@@ -993,9 +993,12 @@ def repos_to_wc(sbox):
   E_url = other_repo_url + "/A/B/E"
   pi_url = other_repo_url + "/A/D/G/pi"
 
-  output, errput = svntest.main.run_svn(None, 'copy', E_url, wc_dir)  
-  if errput:
+  # Expect an error in the directory case
+  output, errput = svntest.main.run_svn(1, 'copy', E_url, wc_dir)  
+  if not errput:
     raise svntest.Failure
+
+  # But file case should work fine.
   output, errput = svntest.main.run_svn(None, 'copy', pi_url, wc_dir)  
   if errput:
     raise svntest.Failure
@@ -1003,9 +1006,6 @@ def repos_to_wc(sbox):
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
     'pi' : Item(status='A ',  wc_rev='0', repos_rev=1),
-    'E' :  Item(status='A ',  wc_rev='0', repos_rev=1),
-    'E/alpha' :  Item(status='A ',  wc_rev='0', repos_rev=1),
-    'E/beta'  :  Item(status='A ',  wc_rev='0', repos_rev=1),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_output)
 

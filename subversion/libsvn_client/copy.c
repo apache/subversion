@@ -926,10 +926,16 @@ repos_to_wc_copy (const char *src_url,
     {
       if (src_kind == svn_node_dir)
         {
-          /* Turn the checkout into an export; we don't want the
-             administrative data from a foreign repository.  The tree
-             should be totally unversioned. */
-          SVN_ERR (svn_client__remove_admin_dirs (dst_path, ctx, pool));
+          /* ### Someday, we would just call svn_wc_add(), as above,
+             but with no copyfrom args.  I.e. in the
+             directory-foreign-UUID case, we still want everything
+             scheduled for addition, URLs rewritten, and wcprop cache
+             deleted, but WITHOUT any copied flags or copyfrom urls.
+             Unfortunately, svn_wc_add() is such a mess that it chokes
+             at the moment when we pass a NULL copyfromurl. */
+
+          return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                   "Source URL is from foreign repository.");
         }
       
       /* Recursively schedule unversioned tree for addition, sans history. */
