@@ -124,12 +124,6 @@ open (void **session_baton,
                                     baton->repository_URL,
                                     subpool));
 
-  /* Temporary... for debugging only.  Obviously, this library should
-     never print to stdout! */
-  printf ("Repos: %s, Path: %s\n",
-          baton->repos_path->data,
-          baton->fs_path->data);
-
   /* Open the filesystem at located at environment `repos_path' */
   SVN_ERR (svn_fs_open_berkeley (baton->fs, baton->repos_path->data));
 
