@@ -1914,8 +1914,169 @@ test_tree_node_validation (const char **msg)
 }
 
 
+static svn_error_t *
+fetch_by_id (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *revision_root, *id_root;
+  svn_revnum_t after_rev;
+  svn_error_t *err;
+
+  *msg = "fetch by id";
+
+  /* Commit a Greek Tree as the first revision. */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-fetch-by-id"));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (greek_tree_under_root (txn_root));
+  SVN_ERR (svn_fs_commit_txn (NULL, &after_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Get one root for the committed Greek Tree, one for the fs. */
+  SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool));
+  SVN_ERR (svn_fs_id_root (&id_root, fs, pool));
+
+  /* Get the IDs of some random paths, then fetch some content by ID. */
+  {
+    svn_fs_id_t *iota_id, *beta_id, *C_id, *D_id, *omega_id;
+    svn_string_t *iota_str, *beta_str, *C_str, *D_str, *omega_str;
+    svn_string_t *not_an_id_str = svn_string_create ("fish", pool);
+    apr_hash_t *entries;
+    apr_off_t len;
+    void *val;
+    int is;
+
+    SVN_ERR (svn_fs_node_id (&iota_id, revision_root, "iota", pool));
+    SVN_ERR (svn_fs_node_id (&beta_id, revision_root, "A/B/E/beta", pool));
+    SVN_ERR (svn_fs_node_id (&C_id, revision_root, "A/C", pool));
+    SVN_ERR (svn_fs_node_id (&D_id, revision_root, "A/D", pool));
+    SVN_ERR (svn_fs_node_id (&omega_id, revision_root, "A/D/H/omega", pool));
+  
+    iota_str  = svn_fs_unparse_id (iota_id, pool);
+    beta_str  = svn_fs_unparse_id (beta_id, pool);
+    C_str     = svn_fs_unparse_id (C_id, pool);
+    D_str     = svn_fs_unparse_id (D_id, pool);
+    omega_str = svn_fs_unparse_id (omega_id, pool);
+
+    /* Check iota. */
+    SVN_ERR (svn_fs_is_dir (&is, id_root, iota_str->data, pool));
+    if (is)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "file fetched by node claimed to be a directory");
+
+    SVN_ERR (svn_fs_is_file (&is, id_root, iota_str->data, pool));
+    if (! is)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "file fetched by node claimed not to be a file");
+
+    SVN_ERR (svn_fs_is_different (&is, revision_root, "iota",
+                                  id_root, iota_str->data, pool));
+    if (is)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "fetching file by path and by node got different results");
 
 
+    /* Check D. */
+    SVN_ERR (svn_fs_is_file (&is, id_root, D_str->data, pool));
+    if (is)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "dir fetched by node claimed to be a file");
+
+    SVN_ERR (svn_fs_is_dir (&is, id_root, D_str->data, pool));
+    if (! is)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "dir fetched by node claimed not to be a dir");
+
+    SVN_ERR (svn_fs_is_different (&is, revision_root, "A/D",
+                                  id_root, D_str->data, pool));
+    if (is)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "fetching dir by path and by node got different results");
+
+
+    SVN_ERR (svn_fs_dir_entries (&entries, id_root, D_str->data, pool));
+    val = apr_hash_get (entries, "gamma", APR_HASH_KEY_STRING);
+    if (! val)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "dir fetched by id doesn't have expected entry \"gamma\"");
+
+    val = apr_hash_get (entries, "G", APR_HASH_KEY_STRING);
+    if (! val)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "dir fetched by id doesn't have expected entry \"G\"");
+
+    val = apr_hash_get (entries, "H", APR_HASH_KEY_STRING);
+    if (! val)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "dir fetched by id doesn't have expected entry \"H\"");
+
+    if (apr_hash_count (entries) != 3)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "dir fetched by id has unexpected number of entries");
+      
+
+    /* Check omega. */
+    SVN_ERR (svn_fs_file_length (&len, id_root, omega_str->data, pool));
+    if (len != strlen ("This is the file 'omega'.\n"))
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "file fetched by id has wrong length");
+      
+    {
+      svn_stream_t *contents_stream;
+      svn_string_t *contents_string;
+
+      SVN_ERR (svn_fs_file_contents (&contents_stream, id_root,
+                                     omega_str->data, pool));
+      SVN_ERR (stream_to_string (&contents_string, contents_stream));
+
+      if (strcmp (contents_string->data, "This is the file 'omega'.\n") != 0)
+        return svn_error_create
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "file fetched by had wrong contents");
+    }
+
+
+    /* Try fetching a non-ID. */
+    err = svn_fs_file_length (&len, id_root, not_an_id_str->data, pool);
+    if (! err)
+      {
+        return svn_error_create
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "fetching an invalid id should fail, but did not");
+      }
+    else if (err->apr_err != SVN_ERR_FS_NOT_ID)
+      {
+        return svn_error_create
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "fetching an invalid id failed with the wrong error");
+      }
+
+
+    /* Try changing a node fetched by ID. */
+    err = svn_fs_delete (id_root, C_str->data, pool);
+    if (! err)
+      {
+        return svn_error_create
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "deleting an ID path should fail, but did not");
+      }
+    
+  }
+
+  return SVN_NO_ERROR;
+}
 
 
 /* Commit TXN, expecting either success or failure:
@@ -3579,6 +3740,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   delete,
   abort_txn,
   test_tree_node_validation,
+  fetch_by_id,
   merge_trees,
   /* fetch_youngest_rev, */
   basic_commit,

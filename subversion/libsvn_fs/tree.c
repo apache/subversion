@@ -28,6 +28,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "skel.h"
@@ -48,7 +49,8 @@
 typedef enum root_kind_t {
   unspecified_root = 0,
   revision_root,
-  transaction_root
+  transaction_root,
+  id_root
 } root_kind_t;
 
 struct svn_fs_root_t
@@ -268,6 +270,13 @@ svn_fs_is_revision_root (svn_fs_root_t *root)
 }
 
 
+int
+svn_fs_is_id_root (svn_fs_root_t *root)
+{
+  return root->kind == id_root;
+}
+
+
 const char *
 svn_fs_txn_root_name (svn_fs_root_t *root,
                       apr_pool_t *pool)
@@ -403,7 +412,13 @@ typedef enum open_path_flags_t {
    component doesn't exist, simply return a path whose bottom `node'
    member is zero.  This option is useful for callers that create new
    nodes --- we find the parent directory for them, and tell them
-   whether the entry exists already.  */
+   whether the entry exists already.  
+
+   If ROOT is an id root, then PATH is the unparsed form of an
+   svn_fs_id_t; set (*PARENT_PATH)->node to the node identified by
+   PATH, and (*PARENT_PATH)->parent to null.  In this case, FLAGS &
+   open_path_last_optional must be zero or an assertion failure
+   results.  */ 
 static svn_error_t *
 open_path (parent_path_t **parent_path_p,
            svn_fs_root_t *root,
@@ -423,67 +438,90 @@ open_path (parent_path_t **parent_path_p,
   /* The portion of PATH we haven't traversed yet.  */
   const char *rest = path;
 
-  SVN_ERR (root_node (&here, root, trail));
-  parent_path = make_parent_path (here, 0, 0, pool);
-
-  /* Whenever we are at the top of this loop:
-     - HERE is our current directory,
-     - REST is the path we're going to find in HERE, and 
-     - PARENT_PATH includes HERE and all its parents.  */
-  for (;;)
+  if (svn_fs_is_id_root (root))
     {
-      const char *next;
-      char *entry;
-      dag_node_t *child;
+      dag_node_t *node;
+      svn_fs_id_t *id = svn_fs_parse_id (path, strlen (path), pool);
 
-      /* Parse out the next entry from the path.  */
-      entry = next_entry_name (&next, rest, pool);
+      /* Unwise callers pay at the door. */
+      assert ((flags & open_path_last_optional) == 0);
 
-      if (*entry == '\0')
-        /* Given the behavior of next_entry_name, this happens when
-           the path either starts or ends with a slash.  In either
-           case, we stay put: the current directory stays the same,
-           and we add nothing to the parent path.  */
-        child = here;
-      else
-        {
-          /* If we found a directory entry, follow it.  */
-          svn_error_t *svn_err = svn_fs__dag_open (&child, here, entry, trail);
+      /* This won't detect a string that's a node id but not a node
+         revision id, but such an id would fail later on anyway. */
+      if (! id)
+        return svn_error_createf
+          (SVN_ERR_FS_NOT_ID, 0, NULL, pool,
+           "`%s' is not a node revision ID", path);
 
-          /* "file not found" requires special handling.  */
-          if (svn_err && svn_err->apr_err == SVN_ERR_FS_NOT_FOUND)
-            {
-              /* If this was the last path component, and the caller
-                 said it was optional, then don't return an error;
-                 just put a zero node pointer in the path.  */
-              if ((flags & open_path_last_optional)
-                  && (! next || *next == '\0'))
-                {
-                  parent_path = make_parent_path (0, entry, parent_path, pool);
-                  break;
-                }
-              else
-                /* Build a better error message than svn_fs__dag_open
-                   can provide, giving the root and full path name.  */
-                return not_found (root, path);
-            }
-
-          /* Other errors we return normally.  */
-          SVN_ERR (svn_err);
-
-          parent_path = make_parent_path (child, entry, parent_path, pool);
-        }
+      SVN_ERR (svn_fs__dag_get_node (&node, root->fs, id, trail));
+      parent_path = make_parent_path (node, 0, 0, pool);
+    }
+  else
+    {
+      SVN_ERR (root_node (&here, root, trail));
+      parent_path = make_parent_path (here, 0, 0, pool);
       
-      /* Are we finished traversing the path?  */
-      if (! next)
-        break;
-
-      /* The path isn't finished yet; we'd better be in a directory.  */
-      if (! svn_fs__dag_is_directory (child))
-        return svn_fs__err_not_directory (fs, path);
-
-      rest = next;
-      here = child;
+      /* Whenever we are at the top of this loop:
+         - HERE is our current directory,
+         - REST is the path we're going to find in HERE, and 
+         - PARENT_PATH includes HERE and all its parents.  */
+      for (;;)
+        {
+          const char *next;
+          char *entry;
+          dag_node_t *child;
+          
+          /* Parse out the next entry from the path.  */
+          entry = next_entry_name (&next, rest, pool);
+          
+          if (*entry == '\0')
+            /* Given the behavior of next_entry_name, this happens when
+               the path either starts or ends with a slash.  In either
+               case, we stay put: the current directory stays the same,
+               and we add nothing to the parent path.  */
+            child = here;
+          else
+            {
+              /* If we found a directory entry, follow it.  */
+              svn_error_t *svn_err = svn_fs__dag_open (&child, here,
+                                                       entry, trail);
+              
+              /* "file not found" requires special handling.  */
+              if (svn_err && svn_err->apr_err == SVN_ERR_FS_NOT_FOUND)
+                {
+                  /* If this was the last path component, and the caller
+                     said it was optional, then don't return an error;
+                     just put a zero node pointer in the path.  */
+                  if ((flags & open_path_last_optional)
+                      && (! next || *next == '\0'))
+                    {
+                      parent_path = make_parent_path (0, entry,
+                                                      parent_path, pool);
+                      break;
+                    }
+                  else
+                    /* Build a better error message than svn_fs__dag_open
+                       can provide, giving the root and full path name.  */
+                    return not_found (root, path);
+                }
+              
+              /* Other errors we return normally.  */
+              SVN_ERR (svn_err);
+              
+              parent_path = make_parent_path (child, entry, parent_path, pool);
+            }
+          
+          /* Are we finished traversing the path?  */
+          if (! next)
+            break;
+          
+          /* The path isn't finished yet; we'd better be in a directory.  */
+          if (! svn_fs__dag_is_directory (child))
+            return svn_fs__err_not_directory (fs, path);
+          
+          rest = next;
+          here = child;
+        }
     }
 
   *parent_path_p = parent_path;
@@ -711,7 +749,7 @@ get_node_kind (enum svn_node_kind *kind,
 
 
 svn_error_t *
-svs_fs_is_different (int *is_different,
+svn_fs_is_different (int *is_different,
                      svn_fs_root_t *root1,
                      const char *path1,
                      svn_fs_root_t *root2,
@@ -719,7 +757,17 @@ svs_fs_is_different (int *is_different,
                      apr_pool_t *pool)
 {
 
+  svn_fs_id_t *id1, *id2;
   enum svn_node_kind kind1, kind2;
+
+  /* Easy check:  are they the same ID? */
+  SVN_ERR (svn_fs_node_id (&id1, root1, path1, pool));
+  SVN_ERR (svn_fs_node_id (&id2, root2, path2, pool));
+  if (svn_fs_id_eq (id1, id2))
+    {
+      *is_different = FALSE;
+      return SVN_NO_ERROR;
+    }
 
   /* Easy check:  are they different node types? */
   SVN_ERR (get_node_kind (&kind1, root1, path1, pool));
@@ -734,21 +782,10 @@ svs_fs_is_different (int *is_different,
   /* If they're both files... */
   if (kind1 == svn_node_file)
     {
-      svn_fs_id_t *id1, *id2;
-      
-      /* ... compare node_rev_ids.  (todo: later on, check the stored
-         delta to prevent false positives.) */
-      SVN_ERR (svn_fs_node_id (&id1, root1, path1, pool));
-      SVN_ERR (svn_fs_node_id (&id2, root2, path2, pool));
-
-      if (svn_fs_id_eq (id1, id2))
-        *is_different = FALSE;
-      else 
-        *is_different = TRUE;
-
+      /* ... then they can't be the same, because the IDs are different. */
+      *is_different = TRUE;
       return SVN_NO_ERROR;
     }
-
 
   /* If they're both dirs... */
   if (kind1 == svn_node_dir)
@@ -2377,6 +2414,19 @@ svn_fs_revision_root (svn_fs_root_t **root_p,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_fs_id_root (svn_fs_root_t **root_p,
+                svn_fs_t *fs,
+                apr_pool_t *pool)
+{
+  svn_fs_root_t *root = make_root (fs, pool);
+
+  root->kind = id_root;
+  *root_p = root;
+
+  return SVN_NO_ERROR;
+}
 
 
 

@@ -489,6 +489,18 @@ svn_error_t *svn_fs_txn_root (svn_fs_root_t **root_p,
                               apr_pool_t *pool);
 
 
+/* Set *ROOT_P to a root object that can be used to access nodes by
+   node revision ID in FS.  Whenever you pass *ROOT_P to a filesystem
+   access function, any filename "relative" to *ROOT_P must actually
+   be the printed form of a node revision ID: a sequence of decimal
+   numbers without leading zeros, separated by '.' characters,
+   containing an even number of numbers; otherwise, return
+   SVN_ERR_FS_NOT_ID.  Allocate ROOT_P in POOL.  */
+svn_error_t *svn_fs_id_root (svn_fs_root_t **root_p,
+                             svn_fs_t *fs,
+                             apr_pool_t *pool);
+
+
 /* Free the root directory ROOT.  Simply clearing or destroying the
    pool ROOT was allocated in will have the same effect as calling
    this function.  */
@@ -499,9 +511,10 @@ void svn_fs_close_root (svn_fs_root_t *root);
 svn_fs_t *svn_fs_root_fs (svn_fs_root_t *root);
 
 
-/* Return true iff ROOT is the root of a transaction/revision.  */
+/* Return true iff ROOT is a transaction/revision/id root.  */
 int svn_fs_is_txn_root      (svn_fs_root_t *root);
 int svn_fs_is_revision_root (svn_fs_root_t *root);
+int svn_fs_is_id_root       (svn_fs_root_t *root);
 
 
 /* If ROOT is the root of a transaction, return a pointer to the name
@@ -654,7 +667,7 @@ svn_error_t *svn_fs_merge (const char **conflict_p,
    different node-rev-ids don't *necessarily* have different contents.
    But right now it's not worth doing byte-for-byte comparisons.  This
    problem will go away when we have deltified storage.) */
-svn_error_t *svs_fs_is_different (int *is_different,
+svn_error_t *svn_fs_is_different (int *is_different,
                                   svn_fs_root_t *root1,
                                   const char *path1,
                                   svn_fs_root_t *root2,
