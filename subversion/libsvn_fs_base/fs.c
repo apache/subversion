@@ -31,6 +31,8 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_utf.h"
+#include "svn_delta.h"
+#include "svn_version.h"
 #include "fs.h"
 #include "err.h"
 #include "dag.h"
@@ -59,7 +61,7 @@
 /* Check that we're using the right Berkeley DB version. */
 /* FIXME: This check should be abstracted into the DB back-end layer. */
 static svn_error_t *
-check_bdb_version (apr_pool_t *pool)
+check_bdb_version (void)
 {
   int major, minor, patch;
 
@@ -496,7 +498,6 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   const char *path_native;
   base_fs_data_t *bfd;
 
-  SVN_ERR (check_bdb_version (pool));
   SVN_ERR (check_already_open (fs));
 
   apr_pool_cleanup_register (fs->pool, fs, cleanup_fs_apr,
@@ -583,7 +584,6 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   const char *path_native;
   base_fs_data_t *bfd;
 
-  SVN_ERR (check_bdb_version (pool));
   SVN_ERR (check_already_open (fs));
 
   apr_pool_cleanup_register (fs->pool, fs, cleanup_fs_apr,
@@ -998,9 +998,6 @@ base_hotcopy (const char *src_path,
   u_int32_t pagesize;
   svn_boolean_t log_autoremove = FALSE;
 
-  /* Check BDB version, just in case */
-  SVN_ERR (check_bdb_version (pool));
-  
   /* If using DB 4.2 or later, note whether the DB_LOG_AUTOREMOVE
      feature is on.  If it is, we have a potential race condition:
      another process might delete a logfile while we're in the middle
@@ -1193,11 +1190,17 @@ svn_fs_base__canonicalize_abspath (const char *path, apr_pool_t *pool)
   return newpath;
 }
 
+static const svn_version_t *
+base_version (void)
+{
+  SVN_VERSION_BODY;
+}
+
 
 
 /* Base FS library vtable, used by the FS loader library. */
-
 static fs_library_vtable_t library_vtable = {
+  base_version,
   base_create,
   base_open,
   base_delete_fs,
@@ -1209,11 +1212,25 @@ static fs_library_vtable_t library_vtable = {
 };
 
 svn_error_t *
-svn_fs_base__init (fs_library_vtable_t **vtable, int abi_version)
+svn_fs_base__init (const svn_version_t *loader_version,
+                   fs_library_vtable_t **vtable)
 {
-  if (abi_version != FS_ABI_VERSION)
-    return svn_error_create (SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
-                             "Mismatched FS module version");
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_subr",  svn_subr_version },
+      { "svn_delta", svn_delta_version },
+      { NULL, NULL }
+    };
+
+  /* Simplified version check to make sure we can safely use the
+     VTABLE parameter. The FS loader does a more exhaustive check. */
+  if (loader_version->major != SVN_VER_MAJOR)
+    return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
+                              _("Unsupported FS loader version (%d) for bdb"),
+                              loader_version->major);
+  SVN_ERR (svn_ver_check_list (base_version(), checklist));
+  SVN_ERR (check_bdb_version());
+
   *vtable = &library_vtable;
   return SVN_NO_ERROR;
 }

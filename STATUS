@@ -9,12 +9,3 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * 10258:
-    Add version checks to, and deprecate ABI version in, the
-    RA and FS loaders and plug-ins.
-    Justification: Planned, if somewhat late, follow-up to
-    r10167/issue #1861; and avoid the need to deprecate yet
-    another ABI version later on.
-    Votes:
-      +1: brane, breser, sussman
-
