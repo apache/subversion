@@ -32,6 +32,11 @@ To be added by someone:
     svnserve.)  The book should perhaps document this way of setting
     up svn+ssh.
 
+ - ch06 talks about Basic authentication and recommends https.
+   Add a mention of Digest authentication now that Apache's bug
+   has been fixed that broke it and potentially update the 
+   example to use it instead.
+
 --------------------------------------------------------------
 To be fixed by someone:
 
