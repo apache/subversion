@@ -27,8 +27,11 @@
 #include "svn_string.h"
 
 
+/*** Option processing ***/
 
-/* long options */
+/* Add an identifier here for long options that don't have a short
+   option. Options that have both long and short options should just
+   use the short option letter as identifier.  */
 typedef enum {
   svn_cl__xml_file_opt = 256,
   svn_cl__ancestor_path_opt,
@@ -103,10 +106,19 @@ svn_cl__cmd_proc_t
   svn_cl__diff,
   svn_cl__update;
 
+/* make the command table information available to all commands */ 
+extern const svn_cl__cmd_desc_t svn_cl__cmd_table[];
+
+const svn_cl__cmd_desc_t *
+svn_cl__get_canonical_command (const char *cmd);
+
+
+/*** Miscellaneous utility commands ***/
 void svn_cl__push_svn_string (apr_array_header_t *array,
                               const char *str,
                               apr_pool_t *pool);
 
+/* subcommands call this to pull any args left into the array of targets. */
 apr_array_header_t*
 svn_cl__args_to_target_array (apr_getopt_t *os,
                               apr_pool_t *pool);
@@ -162,17 +174,9 @@ svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
                                  svn_string_t *initial_path,
                                  apr_pool_t *pool);
 
-/* make the command table information available to all commands */ 
-extern const svn_cl__cmd_desc_t svn_cl__cmd_table[];
-
-const svn_cl__cmd_desc_t *
-svn_cl__get_canonical_command (const char *cmd);
-
-
 
 #endif /* SVN_CL_H */
 
-
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
