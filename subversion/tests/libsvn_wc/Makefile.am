@@ -8,10 +8,11 @@ CFLAGS = -pthread
 INCLUDES = -I../../include -I../../../apr/include -I../../../expat-lite
 
 ## Libraries this binary depends upon:
-checkout_test_LDADD = ../../libsvn_subr.la \
+checkout_test_LDADD = ../../libsvn_subr/libsvn_subr.la \
                       ../../libsvn_string/libsvn_string.la \
                       ../../libsvn_delta/libsvn_delta.la \
                       ../libsvn_wc.la \
+                      ../../../expat-lite/libexpat.a \
                       ../../../apr/libapr.a
 
 
