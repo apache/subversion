@@ -103,48 +103,84 @@ svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool)
 
 
 
-/* Determine if two file-stat structures contain "the same timestamp".
-
-   There are three kinds of POSIX timestamps: 
-
-    - when the file was last read     ("access time" or atime)
-    - when the file was last written  ("modification time" or mtime)
-    - when the inode last changed,
-      *either* from a file write or an
-      ownership/permission change     ("status time" or ctime)
-
-   Since Subversion cares about things like ownership and permission
-   bits, we need to check the ctime field.  When receiving an update,
-   libsvn_wc should manually set the mtime (and thus ctime too) on
-   both the original file and the "textbase" version of it.
-
-   NOTE: if we decide *not* to set timestamps manually, we'll have to
-   go with the CVS strategy of recording timestamps in a file... in
-   which case, the routine below will need to be rewritten and will
-   take different args.  */
-static svn_boolean_t
-timestamps_equal_p (apr_finfo_t *finfo1, apr_finfo_t *finfo2)
+/* Is FILENAME's timestamp the same as the one recorded in our
+   `entries' file?  Return the answer in EQUAL_P.  */
+static svn_error_t *
+timestamps_equal_p (svn_boolean_t *equal_p,
+                    svn_string_t *filename,
+                    apr_pool_t *pool)
 {
-  /* bmcs todo:  rewrite this to use Karl's new timestamp interface */
+  svn_error_t *err;
+  apr_time_t filename_time, entry_time;  /* Two big numbers
+                                            representing timestamps */
+  svn_string_t *dirpath, *entryname;
+  apr_hash_t *atthash;
+  svn_string_t *timestr;
 
-  /*  if (finfo1->ctime == finfo2->ctime)
-      return TRUE;
-      
-      else
-      return FALSE; */
+  /* Split FILENAME into a parent path and entryname. */
+  /* TODO !!!! */
 
-  return TRUE;
+  /* Lookup this entryname in the `entries' file, and specifically
+     retrieve the value of its timestamp. */
+  err = svn_wc__entry_get (dirpath, entryname, NULL, NULL, pool, &atthash);
+  if (err) return err;
+
+  timestr = (svn_string_t *) 
+    apr_hash_get (atthash, 
+                  SVN_WC__ENTRIES_ATTR_TIMESTAMP,
+                  strlen(SVN_WC__ENTRIES_ATTR_TIMESTAMP));
+
+  /* Convert the timestamp string back into a big number */
+  entry_time = svn_wc__string_to_time (timestr);
+
+  /* Now get the timestamp from the actual file */
+  err = svn_wc__file_affected_time (&filename_time, filename, pool);
+  if (err) return err;
+
+  /* Do the comparison */
+  if (filename_time == entry_time)
+    *equal_p = TRUE;
+  else
+    *equal_p = FALSE;
+
+  return SVN_NO_ERROR;
 }
 
 
-/* Are the filesizes of two files the same? */
-static svn_boolean_t
-filesizes_equal_p (apr_finfo_t *finfo1, apr_finfo_t *finfo2)
+
+
+/* Given FILENAME1 and FILENAME2, are their filesizes the same?
+   Return answer in EQUAL_P. */
+static svn_error_t *
+filesizes_equal_p (svn_boolean_t *equal_p,
+                   svn_string_t *filename1,
+                   svn_string_t *filename2,
+                   apr_pool_t *pool)
 {
-  if (finfo1->size == finfo2->size)
-    return TRUE;
+  apr_finfo_t finfo1;
+  apr_finfo_t finfo2;
+  apr_status_t status;
+
+  /* Stat both files */
+  status = apr_stat (&finfo1, filename1->data, pool);
+  if (status)
+    return svn_error_createf
+      (status, 0, NULL, pool,
+       "filesizes_equal_p: apr_stat failed on `%s'", filename1->data);
+
+  status = apr_stat (&finfo2, filename2->data, pool);
+  if (status)
+    return svn_error_createf
+      (status, 0, NULL, pool,
+       "filesizes_equal_p: apr_stat failed on `%s'", filename2->data);
+
+  /* Examine file sizes */
+  if (finfo1.size == finfo2.size)
+    *equal_p = TRUE;
   else
-    return FALSE;
+    *equal_p = FALSE;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -238,34 +274,39 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
   svn_boolean_t identical_p;
   svn_error_t *err;
   svn_string_t *textbase_filename;
-  apr_finfo_t local_stat;
-  apr_finfo_t textbase_stat;
+  svn_boolean_t equal_filesizes, equal_timestamps;
                      
   /* Get the full path of the textbase version of filename */
   textbase_filename = svn_wc__text_base_path (filename, 0, pool);
 
-  /* Stat both files */
-  status = apr_stat (&local_stat, filename->data, pool);
-  if (status)
-    return svn_error_createf
-      (status, 0, NULL, pool,
-       "svn_wc__file_modified_p: apr_stat failed on `%s'", filename->data);
-
-  status = apr_stat (&textbase_stat, textbase_filename->data, pool);
-  if (status)
-    return svn_error_createf
-      (status, 0, NULL, pool,
-       "svn_wc__file_modified_p: apr_stat failed on `%s'",
-       textbase_filename->data);
-
   /* Easy-answer attempt #1:  */
-  if (timestamps_equal_p (&local_stat, &textbase_stat)
-      && filesizes_equal_p (&local_stat, &textbase_stat))
-    *modified_p = FALSE;
+  if (textbase_filename)
+    {
+      /* See if the the local and textbase file are the same size. */
+      err = filesizes_equal_p (&equal_filesizes,
+                               filename, textbase_filename,
+                               pool);
+      if (err) return err;
+
+      if (! equal_filesizes) 
+        {
+          *modified_p = TRUE;
+          return SVN_NO_ERROR;
+        }
+    }
 
   /* Easy-answer attempt #2:  */
-  else if (! filesizes_equal_p (&local_stat, &textbase_stat))
-    *modified_p = TRUE;
+
+  /* See if the local file's timestamp is the same as the one recorded
+     in the administrative directory.  */
+  err = timestamps_equal_p (&equal_timestamps, filename, pool);
+  if (err) return err;
+
+  if (equal_timestamps)
+    {
+      *modified_p = FALSE;
+      return SVN_NO_ERROR;
+    }
   
   else 
     {
@@ -273,7 +314,7 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
          but the timestamps are different.  That's still not enough
          evidence to make a correct decision.  So we just give up and
          get the answer the hard way -- a brute force, byte-for-byte
-         comparision. */
+         comparison. */
       err = contents_identical_p (&identical_p, filename, pool);
       if (err)
         return err;
@@ -282,9 +323,9 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
         *modified_p = FALSE;
       else
         *modified_p = TRUE;
+
+      return SVN_NO_ERROR;
     }
-  
-  return SVN_NO_ERROR;
 }
 
 
