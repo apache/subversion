@@ -97,6 +97,14 @@ report_restoration (const char *path, apr_pool_t *pool)
 }
 
 
+static apr_status_t 
+report_reversion (const char *path, apr_pool_t *pool)
+{
+  printf ("Reverted %s\n", path);
+          
+  return APR_SUCCESS;
+}
+ 
 
 static apr_status_t 
 report_warning (apr_status_t status, const char *warning)
@@ -131,6 +139,7 @@ svn_cl__init_feedback_vtable (apr_pool_t *top_pool)
   feedback_vtable->report_added_item = report_added_item;
   feedback_vtable->report_deleted_item = report_deleted_item;
   feedback_vtable->report_restoration = report_restoration;
+  feedback_vtable->report_reversion = report_reversion;
   feedback_vtable->report_warning = report_warning;
   /* we're -not- overriding report_progress;  we have no need for it
      yet. */

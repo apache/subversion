@@ -718,8 +718,13 @@ svn_wc_add_file (svn_stringbuf_t *file, apr_pool_t *pool)
       state.
 
 */
+
+/* Revert ENTRY in directory PARENT_DIR, trusting that it is of kind
+   KIND, and using POOL for any necessary allocations.  Set REVERTED
+   to TRUE if anything was modified, FALSE otherwise. */
 static svn_error_t *
-revert_admin_things (svn_stringbuf_t *parent_dir,
+revert_admin_things (svn_boolean_t *reverted,
+                     svn_stringbuf_t *parent_dir,
                      svn_stringbuf_t *entry,
                      enum svn_node_kind kind,
                      apr_pool_t *pool)
@@ -729,6 +734,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
   svn_boolean_t text_modified_p, prop_modified_p;
   apr_time_t tstamp, pstamp;
 
+  *reverted = FALSE;
   full_path = svn_stringbuf_dup (parent_dir, pool);
   if (entry)
     svn_path_add_component (full_path, entry, svn_path_local_style);
@@ -792,6 +798,8 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
                 NULL, 
                 pool, 
                 NULL));
+
+      *reverted = TRUE;
     }
 
   return SVN_NO_ERROR;
@@ -806,7 +814,8 @@ svn_wc_revert (svn_stringbuf_t *path,
   enum svn_node_kind kind;
   svn_stringbuf_t *p_dir = NULL, *basename = NULL;
   svn_wc_entry_t *entry;
-  svn_boolean_t wc_root;
+  svn_boolean_t wc_root, reverted;
+  svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
 
   /* Safeguard 1:  is this a versioned resource? */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
@@ -865,9 +874,11 @@ svn_wc_revert (svn_stringbuf_t *path,
     {
       /* Revert the prop and text mods (if any). */
       if (entry->kind == svn_node_dir)
-        SVN_ERR (revert_admin_things (path, NULL, entry->kind, pool));
+        SVN_ERR (revert_admin_things (&reverted, path, NULL, 
+                                      entry->kind, pool));
       else
-        SVN_ERR (revert_admin_things (p_dir, basename, entry->kind, pool));
+        SVN_ERR (revert_admin_things (&reverted, p_dir, basename, 
+                                      entry->kind, pool));
     }
 
   /* Deletions and replacements. */
@@ -876,9 +887,11 @@ svn_wc_revert (svn_stringbuf_t *path,
     {
       /* Revert the prop and text mods (if any). */
       if (entry->kind == svn_node_dir)
-        SVN_ERR (revert_admin_things (path, NULL, entry->kind, pool));
+        SVN_ERR (revert_admin_things (&reverted, path, NULL, 
+                                      entry->kind, pool));
       else
-        SVN_ERR (revert_admin_things (p_dir, basename, entry->kind, pool));
+        SVN_ERR (revert_admin_things (&reverted, p_dir, basename, 
+                                      entry->kind, pool));
 
       /* Reset the schedule to normal. */
       if (! wc_root)
@@ -922,6 +935,19 @@ svn_wc_revert (svn_stringbuf_t *path,
                     pool,
                     NULL));
         }
+
+      /* Note that this was reverted. */
+      reverted = TRUE;
+    }
+
+  /* If PATH was reverted, tell our client that. */
+  if ((fbtable) && (reverted))
+    {
+      apr_status_t apr_err = fbtable->report_reversion (path->data, pool);
+      if (apr_err)
+        return svn_error_createf 
+          (apr_err, 0, NULL, pool,
+           "Error reporting reversion of `%s'", path->data);
     }
 
   /* Finally, recurse if requested. */
