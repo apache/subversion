@@ -149,7 +149,7 @@ static void help(apr_pool_t *pool)
       svn_error_clear (svn_cmdline_fprintf(stdout, pool, "  %s\n", optstr));
     }
   svn_error_clear (svn_cmdline_fprintf(stdout, pool, "\n"));
-  exit(1);
+  exit(0);
 }
 
 static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
