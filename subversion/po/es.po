@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-03 19:53-0300\n"
-"PO-Revision-Date: 2005-04-03 19:54-0300\n"
+"POT-Creation-Date: 2005-04-04 23:31-0300\n"
+"PO-Revision-Date: 2005-04-04 23:34-0300\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1521,7 +1521,7 @@ msgstr ""
 "El mensaje de log es una ruta (¿la intención fue usar -F?); use '--force-"
 "log' para forzar la acción"
 
-#: clients/cmdline/main.c:1429
+#: clients/cmdline/main.c:1433
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -2495,7 +2495,7 @@ msgid "HTTP Path Not Found"
 msgstr "Ruta HTTP no encontrada"
 
 #: include/svn_error_codes.h:698
-msgid "Failed to excute WebDAV PROPPATCH"
+msgid "Failed to execute WebDAV PROPPATCH"
 msgstr "Falló la ejecución de PROPPATCH de WebDAV"
 
 #: include/svn_error_codes.h:703 include/svn_error_codes.h:735
@@ -3494,11 +3494,11 @@ msgstr "almacenar registro de copia"
 
 #: libsvn_fs_base/bdb/copies-table.c:112
 msgid "allocating new copy ID (getting 'next-key')"
-msgstr ""
+msgstr "reservando nuevo ID de copia (obteniendo 'next-key')"
 
 #: libsvn_fs_base/bdb/copies-table.c:130
 msgid "bumping next copy key"
-msgstr ""
+msgstr "generando siguiente clave de copia"
 
 #: libsvn_fs_base/bdb/copies-table.c:169
 msgid "deleting entry from 'copies' table"
@@ -3514,7 +3514,7 @@ msgstr "reservar nuevo ID de nodo (obteniendo 'next-key')"
 
 #: libsvn_fs_base/bdb/nodes-table.c:117
 msgid "bumping next node ID key"
-msgstr ""
+msgstr "generando siguiente clave de ID de nodo"
 
 #: libsvn_fs_base/bdb/nodes-table.c:154
 #, c-format
@@ -3639,7 +3639,7 @@ msgstr ""
 #: libsvn_fs_base/dag.c:801
 #, c-format
 msgid "Attempted to make a child clone with an illegal name '%s'"
-msgstr ""
+msgstr "Se intentó crear un clon hijo con un nombre ilegal '%s'"
 
 #: libsvn_fs_base/dag.c:926
 #, c-format
@@ -3933,21 +3933,21 @@ msgstr "Módulo para trabajar con un repositorio Berkeley DB."
 msgid "Unsupported FS loader version (%d) for bdb"
 msgstr "Versión de cargador FS (%d) no soportada para bdb"
 
-#: libsvn_fs_base/lock.c:449 libsvn_fs_fs/lock.c:618
+#: libsvn_fs_base/lock.c:449 libsvn_fs_fs/lock.c:644
 #, c-format
 msgid "Cannot verify lock on path '%s'; no username available"
 msgstr ""
 "No se puede verificar el bloqueo sobre la ruta '%s'; no hay un nombre de "
 "usuario disponible"
 
-#: libsvn_fs_base/lock.c:455 libsvn_fs_fs/lock.c:624
+#: libsvn_fs_base/lock.c:455 libsvn_fs_fs/lock.c:650
 #, c-format
 msgid "User %s does not own lock on path '%s' (currently locked by %s)"
 msgstr ""
 "El usuario %s no es el dueño del bloqueo sobre la ruta '%s' (actualmente "
 "bloqueada por %s)"
 
-#: libsvn_fs_base/lock.c:462 libsvn_fs_fs/lock.c:631
+#: libsvn_fs_base/lock.c:462 libsvn_fs_fs/lock.c:657
 #, c-format
 msgid "Cannot verify lock on path '%s'; no matching lock-token available"
 msgstr ""
@@ -3961,7 +3961,7 @@ msgstr "La representación no es de tipo 'delta'"
 #: libsvn_fs_base/reps-strings.c:495
 #, c-format
 msgid "Diff version inconsistencies in representation '%s'"
-msgstr ""
+msgstr "Inconsistencias en la versión de diff en la representación '%s'"
 
 #: libsvn_fs_base/reps-strings.c:758
 #, c-format
@@ -3997,7 +3997,7 @@ msgstr "La rep '%s' no es inmutable"
 #: libsvn_fs_base/reps-strings.c:1018
 #, c-format
 msgid "Rep '%s' both mutable and non-fulltext"
-msgstr ""
+msgstr "La rep '%s' es a la vez mutable y no-textocompleto"
 
 #: libsvn_fs_base/reps-strings.c:1318
 msgid "Failed to get new string key"
@@ -4060,7 +4060,7 @@ msgstr "No se pudo abrir '%s'"
 
 #: libsvn_fs_base/tree.c:1407 libsvn_fs_fs/tree.c:1152
 msgid "Asking props changed in two different filesystems"
-msgstr ""
+msgstr "Se piden propiedades cambiadas en dos sistemas de archivos diferentes"
 
 #: libsvn_fs_base/tree.c:1741
 msgid "Corrupt DB: faulty predecessor count"
@@ -4126,7 +4126,7 @@ msgstr ""
 
 #: libsvn_fs_base/tree.c:3937 libsvn_fs_fs/tree.c:2589
 msgid "Asking contents changed in two different filesystems"
-msgstr ""
+msgstr "Se piden contenidos cambiados en dos sistemas de archivos diferentes"
 
 #: libsvn_fs_base/tree.c:3946 libsvn_fs_base/tree.c:3951
 #: libsvn_fs_fs/tree.c:2598 libsvn_fs_fs/tree.c:2603
@@ -4171,7 +4171,7 @@ msgstr ""
 
 #: libsvn_fs_fs/fs.c:272
 msgid "Module for working with a plain file (FSFS) repository."
-msgstr "Módulo para trabajar con un repositorio de archivos simples (FSFS)."
+msgstr "Módulo para usar un repositorio basado en archivos comunes (FSFS)."
 
 #: libsvn_fs_fs/fs.c:306
 #, c-format
@@ -4325,11 +4325,11 @@ msgstr "No se puede asignar contenido de tipo 'texto' a un directorio"
 msgid "Corrupt current file"
 msgstr "Archivo actual corrupto"
 
-#: libsvn_fs_fs/fs_fs.c:3767
+#: libsvn_fs_fs/fs_fs.c:3787
 msgid "Transaction out of date"
 msgstr "La transacción está obsoleta"
 
-#: libsvn_fs_fs/fs_fs.c:4036
+#: libsvn_fs_fs/fs_fs.c:4063
 msgid "No such transaction"
 msgstr "No existe tal transacción"
 
@@ -4342,6 +4342,16 @@ msgstr "No se pudo escribir el archivo de hashes lock/entries '%s'"
 #, c-format
 msgid "Can't parse lock/entries hashfile '%s'"
 msgstr "No se pudo interpretar el archivo de hash de locks/entries '%s'"
+
+#: libsvn_fs_fs/lock.c:740 libsvn_fs_fs/lock.c:761
+#, c-format
+msgid "Path '%s' doesn't exist in HEAD revision"
+msgstr "la ruta '%s' no existe en la revisión HEAD"
+
+#: libsvn_fs_fs/lock.c:766
+#, c-format
+msgid "Lock failed: newer version of '%s' exists"
+msgstr "Falló el bloqueo: existe una versión más nueva de '%s'"
 
 #: libsvn_fs_fs/revs-txns.c:214
 msgid "Transaction cleanup failed"
@@ -5030,6 +5040,8 @@ msgid ""
 "Invalid editor anchoring; at least one of the input paths is not a directory "
 "and there was no source entry"
 msgstr ""
+"Anclaje del editor inválido; por lo menos una de las rutas de entrada no es "
+"un directorio y no había entrada origen"
 
 #: libsvn_repos/dump.c:416
 #, c-format
@@ -6777,8 +6789,8 @@ msgstr ""
 "                             en el flujo, si lo hay"
 
 #: svnadmin/main.c:257
-msgid "type of repository: 'bdb' or 'fsfs'"
-msgstr "tipo de repositorio: 'bdb' o 'fsfs'"
+msgid "type of repository: 'fsfs' (default) or 'bdb'"
+msgstr "tipo de repositorio: 'fsfs' (por defecto) o 'bdb'"
 
 #: svnadmin/main.c:260
 msgid "load at specified directory in repository"
@@ -7702,7 +7714,7 @@ msgstr "raíz del directorio a servir"
 
 #: svnserve/main.c:113
 msgid "deprecated; use repository config file"
-msgstr ""
+msgstr "desrecomendado; use el arhivo de configuración del repositorio"
 
 #: svnserve/main.c:114
 msgid "tunnel mode"
@@ -7876,103 +7888,23 @@ msgstr "exportado%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s no es un recurso versionado, no se exporta\n"
 
-#~ msgid "Lock comment has illegal characters."
-#~ msgstr "El comentario del bloqueo tiene caracteres ilegales."
+#~ msgid " | %d lines"
+#~ msgstr " | %d líneas"
 
-#~ msgid "      Transmitting text...\n"
-#~ msgstr "      Transmitiendo texto...\n"
+#~ msgid " | %d line"
+#~ msgstr " | %d línea"
 
-#~ msgid "   Opening : %s\n"
-#~ msgstr "   Abriendo: %s\n"
+#~ msgid "'get-file-revs' request not implemented"
+#~ msgstr "El requerimiento 'get-file-revs' no está implementado"
 
-#~ msgid " (copied from %s:%ld)"
-#~ msgstr " (copiado de %s:%ld)"
+#~ msgid "'get-locations' request not implemented"
+#~ msgstr "Requerimiento 'get-locations' no implementado"
 
-#~ msgid " (recursively)"
-#~ msgstr " (recursivamente)"
+#~ msgid "repository argument required\n"
+#~ msgstr "el subcomando requiere un parámetro que indique el repositorio\n"
 
-#~ msgid " (recursively) "
-#~ msgstr " (recursivamente) "
-
-#~ msgid "WARNING: error decoding UTF-8 for ?\n"
-#~ msgstr "AVISO: error decodificando UTF-8 para ?\n"
-
-#~ msgid "file"
-#~ msgstr "archivo"
-
-#~ msgid "directory"
-#~ msgstr "directorio"
-
-#~ msgid "restoring text"
-#~ msgstr "restituyendo texto"
-
-#~ msgid "removing props"
-#~ msgstr "eliminando propiedades"
-
-#~ msgid "restoring props"
-#~ msgstr "restituyendo propiedades"
-
-#~ msgid ""
-#~ "The '%s' library is not compatible with this program; found version %d.%d."
-#~ "%d%s, expected version %s"
-#~ msgstr ""
-#~ "La biblioteca '%s' no es compatible con este programa; se encontró la "
-#~ "versión %d.%d.%d%s, cuando se esperaba la versión %s"
-
-#~ msgid ""
-#~ "Not allowed to copy or move '%s': it is not in the repository yet; try "
-#~ "committing first"
-#~ msgstr ""
-#~ "No se permite copiar o mover '%s': no está en el repositorio todavía; "
-#~ "intente primero hacer commit"
-
-#~ msgid "'%s' is an url when it should be a path"
-#~ msgstr "'%s' es un URL cuando debería ser una ruta"
-
-#~ msgid "%s of %s"
-#~ msgstr "%s de %s"
-
-#~ msgid "'%s' is a URL, but revision kind requires a working copy"
-#~ msgstr ""
-#~ "'%s' es un URL, pero el tipo de revisión requiere una copia de trabajo"
-
-#~ msgid "Unknown revision kind"
-#~ msgstr "Tipo de revisión desconocido"
-
-#~ msgid "Path '%s' already exists."
-#~ msgstr "La ruta '%s' ya existe."
-
-#~ msgid "Impossibly long relative URL"
-#~ msgstr "URL relativo imposiblemente largo"
-
-#~ msgid "No commit for revision 0.\n"
-#~ msgstr "No hay commit para la revisión 0.\n"
-
-#~ msgid "pass ARG as bundled options to GNU diff"
-#~ msgstr "pasar PAR como opciones a GNU diff"
-
-#~ msgid "Cannot cleanup '%s': not a directory"
-#~ msgstr "No se puede limpiar '%s': no es un directorio"
-
-#~ msgid "No get_dir() available for URL schema"
-#~ msgstr "No hay get_dir() disponible para el protocolo de URL"
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
-#~ msgstr "Aplique RA binariamente incompatible (versión %d) para ra_dav"
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
-#~ msgstr ""
-#~ "Versión no soportada (%d) de la Interfaz Binaria de Aplicación (ABI) en "
-#~ "el módulo de acceso a repositorio para ra_svn."
-
-#~ msgid "   %ld => %ld\n"
-#~ msgstr "   %ld => %ld\n"
-
-#~ msgid "'svn info' only works on working copy paths, not URLs"
-#~ msgstr "'svn info' sólo funciona en rutas de copia de trabajo, no en URLs"
-
-#~ msgid "Working copy not locked"
-#~ msgstr "La copia de trabajo no tiene lock"
+#~ msgid "unknown command: '%s'\n"
+#~ msgstr "comando desconocido: '%s'\n"
 
 #~ msgid ""
 #~ "Mismatched RA plugin version for '%s': found %d.%d.%d%s, expected %d.%d.%d"
@@ -7981,20 +7913,100 @@ msgstr "%s no es un recurso versionado, no se exporta\n"
 #~ "Conflicto de versiones en modulo de acceso a repositorio para '%s': se "
 #~ "encontró %d.%d.%d%s, se esperaba %d.%d.%d%s"
 
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "comando desconocido: '%s'\n"
+#~ msgid "Working copy not locked"
+#~ msgstr "La copia de trabajo no tiene lock"
 
-#~ msgid "repository argument required\n"
-#~ msgstr "el subcomando requiere un parámetro que indique el repositorio\n"
+#~ msgid "'svn info' only works on working copy paths, not URLs"
+#~ msgstr "'svn info' sólo funciona en rutas de copia de trabajo, no en URLs"
 
-#~ msgid "'get-locations' request not implemented"
-#~ msgstr "Requerimiento 'get-locations' no implementado"
+#~ msgid "   %ld => %ld\n"
+#~ msgstr "   %ld => %ld\n"
 
-#~ msgid "'get-file-revs' request not implemented"
-#~ msgstr "El requerimiento 'get-file-revs' no está implementado"
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
+#~ msgstr ""
+#~ "Versión no soportada (%d) de la Interfaz Binaria de Aplicación (ABI) en "
+#~ "el módulo de acceso a repositorio para ra_svn."
 
-#~ msgid " | %d line"
-#~ msgstr " | %d línea"
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
+#~ msgstr "Aplique RA binariamente incompatible (versión %d) para ra_dav"
 
-#~ msgid " | %d lines"
-#~ msgstr " | %d líneas"
+#~ msgid "No get_dir() available for URL schema"
+#~ msgstr "No hay get_dir() disponible para el protocolo de URL"
+
+#~ msgid "Cannot cleanup '%s': not a directory"
+#~ msgstr "No se puede limpiar '%s': no es un directorio"
+
+#~ msgid "pass ARG as bundled options to GNU diff"
+#~ msgstr "pasar PAR como opciones a GNU diff"
+
+#~ msgid "No commit for revision 0.\n"
+#~ msgstr "No hay commit para la revisión 0.\n"
+
+#~ msgid "Impossibly long relative URL"
+#~ msgstr "URL relativo imposiblemente largo"
+
+#~ msgid "Path '%s' already exists."
+#~ msgstr "La ruta '%s' ya existe."
+
+#~ msgid "Unknown revision kind"
+#~ msgstr "Tipo de revisión desconocido"
+
+#~ msgid "'%s' is a URL, but revision kind requires a working copy"
+#~ msgstr ""
+#~ "'%s' es un URL, pero el tipo de revisión requiere una copia de trabajo"
+
+#~ msgid "%s of %s"
+#~ msgstr "%s de %s"
+
+#~ msgid "'%s' is an url when it should be a path"
+#~ msgstr "'%s' es un URL cuando debería ser una ruta"
+
+#~ msgid ""
+#~ "Not allowed to copy or move '%s': it is not in the repository yet; try "
+#~ "committing first"
+#~ msgstr ""
+#~ "No se permite copiar o mover '%s': no está en el repositorio todavía; "
+#~ "intente primero hacer commit"
+
+#~ msgid ""
+#~ "The '%s' library is not compatible with this program; found version %d.%d."
+#~ "%d%s, expected version %s"
+#~ msgstr ""
+#~ "La biblioteca '%s' no es compatible con este programa; se encontró la "
+#~ "versión %d.%d.%d%s, cuando se esperaba la versión %s"
+
+#~ msgid "restoring props"
+#~ msgstr "restituyendo propiedades"
+
+#~ msgid "removing props"
+#~ msgstr "eliminando propiedades"
+
+#~ msgid "restoring text"
+#~ msgstr "restituyendo texto"
+
+#~ msgid "directory"
+#~ msgstr "directorio"
+
+#~ msgid "file"
+#~ msgstr "archivo"
+
+#~ msgid "WARNING: error decoding UTF-8 for ?\n"
+#~ msgstr "AVISO: error decodificando UTF-8 para ?\n"
+
+#~ msgid " (recursively) "
+#~ msgstr " (recursivamente) "
+
+#~ msgid " (recursively)"
+#~ msgstr " (recursivamente)"
+
+#~ msgid " (copied from %s:%ld)"
+#~ msgstr " (copiado de %s:%ld)"
+
+#~ msgid "   Opening : %s\n"
+#~ msgstr "   Abriendo: %s\n"
+
+#~ msgid "      Transmitting text...\n"
+#~ msgstr "      Transmitiendo texto...\n"
+
+#~ msgid "Lock comment has illegal characters."
+#~ msgstr "El comentario del bloqueo tiene caracteres ilegales."
