@@ -95,11 +95,23 @@ svn_cl__checkout (apr_getopt_t *os,
         = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
 
       /* Canonicalize the URL. */
+      /* ### um. this function isn't really designed for URLs... */
       svn_path_canonicalize (repos_url);
 
       /* Ensure that we have a default dir to checkout into. */
       if (! opt_state->target)
-        local_dir = svn_path_last_component (repos_url, pool);
+        {
+          /* the checkout-dir's name is just the basename of the URL */
+          /* ### hmm. this isn't going to work well for a URL that
+             ### looks like: http://svn.collab.net/
+             ### probably need to parse the incoming URL to extract its
+             ### abs_path and get the last component of *that*. if the
+             ### abs_path is "/", then we have to make something up :-)
+          */
+          local_dir =
+            svn_stringbuf_create (svn_path_basename (repos_url->data, pool),
+                                  pool);
+        }
       else
         local_dir = opt_state->target;
       
@@ -119,6 +131,7 @@ svn_cl__checkout (apr_getopt_t *os,
                                     opt_state->xml_file,
                                     pool));
     }
+
   return SVN_NO_ERROR;
 }
 

@@ -348,8 +348,10 @@ do_dir_replaces (void **newest_baton,
 
           /* We only want the last component of the path; that's what
              the editor's open_directory() expects from us. */
-          dirname = svn_path_last_component (stackptr->path,
-                                             stackptr->pool);
+          dirname =
+            svn_stringbuf_create (svn_path_basename (stackptr->path->data,
+                                                     stackptr->pool),
+                                  stackptr->pool);
 
           /* Get a baton for this directory */
           SVN_ERR (editor->open_directory 
@@ -829,18 +831,19 @@ derive_copyfrom_url (svn_stringbuf_t **copyfrom_url,
     {
       if (stackptr->next)
         {
-          svn_stringbuf_t *dirname;
+          const char *dirname;
 
           /* Move up the stack */
           stackptr = stackptr->next;
 
           /* Fetch the 'name' attribute of this parent directory from
              its URL. */
-          dirname = svn_path_last_component (stackptr->this_dir->url,
-                                             stack->pool);
+          /* ### hmm. the url comes from stackptr, but the pool from stack */
+          dirname = svn_path_basename (stackptr->this_dir->url->data,
+                                       stack->pool);
 
           /* Add it to the url. */
-          svn_path_add_component_nts (root_copyfrom_url, dirname->data);
+          svn_path_add_component_nts (root_copyfrom_url, dirname);
         }
       else 
         {
@@ -1678,16 +1681,14 @@ crawl_local_mods (svn_stringbuf_t *parent_dir,
           if (tgt_entry)
             {
               apr_pool_t *subpool = svn_pool_create (pool);
-              svn_stringbuf_t *basename;
-              
-              basename = svn_path_last_component (target, pool);
+              const char *basename = svn_path_basename (target->data, pool);
               
               /* If TARGET is a file, we check that file for mods.  No
                  stackframes will be pushed or popped, since (the file's
                  parent is already on the stack).  No batons will be
                  closed at all (in case we need to commit more files in
                  this parent). */
-              err = report_single_mod (basename->data,
+              err = report_single_mod (basename,
                                        tgt_entry,
                                        &stack,
                                        affected_targets,
