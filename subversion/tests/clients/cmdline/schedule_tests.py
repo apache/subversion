@@ -654,6 +654,33 @@ def delete_missing(sbox):
                                                 None, None, None, None, None,
                                                 wc_dir)
 
+#----------------------------------------------------------------------
+# Regression test for issue #854:
+# Revert . inside an svn added empty directory should generate an error.
+
+def revert_inside_newly_added_dir(sbox):
+  "revert inside a newly added dir"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+
+  # Schedule a new directory for addition
+  os.mkdir('foo')
+  svntest.main.run_svn(None, 'add', 'foo')
+
+  # Now change into the newly added directory, revert and make sure
+  # an error is output.
+  os.chdir('foo')
+  out, err = svntest.main.run_svn(None, 'revert', '.')
+  if not(err):
+    os.chdir(was_cwd)
+    raise svntest.Failure
+
+  os.chdir(was_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -680,6 +707,7 @@ test_list = [ None,
               XFail(commit_delete_dirs),
               unschedule_missing_added,
               delete_missing,
+              revert_inside_newly_added_dir,
              ]
 
 if __name__ == '__main__':

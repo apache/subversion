@@ -339,6 +339,10 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 18,
               "Cannot change node kind")
 
+  SVN_ERRDEF (SVN_ERR_WC_INVALID_OP_ON_CWD,
+              SVN_ERR_WC_CATEGORY_START + 19,
+              "Invalid operation on the current working directory")  
+
   /* fs errors */
 
   SVN_ERRDEF (SVN_ERR_FS_GENERAL,

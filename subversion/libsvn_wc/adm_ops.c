@@ -1462,6 +1462,19 @@ svn_wc_revert (const char *path,
         {
           apr_hash_t *entries;
           const svn_wc_entry_t *parents_entry;
+
+          /*
+           * We are trying to revert the current directory which is
+           * scheduled for addition. This is supposed to fail (Issue #854)
+           * */
+          if (path[0] == '\0')
+            {
+              return svn_error_createf (SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
+                "%s", "Cannot revert addition of current directory, "
+                      "please try this operation again from the parent "
+                      "directory.");
+            }
+              
           SVN_ERR (svn_wc_entries_read (&entries, parent_access, TRUE, pool));
           parents_entry = apr_hash_get (entries, basey, APR_HASH_KEY_STRING);
           if (parents_entry)
