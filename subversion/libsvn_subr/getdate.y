@@ -564,11 +564,10 @@ yyerror(s)
 
 
 static time_t
-ToSeconds(Hours, Minutes, Seconds, Meridian)
-    time_t	Hours;
-    time_t	Minutes;
-    time_t	Seconds;
-    MERIDIAN	Meridian;
+ToSeconds(time_t Hours,
+          time_t Minutes,
+          time_t Seconds,
+          MERIDIAN Meridian)
 {
     if (Minutes < 0 || Minutes > 59 || Seconds < 0 || Seconds > 59)
 	return -1;
@@ -601,15 +600,14 @@ ToSeconds(Hours, Minutes, Seconds, Meridian)
    * A number from 0 to 99, which means a year from 1900 to 1999, or
    * The actual year (>=100).  */
 static time_t
-Convert(Month, Day, Year, Hours, Minutes, Seconds, Meridian, DSTmode)
-    time_t	Month;
-    time_t	Day;
-    time_t	Year;
-    time_t	Hours;
-    time_t	Minutes;
-    time_t	Seconds;
-    MERIDIAN	Meridian;
-    DSTMODE	DSTmode;
+Convert (time_t Month,
+         time_t Day,
+         time_t Year,
+         time_t Hours,
+         time_t Minutes,
+         time_t Seconds,
+         MERIDIAN Meridian,
+         DSTMODE DSTmode)
 {
     static int DaysInMonth[12] = {
 	31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
@@ -651,9 +649,7 @@ Convert(Month, Day, Year, Hours, Minutes, Seconds, Meridian, DSTmode)
 
 
 static time_t
-DSTcorrect(Start, Future)
-    time_t	Start;
-    time_t	Future;
+DSTcorrect(time_t Start, time_t Future)
 {
     time_t	StartDay;
     time_t	FutureDay;
@@ -665,10 +661,7 @@ DSTcorrect(Start, Future)
 
 
 static time_t
-RelativeDate(Start, DayOrdinal, DayNumber)
-    time_t	Start;
-    time_t	DayOrdinal;
-    time_t	DayNumber;
+RelativeDate(time_t Start, time_t DayOrdinal, time_t DayNumber)
 {
     struct tm	*tm;
     time_t	now;
@@ -682,9 +675,7 @@ RelativeDate(Start, DayOrdinal, DayNumber)
 
 
 static time_t
-RelativeMonth(Start, RelMonth)
-    time_t	Start;
-    time_t	RelMonth;
+RelativeMonth(time_t Start, time_t RelMonth)
 {
     struct tm	*tm;
     time_t	Month;
@@ -704,8 +695,7 @@ RelativeMonth(Start, RelMonth)
 
 
 static int
-LookupWord(buff)
-    char		*buff;
+LookupWord(char *buff)
 {
     register char	*p;
     register char	*q;
@@ -866,8 +856,7 @@ yylex()
 
 /* Yield A - B, measured in seconds.  */
 static long
-difftm (a, b)
-     struct tm *a, *b;
+difftm (struct tm *a, struct tm *b)
 {
   int ay = a->tm_year + (TM_YEAR_ORIGIN - 1);
   int by = b->tm_year + (TM_YEAR_ORIGIN - 1);
@@ -887,9 +876,7 @@ difftm (a, b)
 }
 
 time_t
-svn_parse_date(p, now)
-    char		*p;
-    struct getdate_time	*now;
+svn_parse_date(char *p, struct getdate_time *now)
 {
     struct tm		*tm, gmt;
     struct getdate_time	ftz;
@@ -987,9 +974,7 @@ svn_parse_date(p, now)
 
 /* ARGSUSED */
 int
-main(ac, av)
-    int		ac;
-    char	*av[];
+main(int ac, char *av[])
 {
     char	buff[128];
     time_t	d;
