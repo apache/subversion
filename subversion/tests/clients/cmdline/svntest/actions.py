@@ -48,7 +48,7 @@ def guarantee_greek_repository(path):
     url = main.test_area_url + '/' + main.pristine_dir
 
     # import the greek tree.
-    output, errput = main.run_svn("import", url, main.greek_dump_dir)
+    output, errput = main.run_svn(None, "import", url, main.greek_dump_dir)
 
     # check for any errors from the import
     if len(errput):
@@ -117,7 +117,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   main.remove_wc(wc_dir_name)
 
   # Checkout and make a tree of the output.
-  output, errput = main.run_svn ('co', URL, '-d', wc_dir_name)
+  output, errput = main.run_svn (None, 'co', URL, '-d', wc_dir_name)
   mytree = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
@@ -157,7 +157,7 @@ def run_and_verify_update(wc_dir_name,
   Return 0 if successful."""
 
   # Update and make a tree of the output.
-  output, errput = main.run_svn ('up', wc_dir_name, *args)
+  output, errput = main.run_svn (None, 'up', wc_dir_name, *args)
   mytree = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
@@ -205,7 +205,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   details.  Return 0 if successful."""
 
   # Commit.
-  output, errput = main.run_svn ('ci', *args)
+  output, errput = main.run_svn (error_re_string, 'ci', *args)
 
   if (error_re_string):
     rm = re.compile (error_re_string)
@@ -254,7 +254,7 @@ def run_and_verify_status(wc_dir_name, output_tree,
   more details.
   Return 0 on success."""
 
-  output, errput = main.run_svn ('status', wc_dir_name)
+  output, errput = main.run_svn (None, 'status', wc_dir_name)
 
   mytree = tree.build_tree_from_status (output)
 

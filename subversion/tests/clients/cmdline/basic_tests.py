@@ -162,7 +162,7 @@ def commit_multiple_targets():
   # Just for kicks, add a property to A/D/G as well.  We'll make sure
   # that it *doesn't* get committed.
   ADG_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  svntest.main.run_svn('propset', 'foo', 'bar', ADG_path)
+  svntest.main.run_svn(None, 'propset', 'foo', 'bar', ADG_path)
 
   # Created expected output tree for 'svn ci'.  We should see changes
   # only on these three targets, no others.  
@@ -224,7 +224,7 @@ def commit_multiple_targets_2():
   # Just for kicks, add a property to A/D/G as well.  We'll make sure
   # that it *doesn't* get committed.
   ADG_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  svntest.main.run_svn('propset', 'foo', 'bar', ADG_path)
+  svntest.main.run_svn(None, 'propset', 'foo', 'bar', ADG_path)
 
   # Created expected output tree for 'svn ci'.  We should see changes
   # only on these three targets, no others.  
@@ -590,7 +590,7 @@ def basic_cleanup():
     return 1
   
   # Run cleanup (### todo: cleanup doesn't currently print anything)
-  stdout_lines, stderr_lines = svntest.main.run_svn('cleanup', wc_dir)
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'cleanup', wc_dir)
   if len (stderr_lines) > 0:
     print "Cleanup command printed the following to stderr:"
     print stderr_lines
@@ -632,17 +632,17 @@ def basic_revert():
     return 1
   
   # Run revert (### todo: revert doesn't currently print anything)
-  stdout_lines, stderr_lines = svntest.main.run_svn('revert', beta_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'revert', beta_path)
   if len (stderr_lines) > 0:
     print "Revert command printed the following to stderr:"
     print stderr_lines
     return 1
-  stdout_lines, stderr_lines = svntest.main.run_svn('revert', iota_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'revert', iota_path)
   if len (stderr_lines) > 0:
     print "Revert command printed the following to stderr:"
     print stderr_lines
     return 1
-  stdout_lines, stderr_lines = svntest.main.run_svn('revert', rho_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'revert', rho_path)
   if len (stderr_lines) > 0:
     print "Revert command printed the following to stderr:"
     print stderr_lines
@@ -725,7 +725,7 @@ def update_binary_file():
   fp.write(theta_contents)    # write png filedata into 'A/theta'
   fp.close()
   
-  svntest.main.run_svn('add', theta_path)  
+  svntest.main.run_svn(None, 'add', theta_path)  
 
   # Created expected output tree for 'svn ci'
   output_list = [ [theta_path, None, {}, {'verb' : 'Adding' }] ]

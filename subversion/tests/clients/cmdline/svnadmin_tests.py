@@ -237,7 +237,7 @@ def list_revs():
 
   # Remove gamma
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  svntest.main.run_svn('rm', gamma_path)
+  svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Created expected output tree for 'svn ci'
   output_list = [ [gamma_path, None, {}, {'verb' : 'Deleting' }] ]
