@@ -62,8 +62,8 @@ class Generator(gen_win.WinGeneratorBase):
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,
       'is_exe' : ezt.boolean(isinstance(target, gen_base.TargetExe)),
-      'is_external' : ezt.boolean(isinstance(target,
-                                             gen_base.TargetExternal)),
+      'is_external' : ezt.boolean(isinstance(target, gen_base.TargetUtility)
+                                  and target.cmd),
       'is_utility' : ezt.boolean(isinstance(target,
                                             gen_base.TargetUtility)),
       'instrument_apr_pools' : self.instrument_apr_pools,
@@ -124,7 +124,7 @@ class Generator(gen_win.WinGeneratorBase):
     # each target we work with.
     for target in install_targets:
       # These aren't working yet
-      if isinstance(target, gen_base.TargetExternal):
+      if isinstance(target, gen_base.TargetUtility) and target.cmd:
         continue    
       guids[target.name] = self.makeguid(target.name)
 
@@ -134,7 +134,7 @@ class Generator(gen_win.WinGeneratorBase):
     for target in install_targets:
       name = target.name
       # These aren't working yet
-      if isinstance(target, gen_base.TargetExternal):
+      if isinstance(target, gen_base.TargetUtility) and target.cmd:
         continue
 
       if isinstance(target, gen_base.TargetProject):

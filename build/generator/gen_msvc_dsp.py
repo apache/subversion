@@ -42,11 +42,12 @@ class Generator(gen_win.WinGeneratorBase):
         targval = "0x0104"
         target.output_name = '%s-%d.lib' % (target.name, self.cfg.version)
     elif isinstance(target, gen_base.TargetUtility):
-      targtype = "Win32 (x86) Generic Project"
-      targval = "0x010a"
-    elif isinstance(target, gen_base.TargetExternal):
-      targtype = "Win32 (x86) External Target"
-      targval = "0x0106"
+      if target.cmd:
+        targtype = "Win32 (x86) External Target"
+        targval = "0x0106"
+      else:
+        targtype = "Win32 (x86) Generic Project"
+        targval = "0x010a"
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
 
@@ -66,8 +67,8 @@ class Generator(gen_win.WinGeneratorBase):
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,
       'is_exe' : ezt.boolean(isinstance(target, gen_base.TargetExe)),
-      'is_external' : ezt.boolean(isinstance(target,
-                                             gen_base.TargetExternal)),
+      'is_external' : ezt.boolean(isinstance(target, gen_base.TargetUtility)
+                                  and target.cmd),
       'is_utility' : ezt.boolean(isinstance(target,
                                             gen_base.TargetUtility)),
       'is_dll' : ezt.boolean(isinstance(target, gen_base.TargetSWIG)
