@@ -582,6 +582,10 @@ main (int argc, const char * const *argv)
               log_is_pathname = TRUE;
             }
         }
+
+        /* Note that there's no way here to detect if the log message
+           contains a zero byte -- if it does, then opt_arg will just
+           be shorter than the user intended.  Oh well. */
         opt_state.message = apr_pstrdup (pool, opt_arg);
         break;
       case 'r':
@@ -639,6 +643,19 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        else if (strlen (opt_state.filedata->data) < opt_state.filedata->len)
+          {
+            /* The data contains a zero byte, and therefore can't be
+               represented as a C string.  Punt now; it's probably not
+               a deliberate encoding, and even if it is, we still
+               can't handle it. */
+            err = svn_error_create (SVN_ERR_CL_BAD_LOG_MESSAGE, NULL,
+                                    "Log message contains a zero byte.");
+            svn_handle_error (err, stderr, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
+        
         /* Find out if log message file is under revision control. */
         {
           svn_wc_adm_access_t *adm_access;
