@@ -41,16 +41,16 @@ extern "C" {
 /* A function type which allows the RA layer to fetch WC properties
    during a commit.  */
 typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *close_baton,
-                                                   svn_stringbuf_t *path,
-                                                   svn_stringbuf_t *name,
-                                                   svn_stringbuf_t **value);
+                                                   const char *path,
+                                                   const char *name,
+                                                   const svn_string_t **value);
 
 /* A function type which allows the RA layer to store WC properties
    after a commit.  */
 typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *close_baton,
-                                                   svn_stringbuf_t *path,
-                                                   svn_stringbuf_t *name,
-                                                   svn_stringbuf_t *value);
+                                                   const char *path,
+                                                   const char *name,
+                                                   const svn_string_t *value);
 
 
 /* Function type for post-commit processing.  PATH is the path that

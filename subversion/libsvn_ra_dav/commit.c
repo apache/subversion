@@ -81,9 +81,6 @@ typedef struct
   /* ### not sure if this "deleted" thing is Goodness */
   apr_array_header_t *deleted;
 
-  /* name of local prop to hold the version resource's URL */
-  svn_stringbuf_t *vsn_url_name;
-
   apr_hash_t *valid_targets;
   svn_ra_get_wc_prop_func_t get_func;
   svn_ra_set_wc_prop_func_t set_func;
@@ -193,10 +190,12 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc,
 
   if (cc->get_func != NULL)
     {
-      svn_stringbuf_t *vsn_url_value;
+      const svn_string_t *vsn_url_value;
 
-      SVN_ERR( (*cc->get_func)(cc->close_baton, rsrc->local_path,
-                               cc->vsn_url_name, &vsn_url_value) );
+      SVN_ERR( (*cc->get_func)(cc->close_baton,
+                               rsrc->local_path->data,
+                               SVN_RA_DAV__LP_VSN_URL,
+                               &vsn_url_value) );
       if (vsn_url_value != NULL)
         {
           rsrc->vsn_url = vsn_url_value->data;
@@ -244,7 +243,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc,
 }
 
 static svn_error_t * get_activity_url(commit_ctx_t *cc,
-                                      svn_stringbuf_t **activity_url)
+                                      const svn_string_t **activity_url)
 {
 
   if (cc->get_func != NULL)
@@ -252,13 +251,10 @@ static svn_error_t * get_activity_url(commit_ctx_t *cc,
       /* with a get_func, we can just ask for the activity URL from the
          property store. */
 
-      /* ### damn, this is annoying to have to create strings */
-      svn_stringbuf_t * propname = svn_stringbuf_create(SVN_RA_DAV__LP_ACTIVITY_URL,
-                                                  cc->ras->pool);
-      svn_stringbuf_t * path = svn_stringbuf_create(".", cc->ras->pool);
-
       /* get the URL where we should create activities */
-      SVN_ERR( (*cc->get_func)(cc->close_baton, path, propname,
+      SVN_ERR( (*cc->get_func)(cc->close_baton,
+                               ".",
+                               SVN_RA_DAV__LP_ACTIVITY_URL,
                                activity_url) );
 
       if (*activity_url != NULL)
@@ -266,7 +262,7 @@ static svn_error_t * get_activity_url(commit_ctx_t *cc,
           /* the property was there. return it. */
 
           /* ### urk. copy the thing to get a proper pool in there */
-          *activity_url = svn_stringbuf_dup(*activity_url, cc->ras->pool);
+          *activity_url = svn_string_dup(*activity_url, cc->ras->pool);
 
           return NULL;
         }
@@ -281,10 +277,11 @@ static svn_error_t * get_activity_url(commit_ctx_t *cc,
 
 static svn_error_t * create_activity(commit_ctx_t *cc)
 {
-  svn_stringbuf_t * activity_url;
+  const svn_string_t * activity_url;
   apr_uuid_t uuid;
   char uuid_buf[APR_UUID_FORMATTED_LENGTH + 1];
   int code;
+  svn_stringbuf_t *urlbuf;
 
   /* get the URL where we'll create activities */
   SVN_ERR( get_activity_url(cc, &activity_url) );
@@ -293,10 +290,11 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
   apr_uuid_get(&uuid);
   apr_uuid_format(uuid_buf, &uuid);
 
+  urlbuf = svn_stringbuf_create_from_string(activity_url, cc->ras->pool);
   /* ### grumble. this doesn't watch out for trailing "/" */
-  svn_path_add_component_nts(activity_url, uuid_buf, svn_path_url_style);
+  svn_path_add_component_nts(urlbuf, uuid_buf, svn_path_url_style);
 
-  cc->activity_url = activity_url->data;
+  cc->activity_url = urlbuf->data;
 
   /* do a MKACTIVITY request and get the resulting status code. */
   SVN_ERR( simple_request(cc->ras, "MKACTIVITY", cc->activity_url, &code) );
@@ -1154,7 +1152,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc = apr_pcalloc(ras->pool, sizeof(*cc));
   cc->ras = ras;
   cc->resources = apr_hash_make(ras->pool);
-  cc->vsn_url_name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
   cc->get_func = get_func;
   cc->valid_targets = apr_hash_make(ras->pool);
   cc->set_func = set_func;

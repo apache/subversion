@@ -751,36 +751,35 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
    returns 'wc' props instead of normal props.  */
 static svn_error_t *
 wcprop_list (apr_hash_t **props,
-             svn_stringbuf_t *path,
+             const char *path,
              apr_pool_t *pool)
 {
-  svn_error_t *err;
   enum svn_node_kind kind, pkind;
   svn_stringbuf_t *prop_path;
   
+  /* ### be nice to eliminate this... */
+  svn_stringbuf_t *pathbuf = svn_stringbuf_create (path, pool);
+
   *props = apr_hash_make (pool);
 
   /* Check validity of PATH */
-  err = svn_io_check_path (path, &kind, pool);
-  if (err) return err;
+  SVN_ERR( svn_io_check_path (pathbuf, &kind, pool) );
   
   if (kind == svn_node_none)
     return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
                               "wcprop_list: non-existent path '%s'.",
-                              path->data);
+                              path);
   
   if (kind == svn_node_unknown)
     return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
                               "wcprop_list: unknown node kind: '%s'.",
-                              path->data);
+                              path);
 
   /* Construct a path to the relevant property file */
-  err = svn_wc__wcprop_path (&prop_path, path, 0, pool);
-  if (err) return err;
+  SVN_ERR( svn_wc__wcprop_path (&prop_path, pathbuf, 0, pool) );
 
   /* Does the property file exist? */
-  err = svn_io_check_path (prop_path, &pkind, pool);
-  if (err) return err;
+  SVN_ERR( svn_io_check_path (prop_path, &pkind, pool) );
   
   if (pkind == svn_node_none)
     /* No property file exists.  Just go home, with an empty hash. */
@@ -788,8 +787,7 @@ wcprop_list (apr_hash_t **props,
   
   /* else... */
 
-  err = svn_wc__load_prop_file (prop_path, *props, pool);
-  if (err) return err;
+  SVN_ERR( svn_wc__load_prop_file (prop_path, *props, pool) );
 
   return SVN_NO_ERROR;
 }
@@ -798,13 +796,15 @@ wcprop_list (apr_hash_t **props,
 /* This is what RA_DAV will use to fetch 'wc' properties.  It will be
    passed to ra_session_baton->do_commit(). */
 svn_error_t *
-svn_wc__wcprop_get (svn_stringbuf_t **value,
-                    svn_stringbuf_t *name,
-                    svn_stringbuf_t *path,
+svn_wc__wcprop_get (const svn_string_t **value,
+                    const char *name,
+                    const char *path,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_hash_t *prophash;
+  svn_stringbuf_t *pvaluebuf;
+  svn_string_t *pvalue;
 
   err = wcprop_list (&prophash, path, pool);
   if (err)
@@ -812,7 +812,11 @@ svn_wc__wcprop_get (svn_stringbuf_t **value,
       svn_error_quick_wrap
       (err, "svn_wc__wcprop_get: failed to load props from disk.");
 
-  *value = apr_hash_get (prophash, name->data, name->len);
+  /* ### it would be nice if the hash contained svn_string_t values */
+  pvaluebuf = apr_hash_get (prophash, name, APR_HASH_KEY_STRING);
+  *value = pvalue = apr_palloc(pool, sizeof(*pvalue));
+  pvalue->data = pvaluebuf->data;
+  pvalue->len = pvaluebuf->len;
 
   return SVN_NO_ERROR;
 }
@@ -822,15 +826,19 @@ svn_wc__wcprop_get (svn_stringbuf_t **value,
 /* This is what RA_DAV will use to store 'wc' properties.  It will be
    passed to ra_session_baton->do_commit(). */
 svn_error_t *
-svn_wc__wcprop_set (svn_stringbuf_t *name,
-                    svn_stringbuf_t *value,
-                    svn_stringbuf_t *path,
+svn_wc__wcprop_set (const char *name,
+                    const svn_string_t *value,
+                    const char *path,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
   apr_hash_t *prophash;
   apr_file_t *fp = NULL;
+
+  /* ### be nice to eliminate these... */
+  svn_stringbuf_t *valuebuf = svn_stringbuf_create_from_string (value, pool);
+  svn_stringbuf_t *pathbuf = svn_stringbuf_create (path, pool);
 
   err = wcprop_list (&prophash, path, pool);
   if (err)
@@ -840,11 +848,11 @@ svn_wc__wcprop_set (svn_stringbuf_t *name,
 
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
-  apr_hash_set (prophash, name->data, name->len, value);
+  apr_hash_set (prophash, name, APR_HASH_KEY_STRING, valuebuf);
 
   /* Open the propfile for writing. */
   SVN_ERR (svn_wc__open_props (&fp, 
-                               path, /* open in PATH */
+                               pathbuf, /* open in PATH */
                                (APR_WRITE | APR_CREATE),
                                0, /* not base props */
                                1, /* we DO want wcprops */
@@ -853,10 +861,10 @@ svn_wc__wcprop_set (svn_stringbuf_t *name,
   apr_err = svn_hash_write (prophash, svn_unpack_bytestring, fp, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
-                              "can't write prop hash for %s", path->data);
+                              "can't write prop hash for %s", path);
   
   /* Close file, and doing an atomic "move". */
-  SVN_ERR (svn_wc__close_props (fp, path, 0, 1,
+  SVN_ERR (svn_wc__close_props (fp, pathbuf, 0, 1,
                                 1, /* sync! */
                                 pool));
 

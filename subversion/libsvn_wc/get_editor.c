@@ -667,7 +667,12 @@ change_dir_prop (void *dir_baton,
      get on with life.  It's not a regular versioned property. */
   if (svn_wc_is_wc_prop (name))
     {
-      SVN_ERR (svn_wc__wcprop_set (name, value, db->path, db->pool));
+      svn_string_t value_struct;
+
+      value_struct.data = value->data;
+      value_struct.len = value->len;
+      SVN_ERR (svn_wc__wcprop_set (name->data, &value_struct, db->path->data,
+                                   db->pool));
       return SVN_NO_ERROR;
     }
   
@@ -1805,9 +1810,13 @@ close_file (void *file_baton)
       for (i = 0; i < fb->wcpropchanges->nelts; i++)
         {
           svn_prop_t *prop;
+          svn_string_t value_struct;
+
           prop = (((svn_prop_t **)(fb->wcpropchanges)->elts)[i]);
-          SVN_ERR (svn_wc__wcprop_set (prop->name, prop->value, 
-                                       fb->path, fb->pool));
+          value_struct.data = prop->value->data;
+          value_struct.len = prop->value->len;
+          SVN_ERR (svn_wc__wcprop_set (prop->name->data, &value_struct,
+                                       fb->path->data, fb->pool));
         }
     }
 

@@ -340,38 +340,36 @@ svn_wc_process_committed (void *baton,
 
 
 svn_error_t *svn_wc_get_wc_prop (void *baton,
-                                 svn_stringbuf_t *target,
-                                 svn_stringbuf_t *name,
-                                 svn_stringbuf_t **value)
+                                 const char *target,
+                                 const char *name,
+                                 const svn_string_t **value)
 {
-  struct svn_wc_close_commit_baton *ccb =
-    (struct svn_wc_close_commit_baton *) baton;
+  struct svn_wc_close_commit_baton *ccb = baton;
 
   /* Prepend the baton's prefix to the target. */
   svn_stringbuf_t *path = svn_stringbuf_dup (ccb->prefix_path, ccb->pool);
-  svn_path_add_component (path, target, svn_path_local_style);
+  svn_path_add_component_nts (path, target, svn_path_local_style);
 
   /* And use our public interface to get the property value. */
-  SVN_ERR (svn_wc__wcprop_get (value, name, path, ccb->pool));
+  SVN_ERR (svn_wc__wcprop_get (value, name, path->data, ccb->pool));
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *svn_wc_set_wc_prop (void *baton,
-                                 svn_stringbuf_t *target,
-                                 svn_stringbuf_t *name,
-                                 svn_stringbuf_t *value)
+                                 const char *target,
+                                 const char *name,
+                                 const svn_string_t *value)
 {
-  struct svn_wc_close_commit_baton *ccb =
-    (struct svn_wc_close_commit_baton *) baton;
+  struct svn_wc_close_commit_baton *ccb = baton;
 
   /* Prepend the baton's prefix to the target. */
   svn_stringbuf_t *path = svn_stringbuf_dup (ccb->prefix_path, ccb->pool);
-  svn_path_add_component (path, target, svn_path_local_style);
+  svn_path_add_component_nts (path, target, svn_path_local_style);
 
   /* And use our public interface to get the property value. */
-  SVN_ERR (svn_wc__wcprop_set (name, value, path, ccb->pool));
+  SVN_ERR (svn_wc__wcprop_set (name, value, path->data, ccb->pool));
 
   return SVN_NO_ERROR;
 }
