@@ -1,0 +1,96 @@
+I.    Installation
+
+      mod_authz_svn will be installed alongside mod_dav_svn when the regular
+      installation instructions are followed.
+
+      NOTE: the module is functional, but you should consider it experimental.
+      Some configurations may or may not have the desired effect.  Be sure
+      to test if your configuration works as intended.
+
+
+II.   Configuration
+
+   1. Configuring Apache
+
+      Modify your httpd.conf.  Add the following line _after_ the one that
+      loads mod_dav_svn:
+
+        LoadModule authz_svn_module   modules/mod_authz_svn.so
+
+
+      Next set up your subversion location like so:
+
+        <Location /svn>
+          DAV svn
+          SVNPath /path/to/repos
+
+          AuthType Basic
+          AuthName "Subversion repository"
+          AuthUserFile /path/to/htpasswd/file
+
+          AuthzSVNAccessFile /path/to/access/file
+
+          Require valid-user
+        </Location>
+
+      NOTE: Authentication is always required using mod_authz_svn for all
+      methods you wish to protect.  This means you need a dummy 'anonymous'
+      account for anonymous read only users now, if you want to be able
+      to restrict reading of any portion of the repository.
+
+   2. Specifying permissions
+
+      The file format of the access file looks like this:
+
+        [groups]
+        <groupname> = <user>[,<user>...]
+        ...
+
+        [<path in repository>]
+        @<group> = [rw|r]
+        <user> = [rw|r]
+        * = [rw|r]
+
+
+      An example (line continued lines are supposed to be on one line):
+
+        [groups]
+        subversion = jimb,sussman,kfogel,gstein,brane,joe,ghudson,fitz, \
+                     daniel,cmpilato,kevin,philip,jerenkrantz,rooneg, \
+                     bcollins,blair,striker,naked,dwhedon,dlr,kraai,mbk, \
+                     epg,bdenny,jaa
+        subversion-doc = nsd,zbrown,fmatias,dimentiy,patrick
+        subversion-bindings = xela,yoshiki,morten,jespersm,knacke
+        subversion-rm = mprice
+        ...and so on and so on...
+
+        [/]
+        # Allow everyone read on the entire repository
+        * = r
+        # Allow devs with blanket commit to write to the entire repository
+        @subversion = rw
+
+        [/trunk/doc]
+        @subversion-doc = rw
+
+        [/trunk/subversion/bindings]
+        @subversion-bindings = rw
+
+        [/branches]
+        @subversion-rm = rw
+
+        [/tags]
+        @subversion-rm = rw
+
+        [/branches/issue-650-ssl-certs]
+        mass = rw
+
+        [/branches/pluggable-db]
+        gthompson = rw
+
+        ...
+
+        [/secrets]
+        # Just for demonstration
+        * =
+        @subversion = rw
