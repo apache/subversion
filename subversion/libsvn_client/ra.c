@@ -170,11 +170,30 @@ set_wc_prop (void *baton,
 {
   svn_client__callback_baton_t *cb = baton;
   svn_wc_adm_access_t *adm_access;
+  const svn_wc_entry_t *entry;
   const char *full_path = svn_path_join (cb->base_dir, path, pool);
 
-  SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, cb->base_access,
-                                      full_path, pool));
-  return svn_wc_prop_set (name, value, full_path, adm_access, pool);
+  SVN_ERR (svn_wc_entry (&entry, full_path, cb->base_access, FALSE, pool));
+  if (! entry)
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              _("'%s' is not under version control"),
+                              svn_path_local_style (full_path, pool));
+
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, cb->base_access,
+                                (entry->kind == svn_node_dir
+                                 ? full_path
+                                 : svn_path_dirname (full_path, pool)),
+                                pool));
+    
+  /* We pass 1 for the 'force' parameter here.  Since the property is
+     coming from the repository, we definitely want to accept it.
+     Ideally, we'd raise a conflict if, say, the received property is
+     svn:eol-style yet the file has a locally added svn:mime-type
+     claiming that it's binary.  Probably the repository is still
+     right, but the conflict would remind the user to make sure.
+     Unfortunately, we don't have a clean mechanism for doing that
+     here, so we just set the property and hope for the best. */
+  return svn_wc_prop_set2 (name, value, full_path, adm_access, TRUE, pool);
 }
 
 
