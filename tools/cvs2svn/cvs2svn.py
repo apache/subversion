@@ -131,10 +131,6 @@ class CollectData(rcsparse.Sink):
     and that NAME sprouts from BRANCH_NUMBER .
     BRANCH_NUMBER is an RCS branch number with an odd number of components,
     for example '1.7.2' (never '1.7.0.2')."""
-    
-#    print "KFF: set_branch_name(): %s -> '%s' (in %s)" % \
-#          (branch_number, name, os.path.basename(self.fname))
-
     if not self.branch_names.has_key(branch_number):
       self.branch_names[branch_number] = name
       # The branchlist is keyed on the revision number from which the
@@ -288,8 +284,6 @@ class CollectData(rcsparse.Sink):
       self.resync.write('%08lx %s %08lx\n' % (old_ts, digest, timestamp))
     if self.default_branch:
       default_branch_name = self.branch_names[self.default_branch]
-      # print "KFF: %s: default branch: '%s'" % \
-      #   (os.path.basename(self.fname), default_branch_name)
       ### todo: issue #1510, working here
 
     if text:
