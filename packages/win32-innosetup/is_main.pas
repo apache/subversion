@@ -53,14 +53,14 @@ begin
     Result := WizardSelectedComponents(False);
 end;
 
-function SkipCurPage(CurPage: Integer): Boolean;
+function ShouldSkipPage(CurPage: Integer): Boolean;
 begin
     if Pos('/SP-', UpperCase(GetCmdTail)) > 0 then
         case CurPage of
-          wpWelcome, wpLicense, wpPassword, wpInfoBefore, wpUserInfo,
-          wpSelectDir, wpSelectProgramGroup, wpInfoAfter:
+            wpWelcome, wpLicense, wpPassword, wpInfoBefore, wpUserInfo,
+            wpSelectDir, wpSelectProgramGroup, wpInfoAfter:
             Result := True;
-        end;
+    end;
 end;
 
 // ****************************************************************************
@@ -129,10 +129,10 @@ var
     ErrorCode: Integer;
 begin
     // Stop and uninstall the Apache service
-    bRetVal := InstExec('cmd.exe', '/C apache -k stop', g_sApachePathBin,
-                             True, False, SW_HIDE, ErrorCode);
-    bRetVal := InstExec('cmd.exe', '/C apache -k uninstall', g_sApachePathBin,
-                             True, False, SW_HIDE, ErrorCode);
+    bRetVal := Exec('cmd.exe', '/C apache -k stop', g_sApachePathBin,
+                             SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    bRetVal := Exec('cmd.exe', '/C apache -k uninstall', g_sApachePathBin,
+                             SW_HIDE, ewWaitUntilTerminated, ErrorCode);
 end;
 
 // ****************************************************************************
@@ -144,11 +144,11 @@ var
     ErrorCode: Integer;
 begin
     // Install and start the Apache service
-	 	bRetVal := InstExec('cmd.exe', '/C apache -k install', g_sApachePathBin,
-                        True, False, SW_HIDE, ErrorCode);
+	 	bRetVal := Exec('cmd.exe', '/C apache -k install', g_sApachePathBin,
+                     SW_HIDE, ewWaitUntilTerminated, ErrorCode);
 
-    bRetVal := InstExec('cmd.exe', '/C apache -k start', g_sApachePathBin,
-                        True, False, SW_HIDE, ErrorCode);
+    bRetVal := Exec('cmd.exe', '/C apache -k start', g_sApachePathBin,
+                        SW_HIDE, ewWaitUntilTerminated, ErrorCode);
 end;
 
 
@@ -542,9 +542,8 @@ procedure CurPageChanged(CurStep: Integer);
 begin
     case CurStep of
         wpReady:      // Event after selected tasks
-            if (ShouldProcessEntry('', 'apachehandler') = srYes) then
+            if IsTaskSelected('apachehandler') then
                 VerifyApache;
-
         wpInstalling: // Event before setup is copying destination files
             if g_bHandleApache then
             begin
@@ -554,10 +553,10 @@ begin
     end;
 end;
 
-procedure CurStepChanged(CurStep: Integer);
+procedure CurStepChanged(CurStep: TSetupStep);
 begin
     // Event after setup has copyed destination files
-    if (CurStep = wpInfoBefore) and g_bHandleApache then
+    if (CurStep = ssPostInstall) and g_bHandleApache then
     begin;
         ApacheConfFileHandle;
         ApacheServiceInstall;
@@ -572,4 +571,3 @@ begin
 
     Result := True;
 end;
-
