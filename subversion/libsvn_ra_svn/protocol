@@ -266,7 +266,7 @@ The main command set corresponds to the svn_ra interfaces.
     response: ( dir-token: string )
 
   change-dir-prop
-    params:   ( dir-token:string name:string value:string )
+    params:   ( dir-token:string name:string [ value:string ] )
     response: ( )
 
   close-dir
@@ -284,12 +284,12 @@ The main command set corresponds to the svn_ra interfaces.
 
   apply-textdelta:
     params:   ( file-token:string )
-    response: ( )
-    Upon receiving response, client sends svndiff data as strings,
-     terminated by an empty string.
+    response: ( wanted:bool )
+    Upon receiving positive response, client sends svndiff data as
+     strings, terminated by an empty string.
 
   change-file-prop:
-    params:   ( file-token:string name:string value:string )
+    params:   ( file-token:string name:string [ value:string ] )
     response: ( )
 
   close-file:

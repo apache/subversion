@@ -725,7 +725,7 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
           change = val;
           action[0] = change->action;
           action[1] = '\0';
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cw[c][r]", path, action,
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cw[cr]", path, action,
                                          change->copyfrom_path,
                                          change->copyfrom_rev));
         }

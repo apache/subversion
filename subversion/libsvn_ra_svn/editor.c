@@ -157,7 +157,7 @@ static svn_error_t *ra_svn_change_dir_prop(void *dir_baton, const char *name,
 {
   ra_svn_baton_t *b = dir_baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "change-dir-prop", "ccs",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "change-dir-prop", "cc[s]",
                                b->token, name, value));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
   return SVN_NO_ERROR;
@@ -232,18 +232,29 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
 {
   ra_svn_baton_t *b = file_baton;
   svn_stream_t *diff_stream;
+  svn_boolean_t wanted;
 
   /* Tell the other side we're starting a text delta. */
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "apply-textdelta", "c",
                                b->token));
-  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
+  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, "b", &wanted));
 
-  /* Transform the window stream to an svndiff stream.  Reuse the file
-   * baton for the stream handler, since it has all the needed information. */
-  diff_stream = svn_stream_create(b, pool);
-  svn_stream_set_write(diff_stream, ra_svn_svndiff_handler);
-  svn_stream_set_close(diff_stream, ra_svn_svndiff_close_handler);
-  svn_txdelta_to_svndiff(diff_stream, pool, wh, wh_baton);
+  if (wanted)
+    {
+      /* Transform the window stream to an svndiff stream.  Reuse the
+       * file baton for the stream handler, since it has all the
+       * needed information. */
+      diff_stream = svn_stream_create(b, pool);
+      svn_stream_set_write(diff_stream, ra_svn_svndiff_handler);
+      svn_stream_set_close(diff_stream, ra_svn_svndiff_close_handler);
+      svn_txdelta_to_svndiff(diff_stream, pool, wh, wh_baton);
+    }
+  else
+    {
+      /* The editor consumer doesn't want text delta information. */
+      *wh = NULL;
+      *wh_baton = NULL;
+    }
   return SVN_NO_ERROR;
 }
   
@@ -254,7 +265,7 @@ static svn_error_t *ra_svn_change_file_prop(void *file_baton,
 {
   ra_svn_baton_t *b = file_baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "change-file-prop", "ccs",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "change-file-prop", "cc[s]",
                                b->token, name, value));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
   return SVN_NO_ERROR;
@@ -456,7 +467,8 @@ static svn_error_t *ra_svn_handle_change_dir_prop(svn_ra_svn_conn_t *conn,
   svn_string_t *value;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccs", &token, &name, &value));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[s]", &token, &name,
+                                 &value));
   CMD_ERR(lookup_token(ds, token, &entry, pool));
   CMD_ERR(ds->editor->change_dir_prop(entry->baton, name, value, entry->pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -544,10 +556,16 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
   apr_pool_t *subpool;
   svn_ra_svn_item_t *item;
 
+  /* Parse arguments, make the editor call, and respond. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &token));
   CMD_ERR(lookup_token(ds, token, &entry, pool));
   CMD_ERR(ds->editor->apply_textdelta(entry->baton, pool, &wh, &wh_baton));
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "b", (wh != NULL)));
+
+  /* If we said we didn't want text delta information, we're done. */
+  if (!wh)
+    return SVN_NO_ERROR;
+
   stream = svn_txdelta_parse_svndiff(wh, wh_baton, TRUE, entry->pool);
   subpool = svn_pool_create(entry->pool);
   while (1)
@@ -582,7 +600,8 @@ static svn_error_t *ra_svn_handle_change_file_prop(svn_ra_svn_conn_t *conn,
   svn_string_t *value;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccs", &token, &name, &value));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[s]", &token, &name,
+                                 &value));
   CMD_ERR(lookup_token(ds, token, &entry, pool));
   CMD_ERR(ds->editor->change_file_prop(entry->baton, name, value,
                                        entry->pool));

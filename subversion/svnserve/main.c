@@ -26,6 +26,7 @@
 #include <apr_strings.h>
 #include <apr_getopt.h>
 #include <apr_network_io.h>
+#include <apr_signal.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
@@ -41,6 +42,11 @@ static void usage(const char *progname)
     progname = "svn-server";
   fprintf(stderr, "Usage: %s [-X] [-r root]\n", progname);
   exit(1);
+}
+
+static void sigchld_handler(int signo)
+{
+  /* Nothing to do; we just need to interrupt the accept(). */
 }
 
 int main(int argc, const char *const *argv)
@@ -108,9 +114,21 @@ int main(int argc, const char *const *argv)
   if (!debug)
     apr_proc_detach(1);
 
+#ifdef APR_HAS_FORK
+  apr_signal(SIGCHLD, sigchld_handler);
+#endif
+
   while (1)
     {
       status = apr_accept(&usock, sock, pool);
+#ifdef APR_HAS_FORK
+      /* Collect any zombie child processes. */
+      while (apr_proc_wait_all_procs(&proc, NULL, NULL, APR_NOWAIT,
+                                     pool) == APR_CHILD_DONE)
+        ;
+#endif
+      if (APR_STATUS_IS_EINTR(status))
+        continue;
       if (status)
         {
           fprintf(stderr, "Can't accept client connection: %s\n",
@@ -143,8 +161,6 @@ int main(int argc, const char *const *argv)
       else if (status == APR_INPARENT)
         {
           apr_socket_close(usock);
-          while (apr_proc_wait(&proc, NULL, NULL, APR_WAIT) != APR_CHILD_DONE)
-            ;
         }
       else
         {
