@@ -81,37 +81,6 @@ typedef svn_error_t *
                         void *baton,
                         apr_pool_t *pool);
 
-/** This is a baton that contains information from the calling
- * application, passed to libsvn_client to aid in authentication. 
- *
- * Applications must build and pass one of these to any routine that
- * may require authentication.
- */
-typedef struct svn_client_auth_baton_t
-{
-  /** auth info that the app -may- already have, e.g. from argv[] */
-  const char *username;    
-  const char *password; 
-  
-  /** a callback provided by the app layer, for prompting the user */
-  svn_client_prompt_t prompt_callback;
-  void *prompt_baton;
-
-  /* ### Right now, we only cache username and password.  Since
-     there's only a single --no-auth-cache option, and it applies to
-     both the username and password, we don't offer any framework for
-     storing just the username but not the password.  If we wanted to
-     do that, the variable below should probably be split into two,
-     one for username, one for password.
-
-     But note that we already check the `store_password' config
-     option, so the important case is already covered. */
-
-  /** true means ok to overwrite wc auth info, i.e., not --no-auth-cache */
-  svn_boolean_t store_auth_info;
-
-} svn_client_auth_baton_t;
-
 
 /** Fetch an authentication provider which prompts the user for name
  * and password.
