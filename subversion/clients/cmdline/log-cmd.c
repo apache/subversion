@@ -152,17 +152,24 @@ log_message_receiver (void *baton,
   err = svn_utf_cstring_from_utf8 (&author_native, author, pool);
   if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
     {
+    
       SVN_ERR (svn_utf_cstring_from_utf8
-               (&author_native, "[unconvertible author]", pool));
+               (&author_native,
+                "[unconvertible author,\n"
+"see http://subversion.tigris.org/issues/show_bug.cgi?id=807 for details.]\n",
+                pool));
     }
   else if (err)
     return err;
 
   err = svn_utf_cstring_from_utf8 (&date_native, date, pool);
-  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
+  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))   /* unlikely! */
     {
       SVN_ERR (svn_utf_cstring_from_utf8
-               (&date_native, "[unconvertible date]", pool));  /* unlikely! */
+               (&date_native,
+                "[unconvertible date,\n"
+"see http://subversion.tigris.org/issues/show_bug.cgi?id=807 for details.]\n",
+                pool));
     }
   else if (err)
     return err;
@@ -171,7 +178,10 @@ log_message_receiver (void *baton,
   if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
     {
       SVN_ERR (svn_utf_cstring_from_utf8
-               (&msg_native, "[unconvertible log msg]", pool));
+               (&msg_native,
+                "[unconvertible log msg,\n"
+"see http://subversion.tigris.org/issues/show_bug.cgi?id=807 for details.]\n",
+                pool));
     }
   else if (err)
     return err;
