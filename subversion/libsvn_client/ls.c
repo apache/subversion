@@ -69,11 +69,11 @@ svn_client_ls (apr_hash_t **dirents,
   else if (url_kind == svn_node_file)
     {
       apr_hash_t *parent_ents;
-      const char *parent_url, *basename;
+      const char *parent_url, *base_name;
       svn_dirent_t *the_ent;
 
       /* Re-open the session to the file's parent instead. */
-      svn_path_split_nts (url, &parent_url, &basename, pool);
+      svn_path_split_nts (url, &parent_url, &base_name, pool);
       SVN_ERR (ra_lib->close (session));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, parent_url,
                                             NULL, NULL, FALSE, FALSE, TRUE, 
@@ -90,12 +90,12 @@ svn_client_ls (apr_hash_t **dirents,
 
       /* Copy the relevant entry into the caller's hash. */
       *dirents = apr_hash_make (pool);
-      the_ent = apr_hash_get (parent_ents, basename, APR_HASH_KEY_STRING);
+      the_ent = apr_hash_get (parent_ents, base_name, APR_HASH_KEY_STRING);
       if (the_ent == NULL)
         return svn_error_create (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
                                  "URL non-existent in that revision.");
         
-      apr_hash_set (*dirents, basename, APR_HASH_KEY_STRING, the_ent);
+      apr_hash_set (*dirents, base_name, APR_HASH_KEY_STRING, the_ent);
     }
   else
     return svn_error_create (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
