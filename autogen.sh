@@ -95,6 +95,11 @@ else
   ./gen-make.py build.conf ;
 fi
 
+if test "$?" != "0"; then
+  echo "gen-make.py failed, is python really installed?"
+  exit 1
+fi
+
 # Produce config.h.in
 # Do this before the automake (automake barfs if the header isn't available).
 # Do it after the aclocal command -- automake sets up the header to depend
