@@ -458,7 +458,7 @@ foreach my $project (@project_settings_list)
     if ($sendmail =~ /\w/ and @email_addresses)
       {
         # Open a pipe to sendmail.
-        my $command = "$sendmail $userlist";
+        my $command = "$sendmail -f$mail_from $userlist";
         if (open(SENDMAIL, "| $command"))
           {
             print SENDMAIL @head, @body;
