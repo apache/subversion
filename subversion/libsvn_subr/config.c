@@ -517,12 +517,20 @@ svn_config_get (svn_config_t *cfg, const char **valuep,
       cfg_section_t *sec;
       cfg_option_t *opt = find_option (cfg, section, option, &sec);
       if (opt != NULL)
-        make_string_from_option (valuep, cfg, sec, opt, NULL);
+        {
+          make_string_from_option (valuep, cfg, sec, opt, NULL);
+        }
       else
-        expand_option_value (cfg, sec, default_value, valuep, cfg->x_pool);
+        {
+          expand_option_value (cfg, sec, default_value, valuep, cfg->x_pool);
+          if (! *valuep)
+            *valuep = default_value;
+        }
     }
   else
-    *valuep = default_value;
+    {
+      *valuep = default_value;
+    }
 }
 
 
