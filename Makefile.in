@@ -227,8 +227,7 @@ INSTALL_EXTRA_JAVAHL_JAVA=\
 	$(JAR) cf subversion/bindings/java/javahl/svn-javahl.jar -C subversion/bindings/java/javahl/classes org; \
 	$(INSTALL_DATA) subversion/bindings/java/javahl/svn-javahl.jar $(DESTDIR)$(javahl_javadir);
 
-INSTALL_EXTRA_JAVAHL_LIB=\
-	@INSTALL_EXTRA_JAVAHL_LIB@
+INSTALL_EXTRA_JAVAHL_LIB=@INSTALL_EXTRA_JAVAHL_LIB@
 
 APXS = @APXS@ 
 
