@@ -681,7 +681,7 @@ working-copies
 
           <para>If you interrupt a checkout (or something else
             interrupts your checkout like loss of connectivity, etc.),
-            you can restart it by using either by issuing the
+            you can restart it either by issuing the
             identical checkout command again, or by updating the
             incomplete working copy:</para>
 
