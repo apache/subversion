@@ -39,6 +39,7 @@ my $sendmail = "/usr/sbin/sendmail";
 my $svnlook = "/usr/local/bin/svnlook";
 
 ######################################################################
+# Initial setup/command-line handling
 
 # get the REPOS from the arguments
 my $repos = shift @ARGV;
@@ -79,8 +80,12 @@ while (scalar @email_addrs)
     }
 }
 
+######################################################################
+# Harvest data using svnlook
+
 my @svnlooklines = ();
 my @output = ();
+my $line;
 
 # get the auther, date, and log from svnlook
 open (INPUT, "$svnlook $repos rev $rev info |") 
@@ -98,14 +103,16 @@ chomp $date;
 open (INPUT, "$svnlook $repos rev $rev dirs-changed |")
     or die ("Error running svnlook (changed)");
 my @dirschanged = <INPUT>;
+my $rootchanged = 0;
+close (INPUT);
 chomp @dirschanged;
 grep 
 {
     # lose the trailing slash if one exists (except in the case of '/')
+    $rootchanged = 1 if ($_ eq '/');
     $_ =~ s/(.+)[\/\\]$/$1/;
 } 
 @dirschanged; 
-close (INPUT);
 
 # figure out what's changed (using svnlook)
 open (INPUT, "$svnlook $repos rev $rev changed |") 
@@ -117,7 +124,7 @@ close (INPUT);
 my @adds = ();
 my @dels = ();
 my @mods = ();
-foreach my $line (@svnlooklines)
+foreach $line (@svnlooklines)
 {
     my ($code, $path) = split ('   ', $line);
 
@@ -138,10 +145,55 @@ open (INPUT, "$svnlook $repos rev $rev diff |")
 my @difflines = <INPUT>;
 close (INPUT);
 
-# mail headers
+######################################################################
+# Mail headers
+
+# collapse the list of changed directories
+my @commonpieces = ();
+my $commondir = '';
+if ($rootchanged == 0)
+{
+    my $firstline = shift (@dirschanged);
+    push (@commonpieces, split ('/', $firstline));
+    foreach $line (@dirschanged)
+    {
+        my @pieces = ();
+        my $i = 0;
+        push (@pieces, split ('/', $line));
+        while (($i < scalar @pieces) and ($i < scalar @commonpieces))
+        {
+            if ($pieces[$i] ne $commonpieces[$i])
+            {
+                splice (@commonpieces, $i, (scalar @commonpieces - $i));
+                last;
+            }
+            $i++;
+        }
+    }
+    unshift (@dirschanged, $firstline);
+    if (scalar @commonpieces)
+    {
+        $commondir = join ('/', @commonpieces);
+        grep
+        {
+            s/^$commondir\/(.*)/$1/eg;
+        }
+        @dirschanged;
+    }
+}
 my $dirlist = join (' ', @dirschanged);
+
+
 my $userlist = join (' ', @email_addrs); 
-my $subject = "rev $rev - $dirlist";
+my $subject;
+if ($commondir ne '')
+{
+    $subject = "rev $rev - in $commondir: $dirlist";
+}
+else
+{
+    $subject = "rev $rev - $dirlist";
+}
 if ($subject_prefix =~ /\w/)
 {
     $subject = "$subject_prefix $subject";
