@@ -700,7 +700,7 @@ M  +   ./moved_dir/README    # added with history and has local modifications
 D      ./stuff/fish.c        # this file is scheduled for deletion
 A      ./stuff/loot/bloo.h   # this file is scheduled for addition
 C      ./stuff/loot/lump.c   # this file has conflicts from an update
-    S  ./stuff/other_dir     # this dir has been switched to a branch
+    S  ./stuff/squawk        # this file or dir has been switched to a branch
         </screen>
       
         <para>In this output format <command>svn status</command>
@@ -838,9 +838,9 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
 
         <para>The fifth column will only show whitespace or an
           <computeroutput>S</computeroutput>.  This signifies that the
-          directory has been switched from the path of the rest of the
-          working copy (using <command>svn switch</command>) to a
-          branch.</para>
+          file or directory has been switched from the path of the
+          rest of the working copy (using <command>svn
+          switch</command>) to a branch.</para>
         
         <para>If you pass a specific path to <command>svn
           status</command>, it gives you information about that item
