@@ -623,23 +623,50 @@ prepare_tmpfiles (const char **tmpfile1,
 
 
 /* Generate a diff label for PATH in ROOT, allocating in POOL. */
-static const char *
-generate_label (svn_fs_root_t *root,
+static svn_error_t *
+generate_label (const char **label,
+                svn_fs_root_t *root,
                 const char *path,
                 apr_pool_t *pool)
 {
-  const char *label = "";
+  svn_fs_t *fs = svn_fs_root_fs (root);
+  svn_string_t *date;
+  const char *datestr;
+  const char *name = NULL;
+  svn_revnum_t rev;
+
   if (svn_fs_is_revision_root (root))
     {
-      svn_revnum_t rev = svn_fs_revision_root_revision (root);
-      label = apr_psprintf (pool, "%s\t(r%" SVN_REVNUM_T_FMT ")", path, rev);
+      rev = svn_fs_revision_root_revision (root);
+      SVN_ERR (svn_fs_revision_prop (&date, fs, rev, 
+                                     SVN_PROP_REVISION_DATE, pool));
     }
   else 
     {
-      /* Only our *new* path can be a transaction */
-      label = apr_pstrcat (pool, path, "\t(new)", NULL);
+      svn_fs_txn_t *txn;
+      name = svn_fs_txn_root_name (root, pool);
+      SVN_ERR (svn_fs_open_txn (&txn, fs, name, pool));
+      SVN_ERR (svn_fs_txn_prop (&date, txn, SVN_PROP_REVISION_DATE, pool));
     }
-  return label;
+  
+  if (date)
+    {
+      datestr = date->data;
+      ((char *)datestr)[10] = ' ';
+      ((char *)datestr)[19] = '\0';
+    }
+  else
+    {
+      datestr = "                      ";
+    }
+
+  if (name)
+    *label = apr_psprintf (pool, "%s\t%s UTC (txn %s)", 
+                           path, datestr, name); 
+  else
+    *label = apr_psprintf (pool, "%s\t%s UTC (rev %" SVN_REVNUM_T_FMT ")",
+                           path, datestr, rev);
+  return SVN_NO_ERROR;
 }
 
 
@@ -779,8 +806,9 @@ print_diff_tree (svn_fs_root_t *root,
                       (apr_err, NULL,
                        "print_diff_tree: can't open handle to stdout");
                   
-                  orig_label = generate_label (base_root, base_path, pool);
-                  new_label = generate_label (root, path, pool);
+                  SVN_ERR (generate_label (&orig_label, base_root, 
+                                           base_path, pool));
+                  SVN_ERR (generate_label (&new_label, root, path, pool));
                   SVN_ERR (svn_diff_file_output_unified (outhandle, diff, 
                                                          orig_path, new_path,
                                                          orig_label, new_label,
