@@ -26,12 +26,76 @@
 #include "svn_pools.h"
 
 
-static svn_error_t *
-svn_wc__do_adm_close (svn_wc_adm_access_t *adm_access,
-                      svn_boolean_t preserve_lock);
+struct svn_wc_adm_access_t
+{
+   /* PATH to directory which contains the administrative area */
+   const char *path;
 
+   enum svn_wc__adm_access_type {
+
+      /* SVN_WC__ADM_ACCESS_UNLOCKED indicates no lock is held allowing
+         read-only access without cacheing. */
+      svn_wc__adm_access_unlocked,
+
+#if 0 /* How cacheing might work one day */
+
+      /* ### If read-only operations are allowed sufficient write access to
+         ### create read locks (did you follow that?) then entries cacheing
+         ### could apply to read-only operations as well.  This would
+         ### probably want to fall back to unlocked access if the
+         ### filesystem permissions prohibit writing to the administrative
+         ### area (consider running svn_wc_status on some other user's
+         ### working copy). */
+
+      /* SVN_WC__ADM_ACCESS_READ_LOCK indicates that read-only access and
+         cacheing are allowed. */
+      svn_wc__adm_access_read_lock,
+#endif
+
+      /* SVN_WC__ADM_ACCESS_WRITE_LOCK indicates that read-write access and
+         cacheing are allowed. */
+      svn_wc__adm_access_write_lock,
+
+      /* SVN_WC__ADM_ACCESS_CLOSED indicates that the baton has been
+         closed. */
+      svn_wc__adm_access_closed
+
+   } type;
+
+   /* LOCK_EXISTS is set TRUE when the write lock exists */
+   svn_boolean_t lock_exists;
+
+#if 0 /* How cacheing might work one day */
+
+   /* ENTRIES_MODIFED is set TRUE when the entries cached in ENTRIES have
+      been modified from the original values read from the file. */
+   svn_boolean_t entries_modified;
+
+   /* Once the 'entries' file has been read, ENTRIES will cache the
+      contents if this access baton has an appropriate lock. Otherwise
+      ENTRIES will be NULL. */
+   apr_hash_t *entries;
+#endif
+
+   /* SET is a hash of svn_wc_adm_access_t* keyed on char* representing the
+      path to other directories that are also locked. */
+   apr_hash_t *set;
+
+   /* POOL is used to allocate cached items, they need to persist for the
+      lifetime of this access baton */
+   apr_pool_t *pool;
+
+};
+
+
 static svn_error_t *
-svn_wc__lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
+do_close (svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock);
+
+/* Create a physical lock file in the admin directory for ADM_ACCESS. Wait
+   up to WAIT_FOR seconds if the lock already exists retrying every
+   second. */
+static svn_error_t *
+create_lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
 {
   svn_error_t *err;
 
@@ -58,19 +122,23 @@ svn_wc__lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
 }
 
 
+/* Remove the physical lock in the admin directory for ADM_ACCESS */
 static svn_error_t *
-svn_wc__unlock (const char *path, apr_pool_t *pool)
+remove_lock (const char *path, apr_pool_t *pool)
 {
   return svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_LOCK, NULL);
 }
 
+/* An APR pool cleanup handler.  This handles access batons that have not
+   been closed when their pool gets destroyed.  The physical locks
+   associated with such batons remain in the working copy. */
 static apr_status_t
-svn_wc__adm_access_pool_cleanup (void *p)
+pool_cleanup (void *p)
 {
   svn_wc_adm_access_t *lock = p;
   svn_error_t *err;
 
-  err = svn_wc__do_adm_close (lock, TRUE);
+  err = do_close (lock, TRUE);
 
   /* ### Is this the correct way to handle the error? */
   if (err)
@@ -83,18 +151,22 @@ svn_wc__adm_access_pool_cleanup (void *p)
     return APR_SUCCESS;
 }
 
+/* An APR pool cleanup handler.  This is a child handler, it removes the
+   main pool handler. */
 static apr_status_t
-svn_wc__adm_access_pool_cleanup_child (void *p)
+pool_cleanup_child (void *p)
 {
   svn_wc_adm_access_t *lock = p;
-  apr_pool_cleanup_kill (lock->pool, lock, svn_wc__adm_access_pool_cleanup);
+  apr_pool_cleanup_kill (lock->pool, lock, pool_cleanup);
   return APR_SUCCESS;
 }
 
+/* Allocate from POOL, intialise and return an access baton. TYPE and PATH
+   are used to initialise the baton. */
 static svn_wc_adm_access_t *
-svn_wc__adm_access_alloc (enum svn_wc__adm_access_type type,
-                          const char *path,
-                          apr_pool_t *pool)
+adm_access_alloc (enum svn_wc__adm_access_type type,
+                  const char *path,
+                  apr_pool_t *pool)
 {
   svn_wc_adm_access_t *lock = apr_palloc (pool, sizeof (*lock));
   lock->type = type;
@@ -105,9 +177,8 @@ svn_wc__adm_access_alloc (enum svn_wc__adm_access_type type,
   lock->path = svn_path_canonicalize_nts (apr_pstrdup (pool, path), pool);
   lock->pool = pool;
 
-  apr_pool_cleanup_register (lock->pool, lock,
-                             svn_wc__adm_access_pool_cleanup,
-                             svn_wc__adm_access_pool_cleanup_child);
+  apr_pool_cleanup_register (lock->pool, lock, pool_cleanup,
+                             pool_cleanup_child);
   return lock;
 }
 
@@ -117,10 +188,10 @@ svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
                               apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_wc_adm_access_t *lock
-    = svn_wc__adm_access_alloc (svn_wc__adm_access_write_lock, path, pool);
+  svn_wc_adm_access_t *lock = adm_access_alloc (svn_wc__adm_access_write_lock,
+                                                path, pool);
 
-  err = svn_wc__lock (lock, 0, pool);
+  err = create_lock (lock, 0, pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_WC_LOCKED)
@@ -160,9 +231,8 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
   /* Need to create a new lock */
   if (write_lock)
     {
-      lock = svn_wc__adm_access_alloc (svn_wc__adm_access_write_lock, path,
-                                       pool);
-      SVN_ERR (svn_wc__lock (lock, 0, pool));
+      lock = adm_access_alloc (svn_wc__adm_access_write_lock, path, pool);
+      SVN_ERR (create_lock (lock, 0, pool));
       lock->lock_exists = TRUE;
     }
   else
@@ -176,7 +246,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                                   "lock path is not a directory (%s)",
                                   path);
 
-      lock = svn_wc__adm_access_alloc (svn_wc__adm_access_unlocked, path, pool);
+      lock = adm_access_alloc (svn_wc__adm_access_unlocked, path, pool);
     }
 
   if (associated)
@@ -283,14 +353,17 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
   return SVN_NO_ERROR;
 }
 
+/* Does the work of closing the access baton ADM_ACCESS.  Any physical
+   locks are removed from the working copy if PRESERVE_LOCK is FALSE, or
+   are left if PRESERVE_LOCK is TRUE.  Any associated access batons that
+   are direct descendents will also be closed. */
 static svn_error_t *
-svn_wc__do_adm_close (svn_wc_adm_access_t *adm_access,
-                      svn_boolean_t preserve_lock)
+do_close (svn_wc_adm_access_t *adm_access,
+          svn_boolean_t preserve_lock)
 {
   apr_hash_index_t *hi;
 
-  apr_pool_cleanup_kill (adm_access->pool, adm_access,
-                         svn_wc__adm_access_pool_cleanup);
+  apr_pool_cleanup_kill (adm_access->pool, adm_access, pool_cleanup);
 
   /* Close children */
   if (adm_access->set)
@@ -325,7 +398,7 @@ svn_wc__do_adm_close (svn_wc_adm_access_t *adm_access,
         {
           svn_wc_adm_access_t *child = APR_ARRAY_IDX(children, i,
                                                      svn_wc_adm_access_t*);
-          SVN_ERR (svn_wc__do_adm_close (child, preserve_lock));
+          SVN_ERR (do_close (child, preserve_lock));
         }
     }
 
@@ -334,7 +407,7 @@ svn_wc__do_adm_close (svn_wc_adm_access_t *adm_access,
     {
       if (adm_access->lock_exists && ! preserve_lock)
         {
-          SVN_ERR (svn_wc__unlock (adm_access->path, adm_access->pool));
+          SVN_ERR (remove_lock (adm_access->path, adm_access->pool));
           adm_access->lock_exists = FALSE;
         }
       /* Reset to prevent further use of the write lock. */
@@ -351,7 +424,7 @@ svn_wc__do_adm_close (svn_wc_adm_access_t *adm_access,
 svn_error_t *
 svn_wc_adm_close (svn_wc_adm_access_t *adm_access)
 {
-  return svn_wc__do_adm_close (adm_access, FALSE);
+  return do_close (adm_access, FALSE);
 }
 
 svn_error_t *
@@ -397,11 +470,25 @@ svn_wc_locked (svn_boolean_t *locked, const char *path, apr_pool_t *pool)
     *locked = FALSE;
   else
     return svn_error_createf (SVN_ERR_WC_LOCKED, 0, NULL, pool,
-                              "svn_wc__locked: "
+                              "svn_wc_locked: "
                               "lock file is not a regular file (%s)",
                               lockfile);
     
   return SVN_NO_ERROR;
+}
+
+
+const char *
+svn_wc_adm_access_path (svn_wc_adm_access_t *adm_access)
+{
+  return adm_access->path;
+}
+
+
+void
+svn_wc__adm_forced_lock_removal (svn_wc_adm_access_t *adm_access)
+{
+  adm_access->lock_exists = FALSE;
 }
 
 

@@ -179,7 +179,8 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
 
   SVN_ERR (svn_wc_adm_write_check (adm_access));
 
-  path = extend_with_adm_name (adm_access->path, NULL, tmp, pool, thing, NULL);
+  path = extend_with_adm_name (svn_wc_adm_access_path(adm_access),
+                               NULL, tmp, pool, thing, NULL);
 
   if (type == svn_node_file)
     {
@@ -1197,15 +1198,14 @@ svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
   /* Well, the coast is clear for blowing away the administrative
      directory, which also removes the lock file */
-  path = svn_path_join (adm_access->path, adm_subdir (), pool);
+  path = svn_path_join (svn_wc_adm_access_path(adm_access),
+                        adm_subdir (), pool);
   SVN_ERR (svn_io_remove_dir (path, pool));
 
-  /* ### Need do this so that svn_wc_adm_close can still be called on the
-     ### access baton.  Should the caller be responsible for not calling
-     ### svn_wc_adm_close in this case?  That could be tricky if the baton
-     ### comes from a high level function like svn_client_commit, how would
-     ### the caller know? */
-  adm_access->lock_exists = FALSE;
+  /* Note: we don't handle access batons for subdirectories.  Yes we could
+     do the ones in the same set as ADM_ACCESS, but what about other
+     sets?  See the header file doc string. */
+  svn_wc__adm_forced_lock_removal (adm_access);
 
   return SVN_NO_ERROR;
 }
@@ -1219,8 +1219,8 @@ svn_wc__adm_cleanup_tmp_area (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
   SVN_ERR (svn_wc_adm_write_check (adm_access));
 
   /* Get the path to the tmp area, and blow it away. */
-  tmp_path = extend_with_adm_name (adm_access->path, NULL, 0, pool,
-                                   SVN_WC__ADM_TMP, NULL);
+  tmp_path = extend_with_adm_name (svn_wc_adm_access_path(adm_access),
+                                   NULL, 0, pool, SVN_WC__ADM_TMP, NULL);
   SVN_ERR (svn_io_remove_dir (tmp_path, pool));
 
   /* Now, rebuild the tmp area. */
