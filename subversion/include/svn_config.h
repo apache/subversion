@@ -24,6 +24,10 @@ extern "C" {
 #ifndef SVN_CONFIG_H
 #define SVN_CONFIG_H
 
+#include <apr_pools.h>
+
+#include <svn_types.h>
+#include <svn_string.h>
 
 /* Subversion configuration files
 
