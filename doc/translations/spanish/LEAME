@@ -118,14 +118,20 @@ para no pisarse trabajo. El listado de quién hace qué cosa se lleva
 en el fichero TRABAJO.
 
 Cuando un traductor comienza con un capítulo, se entiende que el
-trabajo puede llevar bastante tiempo hasta ser completado. Conviene
-notificar al menos una vez a la semana al coordinador del estado
-de la traducción mandando parches si es apropiado. Si un traductor
-no se comunica con el coordinador en 14 días, el trozo que se le
-había asignado quedará libre para otros traductores. Se pretende
-evitar así el estancamiento de la traducción. No poder traducir
-algo en el tiempo acordado es algo que puede pasar. No cumplir
-estos plazos no acarrea ningún perjuicio para el traductor.
+trabajo puede llevar bastante tiempo hasta ser completado. Pero
+si un traductor no "genera" ningún cambio en la traducción en
+14 días, el trozo que se le había asignado quedará libre para
+otros traductores. Se pretende evitar así el estancamiento de la
+traducción. Por esta razón se recomienda la traducción de una
+sección <para></para> por día, para evitar saturarse. Mejor cambios
+pequeños frecuentes que ningún cambio.
+
+No poder traducir algo en esos 14 es algo que puede pasar, la vida
+es así. No cumplir estos plazos no acarrea ningún perjuicio para el
+traductor. Tras 90 días del último cambio realizado, se notificará
+a los administradores del repositorio para que cancelen el acceso
+de escritura al traductor, por considerar que ya no colabora con
+el proyecto.
 
 El trabajo de revisión normalmente no se hará de forma global hasta
 que al menos un capítulo esté completo. No obstante, si leyendo algo
@@ -258,6 +264,12 @@ TODO para revisar/discutir en el futuro.
 
 Reglas mínimas para traductores
 ===============================
+
+- Se pierde el "acceso" a un fichero listado en TRABAJO si no se
+  ha colaborado ningún cambio en 14 días.
+
+- Se pierde acceso de escritura al repositorio (en caso de tenerlo)
+  tras 90 días sin realizar ningún cambio en el repositorio.
 
 - No usar tabuladores "duros". Usar espacios al salvar ficheros.
 
