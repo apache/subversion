@@ -434,7 +434,7 @@ def log_where_nothing_changed(sbox):
 
 #----------------------------------------------------------------------
 def log_to_revision_zero(sbox):
-  "Make sure 'svn log -v -r 1:0 wc_root' doesn't seg fault the server."
+  "'svn log -v -r 1:0 wc_root' shouldn't segfault server"
   sbox.build()
   stdout_lines, stderr_lines = svntest.main.run_svn(0, 'log', '-v',
                                                     '-r', '1:0', sbox.wc_dir)
@@ -468,6 +468,20 @@ def log_with_path_args(sbox):
 
   os.chdir (was_cwd)
 
+#----------------------------------------------------------------------
+def url_missing_in_head(sbox):
+  "'svn log -r N URL' when URL is not in HEAD "
+
+  guarantee_repos_and_wc(sbox)
+
+  result = 0
+
+  my_url = svntest.main.current_repo_url + "/A/B/E/alpha"
+  output, errput = svntest.main.run_svn (None, 'log', '-r', '8', my_url)
+
+  if errput:
+    os.chdir (was_cwd)
+    raise svntest.Failure
 
 ########################################################################
 # Run the tests
@@ -481,6 +495,7 @@ test_list = [ None,
               log_where_nothing_changed,
               log_to_revision_zero,
               log_with_path_args,
+#              url_missing_in_head,
              ]
 
 if __name__ == '__main__':
