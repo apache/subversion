@@ -506,7 +506,8 @@ directory_elements_diff (struct dir_baton *dir_baton,
         }
     }
 
-  SVN_ERR (svn_wc_entries_read (&entries, dir_baton->path, dir_baton->pool));
+  SVN_ERR (svn_wc_entries_read (&entries, dir_baton->path,
+                                FALSE, dir_baton->pool));
 
   for (hi = apr_hash_first (dir_baton->pool, entries); hi;
        hi = apr_hash_next (hi))
@@ -622,7 +623,7 @@ delete_entry (svn_stringbuf_t *name,
   struct dir_baton *b;
 
   svn_path_add_component (path, name);
-  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
   switch (entry->kind)
     {
     case svn_node_file:
@@ -883,7 +884,7 @@ close_file (void *file_baton)
   /* The path to the temporary copy of the pristine repository version. */
   svn_stringbuf_t *temp_file_path
     = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
-  SVN_ERR (svn_wc_entry (&entry, b->wc_path, b->pool));
+  SVN_ERR (svn_wc_entry (&entry, b->wc_path, FALSE, b->pool));
 
   if (b->added)
     {
@@ -1091,7 +1092,7 @@ svn_wc_diff (svn_stringbuf_t *anchor,
   if (target)
     svn_path_add_component (target_path, target);
 
-  SVN_ERR (svn_wc_entry (&entry, target_path, eb->pool));
+  SVN_ERR (svn_wc_entry (&entry, target_path, FALSE, eb->pool));
 
   if (entry->kind == svn_node_dir)
     b = make_dir_baton (target, NULL, eb, FALSE, eb->pool);

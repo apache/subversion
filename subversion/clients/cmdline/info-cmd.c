@@ -69,7 +69,7 @@ svn_cl__info (apr_getopt_t *os,
 
       printf ("Path: %s\n", target->data);
 
-      SVN_ERR (svn_wc_entry (&entry, target, pool));
+      SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
       if (! entry)
         {
           /* Print non-versioned message and extra newline separator. */

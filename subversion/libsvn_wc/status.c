@@ -396,7 +396,7 @@ svn_wc_status (svn_wc_status_t **status,
      passed to assemble_status() below, which is fine -- a blank
      status structure will be returned with either 'unversioned' or
      'absent' status filled in. */
-  svn_wc_entry (&entry, path, pool);
+  svn_wc_entry (&entry, path, FALSE, pool);
 
   SVN_ERR (assemble_status (&s, path, entry, TRUE, FALSE, pool));
   *status = s;
@@ -435,7 +435,7 @@ svn_wc_statuses (apr_hash_t *statushash,
     {
       /* Get the entry for this file. Place it into the specified pool since
          we're going to return it in statushash. */
-      SVN_ERR (svn_wc_entry (&entry, path, pool));
+      SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
 
       /* Convert the entry into a status structure, store in the hash.
          
@@ -454,7 +454,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       apr_hash_index_t *hi;
 
       /* Load entries file for the directory into the requested pool. */
-      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
 
       /* Add the unversioned items to the status output. */
       SVN_ERR (add_unversioned_items (path, entries, statushash, pool));
@@ -514,7 +514,7 @@ svn_wc_statuses (apr_hash_t *statushash,
                      svn_wc_entry does this for us if it can.  */
                   svn_wc_entry_t *subdir;
 
-                  SVN_ERR (svn_wc_entry (&subdir, fullpath, pool));
+                  SVN_ERR (svn_wc_entry (&subdir, fullpath, FALSE, pool));
                   SVN_ERR (add_status_structure (statushash, fullpath,
                                                  subdir, get_all, 
                                                  strict, pool));

@@ -338,7 +338,7 @@ svn_wc__get_existing_prop_reject_file (const svn_string_t **reject_file,
   /* ### be nice to get rid of this */
   svn_stringbuf_t *pathbuf = svn_stringbuf_create (path, pool);
 
-  SVN_ERR (svn_wc_entries_read (&entries, pathbuf, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, pathbuf, FALSE, pool));
   the_entry = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
 
   if (! the_entry)
@@ -370,7 +370,8 @@ svn_wc_merge_prop_diffs (const char *path,
   svn_stringbuf_t *path_s, *parent_s, *basename_s, *log_accum;
   apr_file_t *log_fp = NULL;
 
-  SVN_ERR (svn_wc_entry (&entry, svn_stringbuf_create (path, pool), pool));
+  SVN_ERR (svn_wc_entry (&entry, svn_stringbuf_create (path, pool),
+                         FALSE, pool));
   if (entry == NULL)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "Can't merge props into '%s':"

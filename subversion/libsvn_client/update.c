@@ -89,7 +89,7 @@ svn_client_update (const svn_delta_editor_t *before_editor,
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
 
   /* Get full URL from the ANCHOR. */
-  SVN_ERR (svn_wc_entry (&entry, anchor, pool));
+  SVN_ERR (svn_wc_entry (&entry, anchor, FALSE, pool));
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,

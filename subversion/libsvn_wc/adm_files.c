@@ -1101,7 +1101,7 @@ check_adm_exists (svn_boolean_t *exists,
     {
       svn_wc_entry_t *entry;
 
-      SVN_ERR (svn_wc_entry (&entry, path, pool));
+      SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
       if (!entry)
         return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                                   "no entry for '%s'", path->data);

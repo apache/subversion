@@ -54,7 +54,7 @@ notify_added (void *baton, const char *path)
 
   /* ### this sucks. we have to open/parse the entries file to get this
      ### information. when adding thousands of files, this blows... */
-  err = svn_wc_entry (&entry, spath, subpool);
+  err = svn_wc_entry (&entry, spath, FALSE, subpool);
   if (err)
     {
       printf ("WARNING: error fetching entry for %s\n", path);

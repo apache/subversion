@@ -77,7 +77,7 @@ svn_cl__switch (apr_getopt_t *os,
        "`%s' does not appear to be a URL", switch_url->data);
 
   /* Validate the target */
-  SVN_ERR (svn_wc_entry (&entry, target, pool));
+  SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool, 

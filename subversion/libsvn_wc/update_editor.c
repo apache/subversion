@@ -208,7 +208,7 @@ make_dir_baton (const char *path,
   else 
     {
       /* For updates, look in the 'entries' file */
-      err = svn_wc_entry (&entry, d->path, pool);
+      err = svn_wc_entry (&entry, d->path, FALSE, pool);
       if (err || (! entry) || (! entry->url))
         URL = svn_stringbuf_create ("", pool);
       else
@@ -389,7 +389,7 @@ make_file_baton (struct dir_baton *pb,
       svn_stringbuf_t *parent_URL;
 
       /* For updates, look in the 'entries' file */
-      err = svn_wc_entry (&entry, f->path, pool);
+      err = svn_wc_entry (&entry, f->path, FALSE, pool);
       if (err || (! entry) || (! entry->url))
         URL = svn_stringbuf_create ("", pool);
       else
@@ -627,7 +627,7 @@ add_directory (const char *path,
       svn_stringbuf_t *new_URL;
       svn_wc_entry_t *parent_entry;
 
-      SVN_ERR (svn_wc_entry (&parent_entry, pb->path, db->pool));
+      SVN_ERR (svn_wc_entry (&parent_entry, pb->path, FALSE, db->pool));
       new_URL = svn_stringbuf_dup (parent_entry->url, db->pool);
       svn_path_add_component (new_URL, db->name);
       cfpath = new_URL;
@@ -884,7 +884,7 @@ add_or_open_file (const char *path,
      ### Are editor drives guaranteed not to mention the same name
      ### twice in the same dir baton?  Don't know.  */
 
-  SVN_ERR (svn_wc_entry (&entry, fb->path, subpool));
+  SVN_ERR (svn_wc_entry (&entry, fb->path, FALSE, subpool));
   
   /* Sanity checks. */
 
@@ -996,7 +996,7 @@ apply_textdelta (void *file_baton,
       {
         svn_wc_entry_t *ent;
         
-        SVN_ERR (svn_wc_entry (&ent, fb->path, subpool));
+        SVN_ERR (svn_wc_entry (&ent, fb->path, FALSE, subpool));
 
         /* Only compare checksums this file has an entry, and the
            entry has a checksum.  If there's no entry, it just means
@@ -1395,7 +1395,7 @@ svn_wc_install_file (const char *file_path,
               
               /* Create strings representing the revisions of the
                  old and new text-bases. */
-              SVN_ERR (svn_wc_entry (&e, file_path_str, pool));
+              SVN_ERR (svn_wc_entry (&e, file_path_str, FALSE, pool));
               assert (e != NULL);
               oldrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT,
                                          e->revision);
@@ -1915,7 +1915,7 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
   *wc_root = TRUE;
 
   /* Get our ancestry (this doubles as a sanity check).  */
-  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
@@ -1930,7 +1930,7 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
   svn_path_split (path, &parent, &basename, pool);
   if (svn_path_is_empty (parent))
     svn_stringbuf_set (parent, ".");
-  err = svn_wc_entry (&p_entry, parent, pool);
+  err = svn_wc_entry (&p_entry, parent, FALSE, pool);
   if (err || (! p_entry))
     {
       if (err)

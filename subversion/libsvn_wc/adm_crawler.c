@@ -129,7 +129,7 @@ report_revisions (svn_stringbuf_t *wc_path,
   svn_path_add_component (full_path, dir_path);
 
   /* Get both the SVN Entries and the actual on-disk entries. */
-  SVN_ERR (svn_wc_entries_read (&entries, full_path, subpool));
+  SVN_ERR (svn_wc_entries_read (&entries, full_path, TRUE, subpool));
   SVN_ERR (svn_io_get_dirents (&dirents, full_path, subpool));
   
   /* Do the real reporting and recursing. */
@@ -248,7 +248,8 @@ report_revisions (svn_stringbuf_t *wc_path,
           
           /* We need to read the full entry of the directory from its
              own "this dir", if available. */
-          SVN_ERR (svn_wc_entry (&subdir_entry, this_full_path, subpool));
+          SVN_ERR (svn_wc_entry (&subdir_entry, this_full_path,
+                                 TRUE, subpool));
 
           /* Possibly report a disjoint URL... */
           if (! svn_stringbuf_compare (subdir_entry->url, this_url))
@@ -304,14 +305,14 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
      compared to. */
-  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
   base_rev = entry->revision;
   if (base_rev == SVN_INVALID_REVNUM)
     {
       svn_stringbuf_t *parent_name = svn_stringbuf_dup (path, pool);
       svn_wc_entry_t *parent_entry;
       svn_path_remove_component (parent_name);
-      SVN_ERR (svn_wc_entry (&parent_entry, parent_name, pool));
+      SVN_ERR (svn_wc_entry (&parent_entry, parent_name, FALSE, pool));
       base_rev = parent_entry->revision;
     }
 
@@ -481,7 +482,7 @@ svn_wc_transmit_text_deltas (svn_stringbuf_t *path,
       svn_stringbuf_t *tb = svn_wc__text_base_path (path, FALSE, pool);
       svn_wc_entry_t *ent;
       
-      SVN_ERR (svn_wc_entry (&ent, path, pool));
+      SVN_ERR (svn_wc_entry (&ent, path, FALSE, pool));
       SVN_ERR (svn_io_file_checksum (&checksum, tb->data, pool));
       
       /* For backwards compatibility, no checksum means assume a match. */

@@ -60,7 +60,7 @@ recursively_tweak_entries (svn_stringbuf_t *dirpath,
   apr_pool_t *subpool = svn_pool_create (pool);
   
   /* Read DIRPATH's entries. */
-  SVN_ERR (svn_wc_entries_read (&entries, dirpath, subpool));
+  SVN_ERR (svn_wc_entries_read (&entries, dirpath, TRUE, subpool));
 
   /* Tweak "this_dir" */
   SVN_ERR (svn_wc__tweak_entry (entries, 
@@ -130,7 +130,7 @@ svn_wc__do_update_cleanup (svn_stringbuf_t *path,
   apr_hash_t *entries;
   svn_wc_entry_t *entry;
 
-  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, TRUE, pool));
   if (entry == NULL)
     return SVN_NO_ERROR;
 
@@ -138,7 +138,7 @@ svn_wc__do_update_cleanup (svn_stringbuf_t *path,
     {
       svn_stringbuf_t *parent, *basename;
       svn_path_split (path, &parent, &basename, pool);
-      SVN_ERR (svn_wc_entries_read (&entries, parent, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, parent, TRUE, pool));
       SVN_ERR (svn_wc__tweak_entry (entries, basename,
                                     base_url, new_revision, pool));
       SVN_ERR (svn_wc__entries_write (entries, parent, pool));
@@ -148,7 +148,7 @@ svn_wc__do_update_cleanup (svn_stringbuf_t *path,
     {
       if (! recursive) 
         {
-          SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+          SVN_ERR (svn_wc_entries_read (&entries, path, TRUE, pool));
           SVN_ERR (svn_wc__tweak_entry (entries,
                                         svn_stringbuf_create 
                                           (SVN_WC_ENTRY_THIS_DIR,
@@ -350,7 +350,7 @@ svn_wc_process_committed (svn_stringbuf_t *path,
       apr_pool_t *subpool = svn_pool_create (pool);
 
       /* Read PATH's entries;  this is the absolute path. */
-      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, path, TRUE, pool));
 
       /* Recursively loop over all children. */
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -430,7 +430,7 @@ mark_tree (svn_stringbuf_t *dir,
   svn_wc_entry_t *entry; 
 
   /* Read the entries file for this directory. */
-  SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, dir, FALSE, pool));
 
   /* Mark each entry in the entries file. */
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -550,7 +550,7 @@ erase_from_wc (svn_stringbuf_t *path,
         /* First handle the versioned items, this is better (probably) than
            simply using svn_io_get_dirents for everything as it avoids the
            need to do svn_io_check_path on each versioned item */
-        SVN_ERR (svn_wc_entries_read (&ver, path, pool));
+        SVN_ERR (svn_wc_entries_read (&ver, path, FALSE, pool));
         for (hi = apr_hash_first (pool, ver); hi; hi = apr_hash_next (hi))
           {
             const void *key;
@@ -610,7 +610,7 @@ svn_wc_delete (svn_stringbuf_t *path,
   svn_wc_entry_t *entry;
   svn_boolean_t was_schedule_add;
 
-  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
   if (!entry)
     return erase_unversioned_from_wc (path->data, pool);
     
@@ -676,7 +676,7 @@ svn_wc_get_ancestry (svn_stringbuf_t **url,
 {
   svn_wc_entry_t *ent;
 
-  SVN_ERR (svn_wc_entry (&ent, path, pool));
+  SVN_ERR (svn_wc_entry (&ent, path, FALSE, pool));
   *url = svn_stringbuf_dup (ent->url, pool);
   *rev = ent->revision;
 
@@ -706,7 +706,7 @@ svn_wc_add (svn_stringbuf_t *path,
 
   /* Get the original entry for this path if one exists (perhaps
      this is actually a replacement of a previously deleted thing). */
-  if (svn_wc_entry (&orig_entry, path, pool))
+  if (svn_wc_entry (&orig_entry, path, FALSE, pool))
     orig_entry = NULL;
 
   /* You can only add something that is not in revision control, or
@@ -742,7 +742,7 @@ svn_wc_add (svn_stringbuf_t *path,
   svn_path_split (path, &parent_dir, &basename, pool);
   if (svn_path_is_empty (parent_dir))
     parent_dir = svn_stringbuf_create (".", pool);
-  SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
+  SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, FALSE, pool));
   if (! parent_entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
@@ -813,7 +813,7 @@ svn_wc_add (svn_stringbuf_t *path,
 
           /* Get the entry for this directory's parent.  We need to snatch
              the ancestor path out of there. */
-          SVN_ERR (svn_wc_entry (&p_entry, parent_dir, pool));
+          SVN_ERR (svn_wc_entry (&p_entry, parent_dir, FALSE, pool));
   
           /* Derive the parent path for our new addition here. */
           p_path = svn_stringbuf_dup (p_entry->url, pool);
@@ -1105,7 +1105,7 @@ svn_wc_revert (svn_stringbuf_t *path,
   apr_uint32_t modify_flags = 0;
 
   /* Safeguard 1:  is this a versioned resource? */
-  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
@@ -1230,7 +1230,7 @@ svn_wc_revert (svn_stringbuf_t *path,
       apr_hash_index_t *hi;
       svn_stringbuf_t *full_entry_path = svn_stringbuf_dup (path, pool);
 
-      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
           const void *key;
@@ -1312,7 +1312,7 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
         }
 
       /* Remove NAME from PATH's entries file: */
-      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
       svn_wc__entry_remove (entries, name);
       SVN_ERR (svn_wc__entries_write (entries, path, pool));
 
@@ -1354,12 +1354,12 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
       /* ### sanity check:  is parent_dir even a working copy?
          if not, it should not be a fatal error.  we're just removing
          the top of the wc. */
-      SVN_ERR (svn_wc_entries_read (&entries, parent_dir, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, parent_dir, FALSE, pool));
       svn_wc__entry_remove (entries, basename);
       SVN_ERR (svn_wc__entries_write (entries, parent_dir, pool));      
       
       /* Recurse on each file and dir entry. */
-      SVN_ERR (svn_wc_entries_read (&entries, path, subpool));
+      SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, subpool));
       
       for (hi = apr_hash_first (subpool, entries); 
            hi;
@@ -1473,7 +1473,7 @@ svn_wc_resolve_conflict (svn_stringbuf_t *path,
 
   /* Feh, ignoring the return value here.  We just want to know
      whether we got the entry or not. */
-  svn_wc_entry (&entry, path, pool);
+  svn_wc_entry (&entry, path, FALSE, pool);
   if (! entry)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "Not under version control: '%s'", path->data);
@@ -1597,7 +1597,7 @@ svn_wc_set_auth_file (svn_stringbuf_t *path,
       const char *basename;
       svn_wc_entry_t *entry;
 
-      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
 
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {

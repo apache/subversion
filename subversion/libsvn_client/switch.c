@@ -77,7 +77,7 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
   assert (switch_url != NULL);
   assert (switch_url->len > 0);
 
-  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
@@ -88,7 +88,7 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
       SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
       
       /* get the parent entry */
-      SVN_ERR (svn_wc_entry (&session_entry, anchor, pool));
+      SVN_ERR (svn_wc_entry (&session_entry, anchor, FALSE, pool));
       if (! entry)
         return svn_error_createf
           (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,

@@ -317,7 +317,7 @@ delete_entry (const char *path,
      versioned in this working copy, it was probably deleted via this
      working copy.  No need to report such a thing. */
   /* ### use svn_wc_entry() instead? */
-  SVN_ERR (svn_wc_entries_read (&entries, db->path, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, db->path, FALSE, pool));
   if (apr_hash_get (entries, name, APR_HASH_KEY_STRING))
     SVN_ERR (tweak_statushash (db->edit_baton,
                                full_path->data,

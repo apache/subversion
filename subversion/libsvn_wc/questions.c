@@ -145,7 +145,7 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
     svn_path_split (path, &dirpath, &entryname, pool);
 
   /* Get the timestamp from the entries file */
-  SVN_ERR (svn_wc_entries_read (&entries, dirpath, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, dirpath, FALSE, pool));
   entry = apr_hash_get (entries, entryname->data, entryname->len);
 
   /* Can't compare timestamps for an unversioned file. */

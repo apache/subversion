@@ -78,7 +78,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
 
   /* Get full URL from the ANCHOR. */
-  SVN_ERR (svn_wc_entry (&entry, anchor, pool));
+  SVN_ERR (svn_wc_entry (&entry, anchor, FALSE, pool));
   if (! entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,

@@ -923,7 +923,8 @@ main (int argc, const char * const *argv)
         {
           svn_wc_entry_t *e;
 
-          err = svn_wc_entry (&e, svn_stringbuf_create (opt_arg, pool), pool);
+          err = svn_wc_entry (&e, svn_stringbuf_create (opt_arg, pool),
+                              FALSE, pool);
           if ((err == SVN_NO_ERROR) && e)
             log_under_version_control = TRUE;
         }

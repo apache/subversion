@@ -166,6 +166,7 @@ typedef struct svn_wc_entry_t
   /* State information */
   svn_wc_schedule_t schedule;    /* scheduling (add, delete, replace ...) */
   svn_boolean_t copied;          /* in a copied state */
+  svn_boolean_t deleted;         /* deleted, but parent rev lags behind */
   svn_stringbuf_t *copyfrom_url; /* copyfrom location */
   svn_revnum_t copyfrom_rev;     /* copyfrom revision */
   svn_stringbuf_t *conflict_old; /* old version of conflicted file */
@@ -196,7 +197,9 @@ typedef struct svn_wc_entry_t
 
 
 /* Set *ENTRY to an entry for PATH, allocated in POOL.
- * If PATH is not under revision control, set *ENTRY to NULL.  
+ * If SHOW_DELETED is set, return the entry even if it in 'deleted' state.
+ * If PATH is not under revision control, or if entry is 'deleted' and
+ * SHOW_DELETED is false, then set *ENTRY to NULL.
  *
  * Note that it is possible for PATH to be absent from disk but still
  * under revision control; and conversely, it is possible for PATH to
@@ -204,12 +207,16 @@ typedef struct svn_wc_entry_t
  */
 svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
                            svn_stringbuf_t *path,
+                           svn_boolean_t show_deleted,
                            apr_pool_t *pool);
 
 
 /* Parse the `entries' file for PATH and return a hash ENTRIES, whose
    keys are (const char *) entry names and values are (svn_wc_entry_t *). 
    
+   Entries that are in a 'deleted' state are not returned in the hash,
+   unless SHOW_DELETED is set.
+
    Important note: only the entry structures representing files and
    SVN_WC_ENTRY_THIS_DIR contain complete information.  The entry
    structures representing subdirs have only the `kind' and `state'
@@ -218,6 +225,7 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
    structure, or call svn_wc_get_entry on its PATH. */
 svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
                                   svn_stringbuf_t *path,
+                                  svn_boolean_t show_deleted,
                                   apr_pool_t *pool);
 
 

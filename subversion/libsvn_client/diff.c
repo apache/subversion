@@ -309,7 +309,7 @@ merge_file_added (const char *mine,
         /* file already exists, is it under version control? */
         svn_wc_entry_t *entry;
         SVN_ERR (svn_wc_entry (&entry, svn_stringbuf_create (mine, subpool),
-                               subpool));
+                               FALSE, subpool));
         if (entry)
           {
             if (entry->schedule == svn_wc_schedule_delete)
@@ -542,7 +542,7 @@ convert_to_url (svn_stringbuf_t **url,
   else
     {
       svn_wc_entry_t *entry;      
-      SVN_ERR (svn_wc_entry (&entry, path, pool));
+      SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
       if (entry)
         *url = svn_stringbuf_dup (entry->url, pool);
       else
@@ -879,7 +879,7 @@ do_diff (const apr_array_header_t *options,
         }
 
       SVN_ERR (svn_wc_get_actual_target (path1, &anchor, &target, pool));
-      SVN_ERR (svn_wc_entry (&entry, anchor, pool));
+      SVN_ERR (svn_wc_entry (&entry, anchor, FALSE, pool));
       SVN_ERR (svn_wc_diff (anchor, target, callbacks, callback_baton,
                             recurse, pool));
     }
@@ -1193,7 +1193,7 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
 {
   svn_wc_entry_t *entry;
   
-  SVN_ERR (svn_wc_entry (&entry, target_wcpath, pool));
+  SVN_ERR (svn_wc_entry (&entry, target_wcpath, FALSE, pool));
   if (entry == NULL)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "Can't merge changes into '%s':"

@@ -121,7 +121,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
         (*((svn_stringbuf_t**)apr_array_push (condensed_targets))) =
             svn_stringbuf_create("", pool);
 
-      SVN_ERR (svn_wc_entry (&entry, basename, pool));
+      SVN_ERR (svn_wc_entry (&entry, basename, FALSE, pool));
       if (! entry)
         return svn_error_createf
           (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,

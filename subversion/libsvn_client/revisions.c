@@ -86,7 +86,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
            "need a version-controlled path to fetch local revision info.");
 
       path_strbuf = svn_stringbuf_create (path, pool);
-      SVN_ERR (svn_wc_entry (&ent, path_strbuf, pool));
+      SVN_ERR (svn_wc_entry (&ent, path_strbuf, FALSE, pool));
 
       if (! ent)
         return svn_error_createf
