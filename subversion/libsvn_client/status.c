@@ -127,42 +127,30 @@ svn_client_status (svn_revnum_t *result_rev,
   /* Need to lock the tree.  We lock the anchor first, to not lock too much
      if we have a target.  We need to lock the target and immediate children
      if the status is non-recursive.  Else, we lock the whole hierarchy
-     under target.  If we are contacting the repository, we need a recursive
-     lock under anchor so that auth data can be stored. */
+     under target.  */
 
-  if (update)
+  SVN_ERR (svn_wc_adm_probe_open2 (&anchor_access, NULL, anchor, FALSE,
+                                   *target ? 0 : (descend ? -1 : 1), pool));
+  if (*target)
     {
-      SVN_ERR (svn_wc_adm_open2 (&anchor_access, NULL, anchor,
-                                 FALSE, -1, pool));
-      SVN_ERR (svn_wc_adm_probe_retrieve (&target_access, anchor_access,
-                                          path, pool));
-    }
-  else
-    {
-      SVN_ERR (svn_wc_adm_probe_open2 (&anchor_access, NULL, anchor, 
-                                       FALSE,
-                                       *target ? 0 : (descend ? -1 : 1), pool));
-      if (*target)
+      /* Careful! svn_adm_probe_open2 may lock the parent in certain
+         situations, which results in an already locked error.  We use the
+         svn_wc_adm_open2 function instead, since we already have the
+         parent locked. */
+      err = svn_wc_adm_open2 (&target_access, anchor_access, path,
+                              FALSE, descend ? -1 : 1, pool);
+      /* If target is not a versioned directory, then that's fine: we need
+         no locking. */
+      if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
         {
-          /* Careful! svn_adm_probe_open2 may lock the parent in certain
-             situations, which results in an already locked error.  We use the
-             svn_wc_adm_open2 function instead, since we already have the
-             parent locked. */
-          err = svn_wc_adm_open2 (&target_access, anchor_access, path,
-                                  FALSE, (descend || update) ? -1 : 1, pool);
-          /* If target is not a versioned directory, then that's fine: we need
-             no locking. */
-          if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
-            {
-              svn_error_clear (err);
-              target_access = anchor_access;
-            }
-          else
-            SVN_ERR (err);
+          svn_error_clear (err);
+          target_access = anchor_access;
         }
       else
-        target_access = anchor_access;
+        SVN_ERR (err);
     }
+  else
+    target_access = anchor_access;
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
