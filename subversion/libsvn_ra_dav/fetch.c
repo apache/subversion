@@ -602,7 +602,6 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                       apr_pool_t *pool)
 {
   file_read_ctx_t frc = { 0 };
-  svn_error_t *err;
   svn_string_t my_url;
   svn_stringbuf_t *url_str;
 
@@ -610,13 +609,10 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
   my_url.len	= strlen(url);
   url_str	= svn_path_uri_encode (&my_url, pool);
 
-  err = (*editor->apply_textdelta)(file_baton,
-                                   &frc.handler,
-                                   &frc.handler_baton);
-  if (err)
-    {
-      return svn_error_quick_wrap(err, "could not save file");
-    }
+  SVN_ERR_W( (*editor->apply_textdelta)(file_baton,
+                                        &frc.handler,
+                                        &frc.handler_baton),
+             "could not save file");
 
   /* Only bother with text-deltas if our caller cares. */
   if (! text_deltas)
@@ -651,11 +647,10 @@ static svn_error_t *fetch_file(ne_session *sess,
   void *file_baton;
 
   name = my_basename(bc_url, pool);
-  err = (*editor->add_file)(name, dir_baton,
-                            NULL, SVN_INVALID_REVNUM,
-                            &file_baton);
-  if (err)
-    return svn_error_quick_wrap(err, "could not add a file");
+  SVN_ERR_W( (*editor->add_file)(name, dir_baton,
+                                 NULL, SVN_INVALID_REVNUM,
+                                 &file_baton),
+             "could not add a file");
 
   /* fetch_file() is only used for checkout, so we just pass NULL for the
      simple_fetch_file() params related to fetching version URLs (for
@@ -890,8 +885,13 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   subdir_t *subdir;
   apr_array_header_t *subdirs;  /* subdirs to scan (subdir_t *) */
   apr_array_header_t *files;    /* files to grab (svn_ra_dav_resource_t *) */
+  apr_pool_t *subpool;
 
   /* ### use quick_wrap rather than SVN_ERR on some of these? */
+
+  /* this subpool will be used during various iteration loops, and cleared
+     each time. long-lived stuff should go into ras->pool. */
+  subpool = svn_pool_create(ras->pool);
 
   /* begin the checkout process by fetching some basic information */
   SVN_ERR( begin_checkout(ras, revision, &activity_url, &target_rev,
@@ -969,13 +969,12 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
           svn_stringbuf_t *name;
 
           /* We're not in the root, add a directory */
-          name = my_basename(url, ras->pool);
+          name = my_basename(url, subpool);
 
-          err = (*editor->add_directory) (name, parent_baton,
-                                          NULL, SVN_INVALID_REVNUM,
-                                          &this_baton);
-          if (err)
-            return svn_error_quick_wrap(err, "could not add directory");
+          SVN_ERR_W( (*editor->add_directory) (name, parent_baton,
+                                               NULL, SVN_INVALID_REVNUM,
+                                               &this_baton),
+                     "could not add directory");
         }
       else 
         {
@@ -988,8 +987,11 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                                               url,
                                               NULL,
                                               NULL,
-                                              ras->pool));
-      add_props(rsrc, editor->change_dir_prop, this_baton, ras->pool);
+                                              subpool));
+      add_props(rsrc, editor->change_dir_prop, this_baton, subpool);
+
+      /* finished processing the directory. clear out the gunk. */
+      svn_pool_clear(subpool);
 
       /* add a sentinel. this will be used to signal a close_directory
          for this directory's baton. */
@@ -1005,25 +1007,26 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       /* ### use set_wc_dir_prop() */
 
       /* store the activity URL as a property */
-      err = (*editor->change_dir_prop)(this_baton, act_url_name,
-                                       act_url_value);
-      if (err)
-        /* ### should we close the dir batons first? */
-        return svn_error_quick_wrap(err,
-                                    "could not save the URL to indicate "
-                                    "where to create activities");
+      /* ### should we close the dir batons before returning?? */
+      SVN_ERR_W( (*editor->change_dir_prop)(this_baton, act_url_name,
+                                            act_url_value),
+                 "could not save the URL to indicate "
+                 "where to create activities");
 
       /* process each of the files that were found */
       for (i = files->nelts; i--; )
         {
           rsrc = ((svn_ra_dav_resource_t **)files->elts)[i];
 
-          err = fetch_file(ras->sess, rsrc, this_baton, &vuh, editor,
-                           ras->pool);
-          if (err)
-            /* ### should we close the dir batons first? */
-            return svn_error_quick_wrap(err, "could not checkout a file");
+          /* ### should we close the dir batons first? */
+          SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton, &vuh, editor,
+                                subpool),
+                     "could not checkout a file");
+
+          /* trash the per-file stuff. */
+          svn_pool_clear(subpool);
         }
+
       /* reset the list of files */
       files->nelts = 0;
 
@@ -1036,6 +1039,8 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
   /* Store auth info if necessary */
   SVN_ERR( (svn_ra_dav__maybe_store_auth_info (ras)) );
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
