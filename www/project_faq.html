@@ -660,7 +660,7 @@ $ db_archive -a -h /repos/db | xargs rm
 <code>svnadmin</code>:</p>
 
 <pre>
-$ svnadmin archive /repos | xargs rm
+$ svnadmin lsdblogs /repos --only-unused | xargs rm
 # disk space reclaimed!
 </pre>
 
