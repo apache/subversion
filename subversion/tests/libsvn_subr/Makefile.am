@@ -13,5 +13,8 @@ hashdump_test_LDADD = ../libsvn_subr.la \
                       ../../../apr/libapr.a
 
 
+## Automatic test scripts to run for `make check`
+
+TESTS = hashdump-test.sh
 
 

@@ -11,6 +11,7 @@ main ()
   svn_string_t *a, *b, *c;
   char *msg;
   ap_pool_t *pglobal;
+  int e, f;
 
   /* Initialize APR (Apache pools) */
   if (ap_initialize () != APR_SUCCESS)
@@ -45,12 +46,30 @@ main ()
   svn_string_appendbytes (a, "some bytes to frob", 7, pglobal);
   svn_string_print (a, stdout, TRUE, TRUE);
 
+  /* Make sure our appended string is equal to this static one: */
+  if (! svn_string_compare 
+      (a, svn_string_create ("helloa longish phrase xtrasome by", pglobal)))
+    {
+      printf ("error in string-appending comparison.");
+      ap_destroy_pool (pglobal);
+      ap_terminate();
+      exit (1);
+    }
+
+
   /* Duplicate a bytestring, then compare if they're equal */
   c = svn_string_dup (b, pglobal);
-  svn_string_print (c, stdout, TRUE, TRUE);
 
   printf ("comparison of c and b is: %d\n", svn_string_compare (c, b));
   printf ("comparison of a and b is: %d\n", svn_string_compare (a, b));
+
+  if (! svn_string_compare (c,b)) 
+    {
+      printf ("error in string-dup comparison.");
+      ap_destroy_pool (pglobal);
+      ap_terminate();
+      exit (1);
+    }
 
   /* Set a bytestring to NULL, and query this fact. */
   svn_string_setempty (c);
@@ -58,22 +77,46 @@ main ()
   
   printf ("is C empty? : %d\n", svn_string_isempty (c));
   printf ("is A empty? : %d\n", svn_string_isempty (a));
+
+  if (! svn_string_isempty (c)) 
+    {
+      printf ("error in string-empty test.");
+      ap_destroy_pool (pglobal);
+      ap_terminate();
+      exit (1);
+    }
+
   
   /* Fill a bytestring with hash marks */
   svn_string_fillchar (a, '#');
   svn_string_print (a, stdout, TRUE, TRUE);
+
+  if (! svn_string_compare 
+      (a, svn_string_create ("#################################", pglobal))) 
+    {
+      printf ("error in string-fill comparison.");
+      ap_destroy_pool (pglobal);
+      ap_terminate();
+      exit (1);
+    }
+
 
   /* Return a C string from a bytestring */
   msg = svn_string_2cstring (b, pglobal);
   printf ("The C string returned is: %s\n", msg);
 
   /* Compare the C string to the original bytestring */
-  printf ("comparison of b and msg is: %d\n", 
-          svn_string_compare_2cstring (b, msg));
-  printf ("comparison of b and `foogle' is: %d\n", 
-          svn_string_compare_2cstring (b, "foogle"));
-  printf ("comparison of b and `a longish phrase' is: %d\n", 
-          svn_string_compare_2cstring (b, "a longish phrase"));
+  e = svn_string_compare_2cstring (b, msg);
+  f = svn_string_compare_2cstring (b, "a longish phrase");
+
+  if (! (e && f))
+    {
+      printf ("error in Cstring comparison.");
+      ap_destroy_pool (pglobal);
+      ap_terminate();
+      exit (1);
+    }
+  
 
   /* Free our entire memory pool when done. */
   ap_destroy_pool (pglobal);

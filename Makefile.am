@@ -15,6 +15,3 @@ changelog:
                                      `find . -type f -maxdepth 1`
 
 
-## Include these extra files when building `dist' target
-
-EXTRA_DIST = subversion/LICENSE subversion/include
