@@ -2,7 +2,7 @@
 
 default: html
 
-all: txt info html dvi ps
+all: txt info html dvi ps pdf
 
 txt: 
 	makeinfo --no-headers --no-validate svn-design.texi > svn-design.txt
@@ -18,7 +18,8 @@ html-web: html
 	cp ./svn-design.html ../../www/
 
 dvi: 
-	tex svn-design.texi 
+	tex svn-design.texi
+	tex svn-design.texi
 
 ps: dvi
 	dvips svn-design.dvi -o svn-design.ps

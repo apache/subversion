@@ -13,16 +13,19 @@ The following diagram illustrates the "layered" architecture, and where
 each particular interface lies.
 
 @example
-
+@group
              +--------------------+
              | commandline or GUI |
              |    client app      |
          +----------------------------+      <====== Client interface
          |      Client Library        |
- +-------+----------------------------+----+ <====== Network interface
- |    Working Copy     | Repository Access |
- |   Management lib    |       lib         |
- +---------------------+---------+---------+
+         |                            |
+         |        +----+              |
+         |        |    |              |
+ +-------+--------+    +--------------+----+ <====== Network interface
+ | Working Copy   |    | Repository Access |
+ | Management lib |    |       lib         |
+ +----------------+    +---------+---------+
                        |      libneon      |
                        +---------+---------+
                       ^              ^
@@ -40,7 +43,7 @@ each particular interface lies.
         | mod_DAV_SVN |  |         |
  +------+-------------+--+---------+-------+ <===== Server interface
  |                                         |
- |            Main SVN Library             |
+ |           SVN Server Library            |
  |                                         |
  +-----------------------------------------+ <===== Filesystem interface
  |                                         |
@@ -48,8 +51,9 @@ each particular interface lies.
  |                                         |
  +-----------------------------------------+
 
+@end group
 @end example
-@c Let's just say that emacs' "picture" mode is an excellent thing!
+
 
 
 @menu
@@ -62,22 +66,22 @@ each particular interface lies.
 @node Client Layer
 @section Client Layer
 
-The Subversion client is a binary application (either command-line or
-GUI) which draws upon three libraries.
+The Subversion client, which may be either command-line or GUI, draws on
+three libraries.
 
-The first shared library provides an API for managing the client's
-"working copy" of a project.  This includes concepts like local renaming
-or removal of files, patching files, extracting local diffs, and a some
-of routines for maintaining administrative files in the SVN/ directory.
+The first library provides an API for managing the client's working copy
+of a project.  This includes operations like renaming or removal of
+files, patching files, extracting local diffs, and routines for
+maintaining administrative files in the @file{SVN/} directory.
 
-The second shared library provides an API for exchanging information
-with a Subversion repository.  This includes the ability to read files,
-write new versions of files, and ask the repository to compare a working
-copy against its latest version.
+The second library provides an API for exchanging information with a
+Subversion repository.  This includes the ability to read files, write
+new versions of files, and ask the repository to compare a working copy
+against its latest version.
 
 The third library provides general client functions such as
-@code{update()} and @code{commit()}, which involve the using the
-routines in @emph{both} of the other two client libraries.
+@code{update()} and @code{commit()}, which may involve one or both of
+the other two client libraries.
 
 For details, @xref{Client}.
 
@@ -88,13 +92,10 @@ For details, @xref{Client}.
 The network layer's job is to move the repository API requests over a
 wire.
 
-On the client side, a network library translates these ideas into a set
-of either HTTP 1.1 or WebDAV method extensions.  (HTTP 1.1 allows one to
-define new methods.)  For interface specifics, see the header files for
-@dfn{libneon}.
-
-The information is sent over TCP/IP to an Apache server.  Apache is used
-for the following reasons:
+On the client side, a network library translates these requests into a
+set of either HTTP 1.1 or WebDAV method extensions.  The information is
+sent over TCP/IP to an Apache server.  Apache is used for the following
+reasons:
 
 @itemize @bullet
 @item
@@ -111,11 +112,11 @@ for the following reasons:
       it has an extensible module system
 @end itemize
 
-The general suspicion is that any attempt to write a dedicated
-"subversion server" (with a "subversion protocol") would inevitably end
-up evolving towards Apache's already-existing feature set.  (However,
-Subversion's layered architecture certainly doesn't @emph{prevent}
-anyone from writing a totally new network layer!)
+Our suspicion is that any attempt to write a dedicated "Subversion
+server" (with a "Subversion protocol") would inevitably end up evolving
+towards Apache's already-existing feature set.  (However, Subversion's
+layered architecture certainly doesn't @emph{prevent} anyone from
+writing a totally new network layer!)
 
 Depending on whether DAV or HTTP 1.1 is used, an appropriate Apache
 module will translate the method-requests back into API calls against a
@@ -127,22 +128,18 @@ For details, @xref{Protocol}.
 @node Server Layer
 @section Server Layer
 
-The back-end of Subversion consists of two libraries: the Main
-Subversion library and the Subversion Filesystem.
+The back-end of Subversion consists of two libraries: the Subversion
+Server library and the Subversion Filesystem.
 
-The @dfn{Main Subversion library} implements the same repository API
-that the client uses, but @emph{multiplexes} the calls to different
+The @dfn{Subversion Server library} implements the same repository API
+that the client uses, but multiplexes the calls to different
 repositories on the server machine.
 
-Finally, the client's function calls reach a particular repository and
-are interpreted by the @dfn{Subversion Filesystem library}.  The
-Subversion Filesystem is a custom UNIX-like filesystem, but with a small
-twist: @code{write ()} calls are versioned and atomic, and no data is
-ever deleted!
-
-These filesystem calls then talk to disk, either through a set of
-Berkeley DBM files, or a more powerful SQL database.
+When the requests reach a particular repository, they are interpreted by
+the @dfn{Subversion Filesystem library}.  The Subversion Filesystem is a
+custom Unix-like filesystem, with a twist: writes are versioned and
+atomic, and no data is ever deleted!  This filesystem is implemented on
+top of a normal filesystem, using Berkeley DBM files or something
+similar.
 
 For a more detailed explanation: @xref{Server}.
-
-

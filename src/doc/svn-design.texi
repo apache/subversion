@@ -68,7 +68,8 @@
 
 @c -----------------------------------------------------------------
 @titlepage
-@title @titlefont{The Subversion Design}
+@title @titlefont{Subversion}
+@subtitle{A New Version Control System}
 @author Jim Blandy <@email{jimb@@redhat.com}>
 @author Karl Fogel <@email{kfogel@@collab.net}>
 @author Ben Collins-Sussman <@email{sussman@@collab.net}>
@@ -78,8 +79,6 @@
 Copyright @copyright{} 2000 Collab.Net, Inc. @*
 See @xref{License} for details.
 
-This is $Revision: 1.8 $ of this document.
-
 @end titlepage
 @c -----------------------------------------------------------------
 
@@ -88,8 +87,6 @@ This is $Revision: 1.8 $ of this document.
 @ifinfo
 This manual describes the design of the Subversion version control
 system.
-
-This is $Revision: 1.8 $ of this document.
 
 @end ifinfo
 
