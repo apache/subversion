@@ -198,10 +198,9 @@ cleanup_fs (svn_fs_t *fs)
   return SVN_NO_ERROR;
 }
 
+#if 0   /* Set to 1 for instrumenting. */
 static void print_fs_stats(svn_fs_t *fs)
 {
-#if 0   /* Set to 1 for instrumenting. */
-
   DB_TXN_STAT *t;
   DB_LOCK_STAT *l;
   int db_err;
@@ -265,8 +264,10 @@ static void print_fs_stats(svn_fs_t *fs)
       printf ("*** End DB lock stats.\n\n");
     }
 
-#endif /* 0/1 */
 }
+#else
+#  define print_fs_stats(fs)
+#endif /* 0/1 */
 
 /* An APR pool cleanup function for a filesystem.  DATA must be a
    pointer to the filesystem to clean up.
