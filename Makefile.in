@@ -277,8 +277,7 @@ locale-gnu-pot:
 locale-gnu-po-update: locale-gnu-pot
 	(cd $(abs_srcdir)/subversion/po ; \
 	 for i in *.po ; do \
-	   $(MSGMERGE) --sort-by-file --update --no-fuzzy-matching \
-	     $$i subversion.pot ; \
+	   $(MSGMERGE) --sort-by-file --update $$i subversion.pot ; \
 	 done )
 
 # clean everything but the bulky test output, returning the system back
