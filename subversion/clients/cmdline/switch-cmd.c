@@ -88,7 +88,11 @@ svn_cl__switch (apr_getopt_t *os,
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* We want the switch to print the same letters as a regular update. */
-  SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, &base_tgt, pool));
+  if (entry->kind == svn_node_file)
+    SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, &base_tgt, pool));
+  else if (entry->kind == svn_node_dir)
+    parent_dir = target;
+
   SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
                                             &trace_edit_baton,
                                             parent_dir, pool));

@@ -68,7 +68,7 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   svn_wc_entry_t *entry;
-  svn_stringbuf_t *URL;
+  svn_stringbuf_t *URL, *anchor, *target;
   svn_error_t *err;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
@@ -86,28 +86,49 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
       svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL, pool,
                        "Cannot specify _both_ revision and time.");
 
-  /* Unlike 'svn up', we do *not* split the local path into an
-     anchor/target pair.  We do this because we know that the target
-     isn't going to be deleted, because we're doing a switch.  */
-
-  /* Get full URL from the PATH;  this is the URL we will open an RA
-     session to. */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
        "svn_client_update: %s is not under revision control", path->data);
+
+  if (entry->kind == svn_node_file)
+    {
+      SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
+
+      /* 'entry' now refers to parent dir */
+      SVN_ERR (svn_wc_entry (&entry, anchor, pool));
+      if (! entry)
+        return svn_error_createf
+          (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+           "svn_client_update: %s is not under revision control", path->data);
+    }
+  else if (entry->kind == svn_node_dir)
+    {
+      /* Unlike 'svn up', we do *not* split the local path into an
+         anchor/target pair.  We do this because we know that the
+         target isn't going to be deleted, because we're doing a
+         switch.  This means the update editor gets anchored on PATH
+         itself, and thus PATH's name will never change, which is
+         exactly what we want. */
+      anchor = path;
+      target = NULL;
+
+      /* 'entry' still refers to PATH */
+    }
+  
+  /* Get the URL that we will open an RA session to. */
   if (! entry->url)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool,
-       "svn_client_update: entry '%s' has no URL", path->data);
+       "svn_client_switch: entry '%s' has no URL", path->data);
   URL = svn_stringbuf_dup (entry->url, pool);
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later
      on. */
-  SVN_ERR (svn_wc_get_switch_editor (path,
-                                     NULL,
+  SVN_ERR (svn_wc_get_switch_editor (anchor,
+                                     target,
                                      revision,
                                      switch_url,
                                      recurse,
@@ -140,7 +161,7 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
   SVN_ERR (ra_lib->do_switch (session,
                               &reporter, &report_baton,
                               revision,
-                              NULL,
+                              target,
                               recurse,
                               switch_url,
                               switch_editor, switch_edit_baton));
