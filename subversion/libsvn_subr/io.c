@@ -96,27 +96,12 @@
 /* Return a path suitable for display in error messages, based on PATH,
  * which is a utf8 path in internal style, either relative or absolute.
  *
- * The returned path will be absolute if possible, and in native style
- * (e.g. backslashes on MS Windows).
- *
- * ### This could be made more generally available, if other
- * ### files/libraries have a similar need.  And its behaviors could
- * ### be made conditional; for example, absolutizing the path could
- * ### be optional.
+ * The returned path will be in native style (e.g. backslashes on MS Windows).
  */
 static const char *
 path_for_err_msg (const char *path, apr_pool_t *pool)
 {
-  const char *abs_path;
-  svn_error_t *err = svn_path_get_absolute (&abs_path, path, pool);
-  if (err)
-    {
-      /* We can't return an error, because this is for use within errors. */
-      svn_error_clear (err);
-      /* Do the best we can. */
-      abs_path = (*path == '\0') ? "." : path;
-    }
-  return apr_psprintf (pool, "%s", svn_path_local_style (abs_path, pool));
+  return svn_path_local_style (path, pool);
 }
 
 
