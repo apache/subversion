@@ -90,10 +90,10 @@ class CollectData(rcsparse.Sink):
     self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
 
-    # rcsparse calls this the "principal branch", but CVS and RCS
-    # usually call it the "default branch", so that's what we say
-    # internally, even though the rcsparse API setter method is
-    # 'set_principal_branch'.
+    # This is always a number.  rcsparse calls this the "principal
+    # branch", but CVS and RCS usually call it the "default branch",
+    # so that's what we say internally, even though the rcsparse API
+    # setter method is 'set_principal_branch'.
     self.default_branch = None
 
   def set_principal_branch(self, branch):
@@ -133,7 +133,7 @@ class CollectData(rcsparse.Sink):
                        % (warning_prefix, self.fname, revision,
                           self.branch_names[revision], name))
 
-  def get_branch_name(self, revision):
+  def rev_to_branch_name(self, revision):
     """Return the name of the branch on which REVISION lies.
     REVISION is a non-branch revision number with an even number of,
     components, for example '1.7.2.1' (never '1.7.2' nor '1.7.0.2').
@@ -268,13 +268,12 @@ class CollectData(rcsparse.Sink):
       self.resync.write('%08lx %s %08lx\n' % (old_ts, digest, timestamp))
 
     if self.default_branch:
-      pass
-      # default_branch_name = self.get_branch_name(self.default_branch)
+      default_branch_name = self.branch_names.get(self.default_branch)
       # Name might be None, if it's an unlabeled branch.
       # todo: kff fooo: issue #1510 working here
 
     write_revs_line(self.revs, timestamp, digest, op, revision, self.fname,
-                    self.get_branch_name(revision), self.get_tags(revision),
+                    self.rev_to_branch_name(revision), self.get_tags(revision),
                     self.get_branches(revision))
 
 
