@@ -754,17 +754,20 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
   svn_fs_root_t *root;
   svn_revnum_t youngest;
   apr_pool_t *subpool = svn_pool_create (pool);
-  const char *abs_path = svn_fs_fs__canonicalize_abspath (lock->path, pool);
-
+  
   SVN_ERR (svn_fs_fs__check_fs (fs));
+
+  /* Dup the lock so we can canonicalize it's 'path' member. */
+  lock = svn_lock_dup (lock, pool);
+  lock->path = svn_fs_fs__canonicalize_abspath (lock->path, pool);
 
   /* Until we implement directory locks someday, we only allow locks
      on files or non-existent paths. */
   SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
   SVN_ERR (svn_fs_revision_root (&root, fs, youngest, pool));
-  SVN_ERR (svn_fs_fs__check_path (&kind, root, abs_path, pool));
+  SVN_ERR (svn_fs_fs__check_path (&kind, root, lock->path, pool));
   if (kind == svn_node_dir)
-    return svn_fs_fs__err_not_file (fs, abs_path);
+    return svn_fs_fs__err_not_file (fs, lock->path);
 
   /* There better be a username in the incoming lock. */
   if (! lock->owner)
@@ -780,7 +783,7 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
     {
       svn_revnum_t created_rev;
       SVN_ERR (svn_fs_fs__node_created_rev (&created_rev, root, 
-                                            abs_path, pool));
+                                            lock->path, pool));
 
       /* SVN_INVALID_REVNUM means the path doesn't exist.  So
          apparently somebody is trying to lock something in their
@@ -789,18 +792,18 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
       if (! SVN_IS_VALID_REVNUM(created_rev))
         return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
                                   "Path '%s' doesn't exist in HEAD revision.",
-                                  abs_path);
+                                  lock->path);
 
       if (current_rev < created_rev)
         return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
                                   "Lock failed: newer version of '%s' exists.",
-                                  abs_path);
+                                  lock->path);
     }
 
   SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
 
-  /* Try and get a lock from abs_path */ 
-  SVN_ERR (get_lock_helper (fs, &existing_lock, abs_path, pool));
+  /* Try and get a lock from LOCK->path */ 
+  SVN_ERR (get_lock_helper (fs, &existing_lock, lock->path, pool));
 
   if (existing_lock)
     {

@@ -1531,7 +1531,8 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
 
 
 /** Lock a path in @a fs by attaching @a lock.  Specifically, apply
- * the lock to @a lock->path.  Do all temporary work in @a pool.
+ * the lock to @a lock->path, which may be a non-existent path so
+ * that locks can reserve names.  Do all temporary work in @a pool.
  *
  * The caller is responsible for creating and initializing all fields
  * in @a lock before invoking this routine, including the generation
@@ -1540,19 +1541,22 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
  * username associated with @a fs will be used to fill it in.  If
  * neither username is available, return SVN_ERR_FS_NO_USER.
  *
- * If path is already locked, then return @c SVN_ERR_FS_PATH_LOCKED.
+ * If @a lock->path is already locked, then return @c SVN_ERR_FS_PATH_LOCKED.
  * If @a force is true, then "steal" the existing lock anyway, even if
  * the @a lock->owner or @a lock->token don't match the current lock;
- * delete the existing lock on @a path, and attach the new one.  This
- * technique can be used to "refresh" the expiration on existing locks.
+ * delete the existing lock on @a lock->path, and attach the new one.  This
+ * technique can be used to "refresh" the expiration on existing
+ * locks.
  *
- * If @a current_rev is a valid revnum, then do an out-of-dateness
- * check.  If the revnum is less than the last-changed-revision of @a
- * path (or if @a path doesn't exist in HEAD), return SVN_ERR_FS_OUT_OF_DATE.
+ * If @a current_rev is a valid revision number, then do an
+ * out-of-dateness check.  If the revision number is less than the
+ * last-changed-revision of @a lock->path (or if @a lock->path doesn't
+ * exist in HEAD), return SVN_ERR_FS_OUT_OF_DATE.
  *
- * If this function returns successfully, the caller can assume that
- * @a lock now represents the lock attached to @a lock->path.  Path is
- * allowed to be non-existent, so that locks can reserve names.
+ * Callers should not assume that @a lock perfectly represents the
+ * lock attached to @a lock->path simply because this function returns
+ * successfully, and should refetch the lock (using svn_fs_get_lock())
+ * if they have additional uses for it.
  *
  * ### Note:  at this time, only files can be locked.
 */

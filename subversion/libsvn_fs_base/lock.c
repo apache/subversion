@@ -229,14 +229,15 @@ txn_body_attach_lock (void *baton, trail_t *trail)
   svn_node_kind_t kind = svn_node_file;
   svn_lock_t *existing_lock;
 
-  SVN_ERR (svn_fs_base__get_path_kind (&kind, lock->path, trail, trail->pool));
-
+  /* Dup the lock so we can canonicalize it's 'path' member. */
+  lock = svn_lock_dup (lock, trail->pool);
+  lock->path = svn_fs_base__canonicalize_abspath (lock->path, trail->pool);
+  
   /* Until we implement directory locks someday, we only allow locks
      on files or non-existent paths. */
+  SVN_ERR (svn_fs_base__get_path_kind (&kind, lock->path, trail, trail->pool));
   if (kind == svn_node_dir)
     return svn_fs_base__err_not_file (trail->fs, lock->path);
-  if (kind == svn_node_none)
-    kind = svn_node_file;    /* pretend, so the name can be reserved */
 
   /* There better be a username in the incoming lock. */
   if (! lock->owner)
