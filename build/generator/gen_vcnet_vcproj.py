@@ -29,20 +29,22 @@ class Generator(gen_win.WinGeneratorBase):
       config_type=1
       target.output_name = target.name + '.exe'
     elif isinstance(target, gen_base.TargetLib):
-      if target.msvc_static:
+      if isinstance(target, gen_base.TargetApacheMod):
+        #DLL
+        target.output_name = target.name + '.so'
+        config_type=2
+      elif isinstance(target, gen_base.TargetSWIG):
+        config_type=2
+        target.output_name = os.path.basename(target.filename)  
+      else:
+        #LIB
         config_type=4
         target.output_name = '%s-%d.lib' % (target.name, self.cfg.version)
-      else:
-        config_type=2
-        target.output_name = os.path.basename(target.filename)
     elif isinstance(target, gen_base.TargetProject):
       config_type=1
       target.output_name = target.name + '.exe'
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
-
-    if isinstance(target, gen_base.TargetApacheMod):
-      target.output_name = target.name + '.so'
 
     configs = self.get_configs(target, rootpath)
 
@@ -135,9 +137,9 @@ class Generator(gen_win.WinGeneratorBase):
       if isinstance(target, gen_base.TargetProject) and target.cmd:
         continue
 
-      if isinstance(target, gen_base.TargetLinked) and target.external_project:
+      if isinstance(target, gen_base.TargetExternal):
         # Figure out where the external .vcproj is located.
-        fname = target.external_project + '.vcproj'
+        fname = target.msvc_project + '.vcproj'
       else:
         fname = os.path.join(self.projfilesdir,
                              "%s_vcnet.vcproj" % target.proj_name)
