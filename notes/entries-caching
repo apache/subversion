@@ -10,101 +10,90 @@
 0. Preamble
    --------
 
-Entries caching appears to be a good idea for making the client and WC
-libraries faster.  There has been some discussion about this, but how
-it could be implemented has never really been written down.  I have a
-mental picture of how entries caching could work, but the picture is a
-little blurred in places, and I'm a bit worried that the dark bit in
-the corner (probably my thumb) may be obscuring important details.
-
-The solution being developed as part of issue 749 is to use the
-svn_wc_adm_access_t access batons to cache the results of
-svn_wc_entries_read, so that the .svn/entries file does not need to
-read and parsed repeatedly.
-
-What makes this hard is that the entries file is currently accessed in
-a large number of places in the code.  If we attempt to introduce
-caching gradually there is a danger that we will mix code that uses
-the cache with code that access the entries file directly.  Such
-mixing is not a good idea, as it is possible that the cache and
-entries file may get out of sync.  Even if we could ensure that each
-client operation used the cache consistently (could we do that?)  it
-would make future development hard, as we would need to ensure that
-such consistency didn't break.  Introducing caching everywhere in a
-single step is better, but the code changes to do it would be
-gigantic.
+Issue 749 provides some history.  The access batons now cache the
+parsed entries file, as repeatedly reading, parsing and writing the
+file proved to be a bottleneck.
 
 
 1. Caching Interface
    -----------------
 
-The plan is to identify the places where there needs to be an access
-baton, and then make all the changes required to pass access batons
-around within the code, but without attempting to introduce the
-caching code.  This is being done in stages.  Once the access baton is
-in place, I hope that it will then be possible to start using caching
-everywhere in a single step.
-
 The basic functions to retrieve entries are svn_wc_entries_read and
 svn_wc_entry.  The function svn_wc__entries_write is used to update
-the entries file on disk.  Simple really, only three functions, and
-once the access baton gets this far we are more or less done!  The
-trouble is that these functions are used everywhere, so the batons
-have to be passed through a large number of other functions.
+the entries file on disk.  The function svn_wc__entry_modify is
+implemented in terms of entries_read and entries_write.
 
-The basic caching read interface will consist of svn_wc_entry for a
-single entry and svn_wc_entries_read for a hash of all entries, just
-as it does now.  Initially these functions will work exactly as they
-do right now, except they will have gained an additional access baton
-parameter.  Once the functions support caching then switching caching
-on should just involve very localised changes, as the entry interface
-is the same with and without caching.
-
-In the longer term it may be that svn_wc_entries_read will be removed
-in favour of providing a set of functions that access the underlying
-cache, thus allowing the access baton to track changes made.  However
-initially I do not think this will be required, if the current code
-gets a hash from svn_wc_entries_read and expects it to remain valid
-then that expectation should still apply when caching is implemented.
-PROBLEM: I have identified one place in mark_tree where the hash is
-retrieved, one entry is extracted and modified.  I can work around
-this case, but it shows that we really need a more robust interface.
-Perhaps svn_wc_entries_read in its current form should be removed, and
-replaced by some functions returning const svn_wc_entry_t pointers.
-PARTIAL SOLUTION: Auditted all uses of svn_wc_entries_read and changed
-them to use const svn_wc_entry_t* where possible.
-
-At present access batons have a fairly strict interface, they must be
-passed directory names, and the code always "knows" whether it is
-supposed to have a baton for a particular directory or not (and thus
-it knows whether to call svn_wc_adm_open or svn_wc_adm_retrieve).  One
-tricky point is that svn_wc_entry is often called first, before any
-access batons are opened, to determine if a given path represents a
-versioned file or a versioned directory.  However svn_wc_entry falls
-back on checking the physical working copy, so this functionality will
-probably be copied or moved into an access baton convenience function
-that allows opening an access baton without requiring knowledge of
-whether the path is a file or a directory.
-
-The basic caching write interface is svn_wc__entries_write.  Initially
-this will write directly to the entries file, just as it currently
-does.  Later on, modifications may be cached until an explicit
-entries_flush call is made.  I haven't yet determined whether this
-would be a significant benefit in terms of speed, or whether it would
-risk losing changes if a process is interrupted.  There is a definite
-speed advantage to be had here, operations like checkout are still
-writing the entries file repeatedly, even if they don't need to
-read/parse it.  However delayed writing is tricky, if a command is
-interrupted the cache would not get flushed to disk.  Perhaps the
-solution is write lots of little files, and combine them during
-cleanup processing.
-
-The function svn_wc__entry_modify is written in terms of entries_read
-and entries_write and has already been converted to take an access
-baton.
+Caching during read-only operations is essentially complete.  For
+read-write operations one potential bottleneck remains: calling
+svn_wc__entries_write repeatedly, usually through the function
+svn_wc__entry_modify.  This writes the entire file even if only one
+entry has changed.  A partial solution is in place: when running a log
+file any changes are accumulated in the access baton and only finally
+written when the log file completes.  There is scope to use the same
+mechanism in other places, although it may be best to refrain from
+doing this until the interface changes (see section 2) are resolved.
+There is also an alternative approach, which would be to write changes
+to separate files and at some point combine these separate files into
+a single file.
 
 
-2. Access Baton Sets
+2. Interface Enhancements
+   ----------------------
+
+2.1 Entries Interface
+
+A lot of the entries interface has remained unchanged since the
+pre-caching days, and it shows.  Of particular concern is the
+svn_wc_entries_read function, as this provides access to the raw data
+within the cache.  If the application carelessly modifies the data
+things may go wrong.  I would like to remove this function.
+
+One use of svn_wc_entries_read is in svn_wc__entry_modify, this is
+"within the entries code" and so is not a problem.
+
+Of the other uses of svn_wc_entries_read the most common is where the
+application wants to iterate over all the entries in a directory. I
+would like to see an interface something like
+
+  typedef struct svn_wc_entry_iterator_t svn_wc_entry_iterator_t;
+
+  svn_wc_entry_iterator_t *
+  svn_wc_entry_first(svn_wc_adm_access_t *adm_access,
+                     apr_pool_t *pool);
+
+  svn_wc_entry_iterator_t *
+  svn_wc_entry_next(svn_wc_entry_iterator_t *entry_iterator);
+
+  const svn_wc_entry_t *
+  svn_wc_entry_iterator_entry(svn_wc_entry_iterator_t *entry_iterator);
+
+Note that this provides only const access to the entries, the
+application cannot modify the cached data.  All modifications would go
+through svn_wc__entry_modify, and the access batons could keep track
+of whether modifications have been made and not yet written to disk.
+
+The other uses of svn_wc_entries_read tend to extract a single entry.
+I hope these can be converted to use svn_wc_entry.  One slight problem
+is the use of svn_wc_entries_read to intentionally extract a
+directory's entry from its parent.  This is done because that's where
+the "deleted" state is stored.  I think the entry returned by
+svn_wc_entry could contain this state.  Why doesn't it?  I don't know,
+possibly it's an accident, or possibly it's intentional as in the past
+parsing two entries files would have been expensive.
+
+2.2 Access Baton Interface
+
+I would also like to modify the access baton interface.  At present
+the open function detects and skips missing directories when opening a
+directory hierarchy.  I would like to record this information in the
+access baton set, and modify the retrieve functions to include an
+svn_boolean_t* parameter that gets set TRUE when a request for a
+missing directory is made.  The advantage of doing this is that the
+application could avoid making svn_io_check_path calls when the access
+baton already has the information.
+
+
+3. Access Baton Sets
    -----------------
 
 Each access baton represents a directory.  Access batons can associate
@@ -122,28 +111,6 @@ destroy the hash while other batons are using it, as far as I know it
 doesn't currently trigger.  If it turns out that this needs to be
 supported it should be possible to transfer the hash information to
 another baton.
-
-3. Caching Mechanism
-   -----------------
-
-Each access baton will cache the two possible hashes returned by
-svn_wc_entries_read, so that subsequent calls will not need to parse
-the entries file.  If the full hash, the one containing deleted
-entries, is available when a request for the truncated hash is made,
-then the truncated hash will be constructed from the full hash.
-
-The function svn_wc__entries_write will cause the full hash cache to
-be filled and the truncated hash cache to be cleared.
-
-PROBLEM: memory use is going to be a problem, if we simply repeatedly
-allocate from the access baton pool as happens at present.  As the
-entries get updated we need to find a way to reuse the cache memory,
-otherwise memory usage for checkout is going to increase with the
-number of items in the working copy.
-
-PARTIAL SOLUTION: ensure that the access baton pool is used for as
-little as possible.  Use a "normal" pool for all allocations that do
-not need to be part of the cache.
 
 
 4. Access Baton Conversion
@@ -194,6 +161,14 @@ identify those places that are failing to use the log file mechanism.
 6. Status
    ------
 
-Entries caching to avoid repeated reading and parsing of the entries
-file is now in place.  The problem of delaying and combining writing
-to the file has not been addressed.
+Entries caching has been implemented.  Write performance has been
+addressed, but could possibly be improved (section 1).
+
+The interface changes (section 2) have not been started.
+
+The access baton conversion is complete in so far as passing batons is
+concerned.  The path->name signature changes (section 4) have not been
+made.
+
+Automatic detection of failure to use a log file (section 5) has not
+been started.
