@@ -3,69 +3,51 @@ dnl
 dnl  Check configure options and assign variables related to
 dnl  the Apache Portable Runtime Utilities (APRUTIL) library.
 dnl
-dnl  If there is a apr-util/ subdir we assme we want to use it. In that 
-dnl  case an option telling us to use a locally installed apr-util
-dnl  triggers an error.
+dnl  If there is an apr-util source directory, there *must* be a
+dnl  corresponding apr source directory.  APRUTIL's build system
+dnl  is too tied in with apr.  (You can't use an installed APR and
+dnl  a source APR-util.)
 dnl
-dnl  TODO : check apr-util version, link a test program
 
 
 AC_DEFUN(SVN_LIB_APRUTIL,
 [
   AC_MSG_NOTICE([Apache Portable Runtime Utility (APRUTIL) library configuration])
-  
-  AC_ARG_WITH(apr-util,
-              [AC_HELP_STRING([--with-apr-util=PREFIX], 
-	      [Use APRUTIL at PREFIX])],
-  [
-    if test -d $abs_srcdir/apr-util ; then
-      AC_MSG_ERROR([--with-apr-util option but apr-util/ subdir exists.
-Please either remove that subdir or don't use the --with-apr-util option.])
-    fi
-    if test "$withval" = "no" ; then
-      AC_MSG_ERROR([--with-apr-util=no is an illegal option])
-    fi
 
-    if test "$withval" != "yes" ; then
-      aprutil_location="$withval"
-    fi
-  ])
+  APR_FIND_APU(apr-util, $abs_builddir)
 
-  if test -d $abs_srcdir/apr-util ; then
-    echo "Using apr-util found in source directory"
-    SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES -I\$(abs_builddir)/apr-util/include"
-    if test "$abs_srcdir" != "$abs_builddir" ; then
-      SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES -I\$(abs_srcdir)/apr-util/include"
-    fi
-
-dnl ### need to fix the --with-apr line. requires fixes in apr-util to
-dnl ### allow rational values (currently, it must point to a source distro)
-    SVN_SUBDIR_CONFIG(apr-util, --with-apr=../apr)
-    SVN_SUBDIRS="$SVN_SUBDIRS apr-util"
-    SVN_APRUTIL_LIBS='$(abs_builddir)/libaprutil.la'
-dnl ### aprutil will probably change this to PREFIX/bin/apr-util-config
-    aprutil_config="$abs_builddir/apr-util/export_vars.sh"
-  else
-    SVN_FIND_APRUTIL
-    SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES -I$aprutil_location/include"
-    SVN_APRUTIL_LIBS="-L$aprutil_location/lib -laprutil"
-dnl ### aprutil will probably change this to PREFIX/bin/apr-util-config
-    aprutil_config="$aprutil_location/export_vars.sh"
+  if test $apu_found = "no"; then
+    AC_MSG_WARN([APRUTIL not found])
+    SVN_DOWNLOAD_APRUTIL
   fi
-])
 
-dnl SVN_FIND_APRUTIL()
-dnl Look in standard places for APRUTIL headers and libraries
-AC_DEFUN(SVN_FIND_APRUTIL,
-[
-  AC_CHECK_HEADER(apu.h)
-  AC_CHECK_LIB(aprutil, apr_uri_parse)
-dnl ### see that we actually found the header and lib. if not found, then
-dnl ### call SVN_DOWNLOAD_APRUTIL.
-dnl ### need figure out where to put the results of this search. let it
-dnl ### go into LIBS, or move it to SVN_APRUTIL_LIBS.
-])
+  if test $apu_found = "reconfig"; then
+    SVN_SUBDIR_CONFIG($apu_srcdir, --with-apr=../apr)
+    SVN_SUBDIRS="$SVN_SUBDIRS $apu_srcdir"
+  fi
 
+  dnl Get libraries and thread flags from APRUTIL ---------------------
+
+  if test -x "$apu_config"; then
+    SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES `$apu_config --includes`"
+    LDFLAGS="$LDFLAGS `$apu_config --ldflags`"
+  else
+    AC_MSG_WARN([apu-config not found])
+    SVN_DOWNLOAD_APRUTIL
+  fi
+
+  SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES $apu_includes"
+  if test "$abs_srcdir" != "$abs_builddir" && test -d "$abs_srcdir/apr-util" ; then
+      SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES -I$abs_srcdir/apr-util/include"
+  fi
+
+  if test -z "$apu_la_file" ; then
+    SVN_APRUTIL_LIBS="-laprutil $LIBTOOL_LIBS `$apu_config --libs`"
+  else
+    SVN_APRUTIL_LIBS="$apu_la_file $LIBTOOL_LIBS `$apu_config --libs`"
+  fi
+  AC_SUBST(SVN_APRUTIL_LIBS)
+])
 
 dnl SVN_DOWNLOAD_APRUTIL()
 dnl no apr-util found, print out a message telling the user what to do
