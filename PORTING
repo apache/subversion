@@ -65,8 +65,8 @@ i688-pc-win32:
 
 powerpc-apple-darwin1.3:
      Client:     Build OK, Check OK
-     Filesystem: Build OK, Check Fails
-     Last Check: 26 Feb 2001
+     Filesystem: Build OK, Check OK
+     Last Check: 1 Mar 2001
      Porter:     Brian Fitzpatrick <fitz@apple.com>
 
      Notes: 
