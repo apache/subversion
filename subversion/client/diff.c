@@ -69,8 +69,6 @@ svn_cl__print_file_diff (svn_string_t *path,
                                      NULL, outhandle, NULL, pool);
   if (err) return err;
   
-  apr_close (outhandle);
-
   /* TODO:  someday we'll need to worry about two things here:
 
      1.  svn_client_file_diff may be returning a file from RA instead
