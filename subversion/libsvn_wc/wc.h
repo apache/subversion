@@ -487,8 +487,8 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
 */
 svn_boolean_t
 svn_wc__conflicting_propchanges_p (svn_string_t **description,
-                                   svn_propdelta_t *local,
-                                   svn_propdelta_t *update,
+                                   svn_prop_t *local,
+                                   svn_prop_t *update,
                                    apr_pool_t *pool);
 
 /* Look up the entry NAME within PATH and see if it has a `current'

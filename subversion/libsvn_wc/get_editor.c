@@ -116,7 +116,7 @@ struct dir_baton
      guide us when syncing adm files later. */
   svn_boolean_t prop_changed;
 
-  /* An array of (svn_propdelta_t *)'s, representing all the property
+  /* An array of (svn_prop_t *)'s, representing all the property
      changes to be applied to this file. */
   apr_array_header_t *propchanges;
 
@@ -162,7 +162,7 @@ make_dir_baton (svn_string_t *name,
   d->parent_baton = parent_baton;
   d->ref_count    = 1;
   d->pool         = subpool;
-  d->propchanges  = apr_make_array (subpool, 1, sizeof(svn_propdelta_t *));
+  d->propchanges  = apr_make_array (subpool, 1, sizeof(svn_prop_t *));
 
   if (name)
     d->name = svn_string_dup (name, subpool);
@@ -262,7 +262,7 @@ struct file_baton
      into the locally modified props.  */
   svn_boolean_t prop_conflict;
 
-  /* An array of (svn_propdelta_t *)'s, representing all the property
+  /* An array of (svn_prop_t *)'s, representing all the property
      changes to be applied to this file. */
   apr_array_header_t *propchanges;
 
@@ -288,7 +288,7 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_string_t *name)
   f->dir_baton  = parent_dir_baton;
   f->name       = name;
   f->path       = path;
-  f->propchanges = apr_make_array (subpool, 1, sizeof(svn_propdelta_t *));
+  f->propchanges = apr_make_array (subpool, 1, sizeof(svn_prop_t *));
 
   parent_dir_baton->ref_count++;
 
@@ -598,7 +598,7 @@ change_dir_prop (void *dir_baton,
                  svn_string_t *value)
 {
   svn_string_t *local_name, *local_value;
-  svn_propdelta_t *propchange, **receiver;
+  svn_prop_t *propchange, **receiver;
   struct dir_baton *db = dir_baton;
 
   /* Duplicate storage of name/value pair;  they should live in the
@@ -614,13 +614,11 @@ change_dir_prop (void *dir_baton,
   
   /* Build propchange object */
   propchange = apr_pcalloc (db->pool, sizeof(*propchange));
-  propchange->kind = svn_propdelta_dir;
   propchange->name = local_name;
   propchange->value = local_value;
-  propchange->entity_name = (svn_string_t *) db->name;
 
   /* Push the object to the file baton's array of propchanges */
-  receiver = (svn_propdelta_t **) apr_push_array (db->propchanges);
+  receiver = (svn_prop_t **) apr_push_array (db->propchanges);
   *receiver = propchange;
 
   /* Let close_dir() know that propchanges are waiting to be
@@ -896,7 +894,7 @@ change_file_prop (void *file_baton,
 {
   struct file_baton *fb = file_baton;
   svn_string_t *local_name, *local_value;
-  svn_propdelta_t *propchange, **receiver;
+  svn_prop_t *propchange, **receiver;
 
   /* Duplicate storage of name/value pair;  they should live in the
      file baton's pool, not some pool within the editor's driver. :)
@@ -911,13 +909,11 @@ change_file_prop (void *file_baton,
 
   /* Build propchange object */
   propchange = apr_pcalloc (fb->pool, sizeof(*propchange));
-  propchange->kind = svn_propdelta_file;
   propchange->name = local_name;
   propchange->value = local_value;
-  propchange->entity_name = (svn_string_t *) fb->name;
 
   /* Push the object to the file baton's array of propchanges */
-  receiver = (svn_propdelta_t **) apr_push_array (fb->propchanges);
+  receiver = (svn_prop_t **) apr_push_array (fb->propchanges);
   *receiver = propchange;
 
   /* Let close_file() know that propchanges are waiting to be
