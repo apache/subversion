@@ -120,7 +120,7 @@ svn_string_t *svn_wc__adm_subdir (apr_pool_t *pool);
 
 /* Make `PATH/<adminstrative_subdir>/THING'. */
 svn_error_t *svn_wc__make_adm_thing (svn_string_t *path,
-                                     char *thing,
+                                     const char *thing,
                                      int type,
                                      apr_pool_t *pool);
 
@@ -140,7 +140,7 @@ svn_error_t *svn_wc__make_adm_thing (svn_string_t *path,
  */
 svn_error_t *svn_wc__open_adm_file (apr_file_t **handle,
                                     svn_string_t *path,
-                                    char *fname,
+                                    const char *fname,
                                     apr_int32_t flags,
                                     apr_pool_t *pool);
 
@@ -158,14 +158,14 @@ svn_error_t *svn_wc__open_adm_file (apr_file_t **handle,
  */
 svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
                                      svn_string_t *path,
-                                     char *fname,
+                                     const char *fname,
                                      int write,
                                      apr_pool_t *pool);
 
 /* Remove `PATH/<adminstrative_subdir>/THING'. 
    kff todo: just using it for files, not dirs, at the moment. */
 svn_error_t *svn_wc__remove_adm_thing (svn_string_t *path,
-                                       char *thing,
+                                       const char *thing,
                                        apr_pool_t *pool);
 
 
