@@ -1,5 +1,5 @@
-%define apache_version 2.0.36-0.2
-%define neon_version 0.19.2
+%define apache_version 2.0.37-0.1
+%define neon_version 0.19.4
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -8,8 +8,7 @@ Copyright: BSD
 Group: Utilities/System
 URL: http://subversion.tigris.org
 Source0: subversion-%{version}-%{release}.tar.gz
-Patch0: expat.patch
-Patch1: install.patch
+Patch0: install.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apache-libapr >= %{apache_version}
@@ -108,23 +107,12 @@ the Apache directories and configuration.
 %prep
 %setup -q
 
-# Fix up expat library.
-%patch0 -p1
-sed -e 's;libexpat;-lexpat;' < build.conf > build.conf.new && mv build.conf build.conf.old && mv build.conf.new build.conf
-
 sh autogen.sh
-
-# EXPAT is external so get rid of all except (patched) xmlparse.h
-rm -rf expat-lite/[a-w]*.[ch]
-rm -rf expat-lite/xmldef.h
-rm -rf expat-lite/xmlparse.c
-rm -rf expat-lite/xmlrole*
-rm -rf expat-lite/xmltok*
 
 LDFLAGS="-lcrypt -ldl -pthread" ./configure --prefix=/usr --with-apr=/usr --with-apr-util=/usr
 
 # Fix up mod_dav_svn installation.
-%patch1 -p1
+%patch0 -p1
 
 %build
 make
