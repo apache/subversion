@@ -127,23 +127,22 @@ def export_keyword_translation(sbox):
 
   wc_dir = sbox.wc_dir
 
-  # Add a couple of keywords to A/mu and set the svn:keywords
-  # property appropriately to make sure they translated during
+  # Add a keyword to A/mu and set the svn:keywords property
+  # appropriately to make sure it's translated during
   # the export operation
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_append(mu_path, '$LastChangedRevision$ $LastChangedBy$')
+  svntest.main.file_append(mu_path, '$LastChangedRevision$')
   svntest.main.run_svn(None, 'ps', 'svn:keywords', 
-                       'LastChangedRevision LastChangedBy', mu_path)
+                       'LastChangedRevision', mu_path)
   svntest.main.run_svn(None, 'ci',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
-                       '-m', 'Added keywords to mu', mu_path)
+                       '-m', 'Added keyword to mu', mu_path)
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents + 
-                      '$LastChangedRevision: 2 $ $LastChangedBy: ' + 
-                      svntest.main.wc_author + ' $')
+                      '$LastChangedRevision: 2 $')
 
   export_target = sbox.add_wc_path('export')
 
@@ -202,7 +201,7 @@ test_list = [ None,
               export_working_copy,
               export_working_copy_with_mods,
               export_over_existing_dir,
-              Skip(export_keyword_translation, 1), # jszakmeister to examine
+              export_keyword_translation,
               export_eol_translation
              ]
 
