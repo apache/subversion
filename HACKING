@@ -583,7 +583,7 @@ that was changed:
       log message (because "svn log" can show the changed paths for
       that revision anyway).  Only when you need to describe how the
       change affected different paths in different ways is it
-      desirable to organize the log message by path, as in the
+      necessary to organize the log message by path, as in the
       examples above.
 
 In general, there is a tension between making entries easy to find by
