@@ -83,7 +83,8 @@ propset_walk_cb (const char *path,
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use
      the second one (where we're looking at THIS_DIR).  */
-  if (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+  if ((entry->kind == svn_node_dir)
+      && (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR) != 0))
     return SVN_NO_ERROR;
 
   /* Ignore the entry if it does not exist at the time of interest. */
@@ -286,7 +287,8 @@ propget_walk_cb (const char *path,
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use
      the second one (where we're looking at THIS_DIR).  */
-  if (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+  if ((entry->kind == svn_node_dir)
+      && (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR) != 0))
     return SVN_NO_ERROR;
 
   /* Ignore the entry if it does not exist at the time of interest. */
@@ -792,7 +794,8 @@ proplist_walk_cb (const char *path,
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use
      the second one (where we're looking at THIS_DIR).  */
-  if (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+  if ((entry->kind == svn_node_dir)
+      && (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR) != 0))
     return SVN_NO_ERROR;
 
   /* Ignore the entry if it does not exist at the time of interest. */
