@@ -38,17 +38,16 @@ svn_fs_base__create_node (const svn_fs_id_t **id_p,
                           node_revision_t *noderev,
                           const char *copy_id,
                           const char *txn_id,
-                          trail_t *trail)
+                          trail_t *trail,
+                          apr_pool_t *pool)
 {
   svn_fs_id_t *id;
 
   /* Find an unused ID for the node.  */
-  SVN_ERR (svn_fs_bdb__new_node_id (&id, fs, copy_id, txn_id, 
-                                    trail, trail->pool));
+  SVN_ERR (svn_fs_bdb__new_node_id (&id, fs, copy_id, txn_id, trail, pool));
 
   /* Store its NODE-REVISION skel.  */
-  SVN_ERR (svn_fs_bdb__put_node_revision (fs, id, noderev, 
-                                          trail, trail->pool));
+  SVN_ERR (svn_fs_bdb__put_node_revision (fs, id, noderev, trail, pool));
 
   *id_p = id;
   return SVN_NO_ERROR;
@@ -65,17 +64,18 @@ svn_fs_base__create_successor (const svn_fs_id_t **new_id_p,
                                node_revision_t *new_noderev,
                                const char *copy_id,
                                const char *txn_id,
-                               trail_t *trail)
+                               trail_t *trail,
+                               apr_pool_t *pool)
 {
   svn_fs_id_t *new_id;
 
   /* Choose an ID for the new node, and store it in the database.  */
   SVN_ERR (svn_fs_bdb__new_successor_id (&new_id, fs, old_id, copy_id,
-                                         txn_id, trail, trail->pool));
+                                         txn_id, trail, pool));
 
   /* Store the new skel under that ID.  */
   SVN_ERR (svn_fs_bdb__put_node_revision (fs, new_id, new_noderev, 
-                                          trail, trail->pool));
+                                          trail, pool));
 
   *new_id_p = new_id;
   return SVN_NO_ERROR;
@@ -88,10 +88,11 @@ svn_fs_base__create_successor (const svn_fs_id_t **new_id_p,
 svn_error_t *
 svn_fs_base__delete_node_revision (svn_fs_t *fs,
                                    const svn_fs_id_t *id,
-                                   trail_t *trail)
+                                   trail_t *trail,
+                                   apr_pool_t *pool)
 {
   /* ### todo: here, we should adjust other nodes to compensate for
      the missing node. */
 
-  return svn_fs_bdb__delete_nodes_entry (fs, id, trail, trail->pool);
+  return svn_fs_bdb__delete_nodes_entry (fs, id, trail, pool);
 }

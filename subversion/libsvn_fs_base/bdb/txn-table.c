@@ -301,7 +301,7 @@ svn_fs_bdb__get_txn_list (apr_array_header_t **names_p,
         continue;
 
       /* Add the transaction name to the NAMES array, duping it into POOL. */
-      (*((const char **) apr_array_push (names)))
+      (*((const char **) apr_array_push (names))) 
         = apr_pstrmemdup (pool, key.data, key.size);
     }
 
