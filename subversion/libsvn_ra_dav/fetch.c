@@ -517,13 +517,89 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
 }
 
 
+/* Helper (neon callback) for svn_ra_dav__get_file. */
+static void get_file_reader(void *userdata, const char *buf, size_t len)
+{
+  apr_size_t wlen;
+
+  /* The stream we want to push data at. */
+  svn_stream_t *stream = (svn_stream_t *) userdata;
+
+  /* Write however many bytes were passed in by neon. */
+  wlen = len;
+  svn_stream_write(stream, buf, &wlen);
+ 
+#if 0
+  /* Neon's callback won't let us return error.  Joe knows this is a
+     bug in his API, so this section can be reactivated someday. */
+
+  if (wlen != len)
+    {
+      /* Uh oh, didn't write as many bytes as neon gave us. */
+      return 
+        svn_error_create(SVN_ERR_UNEXPECTED_EOF, 0, NULL,
+                         sbaton->pool, "Error writing to svn_stream.");
+    }
+#endif
+      
+}
+
 svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                   const char *path,
                                   svn_revnum_t revision,
                                   svn_stream_t *stream,
                                   svn_revnum_t *fetched_rev)
 {
-  abort ();
+  int rv;
+  svn_stringbuf_t *url_str;
+  const char *final_url;
+  svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
+
+  /* First, create the full URL that the user wants to get. */
+  url_str = svn_stringbuf_create (ras->url, ras->pool);
+  svn_path_add_component_nts (url_str, path, svn_path_url_style);
+
+  /* If the revision is invalid (head), then we're done.  Just fetch
+     the public URL, because that will always get HEAD. */
+  if ((! SVN_IS_VALID_REVNUM(revision)) && (fetched_rev == NULL))
+    final_url = url_str->data;
+
+  /* If the revision is something specific, we need to create a bc_url. */
+  else
+    {
+      svn_revnum_t got_rev;
+      svn_string_t bc_url, bc_relative;
+      svn_stringbuf_t *final_bc_url;
+
+      SVN_ERR (svn_ra_dav__get_baseline_info(NULL,
+                                             &bc_url, &bc_relative,
+                                             &got_rev,
+                                             ras->sess,
+                                             url_str->data, revision,
+                                             ras->pool));
+
+      final_bc_url = svn_stringbuf_create_from_string(&bc_url, ras->pool);
+      svn_path_add_component_nts (final_bc_url, bc_relative.data,
+                                  svn_path_url_style);
+      
+      final_url = final_bc_url->data;
+
+      if (fetched_rev != NULL)
+        *fetched_rev = got_rev;
+    }
+
+  /* Have neon fetch the file contents and 'push' them at
+     get_file_reader().  The caller's stream is passed along as
+     userdata. */
+  rv = ne_read_file(ras->sess, final_url, get_file_reader, stream);
+  if (rv != NE_OK)
+    {
+      /* ### other GET responses? */
+      /* ### need more specific SVN_ERR here */
+      return svn_error_create(APR_EGENERAL, 0, NULL, ras->pool,
+                              ne_get_error(ras->sess));
+    }  
+
   return SVN_NO_ERROR;
 }
 
