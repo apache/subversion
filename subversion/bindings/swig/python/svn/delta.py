@@ -53,7 +53,7 @@ class Editor:
   def change_file_prop(self, file_baton, name, value, pool):
     pass
 
-  def close_file(self, text_checksum, file_baton):
+  def close_file(self, file_baton, text_checksum):
     pass
 
   def close_edit(self):
