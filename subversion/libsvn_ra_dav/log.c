@@ -333,6 +333,7 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   lb.receiver = receiver;
   lb.receiver_baton = receiver_baton;
   lb.subpool = svn_pool_create (ras->pool);
+  lb.err = NULL;
   reset_log_item (&lb);
 
   SVN_ERR( svn_ra_dav__parsed_request(ras,
@@ -346,7 +347,10 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
                                       log_end_element,
                                       &lb,
                                       ras->pool) );
-  
+
+  if (lb.err)
+    return lb.err;
+
   svn_pool_destroy (lb.subpool);
 
   return SVN_NO_ERROR;
