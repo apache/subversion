@@ -48,7 +48,9 @@ struct file_baton
 /*** the anonymous editor functions ***/
 
 static svn_error_t *
-replace_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
+replace_root (void *edit_baton,
+              svn_revnum_t base_revision,
+              void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
   struct dir_baton *rb = apr_pcalloc (eb->pool, sizeof (*rb));
@@ -66,8 +68,8 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
 static svn_error_t *
 add_directory (svn_string_t *name,
                void *parent_baton,
-               svn_string_t *ancestor_path,
-               long int ancestor_revision,
+               svn_string_t *copyfrom_path,
+               svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
   struct dir_baton *parent_d = parent_baton;
@@ -88,7 +90,7 @@ add_directory (svn_string_t *name,
 static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
-                   long int ancestor_revision,
+                   svn_revnum_t base_revision,
                    void **child_baton)
 {
   struct dir_baton *parent_d = parent_baton;
@@ -137,8 +139,8 @@ close_edit (void *edit_baton)
 static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
-          svn_string_t *ancestor_path,
-          long int ancestor_revision,
+          svn_string_t *copy_path,
+          svn_revnum_t copy_revision,
           void **file_baton)
 {
   struct dir_baton *parent_d = parent_baton;
@@ -158,7 +160,7 @@ add_file (svn_string_t *name,
 static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
-              long int ancestor_revision,
+              svn_revnum_t base_revision,
               void **file_baton)
 {
   struct dir_baton *parent_d = parent_baton;
