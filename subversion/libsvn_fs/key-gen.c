@@ -196,6 +196,19 @@ svn_fs__key_compare (const char *a, const char *b)
   return (cmp ? (cmp / abs (cmp)) : 0);
 }
 
+
+int
+svn_fs__same_keys (const char *a, const char *b)
+{
+  if (! (a || b))
+    return 1;
+  if (a && (! b))
+    return 0;
+  if ((! a) && b)
+    return 0;
+  return (! strcmp (a, b));
+}
+
 
 /* 
  * local variables:

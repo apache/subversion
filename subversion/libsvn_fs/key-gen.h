@@ -78,6 +78,14 @@ void svn_fs__next_key (const char *this, apr_size_t *len, char *next);
  */
 int svn_fs__key_compare (const char *a, const char *b);
 
+/* Compare two strings A and B as base-36 alphanumber keys.
+ *
+ * Return non-zero iff both keys are NULL or both keys have the same
+ * contents.
+ */
+int svn_fs__same_keys (const char *a, const char *b);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
