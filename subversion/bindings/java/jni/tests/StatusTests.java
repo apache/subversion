@@ -36,7 +36,7 @@ public class StatusTests extends TestCase
 	{
 	    Status status = NativeWrapper.statusCreate();
 
-	    assertTrue( status != null );
+	    assertNotNull( status );
 	}
 
     public void testStatusSetEntry()
@@ -47,7 +47,7 @@ public class StatusTests extends TestCase
 	    NativeWrapper.statusSetEntry(status, entry);
 
 	    // same thing?
-	    assertTrue( status.getEntry().equals(entry) );
+	    assertEquals( entry, status.getEntry() );
 	}
 
     public void testStatusSetTextStatus()
@@ -55,9 +55,9 @@ public class StatusTests extends TestCase
 	    Status status = new Status();
 	    StatusKind text_status = new StatusKind(StatusKind.DELETED);
 
-	    NativeWrapper.statusSetTextStatus(status, text_status.getKind());
+	    NativeWrapper.statusSetTextStatus(status, text_status);
 
-	    assertTrue( status.getTextStatus().equals(text_status) );
+	    assertEquals( text_status, status.getTextStatus() );
 	}
 
     public void testStatusSetPropStatus()
@@ -65,9 +65,9 @@ public class StatusTests extends TestCase
 	    Status status = new Status();
 	    StatusKind prop_status = new StatusKind(StatusKind.REPLACED);
 
-	    NativeWrapper.statusSetPropStatus(status, prop_status.getKind());
+	    NativeWrapper.statusSetPropStatus(status, prop_status);
 	    
-	    assertTrue( status.getPropStatus().equals(prop_status) );
+	    assertEquals( prop_status, status.getPropStatus() );
 	}
 
     public void testStatusSetCopied()
@@ -77,7 +77,7 @@ public class StatusTests extends TestCase
 
 	    NativeWrapper.statusSetCopied(status, copied);
 
-	    assertTrue(status.getCopied() == copied);
+	    assertEquals( copied, status.getCopied() );
 	}
 
     public void testStatusSetLocked()
@@ -87,7 +87,7 @@ public class StatusTests extends TestCase
 
 	    NativeWrapper.statusSetLocked(status, locked);
 
-	    assertTrue(status.getLocked() == locked);
+	    assertEquals( locked, status.getLocked() );
 	}
 
     public void testStatusSetReposTextStatus()
@@ -96,9 +96,10 @@ public class StatusTests extends TestCase
 	    StatusKind repos_text_status = new StatusKind(22);
 
 	    NativeWrapper.statusSetReposTextStatus(status, 
-						   repos_text_status.getKind());
+						   repos_text_status);
 	    
-	    assertTrue( status.getReposTextStatus().equals(repos_text_status) );
+	    assertEquals( repos_text_status, 
+			  status.getReposTextStatus() );
 	}
 
     public void testStatusSetReposPropStatus()
@@ -107,8 +108,9 @@ public class StatusTests extends TestCase
 	    StatusKind repos_prop_status = new StatusKind(511);
 
 	    NativeWrapper.statusSetReposPropStatus(status,
-						   repos_prop_status.getKind());
-	    assertTrue( status.getReposPropStatus().equals(repos_prop_status) );
+						   repos_prop_status);
+	    assertEquals( repos_prop_status, 
+			  status.getReposPropStatus() );
 	}
 }
 
