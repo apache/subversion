@@ -6,6 +6,7 @@ Usage: python win-tests.py [option] [test-path]
     -u URL, --url=URL  run ra_dav or ra_svn tests against URL; will start
                        svnserve for ra_svn tests
     -v, --verbose      talk more
+    -f, --fs-type=type filesystem type to use (bdb is default)
 
     --svnserve-args=list   comma-separated list of arguments for svnserve;
                            default is '-d,-r,<test-path-root>'
