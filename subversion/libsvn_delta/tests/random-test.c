@@ -110,7 +110,7 @@ main (int argc, const char * const *argv)
 
   /* Read options.  */
   pool = svn_pool_create (NULL);
-  apr_initopt (&opt, NULL, argc, argv);
+  apr_initopt (&opt, pool, argc, argv);
   while ((status = apr_getopt (opt, "s:l:n:", &optch, &optarg)) == APR_SUCCESS)
     {
       switch (optch)
