@@ -245,6 +245,74 @@ svn_fs_close_fs (svn_fs_t *fs)
 {
   svn_error_t *svn_err = 0;
 
+#if 0   /* Set to 1 for instrumenting; but note that this block will
+           probably have to be moved, because it turns out not to be
+           invoked for most regular commits.  Probably someone else is
+           destroying the pool instead of calling svn_fs_close_fs(). */
+  {
+    DB_TXN_STAT *t;
+    DB_LOCK_STAT *l;
+    int db_err;
+
+    /* Print transaction statistics for this DB env. */
+    if ((db_err = txn_stat (fs->env, &t)) != 0)
+      fprintf (stderr, "Error running txn_stat(): %s", db_strerror (db_err));
+    else
+      {
+        printf ("*** DB txn stats, right before closing env:\n");
+        printf ("   Number of txns currently active: %d\n",
+                t->st_nactive);
+        printf ("   Max number of active txns at any one time: %d\n",
+                t->st_maxnactive);
+        printf ("   Number of transactions that have begun: %d\n",
+                t->st_nbegins);
+        printf ("   Number of transactions that have aborted: %d\n",
+                t->st_naborts);
+        printf ("   Number of transactions that have committed: %d\n",
+                t->st_ncommits);
+        printf ("   Number of times a thread was forced to wait: %d\n",
+                t->st_region_wait);
+        printf ("   Number of times a thread didn't need to wait: %d\n",
+                t->st_region_nowait);
+        printf ("*** End DB txn stats.\n\n");
+      }
+
+    /* Print transaction statistics for this DB env. */
+    if ((db_err = lock_stat (fs->env, &l)) != 0)
+      fprintf (stderr, "Error running lock_stat(): %s", db_strerror (db_err));
+    else
+      {
+        printf ("*** DB lock stats, right before closing env:\n");
+        printf ("   The number of current locks: %d\n",
+                l->st_nlocks);
+        printf ("   Max number of locks at any one time: %d\n",
+                l->st_maxnlocks);
+        printf ("   Number of current lockers: %d\n",
+                l->st_nlockers);
+        printf ("   Max number of lockers at any one time: %d\n",
+                l->st_maxnlockers);
+        printf ("   Number of current objects: %d\n",
+                l->st_nobjects);
+        printf ("   Max number of objects at any one time: %d\n",
+                l->st_maxnobjects);
+        printf ("   Total number of locks requested: %d\n",
+                l->st_nrequests);
+        printf ("   Total number of locks released: %d\n",
+                l->st_nreleases);
+        printf ("   Total number of lock reqs failed because "
+                "DB_LOCK_NOWAIT was set: %d\n", l->st_nnowaits);
+        printf ("   Total number of locks not immediately available "
+                "due to conflicts: %d\n", l->st_nconflicts);
+        printf ("   Number of deadlocks detected: %d\n", l->st_ndeadlocks);
+        printf ("   Number of times a thread waited before "
+                "obtaining the region lock: %d\n", l->st_region_wait);
+        printf ("   Number of times a thread didn't have to wait: %d\n",
+                l->st_region_nowait);
+        printf ("*** End DB lock stats.\n\n");
+      }
+  }
+#endif /* 0/1 */
+
   /* We've registered cleanup_fs_apr as a cleanup function for this
      pool, so just freeing the pool should shut everything down
      nicely.  But do catch an error, if one occurs.  */
