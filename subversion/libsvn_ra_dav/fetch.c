@@ -1061,7 +1061,13 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 {
   svn_ra_session_t *ras = session_baton;
   const char *body;
+  const char *vcc_url;
   svn_error_t *err;
+
+  /* Run the 'dated-rev-report' on the VCC url, which is always
+     guaranteed to exist.   */
+  SVN_ERR (svn_ra_dav__get_vcc(&vcc_url, ras->sess, ras->root.path, pool));
+  
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -1073,7 +1079,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 
   *revision = SVN_INVALID_REVNUM;
   err = svn_ra_dav__parsed_request_compat(ras->sess, "REPORT",
-                                          ras->root.path, body, NULL, NULL,
+                                          vcc_url, body, NULL, NULL,
                                           drev_report_elements,
                                           drev_validate_element,
                                           drev_start_element, drev_end_element,
