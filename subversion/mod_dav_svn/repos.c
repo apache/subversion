@@ -314,7 +314,7 @@ static const struct res_type_handler
 } res_type_handlers[] =
 {
   /* skip UNKNOWN */
-  { DAV_RESOURCE_TYPE_REGULAR, dav_svn_prep_working },
+  { DAV_RESOURCE_TYPE_REGULAR, dav_svn_prep_regular },
   { DAV_RESOURCE_TYPE_VERSION, dav_svn_prep_version },
   { DAV_RESOURCE_TYPE_HISTORY, dav_svn_prep_history },
   { DAV_RESOURCE_TYPE_WORKING, dav_svn_prep_working },
