@@ -107,7 +107,7 @@ commit_change_dirent_prop (void *walk_baton,
 }
 
 static svn_error_t *
-commit_finish_dir (void *dir_baton)
+commit_finish_dir (void *walk_baton, void *dir_baton)
 {
   return NULL;
 }
@@ -155,7 +155,7 @@ commit_change_file_prop (void *walk_baton,
 }
 
 static svn_error_t *
-commit_finish_file (void *file_baton)
+commit_finish_file (void *walk_baton, void *file_baton)
 {
   return NULL;
 }

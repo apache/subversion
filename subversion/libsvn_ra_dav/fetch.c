@@ -376,7 +376,7 @@ fetch_file (svn_ra_session_t *ras,
   /* ### store URL into a local, predefined property */
 
   /* done with the file */
-  return (*fc->walker->finish_file)(file_baton);
+  return (*fc->walker->finish_file)(fc->walk_baton, file_baton);
 }
 
 svn_error_t *
@@ -429,7 +429,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
           if (url != NULL)
             break;
 
-          err = (*walker->finish_directory) (parent_baton);
+          err = (*walker->finish_directory) (walk_baton, parent_baton);
           if (err)
             return svn_quick_wrap_error(err, "could not finish directory");
 
@@ -543,7 +543,7 @@ update_change_dirent_prop (void *walk_baton,
 }
 
 static svn_error_t *
-update_finish_dir (void *dir_baton)
+update_finish_dir (void *walk_baton, void *dir_baton)
 {
   return NULL;
 }
@@ -591,7 +591,7 @@ update_change_file_prop (void *walk_baton,
 }
 
 static svn_error_t *
-update_finish_file (void *file_baton)
+update_finish_file (void *walk_baton, void *file_baton)
 {
   return NULL;
 }
