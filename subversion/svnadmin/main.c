@@ -629,6 +629,7 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_stream_t *stdin_stream, *stdout_stream = NULL;
+  struct recode_write_baton stdout_stream_rwb = { 0 };
 
   SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   
@@ -638,8 +639,12 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   
   /* Have the parser dump feedback to STDOUT. */
   if (! opt_state->quiet)
-    SVN_ERR (create_stdio_stream (&stdout_stream,
-                                  apr_file_open_stdout, pool));
+    {
+      stdout_stream = svn_stream_create (&stdout_stream_rwb, pool);
+      stdout_stream_rwb.pool = pool;
+      stdout_stream_rwb.out = stdout;
+      svn_stream_set_write (stdout_stream, recode_write);
+    }
   
   SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream,
                               opt_state->uuid_action, opt_state->parent_dir,
