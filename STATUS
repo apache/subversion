@@ -14,12 +14,15 @@ Candidate changes:
     Justification:
       Duh.  It's a compiler warning.
     Votes:
-      +1: cmpilato, lundblad
+      +1: cmpilato, lundblad, bliss
 
   * r10604
     Cleanup some qsort-related stuff.
     Justification:
       Removes *4* redundant functions, but adds a new API.
+    Notes:
+      The docstring for svn_sort_compare_paths says "New in 1.1."
+      and needs to be updated to say 1.2 if this does not go in.
     Votes:
       -0: ghudson (what's the point of putting code cleanups into 1.1?)
       +1: cmpilato
@@ -32,7 +35,7 @@ Candidate changes:
       a simple propset, rather than text changes to every affected file.
       Patch has been filed in the issue for more than a year!
     Votes:
-      +1: maxb, cmpilato
+      +1: maxb, cmpilato, bliss
 
   * r10674
     Make ./configure behave nicer in the presence of old Apache.
@@ -81,7 +84,7 @@ Candidate changes:
     Justification:
       Very tiny error in the output of the propedit command.
     Votes:
-      +1: breser, lundblad
+      +1: breser, lundblad, bliss
 
   * r10731
     Fix svn_path_dirname() so it returns canonical paths when passed a path
@@ -98,7 +101,7 @@ Candidate changes:
     Justification:
       Avoids assertion failure (the same one avoided by r10731).
     Votes:
-      +1: ghudson
+      +1: ghudson, bliss
 
   * r10467, r10734, rXXXXX
     Detect and report lock-contention at recovery time.
@@ -114,6 +117,7 @@ Candidate changes:
      http://www.contactor.se/~dast/svn/archive-2004-08/0804.shtml
     Votes:
       +1: mbk
+      -1: bliss (implementation broken without r10759)
 
   * r10752
     Remove packages/rpm/mandrake-*.
