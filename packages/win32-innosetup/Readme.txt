@@ -87,7 +87,7 @@ Directory structure
   * Static:  This files are always somewhere in the repository.
   * Dynamic: This files can be picked up anywhere from your computer (even from
              the repository). All the paths here are determined by the file
-             paths_inno_src.iss which is variables that is processed by Inno
+             svn_dynamics.iss which is variables that is processed by Inno
              Setup Pre Processor (ISPP) during the compiling of the setup.
              A template of this file can be found in the 
              packages\win32-innosetup\templates directory. Copy this file to
@@ -100,7 +100,7 @@ Directory structure
   
   Do you think that is looks complicated? -Dont worry! The programs in the
   tools folder takes care of copying and preparing files when your 
-  paths_inno_src.iss file are edited and set correctly.
+  svn_dynamics.iss file are edited and set correctly.
 
   Static paths (in the Subversion repository):
   -------------  
@@ -115,7 +115,7 @@ Directory structure
   Dynamic paths (files from anywhere on your machine)
   ---------------------------------------------------
 
-  This paths are determined by values in the file paths_inno_src.iss. The value
+  This paths are determined by values in the file svn_dynamics.iss. The value
   names of this path variables is:
   
   Path variables:     Setup files:
@@ -223,7 +223,7 @@ Making a distro
   1. Make sure that all the programs needed by INNO are installed as described
      earlier in this file.
 
-  2. If you haven't done it already: Copy the file "paths_inno_src.iss" from
+  2. If you haven't done it already: Copy the file "svn_dynamics.iss" from
      the packages\win32-innosetup\templates folder to packages\win32-innosetup
      in your WC and edit it according to the documentation inside it.
 
@@ -232,7 +232,7 @@ Making a distro
 	   inside it.
 
   4. Make sure that all the files to include in the setup are where they are
-     supposed to be according to the paths_inno_src.iss file.
+     supposed to be according to the svn_dynamics.iss file.
 
   5. Now, you have two different ways of making the documentation and the
      setup:

@@ -120,7 +120,7 @@ sub PathISExe
   
     if ( ! -e "$PathISExe/ISCC.exe")
       {
-        die "ERROR: Could not find path to ISCC.exe in paths_inno_src.iss\n";
+        die "ERROR: Could not find path to ISCC.exe in svn_dynamics.iss\n";
       }
     
     $PathISExe = "$PathISExe\\ISCC.exe";
@@ -137,9 +137,8 @@ sub PathSetupOut
   
     if ( ! -e "../$SetupOut")
       {
-        die "ERROR: Could not find output directory as described in paths_inno_src.iss\n";
+        die "ERROR: Could not find output directory as described in svn_dynamics.iss\n";
       }
 
     return $SetupOut;
 }
-
