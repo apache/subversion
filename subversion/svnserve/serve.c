@@ -222,7 +222,7 @@ static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
 {
   svn_string_t *str;
   svn_revnum_t crev;
-  const char *cdate, *cauthor;
+  const char *cdate, *cauthor, *uuid;
 
   /* Get the properties. */
   SVN_ERR(svn_fs_node_proplist(props, root, path, pool));
@@ -238,6 +238,12 @@ static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
                str);
   str = (cauthor) ? svn_string_create(cauthor, pool) : NULL;
   apr_hash_set(*props, SVN_PROP_ENTRY_LAST_AUTHOR, APR_HASH_KEY_STRING, str);
+
+  /* Hardcode the values for the UUID. */
+  SVN_ERR(svn_fs_get_uuid(svn_fs_root_fs(root), &uuid, pool));
+  str = (uuid) ? svn_string_create(uuid, pool) : NULL;
+  apr_hash_set(*props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING, str);
+  
   return SVN_NO_ERROR;
 }
 
@@ -898,6 +904,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   apr_array_header_t *caplist;
   svn_repos_t *repos;
   server_baton_t b;
+  const char *uuid;
 
   /* Send greeting, saying we only support protocol version 1, the
    * anonymous authentication mechanism, and no extensions. */
@@ -973,8 +980,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
       SVN_ERR(svn_ra_svn_flush(conn, pool));
       return SVN_NO_ERROR;
     }
-  svn_ra_svn_write_cmd_response(conn, pool, "");
-
+  
   b.repos = repos;
   b.url = client_url;
   b.repos_url = repos_url;
@@ -982,6 +988,9 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   b.user = user;
   b.fs = svn_repos_fs(repos);
   b.read_only = read_only;
+
+  SVN_ERR(svn_fs_get_uuid(b.fs, &uuid, pool));
+  svn_ra_svn_write_cmd_response(conn, pool, "c", uuid);
 
   return svn_ra_svn_handle_commands(conn, pool, main_commands, &b, FALSE);
 }
