@@ -93,25 +93,16 @@ typedef struct {
   svn_stringbuf_t *committed_date; /* DAV:creationdate for this resource */
   svn_stringbuf_t *last_author; /* DAV:creator-displayname for this resource */
 
-  /* if resources arrive before we know the target revision, then we store
-     their PATH -> VERSION-URL mappings in here. when the revision arrives,
-     we empty this hash table, setting version URLs and bumping to the
-     revision that arrived. */
-  apr_hash_t *hold;
-
-  /* We only invoke set_prop() or close_commit() on targets listed in
-     valid_targets.  Some entities (such as directories that have had
-     changes committed underneath but are not themselves targets) will
-     be mentioned in the merge response but not appear in
+  /* We only invoke set_prop() on targets listed in valid_targets.
+     Some entities (such as directories that have had changes
+     committed underneath but are not themselves targets) will be
+     mentioned in the merge response but not appear in
      valid_targets. */
   apr_hash_t *valid_targets;
 
-  /* Client callback for setting wcprops. */
+  /* Client callbacks */
   svn_ra_set_wc_prop_func_t set_prop;
-
-  /* Client callback for setting a new revision in the working copy. */
-  svn_ra_close_commit_func_t close_commit;
-  void *close_baton;  /* baton for above */
+  void *cb_baton;  /* baton for above */
 
 } merge_ctx_t;
 
@@ -160,34 +151,28 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
   svn_stringbuf_t *path_str;
   svn_string_t vsn_url_str;
 
-  /* import case. just punt for now. */
-  if (mc->close_commit == NULL)
-    return NULL;
+  /* no sense in doing any more work if there's no property setting
+     function at our disposal. */
+  if (mc->set_prop == NULL)
+    return SVN_NO_ERROR;
 
   /* Only invoke a client callback on PATH if PATH counts as a
      committed target.  The commit-tracking editor built this list for
      us, and took care not to include directories unless they were
      directly committed (i.e., received a property change). */
   if (! okay_to_bump_path (path, mc->valid_targets, mc->pool))
-    return NULL;
+    return SVN_NO_ERROR;
 
-  /* set up two strin values around the path and vsn_url. */
+  /* set up two string values around the path and vsn_url. */
   path_str = svn_stringbuf_create (path, mc->pool);
 
   vsn_url_str.data = vsn_url;
   vsn_url_str.len = strlen(vsn_url);
  
   /* store the version URL */
-  SVN_ERR( (*mc->set_prop)(mc->close_baton, path,
-                           SVN_RA_DAV__LP_VSN_URL, &vsn_url_str,
-                           mc->pool) );
-      
-  /* bump the revision/date/author and commit the file */
-  return (*mc->close_commit)(mc->close_baton, path_str, FALSE,
-                             mc->rev,
-                             mc->committed_date->data,
-                             mc->last_author->data,
-                             mc->pool);
+  return (*mc->set_prop)(mc->cb_baton, path,
+                         SVN_RA_DAV__LP_VSN_URL, &vsn_url_str,
+                         mc->pool);
 }
 
 static svn_error_t * handle_resource(merge_ctx_t *mc)
@@ -233,40 +218,13 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
                                "Protocol error: the MERGE response for the "
                                "\"%s\" resource did not return all of the "
                                "properties that we asked for (and need to "
-                               "complete the commit.", mc->href->data);
+                               "complete the commit).", mc->href->data);
     }
 #endif
 
   if (mc->rtype == RTYPE_BASELINE)
-    {
-      svn_error_t *err = NULL;
-
-      /* cool. the DAV:version-name tells us the new revision */
-      mc->rev = SVN_STR_TO_REV(mc->vsn_name->data);
-
-      /* that's all we need from the baseline. replay everything in "hold"
-         to commit the resources. */
-      if (mc->hold != NULL)
-        {
-          apr_hash_index_t *hi = apr_hash_first(mc->pool, mc->hold);
-
-          for (; hi != NULL; hi = apr_hash_next(hi))
-            {
-              const void *key;
-              void *val;
-              svn_error_t *one_err;
-
-              apr_hash_this(hi, &key, NULL, &val);
-              one_err = bump_resource(mc,
-                                      (char *)key /* path */,
-                                      val /* vsn_url */);
-              if (one_err != NULL && err == NULL)
-                err = one_err;
-            }
-        }
-
-      return err;
-    }
+    /* cool. the DAV:version-name tells us the new revision */
+    mc->rev = SVN_STR_TO_REV(mc->vsn_name->data);
 
   /* a collection or regular resource */
 
@@ -285,22 +243,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
   else
     relative = mc->href->data + mc->base_len + 1;
 
-  if (mc->rev == SVN_INVALID_REVNUM)
-    {
-      /* we don't the target revision yet, so store this for later */
-      if (mc->hold == NULL)
-        mc->hold = apr_hash_make(mc->pool);
-
-      /* copy the key (the relative path) and value since they are in shared
-         storage (i.e. the next resource will overwrite them) */
-      apr_hash_set(mc->hold,
-                   apr_pstrdup(mc->pool, relative), APR_HASH_KEY_STRING,
-                   apr_pstrdup(mc->pool, mc->vsn_url->data));
-
-      return SVN_NO_ERROR;
-    }
-
-  /* we've got everything needed, so bump the resource */
+  /* bump the resource */
   return bump_resource(mc, relative, mc->vsn_url->data);
 }
 
@@ -569,16 +512,10 @@ svn_error_t * svn_ra_dav__merge_activity(
     const char *repos_url,
     const char *activity_url,
     apr_hash_t *valid_targets,
-    svn_ra_set_wc_prop_func_t set_prop,
-    svn_ra_close_commit_func_t close_commit,
-    void *close_baton,
-    apr_array_header_t *deleted_entries,
     apr_pool_t *pool)
 {
   merge_ctx_t mc = { 0 };
   const char *body;
-  svn_stringbuf_t *path_str;
-  int i;
 
   mc.pool = pool;
   mc.base_href = repos_url;
@@ -586,9 +523,8 @@ svn_error_t * svn_ra_dav__merge_activity(
   mc.rev = SVN_INVALID_REVNUM;
 
   mc.valid_targets = valid_targets;
-  mc.set_prop = set_prop;
-  mc.close_commit = close_commit;
-  mc.close_baton = close_baton;
+  mc.set_prop = ras->callbacks->set_wc_prop;
+  mc.cb_baton = ras->callback_baton;
 
   mc.href = MAKE_BUFFER(pool);
   mc.vsn_name = MAKE_BUFFER(pool);
@@ -617,37 +553,17 @@ svn_error_t * svn_ra_dav__merge_activity(
   if (mc.err != NULL)
     return mc.err;
 
-  /* finally, go through and delete a bunch of resources */
-  path_str = MAKE_BUFFER(pool);
-  for (i = 0; i < deleted_entries->nelts; ++i)
-    {
-      svn_stringbuf_set(path_str,
-                     APR_ARRAY_IDX(deleted_entries, i, const char *));
-
-      /* ### todo:  send real values of date & author below. or, is
-         this necessary, given that things are being deleted? */
-      if (close_commit)
-        SVN_ERR( (*close_commit)(close_baton, path_str, FALSE,
-                                 mc.rev, NULL, NULL, pool) );
-    }
-
-
+  /* return some commit properties to the caller. */
   if (new_rev)
     *new_rev = mc.rev;
   if (committed_date)
-    {
-      if (mc.committed_date->len > 0)
-        *committed_date = apr_pstrdup(ras->pool, mc.committed_date->data);
-      else
-        *committed_date = NULL;
-    }
+    *committed_date = mc.committed_date->len
+                      ? apr_pstrdup(ras->pool, mc.committed_date->data)
+                      : NULL;
   if (committed_author)
-    {
-      if (mc.last_author->len > 0)
-        *committed_author = apr_pstrdup(ras->pool, mc.last_author->data);
-      else
-        *committed_author = NULL;
-    }
+    *committed_author = mc.last_author->len 
+                        ? apr_pstrdup(ras->pool, mc.last_author->data)
+                        : NULL;
 
   return NULL;
 }

@@ -556,25 +556,19 @@ struct svn_wc_close_commit_baton
 
 /* This is of type `svn_ra_close_commit_func_t'.
 
-   Bump each committed TARGET to NEW_REVNUM, one at a time, after a
+   Bump each committed PATH to NEW_REVNUM, one at a time, after a
    commit succeeds.  REV_DATE and REV_AUTHOR are the (server-side)
    date and author of the new revision; one or both may be NULL.
 
-   BATON is of type `svn_wc_close_commit_baton'.  Use BATON->prefix_path
-   to convert TARGET, a path relative to the root of the commit, to an
-   absolute path.  Use POOL for all temporary allocation during
-   the post-commit process.
-
-   If RECURSE is set and TARGET is a directory, then bump every
-   versioned object at or under TARGET.  This is usually done for
-   newly added trees.  */
-svn_error_t * svn_wc_process_committed (void *baton,
-                                        svn_stringbuf_t *target,
-                                        svn_boolean_t recurse,
-                                        svn_revnum_t new_revnum,
-                                        const char *rev_date,
-                                        const char *rev_author,
-                                        apr_pool_t *pool);
+   If RECURSE is set and PATH is a directory, then bump every
+   versioned object at or under PATH.  This is usually done for
+   copied trees.  */
+svn_error_t *svn_wc_process_committed (svn_stringbuf_t *path,
+                                       svn_boolean_t recurse,
+                                       svn_revnum_t new_revnum,
+                                       const char *rev_date,
+                                       const char *rev_author,
+                                       apr_pool_t *pool);
 
 
 
@@ -592,17 +586,15 @@ svn_error_t *svn_wc_close_commit (void *baton,
 
 
 /* This is a function of type svn_ra_get_wc_prop_t.  Return *VALUE for
-   property NAME on TARGET.  */
-svn_error_t *svn_wc_get_wc_prop (void *baton,
-                                 const char *target,
+   property NAME on PATH.  */
+svn_error_t *svn_wc_get_wc_prop (const char *path,
                                  const char *name,
                                  const svn_string_t **value,
                                  apr_pool_t *pool);
 
 /* This is a function of type svn_ra_set_wc_prop_t. Set property NAME
-   to VALUE on TARGET.  */
-svn_error_t *svn_wc_set_wc_prop (void *baton,
-                                 const char *target,
+   to VALUE on PATH.  */
+svn_error_t *svn_wc_set_wc_prop (const char *path,
                                  const char *name,
                                  const svn_string_t *value,
                                  apr_pool_t *pool);

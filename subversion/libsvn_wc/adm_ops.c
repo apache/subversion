@@ -186,6 +186,29 @@ svn_wc__do_update_cleanup (svn_stringbuf_t *path,
 
 
 
+/* ### todo: Might just make more sense to expose the
+   svn_wc_wcprop_get/set functions themselves than to have mindless
+   wrappers around them. */
+svn_error_t *
+svn_wc_get_wc_prop (const char *path,
+                    const char *name,
+                    const svn_string_t **value,
+                    apr_pool_t *pool)
+{
+  return svn_wc__wcprop_get (value, name, path, pool);
+}
+
+svn_error_t *
+svn_wc_set_wc_prop (const char *path,
+                    const char *name,
+                    const svn_string_t *value,
+                    apr_pool_t *pool)
+{
+  return svn_wc__wcprop_set (name, value, path, pool);
+}
+
+
+
 /* Process an absolute PATH that has just been successfully committed.
    
    Specifically, its working revision will be set to NEW_REVNUM;  if
@@ -196,13 +219,13 @@ svn_wc__do_update_cleanup (svn_stringbuf_t *path,
    If RECURSE is true (assuming PATH is a directory), this post-commit
    processing will happen recursively down from PATH. 
 */
-static svn_error_t *
-process_committed (svn_stringbuf_t *path,
-                   svn_boolean_t recurse,
-                   svn_revnum_t new_revnum,
-                   const char *rev_date,
-                   const char *rev_author,
-                   apr_pool_t *pool)
+svn_error_t *
+svn_wc_process_committed (svn_stringbuf_t *path,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
@@ -342,12 +365,10 @@ process_committed (svn_stringbuf_t *path,
           
           /* Recurse, but only allow further recursion if the child is
              a directory.  */
-          SVN_ERR (process_committed (path, 
-                                      (current_entry->kind == svn_node_dir)
-                                      ? TRUE : FALSE,
-                                      new_revnum,
-                                      rev_date, rev_author,
-                                      subpool));
+          SVN_ERR (svn_wc_process_committed 
+                   (path, 
+                    (current_entry->kind == svn_node_dir) ? TRUE : FALSE,
+                    new_revnum, rev_date, rev_author, subpool));
 
           /* De-telescope the path. */
           svn_path_remove_component (path);
@@ -361,69 +382,6 @@ process_committed (svn_stringbuf_t *path,
   return SVN_NO_ERROR;
 }
 
-
-/* Public API for above */
-svn_error_t *
-svn_wc_process_committed (void *baton,
-                          svn_stringbuf_t *target,
-                          svn_boolean_t recurse,
-                          svn_revnum_t new_revnum,
-                          const char *rev_date,
-                          const char *rev_author,
-                          apr_pool_t *pool)
-{
-  struct svn_wc_close_commit_baton *bumper =
-    (struct svn_wc_close_commit_baton *) baton;
-
-  /* Construct the -full- path by using the baton */
-  svn_stringbuf_t *path = svn_stringbuf_dup (bumper->prefix_path, pool);
-  svn_path_add_component (path, target);
-
-  /* Call the real function. */
-  return process_committed (path, recurse, new_revnum,
-                            rev_date, rev_author, pool);
-}
-
-
-
-svn_error_t *svn_wc_get_wc_prop (void *baton,
-                                 const char *target,
-                                 const char *name,
-                                 const svn_string_t **value,
-                                 apr_pool_t *pool)
-{
-  struct svn_wc_close_commit_baton *ccb =
-    (struct svn_wc_close_commit_baton *) baton;
-
-  /* Prepend the prefix to the target. */
-  svn_stringbuf_t *path = svn_stringbuf_dup (ccb->prefix_path, pool);
-  svn_path_add_component_nts (path, target);
-
-  /* And use our public interface to get the property value. */
-  SVN_ERR (svn_wc__wcprop_get (value, name, path->data, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *svn_wc_set_wc_prop (void *baton,
-                                 const char *target,
-                                 const char *name,
-                                 const svn_string_t *value,
-                                 apr_pool_t *pool)
-{
-  struct svn_wc_close_commit_baton *ccb =
-    (struct svn_wc_close_commit_baton *) baton;
-
-  /* Prepend the prefix to the target. */
-  svn_stringbuf_t *path = svn_stringbuf_dup (ccb->prefix_path, pool);
-  svn_path_add_component_nts (path, target);
-
-  /* And use our public interface to get the property value. */
-  SVN_ERR (svn_wc__wcprop_set (name, value, path->data, pool));
-
-  return SVN_NO_ERROR;
-}
 
 
 
@@ -834,12 +792,8 @@ revert_error (svn_error_t *err,
               const char *verb,
               apr_pool_t *pool)
 {
-  return svn_error_quick_wrap (err, 
-                               apr_psprintf (pool, 
-                                             "revert: error %s for `%s'", 
-                                             verb, 
-                                             path->data)
-                               );
+  return svn_error_quick_wrap 
+    (err, apr_psprintf (pool, "revert: error %s for `%s'", verb, path->data));
 }
 
 

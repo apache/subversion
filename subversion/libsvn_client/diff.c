@@ -511,7 +511,8 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
      cooperates with the editor and returns values when the file is in the
      wc, and null otherwise. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
-                                        FALSE, FALSE, TRUE, auth_baton, pool));
+                                        NULL, FALSE, FALSE, TRUE, 
+                                        auth_baton, pool));
 
   /* ### todo: later, when we take two (or N) targets and a more
      sophisticated indication of their interaction with start and end,
@@ -568,9 +569,8 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
       /* ### TODO: Forcing the base_dir to null. It might be possible to
          use a special ra session that cooperates with the editor to enable
          get_wc_prop to return values when the file is in the wc */
-      SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL,
-                                            NULL,
-                                            FALSE, FALSE, TRUE,
+      SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL, NULL,
+                                            NULL, FALSE, FALSE, TRUE,
                                             auth_baton, pool));
 
       /* Get the true diff editor. */

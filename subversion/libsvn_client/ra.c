@@ -75,20 +75,31 @@ get_wc_prop (void *baton,
              apr_pool_t *pool)
 {
   svn_client__callback_baton_t *cb = baton;
-  struct svn_wc_close_commit_baton ccb;
 
-  /* if we don't have a base directory, then there are no properties */
-  if (cb->base_dir == NULL)
+  *value = NULL;
+
+  /* If we list of commit_items, search through that for a match for
+     this relative URL. */
+  if (cb->commit_items)
     {
-      *value = NULL;
+      int i;
+      for (i = 0; i < cb->commit_items->nelts; i++)
+        {
+          svn_client_commit_item_t *item
+            = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
+          if (! strcmp (relpath, item->url->data))
+            return svn_wc_get_wc_prop (item->path->data, name, value, pool);
+        }
+
       return SVN_NO_ERROR;
     }
 
-  /* ### this should go away, and svn_wc_get_wc_prop should just take this
-     ### stuff as parameters */
-  ccb.prefix_path = cb->base_dir;
+  /* If we don't have a base directory, then there are no properties. */
+  else if (cb->base_dir == NULL)
+    return SVN_NO_ERROR;
 
-  return svn_wc_get_wc_prop (&ccb, relpath, name, value, pool);
+  return svn_wc_get_wc_prop (svn_path_join (cb->base_dir->data, relpath, pool),
+                             name, value, pool);
 }
 
 static svn_error_t *
@@ -99,52 +110,41 @@ set_wc_prop (void *baton,
              apr_pool_t *pool)
 {
   svn_client__callback_baton_t *cb = baton;
-  struct svn_wc_close_commit_baton ccb;
 
-  /* if we don't have a base directory, that's a problem. */
+  /* If we list of commit_items, search through that for a match for
+     this relative URL. */
+  if (cb->commit_items)
+    {
+      int i;
+      for (i = 0; i < cb->commit_items->nelts; i++)
+        {
+          svn_client_commit_item_t *item
+            = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
+          if (! strcmp (relpath, item->url->data))
+            return svn_wc_set_wc_prop (item->path->data, name, value, pool);
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  /* If we don't have a base directory, that's bad news. */
   assert (cb->base_dir);
-
-  /* ### this should go away, and svn_wc_set_wc_prop should just take this
-     ### stuff as parameters */
-  ccb.prefix_path = cb->base_dir;
-
-  return svn_wc_set_wc_prop (&ccb, relpath, name, value, pool);
+  return svn_wc_set_wc_prop (svn_path_join (cb->base_dir->data, relpath, pool),
+                             name, value, pool);
 }
 
 
-static svn_error_t *
-close_commit (void *baton,
-              svn_stringbuf_t *relpath,
-              svn_boolean_t recurse,
-              svn_revnum_t new_rev,
-              const char *rev_date,
-              const char *rev_author,
-              apr_pool_t *pool)
-{
-  svn_client__callback_baton_t *cb = baton;
-  struct svn_wc_close_commit_baton ccb;
-
-  /* if we don't have a base directory, that's a problem. */
-  assert (cb->base_dir);
-
-  /* ### this should go away, and svn_wc_process_committed should just
-     take this ### stuff as parameters */
-  ccb.prefix_path = cb->base_dir;
-
-  return svn_wc_process_committed (&ccb, relpath, recurse, new_rev,
-                                   rev_date, rev_author, pool);
-}
-
-
-svn_error_t * svn_client__open_ra_session (void **session_baton,
-                                           const svn_ra_plugin_t *ra_lib,
-                                           svn_stringbuf_t *repos_URL,
-                                           svn_stringbuf_t *base_dir,
-                                           svn_boolean_t do_store,
-                                           svn_boolean_t use_admin,
-                                           svn_boolean_t read_only_wc,
-                                           void *auth_baton,
-                                           apr_pool_t *pool)
+svn_error_t * 
+svn_client__open_ra_session (void **session_baton,
+                             const svn_ra_plugin_t *ra_lib,
+                             svn_stringbuf_t *base_url,
+                             svn_stringbuf_t *base_dir,
+                             apr_array_header_t *commit_items,
+                             svn_boolean_t do_store,
+                             svn_boolean_t use_admin,
+                             svn_boolean_t read_only_wc,
+                             svn_client_auth_baton_t *auth_baton,
+                             apr_pool_t *pool)
 {
   svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
   svn_client__callback_baton_t *cb = apr_pcalloc (pool, sizeof(*cb));
@@ -153,14 +153,14 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
   cbtable->get_authenticator = svn_client__get_authenticator;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
-  cbtable->close_commit = read_only_wc ? NULL : close_commit;
 
   cb->auth_baton = auth_baton;
   cb->base_dir = base_dir;
   cb->do_store = do_store;
   cb->pool = pool;
+  cb->commit_items = commit_items;
 
-  SVN_ERR (ra_lib->open (session_baton, repos_URL, cbtable, cb, pool));
+  SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, pool));
 
   return SVN_NO_ERROR;
 }

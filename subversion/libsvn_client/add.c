@@ -178,7 +178,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
          base directory, do not want to store auth data, and do not
          (necessarily) have an admin area for temp files. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, NULL,
-                                            FALSE, FALSE, TRUE, 
+                                            NULL, FALSE, FALSE, TRUE, 
                                             auth_baton, pool));
 
       /* Ensure a non-NULL log message. */
