@@ -1,7 +1,12 @@
-### FIXME: Any sh clone will do
-shell = None
-#shell =  'C:/PROGRA~1/Cygnus/cygwin/bin/bash.exe'
-###
+"""Driver for running the tests on Windows.
+
+Usage: python win-tests.py [option]
+    -r, --release      test the Release configuration
+    -d, --debug        test the Debug configuration (default)
+    -u URL, --url=URL  run DAV tests against URL
+    -v, --verbose      talk more
+"""
+
 
 tests = ['subversion/tests/libsvn_subr/hashdump-test.exe',
          'subversion/tests/libsvn_subr/stringtest.exe',
@@ -10,17 +15,6 @@ tests = ['subversion/tests/libsvn_subr/hashdump-test.exe',
          'subversion/tests/libsvn_wc/translate-test.exe',
          'subversion/tests/libsvn_delta/random-test.exe',
          'subversion/tests/libsvn_subr/target-test.py']
-
-shell_tests = ['subversion/tests/clients/cmdline/xmltests/svn-test.sh',
-               'subversion/tests/clients/cmdline/xmltests/svn-test2.sh']
-if shell is not None:
-  tests += shell_tests
-else:
-  print '================================================================'
-  print 'WARNING: You did not define a shell interpreter.'
-  print '         The following tests will be skipped:\n'
-  for t in shell_tests: print t
-  print '================================================================'
 
 fs_tests = ['subversion/tests/libsvn_fs/run-fs-tests.py',
             'subversion/tests/libsvn_repos/run-repos-tests.py']
@@ -43,57 +37,56 @@ client_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
 
 
 import os, sys, string, shutil, traceback
+import getopt
+
+opts, args = getopt.getopt(sys.argv[1:], 'rdvu:',
+                           ['release', 'debug', 'verbose', 'url='])
+if len(args):
+  print 'Warning: non-option arguments will be ignored'
+
+# Interpret the options and set parameters
+all_tests = tests + fs_tests + client_tests
+repo_loc = 'local repository.'
+base_url = None
+verbose = 0
+filter = 'Debug'
+log = 'tests.log'
+
+for opt,arg in opts:
+  if opt in ['-r', '--release']:
+    filter = 'Release'
+  elif opt in ['-d', '--debug']:
+    filter = 'Debug'
+  elif opt in ['-v', '--verbose']:
+    verbose = 1
+  elif opt in ['-u', '--url']:
+    all_tests = client_tests
+    repo_loc = 'remote repository ' + arg + '.'
+    base_url = arg
+    log = "dav-tests.log"
+
+print 'Testing', filter, 'configuration on', repo_loc
 
 # Have to move the executables where the tests expect them to be
-if len(sys.argv) == 1 or sys.argv[1] == 'd' or sys.argv[1] == 'debug':
-  filter = 'Debug'
-elif sys.argv[1] == 'r' or sys.argv[1] == 'release':
-  filter = 'Release'
-else:
-  sys.stderr.write("Wrong test mode '" + sys.argv[1] + "'.\n")
-  sys.exit(1)
-
-if len(sys.argv) == 3:
-  # Doesn't make sense to run all the tests if we're testing over DAV.
-  all_tests = client_tests
-  base_url = sys.argv[2]
-  log = "dav-tests.log"
-else:
-  all_tests = tests + fs_tests + client_tests
-  base_url = None
-  log = "tests.log"
-
-def delete_execs(filter, dirname, names):
-  if os.path.basename(dirname) != filter: return
-  for name in names:
-    if os.path.splitext(name)[1] != ".exe": continue
-    src = os.path.join(dirname, name)
-    tgt = os.path.join(os.path.dirname(dirname), name)
-    try:
-      if os.path.isfile(tgt):
-        print "kill:", tgt
-        os.unlink(tgt)
-    except:
-      traceback.print_exc(file=sys.stdout)
-      pass
-
+copied_execs = []   # Store copied exec files to avoid the final dir scan
 def copy_execs(filter, dirname, names):
+  global copied_execs
   if os.path.basename(dirname) != filter: return
   for name in names:
     if os.path.splitext(name)[1] != ".exe": continue
     src = os.path.join(dirname, name)
     tgt = os.path.join(os.path.dirname(dirname), name)
     try:
-      print "copy:", src
-      print "  to:", tgt
+      if verbose:
+        print "copy:", src
+        print "  to:", tgt
       shutil.copy(src, tgt)
+      copied_execs.append(tgt)
     except:
       traceback.print_exc(file=sys.stdout)
       pass
-
-
-# Copy the execs
 os.path.walk("subversion", copy_execs, filter)
+
 
 # Run the tests
 abs_srcdir = os.path.abspath("")
@@ -101,14 +94,24 @@ abs_builddir = abs_srcdir  ### For now ...
 
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
-th = run_tests.TestHarness(abs_srcdir, abs_builddir, sys.executable, shell,
+th = run_tests.TestHarness(abs_srcdir, abs_builddir, sys.executable, None,
                            os.path.abspath(log), base_url)
 failed = th.run(all_tests)
 
+
 # Remove the execs again
-os.path.walk("subversion", delete_execs, filter)
+for tgt in copied_execs:
+  try:
+    if os.path.isfile(tgt):
+      if verbose:
+        print "kill:", tgt
+      os.unlink(tgt)
+  except:
+    traceback.print_exc(file=sys.stdout)
+    pass
 
 
+# Print final status
 if failed:
   print
   print 'FAIL:', sys.argv[0]
