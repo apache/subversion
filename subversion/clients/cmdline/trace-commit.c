@@ -51,6 +51,8 @@ struct dir_baton
   svn_stringbuf_t *path;
   svn_boolean_t added;
   svn_boolean_t prop_changed;
+  apr_pool_t *subpool;
+  int ref_count;
 };
 
 
@@ -66,14 +68,44 @@ struct file_baton
 
 
 static svn_error_t *
+decrement_dir_ref_count (struct dir_baton *db)
+{
+  if (db == NULL)
+    return SVN_NO_ERROR;
+
+  db->ref_count--;
+
+  /* Check to see if *any* child batons still depend on this
+     directory's pool. */
+  if (db->ref_count == 0)
+    {
+      struct dir_baton *dbparent = db->parent_dir_baton;
+
+      /* Destroy all memory used by this baton, including the baton
+         itself! */
+      svn_pool_destroy (db->subpool);
+      
+      /* Tell your parent that you're gone. */
+      SVN_ERR (decrement_dir_ref_count (dbparent));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 open_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
 {
+  apr_pool_t *subpool;
   struct edit_baton *eb = edit_baton;
-  struct dir_baton *rb = apr_pcalloc (eb->pool, sizeof (*rb));
+  struct dir_baton *rb;
 
+  subpool = svn_pool_create (eb->pool);;
+  rb = apr_pcalloc (subpool, sizeof (*rb));
   rb->edit_baton = eb;
   rb->parent_dir_baton = NULL;
   rb->path = eb->initial_path;
+  rb->subpool = subpool;
+  rb->ref_count = 1;
 
   *root_baton = rb;
 
@@ -102,16 +134,21 @@ add_directory (svn_stringbuf_t *name,
                svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
+  apr_pool_t *subpool;
   struct dir_baton *parent_d = parent_baton;
-  struct dir_baton *child_d
-    = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_d));
+  struct dir_baton *child_d;
 
+  subpool = svn_pool_create (parent_d->edit_baton->pool);
+  child_d = apr_pcalloc (subpool, sizeof (*child_d));
   child_d->edit_baton = parent_d->edit_baton;
   child_d->parent_dir_baton = parent_d;
   child_d->path = svn_stringbuf_dup (parent_d->path, 
                                      child_d->edit_baton->pool);
   svn_path_add_component (child_d->path, name);
   child_d->added = TRUE;
+  child_d->subpool = subpool;
+  child_d->ref_count = 1;
+  parent_d->ref_count++;
 
   printf ("Adding          %s\n", child_d->path->data);
   *child_baton = child_d;
@@ -126,15 +163,20 @@ open_directory (svn_stringbuf_t *name,
                 svn_revnum_t base_revision,
                 void **child_baton)
 {
+  apr_pool_t *subpool;
   struct dir_baton *parent_d = parent_baton;
-  struct dir_baton *child_d
-    = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_d));
+  struct dir_baton *child_d;
 
+  subpool = svn_pool_create (parent_d->edit_baton->pool);
+  child_d = apr_pcalloc (subpool, sizeof (*child_d));
   child_d->edit_baton = parent_d->edit_baton;
   child_d->parent_dir_baton = parent_d;
   child_d->path = svn_stringbuf_dup (parent_d->path, 
                                      child_d->edit_baton->pool);
   svn_path_add_component (child_d->path, name);
+  child_d->subpool = subpool;
+  child_d->ref_count = 1;
+  parent_d->ref_count++;
 
   *child_baton = child_d;
 
@@ -153,6 +195,7 @@ close_directory (void *dir_baton)
   if (db->prop_changed)
     printf ("Sending         %s\n", db->path->data); 
 
+  decrement_dir_ref_count (db);
   return SVN_NO_ERROR;
 }
 
@@ -168,7 +211,8 @@ close_file (void *file_baton)
             fb->path->data);
   else
     printf ("Sending         %s\n", fb->path->data);
-  
+
+  decrement_dir_ref_count (fb->parent_dir_baton);
   return SVN_NO_ERROR;
 }
 
@@ -208,7 +252,7 @@ add_file (svn_stringbuf_t *name,
 {
   struct dir_baton *parent_d = parent_baton;
   struct file_baton *child_fb
-    = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_fb));
+    = apr_pcalloc (parent_d->subpool, sizeof (*child_fb));
 
   child_fb->parent_dir_baton = parent_d;
   child_fb->path = svn_stringbuf_dup (parent_d->path, 
@@ -217,6 +261,8 @@ add_file (svn_stringbuf_t *name,
   child_fb->added = TRUE;
   child_fb->binary = FALSE;
   *file_baton = child_fb;
+
+  parent_d->ref_count++;
 
   return SVN_NO_ERROR;
 }
@@ -230,7 +276,7 @@ open_file (svn_stringbuf_t *name,
 {
   struct dir_baton *parent_d = parent_baton;
   struct file_baton *child_fb
-    = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_fb));
+    = apr_pcalloc (parent_d->subpool, sizeof (*child_fb));
 
   child_fb->parent_dir_baton = parent_d;
   child_fb->path = svn_stringbuf_dup (parent_d->path, 
@@ -238,6 +284,8 @@ open_file (svn_stringbuf_t *name,
   svn_path_add_component (child_fb->path, name);
 
   *file_baton = child_fb;
+
+  parent_d->ref_count++;
 
   return SVN_NO_ERROR;
 }
