@@ -875,7 +875,8 @@ unparse_list (const char **msg,
         for (j = 0; j < 10; j++)
           {
             char buf[10];
-            int k, val;
+            apr_size_t k;
+            int val;
 
             /* Make some interesting atom, containing lots of binary
                characters.  */
