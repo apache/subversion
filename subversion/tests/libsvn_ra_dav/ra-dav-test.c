@@ -67,21 +67,24 @@ main (int argc, char **argv)
   svn_error_t *err;
   svn_ra_session_t *ras;
   const char *url;
+  const char *dir;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
-  void *dir_baton;
   svn_string_t *repos;
+  svn_string_t *anc_path;
+  svn_vernum_t version;
 
   apr_initialize ();
   pool = svn_pool_create (NULL, NULL);
 
-  if (argc != 2)
+  if (argc != 3)
     {
-      fprintf (stderr, "usage: %s REPOSITORY_URL\n", argv[0]);
+      fprintf (stderr, "usage: %s REPOSITORY_URL TARGET_DIR\n", argv[0]);
       return 1;
     }
-  else
-    url = argv[1];
+
+  url = argv[1];
+  dir = argv[2];        /* ### default to the last component of the URL */
 
   err = svn_ra_open(&ras, url, pool);
   if (err)
@@ -91,16 +94,26 @@ main (int argc, char **argv)
     }
 
   repos = svn_string_create(url, pool);
-  err = svn_wc_get_checkout_editor(NULL,
-                                   repos, svn_string_create ("", pool), 1,
+
+  /* ### what the heck does "ancestor path" mean for a checkout? */
+  anc_path = svn_string_create("", pool);
+
+  /* ### how can we know this before we start fetching crap? */
+  version = 1;
+
+  err = svn_wc_get_checkout_editor(svn_string_create(dir, pool),
+                                   repos, anc_path, version,
                                    &editor, &edit_baton, pool);
   if (err)
-    {
-      svn_handle_error (err, stdout, 0);
-      return 1;
-    }
+    goto error;
 
-  err = svn_ra_checkout(ras, "", 1, editor, edit_baton, dir_baton);
+  err = svn_ra_checkout(ras, "", 1, editor, edit_baton);
+  if (err)
+    goto error;
+
+  err = (*editor->close_edit)(edit_baton);
+  if (err)
+    goto error;
 
   svn_ra_close(ras);
 
@@ -108,6 +121,10 @@ main (int argc, char **argv)
   apr_terminate();
 
   return 0;
+
+ error:
+  svn_handle_error (err, stdout, 0);
+  return 1;
 }
 
 
