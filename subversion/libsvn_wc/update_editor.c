@@ -892,7 +892,6 @@ close_directory (void *dir_baton,
      to deal with them. */
   if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
     {
-      char *revision_str;
       svn_wc_adm_access_t *adm_access;
       apr_file_t *log_fp = NULL;
       apr_status_t apr_err;
@@ -989,29 +988,6 @@ close_directory (void *dir_baton,
                                    SVN_WC_TIMESTAMP_WC,
                                    NULL);
         }
-
-      /* ### This isn't correct with postfix text deltas!  Changing the
-         ### revision here is correct in so far as it makes the revision
-         ### consistent with the updated properties.  Changing the revision
-         ### here may be wrong if postfix text deltas are being used as any
-         ### new files will not yet have been added to the entries file.
-         ### This only becomes a real problem if the client is interrupted
-         ### between this revision change and the postfix close_file that
-         ### adds the new entry.  It's a theoretical problem since we don't
-         ### currently use postfix text deltas. */
-      revision_str = apr_psprintf (db->pool,
-                                   "%" SVN_REVNUM_T_FMT,
-                                   db->edit_baton->target_revision);
-
-      svn_xml_make_open_tag (&entry_accum,
-                             db->pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             SVN_WC_ENTRY_THIS_DIR,
-                             SVN_WC__ENTRY_ATTR_REVISION,
-                             revision_str,
-                             NULL);
 
       accumulate_entry_props (entry_accum, SVN_WC_ENTRY_THIS_DIR, entry_props,
                               pool);

@@ -843,7 +843,10 @@ enum svn_wc_status_kind
     svn_wc_status_ignored,
 
     /** an unversioned resource is in the way of the versioned resource */
-    svn_wc_status_obstructed
+    svn_wc_status_obstructed,
+
+    /** a directory doesn't contain a complete entries list  */
+    svn_wc_status_incomplete
 };
 
 /** Structure for holding the "status" of a working copy item. 

@@ -2736,7 +2736,8 @@ foo.c.r31
                 <term>'!'</term>
                 <listitem>
                   <para>Item is missing (e.g. you moved or deleted it
-                  without using <command>svn</command>).</para>
+                  without using <command>svn</command>), or incomplete
+                  (a checkout or update was interrupted).</para>
                 </listitem>
               </varlistentry>
 
