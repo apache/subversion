@@ -1267,18 +1267,18 @@ Removed real.c because code now in double.c.
 &hellip;
 </screen>
 
-      <para>In the example, we're assuming that you're looking for a
-        deleted file <filename>real.c</filename>.  By looking through
-        the logs of a parent directory, you've spotted that this file
-        was deleted in revision 808.  Therefore, the last version of
-        the file to exist was in the revision right before that.
-        Conclusion: you want to resurrect the path
-        <filename>/calc/trunk/real.c</filename> from revision
-        807.</para>
+      <para>En el ejemplo, estamos asumiendo que está buscando el
+        fichero borrado <filename>real.c</filename>.  Leyendo los
+        informes de cambios del directorio padre, hemos encontrado
+        que este fichero fue borrado en la revisión 808. Por lo
+        tanto la última versión del fichero existió en la revisión
+        inmediatamente anterior a esa. Conclusión: quiere resucitar
+        la ruta <filename>/calc/trunk/real.c</filename> de la
+        revisión 807.</para>
 
-      <para>That was the hard part&mdash;the research.  Now that you
-        know what you want to restore, you have two different
-        choices.</para>
+      <para>Eso fue la parte difícil&mdash;la investigación. Ahora
+        que sabe lo que quiere recuperar, tiene dos posibles
+        opciones.</para>
       
       <para>One option is to use <command>svn merge</command> to apply
         revision 808 <quote>in reverse</quote>.  (We've already
