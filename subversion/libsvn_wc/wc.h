@@ -222,23 +222,36 @@ svn_string_t *svn_wc__text_base_path (svn_string_t *path,
                                       apr_pool_t *pool);
 
 
-/* Ensure that PATH is a working copy directory.
+/* Ensure that PATH is a locked working copy directory.
  *
+ * (In practice, this means creating an adm area if none exists, in
+ * which case it is locked from birth, or else locking an adm area
+ * that's already there.)
+ * 
  * REPOSITORY is a repository string for initializing the adm area.
  *
- * ANCESTOR_PATH and ANCESTOR_VERSION are ancestry information for the
- * directory.
- *
- * If REQUIRE_NEW is non-zero, then it will be an error for this
- * directory to already be a working copy or non-empty.
+ * VERSION is the version for this directory.  kff todo: ancestor_path?
  */
 svn_error_t *svn_wc__ensure_wc (svn_string_t *path,
                                 svn_string_t *repository,
                                 svn_string_t *ancestor_path,
                                 svn_vernum_t ancestor_version,
-                                svn_boolean_t require_new,
                                 apr_pool_t *pool);
 
+
+/* Ensure that an administrative area exists for PATH, so that PATH is
+ * a working copy subdir.
+ *
+ * Use REPOSITORY for the wc's repository.
+ *
+ * Does not ensure existence of PATH itself; if PATH does not exist,
+ * an error will result. 
+ */
+svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
+                                 svn_string_t *repository,
+                                 svn_string_t *ancestor_path,
+                                 svn_vernum_t ancestor_version,
+                                 apr_pool_t *pool);
 
 
 /*** The log file. ***/
