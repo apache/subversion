@@ -26,11 +26,11 @@ Candidate changes:
       +1: lundblad, maxb
 
   * r13961
-    Fix Ruby install.
+    Make Ruby bindings install to the correct location.
     Justification:
       Broken otherwise.
     Votes:
-      +1: epg
+      +1: epg, maxb
 
   * r13978
     Make copy_tests 25 pass over DAV.
