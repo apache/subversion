@@ -79,7 +79,7 @@ build directory, or an apr-config file.])
       done
     fi
     dnl if we have a bundled source directory, then we may have more work
-    if test -n "$1"; then
+    if test -d "$1"; then
       apr_temp_abs_srcdir="`cd $1 && pwd`"
       if test "$apr_found" = "yes" \
          && test "`$apr_config --srcdir`" = "$apr_temp_abs_srcdir"; then
