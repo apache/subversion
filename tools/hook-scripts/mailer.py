@@ -135,12 +135,19 @@ class MailedOutput:
     ### so if the body doesn't change, then it can be sent N times
     ### rather than rebuilding it each time.
 
-    ### need an iteration pool
+    subpool = svn.util.svn_pool_create(pool)
 
     for (group, param_tuple), params in groups.items():
       self.start(group, params)
-      generate_content(self, self.cfg, self.repos, self.changelist, pool)
+
+      # generate the content for this group and set of params
+      generate_content(self, self.cfg, self.repos, self.changelist,
+                       group, params, subpool)
+
       self.finish()
+      svn.util.svn_pool_clear(subpool)
+
+    svn.util.svn_pool_destroy(subpool)
 
   def start(self, group, params):
     self.to_addr = self.cfg.get('to_addr', group, params)
@@ -203,7 +210,11 @@ class StandardOutput:
 
   def generate(self, groups, pool):
     "Generate the output; the groups are ignored."
-    generate_content(self, self.cfg, self.repos, self.changelist, pool)
+
+    # use the default group and no parameters
+    ### is that right?
+    generate_content(self, self.cfg, self.repos, self.changelist,
+                     None, { }, pool)
 
   def run_diff(self, cmd):
     # flush our output to keep the parent/child output in sync
@@ -295,7 +306,7 @@ class PipeOutput(MailedOutput):
     self.pipe.wait()
 
 
-def generate_content(output, cfg, repos, changelist, pool):
+def generate_content(output, cfg, repos, changelist, group, params, pool):
 
   svndate = repos.get_rev_prop(svn.util.SVN_PROP_REVISION_DATE)
   ### pick a different date format?
@@ -314,7 +325,7 @@ def generate_content(output, cfg, repos, changelist, pool):
 
   # these are sorted by path already
   for path, change in changelist:
-    generate_diff(output, cfg, repos, date, change, pool)
+    generate_diff(output, cfg, repos, date, change, group, params, pool)
 
 
 def _select_adds(change):
@@ -356,16 +367,15 @@ def generate_list(output, header, changelist, selection):
                      % (text, change.base_rev, change.base_path[1:], is_dir))
 
 
-def generate_diff(output, cfg, repos, date, change, pool):
+def generate_diff(output, cfg, repos, date, change, group, params, pool):
 
   if change.item_type == ChangeCollector.DIR:
     # all changes were printed in the summary. nothing to do.
     return
 
   if not change.path:
-    ### need group and params
-    #suppress = cfg.get('suppress_deletes', group, params)
-    suppress = 'yes'
+    ### params is a bit silly here
+    suppress = cfg.get('suppress_deletes', group, params)
     if suppress == 'yes':
       # a record of the deletion is in the summary. no need to write
       # anything further here.
@@ -447,7 +457,7 @@ class Repository:
     if not os.path.exists(db_path):
       db_path = repos_dir
 
-    self.fs_ptr = svn.fs.new(pool)
+    self.fs_ptr = svn.fs.new(None, pool)
     svn.fs.open_berkeley(self.fs_ptr, db_path)
 
     self.roots = { }
