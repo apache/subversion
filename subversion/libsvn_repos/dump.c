@@ -267,16 +267,9 @@ dump_node (struct edit_baton *eb,
                                       SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV 
                                       ": %" SVN_REVNUM_T_FMT "\n"
                                       SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
-                                      ": %s\n\n",                  
+                                      ": %s\n",                  
                                       copyfrom_rev, copyfrom_path));
           
-          /* Notice the extra \n above;  that's because this is the -last-
-             header in the block.  (Normally, we have a double \n after the
-             Content-length header.) */
-          
-          /* Get out!  We're done! */
-          return SVN_NO_ERROR;
-
           /* ### someday write a node-copyfrom-source-checksum. */
         }
     }
