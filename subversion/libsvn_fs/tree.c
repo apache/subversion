@@ -345,7 +345,9 @@ typedef struct parent_path_t
   char *entry;
 
   /* The copy id for this path component should that component be
-     cloned for mutability.  */
+     cloned for mutability.  If NULL, this indicates that at the time
+     this node is made mutable, a brand new copy ID should be
+     generated for it.  */
   const char *copy_id;
 
   /* The parent of NODE, or zero if NODE is the root directory.  */
@@ -498,7 +500,7 @@ open_path (parent_path_t **parent_path_p,
       else
         {
           const svn_fs_id_t *this_id;
-          const char *this_copy_id;
+          const char *this_copy_id, *copy_id_to_use = NULL;
 
           /* If we found a directory entry, follow it.  */
           svn_error_t *err = svn_fs__dag_open (&child, here, entry, trail);
@@ -530,29 +532,63 @@ open_path (parent_path_t **parent_path_p,
           /* Other errors we return normally.  */
           SVN_ERR (err);
 
+          /* At this point we need to decide what COPY_ID to use for
+             the CHILD should it need to be made mutable. */
+
           /* Get the ID and copy ID for CHILD.  */
           this_id = svn_fs__dag_get_id (child);
           this_copy_id = svn_fs__id_copy_id (this_id);
 
-          /* Compare the copy IDs of CHILD and its parent.
+          /* If CHILD is already mutable, the COPY_ID question is
+             moot. */
+          if (svn_fs_is_txn_root (root))
+            {
+              const char *txn_id = svn_fs_txn_root_name (root, pool);
+              if (strcmp (svn_fs__id_txn_id (this_id), txn_id) == 0)
+                copy_id_to_use = this_copy_id;
+            }
 
-             If they are the same, then CHILD should use the current
-             value of COPY_ID should it need to be made mutable.
+          /* If we haven't already determined which copy ID to use, do
+             so. */
+          if (! copy_id_to_use)
+            {
+              /* Compare the copy IDs of CHILD and its parent. */
+              int comparison = svn_fs__key_compare (this_copy_id, copy_id);
 
-             If CHILD's copy ID is younger than that of its parent, then
-             CHILD was the target of a copy operation, and COPY_ID
-             should be changed to reflect CHILD's current copy ID.
-
-             If CHILD's copy ID is older than that of its parent,
-             then CHILD is an un-edited sub-item of a copy operation
-             that occured on PARENT, and should use the value of
-             COPY_ID should it need to be made mutable.  */
-          if (svn_fs__key_compare (this_copy_id, copy_id) > 0)
-            copy_id = this_copy_id;
+              if (comparison == 0)
+                {
+                  /* If they are the same, then CHILD is already on
+                     the same branch as the parent, and should use
+                     that parent's mutability COPY_ID should it need
+                     to be made mutable. */
+                  copy_id_to_use = copy_id;
+                }
+              else if (comparison > 0)
+                {
+                  /* If CHILD's copy ID is younger than that of its
+                     parent, then CHILD was the target of a copy
+                     operation, and should continue to use its own
+                     THIS_COPY_ID when made mutable. */
+                  copy_id_to_use = this_copy_id;
+                }
+              else
+                {
+                  /* If CHILD's copy ID is older than that of its
+                     parent, then CHILD is an un-edited sub-item of a
+                     copy operation that occured on PARENT.  Now the
+                     fun begins... ### todo:  begin the fun.  
+                  */
+                  copy_id_to_use = copy_id;
+                }
+            }
 
           /* Now, make a parent_path item for CHILD. */
           parent_path = make_parent_path (child, entry, parent_path, 
-                                          copy_id, pool);
+                                          copy_id_to_use, pool);
+          
+          /* COPY_ID gets updated to whatever we used for the current
+             CHILD. */
+          copy_id = copy_id_to_use;
         }
       
       /* Are we finished traversing the path?  */
