@@ -181,7 +181,7 @@ convert_to_stringbuf (apr_xlate_t *convset,
 
 
 /* Return APR_EINVAL if the first LEN bytes of DATA contain anything
-   other than seven-bit, non-control (except for whitespace) ascii
+   other than seven-bit, non-control (except for whitespace) ASCII
    characters, finding the error pool from POOL.  Otherwise, return
    SVN_NO_ERROR. */
 static svn_error_t *
@@ -191,16 +191,16 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
 
   for (; len > 0; --len, data++)
     {
-      if ((! apr_isascii (*((const unsigned char *) data)))
-          || ((! apr_isspace (*((const unsigned char *) data)))
-              && apr_iscntrl (*((const unsigned char *) data))))
+      if ((! apr_isascii (*data))
+          || ((! apr_isspace (*data))
+              && apr_iscntrl (*data)))
         {
           /* Show the printable part of the data, followed by the
              decimal code of the questionable character.  Because if a
              user ever gets this error, she's going to have to spend
-             time tracking down the non-ascii data, so we want to help
+             time tracking down the non-ASCII data, so we want to help
              as much as possible.  And yes, we just call the unsafe
-             data "non-ascii", even though the actual constraint is
+             data "non-ASCII", even though the actual constraint is
              somewhat more complex than that. */ 
 
           if (data - data_start)
@@ -212,9 +212,9 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
                 (APR_EINVAL, NULL,
                  "Safe data:\n"
                  "\"%s\"\n"
-                 "... was followed by non-ascii byte %d.\n"
+                 "... was followed by non-ASCII byte %d.\n"
                  "\n"
-                 "Non-ascii character detected (see above), "
+                 "Non-ASCII character detected (see above), "
                  "and unable to convert to/from UTF-8",
                  error_data, *((const unsigned char *) data));
             }
@@ -222,7 +222,7 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
             {
               return svn_error_createf
                 (APR_EINVAL, NULL,
-                 "Non-ascii character (code %d) detected, "
+                 "Non-ASCII character (code %d) detected, "
                  "and unable to convert to/from UTF-8",
                  *((const unsigned char *) data));
             }
@@ -499,9 +499,7 @@ svn_utf__cstring_from_utf8_fuzzy (const char *src,
   /* Allocate that amount. */
   new = apr_palloc (pool, new_len + 1);
 
-  /* All right, Brane.  We allocated it, we're building it, we're
-     returning it.  We can cast it, right? :-) */ 
-  new_orig = (const char *) new;
+  new_orig = new;
 
   /* And fill it up. */
   while (*src_orig)
@@ -532,7 +530,7 @@ svn_utf__cstring_from_utf8_fuzzy (const char *src,
       return new_orig;
     }
   else
-    return (const char *) new;
+    return new;
 
   /* ### Check the client locale, maybe we can avoid that second
    * conversion!  See Ulrich Drepper's patch at
