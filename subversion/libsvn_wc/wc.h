@@ -156,6 +156,11 @@ svn_error_t *svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
                                            const char *path, apr_pool_t *pool);
 
 
+/* Set *CLEANUP to TRUE if the directory ADM_ACCESS requires cleanup
+   processing, set *CLEANUP to FALSE otherwise. */
+svn_error_t *svn_wc__adm_is_cleanup_required (svn_boolean_t *cleanup,
+                                              svn_wc_adm_access_t *adm_access,
+                                              apr_pool_t *pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -1278,10 +1278,10 @@ def commit_with_lock(sbox):
 
   # modify gamma and lock its directory
   wc_dir = sbox.wc_dir
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  gamma_lock_path = os.path.join(wc_dir, 'A', 'D', '.svn', 'lock')
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  gamma_path = os.path.join(D_path, 'gamma')
   svntest.main.file_append(gamma_path, "modified gamma")
-  svntest.main.file_append(gamma_lock_path, "")
+  svntest.actions.lock_admin_dir(D_path)
 
   # this commit should fail
   if svntest.actions.run_and_verify_commit(wc_dir,
@@ -1294,7 +1294,9 @@ def commit_with_lock(sbox):
     return 1
                                            
   # unlock directory
-  os.remove(gamma_lock_path)
+  outlines, errlines = svntest.main.run_svn(None, 'cleanup', D_path)
+  if errlines:
+    return 1
 
   # this commit should succeed
   expected_output = svntest.wc.State(wc_dir, {

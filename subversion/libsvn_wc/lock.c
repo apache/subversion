@@ -145,9 +145,12 @@ static apr_status_t
 pool_cleanup (void *p)
 {
   svn_wc_adm_access_t *lock = p;
+  svn_boolean_t cleanup;
   svn_error_t *err;
 
-  err = do_close (lock, TRUE);
+  err = svn_wc__adm_is_cleanup_required (&cleanup, lock, lock->pool);
+  if (!err)
+    err = do_close (lock, cleanup);
 
   /* ### Is this the correct way to handle the error? */
   if (err)
@@ -514,6 +517,23 @@ apr_pool_t *
 svn_wc_adm_access_pool (svn_wc_adm_access_t *adm_access)
 {
   return adm_access->pool;
+}
+
+
+svn_error_t *
+svn_wc__adm_is_cleanup_required (svn_boolean_t *cleanup,
+                                 svn_wc_adm_access_t *adm_access,
+                                 apr_pool_t *pool)
+{
+  enum svn_node_kind kind;
+  const char *log_path = svn_wc__adm_path (svn_wc_adm_access_path (adm_access),
+                                           FALSE, pool, SVN_WC__ADM_LOG, NULL);
+
+  /* The presence of a log file demands cleanup */
+  SVN_ERR (svn_io_check_path (log_path, &kind, pool));
+  *cleanup = (kind == svn_node_file);
+
+  return SVN_NO_ERROR;
 }
 
 

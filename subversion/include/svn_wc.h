@@ -85,7 +85,7 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
    cached items.  If ADM_ACCESS has not been closed when the pool is
    cleared, it will be closed automatically at that point, and removed from
    its set.  A baton closed in this way will not remove physical locks from
-   the working copy.  */
+   the working copy if cleanup is required.  */
 svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                               svn_wc_adm_access_t *associated,
                               const char *path,
@@ -107,8 +107,9 @@ svn_error_t *svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
 
 /* Give up the access baton ADM_ACCESS, and its lock if any. This will
    recursively close any batons in the same set that are subdirectories of
-   ADM_ACCESS.  Any physical locks will be removed from the working
-   copy. */
+   ADM_ACCESS.  Any physical locks will be removed from the working copy.
+   Lock removal is unconditional, there is no check to determine if cleanup
+   is required. */
 svn_error_t *svn_wc_adm_close (svn_wc_adm_access_t *adm_access);
 
 /* Return the (canonicalized) path used to open the access baton
