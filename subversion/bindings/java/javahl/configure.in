@@ -1,4 +1,4 @@
-AC_INIT(javahl, 0.24)
+AC_INIT(javahl, 0.32.1)
 dnl this writes a "config.nice" file which reinvokes ./configure with all
 dnl of the arguments. this is different from config.status which simply
 dnl regenerates the output files. config.nice is useful after you rebuild
@@ -22,78 +22,34 @@ EOF
 
 SVN_CONFIG_NICE(config.nice)
 
-AM_INIT_AUTOMAKE(javahl, 0.24)
+sinclude(../../../../build/ac-macros/java.m4)
+sinclude(../../../../build/ac-macros/find_apr.m4)
+sinclude(../../../../build/ac-macros/find_apu.m4)
+
+AM_INIT_AUTOMAKE(javahl, 0.32.1)
 AM_MAINTAINER_MODE
 
+APR_FIND_APR("../../../../apr","../../../../apr",1)
+APR_FIND_APU("../../../../apr-util","../../../../apr-util",1)
 
+APRCONFIG=$apr_config
+APUCONFIG=$apu_config
 
 AC_PROG_CXX
 AC_PROG_INSTALL
 AC_LIBTOOL_DLOPEN
 AC_PROG_LIBTOOL
-
 dnl
 dnl SVN
 dnl
-
 SVNCONFIG=../../../../svn-config
-CXXFLAGS="$CXXFLAGS `$SVNCONFIG --cflags` `$SVNCONFIG --cppflags` \
-                    `$SVNCONFIG --includes` -I`$SVNCONFIG --srcdir`/subversion/include"
-SVN_LIBS="`$SVNCONFIG --libs`"
-SVN_PREFIX="`$SVNCONFIG --prefix`"
-SVN_LIBS="$SVN_LIBS -L$SVN_PREFIX/lib -lsvn_client-1 -lsvn_delta-1 -lsvn_fs-1 -lsvn_ra-1 -lsvn_ra_dav-1 -lsvn_ra_local-1 -lsvn_ra_svn-1 -lsvn_repos-1 -lsvn_subr-1 -lsvn_wc-1"
-dnl
-dnl java: Locates the JDK and its include files and libraries.
-dnl
-
-AC_DEFUN(SVN_CHECK_JDK,
-[
-  AC_ARG_WITH(jdk,
-              AC_HELP_STRING([--with-jdk=PATH],
-                             [Try to use 'PATH/include' to find the JNI
-                              headers.  If PATH is not specified, look 
-                              for a Java Development Kit at JAVA_HOME.]),
-  [
-    case "$withval" in
-      "no")
-        JDK_SUITABLE=no
-      ;;
-      "yes")
-        SVN_FIND_JDK(check)
-      ;;
-      *)
-        SVN_FIND_JDK($withval)
-      ;;
-    esac
-  ],
-  [
-    SVN_FIND_JDK(check)
-  ])
-])
-
-AC_DEFUN(SVN_FIND_JDK,
-[
-  where=$1
-
-  AC_MSG_CHECKING([for JDK])
-  if test $where = check; then
-    if test -d "$JAVA_HOME/include"; then
-      JDK="$JAVA_HOME"
-      JDK_SUITABLE=yes
-    else
-      JDK=none
-      JDK_SUITABLE=no
-      AC_MSG_ERROR([JDK 1.2 is required. Try --with-jdk.])
-    fi
-  else
-    JDK=$where
-    if test -d "$JDK/include"; then
-      JDK_SUITABLE=yes
-    else
-      AC_MSG_WARN([no JNI header files found.])
-      AC_MSG_ERROR([JDK 1.2 is required. Try --with-jdk.])
-    fi
-  fi
+CXXFLAGS="$CXXFLAGS `$APRCONFIG --cflags` `$APRCONFIG --cppflags` \
+                    `$APRCONFIG --includes` `$APUCONFIG --includes` -I../../../../include"
+SVN_LIBS="`$APUCONFIG --libs` `$APRCONFIG --libs`"
+dnl SVN_PREFIX="`$SVNCONFIG --prefix`"
+dnl SVN_LIBS="$SVN_LIBS -L$SVN_PREFIX/lib -lsvn_client-1 -lsvn_delta-1 -lsvn_fs-1 -lsvn_ra-1 -lsvn_ra_dav-1 -lsvn_ra_local-1 -lsvn_ra_svn-1 -lsvn_repos-1 -lsvn_subr-1 -lsvn_wc-1"
+SVN_LIBS="$SVN_LIBS ../../../../libsvn_client/libsvn_client-1.la"
+SVN_CHECK_JDK
     if test "$JDK" != "none" -a "$JDK_SUITABLE" = "yes"; then
       list="`find "$JDK/include" -type d -print`"
       for dir in $list; do
@@ -101,16 +57,9 @@ AC_DEFUN(SVN_FIND_JDK,
       done
     fi
 
-  CXXFLAGS="$CXXFLAGS $JAVA_INCLUDES"
-  CFLAGS="$CFLAGS $JAVA_INCLUDES"
-  AC_MSG_RESULT([$JDK_SUITABLE])
-
-
-  AC_SUBST(JDK)
-])
-
-SVN_CHECK_JDK
-
+CXXFLAGS="$CXXFLAGS $JAVA_INCLUDES"
+CFLAGS="$CFLAGS $JAVA_INCLUDES"
+ 
 AC_SUBST(SVN_LIBS)
 
 AC_CONFIG_FILES(Makefile src/Makefile native/Makefile cls/Makefile doc/Makefile)
