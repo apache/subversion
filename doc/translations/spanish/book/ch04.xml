@@ -225,9 +225,10 @@ Adding         branches/my-calc-branch
 Committed revision 341.
 </screen>
 
-      <para>And now the easier method of creating a branch, which we
-        should have told you about in the first place: <command>svn
-        copy</command> is able to operate directly on two URLs.</para>
+      <para>Y ahora el método más sencillo para crear una rama,
+        que deberíamos haberle explicado en primer lugar:
+        <command>svn copy</command> es capaz de operar directamente
+        sobre dos URLs.</para>
 
 <screen>
 $ svn copy http://svn.example.com/repos/calc/trunk \
@@ -237,25 +238,26 @@ $ svn copy http://svn.example.com/repos/calc/trunk \
 Committed revision 341.
 </screen>
 
-      <para>There's really no difference between these two methods.
-        Both procedures create a new directory in revision 341, and
-        the new directory is a copy of
-        <filename>/calc/trunk</filename>.  This is shown in <xref
-        linkend="svn-ch-4-dia-3"/>.  Notice that the second method,
-        however, performs an <emphasis>immediate</emphasis> commit.
+      <para>Realmente no hay diferencia entre estos dos
+        métodos. Ambos procedimientos crean un nuevo directorio
+        en la revisión 341, y el nuevo directorio es una copia
+        de <filename>/calc/trunk</filename>.  Esto se puede ver
+        en <xref linkend="svn-ch-4-dia-3"/>. Note cómo el segundo
+        método, no obstante, realiza los cambios en el repositorio
+        <emphasis>inmediatamente</emphasis>.
         <footnote> 
-          <para>Subversion does not support
-            cross-repository copying.  When using URLs with <command>svn
-            copy</command> or <command>svn move</command>, you can only
-            copy items within the same repository.</para>
+          <para>Subversion no soporta copias entre diferentes
+            repositorios.  Cuando use URLs con <command>svn
+            copy</command> o <command>svn move</command>, sólo puede
+            copiar elementos dentro del mismo repositorio.</para>
         </footnote>
-        It's an easier procedure, because it doesn't require you to
-        check out a large mirror of the repository.  In fact, this
-        technique doesn't even require you to have a working copy at
-        all.</para>
+        Es un procedimiento más sencillo, porque no requiere obtener
+        primero una gran copia local de todo el repositorio. De
+        hecho, esta técnica ni si quiera requiere que tenga una
+        copia local en absoluto.</para>
       
       <figure id="svn-ch-4-dia-3">
-        <title>Repository with new copy</title>
+        <title>Repositorio con nueva copia</title>
         <graphic fileref="images/ch04dia3.png"/>
       </figure>
       
