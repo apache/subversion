@@ -132,6 +132,8 @@ svn_path_remove_component (svn_stringbuf_t *path, enum svn_path_style style)
 
   if (! svn_stringbuf_chop_back_to_char (path, dirsep))
     svn_stringbuf_setempty (path);
+
+  svn_path_canonicalize (path, style);
 }
 
 
@@ -275,7 +277,7 @@ svn_path_get_longest_ancestor (const svn_stringbuf_t *path1,
   else
     common_path = svn_stringbuf_ncreate (path1->data, last_dirsep, pool);
     
-  svn_path_canonicalize (common_path, svn_path_local_style);
+  svn_path_canonicalize (common_path, style);
 
   return common_path;
 }

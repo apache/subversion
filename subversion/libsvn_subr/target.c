@@ -46,6 +46,7 @@ svn_path_get_absolute(svn_stringbuf_t **pabsolute,
   if (apr_err == APR_SUCCESS)
     {
       *pabsolute = svn_stringbuf_create(buffer, pool);
+      svn_path_canonicalize(*pabsolute, svn_path_local_style);
       return SVN_NO_ERROR;
     }
   else
