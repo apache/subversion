@@ -8,10 +8,10 @@ dnl python bindings.
 AC_DEFUN(SVN_CHECK_SWIG,
 [
   AC_ARG_WITH(swig,
-              [AC_HELP_STRING([--with-swig=PATH],
-                              [Try to use 'PATH/bin/swig' to build the
-                               swig bindings.  If PATH is not specified,
-                               look for a 'swig' binary in your PATH.])],
+              AC_HELP_STRING([--with-swig=PATH],
+                             [Try to use 'PATH/bin/swig' to build the
+                              swig bindings.  If PATH is not specified,
+                              look for a 'swig' binary in your PATH.]),
   [
     case "$withval" in
       "no")
