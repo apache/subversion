@@ -58,7 +58,8 @@ del_lines_res = [
                  re.compile(r'\s+compiled\s+'),
 
                  # Also for 'svn --version':
-                 re.compile(r"- handles '(https|file)' schema"),
+                 re.compile(r"^\* ra_(dav|local|svn) :"),
+                 re.compile(r"^  - handles '(https|file|svn)' schema"),
                 ]
 
 # This is a list of lines to search and replace text on.
