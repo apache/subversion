@@ -499,6 +499,10 @@ SVN_ERROR_START
               SVN_ERR_REPOS_CATEGORY_START + 6,
               "Disabled repository feature")
 
+  SVN_ERRDEF (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED,
+              SVN_ERR_REPOS_CATEGORY_START + 7,
+              "Error running post-commit hook.")
+
   /* generic ra errors */
 
   SVN_ERRDEF (SVN_ERR_RA_ILLEGAL_URL,

@@ -34,6 +34,7 @@ svn_repos_fs_commit_txn (const char **conflict_p,
                          svn_revnum_t *new_rev,
                          svn_fs_txn_t *txn)
 {
+  svn_error_t *err;
   svn_fs_t *fs = repos->fs;
   apr_pool_t *pool = svn_fs_txn_pool (txn);
 
@@ -53,8 +54,15 @@ svn_repos_fs_commit_txn (const char **conflict_p,
   /* Commit. */
   SVN_ERR (svn_fs_commit_txn (conflict_p, new_rev, txn));
 
-  /* Run post-commit hooks. */
-  SVN_ERR (svn_repos__hooks_post_commit (repos, *new_rev, pool));
+  /* Run post-commit hooks.   Notice that we're wrapping the error
+     with a -specific- errorcode, so that our caller knows not to try
+     and abort the transaction. */
+  err = svn_repos__hooks_post_commit (repos, *new_rev, pool);
+  if (err)
+    return svn_error_create(SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED,
+                            err,
+                            "Commit succeeded, but post-commit hook failed.");
+
 
   return SVN_NO_ERROR;
 }

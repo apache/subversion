@@ -533,6 +533,12 @@ svn_repos_get_logs (svn_repos_t *repos,
  * post-commit hooks around the commit.  Use @a txn's pool for temporary
  * allocations.
  *
+ * If the pre-commit hook or svn_fs_commit_txn() fails, throw the
+ * original error to caller.  If an error occurs when running the
+ * post-commit hook, return the original error wrapped with
+ * SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.  If the caller sees this
+ * error, it knows that the commit succeeded anyway.
+ *
  * @a conflict_p, @a new_rev, and @a txn are as in @c svn_fs_commit_txn().
  */
 svn_error_t *svn_repos_fs_commit_txn (const char **conflict_p,
