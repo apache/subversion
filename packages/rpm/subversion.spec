@@ -1,4 +1,4 @@
-%define apache_version 2.0.40-0.9
+%define apache_version 2.0.41-0.1
 %define neon_version 0.21.3
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
