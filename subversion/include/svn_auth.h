@@ -392,11 +392,7 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
  * fails to authenticate.
  *
  * Use @a pool to allocate @a *state, and for temporary allocation.
- * Note that there is no guarantee about where @a *credentials will be
- * allocated: it might be in @a pool, or it might be in @a
- * auth_baton->pool, depending on the provider.  So safe callers
- * should duplicate the credentials to safe place if they plan to free
- * @a pool.
+ * Note that @a *credentials will be allocated in @a auth_baton's pool.
  */
 svn_error_t * svn_auth_first_credentials(void **credentials,
                                          svn_auth_iterstate_t **state,
@@ -413,11 +409,7 @@ svn_error_t * svn_auth_first_credentials(void **credentials,
  * svn_auth_next_credentials.  If no more credentials are available,
  * set @a *credentials to NULL.
  *
- * Use @a pool for temporary allocation.  Note that there is no
- * guarantee about where @a *credentials will be allocated: it might
- * be in @a pool, or it might be in @a auth_baton->pool, depending on
- * the provider.  So safe callers should duplicate the credentials to
- * safe place if they plan to free @a pool.
+ * Note that @a *credentials will be allocated in @c auth_baton's pool.
  */
 svn_error_t * svn_auth_next_credentials(void **credentials,
                                         svn_auth_iterstate_t *state,
