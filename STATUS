@@ -22,38 +22,6 @@ Candidate changes:
       +1: jszakmeister, dionisos
       +0: kfogel, lundblad
 
-  * r11439, r11669
-    Fix slow "svn st" where the targets are files by not locking the whole
-    anchor tree.
-    Votes:
-      +1: lundblad, dionisos, ghudson
-      (r11439 nominated by): Steve King
-
-  * r11665
-    Make FSFS commits work with insert-only perms on db/revs.
-    Justification:
-      This is a pretty straightforward order-of-operations change, is
-      how I (Greg) always intended FSFS to work, and fulfills what has
-      been a secondary goal of FSFS from the beginning.
-    Votes:
-      +1: ghudson, epg
-
-  * Issue #2111
-    Fix RPM build breakage.
-    Justification:
-      RPM build breakage = bad.
-    Votes:
-      +1: david, ghudson
-
-  * r11047 (Issue #2032)
-    Always call mkdir-init, even if we're not in a VPATH setup.
-    Justification:
-      Allows users to install JavaHL without manually creating
-      directories to work around Issue #2032.
-    Votes:
-      +1: dlr, ghudson
-      Nominated by: David James <james82@gmail.com>
-
   * r11050
     Add install dependencies for libsvn_fs and libsvn_fs_base.
     Justification:
@@ -72,13 +40,6 @@ Candidate changes:
     Votes:
       +1: josander
 
-  * r11451, r11630
-    Fix pool usage and stalled object reference counts in Perl bindings.
-    Justification:
-      Reduce memory leaks in Perl bindings.
-    Votes:
-      +1: clkao, epg
-
   * r11708
     Fix a bug which caused certain unfinished switch operations to leave
     the working copy in a busticated state.
@@ -86,29 +47,6 @@ Candidate changes:
       Did you miss the part where I said "working copy ... busticated state"?
     Votes:
       +1: cmpilato
-
-  * r11730, r11743 (Issue #2108)
-    Fix UNC paths on Cygwin.
-    Justification:
-      Regression from 1.0.x
-    Votes:
-      +1: brane, lundblad
-
-  * r11740
-    Fix encoding bug in svn ls -v.
-    Justification:
-      Encoding bugs look ugly, especially in Asian languages.  Simple fix.
-    Votes:
-      +1: lundblad, kfogel
-      +0: nori
-
-  * r11862, r11921 (part of issue #1997)
-    Fix encoding bug in svnserve -h.
-    Justification:
-      Encoding bugs look ugly.
-    Votes:
-      +1: lundblad
-      +0: nori
 
   * r11936
     Fixes a 'working copy not locked' error.
@@ -126,4 +64,61 @@ Candidate changes:
       Trivial change.
     Votes:
       +1: maxb
+
+
+Approved changes (further review is welcome, but not required):
+
+  * r11439, r11669
+    Fix slow "svn st" where the targets are files by not locking the whole
+    anchor tree.
+    Votes:
+      +1: lundblad, dionisos, ghudson
+      (r11439 nominated by): Steve King
+
+  * r11665
+    Make FSFS commits work with insert-only perms on db/revs.
+    Justification:
+      This is a pretty straightforward order-of-operations change, is
+      how I (Greg) always intended FSFS to work, and fulfills what has
+      been a secondary goal of FSFS from the beginning.
+    Votes:
+      +1: ghudson, epg, maxb
+
+  * Issue #2111
+    Fix RPM build breakage.
+    Justification:
+      RPM build breakage = bad.
+    Votes:
+      +1: david, ghudson
+
+  * r11047 (Issue #2032)
+    Always call mkdir-init, even if we're not in a VPATH setup.
+    Justification:
+      Allows users to install JavaHL without manually creating
+      directories to work around Issue #2032.
+    Votes:
+      +1: dlr, ghudson, maxb
+      Nominated by: David James <james82@gmail.com>
+
+  * r11451, r11630
+    Fix pool usage and stalled object reference counts in Perl bindings.
+    Justification:
+      Reduce memory leaks in Perl bindings.
+    Votes:
+      +1: clkao, epg
+
+  * r11730, r11743 (Issue #2108)
+    Fix UNC paths on Cygwin.
+    Justification:
+      Regression from 1.0.x
+    Votes:
+      +1: brane, lundblad, maxb
+
+  * r11740
+    Fix encoding bug in svn ls -v.
+    Justification:
+      Encoding bugs look ugly, especially in Asian languages.  Simple fix.
+    Votes:
+      +1: lundblad, kfogel, maxb
+      +0: nori
 
