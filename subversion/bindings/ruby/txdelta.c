@@ -52,7 +52,9 @@ static void
 free_txdelta (void *p)
 {
   svn_ruby_txdelta_t *delta = p;
-  apr_pool_destroy (delta->pool);
+
+  svn_pool_destroy (delta->pool);
+
   free (delta);
 }
 
@@ -154,23 +156,25 @@ send_string (VALUE self, VALUE aStr)
 {
   svn_string_t *string;
   apr_pool_t *pool;
-  svn_error_t *err;
   svn_ruby_txdelta_t *delta;
 
   Data_Get_Struct (self, svn_ruby_txdelta_t, delta);
+
   if (delta->closed)
     closed_txdelta_error ();
+
   Check_Type (aStr, T_STRING);
 
   pool = svn_pool_create (delta->pool);
+
   string = svn_string_create (StringValuePtr (aStr), pool);
 
-  err = svn_txdelta_send_string (string, delta->handler, delta->handler_baton,
-                                 pool);
+  SVN_RB_ERR (svn_txdelta_send_string (string, delta->handler,
+                                       delta->handler_baton, pool),
+              pool);
 
-  apr_pool_destroy (pool);
-  if (err)
-    svn_ruby_raise (err);
+  svn_pool_destroy (pool);
+
   delta->closed = TRUE;
 
   return Qnil;
@@ -181,22 +185,23 @@ send_stream (VALUE self, VALUE aStream)
 {
   svn_stream_t *stream;
   apr_pool_t *pool;
-  svn_error_t *err;
   svn_ruby_txdelta_t *delta;
 
   Data_Get_Struct (self, svn_ruby_txdelta_t, delta);
+
   if (delta->closed)
     closed_txdelta_error ();
 
   stream = svn_ruby_stream (aStream);
+
   pool = svn_pool_create (delta->pool);
 
-  err = svn_txdelta_send_stream (stream, delta->handler, delta->handler_baton,
-                                 pool);
+  SVN_RB_ERR (svn_txdelta_send_stream (stream, delta->handler,
+                                       delta->handler_baton, pool),
+              pool);
 
-  apr_pool_destroy (pool);
-  if (err)
-    svn_ruby_raise (err);
+  svn_pool_destroy (pool);
+
   delta->closed = TRUE;
 
   return Qnil;
@@ -210,7 +215,8 @@ apply (VALUE self, VALUE aWindow)
 
   if (aWindow != Qnil
       && CLASS_OF (aWindow) != cSvnTextDeltaWindow)
-    rb_raise (rb_eRuntimeError, "Wrong argument: Window must be Svn::TextDeltaWindow");
+    rb_raise (rb_eRuntimeError,
+              "Wrong argument: Window must be Svn::TextDeltaWindow");
 
   Data_Get_Struct (self, svn_ruby_txdelta_t, handler);
 
@@ -242,6 +248,7 @@ close (VALUE self)
   svn_ruby_txdelta_t *delta;
 
   Data_Get_Struct (self, svn_ruby_txdelta_t, delta);
+
   if (delta->closed)
     closed_txdelta_error ();
   else
@@ -267,7 +274,9 @@ static void
 free_txdelta_window (void *p)
 {
   svn_ruby_txdelta_window_t *window = p;
-  apr_pool_destroy (window->pool);
+
+  svn_pool_destroy (window->pool);
+
   free (window);
 }
 
@@ -286,7 +295,8 @@ free_txdelta_stream (void *p)
 {
   svn_ruby_txdelta_stream_t *stream = p;
 
-  apr_pool_destroy (stream->pool);
+  svn_pool_destroy (stream->pool);
+
   free (stream);
 }
 
@@ -298,15 +308,20 @@ txdelta_stream_new (VALUE class, VALUE source, VALUE target)
 
   obj = Data_Make_Struct (class, svn_ruby_txdelta_stream_t,
                           0, free_txdelta_stream, stream);
+
   stream->pool = svn_pool_create (NULL);
   stream->closed = TRUE;
+
   /* svn_ruby_stream can raise exception. */
   svn_txdelta (&stream->stream,
                svn_ruby_stream (source), svn_ruby_stream (target),
                stream->pool);
+
   stream->closed = FALSE;
+
   rb_iv_set (obj, "@source", source);
   rb_iv_set (obj, "@target", target);
+
   rb_obj_call_init (obj, 0, 0);
 
   return obj;
@@ -339,7 +354,6 @@ txdelta_stream_next_window (VALUE self)
   svn_txdelta_window_t *window;
   svn_ruby_txdelta_stream_t *stream;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   Data_Get_Struct (self, svn_ruby_txdelta_stream_t, stream);
 
@@ -347,9 +361,7 @@ txdelta_stream_next_window (VALUE self)
     rb_raise (rb_eRuntimeError, "Already closed");
 
   pool = svn_pool_create (stream->pool);
-  err = svn_txdelta_next_window (&window, stream->stream, pool);
-  if (err)
-    svn_ruby_raise (err);
+  SVN_RB_ERR (svn_txdelta_next_window (&window, stream->stream, pool), NULL);
 
   if (window == NULL)
     return Qnil;

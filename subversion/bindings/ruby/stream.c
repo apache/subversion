@@ -40,7 +40,7 @@ stream_free (void *p)
   if (!stream->closed)
     {
       svn_stream_close (stream->stream);
-      apr_pool_destroy (stream->pool);
+      svn_pool_destroy (stream->pool);
     }
   free (stream);
 }
@@ -70,7 +70,6 @@ read (VALUE self, VALUE aInt)
 {
   char *buffer;
   apr_size_t len;
-  svn_error_t *err;
   apr_pool_t *pool;
   svn_ruby_stream_t *stream;
   VALUE obj;
@@ -82,21 +81,18 @@ read (VALUE self, VALUE aInt)
   pool = svn_pool_create (stream->pool);
   buffer = apr_palloc (pool, len);
 
-  err = svn_stream_read (stream->stream, buffer, &len);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_stream_read (stream->stream, buffer, &len), pool);
 
   if (!len)
     {
-      apr_pool_destroy (pool);
+      svn_pool_destroy (pool);
       return Qnil;
     }
 
   obj = rb_str_new (buffer, len);
-  apr_pool_destroy (pool);
+
+  svn_pool_destroy (pool);
+
   return obj;
 }
 
@@ -104,14 +100,16 @@ static VALUE
 close (VALUE self)
 {
   svn_ruby_stream_t *stream;
-  svn_error_t *err;
+
   Data_Get_Struct (self, svn_ruby_stream_t, stream);
+
   if (stream->closed)
     rb_raise (rb_eRuntimeError, "Stream is already closed");
-  err = svn_stream_close (stream->stream);
-  if (err)
-    svn_ruby_raise (err);
-  apr_pool_destroy (stream->pool);
+
+  SVN_RB_ERR (svn_stream_close (stream->stream), NULL);
+
+  svn_pool_destroy (stream->pool);
+
   stream->closed = TRUE;
 
   return Qnil;
@@ -145,7 +143,7 @@ file_free (void *p)
     {
       svn_stream_close (stream->stream);
       apr_file_close (stream->file);
-      apr_pool_destroy (stream->pool);
+      svn_pool_destroy (stream->pool);
     }
   free (stream);
 }
@@ -163,8 +161,11 @@ file_new (VALUE class, VALUE aPath, VALUE flag)
   VALUE obj, argv[2];
 
   Check_Type (aPath, T_STRING);
+
   path = StringValuePtr (aPath);
   pool = svn_pool_create (NULL);
+
+  /* XXX should we be using svn_file_open here? */
   status = apr_file_open (&file, path,
                           NUM2LONG (flag), APR_OS_DEFAULT,
                           pool);
@@ -172,16 +173,20 @@ file_new (VALUE class, VALUE aPath, VALUE flag)
     svn_ruby_raise (svn_error_createf (status, 0, 0,
                                        "Failed to open file %s",
                                        path));
+
   stream = svn_stream_from_aprfile (file, pool);
 
   obj = Data_Make_Struct (class, svn_ruby_file_stream_t,
                           0, file_free, rb_stream);
+
   rb_stream->stream = stream;
   rb_stream->pool = pool;
   rb_stream->closed = FALSE;
   rb_stream->file = file;
+
   argv[0] = aPath;
   argv[1] = flag;
+
   rb_obj_call_init (obj, 2, argv);
 
   return obj;
@@ -196,19 +201,20 @@ file_init (VALUE self, VALUE aPath, VALUE flag)
 static VALUE
 file_write (VALUE self, VALUE aString)
 {
-  svn_error_t *err;
   svn_ruby_stream_t *stream;
   apr_size_t len;
 
   Data_Get_Struct (self, svn_ruby_stream_t, stream);
+
   if (stream->closed)
     rb_raise (rb_eRuntimeError, "Stream is already closed");
 
   Check_Type (aString, T_STRING);
+
   len = RSTRING (aString)->len;
-  err = svn_stream_write (stream->stream, StringValuePtr (aString), &len);
-  if (err)
-    svn_ruby_raise (err);
+
+  SVN_RB_ERR (svn_stream_write (stream->stream, StringValuePtr (aString), &len),
+              NULL);
 
   return LONG2NUM (len);
 }
@@ -217,19 +223,21 @@ static VALUE
 file_close (VALUE self)
 {
   svn_ruby_file_stream_t *stream;
-  svn_error_t *err;
   apr_status_t status;
 
   Data_Get_Struct (self, svn_ruby_file_stream_t, stream);
+
   if (stream->closed)
     rb_raise (rb_eRuntimeError, "Stream is already closed");
-  err = svn_stream_close (stream->stream);
-  if (err)
-    svn_ruby_raise (err);
+
+  SVN_RB_ERR (svn_stream_close (stream->stream), NULL);
+
   status = apr_file_close (stream->file);
   if (status)
     rb_raise (rb_eRuntimeError, "failed to close file");
-  apr_pool_destroy (stream->pool);
+
+  svn_pool_destroy (stream->pool);
+
   stream->closed = TRUE;
 
   return Qnil;
@@ -247,7 +255,9 @@ svn_ruby_stream (VALUE aStream)
           || c == cSvnFileStream)
         {
           svn_ruby_stream_t *stream;
+
           Data_Get_Struct (aStream, svn_ruby_stream_t, stream);
+
           return stream->stream;
         }
     }
