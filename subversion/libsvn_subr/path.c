@@ -119,7 +119,7 @@ svn_path_canonicalize (svn_stringbuf_t *path, enum svn_path_style style)
 {
   const path_style_context_t *ctx = get_path_style_context (style);
 
-  /* At some point this could eliminiate redundant components.
+  /* At some point this could eliminate redundant components.
      For now, it just makes sure there is no trailing slash. */
 
   /* kff todo: maybe should be implemented with a new routine in
