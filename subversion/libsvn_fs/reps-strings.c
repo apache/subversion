@@ -1159,6 +1159,8 @@ svn_fs__rep_deltify (svn_fs_t *fs,
                      const char *source,
                      trail_t *trail)
 {
+#if 0  /* We don't do deltification for now */
+
   svn_stream_t *source_stream; /* stream to read the source */
   svn_stream_t *target_stream; /* stream to read the target */
   svn_txdelta_stream_t *txdelta_stream; /* stream to read delta windows  */
@@ -1304,6 +1306,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
     SVN_ERR (svn_fs__string_delete (fs, orig_str_key, trail));
   }
 
+#endif /* 0 */
   return SVN_NO_ERROR;
 }
 
