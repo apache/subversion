@@ -29,7 +29,7 @@
 
 /*** Creating and opening the uuids table.
      When the table is created, the repository's uuid is
-     is generated and stored as record #1. ***/
+     generated and stored as record #1. ***/
 
 int
 svn_fs__bdb_open_uuids_table (DB **uuids_p,

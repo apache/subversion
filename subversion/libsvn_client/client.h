@@ -195,7 +195,7 @@ svn_error_t * svn_client__can_delete (const char *path,
 /* Read automatic properties matching PATH from CTX->config.
    A hash is returned in *PROPERTIES containing propname/value pairs or
    when auto-props are disabled *PROPERTIES is set to NULL.
-   *MIMETYPE is set to to the mimetype or to NULL.
+   *MIMETYPE is set to the mimetype or to NULL.
    This function does not create a subpool, the caller is responsible to
    create one if necessary.
 */
