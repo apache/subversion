@@ -83,10 +83,11 @@ I. Introduction
              server version or local version of the file.  Somebody's
              edits are lost.
 
-       It is the recommendation of this document (see section II.B.3)
-       that Subversion follow the VSS model, with a backup file,
-       whenever a file is hijacked.  This is better than forcing
-       type-2 users to deal with merging and out-of-dateness.
+       It is the recommendation of this document that the commandline
+       client produce normal conflicts when 'svn up' is run on a
+       hijacked file;  but that for a GUI such as TortoiseSVN, a more
+       friendly (or interactive) procedure is followed -- perhaps one
+       that allows the user to choose between versions of flies.
 
 
 II. New Client Behaviors
@@ -96,19 +97,19 @@ II. New Client Behaviors
       This section describes a user interface to accomplish "locking",
       as described in the functional spec.  A new property is used to
       enforce locking and prevent people from wasting time;  lock
-      tokens are objects stored in the working copy that represent a
-      lock; and two new subcommands (lock/unlock) are described.
+      tokens are objects stored in the working that represent a lock;
+      and two new subcommands (lock/unlock) are described.
 
-   B. The "svn:lock" property
+   B. The "svn:needs-lock" property
 
-      Create a new "svn:lock" property to indicate that a path must be
-      locked before committing.  Just like "svn:executable", the value
-      of the property is irrelevant and the property can be created
-      (or deleted) by any user or administrator.
+      Create a new "svn:needs-lock" property to indicate that a path
+      must be locked before committing.  Just like "svn:executable",
+      the value of the property is irrelevant and the property can be
+      created (or deleted) by any user or administrator.
 
       1. Property as enforcement system
 
-         The presence of the "svn:lock" property on a path means that
+         The presence of the "svn:needs-lock" property on a path means that
          concurrency is disabled for the path and a user *must* obtain
          a lock on that path before committing changes to it.  The
          server rejects any commit which modifies this path unless the
@@ -117,28 +118,16 @@ II. New Client Behaviors
 
       2. Property as communication system
 
-         When the Subversion client encounters the "svn:lock" property
-         on a path (on checkout or update), it sets the working-copy
-         path to a read-only state by default.  This serves as a
-         reminder to the user that she should lock this path before
-         editing it.  When a user locks the path, the Subversion
-         client fetches the latest version of the file, then makes the
-         working-copy path read-write.  When the user releases the
-         lock, or if the lock is found to be defunct (see next
-         section), the Subversion client makes the path read-only
-         again.
+         When the Subversion client encounters the "svn:needs-lock"
+         property on a path (on checkout or update), it sets the
+         working-copy path to a read-only state by default.  This
+         serves as a reminder to the user that she should lock this
+         path before editing it.  When a user locks the path, the
+         Subversion client makes the working-copy path read-write.
+         When the user releases the lock, or if the lock is found to
+         be defunct (see next section), the Subversion client makes
+         the path read-only again.
 
-      3. Dealing with the "hijack" scenario (see section I.B.)
-
-         If a file has the "svn:lock" property attached, then the
-         behavior of "svn update" is affected when attempting to merge
-         repository changes into locally modified files.  Rather than
-         attempting contextual merging or marking the file
-         (C)onflicted (and dropping three fulltexts), the svn client
-         interactively asks the user whether to fetch the latest
-         version of the file, or use the edited local version.  In
-         either case, the unused version is left behind as an
-         unversioned backup file.
 
 
    C. Lock manipulation via client
@@ -190,7 +179,8 @@ II. New Client Behaviors
 
                - you *must* provide a username to the server.
                  'anonymous' locks are not allowed.
-               - The path must not already be locked.  
+               - The path must not already be locked.
+               - The path must not be out-of-date.  
                - a comment must be provided, so that others can
                  see why the object was locked.
 
@@ -201,7 +191,7 @@ II. New Client Behaviors
             The 'svn lock' command automatically implies running 'svn
             update' on a path.  In other words, it's not possible to
             lock a non-HEAD version of a path.  If a file has the
-            'svn:lock' property and has been hijacked, 'svn lock'
+            'svn:needs-lock' property and has been hijacked, both 'svn lock'
             will interactively ask the user whether to use the
             repository or local version of the file, just as 'svn
             update' does.
@@ -287,15 +277,15 @@ II. New Client Behaviors
 
               Remember than 'svn lock' requires a lock comment, so -m,
               -F, or launching of $EDITOR is required.  And remember
-              that the 'svn lock' command automatically implies
-              running 'svn update' on a path.
+              that the 'svn lock' command still requires that the
+              target be up-to-date to succeed.
 
 
          e. Discovering/examining locks
 
             1. seeing lock tokens in a working copy
 
-               'svn status' considers a lock token "interesting", and
+               'svn status' conisders a lock token "interesting", and
                displays it using some new symbol, in a new column:
 
                    $ svn status
@@ -319,14 +309,24 @@ II. New Client Behaviors
                         *  file1
                          # file2
 
-            3.  a new subcommand, 'svn lockinfo', describes the
-                attributes of a lock.  If invoked on a URL, it
-                displays information about a remote lock.  If invoked
-                on a working copy path, it displays information about
-                any local lock-token, or, if no lock token exists,
-                queries the path's URL for remote lock information.
 
-                   $ svn lockinfo http://host/repos/file2
+            3.  'svn info', describes the attributes of a lock-token,
+                if attached to a working object.  If invoked on a URL,
+                it displays information about any remote lock
+                attached. 
+
+                   $ svn info foo.c
+                   Path: foo.c
+                   Name: foo.c
+                   URL: http://..../
+                   [...]
+                   You have a lock on this object:
+                       - by user 'harry'
+                       - at time 2004-07-20 21:11:11 -0400
+                       - lock comment:  "mine mine mine."
+                 
+
+                   $ svn info http://host/repos/file2
                    file2 is locked:
                        - by user 'sally'
                        - at time 2004-07-21 22:53:27 -0400
