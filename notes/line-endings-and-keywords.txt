@@ -1,0 +1,129 @@
+
+                    LIBSVN_WC : TRANSPARENT SUBSTITUTIONS
+
+
+NEW USER-VISIBLE FEATURES:
+
+  1.  keyword expansion
+
+      A certain pattern in a file can be 'replaced' with dynamic
+      content, such as an author or date.
+
+  2.  newline conversion
+
+      Text files in the working copy can (optionally) automatically
+      have the client's 'native' line-endings.      
+
+
+DESIGN GOAL
+
+ * Purely client-side substitutions.
+
+    The repository stores data, pure and simple.  It has no
+    'preferred' format, and it's -not- going to change data moving in
+    and out of the filesystem, period.  This is a libsvn_wc change
+    only.
+
+    - Ramification: this means that all working copy 'text-bases' are
+      going to be exactly identical to one another: that is, it will
+      be exactly equal to whatever is in the repository. The
+      repository will continue to use binary-diffs over the wire.
+
+       - Sub-Ramification: svn_wc_text_modified_p() is going to have
+         to intelligently overlook these differences when comparing
+         text-bases with working files that have been 'converted'.
+
+       - Sub-Ramification: the conversions need to happen at the right
+         times, so that our calls to 'diff' and 'patch' work correctly.
+
+
+
+HOW TO KNOW WHEN A FILE IS TEXT
+
+Working proposal, based on status quo:
+
+ * a file is text iff it has a mime-type property of 'text/*', OR if it
+   has no mime-type property at all.  (binary files are currently
+   being detected and marked as type 'application/octet-stream'.)
+
+
+
+
+I. NEWLINE CONVERSION
+
+  A. HOW TO TOGGLE NEWLINE CONVERSION
+
+     Newline conversions only happen on text files.
+
+     Our experience is that most people want newline conversion.
+     Therefore, this feature is "on" by default.  It can be turned off
+     using a file property.
+
+     (Later, if we need to, we can deactivate via directory
+     properties, and maybe even inheritance rules.  But let's not go
+     there yet.)
+
+
+  B. HOW A CLIENT DOES NEWLINE CONVERSION
+ 
+     [ History:  
+
+      * Gstein and Pilchie proposed per-directory default line-ending styles.
+      * Karl proposed something differerent.
+      * Branko gave the 'newest' proposal...
+
+       (Latest proposal by Branko, agreed to by Ben, Karl and Greg Hudson:) ]
+
+    - all text files have a "line-ending-style".  Specifically, this
+      property means: "the style that that file has in the
+      repository."
+
+       - a line-ending-style can be explicitly given via file property:
+
+             'svn:line-ending-style : DOS', etc.
+
+       - define a 'default' line-ending style to SOME convention that
+         ALL clients agree upon.  *** If no line-ending-style property
+         is set, this is the style that the text file is assumed to
+         have. ***
+
+    - When updating/checking out, the client looks at the file's
+      line-ending-style.  If it doesn't match the client app's
+      'native' style, it is silently converted when copying from
+      text-base to the user-visible work area.
+
+    - When committing, if working file's style doesn't match the
+      file's official line-ending-style, then a converted copy will be
+      sent to the repository.
+
+    - See DESIGN section; svn_wc_text_modified_p, diff, and patch all
+      need to be aware of this process.
+
+
+
+II.  KEYWORD EXPANSION
+
+  A. HOW TO TOGGLE KEYWORD EXPANSION
+
+     Our experience is that most people do *not* want keyword
+     expansion every day; most users are unaware of it, and tend to
+     get bitten by it.  When it's wanted, it's usually only wanted on
+     selected files.  Therefore, this feature is "off" by default.  It
+     can be turned on using a file property.
+
+     Also note: as Branko requestss, nothing prevents a user from
+     activating keyword expansion on a 'binary' file.  A file's
+     mime-type is irrelevant.
+
+  B. HOW A CLIENT DOES KEYWORD EXPANSION
+ 
+     - When updating/checking out, the client looks to see if the
+       keyword-expansion property is 'on'.  If so, then the file has
+       keywords substituted when copying from text-base to the
+       user-visible work area.
+
+     - When committing, if the property is 'on', then an
+       un-substituted copy will be sent to the repository.
+
+     - See DESIGN section; svn_wc_text_modified_p, diff, and patch all
+       need to be aware of this process.
