@@ -39,7 +39,7 @@ generate_status_code (enum svn_wc_status_kind status)
     case svn_wc_status_none:        return ' ';
     case svn_wc_status_normal:      return ' ';
     case svn_wc_status_added:       return 'A';
-    case svn_wc_status_absent:      return '!';
+    case svn_wc_status_missing:     return '!';
     case svn_wc_status_incomplete:  return '!';
     case svn_wc_status_deleted:     return 'D';
     case svn_wc_status_replaced:    return 'R';

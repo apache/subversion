@@ -1007,7 +1007,7 @@ enum svn_wc_status_kind
     svn_wc_status_added,
 
     /** under v.c., but is missing */
-    svn_wc_status_absent,
+    svn_wc_status_missing,
 
     /** scheduled for deletion */
     svn_wc_status_deleted,
@@ -1097,8 +1097,8 @@ svn_wc_status_t *svn_wc_dup_status (svn_wc_status_t *orig_stat,
  *                              svn:ignore property setting for @a path's
  *                              parent directory.
  *
- *    - @c svn_wc_status_absent : @a path is versioned, but is missing from
- *                                the working copy.
+ *    - @c svn_wc_status_missing : @a path is versioned, but is missing from
+ *                                 the working copy.
  *
  *    - @c svn_wc_status_unversioned : @a path is not versioned, but is
  *                                     present on disk and not being
