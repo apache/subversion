@@ -155,8 +155,8 @@ int svn_fs__list_length (skel_t *skel);
 
 /* Return 1 if SKEL1 and SKEL2 are the same in structure and contents,
    or 0 if they are not.  This is like a lisp `equal' not `eq': atoms
-   are the same if their lengths and contents are the same, lists are
-   the same if their elements are the same and in the same order. */ 
+   are equal if their lengths and contents are the same, lists are
+   equal if they have the same number and order of equal elements. */
 int svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2);
 
 
