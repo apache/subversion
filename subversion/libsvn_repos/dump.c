@@ -968,7 +968,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
       else
         {
           SVN_ERR (svn_repos_replay (to_root, dump_editor, 
-                                     dump_edit_baton, NULL, NULL, subpool));
+                                     dump_edit_baton, subpool));
         }
 
     loop_end:

@@ -401,21 +401,6 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
  * merely serve as indications that properties or textual contents
  * were changed. 
  *
- * If @a authz_read_func is non-null, invoke it before any call to
- *
- *    @a editor->open_root
- *    @a editor->add_directory
- *    @a editor->open_directory
- *    @a editor->add_file
- *    @a editor->open_file
- *
- * passing @a tgt_root, the same path that would be passed to the
- * editor function in question, and @a authz_read_baton.  If the
- * @a *allowed parameter comes back TRUE, then proceed with the planned
- * editor call; else if FALSE, then invoke @a editor->absent_file or
- * @a editor->absent_directory as appropriate, except if the planned
- * editor call was open_root, throw SVN_ERR_AUTHZ_ROOT_UNREADABLE.
- *
  * NOTE: this editor driver passes SVN_INVALID_REVNUM for all
  * revision parameters in the editor interface except the copyfrom
  * parameter of the add_file() and add_directory() editor functions.
@@ -424,8 +409,6 @@ svn_error_t *
 svn_repos_replay (svn_fs_root_t *root,
                   const svn_delta_editor_t *editor,
                   void *edit_baton,
-                  svn_repos_authz_read_func_t authz_read_func,
-                  void *authz_read_baton,
                   apr_pool_t *pool);
 
 

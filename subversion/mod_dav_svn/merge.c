@@ -421,7 +421,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
       mrc.root = committed_root;
       mrc.repos = repos;
       
-      serr = svn_repos_replay(committed_root, editor, &mrc, NULL, NULL, pool);
+      serr = svn_repos_replay(committed_root, editor, &mrc, pool);
       if (serr != NULL)
         {
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
