@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-11-24 16:14+0100\n"
-"PO-Revision-Date: 2004-11-24 16:18+0100\n"
+"PO-Revision-Date: 2004-12-03 19:10+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -294,6 +294,8 @@ msgstr " (z %s:%ld)"
 #: clients/cmdline/log-cmd.c:501
 msgid "When specifying working copy paths, only one target may be given"
 msgstr ""
+"Przy podawaniu ścieżek kopii roboczych, tylko jeden argument może \n"
+"zostać podany"
 
 #: clients/cmdline/log-cmd.c:513
 msgid "Only relative paths can be specified after a URL"
@@ -508,7 +510,6 @@ msgstr ""
 "Wykorzystanie: add ŚCIEŻKA...\n"
 
 #: clients/cmdline/main.c:184
-#, fuzzy
 msgid ""
 "Output the content of specified files or\n"
 "URLs with revision and author information in-line.\n"
@@ -523,11 +524,10 @@ msgstr ""
 "\n"
 "Użycie: blame OBIEKT[@WERSJA]...\n"
 "\n"
-"  Jeśli podano argument WERSJA\n"
-"\n"
+"  Argument WERSJA określa, w której wersji OBIEKT będzie najpierw \n"
+"sprawdzany.\n"
 
 #: clients/cmdline/main.c:193
-#, fuzzy
 msgid ""
 "Output the content of specified files or URLs.\n"
 "usage: cat TARGET[@REV]...\n"
@@ -536,7 +536,10 @@ msgid ""
 "  looked up.\n"
 msgstr ""
 "Wypisz treść podanych plików (wskazanych przez ścieżki lub URLe).\n"
-"Wykorzystanie: cat OBIEKT...\n"
+"Użycie: cat OBIEKT@WERSJA\n"
+"\n"
+"  Argument WERSJA określa, w której wersji OBIEKT będzie najpierw \n"
+"sprawdzany.\n"
 
 #: clients/cmdline/main.c:201
 msgid ""
@@ -6012,7 +6015,7 @@ msgstr "użyj wątków zamiast tworzenia procesów za pomocą fork"
 
 #: svnserve/main.c:121
 msgid "listen once (useful for debugging)"
-msgstr ""
+msgstr "nasłuchuj tylko raz (użyteczne przy poszukiwaniu błędów)"
 
 #: svnserve/main.c:132
 #, c-format
