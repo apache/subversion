@@ -54,14 +54,47 @@
 #include "xmlparse.h"
 
 
+/* Used as an argument to svn_xml_write_tag() */
+enum {
+  svn_xml__open_tag = 1,         /* write <tag>   */
+  svn_xml__close_tag,            /* write </tag>  */
+  svn_xml__self_close_tag        /* write <tag/>  */
+};
+
+
+/* A generalized Subversion XML parser */
+typedef struct svn_xml_parser_t
+{
+  XML_Parser parser;
+  svn_error_t *error;        /* if non-NULL, an error happened while parsing */
+  apr_pool_t *pool;          /* where to put error */
+
+} svn_xml_parser_t;
+
+
+
+
+
+
 
 /*** Setting up a parser. ***/
 
+#if 0                    /* todo: TEMPORARY */
+svn_xml_parser_t *
+svn_xml_make_parser (void *userData,
+                     XML_StartElementHandler  start_handler,
+                     XML_EndElementHandler    end_handler,
+                     XML_CharacterDataHandler data_handler,
+                     apr_pool_t *pool);
+
+#else
 XML_Parser
 svn_xml_make_parser (void *userData,
                      XML_StartElementHandler  start_handler,
                      XML_EndElementHandler    end_handler,
                      XML_CharacterDataHandler data_handler);
+#endif
+
 
 
 
@@ -76,6 +109,35 @@ svn_xml_make_parser (void *userData,
  * even-numbered index pointing to NULL.
  */
 const char *svn_xml_get_attr_value (const char *name, const char **atts);
+
+
+
+
+
+/*** Printing XML ***/
+
+/* Print an XML tag named TAGNAME into FILE.  Varargs are used to
+   specify a NULL-terminated list of {const char *attribute, const
+   char *value}.  TAGTYPE must be one of 
+
+              svn_xml__open_tag         ... <tagname>
+              svn_xml__close_tag        ... </tagname>
+              svn_xml__self_close_tag   ... <tagname/>
+
+   FILE is assumed to be already open for writing.
+*/
+svn_error_t * svn_xml_write_tag (apr_file_t *file,
+                                 apr_pool_t *pool,
+                                 int tagtype,
+                                 const char *tagname,
+                                 ...);
+
+
+
+
+
+
+
 
 
 #endif /* SVN_XML_H */
