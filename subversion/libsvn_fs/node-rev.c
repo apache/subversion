@@ -67,10 +67,12 @@ svn_fs__put_node_revision (svn_fs_t *fs,
   memset (rep, 0, sizeof (rep));
   rep[0].is_atom = 0;
   rep[0].children = &rep[1];
+
   rep[1].is_atom = 1;
-  rep[1].data = (char *) "fulltext";
+  rep[1].data = "fulltext";
   rep[1].len  = sizeof ("fulltext") - 1;
   rep[1].next = skel;
+
   skel->next = 0;
 
   /* This call checks the form of the skel for us, so we're protected
