@@ -28,7 +28,8 @@ if sys.hexversion < 0x2000000:
   sys.exit(1)
 
 # Don't settle for less.
-if anydbm._defaultmod.__name__ == 'dumbdbm':
+if (anydbm._defaultmod.__name__ == 'dumbdbm'
+    or anydbm._defaultmod.__name__ == 'dbm'):
   print 'ERROR: your installation of Python does not contain a proper'
   print '  DBM module. This script cannot continue.'
   print '  to solve: see http://python.org/doc/current/lib/module-anydbm.html'
