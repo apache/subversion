@@ -70,6 +70,7 @@ notify (void *baton,
     {
       printf ("WARNING: error decoding UTF-8 for ?\n");
       svn_pool_clear (nb->pool);
+      svn_error_clear (err);
       return;
     }
   switch (action)
