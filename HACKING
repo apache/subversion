@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-02-01 12:24:26 $
+              Last updated:  $Date: 2001-02-13 17:09:28 $
 
 
 TABLE OF CONTENTS
@@ -185,6 +185,12 @@ the operator precedence, and be willing to add spaces and newlines to
 avoid "code crunch".  Don't worry too much about vertical density;
 it's more important to make code readable than to fit that extra line
 on the screen.
+
+The controversial GNU convention of putting a space between a function
+name and its opening paren is optional in Subversion.  If you're
+editing an area of code that already seems to have a consistent
+preference about this, then just stick with that; otherwise, pick
+whichever way you like.
 
 
 
