@@ -462,6 +462,8 @@ svn_wc_status (svn_wc_status_t **status,
           SVN_ERR (svn_wc_entry (&parent_entry, parent_path, parent_access,
                                  FALSE, pool));
         }
+      else
+        parent_entry = NULL;
     }
 
   SVN_ERR (assemble_status (&s, path, adm_access, entry, parent_entry,
