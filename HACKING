@@ -390,7 +390,6 @@ For error messages the following conventions apply:
 
    * Don't include newline characters in error messages.
 
-
    * Quoting information is done using single quotes ('some info').
 
    * Don't include the name of the function where the error occurs
@@ -417,13 +416,6 @@ For error messages the following conventions apply:
    * Try to stay within the boundaries of these conventions, so please avoid
      separating different parts of error messages by other separators such 
      as '--' and others.
-
-   * Please wrap your lines in such a way that the message text (if you 
-     supply any) so that the message appears on the start of a new line.
-     Like:
-
-        svn_error_createf (SVN_ERR_FOO, NULL,
-                           "Authorisation failed for '%s'", url);
 
 
 
