@@ -21,6 +21,7 @@
 
 #include "apr_general.h"
 #include "apr_pools.h"
+#include "apr_file_io.h"
 #include "db.h"
 #include "svn_fs.h"
 #include "fs.h"
@@ -241,6 +242,7 @@ allocate_env (svn_fs_t *fs)
 svn_error_t *
 svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 {
+  apr_status_t apr_err;
   svn_error_t *svn_err;
 
   SVN_ERR (check_already_open (fs));
@@ -248,8 +250,9 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   fs->env_path = apr_pstrdup (fs->pool, path);
 
   /* Create the directory for the new environment.  */
-  if (mkdir (path, 0777) < 0)
-    return svn_error_createf (errno, 0, 0, fs->pool,
+  apr_err = apr_make_dir (path, APR_OS_DEFAULT, fs->pool);
+  if (apr_err != 0)
+    return svn_error_createf (apr_err, 0, 0, fs->pool,
 			      "creating Berkeley DB environment dir `%s'",
 			      path);
 
