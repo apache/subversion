@@ -22,14 +22,6 @@ Candidate changes:
     Votes:
       +1: lundblad
 
-  * r11064
-      Don't show 'Internal Server Error' when accessing the root of
-      SVNParentPath with mod_authz_svn.
-    Justification:
-      This looks ugly to the users and the fix is simple.
-    Votes:
-      +1: jaa, sussman, kfogel
-
   * r11215, r11264
       SVN has needed a good packaging script for Win32 since forever.
     Justification:
