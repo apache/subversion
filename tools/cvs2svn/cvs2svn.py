@@ -314,9 +314,9 @@ def make_path(ctx, path, branch_name = None, tag_name = None):
 def relative_name(cvsroot, fname):
   l = len(cvsroot)
   if fname[:l] == cvsroot:
-    if fname[l] == '/':
-      return fname[l+1:]
-    return fname[l:]
+    if fname[l] == os.sep:
+      return string.replace(fname[l+1:], os.sep, '/')
+    return string.replace(fname[l:], os.sep, '/')
   sys.stderr.write('relative_path("%s", "%s"): fname is not a sub-path of'
                    ' cvsroot\n' % (cvsroot, fname))
   sys.exit(1)
@@ -849,6 +849,12 @@ class RepositoryMirror:
     # this, it's nice to know the '/mutable' entries are gone.
     self.stabilize_youngest()
 
+if sys.platform == "win32":
+  def escape_shell_arg(str):
+    return '"' + string.replace(str, '"', '"^""') + '"'
+else:
+  def escape_shell_arg(str):
+    return "'" + string.replace(str, "'", "'\\''") + "'"
 
 class Dumper:
   def __init__(self, dumpfile_path):
@@ -1021,8 +1027,8 @@ class Dumper:
     ### use it to set svn:mime-type.
 
     basename = os.path.basename(rcs_file[:-2])
-    pipe = os.popen('co -q -p%s \'%s\''
-                    % (cvs_rev, rcs_file.replace("'", "'\\''")), 'r')
+    pipe = os.popen('co -q -p%s %s'
+                    % (cvs_rev, escape_shell_arg(rcs_file)), 'r')
 
     # You might think we could just test
     #
