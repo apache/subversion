@@ -1568,6 +1568,26 @@ def basic_import_ignores(sbox):
                                         None, None, 1)
 
 
+def uri_syntax(sbox):
+  'make sure URI syntaxes are parsed correctly'
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Revision 6638 made 'svn co http://host' seg fault, this tests the fix.
+  svntest.main.safe_rmtree(wc_dir)
+  url = svntest.main.current_repo_url
+  schema = url[:string.find(url, ":")]
+  url = schema + "://some_nonexistent_host_with_no_trailing_slash"
+  output, errput = svntest.main.run_svn (1, 'co', url, wc_dir)
+
+  # Different RA layers give different errors for failed checkouts;
+  # for us, it's only important to know that it _did_ error (as
+  # opposed to segfaulting), so we don't examine the error text.
+  if not errput:
+    raise svntest.Failure
+
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -1598,6 +1618,7 @@ test_list = [ None,
               basic_auth_cache,
               basic_add_ignores,
               basic_import_ignores,
+              uri_syntax,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.
