@@ -31,6 +31,8 @@
 #include "svn_types.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -59,7 +61,7 @@ svn_cl__merge (apr_getopt_t *os,
           svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
                                    svn_cl__options, pool);
           return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                                   "Second revision required");
+                                   _("Second revision required"));
         }
       using_alternate_syntax = TRUE;
     }
@@ -83,7 +85,7 @@ svn_cl__merge (apr_getopt_t *os,
           svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
                                    svn_cl__options, pool);
           return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                                   "Wrong number of paths given");
+                                   _("Wrong number of paths given"));
         }
 
       SVN_ERR (svn_opt_parse_path (&peg_revision, &sourcepath1,
@@ -108,7 +110,7 @@ svn_cl__merge (apr_getopt_t *os,
           svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
                                    svn_cl__options, pool);
           return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                                   "Wrong number of paths given");
+                                   _("Wrong number of paths given"));
         }
 
       /* the first two paths become the 'sources' */
@@ -126,7 +128,7 @@ svn_cl__merge (apr_getopt_t *os,
            && ! svn_path_is_url (sourcepath2)))
         return svn_error_create
           (SVN_ERR_CLIENT_BAD_REVISION, 0,
-           "A working copy merge source needs an explicit revision");
+           _("A working copy merge source needs an explicit revision"));
 
       /* decide where to apply the diffs, defaulting to '.' */
       if (targets->nelts == 3)

@@ -32,6 +32,8 @@
 #include "svn_path.h"
 #include "client.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -60,7 +62,7 @@ svn_client_cat (svn_stream_t *out,
   SVN_ERR (ra_lib->check_path (session, "", rev, &url_kind, pool));
   if (url_kind == svn_node_dir)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
-                             "URL '%s' refers to a directory", url);
+                             _("URL '%s' refers to a directory"), url);
 
   /* Grab some properties we need to know in order to figure out if anything 
      special needs to be done with this file. */
@@ -100,7 +102,7 @@ svn_client_cat (svn_stream_t *out,
       /* rewind our stream. */
       apr_err = apr_file_seek (tmp_file, APR_SET, &off);
       if (apr_err)
-        return svn_error_wrap_apr (apr_err, "Can't seek in '%s'",
+        return svn_error_wrap_apr (apr_err, _("Can't seek in '%s'"),
                                    tmp_filename);
 
       if (eol_style)

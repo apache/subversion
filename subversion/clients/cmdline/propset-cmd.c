@@ -34,6 +34,8 @@
 #include "svn_subst.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -81,7 +83,7 @@ svn_cl__propset (apr_getopt_t *os,
     if (opt_state->encoding)
       return svn_error_create 
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         "Bad encoding option: prop value not stored as UTF8");
+         _("Bad encoding option: prop value not stored as UTF8"));
   
   /* Suck up all the remaining arguments into a targets array */
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -110,7 +112,7 @@ svn_cl__propset (apr_getopt_t *os,
          which needs to be converted to a URL. */
       if (targets->nelts <= 0)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                                "No URL target available");
+                                _("No URL target available"));
       target = ((const char **) (targets->elts))[0];
       SVN_ERR (svn_client_url_from_path (&URL, target, pool));  
       if (URL == NULL)
@@ -134,7 +136,7 @@ svn_cl__propset (apr_getopt_t *os,
     {
       return svn_error_createf
         (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-         "Cannot specify revision for setting versioned property '%s'",
+         _("Cannot specify revision for setting versioned property '%s'"),
          pname);
     }
   else  /* operate on a normal, versioned property (not a revprop) */
@@ -166,14 +168,14 @@ svn_cl__propset (apr_getopt_t *os,
             {
               return svn_error_createf
                 (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                 "Explicit target required ('%s' interpreted as prop value)",
+                 _("Explicit target required ('%s' interpreted as prop value)"),
                  propval->data);
             }
           else
             {
               return svn_error_create
                 (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                 "Explicit target argument required");
+                 _("Explicit target argument required"));
             }
         }
 

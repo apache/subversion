@@ -36,6 +36,8 @@
 #include "svn_private_config.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -87,12 +89,13 @@ svn_cl__propedit (apr_getopt_t *os,
          which needs to be converted to a URL. */
       if (targets->nelts <= 0)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                                "No URL target available");
+                                _("No URL target available"));
       target = ((const char **) (targets->elts))[0];
       SVN_ERR (svn_client_url_from_path (&URL, target, pool));  
       if (URL == NULL)
-        return svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                "Either a URL or versioned item is required");
+        return svn_error_create
+          (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+           _("Either a URL or versioned item is required"));
 
       /* Fetch the current property. */
       SVN_ERR (svn_client_revprop_get (pname_utf8, &propval,

@@ -30,6 +30,8 @@
 #include "svn_error.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -83,11 +85,11 @@ svn_cl__import (apr_getopt_t *os,
   if (targets->nelts < 1)
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "Repository URL required when importing");
+       _("Repository URL required when importing"));
   else if (targets->nelts > 2)
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "Too many arguments to import command");
+       _("Too many arguments to import command"));
   else if (targets->nelts == 1)
     {
       url = ((const char **) (targets->elts))[0];
@@ -102,7 +104,7 @@ svn_cl__import (apr_getopt_t *os,
   if (! svn_path_is_url (url))
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "Invalid URL '%s'", url);
+       _("Invalid URL '%s'"), url);
 
   if (! opt_state->quiet)
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton,

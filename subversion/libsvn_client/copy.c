@@ -36,6 +36,8 @@
 
 #include "client.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -78,7 +80,7 @@ wc_to_wc_copy (const char *src_path,
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   if (src_kind == svn_node_none)
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                              "Path '%s' does not exist", src_path);
+                              _("Path '%s' does not exist"), src_path);
 
   /* If DST_PATH does not exist, then its basename will become a new
      file or dir added to its parent (possibly an implicit '.').  If
@@ -97,7 +99,7 @@ wc_to_wc_copy (const char *src_path,
     }
   else
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                              "File '%s' already exists", dst_path);
+                              _("File '%s' already exists"), dst_path);
 
   if (is_move)
     {
@@ -138,7 +140,7 @@ wc_to_wc_copy (const char *src_path,
       if (!force)
         /* Ensure there are no "awkward" files. */
         SVN_ERR_W (svn_client__can_delete (src_path, ctx, pool),
-                   "Move will not be attempted unless forced");
+                   _("Move will not be attempted unless forced"));
     }
   else 
     {
@@ -319,7 +321,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* We can't move something into itself, period. */
   if (svn_path_is_empty (src_rel) && is_move)
     return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                              "Cannot move URL '%s' into itself", src_url);
+                              _("Cannot move URL '%s' into itself"), src_url);
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -348,8 +350,8 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
         {
           return svn_error_createf
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-             "Source and dest appear not to be in the same repository "
-	     "(src: '%s'; dst: '%s')",
+             _("Source and dest appear not to be in the same repository "
+               "(src: '%s'; dst: '%s')"),
              src_url, dst_url);
         }
       else
@@ -392,7 +394,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     {
       /* We disallow the overwriting of files. */
       return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                "Path '%s' already exists.", dst_rel);
+                                _("Path '%s' already exists."), dst_rel);
     }
   else if (dst_kind == svn_node_dir)
     {
@@ -408,12 +410,12 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                                    &attempt_kind, pool));
       if (attempt_kind != svn_node_none)
         return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                  "Path '%s' already exists", dst_rel);
+                                  _("Path '%s' already exists"), dst_rel);
     }
   else
     {
       return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                                "Unrecognized node kind of '%s'", dst_url);
+                                _("Unrecognized node kind of '%s'"), dst_url);
     }
 
   /* Create a new commit item and add it to the array. */
@@ -536,7 +538,7 @@ reconcile_errors (svn_error_t *commit_err,
   if (commit_err)
     {
       commit_err = svn_error_quick_wrap 
-        (commit_err, "Commit failed (details follow):");
+        (commit_err, _("Commit failed (details follow):"));
       err = commit_err;
     }
 
@@ -544,14 +546,14 @@ reconcile_errors (svn_error_t *commit_err,
      that follow. */
   else
     err = svn_error_create (SVN_ERR_BASE, NULL,
-                            "Commit succeeded, but other errors follow:");
+                            _("Commit succeeded, but other errors follow:"));
 
   /* If there was an unlock error... */
   if (unlock_err)
     {
       /* Wrap the error with some headers. */
       unlock_err = svn_error_quick_wrap 
-        (unlock_err, "Error unlocking locked dirs (details follow):");
+        (unlock_err, _("Error unlocking locked dirs (details follow):"));
 
       /* Append this error to the chain. */
       svn_error_compose (err, unlock_err);
@@ -562,7 +564,7 @@ reconcile_errors (svn_error_t *commit_err,
     {
       /* Wrap the error with some headers. */
       cleanup_err = svn_error_quick_wrap 
-        (cleanup_err, "Error in post-commit clean-up (details follow):");
+        (cleanup_err, _("Error in post-commit clean-up (details follow):"));
 
       /* Append this error to the chain. */
       svn_error_compose (err, cleanup_err);
@@ -641,7 +643,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
       /* DST_URL is an existing file, which can't be overwritten or
          used as a container, so error out. */
       return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                "File '%s' already exists", dst_url);
+                                _("File '%s' already exists"), dst_url);
     }
 
   /* Create a new commit item and add it to the array. */
@@ -792,7 +794,7 @@ repos_to_wc_copy (const char *src_url,
       else
         return svn_error_createf
           (SVN_ERR_FS_NOT_FOUND, NULL,
-           "Path '%s' not found in head revision", src_url);
+           _("Path '%s' not found in head revision"), src_url);
     }
 
   /* There are two interfering sets of cases to watch out for here:
@@ -829,7 +831,7 @@ repos_to_wc_copy (const char *src_url,
   else if (dst_kind != svn_node_none)  /* must be a file */
     {
       return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                                "File '%s' already exists", dst_path);
+                                _("File '%s' already exists"), dst_path);
     }
 
   /* Now that dst_path has possibly been reset, check that there's
@@ -837,7 +839,7 @@ repos_to_wc_copy (const char *src_url,
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind != svn_node_none)
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                              "'%s' is in the way", dst_path);
+                              _("'%s' is in the way"), dst_path);
 
   SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, dst_path, TRUE,
                                    0, pool));
@@ -852,7 +854,7 @@ repos_to_wc_copy (const char *src_url,
     if (ent && (ent->kind != svn_node_dir))
       return svn_error_createf
         (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-         "Entry for '%s' exists (though the working file is missing)",
+         _("Entry for '%s' exists (though the working file is missing)"),
          dst_path);
   }
 
@@ -941,8 +943,8 @@ repos_to_wc_copy (const char *src_url,
           
           return svn_error_createf
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-             "Source URL '%s' is from foreign repository; "
-             "leaving it as a disjoint WC", src_url);
+             _("Source URL '%s' is from foreign repository; "
+               "leaving it as a disjoint WC"), src_url);
         }
     } /* end directory case */
 
@@ -1017,7 +1019,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
       && svn_path_is_child (src_path, dst_path, pool))
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       "Cannot copy path '%s' into its own child '%s'",
+       _("Cannot copy path '%s' into its own child '%s'"),
        src_path, dst_path);
 
   if (is_move)
@@ -1027,7 +1029,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
           if (strcmp (src_path, dst_path) == 0)
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-               "Cannot move path '%s' into itself",
+               _("Cannot move path '%s' into itself"),
                src_path);
         }
       else
@@ -1035,7 +1037,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
           /* Disallow moves between the working copy and the repository. */
           return svn_error_create 
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-             "No support for repos <--> working copy moves");
+             _("No support for repos <--> working copy moves"));
         }
 
       /* It doesn't make sense to specify revisions in a move. */
@@ -1050,7 +1052,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
         {
           return svn_error_create
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-             "Cannot specify revisions with move operations");
+             _("Cannot specify revisions with move operations"));
         }
     }
   else
@@ -1074,12 +1076,12 @@ setup_copy (svn_client_commit_info_t **commit_info,
               if (! entry)
                 return svn_error_createf
                   (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                   "'%s' is not under version control", src_path);
+                   _("'%s' is not under version control"), src_path);
 
               if (! entry->url)
                 return svn_error_createf
                   (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                   "'%s' does not seem to have a URL associated with it",
+                   _("'%s' does not seem to have a URL associated with it"),
                    src_path);
 
               src_path = entry->url;

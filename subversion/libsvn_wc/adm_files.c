@@ -899,10 +899,10 @@ check_adm_exists (svn_boolean_t *exists,
       if (entry->revision != revision
           && !(entry->schedule == svn_wc_schedule_delete && revision == 0))
         return
-          svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                             "Revision %ld doesn't match existing revision %ld"
-                             " in '%s'",
-                             revision, entry->revision, path);
+          svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           _("Revision %ld doesn't match existing revision %ld in '%s'"),
+           revision, entry->revision, path);
 
       /** ### comparing URLs, should they be canonicalized first? */
       if (strcmp (entry->url, url) != 0)

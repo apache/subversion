@@ -29,6 +29,8 @@
 #include "svn_path.h"
 #include "svn_sorts.h"
 
+#include "svn_private_config.h"
+
 /* The metadata associated with a particular revision. */
 struct rev
 {
@@ -319,13 +321,13 @@ svn_client_blame (const char *target,
   if (end_revnum < start_revnum)
     return svn_error_create
       (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-       "Start revision must precede end revision");
+       _("Start revision must precede end revision"));
 
   SVN_ERR (ra_lib->check_path (session, "", end_revnum, &kind, pool));
 
   if (kind == svn_node_dir)
     return svn_error_createf (SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
-                              "URL '%s' refers to a directory", url);
+                              _("URL '%s' refers to a directory"), url);
 
   condensed_targets = apr_array_make (pool, 1, sizeof (const char *));
   (*((const char **)apr_array_push (condensed_targets))) = "";
@@ -443,7 +445,7 @@ svn_client_blame (const char *target,
           if (svn_mime_type_is_binary (mimetype->data))
             return svn_error_createf 
               (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
-               "Cannot calculate blame information for binary file '%s'",
+               _("Cannot calculate blame information for binary file '%s'"),
                target);
         }
 
@@ -475,7 +477,7 @@ svn_client_blame (const char *target,
 
   apr_err = apr_file_open (&file, last, APR_READ, APR_OS_DEFAULT, lastpool);
   if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr (apr_err, "Can't open '%s'", last);
+    return svn_error_wrap_apr (apr_err, _("Can't open '%s'"), last);
   apr_pool_cleanup_register (lastpool, file, cleanup_tempfile,
                              apr_pool_cleanup_null);
 
