@@ -141,7 +141,7 @@ typedef struct svn_ver_t
    actions, not client-level actions.  */
 
 typedef enum svr_action {add, rm, mv, checkout, 
-                         commit, import, update} svr_action_t;
+                         commit, import, update} svn_svr_action_t;
 
 
 

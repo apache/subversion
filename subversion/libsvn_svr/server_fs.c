@@ -67,17 +67,51 @@
    This routine is called by each "wrappered" filesystem call in this
    library.
 
-   If any authorization hooks return NULL, then return NULL.
-   Else return success (non-NULL).  
+   If any authorization hooks return NULL, then return NULL (failure).
+   Else return success (1).
 */
 
 char
-call_authorization_hooks (svn_string_t *repos, svn_user_t *user)
+call_authorization_hooks (svn_svr_policies_t *policy, svn_string_t *repos, 
+                          svn_user_t *user, svn_svr_action_t *action,
+                          svn_string_t *path)
 {
-  /* loop through our plugins, calling authorization hooks */
+  int i;
+  char (* my_hook) (svn_string_t *r, svn_user_t *u,
+                    svn_svr_action_t *a, svr_string_t *p);
+  char authorized = 1;  /* start off assuming we're authorized */
 
-  /* at the end, if all plugins are successful, make sure that
+  /* loop through our plugins */
+  for (i = 0; i < (policy->plugin_len); i++)
+    {
+      /* grab an authorization routine from the plugin */
+      my_hook = policy->plugins[i]->authorization_hook;
+      
+      if (my_hook != NULL)
+        {
+          /* Call the authorization routine, giving it a chance to
+             kill authorization */
+          authorized = (*my_hook) (repos, user, action, path);
+        }
+
+      if (! authorized)
+        {
+          return NULL;  /* no point in calling more auth_hooks! */
+          /* TODO: return a more detailed description of failure? */
+        }
+    }
+
+  /* if all auth_hooks are successful, make sure that
      user->svn_username is actually filled in! */
+
+  if (user->svn_username == NULL)  /* TODO: clarify this test! */
+    {
+      svn_string_t canonical_name;
+      /* TODO:  set_value(&canonical_name, user->auth_username) */
+      user->svn_username = &canonical_name;
+    }
+  
+  return 1;  /* successfully authorized to perform the action */
 }
 
 
@@ -86,12 +120,19 @@ call_authorization_hooks (svn_string_t *repos, svn_user_t *user)
    or NULL if authorization failed.  */
 
 svn_ver_t * 
-svn_svr_latest (svn_string_t *repos, svn_user_t *user)
+svn_svr_latest (svn_svr_policies_t *policy, svn_string_t *repos, 
+                svn_user_t *user)
 {
   svn_ver_t *latest_version;
   char authorized = NULL;
 
-  authorized = call_authorization_hooks (repos, user);
+  svn_svr_action_t my_action = foo;  /* TODO:  fix this */
+
+  authorized = call_authorization_hooks (policy, 
+                                         repos, 
+                                         user,
+                                         my_action,
+                                         NULL);
 
   if (! authorized)
     {
@@ -102,6 +143,7 @@ svn_svr_latest (svn_string_t *repos, svn_user_t *user)
     }
   else
     {
+      /* do filesystem call with "canonical" username */
       latest_version = svn_fs_latest (repos, user->svn_username);
       return latest_version;
     }
