@@ -188,6 +188,9 @@ struct dav_resource_private {
 
   /* ### record the base for computing a delta during a GET */
   const char *delta_base;
+
+  /* Pool to allocate temporary data from */
+  apr_pool_t *pool;
 };
 
 

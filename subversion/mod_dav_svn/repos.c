@@ -1906,6 +1906,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   apr_size_t uri_len;
   apr_size_t repos_len;
   apr_hash_t *children;
+  apr_pool_t *params_subpool;
 
   /* The current resource is a collection (possibly here thru recursion)
      and this is the invocation for the collection. Alternatively, this is
@@ -1959,7 +1960,8 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   repos_len = ctx->repos_path->len;
 
   /* fetch this collection's children */
-  /* ### shall we worry about filling params->pool? */
+  params_subpool = svn_pool_create(params->pool);
+
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,
                             ctx->info.repos_path, params->pool);
   if (serr != NULL)
@@ -1996,7 +1998,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 
       serr = svn_fs_is_file(&is_file,
                             ctx->info.root.root, ctx->info.repos_path,
-                            params->pool);
+                            params_subpool);
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "could not determine resource kind");
@@ -2029,7 +2031,11 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       ctx->info.uri_path->len = path_len;
       ctx->uri->len = uri_len;
       ctx->repos_path->len = repos_len;
+
+      svn_pool_clear(params_subpool);
     }
+
+  svn_pool_destroy(params_subpool);
 
   return NULL;
 }
@@ -2081,11 +2087,15 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   if (ctx.repos_path != NULL)
     ctx.info.repos_path = ctx.repos_path->data;
 
+  /* Create a pool usable by the response. */
+  ctx.info.pool = svn_pool_create(params->pool);
+
   /* ### is the root already/always open? need to verify */
 
   /* always return the error, and any/all multistatus responses */
   err = dav_svn_do_walk(&ctx, depth);
   *response = ctx.wres.response;
+
   return err;
 }
 
