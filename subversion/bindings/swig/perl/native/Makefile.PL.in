@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 use ExtUtils::MakeMaker;
+use ExtUtils::Embed;
 use Config;
 use Cwd 'abs_path';
 
@@ -37,7 +38,7 @@ chomp $apr_shlib_path_var;
 my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
     CCFLAGS  => join(' ', $apr_cflags, $apu_cflags, 
-                     `$perl_path -MExtUtils::Embed -e ccopts`,
+                     ccopts(),
                      " -I$swig_srcdir/perl/libsvn_swig_perl",
                      " -I$svnlib_srcdir/include",
                      " -I$swig_srcdir -g"),
@@ -76,7 +77,7 @@ sub MY::postamble {
    package MY ;
    
    my $module_c_files = join (' ',map { "svn_$_.c"} @modules);
-   my $module_make_commands = join ('',map {"\tmake -f Makefile.$_\n"} @modules);
+   my $module_make_commands = join ('',map {"\t\$(MAKE) -f Makefile.$_\n"} @modules);
 
    my $flags;
    if ($swig_version >= 103020) {
