@@ -331,13 +331,13 @@ random_range_index_test (const char **msg,
       apr_off_t offset = myrand (&seed) % 47;
       apr_off_t limit = offset + myrand (&seed) % 16 + 1;
       apr_off_t ret;
-      const char *msg;
+      const char *msg2;
 
       printf ("%3d: Inserting [%3"APR_OFF_T_FMT", %3"APR_OFF_T_FMT") ...... ",
               i, offset, limit);
       insert_range (offset, limit, i, ndx);
       prev_prev_node = prev_node = NULL;
-      ret = walk_range_index (ndx->tree, &msg);
+      ret = walk_range_index (ndx->tree, &msg2);
       if (ret == 0)
         {
           printf (" OK\n");
@@ -345,7 +345,7 @@ random_range_index_test (const char **msg,
       else
         {
           printf (" Ooops!\n");
-          print_range_index (ndx->tree, msg, ret);
+          print_range_index (ndx->tree, msg2, ret);
           return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL, pool,
                                    "insert_range");
         }

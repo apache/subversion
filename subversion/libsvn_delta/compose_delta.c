@@ -38,6 +38,7 @@ typedef struct offset_index_t
 /* Create an index mapping target stream offsets to delta ops in
    WINDOW. Allocate from POOL. */
 
+#if 0  /* This function still unused, so avoid compiler warnings.  -kff */
 static offset_index_t *
 create_offset_index (const svn_txdelta_window_t *window,
                      apr_pool_t *pool)
@@ -58,10 +59,12 @@ create_offset_index (const svn_txdelta_window_t *window,
 
   return ndx;
 }
+#endif /* 0, unused function */
 
 /* Find the index of the delta op thet defines that data at OFFSET in
    NDX. */
 
+#if 0  /* This function still unused, so avoid compiler warnings.  -kff */
 static int
 search_offset_index (offset_index_t *ndx, apr_off_t offset)
 {
@@ -92,6 +95,7 @@ search_offset_index (offset_index_t *ndx, apr_off_t offset)
   assert(ndx->offs[op] <= offset && offset < ndx->offs[op + 1]);
   return op;
 }
+#endif /* 0, unused function */
 
 
 
@@ -449,12 +453,16 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
   else
     {
       apr_pool_t *subpool = svn_pool_create(pool);
+#if 0  /* This var is still unused, so avoid compiler warnings.  -kff */
       offset_index_t *offset_index = create_offset_index(window_A, subpool);
+#endif /* 0, unused var */
       range_index_t *range_index = create_range_index(subpool);
       svn_txdelta__ops_baton_t build_baton = { 0 };
       svn_txdelta_window_t *composite = NULL;
 
+#if 0  /* This var is still unused, so avoid compiler warnings.  -kff */
       const char *new_data_A = window_A->new_data->data;
+#endif /* 0, unused var */
       const char *new_data_B = window_B->new_data->data;
       apr_size_t target_offset = 0;
       int i;
