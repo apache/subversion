@@ -2233,9 +2233,9 @@ Adding         mytree/subdir/quux.h
 Committed revision 1.
 </screen>
 
-      <para>The previous example copied the contents of directory
-        <filename>mytree</filename> under the directory
-        <filename>some/project</filename> in the repository:</para>
+      <para>El ejemplo anterior ha copiado el contenido del directorio
+        <filename>mytree</filename> debajo el directorio
+        <filename>some/project</filename> en el repositorio:</para>
 
       <screen>
 $ svn ls file:///usr/local/svn/newrepos/some/project
