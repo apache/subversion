@@ -81,6 +81,18 @@ GetOptions('no_user_input'           => \$opt_no_user_input,
 $repos_base_url      = shift;
 $repos_load_rel_path = shift;
 
+# Check that the repository base URL and the import directories do not
+# contain any ..'s.
+if ($repos_base_url =~ /\.{2}/)
+  {
+    die "$0: repos base URL $repos_base_url cannot contain ..'s.\n";
+  }
+if ($repos_load_rel_path =~ /\.{2}/)
+  {
+    die "$0: repos import relative directory path $repos_load_rel_path ",
+        "cannot contain ..'s.\n";
+  }
+
 # If there are no directories listed on the command line, then the
 # directories are read from standard input.  In this case, the
 # -no_user_input command line option must be specified.
@@ -108,18 +120,8 @@ if (defined $opt_import_tag_location and $repos_load_rel_path eq '.')
 my @svn_use_repos_cmd_opts;
 &set_svn_use_repos_cmd_opts($opt_svn_username, $opt_svn_password);
 
-# Check that the repository base URL, the import and tag directories
-# do not contain any ..'s.  Also, the import and tag directories
-# cannot be absolute.
-if ($repos_base_url =~ /\.{2}/)
-  {
-    die "$0: repos base URL $repos_base_url cannot contain ..'s.\n";
-  }
-if ($repos_load_rel_path =~ /\.{2}/)
-  {
-    die "$0: repos import relative directory path $repos_load_rel_path ",
-        "cannot contain ..'s.\n";
-  }
+# Check that the tag directories do not contain any ..'s.  Also, the
+# import and tag directories cannot be absolute.
 if (defined $opt_import_tag_location and $opt_import_tag_location =~ /\.{2}/)
   {
     die "$0: repos tag relative directory path $opt_import_tag_location ",
@@ -146,6 +148,12 @@ if (defined $opt_existing_wc_dir)
     unless (-d _)
       {
         die "$0: working copy `$opt_existing_wc_dir' is not a directory.\n";
+      }
+
+    unless (-d "$opt_existing_wc_dir/.svn")
+      {
+        die "$0: working copy `$opt_existing_wc_dir' does not have .svn ",
+            "directory.\n";
       }
 
     $opt_existing_wc_dir = Cwd::abs_path($opt_existing_wc_dir)
@@ -212,6 +220,7 @@ if (@ARGV and defined $opt_import_tag_location)
 
     exit 0 unless &get_yes_or_no("Please examine identified tags.  Are they " .
                                  "acceptable? (Y/N) ");
+    print "\n";
   }
 
 # Load the property configuration filename, if one was specified, into
@@ -281,8 +290,10 @@ if (defined $property_config_filename and length $property_config_filename)
 # Check that the svn base URL works by running svn log on it.  Only
 # get the HEAD revision log message; there's no need to waste
 # bandwidth seeing all of the log messages.
+print "Checking that the base URL is a Subversion repository.\n";
 read_from_process($svn, 'log', '-r', 'HEAD',
                   @svn_use_repos_cmd_opts, $repos_base_uri);
+print "\n";
 
 my $orig_cwd = cwd;
 
@@ -290,6 +301,7 @@ my $orig_cwd = cwd;
 # this with the svn log command.  Take the svn_url hostname and port
 # as the initial url and append to it successive portions of the final
 # path until svn log succeeds.
+print "Finding the root URL of the Subversion repository.\n";
 my $repos_root_uri;
 my $repos_root_uri_path;
 my $repos_base_path_segment;
@@ -319,7 +331,7 @@ my $repos_base_path_segment;
 
 if ($repos_root_uri)
   {
-    print "Determined that svn root URL is $repos_root_uri.\n";
+    print "Determined that the svn root URL is $repos_root_uri.\n\n";
   }
 else
   {
@@ -357,48 +369,14 @@ my $temp_dir_cleanup = Temp::Delete->new;
 # mode and then reading the file in binary mode.
 my $native_eol = &determine_native_eol;
 
-# Either checkout a new working copy from the repository or use an
-# existing working copy.
-if (defined $opt_existing_wc_dir)
-  {
-    # Update an already existing working copy.
-    print "Not checking out anything; using existing working directory at\n";
-    print "$opt_existing_wc_dir\n";
-
-    chdir($opt_existing_wc_dir)
-      or die "$0: cannot chdir `$opt_existing_wc_dir': $!\n";
-
-    read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
-  }
-else
-  {
-    # Check out the svn repository starting at the svn URL into a
-    # fixed directory name.
-    my $checkout_dir_name = 'my_working_copy';
-
-    print "Checking out $repos_base_uri into $temp_dir/$checkout_dir_name\n";
-
-    chdir($temp_dir)
-      or die "$0: cannot chdir `$temp_dir': $!\n";
-
-    read_from_process($svn, 'checkout',
-                      @svn_use_repos_cmd_opts,
-                      $repos_base_uri, $checkout_dir_name);
-
-    chdir($checkout_dir_name)
-      or die "$0: cannot chdir `$checkout_dir_name': $!\n";
-  }
-
-# At this point, the current working directory is the top level
-# directory of the working copy.  Record the absolute path to this
-# location because the script will chdir back here later on.
-my $wc_top_dir_cwd = cwd;
-
 # Check if all the directories exist to load the directories into the
 # repository.  If not, ask if they should be created.  For tags, do
 # not create the tag directory itself, that is done on the svn cp.
 {
+  print "Finding if any directories need to be created in repository.\n";
+
   my @dirs_to_create;
+  my @urls_to_create;
   my %seen_dir;
   my @load_tags_without_last_segment;
 
@@ -423,11 +401,17 @@ my $wc_top_dir_cwd = cwd;
       foreach my $segment (split('/', $dir))
         {
           $d = length $d ? "$d/$segment" : $segment;
-          if (!$seen_dir{$d} and ! -d $d)
+          my $url = "$repos_base_url/$d";
+          unless ($seen_dir{$d})
             {
-              push(@dirs_to_create, $d);
+              $seen_dir{$d} = 1;
+              if (safe_read_from_pipe($svn, 'log', '-r', 'HEAD',
+                                      @svn_use_repos_cmd_opts, $url) != 0)
+                {
+                  push(@dirs_to_create, $d);
+                  push(@urls_to_create, $url);
+                }
             }
-          $seen_dir{$d} = 1;
         }
     }
 
@@ -445,8 +429,6 @@ my $wc_top_dir_cwd = cwd;
 
       foreach my $dir (@dirs_to_create)
         {
-          mkdir($dir)
-            or die "$0: cannot mkdir `$dir': $!\n";
           if (length $repos_base_path_segment)
             {
               $message .= "* $repos_base_path_segment/$dir: New directory.\n";
@@ -458,17 +440,64 @@ my $wc_top_dir_cwd = cwd;
         }
       $message = wrap('', '  ', $message);
 
-      my $target_filename = &make_targets_file(@dirs_to_create);
-      read_from_process($svn, 'add', '-N', '--targets', $target_filename);
-      unlink($target_filename);
-      read_from_process($svn, 'commit', @svn_use_repos_cmd_opts,
-                        '-m', $message);
+      read_from_process($svn, 'mkdir', @svn_use_repos_cmd_opts,
+                        '-m', $message, @urls_to_create);
     }
   else
     {
       print "No directories need to be created to prepare repository.\n";
     }
 }
+
+# Either checkout a new working copy from the repository or use an
+# existing working copy.
+if (defined $opt_existing_wc_dir)
+  {
+    # Update an already existing working copy.
+    print "Not checking out anything; using existing working directory at\n";
+    print "$opt_existing_wc_dir\n";
+
+    chdir($opt_existing_wc_dir)
+      or die "$0: cannot chdir `$opt_existing_wc_dir': $!\n";
+
+    read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
+  }
+else
+  {
+    # Check out the svn repository starting at the svn URL into a
+    # fixed directory name.
+    my $checkout_dir_name = 'my_import_wc';
+
+    # Check out only the directory being imported to, otherwise the
+    # checkout of the entire base URL can be very huge, if it contains
+    # a large number of tags.
+    my $checkout_url;
+    if ($repos_load_rel_path eq '.')
+      {
+        $checkout_url = $repos_base_url;
+      }
+    else
+      {
+        $checkout_url = "$repos_base_url/$repos_load_rel_path";
+      }
+
+    print "Checking out $checkout_url into $temp_dir/$checkout_dir_name\n";
+
+    chdir($temp_dir)
+      or die "$0: cannot chdir `$temp_dir': $!\n";
+
+    read_from_process($svn, 'checkout',
+                      @svn_use_repos_cmd_opts,
+                      $checkout_url, $checkout_dir_name);
+
+    chdir($checkout_dir_name)
+      or die "$0: cannot chdir `$checkout_dir_name': $!\n";
+  }
+
+# At this point, the current working directory is the top level
+# directory of the working copy.  Record the absolute path to this
+# location because the script will chdir back here later on.
+my $wc_import_dir_cwd = cwd;
 
 # Set up the names for the path to the import and tag directories.
 my $repos_load_abs_path;
@@ -487,18 +516,15 @@ else
 # Now go through each source directory and copy each file from the
 # source directory to the target directory.  For new target files, add
 # them to svn.  For files that no longer exist, delete them.
-my $wc_import_dir_cwd    = "$wc_top_dir_cwd/$repos_load_rel_path";
 my $print_rename_message = 1;
 my @load_dirs            = @ARGV;
 while (defined (my $load_dir = &get_next_load_dir))
   {
     my $load_tag = $load_tags{$load_dir};
-    my $wc_tag_dir_cwd;
 
     if (defined $load_tag)
       {
         print "\nLoading $load_dir and will save in tag $load_tag.\n";
-        $wc_tag_dir_cwd = "$wc_top_dir_cwd/$load_tag";
       }
     else
       {
@@ -1125,6 +1151,12 @@ while (defined (my $load_dir = &get_next_load_dir))
                       @svn_use_repos_cmd_opts,
                       '-m', $message);
 
+    # If an update is not run now after a commit, then some file and
+    # directory paths will have an older revisions associated with
+    # them and any future commits will fail because they are out of
+    # date.
+    read_from_process($svn, 'update');
+
     # Now remove any files and directories to be deleted in the
     # repository.
     if (@del_files)
@@ -1150,24 +1182,28 @@ while (defined (my $load_dir = &get_next_load_dir))
                             "$repos_tag_abs_path.\n");
         read_from_process($svn, 'cp', @svn_use_repos_cmd_opts,
                           '-m', $message, $from_url, $to_url);
-      }
 
-    # Finally, go to the top of the svn checked out tree and do an
-    # update to pick up the new tag in the working copy.
-    chdir($wc_top_dir_cwd)
-      or die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
+        # Now check out the tag and run a recursive diff between the
+        # original source directory and the tag for a consistency
+        # check.
+        my $checkout_dir_name = "my_tag_wc_named_$load_tag";
+        print "Checking out $to_url into $temp_dir/$checkout_dir_name\n";
 
-    read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
+        chdir($temp_dir)
+          or die "$0: cannot chdir `$temp_dir': $!\n";
 
-    # Now run a recursive diff between the original source directory
-    # and the tag for a consistency check.
-    if (defined $load_tag)
-      {
+        read_from_process($svn, 'checkout',
+                          @svn_use_repos_cmd_opts,
+                          $to_url, $checkout_dir_name);
+
+        chdir($checkout_dir_name)
+          or die "$0: cannot chdir `$checkout_dir_name': $!\n";
+
         chdir($orig_cwd)
           or die "$0: cannot chdir `$orig_cwd': $!\n";
         read_from_process('diff', '-u', @diff_ignore_space_changes,
                           '-x', '.svn',
-                          '-r', $load_dir, $wc_tag_dir_cwd);
+                          '-r', $load_dir, "$temp_dir/$checkout_dir_name");
       }
   }
 
@@ -1485,8 +1521,8 @@ sub commit_renames
   # Change to the top of the working copy so that any
   # directories will also be updated.
   my $cwd = cwd;
-  chdir($wc_top_dir_cwd)
-    or die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
+  chdir($wc_import_dir_cwd)
+    or die "$0: cannot chdir `$wc_import_dir_cwd': $!\n";
   read_from_process($svn, 'commit', @svn_use_repos_cmd_opts, '-m', $message);
   read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
   chdir($cwd)
@@ -1659,7 +1695,7 @@ sub determine_native_eol
     {
       printf "\\%03o", ord(substr($eol, $i, 1));
     }
-  print ".\n";
+  print ".\n\n";
 
   $eol;
 }
