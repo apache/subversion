@@ -358,6 +358,72 @@ svn_client_proplist (apr_array_header_t **props,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_client_revprop_list (apr_hash_t **props,
+                         const char *URL,
+                         const svn_opt_revision_t *revision,
+                         svn_client_auth_baton_t *auth_baton,
+                         svn_revnum_t *set_rev,
+                         apr_pool_t *pool)
+{
+  void *ra_baton, *session;
+  svn_ra_plugin_t *ra_lib;
+  apr_hash_t *proplist;
+
+  /* Open an RA session for the URL. Note that we don't have a local
+     directory, nor a place to put temp files or store the auth data. */
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
+                                        NULL, NULL, FALSE, FALSE, TRUE,
+                                        auth_baton, pool));
+
+  /* Resolve the revision into something real, and return that to the
+     caller as well. */
+  SVN_ERR (svn_client__get_revision_number
+           (set_rev, ra_lib, session, revision, NULL, pool));
+
+  /* The actual RA call. */
+  SVN_ERR (ra_lib->rev_proplist (session, *set_rev, &proplist));
+
+  /* ### TEMPORARY HACK.  The commandline client expects stringbufs in
+     the hash, so we convert every value from string_t to stringbuf_t.
+     See issue #909.  When that issue is fixed, remove this block. */
+  {
+    apr_hash_index_t *hi;
+    
+    for (hi = apr_hash_first (pool, proplist); hi; hi = apr_hash_next (hi))
+      {
+        const void *key;
+        void *val;
+        apr_ssize_t klen;
+        const char *pname;
+        svn_string_t *pval;
+        svn_stringbuf_t *new_pval;
+
+        apr_hash_this (hi, &key, &klen, &val);
+        pname = key;
+        pval = val;
+        
+        new_pval = apr_pcalloc (pool, sizeof(*new_pval));
+        new_pval->data = (char *) pval->data;
+        new_pval->len = pval->len;
+        /* new_pval's pool and blocksize are still 0.  :-) */
+
+        apr_hash_set (proplist, pname, klen, new_pval);
+      } 
+  }
+
+  /* All done. */
+  SVN_ERR (ra_lib->close(session));
+  
+  *props = proplist;
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /* 
  * local variables:

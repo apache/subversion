@@ -77,6 +77,10 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
                                           const char *name,
                                           const svn_string_t *value);
 
+svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
+                                       svn_revnum_t rev,
+                                       apr_hash_t **props);
+
 svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_editor_t **editor,
@@ -303,6 +307,24 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
                                            const char *url,
                                            svn_revnum_t revision,
                                            apr_pool_t *pool);
+
+/* Fetch a baseline resource populated with specific properties.
+   
+   Given a Neon session SESS and a URL, set *BLN_RSRC to a baseline of
+   REVISION, populated with whatever properties are specified by
+   WHICH_PROPS.  To fetch all properties, pass NULL for WHICH_PROPS.
+
+   If BC_RELATIVE is not NULL, then it will be filled in with a
+   relative pathname for the baselined resource corresponding to the
+   revision of the resource specified by URL.
+*/
+svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
+                                            svn_ra_dav_resource_t **bln_rsrc,
+                                            ne_session *sess,
+                                            const char *url,
+                                            svn_revnum_t revision,
+                                            const ne_propname *which_props,
+                                            apr_pool_t *pool);
 
 extern const ne_propname svn_ra_dav__vcc_prop;
 extern const ne_propname svn_ra_dav__checked_in_prop;

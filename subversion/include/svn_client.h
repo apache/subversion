@@ -855,6 +855,26 @@ svn_client_proplist (apr_array_header_t **props,
                      svn_boolean_t recurse,
                      apr_pool_t *pool);
 
+/* Set *PROPS to a hash of the revision props attached to REVISION in
+   the repository represented by URL.  Use AUTH_BATON for
+   authentication, and POOL for all memory allocation.  Return the
+   actual rev queried in *SET_REV.
+
+   The allocated hash maps (const char *) property names to
+   (svn_stringbuf_t *) property values.
+
+   Note that unlike its cousin svn_client_proplist(), this routine
+   doesn't read a working copy at all; it's a pure network operation
+   that reads *unversioned* properties attached to a revision. */
+svn_error_t *
+svn_client_revprop_list (apr_hash_t **props,
+                         const char *URL,
+                         const svn_opt_revision_t *revision,
+                         svn_client_auth_baton_t *auth_baton,
+                         svn_revnum_t *set_rev,
+                         apr_pool_t *pool);
+
+
 /* Export the contents of either a subversion repository or a subversion 
    working copy into a 'clean' directory (meaning a directory with no 
    administrative directories).
