@@ -5,10 +5,9 @@
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_*_check to 0.
-%define make_ra_local_check 1
-%define make_ra_svn_check 1
-%define make_ra_dav_check 1
-%define make_cvs2svn_check 1
+%define make_ra_local_check 0
+%define make_ra_svn_check 0
+%define make_ra_dav_check 0
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -24,8 +23,6 @@ Requires: apr >= %{apr_version}
 Requires: apr-util >= %{apr_version}
 Requires: db4 >= 4.0.14
 Requires: neon >= %{neon_version}
-Requires: python >= 2
-Obsoletes: subversion-cvs2svn
 BuildPreReq: autoconf >= 2.53
 BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: docbook-style-xsl >= 1.58.1
@@ -94,7 +91,6 @@ Group: Utilities/System
 Summary: Allows Python scripts to directly use Subversion repositories.
 Requires: swig >= %{swig_version}
 Requires: python >= 2
-Obsoletes: subversion-cvs2svn
 %description python
 Provides Python (SWIG) support for Subversion.
 
@@ -105,6 +101,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Tue Feb 24 2004 David Summers <david@summersoft.fay.ar.us> 1.0.0-8823
+- cvs2svn moved to separate project/package.
+
 * Thu Feb 19 2004 David Summers <david@summersoft.fay.ar.us> 0.37.0-8770
 - cvs2svn.1 man page taken out of distribution.  Change RPM so that if it
   just so happens to magically reappear someday then it will get put into
@@ -421,14 +420,6 @@ killall httpd
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
-%if %{make_cvs2svn_check}
-(
-echo "*** Running regression tests on cvs2svn ***"
-cd tools/cvs2svn
-./run-tests.py
-)
-%endif
-
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/%{apache_dir}/conf
@@ -438,17 +429,11 @@ make install DESTDIR="$RPM_BUILD_ROOT"
 mkdir -p $RPM_BUILD_ROOT/etc/httpd/conf.d
 cp packages/rpm/redhat-8+/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
 
-# Install cvs2svn and supporting files
+# Install Python SWIG bindings.
 make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
-sed -e 's;#!/usr/bin/env python;#!/usr/bin/env python2;' < $RPM_BUILD_DIR/%{name}-%{version}/tools/cvs2svn/cvs2svn.py > $RPM_BUILD_ROOT/usr/bin/cvs2svn
-chmod a+x $RPM_BUILD_ROOT/usr/bin/cvs2svn
 mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
-cp -r tools/cvs2svn/rcsparse $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages/rcsparse
 mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
-if [ -f $RPM_BUILD_DIR/subversion-%{version}/tools/cvs2svn/cvs2svn.1 ]; then
-   cp $RPM_BUILD_DIR/subversion-%{version}/tools/cvs2svn/cvs2svn.1 $RPM_BUILD_ROOT/usr/share/man/man1
-fi
 
 # Install PERL SWIG bindings.
 make install-swig-pl-lib DESTDIR=$RPM_BUILD_ROOT
@@ -464,8 +449,6 @@ cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
 # Set up tools package files.
 mkdir -p $RPM_BUILD_ROOT/usr/lib/subversion
 cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
-# Don't need to include 29+ Meg cvs2svn test stuff.
-rm -rf $RPM_BUILD_ROOT/usr/lib/subversion/tools/cvs2svn
 
 # Set up book generation and installation
 (cd doc/book;
@@ -510,7 +493,6 @@ rm -rf $RPM_BUILD_ROOT
 %doc BUGS CHANGES COMMITTERS COPYING HACKING INSTALL README
 %doc subversion/LICENSE
 %doc book
-/usr/bin/cvs2svn
 /usr/bin/svn
 /usr/bin/svnadmin
 /usr/bin/svnadmin-%{version}-%{release}.static
@@ -526,7 +508,6 @@ rm -rf $RPM_BUILD_ROOT
 /usr/lib/libsvn_repos*so*
 /usr/lib/libsvn_subr*so*
 /usr/lib/libsvn_wc*so*
-/usr/lib/python2.2/site-packages/rcsparse
 /usr/share/man/man1/*
 /usr/share/man/man5/*
 /usr/share/man/man8/*
