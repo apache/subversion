@@ -82,6 +82,12 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   svn_boolean_t remove_file = TRUE;
   struct svn_config_t *cfg;
 
+  /* ### TODO: This function should, if it fails to create a temporary
+     file in the requested directory, fall back to the use of a
+     temporary directory (like /tmp, or C:\TEMP, or ...) as described
+     by a not-yet-existant APR function.  See issue #929. */
+
+     
   /* Try to find an editor in the environment. */
   editor = getenv ("SVN_EDITOR");
   if (! editor)
@@ -114,6 +120,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
         (apr_err, 0, NULL, "failed to get current working directory");
     }
   SVN_ERR (svn_utf_cstring_from_utf8 (&base_dir_native, base_dir, pool));
+
   /* APR doesn't like "" directories */
   if (base_dir_native[0] == '\0')
     base_dir_native = ".";
@@ -356,6 +363,7 @@ truncate_buffer_at_prefix (apr_size_t *new_len,
 /* This function is of type svn_client_get_commit_log_t. */
 svn_error_t *
 svn_cl__get_log_message (const char **log_msg,
+                         const char **tmp_file,
                          apr_array_header_t *commit_items,
                          void *baton,
                          apr_pool_t *pool)
@@ -363,7 +371,8 @@ svn_cl__get_log_message (const char **log_msg,
   const char *default_msg = "\n" EDITOR_EOF_PREFIX "\n\n";
   struct log_msg_baton *lmb = baton;
   svn_stringbuf_t *message = NULL;
-
+  
+  *tmp_file = NULL;
   if (lmb->message)
     {
       /* Trim incoming messages the EOF marker text and the junk that
@@ -415,6 +424,8 @@ svn_cl__get_log_message (const char **log_msg,
 
           if (! path)
             path = item->url;
+          else if (! *path)
+            path = ".";
 
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
               && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
@@ -442,7 +453,8 @@ svn_cl__get_log_message (const char **log_msg,
                                      "svn-commit", pool);
 
       /* Dup the tmpfile path into its baton's pool. */
-      lmb->tmpfile_left = apr_pstrdup (lmb->pool, lmb->tmpfile_left);
+      *tmp_file = lmb->tmpfile_left = apr_pstrdup (lmb->pool, 
+                                                  lmb->tmpfile_left);
 
       /* If the edit returned an error, handle it. */
       if (err)
@@ -498,7 +510,7 @@ svn_cl__get_log_message (const char **log_msg,
               if ('a' == letter)
                 {
                   SVN_ERR (svn_io_remove_file (lmb->tmpfile_left, pool));
-                  lmb->tmpfile_left = NULL;
+                  *tmp_file = lmb->tmpfile_left = NULL;
                   break;
                 }
 
@@ -508,7 +520,7 @@ svn_cl__get_log_message (const char **log_msg,
               if ('c' == letter) 
                 {
                   SVN_ERR (svn_io_remove_file (lmb->tmpfile_left, pool));
-                  lmb->tmpfile_left = NULL;
+                  *tmp_file = lmb->tmpfile_left = NULL;
                   message = svn_stringbuf_create ("", pool);
                 }
 
