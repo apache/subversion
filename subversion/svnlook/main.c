@@ -47,12 +47,6 @@
 
 /*** Some convenience macros and types. ***/
 
-/* Temporary subdirectory created for use by svnlook.  ### todo: we
-   need to either find a way to query APR for a suitable (that is,
-   writable) temporary directory, or add this #define to the
-   svn_private_config.h stuffs (with a default of perhaps "/tmp/.svnlook" */
-#define SVNLOOK_TMPDIR       ".svnlook"
-
 
 /* Option handling. */
 
@@ -600,6 +594,7 @@ prepare_tmpfiles (const char **tmpfile1,
                   const char *path1,
                   svn_fs_root_t *root2,
                   const char *path2,
+                  const char *tmpdir,
                   apr_pool_t *pool)
 {
   svn_string_t *mimetype;
@@ -638,7 +633,7 @@ prepare_tmpfiles (const char **tmpfile1,
   /* Now, prepare the two temporary files, each of which will either
      be empty, or will have real contents.  The first file we will
      make in our temporary directory. */
-  *tmpfile2 = svn_path_join (SVNLOOK_TMPDIR, path2, pool);
+  *tmpfile2 = svn_path_join (tmpdir, path2, pool);
   SVN_ERR (open_writable_binary_file (&fh, *tmpfile2, pool));
   if (root2)
     SVN_ERR (dump_contents (fh, root2, path2, pool));
@@ -783,6 +778,7 @@ print_diff_tree (svn_fs_root_t *root,
                  const char *path /* UTF-8! */,
                  const char *base_path /* UTF-8! */,
                  svn_boolean_t no_diff_deleted,
+                 const char *tmpdir,
                  apr_pool_t *pool)
 {
   const char *orig_path = NULL, *new_path = NULL, *path_native;
@@ -858,19 +854,22 @@ print_diff_tree (svn_fs_root_t *root,
         {
           do_diff = TRUE;
           SVN_ERR (prepare_tmpfiles (&orig_path, &new_path, &binary,
-                                     base_root, base_path, root, path, pool));
+                                     base_root, base_path, root, path,
+                                     tmpdir, pool));
         }
       if ((node->action == 'A') && (node->text_mod))
         {
           do_diff = TRUE;
           SVN_ERR (prepare_tmpfiles (&orig_path, &new_path, &binary,
-                                     NULL, base_path, root, path, pool));
+                                     NULL, base_path, root, path,
+                                     tmpdir, pool));
         }
       if (node->action == 'D')
         {
           do_diff = TRUE;
           SVN_ERR (prepare_tmpfiles (&orig_path, &new_path, &binary,
-                                     base_root, base_path, NULL, path, pool));
+                                     base_root, base_path, NULL, path,
+                                     tmpdir, pool));
         }
     }
 
@@ -964,7 +963,8 @@ print_diff_tree (svn_fs_root_t *root,
              (root, base_root, node,
               svn_path_join (path, node->name, subpool),
               svn_path_join (base_path, node->name, subpool),
-              no_diff_deleted, 
+              no_diff_deleted,
+              tmpdir,
               subpool));
 
     /* Recurse across siblings. */
@@ -976,7 +976,8 @@ print_diff_tree (svn_fs_root_t *root,
                  (root, base_root, node,
                   svn_path_join (path, node->name, subpool),
                   svn_path_join (base_path, node->name, subpool),
-                  no_diff_deleted, 
+                  no_diff_deleted,
+                  tmpdir,
                   pool));
       }
     
@@ -1251,6 +1252,50 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Create a new temporary directory with an 'svnlook' prefix. */
+static svn_error_t *
+create_unique_tmpdir (const char **name, apr_pool_t *pool)
+{
+  const char *unique_name_apr;
+  const char *unique_name;
+  const char *sys_tmp_dir;
+  const char *base_apr;
+  const char *base;
+  unsigned int i;
+
+  SVN_ERR (svn_io_temp_dir (&sys_tmp_dir, pool));
+  base = svn_path_join (sys_tmp_dir, "svnlook", pool);
+  SVN_ERR (svn_path_cstring_from_utf8 (&base_apr, base, pool));
+
+  for (i = 1; i <= 99999; i++)
+    {
+      apr_status_t apr_err;
+
+      unique_name_apr = apr_psprintf (pool, "%s.%u", base_apr, i);
+      apr_err = apr_dir_make (unique_name_apr, APR_OS_DEFAULT, pool);
+
+      if (APR_STATUS_IS_EEXIST (apr_err))
+        continue;
+
+      SVN_ERR (svn_path_cstring_to_utf8 (&unique_name, unique_name_apr, pool));
+
+      if (apr_err)
+        {
+          *name = NULL;
+          return svn_error_wrap_apr (apr_err, "Can't create directory '%s'",
+                                     unique_name);
+        }
+      else
+        {
+          *name = unique_name;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  *name = NULL;
+  return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
+                            NULL, "Can't create temporary directory");
+}
 
 /* Print some diff-y stuff in a TBD way. :-) */
 static svn_error_t *
@@ -1276,15 +1321,20 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
                                 TRUE, pool)); 
   if (tree)
     {
-      svn_node_kind_t kind;
+      const char *tmpdir;
+      svn_error_t *err;
 
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
-      SVN_ERR (print_diff_tree (root, base_root, tree, "", "",
-                                c->no_diff_deleted, pool));
-      SVN_ERR (svn_io_check_path (SVNLOOK_TMPDIR, &kind, pool));
-      if (kind == svn_node_dir)
-        SVN_ERR (svn_io_remove_dir (SVNLOOK_TMPDIR, pool));
-      }
+      SVN_ERR (create_unique_tmpdir (&tmpdir, pool));
+      err = print_diff_tree (root, base_root, tree, "", "",
+                             c->no_diff_deleted, tmpdir, pool);
+      if (err)
+        {
+          svn_error_clear (svn_io_remove_dir (tmpdir, pool));
+          return err;
+        }
+      SVN_ERR (svn_io_remove_dir (tmpdir, pool));
+    }
   return SVN_NO_ERROR;
 }
 
