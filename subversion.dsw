@@ -120,6 +120,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "mod_dav_svn"=.\subversion\mod_dav_svn\mod_dav_svn.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "apr"=.\apr\apr.dsp - Package Owner=<4>
 
 Package=<5>
