@@ -46,8 +46,12 @@ $(SVN_DB3_WIN32)\lib.
 
 The workspace `subversion.dsw' at the top of the source tree includes
 all the necessary projects. Right now, only static libraries are
-built. The `subversion_client' project builds the command-line client
-(svn.exe) and all libraries except `libsvn_fs'.
+built. The "__build__" project (active by default) builds all the
+libraries and programs.. The "__check__" project builds the test
+drivers.
+
+You will have to edit the file config.hw to set the correct paths for
+diff and patch.
 
 
 Coding Style
