@@ -350,6 +350,12 @@ svn_cl__get_trace_update_editor (const svn_delta_edit_fns_t **editor,
   eb->pool = svn_pool_create (pool);
   eb->initial_path = svn_string_dup (initial_path, eb->pool);
 
+  /* Hack off the last component of the path since the update editor
+     is doing the same thing.  Stuff looks so much better when the
+     paths match up. */
+  svn_path_remove_component (eb->initial_path,
+                             svn_path_local_style);
+
   /* Set up the editor. */
   trace_editor->replace_root = replace_root;
   trace_editor->delete_entry = delete_entry;
