@@ -61,14 +61,16 @@ svn_wc_get_default_ignores (apr_array_header_t **patterns,
    Otherwise, add to *PATTERNS a list of (const char *) patterns to
    match. */
 static svn_error_t *
-add_ignore_patterns (const char *dirpath,
+add_ignore_patterns (svn_wc_adm_access_t *adm_access,
                      apr_array_header_t *patterns,
                      apr_pool_t *pool)
 {
   const svn_string_t *value;
 
   /* Try to load the SVN_PROP_IGNORE property. */
-  SVN_ERR (svn_wc_prop_get (&value, SVN_PROP_IGNORE, dirpath, pool));
+  SVN_ERR (svn_wc_prop_get (&value, SVN_PROP_IGNORE,
+                            svn_wc_adm_access_path (adm_access), adm_access,
+                            pool));
 
   if (value != NULL)
     svn_cstring_split_append (patterns, value->data, "\n\r", FALSE, pool);
@@ -164,15 +166,19 @@ assemble_status (svn_wc_status_t **status,
      subdir, or deleted the directory altogether and created a new one.
      In any case, what is currently there is in the way.
    */
-  if (entry->kind == svn_node_dir
-      && path_kind == svn_node_dir)
+  if (entry->kind == svn_node_dir)
     {
-      int wc_format_version;
+      if (path_kind == svn_node_dir)
+        {
+          int wc_format_version;
 
-      SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
+          SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
 
-      /* a "version" of 0 means a non-wc directory */
-      if (wc_format_version == 0)
+          /* a "version" of 0 means a non-wc directory */
+          if (wc_format_version == 0)
+            final_text_status = svn_wc_status_obstructed;
+        }
+      else if (path_kind != svn_node_none)
         final_text_status = svn_wc_status_obstructed;
     }
 
@@ -203,7 +209,7 @@ assemble_status (svn_wc_status_t **status,
             precedence over M. */
 
       /* Does the entry have props? */
-      SVN_ERR (svn_wc__has_props (&has_props, path, pool));
+      SVN_ERR (svn_wc__has_props (&has_props, path, adm_access, pool));
       if (has_props)
         final_prop_status = svn_wc_status_normal;
 
@@ -385,8 +391,7 @@ add_status_structure (apr_hash_t *statushash,
         text_status set to svn_wc_status_none.)
 */
 static svn_error_t *
-add_unversioned_items (const char *path, 
-                       svn_wc_adm_access_t *adm_access,
+add_unversioned_items (svn_wc_adm_access_t *adm_access,
                        apr_hash_t *entries,
                        apr_hash_t *statushash,
                        apr_array_header_t *ignores,
@@ -401,7 +406,8 @@ add_unversioned_items (const char *path,
   apr_array_header_t *patterns;
 
   /* Read PATH's dirents. */
-  SVN_ERR (svn_io_get_dirents (&dirents, path, subpool));
+  SVN_ERR (svn_io_get_dirents (&dirents, svn_wc_adm_access_path (adm_access),
+                               subpool));
 
   /* Unless specified, add default ignore regular expressions and try
      to add any svn:ignore properties from the parent directory. */
@@ -418,7 +424,7 @@ add_unversioned_items (const char *path,
         }
 
       /* Then add any svn:ignore globs to the PATTERNS array. */
-      SVN_ERR (add_ignore_patterns (path, patterns, subpool));
+      SVN_ERR (add_ignore_patterns (adm_access, patterns, subpool));
     }
   else
     patterns = NULL;
@@ -452,7 +458,8 @@ add_unversioned_items (const char *path,
          dirent. */
       if (no_ignore || ! ignore_me)
         {
-          printable_path = svn_path_join (path, keystring, pool);
+          printable_path = svn_path_join (svn_wc_adm_access_path (adm_access),
+                                          keystring, pool);
           
           /* Add this item to the status hash. */
           SVN_ERR (add_status_structure (statushash,
@@ -517,7 +524,6 @@ svn_wc_status (svn_wc_status_t **status,
    PATH is a working copy root. */
 static svn_error_t *
 get_dir_status (apr_hash_t *statushash,
-                const char *path,
                 const svn_wc_entry_t *parent_entry,
                 svn_wc_adm_access_t *adm_access,
                 apr_array_header_t *ignores,
@@ -536,11 +542,12 @@ get_dir_status (apr_hash_t *statushash,
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
 
   /* Add the unversioned items to the status output. */
-  SVN_ERR (add_unversioned_items (path, adm_access, entries, statushash,
+  SVN_ERR (add_unversioned_items (adm_access, entries, statushash,
                                   ignores, no_ignore,
                                   notify_func, notify_baton, pool));
 
-  SVN_ERR (svn_wc_entry (&dir_entry, path, adm_access, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&dir_entry, svn_wc_adm_access_path (adm_access),
+                         adm_access, FALSE, pool));
 
   /* Loop over entries hash */
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -552,7 +559,8 @@ get_dir_status (apr_hash_t *statushash,
 
       /* Put fullpath into the request pool since it becomes a key
          in the output statushash hash table. */
-      const char *fullpath = apr_pstrdup (pool, path);
+      const char *fullpath
+        = apr_pstrdup (pool, svn_wc_adm_access_path (adm_access));
 
       /* Get the next dirent */
       apr_hash_this (hi, &key, NULL, &val);
@@ -615,7 +623,7 @@ get_dir_status (apr_hash_t *statushash,
                   svn_wc_adm_access_t *dir_access;
                   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
                                                 fullpath, pool));
-                  SVN_ERR (get_dir_status (statushash, fullpath, dir_entry,
+                  SVN_ERR (get_dir_status (statushash, dir_entry,
                                            dir_access, ignores, descend,
                                            get_all, no_ignore, notify_func,
                                            notify_baton, pool));
@@ -710,7 +718,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       /* Read the default ignores from the config files. */
       SVN_ERR (svn_wc_get_default_ignores (&ignores, pool));
 
-      SVN_ERR (get_dir_status(statushash, path, parent_entry, adm_access,
+      SVN_ERR (get_dir_status(statushash, parent_entry, adm_access,
                               ignores, descend, get_all, no_ignore,
                               notify_func, notify_baton,
                               pool));

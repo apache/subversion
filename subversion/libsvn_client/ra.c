@@ -90,7 +90,8 @@ get_wc_prop (void *baton,
             = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
           if (! strcmp (relpath, 
                         svn_path_uri_decode (item->url, pool)))
-            return svn_wc_prop_get (value, name, item->path, pool);
+            return svn_wc_prop_get (value, name, item->path, cb->base_access,
+                                    pool);
         }
 
       return SVN_NO_ERROR;
@@ -102,7 +103,7 @@ get_wc_prop (void *baton,
 
   return svn_wc_prop_get (value, name,
                           svn_path_join (cb->base_dir, relpath, pool),
-                          pool);
+                          cb->base_access, pool);
 }
 
 /* This implements the `svn_ra_push_wc_prop_func_t' interface. */

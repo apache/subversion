@@ -910,7 +910,7 @@ svn_wc_add (const char *path,
   if (orig_entry)
     {
       const char *prop_path;
-      SVN_ERR (svn_wc__prop_path (&prop_path, path, FALSE, pool));
+      SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, pool));
       SVN_ERR (remove_file_if_present (prop_path, pool));
     }
 
@@ -1127,8 +1127,9 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
     {
       svn_node_kind_t working_props_kind;
 
-      SVN_ERR (svn_wc__prop_path (&thing, fullpath, 0, pool)); 
-      SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, 0, pool));
+      SVN_ERR (svn_wc__prop_path (&thing, fullpath, adm_access, FALSE, pool)); 
+      SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, adm_access, FALSE,
+                                       pool));
 
       /* There may be a base props file but no working props file, if
          the mod was that the working file was `R'eplaced by a new
@@ -1173,8 +1174,9 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
          working props.  It's *still* possible that the base-props
          exist, however, from the original replaced file.  If they do,
          then we need to restore them. */
-      SVN_ERR (svn_wc__prop_path (&thing, fullpath, 0, pool)); 
-      SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, 0, pool));
+      SVN_ERR (svn_wc__prop_path (&thing, fullpath, adm_access, FALSE, pool)); 
+      SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, adm_access, FALSE,
+                                       pool));
       SVN_ERR (svn_io_check_path (base_thing, &kind, pool));
 
       if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
@@ -1200,7 +1202,8 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
           const char *eol;
           base_thing = svn_wc__text_base_path (fullpath, 0, pool);
 
-          SVN_ERR (svn_wc__get_eol_style (NULL, &eol, fullpath, pool));
+          SVN_ERR (svn_wc__get_eol_style (NULL, &eol, fullpath, adm_access,
+                                          pool));
           SVN_ERR (svn_wc__get_keywords (&keywords, fullpath, adm_access, NULL,
                                          pool));
 
@@ -1218,7 +1221,8 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
             return revert_error (err, fullpath, "restoring text", pool);
 
           /* If necessary, tweak the new working file's executable bit. */
-          SVN_ERR (svn_wc__maybe_set_executable (NULL, fullpath, pool));
+          SVN_ERR (svn_wc__maybe_set_executable (NULL, fullpath, adm_access,
+                                                 pool));
 
           /* Modify our entry structure. */
           SVN_ERR (svn_io_file_affected_time (&tstamp, fullpath, pool));
@@ -1582,15 +1586,18 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
 
         /* Working prop file. */
-        SVN_ERR (svn_wc__prop_path (&svn_thang, full_path, 0, subpool));
+        SVN_ERR (svn_wc__prop_path (&svn_thang, full_path, adm_access, FALSE,
+                                    subpool));
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
 
         /* Prop base file. */
-        SVN_ERR (svn_wc__prop_base_path (&svn_thang, full_path, 0, subpool));
+        SVN_ERR (svn_wc__prop_base_path (&svn_thang, full_path, adm_access,
+                                         FALSE, subpool));
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
 
         /* wc-prop file. */
-        SVN_ERR (svn_wc__wcprop_path (&svn_thang, full_path, 0, subpool));
+        SVN_ERR (svn_wc__wcprop_path (&svn_thang, full_path, adm_access, FALSE,
+                                      subpool));
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
       }
 

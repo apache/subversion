@@ -63,7 +63,7 @@ restore_file (const char *file_path,
   SVN_ERR (svn_io_copy_file (text_base_path, tmp_text_base_path,
                              FALSE, pool));
 
-  SVN_ERR (svn_wc__get_eol_style (NULL, &eol, file_path, pool));
+  SVN_ERR (svn_wc__get_eol_style (NULL, &eol, file_path, adm_access, pool));
   SVN_ERR (svn_wc__get_keywords (&keywords,
                                  file_path, adm_access, NULL, pool));
   
@@ -81,7 +81,7 @@ restore_file (const char *file_path,
   SVN_ERR (svn_io_remove_file (tmp_text_base_path, pool));
 
   /* If necessary, tweak the new working file's executable bit. */
-  SVN_ERR (svn_wc__maybe_set_executable (NULL, file_path, pool));
+  SVN_ERR (svn_wc__maybe_set_executable (NULL, file_path, adm_access, pool));
 
   /* Remove any text conflict */
   SVN_ERR (svn_wc_resolve_conflict (file_path, adm_access, TRUE, FALSE, FALSE,
@@ -155,7 +155,8 @@ report_revisions (svn_wc_adm_access_t *adm_access,
   if (traversal_info)
     {
       const svn_string_t *val;
-      SVN_ERR (svn_wc_prop_get (&val, SVN_PROP_EXTERNALS, full_path, pool));
+      SVN_ERR (svn_wc_prop_get (&val, SVN_PROP_EXTERNALS, full_path, adm_access,
+                                pool));
       if (val)
         {
           apr_pool_t *dup_pool = traversal_info->pool;
@@ -661,6 +662,7 @@ svn_wc_transmit_text_deltas (const char *path,
 
 svn_error_t *
 svn_wc_transmit_prop_deltas (const char *path,
+                             svn_wc_adm_access_t *adm_access,
                              const svn_wc_entry_t *entry,
                              const svn_delta_editor_t *editor,
                              void *baton,
@@ -674,7 +676,7 @@ svn_wc_transmit_prop_deltas (const char *path,
   apr_hash_t *baseprops = apr_hash_make (pool);
   
   /* First, get the prop_path from the original path */
-  SVN_ERR (svn_wc__prop_path (&props, path, 0, pool));
+  SVN_ERR (svn_wc__prop_path (&props, path, adm_access, FALSE, pool));
   
   /* Get the full path of the prop-base `pristine' file */
   if ((entry->schedule == svn_wc_schedule_replace)
@@ -687,10 +689,11 @@ svn_wc_transmit_prop_deltas (const char *path,
     }
   else
     /* the real prop-base hash */
-    SVN_ERR (svn_wc__prop_base_path (&props_base, path, 0, pool));
+    SVN_ERR (svn_wc__prop_base_path (&props_base, path, adm_access, FALSE,
+                                     pool));
 
   /* Copy the local prop file to the administrative temp area */
-  SVN_ERR (svn_wc__prop_path (&props_tmp, path, 1, pool));
+  SVN_ERR (svn_wc__prop_path (&props_tmp, path, adm_access, TRUE, pool));
   SVN_ERR (svn_io_copy_file (props, props_tmp, FALSE, pool));
 
   /* Alert the caller that we have created a temporary file that might

@@ -106,7 +106,8 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
         /* Note that this action takes properties from dest, not source. */
         SVN_ERR (svn_wc__get_keywords (&keywords, full_dest_path, adm_access,
                                        NULL, pool));
-        SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_dest_path, pool));
+        SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_dest_path,
+                                        adm_access, pool));
 
         SVN_ERR (svn_subst_copy_and_translate (full_from_path,
                                                full_dest_path,
@@ -117,7 +118,8 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
                                                pool));
 
         /* After copying, set the file executable if props dictate. */
-        return svn_wc__maybe_set_executable (NULL, full_dest_path, pool);
+        return svn_wc__maybe_set_executable (NULL, full_dest_path, adm_access,
+                                             pool);
       }
 
     case svn_wc__xfer_cp_and_detranslate:
@@ -128,7 +130,8 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
         /* Note that this action takes properties from source, not dest. */
         SVN_ERR (svn_wc__get_keywords (&keywords, full_from_path, adm_access,
                                        NULL, pool));
-        SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_from_path, pool));
+        SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_from_path,
+                                        adm_access, pool));
 
         /* If any specific eol style was indicated, then detranslate
            back to repository normal form ("\n"), repairingly.  But if
@@ -220,7 +223,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
    */
 
   /* start off getting the latest translation prop values. */
-  SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, filepath, pool));
+  SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, filepath, adm_access, pool));
   SVN_ERR (svn_wc__get_keywords (&keywords, filepath, adm_access, NULL, pool));
 
   svn_path_split (filepath, &pdir, &bname, pool);
@@ -267,7 +270,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
   SVN_ERR (svn_io_remove_file (tmp_wfile, pool));
 
   /* Set the working file's execute bit if props dictate. */
-  SVN_ERR (svn_wc__maybe_set_executable (&did_set, filepath, pool));
+  SVN_ERR (svn_wc__maybe_set_executable (&did_set, filepath, adm_access, pool));
   if (did_set)
     /* okay, so we didn't -overwrite- the working file, but we changed
        its timestamp, which is the point of returning this flag. :-) */
@@ -549,7 +552,8 @@ log_do_modify_entry (struct log_runner *loggy,
       svn_node_kind_t pfile_kind;
       apr_time_t prop_time;
 
-      err = svn_wc__prop_path (&pfile, tfile, 0, loggy->pool);
+      err = svn_wc__prop_path (&pfile, tfile, loggy->adm_access, FALSE,
+                               loggy->pool);
       if (err)
         signal_error (loggy, err);
       
@@ -881,12 +885,12 @@ log_do_committed (struct log_runner *loggy,
              (&wf,
               is_this_dir
               ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
-              0, pool));
+              loggy->adm_access, FALSE, pool));
     SVN_ERR (svn_wc__prop_base_path
              (&basef,
               is_this_dir
               ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
-              0, pool));
+              loggy->adm_access, FALSE, pool));
     
     /* If this file was replaced in the commit, then we definitely
        need to begin by removing any old residual prop-base file.  */
@@ -902,7 +906,7 @@ log_do_committed (struct log_runner *loggy,
              (&tmpf,
               is_this_dir
               ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
-              1, pool));
+              loggy->adm_access, TRUE, pool));
     if ((err = svn_io_check_path (tmpf, &kind, pool)))
       return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
                                 "error checking existence: %s", name);
@@ -937,7 +941,8 @@ log_do_committed (struct log_runner *loggy,
             int i;
             apr_array_header_t *propchanges;
             SVN_ERR (svn_wc_get_prop_diffs (&propchanges, NULL,
-                                            full_path, pool));
+                                            full_path, loggy->adm_access,
+                                            pool));
             for (i = 0; i < propchanges->nelts; i++)
               {
                 svn_prop_t *propchange
@@ -1110,7 +1115,7 @@ log_do_modify_wcprop (struct log_runner *loggy,
     }
 
   return svn_wc__wcprop_set (propname, propval ? &value : NULL,
-                             path, loggy->pool);
+                             path, loggy->adm_access, loggy->pool);
 }
 
 

@@ -56,6 +56,9 @@ struct svn_wc_adm_access_t
   /* SET_OWNER is TRUE if SET is allocated from this access baton */
   svn_boolean_t set_owner;
 
+  /* The working copy format version number for the directory */
+  int wc_format;
+
   /* SET is a hash of svn_wc_adm_access_t* keyed on char* representing the
      path to directories that are open. */
   apr_hash_t *set;
@@ -173,6 +176,7 @@ adm_access_alloc (enum svn_wc__adm_access_type type,
   lock->type = type;
   lock->entries = NULL;
   lock->entries_deleted = NULL;
+  lock->wc_format = 0;
   lock->set = NULL;
   lock->lock_exists = FALSE;
   lock->set_owner = FALSE;
@@ -197,17 +201,19 @@ adm_ensure_set (svn_wc_adm_access_t *adm_access)
 static svn_error_t *
 probe (const char **dir,
        const char *path,
+       int *wc_format,
        apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  int wc_format_version;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if (kind == svn_node_dir)
-    SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
+    SVN_ERR (svn_wc_check_wc (path, wc_format, pool));
+  else
+    *wc_format = 0;
 
   /* a "version" of 0 means a non-wc directory */
-  if (kind != svn_node_dir || wc_format_version == 0)
+  if (kind != svn_node_dir || *wc_format == 0)
     *dir = svn_path_dirname (path, pool);
   else
     *dir = path;
@@ -398,10 +404,13 @@ svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                        apr_pool_t *pool)
 {
   const char *dir;
+  int wc_format;
 
-  SVN_ERR (probe (&dir, path, pool));
+  SVN_ERR (probe (&dir, path, &wc_format, pool));
   SVN_ERR (svn_wc_adm_open (adm_access, associated, dir, write_lock, tree_lock,
                             pool));
+  if (wc_format && ! (*adm_access)->wc_format)
+    (*adm_access)->wc_format = wc_format;
 
   return SVN_NO_ERROR;
 }
@@ -434,9 +443,13 @@ svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
                            apr_pool_t *pool)
 {
   const char *dir;
+  int wc_format;
 
-  SVN_ERR (probe (&dir, path, pool));
+  SVN_ERR (probe (&dir, path, &wc_format, pool));
   SVN_ERR (svn_wc_adm_retrieve (adm_access, associated, dir, pool));
+
+  if (wc_format && ! (*adm_access)->wc_format)
+    (*adm_access)->wc_format = wc_format;
 
   return SVN_NO_ERROR;
 }
@@ -684,4 +697,18 @@ svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
     }
   else
     return adm_access->entries_deleted;
+}
+
+
+svn_error_t *
+svn_wc_adm_wc_format (svn_wc_adm_access_t *adm_access,
+                      int *wc_format)
+{
+  if (! adm_access->wc_format)
+    SVN_ERR (svn_wc_check_wc (adm_access->path, &adm_access->wc_format,
+                              adm_access->pool));
+
+  *wc_format = adm_access->wc_format;
+
+  return SVN_NO_ERROR;
 }

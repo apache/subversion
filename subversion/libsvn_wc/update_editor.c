@@ -756,7 +756,8 @@ change_dir_prop (void *dir_baton,
   /* If this is a 'wc' prop, store it in the administrative area and
      get on with life.  It's not a regular versioned property. */
   if (svn_wc_is_wc_prop (name))
-    return svn_wc__wcprop_set (name, value, db->path, pool);
+    return svn_wc__wcprop_set (name, value, db->path,
+                               db->edit_baton->adm_access, pool);
   
   /* If this is an 'entry' prop, store it in the entries file and get
      on with life.  It's not a regular user property. */
@@ -882,7 +883,7 @@ close_directory (void *dir_baton,
 
             SVN_ERR (svn_wc_prop_get
                      (&old_val_s, SVN_PROP_EXTERNALS,
-                      db->path, db->pool));
+                      db->path, adm_access, db->pool));
 
             if ((new_val_s == NULL) && (old_val_s == NULL))
               ; /* No value before, no value after... so do nothing. */
@@ -1430,7 +1431,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
           
           /* Get the current pristine props. */
           SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                           file_path, 0, pool));
+                                           file_path, adm_access, FALSE, pool));
           SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
                                            old_pristine_props, pool));
           
@@ -1815,7 +1816,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
 
           prop = &APR_ARRAY_IDX(wc_props, i, svn_prop_t);
           SVN_ERR (svn_wc__wcprop_set (prop->name, prop->value,
-                                       file_path, pool));
+                                       file_path, adm_access, pool));
         }
     }
 

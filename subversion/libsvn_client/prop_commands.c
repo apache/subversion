@@ -184,13 +184,14 @@ svn_client_revprop_set (const char *propname,
 static svn_error_t *
 pristine_or_working_props (apr_hash_t **props,
                            const char *path,
+                           svn_wc_adm_access_t *adm_access,
                            svn_boolean_t pristine,
                            apr_pool_t *pool)
 {
   if (pristine)
-    SVN_ERR (svn_wc_get_prop_diffs (NULL, props, path, pool));
+    SVN_ERR (svn_wc_get_prop_diffs (NULL, props, path, adm_access, pool));
   else
-    SVN_ERR (svn_wc_prop_list (props, path, pool));
+    SVN_ERR (svn_wc_prop_list (props, path, adm_access, pool));
   
   return SVN_NO_ERROR;
 }
@@ -204,6 +205,7 @@ static svn_error_t *
 pristine_or_working_propval (const svn_string_t **propval,
                              const char *propname,
                              const char *path,
+                             svn_wc_adm_access_t *adm_access,
                              svn_boolean_t pristine,
                              apr_pool_t *pool)
 {
@@ -211,12 +213,13 @@ pristine_or_working_propval (const svn_string_t **propval,
     {
       apr_hash_t *pristine_props;
       
-      SVN_ERR (svn_wc_get_prop_diffs (NULL, &pristine_props, path, pool));
+      SVN_ERR (svn_wc_get_prop_diffs (NULL, &pristine_props, path, adm_access,
+                                      pool));
       *propval = apr_hash_get (pristine_props, propname, APR_HASH_KEY_STRING);
     }
   else  /* get the working revision */
     {
-      SVN_ERR (svn_wc_prop_get (propval, propname, path, pool));
+      SVN_ERR (svn_wc_prop_get (propval, propname, path, adm_access, pool));
     }
   
   return SVN_NO_ERROR;
@@ -286,6 +289,7 @@ recursive_propget (apr_hash_t *props,
 
               SVN_ERR (pristine_or_working_propval (&propval, propname,
                                                     full_entry_path,
+                                                    adm_access,
                                                     pristine, pool));
               if (propval)
                 apr_hash_set (props, full_entry_path,
@@ -561,8 +565,8 @@ svn_client_propget (apr_hash_t **props,
         {
           const svn_string_t *propval;
           
-          SVN_ERR (pristine_or_working_propval (&propval, propname,
-                                                target, pristine, pool));
+          SVN_ERR (pristine_or_working_propval (&propval, propname, target,
+                                                adm_access, pristine, pool));
 
           apr_hash_set (prop_hash, target, APR_HASH_KEY_STRING, propval);
         }
@@ -752,12 +756,14 @@ remote_proplist (apr_array_header_t *proplist,
 static svn_error_t *
 add_to_proplist (apr_array_header_t *prop_list,
                  const char *node_name,
+                 svn_wc_adm_access_t *adm_access,
                  svn_boolean_t pristine,
                  apr_pool_t *pool)
 {
   apr_hash_t *hash;
 
-  SVN_ERR (pristine_or_working_props (&hash, node_name, pristine, pool));
+  SVN_ERR (pristine_or_working_props (&hash, node_name, adm_access, pristine,
+                                      pool));
   push_props_on_list (prop_list, hash, node_name, pool);
 
   return SVN_NO_ERROR;
@@ -820,7 +826,8 @@ recursive_proplist (apr_array_header_t *props,
               SVN_ERR (recursive_proplist (props, dir_access, pristine, pool));
             }
           else
-            SVN_ERR (add_to_proplist (props, full_entry_path, pristine, pool));
+            SVN_ERR (add_to_proplist (props, full_entry_path, adm_access,
+                                      pristine, pool));
         }
     }
   return SVN_NO_ERROR;
@@ -935,7 +942,8 @@ svn_client_proplist (apr_array_header_t **props,
       if (recurse && entry->kind == svn_node_dir)
         SVN_ERR (recursive_proplist (prop_list, adm_access, pristine, pool));
       else 
-        SVN_ERR (add_to_proplist (prop_list, target, pristine, pool));
+        SVN_ERR (add_to_proplist (prop_list, target, adm_access, pristine,
+                                  pool));
       
       SVN_ERR (svn_wc_adm_close (adm_access));
     }

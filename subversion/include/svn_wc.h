@@ -171,6 +171,11 @@ apr_pool_t *svn_wc_adm_access_pool (svn_wc_adm_access_t *adm_access);
  */
 svn_error_t *svn_wc_adm_write_check (svn_wc_adm_access_t *adm_access);
 
+/** Set @a *wc_format to the working copy format version number for
+ * @a adm_access. */
+svn_error_t *svn_wc_adm_wc_format (svn_wc_adm_access_t *adm_access,
+                                   int *wc_format);
+
 
 /** Set @a *locked to non-zero if @a path is locked, else set it to zero. */
 svn_error_t *svn_wc_locked (svn_boolean_t *locked, 
@@ -431,10 +436,10 @@ typedef struct svn_wc_diff_callbacks_t
 
 /* Asking questions about a working copy. */
 
-/** Set @a *is_wc to @a path's working copy format version number if 
+/** Set @a *wc_format to @a path's working copy format version number if 
  * @a path is a valid working copy directory, else set it to 0.
  *
- * Set @a *is_wc to @a path's working copy format version number if 
+ * Set @a *wc_format to @a path's working copy format version number if 
  * @a path is a valid working copy directory, else set it to 0.  
  * Return error @c APR_ENOENT if @a path does not exist at all.
  */
@@ -445,9 +450,11 @@ svn_error_t *svn_wc_check_wc (const char *path,
 
 /** Set @a *has_binary_prop to @c TRUE iff @a path has been marked 
  * with a property indicating that it is non-text (in other words, binary).
+ * @a adm_access is an access baton set that contains @path.
  */
 svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
                                      const char *path,
+                                     svn_wc_adm_access_t *adm_access,
                                      apr_pool_t *pool);
 
 
@@ -1502,10 +1509,12 @@ svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *content_state,
  * Set @a *props to a hash table mapping <tt>char *</tt> names onto
  * <tt>svn_string_t *</tt> values for all the regular properties of 
  * @a path.  Allocate the table, names, and values in @a POOL.  If 
- * the node has no properties, an empty hash is returned.
+ * the node has no properties, an empty hash is returned.  @a adm_access
+ * is an access baton set that contains @a path.
  */
 svn_error_t *svn_wc_prop_list (apr_hash_t **props,
                                const char *path,
+                               svn_wc_adm_access_t *adm_access,
                                apr_pool_t *pool);
 
 
@@ -1514,11 +1523,13 @@ svn_error_t *svn_wc_prop_list (apr_hash_t **props,
  * Set @a *value to the value of property @a name for @a path, allocating
  * @a *value in @a pool.  If no such prop, set @a *value to @c NULL.  
  * @a name may be a regular or wc property; if it is an entry property, 
- * return the error @c SVN_ERR_BAD_PROP_KIND.
+ * return the error @c SVN_ERR_BAD_PROP_KIND.  @a adm_access is an access
+ * baton set that contains @a path.
  */
 svn_error_t *svn_wc_prop_get (const svn_string_t **value,
                               const char *name,
                               const char *path,
+                              svn_wc_adm_access_t *adm_access,
                               apr_pool_t *pool);
 
 /** Set property @a name to @a value for @a path.
@@ -1619,7 +1630,7 @@ svn_error_t *svn_wc_diff (svn_wc_adm_access_t *anchor,
  *
  * Given a @a path to a file or directory under version control, discover
  * any local changes made to properties and/or the set of 'pristine'
- * properties.
+ * properties.  @a adm_access is an access baton set for @a path.
  *
  * If @a propchanges is non-@c NULL, return these changes as an array of
  * @c svn_prop_t structures stored in @a *propchanges.  The structures and
@@ -1635,6 +1646,7 @@ svn_error_t *svn_wc_diff (svn_wc_adm_access_t *anchor,
 svn_error_t *svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
                                     apr_hash_t **original_props,
                                     const char *path,
+                                    svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool);
 
 
@@ -2022,7 +2034,8 @@ svn_error_t *svn_wc_transmit_text_deltas (const char *path,
 
 /** Given a @a path with its accompanying @a entry, transmit all local 
  * property modifications using the appropriate @a editor method (in 
- * conjunction with @a baton).
+ * conjunction with @a baton). @a adm_access is an access baton set
+ * that contains @a path.
  *
  * Given a @a path with its accompanying @a entry, transmit all local 
  * property modifications using the appropriate @a editor method (in 
@@ -2033,6 +2046,7 @@ svn_error_t *svn_wc_transmit_text_deltas (const char *path,
  * clean this up if it wishes to do so).
  */
 svn_error_t *svn_wc_transmit_prop_deltas (const char *path,
+                                          svn_wc_adm_access_t *adm_access,
                                           const svn_wc_entry_t *entry,
                                           const svn_delta_editor_t *editor,
                                           void *baton,
