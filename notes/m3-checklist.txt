@@ -45,43 +45,11 @@ What's left to do:
 
   In progress; see "Karl M3 stack" in STACK for details.
 
-
-* Hooks: finished.
-
-    The write-hooks are working now, and we have the 'svnlook' tool
-    for assisting hook scripts.  We might attempt to get sentinels, or
-    at least read sentinels, working if time permits.
-
-* Authentication:  finished.
-
-        - ra_local just gets a username.
- 
-        - ra_dav will get username/password, store them in working
-          copy, and allow Apache to authenticate.
-
-      Usernames are stored automatically as properties on transaction
-      and revision roots, along with log messages and datestamps.
-
-* Authorization:   finished.
-
-        - for ra_local, the Unix filesystem is all the security there
-          can be.  The user running the svn client app either does or
-          doesn't have permission to read/write the Berkeley DB files.
-
-        - for ra_dav, Apache does the authorization by looking at a
-          list of committers in a .conf file.
-
-        - more complex authorization can be done using hook scripts.
-
 * Make a tarball dist.  (kfogel -- working)
 
   Make sure "make dist" works, establish release process, do a
   release. :-)  lucas@collab.net has volunteered to review the release
   procedure doc.
-
-* `svnadmin' program enhancements:  finished.
-
-  svnadmin needs ability to remove stale txns.
 
 * Backup system for commits in the new svn repository.  (kfogel)
 
