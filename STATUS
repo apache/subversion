@@ -55,7 +55,7 @@ Candidate changes:
       Remove the changes to add the version command in r10531, we don't have it
       in 1.1.x.  So only --force would be added to add from the r10531 rev.
     Votes:
-      +1: breser
+      +1: breser, maxb
 
   * r10711
     Fix a non-portable temp file creation in SVN::Ra::Callback.  This
