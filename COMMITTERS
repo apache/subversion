@@ -77,6 +77,8 @@ Commit access for specific areas:
        niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (.po files)
         luebbe   Lübbe Onken <l.onken@rac.de>                (.po files)
        mthelen   Michael W Thelen <thelenm@cs.utah.edu>      (doc)
+  jeremybettis   Jeremy Bettis <jeremy@deadbeef.com>         (hook script)
+      martinto   Martin Tomes <lists@tomes.org>              (hook script)
 
 Committers who have asked to be listed as dormant:
 
