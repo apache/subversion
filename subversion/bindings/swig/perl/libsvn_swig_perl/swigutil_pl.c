@@ -1218,6 +1218,20 @@ svn_error_t *svn_swig_pl_blame_func (void *baton,
     return ret_val;
 }
 
+/* Thunked config enumerator */
+svn_boolean_t svn_swig_pl_thunk_config_enumerator (const char *name, const char *value, void *baton)
+{
+    SV *result;
+    if (!SvOK((SV *)baton))
+	return 0;
+
+    svn_swig_pl_callback_thunk (CALL_SV, baton, &result,
+			        "ss", name, value);
+
+    return SvOK(result);
+}
+
+
 /* default pool support */
 static apr_pool_t *current_pool = 0;
 
