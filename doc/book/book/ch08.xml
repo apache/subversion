@@ -374,7 +374,7 @@ $ svn log -r 1729:{2/17/02}
       </sect2>
       
       <sect2 id="svn-ch-8-sect-1.2">
-        <title><command>svn subcommands</command></title>
+        <title><command>svn Subcommands</command></title>
 
         <refentry>
           <refnamediv>
@@ -397,7 +397,7 @@ $ svn log -r 1729:{2/17/02}
           </refsect1>
           
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>None</para>
           </refsect1>
           
@@ -467,7 +467,7 @@ $ svn log -r 1729:{2/17/02}
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>None</para>
           </refsect1>
 
@@ -545,7 +545,7 @@ Latest revision fresh from the repository!
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>co</para>
           </refsect1>
 
@@ -643,7 +643,7 @@ working-copies
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>None</para>
           </refsect1>
 
@@ -703,7 +703,7 @@ $ svn cleanup /path/to/working-copy
           </refsect1>
           
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>ci (short for <quote>check in</quote> not 
               <quote>co</quote>, which is short for 
               <quote>checkout</quote>)</para>
@@ -848,7 +848,7 @@ Committed revision 7.
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>cp</para>
           </refsect1>
 
@@ -974,7 +974,7 @@ Committed revision 13.
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>del, remove, rm</para>
           </refsect1>
 
@@ -1108,7 +1108,7 @@ D         over-there
 
           </refsect1>
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>di</para>
           </refsect1>
 
@@ -1243,7 +1243,7 @@ Index: COMMITTERS
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>None</para>
           </refsect1>
 
@@ -1313,7 +1313,7 @@ Exported revision 15.
           </refsect1>
           
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>?, h</para>
           </refsect1>
 
@@ -1357,7 +1357,7 @@ Exported revision 15.
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>None</para>
           </refsect1>
 
@@ -1450,7 +1450,7 @@ Committed revision 19.
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>None</para>
           </refsect1>
 
@@ -1533,7 +1533,7 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>ls</para>
           </refsect1>
 
@@ -1636,7 +1636,7 @@ _      24     harry       0 Jan 18 11:27 examples/
 
           </refsect1>
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>None</para>
           </refsect1>
 
@@ -1867,7 +1867,7 @@ Made a change.
               the differences will be applied to that file.</para>
           </refsect1>
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>None</para>
           </refsect1>
 
@@ -1955,7 +1955,7 @@ U  thhgttg.txt
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>None</para>
           </refsect1>
 
@@ -2055,7 +2055,7 @@ Committed revision 26.
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>mv, rename, ren</para>
           </refsect1>
 
@@ -2139,7 +2139,7 @@ Committed revision 27.
 
           </refsect1>
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>pset, ps</para>
           </refsect1>
 
@@ -2254,7 +2254,7 @@ property `owner-pic' set on 'moo.c'
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>pdel</para>
           </refsect1>
 
@@ -2321,7 +2321,7 @@ property `release-date' deleted from repository revision '26'
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>pedit, pe</para>
           </refsect1>
 
@@ -2387,7 +2387,7 @@ Set new value for property `svn:keywords' on `foo.c'
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>pget, pg</para>
           </refsect1>
 
@@ -2455,7 +2455,7 @@ Began journal.
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>plist, pl</para>
           </refsect1>
 
@@ -2533,7 +2533,7 @@ Properties on 'foo.c':
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>None</para>
           </refsect1>
 
@@ -2630,7 +2630,7 @@ $ svn status
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>None</para>
           </refsect1>
 
@@ -2922,7 +2922,7 @@ foo.c.r31
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>stat, st</para>
           </refsect1>
 
@@ -3022,7 +3022,7 @@ Head revision:   981
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>sw</para>
           </refsect1>
 
@@ -3157,7 +3157,7 @@ Updated to revision 31.
           </refsect1>
 
           <refsect1>
-            <title>Alternate names</title>
+            <title>Alternate Names</title>
             <para>up</para>
           </refsect1>
 

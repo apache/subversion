@@ -47,7 +47,7 @@
   <!-- *** SECTION 1:  RUNTIME CONFIGURATION AREA                      *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-6-sect-1">
-    <title>Run-time Configuration Area</title>
+    <title>Runtime Configuration Area</title>
     
     <para>Subversion provides many optional behaviors that can be
       controlled by the user.  Many of these options are of the kind
@@ -196,7 +196,7 @@
         merged into your registry.</para>
 
       <example id="svn-ch-6-sect-1.2-ex-1">
-        <title>Sample registration entries (.REG) file.</title>
+        <title>Sample Registration Entries (.REG) File.</title>
 
         <programlisting>
 REGEDIT4

@@ -36,7 +36,7 @@
       client receives information from others.</para>
 
     <figure id="svn-ch2-dia1">
-      <title>A typical client/server system</title>
+      <title>A Typical Client/Server System</title>
       <graphic fileref="images/ch02dia1.png"/>
     </figure>
     
@@ -93,7 +93,7 @@
         This is definitely a situation we want to avoid!</para>
 
       <figure id="svn-ch2-dia2">
-        <title>The problem to avoid</title>
+        <title>The Problem to Avoid</title>
         <graphic fileref="images/ch02dia2.png"/>
       </figure>
 
@@ -116,7 +116,7 @@
         now Sally can take her turn by locking and editing.</para>
       
       <figure id="svn-ch2-dia3">
-        <title>The lock-modify-unlock solution</title>
+        <title>The Lock-Modify-Unlock Solution</title>
         <graphic fileref="images/ch02dia3.png"/>
       </figure>
       
@@ -193,12 +193,12 @@
         saves his working copy back to the repository.</para>
 
       <figure id="svn-ch2-dia4">
-        <title>The copy-modify-merge solution</title>
+        <title>The Copy-Modify-Merge Solution</title>
         <graphic fileref="images/ch02dia4.png"/>
       </figure>
       
       <figure id="svn-ch2-dia5">
-        <title>&hellip;copy-modify-merge continued</title>
+        <title>&hellip;Copy-Modify-Merge Continued</title>
         <graphic fileref="images/ch02dia5.png"/>
       </figure>
 
@@ -239,10 +239,10 @@
   
   <!-- How svn implements the philosophy -->
   <sect1 id="svn-ch-2-sect-3">
-    <title>Subversion in action</title>
+    <title>Subversion in Action</title>
     
     <sect2 id="svn-ch-2-sect-3.1">
-      <title>Working copies</title>
+      <title>Working Copies</title>
       
       <para>You've already read about working copies; now we'll
         demonstrate how the Subversion client creates and uses
@@ -286,7 +286,7 @@
         two software projects.</para>
 
       <figure id="svn-ch2-dia6">
-        <title>The repository's filesystem</title>
+        <title>The Repository's Filesystem</title>
         <graphic fileref="images/ch02dia6.png"/>
       </figure>
       
@@ -495,13 +495,13 @@ U button.c
         each commit. </para>
       
       <figure id="svn-ch2-dia7">
-        <title>The repository</title>
+        <title>The Repository</title>
         <graphic fileref="images/ch02dia7.png"/>
       </figure>
 
 
         <sidebar>
-        <title>Global revision numbers</title>
+        <title>Global Revision Numbers</title>
          
         <para>Unlike those of many other version control systems,
           Subversion's revision numbers apply to <emphasis>entire
@@ -570,7 +570,7 @@ calc/Makefile:6
     
     
     <sect2 id="svn-ch-2-sect-3.3">
-      <title>How working copies track the repository</title>
+      <title>How Working Copies Track the Repository</title>
       
       <para>For each file in a working directory, Subversion records
         two essential pieces of information in the
@@ -650,7 +650,7 @@ calc/Makefile:6
     </sect2>
     
     <sect2 id="svn-ch-2-sect-3.4">
-      <title>The limitations of mixed revisions</title>
+      <title>The Limitations of Mixed Revisions</title>
 
       <para>As a general principle, Subversion tries to be as flexible
         as possible.  One special kind of flexibility is the ability

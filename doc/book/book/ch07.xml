@@ -42,7 +42,7 @@
       (e.g.: libsvn_fs, libsvn_wc, mod_dav_svn).</para>
 
     <table id="svn-ch-7-table-1">
-      <title>A brief inventory of the Subversion libraries</title>
+      <title>A Brief Inventory of the Subversion Libraries</title>
       <tgroup cols="2">
         <thead>
           <row>
@@ -277,7 +277,7 @@
         a tree as exactly that.</para>
 
       <figure id="svn-ch7-sect1.1-dia1">
-        <title>Files and directories in two dimensions</title>
+        <title>Files and Directories in Two Dimensions</title>
         <graphic fileref="images/ch07dia2.png"/>
       </figure>
 
@@ -303,7 +303,7 @@
         filesystem universe.</para>
 
       <figure id="svn-ch7-sect1.1-dia2">
-        <title>Revisioning Time&mdash;the third dimension!</title>
+        <title>Revisioning Time&mdash;the Third Dimension!</title>
         <graphic fileref="images/ch07dia3.png"/>
       </figure>
 
@@ -1011,7 +1011,7 @@ def crawl_filesystem_dir (root, directory, pool):
         functional Subversion working copy!</para>
 
       <example id="svn-ch-7-sect-2.3-ex-2">
-        <title>A simple script to check out a working copy.</title>
+        <title>A Simple Script to Check Out a Working Copy.</title>
 
         <programlisting>
 #!/usr/bin/env python
@@ -1128,8 +1128,8 @@ if __name__ == '__main__':
         file:</para>
 
       <example id="svn-ch-7-sect-3-ex-1">
-        <title>Contents of a typical <filename>.svn/entries</filename>
-          file</title>
+        <title>Contents of a Typical <filename>.svn/entries</filename>
+          File</title>
         <programlisting>
 &lt;?xml version="1.0" encoding="utf-8"?&gt;
 &lt;wc-entries
@@ -1376,7 +1376,7 @@ if __name__ == '__main__':
       doing some task to each thing in the tree.</para>
 
     <example id="svn-ch-7-sect-5-ex-1">
-      <title>Effective pool usage</title>
+      <title>Effective Pool Usage</title>
       <programlisting>
 /* Recursively crawl over DIRECTORY, adding the paths of all its file
    children to the FILES array, and doing some task to each path

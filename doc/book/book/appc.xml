@@ -99,8 +99,8 @@
         <title>Problems Using Subversion</title>
 
       <sect3 id="svn-ap-c-sect-1.2.1">
-          <title>Every time I try to access my repository, my
-          Subversion client just hangs.</title>
+          <title>Every Time I Try to Access My Repository, My
+          Subversion Client Just Hangs.</title>
 
           <para>Subversion uses Berkeley DB, which keeps your data in
             a series of database files.  Berkeley DB is journaling
@@ -136,8 +136,8 @@ $ svnadmin recover /path/to/repos
 
 
         <sect3 id="svn-ap-c-sect-1.2.2">
-          <title>Every time I try to run <command>svn</command>, it
-            says my working copy is locked.</title>
+          <title>Every Time I Try to Run <command>svn</command>, It
+            Says My Working Copy is Locked.</title>
 
           <para>Subversion's working copy, just like Berkeley DB, uses
             a journaling mechanism to perform all actions. That is, it
@@ -162,8 +162,8 @@ $ svn cleanup working-copy
 
 
         <sect3 id="svn-ap-c-sect-1.2.3">
-          <title>I'm getting errors finding or opening a repository,
-            but I know my repository URL is correct.</title>
+          <title>I'm Getting Errors Finding or Opening a Repository,
+            but I Know My Repository Url is Correct.</title>
 
           <para>See <xref linkend="svn-ap-c-sect-1.2.1"/>.</para>
 
@@ -171,9 +171,9 @@ $ svn cleanup working-copy
 
 
         <sect3 id="svn-ap-c-sect-1.2.4">
-          <title>I'm running Subversion under Windows and I can create
-            a repository fine, but I get errors trying to import or
-            check out from it.</title>
+          <title>I'm Running Subversion Under Windows and I Can Create
+            a Repository Fine, but I Get Errors Trying to Import or
+            Check Out from It.</title>
 
           <para>If the error looks something like:</para>
 
@@ -194,8 +194,8 @@ svn import e:\file\to\be\imported file:///some/path/to/repos/on/d/drive
         </sect3>
 
         <sect3 id="svn-ap-c-sect-1.2.5">
-          <title>I'm having trouble doing write operations to a
-            Subversion repository over a network</title>
+          <title>I'm Having Trouble Doing Write Operations to a
+            Subversion Repository over a Network</title>
           
           <para>If import works fine over local access:</para>
           
@@ -230,8 +230,8 @@ The specified activity does not exist.
 
 
         <sect3 id="svn-ap-c-sect-1.2.6">
-          <title>Under Windows XP, the Subversion server sometimes
-            seems to send out corrupted data.</title>
+          <title>Under Windows Xp, the Subversion Server Sometimes
+            Seems to Send Out Corrupted Data.</title>
 
           <para>You need to install Window XP Service Pack 1.  You can
             get all sorts of information about that Service Pack at
@@ -242,9 +242,9 @@ The specified activity does not exist.
 
 
         <sect3 id="svn-ap-c-sect-1.2.7">
-          <title>What is the best method of doing a network trace of
-            the conversation between a Subversion client and
-            server?</title>
+          <title>What is the Best Method of Doing a Network Trace of
+            the Conversation Between a Subversion Client and
+            Server?</title>
 
           <para>Use Ethereal to eavesdrop on the conversation:</para>
 
@@ -313,9 +313,9 @@ The specified activity does not exist.
         <title>Problems Building Subversion</title>
 
         <sect3 id="svn-ap-c-sect-1.3.1">
-          <title>I just built the distribution binary, and when I try
-            to check out Subversion, I get an error about an
-            <quote>Unrecognized URL scheme</quote></title>
+          <title>I Just Built the Distribution Binary, and When I Try
+            to Check Out Subversion, I Get an Error About an
+            <quote>Unrecognized Url Scheme</quote></title>
 
 
           <para>Subversion uses a plugin system to allow access to
@@ -350,8 +350,8 @@ The specified activity does not exist.
 
 
         <sect3 id="svn-ap-c-sect-1.3.2">
-          <title>When I run <command>configure</command>, I get errors
-            like <literal>subs-1.sed line 38: Unterminated `s'
+          <title>When I Run <command>configure</command>, I Get Errors
+            Like <literal>subs-1.sed line 38: Unterminated `s'
             command</literal></title>
 
           <para>You probably have old copies of
@@ -365,7 +365,7 @@ The specified activity does not exist.
 
 
         <sect3 id="svn-ap-c-sect-1.3.3">
-          <title>I'm having trouble building Subversion under Windows
+          <title>I'm Having Trouble Building Subversion Under Windows
           with MSVC++ 6.0.</title>
 
           <para>You need to get the latest platform SDK. The one that

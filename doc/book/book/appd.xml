@@ -113,7 +113,7 @@
     </sect2>
 
     <sect2 id="svn-app-d-sect1.2">
-      <title>DeltaV extensions</title>
+      <title>DeltaV Extensions</title>
   
       <para>Because RFC 2518 left out versioning concepts, another
         capable group was left with the responsibility of writing RFC
@@ -388,7 +388,7 @@
     </sect2>
 
     <sect2 id="svn-app-d-sect2.3">
-      <title>The mod_dav_lock alternative</title>
+      <title>The mod_dav_lock Alternative</title>
       
       <para>The mod_dav Apache module is a complex beast:  it
         understands and parses all of the WebDAV and DeltaV methods,

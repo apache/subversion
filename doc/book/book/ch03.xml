@@ -1186,7 +1186,7 @@ $ svn status README
     </sect2>
 
     <sect2 id="svn-ch-3-sect-4.4">
-      <title>Resolving conflicts (Merging others' changes)</title>
+      <title>Resolving Conflicts (Merging Others' Changes)</title>
            
       <para>We've already seen how <command>svn status -u</command>
           can predict conflicts.  Suppose you run <command>svn
@@ -1351,7 +1351,7 @@ Resolved conflicted state of sandwich.txt
       </screen>
 
       <sect3 id="svn-ch-3-sect-4.4.1">
-        <title>Merging conflicts by hand</title>
+        <title>Merging Conflicts by Hand</title>
 
         <para>Merging conflicts by hand can be quite intimidating the
           first time you attempt it, but with a little practice, it
@@ -1449,7 +1449,7 @@ $ svn commit -m "Go ahead and use my sandwich, discarding Sally's edits."
       </sect3>
 
       <sect3 id="svn-ch-3-sect-4.4.2">
-        <title>Copying a file onto your working file</title>
+        <title>Copying a File Onto Your Working File</title>
 
         <para>If you get a conflict and decide that you want to throw
           out your changes, you can merely copy one of the temporary
@@ -1500,7 +1500,7 @@ sandwich.txt
     </sect2>
     
     <sect2 id="svn-ch-3-sect-4.5">
-      <title>Commit your changes</title>
+      <title>Commit Your Changes</title>
       
       <para>Finally!  Your edits are finished, you've merged all
         changes from the server, and you're ready to commit your
@@ -1733,7 +1733,7 @@ Frozzled the sub-space winch.
       </screen>
 
       <sidebar>
-        <title>Why Does <command>svn log</command> Gives Me an Empty
+        <title>Why Does <command>svn log</command> Give Me an Empty
           Response?</title>
         
         <para>After working with Subversion for a bit, most users will
@@ -1789,7 +1789,7 @@ $
       </itemizedlist>
       
       <sect3 id="svn-ch-3-sect-5.2.1">
-        <title>Examining local changes</title>
+        <title>Examining Local Changes</title>
 
         <para>As we've seen, invoking <command>svn diff</command> with
           no switches will compare your working files to the cached
@@ -1815,7 +1815,7 @@ $
       </sect3>
 
       <sect3 id="svn-ch-3-sect-5.2.2">
-        <title>Comparing working copy to repository</title>
+        <title>Comparing Working Copy to Repository</title>
 
         <para>If a single <option>--revision</option>
           (<option>-r</option>) number is passed, then your
@@ -1841,7 +1841,7 @@ $
       </sect3>
 
       <sect3 id="svn-ch-3-sect-5.2.3">
-        <title>Comparing repository to repository</title>
+        <title>Comparing Repository to Repository</title>
         
         <para>If two revision numbers, separated by a colon, are
           passed via <option>--revision</option>

@@ -21,7 +21,7 @@
   <!-- ======================== SECTION 1 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-1">
-    <title>What's a branch?</title> 
+    <title>What's a Branch?</title> 
 
     <para>Suppose it's your job to maintain a document for a division
       in your company, a handbook of some sort.  One day a different
@@ -49,7 +49,7 @@
       history.</para>
 
       <figure id="svn-ch4-dia1">
-        <title>Branches of development</title>
+        <title>Branches of Development</title>
         <graphic fileref="images/ch04dia1.png"/>
       </figure>
 
@@ -68,7 +68,7 @@
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-2">
-    <title>Using branches</title> 
+    <title>Using Branches</title> 
 
     <para>At this point, you should understand how each commit creates
       an entire new filesystem tree (called a "revision") in the
@@ -86,7 +86,7 @@
       <filename>trunk</filename>, which we'll explain later on.</para>
     
       <figure id="svn-ch4-dia2">
-        <title>Starting repository layout</title>
+        <title>Starting Repository Layout</title>
         <graphic fileref="images/ch04dia2.png"/>
       </figure>
 
@@ -127,7 +127,7 @@
       on.</para>
 
   <sect2 id="svn-ch-4-sect-2.1">
-    <title>Creating a branch</title> 
+    <title>Creating a Branch</title> 
       
       <para>Creating a branch is very simple&mdash;you make a copy of the
         project in the repository using the <command>svn
@@ -220,12 +220,12 @@ Committed revision 341.
         at all.</para>
       
       <figure id="svn-ch4-dia3">
-        <title>Repository with new copy</title>
+        <title>Repository With New Copy</title>
         <graphic fileref="images/ch04dia3.png"/>
       </figure>
       
       <sidebar>
-        <title>Cheap copies</title>
+        <title>Cheap Copies</title>
                 
         <para>Subversion's repository has a clever design.  When you
           copy a directory, you don't need to worry about the
@@ -256,7 +256,7 @@ Committed revision 341.
     </sect2>
     
     <sect2 id="svn-ch-4-sect-2.2">
-      <title>Working with your branch</title> 
+      <title>Working with Your Branch</title> 
 
       <para>Now that you've created a new branch of the project, you
         can check out a new working copy to start using it:</para>
@@ -302,7 +302,7 @@ Checked out revision 341.
         happening on <filename>integer.c</filename>:</para>
 
       <figure id="svn-ch4-dia4">
-        <title>The branching of one file's history</title>
+        <title>The Branching of One File's History</title>
         <graphic fileref="images/ch04dia4.png"/>
       </figure>
 
@@ -374,7 +374,7 @@ rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
     </sect2>
 
     <sect2 id="svn-ch-4-sect-2.3">
-      <title>The moral of the story</title> 
+      <title>The Moral of the Story</title> 
 
       <para>There are two important lessons that you should remember
       from this section.</para>
@@ -405,7 +405,7 @@ rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
   <!-- ======================== SECTION 3 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-3">
-    <title>Copying changes between branches</title>
+    <title>Copying Changes Between Branches</title>
 
     <para>Now you and Sally are working on parallel branches of the
       project: you're working on a private branch, and Sally is
@@ -436,7 +436,7 @@ rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
     
 
     <sect2 id="svn-ch4-sect-3.1">
-      <title>Copying specific changes</title>
+      <title>Copying Specific Changes</title>
       
 
       <para>In the previous section, we mentioned that both you and
@@ -540,7 +540,7 @@ M  integer.c
         <firstterm>porting</firstterm> changes.</para>
 
       <sidebar>
-        <title>Why not use patches instead?</title>
+        <title>Why Not Use Patches Instead?</title>
         
         <para>A question may be on your mind, especially if you're a
           Unix user: why bother to use <command>svn merge</command> at
@@ -624,7 +624,7 @@ U   my-calc-branch/integer.c
     </sect2>
 
     <sect2 id="svn-ch4-sect-3.2">
-      <title>The repeated merge problem</title>
+      <title>The Repeated Merge Problem</title>
 
       <para>Merging changes sounds simple enough, but in practice it
         can become a headache.  The problem is that if you repeatedly
@@ -661,7 +661,7 @@ U   my-calc-branch/integer.c
     </sect2>
 
     <sect2 id="svn-ch4-sect-3.3">
-      <title>Merging an entire branch</title>
+      <title>Merging an Entire Branch</title>
 
       <para>To complete our running example, we'll move forward in
         time.  Several days have passed, and many changes have
@@ -728,7 +728,7 @@ $ svn commit -m "Merged all my-calc-branch changes into the trunk."
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-4">
-    <title>Removing a change from the repository</title>
+    <title>Removing a Change from the Repository</title>
 
     <para>A common use for <command>svn merge</command> is to roll
       back a change that has already been committed.  Suppose you
@@ -805,7 +805,7 @@ Committed revision 350.
   <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-5">
-    <title>Switching a working copy</title>
+    <title>Switching a Working Copy</title>
 
     <para> The <command>svn switch</command> command transforms an
       existing working copy into a different branch.  While this
@@ -885,7 +885,7 @@ Url: http://svn.example.com/branches/calc/my-calc-branch
       that's a feature planned beyond Subversion 1.0.</para>
     
     <sidebar>
-      <title>Switches and updates</title>
+      <title>Switches and Updates</title>
       
       <para>Have you noticed that the output of <command>svn
           switch</command> and <command>svn update</command> look the
@@ -951,7 +951,7 @@ Url: http://svn.example.com/branches/calc/my-calc-branch
       particular subdirectory of revision 4822.</para>
 
     <sect2 id="svn-ch-4-sect-6.1">
-      <title>Creating a simple tag</title>
+      <title>Creating a Simple Tag</title>
 
       <para>Once again, <command>svn copy</command> comes to the
         rescue.  If you want to create a snapshot of
@@ -1007,7 +1007,7 @@ Committed revision 351.
     </sect2>
     
     <sect2 id="svn-ch-4-sect-6.2">
-      <title>Creating a complex tag</title>
+      <title>Creating a Complex Tag</title>
       
       <para>Sometimes you may want your "snapshot" to be more
         complicated than a single directory at a single
@@ -1068,7 +1068,7 @@ Committed revision 352.
   <!-- ======================== SECTION 7 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-7">
-    <title>Branch maintenance</title>
+    <title>Branch Maintenance</title>
 
     <para>You may have noticed by now that Subversion is extremely
       flexible.  Because it implements branches and tags with the same
@@ -1079,7 +1079,7 @@ Committed revision 352.
       arranging and managing your data over time.</para>
 
     <sect2 id="svn-ch4-sect7.1">
-      <title>Repository layout</title>
+      <title>Repository Layout</title>
       
       <para>There are some standard, recommended ways to organize a
         repository.  Most people create a <filename>trunk</filename>
@@ -1132,7 +1132,7 @@ Committed revision 352.
     </sect2>
     
     <sect2 id="svn-ch4-sect7.2">
-      <title>Data lifetimes</title>
+      <title>Data Lifetimes</title>
 
       <para>Another nice feature of Subversion's model is that
         branches and tags can have finite lifetimes, just like any
