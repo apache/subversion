@@ -1,6 +1,5 @@
-In the tree described by checkout-1.delta, capital letters are
-directories and greek letters are files.  There are no properties yet;
-once we get file contents working, we'll add properties.
+In the tree described by co1-*.xml, capital letters are directories
+and greek letter names are files.  There are no properties yet.
 
 
                                    A                       iota
