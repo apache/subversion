@@ -5,7 +5,6 @@
 
 <center>
 <h2>Bite-Sized Tasks</h2>
-$Date: 2001/07/25 15:53:08 $
 </center>
 
 <!-- ------------------------------------------------------------- -->
@@ -158,33 +157,6 @@ Here are the tasks:
    related to the global yyInput variable, there may be more to this
    change than just adding the qualifier...
    <p>
-
-   <!-- ---------------------------------------------------------- -->
-
-   <li> <b>Implement .svnignore functionality</b> <p>
-   </li>
-   This is
-   <a
-   href="http://subversion.tigris.org/issues/show_bug.cgi?id=482">issue
-   #482</a>, the description is:
-   <p>
-   Subversion should, like CVS, allow itself to be told to ignore
-   certain directory entries when updating (so that, for example, the
-   user doesn't have to see 1000 lines that begin with '?' for all the
-   .o and .lo build objects in their trees.
-   <p>
-   Subversion does NOT need a regexp library added to it!!  Just the
-   ability to match strings which might have a '*' in them.  This code
-   is likely to live in libsvn_wc/adm_crawler.c:report_revisions() and
-   be used to determine for which items fbtable->report_unversioned_item() 
-   is called.
-   <p>
-   Once the code is in place, some nice person might even write a
-   little one-time script to find all the .cvsignore files in the
-   Subversion source tree, copy them to .svnignore files, and then
-   `svn add' them. :-)
-   <p>
-
 
 <!-- template for further items: -->
 <!--

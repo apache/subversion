@@ -38,11 +38,28 @@ list below some of the ones most likely to annoy you.
  </p>
  
  <p>
-   <li><b>Metadata props not yet fully working</b><br>
-   Subversion allows you to attach arbitrary name/value pairs to files
-   and directories;  right now, this feature works when talking to a
-   local repository, but not yet over a network.  This bug is being
-   actively worked on now.
+   <li><b>Property changes to directories require updating first</b><br>
+   If you're going to commit a property change made to a directory,
+   you'll need to update that directory first, to bring it to the
+   youngest (head) revision, otherwise Subversion will reject the
+   commit.  This rejection is a temporary workaround for a larger
+   issues <a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=463">Issue
+   #463</a> and <a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=530">Issue
+   #530</a>
+   </li>
+ </p>
+
+ <p>
+   <li><b>Repeatedly adding/deleting multiple files in same dir needs update</b><br>
+   If you want to add or delete entries in a dir -- in a repeated
+   series of commits -- you must update between the commits, or the server
+   will reject your second commit.  This is also part of issues <a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=463">Issue
+   #463</a> and <a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=530">Issue
+   #530</a>.
    </li>
  </p>
 
