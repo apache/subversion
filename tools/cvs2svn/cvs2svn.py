@@ -43,7 +43,6 @@ HEAD_MIRROR_FILE = 'cvs2svn-head-mirror.db'  # Mirror the head tree
 REVS_SUFFIX = '.revs'
 CLEAN_REVS_SUFFIX = '.c-revs'
 SORTED_REVS_SUFFIX = '.s-revs'
-TAGS_SUFFIX = '.tags'
 RESYNC_SUFFIX = '.resync'
 
 SVNROOT = 'svnroot'
@@ -63,7 +62,6 @@ class CollectData(rcsparse.Sink):
   def __init__(self, cvsroot, log_fname_base):
     self.cvsroot = cvsroot
     self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
-    self.tags = open(log_fname_base + TAGS_SUFFIX, 'w')
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
 
   def set_fname(self, fname):
@@ -112,10 +110,6 @@ class CollectData(rcsparse.Sink):
       return []
 
   def define_tag(self, name, revision):
-    ### disable tag/branch generation until it stops making so many copies
-    return
-
-    self.tags.write('%s %s %s\n' % (name, revision, self.fname))
     if branch_tag.match(revision):
       self.add_cvs_branch(revision, name)
     elif vendor_tag.match(revision):
