@@ -162,7 +162,7 @@ def externals_test_setup(sbox):
   externals_desc = \
            "exdir_A           " + os.path.join(other_repo_url, "A")     + \
            "\n"                                                         + \
-           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
+           "exdir_A/G/        " + os.path.join(other_repo_url, "A/D/G/")+ \
            "\n"                                                         + \
            "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
            "\n"                                                         + \
