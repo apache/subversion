@@ -1,3 +1,15 @@
+Version 0.35.1 (branching 19 December 2003, from /tags/0.35.0)
+http://svn.collab.net/repos/svn/tags/0.35.1
+
+                              NOTICES:
+
+       This release is to correct for the problems in the 0.35.0
+       release and affects Windows users only:
+
+       * fix: file handle leak (r8048)
+       * fix: UTF-8 path problem (issue #1660)
+
+
 Version 0.35.0 (branching 12 December 2003, from revision 7994)
 http://svn.collab.net/repos/svn/branches/0.35.0
 
@@ -10,7 +22,7 @@ http://svn.collab.net/repos/svn/branches/0.35.0
        "svnadmin deltify" in hooks/post-commit, and remove it.
 
     2. We now recommend using Berkeley DB 4.2.52 or higher for SVN
-       repositories.  See http://sleepycat.com/download/index.shtml. 
+       repositories.  See http://sleepycat.com/download/index.shtml.
 
  User-visible changes:
  * BDB log files are automatically pruned, with BDB 4.2.50 and higher (#1615)
