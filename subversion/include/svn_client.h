@@ -1671,8 +1671,8 @@ svn_client_export3 (svn_revnum_t *result_rev,
  *
  * Similar to svn_client_export3, but with the @a peg_revision
  * parameter always set to @c svn_opt_revision_unspecified, @a
- * ignore_externals always set to FALSE, and @a recurse always set to
- * TRUE.
+ * overwrite set to the value of @a force, @a ignore_externals
+ * always false, and @a recurse always true.
  */
 svn_error_t *
 svn_client_export2 (svn_revnum_t *result_rev,

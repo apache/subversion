@@ -275,11 +275,11 @@ svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path,
 /** @} */
 
 
-/** Filesystem Access Contexts.   (@since New in 1.2.)
- * 
- */
-
-/** At certain times, filesystem functions need access to temporary
+/** Filesystem Access Contexts.
+ *
+ * @since New in 1.2.
+ *
+ * At certain times, filesystem functions need access to temporary
  * user data.  For example, which user is changing a file?  If the
  * file is locked, has an appropriate lock-token been supplied?
  *
@@ -287,7 +287,10 @@ svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path,
  * and the access context is then connected to the filesystem object.
  * Whenever a filesystem function requires information, it can pull
  * things out of the context as needed.
-*/
+ *
+ * @defgroup svn_fs_access_ctx filesystem access contexts
+ * @{
+ */
 
 /** An opaque object representing temporary user data. */
 typedef struct svn_fs_access_t svn_fs_access_t;
@@ -336,6 +339,7 @@ svn_error_t *svn_fs_access_get_username (const char **username,
 svn_error_t *svn_fs_access_add_lock_token (svn_fs_access_t *access_ctx,
                                            const char *token);
 
+/** @} */
 
 
 /** Filesystem Nodes.
@@ -516,10 +520,10 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  * @a flags determines transaction enforcement behaviors, and is composed
  * from the constants SVN_FS_TXN_* (@c SVN_FS_TXN_CHECK_OOD etc.).
  *
- *<pre>   >> Note: if you're building a txn for committing, you probably <<
- *   >> don't want to call this directly.  Instead, call            <<
- *   >> @c svn_repos_fs_begin_txn_for_commit(), which honors the       <<
- *   >> repository's hook configurations.                           <<</pre>
+ * @note If you're building a txn for committing, you probably
+ * don't want to call this directly.  Instead, call
+ * @c svn_repos_fs_begin_txn_for_commit(), which honors the
+ * repository's hook configurations.
  */
 svn_error_t *svn_fs_begin_txn2 (svn_fs_txn_t **txn_p,
                                 svn_fs_t *fs,
@@ -542,9 +546,9 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
 
 /** Commit @a txn.
  *
- *<pre>   >> Note: you usually don't want to call this directly.        <<
- *   >> Instead, call @c svn_repos_fs_commit_txn(), which honors the  <<
- *   >> repository's hook configurations.                          <<</pre>
+ * @note You usually don't want to call this directly.
+ * Instead, call @c svn_repos_fs_commit_txn(), which honors the
+ * repository's hook configurations.
  *
  * If the transaction conflicts with other changes committed to the
  * repository, return an @c SVN_ERR_FS_CONFLICT error.  Otherwise, create
