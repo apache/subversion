@@ -31,10 +31,12 @@ To be fixed by cmpilato:
     application *have* to set up in the cxt_t in order to call an
     svn_client_foo() function?
 
+  - ch07: clarify that svn:externals can only point to directories,
+    and that URLs are absolute (so they don't move as part of copies
+    or moves, or 'svn switch --relocate').
+
   - ch07:  'global-ignores' affects 'svn import', but book only
     mentions the effect on 'status' and 'add'
-
-  - ch07: clarify that svn:externals can only point to directories.
 
 --------------------------------------------------------------
 
