@@ -96,7 +96,7 @@ apr_hash_sorted_keys (apr_hash_t *ht,
   ary = apr_array_make (pool, 1, sizeof(svn_item_t *));
 
   /* loop over hash table and push all keys into the array */
-  for (hi = apr_hash_first (ht); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, ht); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t klen;

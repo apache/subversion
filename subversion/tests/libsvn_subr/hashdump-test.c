@@ -86,7 +86,7 @@ test1 (const char **msg, apr_pool_t *pool)
             (APR_WRITE | APR_CREATE),
             APR_OS_DEFAULT, pool);
 
-  result = svn_hash_write (proplist, svn_unpack_bytestring, f);
+  result = svn_hash_write (proplist, svn_unpack_bytestring, f, pool);
 
   apr_file_close (f);
 
@@ -141,7 +141,9 @@ test3 (const char **msg, apr_pool_t *pool)
      same data. */
   
   /* Loop over our original hash */
-  for (this = apr_hash_first (proplist); this; this = apr_hash_next (this))
+  for (this = apr_hash_first (pool, proplist); 
+       this; 
+       this = apr_hash_next (this))
     {
       const void *key;
       size_t keylen;

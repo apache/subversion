@@ -165,7 +165,7 @@ get_dir_entries (apr_hash_t *tree_entries,
   
   /* Copy this list to the master list with the path prepended to the
      names */
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t keylen;
@@ -272,7 +272,9 @@ svn_test__validate_tree (svn_fs_root_t *root,
      entry in the TREE_ENTRIES hash given us by the FS.  If we find
      that object, remove it from the TREE_ENTRIES.  If we don't find
      it, there's a problem to report! */
-  for (hi = apr_hash_first (expected_entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (subpool, expected_entries); 
+       hi; 
+       hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t keylen;
@@ -316,7 +318,9 @@ svn_test__validate_tree (svn_fs_root_t *root,
 
   /* Any entries still left in TREE_ENTRIES are extra ones that are
      not expected to be present.  Assemble a string with their names. */
-  for (hi = apr_hash_first (tree_entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (subpool, tree_entries); 
+       hi; 
+       hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t keylen;

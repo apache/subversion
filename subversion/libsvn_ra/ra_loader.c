@@ -169,7 +169,7 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
   apr_hash_t *hash = ra_baton;
   
   /* Figure out which RA library key matches URL */
-  for (this = apr_hash_first (hash); this; this = apr_hash_next (this))
+  for (this = apr_hash_first (pool, hash); this; this = apr_hash_next (this))
     {
       const void *key;
       void *val;
@@ -205,7 +205,7 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
   apr_hash_t *hash = ra_baton;
   *descriptions = svn_stringbuf_create ("", pool);
 
-  for (this = apr_hash_first (hash); this; this = apr_hash_next (this))
+  for (this = apr_hash_first (pool, hash); this; this = apr_hash_next (this))
     {
       const void *key;
       void *val;

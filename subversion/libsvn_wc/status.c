@@ -279,7 +279,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       if (err) return err;
 
       /* Loop over entries hash */
-      for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
           const void *key;
           void *val;

@@ -67,7 +67,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
 
   /* Loop over baseprops and examine each key.  This will allow us to
      detect any `deletion' events or `set-modification' events.  */
-  for (hi = apr_hash_first (baseprops); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, baseprops); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t klen;
@@ -103,7 +103,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
 
   /* Loop over localprops and examine each key.  This allows us to
      detect `set-creation' events */
-  for (hi = apr_hash_first (localprops); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, localprops); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t klen;
@@ -290,7 +290,7 @@ svn_wc__save_prop_file (svn_stringbuf_t *propfile_path,
                               propfile_path->data);
 
   apr_err = svn_hash_write (hash, svn_unpack_bytestring,
-                            prop_tmp);
+                            prop_tmp, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "save_prop_file: can't write prop hash to `%s'",
@@ -880,7 +880,7 @@ svn_wc__wcprop_set (svn_stringbuf_t *name,
                                1, /* we DO want wcprops */
                                pool));
   /* Write. */
-  apr_err = svn_hash_write (prophash, svn_unpack_bytestring, fp);
+  apr_err = svn_hash_write (prophash, svn_unpack_bytestring, fp, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "can't write prop hash for %s", path->data);
@@ -1003,7 +1003,7 @@ svn_wc_prop_set (svn_stringbuf_t *name,
                                0, /* not wcprops */
                                pool));
   /* Write. */
-  apr_err = svn_hash_write (prophash, svn_unpack_bytestring, fp);
+  apr_err = svn_hash_write (prophash, svn_unpack_bytestring, fp, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "can't write prop hash for %s", path->data);

@@ -138,7 +138,7 @@ remove_all_locks (apr_hash_t *locks, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   
-  for (hi = apr_hash_first (locks); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, locks); hi; hi = apr_hash_next (hi))
     {
       svn_error_t *err;
       const void *key;
@@ -420,7 +420,9 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
   void *val;
   size_t keylen;
 
-  for (hi = apr_hash_first (affected_targets); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, affected_targets); 
+       hi; 
+       hi = apr_hash_next (hi))
     {
       apr_hash_this (hi, &key, &keylen, &val);
       tb = val;
@@ -590,7 +592,7 @@ verify_tree_deletion (svn_stringbuf_t *dir,
   SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
 
   /* Delete each entry in the entries file. */
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t klen;
@@ -1048,7 +1050,7 @@ crawl_dir (svn_stringbuf_t *path,
     }
 
   /* Loop over each entry */
-  for (entry_index = apr_hash_first (entries); entry_index;
+  for (entry_index = apr_hash_first (subpool, entries); entry_index;
        entry_index = apr_hash_next (entry_index))
     {
       const void *key;
@@ -1141,7 +1143,7 @@ report_revisions (svn_stringbuf_t *wc_path,
 
   /* Phase 1:  Print out every unrecognized (unversioned) object. */
 
-  for (hi = apr_hash_first (dirents); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t klen;
@@ -1178,7 +1180,7 @@ report_revisions (svn_stringbuf_t *wc_path,
   /* Phase 2:  Do the real reporting and recursing. */
 
   /* Looping over current directory's SVN entries: */
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       const char *keystring;

@@ -1477,7 +1477,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
                                "could not fetch collection members");
 
   /* iterate over the children in this collection */
-  for (hi = apr_hash_first(children); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_size_t klen;

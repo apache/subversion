@@ -81,7 +81,7 @@ set_any_props (svn_fs_root_t *root,
 
   SVN_ERR (svn_fs_node_proplist (&props, root, path->data, pool));
 
-  for (hi = apr_hash_first (props); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, props); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
@@ -131,7 +131,7 @@ walk_tree (svn_fs_root_t *root,
   SVN_ERR (svn_fs_dir_entries (&dirents, root, dir_path->data, subpool));
 
   /* Loop over this directory's dirents: */
-  for (hi = apr_hash_first (dirents); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
     {
       int is_dir, is_file;
       const void *key;

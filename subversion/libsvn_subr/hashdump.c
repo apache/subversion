@@ -97,13 +97,14 @@ svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool)
 apr_status_t
 svn_hash_write (apr_hash_t *hash, 
                 apr_size_t (*unpack_func) (char **unpacked_data, void *val),
-                apr_file_t *destfile)
+                apr_file_t *destfile,
+                apr_pool_t *pool)
 {
   apr_hash_index_t *this;      /* current hash entry */
   apr_status_t err;
   char buf[SVN_KEYLINE_MAXLEN];
 
-  for (this = apr_hash_first (hash); this; this = apr_hash_next (this))
+  for (this = apr_hash_first (pool, hash); this; this = apr_hash_next (this))
     {
       const void *key;
       void *val;
