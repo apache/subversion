@@ -1,0 +1,33 @@
+VersionPart()
+{
+  TEST=`echo $1 | cut -f$2 -d-`
+  if [ "$TEST" != "" ] ; then
+    TEST=$(( $TEST + 0 ))
+  else
+    TEST=$3
+  fi
+}
+
+MAJOR=0
+MINOR=30
+MICRO=0
+if [ "$4" != "" ] ; then
+  VersionPart "$4" 1 "$MAJOR"
+  MAJOR=$TEST
+  VersionPart "$4" 2 "$MINOR"
+  MINOR=$TEST
+  VersionPart "$4" 3 "$MICRO"
+  MICRO=$TEST
+fi
+if [ $1 -eq $MAJOR ] && [ $2 -eq $MINOR ] && [ $3 -ge $MICRO ] ; then
+  echo 1
+  exit
+fi
+if [ $1 -eq $MAJOR ] && [ $2 -ge $MINOR ] ;  then
+  echo 1
+  exit
+fi
+if [ $1 -gt $MAJOR ] ; then
+  echo 1
+  exit
+fi

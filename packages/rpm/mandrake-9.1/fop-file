@@ -1,1 +1,1 @@
-ls fop-*bin*
+ls fop-*bin* 2>/dev/null
