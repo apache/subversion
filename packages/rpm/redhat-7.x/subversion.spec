@@ -17,7 +17,6 @@ Source0: subversion-%{version}-%{release}.tar.gz
 Source1: subversion.conf
 Source2: rcsparse.py
 Patch0: install.patch
-Patch1: svnversion.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apache-libapr >= %{apache_version}
@@ -209,10 +208,6 @@ sh autogen.sh
 
 # Fix up mod_dav_svn installation.
 %patch0 -p1
-
-# RPM builds don't build in a working copy, so we can't run svnversion during
-# the build.
-%patch1 -p1
 
 # Brand release number into the displayed version number.
 RELEASE_NAME="r%{release}"
