@@ -534,7 +534,7 @@ const char *svn_fs_txn_root_name (svn_fs_root_t *root,
 
 
 /* If ROOT is the root of a revision, return the revision number.
-   Otherwise, return -1.  */
+   Otherwise, return SVN_INVALID_REVNUM.  */
 svn_revnum_t svn_fs_revision_root_revision (svn_fs_root_t *root);
 
 
