@@ -53,20 +53,22 @@
 
 /* Join P1 and P2 with directory separators to create RESULT. */
 static svn_error_t *
-merge_paths (char **result,
+merge_paths (const char **result,
              const char *p1,
              const char *p2,
              apr_pool_t *pool)
 {
   apr_status_t status;
   const char *p2_rel = p2;
+  char *tmp;
   if (*p2 == '/')
     p2_rel = p2 + 1;
 
-  status = apr_filepath_merge (result, p1, p2_rel, APR_FILEPATH_NATIVE, pool);
+  status = apr_filepath_merge (&tmp, p1, p2_rel, APR_FILEPATH_NATIVE, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't merge paths '%s' and '%s'"),
                                p1, p2);
+  *result = tmp;
   return SVN_NO_ERROR;
 }
 
@@ -77,7 +79,7 @@ merge_paths (char **result,
 /* Where DIGEST is the MD5 hash of the path to the lock file or lock
    entries file in FS, set ABS_PATH to the absolute path to file. */
 static svn_error_t *
-abs_path_to_lock_digest_file (char **abs_path,
+abs_path_to_lock_digest_file (const char **abs_path,
                               svn_fs_t *fs,
                               const char *digest,
                               apr_pool_t *pool)
@@ -105,7 +107,7 @@ make_digest (const char *str,
 /* Set ABS_PATH to the absolute path to REL_PATH, where REL_PATH is
    the path to the lock file or lock entries file in FS. */
 static svn_error_t *
-abs_path_to_lock_file (char **abs_path,
+abs_path_to_lock_file (const char **abs_path,
                        svn_fs_t *fs,
                        const char *rel_path,
                        apr_pool_t *pool)
@@ -127,7 +129,7 @@ abs_path_to_lock_file (char **abs_path,
 /* Set BASE_PATH to the directory in FS where lock files (and lock
    entries files) are stored. */
 static svn_error_t *
-base_path_to_lock_file (char **base_path,
+base_path_to_lock_file (const char **base_path,
                         svn_fs_t *fs,
                         apr_pool_t *pool)
 {
@@ -142,7 +144,7 @@ base_path_to_lock_file (char **base_path,
 /* Set ABS_PATH to the absolute path to the lock token file named
    TOKEN in fs. */
 static svn_error_t *
-abs_path_to_lock_token_file (char **abs_path,
+abs_path_to_lock_token_file (const char **abs_path,
                              svn_fs_t *fs,
                              const char *token,
                              apr_pool_t *pool)
@@ -186,7 +188,7 @@ hash_fetch (apr_hash_t *hash,
 /* Write each hash in ENTRIES to path, one hash per line. */
 static svn_error_t *
 write_entries_file (apr_hash_t *entries,
-                    char *path, 
+                    const char *path, 
                     apr_pool_t *pool)
 {
   apr_file_t *fd;
@@ -340,8 +342,8 @@ write_lock_to_file (svn_fs_t *fs,
   svn_stream_t *stream;
   apr_status_t status;
   apr_array_header_t *nodes;
-  char *abs_path, *node_name, *path_so_far = "/";
-  const char *digest_str, *path;
+  char const *abs_path, *node_name;
+  const char *digest_str, *path, *path_so_far = "/";
   int i;
 
   SVN_ERR (base_path_to_lock_file (&abs_path, fs, pool));
@@ -359,7 +361,7 @@ write_lock_to_file (svn_fs_t *fs,
      for its child. */
   for (i = 0; i < (nodes->nelts - 1); i++)
     {
-      char *child_path = "/";
+      const char *child_path = "/";
 
       node_name = APR_ARRAY_IDX (nodes, i, char *);
 
@@ -416,7 +418,7 @@ write_lock_token_to_file (svn_fs_t *fs,
 {
   apr_status_t status;
   apr_file_t *fd;
-  char *abs_path, *dir;
+  const char *abs_path, *dir;
 
   SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, lock->token, pool));
 
@@ -457,7 +459,7 @@ save_lock (svn_fs_t *fs,
 /* Join all items in COMPONENTS with directory separators to create
    PATH. */
 static svn_error_t *
-merge_array_components (char **path,
+merge_array_components (const char **path,
                         apr_array_header_t *components,
                         apr_pool_t *pool)
 {
@@ -479,8 +481,8 @@ delete_lock (svn_fs_t *fs,
              apr_pool_t *pool)
 {
   apr_array_header_t *nodes;
-  char *abs_path, *child_path, *parent_path, *node;
-  const char *digest_str, *path;
+  const char *abs_path, *node;
+  const char *digest_str, *path, *child_path, *parent_path;
 
   path = repository_abs_path (lock->path, pool);
   nodes = svn_path_decompose (path, pool);
@@ -564,7 +566,7 @@ read_path_from_lock_token_file(svn_fs_t *fs,
                                const char *token, 
                                apr_pool_t *pool)
 {
-  char *abs_path;
+  const char *abs_path;
   const char *abs_path_utf8;
   apr_status_t status;
   apr_finfo_t finfo;
@@ -669,8 +671,7 @@ read_lock_from_file (svn_lock_t **lock_p,
                      apr_file_t *fd,
                      apr_pool_t *pool)
 {
-  char *abs_path;
-  const char *rep_path;
+  const char *rep_path, *abs_path;
   /* - Gen MD5 hash of full path to file. */
   rep_path = repository_abs_path (path, pool);
 
@@ -688,7 +689,7 @@ read_lock_from_hash_name (svn_lock_t **lock_p,
                           apr_file_t *fd,
                           apr_pool_t *pool)
 {
-  char *abs_path;
+  const char *abs_path;
 
   SVN_ERR (abs_path_to_lock_digest_file (&abs_path, fs, hash, pool));
   SVN_ERR (read_lock_from_abs_path (lock_p, fs, abs_path, fd, pool));
@@ -760,9 +761,8 @@ get_locks_under_path (apr_hash_t **locks,
                       apr_pool_t *pool)
 {
   apr_hash_t *entries;
-  char *abs_path;
   apr_hash_index_t *hi;
-  const char *child;
+  const char *child, *abs_path;
   apr_off_t offset = 0;
   
   SVN_ERR (read_entries_file (&entries, path, fd, pool));
@@ -1075,10 +1075,9 @@ svn_fs_fs__get_locks (apr_hash_t **locks,
                       const char *path,
                       apr_pool_t *pool)
 {
-  char *abs_path;
   apr_finfo_t finfo;
   apr_status_t status;
-  const char *digest_str; 
+  const char *digest_str, *abs_path;
 
   /* Make the hash that we'll return. */
   *locks = apr_hash_make(pool);
@@ -1089,8 +1088,11 @@ svn_fs_fs__get_locks (apr_hash_t **locks,
   /* Strip any trailing slash. */
   if ((strlen (abs_path) > 0)
       && (abs_path[strlen (abs_path) - 1] == '/'))
-    abs_path[strlen (abs_path) - 1] = '\0';
-
+    {
+      char *tmp = apr_pstrdup (pool, abs_path);
+      tmp[strlen (abs_path) - 1] = '\0';
+      abs_path = tmp;
+    }
   status = apr_stat (&finfo, abs_path, APR_FINFO_TYPE, pool);
 
   /* If base dir doesn't exist, then we don't have any locks. */
@@ -1098,7 +1100,7 @@ svn_fs_fs__get_locks (apr_hash_t **locks,
       return SVN_NO_ERROR;
 
   digest_str = make_digest (path, pool);
-  abs_path = (char *)repository_abs_path (path, pool);
+  abs_path = repository_abs_path (path, pool);
   SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
   
   /* Recursively walk lock "tree" */
