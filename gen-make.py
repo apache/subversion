@@ -29,16 +29,15 @@ def main(fname, oname=None, skip_depends=0):
   groups = { }
   target_deps = { }
   build_targets = { }
-  build_dirs = { }
   install = { }
   test_progs = [ ]
   file_deps = [ ]
-  proj_dirs = { }
+  target_dirs = { }
 
   targets = _filter_targets(parser.sections())
   for target in targets:
     path = parser.get(target, 'path')
-    proj_dirs[path] = None
+    target_dirs[path] = None
 
     install_type = parser.get(target, 'install')
 
@@ -60,7 +59,6 @@ def main(fname, oname=None, skip_depends=0):
 
     tpath = os.path.join(path, tfile)
     build_targets[target] = tpath
-    build_dirs[path] = None
 
     if install.has_key(install_type):
       install[install_type].append(target)
@@ -143,7 +141,7 @@ def main(fname, oname=None, skip_depends=0):
       group_deps[i] = build_targets[group_deps[i]]
     ofile.write('%s: %s\n\n' % (group, string.join(group_deps)))
 
-  ofile.write('CLEAN_DIRS = %s\n' % string.join(build_dirs.keys()))
+  ofile.write('CLEAN_DIRS = %s\n' % string.join(target_dirs.keys()))
 
   cfiles = filter(_filter_clean_files, build_targets.values())
   ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
@@ -244,7 +242,7 @@ def main(fname, oname=None, skip_depends=0):
     # than I cared to do right now)
     #
     include_deps = _create_include_deps(includes)
-    for d in proj_dirs.keys():
+    for d in target_dirs.keys():
       hdrs = glob.glob(os.path.join(d, '*.h'))
       if hdrs:
         more_deps = _create_include_deps(hdrs, include_deps)
