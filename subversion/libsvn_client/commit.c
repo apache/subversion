@@ -472,7 +472,7 @@ send_to_repos (svn_client_commit_info_t **commit_info,
   void *edit_baton;
   const svn_delta_edit_fns_t *wrap_editor;
   void *wrap_edit_baton;
-  struct svn_wc_close_commit_baton ccb = { base_path };
+  struct svn_wc_close_commit_baton ccb;
 
   /* RA-layer stuff. */
   void *ra_baton, *session;
@@ -490,6 +490,7 @@ send_to_repos (svn_client_commit_info_t **commit_info,
 
 
   /*** Setting up the commit/import ***/
+  ccb.prefix_path = base_path;
 
   /* Sanity check: if this is an import, then NEW_ENTRY can be null or
      non-empty, but it can't be empty. */ 
@@ -498,7 +499,7 @@ send_to_repos (svn_client_commit_info_t **commit_info,
                              "empty string is an invalid entry name");
 
   /* If we're committing to XML ... */
-  if (xml_dst && xml_dst->data)
+  if (use_xml)
     {
       /* Open the xml file for writing. */
       if ((apr_err = apr_file_open (&xml_hnd, xml_dst->data,
@@ -511,7 +512,6 @@ send_to_repos (svn_client_commit_info_t **commit_info,
       SVN_ERR (get_xml_editor (&editor, &edit_baton, 
                                svn_stream_from_aprfile (xml_hnd, pool),
                                &ccb, revision, pool));
-      use_xml = TRUE;
     }
 
   /* Else we're committing to an RA layer. */
