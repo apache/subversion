@@ -276,18 +276,24 @@ svn_error_t *svn_cl__revprop_no_rev_error (apr_pool_t *pool);
    CONFIG is a hash of svn_config_t * items keyed on a configuration
    category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.
 
+   If AS_TEXT is true, convert CONTENTS to ENCODING and native eol-style before
+   editing and back to UTF-8/LF afterwards.  If ENCODING is NULL, use the
+   native encoding.
+
    Use POOL for all allocations.  Use PREFIX as the prefix for the
    temporary file used by the editor.
 
    If return error, *EDITED_CONTENTS is not touched. */
 svn_error_t *
-svn_cl__edit_externally (const char **edited_contents,
+svn_cl__edit_externally (svn_string_t **edited_contents,
                          const char **tmpfile_left,
                          const char *editor_cmd,
                          const char *base_dir,
-                         const char *contents,
+                         const svn_string_t *contents,
                          const char *prefix,
                          apr_hash_t *config,
+                         svn_boolean_t as_text,
+                         const char *encoding,
                          apr_pool_t *pool);
 
 
