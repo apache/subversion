@@ -967,6 +967,20 @@ repos_to_wc_copy (const char *src_url,
                 same_repositories ? src_url : NULL,
                 same_repositories ? src_revnum : SVN_INVALID_REVNUM,
                 pool));
+
+      /* Ideally, svn_wc_add_repos_file() would take a notify function
+         and baton, and we wouldn't have to make this call here.
+         However, the situation is... complicated.  See issue #1552
+         for the full story. */
+      if (ctx->notify_func)
+        (*ctx->notify_func) (ctx->notify_baton,
+                             dst_path,
+                             svn_wc_notify_add,
+                             src_kind,
+                             NULL,
+                             svn_wc_notify_state_unknown,
+                             svn_wc_notify_state_unknown,
+                             SVN_INVALID_REVNUM);
     }
   
   SVN_ERR (svn_wc_adm_close (adm_access));
