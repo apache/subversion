@@ -200,7 +200,7 @@ which describe how to edit the contents of @var{source-dir} to yield
 @var{Source-dir} has an entry named @var{name}, which is not present in
 @var{target-dir}.
 
-@item <new name='@var{name}'>@var{content}</new>
+@item <add name='@var{name}'>@var{content}</add>
 @var{target-dir} has an entry named @var{name}, which is not present in
 @var{source-dir}; @var{content} describes the file or directory to which
 the new directory entry refers.
@@ -266,7 +266,7 @@ directory identical to its ancestor.
 
 @end table
 
-The @var{content} of a @code{new} or @code{replace} tag may also contain
+The @var{content} of a @code{add} or @code{replace} tag may also contain
 a property delta, describing changes to the properties of that
 @emph{directory entry}.
 
@@ -350,9 +350,9 @@ rename @file{/dir1/file1} to @file{/dir1/file8}:
     <directory>
       <tree-delta>
         <delete name='file1'/>
-        <new name='file8'>
+        <add name='file8'>
           <file ancestor='/dir1/file1'/>
-        </new>
+        </add>
       </tree-delta>
     </directory>
   </replace>
@@ -413,20 +413,20 @@ directories around it have changed.  Here is the tree delta:
         <replace name='dir2'>
           <directory ancestor='/dir1/dir3'>
             <tree-delta>
-              <new name='file3'>
+              <add name='file3'>
                 <file ancestor='/dir1/dir2/file3'/>
-              </new>
+              </add>
             </tree-delta>
           </directory>
         </replace>
         <delete name='dir3'/>
-        <new name='dir4'>
+        <add name='dir4'>
           <directory ancestor='/dir1/dir2'>
             <tree-delta>
               <delete name='file3'/>
             </tree-delta>
           </directory>
-        </new>
+        </add>
       </tree-delta>
     </directory>
   </replace>
