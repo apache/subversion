@@ -186,7 +186,7 @@ LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs \
 	" ./configure \
 	--prefix=/usr \
-	--with-apxs=%{apache_dir}/usr/bin/apxs \
+	--with-apxs=%{apache_dir}/bin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config \
 	--with-swig
