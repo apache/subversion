@@ -84,16 +84,16 @@ adm_subdir (apr_pool_t *pool)
 
 /* Make name of wc admin file ADM_FILE by appending to directory PATH. 
  * 
- * IMPORTANT: chances are you will want to call chop_admin_name() to
+ * IMPORTANT: chances are you will want to call chop_admin_thing() to
  * restore PATH to its original value before exiting anything that
  * calls this.  If you exit, say by returning an error, before calling
- * chop_admin_name(), then PATH will still be in its extended state.
+ * chop_admin_thing(), then PATH will still be in its extended state.
  *
  * So, safest recipe:
  *
  * Callers of extend_with_admin_name() always have exactly one return
  * statement, and that return occurs *after* an unconditional call to
- * chop_admin_name().
+ * chop_admin_thing().
  */
 static void
 extend_with_admin_name (svn_string_t *path,
@@ -109,7 +109,7 @@ extend_with_admin_name (svn_string_t *path,
 
 /* Restore PATH to what it was before an adm filename was appended to it. */
 static void
-chop_admin_name (svn_string_t *path)
+chop_admin_thing (svn_string_t *path)
 {
   svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
   svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
@@ -159,7 +159,10 @@ svn_wc__make_adm_thing (svn_string_t *path,
     }
 
   /* Restore path to its original state no matter what. */
-  chop_admin_name (path);
+  if (strlen (thing) == 0) /* special case for making "SVN" dir */
+    svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
+  else
+    chop_admin_thing (path);
 
   return err;
 }
@@ -183,7 +186,7 @@ svn_wc__open_adm_file (apr_file_t **handle,
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Restore path to its original state no matter what. */
-  chop_admin_name (path);
+  chop_admin_thing (path);
 
   return err;
 }
@@ -206,7 +209,7 @@ svn_wc__close_adm_file (apr_file_t *fp,
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Restore path to its original state no matter what. */
-  chop_admin_name (path);
+  chop_admin_thing (path);
 
   return err;
 }
@@ -228,7 +231,7 @@ svn_wc__remove_adm_thing (svn_string_t *path,
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Restore path to its original state no matter what. */
-  chop_admin_name (path);
+  chop_admin_thing (path);
 
   return err;
 }
