@@ -343,6 +343,7 @@ static void add_props(const svn_ra_dav_resource_t *r,
 static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
                                    const char *url,
                                    void *dir_baton,
+                                   svn_boolean_t recurse,
                                    apr_array_header_t *subdirs,
                                    apr_array_header_t *files,
                                    prop_setter_t setter,
@@ -402,12 +403,15 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
             }
           else
             {
-              subdir_t *subdir = apr_palloc(pool, sizeof(*subdir));
+              if (recurse)
+                {
+                  subdir_t *subdir = apr_palloc(pool, sizeof(*subdir));
 
-              subdir->rsrc = r;
-              subdir->parent_baton = dir_baton;
+                  subdir->rsrc = r;
+                  subdir->parent_baton = dir_baton;
 
-              PUSH_SUBDIR(subdirs, subdir);
+                  PUSH_SUBDIR(subdirs, subdir);
+                }
             }
         }
       else
@@ -999,7 +1003,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       subdir->parent_baton = this_baton;
       PUSH_SUBDIR(subdirs, subdir);
 
-      err = fetch_dirents(ras, url, this_baton, subdirs, files,
+      err = fetch_dirents(ras, url, this_baton, recurse, subdirs, files,
                           editor->change_dir_prop, &vuh, ras->pool);
       if (err)
         return svn_error_quick_wrap(err, "could not fetch directory entries");
@@ -1029,7 +1033,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       /* reset the list of files */
       files->nelts = 0;
 
-    } while (recurse && subdirs->nelts > 0);
+    } while (subdirs->nelts > 0);
 
   /* ### should never reach??? */
 
