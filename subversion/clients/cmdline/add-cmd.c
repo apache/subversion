@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "cl.h"
 
 
@@ -47,21 +48,29 @@ svn_cl__add (apr_getopt_t *os,
   targets = svn_cl__args_to_target_array (os, pool);
 
   if (targets->nelts)
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-        err = svn_client_add (target, recursive,
-                              SVN_CL_NOTIFY(opt_state),
-                              svn_cl__make_notify_baton (pool),
-                              pool);
-        if (err)
-          {
-            if (err->apr_err == SVN_ERR_ENTRY_EXISTS)
-              svn_handle_warning(err, err->message);
-            else
-              return err;
-          }
-      }
+    {
+      apr_pool_t *subpool = svn_pool_create (pool);
+
+      for (i = 0; i < targets->nelts; i++)
+        {
+          svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
+          err = svn_client_add (target, recursive,
+                                SVN_CL_NOTIFY(opt_state),
+                                svn_cl__make_notify_baton (subpool),
+                                subpool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_ENTRY_EXISTS)
+                svn_handle_warning(err, err->message);
+              else
+                return err;
+            }
+
+          svn_pool_clear (subpool);
+        }
+
+      svn_pool_destroy (subpool);
+    }
   else
     {
       svn_cl__subcommand_help ("add", pool);
