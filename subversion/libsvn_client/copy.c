@@ -107,9 +107,9 @@ wc_to_wc_copy (const char *src_path,
 
       svn_path_split (src_path, &src_parent, NULL, pool);
 
-      SVN_ERR (svn_wc_adm_open2 (&src_access, NULL, src_parent, TRUE,
+      SVN_ERR (svn_wc_adm_open3 (&src_access, NULL, src_parent, TRUE,
                                  src_kind == svn_node_dir ? -1 : 0,
-                                 pool));
+                                 ctx->cancel_func, ctx->cancel_baton, pool));
 
       /* Need to avoid attempting to open the same dir twice when source
          and destination overlap. */
@@ -132,8 +132,9 @@ wc_to_wc_copy (const char *src_path,
             }
           else
             {
-              SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, dst_parent,
-                                         TRUE, 0, pool));
+              SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, dst_parent,
+                                         TRUE, 0, ctx->cancel_func,
+                                         ctx->cancel_baton,pool));
             }
         }
 
@@ -144,8 +145,8 @@ wc_to_wc_copy (const char *src_path,
     }
   else 
     {
-      SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, dst_parent, TRUE,
-                                 0, pool));
+      SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, dst_parent, TRUE, 0,
+                                 ctx->cancel_func, ctx->cancel_baton, pool));
     }
                               
   /* Perform the copy and (optionally) delete. */
@@ -604,8 +605,9 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
      paths everywhere. */
   SVN_ERR (svn_path_get_absolute (&base_path, src_path, pool));
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, base_path,
-                                   FALSE, -1, pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, base_path,
+                                   FALSE, -1, ctx->cancel_func,
+                                   ctx->cancel_baton, pool));
 
   /* Split the DST_URL into an anchor and target. */
   svn_path_split (dst_url, &anchor, &target, pool);
@@ -834,8 +836,9 @@ repos_to_wc_copy (const char *src_url,
                               _("'%s' is in the way"),
                               svn_path_local_style (dst_path, pool));
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, dst_path, TRUE,
-                                   0, pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, dst_path, TRUE,
+                                   0, ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
 
   /* We've already checked for physical obstruction by a working file.
      But there could also be logical obstruction by an entry whose
@@ -906,8 +909,9 @@ repos_to_wc_copy (const char *src_url,
              should be the copyfrom_revision when we commit later. */
           const svn_wc_entry_t *d_entry;
           svn_wc_adm_access_t *dst_access;
-          SVN_ERR (svn_wc_adm_open2 (&dst_access, adm_access, dst_path,
-                                     TRUE, -1, pool));
+          SVN_ERR (svn_wc_adm_open3 (&dst_access, adm_access, dst_path,
+                                     TRUE, -1, ctx->cancel_func,
+                                     ctx->cancel_baton, pool));
           SVN_ERR (svn_wc_entry (&d_entry, dst_path, dst_access, FALSE, pool));
           src_revnum = d_entry->revision;
         }
@@ -1050,8 +1054,10 @@ setup_copy (svn_client_commit_info_t **commit_info,
                  entries file. */
               svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
               const svn_wc_entry_t *entry;
-              SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL,
+              SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL,
                                                src_path, FALSE, 0,
+                                               ctx->cancel_func,
+                                               ctx->cancel_baton, 
                                                pool));
               SVN_ERR (svn_wc_entry (&entry, src_path, adm_access, FALSE,
                                      pool));

@@ -733,8 +733,8 @@ svn_wc_delete (const char *path,
   svn_node_kind_t was_kind;
   svn_boolean_t was_deleted = FALSE; /* Silence a gcc uninitialized warning */
 
-  SVN_ERR (svn_wc_adm_probe_try2 (&dir_access, adm_access, path,
-                                  TRUE, -1, pool));
+  SVN_ERR (svn_wc_adm_probe_try3 (&dir_access, adm_access, path,
+                                  TRUE, -1, cancel_func, cancel_baton, pool));
   if (dir_access)
     SVN_ERR (svn_wc_entry (&entry, path, dir_access, FALSE, pool));
   else
@@ -899,9 +899,9 @@ svn_wc_add (const char *path,
      Note that this is one of the few functions that is allowed to see
     'deleted' entries;  it's totally fine to have an entry that is
      scheduled for addition and still previously 'deleted'.  */
-  SVN_ERR (svn_wc_adm_probe_try2 (&adm_access, parent_access, path,
+  SVN_ERR (svn_wc_adm_probe_try3 (&adm_access, parent_access, path,
                                   TRUE, copyfrom_url != NULL ? -1 : 0,
-                                  pool));
+                                  cancel_func, cancel_baton, pool));
   if (adm_access)
     SVN_ERR (svn_wc_entry (&orig_entry, path, adm_access, TRUE, pool));
   else
@@ -1024,8 +1024,9 @@ svn_wc_add (const char *path,
       if (! orig_entry || orig_entry->deleted)
         {
           apr_pool_t* access_pool = svn_wc_adm_access_pool (parent_access);
-          SVN_ERR (svn_wc_adm_open2 (&adm_access, parent_access, path,
+          SVN_ERR (svn_wc_adm_open3 (&adm_access, parent_access, path,
                                      TRUE, copyfrom_url != NULL ? -1 : 0,
+                                     cancel_func, cancel_baton,
                                      access_pool));
         }
 

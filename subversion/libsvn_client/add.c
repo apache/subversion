@@ -421,8 +421,9 @@ svn_client_add (const char *path,
   svn_wc_adm_access_t *adm_access;
   const char *parent_path = svn_path_dirname (path, pool);
 
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, parent_path,
-                             TRUE, 0, pool));
+  SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, parent_path,
+                             TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
+                             pool));
 
   err = add (path, recursive, FALSE, adm_access, ctx, pool);
   
@@ -450,8 +451,9 @@ svn_client_add2 (const char *path,
   svn_wc_adm_access_t *adm_access;
   const char *parent_path = svn_path_dirname (path, pool);
 
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, parent_path,
-                             TRUE, 0, pool));
+  SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, parent_path,
+                             TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
+                             pool));
 
   err = add (path, recursive, force, adm_access, ctx, pool);
   

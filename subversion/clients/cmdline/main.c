@@ -1156,8 +1156,8 @@ main (int argc, const char * const *argv)
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *e;
           const char *fname_utf8 = svn_path_internal_style (dash_F_arg, pool);
-          err = svn_wc_adm_probe_open2 (&adm_access, NULL, fname_utf8,
-                                        FALSE, 0, pool);
+          err = svn_wc_adm_probe_open3 (&adm_access, NULL, fname_utf8,
+                                        FALSE, 0, NULL, NULL, pool);
           if (! err)
             err = svn_wc_entry (&e, fname_utf8, adm_access, FALSE, pool);
           if ((err == SVN_NO_ERROR) && e)

@@ -125,8 +125,10 @@ svn_client_relocate (const char *path,
   struct validator_baton_t vb;
 
   /* Get an access baton for PATH. */
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path,
-                                   TRUE, recurse ? -1 : 0, pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, path,
+                                   TRUE, recurse ? -1 : 0,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
 
   /* Now, populate our validator callback baton, and call the relocate code. */
   vb.ctx = ctx;
