@@ -45,7 +45,7 @@ of numbers separated by periods that look a lot like RCS revision
 numbers.
 
   node_id ::= number | node_revision_id "." number
-  node_revision_id ::= node_id "." numberh
+  node_revision_id ::= node_id "." number
 
 So: 
 - "100" is a node id.
@@ -81,7 +81,7 @@ was created.  So 100.10 may have been created in filesystem revision
 1218; 100.10.3.2 may have been created any time after 100.10; it
 doesn't matter.
 
-Since revision numbers increase by one each time a delta is added,
+Since nodal revision numbers increase by one each time a delta is added,
 we can compute how many deltas separate two related node revisions
 simply by comparing their ID's.  For example, the distance between
 100.10.3.2 and 100.12 is the distance from 100.10.3.2 to their
