@@ -90,8 +90,16 @@ class TestCase:
           print 'WARNING: Test driver returned a status code'
       except svntest.Failure, ex:
         error = 1
-        if len(ex.args):
-          print 'EXCEPTION:', str(ex)
+        # We captured Failure and its subclasses. We don't want to print
+        # anything for plain old Failure since that just indicates test
+        # failure, rather than relevant information. However, if there
+        # *is* information in the exception's arguments, then print it.
+        if ex.__class__ != svntest.Failure or ex.args:
+          ex_args = str(ex)
+          if ex_args:
+            print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
+          else:
+            print 'EXCEPTION:', ex.__class__.__name__
       except KeyboardInterrupt:
         print 'Interrupted'
         sys.exit(0)
