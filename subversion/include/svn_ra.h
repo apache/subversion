@@ -64,23 +64,23 @@ typedef struct svn_ra_plugin_t
                                      svn_revnum_t *latest_revnum);
 
 
-  /* Return an *EDITOR and *ROOT_DIR_BATON capable of transmitting a
+  /* Return an *EDITOR and *EDIT_BATON capable of transmitting a
      commit to the repository beginning at absolute repository path
      ROOT_PATH.  Also, ra's editor must guarantee that if close_edit()
      returns successfully, that *NEW_REVISION will be set to the
      repository's new revision number resulting from the commit. */
   svn_error_t *(*get_commit_editor) (void *session_baton,
                                      const svn_delta_edit_fns_t **editor,
-                                     void **root_dir_baton,
+                                     void **edit_baton,
                                      svn_revnum_t *new_revision);
 
 
   /* Ask the network layer to check out a copy of ROOT_PATH from a
-     repository's filesystem, using EDITOR and ROOT_DIR_BATON to
-     create a working copy. */
+     repository's filesystem, using EDITOR and EDIT_BATON to create a
+     working copy. */
   svn_error_t *(*do_checkout) (void *session_baton,
                                const svn_delta_edit_fns_t *editor,
-                               void *root_dir_baton);
+                               void *edit_baton);
 
 
   /* Ask the network layer to update a working copy from URL.
@@ -90,16 +90,15 @@ typedef struct svn_ra_plugin_t
      that will be updated.  The client also provides an UPDATE_EDITOR
      (and baton) that can be used to modify the working copy.
 
-     The network layer then returns a REPORT_EDITOR and
-     REPORT_ROOT_DIR_BATON to the client; the client first uses this
-     to transmit an empty tree-delta to the repository which describes
-     all revision numbers in the working copy.
+     The network layer then returns a REPORT_EDITOR and REPORT_BATON
+     to the client; the client first uses this to transmit an empty
+     tree-delta to the repository which describes all revision numbers
+     in the working copy.
 
      There is one special property of the REPORT_EDITOR: its
      close_edit() function.  When the client calls close_edit(), the
      network layer then talks to the repository and proceeds to use
-     UPDATE_EDITOR and UPDATE_ROOT_DIR_BATON to patch the working
-     copy.
+     UPDATE_EDITOR and UPDATE_BATON to patch the working copy.
 
      When the update_editor->close_edit() returns, then
      report_editor->close_edit() returns too.  Therefore the return
@@ -107,9 +106,9 @@ typedef struct svn_ra_plugin_t
      entire update.  */
   svn_error_t *(*do_update) (void *session_baton,
                              const svn_delta_edit_fns_t **report_editor,
-                             void **report_root_dir_baton,
+                             void **report_baton,
                              const svn_delta_edit_fns_t *update_editor,
-                             void *update_root_dir_baton);
+                             void *update_baton);
 
 } svn_ra_plugin_t;
 

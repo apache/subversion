@@ -33,7 +33,7 @@ extern "C" {
    is implemented in tests-common/libsvn_test_editor.la */
 
 svn_error_t *svn_test_get_editor (const svn_delta_edit_fns_t **editor,
-                                  void **root_dir_baton,
+                                  void **edit_baton,
                                   svn_string_t *path,
                                   svn_revnum_t revision,
                                   apr_pool_t *pool);

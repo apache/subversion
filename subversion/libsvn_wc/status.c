@@ -88,13 +88,7 @@ assemble_status (svn_wc_status_t *status,
          "textual" in the sense that the "text" of a directory is
          a list of entries, which has now been changed?  And would
          we then show that `M' in the first column?  Ponder,
-         ponder.  
-
-         kff answers: I don't think we do.  The fact that the
-         directory's "text" has been changed is an artifact of the
-         implementation, it's not how users actually think of it.
-         People think of the file as having been added or deleted, not
-         of its parent having an entry added or deleted. */
+         ponder.  */
       
       /* Mark `M' in status structure based on tests above. */
       if (text_modified_p)

@@ -33,9 +33,9 @@
 
 static svn_error_t *
 apply_delta (const svn_delta_edit_fns_t *before_editor,
-             void *before_root_dir_baton,
+             void *before_edit_baton,
              const svn_delta_edit_fns_t *after_editor,
-             void *after_root_dir_baton,
+             void *after_edit_baton,
              svn_stream_t *delta,
              svn_string_t *dest,
              svn_string_t *repos,            /* ignored if update */
@@ -45,7 +45,7 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
              svn_boolean_t is_update)
 {
   const svn_delta_edit_fns_t *editor;
-  void *root_dir_baton;
+  void *edit_baton;
   svn_error_t *err;
 
   if (! ancestor_path)
@@ -58,7 +58,7 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
       err = svn_wc_get_update_editor (dest,
                                       ancestor_revision,
                                       &editor,
-                                      &root_dir_baton,
+                                      &edit_baton,
                                       pool);
     }
   else /* checkout */
@@ -68,25 +68,25 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
                                         ancestor_path,
                                         ancestor_revision,
                                         &editor,
-                                        &root_dir_baton,
+                                        &edit_baton,
                                         pool);
     }
   if (err)
     return err;
 
   svn_delta_wrap_editor (&editor,
-                         &root_dir_baton,
+                         &edit_baton,
                          before_editor,
-                         before_root_dir_baton,
+                         before_edit_baton,
                          editor,
-                         root_dir_baton,
+                         edit_baton,
                          after_editor,
-                         after_root_dir_baton,
+                         after_edit_baton,
                          pool);
 
   return svn_delta_xml_auto_parse (delta,
                                    editor,
-                                   root_dir_baton,
+                                   edit_baton,
                                    ancestor_path,
                                    ancestor_revision,
                                    pool);
@@ -96,9 +96,9 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
 
 static svn_error_t *
 do_edits (const svn_delta_edit_fns_t *before_editor,
-          void *before_root_dir_baton,
+          void *before_edit_baton,
           const svn_delta_edit_fns_t *after_editor,
-          void *after_root_dir_baton,
+          void *after_edit_baton,
           svn_string_t *path,
           svn_string_t *xml_src,
           svn_string_t *ancestor_path,    /* ignored if update */
@@ -127,9 +127,9 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
 
   /* Check out the delta. */
   err = apply_delta (before_editor,
-                     before_root_dir_baton,
+                     before_edit_baton,
                      after_editor,
-                     after_root_dir_baton,
+                     after_edit_baton,
                      svn_stream_from_aprfile (in, pool),
                      path,
                      svn_string_create (repos, pool),
@@ -154,33 +154,33 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
 
 svn_error_t *
 svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
-                               void *before_root_dir_baton,
+                               void *before_edit_baton,
                                const svn_delta_edit_fns_t *after_editor,
-                               void *after_root_dir_baton,
+                               void *after_edit_baton,
                                svn_string_t *path,
                                svn_string_t *xml_src,
                                svn_string_t *ancestor_path,
                                svn_revnum_t ancestor_revision,
                                apr_pool_t *pool)
 {
-  return do_edits (before_editor, before_root_dir_baton,
-                   after_editor, after_root_dir_baton,
+  return do_edits (before_editor, before_edit_baton,
+                   after_editor, after_edit_baton,
                    path, xml_src, ancestor_path, ancestor_revision, pool, 0);
 }
 
 
 svn_error_t *
 svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
-                             void *before_root_dir_baton,
+                             void *before_edit_baton,
                              const svn_delta_edit_fns_t *after_editor,
-                             void *after_root_dir_baton,
+                             void *after_edit_baton,
                              svn_string_t *path,
                              svn_string_t *xml_src,
                              svn_revnum_t ancestor_revision,
                              apr_pool_t *pool)
 {
-  return do_edits (before_editor, before_root_dir_baton,
-                   after_editor, after_root_dir_baton,
+  return do_edits (before_editor, before_edit_baton,
+                   after_editor, after_edit_baton,
                    path, xml_src, NULL, ancestor_revision, pool, 1);
 }
 

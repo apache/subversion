@@ -25,7 +25,7 @@
 
 
 
-struct edit_context
+struct edit_baton
 {
   apr_pool_t *pool;
   svn_string_t *initial_path;
@@ -34,7 +34,7 @@ struct edit_context
 
 struct dir_baton
 {
-  struct edit_context *edit_context;
+  struct edit_baton *edit_baton;
   struct dir_baton *parent_dir_baton;
   svn_string_t *path;
   svn_boolean_t added;
@@ -53,12 +53,27 @@ struct file_baton
 
 
 static svn_error_t *
-delete_item (svn_string_t *name, void *parent_baton)
+begin_edit (void *edit_baton, void **root_baton)
+{
+  struct edit_baton *eb = edit_baton;
+  struct dir_baton *rb = apr_pcalloc (eb->pool, sizeof (*rb));
+
+  rb->edit_baton = eb;
+  rb->parent_dir_baton = NULL;
+  rb->path = eb->initial_path;
+
+  *root_baton = rb;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+delete_entry (svn_string_t *name, void *parent_baton)
 {
   struct dir_baton *d = parent_baton;
 
-  svn_string_t *printable_name
-    = svn_string_dup (d->path, d->edit_context->pool);
+  svn_string_t *printable_name = svn_string_dup (d->path, d->edit_baton->pool);
   svn_path_add_component (printable_name, name, svn_path_local_style);
 
   printf ("D  %s\n", printable_name->data);
@@ -75,11 +90,11 @@ add_directory (svn_string_t *name,
 {
   struct dir_baton *parent_d = parent_baton;
   struct dir_baton *child_d
-    = apr_pcalloc (parent_d->edit_context->pool, sizeof (*child_d));
+    = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_d));
 
-  child_d->edit_context = parent_d->edit_context;
+  child_d->edit_baton = parent_d->edit_baton;
   child_d->parent_dir_baton = parent_d;
-  child_d->path = svn_string_dup (parent_d->path, child_d->edit_context->pool);
+  child_d->path = svn_string_dup (parent_d->path, child_d->edit_baton->pool);
   svn_path_add_component (child_d->path, name, svn_path_local_style);
   child_d->added = TRUE;
 
@@ -99,11 +114,11 @@ replace_directory (svn_string_t *name,
 {
   struct dir_baton *parent_d = parent_baton;
   struct dir_baton *child_d
-    = apr_pcalloc (parent_d->edit_context->pool, sizeof (*child_d));
+    = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_d));
 
-  child_d->edit_context = parent_d->edit_context;
+  child_d->edit_baton = parent_d->edit_baton;
   child_d->parent_dir_baton = parent_d;
-  child_d->path = svn_string_dup (parent_d->path, child_d->edit_context->pool);
+  child_d->path = svn_string_dup (parent_d->path, child_d->edit_baton->pool);
   svn_path_add_component (child_d->path, name, svn_path_local_style);
 
   *child_baton = child_d;
@@ -130,19 +145,19 @@ close_directory (void *dir_baton)
       
       err = svn_wc_entry (&entry,
                           d->path,
-                          d->edit_context->pool);
+                          d->edit_baton->pool);
       if (err) return err;
       
       err = svn_wc_conflicted_p (&text_conflict, &prop_conflict,
                                  d->path,
                                  entry,
-                                 d->edit_context->pool);
+                                 d->edit_baton->pool);
       if (err) return err;
       
       if (! prop_conflict)
         {
           err = svn_wc_props_modified_p 
-            (&merged, d->path, d->edit_context->pool);
+            (&merged, d->path, d->edit_baton->pool);
           if (err) return err;
         }
       
@@ -179,13 +194,13 @@ close_file (void *file_baton)
 
       err = svn_wc_entry (&entry,
                           fb->path,
-                          fb->parent_dir_baton->edit_context->pool);
+                          fb->parent_dir_baton->edit_baton->pool);
       if (err) return err;
 
       err = svn_wc_conflicted_p (&text_conflict, &prop_conflict,
                                  fb->parent_dir_baton->path,
                                  entry,
-                                 fb->parent_dir_baton->edit_context->pool);
+                                 fb->parent_dir_baton->edit_baton->pool);
       if (err) return err;
 
       if (fb->text_changed)
@@ -193,7 +208,7 @@ close_file (void *file_baton)
           if (! text_conflict)
             {
               err = svn_wc_text_modified_p 
-                (&merged, fb->path, fb->parent_dir_baton->edit_context->pool);
+                (&merged, fb->path, fb->parent_dir_baton->edit_baton->pool);
               if (err) return err;
             }
 
@@ -209,7 +224,7 @@ close_file (void *file_baton)
           if (! prop_conflict)
             {
               err = svn_wc_props_modified_p 
-                (&merged, fb->path, fb->parent_dir_baton->edit_context->pool);
+                (&merged, fb->path, fb->parent_dir_baton->edit_baton->pool);
               if (err) return err;
             }
           
@@ -224,6 +239,13 @@ close_file (void *file_baton)
 
   printf ("%s %s\n", statchar_buf, fb->path->data);
 
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+close_edit (void *edit_baton)
+{
   return SVN_NO_ERROR;
 }
 
@@ -256,11 +278,10 @@ add_file (svn_string_t *name,
 {
   struct dir_baton *parent_d = parent_baton;
   struct file_baton *child_fb
-    = apr_pcalloc (parent_d->edit_context->pool, sizeof (*child_fb));
+    = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_fb));
 
   child_fb->parent_dir_baton = parent_d;
-  child_fb->path = svn_string_dup (parent_d->path,
-                                   parent_d->edit_context->pool);
+  child_fb->path = svn_string_dup (parent_d->path, parent_d->edit_baton->pool);
   svn_path_add_component (child_fb->path, name, svn_path_local_style);
   child_fb->added = TRUE;
 
@@ -279,11 +300,10 @@ replace_file (svn_string_t *name,
 {
   struct dir_baton *parent_d = parent_baton;
   struct file_baton *child_fb
-    = apr_pcalloc (parent_d->edit_context->pool, sizeof (*child_fb));
+    = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_fb));
 
   child_fb->parent_dir_baton = parent_d;
-  child_fb->path = svn_string_dup (parent_d->path,
-                                   parent_d->edit_context->pool);
+  child_fb->path = svn_string_dup (parent_d->path, parent_d->edit_baton->pool);
   svn_path_add_component (child_fb->path, name, svn_path_local_style);
 
   *file_baton = child_fb;
@@ -318,28 +338,23 @@ change_dir_prop (void *parent_baton,
 
 svn_error_t *
 svn_cl__get_trace_update_editor (const svn_delta_edit_fns_t **editor,
-                                 void **root_dir_baton,
+                                 void **edit_baton,
                                  svn_string_t *initial_path,
                                  apr_pool_t *pool)
 {
   /* Allocate an edit baton to be stored in every directory baton.
      Set it up for the directory baton we create here, which is the
      root baton. */
-  struct edit_context *ec = apr_pcalloc (pool, sizeof (*ec));
-  struct dir_baton *rb = apr_pcalloc (pool, sizeof (*rb));
+  struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
   svn_delta_edit_fns_t *trace_editor = svn_delta_default_editor (pool);
 
   /* Set up the edit context. */
-  ec->pool = svn_pool_create (pool);
-  ec->initial_path = svn_string_dup (initial_path, ec->pool);
-
-  /* Set up the root directory baton. */
-  rb->edit_context = ec;
-  rb->parent_dir_baton = NULL;
-  rb->path = ec->initial_path;
+  eb->pool = svn_pool_create (pool);
+  eb->initial_path = svn_string_dup (initial_path, eb->pool);
 
   /* Set up the editor. */
-  trace_editor->delete_item = delete_item;
+  trace_editor->begin_edit = begin_edit;
+  trace_editor->delete_entry = delete_entry;
   trace_editor->add_directory = add_directory;
   trace_editor->replace_directory = replace_directory;
   trace_editor->change_dir_prop = change_dir_prop;
@@ -349,8 +364,9 @@ svn_cl__get_trace_update_editor (const svn_delta_edit_fns_t **editor,
   trace_editor->apply_textdelta = apply_textdelta;
   trace_editor->change_file_prop = change_file_prop;
   trace_editor->close_file = close_file;
+  trace_editor->close_edit = close_edit;
 
-  *root_dir_baton = rb;
+  *edit_baton = eb;
   *editor = trace_editor;
   
   return SVN_NO_ERROR;

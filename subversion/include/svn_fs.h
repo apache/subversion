@@ -832,36 +832,20 @@ svn_error_t *svn_fs_change_rev_prop (svn_fs_t *fs,
 
 /* Compute the differences between SOURCE_DIR and TARGET_DIR, and make
    calls describing those differences on EDITOR, using the provided
-   ROOT_DIR_BATON.  SOURCE_DIR and TARGET_DIR must be directories from
-   the same filesystem.
+   EDIT_BATON.  SOURCE_DIR and TARGET_DIR must be directories from the
+   same filesystem.
+
+   The caller must call editor->close_edit on EDIT_BATON;
+   svn_fs_dir_delta does not close the edit itself.
 
    Do any allocation necessary for the delta computation in POOL.
    This function's maximum memory consumption is at most roughly
    proportional to the greatest depth of TARGET_DIR, not the total
-   size of the delta.
-
-   FIXME: kff todo: this doc string also used to say:
-
-      The caller must call editor->close_edit on EDIT_BATON;
-      svn_fs_dir_delta does not close the edit itself.
-
-   But close_edit() doesn't exist anymore.  And while it is tempting
-   to replace the above text with this:
-
-      The caller must call editor->close_close_directory on
-      ROOT_DIR_BATON; svn_fs_dir_delta does not close the edit itself.
-
-   ...I have not done so, because delta.c:svn_fs_dir_delta() still
-   calls editor->close_directory() on the root directory baton, which
-   should now also do any work close_edit() used to do.  We may have
-   to revisit this issue, if it turns out that closing the root
-   directory is something the caller of svn_fs_dir_delta() wants to do
-   itself.  In the meantime, see the tie-in comment in
-   delta.c:svn_fs_dir_delta(). */
+   size of the delta.  */
 svn_error_t *svn_fs_dir_delta (svn_fs_node_t *source_dir,
 			       svn_fs_node_t *target_dir,
 			       svn_delta_edit_fns_t *editor,
-			       void *root_dir_baton,
+			       void *edit_baton,
 			       apr_pool_t *pool);
 
 

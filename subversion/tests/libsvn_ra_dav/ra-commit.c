@@ -36,7 +36,7 @@ main (int argc, char **argv)
   void *session_baton;
   svn_string_t *url;
   const svn_delta_edit_fns_t *editor;
-  void *root_dir_baton;
+  void *edit_baton;
   svn_revnum_t new_revision;
   const svn_ra_plugin_t *plugin;
   apr_hash_t *targets;
@@ -62,7 +62,7 @@ main (int argc, char **argv)
   if (err)
     goto error;
 
-  err = (*plugin->get_commit_editor)(session_baton, &editor, &root_dir_baton,
+  err = (*plugin->get_commit_editor)(session_baton, &editor, &edit_baton,
                                      &new_revision);
   if (err)
     goto error;
@@ -71,8 +71,7 @@ main (int argc, char **argv)
   root_dir = svn_string_create(".", pool);
 
   printf("Beginning crawl...\n");
-  err = svn_wc_crawl_local_mods(&targets, root_dir,
-                                editor, root_dir_baton, pool);
+  err = svn_wc_crawl_local_mods(&targets, root_dir, editor, edit_baton, pool);
   if (err)
     goto error;
 

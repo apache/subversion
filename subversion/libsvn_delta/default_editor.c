@@ -20,7 +20,15 @@
 
 
 static svn_error_t *
-delete_item (svn_string_t *name, void *parent_baton)
+begin_edit (void *edit_baton, void **root_baton)
+{
+  *root_baton = edit_baton;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+delete_entry (svn_string_t *name, void *parent_baton)
 {
   return SVN_NO_ERROR;
 }
@@ -124,13 +132,20 @@ change_dir_prop (void *parent_baton,
 }
 
 
+static svn_error_t *
+close_edit (void *edit_baton)
+{
+  return SVN_NO_ERROR;
+}
+
 
 
 /* As new editor functions are created, they should be given skeleton
    implementions above, and added here. */
 static const svn_delta_edit_fns_t default_editor =
 {
-  delete_item,
+  begin_edit,
+  delete_entry,
   add_directory,
   replace_directory,
   change_dir_prop,
@@ -140,6 +155,7 @@ static const svn_delta_edit_fns_t default_editor =
   apply_textdelta,
   change_file_prop,
   close_file,
+  close_edit
 };
 
 
