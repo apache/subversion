@@ -703,6 +703,11 @@ svn_client_resolve (const char *path,
    SRC_PATH.  DST_PATH must be a file or directory under version
    control, or a repository URL, existent or not.
 
+   ### 838 The argument to be removed when 838 stops using svn_client_copy.
+   OPTIONAL_ADM_ACCESS can either be a baton that holds a write lock for
+   the parent of PATH, or it can be NULL. If it is NULL the lock for the
+   parent will be acquired and released by the function.
+
    If either SRC_PATH or DST_PATH are URLs, use the AUTH_BATON and
    MESSAGE to immediately attempt to commit the copy action in the
    repository.  If the commit succeeds, allocate (in POOL) and
@@ -726,6 +731,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  const char *src_path,
                  const svn_client_revision_t *src_revision,
                  const char *dst_path,
+                 svn_wc_adm_access_t *optional_adm_access,
                  svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,
                  void *log_msg_baton,

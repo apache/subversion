@@ -99,23 +99,26 @@ create_lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
 {
   svn_error_t *err;
 
-  do {
-    err = svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_LOCK,
-                                  svn_node_file, APR_OS_DEFAULT, 0, pool);
-    if (err)
-      {
-        if (APR_STATUS_IS_EEXIST(err->apr_err))
-          {
-            svn_error_clear_all (err);
-            apr_sleep (1 * APR_USEC_PER_SEC);  /* micro-seconds */
-            wait_for--;
-          }
-        else
-          return err;
-      }
-    else
-      return SVN_NO_ERROR;
-  } while (wait_for > 0);
+  for (;;)
+    {
+      err = svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_LOCK,
+                                    svn_node_file, APR_OS_DEFAULT, 0, pool);
+      if (err)
+        {
+          if (APR_STATUS_IS_EEXIST(err->apr_err))
+            {
+              svn_error_clear_all (err);
+              if (wait_for <= 0)
+                break;
+              wait_for--;
+              apr_sleep (1 * APR_USEC_PER_SEC);  /* micro-seconds */
+            }
+          else
+            return err;
+        }
+      else
+        return SVN_NO_ERROR;
+    }
 
   return svn_error_createf (SVN_ERR_WC_LOCKED, 0, NULL, pool, 
                             "working copy locked: %s", adm_access->path); 
@@ -480,6 +483,12 @@ const char *
 svn_wc_adm_access_path (svn_wc_adm_access_t *adm_access)
 {
   return adm_access->path;
+}
+
+apr_pool_t *
+svn_wc_adm_access_pool (svn_wc_adm_access_t *adm_access)
+{
+  return adm_access->pool;
 }
 
 

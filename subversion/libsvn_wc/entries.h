@@ -122,11 +122,11 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_FORCE         0x80000000
 
 
-/* Modify an entry for NAME in parent dir PATH by folding ("merging")
+/* Modify an entry for NAME in access baton PATH by folding ("merging")
    in changes, and sync those changes to disk.  New values for the
    entry are pulled from their respective fields in ENTRY, and
    MODIFY_FLAGS is a bitmask to specify which of those field to pay
-   attention to.  
+   attention to.  ADM_ACCESS must hold a write lock.
 
    - ENTRY->kind specifies the node kind for this entry, and is
      *required* to be set to one of the following valid values:
@@ -139,7 +139,7 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
    NOTE: when you call this function, the entries file will be read,
    tweaked, and written back out.  */
-svn_error_t *svn_wc__entry_modify (const char *path,
+svn_error_t *svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
                                    const char *name,
                                    svn_wc_entry_t *entry,
                                    apr_uint32_t modify_flags,

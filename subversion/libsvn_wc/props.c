@@ -362,6 +362,7 @@ svn_wc__get_existing_prop_reject_file (const char **reject_file,
 svn_error_t *
 svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
                          const char *path,
+                         svn_wc_adm_access_t *adm_access,
                          const apr_array_header_t *propchanges,
                          apr_pool_t *pool)
 {
@@ -370,7 +371,6 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
   svn_wc_entry_t *entry;
   const char *parent, *base_name;
   svn_stringbuf_t *log_accum;
-  svn_wc_adm_access_t *adm_access;
   apr_file_t *log_fp = NULL;
 
   SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
@@ -394,7 +394,6 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
       return SVN_NO_ERROR; /* ### svn_node_none or svn_node_unknown */
     }
 
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, TRUE, FALSE, pool));
   SVN_ERR (svn_wc__open_adm_file (&log_fp, parent, SVN_WC__ADM_LOG,
                                   (APR_WRITE | APR_CREATE), /* not excl */
                                   pool));
@@ -423,8 +422,6 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
   SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
                                    1, /* sync */ pool));
   SVN_ERR (svn_wc__run_log (adm_access, pool));
-
-  SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }
@@ -1115,16 +1112,20 @@ svn_wc_prop_set (const char *name,
         {
           const char *pdir, *base_name;
           svn_wc_entry_t tmp_entry;
+          svn_wc_adm_access_t *adm_access;
 
           /* If we changed the keywords or newlines, void the entry
              timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
           svn_path_split_nts (path, &pdir, &base_name, pool);
+          SVN_ERR (svn_wc_adm_open (&adm_access, NULL, pdir, TRUE, FALSE,
+                                    pool));
           tmp_entry.kind = svn_node_file;
           tmp_entry.text_time = 0;
-          SVN_ERR (svn_wc__entry_modify (pdir, base_name, &tmp_entry,
+          SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                                          pool));
+          SVN_ERR (svn_wc_adm_close (adm_access));
         }
     }
 
