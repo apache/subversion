@@ -283,6 +283,17 @@ int svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b);
 svn_fs_id_t *svn_fs_copy_id (const svn_fs_id_t *id, apr_pool_t *pool);
 
 
+/* Return the predecessor id to ID, allocated in POOL.  If there is no
+   possible predecessor id, return NULL.
+
+   Does not check that the predecessor id is actually present in the
+   filesystem.
+
+   Does not check that ID is a valid node revision ID.  If you pass in
+   something else, the results are undefined.  */
+svn_fs_id_t *svn_fs_predecessor_id (const svn_fs_id_t *id, apr_pool_t *pool);
+
+
 /* Parse the LEN bytes at DATA as a node or node revision ID.  Return
    zero if the bytes are not a properly-formed ID.  A properly formed
    ID matches the regexp:

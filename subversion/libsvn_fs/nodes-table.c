@@ -591,16 +591,39 @@ svn_fs__create_successor (svn_fs_id_t **new_id_p,
 /* Stable nodes and deltification.  */
 
 
+/* Change ID's representation to be a delta against BASE, as part of
+   TRAIL.  */
+static svn_error_t *
+deltify (svn_fs_id_t *id, svn_fs_id_t *base, trail_t *trail)
+{
+  /* Don't actually deltify yet, since we don't have the
+     undeltification code yet so the fs-tests would fail. */
+
+#if 0
+  {
+    svn_stringbuf_t *idstr, *basestr;
+    
+    idstr   = svn_fs_unparse_id (id, trail->pool);
+    basestr = svn_fs_unparse_id (base, trail->pool);
+    
+    printf ("*** Deltifying %s against %s\n", idstr->data, basestr->data);
+  }
+#endif /* 0 */
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_fs__stable_node (svn_fs_t *fs,
                      svn_fs_id_t *id,
                      trail_t *trail)
 {
-  /* As remarked above, we don't actually store anything in a
-     deltified form yet, so this function is a no-op.  This
-     implementation, along with the definitions of
-     svn_fs__get_node_revision and svn_fs__put_node_revision, is
-     completely correct, but not efficient.  */
+  svn_fs_id_t *predecessor_id = svn_fs_predecessor_id (id, trail->pool);
+
+  if (predecessor_id != NULL)
+    SVN_ERR (deltify (predecessor_id, id, trail));
+
   return SVN_NO_ERROR;
 }
 
