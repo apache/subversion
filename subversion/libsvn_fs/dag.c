@@ -11,6 +11,7 @@
  * ====================================================================
  */
 
+#include "svn_path.h"
 #include "svn_fs.h"
 #include "dag.h"
 #include "err.h"
@@ -208,6 +209,36 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
   /* NOTREACHED */
   return NULL;
 }
+
+svn_error_t *
+svn_fs__dag_open_path (dag_node_t **child_p,
+                       dag_node_t **parent_p,
+                       dag_node_t *root,
+                       const char *path,
+                       trail_t *trail)
+{
+#if 0
+  dag_node_t *child = root;
+  dag_node_t *parent = NULL;
+  char *mutable_path = apr_pstrdup (trail->pool, path);
+  const char *name;
+
+  while (svn_path_first_component(&name, &mutable_path,
+                                  svn_path_repos_style))
+    {
+      parent = child;
+      SVN_ERR (svn_fs__dag_open (&child, parent, name, trail));
+    }
+
+  *child_p = child;
+  *parent_p = parent;
+#else
+  abort ();
+#endif
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
                                  const char *name,
                                  trail_t *trail)
