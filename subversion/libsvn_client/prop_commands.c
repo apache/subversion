@@ -939,7 +939,6 @@ svn_client_revprop_list (apr_hash_t **props,
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   apr_hash_t *proplist;
-  apr_hash_index_t *hi;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data. */
@@ -957,16 +956,6 @@ svn_client_revprop_list (apr_hash_t **props,
   /* The actual RA call. */
   SVN_ERR (ra_lib->rev_proplist (session, *set_rev, &proplist, pool));
 
-  for (hi = apr_hash_first (pool, proplist); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      void *val;
-      apr_ssize_t klen;
-      
-      apr_hash_this (hi, &key, &klen, &val);
-      apr_hash_set (proplist, key, klen, val);
-    } 
-  
   *props = proplist;
   return SVN_NO_ERROR;
 }
