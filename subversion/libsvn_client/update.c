@@ -200,6 +200,8 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
             TRUE,  /* update unchanged externals */
             pool));
 
+  SVN_ERR (svn_wc_adm_close (adm_access));
+
   return SVN_NO_ERROR;
 }
 

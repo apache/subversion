@@ -1860,7 +1860,8 @@ close_edit (void *edit_baton)
 
   /* ### Would really like to pass this back to the caller, but there is no
      ### easy way to do it. So we close it. */
-  SVN_ERR (svn_wc_adm_close (eb->adm_access));
+  if (eb->is_checkout)
+    SVN_ERR (svn_wc_adm_close (eb->adm_access));
 
   /* The edit is over, free its pool.
      ### No, this is wrong.  Who says this editor/baton won't be used
