@@ -5,12 +5,10 @@ TODO for locking
 MUST HAVE
 ---------
 
-* notification-system rewrite;  patch is in progress.  (lundblad)
+* make 'svn up' use new system to tell user that a defunct token
+  has been deleted.  (lundblad)
 
-     - make 'svn up' use new system to tell user that a defunct token
-       has been deleted.
-
-     - make svn_client_(un)lock() use the new notify callback also.
+* make svn_client_(un)lock() use the new notify callback also.
 
 * scan the whole patch for TODO items introduced on the branch (all, please)
   
