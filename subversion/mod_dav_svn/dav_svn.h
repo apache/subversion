@@ -149,9 +149,9 @@ struct dav_resource_private {
   dav_svn_root root;
 
   /* for VERSION resources: the node ID. may be NULL if the resource was
-     fetched via a Baseline (so use root.rev and repos_path). if the
-     VERSION refers to a Baseline (.baselined==1), then repos_path will
-     also be NULL. */
+     fetched via a Baseline Collection (so use root.rev and repos_path). if
+     the VERSION refers to a Baseline (.baselined==1), then node_id and
+     repos_path will be NULL. */
   const svn_fs_id_t *node_id;
 
   /* for PRIVATE resources: the private resource type */
@@ -245,6 +245,28 @@ const char *dav_svn_build_uri(const dav_resource *resource,
                               int add_href,
                               apr_pool_t *pool);
 
+
+/*
+** Simple parsing of a URI. This is used for URIs which appear within a
+** request body. It enables us to verify and break out the necessary pieces
+** to figure out what is being referred to.
+**
+** ### this is horribly duplicative with the parsing functions in repos.c
+** ### for now, this implements only a minor subset of the full range of
+** ### URIs which we may need to parse. it also ignores any scheme, host,
+** ### and port in the URI and simply assumes it refers to the same server.
+*/
+typedef struct {
+  svn_revnum_t rev;
+  const char *repos_path;
+  const char *activity_id;
+  svn_fs_id_t *node_id;
+} dav_svn_uri_info;
+
+svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
+                                      const dav_resource *relative,
+                                      const char *uri,
+                                      apr_pool_t *pool);
 
 #endif /* DAV_SVN_H */
 

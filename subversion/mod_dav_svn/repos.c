@@ -206,6 +206,7 @@ static int dav_svn_parse_vcc_uri(dav_resource_combined *comb,
       comb->priv.root.rev = revnum;
 
       /* NOTE: comb->priv.repos_path == NULL */
+      /* NOTE: comb->priv.node_id == NULL */
     }
 
   return FALSE;
@@ -274,6 +275,7 @@ static int dav_svn_parse_baseline_uri(dav_resource_combined *comb,
   comb->priv.root.rev = revnum;
 
   /* NOTE: comb->priv.repos_path == NULL */
+  /* NOTE: comb->priv.node_id == NULL */
 
   return FALSE;
 }
