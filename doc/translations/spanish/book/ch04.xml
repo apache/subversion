@@ -1596,13 +1596,15 @@ Committed revision 351.
         pruebas, sabe que es la combinación precisa de datos que
         necesita.</para>
 
-      <para>Time to make a snapshot.  Copying one URL to another won't
-        work here. In this case, you want to make a snapshot of your
-        exact working copy arrangement and store it in the repository.
-        Luckily, <command>svn copy</command> actually has four
-        different uses (which you can read about in Chapter 9),
-        including the ability to copy a working-copy tree to the
-        repository:</para>
+      <para>Hora de tomar una instantánea.  Copiar una URL en otra
+        no funcionará esta vez. <!-- TODO: Revisar el significado
+        de la frase original --> En este caso, quiere hacer una
+        instantánea de la configuración exácta de su copia local y
+        almacenarla en el repositorio. Afortunadamente, <command>svn
+        copy</command> tiene en realidad cuatro usos diferentes
+        (sobre los cuales puede leer en el noveno capítulo),
+        incluyendo la habilidad para copiar el árbol de una copia
+        local al repositorio:</para>
 
 <screen>
 $ ls
@@ -1613,10 +1615,10 @@ $ svn copy my-working-copy http://svn.example.com/repos/calc/tags/mytag
 Committed revision 352.
 </screen>
 
-      <para>Now there is a new directory in the repository,
-        <filename>/calc/tags/mytag</filename>, which is an exact
-        snapshot of your working copy&mdash;mixed revisions, urls,
-        and all.</para>
+      <para>Ahora existe un nuevo directorio en el repositorio,
+        <filename>/calc/tags/mytag</filename>, el cual
+        es una instantánea exacta de su copia local de
+        trabajo&mdash;revisiones mezcladas, urls, y todo eso.</para>
 
       <para>Other users have found interesting uses for this feature.
         Sometimes there are situations where you have a bunch of local
