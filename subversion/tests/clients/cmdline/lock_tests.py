@@ -90,8 +90,8 @@ def lock_file(sbox):
   # change the locked file's properties
   svntest.main.run_svn(None, 'propset', 'sneakyuser', 'Sally', file_path_b)
 
-  err_re = "((.*User jconstant does not own lock on path.*)\
-             |(.*At least one property change failed.*))"
+  err_re = "((.*User jconstant does not own lock on path.*)" + \
+             "|(.*At least one property change failed.*))"
 
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit (wc_b, None, None, err_re,
