@@ -74,18 +74,18 @@ new features and fixes many smaller bugs.</p>
 
 <h3>Symlink versioning</h3>
 
-<p>This feature allows *nix users to to place symlinks under version
+<p>This feature allows unix users to to place symlinks under version
     control.  (Note: this is <em>not</em> about creating links
     inside a repository that point to other parts of the repository!)</p>
 
-<p> When a user adds a *nix symlink to version control and commits,
+<p> When a user adds a unix symlink to version control and commits,
     the repository stores the object as a file with the "svn:special"
     property attached.  When the client sees this property during
     checkouts and updates, the repository file is translated back into
     a symlink within the working copy.  On win32 systems, the client
     does no translation, and the user sees just an ordinary file.
     (But a win32 user can hand-edit the contents of this file, which
-    will still have an affect of changing the symlink on a *nix
+    will still have an affect of changing the symlink on a unix
     system.)</p>
 
 
@@ -132,7 +132,7 @@ new features and fixes many smaller bugs.</p>
 <p>
 
 <dt><h3>Bugfixes:</h3></dt>
-<dd>More than 40 "small" bugs fixed.  See the full <a
+<dd>More than 40 "small" bugs fixed.  See the <a
 href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
       for details.</dd>
 
@@ -147,7 +147,7 @@ href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
       <dt><tt>svn export --native-eol [LF | CRLF]</tt></dt>
       <dd>forcibly export 'svn:eol-style=native' files with a specific
       line ending, either LF or CRLF.  Useful for releases (say,
-      creating a win32 zipfile on *nix.)</dd>
+      creating a win32 zipfile on unix.)</dd>
 
       <dt><tt>svn add --force</tt></dt> <dd>forcibly recurse into
       already-versioned directories.  This allows users to <tt>svn
@@ -187,7 +187,7 @@ href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
 <p>A number of new 1.1 functions have been introduced, with the "2"
 suffix, and the older versions are now marked deprecated (and will be
 removed in Subversion 2.0).  For example, a new svn_wc_diff2()
-function has superceded svn_wc_diff().  See the full <a
+function has superceded svn_wc_diff().  See the <a
 href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
 for details.</p>
 
