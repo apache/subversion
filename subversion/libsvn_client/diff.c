@@ -551,6 +551,9 @@ diff_dir_added (svn_wc_adm_access_t *adm_access,
                 svn_revnum_t rev,
                 void *diff_baton)
 {
+  if (state)
+    *state = svn_wc_notify_state_unknown;
+
   /* ### todo:  send feedback to app */
   return SVN_NO_ERROR;
 }
