@@ -426,8 +426,8 @@ get_revnum (svn_revnum_t *revnum, const svn_opt_revision_t *revision,
   if (*revnum > youngest)
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "Revisions must not be greater than the youngest revision (%" 
-       SVN_REVNUM_T_FMT ")", youngest);
+       "Revisions must not be greater than the youngest revision (%ld)",
+       youngest);
 
   return SVN_NO_ERROR;
 }
