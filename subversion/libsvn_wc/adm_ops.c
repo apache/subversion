@@ -1262,6 +1262,10 @@ svn_wc_revert (const char *path,
             was_deleted = parents_entry->deleted;
           adm_access = dir_access;
         }
+      else  /* Else it's `none', or something exotic like a symlink... */
+        return svn_error_createf
+          (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+           "Unknown or unexpected kind for path %s", path);
 
       /* Remove the item from revision control. */
       if (entry->kind == svn_node_dir)
