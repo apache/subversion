@@ -6,7 +6,7 @@ dnl General Setup -----------------------
 
 dnl First line is *required*;  sanity-checks that the our src dir exists.
 AC_INIT(subversion/include/svn_types.h)
-AC_CONFIG_AUX_DIR(helpers)
+AC_CONFIG_AUX_DIR(ac-helpers)
 
 dnl Generate config.nice early (before the args are munged)
 SVN_CONFIG_NICE(config.nice)
