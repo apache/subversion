@@ -335,6 +335,19 @@ fi
 AC_SUBST(GETTEXT_CODESET)
 AC_SUBST(NO_GETTEXT_CODESET)
 
+# Check if we are using GNU gettext.
+GNU_GETTEXT=no
+MSGFMTFLAGS=''
+if test $USE_NLS = "yes"; then
+   AC_MSG_CHECKING(if we are using GNU gettext)
+   if $MSGFMT --version 2>&1 | $EGREP GNU > /dev/null; then
+      GNU_GETTEXT=yes
+      MSGFMTFLAGS='-c'
+   fi
+   AC_MSG_RESULT($GNU_GETTEXT)
+fi
+AC_SUBST(MSGFMTFLAGS)
+
 INSTALL_STATIC_RULES="install-bin install-docs"
 INSTALL_RULES="install-fsmod-lib install-ramod-lib install-lib install-include install-static"
 INSTALL_RULES="$INSTALL_RULES $INSTALL_APACHE_RULE"
