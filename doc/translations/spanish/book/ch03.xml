@@ -2202,25 +2202,30 @@ $ svn update --revision 1729 # Updates an existing working copy to r1729
     <sect2 id="svn-ch-3-sect-7.1">
       <title><command>svn cleanup</command></title>
 
-      <para>When Subversion modifies your working copy (or any
-        information within <filename>.svn</filename>), it tries to do
-        so as safely as possible.  Before changing anything, it writes
-        its intentions to a log file, executes the commands in the log
-        file, then removes the log file (this is similar in design to
-        a journaled filesystem).  If a Subversion operation is
-        interrupted (if the process is killed, or if the machine
-        crashes, for example), the log files remain on disk.  By
-        re-executing the log files, Subversion can complete the
-        previously started operation, and your working copy can get
-        itself back into a consistent state.</para>
+      <para>Cuando Subversion modifica su copia de trabajo (o cualquier
+        información en el interior de <filename>.svn</filename>),
+        intenta hacerlo tan seguro como sea posible. Antes de cambiar
+        cualquier cosa, escribe sus intenciones en un fichero de
+        registro, ejecuta los comandos en el fichero de registro,
+        entonces borra el fichero de registro (esto es similar en
+        diseño a un sistema de ficheros transaccional). Si una operación
+        de Subversion es interrumpida (si el proceso es matado, o si
+        la máquina se cuelga<!--TODO:crashes-->, por ejemplo), los
+        ficheros de registro permanecen en disco. Ejecutando de nuevo
+        los ficheros de registro, Subversion puede completar la
+        operación anteriormente empezada, y su copia de trabajo puede
+        <!--TODO:and your working copy can get itself back into a
+        consistent state--> volver a estar en un estado consistente.</para>
 
-      <para>And this is exactly what <command>svn cleanup</command>
-        does: it searches your working copy and runs any leftover
-        logs, removing locks in the process.  If Subversion ever tells
-        you that some part of your working copy is
-        <quote>locked</quote>, then this is the command that you
-        should run.  Also, <command>svn status</command> will display
-        an <literal>L</literal> next to locked items:</para>
+      <para>Y esto es exactamente lo que hace <command>svn
+        cleanup</command>: busca en su copia de trabajo y ejecuta
+        cualquier registro de sobra<!--TODO:and runs any leftover logs-->,
+        eliminando bloqueos en el proceso. Si Subversion alguna vez le
+        dice que alguna parte de su copia de trabajo está
+        <quote>bloqueada</quote>, entonces éste es el comando que
+        debería ejecutar. También, <command>svn status</command>
+        mostrará una <literal>L</literal> al lado de los objetos
+        bloqueados:</para>
 
       <screen>
 $ svn status
