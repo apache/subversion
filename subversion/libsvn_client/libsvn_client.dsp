@@ -108,10 +108,6 @@ SOURCE=.\delete.c
 # Begin Source File
 
 SOURCE=.\diff.c
-# End Source File#
-# Begin Source File
-
-SOURCE=.\ra_loader.c
 # End Source File
 # Begin Source File
 
