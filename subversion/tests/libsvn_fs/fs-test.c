@@ -5153,7 +5153,7 @@ test_node_created_rev (const char **msg,
   svn_fs_root_t *txn_root, *rev_root;
   svn_revnum_t youngest_rev = 0;
   int i;
-  struct node_created_rev_args path_revs[20];
+  struct node_created_rev_args path_revs[21];
   const char *greek_paths[21] = { 
     /*  0 */ "",
     /*  1 */ "iota",
