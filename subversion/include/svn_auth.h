@@ -171,19 +171,9 @@ typedef struct
     full paths to the files, and sets @a cert_type for the type of
     certificate file to load */
 #define SVN_AUTH_CRED_CLIENT_SSL "svn.ssl.client-cert"
-typedef enum
-  {
-    svn_auth_ssl_unknown_cert_type,
-    svn_auth_ssl_pem_cert_type,
-    svn_auth_ssl_pkcs12_cert_type
-    
-  } svn_auth_ssl_cert_type_t;
 typedef struct
 {
   const char *cert_file;
-  const char *key_file;
-  svn_auth_ssl_cert_type_t cert_type;
-
 } svn_auth_cred_client_ssl_t;
 
 /** SSL client passphrase.

@@ -212,21 +212,8 @@ client_ssl_callback(void *userdata, ne_session *sess,
       if (client_creds)
         {
 #ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
-          if (client_creds->cert_type == svn_auth_ssl_pem_cert_type)
-            {
-              ne_ssl_load_pem(sess, client_creds->cert_file,
-                              client_creds->key_file);
-            }
-          else
-            {
-              ne_ssl_load_pkcs12(sess, client_creds->cert_file);
-            }
+          ne_ssl_load_pkcs12(sess, client_creds->cert_file);
 #else
-          if (client_creds->cert_type == svn_auth_ssl_pem_cert_type)
-            {
-              /* FIXME */
-              return; /* no PEM support in neon 0.24 */
-            }
           ne_ssl_client_cert *clicert =
             ne_ssl_clicert_read(client_creds->cert_file);
           if (ne_ssl_clicert_encrypted(clicert))

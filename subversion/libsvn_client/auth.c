@@ -512,7 +512,7 @@ client_ssl_cert_file_first_credentials (void **credentials,
   const char *server_group = apr_hash_get (parameters,
                                            SVN_AUTH_PARAM_SERVER_GROUP,
                                            APR_HASH_KEY_STRING);
-  const char *cert_file, *key_file, *cert_type;
+  const char *cert_file;
 
   cert_file = svn_config_get_server_setting (cfg, server_group,
                                              SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE,
@@ -523,28 +523,7 @@ client_ssl_cert_file_first_credentials (void **credentials,
       svn_auth_cred_client_ssl_t *cred =
         apr_palloc (pool, sizeof(svn_auth_cred_client_ssl_t));
       
-      key_file = svn_config_get_server_setting (cfg, server_group,
-                                                SVN_CONFIG_OPTION_SSL_CLIENT_KEY_FILE,
-                                                NULL);
-      cert_type = svn_config_get_server_setting (cfg, server_group,
-                                                 SVN_CONFIG_OPTION_SSL_CLIENT_CERT_TYPE,
-                                                 "pem");
       cred->cert_file = cert_file;
-      cred->key_file = key_file;
-      if ((strcmp (cert_type, "pem") == 0) ||
-          (strcmp (cert_type, "PEM") == 0))
-        {
-          cred->cert_type = svn_auth_ssl_pem_cert_type;
-        }
-      else if ((strcmp (cert_type, "pkcs12") == 0) ||
-               (strcmp (cert_type, "PKCS12") == 0))
-        {
-          cred->cert_type = svn_auth_ssl_pkcs12_cert_type;
-        }
-      else
-        {
-          cred->cert_type = svn_auth_ssl_unknown_cert_type;
-        }
       *credentials = cred;
     }
   else
@@ -691,7 +670,6 @@ client_ssl_prompt_first_cred (void **credentials,
   const char *extension;
   svn_auth_cred_client_ssl_t *cred;
 
-  svn_auth_ssl_cert_type_t cert_type;
   SVN_ERR (pb->prompt_func (&cert_file, "client certificate filename: ", FALSE,
                             pb->prompt_baton, pool));
   
@@ -700,53 +678,8 @@ client_ssl_prompt_first_cred (void **credentials,
       return NULL;
     }
 
-  cert_file_len = strlen(cert_file);
-  extension = cert_file + cert_file_len - 4;
-  if ((strcmp (extension, ".p12") == 0) || 
-      (strcmp (extension, ".P12") == 0))
-    {
-      cert_type = svn_auth_ssl_pkcs12_cert_type;
-    }
-  else if ((strcmp (extension, ".pem") == 0) || 
-           (strcmp (extension, ".PEM") == 0))
-    {
-      cert_type = svn_auth_ssl_pem_cert_type;
-    }
-  else
-    {
-      const char *type;
-      SVN_ERR(pb->prompt_func (&type, "cert type ('pem' or 'pkcs12'): ",
-                               FALSE, pb->prompt_baton, pool));
-      if ((strcmp(type, "pkcs12") == 0) ||
-          (strcmp(type, "PKCS12") == 0))
-        {
-          cert_type = svn_auth_ssl_pkcs12_cert_type;
-        }
-      else if ((strcmp (type, "pem") == 0) || 
-               (strcmp (type, "PEM") == 0))
-        {
-          cert_type = svn_auth_ssl_pem_cert_type;
-        }
-      else
-        {
-          return svn_error_createf (SVN_ERR_INCORRECT_PARAMS, NULL,
-                                    "unknown ssl certificate type '%s'", type);
-        }
-    }
-  
-  if (cert_type == svn_auth_ssl_pem_cert_type)
-    {
-      SVN_ERR(pb->prompt_func (&key_file, "optional key file: ",
-                               FALSE, pb->prompt_baton, pool));
-    }
-  if (key_file && key_file[0] == 0)
-    {
-      key_file = 0;
-    }
   cred = apr_palloc (pool, sizeof(*cred));
   cred->cert_file = cert_file;
-  cred->key_file = key_file;
-  cred->cert_type = cert_type;
   *credentials = cred;
   *iter_baton = NULL;
   return SVN_NO_ERROR;

@@ -792,8 +792,6 @@ svn_config_ensure (apr_pool_t *pool)
         "###   ssl-ignore-invalid-date  Allow expired/postdated certificates\n"
         "###   ssl-ignore-host-mismatch Allow certificates for other servers\n"
         "###   ssl-client-cert-file     Client certificate file location\n"
-        "###   ssl-client-cert-type     Can be either 'pem' or 'pkcs12'\n"
-        "###   ssl-client-key-file      Client Key location, if not in cert\n"
         "###   ssl-client-cert-password Client Key password, if needed.\n"
         "###\n"
         "### HTTP timeouts, if given, are specified in seconds.  A timeout\n"
