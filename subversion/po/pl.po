@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-07-26 21:06+0200\n"
-"PO-Revision-Date: 2004-08-13 23:26+0200\n"
+"PO-Revision-Date: 2004-08-16 22:13+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1493,7 +1493,7 @@ msgstr "W wersji %ld.\n"
 
 #: clients/cmdline/notify.c:259
 msgid "External export complete.\n"
-msgstr "Exsport obiektów zewnętrznych wykonany.\n"
+msgstr "Eksport obiektów zewnętrznych wykonany.\n"
 
 #: clients/cmdline/notify.c:260
 msgid "Export complete.\n"
@@ -3899,6 +3899,9 @@ msgid ""
 "WARNING: dumped revision (%ld).  Loading this dump into an empty repository\n"
 "WARNING: will fail.\n"
 msgstr ""
+"Ostrzeżenie: Wersja %ld zawiera dane odnoszące się do starszych wersji niż \n"
+"             najstarsza (%ld) wersja zrzutu. Załadowanie tego zrzutu do\n"
+"             pustego repozytorium może się nie powieść.\n"
 
 #: libsvn_repos/dump.c:955
 #, c-format
@@ -3918,7 +3921,7 @@ msgstr "* %s wersja %ld.\n"
 #: libsvn_repos/load.c:801
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
-msgstr "<<< Nowa transakcja, na bazie orginalnej wersji %ld\n"
+msgstr "<<< Nowa transakcja, na bazie oryginalnej wersji %ld\n"
 
 #: libsvn_repos/load.c:845
 #, c-format
@@ -3942,10 +3945,7 @@ msgid ""
 "\n"
 "------- Committed new rev %ld (loaded from original rev %ld) >>>\n"
 "\n"
-msgstr ""
-"\n"
-"------- Zatwierdzona nowa wersja %ld (z orginalnej wersji %ld) >>>\n"
-"\n"
+msgstr "\n------- Zatwierdzona nowa wersja %ld (z oryginalnej wersji %ld) >>>\n\n"
 
 #: libsvn_repos/rev_hunt.c:63
 #, c-format
@@ -3964,7 +3964,7 @@ msgstr "Nieprawidłowa końcowa wersja %ld"
 
 #: libsvn_subr/error.c:294
 msgid "Can't recode error string from APR"
-msgstr "Nie można przekodować treści błędu z APR"
+msgstr "Nie umiem zdekodować komunikatu błędu z APR"
 
 #: libsvn_subr/opt.c:148
 msgid ""
@@ -4005,7 +4005,7 @@ msgstr "URL '%s' zawiera element '..'"
 #: libsvn_subr/opt.c:628
 #, c-format
 msgid "Error resolving case of '%s'"
-msgstr "Bład ustalania wielkości liter dla '%s'"
+msgstr "Błąd ustalania wielkości liter dla '%s'"
 
 #: libsvn_subr/opt.c:706
 #, c-format
