@@ -222,7 +222,8 @@ do_dir_replaces (svn_string_t *path,
           err = 
             editor->replace_directory (stackptr->path, /* current dir */
                                        stackptr->previous->path, /* parent */
-                                       NULL, NULL,  /* TODO:  FIX THIS!!! */
+                                       NULL,  /* TODO:  FIX THIS!!! */
+                                       0,     /* TODO:  FIX THIS!!! */
                                        &dir_baton);
           if (err) return err;
 
@@ -400,7 +401,8 @@ process_subdirectory (svn_string_t *path,
               /* Add the new directory, getting a new dir baton.  */
               err = editor->add_directory (current_entry_name,
                                            dir_baton,
-                                           NULL, NULL, /* TODO:  FIX ME !!! */
+                                           NULL, /* TODO:  FIX ME !!! */
+                                           0, /* TODO:  FIX ME !!! */
                                            &new_dir_baton);
               if (err) return err;
 
