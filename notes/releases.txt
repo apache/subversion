@@ -89,7 +89,7 @@
    To make sure httpd.conf is properly set up for DAV access, see
    subversion/tests/clients/cmdline/README.
 
-   You should also have libtool-1.5.10 and autoconf-2.59 installed
+   You should also have libtool-1.5.14 and autoconf-2.59 installed
    from source.   It is important that you do not use distribution
    shipped versions of this software as they are often patched in
    ways that are not portable.
@@ -274,6 +274,9 @@
 15. Post news item <http://subversion.tigris.org/servlets/ProjectNewsAdd>,
     and send an announcement to dev@, users@, and announce@ lists.
     Remember to include the URL and MD5 checksum in the announcement.
+
+    Note that the subversion.tigris.org announcement is in HTML format not
+    plain text.
 
     Also notify freshmeat of the new release.
 
