@@ -365,10 +365,9 @@ replace_root (svn_string_t *ancestor_path,
 
 
 static svn_error_t *
-delete (svn_string_t *name, void *edit_baton, void *parent_baton)
+delete (svn_string_t *name, void *parent_baton)
 {
 #if 0
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
 #endif /* 0 */
 
@@ -380,18 +379,19 @@ delete (svn_string_t *name, void *edit_baton, void *parent_baton)
 
 static svn_error_t *
 add_directory (svn_string_t *name,
-               void *edit_baton,
                void *parent_baton,
                svn_string_t *ancestor_path,
                svn_vernum_t ancestor_version,
                void **child_baton)
 {
   svn_error_t *err;
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
 
   struct dir_baton *this_dir_baton
-    = make_dir_baton (name, eb, parent_dir_baton, parent_dir_baton->pool);
+    = make_dir_baton (name,
+                      parent_dir_baton->edit_baton,
+                      parent_dir_baton,
+                      parent_dir_baton->pool);
 
   /* kff todo urgent: need to also let the parent know this new
      subdirectory exists! */
@@ -400,7 +400,7 @@ add_directory (svn_string_t *name,
   *child_baton = this_dir_baton;
 
   err = prep_directory (this_dir_baton->path,
-                        eb->repository,
+                        this_dir_baton->edit_baton->repository,
                         ancestor_path,
                         ancestor_version,
                         1, /* force */
@@ -414,14 +414,12 @@ add_directory (svn_string_t *name,
 
 static svn_error_t *
 replace_directory (svn_string_t *name,
-                   void *edit_baton,
                    void *parent_baton,
                    svn_string_t *ancestor_path,
                    svn_vernum_t ancestor_version,
                    void **child_baton)
 {
 #if 0
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
 #endif /* 0 */
 
@@ -432,8 +430,7 @@ replace_directory (svn_string_t *name,
 
 
 static svn_error_t *
-change_dir_prop (void *edit_baton,
-                 void *dir_baton,
+change_dir_prop (void *dir_baton,
                  svn_string_t *name,
                  svn_string_t *value)
 {
@@ -447,14 +444,12 @@ change_dir_prop (void *edit_baton,
 
 
 static svn_error_t *
-change_dirent_prop (void *edit_baton,
-                    void *dir_baton,
+change_dirent_prop (void *dir_baton,
                     svn_string_t *entry,
                     svn_string_t *name,
                     svn_string_t *value)
 {
 #if 0
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
 #endif /* 0 */
 
@@ -464,7 +459,7 @@ change_dirent_prop (void *edit_baton,
 
 
 static svn_error_t *
-close_directory (void *edit_baton, void *dir_baton)
+close_directory (void *dir_baton)
 {
   struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
   svn_error_t *err = NULL;
@@ -484,7 +479,6 @@ close_directory (void *edit_baton, void *dir_baton)
 
 static svn_error_t *
 add_file (svn_string_t *name,
-          void *edit_baton,
           void *parent_baton,
           svn_string_t *ancestor_path,
           svn_vernum_t ancestor_version,
@@ -522,19 +516,16 @@ add_file (svn_string_t *name,
 
 static svn_error_t *
 replace_file (svn_string_t *name,
-              void *edit_baton,
               void *parent_baton,
               svn_string_t *ancestor_path,
               svn_vernum_t ancestor_version,
               void **file_baton)
 {
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
   svn_error_t *err = NULL;
 
   /* Replacing is mostly like adding... */
   err = add_file (name,
-                  eb,
                   parent_dir_baton,
                   ancestor_path,
                   ancestor_version, 
@@ -553,9 +544,7 @@ replace_file (svn_string_t *name,
 
 
 static svn_error_t *
-apply_textdelta (void *edit_baton,
-                 void *parent_baton,
-                 void *file_baton, 
+apply_textdelta (void *file_baton, 
                  svn_txdelta_window_handler_t **handler,
                  void **handler_baton)
 {
@@ -567,9 +556,7 @@ apply_textdelta (void *edit_baton,
 
 
 static svn_error_t *
-change_file_prop (void *edit_baton,
-                  void *parent_baton,
-                  void *file_baton,
+change_file_prop (void *file_baton,
                   svn_string_t *name,
                   svn_string_t *value)
 {
@@ -584,7 +571,7 @@ change_file_prop (void *edit_baton,
 
 
 static svn_error_t *
-close_file (void *edit_baton, void *file_baton)
+close_file (void *file_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
   apr_file_t *log_fp = NULL;

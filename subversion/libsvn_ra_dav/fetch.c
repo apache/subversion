@@ -375,15 +375,15 @@ fetch_file (svn_ra_session_t *ras,
   printf("fetching and saving %s\n", url);
 
   name = my_basename(url, fc->pool);
-  err = (*fc->editor->add_file) (name, fc->edit_baton, fc->cur_baton,
+  err = (*fc->editor->add_file) (name, fc->cur_baton,
                                  ancestor_path, ancestor_version,
                                  &file_baton);
   if (err)
     return svn_error_quick_wrap(err, "could not add a file");
 
-  err = (*fc->editor->apply_textdelta) (fc->edit_baton, fc->cur_baton,
-                                        file_baton,
-                                        &fc->handler, &fc->handler_baton);
+  err = (*fc->editor->apply_textdelta) (file_baton,
+                                        &fc->handler,
+                                        &fc->handler_baton);
   if (err)
     return svn_error_quick_wrap(err, "could not save file");
 
@@ -399,7 +399,7 @@ fetch_file (svn_ra_session_t *ras,
   /* ### store URL into a local, predefined property */
 
   /* done with the file */
-  return (*fc->editor->close_file)(fc->edit_baton, file_baton);
+  return (*fc->editor->close_file)(file_baton);
 }
 
 svn_error_t *
@@ -451,7 +451,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
           if (url != NULL)
             break;
 
-          err = (*editor->close_directory) (edit_baton, parent_baton);
+          err = (*editor->close_directory) (parent_baton);
           if (err)
             return svn_error_quick_wrap(err, "could not finish directory");
 
@@ -473,7 +473,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
       /* we fetched information about the directory successfully. time to
          create the local directory. */
       name = my_basename(url, ras->pool);
-      err = (*editor->add_directory) (name, edit_baton, parent_baton,
+      err = (*editor->add_directory) (name, parent_baton,
                                       ancestor_path, ancestor_version,
                                       &this_baton);
       if (err)
@@ -517,7 +517,6 @@ svn_ra_checkout (svn_ra_session_t *ras,
 
 static svn_error_t *
 update_delete (svn_string_t *name,
-               void *edit_baton,
                void *parent_baton)
 {
   return NULL;
@@ -525,7 +524,6 @@ update_delete (svn_string_t *name,
 
 static svn_error_t *
 update_add_dir (svn_string_t *name,
-                void *edit_baton,
                 void *parent_baton,
                 svn_string_t *ancestor_path,
                 svn_vernum_t ancestor_version,
@@ -536,7 +534,6 @@ update_add_dir (svn_string_t *name,
 
 static svn_error_t *
 update_rep_dir (svn_string_t *name,
-                void *edit_baton,
                 void *parent_baton,
                 svn_string_t *ancestor_path,
                 svn_vernum_t ancestor_version,
@@ -546,8 +543,7 @@ update_rep_dir (svn_string_t *name,
 }
 
 static svn_error_t *
-update_change_dir_prop (void *edit_baton,
-                        void *dir_baton,
+update_change_dir_prop (void *dir_baton,
                         svn_string_t *name,
                         svn_string_t *value)
 {
@@ -555,8 +551,7 @@ update_change_dir_prop (void *edit_baton,
 }
 
 static svn_error_t *
-update_change_dirent_prop (void *edit_baton,
-                           void *dir_baton,
+update_change_dirent_prop (void *dir_baton,
                            svn_string_t *entry,
                            svn_string_t *name,
                            svn_string_t *value)
@@ -565,14 +560,13 @@ update_change_dirent_prop (void *edit_baton,
 }
 
 static svn_error_t *
-update_close_dir (void *edit_baton, void *dir_baton)
+update_close_dir (void *dir_baton)
 {
   return NULL;
 }
 
 static svn_error_t *
 update_add_file (svn_string_t *name,
-                 void *edit_baton,
                  void *parent_baton,
                  svn_string_t *ancestor_path,
                  svn_vernum_t ancestor_version,
@@ -583,7 +577,6 @@ update_add_file (svn_string_t *name,
 
 static svn_error_t *
 update_rep_file (svn_string_t *name,
-                 void *edit_baton,
                  void *parent_baton,
                  svn_string_t *ancestor_path,
                  svn_vernum_t ancestor_version,
@@ -593,9 +586,7 @@ update_rep_file (svn_string_t *name,
 }
 
 static svn_error_t *
-update_apply_txdelta (void *edit_baton,
-                      void *parent_baton,
-                      void *file_baton, 
+update_apply_txdelta (void *file_baton, 
                       svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
 {
@@ -603,9 +594,7 @@ update_apply_txdelta (void *edit_baton,
 }
 
 static svn_error_t *
-update_change_file_prop (void *edit_baton,
-                         void *parent_baton,
-                         void *file_baton,
+update_change_file_prop (void *file_baton,
                          svn_string_t *name,
                          svn_string_t *value)
 {
@@ -613,7 +602,7 @@ update_change_file_prop (void *edit_baton,
 }
 
 static svn_error_t *
-update_close_file (void *edit_baton, void *file_baton)
+update_close_file (void *file_baton)
 {
   return NULL;
 }

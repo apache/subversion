@@ -95,7 +95,6 @@ checkout_resource (commit_ctx_t *cc, const char *src_url, const char **wr_url)
 
 static svn_error_t *
 commit_delete (svn_string_t *name,
-               void *edit_baton,
                void *parent_baton)
 {
   /* ### CHECKOUT, then DELETE */
@@ -104,7 +103,6 @@ commit_delete (svn_string_t *name,
 
 static svn_error_t *
 commit_add_dir (svn_string_t *name,
-                void *edit_baton,
                 void *parent_baton,
                 svn_string_t *ancestor_path,
                 svn_vernum_t ancestor_version,
@@ -116,7 +114,6 @@ commit_add_dir (svn_string_t *name,
 
 static svn_error_t *
 commit_rep_dir (svn_string_t *name,
-                void *edit_baton,
                 void *parent_baton,
                 svn_string_t *ancestor_path,
                 svn_vernum_t ancestor_version,
@@ -131,8 +128,7 @@ commit_rep_dir (svn_string_t *name,
 }
 
 static svn_error_t *
-commit_change_dir_prop (void *edit_baton,
-                        void *dir_baton,
+commit_change_dir_prop (void *dir_baton,
                         svn_string_t *name,
                         svn_string_t *value)
 {
@@ -141,8 +137,7 @@ commit_change_dir_prop (void *edit_baton,
 }
 
 static svn_error_t *
-commit_change_dirent_prop (void *edit_baton,
-                           void *dir_baton,
+commit_change_dirent_prop (void *dir_baton,
                            svn_string_t *entry,
                            svn_string_t *name,
                            svn_string_t *value)
@@ -152,7 +147,7 @@ commit_change_dirent_prop (void *edit_baton,
 }
 
 static svn_error_t *
-commit_close_dir (void *edit_baton, void *dir_baton)
+commit_close_dir (void *dir_baton)
 {
   /* ### nothing? */
 
@@ -164,7 +159,6 @@ commit_close_dir (void *edit_baton, void *dir_baton)
 
 static svn_error_t *
 commit_add_file (svn_string_t *name,
-                 void *edit_baton,
                  void *parent_baton,
                  svn_string_t *ancestor_path,
                  svn_vernum_t ancestor_version,
@@ -176,7 +170,6 @@ commit_add_file (svn_string_t *name,
 
 static svn_error_t *
 commit_rep_file (svn_string_t *name,
-                 void *edit_baton,
                  void *parent_baton,
                  svn_string_t *ancestor_path,
                  svn_vernum_t ancestor_version,
@@ -188,9 +181,7 @@ commit_rep_file (svn_string_t *name,
 }
 
 static svn_error_t *
-commit_apply_txdelta (void *edit_baton,
-                      void *parent_baton,
-                      void *file_baton, 
+commit_apply_txdelta (void *file_baton, 
                       svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
 {
@@ -199,9 +190,7 @@ commit_apply_txdelta (void *edit_baton,
 }
 
 static svn_error_t *
-commit_change_file_prop (void *edit_baton,
-                         void *parent_baton,
-                         void *file_baton,
+commit_change_file_prop (void *file_baton,
                          svn_string_t *name,
                          svn_string_t *value)
 {
@@ -210,7 +199,7 @@ commit_change_file_prop (void *edit_baton,
 }
 
 static svn_error_t *
-commit_close_file (void *edit_baton, void *file_baton)
+commit_close_file (void *file_baton)
 {
   /* ### nothing? */
   return NULL;

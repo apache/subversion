@@ -18,16 +18,35 @@
 apr_pool_t *globalpool;
 
 
+struct edit_baton
+{
+  int indentation; /* just an indentation count */
+  apr_pool_t *pool;
+};
+
+
+struct dir_baton
+{
+  svn_string_t *path;
+  struct edit_baton *edit_baton;
+};
+
+
+struct file_baton
+{
+  svn_string_t *path;
+  struct dir_baton *dir_baton;
+};
+
 
 
 /* For making formatting all purty. */
 void
-print_spaces (void *i)
+print_spaces (int total)
 {
-  int count;
-  int *total = (int *) i;
+  int i;
 
-  for (count = 0; count < *total; count++)
+  for (i = 0; i < total; i++)
     printf(" ");
 }
 
@@ -52,6 +71,7 @@ dec_spaces (void *i)
 svn_error_t *
 my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
 {
+  struct file_baton *fb = (struct file_baton *) baton;
   int i;
 
   /* Delve into the vcdiff window and print the data. */
@@ -68,7 +88,7 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
                                   (window->ops[i].length),
                                   globalpool);
             
-            print_spaces (baton);
+            print_spaces (fb->dir_baton->edit_baton->indentation);
             printf ("-- got txdelta window -- : new text: [%s]\n", str->data);
           }
         case svn_txdelta_source:
@@ -93,11 +113,12 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
 /* A bunch of dummy callback routines.  */
 
 svn_error_t *
-test_delete (svn_string_t *filename, void *edit_baton, void *parent_baton)
+test_delete (svn_string_t *filename, void *parent_baton)
 {
+  struct dir_baton *d = (struct dir_baton *) parent_baton;
   char *Aname = filename->data ? filename->data : "(unknown)";
 
-  print_spaces (edit_baton);
+  print_spaces (d->edit_baton->indentation);
 
   printf ("DELETE file '%s'\n", Aname);
   return SVN_NO_ERROR;         
@@ -106,16 +127,17 @@ test_delete (svn_string_t *filename, void *edit_baton, void *parent_baton)
 
 svn_error_t *
 test_add_directory (svn_string_t *name,
-                    void *edit_baton, void *parent_baton,
+                    void *parent_baton,
                     svn_string_t *ancestor_path,
                     long int ancestor_version,
                     void **child_baton)
 {
+  struct dir_baton *d = (struct dir_baton *) parent_baton;
   char *Aname = name ? name->data : "(unknown)";
   char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
 
-  inc_spaces (edit_baton);
-  print_spaces (edit_baton);
+  inc_spaces (&(d->edit_baton->indentation));
+  print_spaces (d->edit_baton->indentation);
 
   printf ("ADD_DIR:  name '%s', ancestor '%s' version %d\n",
           Aname, ancestor, ancestor_version);
@@ -135,7 +157,11 @@ test_replace_root (svn_string_t *base_path,
                    void *edit_baton,
                    void **root_baton)
 {
-  *root_baton = (svn_string_t *) svn_string_dup (base_path, globalpool);
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct dir_baton *d = apr_palloc (eb->pool, sizeof (*d));
+
+  d->path = (svn_string_t *) svn_string_dup (base_path, globalpool);
+  *root_baton = d;
 
   return SVN_NO_ERROR;
 }
@@ -144,16 +170,17 @@ test_replace_root (svn_string_t *base_path,
 
 svn_error_t *
 test_replace_directory (svn_string_t *name,
-                        void *edit_baton, void *parent_baton,
+                        void *parent_baton,
                         svn_string_t *ancestor_path,
                         long int ancestor_version,
                         void **child_baton)
 {
+  struct dir_baton *d = (struct dir_baton *) parent_baton;
   char *Aname = name ? name->data : "(unknown)";
   char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
 
-  inc_spaces (edit_baton);
-  print_spaces (edit_baton);
+  inc_spaces (&(d->edit_baton->indentation));
+  print_spaces (d->edit_baton->indentation);
 
   printf ("REPLACE_DIR:  name '%s', ancestor '%s' version %d\n",
           Aname, ancestor, ancestor_version);
@@ -166,13 +193,14 @@ test_replace_directory (svn_string_t *name,
 
 
 svn_error_t *
-test_close_directory (void *edit_baton, void *dir_baton)
+test_close_directory (void *dir_baton)
 {
-  print_spaces (edit_baton);
-  dec_spaces (edit_baton);
+  struct dir_baton *d = (struct dir_baton *) dir_baton;
+  print_spaces (d->edit_baton->indentation);
+  dec_spaces (&(d->edit_baton->indentation));
 
-  if (dir_baton)
-    printf ("CLOSE_DIR '%s'\n", (char *)((svn_string_t *) dir_baton)->data);
+  if (d->path)
+    printf ("CLOSE_DIR '%s'\n", d->path->data);
   else 
     printf ("CLOSE_DIR:  no name!!\n");
 
@@ -181,10 +209,12 @@ test_close_directory (void *edit_baton, void *dir_baton)
 
 
 svn_error_t *
-test_close_file (void *edit_baton, void *file_baton)
+test_close_file (void *file_baton)
 {
-  print_spaces (edit_baton);
-  dec_spaces (edit_baton);
+  struct file_baton *fb = (struct file_baton *) file_baton;
+
+  print_spaces (fb->dir_baton->edit_baton->indentation);
+  dec_spaces (&(fb->dir_baton->edit_baton->indentation));
 
   if (file_baton)
     printf ("CLOSE_FILE '%s'\n", 
@@ -198,83 +228,94 @@ test_close_file (void *edit_baton, void *file_baton)
 
 
 svn_error_t *
-test_apply_textdelta (void *edit_baton, void *parent_baton, void *file_baton,
+test_apply_textdelta (void *file_baton,
                       svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
 {
-  char *Aname = ((svn_string_t *) file_baton)->data ? 
-    ((char *) ((svn_string_t *) file_baton)->data) : "(unknown)";
+  struct file_baton *fb = (struct file_baton *) file_baton;
 
-  print_spaces (edit_baton);
+  char *Aname = fb->path ? fb->path->data : "(unknown)";
+
+  print_spaces (fb->dir_baton->edit_baton->indentation);
 
   printf ("TEXT-DELTA on file '%s':\n", Aname);
 
   /* Set the value of HANDLER and HANDLER_BATON here */
   *handler        = my_vcdiff_windoweater;
-  *handler_baton  = edit_baton;
+  *handler_baton  = fb;
 
   return SVN_NO_ERROR;
 }
 
 
+static svn_error_t *
+add_or_replace_file (svn_string_t *name,
+                     void *parent_baton,
+                     svn_string_t *ancestor_path,
+                     long int ancestor_version,
+                     void **file_baton,
+                     const char *pivot_string)
+{
+  struct dir_baton *d = (struct dir_baton *) parent_baton;
+  struct file_baton *fb;
+  char *Aname = name ? name->data : "(unknown)";
+  char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
 
+  inc_spaces (&(d->edit_baton->indentation));
+  print_spaces (d->edit_baton->indentation);
+
+  printf ("%s:  name '%s', ancestor '%s' version %d\n",
+          pivot_string, Aname, ancestor, ancestor_version);
+
+  /* Put the filename in file_baton */
+  fb = apr_palloc (d->edit_baton->pool, sizeof (*fb));
+  fb->path = (svn_string_t *) svn_string_dup (name, globalpool);
+  *file_baton = fb;
+
+  return SVN_NO_ERROR;
+}
 
 
 svn_error_t *
 test_add_file (svn_string_t *name,
-               void *edit_baton, void *parent_baton,
+               void *parent_baton,
                svn_string_t *ancestor_path,
                long int ancestor_version,
                void **file_baton)
 {
-  char *Aname = name ? name->data : "(unknown)";
-  char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
-
-  inc_spaces (edit_baton);
-  print_spaces (edit_baton);
-
-  printf ("ADD_FILE:  name '%s', ancestor '%s' version %d\n",
-          Aname, ancestor, ancestor_version);
-  
-  /* Put the filename in file_baton */
-  *file_baton = (svn_string_t *) svn_string_dup (name, globalpool);
-
-  return SVN_NO_ERROR;
+  return add_or_replace_file (name,
+                              parent_baton,
+                              ancestor_path,
+                              ancestor_version,
+                              file_baton,
+                              "ADD_FILE");
 }
-
 
 
 svn_error_t *
 test_replace_file (svn_string_t *name,
-                   void *edit_baton, void *parent_baton,
+                   void *parent_baton,
                    svn_string_t *ancestor_path,
                    long int ancestor_version,
                    void **file_baton)
 {
-  char *Aname = name ? name->data : "(unknown)";
-  char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
-
-  inc_spaces (edit_baton);
-  print_spaces (edit_baton);
-
-  printf ("REPLACE_FILE:  name '%s', ancestor '%s' version %d\n",
-          Aname, ancestor, ancestor_version);
-
-  /* Put the filename in file_baton */
-  *file_baton = (svn_string_t *) svn_string_dup (name, globalpool);
-  
-  return SVN_NO_ERROR;
+  return add_or_replace_file (name,
+                              parent_baton,
+                              ancestor_path,
+                              ancestor_version,
+                              file_baton,
+                              "REPLACE_FILE");
 }
 
 
 svn_error_t *
-test_change_file_prop (void *edit_baton, void *parent_baton, void *file_baton,
+test_change_file_prop (void *file_baton,
                        svn_string_t *name, svn_string_t *value)
 {
-  print_spaces (edit_baton);
+  struct file_baton *fb = (struct file_baton *) file_baton;
+  print_spaces (fb->dir_baton->edit_baton->indentation);
 
-  printf ("PROPCHANGE on file '%s': ",
-          (char *) ((svn_string_t *) file_baton)->data);
+  printf ("PROPCHANGE on file '%s': ", fb->path->data);
 
   if (value == NULL)
     printf (" delete `%s'\n", (char *) name->data);
@@ -288,13 +329,13 @@ test_change_file_prop (void *edit_baton, void *parent_baton, void *file_baton,
 
 
 svn_error_t *
-test_change_dir_prop (void *edit_baton, void *parent_baton,
+test_change_dir_prop (void *parent_baton,
                       svn_string_t *name, svn_string_t *value)
 {
-  print_spaces (edit_baton);
+  struct dir_baton *d = (struct dir_baton *) parent_baton;
+  print_spaces (d->edit_baton->indentation);
 
-  printf ("PROPCHANGE on directory '%s': ",
-          (char *) ((svn_string_t *) parent_baton)->data);
+  printf ("PROPCHANGE on directory '%s': ", d->path->data);
 
   if (value == NULL)
     printf (" delete `%s'\n", (char *) name->data);
@@ -308,11 +349,12 @@ test_change_dir_prop (void *edit_baton, void *parent_baton,
 
 
 svn_error_t *
-test_change_dirent_prop (void *edit_baton, void *parent_baton,
+test_change_dirent_prop (void *parent_baton,
                          svn_string_t *entry,
                          svn_string_t *name, svn_string_t *value)
 {
-  print_spaces (edit_baton);
+  struct dir_baton *d = (struct dir_baton *) parent_baton;
+  print_spaces (d->edit_baton->indentation);
 
   printf ("PROPCHANGE on dir-entry '%s': ", (char *) entry->data);
 
@@ -378,10 +420,7 @@ int main(int argc, char *argv[])
   svn_error_t *err;
   apr_file_t *source_baton = NULL;
   apr_status_t status;
-  int my_edit_baton = 0;       /* This is a global that will
-                                  represent how many spaces to
-                                  indent our printf's */
-  void *my_parent_baton = NULL;
+  struct edit_baton *my_edit_baton;
 
   svn_vernum_t base_version;
   svn_string_t *base_path;
@@ -435,6 +474,10 @@ int main(int argc, char *argv[])
   base_version = 37;
   base_path = svn_string_create ("/root", globalpool);
 
+  /* Set up the edit baton. */
+  my_edit_baton = apr_pcalloc (globalpool, sizeof (*my_edit_baton));
+  my_edit_baton->pool = globalpool;
+
   /* Fire up the XML parser */
   err = svn_delta_xml_auto_parse (my_read_func, source_baton, 
                                   &my_editor,
@@ -455,18 +498,3 @@ int main(int argc, char *argv[])
   apr_destroy_pool (globalpool);
   exit (0);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -491,7 +491,6 @@ do_directory_callback (svn_xml__digger_t *digger,
   if (replace_p)
     err = (* (digger->editor->replace_directory)) 
       (dir_name,
-       digger->edit_baton,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
@@ -499,7 +498,6 @@ do_directory_callback (svn_xml__digger_t *digger,
   else
     err = (* (digger->editor->add_directory)) 
       (dir_name,
-       digger->edit_baton,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
@@ -538,9 +536,7 @@ do_delete_dirent (svn_xml__digger_t *digger,
        "do_delete_dirent: <delete> tag has no 'name' field.");
 
   /* Call our editor's callback */
-  err = (* (digger->editor->delete)) (dirent_name, 
-                                      digger->edit_baton,
-                                      youngest_frame->baton);
+  err = (* (digger->editor->delete)) (dirent_name, youngest_frame->baton);
   if (err)
     return err;
 
@@ -589,7 +585,6 @@ do_file_callback (svn_xml__digger_t *digger,
   if (replace_p)
     err = (* (digger->editor->replace_file)) 
       (filename,
-       digger->edit_baton,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
@@ -597,7 +592,6 @@ do_file_callback (svn_xml__digger_t *digger,
   else
     err = (* (digger->editor->add_file)) 
       (filename,
-       digger->edit_baton,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
@@ -627,8 +621,7 @@ do_close_directory (svn_xml__digger_t *digger)
     return SVN_NO_ERROR;
 
   /* Nothing to do but caller the editor's callback, methinks. */
-  err = (* (digger->editor->close_directory)) (digger->edit_baton,
-                                               digger->stack->baton);
+  err = (* (digger->editor->close_directory)) (digger->stack->baton);
   if (err)
     return err;
 
@@ -653,8 +646,7 @@ do_close_file (svn_xml__digger_t *digger)
      stored in a hashtable!! */
   if (! digger->stack->hashed)
     {
-      err = (* (digger->editor->close_file)) (digger->edit_baton,
-                                              digger->stack->file_baton);
+      err = (* (digger->editor->close_file)) (digger->stack->file_baton);
       if (err)
         return err;
     }
@@ -752,9 +744,7 @@ do_begin_textdelta (svn_xml__digger_t *digger)
 
 
   /* Get a window consumer & baton! */
-  err = (* (digger->editor->apply_textdelta)) (digger->edit_baton,
-                                               digger->dir_baton,
-                                               file_baton,
+  err = (* (digger->editor->apply_textdelta)) (file_baton,
                                                &window_consumer,
                                                &consumer_baton);
   if (err)
@@ -942,7 +932,7 @@ do_prop_delta_callback (svn_xml__digger_t *digger)
       {
         if (digger->editor->change_file_prop)
           err = (*(digger->editor->change_file_prop)) 
-            (digger->edit_baton, digger->dir_baton, digger->file_baton,
+            (digger->file_baton,
              digger->current_propdelta->name,
              value_string);
         break;
@@ -951,7 +941,7 @@ do_prop_delta_callback (svn_xml__digger_t *digger)
       {
         if (digger->editor->change_dir_prop)
           err = (*(digger->editor->change_dir_prop)) 
-            (digger->edit_baton, digger->dir_baton,
+            (digger->dir_baton,
              digger->current_propdelta->name,
              value_string);
         break;
@@ -960,7 +950,7 @@ do_prop_delta_callback (svn_xml__digger_t *digger)
       {
         if (digger->editor->change_dirent_prop)
           err = (*(digger->editor->change_dirent_prop)) 
-            (digger->edit_baton, digger->dir_baton,
+            (digger->dir_baton,
              digger->current_propdelta->entity_name,
              digger->current_propdelta->name,
              value_string);
