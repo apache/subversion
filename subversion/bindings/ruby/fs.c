@@ -43,8 +43,6 @@ fs_free (void *p)
 {
   svn_ruby_fs_t *fs = p;
   long count = svn_ruby_get_refcount (fs->pool);
-  if (! fs->closed)
-    svn_fs_close_fs (fs->fs);
   if (count == 1)
     apr_pool_destroy (fs->pool);
   else
