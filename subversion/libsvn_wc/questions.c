@@ -653,6 +653,37 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
 
 
 
+
+svn_error_t *
+svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
+                        const svn_stringbuf_t *path,
+                        apr_pool_t *pool)
+{
+  svn_stringbuf_t *name, *value, *vpath;
+
+  /* The heuristic here is simple;  a file is of type `binary' iff it
+     has the `svn:mime-type' property and its value does *not* start
+     with `text/'. */
+
+  vpath = svn_stringbuf_dup (path, pool);
+  name = svn_stringbuf_create (SVN_PROP_MIME_TYPE, pool);
+  SVN_ERR (svn_wc_prop_get (&value, name, vpath, pool));
+ 
+  if (value
+      && (value->len > 5) 
+      && (strncmp (value->data, "text/", 5)))
+    *has_binary_prop = TRUE;
+  else
+    *has_binary_prop = FALSE;
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")

@@ -907,24 +907,10 @@ svn_wc_prop_list (apr_hash_t **props,
                   apr_pool_t *pool)
 {
   svn_error_t *err;
-  enum svn_node_kind kind, pkind;
+  enum svn_node_kind pkind;
   svn_stringbuf_t *prop_path;
   
   *props = apr_hash_make (pool);
-
-  /* Check validity of PATH */
-  err = svn_io_check_path (path, &kind, pool);
-  if (err) return err;
-  
-  if (kind == svn_node_none)
-    return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
-                              "svn_wc_prop_list: non-existent path '%s'.",
-                              path->data);
-  
-  if (kind == svn_node_unknown)
-    return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
-                              "svn_wc_prop_list: unknown node kind: '%s'.",
-                              path->data);
 
   /* Construct a path to the relevant property file */
   err = svn_wc__prop_path (&prop_path, path, 0, pool);

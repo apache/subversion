@@ -282,7 +282,7 @@ apr_status_t
 apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
 {
   return apr_transfer_file_contents (src, dst,
-                                     (APR_WRITE | APR_CREATE),
+                                     (APR_WRITE | APR_CREATE | APR_TRUNCATE),
                                      pool);
 }
 #endif /* apr_copy_file */

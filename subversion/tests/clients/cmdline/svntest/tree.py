@@ -42,6 +42,7 @@ class SVNTreeNode:
     self.contents = contents
     self.props = props
     self.atts = atts
+    self.path = name
 
 # TODO: Check to make sure contents and children are mutually exclusive
 
@@ -55,6 +56,7 @@ class SVNTreeNode:
         break
     if n == 0:  # append child only if we don't already have it.
       self.children.append(newchild)
+      newchild.path = os.path.join (self.path, newchild.name)
 
     # If you already have the node,
     else:
@@ -63,6 +65,7 @@ class SVNTreeNode:
         a.contents = newchild.contents
         a.props = newchild.props
         a.atts = attribute_merge(a.atts, newchild.atts)
+        a.path = os.path.join (self.path, newchild.name)
       else:
         # try to add dangling children to your matching node
         for i in newchild.children:
@@ -71,6 +74,7 @@ class SVNTreeNode:
 
   def pprint(self):
     print " * Node name: ", self.name
+    print "    Path:     ", self.path
     print "    Contents:  ", self.contents
     print "    Properties:", self.props
     print "    Attributes:", self.atts
@@ -212,7 +216,7 @@ def get_props(path):
   output, errput = main.run_svn("proplist", path)
 
   for line in output:
-    name, value = line.split(':')
+    name, value = line.split(' : ')
     name = string.strip(name)
     value = string.strip(value)
     props[name] = value

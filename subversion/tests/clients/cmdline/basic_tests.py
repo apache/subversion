@@ -671,6 +671,166 @@ def basic_revert():
     print "Revert failed to restore original text."
     return 1
     
+#----------------------------------------------------------------------
+
+# Helper for update_binary_file() test -- a custom singleton handler.
+def detect_extra_files(node, extra_files):
+  """NODE has been discovered an an extra file on disk.  Verify that
+  it matches one of the regular expressions in the EXTRA_FILES list of
+  lists, and that its contents matches the second part of the list
+  item.  If it matches, remove the match from the list.  If it doesn't
+  match, raise an exception."""
+
+  # Baton is of the form:
+  #
+  #     [ WC_DIR,
+  #       [pattern, contents],
+  #       [pattern, contents], ... ]
+
+  wc_dir = extra_files.pop(0)
+
+  for pair in extra_files:
+    pattern = pair[0]
+    contents = pair[1]
+    match_obj = re.match(pattern, node.name)
+    if match_obj:
+      fp = open(os.path.join (wc_dir, node.path))
+      real_contents = fp.read()  # suck up contents of a test .png file
+      fp.close()
+      if real_contents == contents:
+        extra_files.pop(extra_files.index(pair)) # delete pattern from list
+        return 0
+
+  print "Found unexpected disk object:", node.name
+  raise svntest.tree.SVNTreeUnequal
+
+
+
+def update_binary_file():
+  "update a locally-modified binary file"
+
+  sbox = sandbox(update_binary_file)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # Add a binary file to the project.
+  fp = open("theta.png")
+  theta_contents = fp.read()  # suck up contents of a test .png file
+  fp.close()
+
+  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  fp = open(theta_path, 'w')
+  fp.write(theta_contents)    # write png filedata into 'A/theta'
+  fp.close()
+  
+  svntest.main.run_svn('add', theta_path)  
+
+  # Created expected output tree for 'svn ci'
+  output_list = [ [theta_path, None, {}, {'verb' : 'Adding' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected status tree
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+  status_list.append([theta_path, None, {},
+                      {'status' : '__',
+                       'locked' : ' ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '2'}])
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit the new binary file, creating revision 2.
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+                                            expected_status_tree, None,
+                                            None, None, None, None, wc_dir):
+    return 1
+
+  # Make a backup copy of the working copy.
+  wc_backup = wc_dir + 'backup'
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+  theta_backup_path = os.path.join(wc_backup, 'A', 'theta')
+
+  # Make a change to the binary file in the original working copy
+  svntest.main.file_append(theta_path, "revision 3 text")
+  theta_contents_r3 = theta_contents + "revision 3 text"
+
+  # Created expected output tree for 'svn ci'
+  output_list = [ [theta_path, None, {}, {'verb' : 'Changing' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected status tree
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+  status_list.append([theta_path, None, {},
+                      {'status' : '__',
+                       'locked' : ' ',
+                       'wc_rev' : '3',
+                       'repos_rev' : '3'}])
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit original working copy again, creating revision 3.
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+                                            expected_status_tree, None,
+                                            None, None, None, None, wc_dir):
+    return 1
+
+  # Now start working in the backup working copy:
+
+  # Make a local mod to theta
+  svntest.main.file_append(theta_backup_path, "extra theta text")
+  theta_contents_local = theta_contents + "extra theta text"
+
+  # Create expected output tree for an update of wc_backup.
+  output_list = [ [theta_backup_path, None, {}, {'status' : 'U '}] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree for the update -- 
+  #    look!  binary contents, and a binary property!
+  my_greek_tree = svntest.main.copy_greek_tree()
+  my_greek_tree.append(['A/theta',
+                        theta_contents_r3,
+                        {'svn:mime-type' : 'application/octet-stream'}, {}])
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+
+  # Create expected status tree for the update.
+  status_list = svntest.actions.get_virginal_status_list(wc_backup, '3')
+  status_list.append([theta_backup_path, None, {},
+                      {'status' : '__',
+                       'locked' : ' ',
+                       'wc_rev' : '3',
+                       'repos_rev' : '3'}])  
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Extra 'singleton' files we expect to exist after the update.
+  # In the case, the locally-modified binary file should be backed up
+  # to an .orig file.
+  #  This is a list of lists, of the form [ WC_DIR,
+  #                                         [pattern, contents], ...]
+  extra_files = [wc_backup, ['theta.*\.orig', theta_contents_local]]
+  
+  # Do the update and check the results in three ways.  Pass our
+  # custom singleton handler to verify the .orig file; this handler
+  # will verify the existence (and contents) of both binary files
+  # after the update finishes.
+  if svntest.actions.run_and_verify_update(wc_backup,
+                                           expected_output_tree,
+                                           expected_disk_tree,
+                                           expected_status_tree,
+                                           detect_extra_files, extra_files,
+                                           None, None, 1):
+    return 1
+
+  # verify that the extra_files list is now empty.
+  if len(extra_files) != 0:
+    print "Not all extra reject files have been accounted for:"
+    print extra_files
+    return 1
+
+  return 0
 
 ########################################################################
 # Run the tests
@@ -688,7 +848,8 @@ test_list = [ None,
               basic_merge,
               basic_conflict,
               basic_cleanup,
-              basic_revert
+              basic_revert,
+              update_binary_file
              ]
 
 if __name__ == '__main__':
