@@ -75,7 +75,7 @@ const apr_array_header_t *svn_swig_java_strings_to_array(JNIEnv *jenv,
                                                          jobject source,
                                                          apr_pool_t *pool);
 
-/* make a editor that "thunks" from C callbacks up to Java */
+/* make an editor that "thunks" from C callbacks up to Java */
 void svn_swig_java_make_editor(JNIEnv *jenv,
                                const svn_delta_editor_t **editor,
                                void **edit_baton,

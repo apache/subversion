@@ -1638,7 +1638,7 @@ def commit_nonrecursive(sbox):
   ###    Adding         wc/dirA/dirB
   ###    Adding         wc/dirA/dirB/nocommit
   ###    Adding         wc/dirA/dirB/fileC
-  ###    Transmitting file data ....svn: A problem occured; see later errors
+  ###    Transmitting file data ....svn: A problem occurred; see later errors
   ###    for details
   ###    svn: Commit succeeded, but other errors follow:
   ###    svn: Problem running log

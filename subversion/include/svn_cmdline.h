@@ -69,7 +69,7 @@ svn_error_t *svn_cmdline_cstring_from_utf8 (const char **dest,
 const char *svn_cmdline_cstring_from_utf8_fuzzy (const char *src,
                                                  apr_pool_t *pool);
 
-/** Set @a *dest to a output-encoded C string from utf8 C string @a
+/** Set @a *dest to an output-encoded C string from utf8 C string @a
  * src; allocate @a *dest in @a pool.
  */
 svn_error_t * svn_cmdline_cstring_to_utf8 (const char **dest,

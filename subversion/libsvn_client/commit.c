@@ -153,13 +153,13 @@ import_file (const svn_delta_editor_t *editor,
              
 
 /* Import directory PATH into the repository directory indicated by
- * DIR_BATON in EDITOR.  ROOT_PATH is the path imported as the root
+ * DIR_BATON in EDITOR.  EDIT_PATH is the path imported as the root
  * directory, so all edits are relative to that.
  *
  * Accumulate file paths and their batons in FILES, which must be
  * non-null.  (These are used to send postfix textdeltas later).
  *
- * If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
+ * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for each
  * directory.
  *
  * EXCLUDES is a hash whose keys are absolute paths to exclude from
@@ -657,7 +657,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
        SVN_WC_ADM_DIR_NAME);
 
 
-  /* If an error occured during the commit, abort the edit and return
+  /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
   if ((err = import (path, new_entry,
                      editor, edit_baton, nonrecursive, excludes, ctx, pool)))

@@ -617,7 +617,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   base_url = apr_pstrdup (pool, dst_url);
   if (dst_kind == svn_node_none)
     {
-      /* DST_URL doesn't exist under it's parent URL, so the URL we
+      /* DST_URL doesn't exist under its parent URL, so the URL we
          will be creating is DST_URL. */
     }
   else if (dst_kind == svn_node_dir)

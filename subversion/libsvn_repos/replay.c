@@ -86,12 +86,12 @@
    Finally, we drive an editor, moving down our list of sorted paths,
    and manufacturing any intermediate editor calls (directory openings
    and closures) needed to navigate between each successive path.  For
-   each path, we replay the sorted actions that occured at that path.
+   each path, we replay the sorted actions that occurred at that path.
 
    We we've finished the editor drive, we should have fully replayed
-   the filesystem events that occured in that revision or transactions
+   the filesystem events that occurred in that revision or transactions
    (though not necessarily in the same order in which they
-   occured). */
+   occurred). */
    
 
 

@@ -305,7 +305,7 @@ typedef struct svn_client_commit_item_t
   /** node kind (dir, file) */
   svn_node_kind_t kind;
 
-  /** commit url for this item */
+  /** commit URL for this item */
   const char *url;
 
   /** revision (copyfrom-rev if _IS_COPY) */
@@ -1060,7 +1060,7 @@ svn_client_move (svn_client_commit_info_t **commit_info,
  *
  * If @a propname is an svn-controlled property (i.e. prefixed with
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
- * the value UTF8-encoded and uses LF line-endings.
+ * the value is UTF8-encoded and uses LF line-endings.
  *
  * Use @a pool for all memory allocation.
  */
@@ -1290,12 +1290,12 @@ svn_client_cat (svn_stream_t *out,
 
 /* Converting paths to URLs. */
 
-/** Set @a *url to the url for @a path_or_url.
+/** Set @a *url to the URL for @a path_or_url.
  *
  * If @a path_or_url is already a URL, set @a *url to @a path_or_url.
  *
  * If @a path_or_url is a versioned item, set @a *url to @a
- * path_or_url's entry url.  If @a path_or_url is a unversioned (has
+ * path_or_url's entry URL.  If @a path_or_url is unversioned (has
  * no entry), set @a *url to null.
  */
 svn_error_t *
@@ -1325,7 +1325,7 @@ svn_client_uuid_from_url (const char **uuid,
 /** Return the repository @a uuid for working-copy @a path, allocated
  * in @a pool.  Use @a adm_access to retrieve the uuid from @a path's
  * entry; if not present in the entry, then call
- * svn_client_uuid_from_url() to retrieve, using the entry's url.  @a
+ * svn_client_uuid_from_url() to retrieve, using the entry's URL.  @a
  * ctx is required for possible repository authentication.
  *
  * NOTE:  the only reason this function falls back on

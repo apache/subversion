@@ -269,13 +269,13 @@ assemble_status (svn_wc_status_t **status,
      and a parent with an URL, at the very least. */
   if (entry->url && parent_entry && parent_entry->url)
     {
-      /* An item is switched if it's working copy basename differs from the
+      /* An item is switched if its working copy basename differs from the
          basename of its URL. */
       if (strcmp (svn_path_uri_encode (svn_path_basename (path, pool), pool),
                   svn_path_basename (entry->url, pool)))
         switched_p = TRUE;
 
-      /* An item is switched if it's URL, without the basename, does not
+      /* An item is switched if its URL, without the basename, does not
          equal its parent's URL. */
       if (! switched_p
           && strcmp (svn_path_dirname (entry->url, pool),
@@ -1079,7 +1079,7 @@ mark_deleted (void *baton,
    and DIR_ENTRY are the on-disk path and entry, respectively, for the
    directory itself.  If DESCEND is set, this function will recurse
    into subdirectories.  Also, if DIR_WAS_DELETED is set, each status
-   that is reported through this function will have it's
+   that is reported through this function will have its
    repos_text_status field showing a deletion.  Use POOL for all
    allocations. */
 static svn_error_t *

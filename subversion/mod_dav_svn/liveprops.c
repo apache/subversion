@@ -707,7 +707,7 @@ int dav_svn_get_last_modified_time (const char **datestring,
       apr_time_exp_t tms;
       apr_status_t status;
       
-      /* convert the apr_time_t into a apr_time_exp_t */
+      /* convert the apr_time_t into an apr_time_exp_t */
       status = apr_time_exp_gmt(&tms, timeval_tmp);
       if (status != APR_SUCCESS)
         return 1;

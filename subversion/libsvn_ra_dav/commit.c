@@ -848,7 +848,7 @@ static svn_error_t * commit_add_file(const char *path,
      half of a "replace".  
 
      ### For now, we'll assume that if this path has already been
-     added to the valid targets hash, that addition occured during the
+     added to the valid targets hash, that addition occurred during the
      "delete" phase (if that's not the case, this editor is being
      driven incorrectly, as we should never visit the same path twice
      except in a delete+add situation). */

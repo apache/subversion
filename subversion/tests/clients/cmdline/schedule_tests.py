@@ -472,7 +472,7 @@ def commit_delete_dirs(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #863:
 #
-# Suppose here is a either scheduled-add file or directory which is
+# Suppose here is a scheduled-add file or directory which is
 # also missing.  If I want to make the working copy forget all
 # knowledge of the item ("unschedule" the addition), then either 'svn
 # revert' or 'svn rm' will make that happen, with no errors.  The

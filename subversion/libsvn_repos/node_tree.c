@@ -214,7 +214,7 @@ delete_entry (const char *path,
 
   /* We need to look up this node's parents to see what its original
      path in the filesystem was.  Why?  Because if this deletion
-     occured underneath a copied path, the thing that was deleted
+     occurred underneath a copied path, the thing that was deleted
      probably lived at a different location (relative to the copy
      source). */
   find_real_base_location (&base_path, &base_rev, node, pool);

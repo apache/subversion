@@ -619,7 +619,7 @@ revisions_changed (const char **msg,
     /* Number, and list of, changed revisions for each path.  Note
        that for now, bubble-up in directories causes the directory to
        appear changed though no entries were added or removed, and no
-       property mods occured.  Also note that this matrix represents
+       property mods occurred.  Also note that this matrix represents
        only the final state of the paths existing in HEAD of the
        repository.
 

@@ -129,8 +129,8 @@ check_hook_cmd (const char *hook, apr_pool_t *pool)
 {
   static const char* const check_extns[] = {
 #ifdef SVN_WIN32
-  /* For WIN32 we need to check with an added extentsion(s). */
-    ".exe", ".cmd", ".bat",  /* ### Any other extentsions? */
+  /* For WIN32 we need to check with an added extension(s). */
+    ".exe", ".cmd", ".bat",  /* ### Any other extensions? */
 #else
     "",
 #endif

@@ -1,7 +1,7 @@
 Using the svntest scripts                                 -*- Text -*-
 =========================
 
-1) Read the INSTALL (http://svn.collab.net/repos/svm/trunk/INSTALL)
+1) Read the INSTALL (http://svn.collab.net/repos/svn/trunk/INSTALL)
    file, especially the sections about bootstrapping from a tarball
    and getting the latest APR-0.9, APR-UTIL-0.9 and httpd-2.0 sources.
    Check out and compile the latest Subversion. You could easily run
@@ -109,7 +109,7 @@ Using the svntest scripts                                 -*- Text -*-
         SVNPath      /home/brane/svn/obj-sh/subversion/tests/clients/cmdline/local_tmp/repos
     </Location>
     
-   Don't ever thouch config files under $INST_DIR/$HTTPD_NAME/conf, they will be overwritten by
+   Don't ever touch config files under $INST_DIR/$HTTPD_NAME/conf, they will be overwritten by
    the script.
    
 5) Make sure your environment (e.g., LD_LIBRARY_PATH) is set correctly
@@ -122,7 +122,7 @@ Using the svntest scripts                                 -*- Text -*-
 
    The minimum required size for ramdisk is appr. 450MB at the moment.  
    You should also set RAMDISK=yes, and check mount_ramdisk and umount_ramdisk 
-   in the svntes-config.sh file if your system is not GNU/Linux.
+   in the svntest-config.sh file if your system is not GNU/Linux.
    See http://subversion.tigris.org/project_faq.html#ramdisk-tests for 
    further information.
    
@@ -130,10 +130,10 @@ Using the svntest scripts                                 -*- Text -*-
    Subversion, build and test all the configurations. 
 
 8) If you like force rebuilding of some component, you could do:
-   echo "1" > $PROJ_REPO.rb, dependies are:
+   echo "1" > $PROJ_REPO.rb, dependencies are:
    apr-util depends on apr, and httpd depends on apr and apr-util.
    Any dependent project will be also rebuild.
-   When you run this script first time, everything will be rebuild 
+   When you run this script first time, everything will be rebuilt 
    automatically.
 
 ======================================================

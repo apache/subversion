@@ -256,7 +256,7 @@ typedef enum
 /*** Copy ***/
 typedef struct
 {
-  /* What kind of copy occured. */
+  /* What kind of copy occurred. */
   svn_fs__copy_kind_t kind;
 
   /* Path of copy source. */

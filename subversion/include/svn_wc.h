@@ -711,7 +711,7 @@ typedef struct svn_wc_entry_t
   /** url in repository */
   const char *url;
 
-  /** canonical repository url */
+  /** canonical repository URL */
   const char *repos;
 
   /** repository uuid */
@@ -866,7 +866,7 @@ svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                                   const svn_wc_entry_t *entry,
                                   apr_pool_t *pool);
 
-/** Set @a *url and @a *rev to the ancestor url and revision for @a path,
+/** Set @a *url and @a *rev to the ancestor URL and revision for @a path,
  * allocating in @a pool.  @a adm_access must be an access baton for @a path. 
  *
  * If @a url or @a rev is null, then ignore it (just don't return the
@@ -938,7 +938,7 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
  * with repository UUID @a uuid.
  *
  * If the administrative area does not exist then it will be created and
- * initialized to a unlocked state.
+ * initialized to an unlocked state.
  *
  * If the administrative area already exists then the given @a url
  * must match the URL in the administrative area or an error will be
@@ -1104,7 +1104,7 @@ svn_wc_status_t *svn_wc_dup_status (svn_wc_status_t *orig_stat,
  *                                     present on disk and not being
  *                                     ignored (see above).  
  *
- * The other available results for the @c text_status field more
+ * The other available results for the @c text_status field are more
  * straightforward in their meanings.  See the comments on the
  * @c svn_wc_status_kind structure above for some hints.
  */

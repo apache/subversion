@@ -312,7 +312,7 @@ struct file_baton
   const char *tmppath;
 
   /* We need to keep this around so we can explicitly close it in close_file, 
-     thus flushing it's output to disk so we can copy and translate it. */
+     thus flushing its output to disk so we can copy and translate it. */
   apr_file_t *tmp_file;
 
   /* The MD5 digest of the file's fulltext.  This is all zeros until

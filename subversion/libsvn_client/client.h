@@ -303,7 +303,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
  *
  * DRY_RUN is set if this is a dry-run merge. It is not relevant for diff.
  *
- * RA_LIB/RA_SESSION define the additional ra session for requesting file
+ * RA_LIB/RA_SESSION define the additional RA session for requesting file
  * contents.
  *
  * REVISION is the start revision in the comparison.

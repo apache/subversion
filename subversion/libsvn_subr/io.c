@@ -1084,7 +1084,7 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
     This retry loop does not completely solve the problem (who
     knows how long the other app is going to hold onto it for), but
     goes a long way towards minimizing it.  It is not an infinite
-    loop because there might really be a error.
+    loop because there might really be an error.
   */
   {
     int retries = 0;
@@ -1768,7 +1768,7 @@ svn_io_file_rename (const char *from_path, const char *to_path,
     This retry loop does not completely solve the problem (who
     knows how long the other app is going to hold onto it for), but
     goes a long way towards minimizing it.  It is not an infinite
-    loop because there might really be a error.
+    loop because there might really be an error.
   */
   {
     int retries = 0;

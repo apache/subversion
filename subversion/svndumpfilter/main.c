@@ -426,7 +426,7 @@ new_node_record (void **node_baton,
 
           /* Rewrite Node-Copyfrom-Rev if we are renumbering revisions.
              The number points to some revision in the past. We keep track
-             of revision renumbering in a apr_hash, which maps original
+             of revision renumbering in an apr_hash, which maps original
              revisions to new ones. Dropped revision are mapped to -1.
              This should never happen here.
           */

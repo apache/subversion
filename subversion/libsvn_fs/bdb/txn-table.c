@@ -287,7 +287,7 @@ svn_fs__bdb_get_txn_list (apr_array_header_t **names_p,
           return err;
         }
 
-      /* If this is a immutable "committed" transaction, ignore it. */
+      /* If this is an immutable "committed" transaction, ignore it. */
       if (is_committed (txn))
         continue;
 

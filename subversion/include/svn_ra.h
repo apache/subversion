@@ -243,7 +243,7 @@ typedef struct svn_ra_callbacks_t
  */
 typedef struct svn_ra_plugin_t
 {
-  /** The proper name of the ra library, (like "ra_dav" or "ra_local") */
+  /** The proper name of the RA library, (like "ra_dav" or "ra_local") */
   const char *name;         
   
   /** Short doc string printed out by `svn --version` */
@@ -355,7 +355,7 @@ typedef struct svn_ra_plugin_t
    * The callback will not be called if the commit was a no-op
    * (i.e. nothing was committed);
    *
-   * The caller may not perform any ra operations using
+   * The caller may not perform any RA operations using
    * @a session_baton before finishing the edit.
    * 
    * Use @a pool for memory allocation.
@@ -386,7 +386,7 @@ typedef struct svn_ra_plugin_t
    * etc.)  The keys are <tt>const char *</tt>, values are 
    * <tt>@c svn_string_t *</tt>.
    *
-   * The stream handlers for @a stream may not perform any ra
+   * The stream handlers for @a stream may not perform any RA
    * operations using @a session_baton.
    */
   svn_error_t *(*get_file) (void *session_baton,
@@ -447,9 +447,9 @@ typedef struct svn_ra_plugin_t
    * The working copy will be updated to @a revision_to_update_to, or the
    * "latest" revision if this arg is invalid.
    *
-   * The caller may not perform any ra operations using
+   * The caller may not perform any RA operations using
    * @a session_baton before finishing the report, and may not perform
-   * any ra operations using @a session_baton from within the editing
+   * any RA operations using @a session_baton from within the editing
    * operations of @a update_editor.
    *
    * Use @a pool for memory allocation.
@@ -488,9 +488,9 @@ typedef struct svn_ra_plugin_t
    * The working copy will be switched to @a revision_to_switch_to, or the
    * "latest" revision if this arg is invalid.
    *
-   * The caller may not perform any ra operations using
+   * The caller may not perform any RA operations using
    * @a session_baton before finishing the report, and may not perform
-   * any ra operations using @a session_baton from within the editing
+   * any RA operations using @a session_baton from within the editing
    * operations of @a switch_editor.
    *
    * Use @a pool for memory allocation.
@@ -528,9 +528,9 @@ typedef struct svn_ra_plugin_t
    * represented by the @a session_baton's URL, or @c NULL if the entire
    * directory is meant to be examined.
    *
-   * The caller may not perform any ra operations using
+   * The caller may not perform any RA operations using
    * @a session_baton before finishing the report, and may not perform
-   * any ra operations using @a session_baton from within the editing
+   * any RA operations using @a session_baton from within the editing
    * operations of @a status_editor.
    *
    * Use @a pool for memory allocation.
@@ -581,9 +581,9 @@ typedef struct svn_ra_plugin_t
    * and the addition of another, but if this flag is @c TRUE,
    * unrelated items will be diffed as if they were related.
    *
-   * The caller may not perform any ra operations using
+   * The caller may not perform any RA operations using
    * @a session_baton before finishing the report, and may not perform
-   * any ra operations using @a session_baton from within the editing
+   * any RA operations using @a session_baton from within the editing
    * operations of @a diff_editor.
    *
    * Use @a pool for memory allocation.
@@ -629,7 +629,7 @@ typedef struct svn_ra_plugin_t
    *
    * See also the documentation for @c svn_log_message_receiver_t.
    *
-   * The caller may not invoke any ra operations using
+   * The caller may not invoke any RA operations using
    * @a session_baton from within @a receiver.
    *
    * Use @a pool for memory allocation.
@@ -772,7 +772,7 @@ svn_error_t * svn_ra_svn_init (int abi_version,
 svn_error_t * svn_ra_init_ra_libs (void **ra_baton, apr_pool_t *pool);
 
 
-/** Return an ra vtable-@a library (already within @a ra_baton) which can
+/** Return an RA vtable-@a library (already within @a ra_baton) which can
  * handle URL.  A number of svn_client_* routines will call this
  * internally, but client apps might use it too.  
  *

@@ -63,7 +63,7 @@ dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
 
 
 /* Set *REVISION to the youngest revision in which an interesting
-   history item (a modification, or a copy) occured for PATH under
+   history item (a modification, or a copy) occurred for PATH under
    ROOT.  Use POOL for scratchwork. */
 static svn_error_t *
 get_last_history_rev (svn_revnum_t *revision,

@@ -620,7 +620,7 @@ resolve_to_defaults (apr_hash_t *entries,
 
 
 
-/* Fill the entries cache in ADM_ACCESS. Either the full hash cache will
+/* Fill the entries cache in ADM_ACCESS. Either the full hash cache will be
    populated, if SHOW_HIDDEN is TRUE, or the truncated hash cache will be
    populated if SHOW_HIDDEN is FALSE.  POOL is used for local memory
    allocation, the access baton pool is used for the cache. */
