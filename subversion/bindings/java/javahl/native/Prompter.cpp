@@ -400,7 +400,7 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSL()
 	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
 	svn_auth_provider_object_t *provider;
     svn_client_get_ssl_client_cert_prompt_provider
-          (&provider, ssl_client_cert_prompt, this, pool);
+          (&provider, ssl_client_cert_prompt, this, 2, /* retry limit */pool);
 
 	return provider;
 }
@@ -409,7 +409,7 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSLPassword()
 	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
 	svn_auth_provider_object_t *provider;
     svn_client_get_ssl_client_cert_pw_prompt_provider
-          (&provider, ssl_client_cert_pw_prompt, this, pool);
+          (&provider, ssl_client_cert_pw_prompt, this, 2, /* retry limit */pool);
 
 	return provider;
 }
@@ -526,11 +526,11 @@ typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t) (
 	return SVN_NO_ERROR;
 }
 svn_error_t *Prompter::ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred_p,
-										void *baton, apr_pool_t *pool)
+										void *baton, const char *realm, apr_pool_t *pool)
 {
 	Prompter *that = (Prompter*)baton;
 	svn_auth_cred_ssl_client_cert_t *ret = (svn_auth_cred_ssl_client_cert_t*)apr_pcalloc(pool, sizeof(*ret));
-	const char *cert_file = that->askQuestion(NULL, "client certificate filename: ", true);
+	const char *cert_file = that->askQuestion(realm, "client certificate filename: ", true);
 	if(cert_file == NULL)
 		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                         "User canceled dialog");
@@ -539,11 +539,11 @@ svn_error_t *Prompter::ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **
 	return SVN_NO_ERROR;
 }
 svn_error_t *Prompter::ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred_p,
-										void *baton, apr_pool_t *pool)
+										void *baton, const char *realm, apr_pool_t *pool)
 {
 	Prompter *that = (Prompter*)baton;
 	svn_auth_cred_ssl_client_cert_pw_t *ret = (svn_auth_cred_ssl_client_cert_pw_t*)apr_pcalloc(pool, sizeof(*ret));
-    const char *info = that->askQuestion(NULL, "client certificate passphrase: ", false);
+    const char *info = that->askQuestion(realm, "client certificate passphrase: ", false);
 	if(info == NULL)
 		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                         "User canceled dialog");
