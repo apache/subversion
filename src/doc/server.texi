@@ -159,9 +159,10 @@ the Unicode standard.
 
 A @dfn{string of bytes} is what you'd expect.
 
-A @dfn{property list} is an unordered list of properties with unique
-names.  A @dfn{property} is a pair @code{(@var{name}, @var{value})},
-where @var{name} is a text string, and @var{value} is a string of bytes.
+A @dfn{property list} is an unordered list of properties.  A
+@dfn{property} is a pair @code{(@var{name}, @var{value})}, where
+@var{name} is a text string, and @var{value} is a string of bytes.
+No two properties in a property list have the same name.
 
 A @dfn{file} is a property list and a string of bytes.
 
@@ -185,7 +186,7 @@ property list.
 A @dfn{version} is a node number and a property list.
 
 A @dfn{history} is an array of versions, indexed by a contiguous range
-of positive integers containing 1.
+of non-negative integers containing 0.
 
 A @dfn{repository} consists of node table and a history.
 
