@@ -7,7 +7,6 @@ Version 0.14.3 [Alpha Interim 3] (released 20 Sept 2002, revision 3200)
  * empty values in the Windows Registry are no longer ignored (issue #671)
  * report details of repository start-commit or pre-commit hook errors
  * fix locking behaviour when using current directory as a target
- * new python commit-mailer script
  * updated man page
  * new front-page logo.  :-)
 
