@@ -168,9 +168,9 @@ svn_hash_write (apr_hash_t *hash,
  * (This is meant for reading length lines from hashdump files.) 
  */
 static apr_status_t
-read_length_line (apr_file_t *file, char *buf, size_t *limit)
+read_length_line (apr_file_t *file, char *buf, apr_size_t *limit)
 {
-  size_t i;
+  apr_size_t i;
   apr_status_t err;
   char c;
 
@@ -217,7 +217,8 @@ svn_hash_read (apr_hash_t *hash,
   while (1)
     {
       /* Read a key length line.  Might be END, though. */
-      int len = SVN_KEYLINE_MAXLEN;
+      apr_size_t len = sizeof(buf);
+
       err = read_length_line (srcfile, buf, &len);
       if ((err == APR_EOF) && first_time)
         /* We got an EOF on our very first attempt to read, which
@@ -253,7 +254,7 @@ svn_hash_read (apr_hash_t *hash,
           if (c != '\n') return SVN_ERR_MALFORMED_FILE;
 
           /* Read a val length line */
-          len = SVN_KEYLINE_MAXLEN;
+          len = sizeof(buf);
           err = read_length_line (srcfile, buf, &len);
           if (err) return err;
 

@@ -11,10 +11,12 @@
  * ====================================================================
  */
 
-#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+
 #include <apr_general.h>
+#include <apr_lib.h>
+
 #include "svn_delta.h"
 #include "svn_error.h"
 
@@ -78,7 +80,7 @@ print_delta_window (int quiet, svn_txdelta_window_t *window, FILE *stream)
           for (tmp = offset; tmp < offset + length; ++tmp)
             {
               int const dat = window->new->data[tmp];
-              if (iscntrl (dat) || !isascii(dat))
+              if (apr_iscntrl (dat) || !apr_isascii(dat))
                 fprintf (stream, "\\%3.3o", dat & 0xff);
               else if (dat == '\\')
                 fputs ("\\\\", stream);
