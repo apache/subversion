@@ -81,7 +81,45 @@ def lock_file(sbox):
 # released.  Make sure the lock is retained.
 def unlock_file(sbox):
   "unlock a file and verify release behavior"
-  raise svntest.Failure
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  # lock fname as wc_author
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'some lock comment', file_path)
+
+  # make a change and commit it, holding lock
+  svntest.main.file_append(file_path, "Tweak!\n")
+  svntest.main.run_svn(None, 'commit', '-m', '', '--no-unlock', file_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+#  expected_status.tweak(fname, wc_rev=2, writelocked='K')
+  expected_status.tweak(fname, wc_rev=2)
+  expected_status.tweak(fname, writelocked='K')
+
+  # Make sure the file is still locked
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # --- Part 2 ---
+  
+  # make a change and commit it, allowing lock to be released
+  svntest.main.file_append(file_path, "Tweak!\n")
+  svntest.main.run_svn(None, 'commit', '-m', '', file_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak(fname, wc_rev=3)
+
+  # Make sure the file is unlocked
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 
 #----------------------------------------------------------------------
@@ -148,7 +186,7 @@ def enforce_lock(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               lock_file,
-              XFail(unlock_file),
+              unlock_file,
               XFail(break_lock),
               XFail(steal_lock),
               XFail(examine_lock),

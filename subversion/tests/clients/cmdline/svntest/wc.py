@@ -59,8 +59,8 @@ class State:
     """Tweak the items' values, optional restricting based on a filter.
 
     The general form of this method is .tweak(paths..., key=value). If
-    one or paths are provided, then those items' values are modified.
-    If no paths are given, then all items are modified.
+    one or more paths are provided, then those items' values are
+    modified.  If no paths are given, then all items are modified.
     """
     if args:
       for path in args:
@@ -120,6 +120,8 @@ class State:
         atts['copied'] = item.copied
       if item.switched is not None:
         atts['switched'] = item.switched
+      if item.writelocked is not None:
+        atts['writelocked'] = item.writelocked
       nodelist.append((os.path.normpath(os.path.join(self.wc_dir, path)),
                        item.contents,
                        item.props,
@@ -138,7 +140,7 @@ class StateItem:
 
   def __init__(self, contents=None, props=None,
                status=None, verb=None, wc_rev=None, repos_rev=None,
-               locked=None, copied=None, switched=None):
+               locked=None, copied=None, switched=None, writelocked=None):
     # provide an empty prop dict if it wasn't provided
     if props is None:
       props = { }
@@ -158,6 +160,7 @@ class StateItem:
     self.locked = locked
     self.copied = copied
     self.switched = switched
+    self.writelocked = writelocked
 
   def copy(self):
     "Make a deep copy of self."
