@@ -72,6 +72,8 @@ struct apply_baton {
 
   apr_md5_ctx_t md5_context;    /* Leads to result_checksum below. */
   const char *result_checksum;  /* Hex MD5 digest of resultant fulltext. */
+
+  const char *error_info;       /* Optional extra info for error returns. */
 };
 
 
@@ -435,9 +437,11 @@ apply_window (svn_txdelta_window_t *window, void *baton)
           if (strcmp (ab->result_checksum, actual_checksum) != 0)
             err2 = svn_error_createf
               (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-               "apply_window: checksum mismatch after applying text delta:\n"
+               "apply_window: checksum mismatch after applying text delta\n"
+               "(%s):\n"
                "   expected checksum:  %s\n"
                "   actual checksum:    %s\n",
+               ab->error_info ? ab->error_info : "no additional context",
                ab->result_checksum, actual_checksum);
         }
 
@@ -521,6 +525,7 @@ void
 svn_txdelta_apply (svn_stream_t *source,
                    svn_stream_t *target,
                    const char *result_checksum,
+                   const char *error_info,
                    apr_pool_t *pool,
                    svn_txdelta_window_handler_t *handler,
                    void **handler_baton)
@@ -547,6 +552,11 @@ svn_txdelta_apply (svn_stream_t *source,
     }
   else
     ab->result_checksum = NULL;
+
+  if (error_info)
+    ab->error_info = apr_pstrdup (subpool, error_info);
+  else
+    ab->error_info = NULL;
 
   *handler = apply_window;
   *handler_baton = ab;

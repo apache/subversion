@@ -284,12 +284,19 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
  * call to @a *handler that determined this will return the error
  * SVN_ERR_CHECKSUM_MISMATCH.
  *
- * Note: To avoid lifetime issues, @a result_checksum is copied into
- * @a pool or a subpool thereof. 
+ * If @a error_info is non-null, it is inserted parenthetically into
+ * the error string for any error returned by svn_txdelta_apply() or
+ * @a *handler.  (It is normally used to provide path information,
+ * since there's nothing else in the delta application's context to
+ * supply a path for error messages.)
+ *
+ * Note: To avoid lifetime issues, @a result_checksum and 
+ * @a error_info are copied into @a pool or a subpool thereof. 
  */
 void svn_txdelta_apply (svn_stream_t *source,
                         svn_stream_t *target,
                         const char *result_checksum,
+                        const char *error_info,
                         apr_pool_t *pool,
                         svn_txdelta_window_handler_t *handler,
                         void **handler_baton);

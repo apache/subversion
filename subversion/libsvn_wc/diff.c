@@ -891,11 +891,17 @@ apply_textdelta (void *file_baton,
   apr_pool_cleanup_register (b->pool, file_baton, temp_file_cleanup_handler,
                              temp_file_cleanup_handler_remover);
 
-  svn_txdelta_apply (svn_stream_from_aprfile (b->original_file, b->pool),
-                     svn_stream_from_aprfile (b->temp_file, b->pool),
-                     NULL,
-                     b->pool,
-                     &b->apply_handler, &b->apply_baton);
+  {
+    const char *tmp_path;
+
+    apr_file_name_get (&tmp_path, b->temp_file);
+    svn_txdelta_apply (svn_stream_from_aprfile (b->original_file, b->pool),
+                       svn_stream_from_aprfile (b->temp_file, b->pool),
+                       NULL,
+                       tmp_path,
+                       b->pool,
+                       &b->apply_handler, &b->apply_baton);
+  }
 
   *handler = window_handler;
   *handler_baton = file_baton;
