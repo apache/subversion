@@ -449,7 +449,7 @@ typedef struct svn_lock_t
  * 
  * @a lock is a lock for @a path.
  *
- * @a ra_err is null unless the ra layer encounters a locking related
+ * @a ra_err is NULL unless the ra layer encounters a locking related
  * error which it passes back for notification purposes (although the
  * callback can also re-throw the error).  The caller is responsible
  * for clearing @a ra_err after the callback is run.

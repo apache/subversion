@@ -1080,7 +1080,7 @@ svn_ra_local__lock (svn_ra_session_t *session,
       void *val;
       svn_revnum_t *revnum;
       const char *abs_path;
-      svn_error_t *err, *callback_err;
+      svn_error_t *err, *callback_err = NULL;
  
       apr_hash_this (hi, &key, &keylen, &val);
       path = key;
@@ -1099,9 +1099,7 @@ svn_ra_local__lock (svn_ra_session_t *session,
       if (lock_func)
         callback_err = lock_func (lock_baton, path, TRUE, lock, err);
 
-      /* clear the error if there was one. */
-      if (err)
-        svn_error_clear (err);
+      svn_error_clear (err);
 
       if (callback_err)
         return callback_err;
@@ -1137,7 +1135,7 @@ svn_ra_local__unlock (svn_ra_session_t *session,
       apr_ssize_t keylen;
       void *val;
       const char *abs_path, *token;
-      svn_error_t *err, *callback_err;
+      svn_error_t *err, *callback_err = NULL;
  
       apr_hash_this (hi, &key, &keylen, &val);
       path = key;
@@ -1160,9 +1158,7 @@ svn_ra_local__unlock (svn_ra_session_t *session,
       if (lock_func)
         callback_err = lock_func (lock_baton, abs_path, FALSE, NULL, err);
 
-      /* clear the error if there was one. */
-      if (err)
-        svn_error_clear (err);
+      svn_error_clear (err);
 
       if (callback_err)
         return callback_err;

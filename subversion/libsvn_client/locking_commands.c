@@ -117,7 +117,9 @@ store_locks_callback (void *baton,
 
   if (!do_lock)
     /* Remove our wc lock token either a) if we got no error, or b) if
-       we got any locking-related error except for owner mismatch. */
+       we got any error except for owner mismatch.  Note that the only
+       errors that are handed to this callback will be locking-related
+       errors. */
     if (!ra_err ||
         (ra_err && (ra_err->apr_err != SVN_ERR_FS_LOCK_OWNER_MISMATCH)))
       SVN_ERR (svn_wc_remove_lock (abs_path, adm_access, lb->pool));

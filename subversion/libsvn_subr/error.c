@@ -397,9 +397,8 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 svn_boolean_t
 svn_error_is_lock_error (svn_error_t *err)
 {
-  if (err && 
-      (err->apr_err == SVN_ERR_FS_PATH_LOCKED ||
-       err->apr_err == SVN_ERR_FS_OUT_OF_DATE))
+  if (err->apr_err == SVN_ERR_FS_PATH_LOCKED ||
+      err->apr_err == SVN_ERR_FS_OUT_OF_DATE)
     return TRUE;
   return FALSE;
 }
@@ -407,13 +406,12 @@ svn_error_is_lock_error (svn_error_t *err)
 svn_boolean_t
 svn_error_is_unlock_error (svn_error_t *err)
 {
-  if (err && 
-      (err->apr_err == SVN_ERR_FS_PATH_NOT_LOCKED ||
-       err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN ||
-       err->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH ||
-       err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
-       err->apr_err == SVN_ERR_RA_NOT_LOCKED ||
-       err->apr_err == SVN_ERR_FS_LOCK_EXPIRED))
+  if (err->apr_err == SVN_ERR_FS_PATH_NOT_LOCKED ||
+      err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN ||
+      err->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH ||
+      err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
+      err->apr_err == SVN_ERR_RA_NOT_LOCKED ||
+      err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
     return TRUE;
   return FALSE;
 }
