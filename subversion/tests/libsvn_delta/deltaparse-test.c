@@ -145,16 +145,33 @@ test_replace_file (svn_string_t *name,
 /* An official subversion "read" routine, comforming to POSIX standards. 
    This one reads our XML filehandle, passed in as our baton.  */
 svn_error_t *
-my_read_func (void *baton, char *buffer, apr_off_t *len)
+my_read_func (void *baton, char *buffer, apr_off_t *len, apr_pool_t *pool)
 {
+  svn_error_t *err;
+  apr_status_t stat;
+
   /* Recover our filehandle */
   apr_file_t *xmlfile = (apr_file_t *) baton;
 
-  /* TODO: read *len bytes from the file into buffer, and set *len to
-     the number actually read.  Return 0 if we got an EOF.  */
-
+  stat = apr_full_read (xmlfile, buffer,
+                        (apr_size_t) *len,
+                        (apr_size_t *) len);
   
+  /* We want to return general I/O errors, but we explicitly ignore
+     the APR_EOF error.  Why?  Because the caller of this routine
+     doesn't want to know about that error.  It uses (*len == 0) as a
+     test to know when the reading is finished.  Notice that
+     apr_full_read()'s documentation says that it's possible for
+     APR_EOF to be returned and bytes *still* be read into buffer!
+     Therfore, if apr_full_read() does this, the caller will call this
+     routine one more time, and *len should then be set to 0 for sure. */
 
+  if (stat && (stat != APR_EOF)) 
+    return
+      svn_create_error (stat, 0, "my_read_func: error reading xmlfile",
+                        NULL, pool);
+  
+  return SVN_NO_ERROR;  
 }
 
 
@@ -163,7 +180,7 @@ my_read_func (void *baton, char *buffer, apr_off_t *len)
 
 int main()
 {
-  svn_walk_t my_walker;
+  svn_delta_walk_t my_walker;
   svn_error_t *err;
   apr_file_t *source_baton = NULL;
   void *foo_baton = NULL;
@@ -183,7 +200,7 @@ int main()
   my_walker.delete             = test_delete;
   my_walker.add_directory      = test_add_directory;
   my_walker.replace_directory  = test_replace_directory;
-  my_walker.finish_direcory    = test_finish_directory;
+  my_walker.finish_directory   = test_finish_directory;
   my_walker.finish_file        = test_finish_file;
   my_walker.add_file           = test_add_file;
   my_walker.replace_file       = test_replace_file;

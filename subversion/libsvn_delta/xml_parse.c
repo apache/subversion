@@ -89,7 +89,7 @@
 static const char *
 get_attribute_value (const char **atts, char *name)
 {
-  while (**atts)
+  while (atts && (*atts))
     {
       if (strcmp (atts[0], name) == 0)
         return atts[1];
@@ -813,13 +813,10 @@ xml_handle_data (void *userData, const char *data, int len)
 
   else
     {
-      svn_error_t *err = 
-        svn_create_error 
-        (SVN_ERR_MALFORMED_XML, 0,
-         "xml_handle_data:  data not within <text-delta> or <prop-delta>",
-         NULL, digger->pool);
-      signal_expat_bailout (err, digger);
-      return;
+      /* the data must be outside the bounds of a
+      <text-delta></text-delta> or a <prop-delta></prop-delta>.  Just
+      ignore it.  (It's probably whitespace -- expat sends us
+      whitespace frequently.)*/
     }
 
   /* This is a void expat callback, don't return anything. */
