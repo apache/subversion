@@ -32,17 +32,19 @@
 #include "svn_ra.h"
 #include "svn_path.h"
 
-#include "ra_session.h"
+#include "ra_dav.h"
 
 
 enum {
   ELEM_resourcetype = 0x1000,
   ELEM_collection,
-  ELEM_target
+  ELEM_target,
+  ELEM_activity_collection_set
 };
 
 static const dav_propname fetch_props[] =
 {
+  { "DAV:", "activity-collection-set" },
   { "DAV:", "resourcetype" },
   { "DAV:", "target" },
   { NULL }
@@ -53,6 +55,7 @@ static const struct hip_xml_elm fetch_elems[] =
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "collection", ELEM_collection, HIP_XML_CDATA },
   { "DAV:", "target", ELEM_target, 0 },
+  { "DAV:", "activity-collection-set", ELEM_activity_collection_set, 0 },
   { "DAV:", "href", DAV_ELM_href, HIP_XML_CDATA },
   { NULL }
 };
@@ -70,6 +73,7 @@ typedef struct {
 typedef struct {
   const char *href;
   int is_collection;
+  int href_parent;
   const char *target_href;
 } resource_t;
 
@@ -84,6 +88,8 @@ typedef struct {
   void *edit_baton;
 
   apr_pool_t *pool;
+
+  const char *activity_href;    /* where to create activities */
 
   /* used during fetch_dirents() */
   dav_propfind_handler *dph;
@@ -185,6 +191,7 @@ validate_element (hip_xml_elmid parent, hip_xml_elmid child)
           {
           case ELEM_target:
           case ELEM_resourcetype:
+          case ELEM_activity_collection_set:
             return HIP_XML_VALID;
           default:
             return HIP_XML_DECLINE;
@@ -201,7 +208,13 @@ validate_element (hip_xml_elmid parent, hip_xml_elmid child)
         return HIP_XML_VALID;
       else
         return HIP_XML_INVALID;
-      
+
+    case ELEM_activity_collection_set:
+      if (child == DAV_ELM_href)
+        return HIP_XML_VALID;
+      else
+        return HIP_XML_INVALID;
+
     default:
       return HIP_XML_DECLINE;
     }
@@ -229,8 +242,21 @@ start_element (void *userdata, const struct hip_xml_elm *elm,
     }
   */
 
-  if (elm->id == ELEM_collection)
-    r->is_collection = 1;
+  switch (elm->id)
+    {
+    case ELEM_collection:
+      r->is_collection = 1;
+      break;
+
+    case ELEM_target:
+    case ELEM_activity_collection_set:
+      r->href_parent = elm->id;
+      break;
+
+    default:
+      /* nothing to do for these */
+      break;
+    }
 
   return 0;
 }
@@ -255,7 +281,19 @@ end_element (void *userdata, const struct hip_xml_elm *elm, const char *cdata)
 #endif
 
   if (elm->id == DAV_ELM_href)
-    r->target_href = apr_pstrdup(fc->pool, cdata);
+    {
+      if (r->href_parent == ELEM_target)
+        r->target_href = apr_pstrdup(fc->pool, cdata);
+
+      /* store the activity HREF only once */
+      else if (fc->activity_href == NULL)
+        {
+          /* DAV:activity-collection-set
+
+             ### should/how about dealing with multiple HREFs in here? */
+          fc->activity_href = apr_pstrdup(fc->pool, cdata);
+        }
+    }
 
   return 0;
 }
@@ -267,6 +305,7 @@ fetch_dirents (svn_ra_session_t *ras,
 {
   hip_xml_parser *hip;
   int rv;
+  const dav_propname *props;
 
   fc->cur_collection = url;
   fc->dph = dav_propfind_create(ras->sess, url, DAV_DEPTH_ONE);
@@ -277,7 +316,11 @@ fetch_dirents (svn_ra_session_t *ras,
   hip_xml_add_handler(hip, fetch_elems,
                       validate_element, start_element, end_element, fc);
 
-  rv = dav_propfind_named(fc->dph, fetch_props, fc);
+  if (fc->activity_href == NULL)
+    props = fetch_props;
+  else
+    props = fetch_props + 1;    /* don't fetch the activity href */
+  rv = dav_propfind_named(fc->dph, props, fc);
 
   dav_propfind_destroy(fc->dph);
 
@@ -386,13 +429,14 @@ fetch_file (svn_ra_session_t *ras,
   return (*fc->editor->close_file)(file_baton);
 }
 
-svn_error_t *
-svn_ra_checkout (svn_ra_session_t *ras,
-                 const char *start_at_URL,
-                 int recurse,
-                 const svn_delta_edit_fns_t *editor,
-                 void *edit_baton)
+svn_error_t * svn_ra_dav__checkout (void *session_baton,
+                                    const svn_delta_edit_fns_t *editor,
+                                    void *edit_baton,
+                                    svn_string_t *URL)
 {
+  svn_ra_session_t *ras = session_baton;
+  int recurse = 1;      /* ### until it gets passed to us */
+
   svn_error_t *err;
   fetch_ctx_t fc = { 0 };
   dir_rec_t *dr;
@@ -410,7 +454,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
   if (err != SVN_NO_ERROR)
     return err;
 
-  /* ### join ras->rep_root, start_at_URL */
+  /* ### join ras->rep_root, URL */
   dr = apr_push_array(fc.subdirs);
   dr->href = ras->root.path;
   dr->parent_baton = dir_baton;
@@ -613,16 +657,22 @@ static const svn_delta_edit_fns_t update_editor = {
   NULL   /* update_close_edit */
 };
 
+#if 0
 svn_error_t *
-svn_ra_get_update_editor(const svn_delta_edit_fns_t **editor,
-                         void **edit_baton,
-                         ... /* more params */)
+svn_ra_dav__get_update_editor(void *session_baton,
+                              const svn_delta_edit_fns_t **editor,
+                              void **edit_baton,
+                              const svn_delta_edit_fns_t *wc_update,
+                              void *wc_update_baton,
+                              svn_string_t *URL)
 {
+  /* shove the session and wc_* values into our baton */
+
   *editor = &update_editor;
   *edit_baton = NULL;
   return SVN_NO_ERROR;
 }
-
+#endif
 
 
 /* 

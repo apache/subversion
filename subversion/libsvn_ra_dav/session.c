@@ -25,7 +25,7 @@
 #include "svn_error.h"
 #include "svn_ra.h"
 
-#include "ra_session.h"
+#include "ra_dav.h"
 
 /* ### need to pick this up from somewhere else... */
 #define SVN_VERSION "0.1"
@@ -37,11 +37,12 @@ static apr_status_t cleanup_session(void *sess)
   return APR_SUCCESS;
 }
 
-svn_error_t *
-svn_ra_open (svn_ra_session_t **p_ras,
-             const char *repository,
-             apr_pool_t *pool)
+static svn_error_t * svn_ra_open (void **session_baton,
+                                  svn_string_t *repository_name,
+                                  apr_pool_t *pool)
 {
+  const char *repository = repository_name->data;
+
   http_session *sess;
   struct uri uri = { 0 };
   svn_ra_session_t *ras;
@@ -97,15 +98,43 @@ svn_ra_open (svn_ra_session_t **p_ras,
   ras->root = uri;
   ras->sess = sess;
 
-  *p_ras = ras;
+  *session_baton = ras;
 
   return NULL;
 }
 
-void
-svn_ra_close (svn_ra_session_t *ras)
+static svn_error_t *svn_ra_close (void *session_baton)
 {
-  apr_run_cleanup(ras->pool, ras->sess, cleanup_session);
+  svn_ra_session_t *ras = session_baton;
+
+  (void) apr_run_cleanup(ras->pool, ras->sess, cleanup_session);
+  return NULL;
+}
+
+static const svn_ra_plugin_t dav_plugin = {
+  NULL,
+  NULL,
+  NULL,
+  svn_ra_open,
+  svn_ra_close,
+  svn_ra_dav__get_commit_editor,
+  svn_ra_dav__checkout,
+  NULL
+};
+
+svn_error_t *svn_ra_dav_init(int abi_version,
+                             svn_ra_init_params *params)
+{
+  /* ### need a version number to check here... */
+  if (abi_version != 0)
+    ;
+
+#if 0
+  /* ### doesn't exist in any library yet */
+  return svn_ra_register_plugin(&dav_plugin, params);
+#else
+  return NULL;
+#endif
 }
 
 
