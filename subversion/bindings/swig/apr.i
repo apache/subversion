@@ -106,7 +106,7 @@ typedef apr_int64_t apr_time_t;
 %typemap(python,argout) apr_file_t ** {
     $result = t_output_helper(
         $result,
-        SWIG_NewPointerObj(*$1, $*1_descriptor), 0);
+        SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }
 
 /* ----------------------------------------------------------------------- */
