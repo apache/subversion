@@ -580,7 +580,7 @@ delete_entry (const char *path,
   if (pb->edit_baton->notify_func)
     (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
                                     svn_path_join (pb->path, base_name, pool),
-                                    svn_wc_notify_delete,
+                                    svn_wc_notify_update_delete,
                                     svn_node_unknown,
                                     NULL,
                                     svn_wc_notify_state_unknown,
@@ -656,7 +656,7 @@ add_directory (const char *path,
   if (db->edit_baton->notify_func)
     (*db->edit_baton->notify_func) (db->edit_baton->notify_baton,
                                     db->path,
-                                    svn_wc_notify_add,
+                                    svn_wc_notify_update_add,
                                     svn_node_dir,
                                     NULL,
                                     svn_wc_notify_state_unknown,
@@ -948,7 +948,7 @@ close_directory (void *dir_baton)
       
       (*db->edit_baton->notify_func) (db->edit_baton->notify_baton,
                                       db->path,
-                                      svn_wc_notify_update,
+                                      svn_wc_notify_update_update,
                                       svn_node_dir,
                                       NULL,
                                       svn_wc_notify_state_unknown,
@@ -1810,7 +1810,7 @@ close_file (void *file_baton)
     (*fb->edit_baton->notify_func)
       (fb->edit_baton->notify_baton,
        fb->path,
-       fb->added ? svn_wc_notify_add : svn_wc_notify_update,
+       fb->added ? svn_wc_notify_update_add : svn_wc_notify_update_update,
        svn_node_file,
        NULL,  /* ### if svn_wc_install_file gave mimetype, we could use here */
        content_state,

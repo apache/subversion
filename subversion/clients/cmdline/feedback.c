@@ -60,8 +60,14 @@ notify (void *baton,
   switch (action)
     {
     case svn_wc_notify_delete:
+    case svn_wc_notify_update_delete:
       nb->received_some_change = TRUE;
       printf ("D  %s\n", path);
+      break;
+
+    case svn_wc_notify_update_add:
+      nb->received_some_change = TRUE;
+      printf ("A  %s\n", path);
       break;
 
     case svn_wc_notify_restore:
@@ -88,10 +94,10 @@ notify (void *baton,
         printf ("A         %s\n", path);
       break;
 
-    case svn_wc_notify_update:
+    case svn_wc_notify_update_update:
       nb->received_some_change = TRUE;
 
-      if ((kind == svn_node_file) && (action == svn_wc_notify_update))
+      if (kind == svn_node_file)
         {
           if (content_state == svn_wc_notify_state_conflicted)
             statchar_buf[0] = 'C';
@@ -113,6 +119,12 @@ notify (void *baton,
                  || (prop_state == svn_wc_notify_state_unchanged))))
         printf ("%s %s\n", statchar_buf, path);
 
+      break;
+
+    case svn_wc_notify_update_external:
+      /* Currently this is used for checkouts and switches too.  If we
+         want different output, we'll have to add new actions. */
+      printf ("\nFetching external item into %s\n", path);
       break;
 
     case svn_wc_notify_update_completed:
