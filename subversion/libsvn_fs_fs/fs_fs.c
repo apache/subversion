@@ -1052,8 +1052,7 @@ get_root_changes_offset (apr_off_t *root_offset,
 {
   apr_off_t offset;
   char buf[65];
-  int i;
-  apr_size_t num_bytes;
+  int i, num_bytes;
   apr_size_t len;
   
   /* We will assume that the last line containing the two offsets
