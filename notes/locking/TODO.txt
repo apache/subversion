@@ -9,14 +9,14 @@ MUST HAVE
 
    - create svn_wc_status2_t() and svn_wc_create_status() (sussman)
 
+* Slog through Julian Foad's 1.2 API Review email.
 
-
-These are in the format of
-
-* FILENAME:LINE NUMBER
-    CONTENTS OF THE LINE(S) IN QUESTION (ASSIGNED COMMITTER)
-      OTHER COMMENTS
-
+* Determine what to do about the fact that if someone schedules a file
+  for deletion, and then commits it with the --no-unlock switch, the
+  repository will retain a lock on a (now) nonexistent path.  One
+  argument is that this is OK as long as we can delete the lock via a
+  URL.  The other argument is that, on a delete, the lock should be
+  unconditionally deleted.3
 
 * subversion/libsvn_wc/status.c:982
     /* ### lundblad TODO: Make sure lock info is added. */ (lundblad)
