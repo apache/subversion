@@ -266,7 +266,7 @@ analogous to CVS/ sudirs:
       4. finish_file() is called.  First, it constructs a
          ./SVN/tmp/pending file looking something like this: 
 
-            <mv src="SVN/tmp/text-base/iota" dst="SVN/text-base/iota">
+            <mv src="SVN/tmp/iota" dst="SVN/text-base/iota">
             <mv src="SVN/tmp/SVN/versions" dst="SVN/versions">
             <merge src="SVN/text-base/iota" dst="iota">
 
@@ -302,16 +302,17 @@ analogous to CVS/ sudirs:
 
 `tmp'
 
-   Use this instead of /tmp, for debuggability, recovery, easy
-   avoidance of filename collisions.
+   A shallow mirror of the working directory (i.e., the parent of the
+   SVN/ subdirectory), giving us reproducible tmp names.
 
-   When one of the administrative files is being worked on, it's
-   always SVN/tmp/SVN/filename, which is renamed to SVN/filename
-   when the change is complete.
+   When you need a tmp file for something in the main dir, use
+   tmp/NAME, for example tmp/iota.  When you need a tmp file for
+   something in SVN/, use tmp/SVN/thing.  And when you need a *very*
+   temporary file for something in SVN (because you're reconstructing
+   it), use tmp/SVN/thing.$PID -- notice that no SVN/ file ever has a
+   .blah extension.  If it ends in .*, then it must be a tmp file.
 
-   When a regular file is being worked on, it's always
-   SVN/tmp/filename, which is then moved to the appropriate place
-   (usually one of SVN/*-base) when the change is complete.
+   See discussion of the `pending' file for more details.
 
 `text-base/'
 
