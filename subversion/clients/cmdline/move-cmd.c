@@ -73,7 +73,7 @@ svn_cl__move (apr_getopt_t *os,
   if (err)
     return svn_cl__may_need_force (err);
 
-  if (commit_info)
+  if (commit_info && ! opt_state->quiet)
     svn_cl__print_commit_info (commit_info);
 
   return SVN_NO_ERROR;

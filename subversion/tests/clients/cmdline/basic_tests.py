@@ -37,7 +37,7 @@ def expect_extra_files(node, extra_files):
       extra_files.pop(extra_files.index(pattern))
       return 0
   print "Found unexpected disk object:", node.name
-  raise svntest.tree.SVNTreeUnequal
+  raise svntest.main.SVNTreeUnequal
 
 ######################################################################
 # Tests
@@ -1107,6 +1107,80 @@ def basic_checkout_deleted(sbox):
   
 #----------------------------------------------------------------------
 
+# Issue 846, changing a deleted file to an added directory is not
+# supported.
+
+def basic_node_kind_change(sbox):
+  "attempt to change node kind"
+
+  if sbox.build():
+    return 1
+  wc_dir = sbox.wc_dir;
+  
+  # Schedule a file for deletion
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  svntest.main.run_svn(None, 'rm', gamma_path)
+
+  # Status shows deleted file
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', status='D ')
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # Try and fail to create a directory (file scheduled for deletion)
+  expected_error = 'Cannot change node kind'
+  stdout_lines, stderr_lines = svntest.main.run_svn(expected_error,
+                                                    'mkdir', gamma_path)
+  if not stderr_lines:
+    return 1
+
+  # Status is unchanged
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # Commit file deletion
+  expected_output = wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/D/gamma')
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           expected_output, expected_status,
+                                           None, None, None, None, None,
+                                           wc_dir):
+    return 1
+
+  # Try and fail to create a directory (file deleted)
+  stdout_lines, stderr_lines = svntest.main.run_svn(expected_error,
+                                                    'mkdir', gamma_path)
+  if not stderr_lines:
+    return 1
+
+  # Status is unchanged
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # Update to finally get rid of file
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'up', wc_dir)
+  if stderr_lines:
+    return 1
+
+  # mkdir should succeed
+  stdout_lines, stderr_lines = svntest.main.run_svn(expected_error,
+                                                    'mkdir', gamma_path)
+  if stderr_lines:
+    return 1
+  expected_status.tweak(wc_rev=2)
+  expected_status.add({
+    'A/D/gamma' : Item(status='A ', wc_rev=0, repos_rev=2),
+    })
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+
+#----------------------------------------------------------------------
+
 ########################################################################
 # Run the tests
 
@@ -1125,6 +1199,7 @@ test_list = [ None,
               basic_switch,
               basic_delete,
               basic_checkout_deleted,
+              basic_node_kind_change,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

@@ -301,15 +301,15 @@ perhaps in an ordinary Unix file.
 
 Let's work through an example node revision:
 
-   (("file" REV) PROP-KEY "2345")
+   (("file" REV COUNT) PROP-KEY "2345")
 
 The entry for key "2345" in `representations' is:
 
-   (("delta") (0 (("svndiff" "1729") 65 CHECKSUM "2343")))
+   (("delta" TXN) (0 (("svndiff" 0 "1729") 65 CHECKSUM "2343")))
 
 and the entry for key "2343" in `representations' is:
 
-   (("fulltext") "1001")
+   (("fulltext" TXN) "1001")
 
 while the entry for key "1729" in `strings' is:
 

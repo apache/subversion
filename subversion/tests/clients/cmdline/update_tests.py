@@ -61,7 +61,7 @@ def detect_extra_files(node, extra_files):
         return 0
 
   print "Found unexpected disk object:", node.name
-  raise svntest.tree.SVNTreeUnequal
+  raise svntest.main.SVNTreeUnequal
 
 
 
@@ -528,7 +528,7 @@ def detect_conflict_files(node, extra_files):
       return 0
 
   print "Found unexpected disk object:", node.name
-  raise svntest.tree.SVNTreeUnequal
+  raise svntest.main.SVNTreeUnequal
 
 def update_to_revert_text_conflicts(sbox):
   "delete files and update to resolve text conflicts"
@@ -656,7 +656,7 @@ def expect_extra_files(node, extra_files):
       extra_files.pop(extra_files.index(pattern))
       return 0
   print "Found unexpected disk object:", node.name
-  raise svntest.tree.SVNTreeUnequal
+  raise svntest.main.SVNTreeUnequal
 
 def update_delete_modified_files(sbox):
   "update that deletes modifed files"

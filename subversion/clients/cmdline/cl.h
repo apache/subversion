@@ -80,7 +80,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t quiet;           /* sssh...avoid unnecessary output */
   svn_boolean_t version;         /* print version information */
   svn_boolean_t verbose;         /* be verbose */
-  svn_boolean_t very_verbose;    /* be obnoxious, or at least really verbose */
   svn_boolean_t update;          /* contact the server for the full story */
   svn_boolean_t strict;          /* do strictly what was requested */
   svn_stringbuf_t *filedata;     /* contents of file used as option data */

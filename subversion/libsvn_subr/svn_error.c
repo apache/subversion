@@ -312,80 +312,89 @@ svn_error_clear_all (svn_error_t *err)
 }
 
 
-void
-svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
+static void
+handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
+              int depth, apr_status_t parent_apr_err)
 {
-  char buf[200], buf2[2000];
+  char errbuf[256];
+  char utfbuf[2048];
+  const char *err_string;
 
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
 
 #ifdef SVN_DEBUG
   if (err->file)
-    fprintf (stream, "\n%s:%ld\n",
-             svn_utf_utf8_to_native (err->file, buf2, sizeof (buf2)),
+    fprintf (stream, "%s:%ld",
+             svn_utf_utf8_to_native (err->file, utfbuf, sizeof (utfbuf)),
              err->line);
   else
-    fprintf (stream, "\n%s\n", SVN_FILE_LINE_UNDEFINED);
-#else
-  fputc ('\n', stream);
+    fputs (SVN_FILE_LINE_UNDEFINED, stream);
+
+  fprintf (stream, ": (apr_err=%d, src_err=%d)\n", err->apr_err, err->src_err);
 #endif /* SVN_DEBUG */
 
-  /* Is this a Subversion-specific error code? */
-  if ((err->apr_err > APR_OS_START_USEERR) 
-      && (err->apr_err <= APR_OS_START_CANONERR))
-    fprintf (stream, "svn_error: #%d : <%s>\n", err->apr_err,
-             svn_utf_utf8_to_native
-             (svn_strerror (err->apr_err, buf, sizeof (buf)),
-              buf2, sizeof(buf2)));
+  /* When we're recursing, don't repeat the top-level message if its
+     the same as before. */
+  if (depth == 0 || err->apr_err != parent_apr_err)
+    {
+      /* Is this a Subversion-specific error code? */
+      if ((err->apr_err > APR_OS_START_USEERR)
+          && (err->apr_err <= APR_OS_START_CANONERR))
+        err_string = svn_utf_utf8_to_native
+          (svn_strerror (err->apr_err, errbuf, sizeof (errbuf)),
+           utfbuf, sizeof (utfbuf));
+      /* Otherwise, this must be an APR error code. */
+      else
+        err_string = apr_strerror (err->apr_err, errbuf, sizeof (errbuf));
 
-
-  /* Otherwise, this must be an APR error code. */
-  else
-    fprintf (stream, "apr_error: #%d, src_err %d : <%s>\n",
-             err->apr_err,
-             err->src_err,
-             apr_strerror (err->apr_err, buf, sizeof(buf)));
-
+      fprintf (stream, "svn: %s\n", err_string);
+    }
   if (err->message)
-    fprintf (stream, "  %s",
-             svn_utf_utf8_to_native (err->message, buf2, sizeof(buf2)));
-
-
-  fputc ('\n', stream);
+    fprintf (stream, "svn: %s\n",
+             svn_utf_utf8_to_native (err->message, utfbuf, sizeof (utfbuf)));
   fflush (stream);
 
   if (err->child)
-    svn_handle_error (err->child, stream, 0);
+    handle_error (err->child, stream, FALSE, depth + 1, err->apr_err);
 
   if (fatal)
+    /* XXX Shouldn't we exit(1) here instead, so that atexit handlers
+       get called?  --xbc */
     abort ();
 }
 
+void
+svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
+{
+  handle_error (err, stream, fatal, 0, APR_SUCCESS);
+}
 
 
-void 
-svn_handle_warning (void *data, const char *fmt, ...)
+void
+svn_handle_warning (apr_pool_t *pool, void *data, const char *fmt, ...)
 {
   va_list ap;
   svn_stringbuf_t *msg, *msg_utf8;
   svn_error_t *err;
-  apr_pool_t *pool = svn_pool_create (NULL);  /* ### Ick? */
+  apr_pool_t *subpool = svn_pool_create (pool);
+  FILE *stream = data;
 
   va_start (ap, fmt);
-  msg_utf8 = svn_stringbuf_create (apr_pvsprintf (pool, fmt, ap), pool);
+  msg_utf8 = svn_stringbuf_create (apr_pvsprintf (subpool, fmt, ap), subpool);
   va_end (ap);
 
-  err = svn_utf_stringbuf_from_utf8 (&msg, msg_utf8, pool);
+  err = svn_utf_stringbuf_from_utf8 (&msg, msg_utf8, subpool);
 
   if (err)
-    svn_handle_error (err, stderr, FALSE);
+    handle_error (err, stream, FALSE, 0, APR_SUCCESS);
   else
-    fprintf (stderr, "%s\n", msg->data);
+    {
+      fprintf (stream, "svn: warning: %s\n", msg->data);
+      fflush (stream);
+    }
 
-  fflush (stderr);
-
-  svn_pool_destroy (pool);
+  svn_pool_destroy (subpool);
 }
 
 

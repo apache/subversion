@@ -722,6 +722,7 @@ svn_wc_add (const char *path,
   enum svn_node_kind kind;
   apr_uint32_t modify_flags = 0;
   const char *mimetype = NULL;
+  svn_error_t *err;
   
   /* Make sure something's there. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -735,8 +736,12 @@ svn_wc_add (const char *path,
      Note that this is one of the few functions that is allowed to see
     'deleted' entries;  it's totally fine to have an entry that is
      scheduled for addition and still previously 'deleted'.  */
-  if (svn_wc_entry (&orig_entry, path, TRUE, pool))
-    orig_entry = NULL;
+  err = svn_wc_entry (&orig_entry, path, TRUE, pool);
+  if (err)
+    {
+      svn_error_clear_all (err);
+      orig_entry = NULL;
+    }
 
   /* You can only add something that is not in revision control, or
      that is slated for deletion from revision control, or has been
@@ -758,11 +763,12 @@ svn_wc_add (const char *path,
           /* ### todo: At some point, we obviously don't want to block
              replacements where the node kind changes.  When this
              happens, svn_wc_revert() needs to learn how to revert
-             this situation.  */
+             this situation.  At present we are using a specific node-change
+             error so that clients can detect it. */
           return svn_error_createf 
-            (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+            (SVN_ERR_WC_NODE_KIND_CHANGE, 0, NULL, pool,
              "Could not replace '%s' with a node of a differing type"
-             " -- try committing your deletion first and then re-adding '%s'",
+             " -- commit the deletion, update the parent, and then add '%s'",
              path, path);
         }
       if (orig_entry->schedule == svn_wc_schedule_delete)

@@ -1,6 +1,9 @@
-%define apache_version 2.0.40-0.7
+%define apache_version 2.0.40-0.8
 %define neon_version 0.21.3
 %define apache_dir /usr/local/apache2
+# If you don't have 360+ MB of free disk space or don't want to run checks then
+# set make_check to 0.
+%define make_check 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -156,6 +159,10 @@ LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 %build
 make
 
+%if %{make_check}
+make check
+%endif
+
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/usr/share
@@ -214,12 +221,12 @@ if [ "`grep -i dav_svn_module $CONF`"x = "x" ]; then
    perl -e '
    while ( <> )
       {
-      $FirstLoadFound = 1 if ( ! $FirstLoadFound &&
-           ( /^LoadModule/ ) );
-      $InsertPointFound = 1,
-         print "LoadModule dav_svn_module modules/mod_dav_svn.so\n"
-         if ( $FirstLoadFound && ! $InsertPointFound &&
-              ! ( /^LoadModule/ ) );
+      if ( /LoadModule dav_fs_module/ )
+         {
+         print;
+         print "LoadModule dav_svn_module modules/mod_dav_svn.so\n";
+         next;
+         }
       print;
       }
    ' < $CONF > $CONF.new && mv $CONF $CONF.bak && mv $CONF.new $CONF
@@ -271,7 +278,7 @@ if [ "`pidof httpd`"x != "x" ]; then
 fi
 
 %clean
-#rm -rf $RPM_BUILD_ROOT
+rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)

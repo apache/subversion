@@ -33,7 +33,7 @@
 /*** Code. ***/
 
 static svn_error_t *
-print_version_info (apr_pool_t *pool)
+print_version_info (svn_boolean_t quiet, apr_pool_t *pool)
 {
   void *ra_baton;
   svn_stringbuf_t *descriptions;
@@ -41,6 +41,12 @@ print_version_info (apr_pool_t *pool)
   static const char info[] =
     "Copyright (C) 2000-2002 CollabNet.\n"
     "Subversion is open source software, see http://subversion.tigris.org/\n";
+
+  if (quiet)
+    {
+      printf ("%s\n", SVN_VER_NUMBER);
+      return SVN_NO_ERROR;
+    }
 
   printf ("Subversion Client, version %s\n", SVN_VERSION);
   printf ("   compiled %s, %s\n\n", __DATE__, __TIME__);
@@ -88,8 +94,8 @@ svn_cl__help (apr_getopt_t *os,
       {
         svn_cl__subcommand_help (((const char **) (targets->elts))[i], pool);
       }
-  else if (opt_state && opt_state->version)  /* just -v or --version */
-    SVN_ERR (print_version_info (pool));        
+  else if (opt_state && opt_state->version)  /* just --version */
+    SVN_ERR (print_version_info (opt_state->quiet, pool));
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
     svn_cl__print_generic_help (pool, stdout);  
   else                                       /* unknown option or cmd */

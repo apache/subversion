@@ -5,7 +5,7 @@
 
 $LastChangedDate$
 
-   *** Note: Subversion is PRE-ALPHA code.  Don't use it on real data. ***
+   *** Note: Subversion is ALPHA code.  Don't use it on real data. ***
 
 Contents:
 
@@ -357,8 +357,8 @@ II.   INSTALLATION
 
       If you are using Linux (or any OS that can use RPM) then another
       possibility is to download the binary RPM from the
-      http://summersoft.fay.ar.us/pub/linux/RPMS/i386 or
-      http://summersoft.fay.ar.us/pub/linux/RPMS/ppc directory.
+      http://summersoft.fay.ar.us/pub/linux/redhat/RPMS/i386 or
+      http://summersoft.fay.ar.us/pub/linux/mandrake/RPMS/ppc directory.
 
       Currently only Linux on the i386 and ppc platforms are supported
       using this method.  You might also require additional RPMS

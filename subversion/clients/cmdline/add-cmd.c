@@ -21,6 +21,8 @@
 
 
 /*** Includes. ***/
+#define APR_WANT_STDIO
+#include <apr_want.h>
 
 #include "svn_wc.h"
 #include "svn_client.h"
@@ -68,7 +70,7 @@ svn_cl__add (apr_getopt_t *os,
         {
           if (err->apr_err == SVN_ERR_ENTRY_EXISTS)
             {
-              svn_handle_warning (err, err->message);
+              svn_handle_warning (err->pool, stderr, err->message);
               svn_error_clear_all (err);
             }
           else

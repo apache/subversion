@@ -126,8 +126,9 @@ void svn_handle_error (svn_error_t *error,
                        FILE *stream,
                        svn_boolean_t fatal);
 
-/* Basic, default warning handler, just prints to stderr. */
-void svn_handle_warning (void *data, const char *fmt, ...);
+/* Basic, default warning handler. Just prints to a FILE* stream,
+   which must be passed in DATA.  Allocates from a subpool of POOL. */
+void svn_handle_warning (apr_pool_t *pool, void *data, const char *fmt, ...);
 
 
 /* A statement macro for checking error return values.

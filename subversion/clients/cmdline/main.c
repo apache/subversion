@@ -51,8 +51,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {
     {"force",         svn_cl__force_opt, 0, "force operation to run"},
     {"help",          'h', 0, "show help on a subcommand"},
-    /* ### APR is broken. we can't pass NULL for the name, as the doc says */
-    {"--eek--",       '?', 0, "show help on a subcommand"},
+    {NULL,            '?', 0, "show help on a subcommand"},
     {"message",       'm', 1, "specify commit message \"ARG\""},
     {"quiet",         'q', 0, "print as little as possible"},
     {"recursive",     'R', 0, "descend recursively"},
@@ -66,7 +65,6 @@ const apr_getopt_option_t svn_cl__options[] =
                       "take log message in charset encoding ARG"},
     {"version",       svn_cl__version_opt, 0, "print client version info"},
     {"verbose",       'v', 0, "print extra information"},
-    {"very-verbose",  'V', 0, "print maxmimum information"},
     {"show-updates",  'u', 0, "display update information"},
     {"username",      svn_cl__auth_username_opt, 1, "specify a username ARG"},
     {"password",      svn_cl__auth_password_opt, 1, "specify a password ARG"},
@@ -126,8 +124,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "add", svn_cl__add, {0},
     "Put files and directories under revision control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
-    "usage: svn add [OPTIONS] [TARGETS]\n", 
-    {svn_cl__targets_opt, 'R'} },
+    "usage: svn add [TARGETS]\n", 
+    {svn_cl__targets_opt, 'R', 'q'} },
 
   { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
@@ -163,7 +161,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    WC  -> URL:  immediately commit a copy of WC to URL\n"
     "    URL -> WC:   check out URL into WC, schedule for addition\n"
     "    URL -> URL:  complete server-side copy;  used to branch & tag\n",
-    {'m', 'F', 'r', 'D',
+    {'m', 'F', 'r', 'D', 'q',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__msg_encoding_opt} },
   
@@ -178,7 +176,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    behaviour.\n"
     "  * If run on an URL, item is deleted from the repository via an\n"
     "    immediate commit.\n",
-    {svn_cl__force_opt, 'm', 'F', svn_cl__targets_opt,
+    {svn_cl__force_opt, 'm', 'F', 'q', svn_cl__targets_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__msg_encoding_opt} },
   
@@ -216,7 +214,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "help", svn_cl__help, {"?", "h"},
     "Display this usage message.\n"
     "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n",
-    {svn_cl__version_opt} },
+    {svn_cl__version_opt, 'q'} },
   /* We need to support "--help", "-?", and all that good stuff, of
      course.  But those options, since unknown, will result in the
      help message being printed out anyway, so there's no need to
@@ -240,21 +238,22 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
  
   { "list", svn_cl__ls, {"ls"},
     "List directory entries of a URL.\n"
-    "usage: svn list [-v] [-r REV] URL1 [URL2 ...]\n\n"
+    "usage: svn list URL1 [URL2 ...]\n\n"
     "    If URL is a file, just file entry will be displayed.\n",
     {'r', 'D', 'v'} },
   
   { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"
     "usage: svn log [URL] [PATH1 [PATH2] ...] \n"
-    "    Either get the log messages for local PATHs or PATHs at the\n"
-    "    URL.  If URL is given by itself, then log messages are output for\n"
-    "    that specific path.  The -v option will include a list of affected\n"
-    "    files for each log message.  By default, the resultant collection\n"
-    "    of log messages for a given path will include logs for all the\n"
-    "    revisions in which that path's node was modified, spanning copy\n"
-    "    history where such exists.  This can be disabled by using the\n"
-    "    --strict option.  Examples are:\n"
+    "    Print the log messages for local PATHs, or for PATHs under\n"
+    "    URL, if URL is given.  If URL is given by itself, then print log\n"
+    "    messages for everything under it.  With -v, also print all affected\n"
+    "    paths with each log message.\n"
+    "\n"
+    "    Each log message is printed just once, even if more than one of the\n"
+    "    affected paths for that revision were explicitly requested.  Logs\n"
+    "    cross copy history by default; use --strict to disable this.\n"
+    "    For example:\n"
     "\n"
     "       svn log\n"
     "       svn log foo.c\n"
@@ -272,7 +271,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    N and M default to HEAD if omitted.\n\n"
     "  * WCPATH is the working-copy path that will receive the changes.\n"
     "    If omitted, a default value of '.' is assumed.\n\n",
-    {'r', 'D', 'N', svn_cl__force_opt,
+    {'r', 'D', 'N', 'q', svn_cl__force_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
   { "mkdir", svn_cl__mkdir, {0},
@@ -280,7 +279,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "usage: mkdir [NEW_DIR | REPOS_URL].\n\n"
     "    Either create NEW_DIR in working copy scheduled for addition,\n"
     "    or create REPOS_URL via immediate commit.\n",
-    {'m', 'F', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+    {'m', 'F', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__msg_encoding_opt} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"},
@@ -290,8 +289,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "  SRC and DST can both be working copy (WC) paths or URLs:\n"
     "    WC  -> WC:   move and schedule for addition (with history)\n"
     "    URL -> URL:  complete server-side rename.\n",    
-    {'m', 'F', 'r', 'D', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__force_opt, svn_cl__msg_encoding_opt} },
+    {'m', 'F', 'r', 'D', 'q', svn_cl__auth_username_opt,
+     svn_cl__auth_password_opt, svn_cl__force_opt, svn_cl__msg_encoding_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel"},
     "Remove property PROPNAME on files and directories.\n"
@@ -344,7 +343,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "usage: revert TARGET1 [TARGET2 [TARGET3 ... ]]\n\n"
     "    Note:  this routine does not require network access, and \n"
     "    resolves any conflicted states.\n",
-    {svn_cl__targets_opt, 'R'} },
+    {svn_cl__targets_opt, 'R', 'q'} },
 
   { "resolve", svn_cl__resolve, {0},
     "Remove 'conflicted' state on working copy files or directories.\n"
@@ -352,7 +351,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    Note:  this routine does not semantically resolve conflict markers;\n"
     "    it merely removes conflict-related artifact files and allows TARGET\n"
     "    to be committed again.\n",
-    {svn_cl__targets_opt, 'R'} },
+    {svn_cl__targets_opt, 'R', 'q'} },
  
   { "status", svn_cl__status, {"stat", "st"},
     "Print the status of working copy files and directories.\n"
@@ -377,7 +376,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Decoding --verbose output:\n"
     "Status| Out-of-date? | Local Rev | Last changed info |  Path\n"
     "    _                    965       938     kfogel      ./autogen.sh\n"
-    "    _      *             965       970    sussman      ./build.conf\n"
+    "    _      *             965       922    sussman      ./build.conf\n"
     "    M                    965       687        joe      ./buildcheck.sh\n",
     { 'u', 'v', 'N', 'q',
       svn_cl__auth_username_opt, svn_cl__auth_password_opt,
@@ -387,7 +386,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Update working copy to mirror a new URL\n"
     "usage: switch REPOS_URL [TARGET]\n\n"
     "   Note:  this is the way to move a working copy to a new branch.\n",
-    {'r', 'D', 'N', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    { 'r', 'D', 'N', 'q', svn_cl__auth_username_opt,
+      svn_cl__auth_password_opt} },
  
   { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
@@ -403,7 +403,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    U  Updated\n"
     "    C  Conflict\n"
     "    G  Merged\n",
-    {'r', 'D', 'N', svn_cl__auth_username_opt,
+    {'r', 'D', 'N', 'q', svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__xml_file_opt} },
 
   { NULL, NULL, {0}, NULL, {0} }
@@ -984,9 +984,6 @@ main (int argc, const char * const *argv)
         break;
       case 'v':
         opt_state.verbose = TRUE;
-        break;
-      case 'V':
-        opt_state.very_verbose = TRUE;
         break;
       case 'u':
         opt_state.update = TRUE;

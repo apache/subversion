@@ -366,6 +366,137 @@ def textual_merges_galore(sbox):
 
 #----------------------------------------------------------------------
 
+# Merge should copy-with-history when adding files or directories
+
+def add_with_history(sbox):
+  "merge and add new files/dirs with history"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  F_url = os.path.join(svntest.main.current_repo_url, 'A', 'B', 'F')
+
+  Q_path = os.path.join(F_path, 'Q')
+  foo_path = os.path.join(F_path, 'foo')
+  bar_path = os.path.join(F_path, 'Q', 'bar')
+
+  svntest.main.run_svn(None, 'mkdir', Q_path)
+  svntest.main.file_append(foo_path, "foo")
+  svntest.main.file_append(bar_path, "bar")
+  svntest.main.run_svn(None, 'add', foo_path, bar_path)
+
+  expected_output = wc.State(wc_dir, {
+    'A/B/F/Q'     : Item(verb='Adding'),
+    'A/B/F/Q/bar' : Item(verb='Adding'),
+    'A/B/F/foo'   : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/Q'     : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/F/Q/bar' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/F/foo'   : Item(status='_ ', wc_rev=2, repos_rev=2),
+    })
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           expected_output,
+                                           expected_status,
+                                           None,
+                                           None, None,
+                                           None, None,
+                                           wc_dir):
+    print "commit failed"
+    return 1
+
+  expected_output = wc.State(C_path, {
+    'Q'      : Item(status='A '),
+    'Q/bar'  : Item(status='A '),
+    'foo'    : Item(status='A '),
+    })
+  expected_disk = wc.State(C_path, {
+    'Q'      : Item(),
+    'Q/bar'  : Item("bar"),
+    'foo'    : Item("foo"),
+    })
+  expected_status = wc.State(C_path, {
+    ''       : Item(status='_ ', wc_rev=1, repos_rev=2),
+    'Q'      : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
+    # FIXME: This doesn't seem right. How can Q/bar be copied and not added?
+    #        Can't close issue #838 until this is resolved.
+    'Q/bar'  : Item(status='_ ', wc_rev='-', copied='+', repos_rev=2),
+    'foo'    : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
+    })
+
+  ### I'd prefer to use a lambda expression here, but these handlers
+  ### could get arbitrarily complicated.  Even this simple one still
+  ### has a conditional.
+  def merge_singleton_handler(a, ignored_baton):
+    "Accept expected singletons in the merge."
+    if a.name not in ('Q', 'foo'):
+      print "Merge got unexpected singleton '" + a.name + "'"
+      raise svntest.main.SVNTreeUnequal
+
+  # FIXME: No idea why working_copies shows up as a singleton, when it
+  # isn't even a WC dir.
+  def other_singleton_handler(a, ignored_baton):
+    print "Merge got unexpected other singleton '" + a.name + "'"
+
+  if svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          None,
+                                          merge_singleton_handler, None,
+                                          other_singleton_handler, None):
+    print "merge failed"
+    return 1
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/Q'     : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/F/Q/bar' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/F/foo'   : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/C/Q'       : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
+    # FIXME: See fixme above, related to issue #838.
+    'A/C/Q/bar'   : Item(status='_ ', wc_rev='-', copied='+', repos_rev=2),
+    'A/C/foo'     : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
+    })
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    print "status failed"
+    return 1
+
+  # Althogh the merge command produces three lines of output, the
+  # status output is only two lines. The file Q/foo does not appear in
+  # the status because it is simply a child of a copied directory.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/Q'     : Item(verb='Adding'),
+    'A/C/foo'   : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/Q'     : Item(status='_ ', wc_rev=2, repos_rev=3),
+    'A/B/F/Q/bar' : Item(status='_ ', wc_rev=2, repos_rev=3),
+    'A/B/F/foo'   : Item(status='_ ', wc_rev=2, repos_rev=3),
+    'A/C/Q'       : Item(status='_ ', wc_rev=3, repos_rev=3),
+    'A/C/Q/bar'   : Item(status='_ ', wc_rev=3, repos_rev=3),
+    'A/C/foo'     : Item(status='_ ', wc_rev=3, repos_rev=3),
+    })
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           expected_output,
+                                           expected_status,
+                                           None,
+                                           None, None,
+                                           None, None,
+                                           wc_dir):
+    print "commit of merge failed"
+    return 1
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -374,6 +505,7 @@ def textual_merges_galore(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               textual_merges_galore,
+              # add_with_history,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.

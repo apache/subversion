@@ -525,7 +525,7 @@ def build_tree_from_checkout(lines):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
   
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ('^([MAGCUD_ ][MAGCUD_ ])\s+(.+)')
+  rm = re.compile ('^([MAGCUD_ ][MAGCUD_ ]) (.+)')
   
   for line in lines:
     match = rm.search(line)
@@ -582,7 +582,7 @@ def build_tree_from_status(lines):
     repos_rev = '?'
     
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile ('^([MACDRUG_ ][MACDRUG_ ])(.)(.)   .   [^0-9]+(\d+|-)(.{23})(.+)')
+  rm = re.compile ('^([MACDRUG_ ][MACDRUG_ ])(.)(.)   .   [^0-9-]+(\d+|-)(.{23})(.+)')
   for line in lines:
     match = rm.search(line)
     if match and match.groups():

@@ -78,7 +78,7 @@ check_already_open (svn_fs_t *fs)
 /* A default warning handling function.  */
 
 static void
-default_warning_func (void *baton, const char *fmt, ...)
+default_warning_func (apr_pool_t *pool, void *baton, const char *fmt, ...)
 {
   /* The one unforgiveable sin is to fail silently.  Dumping to stderr
      or /dev/tty is not acceptable default behavior for server
@@ -209,7 +209,7 @@ cleanup_fs_apr (void *data)
            (Feel free to replace this with some more sensible
            behavior.  I just don't want to throw any information into
            the bit bucket.)  */
-        (*fs->warning) (fs->warning_baton, "%s", svn_err->message);
+        (*fs->warning) (fs->pool, fs->warning_baton, "%s", svn_err->message);
       
       return SVN_ERR_FS_CLEANUP;
     }
