@@ -53,10 +53,10 @@
 
 #define QUOPRINT_LINELEN 76
 #define VALID_LITERAL(c) ((c) == '\t' || ((c) >= ' ' && (c) <= '~' \
-					  && (c) != '='))
+                                          && (c) != '='))
 #define ENCODE_AS_LITERAL(c) (VALID_LITERAL(c) && (c) != '\t' && (c) != '<' \
-			      && (c) != '>' && (c) != '\'' && (c) != '"' \
-			      && (c) != '&')
+                              && (c) != '>' && (c) != '\'' && (c) != '"' \
+                              && (c) != '&')
 static const char hextab[] = "0123456789ABCDEF";
 
 
@@ -76,7 +76,7 @@ struct encode_baton {
    appended to STR.  */
 static void
 encode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
-	      int *linelen)
+              int *linelen)
 {
   char buf[3];
   const char *p;
@@ -86,25 +86,25 @@ encode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
     {
       /* Encode this character.  */
       if (ENCODE_AS_LITERAL(*p))
-	{
-	  svn_stringbuf_appendbytes (str, p, 1);
-	  (*linelen)++;
-	}
+        {
+          svn_stringbuf_appendbytes (str, p, 1);
+          (*linelen)++;
+        }
       else
-	{
-	  buf[0] = '=';
-	  buf[1] = hextab[(*p >> 4) & 0xf];
-	  buf[2] = hextab[*p & 0xf];
-	  svn_stringbuf_appendbytes (str, buf, 3);
-	  *linelen += 3;
-	}
+        {
+          buf[0] = '=';
+          buf[1] = hextab[(*p >> 4) & 0xf];
+          buf[2] = hextab[*p & 0xf];
+          svn_stringbuf_appendbytes (str, buf, 3);
+          *linelen += 3;
+        }
 
       /* Make sure our output lines don't exceed QUOPRINT_LINELEN.  */
       if (*linelen + 3 > QUOPRINT_LINELEN)
-	{
-	  svn_stringbuf_appendcstr (str, "=\n");
-	  *linelen = 0;
-	}
+        {
+          svn_stringbuf_appendcstr (str, "=\n");
+          *linelen = 0;
+        }
     }
 }
 
@@ -210,29 +210,29 @@ decode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
       /* Append this byte to the buffer and see what we have.  */
       inbuf[(*inbuflen)++] = *p;
       if (*inbuf != '=')
-	{
-	  /* Literal character; append it if it's valid as such.  */
-	  if (VALID_LITERAL(*inbuf))
-	    svn_stringbuf_appendbytes (str, inbuf, 1);
-	  *inbuflen = 0;
-	}
+        {
+          /* Literal character; append it if it's valid as such.  */
+          if (VALID_LITERAL(*inbuf))
+            svn_stringbuf_appendbytes (str, inbuf, 1);
+          *inbuflen = 0;
+        }
       else if (*inbuf == '=' && *inbuflen == 2 && inbuf[1] == '\n')
-	{
-	  /* Soft newline; ignore.  */
-	  *inbuflen = 0;
-	}
+        {
+          /* Soft newline; ignore.  */
+          *inbuflen = 0;
+        }
       else if (*inbuf == '=' && *inbuflen == 3)
-	{
-	  /* Encoded character; decode it and append.  */
-	  find1 = strchr(hextab, inbuf[1]);
-	  find2 = strchr(hextab, inbuf[2]);
-	  if (find1 != NULL && find2 != NULL)
-	    {
-	      c = ((find1 - hextab) << 4) | (find2 - hextab);
-	      svn_stringbuf_appendbytes (str, &c, 1);
-	    }
-	  *inbuflen = 0;
-	}
+        {
+          /* Encoded character; decode it and append.  */
+          find1 = strchr(hextab, inbuf[1]);
+          find2 = strchr(hextab, inbuf[2]);
+          if (find1 != NULL && find2 != NULL)
+            {
+              c = ((find1 - hextab) << 4) | (find2 - hextab);
+              svn_stringbuf_appendbytes (str, &c, 1);
+            }
+          *inbuflen = 0;
+        }
     }
 }
 

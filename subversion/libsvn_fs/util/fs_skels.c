@@ -545,9 +545,10 @@ svn_fs__parse_representation_skel (svn_fs__representation_t **rep_p,
                                            checksum_skel->next->len);
 
           /* Add this chunk to the array. */
-          chunk->offset = atoi (apr_pstrmemdup (pool, 
-                                                chunk_skel->children->data,
-                                                chunk_skel->children->len));
+          chunk->offset = apr_atoui64 (
+              apr_pstrmemdup (pool, 
+                              chunk_skel->children->data,
+                              chunk_skel->children->len));
           (*((svn_fs__rep_delta_chunk_t **)(apr_array_push (chunks)))) = chunk;
 
           /* Next... */
@@ -957,7 +958,7 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
             (((svn_fs__rep_delta_chunk_t **) chunks->elts)[i - 1]);
 
           /* OFFSET */
-          offset_str = apr_psprintf (pool, "%" APR_SIZE_T_FMT,
+          offset_str = apr_psprintf (pool, "%" SVN_FILESIZE_T_FMT,
                                      chunk->offset);
 
           /* SIZE */

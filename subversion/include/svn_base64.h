@@ -22,25 +22,22 @@
 #ifndef SVN_BASE64_H
 #define SVN_BASE64_H
 
-#include "apr_md5.h"
+#include <apr_md5.h>
+
 #include "svn_io.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/** Return a stream that encodes data in base64.
- *
- * Return a writable generic stream which will encode binary data in
+/** Return a writable generic stream which will encode binary data in
  * base64 format and write the encoded data to @c output.  Be sure to
  * close the stream when done writing in order to squeeze out the last
  * bit of encoded data.  The stream is allocated in @c pool.
  */
 svn_stream_t *svn_base64_encode (svn_stream_t *output, apr_pool_t *pool);
 
-/** Return a stream that decodes base64 data.
- *
- * Return a writable generic stream which will decode base64-encoded
+/** Return a writable generic stream which will decode base64-encoded
  * data and write the decoded data to @c output.  The stream is allocated 
  * in @c pool.
  */
@@ -66,7 +63,7 @@ const svn_string_t *svn_base64_decode_string (const svn_string_t *str,
 
 /** Return a base64-encoded checksum for finalized @c digest.
  *
- * @c digest contains MD5_DIGESTSIZE bytes of finalized data.
+ * @c digest contains @c MD5_DIGESTSIZE bytes of finalized data.
  * Allocate the returned checksum in @c pool.
  */
 svn_stringbuf_t *svn_base64_from_md5 (unsigned char digest[],

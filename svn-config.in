@@ -107,7 +107,7 @@ while test $# -gt 0; do
     ;;
     --includes)
     if test "$location" = "installed"; then
-        flags="$flags -I$includedir $INCLUDES"
+        flags="$flags -I$includedir/subversion-1 $INCLUDES"
     elif test "$location" = "source"; then
         flags="$flags -I$SVN_SOURCE_DIR/include $INCLUDES"
     else

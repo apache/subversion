@@ -30,6 +30,7 @@
 #if APR_HAVE_STDLIB
 #include <stdlib.h>     /* for free() */
 #endif
+#include <assert.h>
 
 #include <ne_request.h>
 #include <ne_props.h>
@@ -43,6 +44,7 @@
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_dav.h"
+#include "svn_base64.h"
 
 #include "ra_dav.h"
 
@@ -108,21 +110,21 @@ typedef struct
 
 typedef struct
 {
-  commit_ctx_t *cc;
-  resource_t *rsrc;
-  apr_table_t *prop_changes; /* name/values pairs of changed (or new) properties. */
-  apr_array_header_t *prop_deletes; /* names of properties to delete. */
-  svn_boolean_t created; /* set if this is an add rather than an update */
-} resource_baton_t;
-
-typedef struct
-{
   apr_file_t *tmpfile;
   svn_stringbuf_t *fname;
   const char *base_checksum;    /* hex md5 of base text; may be null */
-  const char *result_checksum;  /* hex md5 of resulting text; may be null */
-  resource_baton_t *file;
 } put_baton_t;
+
+typedef struct
+{
+  commit_ctx_t *cc;
+  resource_t *rsrc;
+  apr_hash_t *prop_changes; /* name/values pairs of new/changed properties. */
+  apr_array_header_t *prop_deletes; /* names of properties to delete. */
+  svn_boolean_t created; /* set if this is an add rather than an update */
+  apr_pool_t *pool; /* the pool from open_foo() / add_foo() */
+  put_baton_t *put_baton;  /* baton for this file's PUT request */
+} resource_baton_t;
 
 /* this property will be fetched from the server when we don't find it
    cached in the WC property store. */
@@ -146,7 +148,7 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               "Could not create a request (%s %s)",
+                               "Could not create a request (%s '%s')",
                                method, url);
     }
 
@@ -179,6 +181,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
 {
   svn_ra_dav_resource_t *propres;
   const char *url;
+  const svn_string_t *url_str;
 
   if (!force && cc->get_func != NULL)
     {
@@ -224,10 +227,10 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
      Version Resource */
   SVN_ERR( svn_ra_dav__get_props_resource(&propres, cc->ras->sess, url,
                                           NULL, fetch_props, pool) );
-  url = apr_hash_get(propres->propset,
-                     SVN_RA_DAV__PROP_CHECKED_IN,
-                     APR_HASH_KEY_STRING);
-  if (url == NULL)
+  url_str = apr_hash_get(propres->propset,
+                         SVN_RA_DAV__PROP_CHECKED_IN,
+                         APR_HASH_KEY_STRING);
+  if (url_str == NULL)
     {
       /* ### need a proper SVN_ERR here */
       return svn_error_create(APR_EGENERAL, NULL,
@@ -238,22 +241,15 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
 
   /* ensure we get the proper lifetime for this URL since it is going into
      a resource object. */
-  rsrc->vsn_url = apr_pstrdup(cc->ras->pool, url);
+  rsrc->vsn_url = apr_pstrdup(cc->ras->pool, url_str->data);
 
   if (cc->push_func != NULL)
     {
-      /* save the (new) version resource URL into the item */
-
-      svn_string_t value;
-
-      value.data = url;
-      value.len = strlen(url);
-
       /* Now we can store the new version-url. */
       SVN_ERR( (*cc->push_func)(cc->cb_baton,
                                 rsrc->local_path,
                                 SVN_RA_DAV__LP_VSN_URL,
-                                &value,
+                                url_str,
                                 pool) );
     }
 
@@ -471,9 +467,10 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
-        return svn_error_createf(err->apr_err, err,
-                                 "Your file '%s' is probably out-of-date.",
-                                 res->local_path);
+        return svn_error_createf
+          (err->apr_err, err,
+           "Your file or directory '%s' is probably out-of-date.",
+           res->local_path);
       return err;
     }
 
@@ -503,45 +500,23 @@ static void record_prop_change(apr_pool_t *pool,
 {
   /* copy the name into the pool so we get the right lifetime (who knows
      what the caller will do with it) */
-  /* ### this isn't strictly need for the table case, but we're going
-     ### to switch that to a hash soon */
   name = apr_pstrdup(pool, name);
 
   if (value)
     {
-      svn_stringbuf_t *escaped = NULL;
-
       /* changed/new property */
       if (r->prop_changes == NULL)
-        r->prop_changes = apr_table_make(pool, 5);
-
-      svn_xml_escape_cdata_string(&escaped, value, pool);
-      apr_table_set(r->prop_changes, name, escaped->data);
+        r->prop_changes = apr_hash_make(pool);
+      apr_hash_set(r->prop_changes, name, APR_HASH_KEY_STRING,
+                   svn_string_dup(value, pool));
     }
   else
     {
       /* deleted property. */
-
       if (r->prop_deletes == NULL)
         r->prop_deletes = apr_array_make(pool, 5, sizeof(char *));
-  
       *(const char **)apr_array_push(r->prop_deletes) = name;
     }
-}
-
-/* Callback iterator for apr_table_do below. */
-static int do_setprop(void *rec, const char *name, const char *value)
-{
-  ne_buffer *body = rec;
-
-  /* use custom prefix for anything that doesn't start with "svn:" */
-  if (strncmp(name, "svn:", 4) == 0)
-    ne_buffer_concat(body, "<S:", name + 4, ">", value, "</S:", name + 4, ">",
-                     NULL);
-  else
-    ne_buffer_concat(body, "<C:", name, ">", value, "</C:", name, ">", NULL);
-
-  return 1;
 }
 
 /* 
@@ -586,72 +561,12 @@ really a big deal I guess.
 */
 static svn_error_t * do_proppatch(svn_ra_session_t *ras,
                                   const resource_t *rsrc,
-                                  resource_baton_t *rb)
+                                  resource_baton_t *rb,
+                                  apr_pool_t *pool)
 {
-  ne_request *req;
-  int code;
-  ne_buffer *body; /* ### using an ne_buffer because it can realloc */
-  svn_error_t *err;
   const char *url = rsrc->wr_url;
-
-  /* just punt if there are no changes to make. */
-  if ((rb->prop_changes == NULL || apr_is_empty_table(rb->prop_changes))
-      && (rb->prop_deletes == NULL || rb->prop_deletes->nelts == 0))
-    return NULL;
-
-  /* easier to roll our own PROPPATCH here than use ne_proppatch(), which 
-   * doesn't really do anything clever. */
-  body = ne_buffer_create();
-
-  ne_buffer_zappend(body,
-                    "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
-                    "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:C=\""
-                    SVN_DAV_PROP_NS_CUSTOM "\" xmlns:S=\""
-                    SVN_DAV_PROP_NS_SVN "\">");
-
-  if (rb->prop_changes != NULL)
-    {
-      ne_buffer_zappend(body, "<D:set><D:prop>");
-      apr_table_do(do_setprop, body, rb->prop_changes, NULL);      
-      ne_buffer_zappend(body, "</D:prop></D:set>");
-    }
-  
-  if (rb->prop_deletes != NULL)
-    {
-      int n;
-
-      ne_buffer_zappend(body, "<D:remove><D:prop>");
-      
-      for (n = 0; n < rb->prop_deletes->nelts; n++) 
-        {
-          const char *name = APR_ARRAY_IDX(rb->prop_deletes, n, const char *);
-
-          /* use custom prefix for anything that doesn't start with "svn:" */
-          if (strncmp(name, "svn:", 4) == 0)
-            ne_buffer_concat(body, "<S:", name + 4, "/>", NULL);
-          else
-            ne_buffer_concat(body, "<C:", name, "/>", NULL);
-        }
-
-      ne_buffer_zappend(body, "</D:prop></D:remove>");
-
-    }
-
-  ne_buffer_zappend(body, "</D:propertyupdate>");
-  req = ne_request_create(ras->sess, "PROPPATCH", url);
-  ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
-  ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
-
-  /* run the request and get the resulting status code (and svn_error_t) */
-  err = svn_ra_dav__request_dispatch(&code, req, ras->sess, "PROPPATCH",
-                                     url,
-                                     207 /* Multistatus */,
-                                     0 /* nothing else allowed */,
-                                     ras->pool);
-
-  ne_buffer_destroy(body);
-
-  return err;
+  return svn_ra_dav__do_proppatch(ras, url, rb->prop_changes, 
+                                  rb->prop_deletes, pool);
 }
 
 
@@ -661,7 +576,8 @@ add_valid_target (commit_ctx_t *cc,
                   enum svn_recurse_kind kind)
 {
   apr_hash_t *hash = cc->valid_targets;
-  apr_hash_set (hash, path, APR_HASH_KEY_STRING, &kind);
+  svn_string_t *path_str = svn_string_create(path, apr_hash_pool_get(hash));
+  apr_hash_set (hash, path_str->data, path_str->len, &kind);
 }
 
 
@@ -690,6 +606,7 @@ static svn_error_t * commit_open_root(void *edit_baton,
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
 
   root = apr_pcalloc(dir_pool, sizeof(*root));
+  root->pool = dir_pool;
   root->cc = cc;
   root->rsrc = rsrc;
   root->created = FALSE;
@@ -762,6 +679,7 @@ static svn_error_t * commit_add_dir(const char *path,
 
   /* create a child object that contains all the resource urls */
   child = apr_pcalloc(dir_pool, sizeof(*child));
+  child->pool = dir_pool;
   child->cc = parent->cc;
   child->created = TRUE;
   SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc,
@@ -834,6 +752,7 @@ static svn_error_t * commit_open_dir(const char *path,
   resource_baton_t *child = apr_pcalloc(dir_pool, sizeof(*child));
   const char *name = svn_path_basename(path, dir_pool);
 
+  child->pool = dir_pool;
   child->cc = parent->cc;
   child->created = FALSE;
   SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc,
@@ -880,7 +799,7 @@ static svn_error_t * commit_close_dir(void *dir_baton,
 
   /* Perform all of the property changes on the directory. Note that we
      checked out the directory when the first prop change was noted. */
-  SVN_ERR( do_proppatch(dir->cc->ras, dir->rsrc, dir) );
+  SVN_ERR( do_proppatch(dir->cc->ras, dir->rsrc, dir, pool) );
 
   return SVN_NO_ERROR;
 }
@@ -910,6 +829,7 @@ static svn_error_t * commit_add_file(const char *path,
 
   /* Construct a file_baton that contains all the resource urls. */
   file = apr_pcalloc(file_pool, sizeof(*file));
+  file->pool = file_pool;
   file->cc = parent->cc;
   file->created = TRUE;
   SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc,
@@ -1024,6 +944,7 @@ static svn_error_t * commit_open_file(const char *path,
   const char *name = svn_path_basename(path, file_pool);
 
   file = apr_pcalloc(file_pool, sizeof(*file));
+  file->pool = file_pool;
   file->cc = parent->cc;
   file->created = FALSE;
   SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc,
@@ -1057,62 +978,9 @@ static svn_error_t * commit_stream_write(void *baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * commit_stream_close(void *baton)
-{
-  put_baton_t *pb = baton;
-  commit_ctx_t *cc = pb->file->cc;
-  const char *url = pb->file->rsrc->wr_url;
-  ne_request *req;
-  int code;
-  svn_error_t *err;
-
-  /* create/prep the request */
-  req = ne_request_create(cc->ras->sess, "PUT", url);
-  if (req == NULL)
-    {
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               "Could not create a PUT request (%s)",
-                               url);
-    }
-
-  ne_add_request_header(req, "Content-Type", SVN_SVNDIFF_MIME_TYPE);
-
-  if (pb->base_checksum)
-    ne_add_request_header
-      (req, SVN_DAV_BASE_FULLTEXT_MD5_HEADER, pb->base_checksum);
-
-  if (pb->result_checksum)
-    ne_add_request_header
-      (req, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, pb->result_checksum);
-
-  /* Give the file to neon. The provider will rewind the file. */
-  err = svn_ra_dav__set_neon_body_provider(req, pb->tmpfile);
-  if (err)
-    {
-      apr_file_close(pb->tmpfile);
-      return err;
-    }
-
-  /* run the request and get the resulting status code (and svn_error_t) */
-  err = svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
-                                     "PUT", url,
-                                     201 /* Created */,
-                                     204 /* No Content */,
-                                     cc->ras->pool);
-
-  /* we're done with the file.  this should delete it. */
-  (void) apr_file_close(pb->tmpfile);
-
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t * 
 commit_apply_txdelta(void *file_baton, 
                      const char *base_checksum,
-                     const char *result_checksum,
                      apr_pool_t *pool,
                      svn_txdelta_window_handler_t *handler,
                      void **handler_baton)
@@ -1121,18 +989,13 @@ commit_apply_txdelta(void *file_baton,
   put_baton_t *baton;
   svn_stream_t *stream;
 
-  baton = apr_pcalloc(pool, sizeof(*baton));
-  baton->file = file;
+  baton = apr_pcalloc(file->pool, sizeof(*baton));
+  file->put_baton = baton;
 
   if (base_checksum)
-    baton->base_checksum = apr_pstrdup (pool, base_checksum);
+    baton->base_checksum = apr_pstrdup (file->pool, base_checksum);
   else
     baton->base_checksum = NULL;
-
-  if (result_checksum)
-    baton->result_checksum = apr_pstrdup (pool, result_checksum);
-  else
-    baton->result_checksum = NULL;
 
   /* ### oh, hell. Neon's request body support is either text (a C string),
      ### or a FILE*. since we are getting binary data, we must use a FILE*
@@ -1149,7 +1012,6 @@ commit_apply_txdelta(void *file_baton,
 
   stream = svn_stream_create(baton, pool);
   svn_stream_set_write(stream, commit_stream_write);
-  svn_stream_set_close(stream, commit_stream_close);
 
   svn_txdelta_to_svndiff(stream, pool, handler, handler_baton);
 
@@ -1180,13 +1042,64 @@ static svn_error_t * commit_change_file_prop(void *file_baton,
 }
 
 static svn_error_t * commit_close_file(void *file_baton,
+                                       const char *text_checksum,
                                        apr_pool_t *pool)
 {
   resource_baton_t *file = file_baton;
+  commit_ctx_t *cc = file->cc;
+
+  if (file->put_baton)
+    {
+      ne_session *sess = cc->ras->sess;
+      put_baton_t *pb = file->put_baton;
+      const char *url = file->rsrc->wr_url;
+      ne_request *req;
+      int code;
+      svn_error_t *err;
+
+      /* create/prep the request */
+      req = ne_request_create(sess, "PUT", url);
+      if (req == NULL)
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
+                                   "Could not create a PUT request (%s)",
+                                   url);
+        }
+      
+      ne_add_request_header(req, "Content-Type", SVN_SVNDIFF_MIME_TYPE);
+      
+      if (pb->base_checksum)
+        ne_add_request_header
+          (req, SVN_DAV_BASE_FULLTEXT_MD5_HEADER, pb->base_checksum);
+      
+      if (text_checksum)
+        ne_add_request_header
+          (req, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, text_checksum);
+      
+      /* Give the file to neon. The provider will rewind the file. */
+      err = svn_ra_dav__set_neon_body_provider(req, pb->tmpfile);
+      if (err)
+        {
+          apr_file_close(pb->tmpfile);
+          return err;
+        }
+      
+      /* run the request and get the resulting status code (and svn_error_t) */
+      err = svn_ra_dav__request_dispatch(&code, req, sess, "PUT", url,
+                                         201 /* Created */,
+                                         204 /* No Content */,
+                                         pool);
+      
+      /* we're done with the file.  this should delete it. */
+      (void) apr_file_close(pb->tmpfile);
+      
+      if (err)
+        return err;
+    }
 
   /* Perform all of the property changes on the file. Note that we
      checked out the file when the first prop change was noted. */
-  SVN_ERR( do_proppatch(file->cc->ras, file->rsrc, file) );
+  SVN_ERR( do_proppatch(cc->ras, file->rsrc, file, pool) );
 
   return SVN_NO_ERROR;
 }
@@ -1268,17 +1181,18 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_revnum_t *new_rev,
   const char **committed_date,
   const char **committed_author,
-  const char *log_msg)
+  const char *log_msg,
+  apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
 
   /* Build the main commit editor's baton. */
-  cc = apr_pcalloc(ras->pool, sizeof(*cc));
+  cc = apr_pcalloc(pool, sizeof(*cc));
   cc->ras = ras;
-  cc->resources = apr_hash_make(ras->pool);
-  cc->valid_targets = apr_hash_make(ras->pool);
+  cc->resources = apr_hash_make(pool);
+  cc->valid_targets = apr_hash_make(pool);
   cc->get_func = ras->callbacks->get_wc_prop;
   cc->push_func = ras->callbacks->push_wc_prop;
   cc->cb_baton = ras->callback_baton;
@@ -1315,7 +1229,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   ** uses these callbacks to describe all the changes in the working copy
   ** that must be committed to the server.
   */
-  commit_editor = svn_delta_default_editor(ras->pool);
+  commit_editor = svn_delta_default_editor(pool);
   commit_editor->open_root = commit_open_root;
   commit_editor->delete_entry = commit_delete_entry;
   commit_editor->add_directory = commit_add_dir;

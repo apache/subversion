@@ -73,12 +73,19 @@ struct edit_baton
   /* Whether this edit will descend into subdirs */
   svn_boolean_t recurse;
 
+  /* Was the root actually opened (was this a non-empty edit)? */
+  svn_boolean_t root_opened;
+
   /* These used only in checkouts. */
   svn_boolean_t is_checkout;
   const char *ancestor_url;
 
   /* Non-null if this is a 'switch' operation. */
   const char *switch_url;
+
+  /* External diff3 to use for merges (can be null, in which case
+     internal merge code is used). */
+  const char *diff3_cmd;
 
   /* Object for gathering info to be accessed after the edit is
      complete. */
@@ -273,9 +280,8 @@ make_dir_baton (const char *path,
 
 
 /* Decrement the bump_dir_info's reference count. If it hits zero,
-   then this directory is "done". This means it is safe to bump the
-   revision of the directory, and to add it as a child to its parent
-   directory.
+   then this directory is "done". This means it is safe to remove the
+   'incomplete' flag attached to the THIS_DIR entry.
 
    In addition, when the directory is "done", we loop onto the parent's
    bump information to possibly mark it as done, too.
@@ -295,45 +301,14 @@ maybe_bump_dir_info (struct edit_baton *eb,
       if (--bdi->ref_count > 0)
         return SVN_NO_ERROR;    /* directory isn't done yet */
 
-      /* Bump this dir to the new revision if this directory is, or is
-         beneath, the target of an update, or unconditionally if this
-         is a checkout. */
-      if (eb->is_checkout || bdi->parent || (! eb->target))
-        {
-          apr_uint32_t modify_flags = SVN_WC__ENTRY_MODIFY_REVISION;
-
-          tmp_entry.revision = eb->target_revision;
-          tmp_entry.url = bdi->new_URL;
-
-          if (bdi->new_URL)
-            modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
-
-          SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, bdi->path,
-                                        pool));
-          
-          SVN_ERR (svn_wc__entry_modify (adm_access, NULL, &tmp_entry,
-                                         modify_flags, TRUE, pool));
-        }
-
-      /* If this directory is newly added, then it probably doesn't
-         have an entry in the parent's list of entries (unless the
-         parent contains a phantom "deleted" entry). The directory is
-         now complete, and can be added. */
-      if (bdi->added && bdi->parent)
-        {
-          const char *name = svn_path_basename (bdi->path, pool);
-
-          tmp_entry.kind = svn_node_dir;
-          tmp_entry.deleted = FALSE;
-
-          SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
-                                        bdi->parent->path, pool));
-
-          SVN_ERR (svn_wc__entry_modify (adm_access, name, &tmp_entry,
-                                         (SVN_WC__ENTRY_MODIFY_KIND
-                                          | SVN_WC__ENTRY_MODIFY_DELETED),
-                                         TRUE, pool));
-        }
+      /* The refcount is zero, thus we remove the 'incomplete' flag.  */
+      SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, bdi->path,
+                                    pool));
+      tmp_entry.incomplete = FALSE;      
+      SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* this_dir */,
+                                     &tmp_entry,
+                                     SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                                     TRUE /* immediate write */,  pool));
     }
   /* we exited the for loop because there are no more parents */
 
@@ -376,6 +351,12 @@ struct file_baton
 
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
+
+  /* This is initialized to all zeroes when the baton is created, then
+     populated with the MD5 digest of the resultant fulltext after the
+     last window is handled by the handler returned from
+     apply_textdelta(). */ 
+  unsigned char digest[MD5_DIGESTSIZE];
 };
 
 
@@ -413,6 +394,8 @@ make_file_baton (struct dir_baton *pb,
   f->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   f->bump_info    = pb->bump_info;
   f->added        = adding;
+
+  /* No need to initialize f->digest, since we used pcalloc(). */
 
   /* the directory's bump info has one more referer now */
   ++f->bump_info->ref_count;
@@ -487,8 +470,8 @@ prep_directory (struct dir_baton *db,
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  SVN_ERR (svn_wc__ensure_adm (db->path, ancestor_url, ancestor_revision,
-                               pool));
+  SVN_ERR (svn_wc_ensure_adm (db->path, ancestor_url, ancestor_revision,
+                              pool));
 
   if (! db->edit_baton->adm_access
       || strcmp (svn_wc_adm_access_path (db->edit_baton->adm_access),
@@ -604,9 +587,34 @@ open_root (void *edit_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d;
 
+  /* Note that something interesting is actually happening in this
+     edit run. */
+  eb->root_opened = TRUE;
+
   *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->is_checkout, pool);
   if (eb->is_checkout)
-    SVN_ERR (prep_directory (d, eb->ancestor_url, eb->target_revision, pool));
+    {
+      SVN_ERR (prep_directory (d, eb->ancestor_url,
+                               eb->target_revision, pool));
+    }
+  else if (! eb->target)
+    {
+      /* For an update with a NULL target, this is equivalent to open_dir(): */
+      svn_wc_adm_access_t *adm_access;
+      svn_wc_entry_t tmp_entry;
+
+      /* Mark directory as being at target_revision, but incomplete. */  
+      tmp_entry.revision = eb->target_revision;
+      tmp_entry.incomplete = TRUE;
+      SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
+                                    d->path, pool));
+      SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* THIS_DIR */,
+                                     &tmp_entry,
+                                     SVN_WC__ENTRY_MODIFY_REVISION |
+                                     SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                                     TRUE /* immediate write */,
+                                     pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -663,7 +671,7 @@ delete_entry (const char *path,
                                    TRUE, /* sync */
                                    pool));
     
-  SVN_ERR (svn_wc__run_log (adm_access, pool));
+  SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
 
   /* The passed-in `path' is relative to the anchor of the edit, so if
    * the operation was invoked on something other than ".", then
@@ -741,6 +749,7 @@ add_directory (const char *path,
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *parent_entry, *dir_entry;
       apr_hash_t *entries;
+      svn_wc_entry_t tmp_entry;
 
       SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
                                     pb->path, db->pool));
@@ -750,7 +759,7 @@ add_directory (const char *path,
                                                   db->name,
                                                   db->pool);
       copyfrom_revision = pb->edit_baton->target_revision;      
-
+      
       /* Extra check:  a directory by this name may not exist, but there
          may still be one scheduled for addition.  That's a genuine
          tree-conflict.  */
@@ -761,6 +770,20 @@ add_directory (const char *path,
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            "failed to add dir '%s': \nobject of the same name is already "
            "scheduled for addition", path);
+
+      /* Immediately create an entry for the new directory in the parent.
+         Note that the parent must already be either added or opened, and
+         thus it's in an 'incomplete' state just like the new dir.  */      
+      tmp_entry.kind = svn_node_dir;
+      /* (Note that there may already exist a 'ghost' entry in the
+         parent with the same name, in a 'deleted' state.  If so, it's
+         fine to overwrite it... but we need to make sure we get rid
+         of the 'deleted' flag when doing so: */
+      tmp_entry.deleted = FALSE;
+      SVN_ERR (svn_wc__entry_modify (adm_access, db->name, &tmp_entry,
+                                     SVN_WC__ENTRY_MODIFY_KIND |
+                                     SVN_WC__ENTRY_MODIFY_DELETED,
+                                     TRUE /* immediate write */, pool));
     }
 
   /* Create dir (if it doesn't yet exist), make sure it's formatted
@@ -791,6 +814,9 @@ open_directory (const char *path,
                 void **child_baton)
 {
   struct dir_baton *parent_dir_baton = parent_baton;
+  struct edit_baton *eb = parent_dir_baton->edit_baton;
+  svn_wc_entry_t tmp_entry;
+  svn_wc_adm_access_t *adm_access;
 
   /* kff todo: check that the dir exists locally, find it somewhere if
      its not there?  Yes, all this and more...  And ancestor_url and
@@ -804,6 +830,18 @@ open_directory (const char *path,
                       pool);
 
   *child_baton = this_dir_baton;
+
+  /* Mark directory as being at target_revision, but incomplete. */
+  tmp_entry.revision = eb->target_revision;
+  tmp_entry.incomplete = TRUE;
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
+                                this_dir_baton->path, pool));  
+  SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* THIS_DIR */,
+                                 &tmp_entry,
+                                 SVN_WC__ENTRY_MODIFY_REVISION |
+                                 SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                                 TRUE /* immediate write */,
+                                 pool));
 
   return SVN_NO_ERROR;
 }
@@ -861,7 +899,6 @@ close_directory (void *dir_baton,
      to deal with them. */
   if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
     {
-      char *revision_str;
       svn_wc_adm_access_t *adm_access;
       apr_file_t *log_fp = NULL;
       apr_status_t apr_err;
@@ -959,29 +996,6 @@ close_directory (void *dir_baton,
                                    NULL);
         }
 
-      /* ### This isn't correct with postfix text deltas!  Changing the
-         ### revision here is correct in so far as it makes the revision
-         ### consistent with the updated properties.  Changing the revision
-         ### here may be wrong if postfix text deltas are being used as any
-         ### new files will not yet have been added to the entries file.
-         ### This only becomes a real problem if the client is interrupted
-         ### between this revision change and the postfix close_file that
-         ### adds the new entry.  It's a theoretical problem since we don't
-         ### currently use postfix text deltas. */
-      revision_str = apr_psprintf (db->pool,
-                                   "%" SVN_REVNUM_T_FMT,
-                                   db->edit_baton->target_revision);
-
-      svn_xml_make_open_tag (&entry_accum,
-                             db->pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             SVN_WC_ENTRY_THIS_DIR,
-                             SVN_WC__ENTRY_ATTR_REVISION,
-                             revision_str,
-                             NULL);
-
       accumulate_entry_props (entry_accum, SVN_WC_ENTRY_THIS_DIR, entry_props,
                               pool);
 
@@ -994,7 +1008,7 @@ close_directory (void *dir_baton,
         {
           apr_file_close (log_fp);
           return svn_error_createf (apr_err, NULL,
-                                    "error writing %s's log file",
+                                    "error writing log file for '%s'",
                                     db->path);
         }
 
@@ -1006,7 +1020,7 @@ close_directory (void *dir_baton,
                                        db->pool));
 
       /* Run the log. */
-      SVN_ERR (svn_wc__run_log (adm_access, db->pool));
+      SVN_ERR (svn_wc__run_log (adm_access, NULL, db->pool));
     }
 
   /* We're done with this directory, so remove one reference from the
@@ -1045,7 +1059,6 @@ add_or_open_file (const char *path,
   struct dir_baton *pb = parent_baton;
   struct file_baton *fb;
   const svn_wc_entry_t *entry;
-  int is_wc;
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
 
@@ -1061,13 +1074,6 @@ add_or_open_file (const char *path,
 
   /* It is interesting to note: everything below is just validation. We
      aren't actually doing any "work" or fetching any persistent data. */
-
-  /* ### It would be nice to get the dirents and entries *once* and stash
-     ### them in the directory baton.  But an important question is,
-     ### are we re-reading the entries each time because we need to be
-     ### sensitive to any work we've already done on the directory?
-     ### Are editor drives guaranteed not to mention the same name
-     ### twice in the same dir baton?  Don't know.  */
 
   SVN_ERR (svn_io_check_path (fb->path, &kind, subpool));
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
@@ -1115,16 +1121,6 @@ add_or_open_file (const char *path,
                               "'%s' in directory '%s'",
                               fb->name, pb->path);
   
-        
-  /* Make sure we've got a working copy to put the file in. */
-  /* kff todo: need stricter logic here */
-  SVN_ERR (svn_wc_check_wc (pb->path, &is_wc, subpool));
-  if (! is_wc)
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "add_or_open_file: '%s' is not a working copy directory",
-       pb->path);
-
   /* ### todo:  right now the incoming copyfrom* args are being
      completely ignored!  Someday the editor-driver may expect us to
      support this optimization;  when that happens, this func needs to
@@ -1166,14 +1162,13 @@ open_file (const char *name,
 static svn_error_t *
 apply_textdelta (void *file_baton, 
                  const char *base_checksum,
-                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
   struct file_baton *fb = file_baton;
-  apr_pool_t *subpool = svn_pool_create (fb->pool);
-  struct handler_baton *hb = apr_palloc (subpool, sizeof (*hb));
+  apr_pool_t *handler_pool = svn_pool_create (fb->pool);
+  struct handler_baton *hb = apr_palloc (handler_pool, sizeof (*hb));
   svn_error_t *err;
 
   /* Open the text base for reading, unless this is a checkout. */
@@ -1201,9 +1196,9 @@ apply_textdelta (void *file_baton,
         const svn_wc_entry_t *ent;
 
         SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
-                                      svn_path_dirname (fb->path, subpool),
-                                      subpool));
-        SVN_ERR (svn_wc_entry (&ent, fb->path, adm_access, FALSE, subpool));
+                                      svn_path_dirname (fb->path, pool),
+                                      pool));
+        SVN_ERR (svn_wc_entry (&ent, fb->path, adm_access, FALSE, pool));
 
         /* Only compare checksums this file has an entry, and the
            entry has a checksum.  If there's no entry, it just means
@@ -1217,8 +1212,8 @@ apply_textdelta (void *file_baton,
             const char *hex_digest;
             const char *tb;
 
-            tb = svn_wc__text_base_path (fb->path, FALSE, subpool);
-            SVN_ERR (svn_io_file_checksum (digest, tb, subpool));
+            tb = svn_wc__text_base_path (fb->path, FALSE, pool);
+            SVN_ERR (svn_io_file_checksum (digest, tb, pool));
             hex_digest = svn_md5_digest_to_cstring (digest, pool);
             
             /* Compare the base_checksum here, rather than in the
@@ -1258,17 +1253,19 @@ apply_textdelta (void *file_baton,
           }
       }
 
-      err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ, subpool);
+      err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ,
+                                    handler_pool);
       if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
         {
           if (hb->source)
             {
-              svn_error_t *err2 = svn_wc__close_text_base (hb->source, fb->path,
-                                                           0, subpool);
+              svn_error_t *err2 = svn_wc__close_text_base (hb->source,
+                                                           fb->path,
+                                                           0, handler_pool);
               if (err2)
                 svn_error_clear (err2);
             }
-          svn_pool_destroy (subpool);
+          svn_pool_destroy (handler_pool);
           return err;
         }
       else if (err)
@@ -1282,12 +1279,12 @@ apply_textdelta (void *file_baton,
   hb->dest = NULL;
   err = svn_wc__open_text_base (&hb->dest, fb->path,
                                 (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                                subpool);
+                                handler_pool);
   if (err)
     {
       if (hb->dest)
-        svn_wc__close_text_base (hb->dest, fb->path, 0, subpool);
-      svn_pool_destroy (subpool);
+        svn_wc__close_text_base (hb->dest, fb->path, 0, handler_pool);
+      svn_pool_destroy (handler_pool);
       return err;
     }
   
@@ -1296,13 +1293,13 @@ apply_textdelta (void *file_baton,
     const char *tmp_path;
 
     apr_file_name_get (&tmp_path, hb->dest);
-    svn_txdelta_apply (svn_stream_from_aprfile (hb->source, subpool),
-                       svn_stream_from_aprfile (hb->dest, subpool),
-                       result_checksum, tmp_path, subpool,
+    svn_txdelta_apply (svn_stream_from_aprfile (hb->source, handler_pool),
+                       svn_stream_from_aprfile (hb->dest, handler_pool),
+                       fb->digest, tmp_path, handler_pool,
                        &hb->apply_handler, &hb->apply_baton);
   }
   
-  hb->pool = subpool;
+  hb->pool = handler_pool;
   hb->fb = fb;
   
   /* We're all set.  */
@@ -1352,6 +1349,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
                      const apr_array_header_t *props,
                      svn_boolean_t is_full_proplist,
                      const char *new_URL,
+                     const char *diff3_cmd,
                      apr_pool_t *pool)
 {
   apr_file_t *log_fp = NULL;
@@ -1781,7 +1779,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   /* The log is ready to run.  Close it and run it! */
   SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir, SVN_WC__ADM_LOG,
                                    TRUE, /* sync */ pool));
-  SVN_ERR (svn_wc__run_log (adm_access, pool));
+  SVN_ERR (svn_wc__run_log (adm_access, diff3_cmd, pool));
 
   if (content_state)
     {
@@ -1827,6 +1825,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
 /* Mostly a wrapper around svn_wc_install_file. */
 static svn_error_t *
 close_file (void *file_baton,
+            const char *text_checksum,
             apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
@@ -1837,15 +1836,31 @@ close_file (void *file_baton,
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->text_changed)
-    new_text_path = svn_wc__text_base_path (fb->path, TRUE, fb->pool);
+    {
+      new_text_path = svn_wc__text_base_path (fb->path, TRUE, pool);
+
+      if (text_checksum)
+        {
+          const char *real_sum = svn_md5_digest_to_cstring (fb->digest, pool);
+          
+          if (real_sum && (strcmp (text_checksum, real_sum) != 0))
+            return svn_error_createf
+              (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+               "close_file: expected and actual checksums do not match:\n"
+               "(%s):\n"
+               "   expected checksum:  %s\n"
+               "   actual checksum:    %s\n",
+               fb->path, text_checksum, real_sum);
+        }
+    }
 
   if (fb->prop_changed)
     propchanges = fb->propchanges;
 
-  parent_path = svn_path_dirname (fb->path, fb->pool);
+  parent_path = svn_path_dirname (fb->path, pool);
     
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
-                                parent_path, fb->pool));
+                                parent_path, pool));
 
   SVN_ERR (svn_wc_install_file (&content_state,
                                 &prop_state,
@@ -1856,12 +1871,13 @@ close_file (void *file_baton,
                                 propchanges,
                                 FALSE, /* -not- a full proplist */
                                 fb->new_URL,
-                                fb->pool));
+                                fb->edit_baton->diff3_cmd,
+                                pool));
 
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR (maybe_bump_dir_info (fb->edit_baton,
                                 fb->bump_info,
-                                fb->pool));
+                                pool));
 
   if ((content_state != svn_wc_notify_state_unchanged) ||
       (prop_state != svn_wc_notify_state_unchanged))
@@ -1897,7 +1913,7 @@ close_edit (void *edit_baton,
 
   /* Do nothing for checkout;  all urls and working revs are fine.
      Updates and switches, though, have to be cleaned up.  */
-  if (! eb->is_checkout)
+  if ((! eb->is_checkout) && eb->root_opened)
     {
       /* Make sure our update target now has the new working revision.
          Also, if this was an 'svn switch', then rewrite the target's
@@ -1910,6 +1926,9 @@ close_edit (void *edit_baton,
                 eb->recurse,
                 eb->switch_url,
                 eb->target_revision,
+                eb->notify_func,
+                eb->notify_baton,
+                TRUE,
                 eb->pool));
     }
 
@@ -1957,6 +1976,7 @@ make_editor (svn_wc_adm_access_t *adm_access,
              void *notify_baton,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
+             const char *diff3_cmd,
              const svn_delta_editor_t **editor,
              void **edit_baton,
              svn_wc_traversal_info_t *traversal_info,
@@ -1970,7 +1990,7 @@ make_editor (svn_wc_adm_access_t *adm_access,
     assert (ancestor_url != NULL);
 
   /* Construct an edit baton. */
-  eb = apr_palloc (subpool, sizeof (*eb));
+  eb = apr_pcalloc (subpool, sizeof (*eb));
   eb->pool            = subpool;
   eb->is_checkout     = is_checkout;
   eb->target_revision = target_revision;
@@ -1983,6 +2003,7 @@ make_editor (svn_wc_adm_access_t *adm_access,
   eb->notify_func     = notify_func;
   eb->notify_baton    = notify_baton;
   eb->traversal_info  = traversal_info;
+  eb->diff3_cmd       = diff3_cmd;
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -2020,6 +2041,7 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                           void *notify_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
+                          const char *diff3_cmd,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t *traversal_info,
@@ -2029,7 +2051,7 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                       target, target_revision, 
                       FALSE, NULL, NULL,
                       recurse, notify_func, notify_baton,
-                      cancel_func, cancel_baton,
+                      cancel_func, cancel_baton, diff3_cmd,
                       editor, edit_baton, traversal_info, pool);
 }
 
@@ -2051,7 +2073,7 @@ svn_wc_get_checkout_editor (const char *dest,
   return make_editor (NULL, dest, NULL, target_revision, 
                       TRUE, ancestor_url, NULL,
                       recurse, notify_func, notify_baton,
-                      cancel_func, cancel_baton,
+                      cancel_func, cancel_baton, NULL,
                       editor, edit_baton,
                       traversal_info, pool);
 }
@@ -2067,6 +2089,7 @@ svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                           void *notify_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
+                          const char *diff3_cmd,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t *traversal_info,
@@ -2078,7 +2101,7 @@ svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                       target, target_revision,
                       FALSE, NULL, switch_url,
                       recurse, notify_func, notify_baton,
-                      cancel_func, cancel_baton,
+                      cancel_func, cancel_baton, diff3_cmd,
                       editor, edit_baton,
                       traversal_info, pool);
 }
@@ -2236,16 +2259,15 @@ check_wc_root (svn_boolean_t *wc_root,
     return SVN_NO_ERROR;
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
+  p_entry = NULL;
   svn_path_split (path, &parent, &base_name, pool);
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, parent, FALSE, FALSE,
-                                  pool));
-  err = svn_wc_entry (&p_entry, parent, adm_access, FALSE, pool);
-  SVN_ERR (svn_wc_adm_close (adm_access));
+  err = svn_wc_adm_probe_open (&adm_access, NULL, parent, FALSE, FALSE,
+                               pool);
+  if (! err)
+    err = svn_wc_entry (&p_entry, parent, adm_access, FALSE, pool);
   if (err || (! p_entry))
     {
-      if (err)
-        svn_error_clear (err);
-
+      svn_error_clear (err);
       return SVN_NO_ERROR;
     }
   

@@ -49,12 +49,19 @@ extern "C" {
    working revision (excluding files that are scheduled for addition
    or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
    all urls to be "telescoping" children of the base_url.
+
+   If REMOVE_MISSING_DIRS is TRUE, then delete the entries for any 
+   missing directories.  If NOTIFY_FUNC is non-null, invoke it with 
+   NOTIFY_BATON for each missing entry deleted.
 */
 svn_error_t *svn_wc__do_update_cleanup (const char *path,
                                         svn_wc_adm_access_t *adm_access,
                                         const svn_boolean_t recursive,
                                         const char *base_url,
                                         const svn_revnum_t new_revision,
+                                        svn_wc_notify_func_t notify_func,
+                                        void *notify_baton,
+                                        svn_boolean_t remove_missing_dirs,
                                         apr_pool_t *pool);
 
 

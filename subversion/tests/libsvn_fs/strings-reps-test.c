@@ -345,10 +345,18 @@ verify_expected_record (svn_fs_t *fs,
   apr_size_t size;
   char buf[100];
   svn_stringbuf_t *text;
-  apr_off_t offset = 0;
+  svn_filesize_t offset = 0;
+  svn_filesize_t string_size;
 
   /* Check the string size. */
-  SVN_ERR (svn_fs__bdb_string_size (&size, fs, key, trail));
+  SVN_ERR (svn_fs__bdb_string_size (&string_size, fs, key, trail));
+  if (string_size > SVN_MAX_OBJECT_SIZE)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "record size is too large "
+                              "(got %" SVN_FILESIZE_T_FMT ", "
+                              "limit is %" APR_SIZE_T_FMT ")",
+                              string_size, SVN_MAX_OBJECT_SIZE);
+  size = (apr_size_t) string_size;
   if (size != expected_len)
     return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
                               "record has unexpected size "
@@ -429,7 +437,16 @@ static svn_error_t *
 txn_body_string_size (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
-  return svn_fs__bdb_string_size (&(b->len), b->fs, b->key, trail);
+  svn_filesize_t string_size;
+  SVN_ERR (svn_fs__bdb_string_size (&string_size, b->fs, b->key, trail));
+  if (string_size > SVN_MAX_OBJECT_SIZE)
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, NULL,
+       "txn_body_string_size: string size is too largs "
+       "(got %" SVN_FILESIZE_T_FMT ", limit is %" APR_SIZE_T_FMT ")",
+       string_size, SVN_MAX_OBJECT_SIZE);
+  b->len = (apr_size_t) string_size;
+  return SVN_NO_ERROR;
 }
 
 

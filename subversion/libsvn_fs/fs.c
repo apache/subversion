@@ -163,33 +163,6 @@ cleanup_fs (svn_fs_t *fs)
   SVN_ERR (cleanup_fs_db (fs, &fs->strings, "strings"));
   SVN_ERR (cleanup_fs_db (fs, &fs->uuids, "uuids"));
 
-  /* Checkpoint any changes.  */
-  {
-    int db_err = env->txn_checkpoint (env, 0, 0, 0);
-
-#if SVN_BDB_HAS_DB_INCOMPLETE
-    while (db_err == DB_INCOMPLETE)
-      {
-        apr_sleep (apr_time_from_sec(1));
-        db_err = env->txn_checkpoint (env, 0, 0, 0);
-      }
-#endif /* SVN_BDB_HAS_DB_INCOMPLETE */
-
-    /* If the environment was not (properly) opened, then txn_checkpoint
-       will typically return EINVAL. Ignore this case.
-
-       Note: we're passing awfully simple values to txn_checkpoint. Any
-             possible EINVAL result is caused entirely by issues internal
-             to the DB. We should be safe to ignore EINVAL even if
-             something other than open-failure causes the result code.
-             (especially because we're just trying to close it down)
-    */
-    if (db_err != 0 && db_err != EINVAL)
-      {
-        SVN_ERR (BDB_WRAP (fs, "checkpointing environment", db_err));
-      }
-  }
-      
   /* Finally, close the environment.  */
   fs->env = 0;
   SVN_ERR (BDB_WRAP (fs, "closing environment",
@@ -310,7 +283,7 @@ cleanup_fs_apr (void *data)
 /* Allocating and freeing filesystem objects.  */
 
 svn_fs_t *
-svn_fs_new (apr_pool_t *parent_pool)
+svn_fs_new (apr_hash_t *fs_config, apr_pool_t *parent_pool)
 {
   svn_fs_t *new_fs;
 
@@ -324,6 +297,7 @@ svn_fs_new (apr_pool_t *parent_pool)
   }
 
   new_fs->warning = default_warning_func;
+  new_fs->config = fs_config;
 
   apr_pool_cleanup_register (new_fs->pool, new_fs,
                              cleanup_fs_apr,
@@ -366,6 +340,11 @@ allocate_env (svn_fs_t *fs)
   /* Allocate a Berkeley DB environment object.  */
   SVN_ERR (BDB_WRAP (fs, "allocating environment object",
                     db_env_create (&fs->env, 0)));
+
+  /* Needed on Windows in case Subversion and Berkeley DB are using
+     different C runtime libraries  */
+  SVN_ERR (BDB_WRAP (fs, "setting environment object's allocation functions",
+                     fs->env->set_alloc (fs->env, malloc, realloc, free)));
 
   /* If we detect a deadlock, select a transaction to abort at random
      from those participating in the deadlock.  */
@@ -452,6 +431,15 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
       "set_lg_bsize     262144\n"
       "set_lg_max      1048576\n";
 
+    static const char dbconfig_txn_nosync[] =
+      "#\n"
+      "# Disable fsync of log files on transaction commit. Read the\n"
+      "# documentation about DB_TXN_NOSYNC at:\n"
+      "#\n"
+      "#   http://www.sleepycat.com/docs/api_c/env_set_flags.html\n"
+      "#\n"
+      "set_flags DB_TXN_NOSYNC\n";
+
     SVN_ERR (svn_io_file_open (&dbconfig_file, dbconfig_file_name,
                                APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
                                fs->pool));
@@ -461,6 +449,22 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
     if (apr_err != APR_SUCCESS)
       return svn_error_createf (apr_err, 0,
                                 "writing to `%s'", dbconfig_file_name);
+
+    if (fs->config)
+      {
+        void *value = apr_hash_get (fs->config,
+                                    SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                                    APR_HASH_KEY_STRING);
+        if (value != NULL)
+          {
+            apr_err = apr_file_write_full (dbconfig_file, dbconfig_txn_nosync,
+                                           sizeof (dbconfig_txn_nosync) - 1,
+                                           NULL);
+            if (apr_err != APR_SUCCESS)
+              return svn_error_createf (apr_err, 0,
+                                        "writing to `%s'", dbconfig_file_name);
+          }
+      }
 
     apr_err = apr_file_close (dbconfig_file);
     if (apr_err != APR_SUCCESS)
@@ -641,6 +645,47 @@ svn_fs_berkeley_recover (const char *path,
 
   return SVN_NO_ERROR;
 }
+
+
+
+/* Running the 'archive' command on a Berkeley DB-based filesystem.  */
+
+
+svn_error_t *
+svn_fs_berkeley_archive (char ***logfiles,
+                         const char *path,
+                         apr_pool_t *pool)
+{
+  int db_err;
+  DB_ENV *env;
+  const char *path_native;
+  char **filelist;
+
+  db_err = db_env_create (&env, 0);
+  if (db_err)
+    return svn_fs__bdb_dberr (db_err);
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
+  db_err = env->open (env, path_native, (DB_CREATE
+                                         | DB_INIT_LOCK | DB_INIT_LOG
+                                         | DB_INIT_MPOOL | DB_INIT_TXN
+                                         | DB_PRIVATE), 0666);
+  if (db_err)
+    return svn_fs__bdb_dberr (db_err);
+
+  db_err = env->log_archive (env, &filelist,
+                             DB_ARCH_ABS /* return absolute paths */);
+  if (db_err)
+    return svn_fs__bdb_dberr (db_err);
+
+  db_err = env->close (env, 0);
+  if (db_err)
+    return svn_fs__bdb_dberr (db_err);
+
+  *logfiles = filelist;
+  return SVN_NO_ERROR;
+}
+
 
 
 

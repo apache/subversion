@@ -26,7 +26,7 @@
 extern "C" 
 {
 BOOL WINAPI PrxDllMain(HINSTANCE hInstance, DWORD dwReason, 
-	LPVOID lpReserved);
+                       LPVOID lpReserved);
 STDAPI PrxDllCanUnloadNow(void);
 STDAPI PrxDllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID* ppv);
 STDAPI PrxDllRegisterServer(void);

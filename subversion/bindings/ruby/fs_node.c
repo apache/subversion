@@ -275,7 +275,7 @@ dir_delta (VALUE self,
 static VALUE
 file_length (VALUE self)
 {
-  apr_off_t length;
+  svn_filesize_t length;
   svn_fs_root_t *root;
   apr_pool_t *pool;
   svn_error_t *err;

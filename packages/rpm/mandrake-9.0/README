@@ -1,4 +1,16 @@
-Last Update: Fri Oct 18 14:56:29 MDT 2002
+Last Update: Wed Apr  2 18:40:23 PST 2003
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	NOTE : I have given up trying to keep subversion working on
+	mandrake 9.0. There is a new spec file for mandrake 9.1 one
+	directory up from here. Please use that.
+
+	If someone wants to get new builds of subversion packaging
+	on mandrake 9.0 again, let me know at ballbach@rten.net and
+	I'll try to give you a little guidance. It will be a pain
+	to do though becaus almost everything subversion uses is out
+	of date in a stock mandrake 9.0 box.
 
 -----------------
 Mandrake SVN RPM:

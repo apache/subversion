@@ -29,6 +29,7 @@
 #include <apr_want.h>
 
 #include "svn_pools.h"
+#include "svn_path.h"
 #include "svn_utf.h"
 #include "cl.h"
 
@@ -65,11 +66,9 @@ notify (void *baton,
   const char *path_native;
   svn_error_t *err;
 
-  /* Always print some path */
-  if (path[0] == '\0')
-    path = ".";
-
-  err = svn_utf_cstring_from_utf8 (&path_native, path, subpool);
+  err = svn_utf_cstring_from_utf8 (&path_native,
+                                   svn_path_local_style (path, subpool),
+                                   subpool);
   if (err)
     {
       printf ("WARNING: error decoding UTF-8 for ?\n");
@@ -204,9 +203,7 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_commit_added:
-      if (mime_type
-          && ((strlen (mime_type)) > 5)
-          && ((strncmp (mime_type, "text/", 5)) != 0))
+      if (mime_type && svn_mime_type_is_binary (mime_type))
         printf ("Adding  (bin)  %s\n", path_native);
       else
         printf ("Adding         %s\n", path_native);

@@ -44,35 +44,32 @@ svn_cl__import (apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *path;
   const char *url;
-  const char *new_entry;
   svn_client_commit_info_t *commit_info = NULL;
 
-  /* Import takes up to three arguments, for example
+  /* Import takes two arguments, for example
    *
-   *   $ svn import  file:///home/jrandom/repos  ./myproj  myproj
-   *                 ^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^
-   *                        (repository)          (source)  (dest)
+   *   $ svn import projects/test file:///home/jrandom/repos/trunk
+   *                ^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   *                 (source)       (repository)
    *
    * or
    *
-   *   $ svn import  file:///home/jrandom/repos/some/subdir  .  myproj
+   *   $ svn import file:///home/jrandom/repos/some/subdir
    *
    * What is the nicest behavior for import, from the user's point of
    * view?  This is a subtle question.  Seemingly intuitive answers
    * can lead to weird situations, such never being able to create
    * non-directories in the top-level of the repository.
    *
-   * For now, let's keep things simple:
+   * If 'source' is a file then the basename of 'url' is used as the
+   * filename in the repository.  If 'source' is a directory then the
+   * import happens directly in the repository target dir, creating
+   * however many new entries are necessary.  If some part of 'url'
+   * does not exist in the repository then parent directories are created
+   * as necessary.
    *
-   * If the third arg is present, it is the name of the new entry in
-   * the repository target dir (the latter may or may not be the root
-   * dir).  If it is absent, then the import happens directly in the
-   * repository target dir, creating however many new entries are
-   * necessary.
-   *
-   * If the second arg is also omitted, then "." is implied.
-   *
-   * The first arg cannot be omitted, of course.
+   * In the case where no 'source' is given '.' (the current directory)
+   * is implied.
    *
    * ### kff todo: review above behaviors.
    */
@@ -83,40 +80,40 @@ svn_cl__import (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
 
-  /* Get a repository url. */
   if (targets->nelts < 1)
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        "repository url required when importing");
-  else
-    url = ((const char **) (targets->elts))[0];
-
-  /* Get a local path. */
-  if (targets->nelts < 2)
-    path = "";
-  else
-    path = ((const char **) (targets->elts))[1];
-
-  /* Optionally get the dest entry name. */
-  if (targets->nelts < 3)
-    new_entry = NULL;  /* tells import() to create many entries at top
-                          level. */
-  else if (targets->nelts == 3)
-    new_entry = ((const char **) (targets->elts))[2];
-  else
+  else if (targets->nelts > 2)
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        "too many arguments to import command");
-  
+  else if (targets->nelts == 1)
+    {
+      url = ((const char **) (targets->elts))[0];
+      path = "";
+    }
+  else
+    {
+      path = ((const char **) (targets->elts))[0];
+      url = ((const char **) (targets->elts))[1];
+    }
+
+  if (! svn_path_is_url (url))
+    return svn_error_createf
+      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+       "invalid url '%s'", url);
+
   if (! opt_state->quiet)
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton,
                           FALSE, FALSE, FALSE, pool);
 
+  SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state, 
+                                       NULL, ctx->config, pool));
   SVN_ERR (svn_cl__cleanup_log_msg 
            (ctx->log_msg_baton, svn_client_import (&commit_info,
                                                    path,
                                                    url,
-                                                   new_entry,
                                                    opt_state->nonrecursive,
                                                    ctx,
                                                    pool)));

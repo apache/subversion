@@ -18,6 +18,8 @@
 
 
 
+#include <assert.h>
+
 #include <apr_pools.h>
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -33,10 +35,9 @@
 #include "svn_config.h"
 #include "svn_version.h"
 #include "svn_path.h"
-
 #include "ra_dav.h"
 
-
+
 /* a cleanup routine attached to the pool that contains the RA session
    baton. */
 static apr_status_t cleanup_session(void *sess)
@@ -45,6 +46,13 @@ static apr_status_t cleanup_session(void *sess)
   return APR_SUCCESS;
 }
 
+/* a cleanup routine attached to the pool that contains the RA session
+   root URI. */
+static apr_status_t cleanup_uri(void *uri)
+{
+  ne_uri_free(uri);
+  return APR_SUCCESS;
+}
 
 /* A neon-session callback to 'pull' authentication data when
    challenged.  In turn, this routine 'pulls' the data from the client
@@ -54,64 +62,161 @@ static int request_auth(void *userdata, const char *realm, int attempt,
 {
   svn_error_t *err;
   svn_ra_session_t *ras = userdata;
-  svn_auth_cred_simple_t *creds;  
+  void *creds;
+  svn_auth_cred_simple_t *simple_creds;  
 
   /* No auth_baton?  Give up. */
   if (! ras->callbacks->auth_baton)
     return -1;
 
   if (attempt == 0)
-    err = svn_auth_first_credentials ((void **) &creds,
-                                      &(ras->auth_iterstate), 
-                                      SVN_AUTH_CRED_SIMPLE,
-                                      ras->callbacks->auth_baton,
-                                      ras->pool);
+    {
+      const char *realmstring;
+      const char *portstring = apr_psprintf (ras->pool,
+                                             "%d", ras->root.port);
+
+      /* <https://svn.collab.net:80>Subversion repository */
+      realmstring = apr_pstrcat(ras->pool, "<", ras->root.scheme, "://",
+                                ras->root.host, ":", portstring, "> ",
+                                realm, NULL);
+
+      err = svn_auth_first_credentials (&creds,
+                                        &(ras->auth_iterstate), 
+                                        SVN_AUTH_CRED_SIMPLE,
+                                        realmstring,
+                                        ras->callbacks->auth_baton,
+                                        ras->pool);
+    }
+
   else /* attempt > 0 */
-    err = svn_auth_next_credentials ((void **) &creds,
+    /* ### TODO:  if the http realm changed this time around, we
+       should be calling first_creds(), not next_creds(). */
+    err = svn_auth_next_credentials (&creds,
                                      ras->auth_iterstate,
                                      ras->pool);
   if (err || ! creds)
-    return -1;
+    {
+      svn_error_clear (err);
+      return -1;
+    }
+  simple_creds = creds;
   
   /* ### silently truncates username/password to 256 chars. */
-  apr_cpystrn(username, creds->username, NE_ABUFSIZ);
-  apr_cpystrn(password, creds->password, NE_ABUFSIZ);
+  apr_cpystrn(username, simple_creds->username, NE_ABUFSIZ);
+  apr_cpystrn(password, simple_creds->password, NE_ABUFSIZ);
 
   return 0;
 }
 
-
+
 /* A neon-session callback to validate the SSL certificate when the CA
    is unknown or there are other SSL certificate problems. */
-static int ssl_set_verify_callback(void *userdata, int failures,
-                                   const ne_ssl_certificate *cert)
+static int
+server_ssl_callback(void *userdata,
+                    int failures,
+                    const ne_ssl_certificate *cert)
 {
-  /* XXX Right now this accepts any SSL server certificates.
-     Subversion should perform checks of the SSL certificates and keep
-     any information related to the certificates in $HOME/.subversion
-     and not in the .svn directories so that the same information can
-     be used for multiple working copies.
+  svn_ra_session_t *ras = userdata;
+  void *creds;
+  svn_auth_cred_server_ssl_t *server_creds;
+  svn_auth_iterstate_t *state;
+  apr_pool_t *pool;
+  svn_error_t *error;
+  int failures_allowed = 0;
 
-     Upon connecting to an SSL svn server, this is was subversion
-     should do:
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN,
+                         (void*)failures);
 
-     1) Check if a copy of the SSL certificate exists for the given
-     svn server hostname in $HOME/.subversion.  If it is there, then
-     just continue processing the svn request.  Otherwise, print all
-     the information about the svn server's SSL certificate and ask if
-     the user wants to:
-     a) Cancel the request.
-     b) Continue this request but do the store the SSL certificate so
-        that the next request will require the same revalidation.
-     c) Accept the SSL certificate forever.  Store a copy of the
-        certificate in $HOME/.subversion.
-
-     Also, when checking the certificate, warn if the certificate is
-     not properly signed by a CA.
-   */
-  return 0;
+  apr_pool_create(&pool, ras->pool);
+  error = svn_auth_first_credentials(&creds, &state,
+                                     SVN_AUTH_CRED_SERVER_SSL,
+                                     "none", /* ### fix? */
+                                     ras->callbacks->auth_baton,
+                                     pool);
+  if (error || !creds)
+    {
+      svn_error_clear(error);
+    }
+  else
+    {
+      server_creds = creds;
+      failures_allowed = (server_creds) ? server_creds->failures_allow : 0;
+    }
+  apr_pool_destroy(pool);
+  return (failures & ~failures_allowed);
 }
 
+static int
+client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
+{
+  svn_ra_session_t *ras = userdata;
+  void *creds;
+  svn_auth_cred_client_ssl_pass_t *pw_creds = NULL;
+  svn_auth_iterstate_t *state;
+  apr_pool_t *pool;
+  svn_error_t *error;
+
+  apr_pool_create(&pool, ras->pool);
+  error = svn_auth_first_credentials(&creds, &state,
+                                     SVN_AUTH_CRED_CLIENT_PASS_SSL,
+                                     "none", /* ### fix? */
+                                     ras->callbacks->auth_baton,
+                                     pool);
+  if (error || !creds)
+    {
+      svn_error_clear(error);
+    }
+  else
+    {
+      pw_creds = creds;
+      if (pw_creds)
+        {
+          apr_cpystrn(pwbuf, pw_creds->password, len);
+        }
+    }
+  apr_pool_destroy(pool);
+  return (pw_creds == NULL);
+}
+
+static void
+client_ssl_callback(void *userdata, ne_session *sess,
+                    const ne_ssl_dname *server)
+{
+  svn_ra_session_t *ras = userdata;
+  void *creds;
+  svn_auth_cred_client_ssl_t *client_creds;
+  svn_auth_iterstate_t *state;
+  apr_pool_t *pool;
+  svn_error_t *error;
+  apr_pool_create(&pool, ras->pool);
+  error = svn_auth_first_credentials(&creds, &state,
+                                     SVN_AUTH_CRED_CLIENT_SSL,
+                                     "none", /* ### fix? */
+                                     ras->callbacks->auth_baton,
+                                     pool);
+  if (error || !creds)
+    {
+      svn_error_clear(error);
+    }
+  else
+    {
+      client_creds = creds;
+      if (client_creds)
+        {
+          if (client_creds->cert_type == svn_auth_ssl_pem_cert_type)
+            {
+              ne_ssl_load_pem(sess, client_creds->cert_file,
+                              client_creds->key_file);
+            }
+          else
+            {
+              ne_ssl_load_pkcs12(sess, client_creds->cert_file);
+            }
+        }
+    }
+  apr_pool_destroy(pool);
+}
 
 /* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, *PROXY_PASSWORD,
  * *TIMEOUT_SECONDS and *NEON_DEBUG to the information for REQUESTED_HOST,
@@ -128,17 +233,13 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                         int *timeout_seconds,
                                         int *neon_debug,
                                         svn_boolean_t *compression,
-                                        apr_hash_t *config,
+                                        svn_config_t *cfg,
                                         const char *requested_host,
                                         apr_pool_t *pool)
 {
-  const char *exceptions;
-  const char *port_str, *timeout_str, *server_group, *debug_str, *compress_str;
+  const char *exceptions, *port_str, *timeout_str, *server_group;
+  const char *debug_str, *compress_str;
   svn_boolean_t is_exception = FALSE;
-  svn_config_t *cfg = config ? apr_hash_get (config, 
-                                             SVN_CONFIG_CATEGORY_SERVERS,
-                                             APR_HASH_KEY_STRING) : NULL;
-
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
   *proxy_port     = (unsigned int) -1;
@@ -176,8 +277,12 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
     }
 
-  server_group = svn_config_find_group(cfg, requested_host, 
-                                       SVN_CONFIG_SECTION_GROUPS, pool);
+  if (cfg)
+    server_group = svn_config_find_group(cfg, requested_host, 
+                                         SVN_CONFIG_SECTION_GROUPS, pool);
+  else
+    server_group = NULL;
+
   if (server_group)
     {
       svn_config_get(cfg, proxy_host, server_group, 
@@ -325,10 +430,12 @@ svn_ra_dav__open (void **session_baton,
   svn_ra_session_t *ras;
   int is_ssl_session;
   svn_boolean_t compression;
+  svn_config_t *cfg;
+  const char *server_group;
 
   /* Sanity check the URI */
   if (ne_uri_parse(repos_URL, &uri) 
-      || uri.host == NULL || uri.path == NULL)
+      || uri.host == NULL || uri.path == NULL || uri.scheme == NULL)
     {
       ne_uri_free(&uri);
       return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -374,6 +481,15 @@ svn_ra_dav__open (void **session_baton,
   sess = ne_session_create(uri.scheme, uri.host, uri.port);
   sess2 = ne_session_create(uri.scheme, uri.host, uri.port);
 
+  cfg = config ? apr_hash_get (config, 
+                               SVN_CONFIG_CATEGORY_SERVERS,
+                               APR_HASH_KEY_STRING) : NULL;
+  if (cfg)
+    server_group = svn_config_find_group(cfg, uri.host,
+                                         SVN_CONFIG_SECTION_GROUPS, pool);
+  else
+    server_group = NULL;
+  
   /* If there's a timeout or proxy for this URL, use it. */
   {
     const char *proxy_host;
@@ -391,7 +507,7 @@ svn_ra_dav__open (void **session_baton,
                               &timeout,
                               &debug,
                               &compression,
-                              config,
+                              cfg,
                               uri.host,
                               pool);
     if (err)
@@ -429,16 +545,6 @@ svn_ra_dav__open (void **session_baton,
       }
   }
 
-  /* For SSL connections, when the CA certificate is not known for the
-     server certificate or the server cert has other verification
-     problems, neon will fail the connection unless we add a callback
-     to tell it to ignore the problem.  */
-  if (is_ssl_session)
-    {
-      ne_ssl_set_verify(sess, ssl_set_verify_callback, NULL);
-      ne_ssl_set_verify(sess2, ssl_set_verify_callback, NULL);
-    }
-
 #if 0
   /* Turn off persistent connections. */
   ne_set_persist(sess, 0);
@@ -446,8 +552,10 @@ svn_ra_dav__open (void **session_baton,
 #endif
 
   /* make sure we will eventually destroy the session */
-  apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
-  apr_pool_cleanup_register(pool, sess2, cleanup_session, apr_pool_cleanup_null);
+  apr_pool_cleanup_register(pool, sess, cleanup_session,
+                            apr_pool_cleanup_null);
+  apr_pool_cleanup_register(pool, sess2, cleanup_session,
+                            apr_pool_cleanup_null);
 
   ne_set_useragent(sess, "SVN/" SVN_VERSION);
   ne_set_useragent(sess2, "SVN/" SVN_VERSION);
@@ -461,12 +569,21 @@ svn_ra_dav__open (void **session_baton,
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
   ras->url = apr_pstrdup (pool, repos_URL);
-  ras->root = uri; /* copies uri pointer members, they get free'd in __close. */
+  /* copies uri pointer members, they get free'd in __close. */
+  ras->root = uri; 
   ras->sess = sess;
   ras->sess2 = sess2;  
   ras->callbacks = callbacks;
   ras->callback_baton = callback_baton;
-  ras->compression = compression;
+  /* save config and server group in the auth parameter hash */
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_CONFIG, cfg);
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_SERVER_GROUP, server_group);
+
+  /* make sure we eventually destroy the uri */
+  apr_pool_cleanup_register(pool, &ras->root, cleanup_uri,
+                            apr_pool_cleanup_null);
 
   /* note that ras->username and ras->password are still NULL at this
      point. */
@@ -476,6 +593,44 @@ svn_ra_dav__open (void **session_baton,
   ne_set_server_auth(sess, request_auth, ras);
   ne_set_server_auth(sess2, request_auth, ras);
 
+  /* Setup and register the private session data on the Neon
+     sessions. */
+  {
+    svn_ra_ne_session_baton_t *bt;
+    bt = apr_palloc(pool, sizeof(*bt));
+    bt->compression = compression;
+    ne_set_session_private(sess, SVN_RA_NE_SESSION_ID, bt);
+    ne_set_session_private(sess2, SVN_RA_NE_SESSION_ID, bt);
+  }
+
+  if (is_ssl_session)
+    {
+      const char *authorities_file;
+      authorities_file = svn_config_get_server_setting(cfg, server_group,
+                                                       SVN_CONFIG_OPTION_SSL_AUTHORITIES_FILE,
+                                                       NULL);
+      
+      if (authorities_file != NULL)
+        {
+          ne_ssl_load_ca(sess, authorities_file);
+          ne_ssl_load_ca(sess2, authorities_file);
+        }
+
+      /* When the CA certificate or server certificate has
+         verification problems, neon will call our verify function before
+         outright rejection of the connection.*/
+      ne_ssl_set_verify(sess, server_ssl_callback, ras);
+      ne_ssl_set_verify(sess2, server_ssl_callback, ras);
+      /* For client connections, we register a callback for if the server
+         wants to authenticate the client via client certificate. */
+      ne_ssl_provide_ccert(sess, client_ssl_callback, ras);
+      ne_ssl_provide_ccert(sess2, client_ssl_callback, ras);
+      /* For the certificate certificate, register a callback in case
+         a password is needed for the key. */
+      ne_ssl_keypw_prompt(sess, client_ssl_keypw_callback, ras);
+      ne_ssl_keypw_prompt(sess2, client_ssl_keypw_callback, ras);
+    }
+
 
   *session_baton = ras;
 
@@ -484,29 +639,26 @@ svn_ra_dav__open (void **session_baton,
 
 
 
-static svn_error_t *svn_ra_dav__close (void *session_baton)
-{
-  svn_ra_session_t *ras = session_baton;
-
-  (void) apr_pool_cleanup_run(ras->pool, ras->sess, cleanup_session);
-  (void) apr_pool_cleanup_run(ras->pool, ras->sess2, cleanup_session);
-  ne_uri_free(&ras->root);
-  return NULL;
-}
-
-
 static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
-                                            const char **uuid)
+                                            const char **uuid,
+                                            apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
 
   if (! ras->uuid)
     {
-      apr_hash_t *props;
       const svn_string_t *value;
-      SVN_ERR(svn_ra_dav__get_dir(ras, "", 0, NULL, NULL, &props));
-      value = apr_hash_get(props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING);
-      ras->uuid = value->data;
+      static const ne_propname uuid_propname =
+        { SVN_DAV_PROP_NS_DAV, "repository-uuid" };
+
+      SVN_ERR( svn_ra_dav__get_one_prop(&value, ras->sess, ras->url, NULL,
+                                        &uuid_propname, pool) );
+      
+      if (value && (value->len > 0))
+        ras->uuid = apr_pstrdup(ras->pool, value->data); /* cache UUID */
+      else
+        return svn_error_create(SVN_ERR_RA_NO_REPOS_UUID, NULL,
+                                "Please upgrade the server to 0.19 or later.");
     }
 
   *uuid = ras->uuid;
@@ -519,7 +671,6 @@ static const svn_ra_plugin_t dav_plugin = {
   "ra_dav",
   "Module for accessing a repository via WebDAV (DeltaV) protocol.",
   svn_ra_dav__open,
-  svn_ra_dav__close,
   svn_ra_dav__get_latest_revnum,
   svn_ra_dav__get_dated_revision,
   svn_ra_dav__change_rev_prop,
@@ -528,7 +679,6 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__get_commit_editor,
   svn_ra_dav__get_file,
   svn_ra_dav__get_dir,
-  svn_ra_dav__do_checkout,
   svn_ra_dav__do_update,
   svn_ra_dav__do_switch,
   svn_ra_dav__do_status,

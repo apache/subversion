@@ -44,11 +44,13 @@
 <li><a href="#multi-proj">How do I manage several different projects
     under Subversion?</a></li>
 <li><a href="#multi-merge">How do I merge two completely separate repositories?</a></li>
+<li><a href="#bdblogs">Why is my repository taking up so much disk space?</a></li>
+<li><a href="#reposperms">How do I set repository permissions correctly?</a></li>
+<li><a href="#readonly">Why do read-only operations still need repository write access?</a></li>
 <li><a href="#patch">How do I submit a patch for Subversion?</a></li>
 <p>
 <strong>Troubleshooting:</strong>
 </p>
-<li><a href="#diff3-diff">I get exitcode 2 from diff3 on Windows</a></li>
 <li><a href="#wedged-repos">What the heck!  Every time I try to access
     my repository, the process just hangs.  Is my repository
     corrupt?</a></li>
@@ -74,6 +76,14 @@
     happening?</a></li>  
 <li><a href="#ethereal">What is the best method of doing a network
     trace of the conversation between a Subversion client and server?</a></li>
+<li><a href="#revert">Why does the <tt>svn revert</tt> require an
+    explicit target?  Why is it not recursive by default?  These
+    behaviors differ from almost all the other subcommands.</a></li>
+<li><a href="#db3db4">When I start Apache, mod_dav_svn complains about
+    a "bad database version", that it found db-3.X, rather than
+    db-4.X.</a></li>
+<li><a href="#redhat-db">I'm getting "Function not implemented" errors on
+    RedHat 9, and nothing works.  How do I fix this?</a></li>
 <p>
 
 <strong>References:</strong>
@@ -81,6 +91,7 @@
 <li><a href="#http-methods">What are all the HTTP methods Subversion 
     uses?</a></li>
 <li><a href="#bikeshed">What's a 'bikeshed'?</a></li> 
+<li><a href="#baton">What's a 'baton'?</a></li> 
 </ol>
 
 <![CDATA[=========================================================]]>
@@ -396,16 +407,19 @@ schema is supported by running <tt>svn --version</tt>.</p>
     Subversion.  What can I do if I still want remote usage?</h3>
 
 <p>If you previously used CVS, you may have used SSH to login to the
-CVS server.  The preferred solution would be to use ra_dav combined
+CVS server.  The ra_svn Subversion access method is the equivalent way of doing
+this with Subversion.  Just use the "svn+ssh" prefix to your Subversion
+repository URL.
+<pre>
+$ svn checkout svn+ssh://your.domain.com/full/path/to/repository
+</pre>
+</p>
+
+<p>The preferred solution would be to use ra_dav combined
 with an Apache HTTP server configured with mod_ssl and appropriate
 authentication support.  This should provide enough security for most
 users.  However, we realize that there are places that do not allow
 adding servers of any kind with external connectivity.</p>
-
-<p>There has been work on a ra_pipe implementation that would work
-similarly to the CVS_RSH mechanism, but it is not currently complete.
-If you wish to contribute to its development, you are more than
-welcome to do so!</p>
 
 <p>However, another solution that can be used instead is to leverage
 SSH port forwarding to connect to the protected server via ra_dav.
@@ -549,6 +563,82 @@ equivalent to CVS modules:
 	remain separate URLs.
 </blockquote>
 
+
+<![CDATA[=========================================================]]>
+  
+<h3><a name="bdblogs">Why is my repository taking up so much disk space?</h3>
+
+<p>The repository stores all your data in a Berkeley DB "environment"
+in the repos/db/ subdirectory.  The environment contains a collection
+of tables and bunch of logfiles (log.*).  Berkeley DB journals all
+changes made to the tables, so that the tables can be recovered to a
+consistent state in case of interruptions (<a
+href="#wedged-repos">more info</a>).</p>
+
+<p>The logfiles will grow forever, eating up disk space, unless you,
+(as the repository administrator) do something about it.  At any given
+moment, Berkeley DB is only using a couple of logfiles actively; the
+rest can be safely deleted.  If you keep all the logfiles around
+forever, then in theory Berkeley DB can replay every change to your
+repository from the day it was born.  But in practice, if you're
+making backups, it's probably not worth the cost in disk space.</p>
+
+<p>Run the <code>db_archive</code> command in the db/ area to see
+which log files can be deleted.  You may want a cron job to do this.</p>
+
+<pre>
+$ db_archive -a -h /repos/db
+/repos/db/log.000003
+/repos/db/log.000004
+[...]
+
+$ db_archive -a -h /repos/db | xargs rm
+# disk space reclaimed!
+</pre>
+
+<p>Or, if you are running a Subversion release <em>later</em> than
+0.24.2, then there's no need to locate the correct
+<code>db_archive</code> command or set of arguments.  Just use
+<code>svnadmin</code>:</p>
+
+<pre>
+$ svnadmin archive /repos | xargs rm
+# disk space reclaimed!
+</pre>
+
+
+<![CDATA[=========================================================]]>
+
+
+<h3><a name="reposperms">How do I set repository
+permissions correctly?</a></h3>
+
+
+<p>If you have multiple processes (httpd, svnserve, etc.) accessing
+the repository, look at <a
+href="http://svnbook.red-bean.com/html-chunk/ch05s05.html"> this
+section of the Subversion Book</a>.</p>
+
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="readonly">Why do read-only operations still need repository
+write access?</a></h3>
+
+<p>Certain client operations are "read-only", like checkouts and
+updates.  From an access-control standpoint, apache treats them as
+such.  But libsvn_fs (the repository filesystem API) still has to
+write temporary data in order to produce tree-deltas.  So the process
+accessing the repository always requires both read <em>and</em> write
+access to the Berkeley DB files in order to function.</p>
+
+<p>In particular, the repository responds to many "read-only"
+operations by comparing two trees.  One tree is the usually the HEAD
+revision, and the other is often a temporary transaction-tree -- thus
+the need for write access.</p>
+
+
+
 <![CDATA[=========================================================]]>
 
 <h3><a name="patch">How do I submit a patch for Subversion?</a></h3>
@@ -589,32 +679,6 @@ understood it <em>before</em> actually hacking the code, right? :)
 <h2>Troubleshooting:</h2>
 <p>
 
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3>I get exitcode 2 from diff3 on Windows <a name="diff3-diff"></a></h3>
-
-<p>
-This happens when your diff utilities are not installed on the
-default location, which on Windows is <samp>C:\Cygwin\bin</samp>.
-This is caused by a bug in Subversion's config file processing,
-which was fixed in revision 4578 (version 0.17.1+).</p>
-<p>
-The workaround is to add a non-standard option to your configuration
-file. For example, if your diff utilities are installed in
-<samp>D:\Cygwin\bin</samp>, your config file probably contains:</p>
-
-<pre>
-[helpers]
-diff-cmd = D:\Cygwin\bin\diff.exe
-diff3-cmd = D:\Cygwin\bin\diff3.exe
-</pre>
-
-<p>Adding the following line to the <samp>[helpers]</samp> section
-should fix this problem:</p>
-
-<pre>
-diff_cmd = D:\Cygwin\bin\diff.exe
-</pre>
 <![CDATA[-----------------------------------------------------------]]>
 
 <h3>What the heck! Every time I try to access my repository, the
@@ -819,20 +883,85 @@ Ethereal, and may not apply to the commandline version (whose binary
 is usually named tethereal).</p>
 
 <p>Alternatively, if you have an up-to-date client (more recent than
-the 0.16 tarball) you may set the <tt>http-debug</tt> parameter in the
+the 0.16 tarball) you may set the <tt>neon-debug-mask</tt> parameter in your
 <tt>servers</tt> configuration file to cause neon's debugging output
 to appear when you run the <tt>svn</tt> client.  The numeric value of
-<tt>neon-debug</tt> is a combination of the <tt>NE_DBG_...</tt> values
+<tt>neon-debug-mask</tt> is a combination of the <tt>NE_DBG_...</tt> values
 in the header file <tt>ne_utils.h</tt>.  For neon 0.23.7 setting
-<tt>http-debug</tt> to 130 (i.e. <tt>NE_DBG_HTTP+NE_DBG_HTTPBODY)</tt>
+<tt>neon-debug-mask</tt> to 130 (i.e. <tt>NE_DBG_HTTP+NE_DBG_HTTPBODY)</tt>
 will cause the HTTP data to be shown.</p>
 
 <p>You may well want to disable compression when doing a network
 trace, see the <tt>compression</tt> parameter in the <tt>config</tt>
 configuration file.</p>
 
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="revert">Why does the <tt>svn revert</tt> require an
+    explicit target?  Why is it not recursive by default?  These
+    behaviors differ from almost all the other subcommands.</a></h3>
+
+<p>The short answer: it's for your own good.</p>
+
+<p>Subversion places a very high priority on protecting your data, and
+not just your versioned data.  Modifications that you make to
+already-versioned files, and new files scheduled for addition to the
+version control system, must be treated with care.</p>
+
+<p>Making the <tt>svn revert</tt> command require an explicit
+target&mdash;even if that target is just '.'&mdash;is one way of
+accomplishing that.  This requirement (as well as requiring you to
+supply the <tt>--recursive (-R)</tt> flag if you want that behavior)
+is intended to make you really think about what you're doing, because
+once your files are reverted, your local modifications are gone
+forever.</p>
+
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="db3db4">When I start Apache, mod_dav_svn complains about
+    a "bad database version", that it found db-3.X, rather than
+    db-4.X.</a></h3>
+
+<p>Your apr-util linked against DB-3, and svn linked against DB-4.
+Unfortunately, the DB symbols aren't different.  When mod_dav_svn is
+loaded into Apache's process-space, it ends up resolving the
+symbol names against apr-util's DB-3 library.</p>
+
+<p>The solution is to make sure apr-util compiles against DB-4.  You
+can do this by passing specific switches to either apr-util's or
+apache's configure: "--with-dbm=db4 --with-berkeley-db=/the/db/prefix".</p>
+
 
 <![CDATA[=========================================================]]>
+
+<h3><a name="redhat-db">I'm getting "Function not implemented" errors on RedHat
+9, and nothing works.  How do I fix this?</a></h3>
+
+<p>This is not really a problem with Subversion, but it often affects
+Subversion users.</p>
+
+<p>RedHat 9 ships with a Berkeley DB library that relies on the kernel
+support for NPTL (the Native Posix Threads Library).</p>
+
+<p>The kernels that RedHat provides have this support built in, but if you
+compile your own kernel, then you may well not have the NPTL support.  If that
+is the case, then you will see errors like this:
+<blockquote><pre>
+svn: Berkeley DB error
+svn: Berkeley DB error while creating environment for filesystem tester/db:
+Function not implemented
+</pre></blockquote>
+This can be fixed in one of several ways:
+<ul>
+<li>Rebuild db4 for the kernel you're using.</li>
+<li>Use a RedHat 9 kernel.</li>
+<li>Apply the NPTL patches to the kernel you're using.</li>
+<li>Use a recent (2.5.x) kernel with the NPTL support included.</li>
+</ul>
+</p>
+
+<![CDATA[-----------------------------------------------------------]]>
 
 
 <p>
@@ -840,8 +969,6 @@ configuration file.</p>
 <p>
 <h2>References:</h2>
 <p>
-
-<![CDATA[-----------------------------------------------------------]]>
 
 <h3><a name="http-methods">What are all the HTTP methods Subversion
     uses?</a></h3>
@@ -906,3 +1033,15 @@ he can check the RFC's for further information.
 
 <p>See Poul-Henning Kamp's post to freebsd-hackers: <a href="http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING">http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING</a>.
 </p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="baton">What's a 'baton'?</a></h3>
+
+<p>Throughout subversion's source code there are many references to
+'baton' objects.  These are just <pre>void *</pre> datastructures that
+provide context to a function.  In other APIs, they're often called
+<pre>void *ctx</pre> or <pre>void *userdata</pre>.  Subversion
+developers call the structures "batons" because they're passed around
+quite a bit.</p>
+

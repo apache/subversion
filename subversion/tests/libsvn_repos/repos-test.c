@@ -350,6 +350,91 @@ dir_deltas (const char **msg,
 }
 
 
+static svn_error_t *
+node_tree_delete_under_copy (const char **msg,
+                             svn_boolean_t msg_only,
+                             apr_pool_t *pool)
+{ 
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *revision_root, *revision_2_root;
+  svn_revnum_t youngest_rev;
+  void *edit_baton;
+  const svn_delta_editor_t *editor; 
+  svn_repos_node_t *tree;
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  *msg = "test that deletions under copies don't irk the node_tree code";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_repos (&repos, "test-repo-del-under-copy", pool));
+  fs = svn_repos_fs (repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+
+  /* Create and commit the greek tree. */
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Now, commit again, this time after copying a directory, and then
+     deleting some paths under that directory. */
+  SVN_ERR (svn_fs_revision_root (&revision_root, fs, youngest_rev, pool)); 
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_copy (revision_root, "A", txn_root, "Z", pool));
+  SVN_ERR (svn_fs_delete_tree (txn_root, "Z/D/G/rho", pool));
+  SVN_ERR (svn_fs_delete_tree (txn_root, "Z/D/H", pool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Now, we run the node_tree editor code, and see that a) it doesn't
+     bomb out, and b) that our nodes are all good. */
+  SVN_ERR (svn_fs_revision_root (&revision_2_root, fs, youngest_rev, pool)); 
+  SVN_ERR (svn_repos_node_editor (&editor, &edit_baton, repos,
+                                  revision_root, revision_2_root, 
+                                  pool, subpool));
+  SVN_ERR (svn_repos_replay (revision_2_root, editor, edit_baton, subpool));
+  
+  /* Get the root of the generated tree, and cleanup our mess. */
+  tree = svn_repos_node_from_baton (edit_baton);
+  svn_pool_destroy (subpool);
+
+  /* See that we got what we expected (fortunately, svn_repos_replay
+     drivers editor paths in a predictable fashion!). */
+
+  if (! (tree /* / */
+         && tree->child /* /Z */
+         && tree->child->child /* /Z/D */
+         && tree->child->child->child /* /Z/D/G */
+         && tree->child->child->child->child /* /Z/D/G/rho */
+         && tree->child->child->child->sibling)) /* /Z/D/H */
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL, 
+                             "Generated node tree is bogus.");
+
+  if (! ((strcmp (tree->name, "") == 0)
+         && (strcmp (tree->child->name, "Z") == 0)
+         && (strcmp (tree->child->child->name, "D") == 0)
+         && (strcmp (tree->child->child->child->name, "G") == 0)
+         && ((strcmp (tree->child->child->child->child->name, "rho") == 0)
+             && (tree->child->child->child->child->kind == svn_node_file)
+             && (tree->child->child->child->child->action == 'D'))
+         && ((strcmp (tree->child->child->child->sibling->name, "H") == 0)
+             && (tree->child->child->child->sibling->kind == svn_node_dir)
+             && (tree->child->child->child->sibling->action == 'D'))))
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL, 
+                             "Generated node tree is bogus.");
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -357,5 +442,6 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS (dir_deltas),
+    SVN_TEST_PASS (node_tree_delete_under_copy),
     SVN_TEST_NULL
   };

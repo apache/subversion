@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-%module _fs
+%module fs
 %include typemaps.i
 
 %import apr.i
@@ -40,9 +40,11 @@
     svn_fs_txn_t **,
     void **,
     svn_fs_id_t **,
-    const char **,
     svn_stream_t **
 };
+
+/* and this is always an OUT param */
+%apply const char **OUTPUT { const char ** };
 
 /* ### need to deal with IN params which have "const" and OUT params which
    ### return non-const type. SWIG's type checking may see these as
@@ -60,6 +62,8 @@
    for the FS, 'int *' will always be an OUTPUT parameter
 */
 %apply int *OUTPUT { int * };
+
+%apply enum SWIGTYPE *OUTENUM { svn_node_kind_t * };
 
 /* -----------------------------------------------------------------------
    define the data/len pair of svn_fs_parse_id to be a single argument
@@ -80,6 +84,9 @@ apr_array_header_t **names_p {
     $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
 }
 
+%typemap(perl5, argout) apr_array_header_t **names_p {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    revisions_changed's "apr_array_header_t **" is returning a list of
    revs.  also, its input array is a list of strings.
@@ -88,6 +95,9 @@ apr_array_header_t **names_p {
 %typemap(python, argout, fragment="t_output_helper") 
 apr_array_header_t **revs {
     $result = t_output_helper($result, svn_swig_py_revarray_to_list(*$1));
+}
+%typemap(perl5, argout) apr_array_header_t **revs {
+    /* ### FIXME-perl */
 }
 
 /* -----------------------------------------------------------------------
@@ -106,6 +116,9 @@ apr_array_header_t **revs {
         $result,
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t));
 }
+%typemap(perl5,argout) apr_hash_t **entries_p {
+    /* ### FIXME-perl */
+}
 
 /* -----------------------------------------------------------------------
    and except for svn_fs_paths_changed, which returns svn_fs_path_change_t
@@ -119,6 +132,25 @@ apr_array_header_t **revs {
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_path_change_t));
 }
 
+/* -----------------------------------------------------------------------
+   Fix the return value for svn_fs_commit_txn(). If the conflict result is
+   NULL, then t_output_helper() is passed Py_None, but that goofs up
+   because that is *also* the marker for "I haven't started assembling a
+   multi-valued return yet" which means the second return value (new_rev)
+   will not cause a 2-tuple to be manufactured.
+
+   The answer is to explicitly create a 2-tuple return value.
+*/
+%typemap(python, argout) (const char **conflict_p, svn_revnum_t *new_rev) {
+    /* this is always Py_None */
+    Py_DECREF($result);
+    /* build the result tuple */
+    $result = Py_BuildValue("zi", *$1, (long)*$2);
+}
+
+%typemap(perl5, argout) apr_hash_t **changed_paths_p {
+    /* ### FIXME-perl */
+}
 /* ----------------------------------------------------------------------- */
 
 

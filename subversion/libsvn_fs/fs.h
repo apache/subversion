@@ -59,6 +59,9 @@ struct svn_fs_t
      pass through to it.  */
   svn_fs_warning_callback_t warning;
   void *warning_baton;
+
+  /* The filesystem configuration. */
+  apr_hash_t *config;
 };
 
 
@@ -160,7 +163,7 @@ typedef struct
   apr_byte_t version;
 
   /* starting offset of the data represented by this chunk */
-  apr_size_t offset;
+  svn_filesize_t offset;
 
   /* string-key to which this representation points. */
   const char *string_key; 

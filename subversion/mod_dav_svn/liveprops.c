@@ -24,7 +24,7 @@
 #include <apr_md5.h>
 #include <mod_dav.h>
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_dav.h"
@@ -38,46 +38,31 @@ static const char * const dav_svn_namespace_uris[] =
 {
     "DAV:",
     SVN_DAV_PROP_NS_DAV,
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-    SVN_PROP_PREFIX,
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
-    NULL	/* sentinel */
+    NULL        /* sentinel */
 };
 enum {
     DAV_SVN_NAMESPACE_URI_DAV,  /* the DAV: namespace URI */
     DAV_SVN_NAMESPACE_URI,      /* the dav<->ra_dav namespace URI */
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-    DAV_SVN_NAMESPACE_URI_OLD   /* the OLD dav<->ra_dav namespace URI */
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 };
 
 #define SVN_RO_DAV_PROP(name) \
-	{ DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##name, 0 }
+        { DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##name, 0 }
 #define SVN_RW_DAV_PROP(name) \
-	{ DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##name, 1 }
+        { DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##name, 1 }
 #define SVN_RO_DAV_PROP2(sym,name) \
-	{ DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##sym, 0 }
+        { DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##sym, 0 }
 #define SVN_RW_DAV_PROP2(sym,name) \
-	{ DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##sym, 1 }
+        { DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##sym, 1 }
 
 #define SVN_RO_SVN_PROP(sym,name) \
-	{ DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 0 }
+        { DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 0 }
 #define SVN_RW_SVN_PROP(sym,name) \
-	{ DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 1 }
+        { DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 1 }
 
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-#define SVN_RO_SVN_OLD_PROP(sym,name) \
-	{ DAV_SVN_NAMESPACE_URI_OLD, #name, SVN_OLD_PROPID_##sym, 0 }
-#define SVN_RW_SVN_OLD_PROP(sym,name) \
-	{ DAV_SVN_NAMESPACE_URI_OLD, #name, SVN_OLD_PROPID_##sym, 1 }
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
 enum {
   SVN_PROPID_baseline_relative_path = 1,
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-  SVN_OLD_PROPID_baseline_relative_path,
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   SVN_PROPID_md5_checksum,
   SVN_PROPID_repository_uuid,
 };
@@ -106,9 +91,6 @@ static const dav_liveprop_spec dav_svn_props[] =
 
   /* SVN properties */
   SVN_RO_SVN_PROP(baseline_relative_path, baseline-relative-path),
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-  SVN_RO_SVN_OLD_PROP(baseline_relative_path, baseline-relative-path),
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   SVN_RO_SVN_PROP(md5_checksum, md5-checksum),
   SVN_RO_SVN_PROP(repository_uuid, repository-uuid),
 
@@ -311,7 +293,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
     case DAV_PROPID_getcontentlength:
       {
-        apr_off_t len = 0;
+        svn_filesize_t len = 0;
         
         /* our property, but not defined on collection resources */
         if (resource->collection || resource->baselined)
@@ -325,7 +307,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             break;
           }
 
-        value = apr_psprintf(p, "%" APR_OFF_T_FMT, len);
+        value = apr_psprintf(p, "%" SVN_FILESIZE_T_FMT, len);
         break;
       }
 
@@ -344,7 +326,19 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                                  SVN_PROP_MIME_TYPE, p);
 
         if ((serr != NULL) || (pval == NULL))
-          value = "text/plain"; /* assume default */        
+          {
+            if (resource->collection) /* defaults for directories */
+              {
+                if (resource->info->repos->xslt_uri)
+                  value = "text/xml";
+                else
+                  value = "text/html";
+              }
+            else
+              {
+                value = "text/plain"; /* default for file */
+              }
+          }            
         else
           {
             serr = svn_mime_type_validate (pval->data, p);
@@ -364,7 +358,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       }
 
     case DAV_PROPID_getetag:
-      value = dav_svn_getetag(resource);
+      value = dav_svn_getetag(resource, p);
       break;
 
     case DAV_PROPID_auto_version:
@@ -474,9 +468,6 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         }
       break;
 
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-    case SVN_OLD_PROPID_baseline_relative_path:
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
     case SVN_PROPID_baseline_relative_path:
       /* only defined for VCRs */
       /* ### VCRs within the BC should not have this property! */
@@ -491,6 +482,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
     case SVN_PROPID_md5_checksum:
       if ((! resource->collection)
+          && (! resource->baselined)
           && (resource->type == DAV_RESOURCE_TYPE_REGULAR
               || resource->type == DAV_RESOURCE_TYPE_WORKING
               || resource->type == DAV_RESOURCE_TYPE_VERSION))
@@ -649,13 +641,13 @@ void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
         return;
 
     if (!resource->exists) {
-	/* a lock-null resource */
-	/*
-	** ### technically, we should insert empty properties. dunno offhand
-	** ### what part of the spec said this, but it was essentially thus:
-	** ### "the properties should be defined, but may have no value".
-	*/
-	return;
+        /* a lock-null resource */
+        /*
+        ** ### technically, we should insert empty properties. dunno offhand
+        ** ### what part of the spec said this, but it was essentially thus:
+        ** ### "the properties should be defined, but may have no value".
+        */
+        return;
     }
 
     pool = resource->info->pool;

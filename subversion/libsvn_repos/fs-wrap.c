@@ -82,17 +82,18 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
      these properties will be copied into the newly created revision. */
   {
     /* User (author). */
-    {
-      svn_string_t val;
-      val.data = author;
-      val.len = strlen (author);
-      
-      SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
-                                       &val, pool));
-    }
+    if (author)
+      {
+        svn_string_t val;
+        val.data = author;
+        val.len = strlen (author);
+        
+        SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
+                                         &val, pool));
+      }
     
     /* Log message. */
-    if (log_msg != NULL)
+    if (log_msg)
       {
         /* Heh heh -- this is unexpected fallout from changing most
            code to use plain strings instead of svn_stringbuf_t and
@@ -130,14 +131,15 @@ svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
      on the txn. */
   {
     /* User (author). */
-    {
-      svn_string_t val;
-      val.data = author;
-      val.len = strlen (author);
-      
-      SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
-                                       &val, pool));
-    }    
+    if (author)
+      {
+        svn_string_t val;
+        val.data = author;
+        val.len = strlen (author);
+        
+        SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
+                                         &val, pool));
+      }
   }
 
   return SVN_NO_ERROR;
@@ -194,22 +196,18 @@ svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                               svn_revnum_t rev,
                               const char *author,
                               const char *name,
-                              const svn_string_t *value,
+                              const svn_string_t *new_value,
                               apr_pool_t *pool)
 {
-  /* Validate the property. */
+  svn_string_t *old_value;
+
   SVN_ERR (validate_prop (name, pool));
-
-  /* Run pre-revprop-change hook */
+  SVN_ERR (svn_fs_revision_prop (&old_value, repos->fs, rev, name, pool));
   SVN_ERR (svn_repos__hooks_pre_revprop_change (repos, rev, author, name, 
-                                                value, pool));
-
-  /* Change the revision prop. */
-  SVN_ERR (svn_fs_change_rev_prop (repos->fs, rev, name, value, pool));
-
-  /* Run post-revprop-change hook */
+                                                new_value, pool));
+  SVN_ERR (svn_fs_change_rev_prop (repos->fs, rev, name, new_value, pool));
   SVN_ERR (svn_repos__hooks_post_revprop_change (repos, rev, author, 
-                                                 name, pool));
+                                                 name, old_value, pool));
 
   return SVN_NO_ERROR;
 }

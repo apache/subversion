@@ -5,17 +5,20 @@
 NOTE: Subversion is now self-hosting -- to obtain a working copy, you
 must use Subversion itself, not CVS.  Please see the <a
 href="/project_source.html">Project Source</a> page for instructions
-on getting a pre-packaged bootstrap distribution, and read the <a
+on getting a bootstrap source distribution, or the <a
+href="/project_packages.html">Distributions</a> page to find a pre-made
+package for your OS.  Read the <a
 href="http://subversion.tigris.org/inconveniences.html"
 >inconveniences page</a> to learn about some temporary annoyances and
 their workarounds. Ask questions on the <a
 href="/servlets/ProjectMailingListList">dev mailing list</a>, or on
-IRC at <b><tt>irc.freenode.net</tt></b>, channel
-<b><tt>#svn</tt></b>.  Please also read the <a
-href="/project_faq.html">FAQ page</a> and the <a
+IRC at <b><tt>irc.freenode.net</tt></b>, channel <b><tt>#svn</tt></b>.
+Please also read the <a href="/project_faq.html">FAQ page</a> and the
+<a
 href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=256"
->Subversion Book</a> for general answers on how to get started
-and/or how to use Subversion. To find out how Subversion is being used, see our list of <a href="svn-repositories.html">Active Repositories</a>
+>Subversion Book</a> for general answers on how to get started and/or
+how to use Subversion. To find out how Subversion is being used, see
+our list of <a href="svn-repositories.html">Active Repositories</a>
 </font>
 </TD>
 </TR>
@@ -155,21 +158,11 @@ progress.
     due to prioritization and scheduling.</p> 
 </li>
 
-<li><strong>Graceful handling of repeated merges</strong>
-    <p>Subversion will use its generic metadata mechanism as a way of
-    remembering what has been merged, so that repeated merges from the
-    same source do not require careful human calculation to avoid
-    spurious conflicts (anyone who's done repeated CVS merges knows
-    what we're talking about).</p>
-
-    <p>(There are some theoretical problems with remembering merge
-    sources -- knowing where the merged data came from implies some
-    sort of universal repository registry.  However, our first goal is
-    to make sure that multiple merges from branches made <i>in the
-    same repository as the original project</i> compound gracefully.
-    Remembering merges from remote sources is more difficult, due to
-    the difficulty of distinguishing remote sources, but there are
-    good "90%" solutions that will work in practice).</p>
+<li><strong>Better merge support</strong>
+    <p>Improved support for selective merges from related lines of
+       development, and for repeated merges.  (Currently,
+       Subversion's merge support is essentially the same as
+       CVS's.)</p>
 </li>
 
 <li><strong>Broader WebDAV compatibility</strong>

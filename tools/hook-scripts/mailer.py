@@ -2,6 +2,11 @@
 #
 # mailer.py: send email describing a commit
 #
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+#
 # USAGE: mailer.py REPOS-DIR REVISION [CONFIG-FILE]
 #
 #   Using CONFIG-FILE, deliver an email describing the changes between
@@ -31,16 +36,10 @@ def main(pool, config_fname, repos_dir, rev):
 
   cfg = Config(config_fname, repos)
 
-  editor = ChangeCollector(repos.root_prev)
+  editor = ChangeCollector(repos, rev-1)
 
   e_ptr, e_baton = svn.delta.make_editor(editor, pool)
-  svn.repos.svn_repos_dir_delta(repos.root_prev, '', None, repos.root_this, '',
-                                e_ptr, e_baton,
-                                0,  # text_deltas
-                                1,  # recurse
-                                0,  # entry_props
-                                1,  # use_copy_history
-                                pool)
+  svn.repos.svn_repos_replay(repos.root_this, e_ptr, e_baton, pool)
 
   # get all the changes and sort by path
   changelist = editor.changes.items()
@@ -135,16 +134,25 @@ class MailedOutput:
     ### so if the body doesn't change, then it can be sent N times
     ### rather than rebuilding it each time.
 
-    ### need an iteration pool
+    subpool = svn.util.svn_pool_create(pool)
 
     for (group, param_tuple), params in groups.items():
       self.start(group, params)
-      generate_content(self, self.cfg, self.repos, self.changelist, pool)
+
+      # generate the content for this group and set of params
+      generate_content(self, self.cfg, self.repos, self.changelist,
+                       group, params, subpool)
+
       self.finish()
+      svn.util.svn_pool_clear(subpool)
+
+    svn.util.svn_pool_destroy(subpool)
 
   def start(self, group, params):
     self.to_addr = self.cfg.get('to_addr', group, params)
-    self.from_addr = self.cfg.get('from_addr', group, params)
+    self.from_addr = self.cfg.get('from_addr', group, params) or \
+                     self.repos.author or 'no_author'
+    self.reply_to = self.cfg.get('reply_to', group, params)
 
   def mail_headers(self, group, params):
     prefix = self.cfg.get('subject_prefix', group, params)
@@ -152,11 +160,13 @@ class MailedOutput:
       subject = prefix + ' ' + self.subject
     else:
       subject = self.subject
-    return 'From: %s\n'    \
+    hdrs = 'From: %s\n'    \
            'To: %s\n'      \
            'Subject: %s\n' \
-           '\n'            \
            % (self.from_addr, self.to_addr, subject)
+    if self.reply_to:
+      hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
+    return hdrs + '\n'
 
 
 class SMTPOutput(MailedOutput):
@@ -200,7 +210,11 @@ class StandardOutput:
 
   def generate(self, groups, pool):
     "Generate the output; the groups are ignored."
-    generate_content(self, self.cfg, self.repos, self.changelist, pool)
+
+    # use the default group and no parameters
+    ### is that right?
+    generate_content(self, self.cfg, self.repos, self.changelist,
+                     None, { }, pool)
 
   def run_diff(self, cmd):
     # flush our output to keep the parent/child output in sync
@@ -292,7 +306,7 @@ class PipeOutput(MailedOutput):
     self.pipe.wait()
 
 
-def generate_content(output, cfg, repos, changelist, pool):
+def generate_content(output, cfg, repos, changelist, group, params, pool):
 
   svndate = repos.get_rev_prop(svn.util.SVN_PROP_REVISION_DATE)
   ### pick a different date format?
@@ -311,7 +325,7 @@ def generate_content(output, cfg, repos, changelist, pool):
 
   # these are sorted by path already
   for path, change in changelist:
-    generate_diff(output, cfg, repos, date, change, pool)
+    generate_diff(output, cfg, repos, date, change, group, params, pool)
 
 
 def _select_adds(change):
@@ -336,7 +350,7 @@ def generate_list(output, header, changelist, selection):
         is_dir = ''
       if change.prop_changes:
         if change.text_changed:
-          props = '   (text, props changed)'
+          props = '   (contents, props changed)'
         else:
           props = '   (props changed)'
       else:
@@ -353,21 +367,29 @@ def generate_list(output, header, changelist, selection):
                      % (text, change.base_rev, change.base_path[1:], is_dir))
 
 
-def generate_diff(output, cfg, repos, date, change, pool):
+def generate_diff(output, cfg, repos, date, change, group, params, pool):
 
   if change.item_type == ChangeCollector.DIR:
     # all changes were printed in the summary. nothing to do.
     return
 
   if not change.path:
+    ### params is a bit silly here
+    suppress = cfg.get('suppress_deletes', group, params)
+    if suppress == 'yes':
+      # a record of the deletion is in the summary. no need to write
+      # anything further here.
+      return
+
     output.write('\nDeleted: %s\n' % change.base_path)
-    diff = svn.fs.FileDiff(repos.root_prev, change.base_path, None, None, pool)
+    diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
+                           change.base_path, None, None, pool)
 
     label1 = '%s\t%s' % (change.base_path, date)
     label2 = '(empty file)'
     singular = True
   elif change.added:
-    if change.base_path:
+    if change.base_path and (change.base_rev != -1):
       # this file was copied.
 
       # copies with no changes are reported in the header, so we can just
@@ -396,7 +418,8 @@ def generate_diff(output, cfg, repos, date, change, pool):
     return
   else:
     output.write('\nModified: %s\n' % change.path)
-    diff = svn.fs.FileDiff(repos.get_root(change.base_rev), change.base_path[1:],
+    diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
+                           change.base_path[1:],
                            repos.root_this, change.path,
                            pool)
     label1 = change.base_path[1:] + '\t(original)'
@@ -436,12 +459,11 @@ class Repository:
     if not os.path.exists(db_path):
       db_path = repos_dir
 
-    self.fs_ptr = svn.fs.new(pool)
+    self.fs_ptr = svn.fs.new(None, pool)
     svn.fs.open_berkeley(self.fs_ptr, db_path)
 
     self.roots = { }
 
-    self.root_prev = self.get_root(rev-1)
     self.root_this = self.get_root(rev)
 
     self.author = self.get_rev_prop(svn.util.SVN_PROP_REVISION_AUTHOR)
@@ -462,25 +484,28 @@ class ChangeCollector(svn.delta.Editor):
   DIR = 'DIR'
   FILE = 'FILE'
 
-  def __init__(self, root_prev):
-    self.root_prev = root_prev
+  # BATON FORMAT: [path, base_path, base_rev]
+  
+  def __init__(self, repos, rev_prev):
+    self.repos = repos
+    self.rev_prev = rev_prev
 
     # path -> _change()
     self.changes = { }
 
   def open_root(self, base_revision, dir_pool):
-    return ('', '', base_revision)  # dir_baton
+    return ('', '', self.rev_prev)  # dir_baton
 
   def delete_entry(self, path, revision, parent_baton, pool):
-    if svn.fs.is_dir(self.root_prev, '/' + path, pool):
+    base_path = _svn_join(parent_baton[1], _svn_basename(path))
+    if svn.fs.is_dir(self.repos.get_root(parent_baton[2]), base_path, pool):
       item_type = ChangeCollector.DIR
     else:
       item_type = ChangeCollector.FILE
-    # base_path is the specified path. revision is the parent's.
     self.changes[path] = _change(item_type,
                                  False,
                                  False,
-                                 path,            # base_path
+                                 base_path,
                                  parent_baton[2], # base_rev
                                  None,            # (new) path
                                  False,           # added
@@ -496,14 +521,16 @@ class ChangeCollector(svn.delta.Editor):
                                  path,              # path
                                  True,              # added
                                  )
-
-    return (path, copyfrom_path, copyfrom_revision)  # dir_baton
+    if copyfrom_path and (copyfrom_revision != -1):
+      base_path = copyfrom_path
+    else:
+      base_path = path
+    base_rev = copyfrom_revision
+    return (path, base_path, base_rev)  # dir_baton
 
   def open_directory(self, path, parent_baton, base_revision, dir_pool):
-    assert parent_baton[2] == base_revision
-
     base_path = _svn_join(parent_baton[1], _svn_basename(path))
-    return (path, base_path, base_revision)  # dir_baton
+    return (path, base_path, parent_baton[2])  # dir_baton
 
   def change_dir_prop(self, dir_baton, name, value, pool):
     dir_path = dir_baton[0]
@@ -530,16 +557,18 @@ class ChangeCollector(svn.delta.Editor):
                                  path,              # path
                                  True,              # added
                                  )
-
-    return (path, copyfrom_path, copyfrom_revision)  # file_baton
+    if copyfrom_path and (copyfrom_revision != -1):
+      base_path = copyfrom_path
+    else:
+      base_path = path
+    base_rev = copyfrom_revision
+    return (path, base_path, base_rev)  # file_baton
 
   def open_file(self, path, parent_baton, base_revision, file_pool):
-    assert parent_baton[2] == base_revision
-
     base_path = _svn_join(parent_baton[1], _svn_basename(path))
-    return (path, base_path, base_revision)  # file_baton
+    return (path, base_path, parent_baton[2])  # file_baton
 
-  def apply_textdelta(self, file_baton, base_checksum, result_checksum):
+  def apply_textdelta(self, file_baton, base_checksum):
     file_path = file_baton[0]
     if self.changes.has_key(file_path):
       self.changes[file_path].text_changed = True
@@ -597,7 +626,7 @@ class _change:
     ### but the same path could be a change to the previous rev or a restore
     ### of an older version. when it is "change to previous", I'm not sure
     ### if the rev is always repos.rev - 1, or whether it represents the
-    ### created or time-of-checkou rev. so... we use a flag (for now)
+    ### created or time-of-checkout rev. so... we use a flag (for now)
     self.added = added
 
 

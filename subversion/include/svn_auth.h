@@ -26,7 +26,6 @@
 
 #include "svn_types.h"
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -89,17 +88,19 @@ typedef struct
   
   /** Get an initial set of credentials.
    *
-   * Set @a *credentials to a set of valid credentials, or NULL if no
-   * credentials are available.  Set @a *iter_baton to context that
-   * allows a subsequent call to @c next_credentials, in case the
-   * first credentials fail to authenticate.  @a provider_baton is
-   * general context for the vtable, and @a parameters contains any
-   * run-time data that the provider may need.
+   * Set @a *credentials to a set of valid credentials within @a
+   * realmstring, or NULL if no credentials are available.  Set @a
+   * *iter_baton to context that allows a subsequent call to @c
+   * next_credentials, in case the first credentials fail to
+   * authenticate.  @a provider_baton is general context for the
+   * vtable, and @a parameters contains any run-time data that the
+   * provider may need.
    */
   svn_error_t * (*first_credentials) (void **credentials,
                                       void **iter_baton,
                                       void *provider_baton,
                                       apr_hash_t *parameters,
+                                      const char *realmstring,
                                       apr_pool_t *pool);
 
   /** Get a different set of credentials.
@@ -107,7 +108,7 @@ typedef struct
    * Set @a *credentials to another set of valid credentials, (using
    * @a iter_baton as the context from previous call to first_credentials
    * or next_credentials).  If no more credentials are available, set
-   * @a **credenitals to NULL.  If the provider only has one set of
+   * @a **credentials to NULL.  If the provider only has one set of
    * credentials, this function pointer should simply be NULL.  @a
    * parameters contains any run-time data that the provider may need.
    */
@@ -149,7 +150,7 @@ typedef struct
 /** Specific types of credentials **/
 
 /** A simple username/password pair. */
-#define SVN_AUTH_CRED_SIMPLE "svn:simple"
+#define SVN_AUTH_CRED_SIMPLE "svn.simple"
 typedef struct
 {
   const char *username;
@@ -158,13 +159,70 @@ typedef struct
 } svn_auth_cred_simple_t;
 
 /** Just a username. */
-#define SVN_AUTH_CRED_USERNAME "svn:username"
+#define SVN_AUTH_CRED_USERNAME "svn.username"
 typedef struct
 {
   const char *username;
 
 } svn_auth_cred_username_t;
 
+/** SSL client authentication - this provides @a cert_file and
+    optionally @a key_file (if the private key is separate) as the
+    full paths to the files, and sets @a cert_type for the type of
+    certificate file to load */
+#define SVN_AUTH_CRED_CLIENT_SSL "svn.ssl.client-cert"
+typedef enum
+  {
+    svn_auth_ssl_unknown_cert_type,
+    svn_auth_ssl_pem_cert_type,
+    svn_auth_ssl_pkcs12_cert_type
+    
+  } svn_auth_ssl_cert_type_t;
+typedef struct
+{
+  const char *cert_file;
+  const char *key_file;
+  svn_auth_ssl_cert_type_t cert_type;
+
+} svn_auth_cred_client_ssl_t;
+
+/** SSL client passphrase.
+ *
+ * @a password gets set with the appropriate password for the
+ * certificate.
+ */
+#define SVN_AUTH_CRED_CLIENT_PASS_SSL "svn.ssl.client-passphrase"
+typedef struct
+{
+  const char *password;
+
+} svn_auth_cred_client_ssl_pass_t;
+
+/** SSL server verification.
+ *
+ *  @a cert contains two inner structures representing fields from the
+ *  server and issuer certificates, as well as the start and expiry
+ *  times.  @a failures_allow is set for each flag allowed.
+ *
+ *  failures flags defined within neon:
+ *  * SVN_AUTH_SSL_NOTYETVALID : certificate is not yet valid
+ *  * SVN_AUTH_SSL_EXPIRED     : certificate has expired
+ *  * SVN_AUTH_SSL_CNMISMATCH  : name on certificate does not match server
+ *  * SVN_AUTH_SSL_UNKNOWNCA   : cert is signed by an untrusted authority
+ */
+#define SVN_AUTH_SSL_NOTYETVALID (1<<0)
+#define SVN_AUTH_SSL_EXPIRED     (1<<1)
+#define SVN_AUTH_SSL_CNMISMATCH  (1<<2)
+#define SVN_AUTH_SSL_UNKNOWNCA   (1<<3)
+#define SVN_AUTH_SSL_FAILMASK    (0x0f)
+
+#define SVN_AUTH_CRED_SERVER_SSL "svn.ssl.server"
+
+typedef struct
+{
+  int failures_allow;
+
+} svn_auth_cred_server_ssl_t;
 
 
 
@@ -226,14 +284,24 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
     Property value is irrelevant; only property's existence matters. */
 #define SVN_AUTH_PARAM_NO_AUTH_CACHE  SVN_AUTH_PARAM_PREFIX "no-auth-cache"
 
+/** The following property is for ssl server cert providers. This
+    provides the detected failures by the certificate validator */
+#define SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN SVN_AUTH_PARAM_PREFIX \
+  "ssl:failures"
+
+/** Some providers need access to the @c svn_config_t configuration
+    for individual servers in order to properly operate */
+#define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX "config"
+#define SVN_AUTH_PARAM_SERVER_GROUP SVN_AUTH_PARAM_PREFIX "server-group"
 
 /** Get an initial set of credentials.
  *
  * Ask @a auth_baton to set @a *credentials to a set of credentials
- * defined by @a cred_kind, or NULL if no credentials are available.
- * Otherwise, return an iteration state in @a *state, so that the
- * caller can call @c svn_auth_next_credentials, in case the first set
- * of credentials fails to authenticate.
+ * defined by @a cred_kind and valid within @a realmstring, or NULL if
+ * no credentials are available.  Otherwise, return an iteration state
+ * in @a *state, so that the caller can call @c
+ * svn_auth_next_credentials, in case the first set of credentials
+ * fails to authenticate.
  *
  * Use @a pool to allocate @a *state, and for temporary allocation.
  * Note that there is no guarantee about where @a *credentials will be
@@ -245,6 +313,7 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 svn_error_t * svn_auth_first_credentials(void **credentials,
                                          svn_auth_iterstate_t **state,
                                          const char *cred_kind,
+                                         const char *realmstring,
                                          svn_auth_baton_t *auth_baton,
                                          apr_pool_t *pool);
 

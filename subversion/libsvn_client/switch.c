@@ -30,6 +30,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_config.h"
 #include "client.h"
 
 
@@ -66,6 +67,18 @@ svn_client_switch (const char *path,
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access;
+  const char *diff3_cmd;
+  
+  /* Get the external diff3, if any. */
+  {
+    svn_config_t *cfg = ctx->config
+      ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
+                      APR_HASH_KEY_STRING)
+      : NULL;
+    
+    svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                    SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+  }
 
   /* Sanity check.  Without these, the switch is meaningless. */
   assert (path);
@@ -156,6 +169,7 @@ svn_client_switch (const char *path,
                                          revnum, switch_url, recurse,
                                          ctx->notify_func, ctx->notify_baton,
                                          ctx->cancel_func, ctx->cancel_baton,
+                                         diff3_cmd,
                                          &switch_editor, &switch_edit_baton,
                                          traversal_info, pool));
 
@@ -167,7 +181,7 @@ svn_client_switch (const char *path,
                                   target,
                                   recurse,
                                   switch_url,
-                                  switch_editor, switch_edit_baton));
+                                  switch_editor, switch_edit_baton, pool));
       
       /* Drive the reporter structure, describing the revisions within
          PATH.  When we call reporter->finish_report, the
@@ -211,6 +225,7 @@ svn_client_switch (const char *path,
       svn_stream_t *file_stream;
       svn_revnum_t fetched_rev = 1; /* this will be set by get_file() */
       apr_status_t apr_err;
+      const char *path_parent;
 
       /* Create a unique file */
       SVN_ERR (svn_io_open_unique_file (&fp, &new_text_path,
@@ -222,30 +237,23 @@ svn_client_switch (const char *path,
       file_stream = svn_stream_from_aprfile (fp, pool);
 
       /* Open an RA session to 'target' file URL. */
-      /* ### FIXME: we shouldn't be passing a NULL base-dir to
-         open_ra_session.  This is a just a way of forcing the server
-         to send a fulltext instead of svndiff data against something
-         in our working copy.  We need to add a callback to
-         open_ra_session that will fetch a 'source' stream from the
-         WC, so that ra_dav's implementation of get_file() can use the
-         svndiff data to construct a fulltext.  */
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, switch_url, NULL,
+      svn_path_split (path, &path_parent, NULL, pool);
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, switch_url,
+                                            path_parent,
                                             NULL, NULL, TRUE, TRUE,
                                             ctx, pool));
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));
 
-      /* Passing "" as a relative path, since we opened the file URL.
-         This pushes the text of the file into our file_stream, which
-         means it ends up in our unique tmpfile.  We also get the full
-         proplist. */
+      /* Push the file's text into file_stream, which means it ends up
+         in our unique tmpfile.  We also get the full proplist. */
       SVN_ERR (ra_lib->get_file (session, "", revnum, file_stream,
-                                 &fetched_rev, &prophash));
+                                 &fetched_rev, &prophash, pool));
       SVN_ERR (svn_stream_close (file_stream));
       apr_err = apr_file_close (fp); 
       if (apr_err)
-        return svn_error_createf (apr_err, NULL,
-                                  "closing temporary file '%s'", new_text_path);
+        return svn_error_createf
+          (apr_err, NULL, "closing temporary file '%s'", new_text_path);
 
       /* Convert the prophash into an array, which is what
          svn_wc_install_file (and its helpers) want.  */
@@ -274,6 +282,7 @@ svn_client_switch (const char *path,
                                       new_text_path,
                                       proparray, TRUE, /* is full proplist */
                                       switch_url, /* new url */
+                                      diff3_cmd,
                                       pool));     
 
         if (ctx->notify_func != NULL)
@@ -292,9 +301,6 @@ svn_client_switch (const char *path,
 
   if (err)
     return err;
-
-  /* Close the RA session. */
-  SVN_ERR (ra_lib->close (session));
 
   SVN_ERR (svn_wc_adm_close (adm_access));
 

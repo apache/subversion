@@ -46,6 +46,7 @@ extern "C" {
 typedef enum {
   svn_cl__ancestor_path_opt = SVN_OPT_FIRST_LONGOPT_ID,
   svn_cl__force_opt,
+  svn_cl__force_log_opt,
   svn_cl__encoding_opt,
   svn_cl__version_opt,
   svn_cl__auth_username_opt,
@@ -59,9 +60,14 @@ typedef enum {
   svn_cl__non_interactive_opt,
   svn_cl__no_diff_deleted,
   svn_cl__dry_run_opt,
+  svn_cl__relocate_opt,
   svn_cl__revprop_opt,
   svn_cl__diff_cmd_opt,
-  svn_cl__merge_cmd_opt
+  svn_cl__merge_cmd_opt,
+  svn_cl__ignore_ancestry_opt,
+  svn_cl__editor_cmd_opt,
+  svn_cl__old_cmd_opt,
+  svn_cl__new_cmd_opt
 } svn_cl__longopt_t;
 
 
@@ -85,6 +91,7 @@ typedef struct svn_cl__opt_state_t
   const char *message;           /* log message */
   const char *ancestor_path;     /* ### todo: who sets this? */
   svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
+  svn_boolean_t force_log;       /* force validity of a suspect log msg file */
   svn_boolean_t incremental;     /* yield output suitable for concatenation */
   svn_boolean_t quiet;           /* sssh...avoid unnecessary output */
   svn_boolean_t non_interactive; /* do no interactive prompting */
@@ -103,10 +110,15 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_ignore;       /* disregard default ignores & svn:ignore's */
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
+  svn_boolean_t ignore_ancestry; /* ignore ancestry for diff-y operations */
   svn_boolean_t dry_run;         /* try operation but make no changes */
   svn_boolean_t revprop;         /* operate on a revision property */
   const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
+  const char *editor_cmd;        /* external editor command. */
+  const char *old_target;        /* diff target */
+  const char *new_target;        /* diff target */
+  svn_boolean_t relocate;        /* rewrite urls (svn switch) */
 } svn_cl__opt_state_t;
 
 
@@ -158,14 +170,17 @@ extern const apr_getopt_option_t svn_cl__options[];
 extern const char svn_cl__help_header[];
 extern const char svn_cl__help_footer[];
 
-
-/* Print out commit information found in COMMIT_INFO to the console. */
-void
-svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
+
+/* Our cancellation callback. */
+svn_error_t *svn_cl__check_cancel (void *baton);
 
 
 
 /*** Command-line output functions -- printing to the user. ***/
+
+/* Print out commit information found in COMMIT_INFO to the console. */
+void svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
+
 
 /* Print a hash that maps (char *) names to (svn_wc_status_t *)
    structs to stdout for human consumption.  Prints in abbreviated
@@ -206,7 +221,11 @@ svn_error_t *svn_cl__revprop_no_rev_error (apr_pool_t *pool);
 /* Search for a text editor command in standard environment variables,
    and invoke it to edit CONTENTS (using a temporary file created in
    directory BASE_DIR).  Return the new contents in *EDITED_CONTENTS,
-   or set *EDITED_CONTENTS to NULL if no edit was performed.  
+   or set *EDITED_CONTENTS to NULL if no edit was performed.
+
+   If EDITOR_CMD is not NULL, it is the name of the external editor
+   command to use, overriding anything else that might determine the
+   editor.
 
    If TMPFILE_LEFT is NULL, the temporary file will be destroyed.
    Else, the file will be left on disk, and its path returned in
@@ -222,6 +241,7 @@ svn_error_t *svn_cl__revprop_no_rev_error (apr_pool_t *pool);
 svn_error_t *
 svn_cl__edit_externally (const char **edited_contents,
                          const char **tmpfile_left,
+                         const char *editor_cmd,
                          const char *base_dir,
                          const char *contents,
                          const char *prefix,
@@ -246,13 +266,6 @@ svn_cl__prompt_user (const char **result,
                      svn_boolean_t hide,
                      void *baton,
                      apr_pool_t *pool);
-
-/* Helper for subcommands: given parsed OPT_STATE arguments from the
-   command-line, put auth info into a structure to pass to libsvn_client. */
-svn_client_auth_baton_t *
-svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
-                         apr_pool_t *pool);
-
 
 
 /*** Notification functions to display results on the terminal. */
@@ -299,10 +312,11 @@ void svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
 
    NOTE: While the baton itself will be allocated from POOL, the items
    add to it are added by reference, not duped into POOL!*/
-void *svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
-                                  const char *base_dir,
-                                  apr_hash_t *config,
-                                  apr_pool_t *pool);
+svn_error_t *svn_cl__make_log_msg_baton (void **baton,
+                                         svn_cl__opt_state_t *opt_state,
+                                         const char *base_dir,
+                                         apr_hash_t *config,
+                                         apr_pool_t *pool);
 
 /* A function of type svn_client_get_commit_log_t. */
 svn_error_t *svn_cl__get_log_message (const char **log_msg,

@@ -40,6 +40,7 @@ struct parse_baton
   svn_boolean_t use_history;
   svn_stream_t *outstream;
   enum svn_repos_load_uuid uuid_action;
+  const char *parent_dir;
 };
 
 struct revision_baton
@@ -168,7 +169,7 @@ stream_malformed (void)
    Use POOL for all allocations.  */
 static svn_error_t *
 parse_property_block (svn_stream_t *stream,
-                      apr_size_t content_length,
+                      svn_filesize_t content_length,
                       const svn_repos_parser_fns_t *parse_fns,
                       void *record_baton,
                       svn_boolean_t is_node,
@@ -288,7 +289,7 @@ parse_property_block (svn_stream_t *stream,
    Use POOL for all allocations.  */
 static svn_error_t *
 parse_text_block (svn_stream_t *stream,
-                  apr_size_t content_length,
+                  svn_filesize_t content_length,
                   const svn_repos_parser_fns_t *parse_fns,
                   void *record_baton,
                   char *buffer,
@@ -317,7 +318,7 @@ parse_text_block (svn_stream_t *stream,
       if (content_length >= buflen)
         rlen = buflen;
       else
-        rlen = content_length;
+        rlen = (apr_size_t) content_length;
       
       num_to_read = rlen;
       SVN_ERR (svn_stream_read (stream, buffer, &rlen));
@@ -493,8 +494,8 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                   SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
                                   APR_HASH_KEY_STRING)))
         {
-          SVN_ERR (parse_property_block (stream, 
-                                         (apr_size_t) atoi (valstr),
+          SVN_ERR (parse_property_block (stream,
+                                         apr_atoui64 (valstr),
                                          parse_fns,
                                          found_node ? node_baton : rev_baton,
                                          found_node,
@@ -507,7 +508,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                   APR_HASH_KEY_STRING)))
         {
           SVN_ERR (parse_text_block (stream, 
-                                     (apr_size_t) atoi (valstr),
+                                     apr_atoui64 (valstr),
                                      parse_fns,
                                      found_node ? node_baton : rev_baton,
                                      buffer, 
@@ -560,7 +561,12 @@ make_node_baton (apr_hash_t *headers,
   /* Then add info from the headers.  */
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
                            APR_HASH_KEY_STRING)))
-    nb->path = apr_pstrdup (pool, val);
+  {
+    if (rb->pb->parent_dir)
+      nb->path = svn_path_join (rb->pb->parent_dir, val, pool);
+    else
+      nb->path = apr_pstrdup (pool, val);
+  }
 
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_KIND,
                            APR_HASH_KEY_STRING)))
@@ -822,6 +828,7 @@ set_revision_property (void *baton,
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t *
 set_node_property (void *baton,
                    const char *name,
@@ -833,6 +840,34 @@ set_node_property (void *baton,
   SVN_ERR (svn_fs_change_node_prop (rb->txn_root, nb->path,
                                     name, value, nb->pool));
   
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+remove_node_props (void *baton)
+{
+  struct node_baton *nb = baton;
+  struct revision_baton *rb = nb->rb;
+  apr_hash_t *proplist;
+  apr_hash_index_t *hi;
+
+  SVN_ERR (svn_fs_node_proplist (&proplist,
+                                 rb->txn_root, nb->path, nb->pool));
+
+  for (hi = apr_hash_first (nb->pool, proplist); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t keylen;
+      void *val;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+
+      SVN_ERR (svn_fs_change_node_prop (rb->txn_root, nb->path,
+                                        (const char *) key, NULL,
+                                        nb->pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -900,10 +935,21 @@ close_revision (void *baton)
                                      rb->pool));
 
   if (pb->outstream)
-    svn_stream_printf (pb->outstream, rb->pool,
-                       "\n------- Committed new rev %" SVN_REVNUM_T_FMT
-                       " (loaded from original rev %" SVN_REVNUM_T_FMT
-                       ") >>>\n\n", new_rev, rb->rev);
+    {
+      if (new_rev == rb->rev)
+        {
+          svn_stream_printf (pb->outstream, rb->pool,
+                             "\n------- Committed revision %" SVN_REVNUM_T_FMT
+                             " >>>\n\n", new_rev);
+        }
+      else
+        {
+          svn_stream_printf (pb->outstream, rb->pool,
+                             "\n------- Committed new rev %" SVN_REVNUM_T_FMT
+                             " (loaded from original rev %" SVN_REVNUM_T_FMT
+                             ") >>>\n\n", new_rev, rb->rev);
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -921,6 +967,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
                                svn_boolean_t use_history,
                                enum svn_repos_load_uuid uuid_action,
                                svn_stream_t *outstream,
+                               const char *parent_dir,
                                apr_pool_t *pool)
 {
   svn_repos_parser_fns_t *parser = apr_pcalloc (pool, sizeof(*parser));
@@ -931,6 +978,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
   parser->uuid_record = uuid_record;
   parser->set_revision_property = set_revision_property;
   parser->set_node_property = set_node_property;
+  parser->remove_node_props = remove_node_props;
   parser->set_fulltext = set_fulltext;
   parser->close_node = close_node;
   parser->close_revision = close_revision;
@@ -940,6 +988,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
   pb->use_history = use_history;
   pb->outstream = outstream;
   pb->uuid_action = uuid_action;
+  pb->parent_dir = parent_dir;
 
   *parser_callbacks = parser;
   *parse_baton = pb;
@@ -953,6 +1002,7 @@ svn_repos_load_fs (svn_repos_t *repos,
                    svn_stream_t *dumpstream,
                    svn_stream_t *feedback_stream,
                    enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
                    apr_pool_t *pool)
 {
   const svn_repos_parser_fns_t *parser;
@@ -965,6 +1015,7 @@ svn_repos_load_fs (svn_repos_t *repos,
                                           TRUE, /* look for copyfrom revs */
                                           uuid_action,
                                           feedback_stream,
+                                          parent_dir,
                                           pool));
 
   SVN_ERR (svn_repos_parse_dumpstream (dumpstream, parser, parse_baton, pool));

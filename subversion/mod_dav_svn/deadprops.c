@@ -23,10 +23,11 @@
 
 #include <apr_hash.h>
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_dav.h"
+#include "svn_base64.h"
 
 struct dav_db {
   const dav_resource *resource;
@@ -69,20 +70,6 @@ static void get_repos_propname(dav_db *db, const dav_prop_name *name,
       /* the name of a custom prop is just the name -- no ns URI */
       *repos_propname = name->name;
     }
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-  else if (strcmp(name->ns, SVN_PROP_PREFIX) == 0)
-    {
-      /* recombine the namespace ("svn:") and the name. */
-      svn_stringbuf_set(db->work, SVN_PROP_PREFIX);
-      svn_stringbuf_appendcstr(db->work, name->name);
-      *repos_propname = db->work->data;
-    }
-  else if (strcmp(name->ns, SVN_PROP_CUSTOM_PREFIX) == 0)
-    {
-      /* the name of a custom prop is just the name -- no ns URI */
-      *repos_propname = name->name;
-    }
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   else
     {
       *repos_propname = NULL;
@@ -228,13 +215,9 @@ static void dav_svn_db_close(dav_db *db)
 
 static dav_error *dav_svn_db_define_namespaces(dav_db *db, dav_xmlns_info *xi)
 {
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-  dav_xmlns_add(xi, "S", SVN_PROP_PREFIX);
-  dav_xmlns_add(xi, "C", SVN_PROP_CUSTOM_PREFIX);
-#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   dav_xmlns_add(xi, "S", SVN_DAV_PROP_NS_SVN);
   dav_xmlns_add(xi, "C", SVN_DAV_PROP_NS_CUSTOM);
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+  dav_xmlns_add(xi, "V", SVN_DAV_PROP_NS_DAV);
 
   /* ### we don't have any other possible namespaces right now. */
 
@@ -246,57 +229,61 @@ static dav_error *dav_svn_db_output_value(dav_db *db,
                                           dav_xmlns_info *xi,
                                           apr_text_header *phdr, int *found)
 {
-  svn_string_t *propval;
-  svn_stringbuf_t *xmlsafe = NULL;
   const char *prefix;
   const char *s;
+  svn_string_t *propval;
   dav_error *err;
+  apr_pool_t *pool = db->resource->pool;
 
   if ((err = get_value(db, name, &propval)) != NULL)
     return err;
 
   /* return whether the prop was found, then punt or handle it. */
-  *found = propval != NULL;
+  *found = (propval != NULL);
   if (propval == NULL)
     return NULL;
 
-  /* XML-escape our properties before sending them across the wire. */
-  svn_xml_escape_cdata_string(&xmlsafe, propval, db->resource->pool);
-
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-  if (strcmp(name->ns, SVN_PROP_CUSTOM_PREFIX) == 0)
-    prefix = "C:";
-  else
-    prefix = "S:";
-#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   if (strcmp(name->ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
     prefix = "C:";
   else
     prefix = "S:";
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
-  if (xmlsafe->len == 0)
+  if (propval->len == 0)
     {
       /* empty value. add an empty elem. */
-      s = apr_psprintf(db->resource->pool, "<%s%s/>" DEBUG_CR, prefix,
-                       name->name);
-      apr_text_append(db->resource->pool, phdr, s);
+      s = apr_psprintf(pool, "<%s%s/>" DEBUG_CR, prefix, name->name);
+      apr_text_append(pool, phdr, s);
     }
   else
     {
-      /* add <prefix:name>value</prefix:name> */
+      /* add <prefix:name [V:encoding="base64"]>value</prefix:name> */
+      const char *xml_safe;
+      const char *encoding = "";
 
-      s = apr_psprintf(db->resource->pool, "<%s%s>", prefix, name->name);
-      apr_text_append(db->resource->pool, phdr, s);
+      /* Ensure XML-safety of our property values before sending them
+         across the wire. */
+      if (! svn_xml_is_xml_safe(propval->data, propval->len))
+        {
+          propval = (svn_string_t *)svn_base64_encode_string(propval, pool);
+          xml_safe = propval->data;
+          encoding = apr_pstrcat(pool, " V:encoding=\"base64\"", NULL);
+        }
+      else
+        {    
+          svn_stringbuf_t *xmlval = NULL;
+          svn_xml_escape_cdata_string(&xmlval, propval, pool);
+          xml_safe = xmlval->data;
+        }
+
+      s = apr_psprintf(pool, "<%s%s%s>", prefix, name->name, encoding);
+      apr_text_append(pool, phdr, s);
 
       /* the value is in our pool which means it has the right lifetime. */
       /* ### at least, per the current mod_dav architecture/API */
-      /* ### oops. apr_text is not binary-safe */
-      apr_text_append(db->resource->pool, phdr, xmlsafe->data);
+      apr_text_append(pool, phdr, xml_safe);
       
-      s = apr_psprintf(db->resource->pool, "</%s%s>" DEBUG_CR, prefix,
-                       name->name);
-      apr_text_append(db->resource->pool, phdr, s);
+      s = apr_psprintf(pool, "</%s%s>" DEBUG_CR, prefix, name->name);
+      apr_text_append(pool, phdr, s);
     }
 
   return NULL;
@@ -316,10 +303,9 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
                                    const apr_xml_elem *elem,
                                    dav_namespace_map *mapping)
 {
-  svn_string_t propval;
-
-  /* ### oops. apr_xml is busted: it doesn't allow for binary data at the
-     ### moment. thankfully, we aren't using binary props yet. */
+  svn_string_t *propval = apr_pcalloc(db->p, sizeof(*propval));
+  apr_pool_t *pool = db->p;
+  apr_xml_attr *attr = elem->attr;
 
   /* SVN sends property values as a big blob of bytes. Thus, there should be
      no child elements of the property-name element. That also means that
@@ -327,10 +313,29 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
      dav_xml_get_cdata() will figure it all out for us, but (normally) it
      should be awfully fast and not need to copy any data. */
 
-  propval.data = dav_xml_get_cdata(elem, db->p, 0 /* strip_white */);
-  propval.len = strlen(propval.data);
+  propval->data = dav_xml_get_cdata(elem, pool, 0 /* strip_white */);
+  propval->len = strlen(propval->data);
+  
+  /* Check for special encodings of the property value. */
+  while (attr)
+    {
+      if (strcmp (attr->name, "encoding") == 0) /* ### namespace check? */
+        {
+          const char *enc_type = attr->value;
 
-  return save_value(db, name, &propval);
+          /* Handle known encodings here. */
+          if (enc_type && (strcmp (enc_type, "base64") == 0))
+            propval = (svn_string_t *)svn_base64_decode_string(propval, pool);
+          else
+            return dav_new_error (pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                  "Unknown property encoding");
+          break;
+        }
+      /* Next attribute, please. */
+      attr = attr->next;
+    }
+
+  return save_value(db, name, propval);
 }
 
 static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
@@ -417,20 +422,6 @@ static void get_name(dav_db *db, dav_prop_name *pname)
 
       apr_hash_this(db->hi, &name, NULL, NULL);
 
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-#define PREFIX_LEN (sizeof(SVN_PROP_PREFIX) - 1)
-      if (strncmp(name, SVN_PROP_PREFIX, PREFIX_LEN) == 0)
-#undef PREFIX_LEN
-        {
-          pname->ns = SVN_PROP_PREFIX;
-          pname->name = (const char *)name + 4;
-        }
-      else
-        {
-          pname->ns = SVN_PROP_CUSTOM_PREFIX;
-          pname->name = name;
-        }
-#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 #define PREFIX_LEN (sizeof(SVN_PROP_PREFIX) - 1)
       if (strncmp(name, SVN_PROP_PREFIX, PREFIX_LEN) == 0)
 #undef PREFIX_LEN
@@ -443,7 +434,6 @@ static void get_name(dav_db *db, dav_prop_name *pname)
           pname->ns = SVN_DAV_PROP_NS_CUSTOM;
           pname->name = name;
         }
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
     }
 }
 
@@ -456,16 +446,24 @@ static dav_error *dav_svn_db_first_name(dav_db *db, dav_prop_name *pname)
 
       /* Working Baseline, Baseline, or (Working) Version resource */
       if (db->resource->baselined)
-        if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
-          serr = svn_fs_txn_proplist(&db->props, db->resource->info->root.txn,
-                                     db->p);
-        else
-          serr = svn_fs_revision_proplist(&db->props,
-                                          db->resource->info->repos->fs,
-                                          db->resource->info->root.rev, db->p);
+        {
+          if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
+            serr = svn_fs_txn_proplist(&db->props, 
+                                       db->resource->info->root.txn,
+                                       db->p);
+          else
+            serr = svn_fs_revision_proplist(&db->props,
+                                            db->resource->info->repos->fs,
+                                            db->resource->info->root.rev, 
+                                            db->p);
+        }
       else
-        serr = svn_fs_node_proplist(&db->props, db->resource->info->root.root,
-                                    get_repos_path(db->resource->info), db->p);
+        {
+          serr = svn_fs_node_proplist(&db->props, 
+                                      db->resource->info->root.root,
+                                      get_repos_path(db->resource->info), 
+                                      db->p);
+        }
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "could not begin sequencing through "
@@ -493,7 +491,8 @@ static dav_error *dav_svn_db_next_name(dav_db *db, dav_prop_name *pname)
   return NULL;
 }
 
-static dav_error *dav_svn_db_get_rollback(dav_db *db, const dav_prop_name *name,
+static dav_error *dav_svn_db_get_rollback(dav_db *db, 
+                                          const dav_prop_name *name,
                                           dav_deadprop_rollback **prollback)
 {
   dav_error *err;

@@ -223,7 +223,8 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
   value = svn_stringbuf_create ("", subpool);
 
   /* The top-level values belong to the [DEFAULT] section */
-  svn_err = parse_section (cfg, hkey, "DEFAULT", option, value);
+  svn_err = parse_section (cfg, hkey, SVN_CONFIG__DEFAULT_SECTION,
+                           option, value);
   if (svn_err)
     goto cleanup;
 

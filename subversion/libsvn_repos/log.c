@@ -36,28 +36,32 @@
  * properties of the node were changed, or that the node was added or
  * deleted.
  *
- * The key is allocated in POOL; the value is (void *) 'U', 'A', 'D',
- * or 'R', for modified, added, deleted, or replaced, respectively.
+ * The CHANGED hash set and the key are allocated in POOL;
+ * the value is (void *) 'U', 'A', 'D', or 'R', for modified, added,
+ * deleted, or replaced, respectively.
  * 
  */
 static svn_error_t *
-detect_changed (apr_hash_t *changed,
+detect_changed (apr_hash_t **changed,
                 svn_fs_root_t *root,
                 apr_pool_t *pool)
 {
   apr_hash_t *changes;
   apr_hash_index_t *hi;
-  svn_log_changed_path_t *item;
   apr_pool_t *subpool = svn_pool_create (pool);
   
-  SVN_ERR (svn_fs_paths_changed (&changes, root, subpool));
-  for (hi = apr_hash_first (subpool, changes); hi; hi = apr_hash_next (hi))
+  *changed = apr_hash_make (pool);
+  SVN_ERR (svn_fs_paths_changed (&changes, root, pool));
+  for (hi = apr_hash_first (pool, changes); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
       svn_fs_path_change_t *change;
       const char *path;
       char action;
+      svn_log_changed_path_t *item;
+
+      svn_pool_clear (subpool);
 
       /* KEY will be the path, VAL the change. */
       apr_hash_this (hi, &key, NULL, &val);
@@ -103,7 +107,7 @@ detect_changed (apr_hash_t *changed,
               item->copyfrom_rev = copyfrom_rev;
             }
         }
-      apr_hash_set (changed, apr_pstrdup (pool, path), 
+      apr_hash_set (*changed, apr_pstrdup (pool, path), 
                     APR_HASH_KEY_STRING, item);
     }
 
@@ -125,7 +129,6 @@ svn_repos_get_logs (svn_repos_t *repos,
 {
   svn_revnum_t this_rev, head = SVN_INVALID_REVNUM;
   apr_pool_t *subpool = svn_pool_create (pool);
-  apr_hash_t *changed_paths = NULL;
   svn_fs_t *fs = repos->fs;
   apr_array_header_t *revs = NULL;
 
@@ -194,8 +197,10 @@ svn_repos_get_logs (svn_repos_t *repos,
                                                  pool));
               for (j = 0; j < changed_revs->nelts; j++)
                 {
-                  svn_revnum_t chrev = 
-                    APR_ARRAY_IDX (changed_revs, j, svn_revnum_t);
+                  /* We're re-using the memory allocated for the array
+                     here in order to avoid more allocations.  */
+                  svn_revnum_t *chrev = 
+                    (((svn_revnum_t *)(changed_revs)->elts) + j);
                   apr_hash_set (all_revs, (void *)chrev, sizeof (chrev), 
                                 (void *)1);
                 }
@@ -234,6 +239,7 @@ svn_repos_get_logs (svn_repos_t *repos,
        ((start >= end) ? this_rev-- : this_rev++))
     {
       svn_string_t *author, *date, *message;
+      apr_hash_t *changed_paths = NULL;
 
       /* If we have a list of revs for use, check to make sure this is
          one of them.  */
@@ -248,7 +254,7 @@ svn_repos_get_logs (svn_repos_t *repos,
 
           if (! matched)
             continue;
-	}
+        }
 
       SVN_ERR (svn_fs_revision_prop
                (&author, fs, this_rev, SVN_PROP_REVISION_AUTHOR, subpool));
@@ -264,17 +270,16 @@ svn_repos_get_logs (svn_repos_t *repos,
       if ((this_rev > 0) && discover_changed_paths)
         {
           svn_fs_root_t *newroot;
-          changed_paths = apr_hash_make (subpool);
           SVN_ERR (svn_fs_revision_root (&newroot, fs, this_rev, subpool));
-          SVN_ERR (detect_changed (changed_paths, newroot, subpool));
+          SVN_ERR (detect_changed (&changed_paths, newroot, subpool));
         }
 
       SVN_ERR ((*receiver) (receiver_baton,
-                            (discover_changed_paths ? changed_paths : NULL),
+                            changed_paths,
                             this_rev,
-                            author ? author->data : "",
-                            date ? date->data : "",
-                            message ? message->data : "",
+                            author ? author->data : NULL,
+                            date ? date->data : NULL,
+                            message ? message->data : NULL,
                             subpool));
       
       svn_pool_clear (subpool);

@@ -37,7 +37,7 @@ use Subversion to check out a working copy of its latest source tree.
 <ol>
 
    <li><p>Download the latest tarball distribution from the <a
-   href="http://subversion.tigris.org/servlets/ProjectDownloadList">Downloads
+   href="http://subversion.tigris.org/servlets/ProjectDownloadList?folderID=260">Downloads
    Page</a>.</p></li>
 
    <li><p>Build and install it according to the instructions in the
@@ -52,11 +52,13 @@ use Subversion to check out a working copy of its latest source tree.
    </pre>
 
    <p>That will get you a new working copy directory named
-   `subversion/', containing the latest, bleeding-edge source.  (If
-   you're behind a proxy or have problems with the checkout, see the
-   <a href="project_faq.html#proxy">proxy faq</a>.)</p>
-   <p>(Some people have reported DNS lookup errors for `svn.collab.net'.
-   The IP address is 216.127.237.133, in case you should need it.)</p></li>
+   `subversion/', containing the latest, bleeding-edge source.  If the
+   checkout is interrupted for some reason, you can resume it by
+   running 'svn update' within the working copy. (If you're behind a
+   proxy or have problems with the checkout, see the <a
+   href="project_faq.html#proxy">proxy faq</a>.)</p> <p>(Some people
+   have reported DNS lookup errors for `svn.collab.net'.  The IP
+   address is 216.127.237.133, in case you should need it.)</p></li>
    
    <li>
    <pre>

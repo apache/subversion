@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 #
 #  main.py: a shared, automated test suite for Subversion
@@ -25,6 +26,7 @@ import string  # for atof()
 import copy    # for deepcopy()
 import time    # for time()
 
+from svntest import Failure
 from svntest import testcase
 from svntest import wc
 
@@ -51,18 +53,28 @@ from svntest import wc
 #####################################################################
 # Global stuff
 
+### Grandfather in SVNTreeUnequal, which used to live here.  If you're
+# ever feeling saucy, you could go through the testsuite and change
+# main.SVNTreeUnequal to test.SVNTreeUnequal.
+import tree
+SVNTreeUnequal = tree.SVNTreeUnequal
 
-# Exception raised if you screw up in the tree module.
-class SVNTreeError(Exception): pass
+class SVNLineUnequal(Failure):
+  "Exception raised if two lines are unequal"
+  pass
 
-# Exception raised if two trees are unequal
-class SVNTreeUnequal(Exception): pass
+class SVNUnmatchedError(Failure):
+  "Exception raised if an expected error is not found"
+  pass
 
-# Exception raised if one node is file and other is dir
-class SVNTypeMismatch(Exception): pass
+class SVNCommitFailure(Failure):
+  "Exception raised if a commit failed"
+  pass
 
-# Exception raised if get_child is passed a file.
-class SVNTreeIsNotDirectory(Exception): pass
+class SVNRepositoryCopyFailure(Failure):
+  "Exception raised if unable to copy a repository"
+  pass
+
 
 # Windows specifics
 if sys.platform == 'win32':
@@ -111,8 +123,11 @@ svnversion_binary = os.path.abspath('../../../svnversion/svnversion' + _exe)
 wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
 
-# Global variable indicating if we want 'quiet' output.
-quiet_mode = 0
+# Global variable indicating if we want verbose output.
+verbose_mode = 0
+
+# Global variable indicating if we want test data cleaned up after success
+cleanup_mode = 0
 
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_schema_prefix + os.path.abspath(os.getcwd())
@@ -197,7 +212,7 @@ def get_post_commit_hook_path(repo_dir):
 
 
 # Run any binary, logging the command line (TODO: and return code)
-def _run_command(command, error_expected, *varargs):
+def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS; return stdout, stderr as lists of lines.
   If ERROR_EXPECTED is None, any stderr also will be printed."""
 
@@ -206,14 +221,16 @@ def _run_command(command, error_expected, *varargs):
     args = args + ' "' + str(arg) + '"'
 
   # Log the command line
-  if not quiet_mode:
+  if verbose_mode:
     print 'CMD:', os.path.basename(command) + args,
 
+  if binary_mode:
+    mode = 'b'
+  else:
+    mode = 't'
+
   start = time.time()
-  infile, outfile, errfile = os.popen3(command + args)
-  stop = time.time()
-  if not quiet_mode:
-    print '<TIME = %.6f>' % (stop - start)
+  infile, outfile, errfile = os.popen3(command + args, mode)
 
   stdout_lines = outfile.readlines()
   stderr_lines = errfile.readlines()
@@ -221,6 +238,10 @@ def _run_command(command, error_expected, *varargs):
   outfile.close()
   infile.close()
   errfile.close()
+
+  if verbose_mode:
+    stop = time.time()
+    print '<TIME = %.6f>' % (stop - start)
 
   if (not error_expected) and (stderr_lines):
     map(sys.stdout.write, stderr_lines)
@@ -230,22 +251,25 @@ def _run_command(command, error_expected, *varargs):
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return stdout, stderr as lists of lines.
-  If ERROR_EXPECTED is None, any stderr also will be printed."""
-  return _run_command(svn_binary, error_expected, *varargs)
+  If ERROR_EXPECTED is None, any stderr also will be printed.  If
+  you're just checking that something does/doesn't come out of
+  stdout/stderr, you might want to use actions.run_and_verify_svn() or
+  actions.run_and_verify_svn_error()."""
+  return run_command(svn_binary, error_expected, 0, *varargs)
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
   "Run svnadmin with VARARGS, returns stdout, stderr as list of lines."
-  return _run_command(svnadmin_binary, 1, *varargs)
+  return run_command(svnadmin_binary, 1, 0, *varargs)
 
-# For running svnadmin.  Ignores the output.
+# For running svnlook.  Ignores the output.
 def run_svnlook(*varargs):
-  "Run svnadmin with VARARGS, returns stdout, stderr as list of lines."
-  return _run_command(svnlook_binary, 1, *varargs)
+  "Run svnlook with VARARGS, returns stdout, stderr as list of lines."
+  return run_command(svnlook_binary, 1, 0, *varargs)
 
 def run_svnversion(*varargs):
   "Run svnversion with VARARGS, returns stdout, stderr as list of lines."
-  return _run_command(svnversion_binary, 1, *varargs)
+  return run_command(svnversion_binary, 1, 0, *varargs)
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
@@ -259,8 +283,8 @@ def chmod_tree(path, mode, mask):
   os.path.walk(path, visit, (mode, mask))
 
 # For clearing away working copies
-def remove_wc(dirname):
-  "Remove a working copy named DIRNAME."
+def safe_rmtree(dirname):
+  "Remove the tree at DIRNAME, making it writable first"
 
   if os.path.exists(dirname):
     chmod_tree(dirname, 0666, 0666)
@@ -281,13 +305,13 @@ def create_repos(path):
 
   if not(os.path.exists(path)):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
-  run_svnadmin("create", path)
+  run_svnadmin("create", path, "--bdb-txn-nosync")
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
 
 # For copying a repository
-def copy_repos(src_path, dst_path, head_revision):
+def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
   # A BDB hot-backup procedure would be more efficient, but that would
@@ -296,14 +320,17 @@ def copy_repos(src_path, dst_path, head_revision):
   create_repos(dst_path)
   dump_args = ' dump "' + src_path + '"'
   load_args = ' load "' + dst_path + '"'
-  if not quiet_mode:
+
+  if ignore_uuid:
+    load_args = load_args + " --ignore-uuid"
+  if verbose_mode:
     print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
           '|', os.path.basename(svnadmin_binary) + load_args,
   start = time.time()
   dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
   load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
   stop = time.time()
-  if not quiet_mode:
+  if verbose_mode:
     print '<TIME = %.6f>' % (stop - start)
   
   while 1:
@@ -327,26 +354,25 @@ def copy_repos(src_path, dst_path, head_revision):
     match = dump_re.match(dump_line)
     if not match or match.group(1) != str(expect_revision):
       print 'ERROR:  dump failed:', dump_line,
-      return 1
+      raise SVNRepositoryCopyFailure
     expect_revision += 1
   if expect_revision != head_revision + 1:
     print 'ERROR:  dump failed; did not see revision', head_revision
-    return 1
+    raise SVNRepositoryCopyFailure
 
-  load_re = re.compile(r'^------- Committed new rev (\d+)' +
-                       r' \(loaded from original rev (\d+)\) >>>$')
+  load_re = re.compile(r'^------- Committed revision (\d+) >>>$')
   expect_revision = 1
   for load_line in load_lines:
     match = load_re.match(load_line)
     if match:
-      if (match.group(1) != str(expect_revision)
-          or match.group(2) != str(expect_revision)):
+      if match.group(1) != str(expect_revision):
         print 'ERROR:  load failed:', load_line,
-        return 1
+        raise SVNRepositoryCopyFailure
       expect_revision += 1
   if expect_revision != head_revision + 1:
     print 'ERROR:  load failed; did not see revision', head_revision
-    return 1
+    raise SVNRepositoryCopyFailure
+
 
 def set_repos_paths(repo_dir):
   "Set current_repo_dir and current_repo_url from a relative path to the repo."
@@ -365,10 +391,34 @@ class Sandbox:
     self.name = '%s-%d' % (module, idx)
     self.wc_dir = os.path.join(general_wc_dir, self.name)
     self.repo_dir = os.path.join(general_repo_dir, self.name)
+    self.repo_url = test_area_url + '/' + self.repo_dir
+    self.test_paths = [self.wc_dir, self.repo_dir]
 
   def build(self):
-    return actions.make_repo_and_wc(self)
+    if actions.make_repo_and_wc(self):
+      raise Failure("Could not build repository and sandbox '%s'" % self.name)
 
+  def add_test_path(self, path, remove=1):
+    self.test_paths.append(path)
+    if remove:
+      safe_rmtree(path)
+
+  def add_repo_path(self, suffix, remove=1):
+    path = self.repo_dir + '.' + suffix
+    url  = self.repo_url + '.' + suffix
+    self.add_test_path(path, remove)
+    return path, url
+
+  def add_wc_path(self, suffix, remove=1):
+    path = self.wc_dir + '.' + suffix
+    self.add_test_path(path, remove)
+    return path
+
+  def cleanup_test_paths(self):
+    for path in self.test_paths:
+      if verbose_mode:
+        print "CLEANUP: " + path
+      safe_rmtree(path)
 
 ######################################################################
 # Main testing functions
@@ -388,6 +438,7 @@ def run_one_test(n, test_list):
     return 1
 
   # Clear the repos paths for this test
+  global current_repo_dir, current_repo_url
   current_repo_dir = None
   current_repo_url = None
 
@@ -400,10 +451,14 @@ def run_one_test(n, test_list):
     sandbox = Sandbox(module, n)
     args = (sandbox,)
   else:
+    sandbox = None
     args = ()
 
   # Run the test.
-  return tc.run(args)
+  exit_code = tc.run(args)
+  if sandbox is not None and not exit_code and cleanup_mode:
+    sandbox.cleanup_test_paths()
+  return exit_code
 
 def _internal_run_tests(test_list, testnum=None):
   exit_code = 0
@@ -435,8 +490,13 @@ def run_tests(test_list):
   """
 
   global test_area_url
-  global quiet_mode
+  global verbose_mode
+  global cleanup_mode
   testnum = None
+
+  # Explicitly set this so that commands that commit but don't supply a
+  # log message will fail rather than invoke an editor.
+  os.environ['SVN_EDITOR'] = ''
 
   url_re = re.compile('^(?:--url|BASE_URL)=(.+)')
 
@@ -457,14 +517,17 @@ def run_tests(test_list):
       index = sys.argv.index(arg)
       test_area_url = sys.argv[index + 1]
 
-    elif arg == "-q":
-      quiet_mode = 1
+    elif arg == "-v" or arg == "--verbose":
+      verbose_mode = 1
+
+    elif arg == "--cleanup":
+      cleanup_mode = 1
 
     else:
       match = url_re.search(arg)
       if match:
         test_area_url = match.group(1)
-    
+
       else:
         try:
           testnum = int(arg)

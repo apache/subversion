@@ -267,7 +267,8 @@ svn_fs_revision_root (svn_fs_root_t **root_p,
 
 /* Constructing nice error messages for roots.  */
 
-/* Return a detailed `file not found' error message for PATH in ROOT.  */
+/* Return the error SVN_ERR_FS_NOT_FOUND, with a detailed error text,
+   for PATH in ROOT. */
 static svn_error_t *
 not_found (svn_fs_root_t *root, const char *path)
 {
@@ -623,13 +624,13 @@ typedef enum open_path_flags_t {
    TRAIL->pool.  The resulting *PARENT_PATH_P value is guaranteed to
    contain at least one element, for the root directory.
 
-   If FLAGS & open_path_last_optional is zero, return an error if the
-   node PATH refers to does not exist.  If it is non-zero, require all
-   the parent directories to exist as normal, but if the final path
-   component doesn't exist, simply return a path whose bottom `node'
-   member is zero.  This option is useful for callers that create new
-   nodes --- we find the parent directory for them, and tell them
-   whether the entry exists already.  */
+   If FLAGS & open_path_last_optional is zero, return the error
+   SVN_ERR_FS_NOT_FOUND if the node PATH refers to does not exist.  If
+   non-zero, require all the parent directories to exist as normal,
+   but if the final path component doesn't exist, simply return a path
+   whose bottom `node' member is zero.  This option is useful for
+   callers that create new nodes --- we find the parent directory for
+   them, and tell them whether the entry exists already. */
 static svn_error_t *
 open_path (parent_path_t **parent_path_p,
            svn_fs_root_t *root,
@@ -818,7 +819,7 @@ make_path_mutable (svn_fs_root_t *root,
 
 /* Open the node identified by PATH in ROOT, as part of TRAIL.  Set
    *DAG_NODE_P to the node we find, allocated in TRAIL->pool.  Return
-   an error if this node doesn't exist. */
+   the error SVN_ERR_FS_NOT_FOUND if this node doesn't exist. */
 static svn_error_t *
 get_dag (dag_node_t **dag_node_p,
          svn_fs_root_t *root,
@@ -964,9 +965,11 @@ txn_body_node_kind (void *baton, trail_t *trail)
   return SVN_NO_ERROR;
 }
 
-svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
-                                   const char *path,
-                                   apr_pool_t *pool)
+svn_error_t *
+svn_fs_check_path (svn_node_kind_t *kind_p,
+                   svn_fs_root_t *root,
+                   const char *path,
+                   apr_pool_t *pool)
 {
   struct node_kind_args args;
   svn_error_t *err;
@@ -975,13 +978,18 @@ svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
   args.path = path;
 
   err = svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool);
-  if (err)
+
+  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
     {
       svn_error_clear (err);
-      return svn_node_none;
+      *kind_p = svn_node_none;
     }
+  else if (err)
+    return err;
+  else
+    *kind_p = args.kind;
 
-  return args.kind;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1355,7 +1363,10 @@ struct deltify_committed_args
    retrieve any other revision.  (Retrieving the oldest node-revision
    will still be fast, just not as blindingly so.)  */
 static svn_error_t *
-txn_deltify (dag_node_t *node, int pred_count, int props_only, trail_t *trail)
+txn_deltify (dag_node_t *node, 
+             int pred_count, 
+             int props_only, 
+             trail_t *trail)
 {
   int nlevels, lev, count;
   dag_node_t *prednode;
@@ -1410,77 +1421,99 @@ txn_deltify (dag_node_t *node, int pred_count, int props_only, trail_t *trail)
 }
 
 
-/* Deltify ID's predecessor iff ID is mutable under TXN_ID in FS.  If
-   ID is a mutable directory, recurse.  Do this as part of TRAIL. */
-static svn_error_t *
-deltify_if_mutable_under_txn_id (svn_fs_t *fs,
-                                 const svn_fs_id_t *id,
-                                 const char *txn_id,
-                                 trail_t *trail)
+struct txn_deltify_args
 {
+  svn_fs_t *fs;
+  svn_fs_root_t *root;
+  const char *path;
+  int is_dir;
+};
+
+
+static svn_error_t *
+txn_body_txn_deltify (void *baton, trail_t *trail)
+{
+  struct txn_deltify_args *args = baton;
   svn_fs__node_revision_t *noderev;
   dag_node_t *node;
-  apr_hash_t *entries;
-  int is_dir;
 
-  /* Not mutable?  Go no further.  This is safe to do because for
-     items in the tree to be mutable, their parent dirs must also be
-     mutable.  Therefore, if a directory is not mutable under TXN_ID,
-     its children cannot be.  */
-  if (strcmp (svn_fs__id_txn_id (id), txn_id))
-    return SVN_NO_ERROR;
+  /* Get the node and node revision. */
+  SVN_ERR (get_dag (&node, args->root, args->path, trail));
+  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, args->fs, 
+                                          svn_fs__dag_get_id (node), trail));
 
-  /* Get the NODE and node revision for ID. */
-  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
-  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, id, trail));
-
-  /* If this is a directory, recurse on its entries. */
-  if ((is_dir = svn_fs__dag_is_directory (node)))
-    {
-      SVN_ERR (svn_fs__dag_dir_entries (&entries, node, trail));
-      if (entries)
-        {
-          apr_hash_index_t *hi;
-
-          for (hi = apr_hash_first (trail->pool, entries); 
-               hi; 
-               hi = apr_hash_next (hi))
-            {
-              const svn_fs_dirent_t *dirent;
-              void *val;
-              
-              /* KEY will be the entry name (about which we really
-                 don't care), VAL the dirent */
-              apr_hash_this (hi, NULL, NULL, &val);
-              dirent = val;
-
-              SVN_ERR (deltify_if_mutable_under_txn_id (fs, dirent->id,
-                                                        txn_id, trail));
-            }
-        }
-    }
-
+  /* If this node has a predecesser, deltify it. */
   if (noderev->predecessor_id)
-    SVN_ERR (txn_deltify (node, noderev->predecessor_count, is_dir, trail));
+    SVN_ERR (txn_deltify (node, noderev->predecessor_count, 
+                          args->is_dir, trail));
 
   return SVN_NO_ERROR;
 }
 
 
+
+/* Deltify ID's predecessor iff ID is mutable under TXN_ID in FS.  If
+   ID is a mutable directory, recurse.  Do this as part of TRAIL. */
 static svn_error_t *
-txn_body_deltify_committed (void *baton, trail_t *trail)
+deltify_mutable (svn_fs_t *fs,
+                 svn_fs_root_t *root,
+                 const char *path,
+                 const char *txn_id,
+                 apr_pool_t *pool)
 {
-  struct deltify_committed_args *args = baton;
   const svn_fs_id_t *id;
-  dag_node_t *root_dir;
+  apr_hash_t *entries = NULL;
+  int is_dir;
+  struct txn_deltify_args td_args;
 
-  /* Get the ID of the root dir of the revision. */
-  SVN_ERR (svn_fs__dag_revision_root (&root_dir, args->fs, args->rev, trail));
-  id = svn_fs__dag_get_id (root_dir);
+  /* Get the ID for PATH under ROOT. */
+  SVN_ERR (svn_fs_node_id (&id, root, path, pool));
 
-  /* Now...deltify! */
-  return deltify_if_mutable_under_txn_id (args->fs, id, args->txn_id, trail);
+  /* Check for mutability.  Not mutable?  Go no further.  This is safe
+     to do because for items in the tree to be mutable, their parent
+     dirs must also be mutable.  Therefore, if a directory is not
+     mutable under TXN_ID, its children cannot be.  */
+  if (strcmp (svn_fs__id_txn_id (id), txn_id))
+    return SVN_NO_ERROR;
+
+  /* Is this a directory?  */
+  SVN_ERR (svn_fs_is_dir (&is_dir, root, path, pool));
+
+  /* If this is a directory, read its entries.  */
+  if (is_dir)
+    SVN_ERR (svn_fs_dir_entries (&entries, root, path, pool));
+
+  /* If there are entries, recurse on 'em.  */
+  if (entries)
+    {
+      apr_pool_t *subpool = svn_pool_create (pool);
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+        {
+          /* KEY will be the entry name, VAL the dirent (about
+             which we really don't care) */
+          const void *key;
+          apr_hash_this (hi, &key, NULL, NULL);
+          SVN_ERR (deltify_mutable (fs, root, 
+                                    svn_path_join (path, key, subpool),
+                                    txn_id, subpool));
+          svn_pool_clear (subpool);
+        }
+
+      svn_pool_destroy (subpool);
+    }
+
+  /* Finally, do the deltification. */
+  td_args.fs = fs;
+  td_args.root = root;
+  td_args.path = path;
+  td_args.is_dir = is_dir;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_txn_deltify, &td_args, pool));
+
+  return SVN_NO_ERROR;
 }
+
 
 struct get_root_args
 {
@@ -2338,8 +2371,10 @@ svn_fs_commit_txn (const char **conflict_p,
   apr_pool_t *pool = svn_fs__txn_pool (txn);
   const char *txn_id;
 
-  /* Initialize returned revision number to an invalid value. */
+  /* Initialize output params. */
   *new_rev = SVN_INVALID_REVNUM;
+  if (conflict_p)
+    *conflict_p = NULL;
 
   /* Get the transaction's name.  We'll need it later. */
   SVN_ERR (svn_fs_txn_name (&txn_id, txn, pool));
@@ -2411,20 +2446,18 @@ svn_fs_commit_txn (const char **conflict_p,
         return err;
       else
         {
-          struct deltify_committed_args dc_args;
+          svn_fs_root_t *rev_root;
 
-          /* Set the return value, the new revision. */
+          /* Set the return value -- our brand spankin' new revision! */
           *new_rev = commit_args.new_rev;
 
-          /* Final step: after a successful commit of the transaction,
-             deltify the new revision. */
-          dc_args.fs = fs;
-          dc_args.rev = *new_rev;
-          dc_args.txn_id = txn_id;
+          /* Get the new revision root. */
+          SVN_ERR_W (svn_fs_revision_root (&rev_root, fs, *new_rev, pool),
+                     "Commit succeeded, but error getting new revision root");
 
-          SVN_ERR_W (svn_fs__retry_txn (fs, txn_body_deltify_committed, 
-                                        &dc_args, pool),
-                     "Commit succeeded, deltification failed");
+          /* Now...deltify! */
+          SVN_ERR_W (deltify_mutable (fs, rev_root, "/", txn_id, pool),
+                     "Commit succeeded; deltification failed");
 
           return SVN_NO_ERROR;
         }
@@ -2964,7 +2997,7 @@ struct file_length_args
 {
   svn_fs_root_t *root;
   const char *path;
-  apr_size_t length;     /* OUT parameter */
+  svn_filesize_t length;       /* OUT parameter */
 };
 
 static svn_error_t *
@@ -2982,7 +3015,7 @@ txn_body_file_length (void *baton,
 }
 
 svn_error_t *
-svn_fs_file_length (apr_off_t *length_p,
+svn_fs_file_length (svn_filesize_t *length_p,
                     svn_fs_root_t *root,
                     const char *path,
                     apr_pool_t *pool)

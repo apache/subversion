@@ -56,6 +56,9 @@ my $opt_svn_password;
 # Verbosity level.
 my $opt_verbose;
 
+# Path to already checked-out working copy.
+my $opt_existing_wc_dir;
+
 # This is the character used to separate regular expressions occuring
 # in the tag directory path from the path itself.
 my $REGEX_SEP_CHAR = '@';
@@ -70,7 +73,8 @@ GetOptions('no_user_input'           => \$opt_no_user_input,
            'svn_password=s'          => \$opt_svn_password,
            'svn_username=s'          => \$opt_svn_username,
            'tag_location=s'          => \$opt_import_tag_location,
-           'verbose+'                => \$opt_verbose)
+           'verbose+'                => \$opt_verbose,
+           'wc=s'                    => \$opt_existing_wc_dir)
   or &usage;
 &usage("$0: too few arguments") if @ARGV < 2;
 
@@ -99,9 +103,10 @@ if (defined $opt_import_tag_location and $repos_load_rel_path eq '.')
     &usage("$0: cannot set import_dir to `.' and use -t command line option.");
   }
 
-# Set the commit options.
-my @svn_commit_options;
-&set_commit_options($opt_svn_username, $opt_svn_password);
+# Set the svn command line options that are used anytime svn connects
+# to the repository.
+my @svn_use_repos_cmd_opts;
+&set_svn_use_repos_cmd_opts($opt_svn_username, $opt_svn_password);
 
 # Check that the repository base URL, the import and tag directories
 # do not contain any ..'s.  Also, the import and tag directories
@@ -131,6 +136,21 @@ if (defined $opt_import_tag_location and $opt_import_tag_location =~ m|^/|)
         "cannot start with /.\n";
   }
 
+if (defined $opt_existing_wc_dir)
+  {
+    unless (-e $opt_existing_wc_dir)
+      {
+        die "$0: working copy `$opt_existing_wc_dir' does not exist.\n";
+      }
+
+    unless (-d _)
+      {
+        die "$0: working copy `$opt_existing_wc_dir' is not a directory.\n";
+      }
+
+    $opt_existing_wc_dir = Cwd::abs_path($opt_existing_wc_dir)
+  }
+
 # Convert the string URL into a URI object.
 $repos_base_url    =~ s|/*$||;
 my $repos_base_uri = URI->new($repos_base_url);
@@ -154,7 +174,7 @@ if (@ARGV)
             die "$0: directory `$dir' does not exist.\n";
           }
 
-        unless (-d $dir)
+        unless (-d _)
           {
             die "$0: directory `$dir' is not a directory.\n";
           }
@@ -258,8 +278,11 @@ if (defined $property_config_filename and length $property_config_filename)
     exit 1 unless $ok;
   }
 
-# Check that the svn base URL works by running svn log on it.
-read_from_process($svn, 'log', $repos_base_uri);
+# Check that the svn base URL works by running svn log on it.  Only
+# get the HEAD revision log message; there's no need to waste
+# bandwidth seeing all of the log messages.
+read_from_process($svn, 'log', '-r', 'HEAD',
+                  @svn_use_repos_cmd_opts, $repos_base_uri);
 
 my $orig_cwd = cwd;
 
@@ -283,7 +306,8 @@ my $repos_base_path_segment;
       $repos_root_uri_path = shift @path_segments;
       push(@r_path_segments, $repos_root_uri_path);
       $r->path_segments(@r_path_segments);
-      if (safe_read_from_pipe($svn, 'log', $r) == 0)
+      if (safe_read_from_pipe($svn, 'log', '-r', 'HEAD',
+                              @svn_use_repos_cmd_opts, $r) == 0)
         {
           $repos_root_uri = $r;
           last;
@@ -328,25 +352,46 @@ $SIG{PIPE} = \&catch_signal;
 # measures that do not clean up the .svn directories.
 my $temp_dir_cleanup = Temp::Delete->new;
 
-chdir($temp_dir)
-  or die "$0: cannot chdir `$temp_dir': $!\n";
-
 # Determine the native end of line style for this system.  Do this the
 # most portable way, by writing a file with a single \n in non-binary
 # mode and then reading the file in binary mode.
 my $native_eol = &determine_native_eol;
 
-# Now check out the svn repository starting at the svn URL into a
-# fixed directory name.
-my $checkout_dir_name = 'ZZZ';
-print "Checking out $repos_base_uri into $temp_dir/$checkout_dir_name\n";
-read_from_process($svn, 'co', $repos_base_uri, $checkout_dir_name);
+# Either checkout a new working copy from the repository or use an
+# existing working copy.
+if (defined $opt_existing_wc_dir)
+  {
+    # Update an already existing working copy.
+    print "Not checking out anything; using existing working directory at\n";
+    print "$opt_existing_wc_dir\n";
 
-# Change into the top level directory of the repository and record the
-# absolute path to this location because the script will come back
-# here.
-chdir($checkout_dir_name)
-  or die "$0: cannot chdir `$checkout_dir_name': $!\n";
+    chdir($opt_existing_wc_dir)
+      or die "$0: cannot chdir `$opt_existing_wc_dir': $!\n";
+
+    read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
+  }
+else
+  {
+    # Check out the svn repository starting at the svn URL into a
+    # fixed directory name.
+    my $checkout_dir_name = 'my_working_copy';
+
+    print "Checking out $repos_base_uri into $temp_dir/$checkout_dir_name\n";
+
+    chdir($temp_dir)
+      or die "$0: cannot chdir `$temp_dir': $!\n";
+
+    read_from_process($svn, 'checkout',
+                      @svn_use_repos_cmd_opts,
+                      $repos_base_uri, $checkout_dir_name);
+
+    chdir($checkout_dir_name)
+      or die "$0: cannot chdir `$checkout_dir_name': $!\n";
+  }
+
+# At this point, the current working directory is the top level
+# directory of the working copy.  Record the absolute path to this
+# location because the script will chdir back here later on.
 my $wc_top_dir_cwd = cwd;
 
 # Check if all the directories exist to load the directories into the
@@ -413,8 +458,11 @@ my $wc_top_dir_cwd = cwd;
         }
       $message = wrap('', '  ', $message);
 
-      read_from_process($svn, 'add', '-N', @dirs_to_create);
-      read_from_process($svn, 'commit', @svn_commit_options, '-m', $message);
+      my $target_filename = &make_targets_file(@dirs_to_create);
+      read_from_process($svn, 'add', '-N', '--targets', $target_filename);
+      unlink($target_filename);
+      read_from_process($svn, 'commit', @svn_use_repos_cmd_opts,
+                        '-m', $message);
     }
   else
     {
@@ -1007,7 +1055,9 @@ while (defined (my $load_dir = &get_next_load_dir))
       {
         my @add_files = sort {length($a) <=> length($b) || $a cmp $b}
                         keys %add_files;
-        read_from_process($svn, 'add', '-N', @add_files);
+        my $target_filename = &make_targets_file(@add_files);
+        read_from_process($svn, 'add', '-N', '--targets', $target_filename);
+        unlink($target_filename);
 
         # Add properties on the added files.
         foreach my $add_file (@add_files)
@@ -1032,7 +1082,9 @@ while (defined (my $load_dir = &get_next_load_dir))
       }
     if (@del_files)
       {
-        read_from_process($svn, 'rm', @del_files);
+        my $target_filename = &make_targets_file(@del_files);
+        read_from_process($svn, 'rm', '--targets', $target_filename);
+        unlink($target_filename);
       }
 
     # Go through the list of updated files and check the svn:eol-style
@@ -1069,7 +1121,9 @@ while (defined (my $load_dir = &get_next_load_dir))
       }
 
     my $message = wrap('', '', "Load $load_dir into $repos_load_abs_path.\n");
-    read_from_process($svn, 'commit', @svn_commit_options, '-m', $message);
+    read_from_process($svn, 'commit',
+                      @svn_use_repos_cmd_opts,
+                      '-m', $message);
 
     # Now remove any files and directories to be deleted in the
     # repository.
@@ -1094,7 +1148,8 @@ while (defined (my $load_dir = &get_next_load_dir))
                             "",
                             "Tag $repos_load_abs_path as " .
                             "$repos_tag_abs_path.\n");
-        read_from_process($svn, 'cp', '-m', $message, $from_url, $to_url);
+        read_from_process($svn, 'cp', @svn_use_repos_cmd_opts,
+                          '-m', $message, $from_url, $to_url);
       }
 
     # Finally, go to the top of the svn checked out tree and do an
@@ -1102,7 +1157,7 @@ while (defined (my $load_dir = &get_next_load_dir))
     chdir($wc_top_dir_cwd)
       or die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
 
-    read_from_process($svn, 'update');
+    read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
 
     # Now run a recursive diff between the original source directory
     # and the tag for a consistency check.
@@ -1131,7 +1186,9 @@ sub usage
       "  -svn_username  username to perform commits as\n",
       "  -svn_password  password to supply to svn commit\n",
       "  -t tag_dir     create a tag copy in tag_dir, relative to svn_url\n",
-      "  -v             increase program verbosity\n";
+      "  -v             increase program verbosity, multiple -v's allowed\n",
+      "  -wc path       use the already checked-out working copy at path\n",
+      "                 instead of checkout out a fresh working copy\n";
 }
 
 # Get the next directory to load, either from the command line or from
@@ -1162,30 +1219,70 @@ sub get_next_load_dir
   if ($line =~ m|(\S+)\s+(\S+)|)
     {
       $line = $1;
-      set_commit_options($2, $opt_svn_password);
+      set_svn_use_repos_cmd_opts($2, $opt_svn_password);
     }
   $line;
 }
 
-# Set additional options for svn commit.
-sub set_commit_options
+# This constant stores the commonly used string to indicate that a
+# subroutine has been passed an incorrect number of arguments.
+use vars qw($INCORRECT_NUMBER_OF_ARGS);
+$INCORRECT_NUMBER_OF_ARGS = "passed incorrect number of arguments.\n";
+
+# Creates a temporary file in the temporary directory and stores the
+# arguments in it for use by the svn --targets command line option.
+# If any part of the file creation failed, exit the program, as
+# there's no workaround.  Use a unique number as a counter to the
+# files.
+my $make_targets_file_counter;
+sub make_targets_file
+{
+  unless (@_)
+    {
+      confess "$0: make_targets_file $INCORRECT_NUMBER_OF_ARGS";
+    }
+
+  $make_targets_file_counter = 1 unless defined $make_targets_file_counter;
+
+  my $filename = sprintf "%s/targets.%05d",
+                 $temp_dir,
+                 $make_targets_file_counter;
+  ++$make_targets_file_counter;
+
+  open(TARGETS, ">$filename")
+    or die "$0: cannot open `$filename' for writing: $!\n";
+
+  foreach my $file (@_)
+    {
+      print TARGETS "$file\n";
+    }
+
+  close(TARGETS)
+    or die "$0: error in closing `$filename' for writing: $!\n";
+
+  $filename;
+}
+
+# Set the svn command line options that are used anytime svn connects
+# to the repository.
+sub set_svn_use_repos_cmd_opts
 {
   unless (@_ == 2)
     {
-      confess "$0: set_commit_options passed incorrect number of arguments.\n";
+      confess "$0: set_svn_use_repos_cmd_opts $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $username = shift;
   my $password = shift;
 
-  @svn_commit_options = ();
+  @svn_use_repos_cmd_opts = ();
   if (defined $username and length $username)
     {
-      push(@svn_commit_options, '--username', $username);
+      push(@svn_use_repos_cmd_opts, '--username', $username);
     }
   if (defined $password)
     {
-      push(@svn_commit_options, '--password', $password);
+      push(@svn_use_repos_cmd_opts, '--password', $password);
     }
 }
 
@@ -1193,7 +1290,7 @@ sub get_tag_dir
 {
   unless (@_ == 1)
     {
-      confess "$0: get_tag_dir passed incorrect number of arguments.\n";
+      confess "$0: get_tag_dir $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $load_dir = shift;
@@ -1242,7 +1339,7 @@ sub safe_read_from_pipe
 {
   unless (@_)
     {
-      croak "$0: safe_read_from_pipe passed no arguments.\n";
+      croak "$0: safe_read_from_pipe $INCORRECT_NUMBER_OF_ARGS";
     }
   print "Running @_\n";
   my $pid = open(SAFE_READ, '-|');
@@ -1288,7 +1385,7 @@ sub read_from_process
 {
   unless (@_)
     {
-      croak "$0: read_from_process passed no arguments.\n";
+      croak "$0: read_from_process $INCORRECT_NUMBER_OF_ARGS";
     }
   my ($status, @output) = &safe_read_from_pipe(@_);
   if ($status)
@@ -1315,8 +1412,7 @@ sub recursive_ls_and_hash
 {
   unless (@_ == 1)
     {
-      croak "$0: recursive_ls_and_hash passed incorrect number of ",
-            "arguments.\n";
+      croak "$0: recursive_ls_and_hash $INCORRECT_NUMBER_OF_ARGS";
     }
 
   # This is the directory to change into.
@@ -1362,7 +1458,7 @@ sub commit_renames
 {
   unless (@_ == 4)
     {
-      croak "$0: commit_renames passed incorrect number of arguments.\n";
+      croak "$0: commit_renames $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $load_dir          = shift;
@@ -1391,8 +1487,8 @@ sub commit_renames
   my $cwd = cwd;
   chdir($wc_top_dir_cwd)
     or die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
-  read_from_process($svn, 'commit', @svn_commit_options, '-m', $message);
-  read_from_process($svn, 'update');
+  read_from_process($svn, 'commit', @svn_use_repos_cmd_opts, '-m', $message);
+  read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
   chdir($cwd)
     or die "$0: cannot chdir `$cwd': $!\n";
 
@@ -1415,7 +1511,7 @@ sub contained_in
 {
   unless (@_ == 3)
     {
-      croak "$0: contain_in passed incorrect number of arguments.\n";
+      croak "$0: contain_in $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $contained      = shift;
@@ -1450,7 +1546,7 @@ sub filter_renamed_files
 {
   unless (@_ == 2)
     {
-      croak "$0: filter_renamed_files passed incorrect number of arguments.\n";
+      croak "$0: filter_renamed_files $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $array_ref = shift;
@@ -1478,7 +1574,7 @@ sub digest_hash_file
 {
   unless (@_ == 1)
     {
-      croak "$0: digest_hash_file passed incorrect number of arguments.\n";
+      croak "$0: digest_hash_file $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $filename = shift;
@@ -1486,7 +1582,7 @@ sub digest_hash_file
   my $ctx = Digest::MD5->new;
   if (open(READ, $filename))
     {
-      binmode(READ);
+      binmode READ;
       $ctx->addfile(*READ);
       close(READ);
     }
@@ -1503,7 +1599,7 @@ sub get_yes_or_no
 {
   unless (@_ == 1)
     {
-      croak "$0: get_yes_or_no passed incorrect number of arguments.\n";
+      croak "$0: get_yes_or_no $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $message = shift;
@@ -1532,13 +1628,18 @@ sub determine_native_eol
       unlink($filename)
         or die "$0: cannot unlink `$filename': $!\n";
     }
+
+  # Write the \n in non-binary mode.
   open(NL_TEST, ">$filename")
     or die "$0: cannot open `$filename' for writing: $!\n";
   print NL_TEST "\n";
   close(NL_TEST)
     or die "$0: error in closing `$filename' for writing: $!\n";
+
+  # Read the \n in binary mode.
   open(NL_TEST, $filename)
     or die "$0: cannot open `$filename' for reading: $!\n";
+  binmode NL_TEST;
   local $/;
   undef $/;
   my $eol = <NL_TEST>;
@@ -1569,8 +1670,7 @@ sub convert_file_to_native_eol
 {
   unless (@_ == 1)
     {
-      croak "$0: convert_file_to_native_eol passed incorrect number of ",
-            "arguments.\n";
+      croak "$0: convert_file_to_native_eol $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $filename = shift;
@@ -1629,7 +1729,7 @@ sub split_line
 {
   unless (@_ == 1)
     {
-      croak "$0: split_line passed incorrect number of arguments.\n";
+      croak "$0: split_line $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $line = shift;

@@ -53,6 +53,10 @@ struct svn_config_t
   /* Temporary string used for lookups.  (Using a stringbuf so that
      frequent resetting is efficient.) */
   svn_stringbuf_t *tmp_key;
+
+  /* Temporary value used for expanded default values in svn_config_get.
+     (Using a stringbuf so that frequent resetting is efficient.) */
+  svn_stringbuf_t *tmp_value;
 };
 
 
@@ -60,6 +64,9 @@ struct svn_config_t
 svn_error_t *svn_config__parse_file (svn_config_t *cfg,
                                      const char *file,
                                      svn_boolean_t must_exist);
+
+/* The name of the magic [DEFAULT] section. */
+#define SVN_CONFIG__DEFAULT_SECTION "DEFAULT"
 
 
 #ifdef SVN_WIN32
@@ -105,7 +112,10 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 #endif /* SVN_WIN32 */
 
 /* The description/instructions file in the config directory. */
-#define SVN_CONFIG__USR_README_FILE    "README"
+#define SVN_CONFIG__USR_README_FILE    "README.txt"
+
+/* The name of the main authentication subdir in the config directory */
+#define SVN_CONFIG__AUTH_SUBDIR        "auth"
 
 /* Set *PATH_P to the path to config file FNAME in the system
    configuration area, allocated in POOL.  If FNAME is NULL, set

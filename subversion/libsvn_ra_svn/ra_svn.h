@@ -30,7 +30,7 @@ extern "C" {
 #include <apr_thread_proc.h>
 
 /* This structure is opaque to the server.  The client pokes at the
- * first few fields during setup and cleanup, and also uses the pool. */
+ * first few fields during setup and cleanup. */
 struct svn_ra_svn_conn_st {
   apr_socket_t *sock;     /* NULL if using in_file/out_file */
   apr_file_t *in_file;
@@ -41,7 +41,6 @@ struct svn_ra_svn_conn_st {
   char *read_end;
   char write_buf[4096];
   int write_pos;
-  apr_pool_t *pool;
   const char *uuid;
 };
 

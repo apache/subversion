@@ -112,7 +112,7 @@ get_bucket (const hash_table_t *table, const char *key)
 
 /* Store a key->index mapping into the hash table. */
 static APR_INLINE void
-store_mapping (hash_table_t *table, const char* key, apr_off_t idx)
+store_mapping (hash_table_t *table, const char* key, apr_size_t idx)
 {
   apr_uint32_t bucket = get_bucket (table, key);
   assert (table->slots[idx].next == NULL);

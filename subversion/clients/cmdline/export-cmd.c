@@ -42,6 +42,7 @@ svn_cl__export (apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *from, *to;
   apr_array_header_t *targets;
+  svn_error_t *err;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -68,10 +69,18 @@ svn_cl__export (apr_getopt_t *os,
                           FALSE, pool);
 
   /* Do the export. */
-  SVN_ERR (svn_client_export (from,
-                              to,
-                              &(opt_state->start_revision),
-                              ctx,
-                              pool));
+  err = svn_client_export (from,
+                           to,
+                           &(opt_state->start_revision),
+                           opt_state->force,
+                           ctx,
+                           pool);
+  if (err && err->apr_err == SVN_ERR_WC_OBSTRUCTED_UPDATE && !opt_state->force)
+    SVN_ERR_W (err,
+               "Destination directory exists.  Please remove\n"
+               "the directory, use --force to ovewrite.");
+  else
+    SVN_ERR (err);
+
   return SVN_NO_ERROR;
 }

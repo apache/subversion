@@ -8,13 +8,14 @@ Usage: python win-tests.py [option]
 """
 
 
-tests = ['subversion/tests/libsvn_subr/hashdump-test.exe',
-         'subversion/tests/libsvn_subr/stringtest.exe',
+tests = ['subversion/tests/libsvn_subr/config-test.exe',
+         'subversion/tests/libsvn_subr/hashdump-test.exe',
+         'subversion/tests/libsvn_subr/string-test.exe',
          'subversion/tests/libsvn_subr/path-test.exe',
          'subversion/tests/libsvn_subr/stream-test.exe',
          'subversion/tests/libsvn_subr/time-test.exe',
          'subversion/tests/libsvn_wc/translate-test.exe',
-         'subversion/tests/libsvn_delta/diff-diff3-test.exe',
+         'subversion/tests/libsvn_diff/diff-diff3-test.exe',
          'subversion/tests/libsvn_delta/random-test.exe',
          'subversion/tests/libsvn_subr/target-test.py']
 
@@ -43,43 +44,73 @@ client_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
 import os, sys, string, shutil, traceback
 import getopt
 
-opts, args = getopt.getopt(sys.argv[1:], 'rdvu:',
-                           ['release', 'debug', 'verbose', 'url='])
-if len(args):
-  print 'Warning: non-option arguments will be ignored'
+opts, args = getopt.getopt(sys.argv[1:], 'rdvcu:',
+                           ['release', 'debug', 'verbose', 'cleanup', 'url='])
+if len(args) > 1:
+  print 'Warning: non-option arguments after the first one will be ignored'
 
 # Interpret the options and set parameters
 all_tests = tests + fs_tests + client_tests
 repo_loc = 'local repository.'
 base_url = None
 verbose = 0
-filter = 'Debug'
+cleanup = None
+objdir = 'Debug'
 log = 'tests.log'
 
 for opt,arg in opts:
   if opt in ['-r', '--release']:
-    filter = 'Release'
+    objdir = 'Release'
   elif opt in ['-d', '--debug']:
-    filter = 'Debug'
+    objdir = 'Debug'
   elif opt in ['-v', '--verbose']:
     verbose = 1
+  elif opt in ['-c', '--cleanup']:
+    cleanup = 1
   elif opt in ['-u', '--url']:
     all_tests = client_tests
     repo_loc = 'remote repository ' + arg + '.'
     base_url = arg
-    log = "dav-tests.log"
+    if arg[:4] == 'http':
+      log = 'dav-tests.log'
+    elif arg[:3] == 'svn':
+      log = 'svn-tests.log'
+    else:
+      # Don't know this schema, but who're we to judge whether it's
+      # correct or not?
+      log = 'url-tests.log'
 
-print 'Testing', filter, 'configuration on', repo_loc
+print 'Testing', objdir, 'configuration on', repo_loc
+
+# Calculate the source and test directory names
+abs_srcdir = os.path.abspath("")
+abs_objdir = os.path.join(abs_srcdir, objdir)
+if len(args) == 0:
+  abs_builddir = abs_objdir
+  create_dirs = 0
+else:
+  abs_builddir = os.path.abspath(args[0])
+  create_dirs = 1
 
 # Have to move the executables where the tests expect them to be
 copied_execs = []   # Store copied exec files to avoid the final dir scan
-def copy_execs(filter, dirname, names):
+
+def create_target_dir(dirname):
+  if create_dirs:
+    tgt_dir = os.path.join(abs_builddir, dirname)
+    if not os.path.exists(tgt_dir):
+      if verbose:
+        print "mkdir:", tgt_dir
+      os.makedirs(tgt_dir)
+
+def copy_execs(dummy, dirname, names):
   global copied_execs
-  if os.path.basename(dirname) != filter: return
   for name in names:
-    if os.path.splitext(name)[1] != ".exe": continue
+    if os.path.splitext(name)[1] != ".exe":
+      continue
     src = os.path.join(dirname, name)
-    tgt = os.path.join(os.path.dirname(dirname), name)
+    tgt = os.path.join(abs_builddir, dirname, name)
+    create_target_dir(dirname)
     try:
       if verbose:
         print "copy:", src
@@ -89,18 +120,34 @@ def copy_execs(filter, dirname, names):
     except:
       traceback.print_exc(file=sys.stdout)
       pass
-os.path.walk("subversion", copy_execs, filter)
+if create_dirs:
+  old_cwd = os.getcwd()
+  try:
+    os.chdir(abs_objdir)
+    os.path.walk('subversion', copy_execs, None)
+    create_target_dir('subversion/tests/clients/cmdline')
+  except:
+    os.chdir(old_cwd)
+    raise
+  else:
+    os.chdir(old_cwd)
 
 
 # Run the tests
-abs_srcdir = os.path.abspath("")
-abs_builddir = abs_srcdir  ### For now ...
-
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir, sys.executable, None,
-                           os.path.abspath(log), base_url)
-failed = th.run(all_tests)
+                           os.path.join(abs_builddir, log),
+                           base_url, 1, cleanup)
+old_cwd = os.getcwd()
+try:
+  os.chdir(abs_builddir)
+  failed = th.run(all_tests)
+except:
+  os.chdir(old_cwd)
+  raise
+else:
+  os.chdir(old_cwd)
 
 
 # Remove the execs again

@@ -59,7 +59,7 @@ svn_client_log (const apr_array_header_t *targets,
   svn_ra_plugin_t *ra_lib;  
   void *ra_baton, *session;
   const char *path;
-  const char *URL;
+  const char *base_url;
   const char *base_name = NULL;
   const char *auth_dir;
   apr_array_header_t *condensed_targets;
@@ -81,7 +81,7 @@ svn_client_log (const apr_array_header_t *targets,
   /* Use the passed URL, if there is one.  */
   if (svn_path_is_url (path))
     {
-      URL = path;
+      base_url = path;
       
       /* Initialize this array, since we'll be building it below */
       condensed_targets = apr_array_make (pool, 1, sizeof (const char *));
@@ -110,49 +110,59 @@ svn_client_log (const apr_array_header_t *targets,
   else
     {
       svn_wc_adm_access_t *adm_access;
-      const svn_wc_entry_t *entry;
+      apr_array_header_t *target_urls;
+      int i;
+      
+      /* Get URLs for each target */
+      target_urls = apr_array_make (pool, 1, sizeof (const char *));
+      for (i = 0; i < targets->nelts; i++) 
+        {
+          const svn_wc_entry_t *entry;
+          const char *URL;
+          const char *target = APR_ARRAY_IDX(targets, i, const char *);
+          SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target,
+                                          FALSE, FALSE, pool));
+          SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
+          if (! entry)
+            return svn_error_createf
+              (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+              "svn_client_log: '%s' is not under revision control", target);
+          if (! entry->url)
+            return svn_error_createf
+              (SVN_ERR_ENTRY_MISSING_URL, NULL,
+              "svn_client_log: entry '%s' has no URL", target);
+          URL = apr_pstrdup (pool, entry->url);
+          SVN_ERR (svn_wc_adm_close (adm_access));
+          (*((const char **)apr_array_push (target_urls))) = URL;
+        }
 
-      /* Use local working copy.  */
-
-      SVN_ERR (svn_path_condense_targets (&base_name, &condensed_targets,
-                                          targets, pool));
+      /* Find the base URL and condensed targets relative to it. */
+      SVN_ERR (svn_path_condense_targets (&base_url, &condensed_targets,
+                                          target_urls, TRUE, pool));
 
       if (condensed_targets->nelts == 0)
         (*((const char **)apr_array_push (condensed_targets))) = "";
-
-      SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, base_name,
-                                      FALSE, FALSE, pool));
-      SVN_ERR (svn_wc_entry (&entry, base_name, adm_access, FALSE, pool));
-      if (! entry)
-        return svn_error_createf
-          (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-          "svn_client_log: '%s' is not under revision control", base_name);
-      if (! entry->url)
-        return svn_error_createf
-          (SVN_ERR_ENTRY_MISSING_URL, NULL,
-          "svn_client_log: entry '%s' has no URL", base_name);
-      URL = apr_pstrdup (pool, entry->url);
-      SVN_ERR (svn_wc_adm_close (adm_access));
     }
 
-  /* Get the RA library that handles URL. */
+  /* Get the RA library that handles BASE_URL */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, base_url, pool));
 
-  /* Open a repository session to the URL. If we got here from a full URL
-     passed to the command line, then if the current directory is a
+  /* Open a repository session to the BASE_URL.  If we got here from a full 
+     URL passed to the command line, then if the current directory is a
      working copy, we pass it as base_name for authentication
      purposes.  But we make sure to treat it as read-only, since when
      one operates on URLs, one doesn't expect it to change anything in
      the working copy. */
+  SVN_ERR (svn_path_condense_targets (&base_name, NULL, targets, TRUE, pool)); 
   if (NULL != base_name)
-    SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, base_name,
-                                          NULL, NULL, TRUE, TRUE, 
+    SVN_ERR (svn_client__open_ra_session (&session, ra_lib, base_url, 
+                                          base_name, NULL, NULL, TRUE, TRUE, 
                                           ctx, pool));
   else
     {
       SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL,
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, base_url,
                                             auth_dir,
                                             NULL, NULL, FALSE, TRUE, 
                                             ctx, pool));
@@ -238,7 +248,8 @@ svn_client_log (const apr_array_header_t *targets,
                                    discover_changed_paths,
                                    strict_node_history,
                                    receiver,
-                                   receiver_baton);
+                                   receiver_baton,
+                                   pool);
             if (err)
               break;
           }
@@ -252,7 +263,8 @@ svn_client_log (const apr_array_header_t *targets,
                                discover_changed_paths,
                                strict_node_history,
                                receiver,
-                               receiver_baton);
+                               receiver_baton,
+                               pool);
       }
     
     /* Special case: If there have been no commits, we'll get an error
@@ -275,7 +287,7 @@ svn_client_log (const apr_array_header_t *targets,
       {
         svn_revnum_t youngest_rev;
         
-        SVN_ERR (ra_lib->get_latest_revnum (session, &youngest_rev));
+        SVN_ERR (ra_lib->get_latest_revnum (session, &youngest_rev, pool));
         if (youngest_rev == 0)
           {
             err = SVN_NO_ERROR;
@@ -289,8 +301,5 @@ svn_client_log (const apr_array_header_t *targets,
       }
   }
   
-  /* We're done with the RA session. */
-  SVN_ERR (ra_lib->close (session));
-
   return err;
 }

@@ -67,9 +67,9 @@
               <entry>svnup</entry>
               <entry>Java, JNI bindings</entry>
               <entry>Yes</entry>
-              <entry>GPL</entry>
+              <entry>Apache-style</entry>
               <entry><systemitem
-              class="url">http://www.qint.de/svnup.html</systemitem></entry>
+              class="url">http://svnup.tigris.org/</systemitem></entry>
             </row>
       
             <row>

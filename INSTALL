@@ -9,7 +9,7 @@ $LastChangedDate$
 
 "Is Subversion stable enough for me to use for my own projects?"
 
-We think so!  Read the full FAQ answer on the website:  
+We think so!  Read the full FAQ answer on the website:
   http://subversion.tigris.org/project_faq.html#stable
 
 
@@ -56,6 +56,7 @@ I.    BUILD REQUIREMENTS
       Note: Because previous builds of Subversion may have installed older
       versions of these libraries, you may want to run some of the cleanup
       commands described in section II.B before installing the following.
+
 
       1.  Apache Portable Runtime
 
@@ -120,21 +121,21 @@ I.    BUILD REQUIREMENTS
       Be sure to use a native Windows CVS client (as opposed to
       Cygwin's version) so that the .dsp files get carriage-returns at
       the ends of their lines.  Otherwise Visual Studio will complain
-      that it doesn't reccognize the .dsp files.
+      that it doesn't recognize the .dsp files.
 
 
       2.  autoconf 2.50 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
-      (See section II.B). Generally only developers would be doing this,
-      but at this stage in Subversion's development chances are you'll
+      (see section II.B). Generally only developers would be doing this,
+      but at this stage in Subversion's development you'll probably
       want to do this as well.
 
 
       3.  libtool 1.4 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
-      (See section II.B), which you probably want to do. See above.
+      (see section II.B), which you probably want to do. See above.
 
       Note: Some systems (Solaris, for example) require libtool 1.4.3 or
       newer. The autogen.sh script knows about that.
@@ -143,7 +144,7 @@ I.    BUILD REQUIREMENTS
       4.  bison or yacc (Unix only)
 
       This is required only if you plan to build from the latest source
-      (See section II.B), which you probably want to do. See above.
+      (see section II.B), which you probably want to do. See above.
 
       The reason one of these programs is required is that it will
       generate the code which parses complex date formats, so that
@@ -160,10 +161,9 @@ I.    BUILD REQUIREMENTS
       5.  Neon library 0.23.7
 
       The Neon library allows a Subversion client to interact with remote
-      repositories over the Internet. Although in theory you could have
-      the client interact only with local repositories, currently the
-      build system requires Neon to be present. Hopefully, this will be
-      fixed in the future.
+      repositories over the Internet via a WebDAV based protocol.  If you 
+      want to use Subversion to connect to a server over ra_dav (via a 
+      http:// or https:// url), you will require Neon.  
 
       The Neon library source code can be installed in "./neon" if you
       want Subversion to build it. The source code is included with the
@@ -176,7 +176,7 @@ I.    BUILD REQUIREMENTS
 
       Without source code, a previously compiled library can be picked up
       from the standard locations. If you want to specify a nonstandard
-      location, you need to use the LDFLAGS environmental variable when
+      location, you need to use the LDFLAGS environment variable when
       you run "./configure". You may also have to specify where the
       neon-config script (which identifies various features of the Neon
       library) is kept by giving the "--with-neon=" option to
@@ -194,10 +194,10 @@ I.    BUILD REQUIREMENTS
       You'll need Berkeley DB 4.0.14 installed on your system.  You can
       get it from:
 
-          http://www.sleepycat.com/.
+          http://www.sleepycat.com/download/patchlogs.shtml
 
       If you already have another version of Berkeley DB installed and
-      don't want to downgrade, you can unpack the Berkeley 4.0.14
+      don't want to downgrade, you can unpack the Berkeley DB 4.0.14
       distribution into a subdir named `db' in the top-level of the
       Subversion source tree.  Then Subversion will ignore the system
       DB and use the one it found in its own source tree.
@@ -217,14 +217,15 @@ I.    BUILD REQUIREMENTS
           http://subversion.tigris.org/servlets/ProjectDownloadList
 
 
-      7.  Apache Web Server 2.0.44 or newer
+      7.  Apache Web Server 2.0.46 or newer
 
       The Apache HTTP server is required if you wish to offer your
       Subversion repository over the Internet. Building Subversion, the
       Apache server, and the modules that Apache needs to communicate
       with Subversion are complicated enough that there is a whole
       section at the end of this document that describes how it is
-      done. See section III for details.
+      done: See section III for details.
+
 
       8.  Python 2.0
 
@@ -238,33 +239,11 @@ I.    BUILD REQUIREMENTS
       9.  Visual C++ 6.0 or newer (Windows Only)
 
       To build Subversion under any of the MS Windows platforms, you
-      will need a copy of Microsoft Visual C++. The project files are
-      provided for you.
+      will need a copy of Microsoft Visual C++.  You can generate the
+      project files using the gen-make.py script.
 
 
-      10. A gnu-like diff and diff3
-
-      Many of the features of the Subversion client require the ability
-      to call out to an external diff or diff3 program, one that
-      conforms to the behavior of the GNU versions of these programs.
-
-      On some versions of Unix, this may involve getting a replacement
-      for your already existing diff and diff3 program. On FreeBSD
-      systems, for example, it requires getting gdiff and gdiff3.
-
-      On a Windows platform, Subversion also requires a GNU diff.exe
-      and diff3.exe. One implementation is provided by the Cygwin
-      project:
-
-          http://sources.redhat.com/cygwin
-
-      Note that the positions for diff.exe and diff3.exe are defined
-      in svn_private_config.hw and that the default path is
-      "C:\Program Files\cygnus\cygwin\bin". If you are using the Cygwin
-      versions the file cygwin1.dll needs to reside in the same directory.
-
-
-      11. Libraries for our libraries
+      10. Libraries for our libraries
 
       Some of the libraries that Subversion depends on themselves have
       optional dependencies that can add features to what Subversion
@@ -290,13 +269,8 @@ I.    BUILD REQUIREMENTS
       more information on how to use these parameters and versions of
       libraries you need.
 
-      Under Windows, you have to edit a batch file available in your
-      Subversion source tree (the root of which is labelled <SVN>
-      below):
-
-          <SVN>\build\win32\build_neon.bat
-
-      and point it to the appropriate directories.
+      Under Windows, you can specify the paths to these libraries by
+      passing the options --with-zlib and --with-openssl to gen-make.py.
 
       You can also add support for these features to a Subversion server
       and you can even use the same support libraries.  The Subversion
@@ -331,8 +305,8 @@ I.    BUILD REQUIREMENTS
       libraries.
 
 
-      12. Building The Documentation
-  
+      11. Building The Documentation
+
       The master source format for Subversion's documentation is
       Docbook Lite.  See doc/book/README for instructions how to
       compile the book into a useful format.
@@ -408,10 +382,10 @@ II.   INSTALLATION
       subversion RPM depending on what packages you already have installed:
 
           subversion*.i386.rpm
-          apache*.i386.rpm (Version 2.0.42 or greater)
+          apache*.i386.rpm (Version 2.0.46 or greater)
           db*.i386.rpm     (Version 4.0.14 or greater)
           expat            (Comes with RedHat)
-          neon             (Version 0.23.7)
+          neon             (Version 0.23.9)
 
       After downloading, install it (as root user):
 
@@ -437,7 +411,7 @@ II.   INSTALLATION
 
       (These instructions assume you have already installed Subversion
       and checked out a Subversion working copy.  See the section
-      "Bootstrapping From A Tarball Or RPM" above for more.)
+      "Bootstrapping from a Tarball or RPM" above for more.)
 
       You can discard the directory created by the tarball; you're
       about to build the latest, greatest Subversion client.
@@ -515,6 +489,7 @@ II.   INSTALLATION
       installed shared libraries.  For a completely static build see the
       '--enable-all-static' option.)
 
+
   C.  Building under Unix in Different Directories
       --------------------------------------------
 
@@ -581,25 +556,24 @@ II.   INSTALLATION
       This will get the latest Subversion sources and put them into the
       "svn" subdirectory.
 
-      If you want to use this client for more than just downloading
-      the latest sources, though, you will probably need to make sure
-      that Subversion has access to the diff.exe and diff3.exe
-      programs, as described in section I.10.
-
 
   E.  Building the Latest Source under Windows
       ----------------------------------------
 
       (These instructions assume you have already installed Subversion
       and checked out a Subversion working copy.  See the section
-      "Bootstrapping From A Zip File Under Windows" above for more.)
+      "Bootstrapping from a Zip File under Windows" above for more.)
 
-      There is some support for building Subversion on Win32 platforms.
-      The project files included in the source tree are from Microsoft
-      Visual C++ 6.x; earlier versions of the compiler are not
-      supported at this time.  You'll also need a fairly recent version
-      of the Microsoft Platform SDK; the header files that come with
-      MSVC 6.x are too old.
+      There is some support for building Subversion on Win32
+      platforms.  The project files generated by gen-make.py are for
+      Microsoft Visual C++ 6.x; earlier versions of the compiler are
+      not supported.  You'll also need a fairly recent version of the
+      Microsoft Platform SDK; the header files that come with MSVC 6.x
+      are too old.
+
+      To generate the project files, you will need Python 2.2 for Windows
+      installed.  Installing Python will also allow you to run the test
+      suite after you build the source.
 
       To build the client components, you'll need a copy of neon
       0.23.7.  See section I.5 for details on where to get one and
@@ -607,23 +581,19 @@ II.   INSTALLATION
 
       [NOTE: The neon library supports secure connections with OpenSSL
           and on-the-wire compression with zlib. If you want to use
-          those features, you should edit the file
-
-              <SVN>\build\win32\build_neon.bat
-
-          to point to the appropriate directories.
-
-          See Section I.11 for more details.]
+          those features, you should pass the options "--with-zlib" and
+          "--with-openssl" to the gen-make.py script. See Section I.11
+          for more details.]
 
       If you are installing under Win9x, NT4, or WinME, and svn.exe
       doesn't run, try installing shfolder.dll from here:
 
-      http://download.microsoft.com/download/platformsdk/Redist/5.50.4027.300/W9XNT4/EN-US/shfinst.EXE
+          http://download.microsoft.com/download/platformsdk/Redist/5.50.4027.300/W9XNT4/EN-US/shfinst.EXE
 
       If you want to build the (local) server components, you'll also
       need a copy of Berkeley DB, version 4.0.14 or newer.  Details are
       in Section I.6. For your convenience, there is also a binary
-      distibution on the Subversion downloads page
+      distribution on the Subversion downloads page
 
           http://subversion.tigris.org/ProjectDownloadList
 
@@ -639,21 +609,60 @@ II.   INSTALLATION
       [NOTE: This binary package of Berkeley DB is provided for
           convenience only. Please don't address questions about
           Berkeley DB that aren't directly related to using Subversion
-          to the project list.]
+          to the project mailing list.]
 
       If you build Berkeley DB from the source, you will have to copy
-      the file ..db-4.0.14\build_win32\db.h to <SVN>\db4-win32\include,
+      the file db-4.0.14\build_win32\db.h to <SVN>\db4-win32\include,
       and all the import libraries to <SVN>\db4-win32\lib. Again, the
       DLLs should be somewhere in your path.
 
-      The workspace `subversion.dsw' at the top of the source tree
-      includes all the necessary projects. Right now, only static
-      libraries are built. The "__build__" project (active by default)
-      builds all the libraries and programs. The "__check__" project
-      builds the test drivers.
+      To build the Apache module, you will also need the Apache 2.0.46
+      or later Win32 source. You can download it from here:
 
-      You will have to edit the file svn_private_config.hw to set the
-      correct paths for diff and diff3.
+          http://httpd.apache.org/download.cgi
+
+      Finally, you will need to copy the Apache apr libraries into the
+      root of the Subversion source tree.
+
+      Walkthrough:
+
+          Unzip the Apache source. Copy the Apache apr, apr-util, and
+          apr-iconv directories from the Apache httpd-2.0.46\srclib
+          directory to the top-level Subversion directory.
+
+          Open the Apache.dsw file and build the Apache source. If you
+          don't compile Apache, mod_dav_svn will not build.
+
+          Run "python gen-make.py -t dsp --with-httpd=<path-to-httpd>"
+          to generate the Visual C++ 6.x project files. If you don't
+          want to build mod_dav_svn, omit the --with-httpd option.
+          Run "python gen-make.py -help" to see other options.
+
+          Open the subversion_msvc.dsw file gen-make creates in the
+          top-level directory. Compile the __ALL__ target to compile
+          everything, __ALL_TESTS__ to also build the test programs.
+
+      The following is a sample script.
+      gunzip, tar, and unzip are native win32 apps taken from
+
+          http://unxutils.sourceforge.net/
+
+      C:\Subversion> svn co http://svn.collab.net/repos/svn/trunk src
+      C:\Subversion> gunzip neon-0.23.9.tar.gz
+      C:\Subversion> cd src
+      C:\Subversion\src> tar -xvf ..\neon-0.23.9.tar
+      C:\Subversion\src> ren neon-0.23.9 neon
+      C:\Subversion\src> unzip ..\db-4.0.14-win32.zip
+      C:\Subversion\src> cd ..
+      C:\Subversion> unzip httpd_2.0.46-win32-src.zip
+      C:\Subversion> xcopy /S httpd-2.0.46\srclib\apr src\apr
+      C:\Subversion> xcopy /S httpd-2.0.46\srclib\apr-util src\apr-util
+      C:\Subversion> xcopy /S httpd-2.0.46\srclib\apr-iconv src\apr-iconv
+      C:\Subversion> msdev httpd-2.0.46\apache.dsw /MAKE ALL
+      C:\Subversion> cd src
+      C:\Subversion\src> python gen-make.py -t dsp --with-httpd=..\httpd-2.0.46
+      C:\Subversion\src> msdev subversion_msvc.dsw /MAKE __ALL__
+
 
       [NOTE: There have been rumors that Subversion on Win32 can be built
           using the latest cygwin. ymmv.]
@@ -688,7 +697,8 @@ III.  BUILDING A SUBVERSION SERVER
           $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
           (password 'anoncvs')
 
-          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co httpd-2.0
+          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic \
+            co -r APACHE_2_0_BRANCH httpd-2.0
 
       Checkout the "apr" and "apr-util" modules into the srclib/ directory:
 
@@ -699,18 +709,17 @@ III.  BUILDING A SUBVERSION SERVER
       At the top of the httpd-2.0 tree:
 
           $ ./buildconf
-          $ ./configure --enable-dav --enable-so --prefix=/usr/local/apache2
+          $ ./configure --enable-dav --enable-so --enable-maintainer-mode
 
       The first arg says to build mod_dav.
+
       The second arg says to enable shared module support which is needed
       for a typical compile of mod_dav_svn (see below).
-      The third arg is where you will ultimately install apache.
 
-      Note: if you build Subversion with --enable-maintainer-mode,
-      then do the same for Apache. mod_dav_svn uses Apache's
-      maintainer-mode stuff from its headers, so you want to ensure
-      that Apache is built with the same assumption. Just add
-      --enable-maintainer-mode to the configure line above.
+      The third arg says to include debugging information.  If you
+      built Subversion with --enable-maintainer-mode, then you should
+      do the same for Apache; there can be problems if one was
+      compiled with debugging and the other without.
 
       Note: if you have multiple db versions installed on your system,
       Apache might link to a different one than Subversion, causing
@@ -729,8 +738,8 @@ III.  BUILDING A SUBVERSION SERVER
       for more details.
 
       All instructions below assume you configured Apache to install
-      under /usr/local/apache2/; substitute appropriately if you
-      chose some other location.
+      in its default location, /usr/local/apache2/; substitute
+      appropriately if you chose some other location.
 
       Compile and install apache:
 
@@ -756,7 +765,7 @@ III.  BUILDING A SUBVERSION SERVER
       to locate the apxs script:
 
           $ ./configure --with-apxs=/home/fred/apache2/bin/apxs
- 
+
 
       Note: it *is* possible to build mod_dav_svn as a static library
       and link it directly into Apache. Possible, but painful. Stick
@@ -775,31 +784,7 @@ III.  BUILDING A SUBVERSION SERVER
       /usr/local/apache2/modules/.
 
 
-      1.  Building the Server on Windows [EXPERIMENTAL]
-
-      The mod_dav_svn module can now be built on Windows, using the
-      mod_dav_svn project in the workspace `subversion.dsw'. You must
-      have the Apache source tree installed in parallel to the Subversion
-      source tree, and will use the apr and apr-util libraries from
-      the Apache sources, like this:
-
-          .../
-            svn/
-              db4-win32/
-              subversion/
-                mod_dav_svn/
-              ...
-            httpd-2.0/
-              srclib/
-                apr/
-                apr-util/
-              ...
-
-      You must have Berkeley DB available, as described in II.E.
-      First, build (and install) Apache and the Subversion client and
-      local server. Then select mod_dav_svn as the active project,
-      build it, and copy mod_dav_svn.so to the Apache modules
-      directory. Apache configuration is the same as on Unix.
+      Section II.E explains how to build the server on Windows.
 
 
   C.  Configuring Apache for Subversion
@@ -819,8 +804,11 @@ III.  BUILDING A SUBVERSION SERVER
       line for you.  But if apache gives you an error like "Unknown
       DAV provider: svn", then you may want to verify that this line
       exists in your httpd.conf:
-  
+
          LoadModule dav_svn_module     modules/mod_dav_svn.so
+
+      NOTE: if you built mod_dav as a dynamic module aswell, make sure
+      the above line appears after the one that loads mod_dav.so.
 
       Next, add this to the *bottom* of your httpd.conf:
 
@@ -849,7 +837,7 @@ III.  BUILDING A SUBVERSION SERVER
                  Require valid-user
              </LimitExcept>
 
-          c) For seperate restricted read and write access:
+          c) For separate restricted read and write access:
 
              AuthGroupFile /my/svn/group/file
 
@@ -863,7 +851,7 @@ III.  BUILDING A SUBVERSION SERVER
              </Limit>
 
       These are only a few simple examples.  For a complete tutorial
-      on Apache access contol, please consider taking a look at the
+      on Apache access control, please consider taking a look at the
       tutorials found under "Security" on the following page:
       http://httpd.apache.org/docs-2.0/misc/tutorials.html
 
@@ -922,8 +910,8 @@ III.  BUILDING A SUBVERSION SERVER
       the HACKING file.
 
 
-  E. Alternative:  'svnserve' and ra_svn
-     -----------------------------------
+  E.  Alternative:  'svnserve' and ra_svn
+      -----------------------------------
 
       As of svn 0.16, we have a new repository-access implementation,
       libsvn_ra_svn (on the client side) and the 'svnserve' process on
@@ -933,28 +921,55 @@ III.  BUILDING A SUBVERSION SERVER
          $ svnserve -d     # becomes a background daemon
          $ svn checkout svn://localhost/usr/local/svn/repository
 
-      This network layer passes 'make check', but is still relatively
-      new and untested.  You can use the "-r" option to svnserve to
-      set a logical root for repositories, and the "-R" option to
-      restrict connections to read-only access.  ("Read-only" is a
-      logical term here; svnserve still needs write access to the
-      database in this mode.)
+      You can use the "-r" option to svnserve to set a logical root
+      for repositories, and the "-R" option to restrict connections to
+      read-only access.  ("Read-only" is a logical term here; svnserve
+      still needs write access to the database in this mode, but will
+      not allow commits or revprop changes.)
 
-      For now, svnserve in daemon mode only support anonymous access.
-      But you can also tunnel ra_svn over ssh or any similar tool.  To
-      do this, create a server group for the repository server in
-      ~/.subversion/servers, and set the variable "svn-tunnel-agent"
-      to "ssh".  An example:
+      (Expect the server invocation options to change incompatibly
+      before they are finalized.)
 
-        [groups]
-        mygroup = server.host.name
+      For now, svnserve in daemon mode only supports anonymous access.
+      But you can also tunnel ra_svn over ssh or any similar tool:
 
-        [mygroup]
-        svn-tunnel-agent = ssh
+         $ svn checkout svn+ssh://hostname/usr/local/svn/repository
 
-      (Right now you can't put any arguments to ssh in that variable.
-      That may change.)  Make sure svnserve is in your path on the
-      server.
+      In this mode of operation, there is no svnserve daemon process;
+      the svn client will ssh to the server and run "svnserve -t" to
+      do the serving.  Make sure svnserve is in your path on the
+      server.  You can override the "ssh" command with the SVN_SSH
+      environment variable, or you can define new tunnel schemes in
+      the [tunnels] section of ~/.subversion/config.  By default, only
+      the "ssh" scheme is allowed.
 
-      Expect the server invocation options to change incompatibly
-      before they are finalized.
+
+
+IV.   PLATFORM-SPECIFIC ISSUES
+      ========================
+
+  A.  Windows XP
+      ----------
+
+      There is an error in the Windows XP TCP/IP stack which causes
+      corruption in certain cases.  This problem is exposed only
+      through ra_dav.
+
+      The root of the matter is caused by duplicating file handles
+      between parent and child processes.  The httpd Apache group
+      explains this a lot better:
+
+          http://www.apache.org/dist/httpd/binaries/win32/#xpbug
+
+      And there's an item about this in the Subversion FAQ:
+
+          http://subversion.tigris.org/project_faq.html#windows-xp-server
+
+      The only known workaround for now is to update to Windows XP
+      SP1 (or higher).
+
+
+  B.  Mac OS X
+      --------
+
+      [TBD: Describe BDB 4.0.x problem]

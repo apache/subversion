@@ -1,83 +1,62 @@
 #!/bin/sh
 
 #
-# USAGE: ./dist.sh [VERSION [NAME [REPOS-PATH]]]
+# USAGE: ./dist.sh VERSION REVISION [REPOS-PATH]
 #
-#   Create a distribution tarball, labelling it with the given version. If
-#   the version is not supplied, the HEAD version will be used.
+#   Create a distribution tarball, labelling it with the given VERSION.
+#   The REVISION will be used in the version string. The tarball will be
+#   constructed from the root located at REPOS-PATH. If REPOS-PATH is
+#   not specified then the default is "branches/release-VERSION". For
+#   example, the command line:
 #
-#   If NAME is supplied, it will be used in the version string. From CVS
-#   trees, this is 'dev build'. By default, this will be 'r<VERSION>'.
-#   Note that you can use '' or 'HEAD' for the VERSION to be able to
-#   supply a name in the second argument.
+#      ./dist.sh 0.24.2 6284
 #
-#   If REPOS-PATH is supplied, the tarball will be constructed from the
-#   root located at that path (e.g. /branches/foo). If REPOS-PATH is not
-#   supplied, then /trunk will be used.
-#
-#   Note: the leading slash on REPOS-PATH will be inserted if not present.
+#   from the top-level of a branches/release-0.24.2 working copy will
+#   create the 0.24.2 release tarball. Make sure you have apr, apr-util,
+#   and neon subdirectories and that the working copy is configured
+#   before running this script in the top-level directory.
 #
 
-##########################################################################
-# How to build a Subversion distribution tarball:
-#
-# Run this script in the top-level of a configured working copy that
-# has apr, apr-util, and neon subdirs, and you'll end up with
-# subversion-rXXX.tar.gz in that top-level directory.
-#
-# Unless specified otherwise (with a single REVISION argument to this
-# script), the tarball will be based on the HEAD of the repository.
-#
-# It will *not* be based on whatever set of revisions are in your
-# working copy.  However, since 
-#
-#   - the documentation will be produced by running "make doc" 
-#     on your working copy's revisions of the doc master files, and
-#
-#   - since the APR and APRUTIL trees are basically copied from your working 
-#     copy, 
-#
-# it's probably simplest if you just make sure your working copy is at
-# the same revision as that of the distribution you are trying to
-# create.  Then you won't get any unexpected results.
-#
-##########################################################################
-
-### Rolling block.
-DIST_SANDBOX=.dist_sandbox
-
-### Estimated current version of your working copy
-WC_VERSION=`svn st -vN doc/README | awk '{print $1}'`
-
-### The "REV" part of ${DISTNAME}-rREV.tar.gz
-if test -z "$1" || test "$1" = "HEAD"; then
-  VERSION="`svn st -vu README | tail -1 | awk '{print $3}'`"
-else
-  VERSION="$1"
+if [ -z "$1" ] || [ -z "$2" ]; then
+  echo "USAGE: ./dist.sh VERSION REVISION [REPOS-PATH]"
+  exit 1
 fi
 
-RELEASE_NAME="$2"
-if test -z "$RELEASE_NAME"; then
-  RELEASE_NAME="r$VERSION"
+if [ ! -d apr ]; then
+  echo "ERROR: an 'apr' subdirectory must be present."
+  exit 1
 fi
+
+if [ ! -d apr-util ]; then
+  echo "ERROR: an 'apr-util' subdirectory must be present."
+  exit 1
+fi
+
+if [ ! -d neon ]; then
+  echo "ERROR: a 'neon' subdirectory must be present."
+  exit 1
+fi
+
+VERSION="$1"
+
+REVISION="$2"
+WC_REVISION="`svnversion doc`"
 
 REPOS_PATH="$3"
-if test -z "$REPOS_PATH"; then
-  REPOS_PATH="trunk"
+if [ -z "$REPOS_PATH" ]; then
+  REPOS_PATH="branches/release-$VERSION"
 else
-  # remove any leading slashes
   REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
 fi
 
-### The tarball's basename, also the name of the subdirectory into which
-### it should unpack.
-DISTNAME=subversion-${RELEASE_NAME}
-echo "Distribution will be named: ${DISTNAME}"
-echo "     constructed from path: /${REPOS_PATH}"
+DISTNAME="subversion-$VERSION"
+DIST_SANDBOX=.dist_sandbox
+DISTPATH="$DIST_SANDBOX/$DISTNAME"
 
-### Warn the user if their working copy looks to be out of sync with
-### their requested (or default) revision
-if test ${WC_VERSION} != ${VERSION}; then
+echo "Distribution will be named: $DISTNAME"
+echo "     constructed from path: /$REPOS_PATH"
+
+if [ "$WC_REVISION" != "$REVISION" ]; then
   echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
   echo "*                                                             *"
   echo "* WARNING:  The docs/ directory in your working copy does not *"
@@ -90,85 +69,48 @@ if test ${WC_VERSION} != ${VERSION}; then
   echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
 fi
 
-### Clean up the old docs so we're guaranteed the latest ones.
-# This is necessary only because "make clean" doesn't appear
-# to clean up docs at the moment.
 echo "Cleaning old docs in docs/ ..."
-rm -f doc/programmer/design/svn-design.info
-rm -f doc/programmer/design/svn-design.info-*
-rm -f doc/programmer/design/svn-design.html
-rm -f doc/programmer/design/svn-design.txt
-rm -f doc/handbook/svn-handbook.info
-rm -f doc/handbook/svn-handbook.info-*
-rm -f doc/handbook/svn-handbook.html
-rm -f doc/handbook/svn-handbook.txt
-rm -f doc/handbook/translations/french/svn-handbook-french.info
-rm -f doc/handbook/translations/french/svn-handbook-french.info-*
-rm -f doc/handbook/translations/french/svn-handbook-french.html
-rm -f doc/handbook/translations/french/svn-handbook-french.txt
+make doc-clean
+rm -f doc/translations/french/svn-handbook-french.info
+rm -f doc/translations/french/svn-handbook-french.info-*
+rm -f doc/translations/french/svn-handbook-french.html
+rm -f doc/translations/french/svn-handbook-french.txt
 
-### Build new docs.
 echo "Building new docs in docs/ ..."
+FOP_OPTS="-Xms100m -Xmx200m"
+export FOP_OPTS
 make doc
 
-### Prepare an area for constructing the dist tree.
-rm -rf ${DIST_SANDBOX}
-mkdir ${DIST_SANDBOX}
-echo "Removed and recreated ${DIST_SANDBOX}"
+rm -rf "$DIST_SANDBOX"
+mkdir "$DIST_SANDBOX"
+echo "Removed and recreated $DIST_SANDBOX"
 
-### Export the dist tree, clean it up.
-echo "Exporting revision ${VERSION} of Subversion into sandbox..."
-(cd ${DIST_SANDBOX} && \
- svn export -q -r ${VERSION} http://svn.collab.net/repos/svn/$REPOS_PATH \
-        ${DISTNAME} --username none --password none)
+echo "Exporting revision $REVISION of Subversion into sandbox..."
+(cd "$DIST_SANDBOX" && \
+ svn export -q -r "$REVISION" "http://svn.collab.net/repos/svn/$REPOS_PATH" \
+     "$DISTNAME" --username none --password none)
 
-### Ship with (relatively) clean APRUTIL, APR, and neon working copies
-### inside the tarball, just to make people's lives easier.  Always do
-### APR-UTIL first, because it depends on APR's makefile.
-echo "Copying apr-util into sandbox, making clean..."
-cp -r apr-util ${DIST_SANDBOX}/${DISTNAME}
-(cd ${DIST_SANDBOX}/${DISTNAME}/apr-util && make extraclean)
-# Defang the APRUTIL working copy.
-echo "Removing all CVS/ and .cvsignore files from apr-util..."
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr-util -name CVS -type d -print`
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr-util -name .cvsignore -print`
+for pkg in apr-util apr ; do
+  echo "Copying $pkg into sandbox, making extraclean..."
+  cp -r "$pkg" "$DISTPATH"
+  (cd "$DISTPATH/$pkg" && make extraclean)
 
-echo "Copying apr into sandbox, making clean..."
-cp -r apr ${DIST_SANDBOX}/${DISTNAME}
-(cd ${DIST_SANDBOX}/${DISTNAME}/apr && make extraclean)
-# Defang the APR working copy.
-echo "Removing all CVS/ and .cvsignore files from apr..."
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name CVS -type d -print`
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name .cvsignore -print`
+  echo "Removing all CVS/ and .cvsignore files from $pkg..."
+  find "$DISTPATH/$pkg" -name CVS -type d -print | xargs rm -fr
+  find "$DISTPATH/$pkg" -name .cvsignore -print | xargs rm -f
+done
 
-# Clean most of neon.
 echo "Coping neon into sandbox, making clean..."
-cp -r neon ${DIST_SANDBOX}/${DISTNAME}
-(cd ${DIST_SANDBOX}/${DISTNAME}/neon && make distclean)
-# Then do some extra cleaning in neon, since its `make distclean'
-# rule still leaves some .o files lying around.  Better to
-# patch Neon, of course; but the fix wasn't obvious to me --
-# something to do with @NEONOBJS@ in neon/src/Makefile.in?
+cp -r neon "$DISTPATH"
+(cd "$DISTPATH/neon" && make distclean)
 echo "Cleaning *.o in neon..."
-rm -f ${DIST_SANDBOX}/${DISTNAME}/neon/src/*.o
+find "$DISTPATH/neon/src" -name '*.o' -print | xargs rm -f
 
-# Remove any config.nice files that may have been left behind. They aren't
-# cleaned by anything.
-files="`find ${DIST_SANDBOX}/${DISTNAME} -name config.nice -print`"
-if test -n "$files"; then
-  echo "Removing: $files"
-  rm -rf $files
-fi
+find "$DISTPATH" -name config.nice -print | xargs rm -f
 
-### Run autogen.sh in the dist, so we ship with a configure script.
-# First make sure autogen.sh is executable, because, as Mike Pilato
-# points out, until we get permission versioning working, it won't be
-# executable on export from svn.
 echo "Running ./autogen.sh in sandbox, to create ./configure ..."
-chmod a+x ${DIST_SANDBOX}/${DISTNAME}/autogen.sh
-(cd ${DIST_SANDBOX}/${DISTNAME} && ./autogen.sh --release)
+(cd "$DISTPATH" && ./autogen.sh --release) || exit 1
 
-### Copy all the pre-built docs, so we ship with ready documentation.
 echo "Copying new docs into sandbox..."
 for name in doc/programmer/design/svn-design.info   \
             doc/programmer/design/svn-design.info-* \
@@ -178,11 +120,10 @@ for name in doc/programmer/design/svn-design.info   \
             doc/book/book/*.pdf                     \
             doc/book/book/*.ps
 do
-   cp ${name} ${DIST_SANDBOX}/${DISTNAME}/${name}
+   cp "$name" "$DISTPATH/$name"
 done
 
-### Tell people where to find old information.
-cat > ${DIST_SANDBOX}/${DISTNAME}/ChangeLog.CVS <<EOF
+cat > "$DISTPATH/ChangeLog.CVS" <<EOF
 The old CVS ChangeLog is kept at 
 
      http://subversion.tigris.org/
@@ -192,36 +133,32 @@ you probably want to use the "svn log" command -- and if it
 does not do what you need, please send in a patch!
 EOF
 
-### Give this release a unique name, to help us interpret bug reports;
-### and change the number tag, to indicate that it is baselined
-vsn_file="${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h"
+vsn_file="$DISTPATH/subversion/include/svn_version.h"
 
 sed -e \
- "/#define *SVN_VER_TAG/s/dev build/${RELEASE_NAME}/" \
-  < "$vsn_file" > "${vsn_file}.tmp"
+ "/#define *SVN_VER_TAG/s/dev build/r$REVISION/" \
+  < "$vsn_file" > "$vsn_file.tmp"
 
 sed -e \
  "/#define *SVN_VER_NUMTAG/s/\+//" \
-  < "${vsn_file}.tmp" > "${vsn_file}.unq"
+  < "$vsn_file.tmp" > "$vsn_file.unq"
 
 sed -e \
- "/#define *SVN_VER_REVISION/s/0/${WC_VERSION}/" \
-  < "${vsn_file}.unq" > "$vsn_file"
+ "/#define *SVN_VER_REVISION/s/0/$REVISION/" \
+  < "$vsn_file.unq" > "$vsn_file"
 
-rm -f "${vsn_file}.tmp"
-rm -f "${vsn_file}.unq"
+rm -f "$vsn_file.tmp"
+rm -f "$vsn_file.unq"
 
+echo "Rolling $DISTNAME.tar.gz ..."
+(cd "$DIST_SANDBOX" && tar zcpf "$DISTNAME.tar.gz" "$DISTNAME")
 
-### Make the tarball.
-echo "Rolling ${DISTNAME}.tar.gz ..."
-(cd ${DIST_SANDBOX} && tar zcpf ${DISTNAME}.tar.gz ${DISTNAME})
-
-### Copy it upstairs and clean up.
 echo "Copying tarball out, removing sandbox..."
-cp ${DIST_SANDBOX}/${DISTNAME}.tar.gz .
-rm -rf ${DIST_SANDBOX}
+cp "$DISTPATH.tar.gz" .
+rm -rf "$DIST_SANDBOX"
 
 echo ""
 echo "Done:"
-ls -l ${DISTNAME}.tar.gz
+ls -l "$DISTNAME.tar.gz"
 echo ""
+

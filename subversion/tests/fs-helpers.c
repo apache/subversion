@@ -55,7 +55,11 @@ fs_warning_handler (void *baton, svn_error_t *err)
 svn_error_t *
 svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool)
 {
-  *fs_p = svn_fs_new (pool);
+  apr_hash_t *fs_config = apr_hash_make (pool);
+  apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                APR_HASH_KEY_STRING, "1");
+
+  *fs_p = svn_fs_new (fs_config, pool);
   if (! *fs_p)
     return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
                              "Couldn't alloc a new fs object.");
@@ -95,6 +99,9 @@ svn_test__create_fs (svn_fs_t **fs_p,
   /* Provide a handler for Berkeley DB error messages.  */
   SVN_ERR (svn_fs_set_berkeley_errcall (*fs_p, berkeley_error_handler));
 
+  /* Register this fs for cleanup. */
+  svn_test_add_dir_cleanup (name);
+
   return SVN_NO_ERROR;
 }
 
@@ -105,6 +112,7 @@ svn_test__create_repos (svn_repos_t **repos_p,
                         apr_pool_t *pool)
 {
   apr_finfo_t finfo;
+  apr_hash_t *fs_config;
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
@@ -120,11 +128,18 @@ svn_test__create_repos (svn_repos_t **repos_p,
                                   "there is already a file named `%s'", name);
     }
 
-  SVN_ERR (svn_repos_create (repos_p, name, NULL, NULL, NULL, pool));
+  fs_config = apr_hash_make (pool);
+  apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                APR_HASH_KEY_STRING, "1");
+  SVN_ERR (svn_repos_create (repos_p, name, NULL, NULL, NULL,
+                             fs_config, pool));
   
   /* Provide a handler for Berkeley DB error messages.  */
   SVN_ERR (svn_fs_set_berkeley_errcall (svn_repos_fs (*repos_p), 
                                         berkeley_error_handler));
+
+  /* Register this repo for cleanup. */
+  svn_test_add_dir_cleanup (name);
 
   return SVN_NO_ERROR;
 }

@@ -1,6 +1,7 @@
 #
 # mailer.conf: example configuration file for mailer.py
 #
+# $Id$
 
 [general]
 
@@ -49,16 +50,19 @@ diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 #
 # The subset of user-defined groups identified by the repository are further
 # refined based on the for_paths option. A group is selected if at least
-# one path(*) in the commit matches the for_paths regular expression.
+# one path(*) in the commit matches the for_paths regular expression. Note
+# that the paths are relative to the root of the repository and do not
+# have a leading slash.
 #
 # (*) Actually, each path will select just one group. Thus, it is possible
 # that one group will match against all paths, while another group matches
-# none of the paths, even though its for_paths would make that possible.
+# none of the paths, even though its for_paths would have selected some of
+# the paths in the commit.
 #
 # Groups are matched in no particular order. Do not depend upon their
 # order within this configuration file. The values from [defaults] will
 # be used if no group is matched or an option in a group does not override
-# the corresponding value from [options].
+# the corresponding value from [defaults].
 #
 # Generally, a commit email is generated for each group that has been
 # selected. The script will try to minimize mails, so it may be possible
@@ -85,7 +89,7 @@ diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 #
 # The client name can be extracted with a regular expression like:
 #
-#   for_paths = /clients/(?P<client>[^/]*)($|/)
+#   for_paths = clients/(?P<client>[^/]*)($|/)
 #
 # The substitution is performed using Python's dict-based string
 # interpolation syntax:
@@ -127,10 +131,26 @@ diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 # The default prefix for the Subject: header
 subject_prefix =
 
-# The default From: and To: addresses for commit messages
+# The default From: and To: addresses for commit messages.  If the
+# from_addr is not specified or it is specified but there is no text
+# after the `=', then the revision's author is used as the from
+# address.  If the revision author is not specified, such as when a
+# commit is done without requiring authentication and authorization,
+# then the string 'no_author' is used.  You can specify a default
+# from_addr here and if you want to have a particular for_repos group
+# use the author as the from address, you can use "from_addr =".
 from_addr = invalid@example.com
 to_addr = invalid@example.com
 
+# If this is set, then a Reply-To: will be inserted into the message
+reply_to =
+
+# When set to "yes", the mailer will suppress the creation of a diff which
+# deletes all the lines in the file. If this is set to anything else, or
+# is simply commented out, then the diff will be inserted. Note that the
+# deletion is always mentioned in the message header, regardless of this
+# option's value.
+suppress_deletes = yes
 
 # --------------------------------------------------------------------------
 
@@ -142,6 +162,8 @@ to_addr = invalid@example.com
 # subject_prefix = [commit]
 # # override the default, sending these elsewhere
 # to_addr = www-commits@example.com
+# # use the revision author as the from address
+# from_addr =
 #
 # [another-example]
 # # commits to personal repositories should go to that person

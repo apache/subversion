@@ -234,7 +234,7 @@ get_one_window (struct compose_handler_baton *cb,
 {
   svn_stream_t *wstream;
   char diffdata[4096];   /* hunk of svndiff data */
-  apr_size_t off;        /* offset into svndiff data */
+  svn_filesize_t off;    /* offset into svndiff data */
   apr_size_t amt;        /* how much svndiff data to/was read */
   const char *str_key;
 
@@ -384,16 +384,17 @@ rep_undeltify_range (svn_fs_t *fs,
 
 
 
-/* Calculate the index of the chunk in REP that contains OFFSET, and
-   find the relative offset within the chunk.  Return -1 if offset is
-   beyond the end of the represented data.
+/* Calculate the index of the chunk in REP that contains REP_OFFSET,
+   and find the relative CHUNK_OFFSET within the chunk.
+   Return -1 if offset is beyond the end of the represented data.
    ### The basic assumption is that all delta windows are the same size
    and aligned at the same offset, so this number is the same in all
    dependent deltas.  Oh, and the chunks in REP must be ordered. */
 
 static int
 get_chunk_offset (svn_fs__representation_t *rep,
-                  apr_size_t *offset)
+                  svn_filesize_t rep_offset,
+                  apr_size_t *chunk_offset)
 {
   const apr_array_header_t *chunks = rep->contents.delta.chunks;
   int cur_chunk;
@@ -406,10 +407,11 @@ get_chunk_offset (svn_fs__representation_t *rep,
     const svn_fs__rep_delta_chunk_t *const this_chunk
       = APR_ARRAY_IDX (chunks, cur_chunk, svn_fs__rep_delta_chunk_t*);
 
-    if ((this_chunk->offset + this_chunk->size) > *offset)
+    if ((this_chunk->offset + this_chunk->size) > rep_offset)
       {
-        assert (this_chunk->offset <= *offset);
-        *offset -= this_chunk->offset;
+        assert (this_chunk->offset <= rep_offset);
+        assert (rep_offset - this_chunk->offset < SVN_MAX_OBJECT_SIZE);
+        *chunk_offset = (apr_size_t) (rep_offset - this_chunk->offset);
         return cur_chunk;
       }
   }
@@ -423,12 +425,13 @@ get_chunk_offset (svn_fs__representation_t *rep,
 static svn_error_t *
 rep_read_range (svn_fs_t *fs,
                 const char *rep_key,
-                apr_size_t offset,
+                svn_filesize_t offset,
                 char *buf,
                 apr_size_t *len,
                 trail_t *trail)
 {
   svn_fs__representation_t *rep;
+  apr_size_t chunk_offset;
 
   /* Read in our REP. */
   SVN_ERR (svn_fs__bdb_read_rep (&rep, fs, rep_key, trail));
@@ -439,7 +442,7 @@ rep_read_range (svn_fs_t *fs,
     }
   else if (rep->kind == svn_fs__rep_kind_delta)
     {
-      const int cur_chunk = get_chunk_offset (rep, &offset);
+      const int cur_chunk = get_chunk_offset (rep, offset, &chunk_offset);
       if (cur_chunk < 0)
         *len = 0;
       else
@@ -481,7 +484,7 @@ rep_read_range (svn_fs_t *fs,
           if (rep->kind == svn_fs__rep_kind_delta)
             rep = NULL;         /* Don't use source data */
           SVN_ERR (rep_undeltify_range (fs, reps, rep, cur_chunk,
-                                        buf, offset, len, trail));
+                                        buf, chunk_offset, len, trail));
         }
     }
   else /* unknown kind */
@@ -582,7 +585,7 @@ struct rep_read_baton
   const char *rep_key;
   
   /* How many bytes have been read already. */
-  apr_size_t offset;
+  svn_filesize_t offset;
 
   /* If present, the read will be done as part of this trail, and the
      trail's pool will be used.  Otherwise, see `pool' below.  */
@@ -601,7 +604,7 @@ struct rep_read_baton
      writes on the same rep in the same trail impossible.  But we're
      not doing that, and probably no one ever should.  And anyway if
      they do, they should see problems immediately. */
-  apr_size_t size;
+  svn_filesize_t size;
 
   /* Set to FALSE when the baton is created, TRUE when the md5_context
      is digestified. */
@@ -648,7 +651,7 @@ rep_read_get_baton (struct rep_read_baton **rb_p,
 /*** Retrieving data. ***/
 
 svn_error_t *
-svn_fs__rep_contents_size (apr_size_t *size_p,
+svn_fs__rep_contents_size (svn_filesize_t *size_p,
                            svn_fs_t *fs,
                            const char *rep_key,
                            trail_t *trail)
@@ -706,10 +709,22 @@ svn_fs__rep_contents (svn_string_t *str,
                       const char *rep_key,
                       trail_t *trail)
 {
+  svn_filesize_t contents_size;
   apr_size_t len;
   char *data;
 
-  SVN_ERR (svn_fs__rep_contents_size (&(str->len), fs, rep_key, trail));
+  SVN_ERR (svn_fs__rep_contents_size (&contents_size, fs, rep_key, trail));
+
+  /* What if the contents are larger than we can handle? */
+  if (contents_size > SVN_MAX_OBJECT_SIZE)
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, NULL,
+       "svn_fs__rep_read_contents: rep contents are too largs "
+       "(got %" SVN_FILESIZE_T_FMT ", limit is %" APR_SIZE_T_FMT ")",
+       contents_size, SVN_MAX_OBJECT_SIZE);
+  else
+    str->len = (apr_size_t) contents_size;
+
   data = apr_palloc (trail->pool, str->len);
   str->data = data;
   len = str->len;
@@ -897,6 +912,7 @@ struct rep_write_baton
      closed. */
   struct apr_md5_ctx_t md5_context;
   unsigned char md5_digest[MD5_DIGESTSIZE];
+  svn_boolean_t finalized;
 
   /* Used for temporary allocations, iff `trail' (above) is null.  */
   apr_pool_t *pool;
@@ -1071,7 +1087,11 @@ rep_write_close_contents (void *baton)
      a checksum mismatch, it just happens that our code never tries to
      do that anyway. */
 
-  apr_md5_final (wb->md5_digest, &wb->md5_context);
+  if (! wb->finalized)
+    {
+      apr_md5_final (wb->md5_digest, &wb->md5_context);
+      wb->finalized = TRUE;
+    }
 
   /* If we got a trail, use it; else make one. */
   if (wb->trail)
@@ -1295,7 +1315,7 @@ typedef struct window_write_t
 {
   const char *key; /* string key for this window */
   apr_size_t svndiff_len; /* amount of svndiff data written to the string */
-  apr_size_t text_off; /* offset of fulltext data represented by this window */
+  svn_filesize_t text_off; /* offset of fulltext represented by this window */
   apr_size_t text_len; /* amount of fulltext data represented by this window */
 
 } window_write_t;
@@ -1330,10 +1350,10 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   /* The current offset into the fulltext that our window is about to
      write.  This doubles, after all windows are written, as the
      total size of the svndiff data for the deltification process. */
-  apr_size_t tview_off = 0;
+  svn_filesize_t tview_off = 0;
 
   /* The total amount of diff data written while deltifying. */
-  apr_size_t diffsize = 0;
+  svn_filesize_t diffsize = 0;
 
   /* TARGET's original string keys */
   apr_array_header_t *orig_str_keys;
@@ -1435,7 +1455,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
     SVN_ERR (svn_fs__bdb_read_rep (&old_rep, fs, target, trail));
     if (old_rep->kind == svn_fs__rep_kind_fulltext)
       {
-        apr_size_t old_size = 0;
+        svn_filesize_t old_size = 0;
 
         str_key = old_rep->contents.fulltext.string_key;
         SVN_ERR (svn_fs__bdb_string_size (&old_size, fs, str_key, trail));

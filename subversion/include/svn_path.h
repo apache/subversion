@@ -18,7 +18,8 @@
  * @file svn_path.h
  * @brief A path manipulation library
  *
- * All incoming and outgoing paths are in UTF-8.
+ * All incoming and outgoing paths are non-null and in UTF-8, unless
+ * otherwise documented.
  * 
  * No result path ever ends with a separator, no matter whether the
  * path is a file or directory, because we always canonicalize() it.
@@ -36,9 +37,9 @@
 
 #include <apr_pools.h>
 #include <apr_tables.h>
+
 #include "svn_string.h"
 #include "svn_error.h"
-#include "svn_utf.h"
 
 
 #ifdef __cplusplus
@@ -79,9 +80,7 @@ char *svn_path_join (const char *base,
                      const char *component,
                      apr_pool_t *pool);
 
-/** Join multiple components onto a @a base path, allocated in @a pool.
- *
- * Join multiple components onto a @a base path, allocated in @a pool. The
+/** Join multiple components onto a @a base path, allocated in @a pool. The
  * components are terminated by a @c NULL.
  *
  * If any component is the empty string, it will be ignored.
@@ -94,9 +93,7 @@ char *svn_path_join (const char *base,
 char *svn_path_join_many (apr_pool_t *pool, const char *base, ...);
 
 
-/** Get the basename of the specified @a path.
- *
- * Get the basename of the specified @a path.  The basename is defined as
+/** Get the basename of the specified @a path.  The basename is defined as
  * the last component of the path (ignoring any trailing slashes).  If
  * the @a path is root ("/"), then that is returned.  Otherwise, the
  * returned value will have no slashes in it.
@@ -119,9 +116,7 @@ char *svn_path_basename (const char *path, apr_pool_t *pool);
  */
 char *svn_path_dirname (const char *path, apr_pool_t *pool);
 
-/** Add a @a component (a null-terminated C-string) to @a path.
- *
- * Add a @a component (a null-terminated C-string) to @a path.  @a component 
+/** Add a @a component (a null-terminated C-string) to @a path.  @a component 
  * is allowed to contain directory separators.
  *
  * If @a path is non-empty, append the appropriate directory separator
@@ -138,8 +133,6 @@ void svn_path_remove_component (svn_stringbuf_t *path);
 
 
 /** Divide @a path into @a *dirpath and @a *base_name, allocated in @a pool.
- *
- * Divide @a path into @a *dirpath and @a *base_name, allocated in @a pool.
  *
  * If @a dirpath or @a base_name is null, then don't set that one.
  *
@@ -162,7 +155,7 @@ void svn_path_split (const char *path,
                      apr_pool_t *pool);
 
 
-/** Return non-zero iff PATH is empty ("") or represents the current
+/** Return non-zero iff @a path is empty ("") or represents the current
  * directory -- that is, if prepending it as a component to an existing
  * path would result in no meaningful change.
  */
@@ -170,9 +163,6 @@ int svn_path_is_empty (const char *path);
 
 
 /** Return a new path like @a path, but with any trailing separators that don't
- * affect @a path's meaning removed.
- *
- * Return a new path like @a path, but with any trailing separators that don't
  * affect @a path's meaning removed. Will convert a "." path to "".  Allocate
  * the new path in @a pool if anything changed, else just return @a path.
  *
@@ -188,10 +178,14 @@ const char *svn_path_canonicalize (const char *path, apr_pool_t *pool);
 int svn_path_compare_paths (const char *path1, const char *path2);
 
 
-/** Return the longest common path shared by both @a path1 and @a path2.
+/** Return the longest common path shared by both @a path1 and @a path2.  If
+ * there's no common ancestor, return the empty path.
  *
- * Return the longest common path shared by both @a path1 and @a path2.  If
- * there's no common ancestor, return @c NULL.
+ * @a path1 and @a path2 may be URLs.  In order for two URLs to have 
+ * a common ancestor, they must (a) have the same protocol (since two URLs 
+ * with the same path but different protocols may point at completely 
+ * different resources), and (b) share a common ancestor in their path 
+ * component, i.e. 'protocol://' is not a sufficient ancestor.
  */
 char *svn_path_get_longest_ancestor (const char *path1,
                                      const char *path2,
@@ -199,6 +193,9 @@ char *svn_path_get_longest_ancestor (const char *path1,
 
 /** Convert @a relative path to an absolute path and return the results in
  * @a *pabsolute, allocated in @a pool.
+ *
+ * @a relative may be a URL, in which case no attempt is made to convert it, 
+ * and a copy of the URL is returned. 
  */
 svn_error_t *
 svn_path_get_absolute (const char **pabsolute,
@@ -206,9 +203,6 @@ svn_path_get_absolute (const char **pabsolute,
                        apr_pool_t *pool);
 
 /** Return the path part of @a path in @a *pdirectory, and the file part in 
- * @a *pfile.
- *
- * Return the path part of @a path in @a *pdirectory, and the file part in 
  * @a *pfile.  If @a path is a directory, set @a *pdirectory to @a path, and 
  * @a *pfile to the empty string.  If @a path does not exist it is treated 
  * as if it is a file, since directories do not normally vanish.
@@ -219,53 +213,45 @@ svn_path_split_if_file(const char *path,
                        const char **pfile,
                        apr_pool_t *pool);
 
-/** Find the common prefix of the paths in @a targets, and remove redundancies.
+/** Find the common prefix of the paths in @a targets (an array of @a
+ * const char *'s), and remove redundant paths if @a
+ * remove_redundancies is true.
  *
- * Find the common prefix of the paths in @a targets, and remove redundancies.
+ *   - Set @a *pcommon to the absolute path of the path or URL common to
+ *     all of the targets.  If the targets have no common prefix, or
+ *     are a mix of URLs and local paths, set @a *pbasename to the
+ *     empty string.
  *
- * The elements in @a targets must be existing files or directories (as
- * const char *).
+ *   - If @a pcondensed_targets is non-null, set @a *pcondensed_targets
+ *     to an array of targets relative to @a *pcommon, and if 
+ *     @a remove_redundancies is true, omit any paths/URLs that are
+ *     descendants of another path/URL in @a targets.  If *pcommon
+ *     is empty, @a *pcondensed_targets will contain full URLs and/or
+ *     absolute paths; redundancies can still be removed (from both URLs 
+ *     and paths).  If @a pcondensed_targets is null, leave it alone.  
  *
- * If there are multiple targets, or exactly one target and it's not a
- * directory, then 
+ * Else if there is exactly one target, then
  *
- *   - @a *pbasename is set to the absolute path of the common parent
- *     directory of all of those targets, and
+ *   - Set @a *pcommon to that target, and
  *
- *   - If @a pcondensed_targets is non-null, @a *pcondensed_targets is set
- *     to an array of targets relative to @a *pbasename, with
- *     redundancies removed (meaning that none of these targets will
- *     be the same as, nor have an ancestor/descendant relationship
- *     with, any of the other targets; nor will any of them be the
- *     same as @a *pbasename).  Else if @a pcondensed_targets is null, it is
- *     left untouched.
- *
- * Else if there is exactly one directory target, then
- *
- *   - @a *pbasename is set to that directory, and
- *
- *   - If @a pcondensed_targets is non-null, @a *pcondensed_targets is set
+ *   - If @a pcondensed_targets is non-null, set @a *pcondensed_targets
  *     to an array containing zero elements.  Else if
- *     @a pcondensed_targets is null, it is left untouched.
+ *     @a pcondensed_targets is null, leave it alone.
  *
- * If there are no items in @a targets, @a *pbasename and (if applicable)
- * @a *pcondensed_targets will be @c NULL.
+ * If there are no items in @a targets, set @a *pbasename and (if
+ * applicable) @a *pcondensed_targets to @c NULL.
  *
  * NOTE: There is no guarantee that @a *pbasename is within a working
- * copy.
- */
+ * copy.  */
 svn_error_t *
-svn_path_condense_targets (const char **pbasename,
+svn_path_condense_targets (const char **pcommon,
                            apr_array_header_t **pcondensed_targets,
                            const apr_array_header_t *targets,
+                           svn_boolean_t remove_redundancies,
                            apr_pool_t *pool);
 
 
 /** Copy a list of @a targets, one at a time, into @a pcondensed_targets,
- * omitting any targets that are found earlier in the list, or whose
- * ancestor is found earlier in the list.
- *
- * Copy a list of @a targets, one at a time, into @a pcondensed_targets,
  * omitting any targets that are found earlier in the list, or whose
  * ancestor is found earlier in the list.  Ordering of targets in the
  * original list is preserved in the condensed list of targets.  Use
@@ -309,20 +295,14 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
 
 
 /** Decompose @a path into an array of <tt>const char *</tt> components, 
- * allocated in @a pool.
- *
- * Decompose @a path into an array of <tt>const char *</tt> components, 
- * allocated in @a pool.  @a style indicates the dir separator to split the 
- * string on.  If @a path is absolute, the first component will be a lone dir
- * separator (the root directory).
+ * allocated in @a pool.  If @a path is absolute, the first component will 
+ * be a lone dir separator (the root directory).
  */
 apr_array_header_t *svn_path_decompose (const char *path,
                                         apr_pool_t *pool);
 
 
-/** Test that @a name is a single path component.
- *
- * Test that @a name is a single path component, that is:
+/** Test that @a name is a single path component, that is:
  *   - not @c NULL or empty.
  *   - not a `/'-separated directory path
  *   - not empty or `..'  
@@ -331,8 +311,6 @@ svn_boolean_t svn_path_is_single_path_component (const char *name);
 
 
 /** Test if @a path2 is a child of @a path1.
- *
- * Test if @a path2 is a child of @a path1.
  * If not, return @c NULL.
  * If so, return a copy of the remainder path, allocated in @a pool.
  * (The remainder is the component which, added to @a path1, yields
@@ -363,16 +341,15 @@ svn_boolean_t svn_path_is_url (const char *path);
 /** Return @c TRUE iff @a path is URI-safe, @c FALSE otherwise. */
 svn_boolean_t svn_path_is_uri_safe (const char *path);
 
-/** Return a URI-encoded copy of @a path, allocated in @a pool. */
+/** Return a URI-encoded copy of @a path, allocated in @a pool.  If
+    @a path is NULL, just return NULL. */
 const char *svn_path_uri_encode (const char *path, apr_pool_t *pool);
 
-/** Return a URI-decoded copy of @a path, allocated in @a pool. */
+/** Return a URI-decoded copy of @a path, allocated in @a pool.  If
+    @a path is NULL, just return NULL. */
 const char *svn_path_uri_decode (const char *path, apr_pool_t *pool);
 
 /** Extend @a url by a single @a component, URI-encoding that @a component
- * before adding it to the @a url.
- *
- * Extend @a url by a single @a component, URI-encoding that @a component
  * before adding it to the @a url.  Return the new @a url, allocated in
  * @a pool.  Notes: if @a component is @c NULL, just return a copy or @a url
  * allocated in @a pool; if @a component is already URI-encoded, calling

@@ -1,4 +1,7 @@
 #! /bin/sh
+#
+# buildcheck.sh: Inspects the build setup to make detection and
+# correction of problems an easier process.
 
 # Initialize parameters
 VERSION_CHECK="$1"
@@ -80,7 +83,7 @@ libtool=`which glibtool 2>/dev/null`
 if test ! -x "$libtool"; then
   libtool=`which libtool`
 fi
-lt_pversion=`$libtool --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[- ].*//'`
+lt_pversion=`$libtool --version 2>/dev/null|head -1|sed -e 's/^[^0-9]*//' -e 's/[- ].*//'`
 if test -z "$lt_pversion"; then
   echo "buildcheck: libtool not found."
   echo "            You need libtool version $LIBTOOL_WANTED_VERSION or newer installed"
@@ -90,7 +93,9 @@ lt_version=`echo $lt_pversion|sed -e 's/\([a-z]*\)$/.\1/'`
 IFS=.; set $lt_version; IFS=' '
 lt_status="good"
 if test "$1" = "$LIBTOOL_WANTED_MAJOR"; then
-   if test "$2" -lt "$LIBTOOL_WANTED_MINOR"; then
+   if test "$2" -gt "$LIBTOOL_WANTED_MINOR"; then
+      lt_status="good"
+   elif test "$2" -lt "$LIBTOOL_WANTED_MINOR"; then
       lt_status="bad"
    elif test ! -z "$LIBTOOL_WANTED_PATCH"; then
        if test "$3" -lt "$LIBTOOL_WANTED_PATCH"; then
@@ -110,14 +115,14 @@ echo "buildcheck: libtool version $lt_pversion (ok)"
 # check for the correct version of Neon
 #
 NEON_WANTED_REGEX=0.2[34].?
-NEON_LATEST_WORKING_VER=0.23.7
+NEON_LATEST_WORKING_VER=0.23.9
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_LATEST_WORKING_VER}.tar.gz"
 NEON_TEST_REGEX="$NEON_WANTED_REGEX"
 if test "$NEON_CHECK_CONTROL" = "--disable-neon-version-check"; then
   NEON_TEST_REGEX=*
 fi
 if test -d ./neon; then
-  NEON_VERSION="`./ac-helpers/get-neon-ver.sh neon`"
+  NEON_VERSION="`./build/get-neon-ver.sh neon`"
   case "$NEON_VERSION" in
     $NEON_TEST_REGEX)
       ;;
@@ -134,7 +139,7 @@ fi
 # check that our local copies of files match up with those in APR(UTIL)
 #
 if test -d ./apr; then
-  if cmp -s ./ac-helpers/find_apr.m4 ./apr/build/find_apr.m4; then
+  if cmp -s ./build/ac-macros/find_apr.m4 ./apr/build/find_apr.m4; then
     :
   else
     echo "buildcheck: local copy of find_apr.m4 does not match APR's copy."
@@ -149,7 +154,7 @@ if test -d ./apr; then
 fi
 
 if test -d ./apr-util; then
-  if cmp -s ./ac-helpers/find_apu.m4 ./apr-util/build/find_apu.m4; then
+  if cmp -s ./build/ac-macros/find_apu.m4 ./apr-util/build/find_apu.m4; then
     :
   else
     echo "buildcheck: local copy of find_apu.m4 does not match APRUTIL's copy."

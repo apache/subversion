@@ -1,4 +1,10 @@
 #!/usr/bin/python
+
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
 import commands
 import sys, os
 import getopt

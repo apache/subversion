@@ -35,6 +35,14 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
 #ifdef SVN_WIN32
   /* Force the Windows console to use the same multibyte character set
      that the app uses internally. */
+
+  /* FIXME: Win9x/Me don't support the SetConsoleCP funcitons. As a
+     temporary measure, we skip setting the console code page on those
+     systems. */
+  OSVERSIONINFO os_version;
+  os_version.dwOSVersionInfoSize = sizeof(os_version);
+  if (!GetVersionEx(&os_version)
+      || os_version.dwPlatformId != VER_PLATFORM_WIN32_WINDOWS)
   {
     UINT codepage = GetACP();
     if (!SetConsoleCP(codepage))
@@ -63,9 +71,29 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
   if (!setlocale(LC_CTYPE, ""))
     {
       if (error_stream)
-        fprintf(error_stream,
-                "%s: error: cannot set the locale\n",
-                progname);
+        {
+          const char *env_vars[] = { "LC_ALL", "LC_CTYPE", "LANG", NULL };
+          const char **env_var = &env_vars[0], *env_val = NULL;
+          while (*env_var)
+            {
+              env_val = getenv(*env_var);
+              if (env_val && env_val[0])
+                break;
+              ++env_var;
+            }
+
+          if (!*env_var)
+            {
+              /* Unlikely. Can setlocale fail if no env vars are set? */
+              --env_var;
+              env_val = "not set";
+            }
+
+          fprintf(error_stream,
+                  "%s: error: cannot set LC_CTYPE locale\n"
+                  "%s: error: environment variable %s is %s\n",
+                  progname, progname, *env_var, env_val);
+        }
       return EXIT_FAILURE;
     }
 

@@ -93,7 +93,7 @@ test_path_split (const char **msg,
                  svn_boolean_t msg_only,
                  apr_pool_t *pool)
 {
-  int i;
+  apr_size_t i;
 
   static const char * const paths[][3] = { 
     { "/foo/bar",        "/foo",          "bar" },
@@ -142,23 +142,6 @@ test_path_split (const char **msg,
 }
 
 
-static svn_boolean_t
-char_is_uri_safe (int c)
-{
-  /* Is this an alphanumeric character? */
-  if (((c >= 'A') && (c <='Z'))
-      || ((c >= 'a') && (c <='z'))
-      || ((c >= '0') && (c <='9')))
-    return TRUE;
-
-  /* Is this a supported non-alphanumeric character? (these are sorted
-     by estimated usage, most-to-least commonly used) */
-  if (strchr ("/:.-_!~'()@=+$,&*", c) != NULL)
-    return TRUE;
-
-  return FALSE;
-}
-
 static svn_error_t *
 test_is_url (const char **msg,
              svn_boolean_t msg_only,
@@ -188,35 +171,6 @@ test_is_url (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  /* First, test the helper function */
-  {
-    char foo[2];
-    foo[1] = '\0';
-
-    for (i = 0; i < 255; i++)
-      {
-        svn_boolean_t expected, actual;
-        expected = char_is_uri_safe (i);
-
-        foo[0] = (char)i;
-        actual = svn_path_is_uri_safe (foo);
-
-        if (expected && (! actual))
-          {
-            return svn_error_createf
-              (SVN_ERR_TEST_FAILED, NULL,
-               "svn_path_is_uri_safe (%d) returned FALSE instead of TRUE", i);
-          }
-        if ((! expected) && actual)
-          {
-            return svn_error_createf
-              (SVN_ERR_TEST_FAILED, NULL,
-               "svn_path_is_uri_safe (%d) returned TRUE instead of FALSE", i);
-          }
-      }
-  }
-
-  /* Now, do the tests. */
   for (i = 0; i < 5; i++)
     {
       svn_boolean_t retval;
@@ -231,6 +185,60 @@ test_is_url (const char **msg,
 
   return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *
+test_is_uri_safe (const char **msg,
+                  svn_boolean_t msg_only,
+                  apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* Paths to test. */
+  static const char * const paths[] = { 
+    "http://svn.collab.net/repos",
+    "http://svn.collab.net/repos%",
+    "http://svn.collab.net/repos%/svn",
+    "http://svn.collab.net/repos%2g",
+    "http://svn.collab.net/repos%2g/svn",
+    "http://svn.collab.net/repos%%",
+    "http://svn.collab.net/repos%%/svn",
+    "http://svn.collab.net/repos%2a",
+    "http://svn.collab.net/repos%2a/svn",
+  };
+
+  /* Expected results of the tests. */
+  static const svn_boolean_t retvals[] = {
+    TRUE,
+    FALSE,
+    FALSE,
+    FALSE,
+    FALSE,
+    FALSE,
+    FALSE,
+    TRUE,
+    TRUE };
+
+  *msg = "test svn_path_is_uri_safe";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < (sizeof (paths) / sizeof (const char *)); i++)
+    {
+      svn_boolean_t retval;
+
+      retval = svn_path_is_uri_safe (paths[i]);
+      if (retvals[i] != retval)
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_is_uri_safe (%s) returned %s instead of %s",
+           paths[i], retval ? "TRUE" : "FALSE", retvals[i] ? "TRUE" : "FALSE");
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 test_uri_encode (const char **msg,
@@ -562,6 +570,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (test_path_is_child),
     SVN_TEST_PASS (test_path_split),
     SVN_TEST_PASS (test_is_url),
+    SVN_TEST_PASS (test_is_uri_safe),
     SVN_TEST_PASS (test_uri_encode),
     SVN_TEST_PASS (test_join),
     SVN_TEST_PASS (test_basename),

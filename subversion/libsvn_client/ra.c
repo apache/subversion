@@ -22,6 +22,7 @@
 #include <assert.h>
 
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_ra.h"
 #include "svn_wc.h"
@@ -180,17 +181,16 @@ struct invalidate_wcprop_walk_baton
 
   /* Access baton for the top of the walk. */
   svn_wc_adm_access_t *base_access;
-
-  /* You knew this was coming. */
-  apr_pool_t *pool;
 };
+
 
 /* This implements the `found_entry' prototype in
    `svn_wc_entry_callbacks_t'. */
 static svn_error_t *
 invalidate_wcprop_for_entry (const char *path,
                              const svn_wc_entry_t *entry,
-                             void *walk_baton)
+                             void *walk_baton,
+                             apr_pool_t *pool)
 {
   struct invalidate_wcprop_walk_baton *wb = walk_baton;
   svn_wc_adm_access_t *entry_access;
@@ -198,10 +198,11 @@ invalidate_wcprop_for_entry (const char *path,
   SVN_ERR (svn_wc_adm_retrieve (&entry_access, wb->base_access,
                                 ((entry->kind == svn_node_dir)
                                  ? path
-                                 : svn_path_dirname (path, wb->pool)),
-                                wb->pool));
-  return svn_wc_prop_set (wb->prop_name, NULL, path, entry_access, wb->pool);
+                                 : svn_path_dirname (path, pool)),
+                                pool));
+  return svn_wc_prop_set (wb->prop_name, NULL, path, entry_access, pool);
 }
+
 
 /* This implements the `svn_ra_invalidate_wc_props_func_t' interface. */
 static svn_error_t *
@@ -216,7 +217,6 @@ invalidate_wc_props (void *baton,
 
   wb.base_access = cb->base_access;
   wb.prop_name = prop_name;
-  wb.pool = pool;
   walk_callbacks.found_entry = invalidate_wcprop_for_entry;
 
   SVN_ERR (svn_wc_walk_entries (svn_path_join (cb->base_dir, path, pool),
@@ -255,17 +255,6 @@ svn_client__open_ra_session (void **session_baton,
   cb->commit_items = commit_items;
   cb->config = ctx->config;
 
-  /* If we have a base_dir, then we need to let the wc-auth-provider
-     know about it.  It needs it as a runtime parameter. */
-  if (base_dir)
-    {
-      svn_auth_set_parameter(ctx->auth_baton,
-                             SVN_AUTH_PARAM_SIMPLE_WC_WCDIR, base_dir);
-      if (base_access)
-        svn_auth_set_parameter(ctx->auth_baton,
-                               SVN_AUTH_PARAM_SIMPLE_WC_ACCESS, base_access);
-    }
-
   /* Decide if the user passed new auth info into the system by
      examining the auth_baton's runtime params. */
   {
@@ -278,6 +267,68 @@ svn_client__open_ra_session (void **session_baton,
 
   SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, ctx->config,
                          pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_client_uuid_from_url (const char **uuid,
+                          const char *url,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool)
+{
+  svn_ra_plugin_t *ra_lib;  
+  void *ra_baton, *session;
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  /* use subpool to create a temporary RA session */
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, subpool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, subpool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url,
+                                        NULL, /* no base dir */
+                                        NULL, NULL, FALSE, TRUE, 
+                                        ctx, subpool));
+
+  ra_lib->get_uuid (session, uuid, subpool);
+
+  /* Copy the uuid in to the passed-in pool. */
+  *uuid = apr_pstrdup (pool, *uuid);
+
+  /* destroy the RA session */
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_uuid_from_path (const char **uuid,
+                           const char *path,
+                           svn_wc_adm_access_t *adm_access,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access,
+                         TRUE,  /* show deleted */ pool));
+
+  if (! entry)
+    return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                              "svn_client_uuid_from_path: "
+                              "can't find entry for `%s'", path);
+
+  if (entry->uuid)
+    {
+      *uuid = entry->uuid;
+    }
+  else
+    {
+      /* fallback to using the network. */
+      SVN_ERR (svn_client_uuid_from_url (uuid, entry->url, ctx, pool));
+    }
 
   return SVN_NO_ERROR;
 }

@@ -95,18 +95,33 @@ change_prop (void *file_baton,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_delta_noop_window_handler (svn_txdelta_window_t *window,
+                                            void *baton)
+{
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 apply_textdelta (void *file_baton,
                  const char *base_checksum,
-                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
-  *handler = NULL;
+  *handler = svn_delta_noop_window_handler;
   *handler_baton = NULL;
   return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *
+close_file (void *file_baton,
+            const char *text_checksum,
+            apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
 
 
 static const svn_delta_editor_t default_editor =
@@ -122,7 +137,7 @@ static const svn_delta_editor_t default_editor =
   open_item,
   apply_textdelta,
   change_prop,
-  single_baton_func,
+  close_file,
   single_baton_func,
   single_baton_func
 };

@@ -54,16 +54,16 @@ extern "C" {
 #if defined(SVN_ERROR_BUILD_ARRAY)
 
 #define SVN_ERROR_START \
-	static const err_defn error_table[] = { \
-	  { SVN_WARNING, "Warning" },
+        static const err_defn error_table[] = { \
+          { SVN_WARNING, "Warning" },
 #define SVN_ERRDEF(num, offset, str) { num, str },
 #define SVN_ERROR_END { 0, NULL } };
 
 #elif !defined(SVN_ERROR_ENUM_DEFINED)
 
 #define SVN_ERROR_START \
-	typedef enum svn_errno_t { \
-	  SVN_WARNING = APR_OS_START_USERERR + 1,
+        typedef enum svn_errno_t { \
+          SVN_WARNING = APR_OS_START_USERERR + 1,
 #define SVN_ERRDEF(num, offset, str) /** str */ num = offset,
 #define SVN_ERROR_END SVN_ERR_LAST } svn_errno_t;
 
@@ -516,7 +516,11 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_RA_OUT_OF_DATE,
               SVN_ERR_RA_CATEGORY_START + 4,
               "Item is out-of-date.")
-       
+
+  SVN_ERRDEF (SVN_ERR_RA_NO_REPOS_UUID,
+              SVN_ERR_RA_CATEGORY_START + 5,
+              "Repository has no UUID.")
+      
   /* ra_dav errors */
 
   SVN_ERRDEF (SVN_ERR_RA_DAV_SOCK_INIT,
@@ -684,11 +688,15 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 8,
               "Revision range is not allowed")
 
+  SVN_ERRDEF (SVN_ERR_CLIENT_INVALID_RELOCATION,
+              SVN_ERR_CLIENT_CATEGORY_START + 9,
+              "Inter-repository relocation not allowed")
+
   /* misc errors */
 
   SVN_ERRDEF (SVN_ERR_BASE,
               SVN_ERR_MISC_CATEGORY_START + 0,
-              "A problem occured; see later errors for details")
+              "A problem occurred; see later errors for details")
 
   SVN_ERRDEF (SVN_ERR_PLUGIN_LOAD_FAILURE,
               SVN_ERR_MISC_CATEGORY_START + 1,
@@ -748,7 +756,15 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CANCELLED,
               SVN_ERR_MISC_CATEGORY_START + 15,
-              "The operation was canceled")
+              "The operation was interrupted")
+
+  SVN_ERRDEF (SVN_ERR_INVALID_DIFF_OPTION,
+              SVN_ERR_MISC_CATEGORY_START + 16,
+              "The specified diff option is not supported")
+
+  SVN_ERRDEF (SVN_ERR_PROPERTY_NOT_FOUND,
+              SVN_ERR_MISC_CATEGORY_START + 17,
+              "Property not found")
 
   /* command-line client errors */
 
@@ -778,7 +794,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CL_COMMIT_IN_ADDED_DIR,
               SVN_ERR_CL_CATEGORY_START + 6,
-              "Commiting in directory scheduled for addition")
+              "Committing in directory scheduled for addition")
 
   SVN_ERRDEF (SVN_ERR_CL_NO_EXTERNAL_EDITOR,
               SVN_ERR_CL_CATEGORY_START + 7,

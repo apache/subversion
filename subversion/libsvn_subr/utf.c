@@ -321,8 +321,8 @@ svn_utf_cstring_to_utf8 (const char **dest,
 
 svn_error_t *
 svn_utf_stringbuf_from_utf8 (svn_stringbuf_t **dest,
-			     const svn_stringbuf_t *src,
-			     apr_pool_t *pool)
+                             const svn_stringbuf_t *src,
+                             apr_pool_t *pool)
 {
   apr_xlate_t *convset;
 
@@ -497,7 +497,7 @@ svn_utf_cstring_from_utf8_string (const char **dest,
 
 const char *
 svn_utf_utf8_to_native (const char *utf8_string,
-			char *buf,
+                        char *buf,
                         apr_size_t bufsize)
 {
   apr_xlate_t *convset;

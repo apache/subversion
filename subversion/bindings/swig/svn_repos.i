@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-%module _repos
+%module repos
 %include typemaps.i
 
 %import apr.i
@@ -47,6 +47,10 @@
                       void *receiver_baton) {
     $1 = svn_swig_py_thunk_log_receiver;
     $2 = (void *)$input;
+}
+%typemap(perl5, in) (svn_log_message_receiver_t receiver, 
+                      void *receiver_baton) {
+    /* ### FIXME-perl */
 }
 
 /* -----------------------------------------------------------------------

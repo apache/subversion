@@ -38,23 +38,6 @@ Item = svntest.wc.StateItem
 
 #----------------------------------------------------------------------
 
-### todo: this is a bit hackish.  We need to formalize the ".other"
-### convention, for _both_ working copies and repositories, so that
-### the conf & symlinking code knows about them, thus enabling tests
-### that use secondary repositories and working copies to run over
-### DAV.
-def externals_test_cleanup(sbox):
-  """Clean up from any previous externals test with SBOX.  This
-  includes cleaning up the 'other' repository and working copy, and
-  the initialization working copy."""
-  if os.path.exists(sbox.repo_dir):
-    shutil.rmtree(sbox.repo_dir)
-  if os.path.exists(sbox.repo_dir + ".other"):
-    shutil.rmtree(sbox.repo_dir + ".other")
-  svntest.main.remove_wc(sbox.wc_dir)
-  svntest.main.remove_wc(sbox.wc_dir + ".other")
-  svntest.main.remove_wc(sbox.wc_dir + ".init")
-
 ### todo: it's inefficient to keep calling externals_test_setup() for
 ### every test.  It's slow.  But it's very safe -- we're guaranteed to
 ### have a clean repository, built from the latest Subversion, with
@@ -83,20 +66,17 @@ def externals_test_setup(sbox):
   NOTE: Before calling this, use externals_test_cleanup(SBOX) to
   remove a previous incarnation of the other repository.
   """
-  
-  externals_test_cleanup(sbox)
 
   if sbox.build():
     return 1
 
-  svntest.main.remove_wc(sbox.wc_dir) # The test itself will recreate this
+  svntest.main.safe_rmtree(sbox.wc_dir) # The test itself will recreate this
 
-  wc_init_dir    = sbox.wc_dir + ".init"  # just for setting up props
+  wc_init_dir    = sbox.add_wc_path('init')  # just for setting up props
   repo_dir       = sbox.repo_dir
-  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
-  other_repo_dir = repo_dir + ".other"
-  other_repo_url = repo_url + ".other"
-  
+  repo_url       = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+
   # These files will get changed in revisions 2 through 5.
   mu_path = os.path.join(wc_init_dir, "A/mu")
   pi_path = os.path.join(wc_init_dir, "A/D/G/pi")
@@ -147,13 +127,12 @@ def externals_test_setup(sbox):
   # the one to which the first repository's `svn:externals' properties
   # will refer.  After this, both repositories have five revisions
   # of random stuff, with no svn:externals props set yet.
-  if svntest.main.copy_repos(repo_dir, other_repo_dir, 5):
-    return 1
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 5)
 
   # Set up the externals properties on A/B/ and A/D/.
   externals_desc = \
-           "exdir_G       " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
-           "exdir_H  -r 1 " + os.path.join(other_repo_url, "A/D/H") + "\n"
+           "exdir_G       " + other_repo_url + "/A/D/G" + "\n" + \
+           "exdir_H  -r 1 " + other_repo_url + "/A/D/H" + "\n"
 
   tmp_f = os.tempnam(wc_init_dir, 'tmp')
   svntest.main.file_append(tmp_f, externals_desc)
@@ -164,13 +143,13 @@ def externals_test_setup(sbox):
   os.remove(tmp_f)
 
   externals_desc = \
-           "exdir_A           " + os.path.join(other_repo_url, "A")     + \
-           "\n"                                                         + \
-           "exdir_A/G/        " + os.path.join(other_repo_url, "A/D/G/")+ \
-           "\n"                                                         + \
-           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
-           "\n"                                                         + \
-           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/E") + \
+           "exdir_A           " + other_repo_url + "/A"      + \
+           "\n"                                              + \
+           "exdir_A/G/        " + other_repo_url + "/A/D/G/" + \
+           "\n"                                              + \
+           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H"  + \
+           "\n"                                              + \
+           "x/y/z/blah        " + other_repo_url + "/A/B/E"  + \
            "\n"
 
   svntest.main.file_append(tmp_f, externals_desc)
@@ -233,7 +212,7 @@ def checkout_with_externals(sbox):
 
   wc_dir         = sbox.wc_dir
   repo_dir       = sbox.repo_dir
-  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  repo_url       = sbox.repo_url
 
   # Create a working copy.
   out_lines, err_lines = svntest.main.run_svn \
@@ -304,9 +283,9 @@ def update_receive_new_external(sbox):
     return 1
 
   wc_dir         = sbox.wc_dir
-  other_wc_dir   = wc_dir + ".other"
+  other_wc_dir   = sbox.add_wc_path('other')
   repo_dir       = sbox.repo_dir
-  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
@@ -327,15 +306,15 @@ def update_receive_new_external(sbox):
   # Add one new external item to the property on A/D.  The new item is
   # "exdir_E", deliberately added in the middle not at the end.
   new_externals_desc = \
-           "exdir_A           " + os.path.join(other_repo_url, "A")     + \
-           "\n"                                                         + \
-           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
-           "\n"                                                         + \
-           "exdir_E           " + os.path.join(other_repo_url, "A/B/E") + \
-           "\n"                                                         + \
-           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
-           "\n"                                                         + \
-           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/E") + \
+           "exdir_A           " + other_repo_url + "/A"     + \
+           "\n"                                             + \
+           "exdir_A/G         " + other_repo_url + "/A/D/G" + \
+           "\n"                                             + \
+           "exdir_E           " + other_repo_url + "/A/B/E" + \
+           "\n"                                             + \
+           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H" + \
+           "\n"                                             + \
+           "x/y/z/blah        " + other_repo_url + "/A/B/E" + \
            "\n"
 
   # Set and commit the property
@@ -362,9 +341,9 @@ def update_lose_external(sbox):
     return 1
 
   wc_dir         = sbox.wc_dir
-  other_wc_dir   = wc_dir + ".other"
+  other_wc_dir   = sbox.add_wc_path('other')
   repo_dir       = sbox.repo_dir
-  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
@@ -399,11 +378,11 @@ def update_lose_external(sbox):
   #    A/D/exdir_A/H/...                     A/D/exdir_A/H/...
 
   new_externals_desc = \
-           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
-           "\n"                                                         + \
-           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
-           "\n"                                                         + \
-           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/E") + \
+           "exdir_A/G         " + other_repo_url + "/A/D/G" + \
+           "\n"                                             + \
+           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H" + \
+           "\n"                                             + \
+           "x/y/z/blah        " + other_repo_url + "/A/B/E" + \
            "\n"
 
   # Set and commit the property
@@ -455,15 +434,15 @@ def update_lose_external(sbox):
 #----------------------------------------------------------------------
 
 def update_change_pristine_external(sbox):
-  "update to receive a change to an unmodifed external module."
+  "update to receive a change to an unmodified external module."
 
   if externals_test_setup(sbox):
     return 1
 
   wc_dir         = sbox.wc_dir
-  other_wc_dir   = wc_dir + ".other"
+  other_wc_dir   = sbox.add_wc_path('other')
   repo_dir       = sbox.repo_dir
-  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
@@ -485,13 +464,13 @@ def update_change_pristine_external(sbox):
   # URL.  Since no changes were made to the old checked-out external,
   # we should get a clean replace.
   new_externals_desc = \
-           "exdir_A           " + os.path.join(other_repo_url, "A")     + \
-           "\n"                                                         + \
-           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
-           "\n"                                                         + \
-           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
-           "\n"                                                         + \
-           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/F") + \
+           "exdir_A           " + other_repo_url + "/A"     + \
+           "\n"                                             + \
+           "exdir_A/G         " + other_repo_url + "/A/D/G" + \
+           "\n"                                             + \
+           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H" + \
+           "\n"                                             + \
+           "x/y/z/blah        " + other_repo_url + "/A/B/F" + \
            "\n"
 
   # Set and commit the property
@@ -523,9 +502,9 @@ def update_change_modified_external(sbox):
     return 1
 
   wc_dir         = sbox.wc_dir
-  other_wc_dir   = wc_dir + ".other"
+  other_wc_dir   = sbox.add_wc_path('other')
   repo_dir       = sbox.repo_dir
-  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
@@ -555,13 +534,13 @@ def update_change_modified_external(sbox):
   # URL.  There are some local mods under the old checked-out external,
   # so the old dir should be saved under a new name.
   new_externals_desc = \
-           "exdir_A           " + os.path.join(other_repo_url, "A")     + \
-           "\n"                                                         + \
-           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
-           "\n"                                                         + \
-           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
-           "\n"                                                         + \
-           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/F") + \
+           "exdir_A           " + other_repo_url + "/A"     + \
+           "\n"                                             + \
+           "exdir_A/G         " + other_repo_url + "/A/D/G" + \
+           "\n"                                             + \
+           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H" + \
+           "\n"                                             + \
+           "x/y/z/blah        " + other_repo_url + "/A/B/F" + \
            "\n"
 
   # Set and commit the property
@@ -593,9 +572,9 @@ def update_receive_change_under_external(sbox):
     return 1
 
   wc_dir         = sbox.wc_dir
-  other_wc_dir   = wc_dir + ".other"
+  other_wc_dir   = sbox.add_wc_path('other')
   repo_dir       = sbox.repo_dir
-  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
@@ -697,7 +676,7 @@ def modify_and_update_receive_new_external(sbox):
 
   wc_dir         = sbox.wc_dir
   repo_dir       = sbox.repo_dir
-  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
   # Checkout a working copy
@@ -712,9 +691,9 @@ def modify_and_update_receive_new_external(sbox):
   # Add one more external item
   B_path = os.path.join(wc_dir, "A/B")
   externals_desc = \
-          "exdir_G       " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
-          "exdir_H  -r 1 " + os.path.join(other_repo_url, "A/D/H") + "\n" + \
-          "exdir_Z       " + os.path.join(other_repo_url, "A/D/H") + "\n"
+          "exdir_G       " + other_repo_url + "/A/D/G" + "\n" + \
+          "exdir_H  -r 1 " + other_repo_url + "/A/D/H" + "\n" + \
+          "exdir_Z       " + other_repo_url + "/A/D/H" + "\n"
 
   tmp_f = os.tempnam()
   svntest.main.file_append(tmp_f, externals_desc)
@@ -727,7 +706,7 @@ def modify_and_update_receive_new_external(sbox):
   was_cwd = os.getcwd()
   os.chdir(B_path)
   try:
-    # Once apon a time there was a core-dump here
+    # Once upon a time there was a core-dump here
     out_lines, err_lines = svntest.main.run_svn (None, 'up')
     if err_lines or not out_lines:
       print "update failed"

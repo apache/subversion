@@ -65,6 +65,7 @@ svn_cl__print_commit_info (svn_client_commit_info_t *commit_info)
 svn_error_t *
 svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
                          const char **tmpfile_left /* UTF-8! */,
+                         const char *editor_cmd,
                          const char *base_dir /* UTF-8! */,
                          const char *contents /* UTF-8! */,
                          const char *prefix,
@@ -92,25 +93,34 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
      by a not-yet-existant APR function.  See issue #929. */
 
      
-  /* Try to find an editor in the environment. */
+  /* Look for the Subversion specific environment variable. */
   editor = getenv ("SVN_EDITOR");
+
+  /* If not found then fall back on the config file. */
+  if (! editor)
+    {
+      cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG, 
+                                   APR_HASH_KEY_STRING) : NULL;
+      svn_config_get (cfg, &editor, SVN_CONFIG_SECTION_HELPERS, 
+                      SVN_CONFIG_OPTION_EDITOR_CMD, NULL);
+    }
+
+  /* If not found yet then try general purpose environment variables. */
   if (! editor)
     editor = getenv ("VISUAL");
   if (! editor)
     editor = getenv ("EDITOR");
 
 #ifdef SVN_CLIENT_EDITOR
+  /* If still not found then fall back on the hard-coded default. */
   if (! editor)
     editor = SVN_CLIENT_EDITOR;
 #endif
 
-  /* Now, override this editor choice with a selection from our config
-     file (using what we have found thus far as the default in case no
-     config option exists). */
-  cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG, 
-                               APR_HASH_KEY_STRING) : NULL;
-  svn_config_get (cfg, &editor, SVN_CONFIG_SECTION_HELPERS, 
-                  SVN_CONFIG_OPTION_EDITOR_CMD, editor);
+  /* Override further with the editor specified on the command line
+     via --editor-cmd, if any. */
+  if (editor_cmd)
+    editor = editor_cmd;
 
   /* Abort if there is no editor specified */
   if (! editor)
@@ -267,6 +277,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
 
 struct log_msg_baton
 {
+  const char *editor_cmd;  /* editor specified via --editor-cmd, else NULL */
   const char *message;  /* the message. */
   const char *message_encoding; /* the locale/encoding of the message. */
   const char *base_dir; /* the base directory for an external edit. UTF-8! */
@@ -276,24 +287,54 @@ struct log_msg_baton
 };
 
 
-void *
-svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
+svn_error_t *
+svn_cl__make_log_msg_baton (void **baton,
+                            svn_cl__opt_state_t *opt_state,
                             const char *base_dir /* UTF-8! */,
                             apr_hash_t *config,
                             apr_pool_t *pool)
 {
-  struct log_msg_baton *baton = apr_palloc (pool, sizeof (*baton));
+  struct log_msg_baton *lmb = apr_palloc (pool, sizeof (*lmb));
 
   if (opt_state->filedata) 
-    baton->message = opt_state->filedata->data;
+    {
+      if (strlen (opt_state->filedata->data) < opt_state->filedata->len)
+        {
+          /* The data contains a zero byte, and therefore can't be
+             represented as a C string.  Punt now; it's probably not
+             a deliberate encoding, and even if it is, we still
+             can't handle it. */
+          return svn_error_create (SVN_ERR_CL_BAD_LOG_MESSAGE, NULL,
+                                   "Log message contains a zero byte.");
+        }
+      lmb->message = opt_state->filedata->data;
+    }      
   else
-    baton->message = opt_state->message;
-  baton->message_encoding = opt_state->encoding;
-  baton->base_dir = base_dir ? base_dir : "";
-  baton->tmpfile_left = NULL;
-  baton->config = config;
-  baton->pool = pool;
-  return baton;
+    {
+      lmb->message = opt_state->message;
+    }
+
+  lmb->editor_cmd = opt_state->editor_cmd;
+  if (opt_state->encoding)
+    {
+      lmb->message_encoding = opt_state->encoding;
+    }
+  else if (config)
+    {
+      svn_config_t *cfg = apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG, 
+                                        APR_HASH_KEY_STRING);
+      svn_config_get (cfg, &(lmb->message_encoding),
+                      SVN_CONFIG_SECTION_MISCELLANY,
+                      SVN_CONFIG_OPTION_LOG_ENCODING,
+                      NULL);
+    }
+
+  lmb->base_dir = base_dir ? base_dir : "";
+  lmb->tmpfile_left = NULL;
+  lmb->config = config;
+  lmb->pool = pool;
+  *baton = lmb;
+  return SVN_NO_ERROR;
 }
 
 
@@ -436,6 +477,13 @@ svn_cl__get_log_message (const char **log_msg,
           else if (! *path)
             path = ".";
 
+          if (path && lmb->base_dir)
+            path = svn_path_is_child (lmb->base_dir, path, pool);
+
+          /* If still no path, then just use current directory. */
+          if (! path)
+            path = ".";
+
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
               && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
             text_mod = 'R';
@@ -458,8 +506,9 @@ svn_cl__get_log_message (const char **log_msg,
 
       /* Use the external edit to get a log message. */
       err = svn_cl__edit_externally (&msg2, &lmb->tmpfile_left,
-                                     lmb->base_dir, tmp_message->data, 
-                                     "svn-commit", lmb->config, pool);
+                                     lmb->editor_cmd, lmb->base_dir,
+                                     tmp_message->data, "svn-commit",
+                                     lmb->config, pool);
 
       /* Clean up the log message into UTF8/LF before giving it to
          libsvn_client. */

@@ -78,7 +78,9 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
       break;
     }
 
-  return svn_error_createf (errcode, NULL, "%s: %s", context, msg);
+  return svn_error_createf (errcode, NULL, "%s: %s (%s://%s)", 
+                            context, msg, ne_get_scheme(sess), 
+                            ne_get_server_hostport(sess));                            
   
 }
 
@@ -234,9 +236,7 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
 
   /* ### APR bug? apr_file_info_get won't always return the correct
          size for buffered files. */
-  status = apr_file_flush(body_file);
-  if (!status)
-    status = apr_file_info_get(&finfo, APR_FINFO_SIZE, body_file);
+  status = apr_file_info_get(&finfo, APR_FINFO_SIZE, body_file);
   if (status)
     return svn_error_create(status, NULL,
                             "Could not calculate the request body size");
@@ -248,18 +248,21 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
 
 
 
-svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
-                                        const char *method,
-                                        const char *url,
-                                        const char *body,
-                                        apr_file_t *body_file,
-                                        const struct ne_xml_elm *elements, 
-                                        ne_xml_validate_cb validate_cb,
-                                        ne_xml_startelm_cb startelm_cb, 
-                                        ne_xml_endelm_cb endelm_cb,
-                                        void *baton,
-                                        apr_hash_t *extra_headers,
-                                        apr_pool_t *pool)
+svn_error_t *
+svn_ra_dav__parsed_request(ne_session *sess,
+                           const char *method,
+                           const char *url,
+                           const char *body,
+                           apr_file_t *body_file,
+                           void set_parser (ne_xml_parser *parser,
+                                            void *baton),
+                           const struct ne_xml_elm *elements, 
+                           ne_xml_validate_cb validate_cb,
+                           ne_xml_startelm_cb startelm_cb, 
+                           ne_xml_endelm_cb endelm_cb,
+                           void *baton,
+                           apr_hash_t *extra_headers,
+                           apr_pool_t *pool)
 {
   ne_request *req;
   ne_decompress *decompress_main;
@@ -268,13 +271,15 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   ne_xml_parser *error_parser;
   int rv;
   int decompress_rv;
-  int decompress_on = ras->compression;
   int code;
+  int expected_code;
   const char *msg;
   svn_error_t *err = SVN_NO_ERROR;
+  svn_ra_ne_session_baton_t *sess_baton =
+    ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
 
   /* create/prep the request */
-  req = ne_request_create(ras->sess, method, url);
+  req = ne_request_create(sess, method, url);
 
   if (body != NULL)
     ne_set_request_body_buffer(req, body, strlen(body));
@@ -301,7 +306,12 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   /* create a parser to read the normal response body */
   success_parser = ne_xml_create();
   ne_xml_push_handler(success_parser, elements,
-                       validate_cb, startelm_cb, endelm_cb, baton);
+                      validate_cb, startelm_cb, endelm_cb, baton);
+
+  /* if our caller is interested in having access to this parser, call
+     the SET_PARSER callback with BATON. */
+  if (set_parser != NULL)
+    set_parser(success_parser, baton);
 
   /* create a parser to read the <D:error> response body */
   error_parser = ne_xml_create();
@@ -310,7 +320,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 
   /* Register the "main" accepter and body-reader with the request --
      the one to use when the HTTP status is 2XX */
-  if (decompress_on)
+  if (sess_baton->compression)
     {
       decompress_main = ne_decompress_reader(req, ne_accept_2xx,
                                              ne_xml_parse_v, success_parser);
@@ -324,7 +334,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */
-  if (decompress_on)
+  if (sess_baton->compression)
     {
       decompress_err = ne_decompress_reader(req, ra_dav_error_accepter,
                                             ne_xml_parse_v, error_parser);
@@ -363,11 +373,16 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   if (err) /* If the error parser had a problem */
     goto error;
 
-  if (code != 200
-      || rv != NE_OK)
+  /* Set the expected code based on the method. */
+  expected_code = 200;
+  if (strcmp(method, "PROPFIND") == 0)
+    expected_code = 207;
+
+  if ((code != expected_code) 
+      || (rv != NE_OK))
     {
-      msg = apr_psprintf(pool, "%s of %s", method, url);
-      err = svn_ra_dav__convert_error(ras->sess, msg, rv);
+      msg = apr_psprintf(pool, "%s of '%s'", method, url);
+      err = svn_ra_dav__convert_error(sess, msg, rv);
       goto error;
     }
 
@@ -391,7 +406,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   ne_xml_destroy(success_parser);
   ne_xml_destroy(error_parser);
   return svn_error_createf(err->apr_err, err,
-                           "%s request failed on %s", method, url );
+                           "%s request failed on '%s'", method, url );
 }
 
 

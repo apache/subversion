@@ -18,10 +18,10 @@
       <command>svn</command></title>
     
     <para>To use the command line client, you type
-      <command>svn</command>, the subcommand you wish to use,
+      <command>svn</command>, the subcommand you wish to use
       <footnote><para>Yes, yes, you don't need a subcommand to use the
       <option>--version</option> switch, but we'll get to that in just
-      a minute.</para> </footnote> and any switches or targets that
+      a minute.</para> </footnote>, and any switches or targets that
       you wish to operate on&mdash;there is no specific order that the
       subcommand and the switches must appear in.  For example, all of
       the following are valid ways to use <command>svn
@@ -60,16 +60,6 @@ $ svn status -v myfile
         </varlistentry>
       
         <varlistentry>
-          <term><option>--file</option> (<option>-F</option>)
-            <replaceable>FILENAME</replaceable>
-              </term>
-          <listitem>
-            <para>Uses the contents of the file passed as an argument
-              to this switch for the specified subcommand.</para>
-          </listitem>
-        </varlistentry>
-
-        <varlistentry>
           <term><option>--encoding</option> <replaceable>ENC</replaceable></term>
           <listitem>
             <para>Tells Subversion that your commit message is encoded
@@ -97,6 +87,16 @@ $ svn status -v myfile
         </varlistentry>
       
         <varlistentry>
+          <term><option>--file</option> (<option>-F</option>)
+            <replaceable>FILENAME</replaceable>
+              </term>
+          <listitem>
+            <para>Uses the contents of the file passed as an argument
+              to this switch for the specified subcommand.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
           <term><option>--force</option></term>
           <listitem>
             <para>Forces a particular command or operation to run.
@@ -108,6 +108,27 @@ $ svn status -v myfile
               programmatic equivalent of doing your own electrical
               work with the power on&mdash;if you don't know what
               you're doing, you're likely to get a nasty shock.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--force-log</option></term>
+          <listitem>
+            <para>Forces a suspicious parameter passed to the
+              <option>--message</option> (<option>-m</option>) or
+              <option>--file</option> (<option>-F</option>) options to
+              be accepted as valid.  By default, Subversion will
+              produce an error if parameters to these options look
+              like they might instead be targets of the subcommand.
+              For example, if you pass a versioned file's path to the
+              <option>--file</option> (<option>-F</option>) option,
+              Subversion will assume you've made a mistake, that the
+              path was instead intended as the target of the
+              operation, and that you simply failed to provide some
+              other&mdash;unversioned&mdash;file as the source of your log
+              message.  To assert your intent and override these types
+              of errors, pass the <option>--force-log</option> option 
+              to commands that accept log messages.</para>
           </listitem>
         </varlistentry>
         
@@ -180,7 +201,7 @@ $ svn status -v myfile
             insufficient credentials, prevents prompting for credentials
             (e.g. username or password).  This is useful if you're
             running Subversion inside of an automated script and it's
-            more appropriate to have Subversion fail then to prompt
+            more appropriate to have Subversion fail than to prompt
             for more information.</para>
           </listitem>
         </varlistentry>
@@ -197,7 +218,7 @@ $ svn status -v myfile
         </varlistentry>
 
         <varlistentry>
-        <term><option>--password</option><replaceable>PASS</replaceable></term>
+          <term><option>--password</option><replaceable>PASS</replaceable></term>
           <listitem>
             <para>Indicates that you are providing your password for
               authentication on the command line&mdash;otherwise, if
@@ -322,7 +343,7 @@ $ svn log -r 1729:{2/17/02}
             <listitem>
               <para>Prints the client version info.  This information
                 not only includes the version number of the client,
-                but als a listing of all repository access modules
+                but also a listing of all repository access modules
                 that the client can use to access a Subversion
                 repository.</para>
             </listitem>
@@ -393,7 +414,7 @@ $ svn log -r 1729:{2/17/02}
             </screen>
 
             <para>When adding a directory, the default behavior of
-              svn add is to recurse:</para>
+              <command>svn add</command> is to recurse:</para>
             
             <screen>
   $ svn add testdir
@@ -428,7 +449,8 @@ $ svn log -r 1729:{2/17/02}
             <title>Description</title>
             
             <para>Outputs the contents of the specified files or URLs.
-              For listing the contents of directories, see svn list.</para>
+              For listing the contents of directories, see <command>svn
+              list</command>.</para>
           </refsect1>
 
           <refsect1>
@@ -603,7 +625,7 @@ working-copies
               locks resuming unfinished operations.  If you ever get a
               <quote>working copy locked</quote> error, run this
               command to remove stale locks and get your working copy
-              into a useable state again.  See <xref
+              into a usable state again.  See <xref
               linkend="svn-ap-c"/>.</para>
           </refsect1>
 
@@ -631,8 +653,8 @@ working-copies
           <refsect1>
             <title>Examples</title>
 
-            <para>Well, there's not much to the examples here as svn
-              cleanup generates no output.  If you pass no PATH, '.'
+            <para>Well, there's not much to the examples here as <command>svn
+              cleanup</command> generates no output.  If you pass no PATH, '.'
               is used.</para>
 
             <screen>
@@ -662,14 +684,16 @@ $ svn cleanup /path/to/working-copy
               commit by using either the <option>--file</option> or
               <option>--message</option> switch,
               <command>svn</command> will launch your editor for you
-              to compose acommit message.  See the
+              to compose a commit message.  See the
               <literal>editor-cmd</literal> section in <xref
               linkend="svn-ch-6-sect-1.3.2"/>.</para>
           </refsect1>
           
           <refsect1>
             <title>Alternate names</title>
-            <para>ci</para>
+            <para>ci (short for <quote>check in</quote> not 
+              <quote>co</quote>, which is short for 
+              <quote>checkout</quote>)</para>
           </refsect1>
 
           <refsect1>
@@ -691,7 +715,7 @@ $ svn cleanup /path/to/working-copy
 --quiet (-q)
 --non-recursive (-N)
 --targets FILENAME
---force
+--force-log
 --username USER
 --password PASS
 --no-auth-cache
@@ -729,15 +753,15 @@ Committed revision 5.
             <para>If you want to use a file that's under version
               control for your commit message with
               <option>--file</option>, you need to pass the
-              <option>--force</option> switch:</para>
+              <option>--force-log</option> switch:</para>
 
             <screen>
 $ svn commit --file file_under_vc.txt foo.c
 subversion/clients/cmdline/main.c:862: (apr_err=205004)
 svn: The log message file is under version control
-svn: Log message file is a versioned file; use `--force' to override.
+svn: Log message file is a versioned file; use `--force-log' to override.
 
-$ svn commit --force --file file_under_vc.txt foo.c
+$ svn commit --force-log --file file_under_vc.txt foo.c
 Sending        foo.c
 Transmitting file data .
 Committed revision 6.
@@ -837,6 +861,7 @@ Committed revision 7.
 --password PASS
 --no-auth-cache
 --non-interactive
+--force-log
 --encoding ENC
             </screen>
           </refsect1>
@@ -845,7 +870,7 @@ Committed revision 7.
             <title>Examples</title>
 
             <para>Copy an item within your working copy (just
-              schedules the copy--nothing goes into the repository
+              schedules the copy&mdash;nothing goes into the repository
               until you commit):</para>
 
             <screen>
@@ -865,7 +890,7 @@ Committed revision 8.
             </screen>
 
             <para>Copy an item from the repository to your working
-              copy (Just schedules the copy--nothing goes into the
+              copy (Just schedules the copy&mdash;nothing goes into the
               repository until you commit):</para>
 
             <tip>
@@ -888,8 +913,8 @@ Committed revision 9.
 
             <tip>
               <para>This is the easiest way to 'tag' a revision in
-                your repository&mdash;just svn copy that revision
-                (usually HEAD) into your tags directory.</para>
+                your repository&mdash;just <command>svn copy</command>
+                that revision (usually HEAD) into your tags directory.</para>
             </tip>
 
             <screen>
@@ -955,6 +980,7 @@ Committed revision 13.
 
             <screen>
 --force
+--force-log
 --message (-m) TEXT
 --file (-F) FILE
 --quiet (-q)
@@ -1064,7 +1090,7 @@ D         over-there
 
             <para>If the alternate syntax is used, the server compares
               URL1 and URL2 at revisions N and M respectively.  If
-              either N or M are ommitted, a value of HEAD is
+              either N or M are omitted, a value of HEAD is
               assumed.</para>
 
           </refsect1>
@@ -1103,7 +1129,7 @@ D         over-there
             <title>Examples</title>
 
             <para>Compare BASE and your working copy (One of the most
-              popular uses of svn diff):</para>
+              popular uses of <command>svn diff</command>):</para>
 
             <screen>
 $ svn diff COMMITTERS 
@@ -1303,18 +1329,15 @@ Exported revision 15.
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
-            <programlisting>svn import URL [PATH [NEW_ENTRY_IN_REPOS]]</programlisting>
+            <programlisting>svn import [PATH] URL</programlisting>
           </refsect1>
           <refsect1>
             <title>Description</title>
 
             <para>Recursively commit a copy of <literal>PATH</literal>
-              to <literal>URL</literal>.  If there is no third
-              argument, copy the top-level contents of
-              <literal>PATH</literal> into <literal>URL</literal>
-              directly.  Otherwise, create
-              <literal>NEW_ENTRY</literal> underneath
-              <literal>URL</literal> and begin copy there.</para>
+              to <literal>URL</literal>.  If <literal>PATH</literal>
+              is omitted '.' is assumed.  Parent directories are created
+              in the repository as necessary.</para>
           </refsect1>
 
           <refsect1>
@@ -1344,6 +1367,7 @@ Exported revision 15.
 --password PASS
 --no-auth-cache
 --non-interactive
+--force-log
 --encoding ENC
             </screen>
           </refsect1>
@@ -1355,7 +1379,7 @@ Exported revision 15.
               root of your repository:</para>
 
             <screen>
-$ svn import -m "New import" http://svn.red-bean.com/repos/test myproj
+$ svn import -m "New import" myproj http://svn.red-bean.com/repos/test
 Adding         myproj/sample.txt
 ...
 Transmitting file data .........
@@ -1364,12 +1388,11 @@ Committed revision 16.
 
             <para>This imports the local directory 'myproj' into
               'trunk/vendors' in your repository.  The directory
-              'trunk/vendors' must exist before you import into
-              it&mdash;<command>svn import</command> will not
+              'trunk/vendors' need not exist before you import into
+              it&mdash;<command>svn import</command> will
               recursively create directories for you:</para>
-
             <screen>
-$ svn import -m "New import" http://svn.red-bean.com/repos/test myproj trunk/vendors/myproj
+$ svn import -m "New import" myproj http://svn.red-bean.com/repos/test/trunk/vendors/myproj
 Adding         myproj/sample.txt
 ...
 Transmitting file data .........
@@ -1439,7 +1462,7 @@ Committed revision 19.
 
             <para><command>svn info</command> will show you all the
               useful information that it has for items in your working
-              copy.  It will show informtion for files:</para>
+              copy.  It will show information for files:</para>
 
             <screen>
 $ svn info foo.c
@@ -1463,7 +1486,7 @@ Checksum: /3L38YwzhT93BWvgpdF6Zw==
 $ svn info vendors
 Path: trunk
 Url: http://svn.red-bean.com/repos/test/vendors
-bRevision: 19
+Revision: 19
 Node Kind: directory
 Schedule: normal
 Last Changed Author: harry
@@ -1633,8 +1656,8 @@ _      24     harry       0 Jan 18 11:27 examples/
             <title>Examples</title>
 
             <para>You can see the log messages for all the paths that
-              changed in your working copy by running svn log from the
-              top:</para>
+              changed in your working copy by running <command>svn
+              log</command> from the top:</para>
 
             <screen>
 $ svn log
@@ -1771,8 +1794,9 @@ rev 27: ...
 
 
             <warning>
-              <para>If you run svn log on a specific path and provide
-                a specific revision and get no output at all</para>
+              <para>If you run <command>svn log</command> on a specific
+                path and provide a specific revision and get no output
+                at all</para>
 
               <screen>
 $ svn log -r 20 http://svn.red-bean.com/untouched.txt
@@ -1801,28 +1825,30 @@ Made a change.
         <refentry>
           <refnamediv>
             <refname>svn merge</refname>
-            <refpurpose>Apply the differences between two URLs to a working copy path.</refpurpose>
+            <refpurpose>Apply the differences between two sources to a working copy path.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
-            <programlisting>svn merge URL1[@N] URL2[@M] [PATH]</programlisting>
-            <programlisting>merge -r N:M TARGET [PATH]</programlisting>
+            <programlisting>svn merge sourceURL1[@N] sourceURL2[@M] [WCPATH]</programlisting>
+            <programlisting>merge -r N:M SOURCE [PATH]</programlisting>
           </refsect1>
           <refsect1>
             <title>Description</title>
 
-            <para>In the first form, URL1 and URL2 are URLs specified
+            <para>In the first form, the source URLs are specified
               at revisions N and M.  These are the two sources to be
               compared.  The revisions default to HEAD if omitted.</para>
 
-            <para>In the second form TARGET can be a URL, or it can be
-              a working copy path, in which case the corresponding URL
-              is used.  This URL, at revisions N and M, defines the
-              two sources to be compared.</para>
+            <para>In the second form, SOURCE can be a URL or working
+              copy item, in which case the corresponding URL is used.
+              This URL, at revisions N and M, defines the two sources
+              to be compared.</para>
 
-            <para>PATH is the working copy path that will receive the
-              changes.  If omitted, a default value of '.' is
-              assumed.</para>
+            <para>WCPATH is the working copy path that will receive
+              the changes. If WCPATH is omitted, a default value of
+              '.' is assumed, unless the sources have identical
+              basenames that match a file within '.': in which case,
+              the differences will be applied to that file.</para>
           </refsect1>
           <refsect1>
             <title>Alternate names</title>
@@ -1879,6 +1905,14 @@ U  myproj/thhgttg.txt
 ...
             </screen>
             
+          <para>To merge changes to a single file:</para>
+
+          <screen>
+$ cd myproj
+$ svn merge -r 30:31 thhgttg.txt 
+U  thhgttg.txt
+          </screen>
+
           </refsect1>
         </refentry>
 
@@ -1931,6 +1965,7 @@ U  myproj/thhgttg.txt
 --no-auth-cache
 --non-interactive
 --encoding ENC
+--force-log
             </screen>
           </refsect1>
 
@@ -2026,12 +2061,13 @@ Committed revision 26.
 --file (-F) FILE
 --revision (-r) REV
 --quiet (-q)
+--force
 --username USER
 --password PASS
 --no-auth-cache
 --non-interactive
---force
 --encoding ENC
+--force-log
             </screen>
           </refsect1>
 
@@ -2544,10 +2580,11 @@ $ svn status
             </screen>
 
             <warning>
-              <para>If you provide no targets to svn revert, it will
-                do nothing&mdash;to protect you from accidentally
-                losing changes in your working copy, svn revert
-                requires you to provide at least one target.</para>
+              <para>If you provide no targets to <command>svn
+                revert</command>, it will do nothing&mdash;to protect
+                you from accidentally losing changes in your working
+                copy, <command>svn revert</command> requires you to
+                provide at least one target.</para>
             </warning>
 
           </refsect1>
@@ -2625,11 +2662,11 @@ foo.c.r31
 
             <warning>
               <para>You <emphasis>can</emphasis> just remove the
-                conflict files and commit, but svn resolve fixes up
-                some bookkeeping data in the working copy
-                administrative area in addition to removing the
-                conflict files, so we recommend that you use this
-                command.</para>
+                conflict files and commit, but <command>svn
+                resolve</command> fixes up some bookkeeping data
+                in the working copy administrative area in addition
+                to removing the conflict files, so we recommend that
+                you use this command.</para>
             </warning>
 
           </refsect1>
@@ -2649,7 +2686,7 @@ foo.c.r31
             <title>Description</title>
 
             <para>Print the status of working copy files and
-              directories.  With no args, it prints only locally
+              directories.  With no arguments, it prints only locally
               modified items (no repository access).  With
               <option>--show-updates</option>, add working revision
               and server out-of-date information.  With
@@ -2703,6 +2740,14 @@ foo.c.r31
               </varlistentry>
 
               <varlistentry>
+                <term>'I'</term>
+                <listitem>
+                  <para>Item is being ignored (e.g. with the 
+                    svn:ignore) property</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
                 <term>'?'</term>
                 <listitem>
                   <para>Item is not under version control.</para>
@@ -2713,7 +2758,8 @@ foo.c.r31
                 <term>'!'</term>
                 <listitem>
                   <para>Item is missing (e.g. you moved or deleted it
-                  without using <command>svn</command>).</para>
+                  without using <command>svn</command>), or incomplete
+                  (a checkout or update was interrupted).</para>
                 </listitem>
               </varlistentry>
 
@@ -2931,8 +2977,8 @@ A  +         965       687      harry   wc/qax.c
 Head revision:   981
             </screen>
 
-            <para>For many more examples of svn status, see <xref
-                linkend="svn-ch-3-sect-4.3.1"/>.</para>
+            <para>For many more examples of <command>svn status</command>,
+              see <xref linkend="svn-ch-3-sect-4.3.1"/>.</para>
 
           </refsect1>
         </refentry>
@@ -3226,7 +3272,7 @@ Updated to revision 30.
             <term><option>--on-disk-template <replaceable>ARG</replaceable></option></term>
             <listitem>
 
-              <para>Specify a templete to use for the on-disk
+              <para>Specify a template to use for the on-disk
                 structure (i.e. <filename>conf/</filename>,
                 <filename>hooks/</filename>, etc.) of the repository
                 you want to create.</para>
@@ -3238,7 +3284,7 @@ Updated to revision 30.
 
               <itemizedlist>
                 <listitem><para>default/</para></listitem>
-                <listitem><para>README</para></listitem>
+                <listitem><para>README.txt</para></listitem>
                 <listitem><para>dav/</para></listitem>
                 <listitem><para>format</para></listitem>
                 <listitem><para>hooks/</para></listitem>
@@ -3278,7 +3324,47 @@ Updated to revision 30.
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
-          <refname>svn create</refname>
+          <refname>svnadmin archive</refname>
+          <refpurpose>Ask Berkeley DB which logfiles can be safely
+          deleted.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svnadmin archive REPOS_PATH</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+            <para>Berkeley DB creates logs of all changes to the
+            repository, which allow it to recover in the face of
+            catastrophe.  Over time, the logfiles accumulate, although
+            most are no longer used and can be deleted to reclaim disk
+            space. See <xref linkend="svn-ch-5-sect-3.1.4"/> for more
+            information. </para>
+          </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+          
+          <para>Remove all unused logfiles from a repository:</para>
+
+        <screen>
+$ svnadmin archive /path/to/repos
+/path/to/repos/log.0000000031
+/path/to/repos/log.0000000032
+/path/to/repos/log.0000000033
+
+$ svnadmin archive /path/to/repos | xargs rm
+## disk space reclaimed!
+        </screen>
+
+        </refsect1>
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
+          <refname>svnadmin create</refname>
           <refpurpose>Create a new, empty repository at REPOS_PATH.</refpurpose>
         </refnamediv>
         <refsect1>
@@ -3313,6 +3399,7 @@ $ svnadmin create /usr/local/svn/repos
           
         </refsect1>
       </refentry>
+
 
       <!-- ================================================================= -->
       <refentry>
@@ -3398,7 +3485,7 @@ Content-length: 101
         <refnamediv>
           <refname>svnadmin load</refname> <refpurpose>Read a
             <quote>dumpfile-formatted</quote> stream from
-            STDIN.</refpurpose>
+            stdin.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -3481,7 +3568,7 @@ $ svnadmin lscr /usr/local/svn/repos/ test-moved-file
           </screen>
 
           <para>List the revisions in which a path was modified
-            including changes that occured before it was
+            including changes that occurred before it was
             moved/copied:</para>
 
           <screen>
@@ -3686,8 +3773,9 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
         holds the repository, it takes paths as targets and not
         URLs.</para>
 
-      <para>If no revision or transaction is specified, svnlook defaults
-        to the youngest (most recent) revision of the repository.</para>
+      <para>If no revision or transaction is specified,
+        <command>svnlook</command> defaults to the youngest (most
+        recent) revision of the repository.</para>
       
       <sect2 id="svn-ch-8-sect-3.1">
         <title>Switches</title>
@@ -3704,11 +3792,11 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
           <varlistentry>
             <term><option>--no-diff-deleted</option></term>
             <listitem>
-              <para>Prevents svnlook from printing differences for
-                deleted files.  The default behavior when a file is
-                deleted in a transaction/revision is to print the same
-                differences that you would see if you had left the
-                file but removed all the content.</para>
+              <para>Prevents <command>svnlook</command> from printing
+                differences for deleted files.  The default behavior
+                when a file is deleted in a transaction/revision is
+                to print the same differences that you would see if
+                you had left the file but removed all the content.</para>
             </listitem>
           </varlistentry>
 

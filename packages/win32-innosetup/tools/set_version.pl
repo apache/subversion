@@ -264,9 +264,14 @@ sub SetVerSvnIss
     my ($SvnVersion, $SvnRelease) = @_;
     my $IssFileCnt='';
 
-    print "  svn.iss in the Inno Setup directory.\n" if (! $g_AutoRun);
+    if (! -e '../svn_version.iss')
+      {
+        system ("copy ..\\templates\\svn_version.iss ..");
+      }
+
+    print "  svn_version.iss in the Inno Setup directory.\n" if (! $g_AutoRun);
     
-    open (FH_ISSFILE, '../svn.iss') || die "ERROR: Could not open ..\\svn.iss";
+    open (FH_ISSFILE, '../svn_version.iss') || die "ERROR: Could not open ..\\svn_version.iss";
     while (<FH_ISSFILE>)
       {
 			  chomp($_);
@@ -293,8 +298,8 @@ sub SetVerSvnIss
 
     $IssFileCnt="$IssFileCnt\n";
 
-    open (FH_ISSFILE, ">" . '../svn.iss')
-      || die "ERROR: Could not open ..\\svn.iss";
+    open (FH_ISSFILE, ">" . '../svn_version.iss')
+      || die "ERROR: Could not open ..\\svn_version.iss";
 		    print FH_ISSFILE $IssFileCnt;
 	  close (FH_ISSFILE);
 }
@@ -310,13 +315,16 @@ sub SvnVersion
     my ($SvnVersion, $SvnRelease) ='';
  
     $Svn = "\"$Svn\"";
-    $SvnRetVal  = `$Svn --version`;
-    
     $SvnRetVal = `$Svn --version`;
-    $SvnRetVal =~ s/svn, version\s//;
-    ($SvnVersion, $SvnRelease) = split (/\s/, $SvnRetVal);
-    $SvnRelease =~ s/^\(r(.*)\)$/$1/;
-    
+    $SvnRetVal =~ s/svn, version//;
+    $SvnRetVal =~ s/(^.*)\).*/$1/;
+
+    ($SvnVersion, $SvnRelease) = split (/\(/, $1);
+
+    $SvnVersion =~ s/^\s+//;
+	  $SvnVersion =~ s/\s+$//;
+    $SvnRelease =~ s/r//;
+    $SvnRelease =~ s/dev build/_dev-build/;
+
     return ($SvnVersion, $SvnRelease);
 }
-

@@ -43,7 +43,8 @@
    (with the minor version number incremented), apply fixes, and go
    through the release process again.
 
-9. Update www/project_status.html on trunk.  Commit.
+9. Update www/project_status.html on trunk, including a MD5 checksum
+   for the fresh tarball.  Commit.
 
 10. Post news item <http://subversion.tigris.org/servlets/ProjectNewsAdd>,
     and send an announcement to dev and announce lists.

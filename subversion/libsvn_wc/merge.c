@@ -21,6 +21,8 @@
 #include "svn_wc.h"
 #include "svn_diff.h"
 #include "svn_config.h"
+#include "svn_path.h"
+
 #include "wc.h"
 #include "entries.h"
 #include "translate.h"
@@ -39,7 +41,7 @@ svn_wc_merge (const char *left,
               const char *target_label,
               svn_boolean_t dry_run,
               enum svn_wc_merge_outcome_t *merge_outcome,
-              apr_hash_t *config,
+              const char *diff3_cmd,
               apr_pool_t *pool)
 {
   const char *tmp_target, *result_target, *tmp_left, *tmp_right;
@@ -50,7 +52,6 @@ svn_wc_merge (const char *left,
   const char *eol;
   apr_status_t apr_err;
   const svn_wc_entry_t *entry;
-  const char *merge_cmd = NULL;
   svn_boolean_t contains_conflicts;
 
   svn_path_split (merge_target, &mt_pt, &mt_bn, pool);
@@ -58,9 +59,10 @@ svn_wc_merge (const char *left,
   /* Sanity check:  the merge target must be under revision control. */
   SVN_ERR (svn_wc_entry (&entry, merge_target, adm_access, FALSE, pool));
   if (! entry)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       "svn_wc_merge: `%s' not under revision control", merge_target);
+    {
+      *merge_outcome = svn_wc_merge_no_merge;
+      return SVN_NO_ERROR;
+    }
 
   /* Decide if the merge target is a text or binary file. */
   SVN_ERR (svn_wc_has_binary_prop (&is_binary, merge_target, adm_access, pool));
@@ -125,25 +127,15 @@ svn_wc_merge (const char *left,
       SVN_ERR (svn_io_copy_file (left, tmp_left, TRUE, pool));
       SVN_ERR (svn_io_copy_file (right, tmp_right, TRUE, pool));
 
-      /* Find out if we need to run an external merge */
-      if (config)
-        {
-          svn_config_t *cfg = apr_hash_get (config,
-                                            SVN_CONFIG_CATEGORY_CONFIG,
-                                            APR_HASH_KEY_STRING);
-          svn_config_get (cfg, &merge_cmd, SVN_CONFIG_SECTION_HELPERS,
-	                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
-        }
-
-      if (merge_cmd)
+      /* Run an external merge if requested. */
+      if (diff3_cmd)
         {
           int exit_code;
 
           SVN_ERR (svn_io_run_diff3 (".",
                                      tmp_target, tmp_left, tmp_right,
                                      target_label, left_label, right_label,
-                                     result_f, &exit_code, config,
-                                     pool));
+                                     result_f, &exit_code, diff3_cmd, pool));
           
           contains_conflicts = exit_code == 1;
         }
@@ -154,9 +146,9 @@ svn_wc_merge (const char *left,
           const char *left_marker;
           const char *right_marker;
 
-          SVN_ERR (svn_diff3_file (&diff,
-                                   tmp_left, tmp_target, tmp_right,
-                                   pool));
+          SVN_ERR (svn_diff_file_diff3 (&diff,
+                                        tmp_left, tmp_target, tmp_right,
+                                        pool));
 
           /* Labels fall back to sensible defaults if not specified. */
           if (target_label)
@@ -174,15 +166,15 @@ svn_wc_merge (const char *left,
           else
             right_marker = ">>>>>>> .new";
 
-          SVN_ERR (svn_diff3_file_output (result_f, diff,
-                                          tmp_left, tmp_target, tmp_right,
-                                          left_marker,
-                                          target_marker,
-                                          right_marker,
-                                          "=======", /* seperator */
-                                          FALSE, /* display original */
-                                          FALSE, /* resolve conflicts */
-                                          pool));
+          SVN_ERR (svn_diff_file_output_merge (result_f, diff,
+                                               tmp_left, tmp_target, tmp_right,
+                                               left_marker,
+                                               target_marker,
+                                               right_marker,
+                                               "=======", /* seperator */
+                                               FALSE, /* display original */
+                                               FALSE, /* resolve conflicts */
+                                               pool));
 
           contains_conflicts = svn_diff_contains_conflicts (diff);
         }

@@ -61,6 +61,7 @@ typedef struct {
 typedef struct {
   const char *repos_url;
   void *report_baton;
+  svn_error_t *err;
 } report_driver_baton_t;
 
 typedef struct {
@@ -85,16 +86,23 @@ static svn_error_t *get_fs_path(const char *repos_url, const char *url,
 
 /* --- REPORTER COMMAND SET --- */
 
+/* To allow for pipelining, reporter commands have no reponses.  If we
+ * get an error, we ignore all subsequent reporter commands and return
+ * the error finish_report, to be handled by the calling command.
+ */
+
 static svn_error_t *set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              apr_array_header_t *params, void *baton)
 {
   report_driver_baton_t *b = baton;
   const char *path;
   svn_revnum_t rev;
+  svn_boolean_t start_empty;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cr", &path, &rev));
-  SVN_CMD_ERR(svn_repos_set_path(b->report_baton, path, rev, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "crb",
+                                 &path, &rev, &start_empty));
+  if (!b->err)
+    b->err = svn_repos_set_path(b->report_baton, path, rev, start_empty, pool);
   return SVN_NO_ERROR;
 }
 
@@ -105,8 +113,8 @@ static svn_error_t *delete_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *path;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &path));
-  SVN_CMD_ERR(svn_repos_delete_path(b->report_baton, path, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+  if (!b->err)
+    b->err = svn_repos_delete_path(b->report_baton, path, pool);
   return SVN_NO_ERROR;
 }
     
@@ -116,12 +124,16 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   report_driver_baton_t *b = baton;
   const char *path, *url, *fs_path;
   svn_revnum_t rev;
+  svn_boolean_t start_empty;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccr", &path, &url, &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrb",
+                                 &path, &url, &rev, &start_empty));
   url = svn_path_uri_decode(url, pool);
-  SVN_CMD_ERR(get_fs_path(b->repos_url, url, &fs_path, pool));
-  SVN_CMD_ERR(svn_repos_link_path(b->report_baton, path, fs_path, rev, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+  if (!b->err)
+    b->err = get_fs_path(b->repos_url, url, &fs_path, pool);
+  if (!b->err)
+    b->err = svn_repos_link_path(b->report_baton, path, fs_path, rev,
+                                 start_empty, pool);
   return SVN_NO_ERROR;
 }
 
@@ -131,11 +143,8 @@ static svn_error_t *finish_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   report_driver_baton_t *b = baton;
 
   /* No arguments to parse. */
-  /* Finishing a report generally means driving an editor, so we can't
-   * do it before sending the command response, and we can't report
-   * errors to the client. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
-  SVN_ERR(svn_repos_finish_report(b->report_baton));
+  if (!b->err)
+    b->err = svn_repos_finish_report(b->report_baton);
   return SVN_NO_ERROR;
 }
 
@@ -145,8 +154,7 @@ static svn_error_t *abort_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   report_driver_baton_t *b = baton;
 
   /* No arguments to parse. */
-  SVN_CMD_ERR(svn_repos_abort_report(b->report_baton));
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+  svn_error_clear(svn_repos_abort_report(b->report_baton));
   return SVN_NO_ERROR;
 }
 
@@ -159,14 +167,48 @@ static const svn_ra_svn_cmd_entry_t report_commands[] = {
   { NULL }
 };
 
-static svn_error_t *handle_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                  const char *repos_url, void *baton)
+/* Accept a report from the client, drive the network editor with the
+ * result, and then write an empty command response.  If there is a
+ * non-protocol failure, accept_report will abort the edit and return
+ * a command error to be reported by handle_commands(). */
+static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                  server_baton_t *b, svn_revnum_t rev,
+                                  const char *target, const char *tgt_path,
+                                  svn_boolean_t text_deltas,
+                                  svn_boolean_t recurse,
+                                  svn_boolean_t ignore_ancestry)
 {
-  report_driver_baton_t b;
+  const svn_delta_editor_t *editor;
+  void *edit_baton, *report_baton;
+  report_driver_baton_t rb;
+  svn_error_t *err;
 
-  b.repos_url = repos_url;
-  b.report_baton = baton;
-  return svn_ra_svn_handle_commands(conn, pool, report_commands, &b, FALSE);
+  /* Make an svn_repos report baton.  Tell it to drive the network editor
+   * when the report is complete. */
+  svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
+  SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
+                                     b->fs_path, target, tgt_path, text_deltas,
+                                     recurse, ignore_ancestry, editor,
+                                     edit_baton, pool));
+
+  rb.repos_url = b->repos_url;
+  rb.report_baton = report_baton;
+  rb.err = NULL;
+  err = svn_ra_svn_handle_commands(conn, pool, report_commands, &rb);
+  if (err)
+    {
+      /* Network or protocol error while handling commands. */
+      svn_error_clear(rb.err);
+      return err;
+    }
+  else if (rb.err)
+    {
+      /* Some failure during the reporting or editing operations. */
+      editor->abort_edit(edit_baton, pool);
+      SVN_CMD_ERR(rb.err);
+    }
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+  return SVN_NO_ERROR;
 }
 
 /* --- MAIN COMMAND SET --- */
@@ -362,9 +404,10 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                           b->repos_url, b->fs_path, b->user,
                                           log_msg, commit_done, &ccb, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
-  SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, FALSE,
-                                  &aborted));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "rcc", new_rev, date, author));
+  SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, &aborted));
+  if (!aborted)
+    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(?c)(?c)",
+                                   new_rev, date, author));
   return SVN_NO_ERROR;
 }
 
@@ -382,6 +425,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_size_t len;
   svn_boolean_t want_props, want_contents;
   unsigned char digest[MD5_DIGESTSIZE];
+  svn_error_t *err, *write_err;
 
   /* Parse arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb", &path, &rev,
@@ -403,7 +447,10 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   SVN_ERR(svn_ra_svn_write_word(conn, pool, "success"));
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_cstring(conn, pool, hex_digest));
+  SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  if (hex_digest)
+    SVN_ERR(svn_ra_svn_write_cstring(conn, pool, hex_digest));
+  SVN_ERR(svn_ra_svn_end_list(conn, pool));
   SVN_ERR(svn_ra_svn_write_number(conn, pool, rev));
   SVN_ERR(write_proplist(conn, pool, props));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
@@ -412,21 +459,33 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Now send the file's contents. */
   if (want_contents)
     {
+      err = SVN_NO_ERROR;
       while (1)
         {
           len = sizeof(buf);
-          SVN_ERR(svn_stream_read(contents, buf, &len));
-          write_str.data = buf;
-          write_str.len = len;
+          err = svn_stream_read(contents, buf, &len);
+          if (err)
+            break;
           if (len > 0)
-            SVN_ERR(svn_ra_svn_write_string(conn, pool, &write_str));
+            {
+              write_str.data = buf;
+              write_str.len = len;
+              SVN_ERR(svn_ra_svn_write_string(conn, pool, &write_str));
+            }
           if (len < sizeof(buf))
             {
-              SVN_ERR(svn_ra_svn_write_cstring(conn, pool, ""));
+              err = svn_stream_close(contents);
               break;
             }
         }
-      SVN_ERR(svn_stream_close(contents));
+      write_err = svn_ra_svn_write_cstring(conn, pool, "");
+      if (write_err)
+        {
+          svn_error_clear(err);
+          return write_err;
+        }
+      SVN_CMD_ERR(err);
+      SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
     }
 
   return SVN_NO_ERROR;
@@ -541,29 +600,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *checkout(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                             apr_array_header_t *params, void *baton)
-{
-  server_baton_t *b = baton;
-  svn_revnum_t rev;
-  svn_boolean_t recurse;
-  const svn_delta_editor_t *editor;
-  void *edit_baton;
-
-  /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)b", &rev, &recurse));
-  if (!SVN_IS_VALID_REVNUM(rev))
-    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-
-  /* Write an empty command-reponse, signalling that we will start editing. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
-
-  /* Drive the network editor with a checkout. */
-  svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  SVN_ERR(svn_repos_checkout(b->fs, rev, recurse, b->fs_path,
-                             editor, edit_baton, pool));
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                            apr_array_header_t *params, void *baton)
@@ -572,8 +608,6 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
   const char *target;
   svn_boolean_t recurse;
-  const svn_delta_editor_t *editor;
-  void *edit_baton, *report_baton;
 
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb", &rev, &target,
@@ -583,19 +617,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
-  /* Make an svn_repos report baton.  Tell it to drive the network editor
-   * when the report is complete. */
-  svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
-                                     b->fs_path, target, NULL, TRUE, recurse,
-                                     editor, edit_baton, pool));
-
-  /* Write an empty command-reponse, telling the client to start reporting. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
-
-  /* Handle the client's report; when it's done, svn_repos will drive the
-   * network editor with the update. */
-  return handle_report(conn, pool, b->repos_url, report_baton);
+  return accept_report(conn, pool, b, rev, target, NULL, TRUE, recurse, FALSE);
 }
 
 static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -606,8 +628,6 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *target;
   const char *switch_url, *switch_path;
   svn_boolean_t recurse;
-  const svn_delta_editor_t *editor;
-  void *edit_baton, *report_baton;
 
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc", &rev, &target,
@@ -618,19 +638,8 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   SVN_CMD_ERR(get_fs_path(b->repos_url, switch_url, &switch_path, pool));
 
-  /* Make an svn_repos report baton.  Tell it to drive the network editor
-   * when the report is complete. */
-  svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
-                                     b->fs_path, target, switch_path, TRUE,
-                                     recurse, editor, edit_baton, pool));
-
-  /* Write an empty command-reponse, telling the client to start reporting. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
-
-  /* Handle the client's report; when it's done, svn_repos will drive the
-   * network editor with the switch update. */
-  return handle_report(conn, pool, b->repos_url, report_baton);
+  return accept_report(conn, pool, b, rev, target, switch_path, TRUE, recurse,
+                       FALSE);
 }
 
 static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -640,28 +649,15 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
   const char *target;
   svn_boolean_t recurse;
-  const svn_delta_editor_t *editor;
-  void *edit_baton, *report_baton;
 
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb", &target, &recurse));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
 
-  /* Make an svn_repos report baton.  Tell it to drive the network editor
-   * when the report is complete. */
   SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-  svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
-                                     b->fs_path, target, NULL, FALSE, recurse,
-                                     editor, edit_baton, pool));
-
-  /* Write an empty command-reponse, telling the client to start reporting. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
-
-  /* Handle the client's report; when it's done, svn_repos will drive the
-   * network editor with the status report. */
-  return handle_report(conn, pool, b->repos_url, report_baton);
+  return accept_report(conn, pool, b, rev, target, NULL, FALSE, recurse,
+                       FALSE);
 }
 
 static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -670,32 +666,19 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_revnum_t rev;
   const char *target, *versus_url, *versus_path;
-  svn_boolean_t recurse;
-  const svn_delta_editor_t *editor;
-  void *edit_baton, *report_baton;
+  svn_boolean_t recurse, ignore_ancestry;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc", &rev, &target,
-                                 &recurse, &versus_url));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbc", &rev, &target,
+                                 &recurse, &ignore_ancestry, &versus_url));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   SVN_CMD_ERR(get_fs_path(b->repos_url, versus_url, &versus_path, pool));
 
-  /* Make an svn_repos report baton.  Tell it to drive the network editor
-   * when the report is complete. */
-  svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
-                                     b->fs_path, target, versus_path, FALSE,
-                                     recurse, editor, edit_baton, pool));
-
-  /* Write an empty command-reponse, telling the client to start reporting. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
-
-  /* Handle the client's report; when it's done, svn_repos will drive the
-   * network editor with the diff. */
-  return handle_report(conn, pool, b->repos_url, report_baton);
+  return accept_report(conn, pool, b, rev, target, versus_path, TRUE, recurse,
+                       ignore_ancestry);
 }
 
 /* Send a log entry to the client. */
@@ -761,6 +744,7 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
 static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             apr_array_header_t *params, void *baton)
 {
+  svn_error_t *err, *write_err;
   server_baton_t *b = baton;
   svn_revnum_t start_rev, end_rev;
   const char *full_path;
@@ -785,17 +769,22 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       *((const char **) apr_array_push(full_paths)) = full_path;
     }
 
-  /* Write an empty command-reponse, telling the client logs are coming. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
-
   /* Get logs.  (Can't report errors back to the client at this point.) */
   lb.fs_path = b->fs_path;
   lb.conn = conn;
-  SVN_ERR(svn_repos_get_logs(b->repos, full_paths, start_rev, end_rev,
-                             changed_paths, strict_node, log_receiver, &lb,
-                             pool));
+  err = svn_repos_get_logs(b->repos, full_paths, start_rev, end_rev,
+                           changed_paths, strict_node, log_receiver, &lb,
+                           pool);
 
-  return svn_ra_svn_write_word(conn, pool, "done");
+  write_err = svn_ra_svn_write_word(conn, pool, "done");
+  if (write_err)
+    {
+      svn_error_clear(err);
+      return write_err;
+    }
+  SVN_CMD_ERR(err);
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -812,7 +801,7 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   full_path = svn_path_join(b->fs_path, path, pool);
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
-  kind = svn_fs_check_path(root, full_path, pool);
+  SVN_CMD_ERR(svn_fs_check_path(&kind, root, full_path, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "w", kind_word(kind)));
   return SVN_NO_ERROR;
 }
@@ -826,7 +815,6 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "commit",          commit },
   { "get-file",        get_file },
   { "get-dir",         get_dir },
-  { "checkout",        checkout },
   { "update",          update },
   { "switch",          switch_cmd },
   { "status",          status },
@@ -835,6 +823,20 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "check-path",      check_path },
   { NULL }
 };
+
+/* Skip past the scheme part of a URL, including the tunnel specification
+ * if present.  Return NULL if the scheme part is invalid for ra_svn. */
+static const char *skip_scheme_part(const char *url)
+{
+  if (strncmp(url, "svn", 3) != 0)
+    return NULL;
+  url += 3;
+  if (*url == '+')
+    url += strcspn(url, ":");
+  if (strncmp(url, "://", 3) != 0)
+    return NULL;
+  return url + 3;
+}
 
 static svn_error_t *find_repos(const char *url, const char *root,
                                svn_repos_t **repos, const char **repos_url,
@@ -849,13 +851,12 @@ static svn_error_t *find_repos(const char *url, const char *root,
   /* Decode any escaped characters in the URL. */
   url = svn_path_uri_decode(url, pool);
 
-  /* Verify the scheme part. */
-  if (strncmp(url, "svn://", 6) != 0)
+  /* Skip past the scheme and authority part. */
+  client_path = skip_scheme_part(url);
+  if (client_path == NULL)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                             "Non-svn URL passed to svn server: %s", url);
-
-  /* Skip past the authority part. */
-  client_path = strchr(url + 6, '/');
+                             "Non-svn URL passed to svn server: '%s'", url);
+  client_path = strchr(client_path, '/');
   client_path = (client_path == NULL) ? "" : client_path + 1;
 
   SVN_ERR(svn_path_cstring_from_utf8(&client_path_apr,
@@ -905,9 +906,12 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   svn_repos_t *repos;
   server_baton_t b;
   const char *uuid;
+  svn_boolean_t valid_mech = FALSE;
 
   /* Send greeting, saying we only support protocol version 1, the
    * anonymous authentication mechanism, and no extensions. */
+  SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_word(conn, pool, "success"));
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   /* Our minimum and maximum supported protocol version is 1. */
   SVN_ERR(svn_ra_svn_write_number(conn, pool, 1));
@@ -922,6 +926,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   /* We have no special capabilities. */
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  SVN_ERR(svn_ra_svn_end_list(conn, pool));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
 
@@ -939,8 +944,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
 
       if (!mecharg)  /* Must be present */
         return SVN_NO_ERROR;
-      if (apr_current_userid(&uid, &gid, pool) != APR_SUCCESS
-          || apr_get_username((char **) &user, uid, pool) != APR_SUCCESS)
+      if (apr_uid_current(&uid, &gid, pool) != APR_SUCCESS
+          || apr_uid_name_get((char **) &user, uid, pool) != APR_SUCCESS)
         {
           SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
                                          "Can't determine username"));
@@ -952,13 +957,14 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
                                          "Requested username does not match"));
           return SVN_NO_ERROR;
         }
+      valid_mech = TRUE;
     }
 #endif
 
   if (strcmp(mech, "ANONYMOUS") == 0)
-    user = "anonymous";
+    valid_mech = TRUE;
 
-  if (!user)  /* Client gave us an unlisted mech. */
+  if (!valid_mech)  /* Client gave us an unlisted mech. */
     return SVN_NO_ERROR;
 
   /* Write back a success notification. */
@@ -992,5 +998,5 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   SVN_ERR(svn_fs_get_uuid(b.fs, &uuid, pool));
   svn_ra_svn_write_cmd_response(conn, pool, "c", uuid);
 
-  return svn_ra_svn_handle_commands(conn, pool, main_commands, &b, FALSE);
+  return svn_ra_svn_handle_commands(conn, pool, main_commands, &b);
 }

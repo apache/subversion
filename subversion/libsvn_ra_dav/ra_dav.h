@@ -55,11 +55,19 @@ typedef struct {
 
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
 
-  svn_boolean_t compression;            /* should we use http compression? */
-
   const char *uuid;                     /* repository UUID */
 } svn_ra_session_t;
 
+
+/* A baton which is attached to Neon session's to hold session-related
+   private data. */
+typedef struct {
+  svn_boolean_t compression;            /* should we use http compression? */
+} svn_ra_ne_session_baton_t;
+
+/* Id used with ne_set_session_private() and ne_get_session_private()
+   to retrieve the associated svn_ra_ne_session_baton_t baton. */
+#define SVN_RA_NE_SESSION_ID   "SVN"
 
 #ifdef SVN_DEBUG
 #define DEBUG_CR "\n"
@@ -71,25 +79,30 @@ typedef struct {
 /** plugin function prototypes */
 
 svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
-                                           svn_revnum_t *latest_revnum);
+                                           svn_revnum_t *latest_revnum,
+                                           apr_pool_t *pool);
 
 svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                              svn_revnum_t *revision,
-                                             apr_time_t timestamp);
+                                             apr_time_t timestamp,
+                                             apr_pool_t *pool);
 
 svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
                                           svn_revnum_t rev,
                                           const char *name,
-                                          const svn_string_t *value);
+                                          const svn_string_t *value,
+                                          apr_pool_t *pool);
 
 svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
                                        svn_revnum_t rev,
-                                       apr_hash_t **props);
+                                       apr_hash_t **props,
+                                       apr_pool_t *pool);
 
 svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
                                    svn_revnum_t rev,
                                    const char *name,
-                                   svn_string_t **value);
+                                   svn_string_t **value,
+                                   apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
@@ -98,7 +111,8 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_revnum_t *new_rev,
   const char **committed_date,
   const char **committed_author,
-  const char *log_msg);
+  const char *log_msg,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__get_file(
   void *session_baton,
@@ -106,7 +120,8 @@ svn_error_t * svn_ra_dav__get_file(
   svn_revnum_t revision,
   svn_stream_t *stream,
   svn_revnum_t *fetched_rev,
-  apr_hash_t **props);
+  apr_hash_t **props,
+  apr_pool_t *pool);
 
 svn_error_t *svn_ra_dav__get_dir(
   void *session_baton,
@@ -114,18 +129,12 @@ svn_error_t *svn_ra_dav__get_dir(
   svn_revnum_t revision,
   apr_hash_t **dirents,
   svn_revnum_t *fetched_rev,
-  apr_hash_t **props);
+  apr_hash_t **props,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__abort_commit(
  void *session_baton,
  void *edit_baton);
-
-svn_error_t * svn_ra_dav__do_checkout (
-  void *session_baton,
-  svn_revnum_t revision,
-  svn_boolean_t recurse,
-  const svn_delta_editor_t *editor,
-  void *edit_baton);
 
 svn_error_t * svn_ra_dav__do_update(
   void *session_baton,
@@ -135,7 +144,8 @@ svn_error_t * svn_ra_dav__do_update(
   const char *update_target,
   svn_boolean_t recurse,
   const svn_delta_editor_t *wc_update,
-  void *wc_update_baton);
+  void *wc_update_baton,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__do_status(
   void *session_baton,
@@ -144,7 +154,8 @@ svn_error_t * svn_ra_dav__do_status(
   const char *status_target,
   svn_boolean_t recurse,
   const svn_delta_editor_t *wc_status,
-  void *wc_status_baton);
+  void *wc_status_baton,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__do_switch(
   void *session_baton,
@@ -155,7 +166,8 @@ svn_error_t * svn_ra_dav__do_switch(
   svn_boolean_t recurse,
   const char *switch_url,
   const svn_delta_editor_t *wc_update,
-  void *wc_update_baton);
+  void *wc_update_baton,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__do_diff(
   void *session_baton,
@@ -164,9 +176,11 @@ svn_error_t * svn_ra_dav__do_diff(
   svn_revnum_t revision,
   const char *diff_target,
   svn_boolean_t recurse,
+  svn_boolean_t ignore_ancestry,
   const char *versus_url,
   const svn_delta_editor_t *wc_diff,
-  void *wc_diff_baton);
+  void *wc_diff_baton,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__get_log(
   void *session_baton,
@@ -176,13 +190,15 @@ svn_error_t * svn_ra_dav__get_log(
   svn_boolean_t discover_changed_paths,
   svn_boolean_t strict_node_history,
   svn_log_message_receiver_t receiver,
-  void *receiver_baton);
+  void *receiver_baton,
+  apr_pool_t *pool);
 
 svn_error_t *svn_ra_dav__do_check_path(
   svn_node_kind_t *kind,
   void *session_baton,
   const char *path,
-  svn_revnum_t revision);
+  svn_revnum_t revision,
+  apr_pool_t *pool);
 
 /*
 ** SVN_RA_DAV__LP_*: local properties for RA/DAV
@@ -218,11 +234,6 @@ svn_error_t *svn_ra_dav__do_check_path(
 #define SVN_RA_DAV__PROP_BASELINE_RELPATH \
     SVN_DAV_PROP_NS_DAV "baseline-relative-path"
 
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-#define SVN_RA_DAV__PROP_BASELINE_RELPATH_OLD \
-    SVN_PROP_PREFIX "baseline-relative-path"
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
-
 #define SVN_RA_DAV__PROP_MD5_CHECKSUM SVN_DAV_PROP_NS_DAV "md5-checksum"
 
 #define SVN_RA_DAV__PROP_REPOSITORY_UUID SVN_DAV_PROP_NS_DAV "repository-uuid"
@@ -235,7 +246,7 @@ typedef struct {
   /* is this resource a collection? (from the DAV:resourcetype element) */
   int is_collection;
 
-  /* PROPSET: NAME -> VALUE (const char * -> const char *) */
+  /* PROPSET: NAME -> VALUE (const char * -> const svn_string_t *) */
   apr_hash_t *propset;
 
   /* --- only used during response processing --- */
@@ -336,6 +347,26 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
                                             const ne_propname *which_props,
                                             apr_pool_t *pool);
 
+/* Fetch the repository's unique Version-Controlled-Configuration url.
+   
+   Given a Neon session SESS and a URL, set *VCC to the url of the
+   repository's version-controlled-configuration resource.
+ */
+svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
+                                 ne_session *sess,
+                                 const char *url,
+                                 apr_pool_t *pool);
+
+/* Issue a PROPPATCH request on URL, transmitting PROP_CHANGES (a hash
+   of const svn_string_t * values keyed on Subversion user-visible
+   property names) and PROP_DELETES (an array of property names to
+   delete).  Use POOL for all allocations.  */
+svn_error_t *svn_ra_dav__do_proppatch (svn_ra_session_t *ras,
+                                       const char *url,
+                                       apr_hash_t *prop_changes,
+                                       apr_array_header_t *prop_deletes,
+                                       apr_pool_t *pool);
+
 extern const ne_propname svn_ra_dav__vcc_prop;
 extern const ne_propname svn_ra_dav__checked_in_prop;
 
@@ -358,7 +389,7 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
 
 
 /* Send a METHOD request (e.g., "MERGE", "REPORT", "PROPFIND") to URL
- * in session RAS, and parse the response.  If BODY is non-null, it is
+ * in session SESS, and parse the response.  If BODY is non-null, it is
  * the body of the request, else use the contents of file BODY_FILE
  * as the body.
  *
@@ -368,24 +399,31 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
  * element, and end element handlers, respectively.  BATON is passed
  * to each as userdata.
  *
+ * SET_PARSER is a callback function which, if non-NULL, is called
+ * with the XML parser and BATON.  This is useful for providers of
+ * validation and element handlers which require access to the parser.
+ *
  * EXTRA_HEADERS is a hash of (const char *) key/value pairs to be
  * inserted as extra headers in the request.  Can be NULL.
  *
  * Use POOL for any temporary allocation.
  */
-svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
-                                        const char *method,
-                                        const char *url,
-                                        const char *body,
-                                        apr_file_t *body_file,
-                                        const struct ne_xml_elm *elements, 
-                                        ne_xml_validate_cb validate_cb,
-                                        ne_xml_startelm_cb startelm_cb, 
-                                        ne_xml_endelm_cb endelm_cb,
-                                        void *baton,
-                                        apr_hash_t *extra_headers,
-                                        apr_pool_t *pool);
-
+svn_error_t *
+svn_ra_dav__parsed_request(ne_session *sess,
+                           const char *method,
+                           const char *url,
+                           const char *body,
+                           apr_file_t *body_file,
+                           void set_parser (ne_xml_parser *parser,
+                                            void *baton),
+                           const struct ne_xml_elm *elements, 
+                           ne_xml_validate_cb validate_cb,
+                           ne_xml_startelm_cb startelm_cb, 
+                           ne_xml_endelm_cb endelm_cb,
+                           void *baton,
+                           apr_hash_t *extra_headers,
+                           apr_pool_t *pool);
+  
 
 /* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
 enum {
@@ -414,9 +452,6 @@ enum {
   ELEM_add_directory,
   ELEM_add_file,
   ELEM_baseline_relpath, 
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-  ELEM_baseline_relpath_old,
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   ELEM_md5_checksum,
   ELEM_deleted_path,  /* used in log reports */
   ELEM_replaced_path,  /* used in log reports */

@@ -31,7 +31,6 @@
 %typemap(python, in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
-
 %typemap(java, in) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
@@ -39,11 +38,32 @@
     $result = t_output_helper($result,
                               SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }
+%typemap(perl5, argout) SWIGTYPE **OUTPARAM {
+    /* ### FIXME-perl */
+}
+
+/* -----------------------------------------------------------------------
+   Create a typemap to handle enums.
+*/
+
+%typemap(python, in, numinputs=0) enum SWIGTYPE *OUTENUM ($*1_type temp) {
+    $1 = ($1_ltype)&temp;
+}
+%typemap(java, in) enum SWIGTYPE *OUTENUM ($*1_type temp) {
+    $1 = ($1_ltype)&temp;
+}
+%typemap(python, argout, fragment="t_output_helper") enum SWIGTYPE *OUTENUM {
+    $result = t_output_helper($result, PyInt_FromLong(*$1));
+}
+
 
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
 */
 %typemap(python, in, parse="z") const char *MAY_BE_NULL "";
+
+/* ### FIXME-perl: I need to figure out what is going on with the above typemap
+*/
 
 %typemap(java, in) const char *MAY_BE_NULL { 
   /* ### WHEN IS THIS USED? */
@@ -52,6 +72,9 @@
     $1 = ($1_ltype)JCALL2(GetStringUTFChars, jenv, $input, 0);
     if (!$1) return $null;
   }
+}
+%typemap(perl5,out) svn_error_t * {
+    /* ### FIXME-perl */
 }
 
 /* -----------------------------------------------------------------------
@@ -84,14 +107,12 @@
     $result = Py_None;
 }
 
-%typemap(java, out) svn_error_t * {
-    if ($1 != NULL) {
-        SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, $1->message);
-    }
-}
-%typemap(jni) svn_error_t * "int"
-%typemap(jtype) svn_error_t * "int"
-%typemap(jstype) svn_error_t * "int"
+%typemap(java, out) svn_error_t * %{
+    $result = ($1 != NULL) ? svn_swig_java_convert_error(jenv, $1) : NULL;
+%}
+%typemap(jni) svn_error_t * "jthrowable"
+%typemap(jtype) svn_error_t * "org.tigris.subversion.SubversionException"
+%typemap(jstype) svn_error_t * "org.tigris.subversion.SubversionException"
 %typemap(javain) svn_error_t * "@javainput"
 %typemap(javaout) svn_error_t * {
 	return $jnicall;
@@ -104,6 +125,16 @@
    'svn_renum_t *' will always be an OUTPUT parameter
 */
 %apply long *OUTPUT { svn_revnum_t * };
+
+/* -----------------------------------------------------------------------
+   Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll
+   treat it as a 'long' even if that isn't entirely correct...  
+*/
+%typemap(python,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
+    "$1 = &temp;";
+
+%typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
+    "$result = t_output_helper($result,PyInt_FromLong((long) (*$1)));";
 
 /* -----------------------------------------------------------------------
    Define a general ptr/len typemap. This takes a single script argument
@@ -147,6 +178,9 @@
     return $jnicall;
   }
 
+%typemap(perl5, in) (const char *PTR, apr_size_t LEN) {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    Define a generic arginit mapping for pools.
 */
@@ -156,6 +190,9 @@
     SWIG_ConvertPtr(PyTuple_GET_ITEM(args, PyTuple_GET_SIZE(args) - 1),
                     (void **)&$1, $1_descriptor, SWIG_POINTER_EXCEPTION | 0);
     _global_pool = $1;
+}
+%typemap(perl5, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
+    /* ### FIXME-perl */
 }
 
 %typemap(java, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {

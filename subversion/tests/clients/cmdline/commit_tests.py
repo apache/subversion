@@ -810,6 +810,85 @@ def hudson_part_2(sbox):
                                                 None, None,
                                                 wc_dir)
 
+#----------------------------------------------------------------------
+
+# Test a possible regression in our 'deleted' post-commit handling.
+#
+# This test moves files from one subdir to another, commits, then
+# updates the empty directory.  Nothing should be printed, assuming
+# all the moved files are properly marked as 'deleted' and reported to
+# the server.
+
+def hudson_part_2_1(sbox):
+  "hudson prob 2.1:  move files, update empty dir"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Move all the files in H to G
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  chi_path = os.path.join(H_path, 'chi')
+  psi_path = os.path.join(H_path, 'psi')
+  omega_path = os.path.join(H_path, 'omega') 
+
+  svntest.main.run_svn(None, 'mv', chi_path, G_path)
+  svntest.main.run_svn(None, 'mv', psi_path, G_path)
+  svntest.main.run_svn(None, 'mv', omega_path, G_path)
+  
+  # Create expected commit output.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/chi' : Item(verb='Deleting'),
+    'A/D/H/omega' : Item(verb='Deleting'),
+    'A/D/H/psi' : Item(verb='Deleting'),
+    'A/D/G/chi' : Item(verb='Adding'),
+    'A/D/G/omega' : Item(verb='Adding'),
+    'A/D/G/psi' : Item(verb='Adding'),
+    })
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/D/H/chi')
+  expected_status.remove('A/D/H/omega')
+  expected_status.remove('A/D/H/psi')
+  expected_status.add({ 'A/D/G/chi' :
+                        Item(wc_rev=2, repos_rev=2, status='  ') })
+  expected_status.add({ 'A/D/G/omega' :
+                        Item(wc_rev=2, repos_rev=2, status='  ') })
+  expected_status.add({ 'A/D/G/psi' :
+                        Item(wc_rev=2, repos_rev=2, status='  ') })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Now, assuming all three files in H are marked as 'deleted', an
+  # update of H should print absolutely nothing.
+  expected_output = svntest.wc.State(wc_dir, { })
+
+  # Reuse expected_status
+  expected_status.tweak(wc_rev=2)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  expected_disk.add({
+    'A/D/G/chi' : Item("This is the file 'chi'."),
+    })
+  expected_disk.add({
+    'A/D/G/omega' : Item("This is the file 'omega'."),
+    })
+  expected_disk.add({
+    'A/D/G/psi' : Item("This is the file 'psi'."),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)  
 
 #----------------------------------------------------------------------
 
@@ -870,7 +949,7 @@ def hook_test(sbox):
 # node-rev-id parentage.
 
 def merge_mixed_revisions(sbox):
-  "commit mixed-rev wc (no erronous merge error)"
+  "commit mixed-rev wc (no erroneous merge error)"
 
   if sbox.build():
     return 1
@@ -1195,7 +1274,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 None,
                                                 None,
-                                                "unversioned",
+                                                "not versioned",
                                                 None, None,
                                                 None, None,
                                                 bloo_path)
@@ -1421,7 +1500,7 @@ def failed_commit(sbox):
   wc_dir = sbox.wc_dir
 
   # Make the other working copy
-  other_wc_dir = wc_dir + '.other'
+  other_wc_dir = sbox.add_wc_path('other')
   svntest.actions.duplicate_dir(wc_dir, other_wc_dir)
 
   # Make different changes in the two working copies
@@ -1528,6 +1607,206 @@ def commit_symlink(sbox):
   else:
     return 1
 
+def commit_nonrecursive(sbox):
+  "commit named targets with -N (issues #1195, #1239)"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  #####################################################
+  ### Issue #1195:
+  ###
+  ### 1. Create these directories and files:
+  ###
+  ###    file1
+  ###    dir1
+  ###    dir1/file2
+  ###    dir1/file3
+  ###    dir1/dir2
+  ###    dir1/dir2/file4
+  ###   
+  ### 2. run 'svn add -N <all of the above>'
+  ###
+  ### 3. run 'svn ci -N <all of the above>'
+  ###
+  ### (The bug was that only 4 entities would get committed, when it
+  ### should be 6: dir2/ and file4 were left out.)
+
+  # These paths are relative to the top of the test's working copy.
+  file1_path = 'file1'
+  dir1_path  = 'dir1'
+  file2_path = os.path.join('dir1', 'file2')
+  file3_path = os.path.join('dir1', 'file3')
+  dir2_path  = os.path.join('dir1', 'dir2')
+  file4_path = os.path.join('dir1', 'dir2', 'file4')
+
+  # Create the new files and directories.
+  svntest.main.file_append(os.path.join(wc_dir, file1_path), 'this is file1')
+  os.mkdir(os.path.join(wc_dir, dir1_path))
+  svntest.main.file_append(os.path.join(wc_dir, file2_path), 'this is file2')
+  svntest.main.file_append(os.path.join(wc_dir, file3_path), 'this is file3')
+  os.mkdir(os.path.join(wc_dir, dir2_path))
+  svntest.main.file_append(os.path.join(wc_dir, file4_path), 'this is file4')
+
+  # Add them to version control.
+  out, err = svntest.main.run_svn(None, 'add', '-N',
+                                  os.path.join(wc_dir, file1_path),
+                                  os.path.join(wc_dir, dir1_path),
+                                  os.path.join(wc_dir, file2_path),
+                                  os.path.join(wc_dir, file3_path),
+                                  os.path.join(wc_dir, dir2_path),
+                                  os.path.join(wc_dir, file4_path))
+  if err:
+    raise svntest.Failure
+
+  # Commit.  We should see all 6 items (2 dirs, 4 files) get sent.
+  expected_output = svntest.wc.State(
+    wc_dir,
+    { file1_path                    : Item(verb='Adding'),
+      dir1_path                     : Item(verb='Adding'),
+      file2_path                    : Item(verb='Adding'),
+      file3_path                    : Item(verb='Adding'),
+      dir2_path                     : Item(verb='Adding'),
+      file4_path                    : Item(verb='Adding'),
+      }
+    )
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2) # post-commit revision
+  expected_status.add({
+    file1_path   : Item(status='  ', repos_rev=2, wc_rev=2),
+    dir1_path    : Item(status='  ', repos_rev=2, wc_rev=2),
+    file2_path   : Item(status='  ', repos_rev=2, wc_rev=2),
+    file3_path   : Item(status='  ', repos_rev=2, wc_rev=2),
+    dir2_path    : Item(status='  ', repos_rev=2, wc_rev=2),
+    file4_path   : Item(status='  ', repos_rev=2, wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        '-N',
+                                        os.path.join(wc_dir, file1_path),
+                                        os.path.join(wc_dir, dir1_path),
+                                        os.path.join(wc_dir, file2_path),
+                                        os.path.join(wc_dir, file3_path),
+                                        os.path.join(wc_dir, dir2_path),
+                                        os.path.join(wc_dir, file4_path))
+
+  #####################################################
+  ### Issue #1239:
+  ###
+  ### 1. Create these directories and files:
+  ###
+  ###    dirA
+  ###    dirA/fileA
+  ###    dirA/fileB
+  ###    dirA/dirB
+  ###    dirA/dirB/fileC
+  ###    dirA/dirB/nocommit
+  ###   
+  ### 2. run 'svn add -N <all of the above>'
+  ###
+  ### 3. run 'svn ci -N <all but nocommit>'
+  ###
+  ### The bug was that it would attempt to commit the file `nocommit',
+  ### when it shouldn't, and then get an error anyway:
+  ###
+  ###    Adding         wc/dirA
+  ###    Adding         wc/dirA/fileA
+  ###    Adding         wc/dirA/fileB
+  ###    Adding         wc/dirA/dirB
+  ###    Adding         wc/dirA/dirB/nocommit
+  ###    Adding         wc/dirA/dirB/fileC
+  ###    Transmitting file data ....svn: A problem occured; see later errors
+  ###    for details
+  ###    svn: Commit succeeded, but other errors follow:
+  ###    svn: Problem running log
+  ###    svn: Error bumping revisions post-commit (details follow):
+  ###    svn: in directory
+  ###    'F:/Programmation/Projets/subversion/svnant/test/wc/dirA'
+  ###    svn: start_handler: error processing command 'committed' in
+  ###    'F:/Programmation/Projets/subversion/svnant/test/wc/dirA'
+  ###    svn: Working copy not locked
+  ###    svn: directory not locked
+  ###    (F:/Programmation/Projets/subversion/svnant/test/wc)  
+  ### 
+
+  # Now add these directories and files, except the last:
+  dirA_path  = 'dirA'
+  fileA_path = os.path.join('dirA', 'fileA')
+  fileB_path = os.path.join('dirA', 'fileB')
+  dirB_path  = os.path.join('dirA', 'dirB')
+  fileC_path = os.path.join(dirB_path, 'fileC')
+  nocommit_path = os.path.join(dirB_path, 'nocommit')
+
+  # Create the new files and directories.
+  os.mkdir(os.path.join(wc_dir, dirA_path))
+  svntest.main.file_append(os.path.join(wc_dir, fileA_path), 'fileA')
+  svntest.main.file_append(os.path.join(wc_dir, fileB_path), 'fileB')
+  os.mkdir(os.path.join(wc_dir, dirB_path))
+  svntest.main.file_append(os.path.join(wc_dir, fileC_path), 'fileC')
+  svntest.main.file_append(os.path.join(wc_dir, nocommit_path), 'nocommit')
+
+  # Add them to version control.
+  out, err = svntest.main.run_svn(None, 'add', '-N',
+                                  os.path.join(wc_dir, dirA_path),
+                                  os.path.join(wc_dir, fileA_path),
+                                  os.path.join(wc_dir, fileB_path),
+                                  os.path.join(wc_dir, dirB_path),
+                                  os.path.join(wc_dir, fileC_path),
+                                  os.path.join(wc_dir, nocommit_path))
+  if err:
+    raise svntest.Failure
+
+  expected_output = svntest.wc.State(
+    wc_dir,
+    { dirA_path  : Item(verb='Adding'),
+      fileA_path : Item(verb='Adding'),
+      fileB_path : Item(verb='Adding'),
+      dirB_path  : Item(verb='Adding'),
+      fileC_path : Item(verb='Adding'),
+      }
+    )
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=3)
+
+  # Expect the leftovers from the first part of the test.
+  expected_status.add({
+    file1_path : Item(status='  ', repos_rev=3, wc_rev=2),
+    dir1_path  : Item(status='  ', repos_rev=3, wc_rev=2),
+    file2_path : Item(status='  ', repos_rev=3, wc_rev=2),
+    file3_path : Item(status='  ', repos_rev=3, wc_rev=2),
+    dir2_path  : Item(status='  ', repos_rev=3, wc_rev=2),
+    file4_path : Item(status='  ', repos_rev=3, wc_rev=2),
+    })
+
+  # Expect the commits (and one noncommit) from this part of the test.
+  expected_status.add({
+    dirA_path     : Item(status='  ', repos_rev=3, wc_rev=3),
+    fileA_path    : Item(status='  ', repos_rev=3, wc_rev=3),
+    fileB_path    : Item(status='  ', repos_rev=3, wc_rev=3),
+    dirB_path     : Item(status='  ', repos_rev=3, wc_rev=3),
+    fileC_path    : Item(status='  ', repos_rev=3, wc_rev=3),
+    nocommit_path : Item(status='A ', repos_rev=3, wc_rev=0)
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        '-N',
+                                        os.path.join(wc_dir, dirA_path),
+                                        os.path.join(wc_dir, fileA_path),
+                                        os.path.join(wc_dir, fileB_path),
+                                        os.path.join(wc_dir, dirB_path),
+                                        os.path.join(wc_dir, fileC_path))
+
 #----------------------------------------------------------------------
 # Regression for #1017: ra_dav was allowing the deletion of out-of-date
 # files or dirs, which majorly violates Subversion's semantics.
@@ -1542,7 +1821,7 @@ def commit_out_of_date_deletions(sbox):
   wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy
-  wc_backup = wc_dir + 'backup'
+  wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Change omega's text, and make a propchange to A/C directory
@@ -1628,6 +1907,56 @@ def commit_with_bad_log_message(sbox):
     return 1
 
 
+def from_wc_top_with_bad_editor(sbox):
+  "commit from top of a wc, with invalid external editor cmd"
+
+  # Shortly after revision 5407, Vladimir Prus posted this bug recipe:
+  #
+  #   #!/bin/bash
+  #   cd /tmp
+  #   rm -rf repo wc
+  #   svnadmin create repo
+  #   svn mkdir file:///tmp/repo/foo -m ""
+  #   svn co file:///tmp/repo/foo wc
+  #   cd wc
+  #   svn ps svn:externals "lib http://something.org/lib" .
+  #   svn ci
+  #
+  # The final 'svn ci' would seg fault because of a problem in
+  # calculating the paths to insert in the initial log message that
+  # gets passed to the editor.
+  #
+  # So this regression test is primarily about making sure the seg
+  # fault is gone, and only secondarily about testing that we get the
+  # expected error from passing a bad editor cmd to Subversion.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  out, err = svntest.main.run_svn(None, 'pset', 'fish', 'food', wc_dir)
+  if err:
+    print "Unexpected failure from propset."
+    raise svntest.Failure
+  
+  was_cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    out, err = svntest.main.run_svn(1, 'ci', '--editor-cmd', 'no_such-editor')
+
+    if not err:
+      print "Commit succeeded when should have failed."
+      raise svntest.Failure
+
+    err = string.join(map(string.strip, err), ' ')
+    if not (re.match(".*no_such-editor.*", err)
+            and re.match(".*Commit failed.*", err)):
+      print "Commit failed, but not in the way expected."
+      raise svntest.Failure
+
+  finally:
+    os.chdir(was_cwd)
+  
+
 
 ########################################################################
 # Run the tests
@@ -1648,6 +1977,7 @@ test_list = [ None,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
               hudson_part_2,
+              hudson_part_2_1,
               XFail(hook_test),
               merge_mixed_revisions,
               commit_uri_unsafe,
@@ -1659,10 +1989,12 @@ test_list = [ None,
               commit_with_lock,
               commit_current_dir,
               commit_multiple_wc,
+              commit_nonrecursive,
               XFail(failed_commit),
               Skip(commit_symlink, (os.name != 'posix')),
               commit_out_of_date_deletions,
               commit_with_bad_log_message,
+              from_wc_top_with_bad_editor,
              ]
 
 if __name__ == '__main__':

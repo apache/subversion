@@ -39,7 +39,7 @@ struct svn_txdelta_stream_t {
 
   /* Private data */
   svn_boolean_t more;           /* TRUE if there are more data in the pool. */
-  apr_off_t pos;                /* Offset of next read in source file. */
+  svn_filesize_t pos;           /* Offset of next read in source file. */
   char *buf;                    /* Buffer for vdelta data. */
 
   apr_md5_ctx_t context;        /* APR's MD5 context container. */
@@ -65,13 +65,15 @@ struct apply_baton {
   apr_pool_t *pool;             /* Pool to allocate data from */
   char *sbuf;                   /* Source buffer */
   apr_size_t sbuf_size;         /* Allocated source buffer space */
-  apr_off_t sbuf_offset;        /* Offset of SBUF data in source stream */
+  svn_filesize_t sbuf_offset;   /* Offset of SBUF data in source stream */
   apr_size_t sbuf_len;          /* Length of SBUF data */
   char *tbuf;                   /* Target buffer */
   apr_size_t tbuf_size;         /* Allocated target buffer space */
 
-  apr_md5_ctx_t md5_context;    /* Leads to result_checksum below. */
-  const char *result_checksum;  /* Hex MD5 digest of resultant fulltext. */
+  apr_md5_ctx_t md5_context;    /* Leads to result_digest below. */
+  unsigned char *result_digest; /* MD5 digest of resultant fulltext;
+                                   must point to at least MD5_DIGESTSIZE
+                                   bytes of storage. */
 
   const char *error_info;       /* Optional extra info for error returns. */
 };
@@ -135,9 +137,9 @@ svn_txdelta__copy_window (const svn_txdelta_window_t *window,
 
 void
 svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
-                        int opcode,
-                        apr_off_t offset,
-                        apr_off_t length,
+                        enum svn_delta_action opcode,
+                        apr_size_t offset,
+                        apr_size_t length,
                         const char *new_data,
                         apr_pool_t *pool)
 {
@@ -223,11 +225,6 @@ svn_txdelta (svn_txdelta_stream_t **stream,
 
   /* Initialize MD5 digest calculation. */
   apr_md5_init (&((*stream)->context));
-
-  /* ### Need to initalise this as the value gets used later in
-     use_implicit(). I don't know what the initial value should be,
-     zero appears to work. */
-  memset ((*stream)->digest, 0, MD5_DIGESTSIZE);
 }
 
 
@@ -258,69 +255,55 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
                          svn_txdelta_stream_t *stream,
                          apr_pool_t *pool)
 {
-  if (!stream->more)
+  svn_error_t *err;
+  apr_size_t source_len = SVN_STREAM_CHUNK_SIZE;
+  apr_size_t target_len = SVN_STREAM_CHUNK_SIZE;
+  svn_txdelta__ops_baton_t build_baton = { 0 };
+  
+  /* Read the source stream. */
+  err = svn_stream_read (stream->source, stream->buf, &source_len);
+  
+  /* Read the target stream. */
+  if (err == SVN_NO_ERROR)
+    err = svn_stream_read (stream->target, stream->buf + source_len,
+                           &target_len);
+  if (err != SVN_NO_ERROR)
+    return err;
+  stream->pos += source_len;
+  
+  /* ### The apr_md5 functions always return APR_SUCCESS.  At one
+     point, we proposed to APR folks that the interfaces change to
+     return void, but for some people that was apparently not a good
+     idea, and we didn't bother pressing the matter.  In the meantime,
+     we just ignore their return values below. */
+  if (target_len == 0)
     {
-      apr_status_t apr_err;
-
-      apr_err = apr_md5_final (stream->digest, &(stream->context));
-      if (apr_err)
-        return svn_error_create 
-          (apr_err, NULL,
-           "svn_txdelta_next_window: MD5 finalization failed");
-
+      /* No target data?  We're done; return the final window. */
+      apr_md5_final (stream->digest, &(stream->context));
       *window = NULL;
+      stream->more = FALSE;
       return SVN_NO_ERROR;
     }
   else
     {
-      svn_error_t *err;
-      apr_size_t source_len = SVN_STREAM_CHUNK_SIZE;
-      apr_size_t target_len = SVN_STREAM_CHUNK_SIZE;
-      svn_txdelta__ops_baton_t build_baton = { 0 };
-
-      /* Read the source stream. */
-      err = svn_stream_read (stream->source, stream->buf, &source_len);
-
-      /* Update the MD5 accumulator with the freshly-read data in
-         stream.
-
-         ### todo: Currently, apr_md5_update() always returns
-         APR_SUCCESS.  As such, we are proposing to the APR folks that
-         its interface change to be a void function.  In the meantime,
-         we'll simply ignore the return value. */
-      apr_md5_update (&(stream->context), stream->buf, source_len);
-
-      /* Read the target stream. */
-      if (err == SVN_NO_ERROR)
-        err = svn_stream_read (stream->target, stream->buf + source_len,
-                               &target_len);
-      if (err != SVN_NO_ERROR)
-        return err;
-      stream->pos += source_len;
-
-      /* Forget everything if there's no target data. */
-      if (target_len == 0)
-        {
-          *window = NULL;
-          stream->more = FALSE;
-          return SVN_NO_ERROR;
-        }
-
-      /* Compute the delta operations. */
-      build_baton.new_data = svn_stringbuf_create ("", pool);
-      svn_txdelta__vdelta (&build_baton, stream->buf,
-                           source_len, target_len,
-                           pool);
-
-      /* Create the delta window. */
-      *window = svn_txdelta__make_window (&build_baton, pool);
-      (*window)->sview_offset = stream->pos - source_len;
-      (*window)->sview_len = source_len;
-      (*window)->tview_len = target_len;
-
-      /* That's it. */
-      return SVN_NO_ERROR;
+      apr_md5_update (&(stream->context), stream->buf + source_len,
+                      target_len);
     }
+  
+  /* Compute the delta operations. */
+  build_baton.new_data = svn_stringbuf_create ("", pool);
+  svn_txdelta__vdelta (&build_baton, stream->buf,
+                       source_len, target_len,
+                       pool);
+  
+  /* Create the delta window. */
+  *window = svn_txdelta__make_window (&build_baton, pool);
+  (*window)->sview_offset = stream->pos - source_len;
+  (*window)->sview_len = source_len;
+  (*window)->tview_len = target_len;
+  
+  /* That's it. */
+  return SVN_NO_ERROR;
 }
 
 
@@ -425,25 +408,8 @@ apply_window (svn_txdelta_window_t *window, void *baton)
       /* We're done; just clean up.  */
       svn_error_t *err2 = NULL;
 
-      /* ### If streams had checksums, this code wouldn't be here... */
-      if (ab->result_checksum)
-        {
-          const char *actual_checksum;
-          unsigned char digest[MD5_DIGESTSIZE];
-          
-          apr_md5_final(digest, &(ab->md5_context));
-          actual_checksum = svn_md5_digest_to_cstring (digest, ab->pool);
-          
-          if (strcmp (ab->result_checksum, actual_checksum) != 0)
-            err2 = svn_error_createf
-              (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-               "apply_window: checksum mismatch after applying text delta\n"
-               "(%s):\n"
-               "   expected checksum:  %s\n"
-               "   actual checksum:    %s\n",
-               ab->error_info ? ab->error_info : "no additional context",
-               ab->result_checksum, actual_checksum);
-        }
+      if (ab->result_digest)
+        apr_md5_final (ab->result_digest, &(ab->md5_context));
 
       err = svn_stream_close (ab->target);
       svn_pool_destroy (ab->pool);
@@ -514,7 +480,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
      streams would do it automatically, and verify the checksum in
      svn_stream_closed().  But this might be overkill for issue #689;
      so for now we just update the context here. */
-  if (ab->result_checksum)
+  if (ab->result_digest)
     apr_md5_update(&(ab->md5_context), ab->tbuf, len);
 
   return svn_stream_write (ab->target, ab->tbuf, &len);
@@ -524,7 +490,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
 void
 svn_txdelta_apply (svn_stream_t *source,
                    svn_stream_t *target,
-                   const char *result_checksum,
+                   unsigned char *result_digest,
                    const char *error_info,
                    apr_pool_t *pool,
                    svn_txdelta_window_handler_t *handler,
@@ -543,14 +509,10 @@ svn_txdelta_apply (svn_stream_t *source,
   ab->sbuf_len = 0;
   ab->tbuf = NULL;
   ab->tbuf_size = 0;
+  ab->result_digest = result_digest;
 
-  if (result_checksum)
-    {
-      ab->result_checksum = apr_pstrdup (subpool, result_checksum);
-      apr_md5_init (&(ab->md5_context));
-    }
-  else
-    ab->result_checksum = NULL;
+  if (result_digest)
+    apr_md5_init (&(ab->md5_context));
 
   if (error_info)
     ab->error_info = apr_pstrdup (subpool, error_info);
@@ -597,9 +559,11 @@ svn_txdelta_send_string (const svn_string_t *string,
 svn_error_t *svn_txdelta_send_stream (svn_stream_t *stream,
                                       svn_txdelta_window_handler_t handler,
                                       void *handler_baton,
+                                      unsigned char *digest,
                                       apr_pool_t *pool)
 {
   svn_txdelta_stream_t *txstream;
+  svn_error_t *err;
 
   /* ### this is a hack. we should simply read from the stream, construct
      ### some windows, and pass those to the handler. there isn't any reason
@@ -610,7 +574,17 @@ svn_error_t *svn_txdelta_send_stream (svn_stream_t *stream,
   /* Create a delta stream which converts an *empty* bytestream into the
      target bytestream. */
   svn_txdelta (&txstream, svn_stream_empty (pool), stream, pool);
-  return svn_txdelta_send_txstream (txstream, handler, handler_baton, pool);
+  err = svn_txdelta_send_txstream (txstream, handler, handler_baton, pool);
+
+  if (digest && (! err))
+    {
+      const unsigned char *result_md5;
+      result_md5 = svn_txdelta_md5_digest (txstream);
+      /* Since err is null, result_md5 "cannot" be null. */
+      memcpy (digest, result_md5, MD5_DIGESTSIZE);
+    }
+
+  return err;
 }
 
 svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,

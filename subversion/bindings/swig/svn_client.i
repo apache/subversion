@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-%module _client
+%module client
 %include typemaps.i
 
 %import apr.i
@@ -33,7 +33,8 @@
    these types (as 'type **') will always be an OUT param
 */
 %apply SWIGTYPE **OUTPARAM {
-  svn_client_commit_info_t **
+  svn_client_commit_info_t **,
+  svn_auth_provider_object_t **
 };
 
 /* -----------------------------------------------------------------------
@@ -95,6 +96,9 @@
   $1 = svn_swig_py_notify_func;
   $2 = $input; /* our function is the baton. */
 }
+%typemap(perl5,argout) apr_hash_t **statushash {
+    /* ### FIXME-perl */
+}
 
 %typemap(java,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
 
@@ -110,6 +114,9 @@
     return $jnicall;
   }
 
+%typemap(perl5,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    handle svn_client_get_commit_log_t/baton pairs
 */
@@ -136,6 +143,31 @@
     return $jnicall;
   }
 
+%typemap(perl5,in) (svn_client_get_commit_log_t log_msg_func, 
+                     void *log_msg_baton) {
+    /* ### FIXME-perl */
+}
+
+/* -----------------------------------------------------------------------
+   handle svn_client_prompt_t/baton pairs
+*/
+
+%typemap(java,memberin) (svn_client_prompt_t prompt_func, 
+                   void *prompt_baton) {
+  //$1 = svn_swig_java_client_prompt_func;
+  //$2 = svn_swig_java_make_callback_baton(jenv, $input, _global_pool);
+}
+
+%typemap(java,in) (svn_client_prompt_t prompt_func, 
+                   void *prompt_baton) {
+  $1 = svn_swig_java_client_prompt_func;
+  $2 = svn_swig_java_make_callback_baton(jenv, $input, _global_pool);
+}
+
+%typemap(java, jni) svn_client_prompt_t "jobject"
+%typemap(java, jtype) svn_client_prompt_t "org.tigris.subversion.client.ClientPrompt"
+%typemap(java, jstype) svn_client_prompt_t "org.tigris.subversion.client.ClientPrompt"
+%typemap(java, javain) svn_client_prompt_t "$javainput"
 
 /* -----------------------------------------------------------------------
    handle svn_client_get_commit_log_t/baton pairs
@@ -166,6 +198,9 @@
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
 }
 
+%typemap(perl5,argout) apr_hash_t **statushash {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    fix up the return hash for svn_client_ls() 
 */
@@ -175,6 +210,9 @@
 	$result = t_output_helper(
 		$result,
 		svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_dirent_t));
+}
+%typemap(perl5,argout) apr_hash_t **dirents {
+    /* ### FIXME-perl */
 }
 
 /* -----------------------------------------------------------------------

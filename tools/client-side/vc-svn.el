@@ -11,17 +11,52 @@
 ;;; VC patches.
 
 
+;;; To make this file load on demand, put this file into a directory
+;;; in `load-path', and add this line to a startup file:
+;;;
+;;;     (add-to-list 'vc-handled-backends 'SVN)
+
+
 ;;; To do here:
 ;;; Provide more of the optional VC backend functions: 
 ;;; - dir-state
-;;; - mode-line-string, to show newly added files, modified props?
-;;;   see vc-cvs-mode-line-string
+;;; - merge across arbitrary revisions
+;;;
+;;; Maybe we want more info in mode-line-string.  Status of props?  Status 
+;;; compared to what's in the repository (svn st -u) ? 
 ;;;
 ;;; VC passes the vc-svn-register function a COMMENT argument, which
 ;;; is like the file description in CVS and RCS.  Could we store the
 ;;; COMMENT as a Subversion property?  Would that show up in fancy DAV
 ;;; web folder displays, or would it just languish in obscurity, the
 ;;; way CVS and RCS descriptions do?
+;;;
+;;; After manual merging, need some way to run `svn resolve'.  Perhaps
+;;; we should just prompt for approval when somebody tries to commit a
+;;; conflicted file?
+;;;
+;;; vc-svn ought to handle more gracefully an attempted commit that
+;;; fails with "Transaction is out of date".  Probably the best
+;;; approach is to ask "file is not up-to-date; do you want to merge
+;;; now?"  I think vc-cvs does this.
+;;;
+;;; Perhaps show the "conflicted" marker in the modeline?
+;;;
+;;; If conflicted, before committing or merging, ask the user if they
+;;; want to mark the file as resolved.
+;;;
+;;; Won't searching for strings in svn output cause trouble if the
+;;; locale language is not English?
+;;;
+;;; After merging news, need to recheck our idea of which workfile
+;;; version we have.  Reverting the file does this but we need to
+;;; force it.  Note that this can be necessary even if the file has
+;;; not changed.
+;;;
+;;; Does everything work properly if we're rolled back to an old
+;;; revision?
+;;;
+;;; Perhaps need to implement vc-svn-latest-on-branch-p?
 
 
 ;;; To do in VC:
@@ -38,6 +73,17 @@
 ;;;
 ;;; Should vc-BACKEND-checkout really have to set the workfile version
 ;;; itself?
+;;;
+;;; Fix smerge for svn conflict markers.
+;;;
+;;; We can have files which are not editable for reasons other than
+;;; needing to be checked out.  For example, they might be a read-only
+;;; view of an old revision opened with [C-x v ~].  (See vc-merge)
+;;;
+;;; Would be nice if there was a way to mark a file as
+;;; just-checked-out, aside from updating the checkout-time property
+;;; which in theory is not to be changed by backends.
+
 
 (add-to-list 'vc-handled-backends 'SVN)
 
@@ -136,6 +182,7 @@ If the file is newly added, LOCAL is \"0\" and CHANGED is nil."
       (list state
             (match-string 2)
             (match-string 3)))
+     ((looking-at "^I +") nil)       ;; An ignored file
      ((looking-at " \\{40\\}") nil)  ;; A file that is not in the wc nor svn?
      (t (error "Couldn't parse output from `svn status -v'")))))
 
@@ -148,8 +195,9 @@ The documentation for the function `vc-state' describes the possible values."
    ;; positives, if the clauses preceding them didn't screen those
    ;; out.  Making a pattern more selective could break something.
 
-   ;; nil                 The given file is not under version control.
-   ((looking-at "\\?") nil)
+   ;; nil                 The given file is not under version control,
+   ;;                     or does not exist.
+   ((looking-at "\\?\\|^$") nil)
 
    ;; 'needs-patch        The file has not been edited by the
    ;;                     user, but there is a more recent version
@@ -181,13 +229,24 @@ The documentation for the function `vc-state' describes the possible values."
    (t 'edited)))
 
 
+;;; Is it really safe not to check for updates?  I haven't seen any
+;;; cases where failing to check causes a problem that is not caught
+;;; in some other way.  However, there *are* cases where checking
+;;; needlessly causes network delay, such as C-x v v.  The common case
+;;; is for the commit to be OK; we can handle errors if they occur. -- mbp
 (defun vc-svn-state (file)
   "Return the current version control state of FILE.
 For a list of possible return values, see `vc-state'.
+
 This function should do a full and reliable state computation; it is
 usually called immediately after `C-x v v'.  `vc-svn-state-heuristic'
-provides a faster heuristic when visiting a file."
-  (car (vc-svn-run-status file 'update)))
+provides a faster heuristic when visiting a file.
+
+For svn this does *not* check for updates in the repository, because
+that needlessly slows down vc when the repository is remote.  Instead,
+we rely on Subversion to trap situations such as needing a merge
+before commit."
+  (car (vc-svn-run-status file)))
 
 
 (defun vc-svn-state-heuristic (file)
@@ -255,19 +314,44 @@ function ignores the CONTENTS-DONE argument."
   (vc-do-command nil 0 vc-svn-program-name file "revert"))
 
 
+(defun vc-svn-merge-news (file)
+  "Merge recent changes into FILE.
+
+This calls `svn update'.  In the case of conflicts, Subversion puts
+conflict markers into the file and leaves additional temporary files
+containing the `ancestor', `mine', and `other' files.
+
+You may need to run `svn resolve' by hand once these conflicts have
+been resolved.  
+
+Returns a vc status, which is used to determine whether conflicts need
+to be merged."
+  (prog1
+      (vc-do-command nil 0 vc-svn-program-name file "update")
+    
+    ;; This file may not have changed in the revisions which were
+    ;; merged, which means that its mtime on disk will not have been
+    ;; updated.  However, the workfile version may still have been
+    ;; updated, and we want that to be shown correctly in the
+    ;; modeline.
+
+    ;; vc-cvs does something like this
+    (vc-file-setprop file 'vc-checkout-time 0)
+    (vc-file-setprop file 'vc-workfile-version
+                     (vc-svn-workfile-version file))))
+
+
 (defun vc-svn-print-log (file)
   "Insert the revision log of FILE into the *vc* buffer."
   (vc-do-command nil 'async vc-svn-program-name file "log"))
 
 
-;;; This never gets called, due to a bug vc-print-log that makes it 
-;;; try to use log-view-mode no matter what the back end.  Boo.
 (defun vc-svn-show-log-entry (version)
   "Search the log entry for VERSION in the current buffer.
 Make sure it is displayed in the buffer's window."
   (when (re-search-forward (concat "^-+\n\\(rev\\) "
                                    (regexp-quote version)
-                                   ":[^|]|[^|]| [0-9]+ lines?"))
+                                   ":[^|]+|[^|]+| [0-9]+ lines?"))
     (goto-char (match-beginning 1))
     (recenter 1)))
 
@@ -280,7 +364,12 @@ repository) as the older version; if REV2 is nil, use the current
 workfile contents as the newer version.
 This function returns a status of either 0 (no differences found), or
 1 (either non-empty diff or the diff is run asynchronously)."
-  (let* ((diff-switches-list (vc-diff-switches-list svn))
+  (let* ((diff-switches-list
+          ;; In Emacs 21.3.50 or so, the `vc-diff-switches-list' macro
+          ;; started requiring its symbol argument to be quoted.
+          (condition-case nil
+              (vc-diff-switches-list svn)
+            (void-variable (vc-diff-switches-list 'SVN))))
          (status (vc-svn-run-status file))
          (local (elt status 1))
          (changed (elt status 2))
@@ -318,5 +407,8 @@ This function returns a status of either 0 (no differences found), or
       (if (or async (> (buffer-size (get-buffer "*vc-diff*")) 0))
           1 0))))
 
+(defun vc-svn-find-version (file rev buffer)
+  (vc-do-command buffer 0 vc-svn-program-name file 
+         "cat" "-r" rev))
 
 (provide 'vc-svn)

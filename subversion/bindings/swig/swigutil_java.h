@@ -40,6 +40,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* convert an svn_error_t into a SubversionException and clear error */
+jthrowable svn_swig_java_convert_error(JNIEnv *jenv, svn_error_t *error);
+
 /* helper function to convert an apr_hash_t* (char* -> svnstring_t*) to
    a Java Map */
 jobject svn_swig_java_prophash_to_dict(JNIEnv *jenv, apr_hash_t *hash);
@@ -90,6 +93,10 @@ void svn_swig_java_notify_func(void *baton,
                                svn_wc_notify_state_t prop_state,
                                svn_revnum_t revision);
 
+/* a cancel function that executes a Java method on an object passed
+   in via the cancel_baton argument. */
+svn_error_t *svn_swig_java_cancel_func(void *cancel_baton);
+
 /* thunked commit log fetcher */
 svn_error_t *svn_swig_java_get_commit_log_func(const char **log_msg,
                                               const char **tmp_file,
@@ -105,6 +112,18 @@ svn_error_t *svn_swig_java_log_message_receiver(void *baton,
       const char *date,  /* use svn_time_from_string() if need apr_time_t */
       const char *message,
       apr_pool_t *pool);
+
+/* Create a callback baton */
+void *svn_swig_java_make_callback_baton(JNIEnv *jenv,
+                                        jobject callback,
+                                        apr_pool_t *pool);
+
+/* Prompt for username */
+svn_error_t *svn_swig_java_client_prompt_func(const char **info,
+                                              const char *prompt,
+                                              svn_boolean_t hide,
+                                              void *baton,
+                                              apr_pool_t *pool);
 
 /* Create write-only svn_stream_t from java.io.OutputStream */
 svn_stream_t *svn_swig_java_outputstream_to_stream(JNIEnv *jenv, 

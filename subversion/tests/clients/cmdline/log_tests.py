@@ -32,7 +32,7 @@ import svntest
 # add, del, mv, cp, as well as file modifications, and make sure that
 # some files are modified more than once.
 #
-# Give each commit a recognizeable log message.  Test all combinations
+# Give each commit a recognizable log message.  Test all combinations
 # of -r options, including none.  Then test with -v, which will
 # (presumably) show changed paths as well.
 #
@@ -63,11 +63,10 @@ Item = svntest.wc.StateItem
 #
 
 def guarantee_repos_and_wc(sbox):
-  "Make a repos and wc, commit max_revision revs.  Return 0 on success."
+  "Make a repos and wc, commit max_revision revs."
   global max_revision
 
-  if sbox.build():
-    return 1
+  sbox.build()
 
   wc_path = sbox.wc_dir
 
@@ -160,7 +159,7 @@ def guarantee_repos_and_wc(sbox):
   expected_status.tweak('A/B', 'A/mu', status='  ')
 
   # Run 'svn st -uv' and compare the actual results with our tree.
-  return svntest.actions.run_and_verify_status(wc_path, expected_status)
+  svntest.actions.run_and_verify_status(wc_path, expected_status)
 
 
 
@@ -262,12 +261,12 @@ def parse_log_output(log_lines):
   return chain
 
 
-def check_log_chain (chain, start, end):
+def check_log_chain (chain, revlist):
   """Verify that log chain CHAIN contains the right log messages for
   revisions START to END (see documentation for parse_log_output() for
   more about log chains.)
 
-  Return 0 if the log chain's messages run from revision START to END
+  Do nothing if the log chain's messages run from revision START to END
   with no gaps, and that each log message is one line of the form
 
      'Log message for revision N'
@@ -276,37 +275,34 @@ def check_log_chain (chain, start, end):
   author and date are present and look sane, but don't check them too
   carefully.
 
-  Return 1 if anything looks wrong.
+  Raise if anything looks wrong.
   """
 
-  if start > end:
-    step = -1
-  else:
-    step = 1
-  
-  for expect_rev in range (start, end + step, step):
+  for expect_rev in revlist:
     log_item = chain.pop (0)
     saw_rev = string.atoi (log_item['revision'])
     date = log_item['date']
     author = log_item['author']
     msg = log_item['msg']
     # The most important check is that the revision is right:
-    if expect_rev != saw_rev: return 1
-    # Check that author and date look at least vaguely right:
-    author_re = re.compile ('[a-zA-Z]+')
+    if expect_rev != saw_rev: raise svntest.Failure
+    # Check that date looks at least vaguely right:
     date_re = re.compile ('[0-9]+')
-    if (not author_re.search (author)): return 1
-    if (not date_re.search (date)): return 1
+    if (not date_re.search (date)): raise svntest.Failure
+    # Authors are a little harder, since they might not exist over ra-dav.
+    # Well, it's not much of a check, but we'll do what we can.
+    author_re = re.compile ('[a-zA-Z]+')
+    if (not (author_re.search (author)
+             or author == ''
+             or author == '(no author)')): raise svntest.Failure
     # Check that the log message looks right:
     msg_re = re.compile ('Log message for revision ' + `saw_rev`)
-    if (not msg_re.search (msg)): return 1
+    if (not msg_re.search (msg)): raise svntest.Failure
 
   ### todo: need some multi-line log messages mixed in with the
   ### one-liners.  Easy enough, just make the prime revisions use REV
   ### lines, and the rest use 1 line, or something, so it's
   ### predictable based on REV.
-
-  return 0
 
 
 ######################################################################
@@ -317,8 +313,7 @@ def check_log_chain (chain, start, end):
 def plain_log(sbox):
   "'svn log', no args, top of wc."
 
-  if guarantee_repos_and_wc(sbox):
-    return 1
+  guarantee_repos_and_wc(sbox)
 
   result = 0
 
@@ -329,22 +324,21 @@ def plain_log(sbox):
 
   if errput:
     os.chdir (was_cwd)
-    return 1
+    raise svntest.Failure
 
   log_chain = parse_log_output (output)
-  if check_log_chain (log_chain, max_revision, 1):
+  if check_log_chain (log_chain, range(max_revision, 1 - 1, -1)):
     os.chdir (was_cwd)
-    return 1
+    raise svntest.Failure
 
   os.chdir (was_cwd)
-  return 0
 
 
+#----------------------------------------------------------------------
 def versioned_log_message(sbox):
   "'svn commit -F foo' when foo is a versioned file"
 
-  if sbox.build():
-    return 1
+  sbox.build()
 
   was_cwd = os.getcwd ()
   os.chdir (sbox.wc_dir)
@@ -361,15 +355,15 @@ def versioned_log_message(sbox):
   # make sure we failed.
   if (len(stderr_lines) <= 0):
     os.chdir (was_cwd)
-    return 1
+    raise svntest.Failure
 
   # force it.  should not produce any errors.
   stdout_lines, stderr_lines = \
-    svntest.main.run_svn (None, 'ci', '-F', log_path, '--force')
+    svntest.main.run_svn (None, 'ci', '-F', log_path, '--force-log')
 
   if (len(stderr_lines) != 0):
     os.chdir (was_cwd)
-    return 1
+    raise svntest.Failure
 
   svntest.main.file_append (mu_path, "2")
 
@@ -380,20 +374,20 @@ def versioned_log_message(sbox):
   # make sure it failed.
   if (len(stderr_lines) <= 0):
     os.chdir (was_cwd)
-    return 1
+    raise svntest.Failure
 
   # force it...  should succeed.
   stdout_lines, stderr_lines = \
-    svntest.main.run_svn (None, 'ci', '-F', log_path, '--force', mu_path)
+    svntest.main.run_svn (None, 'ci', '-F', log_path, '--force-log', mu_path)
 
   if (len(stderr_lines) != 0):
     os.chdir (was_cwd)
-    return 1
+    raise svntest.Failure
 
   os.chdir (was_cwd)
-  return 0
 
 
+#----------------------------------------------------------------------
 def log_with_empty_repos(sbox):
   "test 'svn log' on an empty repository"
 
@@ -401,6 +395,7 @@ def log_with_empty_repos(sbox):
   if os.path.exists(sbox.repo_dir):
     shutil.rmtree(sbox.repo_dir)
   svntest.main.create_repos(sbox.repo_dir)
+  svntest.main.set_repos_paths(sbox.repo_dir)
 
   stdout_lines, stderr_lines = svntest.main.run_svn\
                                (None, 'log',
@@ -409,43 +404,69 @@ def log_with_empty_repos(sbox):
                                 svntest.main.current_repo_url)
 
   if (len(stderr_lines) != 0):
-    return 1
-
-  return 0
+    raise svntest.Failure
 
 
+#----------------------------------------------------------------------
 def log_where_nothing_changed(sbox):
   "test 'svn log -rN some_dir_unchanged_in_N'"
-  if sbox.build():
-    return 1
+  sbox.build()
 
   # Fix bug whereby running 'svn log -rN SOMEPATH' would result in an
   # xml protocol error if there were no changes in revision N
   # underneath SOMEPATH.  This problem was introduced in revision
   # 3811, which didn't cover the case where svn_repos_get_logs might
-  # invoke log_receiver zero times.  Since the reciever never ran, the
+  # invoke log_receiver zero times.  Since the receiver never ran, the
   # lrb->needs_header flag never got cleared.  Control would proceed
   # without error to the end of dav_svn__log_report(), which would
   # send a closing tag even though no opening tag had ever been sent.
 
   rho_path = os.path.join (sbox.wc_dir, 'A', 'D', 'G', 'rho')
   svntest.main.file_append (rho_path, "some new material in rho")
-  stdout_lines, stderr_lines = svntest.main.run_svn \
-                               (None, 'ci', '-m', 'log msg', rho_path)
-  if (len(stderr_lines) != 0):
-    print stderr_lines
-    return 1
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'log msg', rho_path)
 
   # Now run 'svn log -r2' on a directory unaffected by revision 2.
   H_path = os.path.join (sbox.wc_dir, 'A', 'D', 'H')
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'log', '-r', '2',
-                                                    H_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'log', '-r', '2', H_path)
 
-  if (len(stderr_lines) != 0):
-    print stderr_lines
-    return 1
 
-  return 0
+#----------------------------------------------------------------------
+def log_to_revision_zero(sbox):
+  "Make sure 'svn log -v -r 1:0 wc_root' doesn't seg fault the server."
+  sbox.build()
+  stdout_lines, stderr_lines = svntest.main.run_svn(0, 'log', '-v',
+                                                    '-r', '1:0', sbox.wc_dir)
+  if stderr_lines:
+    raise svntest.Failure
+
+
+#----------------------------------------------------------------------
+def log_with_path_args(sbox):
+  "'svn log', no args, top of wc."
+
+  guarantee_repos_and_wc(sbox)
+
+  result = 0
+
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  output, errput = svntest.main.run_svn (None, 'log',
+                                         svntest.main.current_repo_url,
+                                         'A/D/G', 'A/D/H')
+
+  if errput:
+    os.chdir (was_cwd)
+    raise svntest.Failure
+
+  log_chain = parse_log_output (output)
+  if check_log_chain (log_chain, [8, 6, 5, 3, 1]):
+    os.chdir (was_cwd)
+    raise svntest.Failure
+
+  os.chdir (was_cwd)
 
 
 ########################################################################
@@ -458,6 +479,8 @@ test_list = [ None,
               versioned_log_message,
               log_with_empty_repos,
               log_where_nothing_changed,
+              log_to_revision_zero,
+              log_with_path_args,
              ]
 
 if __name__ == '__main__':

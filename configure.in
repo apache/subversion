@@ -22,12 +22,19 @@ define([subversion_version],
        ifdef([__gnu__],
 	     [esyscmd(build/getversion.py subversion/include/svn_version.h)],
 	     [0.x]))
-AC_INIT(subversion, subversion_version, [http://subversion.tigris.org])
+AC_INIT(subversion, subversion_version, [http://subversion.tigris.org/])
 undefine([subversion_version])
 
 dnl AC_CONFIG_SRCDIR is *required*;  sanity-checks that our src dir exists.
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
 AC_CONFIG_AUX_DIR(ac-helpers)
+
+dnl What version of Subversion are we configuring?
+# Note: this could be different from PACKAGE_VERSION. That symbol gets
+# defined at M4 evaluation time, but only for GNU M4. Other M4
+# implementations might end up with just "0.x"
+svn_version="`$srcdir/build/getversion.py $srcdir/subversion/include/svn_version.h`"
+echo "Configuring Subversion $svn_version"
 
 abs_srcdir="`cd $srcdir && pwd`"
 abs_builddir="`pwd`"
@@ -43,39 +50,20 @@ MKDIR="$INSTALL -d"
 AC_SUBST(MKDIR)
 
 dnl Grab our own macros
-sinclude(ac-helpers/berkeley-db.m4)
-sinclude(ac-helpers/svn-apache.m4)
-sinclude(ac-helpers/svn-macros.m4)
-sinclude(ac-helpers/neon.m4)
-sinclude(ac-helpers/find_apr.m4)
-sinclude(ac-helpers/apr.m4)
-sinclude(ac-helpers/find_apu.m4)
-sinclude(ac-helpers/aprutil.m4)
-sinclude(ac-helpers/java.m4)
-sinclude(ac-helpers/swig.m4)
-sinclude(ac-helpers/gnu-diff.m4)
+sinclude(build/ac-macros/berkeley-db.m4)
+sinclude(build/ac-macros/svn-apache.m4)
+sinclude(build/ac-macros/svn-macros.m4)
+sinclude(build/ac-macros/neon.m4)
+sinclude(build/ac-macros/find_apr.m4)
+sinclude(build/ac-macros/apr.m4)
+sinclude(build/ac-macros/find_apu.m4)
+sinclude(build/ac-macros/aprutil.m4)
+sinclude(build/ac-macros/java.m4)
+sinclude(build/ac-macros/swig.m4)
+
 
 dnl Grab the libtool macros
 sinclude(ac-helpers/libtool.m4)
-
-
-dnl Create SVN_BINDIR for proper substitution
-if test "${bindir}" = '${exec_prefix}/bin'; then
-        if test "${exec_prefix}" = "NONE"; then
-                if test "${prefix}" = "NONE"; then
-                        SVN_BINDIR="${ac_default_prefix}/bin"
-                else
-                        SVN_BINDIR="${prefix}/bin"
-                fi
-        else
-                SVN_BINDIR="${exec_prefix}/bin"
-        fi
-else
-        SVN_BINDIR="${bindir}"
-fi
-
-eval  SVN_BINDIR=${SVN_BINDIR}
-AC_SUBST(SVN_BINDIR)
 
 
 dnl Generate config.nice early (before the args are munged)
@@ -119,8 +107,8 @@ dnl Configure APR, and local Berkeley DB if any --------------------------
 
 dnl verify apr version and set apr flags
 changequote(<<, >>)
-APR_VER_REGEX="0\.9\.[2-9]"
-APU_VER_REGEX="0\.9\.[2-9]"
+APR_VER_REGEX="0\.9\.[3-9]"
+APU_VER_REGEX="0\.9\.[3-9]"
 changequote([, ])
 
 SVN_LIB_APR($APR_VER_REGEX)
@@ -134,34 +122,90 @@ if test -d $abs_srcdir/db ; then
     SVN_SUBDIRS="$SVN_SUBDIRS db/dist"
 fi
 
-dnl Set include dir and module library lists for Makefiles -----------------
+dnl What version of Expat are we using? -----------------
 
-dnl Expat
 APU_HAVE_OLD_EXPAT="`$apu_config --old-expat`"
 if test "$APU_HAVE_OLD_EXPAT" = "yes"; then
   AC_DEFINE(SVN_HAVE_OLD_EXPAT, 1, [Defined if Expat 1.0 or 1.1 was found])
 fi
 
-dnl Define the location of our templates ---------------------
 
-dnl ### I'm not sure of the best way for us to handle config of this value.
-dnl ### we probably want a version number in this path, too.
-dnl ### note that we use 'eval' to fully evaluate the value (prolly not good)
-template_dir="`eval echo ${datadir}/subversion/templates`"
-AC_DEFINE_UNQUOTED(SVN_TEMPLATE_ROOT_DIR, "$template_dir",
+dnl Set up a number of directories ---------------------
+
+dnl Create SVN_BINDIR for proper substitution
+if test "${bindir}" = '${exec_prefix}/bin'; then
+        if test "${exec_prefix}" = "NONE"; then
+                if test "${prefix}" = "NONE"; then
+                        SVN_BINDIR="${ac_default_prefix}/bin"
+                else
+                        SVN_BINDIR="${prefix}/bin"
+                fi
+        else
+                SVN_BINDIR="${exec_prefix}/bin"
+        fi
+else
+        SVN_BINDIR="${bindir}"
+fi
+
+dnl fully evaluate this value. when we substitute it into our tool scripts,
+dnl they will not have things such as ${bindir} available
+SVN_BINDIR="`eval echo ${SVN_BINDIR}`"
+AC_SUBST(SVN_BINDIR)
+
+
+dnl This directory is where we will store our data. We don't want to
+dnl evaluate it so that later changes in datadir will propagate properly
+svndatadir='${datadir}/subversion'
+
+
+dnl ### do we want this to be alterable via a cmdline switch?
+templatedir="${svndatadir}/${svn_version}/templates"
+AC_SUBST(templatedir)
+
+dnl We want to fully evaluate the template directory for the constant
+dnl that we compile into the code.
+def_template_dir="`eval echo ${templatedir}`"
+def_template_dir="`eval echo ${def_template_dir}`"
+AC_DEFINE_UNQUOTED(SVN_TEMPLATE_ROOT_DIR, "$def_template_dir",
                    [Location of the on-disk and in-repos templates.])
+
+docdir='${datadir}/doc'
+docdir="${docdir}/subversion-${svn_version}"
+AC_SUBST(docdir)
 
 dnl Check for programs ---------------------
 
 dnl Look for a C compiler
 AC_PROG_CC
 
+dnl Look for a C pre-processor
+AC_PROG_CPP
+
+dnl Pass EXEEXT on to the Makefiles
+AC_SUBST(EXEEXT)
+
+dnl Look for an extended grep, this macro appeared in autoconf-2.53b
+ifdef([AC_PROG_EGREP],[AC_PROG_EGREP],[])
+
 dnl See if 'ln -s' works
 AC_PROG_LN_S
 
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
 echo "configuring libtool now"
+AC_ARG_ENABLE(experimental-libtool,
+  AC_HELP_STRING([--experimental-libtool],[Use APR's libtool]),
+  [experimental_libtool=$enableval],[experimental_libtool=no])
+
+if test "$experimental_libtool" = "yes"; then
+  echo "using APR's libtool"
+  LIBTOOL="`$apr_config --apr-libtool`"
+  SVN_LIBTOOL="`$apr_config --apr-libtool`"
+else
+  SVN_LIBTOOL='$(SHELL) $(abs_builddir)/libtool'
+  dnl libtoolize requires that the following line not be indented
 AC_PROG_LIBTOOL
+fi
+AC_SUBST(SVN_LIBTOOL)
 
 dnl Before configuring libtool check for --enable-all-static option
 AC_ARG_ENABLE(all-static,
@@ -202,9 +246,19 @@ AC_CHECK_LIB(socket, socket)
 
 # Build the filesystem library (and repository administration tool)
 # only if we have an appropriate version of Berkeley DB.
-SVN_FS_WANT_DB_MAJOR=4
-SVN_FS_WANT_DB_MINOR=0
-SVN_FS_WANT_DB_PATCH=14
+case "$host" in
+powerpc-apple-darwin*)
+    # Berkeley DB 4.0 does not work on OS X.
+    SVN_FS_WANT_DB_MAJOR=4
+    SVN_FS_WANT_DB_MINOR=1
+    SVN_FS_WANT_DB_PATCH=25
+    ;;
+*)
+    SVN_FS_WANT_DB_MAJOR=4
+    SVN_FS_WANT_DB_MINOR=0
+    SVN_FS_WANT_DB_PATCH=14
+    ;;
+esac
 # Look for libdb4.so first:
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH, [db4 db])
@@ -220,6 +274,12 @@ if test "$svn_lib_berkeley_db" = "yes"; then
   INSTALL_RULES="install-base-lib install-fs-lib install-lib install-include install-static $INSTALL_APACHE_RULE"
   FS_TEST_DEPS="\$(FS_TEST_DEPS)"
   FS_TEST_PROGRAMS="\$(FS_TEST_PROGRAMS)"
+fi
+
+if test "$svn_lib_neon" = "yes"; then
+  BUILD_RULES="$BUILD_RULES dav-lib"
+  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-dav-lib"
+  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-dav-lib install-lib/'`"
 fi
 
 AC_SUBST(BUILD_RULES)
@@ -288,6 +348,21 @@ AC_HELP_STRING([--with-editor=PATH],
     fi
 
 ])
+
+AC_ARG_WITH(zlib,
+AC_HELP_STRING([--with-zlib], [enable zlib support]),
+[
+
+    if test "$withval" = "yes" ; then
+       AC_CHECK_HEADER(zlib.h, [
+           AC_CHECK_LIB(z, inflate, [
+               AC_DEFINE([SVN_HAVE_ZLIB], [1], [Is zlib support enabled?])
+               LIBS="$LIBS -lz"
+           ])
+       ])
+    fi
+
+])
     
 MOD_ACTIVATION="-a"
 AC_ARG_ENABLE(mod-activation,
@@ -317,6 +392,11 @@ AC_HELP_STRING([--enable-maintainer-mode],
         dnl SVN_DEBUG enables specific features for developer builds
         dnl AP_DEBUG enables specific (Apache) features for developer builds
         CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow -DSVN_DEBUG -DAP_DEBUG";
+        case "$host" in
+        *freebsd*|*linux*)
+          CFLAGS="$CFLAGS -std=c89"
+          ;;
+        esac
       fi
     fi
 ])
@@ -336,9 +416,6 @@ else
     changequote([,])
   fi
 fi
-
-dnl Find suitable diff utilities
-SVN_LIB_DIFFUTILS(${abs_srcdir}/ac-helpers)
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
@@ -383,10 +460,12 @@ AC_HELP_STRING([--enable-dso], [Turn on DSO loading of RA libraries]),
 ])
 
 if test "$enable_shared" = "no" -o "$enable_dso" != "yes"; then
-  AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
-        [Defined if libsvn_client should link against libsvn_ra_dav])
-  svn_ra_lib_deps="\$(RA_DAV_DEPS)"
-  svn_ra_lib_link="\$(RA_DAV_LINK)"
+  if test "$svn_lib_neon" = "yes"; then
+    AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
+          [Defined if libsvn_client should link against libsvn_ra_dav])
+    svn_ra_lib_deps="\$(RA_DAV_DEPS)"
+    svn_ra_lib_link="\$(RA_DAV_LINK)"
+  fi
 
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_SVN, 1,
       [Defined if libsvn_client should link against libsvn_ra_svn])
@@ -470,7 +549,7 @@ Berkeley DB version $db_version or newer, which you don't seem to have
 installed.  We have created makefiles which will build the Subversion
 client code only, and skip the server.  You can find latest version of
 Berkeley DB at http://www.sleepycat.com/.  You can find the latest
-version of Berkeley DB here: http://www.sleepycat.com/download.html
+version of Berkeley DB here: http://www.sleepycat.com/download/index.shtml
 
 As an option, you may build Berkeley DB directly within the Subversion
 source tree. Download and extract the Berkeley distribution, then

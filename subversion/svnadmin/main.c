@@ -33,16 +33,6 @@
 
 /* Helper to open stdio streams */
 
-/* NOTE: we used to call svn_stream_from_stdio(), which wraps a stream
-   around a standard stdio.h FILE pointer.  The problem is that these
-   pointers operate through C Run Time (CRT) on Win32, which does all
-   sorts of translation on them: LF's become CRLF's, and ctrl-Z's
-   embedded in Word documents are interpreted as premature EOF's.
-
-   So instead, we use apr_file_open_std*, which bypass the CRT and
-   directly wrap the OS's file-handles, which don't know or care about
-   translation.  Thus dump/load works correctly on Win32.
- */
 static svn_error_t *
 create_stdio_stream (svn_stream_t **stream,
                      APR_DECLARE(apr_status_t) open_fn (apr_file_t **, 
@@ -65,6 +55,7 @@ create_stdio_stream (svn_stream_t **stream,
 /** Subcommands. **/
 
 static svn_opt_subcommand_t
+  subcommand_archive,
   subcommand_create,
   subcommand_createtxn,
   subcommand_dump,
@@ -78,12 +69,15 @@ static svn_opt_subcommand_t
 
 enum 
   { 
-    svnadmin__incremental = SVN_OPT_FIRST_LONGOPT_ID,
+    svnadmin__version = SVN_OPT_FIRST_LONGOPT_ID,
+    svnadmin__incremental,
     svnadmin__follow_copies,
     svnadmin__on_disk_template,
     svnadmin__in_repos_template,
     svnadmin__ignore_uuid,
-    svnadmin__force_uuid
+    svnadmin__force_uuid,
+    svnadmin__parent_dir,
+    svnadmin__bdb_txn_nosync
   };
 
 /* Option codes and descriptions.
@@ -100,6 +94,9 @@ static const apr_getopt_option_t options_table[] =
 
     {NULL,            '?', 0,
      "show help on a subcommand"},
+
+    {"version",       svnadmin__version, 0,
+     "show version information"},
 
     {"revision",      'r', 1,
      "specify revision number ARG (or X:Y range)"},
@@ -125,6 +122,12 @@ static const apr_getopt_option_t options_table[] =
     {"force-uuid", svnadmin__force_uuid, 0,
      "set repos UUID to that found in stream, if any."},
 
+    {"parent-dir", svnadmin__parent_dir, 1,
+     "load at specified directory in repository"},
+
+    {SVN_FS_CONFIG_BDB_TXN_NOSYNC, svnadmin__bdb_txn_nosync, 0,
+     "disable fsync at database transaction commit [Berkeley DB]."},
+
     {NULL}
   };
 
@@ -134,10 +137,16 @@ static const apr_getopt_option_t options_table[] =
  */
 static const svn_opt_subcommand_desc_t cmd_table[] =
   {
+    {"archive", subcommand_archive, {0},
+     "usage: svnadmin archive REPOS_PATH\n\n"
+     "Ask Berkeley DB which logfiles can be safely deleted.\n\n",
+     {0} },
+
     {"create", subcommand_create, {0},
      "usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n",
-     {svnadmin__on_disk_template, svnadmin__in_repos_template} },
+     {svnadmin__on_disk_template, svnadmin__in_repos_template,
+      svnadmin__bdb_txn_nosync} },
     
     {"createtxn", subcommand_createtxn, {0},
      "usage: svnadmin createtxn REPOS_PATH -r REVISION\n\n"
@@ -157,7 +166,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"help", subcommand_help, {"?", "h"},
      "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
      "Display this usage message.\n",
-     {0} },
+     {svnadmin__version} },
 
     {"load", subcommand_load, {0},
      "usage: svnadmin load REPOS_PATH\n\n"
@@ -165,7 +174,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "new revisions into the repository's filesystem.  If the repository\n"
      "was previously empty, its UUID will, by default, be changed to the\n"
      "one specified in the stream.  Progress feedback is sent to stdout.\n",
-     {svnadmin__ignore_uuid, svnadmin__force_uuid} },
+     {svnadmin__ignore_uuid, svnadmin__force_uuid, svnadmin__parent_dir} },
 
     {"lscr", subcommand_lscr, {0},
      "usage: svnadmin lscr REPOS_PATH PATH [--copies]\n\n"
@@ -213,13 +222,16 @@ struct svnadmin_opt_state
   const char *repository_path;
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
+  svn_boolean_t version;                            /* --version */
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t follow_copies;                      /* --copies */
   svn_boolean_t quiet;                              /* --quiet */
+  svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   const char *on_disk;
   const char *in_repos;
+  const char *parent_dir;
 };
 
 /* This implements `svn_opt_subcommand_t'. */
@@ -229,11 +241,19 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   apr_hash_t *config;
-  
+  apr_hash_t *fs_config = NULL;
+
+  if (opt_state->bdb_txn_nosync)
+    {
+      fs_config = apr_hash_make (pool);
+      apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                    APR_HASH_KEY_STRING, "1");
+    }
+
   SVN_ERR (svn_config_get_config (&config, pool));
   SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
                              opt_state->on_disk, opt_state->in_repos, 
-                             config, pool));
+                             config, fs_config, pool));
 
   return SVN_NO_ERROR;
 }
@@ -283,11 +303,15 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* ### We only handle revision numbers right now, not dates. */
   if (opt_state->start_revision.kind == svn_opt_revision_number)
     lower = opt_state->start_revision.value.number;
+  else if (opt_state->start_revision.kind == svn_opt_revision_head)
+    svn_fs_youngest_rev (&lower, fs, pool);
   else
     lower = SVN_INVALID_REVNUM;
 
   if (opt_state->end_revision.kind == svn_opt_revision_number)
     upper = opt_state->end_revision.value.number;
+  else if (opt_state->end_revision.kind == svn_opt_revision_head)
+    svn_fs_youngest_rev (&upper, fs, pool);
   else
     upper = SVN_INVALID_REVNUM;
 
@@ -329,13 +353,16 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 static svn_error_t *
 subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
+  struct svnadmin_opt_state *opt_state = baton;
   const char *header =
     "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
     "Type \"svnadmin help <subcommand>\" for help on a specific subcommand.\n"
     "\n"
     "Available subcommands:\n";
 
-  SVN_ERR (svn_opt_print_help (os, "svnadmin", FALSE, FALSE, NULL,
+  SVN_ERR (svn_opt_print_help (os, "svnadmin", 
+                               opt_state ? opt_state->version : FALSE,
+                               FALSE, NULL,
                                header, cmd_table, options_table, NULL,
                                pool));
   
@@ -350,7 +377,7 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_stream_t *stdin_stream, *stdout_stream;
-  
+
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
   
   /* Read the stream from STDIN.  Users can redirect a file. */
@@ -362,7 +389,8 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                 apr_file_open_stdout, pool));
   
   SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream,
-                              opt_state->uuid_action, pool));
+                              opt_state->uuid_action, opt_state->parent_dir,
+                              pool));
 
   return SVN_NO_ERROR;
 }
@@ -458,6 +486,31 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+
+/* This implements `svn_opt_subcommand_t'. */
+svn_error_t *
+subcommand_archive (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  struct svnadmin_opt_state *opt_state = baton;
+  char **logfiles;
+  char **filename;
+
+  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+
+  SVN_ERR (svn_fs_berkeley_archive (&logfiles,
+                                    svn_repos_db_env (repos, pool), pool));
+
+  if (logfiles == NULL)
+    return SVN_NO_ERROR;
+
+  for (filename = logfiles; *filename != NULL; ++filename)
+    printf ("%s\n", *filename);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* This implements `svn_opt_subcommand_t'. */
@@ -582,6 +635,7 @@ main (int argc, const char * const *argv)
   /* Parse options. */
   apr_getopt_init (&os, pool, argc, argv);
   os->interleave = 1;
+
   while (1)
     {
       const char *opt_arg;
@@ -642,6 +696,10 @@ main (int argc, const char * const *argv)
       case '?':
         opt_state.help = TRUE;
         break;
+      case svnadmin__version:
+        opt_state.version = TRUE;
+        opt_state.help = TRUE;
+        break;
       case svnadmin__incremental:
         opt_state.incremental = TRUE;
         break;
@@ -657,6 +715,7 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        opt_state.on_disk = svn_path_internal_style (opt_state.on_disk, pool);
         break;
       case svnadmin__in_repos_template:
         err = svn_utf_cstring_to_utf8 (&opt_state.in_repos, opt_arg,
@@ -667,12 +726,27 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        opt_state.in_repos = svn_path_internal_style (opt_state.in_repos,
+                                                      pool);
         break;
       case svnadmin__ignore_uuid:
         opt_state.uuid_action = svn_repos_load_uuid_ignore;
         break;
       case svnadmin__force_uuid:
         opt_state.uuid_action = svn_repos_load_uuid_force;
+        break;
+      case svnadmin__parent_dir:
+        err = svn_utf_cstring_to_utf8 (&opt_state.parent_dir, opt_arg,
+                                       NULL, pool);
+        if (err)
+          {
+            svn_handle_error (err, stderr, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
+        break;
+      case svnadmin__bdb_txn_nosync:
+        opt_state.bdb_txn_nosync = TRUE;
         break;
       default:
         {

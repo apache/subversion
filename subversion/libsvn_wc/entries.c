@@ -28,6 +28,7 @@
 #include "svn_types.h"
 #include "svn_time.h"
 #include "svn_pools.h"
+#include "svn_path.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -61,12 +62,14 @@
 svn_error_t *
 svn_wc__entries_init (const char *path,
                       const char *url,
+                      svn_revnum_t initial_rev,
                       apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_file_t *f = NULL;
   svn_stringbuf_t *accum = NULL;
-  char *initial_revstr = apr_psprintf (pool, "%d", 0);
+  char *initial_revstr =  apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                                        initial_rev);
 
   /* Create the entries file, which must not exist prior to this. */
   SVN_ERR (svn_wc__open_adm_file (&f, path, SVN_WC__ADM_ENTRIES,
@@ -85,19 +88,29 @@ svn_wc__entries_init (const char *path,
                          NULL);
 
   /* Add an entry for the dir itself -- name is absent, only the
-     revision and default ancestry are present as xml attributes. */
-  svn_xml_make_open_tag 
-    (&accum,
-     pool,
-     svn_xml_self_closing,
-     SVN_WC__ENTRIES_ENTRY,
-     SVN_WC__ENTRY_ATTR_KIND,
-     SVN_WC__ENTRIES_ATTR_DIR_STR,
-     SVN_WC__ENTRY_ATTR_REVISION,
-     initial_revstr,
-     SVN_WC__ENTRY_ATTR_URL,
-     url,
-     NULL);
+     revision and default ancestry are present as xml attributes, and
+     possibly an 'incomplete' flag if  the revnum is > 0. */
+  if ((initial_rev == 0) || (! SVN_IS_VALID_REVNUM(initial_rev)))
+    svn_xml_make_open_tag 
+      (&accum,
+       pool,
+       svn_xml_self_closing,
+       SVN_WC__ENTRIES_ENTRY,
+       SVN_WC__ENTRY_ATTR_KIND, SVN_WC__ENTRIES_ATTR_DIR_STR,
+       SVN_WC__ENTRY_ATTR_REVISION, initial_revstr,
+       SVN_WC__ENTRY_ATTR_URL, url,
+       NULL);    
+  else
+    svn_xml_make_open_tag 
+      (&accum,
+       pool,
+       svn_xml_self_closing,
+       SVN_WC__ENTRIES_ENTRY,
+       SVN_WC__ENTRY_ATTR_KIND, SVN_WC__ENTRIES_ATTR_DIR_STR,
+       SVN_WC__ENTRY_ATTR_REVISION, initial_revstr,
+       SVN_WC__ENTRY_ATTR_URL, url,
+       SVN_WC__ENTRY_ATTR_INCOMPLETE, "true",
+       NULL);
 
   /* Close the top-level form. */
   svn_xml_make_close_tag (&accum,
@@ -326,6 +339,34 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       }
   }
 
+  /* Is this entry incomplete? */
+  {
+    const char *incompletestr;
+      
+    incompletestr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, 
+                                  APR_HASH_KEY_STRING);
+        
+    entry->incomplete = FALSE;
+    if (incompletestr)
+      {
+        if (! strcmp (incompletestr, "true"))
+          entry->incomplete = TRUE;
+        else if (! strcmp (incompletestr, "false"))
+          entry->incomplete = FALSE;
+        else if (! strcmp (incompletestr, ""))
+          entry->incomplete = FALSE;
+        else
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             "Entry '%s' has invalid '%s' value",
+             (name ? name : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC__ENTRY_ATTR_INCOMPLETE);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
+      }
+  }
+
+
   /* Attempt to set up timestamps. */
   {
     const char *text_timestr, *prop_timestr;
@@ -439,7 +480,10 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
   attributes = svn_xml_make_att_hash (atts, accum->pool);
   err = svn_wc__atts_to_entry (&entry, &modify_flags, attributes, accum->pool);
   if (err)
-    svn_xml_signal_bailout (err, accum->parser);
+    {
+      svn_xml_signal_bailout (err, accum->parser);
+      return;
+    }
         
   /* Find the name and set up the entry under that name.  This
      should *NOT* be NULL, since svn_wc__atts_to_entry() should
@@ -465,14 +509,15 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
   if ((dst->revision == SVN_INVALID_REVNUM) && (dst->kind != svn_node_dir))
     dst->revision = src->revision;
   
-  /* Inherits parent's url if doesn't have a url of one's own and is not
-     marked for addition.  An entry being added doesn't really have
-     url yet.  */
-  if ((! dst->url) 
+  /* Inherits parent's url if doesn't have a url of one's own. */
+  if (! dst->url) 
+    dst->url = svn_path_url_add_component (src->url, dst->name, pool);
+
+  if ((! dst->uuid) 
       && (! ((dst->schedule == svn_wc_schedule_add)
              || (dst->schedule == svn_wc_schedule_replace))))
     {
-      dst->url = svn_path_url_add_component (src->url, dst->name, pool);
+      dst->uuid = src->uuid;
     }
 }
 
@@ -898,6 +943,10 @@ write_entry (svn_stringbuf_t **output,
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_DELETED, APR_HASH_KEY_STRING,
                 (entry->deleted ? "true" : NULL));
 
+  /* Incomplete state */
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, APR_HASH_KEY_STRING,
+                (entry->incomplete ? "true" : NULL));
+
   /* Timestamps */
   if (entry->text_time)
     {
@@ -1022,6 +1071,7 @@ svn_wc__entries_write (apr_hash_t *entries,
   apr_status_t apr_err;
   apr_hash_index_t *hi;
   svn_wc_entry_t *this_dir;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   SVN_ERR (svn_wc_adm_write_check (adm_access));
 
@@ -1043,7 +1093,8 @@ svn_wc__entries_write (apr_hash_t *entries,
    * tags such as SVN_WC__LOG_MV to move entries files so any existing file
    * is not "valuable".
    */
-  SVN_ERR (svn_wc__open_adm_file (&outfile, svn_wc_adm_access_path (adm_access),
+  SVN_ERR (svn_wc__open_adm_file (&outfile, 
+                                  svn_wc_adm_access_path (adm_access),
                                   SVN_WC__ADM_ENTRIES,
                                   (APR_WRITE | APR_CREATE),
                                   pool));
@@ -1074,9 +1125,11 @@ svn_wc__entries_write (apr_hash_t *entries,
         continue;
 
       /* Append the entry to BIGSTR */
-      write_entry (&bigstr, this_entry, key, this_dir, pool);
+      write_entry (&bigstr, this_entry, key, this_dir, subpool);
+      svn_pool_clear (subpool);
     }
 
+  svn_pool_destroy (subpool);
   svn_xml_make_close_tag (&bigstr, pool, SVN_WC__ENTRIES_TOPLEVEL);
 
   apr_err = apr_file_write_full (outfile, bigstr->data, bigstr->len, NULL);
@@ -1161,6 +1214,10 @@ fold_entry (apr_hash_t *entries,
   /* Deleted state */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_DELETED)
     cur_entry->deleted = entry->deleted;
+
+  /* Incomplete state */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_INCOMPLETE)
+    cur_entry->incomplete = entry->incomplete;
 
   /* Text/prop modification times */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
@@ -1509,6 +1566,8 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
   /* Sync changes to disk. */
   if (do_sync)
     SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
+  else
+    svn_wc__adm_access_set_entries (adm_access, FALSE, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1527,6 +1586,10 @@ svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->name = apr_pstrdup (pool, entry->name);
   if (entry->url)
     dupentry->url = apr_pstrdup (pool, entry->url);
+  if (entry->repos)
+    dupentry->repos = apr_pstrdup (pool, entry->repos);
+  if (entry->uuid)
+    dupentry->uuid = apr_pstrdup (pool, entry->uuid);
   if (entry->copyfrom_url)
     dupentry->copyfrom_url = apr_pstrdup (pool, entry->copyfrom_url);
   if (entry->conflict_old)
@@ -1537,6 +1600,8 @@ svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->conflict_wrk = apr_pstrdup (pool, entry->conflict_wrk);
   if (entry->prejfile)
     dupentry->prejfile = apr_pstrdup (pool, entry->prejfile);
+  if (entry->checksum)
+    dupentry->checksum = apr_pstrdup (pool, entry->checksum);
   if (entry->cmt_author)
     dupentry->cmt_author = apr_pstrdup (pool, entry->cmt_author);
 
@@ -1598,7 +1663,7 @@ walker_helper (const char *dirpath,
   apr_hash_index_t *hi;
   svn_wc_entry_t *dot_entry;
 
-  SVN_ERR (svn_wc_entries_read (&entries, adm_access, show_deleted, subpool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, show_deleted, pool));
   
   /* As promised, always return the '.' entry first. */
   dot_entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
@@ -1608,10 +1673,10 @@ walker_helper (const char *dirpath,
                               "Directory '%s' has no THIS_DIR entry!",
                               dirpath);
 
-  SVN_ERR (walk_callbacks->found_entry (dirpath, dot_entry, walk_baton));
+  SVN_ERR (walk_callbacks->found_entry (dirpath, dot_entry, walk_baton, pool));
 
   /* Loop over each of the other entries. */
-  for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_ssize_t klen;
@@ -1627,7 +1692,7 @@ walker_helper (const char *dirpath,
 
       entrypath = svn_path_join (dirpath, key, subpool);
       SVN_ERR (walk_callbacks->found_entry (entrypath, current_entry,
-                                            walk_baton));
+                                            walk_baton, subpool));
 
       if (current_entry->kind == svn_node_dir)
         {
@@ -1638,6 +1703,8 @@ walker_helper (const char *dirpath,
                                   walk_callbacks, walk_baton,
                                   show_deleted, subpool));
         }
+
+      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);
@@ -1663,7 +1730,7 @@ svn_wc_walk_entries (const char *path,
                               "'%s' is not under revision control.", path);
 
   if (entry->kind == svn_node_file)
-    return walk_callbacks->found_entry (path, entry, walk_baton);
+    return walk_callbacks->found_entry (path, entry, walk_baton, pool);
 
   else if (entry->kind == svn_node_dir)
     return walker_helper (path, adm_access, walk_callbacks, walk_baton,
@@ -1704,6 +1771,6 @@ svn_wc_mark_missing_deleted (const char *path,
     }
   else
     return svn_error_createf (SVN_ERR_WC_PATH_FOUND, NULL,
-                              "svn_wc_mark_missing_deleted: path %s isn't "
+                              "svn_wc_mark_missing_deleted: path '%s' isn't "
                               "missing.", path);
 }

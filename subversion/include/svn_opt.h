@@ -35,8 +35,7 @@ extern "C" {
 
 
 
-/** All subcommand procedures in Subversion conform to this prototype.
- *
+/**
  * All subcommand procedures in Subversion conform to this prototype.
  *
  * @a os is the apr option state after getopt processing has been run; in
@@ -88,9 +87,7 @@ typedef struct svn_opt_subcommand_desc_t
 } svn_opt_subcommand_desc_t;
 
 
-/** Return the entry in @a table whose name matches @a cmd_name, or @c NULL 
- * if none.
- *
+/**
  * Return the entry in @a table whose name matches @a cmd_name, or @c NULL if 
  * none.  @a cmd_name may be an alias.
  */  
@@ -99,9 +96,7 @@ svn_opt_get_canonical_subcommand (const svn_opt_subcommand_desc_t *table,
                                   const char *cmd_name);
 
 
-/** Return the first entry from @a option_table whose option code is @a code,
- * or @c NULL if no match.
- *
+/**
  * Return the first entry from @a option_table whose option code is @a code,
  * or @c NULL if no match.  @a option_table must end with an element whose
  * every field is zero.
@@ -111,7 +106,8 @@ svn_opt_get_option_from_code (int code,
                               const apr_getopt_option_t *option_table);
 
 
-/** Return @c TRUE iff subcommand @a command supports option @a option_code,
+/**
+ * Return @c TRUE iff subcommand @a command supports option @a option_code,
  * else return @c FALSE.
  */
 svn_boolean_t
@@ -119,9 +115,9 @@ svn_opt_subcommand_takes_option (const svn_opt_subcommand_desc_t *command,
                                  int option_code);
 
 
-/** Print a generic (not command-specific) usage message to @a stream.
- *
+/**
  * Print a generic (not command-specific) usage message to @a stream.
+ *
  * (### todo: why is @a stream a stdio file instead of an svn stream?)
  *
  * If @a header is non-null, print @a header followed by a newline.  Then
@@ -140,8 +136,7 @@ svn_opt_print_generic_help (const char *header,
                             FILE *stream);
 
 
-/** Print an option @a opt nicely into a @a string allocated in @a pool.
- *
+/**
  * Print an option @a opt nicely into a @a string allocated in @a pool.  
  * If @a doc is set, include the generic documentation string of option.
  */
@@ -153,8 +148,7 @@ svn_opt_format_option (const char **string,
 
 
 
-/** Get @a subcommand's usage from @a table, and print it to @c stdout.
- *
+/**
  * Get @a subcommand's usage from @a table, and print it to @c stdout.  
  * Obtain option usage from @a options_table.  Use @a pool for temporary
  * allocation.  @a subcommand may be a canonical command name or an
@@ -171,10 +165,9 @@ svn_opt_subcommand_help (const char *subcommand,
 
 /* Parsing revision and date options. */
 
-/** Various ways of specifying revisions. 
- *
+/**
  * Various ways of specifying revisions. 
- *   
+ *
  * Note:
  * In contexts where local mods are relevant, the `working' kind
  * refers to the uncommitted "working" revision, which may be modified
@@ -218,9 +211,7 @@ typedef struct svn_opt_revision_t {
 } svn_opt_revision_t;
 
 
-/** Set @a *start_revision and/or @a *end_revision according to @a arg, 
- * where @a arg is "N" or "N:M".
- *
+/**
  * Set @a *start_revision and/or @a *end_revision according to @a arg, 
  * where @a arg is "N" or "N:M", like so:
  * 
@@ -252,19 +243,18 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
 
 /* Parsing arguments. */
 
-/** Pull remaining target arguments from @a os into @a *targets_p, including 
- * targets stored in @a known_targets.
- *
+/**
  * Pull remaining target arguments from @a os into @a *targets_p, including
  * targets stored in @a known_targets (which might come from, for
  * example, the "--targets" command line option), converting them to
  * UTF-8.  Allocate @a *targets_p and its elements in @a pool.
  *
  * If @a extract_revisions is set, then this function will attempt to
- * look for trailing "@rev" syntax on the paths.  If one @rev is
- * found, it will overwrite the value of @a *start_revision.  If a second
- * one is found, it will overwrite @a *end_revision.  (Extra revisions
- * beyond that are ignored.)
+ * look for trailing "@rev" syntax on the paths.  If an @rev is found
+ * for the first target in *TARGETS_P, it will overwrite the value of
+ * @a *start_revision.  If an @rev is found for the second target in
+ * *TARGETS_P,  it will overwrite @a *end_revision.  (Extra revisions 
+ * beyond that are ignored.) 
  */
 svn_error_t *
 svn_opt_args_to_target_array (apr_array_header_t **targets_p,
@@ -276,8 +266,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
                               apr_pool_t *pool);
 
 
-/** If no targets exist in @a *targets, add `.' as the lone target.
- *
+/**
  * If no targets exist in @a *targets, add `.' as the lone target.
  *
  * (Some commands take an implicit "." string argument when invoked
@@ -288,9 +277,7 @@ void svn_opt_push_implicit_dot_target (apr_array_header_t *targets,
                                        apr_pool_t *pool);
 
 
-/** Parse @a num_args non-target arguments from the list of arguments in
- * @a os->argv.
- *
+/**
  * Parse @a num_args non-target arguments from the list of arguments in
  * @a os->argv, return them as <tt>const char *</tt> in @a *args_p, without 
  * doing any UTF-8 conversion.  Allocate @a *args_p and its values in @a pool.
@@ -302,8 +289,7 @@ svn_opt_parse_num_args (apr_array_header_t **args_p,
                         apr_pool_t *pool);
 
 
-/** Parse all remaining arguments from @a os->argv.
- *
+/**
  * Parse all remaining arguments from @a os->argv, return them as
  * <tt>const char *</tt> in @a *args_p, without doing any UTF-8 conversion.
  * Allocate @a *args_p and its values in @a pool.
@@ -314,8 +300,7 @@ svn_opt_parse_all_args (apr_array_header_t **args_p,
                         apr_pool_t *pool);
 
 
-/** Print either generic help, or command-specific help for @a pgm_name.
- *
+/**
  * Print either generic help, or command-specific help for @a pgm_name.
  * If there are arguments in @a os, then try printing help for them as
  * though they are subcommands, using  @a cmd_table and @a option_table 

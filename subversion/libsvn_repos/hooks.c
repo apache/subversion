@@ -60,7 +60,7 @@ run_hook_cmd (const char *name,
   apr_err = apr_file_pipe_create(&read_errhandle, &write_errhandle, pool);
   if (apr_err)
     return svn_error_createf
-      (apr_err, NULL, "can't create pipe for %s hook", cmd);
+      (apr_err, NULL, "can't create pipe for '%s' hook", cmd);
 
   err = svn_io_run_cmd (".", cmd, args, &exitcode, &exitwhy, FALSE,
                         NULL, NULL, write_errhandle, pool);
@@ -77,7 +77,7 @@ run_hook_cmd (const char *name,
   if (err)
     {
       err = svn_error_createf
-        (SVN_ERR_REPOS_HOOK_FAILURE, err, "failed to run %s hook", cmd);
+        (SVN_ERR_REPOS_HOOK_FAILURE, err, "failed to run '%s' hook", cmd);
     }
 
   if (!err && check_exitcode)
@@ -92,7 +92,7 @@ run_hook_cmd (const char *name,
 
           err = svn_error_createf
               (SVN_ERR_REPOS_HOOK_FAILURE, err,
-               "%s hook failed with error output:\n%s",
+               "'%s' hook failed with error output:\n%s",
                name, error->data);
         }
     }
@@ -141,22 +141,20 @@ check_hook_cmd (const char *hook, apr_pool_t *pool)
   return NULL;
 }
 
-/* Run the start-commit hook for REPOS.  Use POOL for any temporary
-   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  */
 svn_error_t *
 svn_repos__hooks_start_commit (svn_repos_t *repos,
                                const char *user,
                                apr_pool_t *pool)
 {
   const char *hook = svn_repos_start_commit_hook (repos, pool);
-
+  
   if ((hook = check_hook_cmd (hook, pool)))
     {
       const char *args[4];
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
-      args[2] = user;
+      args[2] = user ? user : "";
       args[3] = NULL;
 
       SVN_ERR (run_hook_cmd ("start-commit", hook, args, TRUE, pool));
@@ -166,8 +164,6 @@ svn_repos__hooks_start_commit (svn_repos_t *repos,
 }
 
 
-/* Run the pre-commit hook for REPOS.  Use POOL for any temporary
-   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  */
 svn_error_t  *
 svn_repos__hooks_pre_commit (svn_repos_t *repos,
                              const char *txn_name,
@@ -191,8 +187,6 @@ svn_repos__hooks_pre_commit (svn_repos_t *repos,
 }
 
 
-/* Run the post-commit hook for REPOS.  Use POOL for any temporary
-   allocations.  If the hook fails, run SVN_ERR_REPOS_HOOK_FAILURE.  */
 svn_error_t  *
 svn_repos__hooks_post_commit (svn_repos_t *repos,
                               svn_revnum_t rev,
@@ -216,9 +210,6 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
 }
 
 
-/* Run the pre-revprop-change hook for REPOS.  Use POOL for any
-   temporary allocations.  If the hook fails, return
-   SVN_ERR_REPOS_HOOK_FAILURE.  */
 svn_error_t  *
 svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
                                      svn_revnum_t rev,
@@ -233,12 +224,12 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
     {
       const char *args[6];
 
-      /* ### somehow pass VALUE as stdin to hook?! */
+      /* ### somehow pass the new value as stdin to hook? */
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
       args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
-      args[3] = author;
+      args[3] = author ? author : "";
       args[4] = name;
       args[5] = NULL;
 
@@ -261,14 +252,12 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
 }
 
 
-/* Run the pre-revprop-change hook for REPOS.  Use POOL for any
-   temporary allocations.  If the hook fails, return
-   SVN_ERR_REPOS_HOOK_FAILURE.  */
 svn_error_t  *
 svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
                                       svn_revnum_t rev,
                                       const char *author,
                                       const char *name,
+                                      svn_string_t *old_value,
                                       apr_pool_t *pool)
 {
   const char *hook = svn_repos_post_revprop_change_hook (repos, pool);
@@ -277,10 +266,12 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
     {
       const char *args[6];
 
+      /* ### somehow pass the old value as stdin to hook? */
+
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
       args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
-      args[3] = author;
+      args[3] = author ? author : "";
       args[4] = name;
       args[5] = NULL;
 

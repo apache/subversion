@@ -51,13 +51,13 @@ extern "C" {
  * Modify when new functionality is added or new interfaces are
  * defined, but all changes are backward compatible.
  */
-#define SVN_VER_MINOR      18
+#define SVN_VER_MINOR      24
 
 /** Patch number.
  *
  * Modify for every released patch.
  */
-#define SVN_VER_MICRO      0
+#define SVN_VER_MICRO      2
 
 /** Library version number.
  *
@@ -97,7 +97,7 @@ extern "C" {
  * file version. Its value remains 0 in the repository.
  *
  * During the distribution process, we automatically replace it with
- * what we gues to be the correct revision number.
+ * what we guess to be the correct revision number.
  */
 #define SVN_VER_REVISION   0
 

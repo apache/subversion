@@ -31,7 +31,7 @@
       <para>RFC 2518 defines a set of concepts and accompanying
         extension methods to HTTP 1.1 that make the web into a more
         universal read/write medium.  The basic idea is that a
-        WebDAV-compliant webserver can act like a generic fileserver;
+        WebDAV-compliant web server can act like a generic file server;
         clients can mount WebDAV <quote>shares</quote> that behave
         much like NFS or SMB shares.</para>
       
@@ -116,8 +116,8 @@
       <title>DeltaV extensions</title>
   
       <para>Because RFC 2518 left out versioning concepts, another
-        capable group was left with the responsiblity of writing RFC
-        3256, which adds versioning to WebDAV.  WebDAV/DeltaV clients
+        capable group was left with the responsibility of writing RFC
+        3253, which adds versioning to WebDAV.  WebDAV/DeltaV clients
         and servers are often called just <quote>DeltaV</quote>
         clients and servers, since DeltaV implies the existence of
         basic WebDAV.</para>
@@ -328,7 +328,7 @@
       <title>Autoversioning Support</title>
       
       <para>At the time of writing, the truth is that there are very
-        few DeltaV clients in the world; RFC 3256 is still relatively
+        few DeltaV clients in the world; RFC 3253 is still relatively
         new.  However users do have access to <quote>generic</quote>
         clients, because almost every modern operating system now has
         a integrated basic WebDAV client.  With this in mind,
@@ -403,7 +403,7 @@
       <para>Subversion, on the other hand, uses mod_dav_svn as a
         provider for mod_dav.  mod_dav_svn understands all WebDAV
         methods except <literal>LOCK</literal>, and understands a
-        sizeable subset of DeltaV methods.  It accesses data in the
+        sizable subset of DeltaV methods.  It accesses data in the
         Subversion repository, rather than in the real filesystem.
         Subversion 1.0 doesn't support locking, because it would
         actually quite difficult to implement, since Subversion uses
@@ -441,7 +441,7 @@
 &lt;/Location&gt;
 </screen>
 
-      <para>This techique is a risky business; in some sense, the
+      <para>This technique is a risky business; in some sense, the
         mod_dav_svn is now lying to the WebDAV client.  It claims to
         accept the <literal>LOCK</literal> request, but in reality the
         lock isn't being enforced at all levels.  If a second WebDAV
@@ -545,8 +545,8 @@
         <literal>PUT</literal> to a temporary location, a
         <literal>DELETE</literal> of original file, and a
         <literal>MOVE</literal> of the temporary resource to the
-        original file name.  That's three new Subversion
-        revisions per save!</para>
+        original filename.  That's three new Subversion revisions per
+        save!</para>
 
       <para>One more word of warning: OS X's WebDAV client can be
         overly sensitive to HTTP redirects.  If you're unable to mount

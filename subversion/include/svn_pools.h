@@ -29,7 +29,12 @@
 #include <apr_errno.h>     /* APR's error system */
 #include <apr_pools.h>
 
-#include <svn_types.h>
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+#define APR_WANT_STDIO
+#endif
+#include <apr_want.h>
+
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -65,9 +70,7 @@ void svn_pool_clear_debug (apr_pool_t *p,
 
 /** Destroy a @a pool and all of its children. 
  *
- * Destroy a @a pool and all of its children. 
- *
- * This define for @c svn_pool_destroy exists for symmatry (the
+ * This define for @c svn_pool_destroy exists for symmetry (the
  * not-so-grand reason) and for the existence of a great memory usage
  * debugging hook (the grand reason).
  */
@@ -82,13 +85,10 @@ void svn_pool_clear_debug (apr_pool_t *p,
    svn-specific in its code, other than SVN_WIN32, which obviously APR
    has its own way of dealing with.  Thoughts?  (Brane?) */
 
-#define APR_WANT_STDIO
-#include <apr_want.h>
-
 /** Set up the locale for character conversion, and initialize APR.
  * If @a error_stream is non-null, print error messages to the stream,
- * using @a progname as the program name. Return EXIT_SUCCESS if
- * successful, otherwise EXIT_FAILURE.
+ * using @a progname as the program name. Return @c EXIT_SUCCESS if
+ * successful, otherwise @c EXIT_FAILURE.
  */
 int svn_cmdline_init (const char *progname, FILE *error_stream);
 
@@ -97,4 +97,4 @@ int svn_cmdline_init (const char *progname, FILE *error_stream);
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_ERROR_H */
+#endif /* SVN_POOLS_H */

@@ -29,7 +29,7 @@
 #include "svn_dav.h"
 #include "svn_time.h"
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 
 
 /* ### should move these report names to a public header to share with
@@ -251,6 +251,12 @@ dav_error *dav_svn_checkout(dav_resource *resource,
       apr_uuid_format(uuid_buf, &uuid);
       resource->info->root.activity_id = uuid_buf;
 
+      /* Remember that this resource was auto-checked-out, so that
+         dav_svn_auto_versionable allows us to do an auto-checkin and
+         dav_svn_can_be_activity will allow this resource to be an
+         activity. */
+      resource->info->auto_checked_out = TRUE;
+
       /* Create a txn based on youngest rev, and create an associated
          activity id in the activity database. */
       derr = dav_svn_make_activity(resource);
@@ -262,10 +268,6 @@ dav_error *dav_svn_checkout(dav_resource *resource,
       res = dav_svn_create_working_resource(resource, uuid_buf, 
                                             resource->info->root.txn_name,
                                             TRUE /* tweak in place */);
-
-      /* Remember that this resource was auto-checked-out, so that
-         dav_svn_auto_versionable allows us to do an auto-checkin. */
-      resource->info->auto_checked_out = TRUE;
 
       /* Finally, be sure to open the txn and txn_root in the
          resource.  Normally we only get a PUT on a WR uri, and
@@ -790,7 +792,13 @@ static dav_error *dav_svn_deliver_report(request_rec *r,
 
 static int dav_svn_can_be_activity(const dav_resource *resource)
 {
-  return resource->type == DAV_RESOURCE_TYPE_ACTIVITY && !resource->exists;
+  /* If our resource is marked as auto_checked_out'd, then we allow this to
+   * be an activity URL.  Otherwise, it must be a real activity URL that
+   * doesn't already exist.
+   */
+  return (resource->info->auto_checked_out == TRUE ||
+          (resource->type == DAV_RESOURCE_TYPE_ACTIVITY &&
+           !resource->exists));
 }
 
 static dav_error *dav_svn_make_activity(dav_resource *resource)
@@ -799,8 +807,16 @@ static dav_error *dav_svn_make_activity(dav_resource *resource)
   const char *txn_name;
   dav_error *err;
 
-  /* ### need to check some preconditions? */
-
+  /* sanity check:  make sure the resource is a valid activity, in
+     case an older mod_dav doesn't do the check for us. */
+  if (! dav_svn_can_be_activity(resource))
+    return dav_new_error_tag(resource->pool, HTTP_FORBIDDEN,
+                             SVN_ERR_APMOD_MALFORMED_URI,
+                             "Activities cannot be created at that location; "
+                             "query the DAV:activity-collection-set property.",
+                             SVN_DAV_ERROR_NAMESPACE,
+                             SVN_DAV_ERROR_TAG);
+   
   err = dav_svn_create_activity(resource->info->repos, &txn_name,
                                 resource->pool);
   if (err != NULL)

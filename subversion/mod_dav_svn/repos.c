@@ -38,7 +38,7 @@
 #include "svn_sorts.h"
 #include "svn_version.h"
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 
 
 struct dav_stream {
@@ -545,8 +545,15 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
                                  "repository");
     }
 
-  kind = svn_fs_check_path (comb->priv.root.root, comb->priv.repos_path,
-                            pool);
+  serr = svn_fs_check_path(&kind, comb->priv.root.root,
+                           comb->priv.repos_path, pool);
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 apr_psprintf (pool, "Error checking kind of "
+                                               "path '%s' in repository",
+                                               comb->priv.repos_path));
+    }
 
   comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
   comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
@@ -668,8 +675,15 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
                                  "repository");
     }
 
-  kind = svn_fs_check_path (comb->priv.root.root, comb->priv.repos_path,
-                            pool);
+  serr = svn_fs_check_path (&kind, comb->priv.root.root,
+                            comb->priv.repos_path, pool);
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err
+        (serr, HTTP_INTERNAL_SERVER_ERROR,
+         apr_psprintf (pool, "Error checking kind of path '%s' in repository",
+                       comb->priv.repos_path));
+    }
 
   comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
   comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
@@ -792,14 +806,15 @@ static void log_warning(void *baton, svn_error_t *err)
 }
 
 
-dav_error * dav_svn_split_uri (request_rec *r,
-                               const char *uri_to_split,
-                               const char *root_path,
-                               const char **cleaned_uri,
-                               int *trailing_slash,
-                               const char **repos_name,
-                               const char **relative_path,
-                               const char **repos_path)
+AP_MODULE_DECLARE(dav_error *)
+dav_svn_split_uri (request_rec *r,
+                   const char *uri_to_split,
+                   const char *root_path,
+                   const char **cleaned_uri,
+                   int *trailing_slash,
+                   const char **repos_name,
+                   const char **relative_path,
+                   const char **repos_path)
 {
   apr_size_t len1;
   int had_slash;
@@ -1164,8 +1179,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   repos->special_uri = dav_svn_get_special_uri(r);
 
   /* Remember who is making this request */
-  if ((repos->username = r->user) == NULL)
-    repos->username = "anonymous";
+  repos->username = r->user;
 
   /* open the SVN FS */
   serr = svn_repos_open(&(repos->repos), fs_path, r->pool);
@@ -1420,8 +1434,18 @@ dav_error * dav_svn_resource_kind (request_rec *r,
         *kind = svn_node_unknown;
 
       else /* ver */
-        *kind = svn_fs_check_path (resource->info->root.root,
-                                   resource->info->repos_path, r->pool);
+        {
+          serr = svn_fs_check_path (kind, resource->info->root.root,
+                                    resource->info->repos_path, r->pool);
+
+          if (serr)
+            return 
+              dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   apr_psprintf(r->pool,
+                                                "Error checking kind of "
+                                                "path '%s' in repository",
+                                                resource->info->repos_path));
+        }
     }
   
   else if (resource->type == DAV_RESOURCE_TYPE_WORKING)
@@ -1445,8 +1469,15 @@ dav_error * dav_svn_resource_kind (request_rec *r,
                                    "Could not open root of revision %"
                                    SVN_REVNUM_T_FMT, base_rev));
       
-          *kind = svn_fs_check_path (base_rev_root,
-                                     resource->info->repos_path, r->pool);
+          serr = svn_fs_check_path (kind, base_rev_root,
+                                    resource->info->repos_path, r->pool);
+          if (serr)
+            return 
+              dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   apr_psprintf(r->pool,
+                                                "Error checking kind of "
+                                                "path '%s' in repository",
+                                                resource->info->repos_path));
         }
     }
 
@@ -1547,15 +1578,35 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
 
 static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
 {
+  svn_error_t *serr;
+
   if (stream->rstream != NULL)
-    svn_stream_close(stream->rstream);
+    {
+      serr = svn_stream_close(stream->rstream);
+      if (serr)
+        return dav_svn_convert_err
+          (serr, HTTP_INTERNAL_SERVER_ERROR,
+           "dav_svn_close_stream: error closing read stream");
+    }
 
   /* if we have a write-stream, then closing it also takes care of the
      handler (so make sure not to send a NULL to it, too) */
   if (stream->wstream != NULL)
-    svn_stream_close(stream->wstream);
+    {
+      serr = svn_stream_close(stream->wstream);
+      if (serr)
+        return dav_svn_convert_err
+          (serr, HTTP_INTERNAL_SERVER_ERROR,
+           "dav_svn_close_stream: error closing write stream");
+    }
   else if (stream->delta_handler != NULL)
-    (*stream->delta_handler)(NULL, stream->delta_baton);
+    {
+      serr = (*stream->delta_handler)(NULL, stream->delta_baton);
+      if (serr)
+        return dav_svn_convert_err
+          (serr, HTTP_INTERNAL_SERVER_ERROR,
+           "dav_svn_close_stream: error sending final (null) delta window");
+    }
 
   return NULL;
 }
@@ -1609,7 +1660,7 @@ static dav_error * dav_svn_seek_stream(dav_stream *stream,
                        "[at this time].");
 }
 
-const char * dav_svn_getetag(const dav_resource *resource)
+const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool)
 {
   svn_error_t *serr;
   svn_revnum_t created_rev;
@@ -1627,23 +1678,34 @@ const char * dav_svn_getetag(const dav_resource *resource)
 
   if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
                                       resource->info->repos_path,
-                                      resource->pool)))
+                                      pool)))
     {
       /* ### what to do? */
       return "";
     }
-  
-  return apr_psprintf(resource->pool, "\"%" SVN_REVNUM_T_FMT "/%s\"",
+
+  /* Use the "weak" format of the etag for collections because our GET
+     requests on collections include dynamic data (the HEAD revision,
+     the build version of Subversion, etc.). */
+  return apr_psprintf(pool, "%s\"%" SVN_REVNUM_T_FMT "/%s\"",
+                      resource->collection ? "W/" : "",
                       created_rev,
-                      apr_xml_quote_string(resource->pool,
+                      apr_xml_quote_string(pool,
                                            resource->info->repos_path, 1));
+}
+
+/* Since dav_svn_getetag() takes a pool argument, this wrapper is for
+   the mod_dav hooks vtable entry, which does not. */
+static const char * getetag_pathetic(const dav_resource *resource)
+{
+  return dav_svn_getetag(resource, resource->pool);
 }
 
 static dav_error * dav_svn_set_headers(request_rec *r,
                                        const dav_resource *resource)
 {
   svn_error_t *serr;
-  apr_off_t length;
+  svn_filesize_t length;
   const char *mimetype = NULL;
   
   if (!resource->exists)
@@ -1662,7 +1724,8 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 #endif
 
   /* generate our etag and place it into the output */
-  apr_table_setn(r->headers_out, "ETag", dav_svn_getetag(resource));
+  apr_table_setn(r->headers_out, "ETag",
+                 dav_svn_getetag(resource, resource->pool));
 
   /* we accept byte-ranges */
   apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");
@@ -1731,7 +1794,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "could not fetch the resource length");
         }
-      ap_set_content_length(r, length);
+      ap_set_content_length(r, (apr_off_t) length);
     }
 
   /* set the discovered MIME type */
@@ -1869,6 +1932,9 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       }
     else
       {
+        const char *name = resource->info->repos->repo_name;
+        const char *href = resource->info->repos_path;
+
         ap_fputs(output, bb, "<?xml version=\"1.0\"?>\n");
         ap_fprintf(output, bb,
                    "<?xml-stylesheet type=\"text/xsl\" href=\"%s\"?>\n",
@@ -1877,18 +1943,18 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         ap_fputs(output, bb,
                  "<svn version=\"" SVN_VERSION "\"\n"
                  "     href=\"http://subversion.tigris.org/\">\n");
-
         ap_fputs(output, bb, "  <index");
-        if (resource->info->repos->repo_name)
-            ap_fprintf(output, bb, " name=\"%s\"",
-                       resource->info->repos->repo_name);
+        if (name)
+          ap_fprintf(output, bb, " name=\"%s\"",
+                     apr_xml_quote_string(resource->pool, name, 1));
         if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
           ap_fprintf(output, bb, " rev=\"%" SVN_REVNUM_T_FMT "\"",
                      resource->info->root.rev);
-        if (resource->info->repos_path)
+        if (href)
           ap_fprintf(output, bb, " path=\"%s\"",
-                     ap_escape_uri(resource->pool,
-                                   resource->info->repos_path));
+                     apr_xml_quote_string(resource->pool,
+                                          ap_escape_uri(resource->pool, href),
+                                          1));
         ap_fputs(output, bb, ">\n");
       }
 
@@ -1924,9 +1990,9 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         (void) svn_fs_is_dir(&is_dir, resource->info->root.root,
                              entry_path, entry_pool);
 
-	name = item->key;
-	href = name;
-	
+        name = item->key;
+        href = name;
+
         /* append a trailing slash onto the name for directories. we NEED
            this for the href portion so that the relative reference will
            descend properly. for the visible portion, it is just nice. */
@@ -1937,17 +2003,21 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
         if (gen_html)
           name = href;
-	
+
         href = ap_escape_uri(entry_pool, href);
 
         if (gen_html)
-          ap_fprintf(output, bb,
-                     "  <li><a href=\"%s\">%s</a></li>\n",
-                     href, name);
+          {
+            ap_fprintf(output, bb,
+                       "  <li><a href=\"%s\">%s</a></li>\n",
+                       href, name);
+          }
         else
           {
             const char *const tag = (is_dir ? "dir" : "file");
-
+            name = apr_xml_quote_string(entry_pool, name, 1);
+            href = apr_xml_quote_string(entry_pool, href, 1);
+            
             /* ### This is where the we could search for props */
 
             ap_fprintf(output, bb,
@@ -2533,7 +2603,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 }
 
 static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
-				dav_response **response)
+                                dav_response **response)
 {
   dav_svn_walker_context ctx = { 0 };
   dav_error *err;
@@ -2736,5 +2806,5 @@ const dav_hooks_repository dav_svn_hooks_repos =
   dav_svn_move_resource,
   dav_svn_remove_resource,
   dav_svn_walk,
-  dav_svn_getetag,
+  getetag_pathetic
 };

@@ -20,6 +20,7 @@
 
 #include <apr_pools.h>
 #include <apr_file_io.h>
+#include <apr_md5.h>
 
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -27,6 +28,7 @@
 #include "svn_delta.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
+#include "svn_md5.h"
 
 
 
@@ -46,7 +48,7 @@ struct edit_baton
   const char *log_msg;
 
   /* Callback to run when the commit is done. */
-  svn_repos_commit_callback_t *callback;
+  svn_repos_commit_callback_t callback;
   void *callback_baton;
 
   /* The already-open svn repository to commit to. */
@@ -101,7 +103,6 @@ struct file_baton
 {
   struct edit_baton *edit_baton;
   const char *path; /* the -absolute- path to this file in the fs */
-  apr_pool_t *pool; /* my personal pool, in which I am allocated. */
 };
 
 
@@ -126,16 +127,18 @@ open_root (void *edit_baton,
 {
   struct dir_baton *dirb;
   struct edit_baton *eb = edit_baton;
+  svn_revnum_t youngest;
 
   /* Ignore BASE_REVISION.  We always build our transaction against
-     HEAD. */
-  SVN_ERR (svn_fs_youngest_rev (&base_revision, eb->fs, eb->pool));
+     HEAD.  However, we will keep it in our dir baton for out of
+     dateness checks.  */
+  SVN_ERR (svn_fs_youngest_rev (&youngest, eb->fs, eb->pool));
 
   /* Begin a subversion transaction, cache its name, and get its
      root object. */
   SVN_ERR (svn_repos_fs_begin_txn_for_commit (&(eb->txn), 
                                               eb->repos, 
-                                              base_revision, 
+                                              youngest,
                                               eb->user, 
                                               eb->log_msg,
                                               eb->pool));
@@ -172,7 +175,7 @@ delete_entry (const char *path,
   const char *full_path = svn_path_join (eb->base_path, path, pool);
 
   /* Check PATH in our transaction.  */
-  kind = svn_fs_check_path (eb->txn_root, full_path, pool);
+  SVN_ERR (svn_fs_check_path (&kind, eb->txn_root, full_path, pool));
 
   /* If PATH doesn't exist in the txn, that's fine (merge
      allows this). */
@@ -226,7 +229,7 @@ add_directory (const char *path,
          unless its parent directory was copied (in which case, the
          thing might have been copied in as well), else return an
          out-of-dateness error. */
-      kind = svn_fs_check_path (eb->txn_root, full_path, subpool);
+      SVN_ERR (svn_fs_check_path (&kind, eb->txn_root, full_path, subpool));
       if ((kind != svn_node_none) && (! pb->was_copied))
         return out_of_date (full_path, eb->txn_name);
 
@@ -290,7 +293,7 @@ open_directory (const char *path,
 
   /* Check PATH in our transaction.  Make sure it does not exist,
      else return an out-of-dateness error. */
-  kind = svn_fs_check_path (eb->txn_root, full_path, pool);
+  SVN_ERR (svn_fs_check_path (&kind, eb->txn_root, full_path, pool));
   if (kind == svn_node_none)
     return out_of_date (full_path, eb->txn_name);
 
@@ -311,7 +314,6 @@ open_directory (const char *path,
 static svn_error_t *
 apply_textdelta (void *file_baton,
                  const char *base_checksum,
-                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
@@ -321,8 +323,8 @@ apply_textdelta (void *file_baton,
                                  fb->edit_baton->txn_root, 
                                  fb->path,
                                  base_checksum,
-                                 result_checksum,
-                                 fb->pool);
+                                 NULL,
+                                 pool);
 }
 
 
@@ -359,7 +361,7 @@ add_file (const char *path,
          unless its parent directory was copied (in which case, the
          thing might have been copied in as well), else return an
          out-of-dateness error. */
-      kind = svn_fs_check_path (eb->txn_root, full_path, subpool);
+      SVN_ERR (svn_fs_check_path (&kind, eb->txn_root, full_path, subpool));
       if ((kind != svn_node_none) && (! pb->was_copied))
         return out_of_date (full_path, eb->txn_name);
 
@@ -396,7 +398,6 @@ add_file (const char *path,
   /* Build a new file baton */
   new_fb = apr_pcalloc (pool, sizeof (*new_fb));
   new_fb->edit_baton = eb;
-  new_fb->pool = pool;
   new_fb->path = full_path;
 
   *file_baton = new_fb;
@@ -417,10 +418,12 @@ open_file (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_revnum_t cr_rev;
+  apr_pool_t *subpool = svn_pool_create (pool);
   const char *full_path = svn_path_join (eb->base_path, path, pool);
 
   /* Get this node's creation revision (doubles as an existence check). */
-  SVN_ERR (svn_fs_node_created_rev (&cr_rev, eb->txn_root, full_path, pool));
+  SVN_ERR (svn_fs_node_created_rev (&cr_rev, eb->txn_root, full_path, 
+                                    subpool));
   
   /* If the node our caller has is an older revision number than the
      one in our transaction, return an out-of-dateness error. */
@@ -430,10 +433,13 @@ open_file (const char *path,
   /* Build a new file baton */
   new_fb = apr_pcalloc (pool, sizeof (*new_fb));
   new_fb->edit_baton = eb;
-  new_fb->pool = pool;
   new_fb->path = full_path;
-  
+
   *file_baton = new_fb;
+
+  /* Destory the work subpool. */
+  svn_pool_destroy (subpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -449,6 +455,38 @@ change_file_prop (void *file_baton,
   struct edit_baton *eb = fb->edit_baton;
   return svn_repos_fs_change_node_prop (eb->txn_root, fb->path, 
                                         name, value, pool);
+}
+
+
+static svn_error_t *
+close_file (void *file_baton,
+            const char *text_checksum,
+            apr_pool_t *pool)
+{
+  struct file_baton *fb = file_baton;
+
+  if (text_checksum)
+    {
+      unsigned char digest[MD5_DIGESTSIZE];
+      const char *hex_digest;
+
+      SVN_ERR (svn_fs_file_md5_checksum
+               (digest, fb->edit_baton->txn_root, fb->path, pool));
+      hex_digest = svn_md5_digest_to_cstring (digest, pool);
+      
+      if (strcmp (text_checksum, hex_digest) != 0)
+        {
+          return svn_error_createf
+            (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+             "close_file: checksum mismatch for resulting fulltext\n"
+             "(%s):\n"
+             "   expected checksum:  %s\n"
+             "   actual checksum:    %s\n",
+             fb->path, text_checksum, hex_digest);
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -526,7 +564,9 @@ close_edit (void *edit_baton,
                                    new_revision, SVN_PROP_REVISION_AUTHOR,
                                    eb->pool));
 
-    SVN_ERR ((*eb->callback) (new_revision, date->data, author->data,
+    SVN_ERR ((*eb->callback) (new_revision, 
+                              date ? date->data : NULL, 
+                              author ? author->data : NULL,
                               eb->callback_baton));
   }
 
@@ -556,7 +596,7 @@ svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                              const char *base_path,
                              const char *user,
                              const char *log_msg,
-                             svn_repos_commit_callback_t *callback,
+                             svn_repos_commit_callback_t callback,
                              void *callback_baton,
                              apr_pool_t *pool)
 {
@@ -572,6 +612,7 @@ svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
   e->change_dir_prop   = change_dir_prop;
   e->add_file          = add_file;
   e->open_file         = open_file;
+  e->close_file        = close_file;
   e->apply_textdelta   = apply_textdelta;
   e->change_file_prop  = change_file_prop;
   e->close_edit        = close_edit;
@@ -579,7 +620,7 @@ svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
 
   /* Set up the edit baton. */
   eb->pool = subpool;
-  eb->user = apr_pstrdup (subpool, user);
+  eb->user = user ? apr_pstrdup (subpool, user) : NULL;
   eb->log_msg = apr_pstrdup (subpool, log_msg);
   eb->callback = callback;
   eb->callback_baton = callback_baton;

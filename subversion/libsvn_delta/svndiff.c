@@ -58,10 +58,10 @@ struct encoder_baton {
 */
 
 static char *
-encode_int (char *p, apr_off_t val)
+encode_int (char *p, svn_filesize_t val)
 {
   int n;
-  apr_off_t v;
+  svn_filesize_t v;
   unsigned char cont;
 
   assert (val >= 0);
@@ -89,7 +89,8 @@ encode_int (char *p, apr_off_t val)
 
 /* Append an encoded integer to a string.  */
 static void
-append_encoded_int (svn_stringbuf_t *header, apr_off_t val, apr_pool_t *pool)
+append_encoded_int (svn_stringbuf_t *header, svn_filesize_t val,
+                    apr_pool_t *pool)
 {
   char buf[128], *p;
 
@@ -186,9 +187,9 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
 void
 svn_txdelta_to_svndiff (svn_stream_t *output,
-			apr_pool_t *pool,
-			svn_txdelta_window_handler_t *handler,
-			void **handler_baton)
+                        apr_pool_t *pool,
+                        svn_txdelta_window_handler_t *handler,
+                        void **handler_baton)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   struct encoder_baton *eb;
@@ -226,7 +227,7 @@ struct decode_baton
 
   /* The offset and size of the last source view, so that we can check
      to make sure the next one isn't sliding backwards.  */
-  apr_off_t last_sview_offset;
+  svn_filesize_t last_sview_offset;
   apr_size_t last_sview_len;
 
   /* We have to discard four bytes at the beginning for the header.
@@ -247,7 +248,7 @@ struct decode_baton
    file for more detail on the encoding format.  */
 
 static const unsigned char *
-decode_int (apr_off_t *val,
+decode_int (svn_filesize_t *val,
             const unsigned char *p,
             const unsigned char *end)
 {
@@ -272,7 +273,7 @@ decode_instruction (svn_txdelta_op_t *op,
                     const unsigned char *p,
                     const unsigned char *end)
 {
-  apr_off_t val;
+  svn_filesize_t val;
 
   if (p == end)
     return NULL;
@@ -293,14 +294,14 @@ decode_instruction (svn_txdelta_op_t *op,
       p = decode_int (&val, p, end);
       if (p == NULL)
         return NULL;
-      op->length = val;
+      op->length = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
     }
   if (op->action_code != svn_txdelta_new)
     {
       p = decode_int (&val, p, end);
       if (p == NULL)
         return NULL;
-      op->offset = val;
+      op->offset = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
     }
 
   return p;
@@ -389,7 +390,7 @@ write_handler (void *baton,
 {
   struct decode_baton *db = (struct decode_baton *) baton;
   const unsigned char *p, *end;
-  apr_off_t val, sview_offset;
+  svn_filesize_t val, sview_offset;
   apr_size_t sview_len, tview_len, inslen, newlen, remaining, npos;
   apr_size_t buflen = *len;
   svn_txdelta_op_t *op;
@@ -436,50 +437,50 @@ write_handler (void *baton,
 
       p = decode_int (&val, p, end);
       if (p == NULL)
-	return SVN_NO_ERROR;
+        return SVN_NO_ERROR;
       sview_offset = val;
 
       p = decode_int (&val, p, end);
       if (p == NULL)
-	return SVN_NO_ERROR;
-      sview_len = val;
+        return SVN_NO_ERROR;
+      sview_len = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
 
       p = decode_int (&val, p, end);
       if (p == NULL)
-	return SVN_NO_ERROR;
-      tview_len = val;
+        return SVN_NO_ERROR;
+      tview_len = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
 
       p = decode_int (&val, p, end);
       if (p == NULL)
-	return SVN_NO_ERROR;
-      inslen = val;
+        return SVN_NO_ERROR;
+      inslen = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
 
       p = decode_int (&val, p, end);
       if (p == NULL)
-	return SVN_NO_ERROR;
-      newlen = val;
+        return SVN_NO_ERROR;
+      newlen = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
 
       /* Check for integer overflow (don't want to let the input trick
          us into invalid pointer games using negative numbers).  */
       /* FIXME: Some of these are apr_size_t, which is
          unsigned. Should they be apr_ptrdiff_t instead? --xbc */
       if (sview_offset < 0 || sview_len < 0 || tview_len < 0 || inslen < 0
-	  || newlen < 0 || inslen + newlen < 0 || sview_offset + sview_len < 0)
-	return svn_error_create (SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL, 
-				 "svndiff contains corrupt window header");
+          || newlen < 0 || inslen + newlen < 0 || sview_offset + sview_len < 0)
+        return svn_error_create (SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL, 
+                                 "svndiff contains corrupt window header");
 
       /* Check for source windows which slide backwards.  */
       if (sview_len > 0
           && (sview_offset < db->last_sview_offset
               || (sview_offset + sview_len
                   < db->last_sview_offset + db->last_sview_len)))
-	return svn_error_create (SVN_ERR_SVNDIFF_BACKWARD_VIEW, NULL, 
-				 "svndiff has backwards-sliding source views");
+        return svn_error_create (SVN_ERR_SVNDIFF_BACKWARD_VIEW, NULL, 
+                                 "svndiff has backwards-sliding source views");
 
       /* Wait for more data if we don't have enough bytes for the
          whole window.  */
       if ((apr_size_t) (end - p) < inslen + newlen)
-	return SVN_NO_ERROR;
+        return SVN_NO_ERROR;
 
       /* Count the instructions and make sure they are all valid.  */
       end = p + inslen;
@@ -494,21 +495,21 @@ write_handler (void *baton,
       ops = apr_palloc (db->subpool, ninst * sizeof (*ops));
       npos = 0;
       for (op = ops; op < ops + ninst; op++)
-	{
+        {
           /* ### Why don't we use a build baton and svn_txdelta__make_window
                  like everyone else?  --xbc */
           /* FIXME: The way things stand now, every svndiff insn is decoded
              twice. We should integrate what count_and_verify_instructions
              does here, instead.  --xbc */
-	  p = decode_instruction (op, p, end);
-	  if (op->action_code == svn_txdelta_source)
+          p = decode_instruction (op, p, end);
+          if (op->action_code == svn_txdelta_source)
             ++window.src_ops;
-	  else if (op->action_code == svn_txdelta_new)
-	    {
-	      op->offset = npos;
-	      npos += op->length;
-	    }
-	}
+          else if (op->action_code == svn_txdelta_new)
+            {
+              op->offset = npos;
+              npos += op->length;
+            }
+        }
       window.num_ops = ninst;
       window.ops = ops;
 
@@ -525,7 +526,7 @@ write_handler (void *baton,
       p += newlen;
       remaining = db->buffer->data + db->buffer->len - (const char *) p;
       db->buffer = 
-	svn_stringbuf_ncreate ((const char *) p, remaining, newpool);
+        svn_stringbuf_ncreate ((const char *) p, remaining, newpool);
 
       /* Remember the offset and length of the source view for next time.  */
       db->last_sview_offset = sview_offset;

@@ -76,6 +76,7 @@
 # can be quite hypnotic!
 
 
+use IPC::Open3;
 use Getopt::Std;
 use File::Find;
 use File::Path;
@@ -84,18 +85,19 @@ use Cwd;
 # Repository check/create
 sub init_repo
   {
-    my ( $repo, $create ) = @_;
+    my ( $repo, $create, $no_sync ) = @_;
     if ( $create )
       {
-	rmtree([$repo]) if -e $repo;
-	my $svnadmin_cmd = "svnadmin create $repo";
-	system( $svnadmin_cmd) and die "$svnadmin_cmd: failed: $?\n";
+        rmtree([$repo]) if -e $repo;
+        my $svnadmin_cmd = "svnadmin create $repo";
+        $svnadmin_cmd = "$svnadmin_cmd --bdb-txn-nosync" if $no_sync;
+        system( $svnadmin_cmd) and die "$svnadmin_cmd: failed: $?\n";
       }
     else
       {
-	my $svnlook_cmd = "svnlook youngest $repo";
-	my $revision = readpipe $svnlook_cmd;
-	die "$svnlook_cmd: failed\n" if not $revision =~ m{^[0-9]};
+        my $svnlook_cmd = "svnlook youngest $repo";
+        my $revision = readpipe $svnlook_cmd;
+        die "$svnlook_cmd: failed\n" if not $revision =~ m{^[0-9]};
       }
     $repo = getcwd . "/$repo" if not $repo =~ m[^/];
     return $repo;
@@ -136,40 +138,36 @@ sub status_update_commit
     print "Committing:\n";
     # Use current time as log message
     my $now_time = localtime;
-    my $svn_cmd = "svn ci $wc_dir -m '$now_time'";
+    # [Windows compat] Must use double quotes for the log message.
+    my $svn_cmd = "svn ci $wc_dir -m \"$now_time\"";
 
     # Need to handle the commit carefully. It could fail for all sorts
     # of reasons, but errors that indicate a conflict are "acceptable"
     # while other errors are not.  Thus there is a need to check the
     # return value and parse the error text.
+    my $pid = open3(\*COMMIT_WRITE, \*COMMIT_READ, \*COMMIT_ERR_READ,
+                    $svn_cmd);
+    print while ( <COMMIT_READ> );
 
-    pipe COMMIT_ERR_READ, COMMIT_ERR_WRITE or die "pipe: $!\n";
-    my $pid = fork();
-    die "fork failed: $!\n" if not defined $pid;
-    if ( not $pid )
-      {
-	# This is the child process
-	open( STDERR, ">&COMMIT_ERR_WRITE" ) or die "redirect failed: $!\n";
-	exec $svn_cmd or die "exec $svn_cmd failed: $!\n";
-      }
-
-    # This is the main parent process, look for acceptable errors
-    close COMMIT_ERR_WRITE or die "close COMMIT_ERR_WRITE: $!\n";
+    # Look for acceptable errors, ones we expect to occur due to conflicts
     my $acceptable_error = 0;
     while ( <COMMIT_ERR_READ> )
       {
-	print STDERR;
-	$acceptable_error = 1 if ( /^svn:[ ]
-				   (
-				    Transaction[ ]is[ ]out[ ]of[ ]date
-				    |
-				    Merge[ ]conflict[ ]during[ ]commit
-				    |
-				    Baseline[ ]incorrect
-				   )
-				   $/x );
+        print;
+        s/\r*$//;               # [Windows compat] Remove trailing \r's
+        $acceptable_error = 1 if ( /^svn:[ ]
+                                   (
+                                    Transaction[ ]is[ ]out[ ]of[ ]date
+                                    |
+                                    Merge[ ]conflict[ ]during[ ]commit
+                                    |
+                                    Baseline[ ]incorrect
+                                   )
+                                   $/x );
       }
     close COMMIT_ERR_READ or die "close COMMIT_ERR_READ: $!\n";
+    close COMMIT_WRITE or die "close COMMIT_WRITE: $!\n";
+    close COMMIT_READ or die "close COMMIT_READ: $!\n";
 
     # Get commit subprocess exit status
     die "waitpid: $!\n" if $pid != waitpid $pid, 0;
@@ -200,34 +198,36 @@ sub status_update_commit
 # Populate a working copy
 sub populate
   {
-    my ( $dir, $dir_width, $file_width, $depth ) = @_;
+    my ( $dir, $dir_width, $file_width, $depth, $pad ) = @_;
     return if not $depth--;
 
     for $nfile ( 1..$file_width )
       {
-	my $filename = "$dir/foo$nfile";
-	open( FOO, ">$filename" ) or die "open $filename: $!\n";
+        my $filename = "$dir/foo$nfile";
+        open( FOO, ">$filename" ) or die "open $filename: $!\n";
 
-	for $line ( 0..9 )
-	  {
-	    print FOO "A$line\n$line\n" or die "write to $filename: $!\n";
-	  }
-	close FOO or die "close $filename: $!\n";
+        for $line ( 0..9 )
+          {
+            print FOO "A$line\n$line\n" or die "write to $filename: $!\n";
+            map { print FOO $_ x 255, "\n"; } ("a", "b", "c", "d")
+              foreach (1..$pad);
+          }
+        close FOO or die "close $filename: $!\n";
 
-	my $svn_cmd = "svn add $filename";
-	system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+        my $svn_cmd = "svn add $filename";
+        system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
       }
 
     if ( $depth )
       {
-	for $ndir ( 1..$dir_width )
-	  {
-	    my $dirname = "$dir/bar$ndir";
-	    my $svn_cmd = "svn mkdir $dirname";
-	    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+        for $ndir ( 1..$dir_width )
+          {
+            my $dirname = "$dir/bar$ndir";
+            my $svn_cmd = "svn mkdir $dirname";
+            system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
 
-	    populate( "$dirname", $dir_width, $file_width, $depth );
-	  }
+            populate( "$dirname", $dir_width, $file_width, $depth, $pad );
+          }
       }
   }
 
@@ -251,8 +251,8 @@ sub ParseCommandLine
   {
     my %cmd_opts;
     my $usage = "
-usage: stress.pl [-c] [-i num] [-n num] [-s secs] [-x num]
-                 [-D num] [-F num] [-N num] [-R path] [-S path] [-U url]
+usage: stress.pl [-c] [-i num] [-n num] [-s secs] [-x num] [-D num] [-F num]
+                 [-N num] [-P num] [-R path] [-S path] [-U url] [-W]
 where
   -c cause repository creation
   -i the ID (valid IDs are 0 to 9, default is 0 if -c given, 1 otherwise)
@@ -262,25 +262,29 @@ where
   -D the number of sub-directories per directory in the tree
   -F the number of files per directory in the tree
   -N the depth of the tree
+  -P the number of 10K blocks with which to pad the file
   -R the path to the repository
   -S the path to the file whose presence stops this script
   -U the URL to the repository (file:///<-R path> by default)
+  -W use --bdb-txn-nosync during repository creation
 ";
 
     # defaults
     $cmd_opts{'D'} = 2;            # number of subdirs per dir
     $cmd_opts{'F'} = 2;            # number of files per dir
     $cmd_opts{'N'} = 2;            # depth
+    $cmd_opts{'P'} = 0;            # padding blocks
     $cmd_opts{'R'} = "repostress"; # repository name
     $cmd_opts{'S'} = "stop";       # path of file to stop the script
     $cmd_opts{'U'} = "none";       # URL
+    $cmd_opts{'W'} = 0;            # create with --bdb-txn-nosync
     $cmd_opts{'c'} = 0;            # create repository
     $cmd_opts{'i'} = 0;            # ID
     $cmd_opts{'s'} = -1;           # sleep interval
     $cmd_opts{'n'} = 200;          # sets of changes
     $cmd_opts{'x'} = 4;            # files to modify
 
-    getopts( 'ci:n:s:x:D:F:N:R:U:', \%cmd_opts ) or die $usage;
+    getopts( 'ci:n:s:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
 
     # default ID if not set
     $cmd_opts{'i'} = 1 - $cmd_opts{'c'} if not $cmd_opts{'i'};
@@ -293,14 +297,30 @@ where
 ############################################################################
 # Main
 
+# Why the fixed seed?  I use this script for more than stress testing,
+# I also use it to create test repositories.  When creating a test
+# repository, while I don't care exactly which files get modified, I
+# find it useful for the repositories to be reproducible, i.e. to have
+# the same files modified each time.  When using this script for
+# stress testing one could remove this fixed seed and Perl will
+# automatically use a pseudo-random seed.  However it doesn't much
+# matter, the stress testing really depends on the real-time timing
+# differences between mutiple instances of the script, rather than the
+# randomness of the chosen files.
 srand 123456789;
 
 my %cmd_opts = ParseCommandLine();
 
-my $repo = init_repo $cmd_opts{'R'}, $cmd_opts{'c'};
+my $repo = init_repo $cmd_opts{'R'}, $cmd_opts{'c'}, $cmd_opts{'W'};
+
+# [Windows compat]
+# Replace backslashes in the path, and tweak the number of slashes
+# in the schema separator to make the URL always correct.
+my $urlsep = ($repo =~ m/^\// ? '//' : '///');
+$repo =~ s/\\/\//g;
 
 # Make URL from path if URL not explicitly specified
-$cmd_opts{'U'} = "file://$repo" if $cmd_opts{'U'} eq "none";
+$cmd_opts{'U'} = "file:$urlsep$repo" if $cmd_opts{'U'} eq "none";
 
 my $wc_dir = check_out $cmd_opts{'U'};
 
@@ -308,7 +328,8 @@ if ( $cmd_opts{'c'} )
   {
     my $svn_cmd = "svn mkdir $wc_dir/trunk";
     system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
-    populate "$wc_dir/trunk", $cmd_opts{'D'}, $cmd_opts{'F'}, $cmd_opts{'N'};
+    populate( "$wc_dir/trunk", $cmd_opts{'D'}, $cmd_opts{'F'}, $cmd_opts{'N'},
+              $cmd_opts{'P'} );
     status_update_commit $wc_dir, 0 and die "populate checkin failed\n";
   }
 
@@ -324,10 +345,10 @@ for $mod_number ( 1..$cmd_opts{'n'} )
     my @chosen;
     for ( 1..$cmd_opts{'x'} )
       {
-	# Extract random file from list and modify it
-	my $mod_file = splice @wc_files, int rand $#wc_files, 1;
-	ModFile $mod_file, $mod_number, $cmd_opts{'i'};
-	push @chosen, $mod_file;
+        # Extract random file from list and modify it
+        my $mod_file = splice @wc_files, int rand $#wc_files, 1;
+        ModFile $mod_file, $mod_number, $cmd_opts{'i'};
+        push @chosen, $mod_file;
       }
     # Reinstate list of files, the order doesn't matter
     push @wc_files, @chosen;

@@ -45,6 +45,10 @@ struct edit_baton
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t descend;
 
+  /* True if we should report status for the root node of this editor
+     drive, false if we should not. */
+  svn_boolean_t report_root;
+
   /* The youngest revision in the repository.  This is a reference
      because this editor returns youngest rev to the driver directly,
      as well as in each statushash entry. */
@@ -345,10 +349,13 @@ delete_entry (const char *path,
                                full_path, kind == svn_node_dir,
                                svn_wc_status_deleted, 0));
 
-  /* Mark the parent dir regardless -- it lost an entry. */
-  SVN_ERR (tweak_statushash (db->edit_baton,
-                             db->path, kind == svn_node_dir,
-                             svn_wc_status_modified, 0));
+  /* Mark the parent dir -- it lost an entry (unless that parent dir
+     is the root node and we're not supposed to report on the root
+     node).  */
+  if ((db->parent_baton) || (eb->report_root))
+    SVN_ERR (tweak_statushash (db->edit_baton,
+                               db->path, kind == svn_node_dir,
+                               svn_wc_status_modified, 0));
 
   return SVN_NO_ERROR;
 }
@@ -422,8 +429,10 @@ close_directory (void *dir_baton,
                                svn_wc_status_added,
                                db->prop_changed ? svn_wc_status_added : 0));
 
-  /* Else, mark the existing directory in the statushash. */
-  else
+  /* Else, if this a) is not the root directory, or b) *is* the root
+     directory, and we are supposed to report on it, then mark the
+     existing directory in the statushash. */
+  else if ((db->parent_baton) || (db->edit_baton->report_root))
     SVN_ERR (tweak_statushash (db->edit_baton,
                                db->path, TRUE,
                                db->text_changed ? svn_wc_status_modified : 0,
@@ -474,7 +483,6 @@ open_file (const char *path,
 static svn_error_t *
 apply_textdelta (void *file_baton, 
                  const char *base_checksum,
-                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
@@ -486,7 +494,7 @@ apply_textdelta (void *file_baton,
 
   /* Send back a NULL window handler -- we don't need the actual diffs. */
   *handler_baton = NULL;
-  *handler = NULL;
+  *handler = svn_delta_noop_window_handler;
 
   return SVN_NO_ERROR;
 }
@@ -507,6 +515,7 @@ change_file_prop (void *file_baton,
 
 static svn_error_t *
 close_file (void *file_baton,
+            const char *text_checksum,  /* ignored, as we receive no data */
             apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
@@ -583,12 +592,16 @@ svn_wc_get_status_editor (const svn_delta_editor_t **editor,
   else
     tempbuf = apr_pstrdup (pool, anchor);
 
-
   if (strcmp (path, tempbuf) != 0)
     eb->path = "";
   else
     eb->path = anchor;
 
+  /* Record whether or not there is a target; in other words, whether
+     or not we want to report about the root directory of the edit
+     drive. */
+  eb->report_root = target ? FALSE : TRUE;
+  
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;

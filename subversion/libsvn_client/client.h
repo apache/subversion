@@ -209,6 +209,51 @@ svn_error_t * svn_client__can_delete (const char *path,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool);
 
+
+/* ---------------------------------------------------------------- */
+
+/*** Export ***/
+
+/* Set *EDITOR and *EDIT_BATON to an editor (allocated in POOL) that
+   simply dumps data to disk, with no working copy administrative dirs
+   or bookkeeping.  Create the directory ROOT_PATH, and dump the
+   entire tree within.  ROOT_URL must be the the url being exported,
+   so that the 'url' keyword can be expanded.  Use CTX (if non-NULL)
+   for sending feedback. */
+svn_error_t * svn_client__get_export_editor (const svn_delta_editor_t **editor,
+                                             void **edit_baton,
+                                             const char *root_path,
+                                             const char *root_url,
+                                             svn_boolean_t force,
+                                             svn_client_ctx_t *ctx,
+                                             apr_pool_t *pool);
+
+
+/* ---------------------------------------------------------------- */
+
+/*** Add/delete ***/
+
+/* The main logic of the public svn_client_add;  the only difference
+   is that this function uses an existing access baton.
+   (svn_client_add just generates an access baton and calls this func.) */
+svn_error_t * svn_client__add (const char *path, 
+                               svn_boolean_t recursive,
+                               svn_wc_adm_access_t *adm_access,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool);
+
+/* The main logic for client deletion from a working copy. Deletes PATH
+   from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
+   modified the delete will fail and return an error unless FORCE is TRUE.
+   If DRY_RUN is TRUE all the checks are made to ensure that the delete can
+   occur, but the working copy is not modifed. */
+svn_error_t * svn_client__wc_delete (const char *path,
+                                     svn_wc_adm_access_t *adm_access,
+                                     svn_boolean_t force,
+                                     svn_boolean_t dry_run,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *pool);
+
 /* ---------------------------------------------------------------- */
 
 /*** Checkout and update ***/
@@ -331,7 +376,7 @@ svn_client__get_diff_editor (const char *target,
    The prototypes below are still in development.  In general, the
    idea is that commit-y processes (`svn mkdir URL`, `svn delete URL`,
    `svn commit`, `svn copy WC_PATH URL`, `svn copy URL1 URL2`, `svn
-   move URL1 URL2`, others??) generate the cached commit candidate
+   move URL1 URL2`, others?) generate the cached commit candidate
    information, and hand this information off to a consumer which is
    responsible for driving the RA layer's commit editor in a
    URL-depth-first fashion and reporting back the post-commit

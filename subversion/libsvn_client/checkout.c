@@ -51,10 +51,8 @@ svn_client__checkout_internal (const char *URL,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
-  const svn_delta_editor_t *checkout_editor;
-  void *checkout_edit_baton;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
-  svn_error_t *err;
+  svn_error_t *err = NULL;
   svn_revnum_t revnum;
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
@@ -63,35 +61,20 @@ svn_client__checkout_internal (const char *URL,
   assert (path != NULL);
   assert (URL != NULL);
 
-  /* Get revnum set to something meaningful, so we can fetch the
-     checkout editor. */
-  if (revision->kind == svn_opt_revision_number)
-    revnum = revision->value.number; /* do the trivial conversion manually */
-  else
-    revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
+  /* Fulfill the docstring promise of svn_client_checkout: */
+  if ((revision->kind != svn_opt_revision_number)
+      && (revision->kind != svn_opt_revision_date)
+      && (revision->kind != svn_opt_revision_head))
+    return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                             "Bogus revision passed to svn_client_checkout");
 
   /* Canonicalize the URL. */
   URL = svn_path_canonicalize (URL, pool);
 
-  /* Fetch the checkout editor.  If REVISION is invalid, that's okay;
-     the RA driver will call editor->set_target_revision
-     later on. */
-  SVN_ERR (svn_wc_get_checkout_editor (path,
-                                       URL,
-                                       revnum,
-                                       recurse,
-                                       ctx->notify_func,
-                                       ctx->notify_baton,
-                                       ctx->cancel_func,
-                                       ctx->cancel_baton,
-                                       &checkout_editor,
-                                       &checkout_edit_baton,
-                                       traversal_info,
-                                       pool));
-
     {
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
+      svn_node_kind_t kind;
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -107,14 +90,70 @@ svn_client__checkout_internal (const char *URL,
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));
 
-      /* Tell RA to do a checkout of REVISION; if we pass an invalid
-         revnum, that means RA will fetch the latest revision.  */
-      err = ra_lib->do_checkout (session,
-                                 revnum,
-                                 recurse,
-                                 checkout_editor,
-                                 checkout_edit_baton);
+      
+      SVN_ERR (svn_io_check_path (path, &kind, pool));
 
+      if (kind == svn_node_none)
+        {
+          /* Bootstrap: create an incomplete working-copy root dir.  Its
+             entries file should only have an entry for THIS_DIR with a
+             URL, revnum, and an 'incomplete' flag.  */
+          SVN_ERR (svn_io_make_dir_recursively (path, pool));          
+          SVN_ERR (svn_wc_ensure_adm (path, URL, revnum, pool));
+          
+          /* Have update fix the incompleteness. */
+          err = svn_client_update (path, revision, recurse, ctx, pool);
+        }
+      else if (kind == svn_node_dir)
+        {
+          int wc_format;
+          const svn_wc_entry_t *entry;
+          svn_wc_adm_access_t *adm_access;
+
+          SVN_ERR (svn_wc_check_wc (path, &wc_format, pool));
+          if (! wc_format)
+            {
+              /* Make the unversioned directory into a versioned one. */
+              SVN_ERR (svn_wc_ensure_adm (path, URL, revnum, pool));
+              err = svn_client_update (path, revision, recurse, ctx, pool);
+              goto done;
+            }
+
+          /* Get PATH's entry. */
+          SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path,
+                                    FALSE, FALSE, pool));
+          SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+          SVN_ERR (svn_wc_adm_close (adm_access));
+
+          /* If PATH's existing url matches the incoming one, then
+             just update.  This allows 'svn co' to restart an
+             interrupted checkout. */
+          if (entry->url && (strcmp (entry->url, URL) == 0))
+            {
+              err = svn_client_update (path, revision, recurse, ctx, pool);
+            }
+          else
+            {
+              const char *errmsg;
+              errmsg = apr_psprintf 
+                (pool,
+                 "'%s' is already a working copy for a different url", path);
+              if (entry->incomplete)
+                errmsg = apr_pstrcat
+                  (pool, errmsg, "; run 'svn update' to complete it.", NULL);
+
+              return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                                       errmsg);
+            }
+        }
+      else
+        {
+          return svn_error_createf (SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
+                                    "'%s' is already a file/something else.",
+                                    path);
+        }
+
+    done:
       if (err)
         {
           /* Don't rely on the error handling to handle the sleep later, do
@@ -123,9 +162,6 @@ svn_client__checkout_internal (const char *URL,
           return err;
         }
       *use_sleep = TRUE;
-
-      /* Close the RA session. */
-      SVN_ERR (ra_lib->close (session));
     }      
   
   /* We handle externals after the initial checkout is complete, so

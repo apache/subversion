@@ -29,6 +29,19 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 
+# FIXME: Someday we'll create expected output with the right kind
+#        of path separator; but the client doesn't consistently
+#        use local style in output yet.
+def _tweak_paths(list):
+  if os.sep != "/":
+    tweaked_list = []
+    for line in list:
+      tweaked_list.append(string.replace(line, os.sep, "/"))
+    return tweaked_list
+  else:
+    return list
+
+
 ######################################################################
 # Tests
 #
@@ -177,7 +190,7 @@ def add_executable(sbox):
   def runTest(wc_dir, fileName, perm, executable):
     fileName = os.path.join(wc_dir, fileName)
     if executable:
-      expected = (["\n"], [])
+      expected = (["*\n"], [])
     else:
       expected = ([], [])
     f = open(fileName,"w")
@@ -282,6 +295,7 @@ def revert_add_files(sbox):
     return 1
 
   ### do we really need to sort these?
+  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
@@ -314,6 +328,7 @@ def revert_add_directories(sbox):
     return 1
 
   ### do we really need to sort these?
+  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
@@ -346,6 +361,7 @@ def revert_nested_adds(sbox):
     return 1
 
   ### do we really need to sort these?
+  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
@@ -383,6 +399,7 @@ def revert_add_executable(sbox):
     return 1
 
   ### do we really need to sort these?
+  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
@@ -417,6 +434,7 @@ def revert_delete_files(sbox):
     return 1
 
   ### do we really need to sort these?
+  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
@@ -459,6 +477,7 @@ def revert_delete_dirs(sbox):
     return 1
 
   ### do we really need to sort these?
+  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
@@ -578,8 +597,8 @@ def unschedule_missing_added(sbox):
   # Poof, all 4 added things are now missing in action.
   os.remove(file1_path)
   os.remove(file2_path)
-  svntest.main.remove_wc(dir1_path)
-  svntest.main.remove_wc(dir2_path)
+  svntest.main.safe_rmtree(dir1_path)
+  svntest.main.safe_rmtree(dir2_path)
 
   # Unschedule the additions, using 'svn rm' and 'svn revert'.
   svntest.main.run_svn(None, 'rm', file1_path, dir1_path)
@@ -611,7 +630,7 @@ def delete_missing(sbox):
 
   # Manually remove a file and a directory.
   os.remove(mu_path)
-  svntest.main.remove_wc(H_path)
+  svntest.main.safe_rmtree(H_path)
 
   # Now schedule them for deletion anyway, and make sure no error is output.
   stdout, stderr = svntest.main.run_svn(None, 'rm', mu_path, H_path)

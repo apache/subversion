@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include "svn_wc.h"
+#include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
@@ -104,22 +105,28 @@ svn_cl__propdel (apr_getopt_t *os,
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
+      apr_pool_t *subpool = svn_pool_create (pool);
+
       /* For each target, remove the property PNAME. */
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
+
+          svn_pool_clear (subpool);
           SVN_ERR (svn_client_propset (pname_utf8, NULL, target,
-                                       opt_state->recursive, pool));
+                                       opt_state->recursive, subpool));
           if (! opt_state->quiet) 
             {
               const char *target_native;
               SVN_ERR (svn_utf_cstring_from_utf8 (&target_native,
-                                                  target, pool));
+                                                  target, subpool));
               printf ("property `%s' deleted%sfrom '%s'.\n", pname,
                       opt_state->recursive ? " (recursively) " : " ",
                       target_native);
             }
+          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
         }
+      svn_pool_destroy (subpool);
     }
 
   return SVN_NO_ERROR;

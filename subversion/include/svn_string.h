@@ -33,20 +33,32 @@
  * @c svn_stringbuf_t uses a plain <tt>char *</tt> for its data, so it is 
  * most appropriate for modifiable data.
  *
- * <h3>Invariant</h3>
+ * <h3>Invariants</h3>
  *
- * Both structures maintain a significant invariant:
+ *   1. Null termination:
  *
- *     <tt>s->data[s->len] == '\\0'</tt>
+ *      Both structures maintain a significant invariant:
  *
- * The functions defined within this header file will maintain the invariant
- * (which does imply that memory is allocated/defined as @c len+1 bytes). If
- * code outside of the @c svn_string.h functions manually builds these
- * structures, then they must enforce this invariant.
+ *         <tt>s->data[s->len] == '\\0'</tt>
  *
- * Note that an @c svn_string(buf)_t may contain binary data, which means that
- * @c strlen(s->data) does not have to equal @c s->len. The null terminator is
- * provided to make it easier to pass @c s->data to C string interfaces.
+ *      The functions defined within this header file will maintain
+ *      the invariant (which does imply that memory is
+ *      allocated/defined as @c len+1 bytes).  If code outside of the
+ *      @c svn_string.h functions manually builds these structures,
+ *      then they must enforce this invariant.
+ *
+ *      Note that an @c svn_string(buf)_t may contain binary data,
+ *      which means that @c strlen(s->data) does not have to equal @c
+ *      s->len. The null terminator is provided to make it easier to
+ *      pass @c s->data to C string interfaces.
+ *
+ *
+ *   2. Non-null input:
+ *
+ *      All the functions below assume their input data is non-null,
+ *      unless otherwise documented, and may seg fault if passed
+ *      null.  The input data may *contain* null bytes, of course, just
+ *      the data pointer itself must not be null.
  */
 
 
@@ -275,9 +287,7 @@ svn_boolean_t svn_string_compare_stringbuf (const svn_string_t *str1,
  * @{
  */
 
-/** Split @a input into substrings.
- *
- * Divide @a input into substrings along @a sep_char boundaries, return an
+/** Divide @a input into substrings along @a sep_char boundaries, return an
  * array of copies of those substrings, allocating both the array and
  * the copies in @a pool.
  *
@@ -296,9 +306,7 @@ apr_array_header_t *svn_cstring_split (const char *input,
                                        svn_boolean_t chop_whitespace,
                                        apr_pool_t *pool);
 
-/** Split @a input into substrings and append the results to @a array.
- *
- * Like @c svn_cstring_split(), but append to existing @a array instead of
+/** Like @c svn_cstring_split(), but append to existing @a array instead of
  * creating a new one.  Allocate the copied substrings in @a pool
  * (i.e., caller decides whether or not to pass @a array->pool as @a pool).
  */

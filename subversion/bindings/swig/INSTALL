@@ -50,14 +50,14 @@ SPECIFIC LANGUAGE BINDINGS
 
 *  Python
 
-   1.  On Unix systems, run 'make swig-py from the top of the
+   1.  On Unix systems, run 'make swig-py' from the top of the
        Subversion source tree.  This will invoke SWIG on the *.i
        files, resulting in a collection of .c source files.  It will
        then compile and link those .c files into Python libraries.
 
-       On Windows, ???
+       On Windows, build the __SWIG_PYTHON__ project in Visual Studio.
 
-   2.  On Unix systems, run 'make install-swig-py (as root, typically)
+   2.  On Unix systems, run 'make install-swig-py' (as root, typically)
        from the top of the Subversion source tree.  This will copy
        your new Python libraries into the appropriate system location.
 
@@ -66,17 +66,39 @@ SPECIFIC LANGUAGE BINDINGS
        directory.  You can do this by running
        'make install-swig-py swig_pydir=~'.
 
-       Note: If you want to install to an alterante prefix (usually only
+       Note: If you want to install to an alternate prefix (usually only
        if you are building packages), you can supply the prefix here.  An
        example of doing this for building rpms looks like
        'make install-swig-py DESTDIR=$RPM_BUILD_ROOT/usr'.
 
-       On Windows, ???
+       On Windows, create two folders:
+
+         <PYTHON>\Lib\site-packages\svn
+         <PYTHON>\Lib\site-packages\libsvn
+
+       Copy subversion\bindings\swig\python\svn\*.py into the svn folder.
+       Copy subversion\bindings\swig\python\*.py and
+       Release\subversion\bindings\swig\python\*.dll into the libsvn folder.
+
+       Optionally, you can run the following commands to compile the python
+       sources into bytecode:
+
+         python <PYTHON>\lib\compileall.py <PYTHON>\Lib\site-packages\svn
+         python <PYTHON>\lib\compileall.py <PYTHON>\Lib\site-packages\libsvn
+
+       This can make the modules load faster for users without write access
+       to the site-packages directory.
 
    3.  Verify that an 'svn' package has been installed correctly.  You can
        do this by running python via 'python -c "from svn import client"'.
 
-   4.  Try some demo programs.  From the top of your svn working copy,
+   4.  Make sure that whatever directory the bindings got installed in
+       is in your PYTHONPATH.  That directory depends on how you
+       installed; a typical location is /usr/local/lib/svn-python/,
+       see http://subversion.tigris.org/issues/show_bug.cgi?id=1125
+       for some imminent improvements to the install process.
+
+   5.  Try some demo programs.  From the top of your svn working copy,
        cd tools/examples/, and try running 'svnlook.py'.
 
 
@@ -85,7 +107,7 @@ SPECIFIC LANGUAGE BINDINGS
 
    The Java bindings are still under development, and have not yet
    reached a functional state.  You can attempt to build them by
-   running 'make swig-java from the top level of the Subversion
+   running 'make swig-java' from the top level of the Subversion
    source tree.
 
 

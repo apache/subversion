@@ -72,7 +72,7 @@ write_hash_to_stringbuf (apr_hash_t *hash,
 
       svn_stringbuf_appendbytes (*strbuf, "V ", 2);
 
-      sprintf (buf, "%ld%n", (long int) value->len, &bytes_used);
+      sprintf (buf, "%" APR_SIZE_T_FMT "%n", value->len, &bytes_used);
       svn_stringbuf_appendbytes (*strbuf, buf, bytes_used);
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
 
@@ -220,7 +220,7 @@ dump_node (struct edit_baton *eb,
 {
   svn_stringbuf_t *propstring;
   apr_hash_t *prophash;
-  apr_off_t textlen = 0, content_length = 0;
+  svn_filesize_t textlen = 0, content_length = 0;
   apr_size_t proplen = 0, len;
   svn_boolean_t must_dump_text = FALSE, must_dump_props = FALSE;
   const char *compare_path = path;
@@ -408,7 +408,7 @@ dump_node (struct edit_baton *eb,
       content_length += textlen;
       SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH 
-                                  ": %" APR_OFF_T_FMT "\n", textlen));
+                                  ": %" SVN_FILESIZE_T_FMT "\n", textlen));
 
       SVN_ERR (svn_fs_file_md5_checksum (md5_digest, eb->fs_root, path, pool));
       hex_digest = svn_md5_digest_to_cstring (md5_digest, pool);
@@ -424,7 +424,8 @@ dump_node (struct edit_baton *eb,
      parsers. */
   SVN_ERR (svn_stream_printf (eb->stream, pool,
                               SVN_REPOS_DUMPFILE_CONTENT_LENGTH 
-                              ": %" APR_OFF_T_FMT "\n\n", content_length));
+                              ": %" SVN_FILESIZE_T_FMT "\n\n",
+                              content_length));
 
   /* Dump property content if we're supposed to do so. */
   if (must_dump_props)
@@ -844,11 +845,13 @@ svn_repos_dump_fs (svn_repos_t *repos,
   /* Validate the revisions. */
   if (start_rev > end_rev)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
-                              "start_rev %ld is greater than end_rev %ld",
+                              "start_rev %" SVN_REVNUM_T_FMT
+                              " is greater than end_rev %" SVN_REVNUM_T_FMT,
                               start_rev, end_rev);
   if (end_rev > youngest)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
-                              "end_rev %ld is invalid (youngest rev is %ld)",
+                              "end_rev %" SVN_REVNUM_T_FMT " is invalid "
+                              "(youngest rev is %" SVN_REVNUM_T_FMT ")",
                               end_rev, youngest);
   if ((start_rev == 0) && incremental)
     incremental = FALSE; /* revision 0 looks the same regardless of
@@ -869,7 +872,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
   for (i = start_rev; i <= end_rev; i++)
     {
       svn_revnum_t from_rev, to_rev;
-      svn_fs_root_t *from_root, *to_root;
+      svn_fs_root_t *to_root;
 
       /* Special-case the initial revision dump: it needs to contain
          *all* nodes, because it's the foundation of all future
@@ -906,17 +909,30 @@ svn_repos_dump_fs (svn_repos_t *repos,
                                 fs, to_rev, "/", stream, feedback_stream,
                                 start_rev, subpool));
 
-      /* Drive the editor. */
-      SVN_ERR (svn_fs_revision_root (&from_root, fs, from_rev, subpool));
+      /* Drive the editor in one way or another. */
       SVN_ERR (svn_fs_revision_root (&to_root, fs, to_rev, subpool));
-      SVN_ERR (svn_repos_dir_delta (from_root, "/", NULL, 
-                                    to_root, "/",
-                                    dump_editor, dump_edit_baton,
-                                    FALSE, /* don't send text-deltas */
-                                    TRUE, /* recurse */
-                                    FALSE, /* don't send entry props */
-                                    TRUE, /* send copyfrom args */
-                                    subpool));
+
+      /* If this is the first revision of a non-incremental dump,
+         we're in for a full tree dump.  Othersise, we want to simply
+         replay the revision.  */
+      if ((i == start_rev) && (! incremental))
+        {
+          svn_fs_root_t *from_root;
+          SVN_ERR (svn_fs_revision_root (&from_root, fs, from_rev, subpool));
+          SVN_ERR (svn_repos_dir_delta (from_root, "/", NULL, 
+                                        to_root, "/",
+                                        dump_editor, dump_edit_baton,
+                                        FALSE, /* don't send text-deltas */
+                                        TRUE, /* recurse */
+                                        FALSE, /* don't send entry props */
+                                        FALSE, /* don't ignore ancestry */
+                                        subpool));
+        }
+      else
+        {
+          SVN_ERR (svn_repos_replay (to_root, dump_editor, 
+                                     dump_edit_baton, subpool));
+        }
 
     loop_end:
       /* Reuse all memory consumed by the dump of this one revision. */

@@ -77,6 +77,20 @@ case $CHECK_TARGET in
         ;;
 esac
 
+# Kill the server
+kill_svnserve() {
+    case $CHECK_TARGET in
+        check)
+            # Nothing to do here
+            ;;
+        svncheck)
+            START "kill svnserve" "Stopping svnserve..."
+            $KILL $SVNSERVE_PID || FAIL
+            PASS
+            ;;
+    esac
+}
+
 # Test
 START "make $CHECK_TARGET" "Testing $RA_TYPE..."
 CHECK_LOG_FILE="$TEST_ROOT/LOG_svn_check_${BUILD_TYPE}_${RA_TYPE}"
@@ -90,18 +104,8 @@ test $? = 0 || {
     echo >> $LOG_FILE
     echo "tests.log:" >> $LOG_FILE
     $CAT tests.log >> $LOG_FILE 2>&1
-    FAIL
+    FAIL kill_svnserve
 }
 PASS
 
-# Kill the server
-case $CHECK_TARGET in
-    check)
-        # Nothing to do here
-        ;;
-    svncheck)
-        START "kill svnserve" "Stopping svnserve..."
-        $KILL $SVNSERVE_PID || FAIL
-        PASS
-        ;;
-esac
+kill_svnserve

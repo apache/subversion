@@ -32,7 +32,7 @@ TABLE OF CONTENTS
    * The configuration/build system under unix
    * How to release a distribution tarball
    * Release numbering
-
+   * Compatibility
 
 
 Participating in the community
@@ -67,7 +67,7 @@ testing and/or helping to manage the bug database.  If you'd like to
 contribute, then look at:
 
    *  The bugs/issues database
-      http://subversion.tigris.org/servlets/ProjectIssues
+      http://subversion.tigris.org/project_issues.html
 
    *  The bite-sized tasks page
       http://subversion.tigris.org/project_tasks.html
@@ -450,16 +450,16 @@ principles:
       destroy that pool.
 
    2. When iterating an unbounded number of times, create a subpool
-      before the iteration, use it inside the iteration and clear it
-      after each iteration, then destroy it after the loop is done,
-      like so:
+      before entering the iteration, use it inside the loop and clear 
+      it at the start of each iteration, then destroy it after the loop 
+      is done, like so:
 
          subpool = svn_pool_create(pool);
 
          for (i = 0; i < n; ++i)
          {
-           do_operation(..., subpool);
            svn_pool_clear(subpool);
+           do_operation(..., subpool);
          }
 
          svn_pool_destroy(subpool);
@@ -517,8 +517,8 @@ In summary:
      function's memory usage.
 
      For example, the caller might know that the app will exit upon
-     the function's return. thus, the function would be created extra
-     work if it built/destroyed a pool. instead, it should use the
+     the function's return. Thus, the function would create extra
+     work if it built/destroyed a pool. Instead, it should use the
      passed-in pool, which the caller is going to be tossing as part
      of app-exit anyway.
 
@@ -642,7 +642,7 @@ look up the line number at the end of marshal.c:vparse_tuple() where
 it returns the "Malformed network data" error.
 
 To debug the client, simply pull it up in gdb, set a breakpoint, and
-run the offending commmand:
+run the offending command:
 
   % gdb svn
   (gdb) break marshal.c:NNN
@@ -678,12 +678,11 @@ option to serve a single connection:
 Then run the offending client command.  From there, it's just like
 debugging the client.
 
-There's no good way to debug the server in tunnel mode, so if you see
-a "Connection closed unexpectedly" in tunnel mode, and can't reproduce
-it in daemon mode, debug the client to figure out which protocol
-exchange is failing and then pore over the server code.  If necessary,
-add debugging statements to the server code which send output to
-stderr.
+Debugging the server in tunnel mode is more of a pain.  You'll need to
+stick something like "{ int x = 1; while (x); }" near the top of
+svnserve's main() and put the resulting svnserve in the user path on
+the server.  Then start an operation, gdb attach the process on the
+server, "set x = 0", and step through the code as desired.
 
 
 
@@ -745,10 +744,10 @@ then include a string like "issue #N" in the log message.  For
 example, if a patch resolves issue 1729, then the log message might
 be:
 
-   Fix issue #1729:
+   Fix issue #1729: Don't crash because of a missing file.
 
    * get_editor.c
-     (frobnicate_file): Check that file exists first.
+     (frobnicate_file): Check that file exists before frobnicating.
 
 For large changes or change groups, group the log entry into
 paragraphs separated by blank lines.  Each paragraph should be a set
@@ -1135,3 +1134,78 @@ Release numbering
 
 Please see http://apr.apache.org/versioning.html -- Subversion uses
 the same guidelines.
+
+
+
+Compatibility
+=============
+
+Before 1.0, we require only that each interim release be compatible
+with the one before it.  For example, a 0.20 server must work with
+both 0.19 and 0.21 clients (and, obviously, a 0.20 client as well),
+but may be incompatible with a 0.18 client (though gratuitous
+incompatibility should be avoided whenever possible, of course).
+Patch levels don't count: 0.20.1, 0.20.2, etc, must be compatible with
+0.19.*.
+
+The purpose of this policy is to help early adopters make good
+decisions about when to upgrade, without impeding development too
+much.  After 1.0 is released, we will probably adopt a more
+conservative policy.
+
+Note that the ra_svn layer temporarily has a different compatibility
+policy:
+
+   From: Greg Hudson <ghudson@MIT.EDU>
+   Subject: A word about ra_svn compatibility
+   To: dev@subversion.tigris.org
+   Date: Sun, 25 May 2003 23:51:14 -0400
+   
+   Some users and developers have expressed concerns about ra_svn
+   compatibility, partly because of the way we've broken compatibility in
+   that ra mechanism in every release since 0.20 or so.  I'd like to
+   clarify the situation.
+   
+   The ra_svn protocol has several flexible allowances for backward
+   compatibility, in decreasing order of desirability:
+   
+     (1) Fields can be added to any tuple; old clients will simply ignore
+         them.  (Right now, there are some implementation limits on what
+         kinds of things you can put in the optional part of a tuple.  I
+         hope to fix that, but I'd like to stress that it's not a
+         protocol flaw and fixing it will not require a protocol change.)
+   
+         We can use this mechanism when information is added to an API
+         call, such as the "start_empty" parameter of the reporter calls.
+   
+     (2) At connection establishment time, clients and servers exchange a
+         list of capability keywords.
+   
+         We can use this mechanism for more complicated changes, like
+         introducing pipelining or removing information from API calls.
+   
+     (3) New commands can be added; trying to use an unsupported command
+         will result in an error which can be checked and dealt with.
+   
+     (4) The protocol version number can be bumped to allow graceful
+         refusal of old clients or servers, or to allow a client or
+         server to detect when it has to do things the old way.
+   
+         This mechanism is a last resort, to be used when capability
+         keywords would be too hard to manage.
+   
+   However, we (mostly I) have made the deliberate decision not to use
+   any of these mechanisms so far, because Subversion is still in alpha
+   and ra_svn is still experiencing growing pains.  Unfortunately, I took
+   a ~6-month hiatus from significant Subversion work while a number of
+   people have adopted ra_svn for moderately high-profile projects under
+   the theory that Subversion is supposed to be "unusually stable for
+   alpha."  This situation cannot stand for too much longer.
+   
+   Right now I have some traumatic, structural error-handling changes to
+   make (see <http://subversion.tigris.org/issues/show_bug.cgi?id=1146>),
+   which would be irritating to make in a backwards-compatible fashion.
+   I hope to have these changes ready before 0.24.  After those changes
+   are made, I will declare that ra_svn is ready to follow the
+   compatibility discipline we apply to the rest of Subversion--
+   tolerating a skew of at least one release.

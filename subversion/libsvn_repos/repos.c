@@ -215,53 +215,88 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                "creating hook file");
     
     contents = 
-      "#!/bin/sh\n"
-      "\n"
-      "# START-COMMIT HOOK\n"
-      "#\n"
-      "# The start-commit hook is invoked before a Subversion txn is created\n"
-      "# in the process of doing a commit.  Subversion runs this hook\n"
-      "# by invoking a program (script, executable, binary, etc.) named\n"
+      "#!/bin/sh"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# START-COMMIT HOOK"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The start-commit hook is invoked before a Subversion txn is created"
+      APR_EOL_STR
+      "# in the process of doing a commit.  Subversion runs this hook"
+      APR_EOL_STR
+      "# by invoking a program (script, executable, binary, etc.) named"
+      APR_EOL_STR
       "# `" 
       SVN_REPOS__HOOK_START_COMMIT
-      "' (for which this file is a template)\n"
-      "# with the following ordered arguments:\n"
-      "#\n"
-      "#   [1] REPOS-PATH   (the path to this repository)\n"
-      "#   [2] USER         (the authenticated user attempting to commit)\n"
-      "#\n"
-      "# If the hook program exits with success, the commit continues; but\n"
-      "# if it exits with failure (non-zero), the commit is stopped before\n"
-      "# even a Subversion txn is created.\n"
-      "#\n"
+      "' (for which this file is a template)"
+      APR_EOL_STR
+      "# with the following ordered arguments:"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "#   [1] REPOS-PATH   (the path to this repository)"
+      APR_EOL_STR
+      "#   [2] USER         (the authenticated user attempting to commit)"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# If the hook program exits with success, the commit continues; but"
+      APR_EOL_STR
+      "# if it exits with failure (non-zero), the commit is stopped before"
+      APR_EOL_STR
+      "# even a Subversion txn is created."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
       "# On a Unix system, the normal procedure is to have "
       "`"
       SVN_REPOS__HOOK_START_COMMIT
-      "'\n" 
-      "# invoke other programs to do the real work, though it may do the\n"
-      "# work itself too.\n"
-      "#\n"
+      "'" 
+      APR_EOL_STR
+      "# invoke other programs to do the real work, though it may do the"
+      APR_EOL_STR
+      "# work itself too."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
       "# Note that"
       " `" SVN_REPOS__HOOK_START_COMMIT "' "
-      "must be executable by the user(s) who will\n"
-      "# invoke it (typically the user httpd runs as), and that user must\n"
-      "# have filesystem-level permission to access the repository.\n"
-      "#\n"
-      "# On a Windows system, you should name the hook program\n"
+      "must be executable by the user(s) who will"
+      APR_EOL_STR
+      "# invoke it (typically the user httpd runs as), and that user must"
+      APR_EOL_STR
+      "# have filesystem-level permission to access the repository."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# On a Windows system, you should name the hook program"
+      APR_EOL_STR
       "# `" SVN_REPOS__HOOK_START_COMMIT ".bat' or "
-      "`" SVN_REPOS__HOOK_START_COMMIT ".exe',\n"
-      "# but the basic idea is the same.\n"
-      "# \n"
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
-      "\n"
-      "REPOS=\"$1\"\n"
-      "USER=\"$2\"\n"
-      "\n"
-      "commit-allower.pl --repository \"$REPOS\" --user \"$USER\" || exit 1\n"
-      "special-auth-check.py --user \"$USER\" --auth-level 3 || exit 1\n"
-      "\n"
-      "# All checks passed, so allow the commit.\n"
-      "exit 0\n";
+      "`" SVN_REPOS__HOOK_START_COMMIT ".exe',"
+      APR_EOL_STR
+      "# but the basic idea is the same."
+      APR_EOL_STR
+      "# "
+      APR_EOL_STR
+      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      APR_EOL_STR
+      APR_EOL_STR
+      "REPOS=\"$1\""
+      APR_EOL_STR
+      "USER=\"$2\""
+      APR_EOL_STR
+      APR_EOL_STR
+      "commit-allower.pl --repository \"$REPOS\" --user \"$USER\" || exit 1"
+      APR_EOL_STR
+      "special-auth-check.py --user \"$USER\" --auth-level 3 || exit 1"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# All checks passed, so allow the commit."
+      APR_EOL_STR
+      "exit 0"
+      APR_EOL_STR;
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -287,68 +322,116 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                "creating hook file");
 
     contents =
-      "#!/bin/sh\n"
-      "\n"
-      "# PRE-COMMIT HOOK\n"
-      "#\n"
-      "# The pre-commit hook is invoked before a Subversion txn is\n"
-      "# committed.  Subversion runs this hook by invoking a program\n"
+      "#!/bin/sh"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# PRE-COMMIT HOOK"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The pre-commit hook is invoked before a Subversion txn is"
+      APR_EOL_STR
+      "# committed.  Subversion runs this hook by invoking a program"
+      APR_EOL_STR
       "# (script, executable, binary, etc.) named "
       "`" 
-      SVN_REPOS__HOOK_PRE_COMMIT "' (for which\n"
-      "# this file is a template), with the following ordered arguments:\n"
-      "#\n"
-      "#   [1] REPOS-PATH   (the path to this repository)\n"
-      "#   [2] TXN-NAME     (the name of the txn about to be committed)\n"
-      "#\n"
-      "# If the hook program exits with success, the txn is committed; but\n"
-      "# if it exits with failure (non-zero), the txn is aborted and no\n"
-      "# commit takes place.  The hook program can use the `svnlook'\n"
-      "# utility to help it examine the txn.\n"
-      "#\n"
+      SVN_REPOS__HOOK_PRE_COMMIT "' (for which"
+      APR_EOL_STR
+      "# this file is a template), with the following ordered arguments:"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "#   [1] REPOS-PATH   (the path to this repository)"
+      APR_EOL_STR
+      "#   [2] TXN-NAME     (the name of the txn about to be committed)"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# If the hook program exits with success, the txn is committed; but"
+      APR_EOL_STR
+      "# if it exits with failure (non-zero), the txn is aborted and no"
+      APR_EOL_STR
+      "# commit takes place.  The hook program can use the `svnlook'"
+      APR_EOL_STR
+      "# utility to help it examine the txn."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
       "# On a Unix system, the normal procedure is to have "
       "`"
       SVN_REPOS__HOOK_PRE_COMMIT
-      "'\n" 
-      "# invoke other programs to do the real work, though it may do the\n"
-      "# work itself too.\n"
-      "#\n"
-      "#   ***   NOTE: THE HOOK PROGRAM MUST NOT MODIFY THE TXN.    ***\n"
-      "#   This is why we recommend using the read-only `svnlook' utility.\n"
-      "#   In the future, Subversion may enforce the rule that pre-commit\n"
-      "#   hooks should not modify txns, or else come up with a mechanism\n"
-      "#   to make it safe to do so (by informing the committing client of\n"
-      "#   the changes).  However, right now neither mechanism is\n"
-      "#   implemented, so hook writers just have to be careful.\n"
-      "#\n"
+      "'" 
+      APR_EOL_STR
+      "# invoke other programs to do the real work, though it may do the"
+      APR_EOL_STR
+      "# work itself too."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "#   ***   NOTE: THE HOOK PROGRAM MUST NOT MODIFY THE TXN.    ***"
+      APR_EOL_STR
+      "#   This is why we recommend using the read-only `svnlook' utility."
+      APR_EOL_STR
+      "#   In the future, Subversion may enforce the rule that pre-commit"
+      APR_EOL_STR
+      "#   hooks should not modify txns, or else come up with a mechanism"
+      APR_EOL_STR
+      "#   to make it safe to do so (by informing the committing client of"
+      APR_EOL_STR
+      "#   the changes).  However, right now neither mechanism is"
+      APR_EOL_STR
+      "#   implemented, so hook writers just have to be careful."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
       "# Note that"
       " `" SVN_REPOS__HOOK_PRE_COMMIT "' "
-      "must be executable by the user(s) who will\n"
-      "# invoke it (typically the user httpd runs as), and that user must\n"
-      "# have filesystem-level permission to access the repository.\n"
-      "#\n"
-      "# On a Windows system, you should name the hook program\n"
+      "must be executable by the user(s) who will"
+      APR_EOL_STR
+      "# invoke it (typically the user httpd runs as), and that user must"
+      APR_EOL_STR
+      "# have filesystem-level permission to access the repository."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# On a Windows system, you should name the hook program"
+      APR_EOL_STR
       "# `" SVN_REPOS__HOOK_PRE_COMMIT ".bat' or "
-      "`" SVN_REPOS__HOOK_PRE_COMMIT ".exe',\n"
-      "# but the basic idea is the same.\n"
-      "#\n"
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
-      "\n"
-      "REPOS=\"$1\"\n"
-      "TXN=\"$2\"\n"
-      "\n"
-      "# Make sure that the log message contains some text.\n"
-      "SVNLOOK=/usr/local/bin/svnlook\n"
-      "LOG=`$SVNLOOK log -t \"$TXN\" \"$REPOS\"`\n"
-      "echo \"$LOG\" | grep \"[a-zA-Z0-9]\" > /dev/null || exit 1\n"
-      "\n"
-      "# Check that the author of this commit has the rights to perform\n"
-      "# the commit on the files and directories being modified.\n"
+      "`" SVN_REPOS__HOOK_PRE_COMMIT ".exe',"
+      APR_EOL_STR
+      "# but the basic idea is the same."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      APR_EOL_STR
+      APR_EOL_STR
+      "REPOS=\"$1\""
+      APR_EOL_STR
+      "TXN=\"$2\""
+      APR_EOL_STR
+      APR_EOL_STR
+      "# Make sure that the log message contains some text."
+      APR_EOL_STR
+      "SVNLOOK=/usr/local/bin/svnlook"
+      APR_EOL_STR
+      "LOG=`$SVNLOOK log -t \"$TXN\" \"$REPOS\"`"
+      APR_EOL_STR
+      "echo \"$LOG\" | grep \"[a-zA-Z0-9]\" > /dev/null || exit 1"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# Check that the author of this commit has the rights to perform"
+      APR_EOL_STR
+      "# the commit on the files and directories being modified."
+      APR_EOL_STR
       "commit-access-control.pl \"$REPOS\" \"$TXN\" commit-access-control.cfg "
-      "|| exit 1\n"
-      "\n"
-      "# All checks passed, so allow the commit.\n"
-      "exit 0\n";
+      "|| exit 1"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# All checks passed, so allow the commit."
+      APR_EOL_STR
+      "exit 0"
+      APR_EOL_STR;
     
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -375,63 +458,109 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                "creating hook file");
 
     contents =
-      "#!/bin/sh\n"
-      "\n"
-      "# PRE-REVPROP-CHANGE HOOK\n"
-      "#\n"
-      "# The pre-revprop-change hook is invoked before a revision property\n"
-      "# is modified.  Subversion runs this hook by invoking a program\n"
+      "#!/bin/sh"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# PRE-REVPROP-CHANGE HOOK"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The pre-revprop-change hook is invoked before a revision property"
+      APR_EOL_STR
+      "# is modified.  Subversion runs this hook by invoking a program"
+      APR_EOL_STR
       "# (script, executable, binary, etc.) named "
       "`" 
-      SVN_REPOS__HOOK_PRE_REVPROP_CHANGE "' (for which\n"
-      "# this file is a template), with the following ordered arguments:\n"
-      "#\n"
-      "#   [1] REPOS-PATH   (the path to this repository)\n"
-      "#   [2] REVISION     (the revision being tweaked)\n"
-      "#   [3] USER         (the username of the person tweaking the property)\n"
-      "#   [4] PROPNAME     (the property being set on the revision)\n"
-      "#\n"
-      "#   [STDIN] PROPVAL  ** the property value is passed via STDIN.\n"
-      "#\n"
-      "# If the hook program exits with success, the propchange happens; but\n"
-      "# if it exits with failure (non-zero), the propchange doesn't happen.\n"
-      "# The hook program can use the `svnlook' utility to examine the \n"
-      "# existing value of the revision property.\n"
-      "#\n"
-      "# WARNING: unlike other hooks, this hook MUST exist for revision\n"
-      "# properties to be changed.  If the hook does not exist, Subversion \n"
-      "# will behave as if the hook were present, but failed.  The reason\n"
-      "# for this is that revision properties are UNVERSIONED, meaning that\n"
-      "# a successful propchange is destructive;  the old value is gone\n"
-      "# forever.  We recommend the hook back up the old value somewhere.\n"
-      "#\n"      
+      SVN_REPOS__HOOK_PRE_REVPROP_CHANGE "' (for which"
+      APR_EOL_STR
+      "# this file is a template), with the following ordered arguments:"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "#   [1] REPOS-PATH   (the path to this repository)"
+      APR_EOL_STR
+      "#   [2] REVISION     (the revision being tweaked)"
+      APR_EOL_STR
+      "#   [3] USER         (the username of the person tweaking the property)"
+      APR_EOL_STR
+      "#   [4] PROPNAME     (the property being set on the revision)"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "#   [STDIN] PROPVAL  ** the property value is passed via STDIN."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# If the hook program exits with success, the propchange happens; but"
+      APR_EOL_STR
+      "# if it exits with failure (non-zero), the propchange doesn't happen."
+      APR_EOL_STR
+      "# The hook program can use the `svnlook' utility to examine the "
+      APR_EOL_STR
+      "# existing value of the revision property."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# WARNING: unlike other hooks, this hook MUST exist for revision"
+      APR_EOL_STR
+      "# properties to be changed.  If the hook does not exist, Subversion "
+      APR_EOL_STR
+      "# will behave as if the hook were present, but failed.  The reason"
+      APR_EOL_STR
+      "# for this is that revision properties are UNVERSIONED, meaning that"
+      APR_EOL_STR
+      "# a successful propchange is destructive;  the old value is gone"
+      APR_EOL_STR
+      "# forever.  We recommend the hook back up the old value somewhere."
+      APR_EOL_STR
+      "#"      
+      APR_EOL_STR
       "# On a Unix system, the normal procedure is to have "
       "`"
       SVN_REPOS__HOOK_PRE_REVPROP_CHANGE
-      "'\n" 
-      "# invoke other programs to do the real work, though it may do the\n"
-      "# work itself too.\n"
-      "#\n"
+      "'" 
+      APR_EOL_STR
+      "# invoke other programs to do the real work, though it may do the"
+      APR_EOL_STR
+      "# work itself too."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
       "# Note that"
       " `" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE "' "
-      "must be executable by the user(s) who will\n"
-      "# invoke it (typically the user httpd runs as), and that user must\n"
-      "# have filesystem-level permission to access the repository.\n"
-      "#\n"
-      "# On a Windows system, you should name the hook program\n"
+      "must be executable by the user(s) who will"
+      APR_EOL_STR
+      "# invoke it (typically the user httpd runs as), and that user must"
+      APR_EOL_STR
+      "# have filesystem-level permission to access the repository."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# On a Windows system, you should name the hook program"
+      APR_EOL_STR
       "# `" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE ".bat' or "
-      "`" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE ".exe',\n"
-      "# but the basic idea is the same.\n"
-      "#\n"
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
-      "\n"
-      "REPOS=\"$1\"\n"
-      "REV=\"$2\"\n"
-      "USER=\"$3\"\n"
-      "PROPNAME=\"$4\"\n"
-      "\n"
-      "if [ \"$PROPNAME\" = \"svn:log\" ]; then exit 0; fi\n"
-      "exit 1\n";
+      "`" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE ".exe',"
+      APR_EOL_STR
+      "# but the basic idea is the same."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      APR_EOL_STR
+      APR_EOL_STR
+      "REPOS=\"$1\""
+      APR_EOL_STR
+      "REV=\"$2\""
+      APR_EOL_STR
+      "USER=\"$3\""
+      APR_EOL_STR
+      "PROPNAME=\"$4\""
+      APR_EOL_STR
+      APR_EOL_STR
+      "if [ \"$PROPNAME\" = \"svn:log\" ]; then exit 0; fi"
+      APR_EOL_STR
+      "exit 1"
+      APR_EOL_STR;
     
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -458,50 +587,83 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                "creating hook file");
     
     contents =
-      "#!/bin/sh\n"
-      "\n"
-      "# POST-COMMIT HOOK\n"
-      "#\n"
-      "# The post-commit hook is invoked after a commit. Subversion runs\n"
-      "# this hook by invoking a program (script, executable, binary,\n"
+      "#!/bin/sh"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# POST-COMMIT HOOK"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The post-commit hook is invoked after a commit. Subversion runs"
+      APR_EOL_STR
+      "# this hook by invoking a program (script, executable, binary,"
+      APR_EOL_STR
       "# etc.) named `" 
       SVN_REPOS__HOOK_POST_COMMIT 
-      "' (for which\n"
-      "# this file is a template) with the following ordered arguments:\n"
-      "#\n"
-      "#   [1] REPOS-PATH   (the path to this repository)\n"
-      "#   [2] REV          (the number of the revision just committed)\n"
-      "#\n"
-      "# Because the commit has already completed and cannot be undone,\n"
-      "# the exit code of the hook program is ignored.  The hook program\n"
-      "# can use the `svnlook' utility to help it examine the\n"
-      "# newly-committed tree.\n"
-      "#\n"
+      "' (for which"
+      APR_EOL_STR
+      "# this file is a template) with the following ordered arguments:"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "#   [1] REPOS-PATH   (the path to this repository)"
+      APR_EOL_STR
+      "#   [2] REV          (the number of the revision just committed)"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# Because the commit has already completed and cannot be undone,"
+      APR_EOL_STR
+      "# the exit code of the hook program is ignored.  The hook program"
+      APR_EOL_STR
+      "# can use the `svnlook' utility to help it examine the"
+      APR_EOL_STR
+      "# newly-committed tree."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
       "# On a Unix system, the normal procedure is to have "
       "`"
       SVN_REPOS__HOOK_POST_COMMIT
-      "'\n" 
-      "# invoke other programs to do the real work, though it may do the\n"
-      "# work itself too.\n"
-      "#\n"
+      "'" 
+      APR_EOL_STR
+      "# invoke other programs to do the real work, though it may do the"
+      APR_EOL_STR
+      "# work itself too."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
       "# Note that"
       " `" SVN_REPOS__HOOK_POST_COMMIT "' "
-      "must be executable by the user(s) who will\n"
-      "# invoke it (typically the user httpd runs as), and that user must\n"
-      "# have filesystem-level permission to access the repository.\n"
-      "#\n"
-      "# On a Windows system, you should name the hook program\n"
+      "must be executable by the user(s) who will"
+      APR_EOL_STR
+      "# invoke it (typically the user httpd runs as), and that user must"
+      APR_EOL_STR
+      "# have filesystem-level permission to access the repository."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# On a Windows system, you should name the hook program"
+      APR_EOL_STR
       "# `" SVN_REPOS__HOOK_POST_COMMIT ".bat' or "
-      "`" SVN_REPOS__HOOK_POST_COMMIT ".exe',\n"
-      "# but the basic idea is the same.\n"
-      "# \n"
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
-      "\n"
-      "REPOS=\"$1\"\n"
-      "REV=\"$2\"\n"
-      "\n"
-      "commit-email.pl \"$REPOS\" \"$REV\" commit-watchers@example.org\n"
-      "log-commit.py --repository \"$REPOS\" --revision \"$REV\"\n";
+      "`" SVN_REPOS__HOOK_POST_COMMIT ".exe',"
+      APR_EOL_STR
+      "# but the basic idea is the same."
+      APR_EOL_STR
+      "# "
+      APR_EOL_STR
+      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      APR_EOL_STR
+      APR_EOL_STR
+      "REPOS=\"$1\""
+      APR_EOL_STR
+      "REV=\"$2\""
+      APR_EOL_STR
+      APR_EOL_STR
+      "commit-email.pl \"$REPOS\" \"$REV\" commit-watchers@example.org"
+      APR_EOL_STR
+      "log-commit.py --repository \"$REPOS\" --revision \"$REV\""
+      APR_EOL_STR;
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -528,54 +690,91 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                "creating hook file");
     
     contents =
-      "#!/bin/sh\n"
-      "\n"
-      "# POST-REVPROP-CHANGE HOOK\n"
-      "#\n"
-      "# The post-revprop-change hook is invoked after a revision property\n"
-      "# has been changed. Subversion runs this hook by invoking a program\n"
+      "#!/bin/sh"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# POST-REVPROP-CHANGE HOOK"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The post-revprop-change hook is invoked after a revision property"
+      APR_EOL_STR
+      "# has been changed. Subversion runs this hook by invoking a program"
+      APR_EOL_STR
       "# (script, executable, binary, etc.) named `"
       SVN_REPOS__HOOK_POST_REVPROP_CHANGE 
-      "'\n"
-      "# (for which this file is a template), with the following ordered\n"
-      "# arguments:\n"
-      "#\n"
-      "#   [1] REPOS-PATH   (the path to this repository)\n"
-      "#   [2] REV          (the revision that was tweaked)\n"
-      "#   [3] USER         (the username of the person tweaking the property)\n"
-      "#   [4] PROPNAME     (the property that was changed)\n"
-      "#\n"
-      "# Because the propchange has already completed and cannot be undone,\n"
-      "# the exit code of the hook program is ignored.  The hook program\n"
-      "# can use the `svnlook' utility to help it examine the\n"
-      "# new property value.\n"
-      "#\n"
+      "'"
+      APR_EOL_STR
+      "# (for which this file is a template), with the following ordered"
+      APR_EOL_STR
+      "# arguments:"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "#   [1] REPOS-PATH   (the path to this repository)"
+      APR_EOL_STR
+      "#   [2] REV          (the revision that was tweaked)"
+      APR_EOL_STR
+      "#   [3] USER         (the username of the person tweaking the property)"
+      APR_EOL_STR
+      "#   [4] PROPNAME     (the property that was changed)"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# Because the propchange has already completed and cannot be undone,"
+      APR_EOL_STR
+      "# the exit code of the hook program is ignored.  The hook program"
+      APR_EOL_STR
+      "# can use the `svnlook' utility to help it examine the"
+      APR_EOL_STR
+      "# new property value."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
       "# On a Unix system, the normal procedure is to have "
       "`"
       SVN_REPOS__HOOK_POST_REVPROP_CHANGE
-      "'\n" 
-      "# invoke other programs to do the real work, though it may do the\n"
-      "# work itself too.\n"
-      "#\n"
+      "'" 
+      APR_EOL_STR
+      "# invoke other programs to do the real work, though it may do the"
+      APR_EOL_STR
+      "# work itself too."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
       "# Note that"
       " `" SVN_REPOS__HOOK_POST_REVPROP_CHANGE "' "
-      "must be executable by the user(s) who will\n"
-      "# invoke it (typically the user httpd runs as), and that user must\n"
-      "# have filesystem-level permission to access the repository.\n"
-      "#\n"
-      "# On a Windows system, you should name the hook program\n"
+      "must be executable by the user(s) who will"
+      APR_EOL_STR
+      "# invoke it (typically the user httpd runs as), and that user must"
+      APR_EOL_STR
+      "# have filesystem-level permission to access the repository."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# On a Windows system, you should name the hook program"
+      APR_EOL_STR
       "# `" SVN_REPOS__HOOK_POST_REVPROP_CHANGE ".bat' or "
-      "`" SVN_REPOS__HOOK_POST_REVPROP_CHANGE ".exe',\n"
-      "# but the basic idea is the same.\n"
-      "# \n"
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
-      "\n"
-      "REPOS=\"$1\"\n"
-      "REV=\"$2\"\n"
-      "USER=\"$3\"\n"
-      "PROPNAME=\"$4\"\n"
-      "\n"
-      "propchange-email.pl \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" watchers@example.org\n";
+      "`" SVN_REPOS__HOOK_POST_REVPROP_CHANGE ".exe',"
+      APR_EOL_STR
+      "# but the basic idea is the same."
+      APR_EOL_STR
+      "# "
+      APR_EOL_STR
+      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      APR_EOL_STR
+      APR_EOL_STR
+      "REPOS=\"$1\""
+      APR_EOL_STR
+      "REV=\"$2\""
+      APR_EOL_STR
+      "USER=\"$3\""
+      APR_EOL_STR
+      "PROPNAME=\"$4\""
+      APR_EOL_STR
+      APR_EOL_STR
+      "propchange-email.pl \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" watchers@example.org"
+      APR_EOL_STR;
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -668,19 +867,26 @@ create_repos_structure (svn_repos_t *repos,
     const char *readme_file_name 
       = svn_path_join (path, SVN_REPOS__README, pool);
     static const char * const readme_contents =
-      "This is a Subversion repository; use the `svnadmin' tool to examine\n"
-      "it.  Do not add, delete, or modify files here unless you know how\n"
-      "to avoid corrupting the repository.\n"
-      "\n"
+      "This is a Subversion repository; use the `svnadmin' tool to examine"
+      APR_EOL_STR
+      "it.  Do not add, delete, or modify files here unless you know how"
+      APR_EOL_STR
+      "to avoid corrupting the repository."
+      APR_EOL_STR
+      APR_EOL_STR
       "The directory \""
       SVN_REPOS__DB_DIR
-      "\" contains a Berkeley DB environment.\n"
+      "\" contains a Berkeley DB environment."
+      APR_EOL_STR
       "You may need to tweak the values in \""
       SVN_REPOS__DB_DIR
-      "/DB_CONFIG\" to match the\n"
-      "requirements of your site.\n"
-      "\n"
-      "Visit http://subversion.tigris.org/ for more information.\n";
+      "/DB_CONFIG\" to match the"
+      APR_EOL_STR
+      "requirements of your site."
+      APR_EOL_STR
+      APR_EOL_STR
+      "Visit http://subversion.tigris.org/ for more information."
+      APR_EOL_STR;
 
     SVN_ERR (svn_io_file_open (&readme_file, readme_file_name,
                                APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
@@ -761,6 +967,7 @@ svn_repos_create (svn_repos_t **repos_p,
                   const char *on_disk_template,
                   const char *in_repos_template,
                   apr_hash_t *config,
+                  apr_hash_t *fs_config,
                   apr_pool_t *pool)
 {
   svn_repos_t *repos;
@@ -809,29 +1016,24 @@ svn_repos_create (svn_repos_t **repos_p,
                          pool);
   if (err)
     {
-      if (APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          /* We could not find the specified template. If the user
-             actually specified one, then bail.  */
-          if (on_disk_template != NULL)
-            return err;
-
-          /* Don't need the error any more. */
-          svn_error_clear (err);
-
-          /* We were trying the default. Oops... install problem?
-             Fall back to the builtin structure.  */
-          SVN_ERR_W (create_repos_structure (repos, path, pool),
-                     "repository creation failed");
-        }
-      else
+      /* We could not use the specified template. If the user
+         actually specified one, then bail.  */
+      if (on_disk_template != NULL)
         return err;
+
+      /* Don't need the error any more. */
+      svn_error_clear (err);
+
+      /* We were trying the default, but for some reason it didn't
+         work... Anyway, fall back to the builtin structure.  */
+      SVN_ERR_W (create_repos_structure (repos, path, pool),
+                 "repository creation failed");
     }
 
   /* The on-disk structure should be built now. */
   
   /* Initialize the filesystem object. */
-  repos->fs = svn_fs_new (pool);
+  repos->fs = svn_fs_new (fs_config, pool);
 
   /* Create a Berkeley DB environment for the filesystem. */
   SVN_ERR (svn_fs_create_berkeley (repos->fs, repos->db_path));
@@ -904,7 +1106,7 @@ get_repos (svn_repos_t **repos_p,
   init_repos_dirs (repos, pool);
 
   /* Initialize the filesystem object. */
-  repos->fs = svn_fs_new (pool);
+  repos->fs = svn_fs_new (NULL, pool);
 
   /* Open up the Berkeley filesystem. */
   if (open_fs)

@@ -38,9 +38,9 @@ svn_ruby_error (const char *msg, apr_pool_t *pool)
 {
   svn_error_t *err;
   err = svn_error_createf (SVN_RUBY_ERR_PROTECTED, 0,
-			    "%s", msg);
+                            "%s", msg);
   apr_pool_userdata_set ((void *) ruby_errinfo, SVN_RUBY_ERR_OBJECT,
-			 apr_pool_cleanup_null, err->pool);
+                         apr_pool_cleanup_null, err->pool);
   if (ruby_errinfo != Qnil)
     rb_hash_aset (error_hash, ruby_errinfo, Qnil);
   return err;
@@ -58,18 +58,18 @@ svn_ruby_raise (svn_error_t *err)
       apr_pool_userdata_get (&value, SVN_RUBY_ERR_OBJECT, err->pool);
       err_obj = (VALUE) value;
       if (err_obj == Qnil)
-	err_obj = rb_exc_new2 (rb_eException, err->message);
+        err_obj = rb_exc_new2 (rb_eException, err->message);
       else
-	rb_funcall (error_hash, rb_intern ("delete"), 1, err_obj);
+        rb_funcall (error_hash, rb_intern ("delete"), 1, err_obj);
     }
   else
     {
       VALUE err_class;
 
       if (SVN_RUBY_ERR_START <= err->apr_err && err->apr_err <= SVN_RUBY_ERR_END)
-	err_class = error_list[err->apr_err - SVN_RUBY_ERR_START];
+        err_class = error_list[err->apr_err - SVN_RUBY_ERR_START];
       else
-	err_class = eGeneral;
+        err_class = eGeneral;
       /* #### What about err->child?  Shouldn't we accumulate error messages? */
       err_obj = rb_exc_new2 (err_class, err->message);
       rb_iv_set (err_obj, "aprErr", INT2FIX (err->apr_err));
@@ -93,7 +93,7 @@ svn_ruby_init_error (void)
 {
   mSvnError = rb_define_module_under (svn_ruby_mSvn, "Error");
   eGeneral = rb_define_class_under (mSvnError, "General",
-				    rb_eStandardError);
+                                    rb_eStandardError);
 
   define_error (SVN_WARNING, "Warning");
   define_error (SVN_ERR_PLUGIN_LOAD_FAILURE, "PluginLoadFailure");

@@ -59,10 +59,10 @@ static const struct ne_xml_elm merge_elements[] =
 };
 
 enum merge_rtype {
-  RTYPE_UNKNOWN,	/* unknown (haven't seen it in the response yet) */
-  RTYPE_REGULAR,        /* a regular (member) resource */
-  RTYPE_COLLECTION,     /* a collection resource */
-  RTYPE_BASELINE        /* a baseline resource */
+  RTYPE_UNKNOWN,    /* unknown (haven't seen it in the response yet) */
+  RTYPE_REGULAR,    /* a regular (member) resource */
+  RTYPE_COLLECTION, /* a collection resource */
+  RTYPE_BASELINE    /* a baseline resource */
 };
 
 typedef struct {
@@ -77,21 +77,21 @@ typedef struct {
   const char *base_href;
   apr_size_t base_len;
 
-  svn_revnum_t rev;	/* the new/target revision number for this commit */
+  svn_revnum_t rev;        /* the new/target revision number for this commit */
 
   svn_boolean_t response_has_error;
-  int response_parent;  /* what element did DAV:response appear within? */
+  int response_parent;     /* what element did DAV:response appear within? */
 
-  int href_parent;      /* what element is the DAV:href appearing within? */
+  int href_parent;         /* what element is the DAV:href appearing within? */
   svn_stringbuf_t *href;   /* current response */
 
-  int status;           /* HTTP status for this DAV:propstat */
-  enum merge_rtype rtype;       /* DAV:resourcetype of this resource */
+  int status;              /* HTTP status for this DAV:propstat */
+  enum merge_rtype rtype;  /* DAV:resourcetype of this resource */
 
-  svn_stringbuf_t *vsn_name;	/* DAV:version-name for this resource */
-  svn_stringbuf_t *vsn_url;	/* DAV:checked-in for this resource */
+  svn_stringbuf_t *vsn_name;       /* DAV:version-name for this resource */
+  svn_stringbuf_t *vsn_url;        /* DAV:checked-in for this resource */
   svn_stringbuf_t *committed_date; /* DAV:creationdate for this resource */
-  svn_stringbuf_t *last_author; /* DAV:creator-displayname for this resource */
+  svn_stringbuf_t *last_author;    /* DAV:creator-displayname for this resource */
 
   /* We only invoke set_prop() on targets listed in valid_targets.
      Some entities (such as directories that have had changes
@@ -566,11 +566,11 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "</D:prop>"
                       "</D:merge>", activity_url);
 
-  SVN_ERR( svn_ra_dav__parsed_request(ras, "MERGE", repos_url, body, 0,
-                                      merge_elements, validate_element,
+  SVN_ERR( svn_ra_dav__parsed_request(ras->sess, "MERGE", repos_url, body, 0,
+                                      NULL, merge_elements, validate_element,
                                       start_element, end_element, &mc,
                                       extra_headers, pool) );
-
+  
   /* is there an error stashed away in our context? */
   if (mc.err != NULL)
     return mc.err;

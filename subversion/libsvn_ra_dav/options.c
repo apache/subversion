@@ -110,12 +110,12 @@ svn_error_t * svn_ra_dav__get_activity_collection(
 
   oc.pool = pool;
 
-  SVN_ERR( svn_ra_dav__parsed_request(ras, "OPTIONS", url,
+  SVN_ERR( svn_ra_dav__parsed_request(ras->sess, "OPTIONS", url,
                                       "<?xml version=\"1.0\" "
                                       "encoding=\"utf-8\"?>"
                                       "<D:options xmlns:D=\"DAV:\">"
                                       "<D:activity-collection-set/>"
-                                      "</D:options>", 0,
+                                      "</D:options>", 0, NULL,
                                       options_elements, validate_element,
                                       start_element, end_element, &oc,
                                       NULL, pool) );

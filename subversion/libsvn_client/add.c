@@ -50,9 +50,14 @@ add_dir_recursive (const char *dirname,
   svn_wc_adm_access_t *dir_access;
   apr_array_header_t *ignores;
 
+  /* Check cancellation; note that this catches recursive calls too. */
+  if (ctx->cancel_func)
+    SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+
   /* Add this directory to revision control. */
   SVN_ERR (svn_wc_add (dirname, adm_access,
                        NULL, SVN_INVALID_REVNUM,
+                       ctx->cancel_func, ctx->cancel_baton,
                        ctx->notify_func, ctx->notify_baton, pool));
 
   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, dirname, pool));
@@ -93,6 +98,7 @@ add_dir_recursive (const char *dirname,
 
       else if (this_entry.filetype == APR_REG)
         SVN_ERR (svn_wc_add (fullpath, dir_access, NULL, SVN_INVALID_REVNUM,
+                             ctx->cancel_func, ctx->cancel_baton,
                              ctx->notify_func, ctx->notify_baton, subpool));
 
       /* Clean out the per-iteration pool. */
@@ -124,26 +130,45 @@ add_dir_recursive (const char *dirname,
 }
 
 
+/* The main body of svn_client_add;  uses an existing access baton. */
 svn_error_t *
-svn_client_add (const char *path, 
-                svn_boolean_t recursive,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+svn_client__add (const char *path, 
+                 svn_boolean_t recursive,
+                 svn_wc_adm_access_t *adm_access,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  svn_error_t *err, *err2;
-  svn_wc_adm_access_t *adm_access;
-  const char *parent_path = svn_path_dirname (path, pool);
-
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, TRUE, pool));
+  svn_error_t *err;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if ((kind == svn_node_dir) && recursive)
     err = add_dir_recursive (path, adm_access, ctx, pool);
   else
     err = svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
+                      ctx->cancel_func, ctx->cancel_baton,
                       ctx->notify_func, ctx->notify_baton, pool);
 
+  return err;
+}
+
+
+
+svn_error_t *
+svn_client_add (const char *path, 
+                svn_boolean_t recursive,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  svn_error_t *err, *err2;
+  svn_wc_adm_access_t *adm_access;
+  const char *parent_path = svn_path_dirname (path, pool);
+
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path,
+                            TRUE, FALSE, pool));
+
+  err = svn_client__add (path, recursive, adm_access, ctx, pool);
+  
   err2 = svn_wc_adm_close (adm_access);
   if (err2)
     {
@@ -156,111 +181,192 @@ svn_client_add (const char *path,
   return err;
 }
 
+
+static svn_error_t *
+path_driver_cb_func (void **dir_baton,
+                     void *parent_baton,
+                     void *callback_baton,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  const svn_delta_editor_t *editor = callback_baton;
+  return editor->add_directory (path, parent_baton, NULL,
+                                SVN_INVALID_REVNUM, pool, dir_baton);
+}
+
+
+static svn_error_t *
+mkdir_urls (svn_client_commit_info_t **commit_info,
+            const apr_array_header_t *paths,
+            svn_client_ctx_t *ctx,
+            apr_pool_t *pool)
+{
+  void *ra_baton, *session;
+  svn_ra_plugin_t *ra_lib;
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
+  const char *committed_date = NULL;
+  const char *committed_author = NULL;
+  const char *log_msg;
+  const char *auth_dir;
+  apr_array_header_t *targets;
+  const char *common;
+  int i;
+
+  /* Condense our list of mkdir targets. */
+  SVN_ERR (svn_path_condense_targets (&common, &targets, paths, FALSE, pool));
+  if (! targets->nelts)
+    {
+      const char *bname;
+      svn_path_split (common, &common, &bname, pool);
+      APR_ARRAY_PUSH (targets, const char *) = bname;
+    }
+  else
+    {
+      svn_boolean_t resplit = FALSE;
+
+      /* We can't "mkdir" the root of an editor drive, so if one of
+         our targets is the empty string, we need to back everything
+         up by a path component. */
+      for (i = 0; i < targets->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX (targets, i, const char *);
+          if (! *path)
+            {
+              resplit = TRUE;
+              break;
+            }
+        }
+      if (resplit)
+        {
+          const char *bname;
+          svn_path_split (common, &common, &bname, pool);
+          for (i = 0; i < targets->nelts; i++)
+            {
+              const char *path = APR_ARRAY_IDX (targets, i, const char *);
+              path = svn_path_join (bname, path, pool);
+              APR_ARRAY_IDX (targets, i, const char *) = path;
+            }
+        }
+    }
+
+  /* Create new commit items and add them to the array. */
+  if (ctx->log_msg_func)
+    {
+      svn_client_commit_item_t *item;
+      const char *tmp_file;
+      apr_array_header_t *commit_items 
+        = apr_array_make (pool, targets->nelts, sizeof (item));
+          
+      for (i = 0; i < targets->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX (targets, i, const char *);
+          item = apr_pcalloc (pool, sizeof (*item));
+          item->url = svn_path_join (common, path, pool);
+          item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
+          APR_ARRAY_PUSH (commit_items, svn_client_commit_item_t *) = item;
+        }
+      SVN_ERR ((*ctx->log_msg_func) (&log_msg, &tmp_file, commit_items, 
+                                     ctx->log_msg_baton, pool));
+      if (! log_msg)
+        return SVN_NO_ERROR;
+    }
+  else
+    log_msg = "";
+
+  /* Get the RA vtable that matches URL. */
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, common, pool));
+
+  /* Open an RA session for the URL. Note that we don't have a local
+     directory, nor a place to put temp files or store the auth
+     data, although we'll try to retrieve auth data from the
+     current directory. */
+  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, common, auth_dir,
+                                        NULL, NULL, FALSE, TRUE,
+                                        ctx, pool));
+
+  /* URI-decode each target. */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX (targets, i, const char *);
+      path = svn_path_uri_decode (path, pool);
+      APR_ARRAY_IDX (targets, i, const char *) = path;
+    }
+
+  /* Fetch RA commit editor */
+  SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,
+                                      &committed_rev,
+                                      &committed_date,
+                                      &committed_author,
+                                      log_msg, pool));
+
+  /* Call the path-based editor driver. */
+  SVN_ERR (svn_delta_path_driver (editor, edit_baton, SVN_INVALID_REVNUM, 
+                                  targets, path_driver_cb_func, 
+                                  (void *)editor, pool));
+
+  /* Close the edit. */
+  SVN_ERR (editor->close_edit (edit_baton, pool));
+
+  /* Fill in the commit_info structure. */
+  *commit_info = svn_client__make_commit_info (committed_rev,
+                                               committed_author,
+                                               committed_date,
+                                               pool);
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
-                  const char *path,
+                  const apr_array_header_t *paths,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  svn_error_t *err;
-
-  /* If this is a URL, we want to drive a commit editor to create this
-     directory. */
-  if (svn_path_is_url (path))
-    {
-      /* This is a remote directory creation.  */
-      void *ra_baton, *session;
-      svn_ra_plugin_t *ra_lib;
-      const char *anchor, *target;
-      const svn_delta_editor_t *editor;
-      void *edit_baton;
-      void *root_baton, *dir_baton;
-      svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
-      const char *committed_date = NULL;
-      const char *committed_author = NULL;
-      const char *message;
-
-      *commit_info = NULL;
-
-      /* Create a new commit item and add it to the array. */
-      if (ctx->log_msg_func)
-        {
-          svn_client_commit_item_t *item;
-          const char *tmp_file;
-          apr_array_header_t *commit_items 
-            = apr_array_make (pool, 1, sizeof (item));
-          
-          item = apr_pcalloc (pool, sizeof (*item));
-          item->url = apr_pstrdup (pool, path);
-          item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-          (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
-            = item;
-          
-          SVN_ERR ((*ctx->log_msg_func) (&message, &tmp_file, commit_items, 
-                                         ctx->log_msg_baton, pool));
-          if (! message)
-            return SVN_NO_ERROR;
-        }
-      else
-        message = "";
-
-      /* Split the new directory name from its parent URL. */
-      svn_path_split (path, &anchor, &target, pool);
-      target = svn_path_uri_decode (target, pool);
-
-      /* Get the RA vtable that matches URL. */
-      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor, pool));
-
-      /* Open a repository session to the URL. Note that we do not have a
-         base directory, do not want to store auth data, and do not
-         (necessarily) have an admin area for temp files. */
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, NULL,
-                                            NULL, NULL, FALSE, TRUE, 
-                                            ctx, pool));
-
-      /* Fetch RA commit editor */
-      SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,
-                                          &committed_rev,
-                                          &committed_date,
-                                          &committed_author,
-                                          message));
-
-      /* Drive the editor to create the TARGET. */
-      SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, pool,
-                                  &root_baton));
-      SVN_ERR (editor->add_directory (target, root_baton, NULL, 
-                                      SVN_INVALID_REVNUM, pool, &dir_baton));
-      SVN_ERR (editor->close_directory (dir_baton, pool));
-      SVN_ERR (editor->close_directory (root_baton, pool));
-      SVN_ERR (editor->close_edit (edit_baton, pool));
-
-      /* Fill in the commit_info structure. */
-      *commit_info = svn_client__make_commit_info (committed_rev,
-                                                   committed_author,
-                                                   committed_date,
-                                                   pool);
-
-      /* Free the RA session. */
-      SVN_ERR (ra_lib->close (session));
-
-      return SVN_NO_ERROR;
-    }
-
-  /* This is a regular "mkdir" + "svn add" */
-  SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
+  if (! paths->nelts)
+    return SVN_NO_ERROR;
   
-  err = svn_client_add (path, FALSE, ctx, pool);
-
-  /* Trying to add a directory with the same name as a file that is
-     scheduled for deletion is not supported.  Leaving an unversioned
-     directory makes the working copy hard to use.  */
-  if (err && err->apr_err == SVN_ERR_WC_NODE_KIND_CHANGE)
+  if (svn_path_is_url (APR_ARRAY_IDX (paths, 0, const char *)))
     {
-      svn_error_t *err2 = svn_io_remove_dir (path, pool);
-      if (err2)
-        svn_error_clear (err2);
+      SVN_ERR (mkdir_urls (commit_info, paths, ctx, pool));
+    }
+  else
+    {
+      /* This is a regular "mkdir" + "svn add" */
+      apr_pool_t *subpool = svn_pool_create (pool);
+      svn_error_t *err;
+      int i;
+
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX (paths, i, const char *);
+
+          SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
+          err = svn_client_add (path, FALSE, ctx, pool);
+
+          /* Trying to add a directory with the same name as a file that is
+             scheduled for deletion is not supported.  Leaving an unversioned
+             directory makes the working copy hard to use.  */
+          if (err && err->apr_err == SVN_ERR_WC_NODE_KIND_CHANGE)
+            {
+              svn_error_t *err2 = svn_io_remove_dir (path, pool);
+              if (err2)
+                svn_error_clear (err2);
+            }
+          SVN_ERR (err);
+
+          /* See if the user wants us to stop. */
+          if (ctx->cancel_func)
+            SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+          svn_pool_clear (subpool);
+
+        }
+      svn_pool_destroy (subpool);
     }
 
-  return err;
+  return SVN_NO_ERROR;
 }

@@ -385,8 +385,7 @@ svn_opt_parse_revision (svn_opt_revision_t *start_revision,
 #define DEFAULT_ARRAY_SIZE 5
 
 
-/* Copy STR into POOL and push the copy onto ARRAY.
-   ### todo: Hmm. This should probably find its way into libsvn_subr -Fitz */
+/* Copy STR into POOL and push the copy onto ARRAY. */
 static void 
 array_push_str (apr_array_header_t *array,
                 const char *str,
@@ -567,7 +566,11 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
       if (svn_path_is_url (utf8_target))
         {
           /* No need to canonicalize a URL's case or path separators. */
-
+          if (! svn_path_is_uri_safe (utf8_target))
+            return svn_error_createf (SVN_ERR_BAD_URL, 0,
+                                      "URL `%s' is not properly URI-encoded",
+                                      utf8_target);
+                                      
           /* strip any trailing '/' */
           target = svn_path_canonicalize (utf8_target, pool);
         }
@@ -619,48 +622,32 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
 
   if (extract_revisions)
     {
-      svn_opt_revision_t *firstrev = NULL, *secondrev = NULL;
+      svn_opt_revision_t temprev;
+      const char *path;
 
-      for (i = 0; i < output_targets->nelts; i++)
+      if (output_targets->nelts > 0)
         {
-          const char *truepath;
-          svn_opt_revision_t temprev; 
-          const char *path = ((const char **) (output_targets->elts))[i];
-
-          SVN_ERR (parse_path (&temprev, &truepath, path, pool));
-
+          path = ((const char **) (output_targets->elts))[0];
+          SVN_ERR (parse_path (&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
-              ((const char **) (output_targets->elts))[i] = 
-                svn_path_canonicalize (truepath, pool);
-
-              if (! firstrev)
-                {
-                  firstrev = apr_pcalloc (pool, sizeof (*firstrev));
-                  firstrev->kind = temprev.kind;
-                  firstrev->value = temprev.value;
-                }
-              else if (! secondrev)
-                {
-                  secondrev = apr_pcalloc (pool, sizeof (*secondrev));
-                  secondrev->kind = temprev.kind;
-                  secondrev->value = temprev.value;
-                }
-              else
-                break;
+              ((const char **) (output_targets->elts))[0] = 
+                svn_path_canonicalize (path, pool);
+              start_revision->kind = temprev.kind;
+              start_revision->value = temprev.value;
             }
         }
-
-      if (firstrev)
+      if (output_targets->nelts > 1)
         {
-          start_revision->kind = firstrev->kind;
-          start_revision->value = firstrev->value;
-        }
-      
-      if (secondrev)
-        {
-          end_revision->kind = secondrev->kind;
-          end_revision->value = secondrev->value;
+          path = ((const char **) (output_targets->elts))[1];
+          SVN_ERR (parse_path (&temprev, &path, path, pool));
+          if (temprev.kind != svn_opt_revision_unspecified)
+            {
+              ((const char **) (output_targets->elts))[1] = 
+                svn_path_canonicalize (path, pool);
+              end_revision->kind = temprev.kind;
+              end_revision->value = temprev.value;
+            }
         }
     }
   

@@ -63,8 +63,12 @@ svn_cl__copy (apr_getopt_t *os,
   dst_is_url = svn_path_is_url (dst_path);
 
   if ((! src_is_url) && (! dst_is_url))
-    /* WC->WC : No notification needed. */
-    ;
+    {
+      /* WC->WC */
+      if (! opt_state->quiet)
+        svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, 
+                              FALSE, FALSE, FALSE, pool);
+    }
   else if ((! src_is_url) && (dst_is_url))
     {
       /* WC->URL : Use notification. */
@@ -97,6 +101,8 @@ svn_cl__copy (apr_getopt_t *os,
     /* URL->URL : No notification needed. */
     ;
 
+  SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state, 
+                                       NULL, ctx->config, pool));
   SVN_ERR (svn_cl__cleanup_log_msg
            (ctx->log_msg_baton, svn_client_copy (&commit_info,
                                                  src_path, 

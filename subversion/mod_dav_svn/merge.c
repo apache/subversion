@@ -27,7 +27,7 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 
 
 /* #################################################################
@@ -281,6 +281,7 @@ static svn_error_t *mr_open_file(const char *path,
 }
 
 static svn_error_t *mr_close_file(void *file_baton,
+                                  const char *text_checksum,
                                   apr_pool_t *pool)
 {
   /* nothing to do except for sending the response. */
@@ -368,11 +369,24 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                         ### we need to tell the client to look at *this*
                         ### resource for the version-name. */
                      "<D:resourcetype><D:baseline/></D:resourcetype>" DEBUG_CR
-                     "<D:version-name>", revbuf, "</D:version-name>" DEBUG_CR
-                     "<D:creationdate>", creationdate->data, 
-                                     "</D:creationdate>" DEBUG_CR
-                     "<D:creator-displayname>", creator_displayname->data,
-                                     "</D:creator-displayname>" DEBUG_CR
+                     "<D:version-name>", revbuf, "</D:version-name>" DEBUG_CR,
+                     NULL);
+  if (creationdate)
+    {
+      (void) ap_fputstrs(output, bb,
+                         "<D:creationdate>", creationdate->data, 
+                         "</D:creationdate>" DEBUG_CR,
+                         NULL);
+    }
+  if (creator_displayname)
+    {
+      (void) ap_fputstrs(output, bb,
+                         "<D:creator-displayname>", 
+                         creator_displayname->data,
+                         "</D:creator-displayname>" DEBUG_CR,
+                         NULL);
+    }
+  (void) ap_fputstrs(output, bb,
                      "</D:prop>" DEBUG_CR
                      "<D:status>HTTP/1.1 200 OK</D:status>" DEBUG_CR
                      "</D:propstat>" DEBUG_CR
@@ -422,7 +436,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                                  FALSE, /* don't bother with text-deltas */
                                  TRUE, /* Do recurse into subdirectories */
                                  FALSE, /* Do not allow entry props */
-                                 FALSE, /* Do not allow copyfrom args */
+                                 FALSE, /* Do not ignore ancestry */
                                  pool);
       if (serr != NULL)
         {

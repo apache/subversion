@@ -46,7 +46,6 @@ typedef struct svn_repos_t svn_repos_t;
 
 /** Set @a *repos_p to a repository object for the repository at @a path.
  *
- * Set @a *repos_p to a repository object for the repository at @a path.  
  * Allocate @a *repos_p in @a pool.
  *
  * Acquires a shared lock on the repository, and attaches a cleanup
@@ -58,9 +57,7 @@ svn_error_t *svn_repos_open (svn_repos_t **repos_p,
                              const char *path,
                              apr_pool_t *pool);
 
-/** Create a new Subversion repository at @a path.
- *
- * Create a new Subversion repository at @a path, building the necessary
+/** Create a new Subversion repository at @a path, building the necessary
  * directory structure, creating the Berkeley DB filesystem environment, 
  * and so on.  Return the (open) repository object in @a *repos_p,
  * allocated in @a pool.
@@ -81,12 +78,15 @@ svn_error_t *svn_repos_open (svn_repos_t **repos_p,
  *
  * @a config is a client configuration hash of @c svn_config_t * items
  * keyed on config category names, and may be NULL.
+ *
+ * @a fs_config is passed to the filesystem, and may be NULL.
  */
 svn_error_t *svn_repos_create (svn_repos_t **repos_p, 
                                const char *path,
                                const char *on_disk_template,
                                const char *in_repos_template,
                                apr_hash_t *config,
+                               apr_hash_t *fs_config,
                                apr_pool_t *pool);
 
 /** Destroy the Subversion repository found at @a path, using @a pool for any
@@ -98,9 +98,6 @@ svn_error_t *svn_repos_delete (const char *path, apr_pool_t *pool);
 svn_fs_t *svn_repos_fs (svn_repos_t *repos);
 
 /** Run database recovery procedures on the repository at @a path,
- * returning the database to a consistent state.
- *
- * Run database recovery procedures on the repository at @a path,
  * returning the database to a consistent state.  Use @a pool for all
  * allocation.
  *
@@ -160,9 +157,6 @@ const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos,
 
 
 /** Construct and return a @a report_baton that will be paired with some
- * @c svn_ra_reporter_t table.
- *
- * Construct and return a @a report_baton that will be paired with some
  * @c svn_ra_reporter_t table.  The table and baton are used to build a
  * transaction in the system;  when the report is finished,
  * @c svn_repos_dir_delta is called on the transaction, driving
@@ -180,17 +174,20 @@ const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos,
  * @a tgt_path may (indeed, should) be @c NULL when the source and target
  * paths of the report are the same.  That is, @a tgt_path should *only*
  * be specified when specifying that the resultant editor drive be one
- * that tranforms the reported heirarchy into a pristing tree of
+ * that transforms the reported hierarchy into a pristine tree of
  * @a tgt_path at revision @a revnum.  Else, a @c NULL value for @a tgt_path 
  * will indicate that the editor should be driven in such a way as to
- * transform the reported heirarchy to revision @a revnum, preserving the
- * reported heirarchy.
+ * transform the reported hierarchy to revision @a revnum, preserving the
+ * reported hierarchy.
  *
  * @a text_deltas instructs the driver of the @a editor to enable to disable
  * the generation of text deltas.
  *
  * @a recurse instructs the driver of the @a editor to send a recursive
  * delta (or not.)
+ *
+ * @a ignore_ancestry instructs the driver to ignore node ancestry
+ * when determining how to transmit differences.
  *
  * All allocation for the context and collected state will occur in
  * @a pool.
@@ -205,15 +202,13 @@ svn_repos_begin_report (void **report_baton,
                         const char *tgt_path,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
+                        svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
                         apr_pool_t *pool);
 
 
 /** Given a @a report_baton constructed by @c svn_repos_begin_report(), this
- * routine will build @a revision:@a path into the current transaction.
- *
- * Given a @a report_baton constructed by @c svn_repos_begin_report(), this
  * routine will build @a revision:@a path into the current transaction.
  * This routine is called multiple times to create a transaction that
  * is a "mirror" of a working copy.
@@ -222,23 +217,28 @@ svn_repos_begin_report (void **report_baton,
  * @a path; that allows the reporter to set up the correct root revision
  * (useful when creating a txn, for example).
  *
+ * If @a start_empty is set and @a path is a directory, then remove
+ * all children and props of the freshly-linked directory.  This is
+ * for 'low confidence' client reporting.
+ * 
  * All temporary allocations are done in @a pool.
  */
 svn_error_t *svn_repos_set_path (void *report_baton,
                                  const char *path,
                                  svn_revnum_t revision,
+                                 svn_boolean_t start_empty,
                                  apr_pool_t *pool);
 
 
 /** Given a @a report_baton constructed by @c svn_repos_begin_report(), 
  * this routine will build @a revision:@a link_path into the current 
- * transaction at @a path.
- *
- * Given a @a report_baton constructed by @c svn_repos_begin_report(), 
- * this routine will build @a revision:@a link_path into the current 
  * transaction at @a path.  Note that while @a path is relative to the 
  * anchor/target used in the creation of the @a report_baton, @a link_path 
  * is an absolute filesystem path!
+ *
+ * If @a start_empty is set and @a path is a directory, then remove
+ * all children and props of the freshly-linked directory.  This is
+ * for 'low confidence' client reporting.
  *
  * All temporary allocations are done in @a pool.
  */
@@ -246,12 +246,10 @@ svn_error_t *svn_repos_link_path (void *report_baton,
                                   const char *path,
                                   const char *link_path,
                                   svn_revnum_t revision,
+                                  svn_boolean_t start_empty,
                                   apr_pool_t *pool);
 
 /** Given a @a report_baton constructed by @c svn_repos_begin_report(), 
- * this routine will remove @a path from the current fs transaction. 
- *
- * Given a @a report_baton constructed by @c svn_repos_begin_report(), 
  * this routine will remove @a path from the current fs transaction. 
  *
  * (This allows the reporter's driver to describe missing pieces of a
@@ -265,7 +263,9 @@ svn_error_t *svn_repos_delete_path (void *report_baton,
 
 /** Make the filesystem compare the transaction to a revision and have
  * it drive an update editor (using @c svn_repos_delta_dirs()), then
- * abort the transaction.
+ * abort the transaction.  If an error occurs during the driving of
+ * the editor, we do NOT abort the edit; that responsibility belongs
+ * to the caller, if it happens at all.
  */
 svn_error_t *svn_repos_finish_report (void *report_baton);
 
@@ -278,11 +278,7 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
 
 /* The magical dir_delta update routines. */
 
-/** Use @a editor and @a edit_baton to describe the changes necessary for 
- * making a given node (and it's descendants, if it is a directory) under 
- * @a src_root look exactly like @a tgt_path under @a tgt_root.
- *
- * Use the provided @a editor and @a edit_baton to describe the changes
+/** Use the provided @a editor and @a edit_baton to describe the changes
  * necessary for making a given node (and its descendants, if it is a
  * directory) under @a src_root look exactly like @a tgt_path under
  * @a tgt_root.  @a src_entry is the node to update, and is either @c NULL 
@@ -305,13 +301,8 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
  * propchange editor calls that relay special "entry props" (this
  * is typically used only for working copy updates).
  *
- * If @a use_copy_history is @c TRUE, then when copy history is present on
- * an added node, pass it through to @a editor, and express differences
- * as against the node referred to by that copy history.  Else if
- * @a use_copy_history is @c FALSE, then never pass copyfrom history, and
- * express differences as full adds (i.e., all directory entries are
- * reported as adds, and text deltas are sent against the empty
- * string).
+ * @a ignore_ancestry instructs the function to ignore node ancestry
+ * when determining how to transmit differences.
  *
  * Before completing successfully, this function calls @a editor's
  * @c close_edit(), so the caller should expect its @a edit_baton to be
@@ -333,8 +324,28 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
                      svn_boolean_t entry_props,
-                     svn_boolean_t use_copy_history,
+                     svn_boolean_t ignore_ancestry,
                      apr_pool_t *pool);
+
+/** Use the provided @a editor and @a edit_baton to describe the
+ * skeletal changes made in a particular filesystem @a root
+ * (revision or transaction).
+ *
+ * The @a editor passed to this function should be aware of the fact
+ * that calls to its change_dir_prop(), change_file_prop(), and
+ * apply_textdelta() functions will not contain meaningful data, and
+ * merely serve as indications that properties or textual contents
+ * were changed. 
+ *
+ * NOTE: this editor driver passes SVN_INVALID_REVNUM for all
+ * revision parameters in the editor interface except the copyfrom
+ * parameter of the add_file() and add_directory() editor functions.
+ */
+svn_error_t *
+svn_repos_replay (svn_fs_root_t *root,
+                  const svn_delta_editor_t *editor,
+                  void *edit_baton,
+                  apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/
@@ -347,14 +358,13 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
  * the @a new_revision, @a date, and @a author of the commit, along with 
  * the @a baton closure.
  */
-typedef svn_error_t *svn_repos_commit_callback_t (svn_revnum_t new_revision,
-                                                  const char *date,
-                                                  const char *author,
-                                                  void *baton);
+typedef svn_error_t * (*svn_repos_commit_callback_t) (
+    svn_revnum_t new_revision,
+    const char *date,
+    const char *author,
+    void *baton);
 
-/** Return an @a editor and @a edit_baton to commit changes to @a session->fs.
- *
- * Return an @a editor and @a edit_baton to commit changes to @a session->fs,
+/** Return an @a editor and @a edit_baton to commit changes to @a session->fs,
  * beginning at location 'rev:@a base_path', where "rev" is the argument
  * given to @c open_root().  Store @a user as the author of the commit and
  * @a log_msg as the commit message.
@@ -378,7 +388,7 @@ svn_error_t *svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                                           const char *base_path,
                                           const char *user,
                                           const char *log_msg,
-                                          svn_repos_commit_callback_t *hook,
+                                          svn_repos_commit_callback_t hook,
                                           void *callback_baton,
                                           apr_pool_t *pool);
 
@@ -397,9 +407,7 @@ svn_repos_dated_revision (svn_revnum_t *revision,
                           apr_pool_t *pool);
                           
 
-/** Return information about a @a root/@a path combo in a filesystem.
- *
- * Given a @a root/@a path within some filesystem, return three pieces of
+/** Given a @a root/@a path within some filesystem, return three pieces of
  * information allocated in @a pool:
  *
  *    - set @a *committed_rev to the revision in which the object was
@@ -429,22 +437,6 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
 */
 
 
-/* ---------------------------------------------------------------*/
-
-/* Making checkouts. */
-
-/** Recursively walk over @a revnum:@a path inside an already-open repository
- * @a fs, and drive a checkout @a editor, allocating all data in @a pool.
- */
-svn_error_t *
-svn_repos_checkout (svn_fs_t *fs, 
-                    svn_revnum_t revnum, 
-                    svn_boolean_t recurse,
-                    const char *fs_path,
-                    const svn_delta_editor_t *editor, 
-                    void *edit_baton,
-                    apr_pool_t *pool);
-
 
 /* ---------------------------------------------------------------*/
 
@@ -452,10 +444,7 @@ svn_repos_checkout (svn_fs_t *fs,
 
 
 /** Invoke @a receiver with @a receiver_baton on each log message from 
- * @a start to @a end in @a repos's fileystem.
- *
- * Invoke @a receiver with @a receiver_baton on each log message from 
- * @a start to @a end in @a repos's fileystem.  @a start may be greater 
+ * @a start to @a end in @a repos's filesystem.  @a start may be greater 
  * or less than @a end; this just controls whether the log messages are 
  * processed in descending or ascending revision number order.
  *
@@ -481,10 +470,6 @@ svn_repos_checkout (svn_fs_t *fs,
  * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths 
  * argument; the hash's keys are all the paths committed in that revision.
  * Otherwise, each call to @a receiver passes null for @a changed_paths.
- *
- * ### NOTE: @a paths and @a discover_changed_paths are currently ignored,
- * see http://subversion.tigris.org/issues/show_bug.cgi?id=562 for
- * more information.
  *
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each path.
@@ -520,9 +505,6 @@ svn_repos_get_logs (svn_repos_t *repos,
  */
 
 /** Like @c svn_fs_commit_txn(), but invoke the @a repos's pre- and
- * post-commit hooks around the commit.
- *
- * Like @c svn_fs_commit_txn(), but invoke the @a repos's pre- and
  * post-commit hooks around the commit.  Use @a txn's pool for temporary
  * allocations.
  *
@@ -534,9 +516,6 @@ svn_error_t *svn_repos_fs_commit_txn (const char **conflict_p,
                                       svn_fs_txn_t *txn);
 
 /** Like @c svn_fs_begin_txn(), but use @a author and @a log_msg to set the
- * corresponding properties on transaction @a *txn_p.
- *
- * Like @c svn_fs_begin_txn(), but use @a author and @a log_msg to set the
  * corresponding properties on transaction @a *txn_p.  @a repos is the
  * repository object which contains the filesystem.  @a rev, @a *txn_p, and
  * @a pool are as in @c svn_fs_begin_txn().
@@ -557,9 +536,6 @@ svn_error_t *svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
 
 
 /** Like @c svn_fs_begin_txn(), but use @a author to set the corresponding
- * property on transaction @a *txn_p.
- *
- * Like @c svn_fs_begin_txn(), but use @a author to set the corresponding
  * property on transaction @a *txn_p.  @a repos is the repository object
  * which contains the filesystem.  @a rev, @a *txn_p, and @a pool are as in
  * @c svn_fs_begin_txn().
@@ -575,21 +551,19 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
 
 
 /** Like @c svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
- * post-revprop-change hooks around the change.
- *
- * Like @c svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
  * post-revprop-change hooks around the change.  Use @a pool for
  * temporary allocations.
  *
- * @a rev, @a name, and @a value are as in @c svn_fs_commit_txn().  
- * @a author is the authenticated username of the person changing the 
- * property value (if available).
+ * @a rev is the revision whose property to change, @a name is the
+ * name of the property, and @a new_value is the new value of the
+ * property.   @a author is the authenticated username of the person
+ * changing the property value, or null if not available.
  */
 svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                                            svn_revnum_t rev,
                                            const char *author,
                                            const char *name,
-                                           const svn_string_t *value,
+                                           const svn_string_t *new_value,
                                            apr_pool_t *pool);
 
 
@@ -669,14 +643,13 @@ typedef struct svn_repos_node_t
   /** Pointer to the first child of this node */
   struct svn_repos_node_t *child;
 
+  /** Pointer to the parent of this node */
+  struct svn_repos_node_t *parent;
+
 } svn_repos_node_t;
 
 
-/** Get an @a editor/@a edit_baton pair that can be driven by 
- * @c svn_repos_dir_delta to build a tree of @c svn_repos_node_t's 
- * representing the delta from @a base_root to @a root.
- *
- * Set @a *editor and @a *edit_baton to an editor that, when driven by
+/** Set @a *editor and @a *edit_baton to an editor that, when driven by
  * @c svn_repos_dir_delta(), builds an <tt>svn_repos_node_t *</tt> tree
  * representing the delta from @a base_root to @a root in @a repos's 
  * filesystem.
@@ -698,10 +671,7 @@ svn_error_t *svn_repos_node_editor (const svn_delta_editor_t **editor,
                                     apr_pool_t *node_pool,
                                     apr_pool_t *pool);
 
-/** Return the root node of the linked-list tree generated by using an 
- * editor from @c svn_repos_node_editor with @c svn_repos_dir_delta.
- *
- * Return the root node of the linked-list tree generated by driving
+/** Return the root node of the linked-list tree generated by driving
  * the editor created by @c svn_repos_node_editor() with
  * @c svn_repos_dir_delta(), which is stored in @a edit_baton.  This is 
  * only really useful if used *after* the editor drive is completed.
@@ -772,9 +742,6 @@ enum svn_repos_load_uuid
 };
 
 /** Dump the contents of the filesystem within already-open @a repos into
- * writable @a dumpstream. 
- *
- * Dump the contents of the filesystem within already-open @a repos into
  * writable @a dumpstream.  Begin at revision @a start_rev, and dump every
  * revision up through @a end_rev.  Use @a pool for all allocation.  If
  * non-@c NULL, send feedback to @a feedback_stream.
@@ -796,7 +763,7 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 apr_pool_t *pool);
 
 
-/* Read and parse dumpfile-formatted @a dumpstream, reconstructing
+/** Read and parse dumpfile-formatted @a dumpstream, reconstructing
  * filesystem revisions in already-open @a repos, handling uuids
  * in accordance with @a uuid_action.
  *
@@ -816,11 +783,11 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
  * If the dumpstream contains no UUID, then @a uuid_action is
  * ignored and the repository UUID is not touched.
  */
-
 svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
                                 svn_stream_t *feedback_stream,
                                 enum svn_repos_load_uuid uuid_action,
+                                const char *parent_dir,
                                 apr_pool_t *pool);
 
 
@@ -828,9 +795,6 @@ svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
 typedef struct svn_repos_parse_fns_t
 {
   /** The parser has discovered a new revision record within the
-   * parsing session represented by @a parse_baton.
-   *
-   * The parser has discovered a new revision record within the
    * parsing session represented by @a parse_baton.  All the headers are
    * placed in @a headers (allocated in @a pool), which maps <tt>const 
    * char *</tt> header-name ==> <tt>const char *</tt> header-value.  
@@ -843,9 +807,6 @@ typedef struct svn_repos_parse_fns_t
                                        apr_pool_t *pool);
 
   /** The parser has discovered a new uuid record within the parsing
-   * session represented by @a parse_baton.
-   *
-   * The parser has discovered a new uuid record within the parsing
    * session represented by @a parse_baton.  The uuid's value is
    * @a uuid, and it is allocated in @a pool.
    */
@@ -854,9 +815,6 @@ typedef struct svn_repos_parse_fns_t
                                apr_pool_t *pool);
 
   /** The parser has discovered a new node record within the current
-   * revision represented by @a revision_baton.
-   *
-   * The parser has discovered a new node record within the current
    * revision represented by @a revision_baton.  All the headers are
    * placed in @a headers as above, allocated in @a pool.  The 
    * @a node_baton received back is allocated in @a pool and represents 
@@ -877,10 +835,10 @@ typedef struct svn_repos_parse_fns_t
                                      const char *name,
                                      const svn_string_t *value);
 
+  /** For a given @a node_baton, remove all properties. */
+  svn_error_t *(*remove_node_props) (void *node_baton);
+
   /** For a given @a node_baton, receive a writable @a stream capable of
-   * receiving the node's fulltext.
-   *
-   * For a given @a node_baton, receive a writable @a stream capable of
    * receiving the node's fulltext.  After writing the fulltext, call
    * the stream's @c close() function.
    *
@@ -897,9 +855,6 @@ typedef struct svn_repos_parse_fns_t
   svn_error_t *(*close_node) (void *node_baton);
 
   /** The parser has reached the end of the current revision
-   * represented by @a revision_baton.
-   *
-   * The parser has reached the end of the current revision
    * represented by @a revision_baton.  In other words, there are no more
    * changed nodes within the revision.  The baton can be freed.
    */
@@ -910,9 +865,6 @@ typedef struct svn_repos_parse_fns_t
 
 
 /** Read and parse dumpfile-formatted @a stream, calling callbacks in
- * @a parse_fns/@a parse_baton, and using @a pool for allocations.
- *
- * Read and parse dumpfile-formatted @a stream, calling callbacks in
  * @a parse_fns/@a parse_baton, and using @a pool for allocations.
  *
  * This parser has built-in knowledge of the dumpfile format, but only
@@ -942,14 +894,13 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
  * UUID records in a manner consistent with @a uuid_action.  Use @a pool
  * to operate on the fs.
  *
- * Set @a *parser and @a *parse_baton to a vtable parser which commits new
- * revisions to the fs in @a repos.  The constructed parser will treat
- * UUID records in a manner consistent with @a uuid_action.  Use @a pool
- * to operate on the fs.
- *
  * If @a use_history is set, then the parser will require relative
  * 'copyfrom' history to exist in the repository when it encounters
  * nodes that are added-with-history.
+ *
+ * If @a parent_dir is not null, then the parser will reparent all the
+ * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
+ * must be an existing directory in the repository.
  *
  * Print all parsing feedback to @a outstream (if non-@c NULL).
  *
@@ -961,6 +912,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
                                svn_boolean_t use_history,
                                enum svn_repos_load_uuid uuid_action,
                                svn_stream_t *outstream,
+                               const char *parent_dir,
                                apr_pool_t *pool);
 /** @} */
 

@@ -68,17 +68,19 @@ extern struct svn_test_descriptor_t test_funcs[];
 
 /** Return a pseudo-random number based on @a seed, and modify @a seed.
  *
- * Return a pseudo-random number based on @a seed, and modify @a seed.  
  * This is a "good" pseudo-random number generator, intended to replace 
  * all those "bad" @c rand() implementations out there.
  */
 apr_uint32_t svn_test_rand (apr_uint32_t *seed);
 
+
+/** Add @a path to the test cleanup list.
+ */
+void svn_test_add_dir_cleanup (const char *path);
+
+
 
-/** Set @a *editor and @a *edit_baton to an editor that prints its arguments 
- * to @a out_stream.
- *
- * Set @a *editor and @a *edit_baton to an editor that prints its 
+/** Set @a *editor and @a *edit_baton to an editor that prints its 
  * arguments to @a out_stream.  The edit starts at @a path, that is, 
  * @a path will be prepended to the appropriate paths in the output.
  * Allocate the editor in @a pool.

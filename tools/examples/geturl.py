@@ -19,7 +19,7 @@ def main(pool, files):
     adm_baton = svn.wc.svn_wc_adm_open(None, dirpath, 1, 1, pool)
     try:
       entry = svn.wc.svn_wc_entry(fullpath, adm_baton, 0, pool)
-      print svn.wc.svn_wc_entry_t_url_get(entry)
+      print entry.url
     finally:
       svn.wc.svn_wc_adm_close(adm_baton)
 

@@ -1,8 +1,9 @@
 [Setup]
 ;# Version parameters #########################################################
-#define svn_version "0.18.0"
-#define svn_release "4973"
 #define svn_cpr "Copyright ©2000-2003 CollabNet"
+
+; Version and release info:
+#include "svn_version.iss"
 
 ;# paths_inno_src.iss ##########################################################
 ; This file contains all the paths needed by inno for finding the sources to
@@ -57,7 +58,9 @@ Source: {#= path_svnadmin}\svnadmin.exe; DestDir: {app}; Components: main; Flags
 Source: {#= path_svnlook}\svnlook.exe; DestDir: {app}; Components: main; Flags: ignoreversion
 Source: {#= path_svnserve}\svnserve.exe; DestDir: {app}; Components: main; Flags: ignoreversion
 Source: {#= path_svnversion}\svnversion.exe; DestDir: {app}; Components: main; Flags: ignoreversion
+Source: {#= path_svndumpfilter}\svndumpfilter.exe; DestDir: {app}; Components: main; Flags: ignoreversion
 Source: {#= path_davsvn}\mod_dav_svn.so; DestDir: {app}\apache2\modules; Components: main; Flags: ignoreversion
+Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\apache2\modules; Components: main; Flags: ignoreversion
 Source: {#= path_svnclient}\libdb40.dll; DestDir: {app}; Components: main
 Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Components: main; Flags: ignoreversion
 Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}; Components: main

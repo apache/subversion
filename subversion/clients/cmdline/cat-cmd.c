@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -40,8 +41,8 @@ svn_cl__cat (apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   int i;
-  apr_file_t *std_out;
-  apr_status_t status;
+  svn_stream_t *out;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
     return svn_error_createf (SVN_ERR_CLIENT_REVISION_RANGE, NULL,
@@ -57,18 +58,18 @@ svn_cl__cat (apr_getopt_t *os,
   if (! targets->nelts)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
 
-  status = apr_file_open_stdout (&std_out, pool);
-  if (!APR_STATUS_IS_SUCCESS (status))
-    return svn_error_create (status, NULL, "Error opening stdout.");
+  SVN_ERR (svn_stream_for_stdout (&out, pool));
 
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
-      svn_stream_t *out = svn_stream_from_aprfile (std_out, pool);
 
+      svn_pool_clear (subpool);
       SVN_ERR (svn_client_cat (out, target, &(opt_state->start_revision),
-                               ctx, pool));
+                               ctx, subpool));
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
     }
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }

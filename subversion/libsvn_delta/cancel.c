@@ -205,7 +205,6 @@ open_file (const char *path,
 static svn_error_t *
 apply_textdelta (void *file_baton,
                  const char *base_checksum,
-                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
@@ -217,7 +216,6 @@ apply_textdelta (void *file_baton,
 
   SVN_ERR (eb->wrapped_editor->apply_textdelta (fb->wrapped_file_baton,
                                                 base_checksum,
-                                                result_checksum,
                                                 pool,
                                                 handler,
                                                 handler_baton));
@@ -227,6 +225,7 @@ apply_textdelta (void *file_baton,
 
 static svn_error_t *
 close_file (void *file_baton,
+            const char *text_checksum,
             apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
@@ -235,7 +234,7 @@ close_file (void *file_baton,
   SVN_ERR (eb->cancel_func (eb->cancel_baton));
 
   SVN_ERR (eb->wrapped_editor->close_file (fb->wrapped_file_baton,
-                                           pool));
+                                           text_checksum, pool));
 
   return SVN_NO_ERROR;
 }

@@ -68,33 +68,31 @@ print_dirents (apr_hash_t *dirents,
                                           utf8_entryname, pool));      
       if (verbose)
         {
-          const char *native_author;
+          apr_time_exp_t exp_time;
+          apr_status_t apr_err;
+          apr_size_t size;
+          const char *native_author = NULL;
+          
+          if (dirent->last_author)
+            SVN_ERR (svn_utf_cstring_from_utf8 (&native_author,
+                                                dirent->last_author, pool));
 
-          SVN_ERR (svn_utf_cstring_from_utf8 (&native_author,
-                                              dirent->last_author, pool));
+          /* svn_time_to_human_cstring gives us something *way* to long
+             to use for this, so we have to roll our own. */
+          apr_time_exp_lt (&exp_time, dirent->time);
+          apr_err = apr_strftime (timestr, &size, sizeof (timestr),
+                                  "%b %d %H:%M", &exp_time);
 
-          {
-            /* svn_time_to_human_cstring gives us something *way* to long
-               to use for this, so we have to roll our own. */
-            apr_time_exp_t exp_time;
-            apr_status_t apr_err;
-            apr_size_t size;
+          /* if that failed, just zero out the string and print nothing */
+          if (apr_err)
+            timestr[0] = '\0';
 
-            apr_time_exp_lt (&exp_time, dirent->time);
-
-            apr_err = apr_strftime (timestr, &size, sizeof (timestr),
-                                    "%b %d %H:%M", &exp_time);
-
-            /* if that failed, just zero out the string and print nothing */
-            if (apr_err)
-              timestr[0] = '\0';
-          }
-
-          printf ("%c %7"SVN_REVNUM_T_FMT" %8.8s %8ld %12s %s%s\n", 
+          printf ("%c %7"SVN_REVNUM_T_FMT" %8.8s "
+                  "%8"SVN_FILESIZE_T_FMT" %12s %s%s\n",
                   dirent->has_props ? 'P' : '_',
                   dirent->created_rev,
                   native_author ? native_author : "      ? ",
-                  (long int) dirent->size,
+                  dirent->size,
                   timestr,
                   native_entryname,
                   (dirent->kind == svn_node_dir) ? "/" : "");
@@ -128,9 +126,8 @@ svn_cl__ls (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
 
-  /* Give me arguments or give me death! */
-  if (targets->nelts == 0)
-    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL, "");
+  /* Add "." if user passed 0 arguments */
+  svn_opt_push_implicit_dot_target (targets, pool);
 
   /* For each target, try to list it. */
   for (i = 0; i < targets->nelts; i++)
@@ -138,20 +135,11 @@ svn_cl__ls (apr_getopt_t *os,
       apr_hash_t *dirents;
       const char *target = ((const char **) (targets->elts))[i];
      
-      if (! svn_path_is_url (target))
-        {
-          const char *target_native;
-
-          SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, pool));
-          printf ("Invalid URL: %s\n", target_native);
-          continue;
-        }
-      
       SVN_ERR (svn_client_ls (&dirents, target, &(opt_state->start_revision),
                               opt_state->recursive, ctx, subpool));
 
       SVN_ERR (print_dirents (dirents, opt_state->verbose, subpool));
-
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       svn_pool_clear (subpool);
     }
 

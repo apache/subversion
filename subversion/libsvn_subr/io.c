@@ -39,7 +39,8 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 #include "svn_config.h"
-#include "svn_private_config.h" /* for SVN_CLIENT_DIFF */
+
+#include "svn_private_config.h" /* For SVN_WIN32 */
 
 
 
@@ -57,8 +58,8 @@ io_check_path (const char *path,
   apr_status_t apr_err;
   const char *path_apr;
 
-  if (path[0] == '\0')
-    path = ".";
+  /* Make path appropriate for error messages in advance. */
+  path = svn_path_local_style (path, pool);
 
   /* Not using svn_io_stat() here because we want to check the
      apr_err return explicitly. */
@@ -162,7 +163,7 @@ svn_io_open_unique_file (apr_file_t **f,
           *unique_name_p = NULL;
           return svn_error_createf
             (apr_err, NULL,
-             "svn_io_open_unique_file: error openning '%s'", unique_name);
+             "svn_io_open_unique_file: error opening '%s'", unique_name);
         }
       else
         {
@@ -299,6 +300,8 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                                           const char *dst_parent,
                                           const char *dst_basename,
                                           svn_boolean_t copy_perms,
+                                          svn_cancel_func_t cancel_func,
+                                          void *cancel_baton,
                                           apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -361,6 +364,9 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
       entryname = key;
       entrykind = val;
 
+      if (cancel_func)
+        SVN_ERR (cancel_func (cancel_baton));
+
       /* Telescope the entryname onto the source dir. */
       src_target = svn_path_join (src, entryname, subpool);
 
@@ -374,11 +380,15 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                                      copy_perms, subpool));
         }
       else if (*entrykind == svn_node_dir)  /* recurse */
-        SVN_ERR (svn_io_copy_dir_recursively (src_target,
-                                              dst_path,
-                                              entryname,
-                                              copy_perms,
-                                              subpool));
+        {
+          SVN_ERR (svn_io_copy_dir_recursively (src_target,
+                                                dst_path,
+                                                entryname,
+                                                copy_perms,
+                                                cancel_func,
+                                                cancel_baton,
+                                                subpool));
+        }
 
       /* ### someday deal with other node kinds? */
     }
@@ -787,8 +797,22 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
   apr_status_t apr_err;
   const char *path_apr;
 
-  /* Remove read-only flag on terminated file. */
+#ifdef SVN_WIN32
+  /* ### On Unix a read-only file can still be removed, because
+     removal is really an edit of the parent directory, not of the
+     file itself.  Windows apparently has different semantics, and so
+     when the svn_io_set_file_read_write() call below was temporarily
+     removed in revision 5663, Subversion stopped working on Windows.
+
+     Still, this chmod should probably should be controlled by a flag.
+     Certain callers, namely libsvn_wc when dealing with the read-only
+     files in .svn/, frequently have read-only files to remove; but
+     many others don't, and the chmod is a waste of time for them.
+
+     But see http://subversion.tigris.org/issues/show_bug.cgi?id=1294
+     for a more thorough discussion of long term solutions to this. */
   SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
+#endif /* SVN_WIN32 */
 
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
@@ -1113,22 +1137,16 @@ svn_io_run_diff (const char *dir,
                  int *pexitcode, 
                  apr_file_t *outfile, 
                  apr_file_t *errfile, 
-                 apr_hash_t *config,
+                 const char *diff_cmd,
                  apr_pool_t *pool)
 {
   const char **args;
   int i; 
   int exitcode;
   int nargs = 4; /* the diff command itself, two paths, plus a trailing NULL */
-  const char *diff_cmd;
   const char *diff_utf8;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_config_t *cfg = config ? apr_hash_get (config, 
-                                             SVN_CONFIG_CATEGORY_CONFIG,
-                                             APR_HASH_KEY_STRING) : NULL;
-  
-  svn_config_get (cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS, 
-                  SVN_CONFIG_OPTION_DIFF_CMD, SVN_CLIENT_DIFF);
+
   SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
 
   if (pexitcode == NULL)
@@ -1190,7 +1208,7 @@ svn_io_run_diff (const char *dir,
    */
   if (*pexitcode != 0 && *pexitcode != 1)
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL, 
-                              "%s returned %d", diff_utf8, *pexitcode);
+                              "'%s' returned %d", diff_utf8, *pexitcode);
 
   svn_pool_destroy (subpool);
 
@@ -1209,19 +1227,13 @@ svn_io_run_diff3 (const char *dir,
                   const char *yours_label,
                   apr_file_t *merged,
                   int *exitcode,
-                  apr_hash_t *config,
+                  const char *diff3_cmd,
                   apr_pool_t *pool)
 {
   const char *args[14];
   const char *diff3_utf8;
   int nargs = 13, i = 0;
-  const char *diff3_cmd;
-  svn_config_t *cfg = config ? apr_hash_get (config, 
-                                             SVN_CONFIG_CATEGORY_CONFIG,
-                                             APR_HASH_KEY_STRING) : NULL;
 
-  svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS, 
-                  SVN_CONFIG_OPTION_DIFF3_CMD, SVN_CLIENT_DIFF3);
   SVN_ERR (svn_path_cstring_to_utf8 (&diff3_utf8, diff3_cmd, pool));
 
   /* Labels fall back to sensible defaults if not specified. */
@@ -1249,6 +1261,17 @@ svn_io_run_diff3 (const char *dir,
 #ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
   {
     const char *has_arg;
+
+    /* ### FIXME: we really shouldn't be reading the config here;
+       instead, the necessary bits should be passed in by the caller.
+       But should we add another parameter to this function, when the
+       whole external diff3 thing might eventually go away?  */
+    apr_hash_t *config;
+    svn_config_t *cfg;
+
+    SVN_ERR (svn_config_get_config (&config, pool));
+    cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG,
+                                 APR_HASH_KEY_STRING) : NULL;
     svn_config_get (cfg, &has_arg, SVN_CONFIG_SECTION_HELPERS, 
                     SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG, "yes");
     if (0 == strcasecmp(has_arg, "yes")
@@ -1282,8 +1305,8 @@ svn_io_run_diff3 (const char *dir,
   if ((*exitcode != 0) && (*exitcode != 1))
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL, 
                               "svn_io_run_diff3: "
-                              "Error running %s:  exitcode was %d, args were:"
-                              "\nin directory %s, basenames:\n%s\n%s\n%s",
+                              "Error running '%s':  exitcode was %d, args were:"
+                              "\nin directory '%s', basenames:\n%s\n%s\n%s",
                               diff3_utf8, *exitcode,
                               dir, mine, older, yours);
 
@@ -1431,8 +1454,12 @@ svn_io_file_rename (const char *from_path, const char *to_path,
 }
 
 
-svn_error_t *
-svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool)
+/* Common implementation of svn_io_dir_make and svn_io_dir_make_hidden.
+   HIDDEN determines if the hidden attribute
+   should be set on the newly created directory. */
+static svn_error_t *
+dir_make (const char *path, apr_fileperms_t perm,
+          svn_boolean_t hidden, apr_pool_t *pool)
 {
   apr_status_t status;
   const char *path_apr;
@@ -1443,10 +1470,35 @@ svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool)
 
   if (status)
     return svn_error_createf (status, NULL,
-                              "svn_io_dir_make: can't create directory '%s'",
-                              path);
-  else
-    return SVN_NO_ERROR;
+                              "can't create directory '%s'", path);
+
+#ifdef APR_FILE_ATTR_HIDDEN
+  if (hidden)
+    {
+      status = apr_file_attrs_set (path_apr,
+                                   APR_FILE_ATTR_HIDDEN,
+                                   APR_FILE_ATTR_HIDDEN,
+                                   pool);
+      if (status)
+        return svn_error_createf (status, NULL,
+                                  "can't hide directory '%s'", path);
+    }
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool)
+{
+  return dir_make (path, perm, FALSE, pool);
+}
+
+svn_error_t *
+svn_io_dir_make_hidden (const char *path, apr_fileperms_t perm,
+                        apr_pool_t *pool)
+{
+  return dir_make (path, perm, TRUE, pool);
 }
 
 

@@ -64,7 +64,7 @@ int svn_fs__bdb_open_strings_table (DB **strings_p,
 svn_error_t *svn_fs__bdb_string_read (svn_fs_t *fs,
                                       const char *key,
                                       char *buf,
-                                      apr_off_t offset,
+                                      svn_filesize_t offset,
                                       apr_size_t *len,
                                       trail_t *trail);
 
@@ -74,7 +74,7 @@ svn_error_t *svn_fs__bdb_string_read (svn_fs_t *fs,
  *
  * If string KEY does not exist, return SVN_ERR_FS_NO_SUCH_STRING.
  */
-svn_error_t *svn_fs__bdb_string_size (apr_size_t *size,
+svn_error_t *svn_fs__bdb_string_size (svn_filesize_t *size,
                                       svn_fs_t *fs,
                                       const char *key,
                                       trail_t *trail);

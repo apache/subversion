@@ -418,7 +418,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
 
       SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
                                        1, /* sync */ pool));
-      SVN_ERR (svn_wc__run_log (adm_access, pool));
+      SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1043,7 +1043,7 @@ validate_prop_against_node_kind (const char *name,
   while (*node_kind_prohibit)
     if (strcmp (name, *node_kind_prohibit++) == 0)
       return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
-                                "Cannot set %s on a %s (%s)",
+                                "Cannot set '%s' on a %s (%s)",
                                 name, node_kind_text, path);
 
   return SVN_NO_ERROR;
@@ -1103,6 +1103,7 @@ svn_wc_prop_set (const char *name,
   apr_hash_t *prophash;
   apr_file_t *fp = NULL;
   svn_subst_keywords_t *old_keywords;
+  svn_stringbuf_t *new_value = NULL;
   svn_node_kind_t kind;
   enum svn_prop_kind prop_kind = svn_property_kind (NULL, name);
 
@@ -1124,7 +1125,32 @@ svn_wc_prop_set (const char *name,
     {
       SVN_ERR (validate_prop_against_node_kind (name, path, kind, pool));
       if (strcmp (name, SVN_PROP_EOL_STYLE) == 0)
-        SVN_ERR (validate_eol_prop_against_file (path, adm_access, pool));
+        {
+          new_value = svn_stringbuf_create_from_string (value, pool);
+          svn_stringbuf_strip_whitespace (new_value);
+          SVN_ERR (validate_eol_prop_against_file (path, adm_access, pool));
+        }
+      else if (strcmp (name, SVN_PROP_MIME_TYPE) == 0)
+        {
+          new_value = svn_stringbuf_create_from_string (value, pool);
+          svn_stringbuf_strip_whitespace (new_value);
+          SVN_ERR (svn_mime_type_validate (new_value->data, pool));
+        }
+      else if (strcmp (name, SVN_PROP_IGNORE) == 0
+               || strcmp (name, SVN_PROP_EXTERNALS) == 0)
+        {
+          /* Make sure that the last line ends in a newline */
+          if (value->data[value->len - 1] != '\n')
+            {
+              new_value = svn_stringbuf_create_from_string (value, pool);
+              svn_stringbuf_appendbytes (new_value, "\n", 1);
+            }
+        }
+      else if (strcmp (name, SVN_PROP_KEYWORDS) == 0)
+        {
+          new_value = svn_stringbuf_create_from_string (value, pool);
+          svn_stringbuf_strip_whitespace (new_value);
+        }
     }
 
   if (kind == svn_node_file && strcmp (name, SVN_PROP_EXECUTABLE) == 0)
@@ -1133,13 +1159,22 @@ svn_wc_prop_set (const char *name,
          If the svn:executable property was deleted (NULL value passed
          in), then chmod -x. */
       if (value == NULL)
-        SVN_ERR (svn_io_set_file_executable (path, FALSE, TRUE, pool));
+        {
+          SVN_ERR (svn_io_set_file_executable (path, FALSE, TRUE, pool));
+        }
       else
-        SVN_ERR (svn_io_set_file_executable (path, TRUE, TRUE, pool));
-    }
-  else if ((strcmp (name, SVN_PROP_MIME_TYPE) == 0) && value)
-    {
-      SVN_ERR (svn_mime_type_validate (value->data, pool));
+        {
+          /* Since we only check if the property exists or not, force the
+             property value to a specific value */
+          static const svn_string_t executable_value =
+            {
+              SVN_PROP_EXECUTABLE_VALUE,
+              sizeof (SVN_PROP_EXECUTABLE_VALUE) - 1
+            };
+
+          value = &executable_value;
+          SVN_ERR (svn_io_set_file_executable (path, TRUE, TRUE, pool));
+        }
     }
 
   err = svn_wc_prop_list (&prophash, path, adm_access, pool);
@@ -1162,6 +1197,8 @@ svn_wc_prop_set (const char *name,
 
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
+  if (new_value)
+    value = svn_string_create_from_buf (new_value, pool);
   apr_hash_set (prophash, name, APR_HASH_KEY_STRING, value);
   
   /* Open the propfile for writing. */

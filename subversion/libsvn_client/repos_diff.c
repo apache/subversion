@@ -135,7 +135,7 @@ struct file_baton {
   const char *path_end_revision;
   apr_file_t *file_end_revision;
 
-  /* APPLY_HANDLER/APPLY_BATON represent the delta applcation baton. */
+  /* APPLY_HANDLER/APPLY_BATON represent the delta application baton. */
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
 
@@ -209,6 +209,49 @@ make_file_baton (const char *path,
 
   return file_baton;
 }
+
+
+/* Helper function: return up to two svn:mime-type values buried
+ * within a file baton.  Set *MIMETYPE1 to the value within the file's
+ * pristine properties, or NULL if not available.  Set *MIMETYPE2 to
+ * the value within the "new" file's propchanges, or NULL if not
+ * available.
+ */
+static void
+get_file_mime_types (const char **mimetype1,
+                     const char **mimetype2,
+                     struct file_baton *b)
+{
+  /* Defaults */
+  *mimetype1 = NULL;
+  *mimetype2 = NULL;
+
+  if (b->pristine_props)
+    {
+      svn_string_t *pristine_val;
+      pristine_val = apr_hash_get (b->pristine_props, SVN_PROP_MIME_TYPE,
+                                   strlen(SVN_PROP_MIME_TYPE));
+      if (pristine_val)
+        *mimetype1 = pristine_val->data;
+    }
+
+  if (b->propchanges)
+    {
+      int i;
+      svn_prop_t *propchange;
+
+      for (i = 0; i < b->propchanges->nelts; i++)
+        {
+          propchange = &APR_ARRAY_IDX(b->propchanges, i, svn_prop_t);
+          if (strcmp (propchange->name, SVN_PROP_MIME_TYPE) == 0)
+            {
+              *mimetype2 = propchange->value->data;
+              break;
+            }
+        }
+    }
+}
+
 
 /* An apr pool cleanup handler, this deletes one of the temporary files.
  */
@@ -287,7 +330,8 @@ get_file_from_ra (struct file_baton *b)
                                             b->path,
                                             b->edit_baton->revision,
                                             fstream, NULL,
-                                            &(b->pristine_props)));
+                                            &(b->pristine_props),
+                                            b->pool));
 
   status = apr_file_close (file);
   if (status)
@@ -308,7 +352,8 @@ get_dirprops_from_ra (struct dir_baton *b)
                                            b->path,
                                            b->edit_baton->revision,
                                            &dirents, NULL,
-                                           &(b->pristine_props)));
+                                           &(b->pristine_props),
+                                           b->pool));
 
   return SVN_NO_ERROR;
 }
@@ -457,7 +502,8 @@ delete_entry (const char *path,
   SVN_ERR (pb->edit_baton->ra_lib->check_path (&kind,
                                                pb->edit_baton->ra_session,
                                                path,
-                                               pb->edit_baton->revision));
+                                               pb->edit_baton->revision,
+                                               pool));
 
   /* Missing access batons are a problem during delete */
   SVN_ERR (get_path_access (&adm_access, eb->adm_access, pb->wcpath,
@@ -466,18 +512,24 @@ delete_entry (const char *path,
     {
     case svn_node_file:
       {
+        const char *mimetype1, *mimetype2;
+
         /* Compare a file being deleted against an empty file */
         struct file_baton *b = make_file_baton (path,
                                                 FALSE,
                                                 pb->edit_baton,
                                                 pool);
+
         SVN_ERR (get_file_from_ra (b));
         SVN_ERR (get_empty_file(b->edit_baton, &(b->path_end_revision)));
+
+        get_file_mime_types (&mimetype1, &mimetype2, b);
         
         SVN_ERR (pb->edit_baton->diff_callbacks->file_deleted 
                  (adm_access, b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
+                  mimetype1, mimetype2,
                   b->edit_baton->diff_cmd_baton));
 
         break;
@@ -637,7 +689,6 @@ window_handler (svn_txdelta_window_t *window,
 static svn_error_t *
 apply_textdelta (void *file_baton,
                  const char *base_checksum,
-                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
@@ -671,9 +722,17 @@ apply_textdelta (void *file_baton,
 
 /* An editor function.  When the file is closed we have a temporary
  * file containing a pristine version of the repository file. This can
- * be compared against the working copy.  */
+ * be compared against the working copy.
+ *
+ * ### Ignore TEXT_CHECKSUM for now.  Someday we can use it to verify
+ * ### the integrity of the file being diffed.  Done efficiently, this
+ * ### would probably involve calculating the checksum as the data is
+ * ### received, storing the final checksum in the file_baton, and
+ * ### comparing against it here.
+ */
 static svn_error_t *
 close_file (void *file_baton,
+            const char *text_checksum,
             apr_pool_t *pool)
 {
   struct file_baton *b = file_baton;
@@ -687,11 +746,15 @@ close_file (void *file_baton,
                               b->wcpath, eb->dry_run, b->pool));
   if (b->path_end_revision)
     {
+      const char *mimetype1, *mimetype2;
+      get_file_mime_types (&mimetype1, &mimetype2, b);
+
       if (b->added)
         SVN_ERR (eb->diff_callbacks->file_added
                  (adm_access, b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
+                  mimetype1, mimetype2,
                   b->edit_baton->diff_cmd_baton));
       else
         SVN_ERR (eb->diff_callbacks->file_changed
@@ -701,6 +764,7 @@ close_file (void *file_baton,
                   b->path_end_revision,
                   b->edit_baton->revision,
                   b->edit_baton->target_revision,
+                  mimetype1, mimetype2,
                   b->edit_baton->diff_cmd_baton));
     }
 

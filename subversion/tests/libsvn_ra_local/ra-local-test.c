@@ -154,7 +154,7 @@ get_youngest_rev (const char **msg)
                          pool));
 
   /* Get the youngest revision and make sure it's 0. */
-  SVN_ERR (plugin->get_latest_revnum (session, &latest_rev));
+  SVN_ERR (plugin->get_latest_revnum (session, &latest_rev, pool));
   
   if (latest_rev != 0)
       return svn_error_create (SVN_ERR_FS_GENERAL, NULL,

@@ -17,7 +17,7 @@
     
     <para>Even though the examples in this chapter show people sharing
       collections of program source code, keep in mind that Subversion
-      can manage any sort of file collection -- it's not limited to
+      can manage any sort of file collection&mdash;it's not limited to
       helping computer programmers.</para>
   </simplesect>
   
@@ -652,7 +652,7 @@ calc/Makefile:6
         numbers.</para>
 
       <para>At first, it may not be entirely clear why this sort of
-        flexibliity is considered a feature, and not a liability.
+        flexibility is considered a feature, and not a liability.
         After completing a commit to the repository, the freshly
         committed files and directories are at more recent working
         revision than the rest of the working copy.  It looks like a

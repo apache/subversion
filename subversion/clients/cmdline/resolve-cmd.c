@@ -75,7 +75,8 @@ svn_cl__resolve (apr_getopt_t *os,
           svn_handle_warning (stderr, err);
           svn_error_clear (err);
         }
-      
+
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));    
       svn_pool_clear (subpool);
     }
   

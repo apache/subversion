@@ -182,27 +182,6 @@ svn_error_t *svn_wc__close_text_base (apr_file_t *fp,
                                       int sync,
                                       apr_pool_t *pool);
 
-
-/* Open FILE in the authentication area of PATH's administratve area.
- * FILE is a single file's name, i.e. a basename.
- * Behaves like svn_wc__open_adm_file(), which see.
- */
-svn_error_t *svn_wc__open_auth_file (apr_file_t **handle,
-                                     const char *path,
-                                     const char *auth_filename,
-                                     apr_int32_t flags,
-                                     apr_pool_t *pool);
-
-/* Close the authentication FILE in PATH's administrative area.
- * FP was obtained from svn_wc__open_auth_file().
- * Behaves like svn_wc__close_adm_file(), which see.
- */
-svn_error_t *svn_wc__close_auth_file (apr_file_t *handle,
-                                      const char *path,
-                                      const char *file,
-                                      int sync,
-                                      apr_pool_t *pool);
-
 /* Open the property file for PATH.
  * PATH can be any kind of path, either file or dir.
  *
@@ -242,28 +221,6 @@ svn_error_t *svn_wc__sync_props (const char *path,
                                  svn_boolean_t base,
                                  svn_boolean_t wcprops,
                                  apr_pool_t *pool);
-
-
-/* Ensure that an administrative area exists for PATH, so that PATH is a
- * working copy subdir based on URL at REVISION.
- *
- * If the administrative area does not exist then it will be created and
- * initialized to a unlocked state.
- *
- * If the administrative area already exists then the given URL must match
- * the URL in the administrative area or an error will be returned. The
- * given REVISION must also match except for the special case of adding a
- * directory that has a name matching one scheduled for deletion, in which
- * case REVISION must be zero.
- *
- * Do not ensure existence of PATH itself; if PATH does not exist,
- * return error. 
- */
-svn_error_t *svn_wc__ensure_adm (const char *path,
-                                 const char *url,
-                                 svn_revnum_t revision,
-                                 apr_pool_t *pool);
-
 
 /* Blow away the admistrative directory associated with the access baton
    ADM_ACCESS. This closes ADM_ACCESS, but it is safe to close ADM_ACCESS

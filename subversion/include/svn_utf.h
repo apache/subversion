@@ -24,9 +24,10 @@
 #ifndef SVN_UTF_H
 #define SVN_UTF_H
 
-#include "svn_error.h"
-#include "svn_delta.h"
 #include <apr_xlate.h>
+
+#include "svn_error.h"
+#include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,9 +51,6 @@ svn_error_t *svn_utf_string_to_utf8 (const svn_string_t **dest,
 
 
 /** Set @a *dest to a utf8-encoded stringbuf from native C string @a src;
- * allocate @a *dest in @a pool.
- *
- * Set @a *dest to a utf8-encoded stringbuf from native C string @a src;
  * allocate @a *dest in @a pool.   Use @a xlator to do the conversion;  if
  * @c NULL, then use the environment's default locale.
  */
@@ -63,9 +61,6 @@ svn_error_t *svn_utf_cstring_to_utf8_stringbuf (svn_stringbuf_t **dest,
 
 
 /** Set @a *dest to a utf8-encoded C string from native C string @a src;
- * allocate @a *dest in @a pool.
- *
- * Set @a *dest to a utf8-encoded C string from native C string @a src;
  * allocate @a *dest in @a pool.  Use @a xlator to do the conversion; if 
  * @c NULL, then use the environment's default locale.
  */
@@ -79,8 +74,8 @@ svn_error_t *svn_utf_cstring_to_utf8 (const char **dest,
  * allocate @a *dest in @a pool.
  */
 svn_error_t *svn_utf_stringbuf_from_utf8 (svn_stringbuf_t **dest,
-					  const svn_stringbuf_t *src,
-					  apr_pool_t *pool);
+                                          const svn_stringbuf_t *src,
+                                          apr_pool_t *pool);
 
 
 /** Set @a *dest to a natively-encoded string from utf8 string @a src;
@@ -100,9 +95,6 @@ svn_error_t *svn_utf_cstring_from_utf8 (const char **dest,
 
 
 /** Return a fuzzily native-encoded C string from utf8 C string @a src,
- * allocated in @a pool.
- *
- * Return a fuzzily native-encoded C string from utf8 C string @a src,
  * allocated in @a pool.  A fuzzy recoding leaves all 7-bit ascii
  * characters the same, and substitutes "?\\XXX" for others, where XXX
  * is the unsigned decimal code for that character.
@@ -156,9 +148,6 @@ svn_error_t *svn_utf_cstring_from_utf8_string (const char **dest,
 
 
 /** Convert @a utf8_string to native encoding and store in @a buf, storing
- * no more than @a bufsize octets.
- *
- * Convert @a utf8_string to native encoding and store in @a buf, storing
  * no more than @a bufsize octets.  Note: this function is meant for
  * error message printing.
  */

@@ -75,7 +75,7 @@ def status_update_with_nested_adds(sbox):
   wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy
-  wc_backup = wc_dir + 'backup'
+  wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
   
   # Create newdir and newfile
@@ -193,9 +193,35 @@ def status_type_change(sbox):
   os.chdir(wc_dir)
   try:
 
+    # First replace a versioned dir with a file and a versioned file
+    # with a versioned dir.
     os.rename('iota', 'was_iota')
     os.rename('A', 'iota')
     os.rename('was_iota', 'A')
+
+    stat_output, err_output = svntest.main.run_svn(None, 'status')
+    if err_output or len(stat_output) != 2:
+      return 1
+    for line in stat_output:
+      if not re.match("~ +(iota|A)", line):
+        return 1
+
+    # Now change the file that is obstructing the versioned dir into an
+    # unversioned dir.
+    os.remove('A')
+    os.mkdir('A')
+
+    stat_output, err_output = svntest.main.run_svn(None, 'status')
+    if err_output or len(stat_output) != 2:
+      return 1
+    for line in stat_output:
+      if not re.match("~ +(iota|A)", line):
+        return 1
+
+    # Now change the versioned dir that is obstructing the file into an
+    # unversioned dir.
+    svntest.main.safe_rmtree('iota')
+    os.mkdir('iota')
 
     stat_output, err_output = svntest.main.run_svn(None, 'status')
     if err_output or len(stat_output) != 2:
@@ -224,7 +250,7 @@ def status_type_change_to_symlink(sbox):
     # "broken" symlinks
     os.remove('iota')
     os.symlink('foo', 'iota')
-    svntest.main.remove_wc('A/D')
+    svntest.main.safe_rmtree('A/D')
     os.symlink('bar', 'A/D')
 
     stat_output, err_output = svntest.main.run_svn(None, 'status')
@@ -280,7 +306,10 @@ def status_with_new_files_pending(sbox):
   # class is not the same as os.popen3().  Got that?)  See the Python
   # docs for details; in the meantime, no output means there was a
   # problem.
-  if not stat_output:
+  for line in stat_output:
+    if line.find('newfile') != -1:
+      break;
+  else:
     return 1
 
   os.chdir(was_cwd)
@@ -288,31 +317,73 @@ def status_with_new_files_pending(sbox):
   return 0
 
 
-def status_blank_for_unignored_file(sbox):
-  "status blank for unignored file"
+def status_for_unignored_file(sbox):
+  "status for unignored file"
 
-  if sbox.build():
-    return 1
+  sbox.build()
 
   wc_dir = sbox.wc_dir
   was_cwd = os.getcwd()
 
   os.chdir(wc_dir)
 
-  svntest.main.file_append('newfile', 'this is a new file')
-  svntest.main.run_svn(None, 'propset', 'svn:ignore', 'newfile', '.')
-  stat_output, err_output = svntest.main.run_svn(None, 'status', '--no-ignore',
-                                                 '.')
-  if err_output:
-    return 1
-  status = 1
-  for line in stat_output:
-    if re.match("  +newfile", line):
-      status = 0
-  
-  os.chdir(was_cwd)
+  try:
+    svntest.main.file_append('newfile', 'this is a new file')
+    svntest.main.run_svn(None, 'propset', 'svn:ignore', 'newfile', '.')
 
-  return status
+    # status on the directory with --no-ignore
+    stat_output, err_output = svntest.main.run_svn(None, 'status', 
+                                                   '--no-ignore', '.')
+    if err_output:
+      raise svntest.Failure
+    status = 1
+    for line in stat_output:
+      if re.match("I +newfile", line):
+        status = 0
+
+    if (status == 1):
+      raise svntest.Failure
+
+    # status specifying the file explicitly on the command line
+    stat_output, err_output = svntest.main.run_svn(None, 'status', 'newfile')
+
+    if err_output:
+      raise svntest.Failure
+    status = 1
+    for line in stat_output:
+      if re.match("I +newfile", line):
+        status = 0
+
+    if (status == 1):
+      raise svntest.Failure
+  
+  finally:
+    os.chdir(was_cwd)
+
+
+def status_for_nonexistent_file(sbox):
+  "status for a file neither on disk nor under version control"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  was_cwd = os.getcwd()
+
+  os.chdir(wc_dir)
+
+  try:
+    stat_output, err_output = svntest.main.run_svn(None, 'status', 
+                                                   'nonexistent-file')
+    if err_output:
+      raise svntest.Failure
+
+    # there should *not* be a status line printed for the nonexistent file 
+    for line in stat_output:
+      if re.match(" +nonexistent-file", line):
+        raise svntest.Failure
+  
+  finally:
+    os.chdir(was_cwd)
 
 
 def status_file_needs_update(sbox):
@@ -346,7 +417,7 @@ def status_file_needs_update(sbox):
     return 1
 
   wc_dir = sbox.wc_dir
-  other_wc = wc_dir + '-other'
+  other_wc = sbox.add_wc_path('other')
 
   svntest.actions.duplicate_dir(wc_dir, other_wc)
 
@@ -412,7 +483,7 @@ def status_uninvited_parent_directory(sbox):
     return 1
 
   wc_dir = sbox.wc_dir
-  other_wc = wc_dir + '-other'
+  other_wc = sbox.add_wc_path('other')
 
   svntest.actions.duplicate_dir(wc_dir, other_wc)
 
@@ -441,7 +512,7 @@ def status_uninvited_parent_directory(sbox):
   saw_uninvited_parent_dir = 0
   for line in out:
     # The "/?" is just to allow for an optional trailing slash.
-    if re.match("\\s+\\*.*-other/?$", line):
+    if re.match("\\s+\\*.*\.other/?$", line):
       saw_uninvited_parent_dir = 1
 
   return saw_uninvited_parent_dir
@@ -460,9 +531,10 @@ test_list = [ None,
               status_type_change,
               Skip(status_type_change_to_symlink, (os.name != 'posix')),
               status_with_new_files_pending,
-              status_blank_for_unignored_file,
+              status_for_unignored_file,
+              status_for_nonexistent_file,
               status_file_needs_update,
-              XFail(status_uninvited_parent_directory),
+              status_uninvited_parent_directory,
              ]
 
 if __name__ == '__main__':

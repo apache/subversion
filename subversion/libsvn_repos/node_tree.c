@@ -45,13 +45,15 @@
 
 /*** Node creation and assembly structures and routines. ***/
 static svn_repos_node_t *
-create_node (const char *name, 
+create_node (const char *name,
+             svn_repos_node_t *parent,
              apr_pool_t *pool)
 {
   svn_repos_node_t *node = apr_pcalloc (pool, sizeof (svn_repos_node_t));
   node->action = 'R';
   node->kind = svn_node_unknown;
   node->name = apr_pstrdup (pool, name);
+  node->parent = parent;
   return node;
 }
 
@@ -73,7 +75,7 @@ create_sibling_node (svn_repos_node_t *elder,
     tmp_node = tmp_node->sibling;
 
   /* Create a new youngest sibling and return that. */
-  return (tmp_node->sibling = create_node (name, pool));
+  return (tmp_node->sibling = create_node (name, elder->parent, pool));
 }
 
 
@@ -88,7 +90,7 @@ create_child_node (svn_repos_node_t *parent,
 
   /* If PARENT has no children, create its first one and return that. */
   if (! parent->child)
-    return (parent->child = create_node (name, pool));
+    return (parent->child = create_node (name, parent, pool));
 
   /* If PARENT already has a child, create a new sibling for its first
      child and return that. */
@@ -126,6 +128,47 @@ find_child_by_name (svn_repos_node_t *parent,
   return NULL;
 }
 
+
+static void
+find_real_base_location (const char **path_p,
+                         svn_revnum_t *rev_p,
+                         svn_repos_node_t *node,
+                         apr_pool_t *pool)
+{
+  /* If NODE is an add-with-history, then its real base location is
+     the copy source. */
+  if ((node->action == 'A') 
+      && node->copyfrom_path 
+      && SVN_IS_VALID_REVNUM (node->copyfrom_rev))
+    {
+      *path_p = node->copyfrom_path;
+      *rev_p = node->copyfrom_rev;
+      return;
+    }
+
+  /* Otherwise, if NODE has a parent, we'll recurse, and add NODE's
+     name to whatever the parent's real base path turns out to be (and
+     pass the base revision on through). */
+  if (node->parent)
+    {
+      const char *path;
+      svn_revnum_t rev;
+
+      find_real_base_location (&path, &rev, node->parent, pool);
+      *path_p = svn_path_join (path, node->name, pool);
+      *rev_p = rev;
+      return;
+    }
+
+  /* Finally, if the node has no parent, then its name is "/", and it
+     has no interesting base revision.  */
+  *path_p = "/";
+  *rev_p = SVN_INVALID_REVNUM;
+  return;
+}
+
+
+
 
 /*** Editor functions and batons. ***/
 
@@ -157,20 +200,41 @@ delete_entry (const char *path,
   struct edit_baton *eb = d->edit_baton;
   svn_repos_node_t *node;
   const char *name;
+  const char *base_path;
+  svn_revnum_t base_rev;
+  svn_fs_root_t *base_root;
   svn_node_kind_t kind;
-
-  /* Was this a dir or file (we have to check the base root for this one) */
-  kind = svn_fs_check_path (eb->base_root, path, pool);
-  if (kind == svn_node_none)
-    return svn_error_create (SVN_ERR_FS_NOT_FOUND, NULL, path);
                               
   /* Get (or create) the change node and update it. */
   name = svn_path_basename (path, pool);
   node = find_child_by_name (d->node, name);
   if (! node)
     node = create_child_node (d->node, name, eb->node_pool);
-  node->kind = kind;
   node->action = 'D';
+
+  /* We need to look up this node's parents to see what its original
+     path in the filesystem was.  Why?  Because if this deletion
+     occured underneath a copied path, the thing that was deleted
+     probably lived at a different location (relative to the copy
+     source). */
+  find_real_base_location (&base_path, &base_rev, node, pool);
+  if (! SVN_IS_VALID_REVNUM (base_rev))
+    {
+      /* No interesting base revision?  We'll just look for the path
+         in our base root.  */
+      base_root = eb->base_root;
+    }
+  else
+    {
+      /* Oh.  Perhaps some copy goodness happened somewhere? */
+      SVN_ERR (svn_fs_revision_root (&base_root, eb->fs, base_rev, pool));
+    }
+
+  /* Now figure out if this thing was a file or a dir. */
+  SVN_ERR (svn_fs_check_path (&kind, base_root, base_path, pool));
+  if (kind == svn_node_none)
+    return svn_error_create (SVN_ERR_FS_NOT_FOUND, NULL, path);
+  node->kind = kind;
 
   return SVN_NO_ERROR;
 }
@@ -221,7 +285,7 @@ open_root (void *edit_baton,
 
   d->edit_baton = eb;
   d->parent_baton = NULL;
-  d->node = (eb->node = create_node ("", eb->node_pool));
+  d->node = (eb->node = create_node ("", NULL, eb->node_pool));
   d->node->kind = svn_node_dir;
   d->node->action = 'R';
   *root_baton = d;
@@ -291,14 +355,13 @@ add_file (const char *path,
 static svn_error_t *
 apply_textdelta (void *file_baton, 
                  const char *base_checksum,
-                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
   struct node_baton *fb = file_baton;
   fb->node->text_mod = TRUE;
-  *handler = NULL;
+  *handler = svn_delta_noop_window_handler;
   *handler_baton = NULL;
   return SVN_NO_ERROR;
 }

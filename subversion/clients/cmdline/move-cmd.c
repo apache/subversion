@@ -63,6 +63,8 @@ svn_cl__move (apr_getopt_t *os,
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
                           FALSE, pool);
 
+  SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state,
+                                       NULL, ctx->config, pool));
   err = svn_client_move 
            (&commit_info, 
             src_path, &(opt_state->start_revision), dst_path,

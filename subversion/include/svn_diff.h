@@ -27,7 +27,7 @@
  * strings of data.  The Subversion client and server send text deltas
  * to one another during updates and commits.
  *
- * This API, however, is (or will be) used for peforming *contextual*
+ * This API, however, is (or will be) used for performing *contextual*
  * merges between files in the working copy.  During an update or
  * merge, 3-way file merging is needed.  And 'svn diff' needs to show
  * the differences between 2 files.
@@ -36,7 +36,7 @@
  * operates on any source of data (a "datasource") and calculates
  * contextual differences on "tokens" within the data.  In our
  * particular usage, the datasources are files and the tokens are
- * lines.  But the possibilites are endless.
+ * lines.  But the possibilities are endless.
  */
 
 
@@ -59,17 +59,16 @@ extern "C" {
 /* Diffs. */
 
 /** An opaque type that represents a difference between either two or
- * three datasources.
- *
- * An opaque type that represents a difference between either two or
- * three datasources.   This object is returned by @c svn_diff() and
- * @c svn_diff3() below, and consumed by a number of other routines.
+ * three datasources.   This object is returned by @c svn_diff_diff(),
+ * @c svn_diff_diff3() and @c svn_diff_diff4 below, and consumed by a number of
+ * other routines.
  */
 typedef struct svn_diff_t svn_diff_t;
 
 /**
- * There are three types of datasources.  In GNU diff3 terminology,
- * these types correspond to the phrases "older", "mine", and "yours".
+ * There are four types of datasources.  In GNU diff3 terminology,
+ * the first three types correspond to the phrases "older", "mine",
+ * and "yours".
  */
 typedef enum svn_diff_datasource_e
 {
@@ -82,7 +81,10 @@ typedef enum svn_diff_datasource_e
   /** The latest version of the data, possibly different than the
    * user's modified version.
    */
-  svn_diff_datasource_latest
+  svn_diff_datasource_latest,
+
+  /** The common ancestor of original and modified. */
+  svn_diff_datasource_ancestor
 
 } svn_diff_datasource_e;
 
@@ -104,9 +106,6 @@ typedef struct svn_diff_fns_t
                                              svn_diff_datasource_e datasource);
 
   /** A function for ordering the tokens with the same interface as
-   * 'strcmp'.
-   *
-   * A function for ordering the tokens with the same interface as
    * 'strcmp': If @a ltoken and @a rtoken are "equal", return 0.  If 
    * @a ltoken is "less than" @a rtoken, return a number < 0.  If @a ltoken 
    * is "greater than" @a rtoken, return a number > 0.  [The diff algorithm
@@ -127,50 +126,51 @@ typedef struct svn_diff_fns_t
 
 /* The Main Events */
 
-/** Return a diff that represents the differences between an original and 
- * modified datasource.
- *
- * Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
+/** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
  * return a diff object in @a *diff that represents a difference between
  * an "original" and "modified" datasource.  Do all allocation in @a pool.
  */
-svn_error_t *svn_diff (svn_diff_t **diff,
-                       void *diff_baton,
-                       const svn_diff_fns_t *diff_fns,
-                       apr_pool_t *pool);
+svn_error_t *svn_diff_diff(svn_diff_t **diff,
+                           void *diff_baton,
+                           const svn_diff_fns_t *diff_fns,
+                           apr_pool_t *pool);
 
-/** Return a diff that represents the difference between three datasources.
- *
- * Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
+/** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
  * return a diff object in @a *diff that represents a difference between
- * three datasources: "original", "modified", and "latest". Do all
+ * three datasources: "original", "modified", and "latest".  Do all
  * allocation in @a pool.
  */
-svn_error_t *svn_diff3 (svn_diff_t **diff,
-                        void *diff_baton,
-                        const svn_diff_fns_t *diff_fns,
-                        apr_pool_t *pool);
+svn_error_t *svn_diff_diff3(svn_diff_t **diff,
+                            void *diff_baton,
+                            const svn_diff_fns_t *diff_fns,
+                            apr_pool_t *pool);
+
+/** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
+ * return a diff object in @a *diff that represents a difference between
+ * two datasources: "original" and "latest", adjusted to become a full
+ * difference between "original", "modified" and "latest" using "ancestor".
+ * Do all allocation in @a pool.
+ */
+svn_error_t *svn_diff_diff4(svn_diff_t **diff,
+                            void *diff_baton,
+                            const svn_diff_fns_t *diff_fns,
+                            apr_pool_t *pool);
 
 
 /* Utility functions */
 
-/** Determine if a diff object contains conflicts.
- *
- * Determine if a diff object contains conflicts.  If it does, return
+/** Determine if a diff object contains conflicts.  If it does, return
  * @c TRUE, else return @c FALSE.
  */
 svn_boolean_t
-svn_diff_contains_conflicts (svn_diff_t *diff);
+svn_diff_contains_conflicts(svn_diff_t *diff);
 
 
 /** Determine if a diff object contains actual differences between the
- * datasources.
- *
- * Determine if a diff object contains actual differences between the
  * datasources.  If so, return @c TRUE, else return @c FALSE.
  */
 svn_boolean_t
-svn_diff_contains_diffs (svn_diff_t *diff);
+svn_diff_contains_diffs(svn_diff_t *diff);
 
 
 
@@ -179,7 +179,6 @@ svn_diff_contains_diffs (svn_diff_t *diff);
 
 /** A vtable for displaying (or consuming) differences between datasources.
  *
- * A vtable for displaying (or consuming) differences between datasources.
  * Differences, similarities, and conflicts are described by lining up
  * "ranges" of data.
  *  
@@ -204,7 +203,7 @@ typedef struct svn_diff_output_fns_t
    * @a original_length in the original data, and is also identical to
    * the range @a modified_start, @a modified_length in the modified data.
    */
-  svn_error_t *(*output_common) (void *output_baton,
+  svn_error_t *(*output_common)(void *output_baton,
                                 apr_off_t original_start,
                                 apr_off_t original_length,
                                 apr_off_t modified_start,
@@ -217,19 +216,19 @@ typedef struct svn_diff_output_fns_t
    * between the "original" and "modified" datasources.  Specifically,
    * the conflict starts at @a original_start and foes for @a original_length
    * tokens in the original data, and at @a modified_start for 
-   * @a modified_lenght tokens in the modified data.
+   * @a modified_length tokens in the modified data.
    *
    * If doing a three-way diff, then an identical data range was discovered
    * between the "original" and "latest" datasources, but this conflicts with
    * a range in the "modified" datasource.
    */
-  svn_error_t *(*output_diff_modified) (void *output_baton,
-                                        apr_off_t original_start,
-                                        apr_off_t original_length,
-                                        apr_off_t modified_start,
-                                        apr_off_t modified_length,
-                                        apr_off_t latest_start,
-                                        apr_off_t latest_length);
+  svn_error_t *(*output_diff_modified)(void *output_baton,
+                                       apr_off_t original_start,
+                                       apr_off_t original_length,
+                                       apr_off_t modified_start,
+                                       apr_off_t modified_length,
+                                       apr_off_t latest_start,
+                                       apr_off_t latest_length);
 
   /* ------ The following callbacks are used by three-way diffs only --- */
 
@@ -237,29 +236,27 @@ typedef struct svn_diff_output_fns_t
    * "modified" datasources, but this conflicts with a range in the
    * "latest" datasource.
    */
-  svn_error_t *(*output_diff_latest) (void *output_baton,
-                                      apr_off_t original_start,
-                                      apr_off_t original_length,
-                                      apr_off_t modified_start,
-                                      apr_off_t modified_length,
-                                      apr_off_t latest_start,
-                                      apr_off_t latest_length);
+  svn_error_t *(*output_diff_latest)(void *output_baton,
+                                     apr_off_t original_start,
+                                     apr_off_t original_length,
+                                     apr_off_t modified_start,
+                                     apr_off_t modified_length,
+                                     apr_off_t latest_start,
+                                     apr_off_t latest_length);
 
   /** An identical data range was discovered between the "modified" and
    * "latest" datasources, but this conflicts with a range in the
    * "original" datasource.
    */
-  svn_error_t *(*output_diff_common) (void *output_baton,
-                                      apr_off_t original_start,
-                                      apr_off_t original_length,
-                                      apr_off_t modified_start,
-                                      apr_off_t modified_length,
-                                      apr_off_t latest_start,
-                                      apr_off_t latest_length);
+  svn_error_t *(*output_diff_common)(void *output_baton,
+                                     apr_off_t original_start,
+                                     apr_off_t original_length,
+                                     apr_off_t modified_start,
+                                     apr_off_t modified_length,
+                                     apr_off_t latest_start,
+                                     apr_off_t latest_length);
 
-  /** All three datasources have conflicting data ranges.
-   *
-   * All three datasources have conflicting data ranges.  The range
+  /** All three datasources have conflicting data ranges.  The range
    * @a latest_start, @a latest_length in the "latest" datasource conflicts 
    * with the range @a original_start, @a original_length in the "original" 
    * datasource, and also conflicts with the range @a modified_start, 
@@ -268,14 +265,14 @@ typedef struct svn_diff_output_fns_t
    * in this conflicting range, @a resolved_diff will contain a diff
    * which can be used to retrieve the common and conflicting ranges.
    */
-  svn_error_t *(*output_conflict) (void *output_baton,
-                                   apr_off_t original_start,
-                                   apr_off_t original_length,
-                                   apr_off_t modified_start,
-                                   apr_off_t modified_length,
-                                   apr_off_t latest_start,
-                                   apr_off_t latest_length,
-                                   svn_diff_t *resolved_diff);
+  svn_error_t *(*output_conflict)(void *output_baton,
+                                  apr_off_t original_start,
+                                  apr_off_t original_length,
+                                  apr_off_t modified_start,
+                                  apr_off_t modified_length,
+                                  apr_off_t latest_start,
+                                  apr_off_t latest_length,
+                                  svn_diff_t *resolved_diff);
 } svn_diff_output_fns_t;
 
 
@@ -283,9 +280,9 @@ typedef struct svn_diff_output_fns_t
  * differences, output the differences in @a diff.
  */
 svn_error_t *
-svn_diff_output (svn_diff_t *diff,
-                 void *output_baton,
-                 const svn_diff_output_fns_t *output_fns);
+svn_diff_output(svn_diff_t *diff,
+                void *output_baton,
+                const svn_diff_output_fns_t *output_fns);
 
 
 
@@ -298,10 +295,10 @@ svn_diff_output (svn_diff_t *diff,
  * (The file arguments must be full paths to the files.)
  */
 svn_error_t *
-svn_diff_file(svn_diff_t **diff,
-              const char *original,
-              const char *modified,
-              apr_pool_t *pool);
+svn_diff_file_diff(svn_diff_t **diff,
+                   const char *original,
+                   const char *modified,
+                   apr_pool_t *pool);
 
 
 /** A convenience function to produce a diff between three files.
@@ -311,11 +308,25 @@ svn_diff_file(svn_diff_t **diff,
  * file. (The file arguments must be full paths to the files.)
  */
 svn_error_t *
-svn_diff3_file(svn_diff_t **diff,
-               const char *original,
-               const char *modified,
-               const char *latest,
-               apr_pool_t *pool);
+svn_diff_file_diff3(svn_diff_t **diff,
+                    const char *original,
+                    const char *modified,
+                    const char *latest,
+                    apr_pool_t *pool);
+
+/** A convenience function to produce a diff between four files.
+ *
+ * Return a diff object in @a *diff (allocated from @a pool) that represents
+ * the difference between an @a original file, @a modified file, @a latest
+ * and @a ancestor file. (The file arguments must be full paths to the files.)
+ */
+svn_error_t *
+svn_diff_file_diff4(svn_diff_t **diff,
+                    const char *original,
+                    const char *modified,
+                    const char *latest,
+                    const char *ancestor,
+                    apr_pool_t *pool);
 
 /** A convenience function to produce unified diff output from the
  * diff generated by @c svn_diff_file.
@@ -349,18 +360,18 @@ svn_diff_file_output_unified(apr_file_t *output_file,
  * as desired.  Note that these options are mutually exclusive.
  */
 svn_error_t *
-svn_diff3_file_output(apr_file_t *output_file,
-                      svn_diff_t *diff,
-                      const char *original_path,
-                      const char *modified_path,
-                      const char *latest_path,
-                      const char *conflict_original,
-                      const char *conflict_modified,
-                      const char *conflict_latest,
-                      const char *conflict_separator,
-                      svn_boolean_t display_original_in_conflict,
-                      svn_boolean_t display_resolved_conflicts,
-                      apr_pool_t *pool);
+svn_diff_file_output_merge(apr_file_t *output_file,
+                           svn_diff_t *diff,
+                           const char *original_path,
+                           const char *modified_path,
+                           const char *latest_path,
+                           const char *conflict_original,
+                           const char *conflict_modified,
+                           const char *conflict_latest,
+                           const char *conflict_separator,
+                           svn_boolean_t display_original_in_conflict,
+                           svn_boolean_t display_resolved_conflicts,
+                           apr_pool_t *pool);
 
 
 #ifdef __cplusplus

@@ -29,13 +29,12 @@
 #include <apr_hash.h>
 
 #include "svn_error.h"
-#include "svn_delta.h"
 #include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
+  
 /** The namespace all Subversion XML uses. */
 #define SVN_XML_NAMESPACE "svn:"
 
@@ -50,12 +49,28 @@ enum svn_xml_open_tag_style {
   /** <tag .../>  */
   svn_xml_self_closing
 };
+  
+
 
-
-/** Create or append in @a *outstr an xml-escaped version of @a string.
+/** Determine if a string of character @a data of length @a len is a
+ * safe bet for use with the svn_xml_escape_* functions found in this
+ * header. 
+ * 
+ * Return @c TRUE if it is, @c FALSE otherwise.
  *
- * Create or append in @a *outstr an xml-escaped version of @a string,
+ * Essentially, this function exists to determine whether or not
+ * simply running a string of bytes through the Subversion XML escape
+ * routines will produce legitimate XML.  It should only be necessary
+ * for data which might contain bytes that cannot be safely encoded
+ * into XML (upper ASCII and control characters, for example). 
+ */
+svn_boolean_t svn_xml_is_xml_safe (const char *data, 
+                                   apr_size_t len);
+
+
+/** Create or append in @a *outstr an xml-escaped version of @a string,
  * suitable for output as character data.
+ *
  * If @a *outstr is @c NULL, store a new stringbuf, else append to the
  * existing stringbuf there.
  */
@@ -78,10 +93,9 @@ void svn_xml_escape_cdata_cstring (svn_stringbuf_t **outstr,
                                    apr_pool_t *pool);
 
 
-/** Create or append in @a *outstr an xml-escaped version of @a string.
- *
- * Create or append in @a *outstr an xml-escaped version of @a string,
+/** Create or append in @a *outstr an xml-escaped version of @a string,
  * suitable for output as an attribute value.
+ *
  * If @a *outstr is @c NULL, store a new stringbuf, else append to the
  * existing stringbuf there.
  */
@@ -117,7 +131,7 @@ typedef void (*svn_xml_start_elem)(void *baton,
 
 typedef void (*svn_xml_end_elem)(void *baton, const char *name);
 
-/* data is not NUL-terminated. */
+/* data is not NULL-terminated. */
 typedef void (*svn_xml_char_data)(void *baton,
                                   const char *data,
                                   apr_size_t len);
@@ -137,8 +151,6 @@ void svn_xml_free_parser (svn_xml_parser_t *svn_parser);
 
 /** Push @a len bytes of xml data in @a buf at @a svn_parser.  
  *
- * Push @a len bytes of xml data in @a buf at @a svn_parser.  
- *
  * If this is the final push, @a is_final must be set.  
  *
  * An error will be returned if there was a syntax problem in the XML,
@@ -157,7 +169,6 @@ svn_error_t *svn_xml_parse (svn_xml_parser_t *parser,
 
 /** The way to officially bail out of xml parsing.
  *
- * The way to officially bail out of xml parsing:
  * Store @a error in @a svn_parser and set all expat callbacks to @c NULL.
  */
 void svn_xml_signal_bailout (svn_error_t *error,
@@ -172,13 +183,12 @@ void svn_xml_signal_bailout (svn_error_t *error,
 /** Return the value associated with @a name in expat attribute array @a atts,
  * else return @c NULL.
  *
- * Return the value associated with @a name in expat attribute array @a atts,
- * else return @c NULL.  (There could never be a @c NULL attribute value in
- * the XML, although the empty string is possible.)
+ * (There could never be a @c NULL attribute value in the XML,
+ * although the empty string is possible.)
  * 
  * @a atts is an array of c-strings: even-numbered indexes are names,
  * odd-numbers hold values.  If all is right, it should end on an
- * even-numbered index pointing to @c NULL.
+ * even-numbered index pointing to @c NULL. 
  */
 const char *svn_xml_get_attr_value (const char *name, const char **atts);
 
@@ -189,7 +199,6 @@ const char *svn_xml_get_attr_value (const char *name, const char **atts);
 
 /** Create an attribute hash from @c va_list @a ap. 
  *
- * Create an attribute hash from @c va_list @a ap. 
  * The contents of @a ap are alternating <tt>char *</tt> keys and 
  * <tt>char *</tt> vals, terminated by a final @c NULL falling on an 
  * odd index (zero-based).
@@ -198,7 +207,6 @@ apr_hash_t *svn_xml_ap_to_hash (va_list ap, apr_pool_t *pool);
 
 /** Create a hash that corresponds to Expat xml attribute list @a atts.
  *
- * Create a hash that corresponds to Expat xml attribute list @a atts.
  * The hash's keys and values are <tt>char *</tt>'s.
  *
  * @a atts may be null, in which case you just get an empty hash back
@@ -240,8 +248,6 @@ void svn_xml_make_header (svn_stringbuf_t **str, apr_pool_t *pool);
 
 /** Store a new xml tag @a tagname in @a *str.
  *
- * Store a new xml tag @a tagname in @a *str.
- *
  * If @a str is @c NULL, allocate @a *str in @a pool; else append the new 
  * tag to @a *str, allocating in @a str's pool
  *
@@ -252,26 +258,23 @@ void svn_xml_make_header (svn_stringbuf_t **str, apr_pool_t *pool);
  * @a style is one of the enumerated styles in @c svn_xml_open_tag_style.
  */
 void svn_xml_make_open_tag (svn_stringbuf_t **str,
-			    apr_pool_t *pool,
-			    enum svn_xml_open_tag_style style,
-			    const char *tagname,
-			    ...);
+                            apr_pool_t *pool,
+                            enum svn_xml_open_tag_style style,
+                            const char *tagname,
+                            ...);
 
 
 /** Like @c svn_xml_make_open_tag, but takes a @c va_list instead of being
  * variadic.
  */
 void svn_xml_make_open_tag_v (svn_stringbuf_t **str,
-			      apr_pool_t *pool,
-			      enum svn_xml_open_tag_style style,
-			      const char *tagname,
-			      va_list ap);
+                              apr_pool_t *pool,
+                              enum svn_xml_open_tag_style style,
+                              const char *tagname,
+                              va_list ap);
 
 
 /** Like @c svn_xml_make_tag, but takes a hash table of attributes 
- * (<tt>char *</tt> keys mapping to <tt>char *</tt> values).
- *
- * Like @c svn_xml_make_tag, but takes a hash table of attributes 
  * (<tt>char *</tt> keys mapping to <tt>char *</tt> values).
  *
  * You might ask, why not just provide @c svn_xml_make_tag_atts()?
@@ -290,16 +293,16 @@ void svn_xml_make_open_tag_v (svn_stringbuf_t **str,
  * convert Expat attr lists into hashes when necessary.
  */
 void svn_xml_make_open_tag_hash (svn_stringbuf_t **str,
-				 apr_pool_t *pool,
-				 enum svn_xml_open_tag_style style,
-				 const char *tagname,
-				 apr_hash_t *attributes);
+                                 apr_pool_t *pool,
+                                 enum svn_xml_open_tag_style style,
+                                 const char *tagname,
+                                 apr_hash_t *attributes);
 
 
 /** Makes a close tag. */
 void svn_xml_make_close_tag (svn_stringbuf_t **str,
-			     apr_pool_t *pool,
-			     const char *tagname);
+                             apr_pool_t *pool,
+                             const char *tagname);
 
 
 

@@ -22,10 +22,14 @@
 #include <apr_want.h>
 
 #include <apr_lib.h>
+#include <apr_md5.h>
 #include "config_impl.h"
 #include "svn_io.h"
 #include "svn_types.h"
 #include "svn_path.h"
+#include "svn_auth.h"
+#include "svn_md5.h"
+#include "svn_hash.h"
 #include "svn_private_config.h"
 
 
@@ -389,7 +393,10 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
 
         case '#':               /* Comment */
           if (count == 0)
-            ch = skip_to_eoln(fd);
+            {
+              ch = skip_to_eoln(fd);
+              ++ctx.line;
+            }
           else
             {
               ch = EOF;
@@ -442,6 +449,49 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
 }
 
 
+/* Helper for svn_config_ensure:  see if ~/.subversion/auth/ and its
+   subdirs exist, try to create them, but don't throw errors on
+   failure.  PATH is assumed to be a path to the user's private config
+   directory. */
+static void
+ensure_auth_dirs (const char *path,
+                  apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  apr_status_t apr_err;
+  const char *auth_dir, *auth_subdir;
+
+  /* Ensure ~/.subversion/auth/ */
+  auth_dir = svn_path_join_many (pool, path, SVN_CONFIG__AUTH_SUBDIR, NULL);
+  svn_io_check_path (auth_dir, &kind, pool);
+  if (kind == svn_node_none)
+    {
+      /* 'chmod 700' permissions: */
+      apr_err = apr_dir_make (auth_dir,
+                              (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
+                              pool);
+      if (apr_err)
+        return;
+    }
+
+  /* If a provider exists that wants to store credentials in
+     ~/.subversion, a subdirectory for the cred_kind must exist. */
+
+  auth_subdir = svn_path_join_many (pool, auth_dir,
+                                    SVN_AUTH_CRED_SIMPLE, NULL);
+  svn_io_check_path (auth_subdir, &kind, pool);
+  if (kind == svn_node_none)
+    apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
+
+  auth_subdir = svn_path_join_many (pool, auth_dir,
+                                    SVN_AUTH_CRED_USERNAME, NULL);
+  svn_io_check_path (auth_subdir, &kind, pool);
+  if (kind == svn_node_none)
+    apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
+
+}
+
+
 svn_error_t *
 svn_config_ensure (apr_pool_t *pool)
 {
@@ -463,8 +513,15 @@ svn_config_ensure (apr_pool_t *pool)
       if (apr_err)
         return SVN_NO_ERROR;
     }
-  else if (kind != svn_node_dir)
-    return SVN_NO_ERROR;
+  else
+    {
+      /* ### config directory already exists, but for the sake of
+         smooth upgrades, try to ensure that the auth/ subdirs exist
+         as well.  we can remove this check someday in the future. */
+      ensure_auth_dirs (path, pool);
+
+      return SVN_NO_ERROR;
+    }
 
   /* Else, there's a configuration directory. */
 
@@ -472,7 +529,10 @@ svn_config_ensure (apr_pool_t *pool)
      success.  There's no _need_ to init a config directory if
      something's preventing it. */
 
-  /** Ensure that the `README' file exists. **/
+  /** If non-existent, try to create a number of auth/ subdirectories. */
+  ensure_auth_dirs (path, pool);
+
+  /** Ensure that the `README.txt' file exists. **/
   SVN_ERR (svn_config__user_config_path
            (&path, SVN_CONFIG__USR_README_FILE, pool));
 
@@ -487,118 +547,199 @@ svn_config_ensure (apr_pool_t *pool)
     {
       apr_file_t *f;
       const char *contents =
-   "This directory holds run-time configuration information for Subversion\n"
-   "clients.  The configuration files all share the same syntax, but you\n"
-   "should examine a particular file to learn what configuration\n"
-   "directives are valid for that file.\n"
-   "\n"
+   "This directory holds run-time configuration information for Subversion"
+   APR_EOL_STR
+   "clients.  The configuration files all share the same syntax, but you"
+   APR_EOL_STR
+   "should examine a particular file to learn what configuration"
+   APR_EOL_STR
+   "directives are valid for that file."
+   APR_EOL_STR
+   APR_EOL_STR
    "The syntax is standard INI format:"
-   "\n"
-   "\n"
-   "   - Empty lines, and lines starting with '#', are ignored.\n"
-   "     The first significant line in a file must be a section header.\n"
-   "\n"
-   "   - A section starts with a section header, which must start in\n"
-   "     the first column:\n"
-   "\n"
-   "       [section-name]\n"
-   "\n"
-   "   - An option, which must always appear within a section, is a pair\n"
-   "     (name, value).  There are two valid forms for defining an\n"
-   "     option, both of which must start in the first column:\n"
-   "\n"
-   "       name: value\n"
-   "       name = value\n"
-   "\n"
-   "     Whitespace around the separator (:, =) is optional.\n"
-   "\n"
-   "   - Section and option names are case-insensitive, but case is\n"
-   "     preserved.\n"
-   "\n"
-   "   - An option's value may be broken into several lines.  The value\n"
-   "     continuation lines must start with at least one whitespace.\n"
-   "     Trailing whitespace in the previous line, the newline character\n"
-   "     and the leading whitespace in the continuation line is compressed\n"
-   "     into a single space character.\n"
-   "\n"
-   "   - All leading and trailing whitespace around a value is trimmed,\n"
-   "     but the whitespace within a value is preserved, with the\n"
-   "     exception of whitespace around line continuations, as\n"
-   "     described above.\n"
-   "\n"
-   "   - When a value is a list, it is comma-separated.  Again, the\n"
-   "     whitespace around each element of the list is trimmed.\n"
-   "\n"
-#if 0   /* expansion not implemented yet */
-   "   - Option values may be expanded within a value by enclosing the\n"
-   "     option name in parentheses, preceded by a percent sign:\n"
-   "\n"
-   "       %(name)\n"
-   "\n"
-   "     The expansion is performed recursively and on demand, during\n"
-   "     svn_option_get.  The name is first searched for in the same\n"
-   "     section, then in the special [DEFAULT] section. If the name\n"
-   "     is not found, the whole %(name) placeholder is left\n"
-   "     unchanged.\n"
-   "\n"
-   "     Any modifications to the configuration data invalidate all\n"
-   "     previously expanded values, so that the next svn_option_get\n"
-   "     will take the modifications into account.\n"
-   "\n"
-#endif /* 0 */
-   "\n"
-   "Configuration data in the Windows registry\n"
-   "==========================================\n"
-   "\n"
-   "On Windows, configuration data may also be stored in the registry.  The\n"
-   "functions svn_config_read and svn_config_merge will read from the\n"
-   "registry when passed file names of the form:\n"
-   "\n"
-   "   REGISTRY:<hive>/path/to/config-key\n"
-   "\n"
-   "The REGISTRY: prefix must be in upper case. The <hive> part must be\n"
-   "one of:\n"
-   "\n"
-   "   HKLM for HKEY_LOCAL_MACHINE\n"
-   "   HKCU for HKEY_CURRENT_USER\n"
-#if 0   /* expansion not implemented yet */
-   "\n"
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - Empty lines, and lines starting with '#', are ignored."
+   APR_EOL_STR
+   "     The first significant line in a file must be a section header."
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - A section starts with a section header, which must start in"
+   APR_EOL_STR
+   "     the first column:"
+   APR_EOL_STR
+   APR_EOL_STR
+   "       [section-name]"
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - An option, which must always appear within a section, is a pair"
+   APR_EOL_STR
+   "     (name, value).  There are two valid forms for defining an"
+   APR_EOL_STR
+   "     option, both of which must start in the first column:"
+   APR_EOL_STR
+   APR_EOL_STR
+   "       name: value"
+   APR_EOL_STR
+   "       name = value"
+   APR_EOL_STR
+   APR_EOL_STR
+   "     Whitespace around the separator (:, =) is optional."
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - Section and option names are case-insensitive, but case is"
+   APR_EOL_STR
+   "     preserved."
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - An option's value may be broken into several lines.  The value"
+   APR_EOL_STR
+   "     continuation lines must start with at least one whitespace."
+   APR_EOL_STR
+   "     Trailing whitespace in the previous line, the newline character"
+   APR_EOL_STR
+   "     and the leading whitespace in the continuation line is compressed"
+   APR_EOL_STR
+   "     into a single space character."
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - All leading and trailing whitespace around a value is trimmed,"
+   APR_EOL_STR
+   "     but the whitespace within a value is preserved, with the"
+   APR_EOL_STR
+   "     exception of whitespace around line continuations, as"
+   APR_EOL_STR
+   "     described above."
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - When a value is a list, it is comma-separated.  Again, the"
+   APR_EOL_STR
+   "     whitespace around each element of the list is trimmed."
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - Option values may be expanded within a value by enclosing the"
+   APR_EOL_STR
+   "     option name in parentheses, preceded by a percent sign:"
+   APR_EOL_STR
+   APR_EOL_STR
+   "       %(name)"
+   APR_EOL_STR
+   APR_EOL_STR
+   "     The expansion is performed recursively and on demand, during"
+   APR_EOL_STR
+   "     svn_option_get.  The name is first searched for in the same"
+   APR_EOL_STR
+   "     section, then in the special [DEFAULT] section. If the name"
+   APR_EOL_STR
+   "     is not found, the whole %(name) placeholder is left"
+   APR_EOL_STR
+   "     unchanged."
+   APR_EOL_STR
+   APR_EOL_STR
+   "     Any modifications to the configuration data invalidate all"
+   APR_EOL_STR
+   "     previously expanded values, so that the next svn_option_get"
+   APR_EOL_STR
+   "     will take the modifications into account."
+   APR_EOL_STR
+   APR_EOL_STR
+   APR_EOL_STR
+   "Configuration data in the Windows registry"
+   APR_EOL_STR
+   "=========================================="
+   APR_EOL_STR
+   APR_EOL_STR
+   "On Windows, configuration data may also be stored in the registry.  The"
+   APR_EOL_STR
+   "functions svn_config_read and svn_config_merge will read from the"
+   APR_EOL_STR
+   "registry when passed file names of the form:"
+   APR_EOL_STR
+   APR_EOL_STR
+   "   REGISTRY:<hive>/path/to/config-key"
+   APR_EOL_STR
+   APR_EOL_STR
+   "The REGISTRY: prefix must be in upper case. The <hive> part must be"
+   APR_EOL_STR
+   "one of:"
+   APR_EOL_STR
+   APR_EOL_STR
+   "   HKLM for HKEY_LOCAL_MACHINE"
+   APR_EOL_STR
+   "   HKCU for HKEY_CURRENT_USER"
+   APR_EOL_STR
+   APR_EOL_STR
    "The values in config-key represent the options in the [DEFAULT] section."
-   "\n"
-   "The keys below config-key represent other sections, and their values\n"
-#else
-   "\n"
-   "The keys below config-key represent the sections, and their values\n"
-#endif /* 0 */
-   "represent the options. Only values of type REG_SZ whose name doesn't\n"
-   "start with a '#' will be used; other values, as well as the keys'\n"
-   "default values, will be ignored.\n"
-   "\n"
-   "\n"
-   "File locations\n"
-   "==============\n"
-   "\n"
-   "Typically, Subversion uses two config directories, one for site-wide\n"
-   "configuration,\n"
-   "\n"
-   "  /etc/subversion/servers\n"
-   "  /etc/subversion/config\n"
-   "  /etc/subversion/hairstyles\n"
-   "     -- or --\n"
-   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Servers\n"
-   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Config\n"
-   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Hairstyles\n"
-   "\n"
-   "and one for per-user configuration:\n"
-   "\n"
-   "  ~/.subversion/servers\n"
-   "  ~/.subversion/config\n"
-   "  ~/.subversion/hairstyles\n"
-   "     -- or --\n"
-   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Servers\n"
-   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Config\n"
-   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Hairstyles\n"
-   "\n";
+   APR_EOL_STR
+   "The keys below config-key represent other sections, and their values"
+   APR_EOL_STR
+   "represent the options. Only values of type REG_SZ whose name doesn't"
+   APR_EOL_STR
+   "start with a '#' will be used; other values, as well as the keys'"
+   APR_EOL_STR
+   "default values, will be ignored."
+   APR_EOL_STR
+   APR_EOL_STR
+   APR_EOL_STR
+   "File locations"
+   APR_EOL_STR
+   "=============="
+   APR_EOL_STR
+   APR_EOL_STR
+   "Typically, Subversion uses two config directories, one for site-wide"
+   APR_EOL_STR
+   "configuration,"
+   APR_EOL_STR
+   APR_EOL_STR
+   "  Unix:"
+   APR_EOL_STR
+   "    /etc/subversion/servers"
+   APR_EOL_STR
+   "    /etc/subversion/config"
+   APR_EOL_STR
+   "    /etc/subversion/hairstyles"
+   APR_EOL_STR
+   "  Windows:"
+   APR_EOL_STR
+   "    %ALLUSERSPROFILE%\\Application Data\\Subversion\\servers"
+   APR_EOL_STR
+   "    %ALLUSERSPROFILE%\\Application Data\\Subversion\\config"
+   APR_EOL_STR
+   "    %ALLUSERSPROFILE%\\Application Data\\Subversion\\hairstyles"
+   APR_EOL_STR
+   "    REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Servers"
+   APR_EOL_STR
+   "    REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Config"
+   APR_EOL_STR
+   "    REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Hairstyles"
+   APR_EOL_STR
+   APR_EOL_STR
+   "and one for per-user configuration:"
+   APR_EOL_STR
+   APR_EOL_STR
+   "  Unix:"
+   APR_EOL_STR
+   "    ~/.subversion/servers"
+   APR_EOL_STR
+   "    ~/.subversion/config"
+   APR_EOL_STR
+   "    ~/.subversion/hairstyles"
+   APR_EOL_STR
+   "  Windows:"
+   APR_EOL_STR
+   "    %APPDATA%\\Subversion\\servers"
+   APR_EOL_STR
+   "    %APPDATA%\\Subversion\\config"
+   APR_EOL_STR
+   "    %APPDATA%\\Subversion\\hairstyles"
+   APR_EOL_STR
+   "    REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Servers"
+   APR_EOL_STR
+   "    REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Config"
+   APR_EOL_STR
+   "    REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Hairstyles"
+   APR_EOL_STR
+   APR_EOL_STR;
 
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -635,19 +776,25 @@ svn_config_ensure (apr_pool_t *pool)
       apr_file_t *f;
       const char *contents =
         "### This file specifies server-specific protocol parameters,\n"
-        "### including HTTP proxy information, HTTP timeout settings, and\n"
-        "### svn protocol tunnel agents (for running svn over ssh or similar\n"
-        "### tools).\n"
+        "### including HTTP proxy information, and HTTP timeout settings.\n"
         "###\n"
         "### The currently defined server options are:\n"
-        "###   http-proxy-host      Proxy host for HTTP connection\n"
-        "###   http-proxy-port      Port number of proxy host service\n"
-        "###   http-proxy-username  Username for auth to proxy service\n"
-        "###   http-proxy-password  Password for auth to proxy service\n"
-        "###   http-timeout         Timeout (in seconds) for HTTP requests\n"
-        "###   http-compression     Whether or not to compress HTTP requests\n"
-        "###   neon-debug-mask      Debug mask for Neon HTTP library\n"
-        "###   svn-tunnel-agent     Program to connect to svn server\n"
+        "###   http-proxy-host          Proxy host for HTTP connection\n"
+        "###   http-proxy-port          Port number of proxy host service\n"
+        "###   http-proxy-username      Username for auth to proxy service\n"
+        "###   http-proxy-password      Password for auth to proxy service\n"
+        "###   http-proxy-exceptions    List of sites that do not use proxy\n"
+        "###   http-timeout             Timeout for HTTP requests in seconds\n"
+        "###   http-compression         Whether to compress HTTP requests\n"
+        "###   neon-debug-mask          Debug mask for Neon HTTP library\n"
+        "###   ssl-authorities-file     File listing known and trusted CAs\n"
+        "###   ssl-ignore-unknown-ca    Allow untrusted server certificates\n"
+        "###   ssl-ignore-invalid-date  Allow expired/postdated certificates\n"
+        "###   ssl-ignore-host-mismatch Allow certificates for other servers\n"
+        "###   ssl-client-cert-file     Client certificate file location\n"
+        "###   ssl-client-cert-type     Can be either 'pem' or 'pkcs12'\n"
+        "###   ssl-client-key-file      Client Key location, if not in cert\n"
+        "###   ssl-client-cert-password Client Key password, if needed.\n"
         "###\n"
         "### HTTP timeouts, if given, are specified in seconds.  A timeout\n"
         "### of 0, i.e. zero, causes a builtin default to be used.\n"
@@ -660,6 +807,11 @@ svn_config_ensure (apr_pool_t *pool)
         "### access is matched against the patterns on the right.  If a\n"
         "### match is found, the server info is from the section with the\n"
         "### corresponding name.\n"
+        "\n"
+        "### Note that the ssl-ignore overrides significantly decrease the\n"
+        "### security of the connection, and may allow a third party to\n"
+        "### intercept or even modify the transmitted data.\n"
+        "\n"
         "# [groups]\n"
         "# group1 = *.collab.net\n"
         "# othergroup = repository.blarggitywhoomph.com\n"
@@ -673,6 +825,9 @@ svn_config_ensure (apr_pool_t *pool)
         "# http-proxy-password = doubleblah\n"
         "# http-timeout = 60\n"
         "# neon-debug-mask = 130\n"
+        "# ssl-ignore-unknown-ca = true\n"
+        "# ssl-ignore-host-mismatch = true\n"
+        "# ssl-ignore-invalid-date = true\n"
         "\n"
         "### Information for the second group:\n"
         "# [othergroup]\n"
@@ -680,21 +835,22 @@ svn_config_ensure (apr_pool_t *pool)
         "# http-proxy-port = 9000\n"
         "# No username and password, so use the defaults below.\n"
         "\n"
-        "### Information for the third group:\n"
-        "# [thirdgroup]\n"
-        "# svn-tunnel-agent = ssh\n"
-        "\n"
-        "### You can set default HTTP parameters in the 'defaults' section.\n"
+        "### You can set default parameters in the 'global' section.\n"
         "### These parameters apply if no corresponding parameter is set in\n"
         "### a specifically matched group as shown above.  Thus, if you go\n"
         "### through the same proxy server to reach every site on the\n"
         "### Internet, you probably just want to put that server's\n"
-        "### information in the 'default' section and not bother with\n"
+        "### information in the 'global' section and not bother with\n"
         "### 'groups' or any other sections.\n"
         "###\n"
         "### If you go through a proxy for all but a few sites, you can\n"
         "### list those exceptions under 'http-proxy-exceptions'.  This only\n"
         "### overrides defaults, not explicitly matched server names.\n"
+        "###\n"
+        "### 'ssl-authorities-file' points to the location of the file\n"
+        "### containing a list of known and trusted SSL Certificate \n"
+        "### Authorities (CAs). See details above for overriding security\n"
+        "### issues due to SSL\n"
         "# [global]\n"
         "# http-proxy-exceptions = *.exception.com, www.internal-site.org\n"
         "# http-proxy-host = defaultproxy.whatever.com\n"
@@ -703,7 +859,8 @@ svn_config_ensure (apr_pool_t *pool)
         "# http-proxy-password = defaultpassword\n"
         "# http-compression = yes\n"
         "# No http-timeout, so just use the builtin default.\n"
-        "# No neon-debug-mask, so neon debugging is disabled.\n";
+        "# No neon-debug-mask, so neon debugging is disabled.\n"
+        "# ssl-authorities-file = /path/to/CAcerts.pem\n";
 
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -746,7 +903,10 @@ svn_config_ensure (apr_pool_t *pool)
         "\n"
         "### Section for authentication and authorization customizations.\n"
         "### Set store-password to 'no' to avoid storing your subversion\n"
-        "###   password in your working copies.  It defaults to 'yes'.\n"   
+        "### passwords in the auth/ area of your config directory.\n"
+        "### It defaults to 'yes'.  Note that this option only prevents\n"
+        "### saving of *new* credentials;  it doesn't invalidate existing\n"
+        "### caches.  (To do that, remove the cache files by hand.)\n"
         "# [auth]\n"
         "# store-password = no\n"
         "\n"
@@ -756,28 +916,46 @@ svn_config_ensure (apr_pool_t *pool)
         "###   examines by default to find this information ($EDITOR, \n"
         "###   et al).\n"
         "### Set diff-cmd to the absolute path of your `diff' program.\n"
-        "###   This will override the compile-time default path to `diff'\n"
-        "###   that Subversion default to.\n"
+        "###   This will override the compile-time default, which is to use\n"
+        "###   Subversion's internal diff implementation.\n"
         "### Set diff3-cmd to the absolute path of your `diff3' program.\n"
-        "###   This will override the compile-time default path to `diff3'\n"
-        "###   that Subversion default to.\n"
+        "###   This will override the compile-time default, which is to use\n"
+        "###   Subversion's internal diff3 implementation.\n"
         "### Set diff3-has-program-arg to `true' or `yes' if your `diff3'\n"
         "###   program accepts the `--diff-program' option.\n"
         "# [helpers]\n"
         "# editor-cmd = editor (vi, emacs, notepad, etc.)\n"
-        "# diff-cmd = " SVN_CLIENT_DIFF "\n"
-        "# diff3-cmd = " SVN_CLIENT_DIFF3 "\n"
-#ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
-        "# diff3-has-program-arg = true\n"
-#else
-        "# diff3-has-program-arg = false\n"
-#endif
+        "# diff-cmd = diff_program (diff, gdiff, etc.)\n"
+        "# diff3-cmd = diff3_program (diff3, gdiff3, etc.)\n"
+        "# diff3-has-program-arg = [true | false]\n"
+        "\n"
+        "### Section for configuring tunnel agents.\n"
+        "# [tunnels]\n"
+        "### Configure svn protocol tunnel schemes here.  By default, only\n"
+        "### the `ssh' scheme is defined.  You can define other schemes to\n"
+        "### be used with `svn+scheme://hostname/path' URLs.  A scheme\n"
+        "### definition is simply a command, optionally prefixed by an\n"
+        "### environment variable name which can override the command if it\n"
+        "### is defined.  The command (or environment variable) may contain\n"
+        "### arguments, using standard shell quoting for arguments with\n"
+        "### spaces.  The command will be invoked as:\n"
+        "###   <command> <hostname> svnserve -t\n"
+        "### If the built-in ssh scheme were not predefined, it could be\n"
+        "### defined as:\n"
+        "# ssh = $SVN_SSH ssh\n"
+        "### If you wanted to define a new `rsh' scheme, to be used with\n"
+        "### 'svn+rsh:' URLs, you could do so as follows:\n"
+        "# rsh = rsh\n"
+        "### Or, if you wanted to specify a full path and arguments:\n"
+        "# rsh = /path/to/rsh -l myusername\n"
         "\n"
         "### Section for configuring miscelleneous Subversion options.\n"
         "# [miscellany]\n"
         "### Set global-ignores to a set of whitespace-delimited globs\n"
         "###   which Subversion will ignore in its `status' output.\n"
-        "# global-ignores = *.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
+        "# global-ignores = *.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*\n"
+        "### Set log-encoding to the default encoding for log messages\n"
+        "# log-encoding = latin1\n"
         "\n"
         "### See http://subversion.tigris.org/issues/show_bug.cgi?id=668\n"
         "### for what else will soon be customized in this file.\n";

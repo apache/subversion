@@ -49,7 +49,7 @@ if len(sys.argv) != 3:
 
 # Path to repository
 repo_dir = sys.argv[1]
-repo = os.path.basename(repo_dir)
+repo = os.path.basename(os.path.abspath(repo_dir))
 
 # Where to store the repository backup.  The backup will be placed in
 # a *subdirectory* of this location, named after the youngest

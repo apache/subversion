@@ -32,7 +32,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 
 
 typedef struct {
@@ -76,7 +76,12 @@ typedef struct {
   const char *path2;   /* a telescoping extension of uc->dst_path */
   const char *path3;   /* a telescoping extension of uc->dst_path
                             without dst_path as prefix. */
-  svn_boolean_t added;
+
+  const char *base_checksum;   /* base_checksum (from apply_textdelta) */
+  const char *text_checksum;   /* text_checksum (from close_file) */
+
+  svn_boolean_t text_changed;        /* Did the file's contents change? */
+  svn_boolean_t added;               /* File added? (Implies text_changed.) */
   apr_array_header_t *changed_props; /* array of const char * prop names */
   apr_array_header_t *removed_props; /* array of const char * prop names */
 
@@ -84,7 +89,6 @@ typedef struct {
   const char *committed_rev;
   const char *committed_date;
   const char *last_author;
-  const char *uuid;
 
 } item_baton_t;
 
@@ -178,45 +182,6 @@ static item_baton_t *make_child_baton(item_baton_t *parent,
 }
 
 
-/* Construct an xml element with optional BASE_CHECKSUM and
- * RESULT_CHECKSUM attributes.
- *
- * (PREFIX and SUFFIX don't need whitespace on the end and beginning
- * respectively; this function will add the padding itself.
- */
-static const char *
-insert_checksum_attributes(const char *prefix,
-                           const char *base_checksum,
-                           const char *result_checksum,
-                           const char *suffix,
-                           apr_pool_t *pool)
-{
-  if (base_checksum && result_checksum)
-    {
-      return apr_pstrcat(pool, prefix, " ",
-                         "base-checksum=\"", base_checksum, "\" ",
-                         "result-checksum=\"", result_checksum, "\" ",
-                         suffix, NULL);
-    }
-  else if (base_checksum)
-    {
-      return apr_pstrcat(pool, prefix, " ",
-                         "base-checksum=\"", base_checksum, "\" ",
-                         suffix, NULL);
-    }
-  else if (result_checksum)
-    {
-      return apr_pstrcat(pool, prefix, " ",
-                         "result-checksum=\"", result_checksum, "\" ",
-                         suffix, NULL);
-    }
-  else
-    {
-      return apr_pstrcat(pool, prefix, " ", suffix, NULL);
-    }
-}
-
-
 static void send_xml(update_ctx_t *uc, const char *fmt, ...)
 {
   va_list ap;
@@ -249,8 +214,8 @@ static void send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
   revision = dav_svn_get_safe_cr(baton->uc->rev_root, path, pool);
     
   href = dav_svn_build_uri(baton->uc->resource->info->repos,
-			   DAV_SVN_BUILD_URI_VERSION,
-			   revision, path, 0 /* add_href */, pool);
+                           DAV_SVN_BUILD_URI_VERSION,
+                           revision, path, 0 /* add_href */, pool);
 
   send_xml(baton->uc, 
            "<D:checked-in><D:href>%s</D:href></D:checked-in>" DEBUG_CR, 
@@ -266,62 +231,87 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
                                 void **child_baton)
 {
   item_baton_t *child;
-  const char *qname;
-  const char *qpath;
   update_ctx_t *uc = parent->uc;
+  const char *bc_url = NULL;
 
   child = make_child_baton(parent, path, pool);
   child->added = TRUE;
 
   if (uc->resource_walk)
     {
-      qpath = apr_xml_quote_string(pool, child->path3, 1);
-
-      send_xml(child->uc, "<S:resource path=\"%s\">" DEBUG_CR, qpath);      
+      send_xml(child->uc, "<S:resource path=\"%s\">" DEBUG_CR, 
+               apr_xml_quote_string(pool, child->path3, 1));
     }
   else
     {
-      const char *hex_digest = NULL;
+      const char *qname = apr_xml_quote_string(pool, child->name, 1);
+      const char *elt;
+      const char *chk_attr = "";
+      const char *real_path = get_real_fs_path(child, pool);
 
-      qname = apr_xml_quote_string(pool, child->name, 1);
-      
       if (! is_dir)
         {
+          /* files have checksums */
           unsigned char digest[MD5_DIGESTSIZE];
-          const char *real_path = get_real_fs_path(child, pool);
-
           SVN_ERR (svn_fs_file_md5_checksum
                    (digest, uc->rev_root, real_path, pool));
           
-          hex_digest = svn_md5_digest_to_cstring(digest, pool);
+          child->text_checksum = svn_md5_digest_to_cstring(digest, pool);
         }
+      else
+        {
+          /* we send baseline-collection urls when we add a directory */
+          svn_revnum_t revision;
+          revision = dav_svn_get_safe_cr(child->uc->rev_root, real_path, pool);
+          bc_url = dav_svn_build_uri(child->uc->resource->info->repos,
+                                     DAV_SVN_BUILD_URI_BC,
+                                     revision, real_path,
+                                     0 /* add_href */, pool);
+
+          /* ugh, build_uri ignores the path and just builds the root
+             of the baseline collection.  we have to tack the
+             real_path on manually, ignoring its leading slash. */
+          if (real_path && (! svn_path_is_empty(real_path)))
+            bc_url = svn_path_url_add_component(bc_url, real_path+1, pool);
+        }
+
 
       if (copyfrom_path == NULL)
         {
-          const char *prefix
-            = apr_psprintf(pool, "<S:add-%s name=\"%s\"",
-                           DIR_OR_FILE(is_dir), qname);
-
-          const char *elt = insert_checksum_attributes(prefix,
-                                                       NULL, hex_digest,
-                                                       ">", pool);
-          send_xml(child->uc, "%s" DEBUG_CR, elt);
+          if (bc_url)            
+            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
+                               "bc-url=\"%s\"%s>" DEBUG_CR,
+                               DIR_OR_FILE(is_dir), qname, bc_url, chk_attr);
+          else
+            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\"%s>" DEBUG_CR,
+                               DIR_OR_FILE(is_dir), qname, chk_attr);
         }
       else
         {
           const char *qcopy = apr_xml_quote_string(pool, copyfrom_path, 1);
-          const char *prefix
-            = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                           "copyfrom-path=\"%s\" copyfrom-rev=\"%"
-                           SVN_REVNUM_T_FMT "\"",
-                           DIR_OR_FILE(is_dir),
-                           qname, qcopy, copyfrom_revision);
 
-          const char *elt = insert_checksum_attributes(prefix,
-                                                       NULL, hex_digest,
-                                                       ">", pool);
-          send_xml(child->uc, "%s" DEBUG_CR, elt);
+          if (bc_url)
+            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
+                               "copyfrom-path=\"%s\" copyfrom-rev=\"%"
+                               SVN_REVNUM_T_FMT "\" "
+                               "bc-url=\"%s\"%s>" DEBUG_CR,
+                               DIR_OR_FILE(is_dir),
+                               qname, qcopy, copyfrom_revision,
+                               bc_url, chk_attr);
+          else
+            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
+                               "copyfrom-path=\"%s\" copyfrom-rev=\"%"
+                               SVN_REVNUM_T_FMT "\"%s>" DEBUG_CR,
+                               DIR_OR_FILE(is_dir),
+                               qname, qcopy, copyfrom_revision, chk_attr);
         }
+
+      /* Resist the temptation to pass 'elt' as the format string.
+         Because it contains URIs, it might have sequences that look
+         like format string insert placeholders.  For example,
+         "this%20dir" is a valid printf() format string that means
+         "this[insert an integer of width 20 here]ir". */
+      send_xml(child->uc, "%s", elt);
     }
 
   send_vsn_url(child, pool);
@@ -350,7 +340,7 @@ static void open_helper(svn_boolean_t is_dir,
 
   send_xml(child->uc, "<S:open-%s name=\"%s\" rev=\"%"
            SVN_REVNUM_T_FMT "\">" DEBUG_CR,
-	   DIR_OR_FILE(is_dir), qname, base_revision);
+           DIR_OR_FILE(is_dir), qname, base_revision);
 
   send_vsn_url(child, pool);
 
@@ -408,10 +398,10 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
       send_xml(baton->uc, "<D:creator-displayname>%s</D:creator-displayname>",
                baton->last_author);
 
-    if (baton->uuid)
-      send_xml(baton->uc, "<S2:repository-uuid>%s</S2:repository-uuid>",
-               baton->uuid);
-    
+    if (baton->text_checksum)
+      send_xml(baton->uc, "<V:md5-checksum>%s</V:md5-checksum>", 
+               baton->text_checksum);
+
     send_xml(baton->uc, "</S:prop>\n");
   }
     
@@ -422,7 +412,7 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 }
 
 static svn_error_t * upd_set_target_revision(void *edit_baton,
-					     svn_revnum_t target_revision,
+                                             svn_revnum_t target_revision,
                                              apr_pool_t *pool)
 {
   update_ctx_t *uc = edit_baton;
@@ -432,8 +422,8 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
       send_xml(uc,
                DAV_XML_HEADER DEBUG_CR
                "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-               "xmlns:D=\"DAV:\" " DEBUG_CR
-               "xmlns:S2=\"" SVN_DAV_PROP_NS_DAV "\">" DEBUG_CR
+               "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
+               "xmlns:D=\"DAV:\">" DEBUG_CR
                "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
                target_revision);
 
@@ -481,7 +471,7 @@ static svn_error_t * upd_open_root(void *edit_baton,
 
 static svn_error_t * upd_delete_entry(const char *path,
                                       svn_revnum_t revision,
-				      void *parent_baton,
+                                      void *parent_baton,
                                       apr_pool_t *pool)
 {
   item_baton_t *parent = parent_baton;
@@ -494,11 +484,11 @@ static svn_error_t * upd_delete_entry(const char *path,
 }
 
 static svn_error_t * upd_add_directory(const char *path,
-				       void *parent_baton,
-				       const char *copyfrom_path,
-				       svn_revnum_t copyfrom_revision,
+                                       void *parent_baton,
+                                       const char *copyfrom_path,
+                                       svn_revnum_t copyfrom_revision,
                                        apr_pool_t *pool,
-				       void **child_baton)
+                                       void **child_baton)
 {
   return add_helper(TRUE /* is_dir */,
                     path, parent_baton, copyfrom_path, copyfrom_revision, pool,
@@ -517,8 +507,8 @@ static svn_error_t * upd_open_directory(const char *path,
 }
 
 static svn_error_t * upd_change_xxx_prop(void *baton,
-					 const char *name,
-					 const svn_string_t *value,
+                                         const char *name,
+                                         const svn_string_t *value,
                                          apr_pool_t *pool)
 {
   item_baton_t *b = baton;
@@ -537,8 +527,6 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
         b->committed_date = value ? apr_pstrdup(b->pool, value->data) : NULL;
       else if (! strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR))
         b->last_author = value ? apr_pstrdup(b->pool, value->data) : NULL;
-      else if (! strcmp(name, SVN_PROP_ENTRY_UUID))
-        b->uuid = value ? apr_pstrdup(b->pool, value->data) : NULL;
       
       return SVN_NO_ERROR;
     }
@@ -577,11 +565,11 @@ static svn_error_t * upd_close_directory(void *dir_baton,
 }
 
 static svn_error_t * upd_add_file(const char *path,
-				  void *parent_baton,
-				  const char *copyfrom_path,
-				  svn_revnum_t copyfrom_revision,
+                                  void *parent_baton,
+                                  const char *copyfrom_path,
+                                  svn_revnum_t copyfrom_revision,
                                   apr_pool_t *pool,
-				  void **file_baton)
+                                  void **file_baton)
 {
   return add_helper(FALSE /* is_dir */,
                     path, parent_baton, copyfrom_path, copyfrom_revision, pool,
@@ -602,40 +590,46 @@ static svn_error_t * upd_open_file(const char *path,
 
 static svn_error_t * upd_apply_textdelta(void *file_baton, 
                                          const char *base_checksum,
-                                         const char *result_checksum,
                                          apr_pool_t *pool,
                                          svn_txdelta_window_handler_t *handler,
                                          void **handler_baton)
 {
   item_baton_t *file = file_baton;
 
-  /* if we added the file, then no need to tell the client to fetch it */
-  if (! file->added)
-    {
-      const char *elt = insert_checksum_attributes("<S:fetch-file",
-                                                   base_checksum,
-                                                   result_checksum,
-                                                   "/>",
-                                                   pool);
-      send_xml(file->uc, "%s" DEBUG_CR, elt);
-    }
-
-  *handler = NULL;
+  file->base_checksum = apr_pstrdup(file->pool, base_checksum);
+  file->text_changed = TRUE;
+  *handler = svn_delta_noop_window_handler;
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t * upd_close_file(void *file_baton,
+                                    const char *text_checksum,
                                     apr_pool_t *pool)
 {
-  close_helper(FALSE /* is_dir */, file_baton);
+  item_baton_t *file = file_baton;
+
+  file->text_checksum = apr_pstrdup(file->pool, text_checksum);
+
+  /* if we added the file, then no need to tell the client to fetch it */
+  if ((! file->added) && file->text_changed)
+    {
+      const char *elt;
+      elt = apr_psprintf(pool, "<S:fetch-file%s%s%s/>" DEBUG_CR,
+                         file->base_checksum ? " base-checksum=\"" : "",
+                         file->base_checksum ? file->base_checksum : "",
+                         file->base_checksum ? "\"" : "");
+      send_xml(file->uc, elt);
+    }
+
+  close_helper(FALSE /* is_dir */, file);
   return SVN_NO_ERROR;
 }
 
 
 dav_error * dav_svn__update_report(const dav_resource *resource,
-				   const apr_xml_doc *doc,
-				   ap_filter_t *output)
+                                   const apr_xml_doc *doc,
+                                   ap_filter_t *output)
 {
   svn_delta_editor_t *editor;
   apr_xml_elem *child;
@@ -644,16 +638,20 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_revnum_t revnum = SVN_INVALID_REVNUM;
   int ns;
   svn_error_t *serr;
+  const char *src_path = NULL;
   const char *dst_path = NULL;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = NULL;
-  svn_boolean_t recurse = TRUE, resource_walk = FALSE;
+  svn_boolean_t recurse = TRUE;
+  svn_boolean_t resource_walk = FALSE;
+  svn_boolean_t ignore_ancestry = FALSE;
 
-  if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
+  if ((resource->type != DAV_RESOURCE_TYPE_REGULAR)
+      && (resource->info->restype != DAV_SVN_RESTYPE_VCC))
     {
       return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
                            "This report can only be run against a "
-                           "version-controlled resource.");
+                           "VCC or VCR (regular resource).");
     }
 
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -683,6 +681,29 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           /* ### assume no white space, no child elems, etc */
           revnum = SVN_STR_TO_REV(child->first_cdata.first->text);
         }
+
+      if (child->ns == ns && strcmp(child->name, "src-path") == 0)
+        {
+          /* ### assume no white space, no child elems, etc */
+          dav_svn_uri_info this_info;
+
+          if (! child->first_cdata.first)
+            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+              "The request's `src-path' element contains empty cdata; "
+              "there is a problem with the client.");
+
+          /* split up the 1st public URL. */
+          serr = dav_svn_simple_parse_uri(&this_info, resource,
+                                          child->first_cdata.first->text,
+                                          resource->pool);
+          if (serr != NULL)
+            {
+              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                         "Could not parse src-path URL.");
+            }
+          src_path = this_info.repos_path;
+        }
+
       if (child->ns == ns && strcmp(child->name, "dst-path") == 0)
         {
           /* ### assume no white space, no child elems, etc */
@@ -703,7 +724,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                          "Could not parse dst-path URL.");
             }
-          dst_path = apr_pstrdup(resource->pool, this_info.repos_path);
+          dst_path = this_info.repos_path;
         }
 
       if (child->ns == ns && strcmp(child->name, "update-target") == 0)
@@ -726,6 +747,18 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           /* ### assume no white space, no child elems, etc */
           if (strcmp(child->first_cdata.first->text, "no") == 0)
             recurse = FALSE;
+        }
+      if (child->ns == ns && strcmp(child->name, "ignore-ancestry") == 0)
+        {
+          if (! child->first_cdata.first)
+            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+              "The request's `ignore-ancestry' element contains empty cdata; "
+              "there is a problem with the client.");
+
+          /* ### assume no white space, no child elems, etc */
+          ignore_ancestry = TRUE;
+          if (strcmp(child->first_cdata.first->text, "no") == 0)
+            ignore_ancestry = FALSE;
         }
       if (child->ns == ns && strcmp(child->name, "resource-walk") == 0)
         {
@@ -765,9 +798,14 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   editor->change_file_prop = upd_change_xxx_prop;
   editor->close_file = upd_close_file;
 
+  /* If the client never sent a <src-path> element, it's sending an
+     "old style" report -- so use the resource's path instead. */
+  if (! src_path)
+    src_path = resource->info->repos_path;
+
   uc.resource = resource;
   uc.output = output;  
-  uc.anchor = resource->info->repos_path;
+  uc.anchor = src_path;
   if (dst_path) /* we're doing a 'switch' */
     {      
       if (target) /* if the src is split into anchor/target, so must
@@ -797,15 +835,16 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
      the case of a switch, they should be different. */
   if ((serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
                                      repos->repos, 
-                                     resource->info->repos_path, target,
+                                     src_path, target,
                                      dst_path,
                                      FALSE, /* don't send text-deltas */
                                      recurse,
+                                     ignore_ancestry,
                                      editor, &uc, resource->pool)))
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "The state report gatherer could not be "
-				 "created.");
+                                 "created.");
     }
 
   /* scan the XML doc for state information */
@@ -817,6 +856,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             const char *path;
             svn_revnum_t rev = SVN_INVALID_REVNUM;
             const char *linkpath = NULL;
+            svn_boolean_t start_empty = FALSE;
             apr_xml_attr *this_attr = child->attr;
 
             while (this_attr)
@@ -825,6 +865,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                   rev = SVN_STR_TO_REV(this_attr->value);
                 else if (! strcmp(this_attr->name, "linkpath"))
                   linkpath = this_attr->value;
+                else if (! strcmp(this_attr->name, "start-empty"))
+                  start_empty = TRUE;
 
                 this_attr = this_attr->next;
               }
@@ -846,10 +888,11 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             path = dav_xml_get_cdata(child, resource->pool, 1);
             
             if (! linkpath)
-              serr = svn_repos_set_path(rbaton, path, rev, resource->pool);
+              serr = svn_repos_set_path(rbaton, path, rev,
+                                        start_empty, resource->pool);
             else
               serr = svn_repos_link_path(rbaton, path, linkpath, rev,
-                                         resource->pool);
+                                         start_empty, resource->pool);
             if (serr != NULL)
               {
                 /* ### This removes the fs txn.  todo: check error. */
@@ -865,8 +908,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             if (linkpath && (! dst_path))
               {
                 const char *this_path
-                  = svn_path_join_many(resource->pool,
-                                       resource->info->repos_path,
+                  = svn_path_join_many(resource->pool, 
+                                       src_path,
                                        target ? target : path,
                                        target ? path : NULL,
                                        NULL);
@@ -899,6 +942,10 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   /* this will complete the report, and then drive our editor to generate
      the response to the client. */
   serr = svn_repos_finish_report(rbaton);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "A failure occurred while "
+                               "driving the update report editor");
 
   /* The potential "resource walk" part of the update-report. */
   if (dst_path && resource_walk)  /* this was a 'switch' operation */
@@ -907,8 +954,12 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
          walk.  dir_delta would choke if we pass a filepath as the
          'target'.  Also, there's no need to do the walk, since the
          new vsn-rsc-url was already in the earlier part of the report. */
-      svn_node_kind_t dst_kind = svn_fs_check_path(uc.rev_root, dst_path,
-                                                   resource->pool);
+      svn_node_kind_t dst_kind;
+
+      serr = svn_fs_check_path(&dst_kind, uc.rev_root, dst_path,
+                               resource->pool);
+      /* ### what to do with this error? */
+
       if (dst_kind == svn_node_dir)
         {
           /* send a second embedded <S:resource-walk> tree that contains
@@ -933,7 +984,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      FALSE, /* no text deltas */
                                      recurse,
                                      TRUE, /* send entryprops */
-                                     FALSE, /* no copy history */
+                                     FALSE, /* don't ignore ancestry */
                                      resource->pool);
 
           send_xml(&uc, "</S:resource-walk>" DEBUG_CR);
@@ -955,9 +1006,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       /* ### This removes the fs txn.  todo: check error. */
       svn_repos_abort_report(rbaton);
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-				 "A failure occurred during the completion "
-				 "and response generation for the update "
-				 "report.");
+                                 "A failure occurred during the completion "
+                                 "and response generation for the update "
+                                 "report.");
     }
 
   return NULL;

@@ -62,7 +62,7 @@ delta_window_print (const svn_txdelta_window_t *window,
                     const char *tag, FILE *stream)
 {
   const apr_off_t len = delta_window_size_estimate (window);
-  apr_off_t op_offset = 0, tmp;
+  apr_off_t op_offset = 0;
   int i;
 
   if (!window)
@@ -70,12 +70,14 @@ delta_window_print (const svn_txdelta_window_t *window,
 
   fprintf (stream, "%s: (WINDOW %" APR_OFF_T_FMT, tag, len);
   fprintf (stream,
-           " (%" APR_OFF_T_FMT " %" APR_SIZE_T_FMT " %" APR_SIZE_T_FMT ")",
+           " (%" SVN_FILESIZE_T_FMT
+           " %" APR_SIZE_T_FMT " %" APR_SIZE_T_FMT ")",
            window->sview_offset, window->sview_len, window->tview_len);
   for (i = 0; i < window->num_ops; ++i)
     {
       apr_size_t const offset = window->ops[i].offset;
       apr_size_t const length = window->ops[i].length;
+      apr_size_t tmp;
       switch (window->ops[i].action_code)
         {
         case svn_txdelta_source:

@@ -263,7 +263,7 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
   const err_defn *defn;
 
   for (defn = error_table; defn->errdesc != NULL; ++defn)
-    if (defn->errcode == statcode)
+    if (defn->errcode == (svn_errno_t)statcode)
       {
         apr_cpystrn (buf, defn->errdesc, bufsize);
         return buf;

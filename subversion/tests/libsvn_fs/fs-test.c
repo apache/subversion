@@ -305,15 +305,19 @@ call_functions_with_unopened_fs (const char **msg,
                                  svn_boolean_t msg_only,
                                  apr_pool_t *pool)
 {
+  svn_fs_t *fs;
   svn_error_t *err;
-  svn_fs_t *fs = svn_fs_new (pool);
+  apr_hash_t *fs_config = apr_hash_make (pool);
+  apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                APR_HASH_KEY_STRING, "1");
+  fs = svn_fs_new (fs_config, pool);
 
   *msg = "call functions with unopened filesystem and check errors";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  fs = svn_fs_new (pool);
+  fs = svn_fs_new (fs_config, pool);
   err = svn_fs_set_berkeley_errcall (fs, berkeley_error_handler);
   SVN_ERR (check_no_fs_error (err));
 
@@ -943,15 +947,15 @@ node_props (const char **msg,
   /* Change some of the above properties. */
   SET_STR (&s1, "P.O.D.");
   SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt", "Best Rock Artist",
-				    &s1, pool));
+                                    &s1, pool));
 
   SET_STR (&s1, "Busta Rhymes");
   SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt", "Best Rap Artist",
-				    &s1, pool));
+                                    &s1, pool));
 
   /* Remove a property altogether */
   SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt",
-				    "Best Country Artist", NULL, pool));
+                                    "Best Country Artist", NULL, pool));
 
   /* Copy a property's value into a new property. */
   SVN_ERR (svn_fs_node_prop (&value, txn_root, "music.txt",
@@ -960,7 +964,7 @@ node_props (const char **msg,
   s1.data = value->data;
   s1.len = value->len;
   SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt",
-				    "Biggest Cakewalk Fanatic", &s1, pool));
+                                    "Biggest Cakewalk Fanatic", &s1, pool));
 
   /* Obtain a list of all current properties, and make sure it matches
      the expected values. */
@@ -1617,7 +1621,7 @@ merging_commit (const char **msg,
   svn_fs_root_t *txn_root, *revision_root;
   svn_revnum_t after_rev;
   svn_revnum_t revisions[24];
-  int i;
+  apr_size_t i;
   svn_revnum_t revision_count;
 
   *msg = "merging commit";
@@ -5398,7 +5402,7 @@ canonicalize_abspath (const char **msg,
                       svn_boolean_t msg_only,
                       apr_pool_t *pool)
 { 
-  int i;
+  apr_size_t i;
   const char *paths[21][2] = 
     /* in                      out */
   { { NULL,                    NULL },
@@ -5696,7 +5700,7 @@ create_within_copy (const char **msg,
         s = svn_fs_unparse_id (id, spool);
         if (strcmp (s->data, node->unparsed_id) != 0)
           return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                    "%s id: expected %s got: %s",
+                                    "`%s' id: expected `%s'; got `%s'",
                                     node->path, node->unparsed_id, s->data);
         ++node;
       }

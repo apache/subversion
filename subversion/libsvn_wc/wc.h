@@ -22,11 +22,9 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
+
 #include "svn_types.h"
-#include "svn_string.h"
 #include "svn_error.h"
-#include "svn_path.h"
-#include "svn_xml.h"
 #include "svn_wc.h"
 
 #ifdef __cplusplus
@@ -101,7 +99,7 @@ struct svn_wc_traversal_info_t
 
 /** The files within the administrative subdir. **/
 #define SVN_WC__ADM_FORMAT              "format"
-#define SVN_WC__ADM_README              "README"
+#define SVN_WC__ADM_README              "README.txt"
 #define SVN_WC__ADM_ENTRIES             "entries"
 #define SVN_WC__ADM_LOCK                "lock"
 #define SVN_WC__ADM_TMP                 "tmp"
@@ -165,6 +163,24 @@ apr_hash_t *svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
                                         svn_boolean_t show_deleted,
                                         apr_pool_t *pool);
 
+/* Return an access baton for PATH in *ADM_ACCESS.  This function is used
+   to lock the working copy during construction of the admin area, it
+   necessarily does less checking than svn_wc_adm_open. */
+svn_error_t *svn_wc__adm_pre_open (svn_wc_adm_access_t **adm_access,
+                                   const char *path,
+                                   apr_pool_t *pool);
+
+/* Returns TRUE if PATH is a working copy directory that is obstructed or
+   missing such that an access baton is not available for PATH.  This means
+   that ADM_ACCESS is an access baton set that contains an access baton for
+   the parent of PATH and when that access baton was opened it must have
+   attempted to open PATH, i.e. it must have been opened with the TREE_LOCK
+   parameter set TRUE. */
+svn_boolean_t svn_wc__adm_missing (svn_wc_adm_access_t *adm_access,
+                                   const char *path);
+
+/* Return the working copy format version number for ADM_ACCESS. */
+int svn_wc__adm_wc_format (svn_wc_adm_access_t *adm_access);
 
 #ifdef __cplusplus
 }

@@ -39,7 +39,8 @@ get_dir_contents (apr_hash_t *dirents,
 
   /* Get the directory's entries, but not its props. */
   if (ra_lib->get_dir)
-    SVN_ERR (ra_lib->get_dir (session, dir, rev, &tmpdirents, NULL, NULL));
+    SVN_ERR (ra_lib->get_dir (session, dir, rev, &tmpdirents, 
+                              NULL, NULL, pool));
   else
     return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                              "No get_dir() available for url schema.");
@@ -70,7 +71,7 @@ get_dir_contents (apr_hash_t *dirents,
 
 svn_error_t *
 svn_client_ls (apr_hash_t **dirents,
-               const char *url,
+               const char *path_or_url,
                svn_opt_revision_t *revision,
                svn_boolean_t recurse,               
                svn_client_ctx_t *ctx,
@@ -81,6 +82,12 @@ svn_client_ls (apr_hash_t **dirents,
   svn_revnum_t rev;
   svn_node_kind_t url_kind;
   const char *auth_dir;
+  const char *url;
+
+  SVN_ERR (svn_client_url_from_path (&url, path_or_url, pool));
+  if (! url)
+    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                              "'%s' has no URL", path_or_url);
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -98,10 +105,10 @@ svn_client_ls (apr_hash_t **dirents,
   SVN_ERR (svn_client__get_revision_number (&rev, ra_lib, session,
                                             revision, NULL, pool));
   if (! SVN_IS_VALID_REVNUM (rev))
-    SVN_ERR (ra_lib->get_latest_revnum (session, &rev));
+    SVN_ERR (ra_lib->get_latest_revnum (session, &rev, pool));
 
   /* Decide if the URL is a file or directory. */
-  SVN_ERR (ra_lib->check_path (&url_kind, session, "", rev));
+  SVN_ERR (ra_lib->check_path (&url_kind, session, "", rev, pool));
 
   if (url_kind == svn_node_dir)
     {
@@ -109,8 +116,6 @@ svn_client_ls (apr_hash_t **dirents,
 
       SVN_ERR (get_dir_contents (*dirents, "", rev, ra_lib, session, recurse,
                                  pool));
-
-      SVN_ERR (ra_lib->close (session));
     }
   else if (url_kind == svn_node_file)
     {
@@ -120,7 +125,6 @@ svn_client_ls (apr_hash_t **dirents,
 
       /* Re-open the session to the file's parent instead. */
       svn_path_split (url, &parent_url, &base_name, pool);
-      SVN_ERR (ra_lib->close (session));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, parent_url,
                                             auth_dir,
                                             NULL, NULL, FALSE, TRUE, 
@@ -128,12 +132,11 @@ svn_client_ls (apr_hash_t **dirents,
 
       /* Get all parent's entries, no props. */
       if (ra_lib->get_dir)
-        SVN_ERR (ra_lib->get_dir (session, "", rev, &parent_ents, NULL, NULL));
+        SVN_ERR (ra_lib->get_dir (session, "", rev, &parent_ents, 
+                                  NULL, NULL, pool));
       else
         return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                                  "No get_dir() available for url schema.");
-
-      SVN_ERR (ra_lib->close (session));
 
       /* Copy the relevant entry into the caller's hash. */
       *dirents = apr_hash_make (pool);

@@ -48,6 +48,10 @@
   subversion functions. 
 */
 
+#if defined(WITH_THREAD) && !APR_HAS_THREADS
+#error The python bindings require threads. APR was compiled without threads.
+#endif
+
 #ifdef WITH_THREAD
 static apr_threadkey_t *_saved_thread_key = NULL;
 static apr_pool_t *_saved_thread_pool = NULL;
@@ -80,8 +84,10 @@ void release_py_lock(void)
 void acquire_py_lock(void)
 {
 #ifdef WITH_THREAD
+  void *val;
   PyThreadState *thread_state;
-  apr_threadkey_private_get((void **)&thread_state, _saved_thread_key);
+  apr_threadkey_private_get(&val, _saved_thread_key);
+  thread_state = val;
   PyEval_RestoreThread(thread_state);
 #endif
 }
@@ -343,7 +349,7 @@ commit_item_array_to_list(const apr_array_header_t *array)
 }
 
 
-static svn_error_t * convert_python_error(apr_pool_t *pool)
+static svn_error_t * convert_python_error(void)
 {
   return svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, NULL,
                           "the Python callback raised an exception");
@@ -356,13 +362,7 @@ static svn_error_t * convert_python_error(apr_pool_t *pool)
 typedef struct {
   PyObject *editor;     /* the editor handling the callbacks */
   PyObject *baton;      /* the dir/file baton (or NULL for edit baton) */
-  apr_pool_t *pool;     /* pool to use for errors */
 } item_baton;
-
-typedef struct {
-  PyObject *handler;    /* the window handler (a callable) */
-  apr_pool_t *pool;     /* a pool for constructing errors */
-} handler_baton;
 
 static item_baton * make_baton(apr_pool_t *pool,
                                PyObject *editor, PyObject *baton)
@@ -376,7 +376,6 @@ static item_baton * make_baton(apr_pool_t *pool,
 
   newb->editor = editor;
   newb->baton = baton;
-  newb->pool = pool;
 
   return newb;
 }
@@ -397,7 +396,7 @@ static svn_error_t * close_baton(void *baton, const char *method)
                                     ib->baton ? (char *)"(O)" : NULL,
                                     ib->baton)) == NULL)
     {
-      err = convert_python_error(ib->pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -435,7 +434,7 @@ static svn_error_t * thunk_set_target_revision(void *edit_baton,
   if ((result = PyObject_CallMethod(ib->editor, (char *)"set_target_revision",
                                     (char *)"l", target_revision)) == NULL)
     {
-      err = convert_python_error(ib->pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -464,7 +463,7 @@ static svn_error_t * thunk_open_root(void *edit_baton,
                                     (char *)"lO&", base_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      err = convert_python_error(dir_pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -493,7 +492,7 @@ static svn_error_t * thunk_delete_entry(const char *path,
                                     (char *)"slOO&", path, revision, ib->baton,
                                     make_ob_pool, pool)) == NULL)
     {
-      err = convert_python_error(pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -525,7 +524,7 @@ static svn_error_t * thunk_add_directory(const char *path,
                                     copyfrom_path, copyfrom_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      err = convert_python_error(dir_pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -556,7 +555,7 @@ static svn_error_t * thunk_open_directory(const char *path,
                                     base_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      err = convert_python_error(dir_pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -583,10 +582,11 @@ static svn_error_t * thunk_change_dir_prop(void *dir_baton,
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"change_dir_prop",
                                     (char *)"Oss#O&", ib->baton, name,
-                                    value->data, value->len,
+                                    value ? value->data : NULL, 
+                                    value ? value->len : 0,
                                     make_ob_pool, pool)) == NULL)
     {
-      err = convert_python_error(pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -624,7 +624,7 @@ static svn_error_t * thunk_add_file(const char *path,
                                     copyfrom_path, copyfrom_revision,
                                     make_ob_pool, file_pool)) == NULL)
     {
-      err = convert_python_error(file_pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -656,7 +656,7 @@ static svn_error_t * thunk_open_file(const char *path,
                                     base_revision,
                                     make_ob_pool, file_pool)) == NULL)
     {
-      err = convert_python_error(file_pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -672,7 +672,7 @@ static svn_error_t * thunk_open_file(const char *path,
 static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
                                           void *baton)
 {
-  handler_baton *hb = baton;
+  PyObject *handler = baton;
   PyObject *result;
   svn_error_t *err;
 
@@ -684,22 +684,22 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
 
       /* invoke the handler with None for the window */
       /* ### python doesn't have 'const' on the format */
-      result = PyObject_CallFunction(hb->handler, (char *)"O", Py_None);
+      result = PyObject_CallFunction(handler, (char *)"O", Py_None);
 
       /* we no longer need to refer to the handler object */
-      Py_DECREF(hb->handler);
+      Py_DECREF(handler);
     }
   else
     {
       /* invoke the handler with the window */
       /* ### python doesn't have 'const' on the format */
-      result = PyObject_CallFunction(hb->handler,
+      result = PyObject_CallFunction(handler,
                                      (char *)"O&", make_ob_window, window);
     }
 
   if (result == NULL)
     {
-      err = convert_python_error(hb->pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -715,7 +715,6 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
 static svn_error_t *
 thunk_apply_textdelta(void *file_baton, 
                       const char *base_checksum,
-                      const char *result_checksum,
                       apr_pool_t *pool,
                       svn_txdelta_window_handler_t *handler,
                       void **h_baton)
@@ -728,30 +727,29 @@ thunk_apply_textdelta(void *file_baton,
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"apply_textdelta",
-                                    (char *)"(Oss)", ib->baton,
-                                    base_checksum, result_checksum)) == NULL)
+                                    (char *)"(Os)", ib->baton,
+                                    base_checksum)) == NULL)
     {
-      err = convert_python_error(ib->pool);
+      err = convert_python_error();
       goto finished;
     }
 
+  /* Interpret None to mean svn_delta_noop_window_handler. This is much
+     easier/faster than making code always have to write a NOOP handler
+     in Python.  */
   if (result == Py_None)
     {
       Py_DECREF(result);
-      *handler = NULL;
+
+      *handler = svn_delta_noop_window_handler;
       *h_baton = NULL;
     }
   else
     {
-      handler_baton *hb = apr_palloc(ib->pool, sizeof(*hb));
-
       /* return the thunk for invoking the handler. the baton takes our
-         'result' reference. */
-      hb->handler = result;
-      hb->pool = ib->pool;
-
+         'result' reference, which is the handler. */
       *handler = thunk_window_handler;
-      *h_baton = hb;
+      *h_baton = result;
     }
 
   err = SVN_NO_ERROR;
@@ -775,10 +773,11 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"change_file_prop",
                                     (char *)"Oss#O&", ib->baton, name,
-                                    value->data, value->len,
+                                    value ? value->data : NULL, 
+                                    value ? value->len : 0,
                                     make_ob_pool, pool)) == NULL)
     {
-      err = convert_python_error(pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -792,9 +791,42 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
 }
 
 static svn_error_t * thunk_close_file(void *file_baton,
+                                      const char *text_checksum,
                                       apr_pool_t *pool)
 {
-  return close_baton(file_baton, "close_file");
+  item_baton *ib = file_baton;
+  PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
+
+  /* ### python doesn't have 'const' on the method name and format */
+  if ((result = PyObject_CallMethod(ib->editor, (char *)"close_file",
+                                    (char *)"(Os)", ib->baton,
+                                    text_checksum)) == NULL)
+    {
+      err = convert_python_error();
+      goto finished;
+    }
+
+  /* there is no return value, so just toss this object (probably Py_None) */
+  Py_DECREF(result);
+
+  /* We're now done with the baton. Since there isn't really a free, all
+     we need to do is note that its objects are no longer referenced by
+     the baton.  */
+  Py_DECREF(ib->editor);
+  Py_XDECREF(ib->baton);
+
+#ifdef SVN_DEBUG
+  ib->editor = ib->baton = NULL;
+#endif
+
+  err = SVN_NO_ERROR;
+
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_close_edit(void *edit_baton,
@@ -835,41 +867,40 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
   *edit_baton = make_baton(pool, py_editor, NULL);
 }
 
-/* This is very hacky and gross.  And did I mention broken? */
+/* This is very hacky and gross.  */
 apr_file_t *svn_swig_py_make_file (PyObject *py_file,
                                    apr_pool_t *pool)
 {
-  apr_file_t *apr_file;
-  apr_status_t status;
-  FILE *file;
-  int fd = -1;
+  apr_file_t *apr_file = NULL;
 
   if (py_file == NULL || py_file == Py_None)
     return NULL;
 
-  if (PyString_Check (py_file))
+  if (PyString_Check(py_file))
     {
-      fd = open (PyString_AS_STRING (py_file),
-                 O_CREAT | O_RDWR,
-                 S_IRUSR | S_IWUSR);
+      /* input is a path -- just open an apr_file_t */
+      apr_file_open(&apr_file, PyString_AS_STRING(py_file),
+                    APR_CREATE | APR_READ | APR_WRITE,
+                    APR_OS_DEFAULT,
+                    pool);
     }
   else if (PyFile_Check (py_file))
     {
-      file = PyFile_AsFile (py_file);
-      fd = fileno (file);
-    }
-  else if (PyInt_Check (py_file))
-    {
-      fd = PyInt_AsLong (py_file);
-    }
+      apr_status_t status;
+      FILE *file;
+      apr_os_file_t osfile;
 
-  if (fd >= 0) 
-    {  
-      status = apr_os_file_put (&apr_file, &fd, O_CREAT | O_WRONLY, pool);
+      /* input is a file object -- convert to apr_file_t */
+      file = PyFile_AsFile(py_file);
+#ifdef WIN32
+      osfile = (apr_os_file_t)_get_osfhandle(_fileno(file));
+#else
+      osfile = (apr_os_file_t)fileno(file);
+#endif
+      status = apr_os_file_put (&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
+      if (status)
+        return NULL;
     }
-
-  /* FIXME: We shouldn't just silently fail. */
-
   return apr_file;
 }
 
@@ -885,23 +916,46 @@ void svn_swig_py_notify_func(void *baton,
   PyObject *function = baton;
   PyObject *result;
 
-  if (function != NULL && function != Py_None)
+  if (function == NULL || function == Py_None)
+    return;
+
+  acquire_py_lock();
+  if ((result = PyObject_CallFunction(function, 
+                                      (char *)"(siisiii)", 
+                                      path, action, kind,
+                                      mime_type,
+                                      content_state, prop_state, 
+                                      revision)) != NULL)
     {
-      acquire_py_lock();
-
-      if ((result = PyObject_CallFunction(function, 
-                                          (char *)"(siisiii)", 
-                                          path, action, kind,
-                                          mime_type,
-                                          content_state, prop_state, 
-                                          revision)) != NULL)
-        {
-          Py_XDECREF(result);
-        }
-
-      release_py_lock();
+      Py_XDECREF(result);
     }
+  release_py_lock();
 }
+
+svn_error_t *
+svn_swig_py_cancel_func(void *cancel_baton)
+{
+  PyObject *function = cancel_baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (function == NULL || function == Py_None)
+    return SVN_NO_ERROR;
+
+  acquire_py_lock();
+  if ((result = PyObject_CallFunction(function, NULL)) != NULL)
+    {
+      err = convert_python_error();
+      goto finished;
+    }
+
+  Py_DECREF(result);
+
+ finished:
+  release_py_lock();
+  return err;
+}
+
 
 svn_error_t *
 svn_swig_py_get_commit_log_func(const char **log_msg,
@@ -942,7 +996,7 @@ svn_swig_py_get_commit_log_func(const char **log_msg,
                                       make_ob_pool, pool)) == NULL)
     {
       Py_DECREF(cmt_items);
-      err = convert_python_error(pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -965,7 +1019,7 @@ svn_swig_py_get_commit_log_func(const char **log_msg,
      
   Py_DECREF(result);
   PyErr_SetString(PyExc_TypeError, "not a string");
-  err = convert_python_error(pool);
+  err = convert_python_error();
 
  finished:
   release_py_lock();
@@ -1012,7 +1066,7 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
                                       make_ob_pool, pool)) == NULL)
     {
       Py_DECREF(chpaths);
-      err = convert_python_error(pool);
+      err = convert_python_error();
       goto finished;
     }
 
