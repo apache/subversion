@@ -150,7 +150,7 @@ make_adm_thing (svn_string_t *path, char *thing, int type, apr_pool_t *pool)
   if (type == svn_file_kind)
     {
       apr_err = apr_open (&f, path->data,
-                          (APR_WRITE | APR_CREATE),
+                          (APR_WRITE | APR_CREATE | APR_EXCL),
                           APR_OS_DEFAULT,
                           pool);
 
@@ -356,7 +356,10 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
     err = make_adm_thing (path, SVN_WC__ADM_LOCK, svn_file_kind, pool);
     if (err)
       {
-        if ((err->apr_err == APR_EEXIST) && wait)
+        /* kff todo: should check that the error was an existence
+           error here, too.  Ask how; APR_EEXIST didn't do the trick
+           -- it was not what err->apr_err was set to. */
+        if (wait)
           {
             apr_sleep (1000);  /* micro-seconds */
             wait--;
