@@ -1292,8 +1292,11 @@ fold_state_changes (apr_hash_t *entries,
 
 
         case svn_wc_schedule_delete:
-          /* Not-yet-versioned item being deleted, Just
-             remove the entry. */
+          /* Not-yet-versioned item being deleted, Just remove
+             the entry. Check that we are not trying to remove
+             the SVN_WC_ENTRY_THIS_DIR entry as that would
+             leave the entries file in an invalid state. */
+          assert (entry != this_dir_entry);
           apr_hash_set (entries, name->data, name->len, NULL);
           return SVN_NO_ERROR;
         }
