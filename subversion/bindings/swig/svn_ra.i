@@ -52,7 +52,7 @@
 */
 %apply SWIGTYPE **OUTPARAM {
     svn_ra_plugin_t **,
-    session_baton **,
+    svn_ra_session_t **,
     const svn_ra_reporter_t **reporter,
     void **report_baton
 };
@@ -114,6 +114,5 @@
 %}
 
 #ifdef SWIGPERL
-%include ra_plugin.hi
 %include ra_reporter.hi
 #endif
