@@ -78,8 +78,7 @@ created locally - must satisfy two conditions:
 
 These requirements stem from the fact that Subversion uses UTF-8
 internally, some implementations translate to the active locale and the
-fact that bind_textdomain_codeset() is not portable accross
-implementations.
+fact that bind_textdomain_codeset() is not portable across implementations.
 
 To satisfy the first requirement po files are required to be UTF-8
 encoded.  The build system makes sure that the second requirement is
