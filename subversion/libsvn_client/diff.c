@@ -384,7 +384,7 @@ merge_dir_added (const char *path,
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
   enum svn_node_kind kind;
-  svn_boolean_t is_wc;
+  svn_wc_entry_t *entry;
 
   SVN_ERR (svn_io_check_path (path, &kind, subpool));
   switch (kind)
@@ -394,10 +394,11 @@ merge_dir_added (const char *path,
                                  NULL, NULL, subpool));
       break;
     case svn_node_dir:
-      /* dir already exists.  make sure it's under version control. */
-      SVN_ERR (svn_wc_check_wc (path, &is_wc, subpool));
-      if (! is_wc)
-        SVN_ERR (svn_client_add (path, FALSE, NULL, NULL, subpool));        
+      /* ### should unversioned directories generate 'obstructed update'
+         errors? */
+      SVN_ERR (svn_wc_entry (&entry, path, TRUE, subpool));
+      if (! entry || (entry && entry->schedule == svn_wc_schedule_delete))
+        SVN_ERR (svn_client_add (path, FALSE, NULL, NULL, subpool));
       break;
     case svn_node_file:
       /* ### create a .drej conflict or something someday? */
