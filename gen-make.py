@@ -10,15 +10,8 @@ import string
 import glob
 
 
-_defaults = {
-  'sources' : '*.c',
-  'link-flags' : '',
-  'libs' : '',
-  'custom' : '',
-  'install' : '',
-  }
 def main(fname, oname=None):
-  parser = ConfigParser.ConfigParser(_defaults)
+  parser = ConfigParser.ConfigParser(_cfg_defaults)
   parser.read(fname)
 
   if oname is None:
@@ -33,6 +26,7 @@ def main(fname, oname=None):
   build_targets = { }
   build_dirs = { }
   install = { }
+  test_progs = [ ]
 
   targets = _filter_targets(parser.sections())
   for target in targets:
@@ -62,6 +56,9 @@ def main(fname, oname=None):
       install[install_type].append(target)
     else:
       install[install_type] = [ target ]
+
+    if install_type == 'test' and bldtype == 'exe':
+      test_progs.append(tpath)
 
     sources, s_errors = _collect_paths(parser.get(target, 'sources'), path)
     errors = errors or s_errors
@@ -182,8 +179,10 @@ def main(fname, oname=None):
                   '\t$(mkinstalldirs) $(%sdir)\n'
                   % (area, string.join(files), area))
       for file in files:
-        ofile.write('\t$(INSTALL_%s) %s $(%sdir)/%s\n'
-                    % (string.upper(area), file, area, os.path.basename(file)))
+        ofile.write('\t$(INSTALL_%s) %s %s\n'
+                    % (string.upper(area), file,
+                       os.path.join('$(%sdir)' % area,
+                                    os.path.basename(file))))
       ofile.write('\n')
 
   includes, i_errors = _collect_paths(parser.get('includes', 'paths'))
@@ -193,18 +192,37 @@ def main(fname, oname=None):
               '\t$(mkinstalldirs) $(includedir)\n'
               % (string.join(includes),))
   for file in includes:
-    ofile.write('\t$(INSTALL_INCLUDE) %s $(includedir)/%s\n'
-                % (file, os.path.basename(file)))
+    ofile.write('\t$(INSTALL_INCLUDE) %s %s\n'
+                % (file,
+                   os.path.join('$(includedir)', os.path.basename(file))))
 
   ofile.write('\n# handy shortcut targets\n')
   for target, tpath in build_targets.items():
     ofile.write('%s: %s\n' % (target, tpath))
   ofile.write('\n')
 
+  scripts, s_errors = _collect_paths(parser.get('test-scripts', 'paths'))
+  errors = errors or s_errors
+
+  ofile.write('TEST_PROGRAMS = %s\n\n' % string.join(test_progs + scripts))
+
   if errors:
     sys.exit(1)
 
-_predef_sections = ['external', 'includes', 'static-apache']
+_cfg_defaults = {
+  'sources' : '*.c',
+  'link-flags' : '',
+  'libs' : '',
+  'custom' : '',
+  'install' : '',
+  }
+
+_predef_sections = [
+  'external',
+  'includes',
+  'static-apache',
+  'test-scripts',
+  ]
 def _filter_targets(t):
   t = t[:]
   for s in _predef_sections:
