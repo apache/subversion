@@ -1,4 +1,4 @@
-Version 0.24.0 (released 15 June 2003, revision XXXX, branches/release-0.24.0)
+Version 0.24.0 (released 15 June 2003, revision 6234, branches/release-0.24.0)
 
  User-visible changes:
  * new 'svn diff [--old OLD] [--new NEW]' syntax (#1142)
