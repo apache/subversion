@@ -100,8 +100,11 @@ AC_PROG_LIBTOOL
 dnl Configure neon --------------------------
 
 if test "$enable_subdir_config" = "yes"; then
-  # neon (as of 0.15) defaults to not building shared libs, so 
-  # tell it to do whatever we're doing.
+  # The arguments passed to this configure script are passed down to
+  # neon's configure script, but, since neon defaults to *not* building
+  # shared libs, and we default to building shared libs, we have to 
+  # explicitly pass down an --{enable,disable}-shared argument, to make
+  # sure neon does the same as we do.
   if test "$enable_shared" = "yes"; then
      args="--enable-shared"
   else
