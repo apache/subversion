@@ -68,7 +68,7 @@ typedef struct
 
 static svn_error_t *
 commit_delete (svn_string_t *name,
-               void *walk_baton,
+               void *edit_baton,
                void *parent_baton)
 {
   return NULL;
@@ -76,7 +76,7 @@ commit_delete (svn_string_t *name,
 
 static svn_error_t *
 commit_add_dir (svn_string_t *name,
-                void *walk_baton,
+                void *edit_baton,
                 void *parent_baton,
                 svn_string_t *ancestor_path,
                 svn_vernum_t ancestor_version,
@@ -87,7 +87,7 @@ commit_add_dir (svn_string_t *name,
 
 static svn_error_t *
 commit_rep_dir (svn_string_t *name,
-                void *walk_baton,
+                void *edit_baton,
                 void *parent_baton,
                 svn_string_t *ancestor_path,
                 svn_vernum_t ancestor_version,
@@ -97,7 +97,7 @@ commit_rep_dir (svn_string_t *name,
 }
 
 static svn_error_t *
-commit_change_dir_prop (void *walk_baton,
+commit_change_dir_prop (void *edit_baton,
                         void *dir_baton,
                         svn_string_t *name,
                         svn_string_t *value)
@@ -106,7 +106,7 @@ commit_change_dir_prop (void *walk_baton,
 }
 
 static svn_error_t *
-commit_change_dirent_prop (void *walk_baton,
+commit_change_dirent_prop (void *edit_baton,
                            void *dir_baton,
                            svn_string_t *entry,
                            svn_string_t *name,
@@ -116,14 +116,14 @@ commit_change_dirent_prop (void *walk_baton,
 }
 
 static svn_error_t *
-commit_finish_dir (void *walk_baton, void *dir_baton)
+commit_finish_dir (void *edit_baton, void *dir_baton)
 {
   return NULL;
 }
 
 static svn_error_t *
 commit_add_file (svn_string_t *name,
-                 void *walk_baton,
+                 void *edit_baton,
                  void *parent_baton,
                  svn_string_t *ancestor_path,
                  svn_vernum_t ancestor_version,
@@ -134,7 +134,7 @@ commit_add_file (svn_string_t *name,
 
 static svn_error_t *
 commit_rep_file (svn_string_t *name,
-                 void *walk_baton,
+                 void *edit_baton,
                  void *parent_baton,
                  svn_string_t *ancestor_path,
                  svn_vernum_t ancestor_version,
@@ -144,7 +144,7 @@ commit_rep_file (svn_string_t *name,
 }
 
 static svn_error_t *
-commit_apply_txdelta (void *walk_baton,
+commit_apply_txdelta (void *edit_baton,
                       void *parent_baton,
                       void *file_baton, 
                       svn_txdelta_window_handler_t **handler,
@@ -154,7 +154,7 @@ commit_apply_txdelta (void *walk_baton,
 }
 
 static svn_error_t *
-commit_change_file_prop (void *walk_baton,
+commit_change_file_prop (void *edit_baton,
                          void *parent_baton,
                          void *file_baton,
                          svn_string_t *name,
@@ -164,7 +164,7 @@ commit_change_file_prop (void *walk_baton,
 }
 
 static svn_error_t *
-commit_finish_file (void *walk_baton, void *file_baton)
+commit_finish_file (void *edit_baton, void *file_baton)
 {
   return NULL;
 }
@@ -174,7 +174,7 @@ commit_finish_file (void *walk_baton, void *file_baton)
 ** uses these callbacks to describe all the changes in the working copy
 ** that must be committed to the server.
 */
-static const svn_delta_walk_t commit_walker = {
+static const svn_delta_edit_fns_t commit_editor = {
   commit_delete,
   commit_add_dir,
   commit_rep_dir,
@@ -189,16 +189,16 @@ static const svn_delta_walk_t commit_walker = {
 };
 
 svn_error_t *
-svn_ra_get_commit_walker(svn_ra_session_t *ras,
-                         const svn_delta_walk_t **walker,
-                         void **walk_baton)
+svn_ra_get_commit_editor(svn_ra_session_t *ras,
+                         const svn_delta_edit_fns_t **editor,
+                         void **edit_baton)
 {
   commit_ctx_t *cc = apr_pcalloc(ras->pool, sizeof(*cc));
 
   cc->ras = ras;
-  *walk_baton = cc;
+  *edit_baton = cc;
 
-  *walker = &commit_walker;
+  *editor = &commit_editor;
 
   return NULL;
 }

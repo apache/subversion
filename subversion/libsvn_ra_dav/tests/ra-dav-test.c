@@ -67,8 +67,8 @@ main (int argc, char **argv)
   svn_error_t *err;
   svn_ra_session_t *ras;
   const char *url;
-  const svn_delta_walk_t *walker;
-  void *walk_baton;
+  const svn_delta_edit_fns_t *editor;
+  void *edit_baton;
   void *dir_baton;
   svn_string_t *repos;
 
@@ -91,15 +91,15 @@ main (int argc, char **argv)
     }
 
   repos = svn_string_create(url, pool);
-  err = svn_wc_get_change_walker(NULL, repos, 1,
-                                 &walker, &walk_baton, &dir_baton, pool);
+  err = svn_wc_get_update_editor(NULL, repos, 1,
+                                 &editor, &edit_baton, &dir_baton, pool);
   if (err)
     {
       svn_handle_error (err, stdout);
       return 1;
     }
 
-  err = svn_ra_checkout(ras, "", 1, walker, walk_baton, dir_baton);
+  err = svn_ra_checkout(ras, "", 1, editor, edit_baton, dir_baton);
 
   svn_ra_close(ras);
 

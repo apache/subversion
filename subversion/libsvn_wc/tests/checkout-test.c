@@ -90,20 +90,20 @@ apply_delta (void *delta_src,
              svn_vernum_t version,
              apr_pool_t *pool)
 {
-  const svn_delta_walk_t *walker;
-  void *walk_baton;
+  const svn_delta_edit_fns_t *editor;
+  void *edit_baton;
   void *dir_baton;
   svn_error_t *err;
 
-  /* Get the change-walker and friends... */
-  err = svn_wc_get_change_walker (dest, repos, version,
-                                  &walker, &walk_baton, &dir_baton, pool);
+  /* Get the editor and friends... */
+  err = svn_wc_get_update_editor (dest, repos, version,
+                                  &editor, &edit_baton, &dir_baton, pool);
   if (err)
     return err;
 
-  /* ... and walk! */
+  /* ... and edit! */
   return svn_xml_auto_parse (read_fn, delta_src,
-                             walker, walk_baton, dir_baton, pool);
+                             editor, edit_baton, dir_baton, pool);
 }
 
 

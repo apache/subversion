@@ -96,10 +96,10 @@ svn_error_t *svn_wc_delete (apr_array_header_t *paths);
    beginning at ROOT_DIRECTORY.  Push synthesized xml (representing a
    coherent tree-delta) at XML_PARSER.
 
-   Presumably, the client library will grab a "walker" from libsvn_ra,
-   build an svn_xml_parser_t around it, and then pass the parser to
-   this routine.  This is how local changes in the working copy are
-   ultimately translated into network requests.  */
+   Presumably, the client library will grab an svn_delta_edit_fns_t
+   from libsvn_ra, build an svn_xml_parser_t around it, and then pass
+   the parser to this routine.  This is how local changes in the
+   working copy are ultimately translated into network requests.  */
 svn_error_t * svn_wc_crawl_local_mods (svn_string_t *root_directory,
                                        svn_xml_parser_t *xml_parser,
                                        apr_pool_t *pool);
@@ -107,10 +107,10 @@ svn_error_t * svn_wc_crawl_local_mods (svn_string_t *root_directory,
 
 
 /*
- * Return a walker for effecting changes in a working copy, including
+ * Return an editor for effecting changes in a working copy, including
  * creating the working copy (i.e., update and checkout).
  * 
- * If DEST is non-null, the walker will ensure its existence as a
+ * If DEST is non-null, the editor will ensure its existence as a
  * directory (i.e., it is created if it does not already exist), and
  * it will be prepended to every path the delta causes to be touched.
  *
@@ -126,20 +126,20 @@ svn_error_t * svn_wc_crawl_local_mods (svn_string_t *root_directory,
  * VERSION is the repository version that results from this set of
  * changes.
  *
- * WALKER, WALK_BATON, and DIR_BATON are all returned by reference,
- * and the latter two must be used as parameters to walker functions.
+ * EDITOR, EDIT_BATON, and DIR_BATON are all returned by reference,
+ * and the latter two must be used as parameters to editor functions.
  *
  * kff todo: Actually, REPOS is one of several possible non-delta-ish
- * things that may be needed by a walker when creating new
+ * things that may be needed by a editor when creating new
  * administrative subdirs.  Other things might be username and/or auth
  * info, which aren't necessarily included in the repository string.
  * Thinking more on this question...
  */
-svn_error_t *svn_wc_get_change_walker (svn_string_t *dest,
+svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
                                        svn_string_t *repos,
                                        svn_vernum_t version,
-                                       const svn_delta_walk_t **walker,
-                                       void **walk_baton,
+                                       const svn_delta_edit_fns_t **editor,
+                                       void **edit_baton,
                                        void **dir_baton,
                                        apr_pool_t *pool);
 
@@ -149,12 +149,12 @@ svn_error_t *svn_wc_get_change_walker (svn_string_t *dest,
 
 /* GJS: the function will look something like this:
  *
- * svn_wc_commit(source, commit_walker, commit_walk_baton, dir_baton, pool)
+ * svn_wc_commit(source, commit_editor, commit_edit_baton, dir_baton, pool)
  *
- * The Client Library will fetch the commit_walker (& baton) from RA.
+ * The Client Library will fetch the commit_editor (& baton) from RA.
  * Source is something that describes the files/dirs (and recursion) to
- * commit. Internally, WC will walk the local dirs and push changes into
- * the commit walker.
+ * commit. Internally, WC will edit the local dirs and push changes into
+ * the commit editor.
  */
 
 svn_error_t *svn_wc_make_skelta (void *delta_src,

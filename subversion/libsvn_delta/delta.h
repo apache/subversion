@@ -151,7 +151,7 @@ typedef struct svn_xml__stackframe_t
  *    kind, a little pointer chasing should be lost in the noise.
  *
  * The digger structure also holds critical information given to us by
- * the uber-caller of "svn_delta_parse", such as batons and a walker_t
+ * the uber-caller of "svn_delta_parse", such as batons and a editor_t
  * structure which tells us what to do in the case of certain parse
  * events.
  *
@@ -169,11 +169,11 @@ typedef struct svn_xml__digger_t
   svn_xml__stackframe_t *stack;
 
   /* Callbacks to use when we discover interesting XML events */
-  const svn_delta_walk_t *walker;
+  const svn_delta_edit_fns_t *editor;
 
   /* Userdata structures that we need to keep track of while we parse,
      given to us by either the SVN filesystem or the SVN client */
-  void *walk_baton;  /* (global data from our caller) */
+  void *edit_baton;  /* (global data from our caller) */
   void *dir_baton;   /* (local info about root directory;  local subdir
                          info will be stored in each stackframe structure ) */
   void *file_baton;  /* (local info about current file) */

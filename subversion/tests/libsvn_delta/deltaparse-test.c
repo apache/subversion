@@ -93,11 +93,11 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
 /* A bunch of dummy callback routines.  */
 
 svn_error_t *
-test_delete (svn_string_t *filename, void *walk_baton, void *parent_baton)
+test_delete (svn_string_t *filename, void *edit_baton, void *parent_baton)
 {
   char *Aname = filename->data ? filename->data : "(unknown)";
 
-  print_spaces (walk_baton);
+  print_spaces (edit_baton);
 
   printf ("DELETE event:  delete filename '%s'\n", Aname);
   return SVN_NO_ERROR;         
@@ -106,7 +106,7 @@ test_delete (svn_string_t *filename, void *walk_baton, void *parent_baton)
 
 svn_error_t *
 test_add_directory (svn_string_t *name,
-                    void *walk_baton, void *parent_baton,
+                    void *edit_baton, void *parent_baton,
                     svn_string_t *ancestor_path,
                     long int ancestor_version,
                     void **child_baton)
@@ -114,8 +114,8 @@ test_add_directory (svn_string_t *name,
   char *Aname = name ? name->data : "(unknown)";
   char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
 
-  inc_spaces (walk_baton);
-  print_spaces (walk_baton);
+  inc_spaces (edit_baton);
+  print_spaces (edit_baton);
 
   printf ("ADD_DIR event:  name '%s', ancestor '%s' version %d\n",
           Aname, ancestor, ancestor_version);
@@ -129,7 +129,7 @@ test_add_directory (svn_string_t *name,
 
 svn_error_t *
 test_replace_directory (svn_string_t *name,
-                        void *walk_baton, void *parent_baton,
+                        void *edit_baton, void *parent_baton,
                         svn_string_t *ancestor_path,
                         long int ancestor_version,
                         void **child_baton)
@@ -137,8 +137,8 @@ test_replace_directory (svn_string_t *name,
   char *Aname = name ? name->data : "(unknown)";
   char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
 
-  inc_spaces (walk_baton);
-  print_spaces (walk_baton);
+  inc_spaces (edit_baton);
+  print_spaces (edit_baton);
 
   printf ("REPLACE_DIR event:  name '%s', ancestor '%s' version %d\n",
           Aname, ancestor, ancestor_version);
@@ -151,10 +151,10 @@ test_replace_directory (svn_string_t *name,
 
 
 svn_error_t *
-test_finish_directory (void *walk_baton, void *dir_baton)
+test_finish_directory (void *edit_baton, void *dir_baton)
 {
-  print_spaces (walk_baton);
-  dec_spaces (walk_baton);
+  print_spaces (edit_baton);
+  dec_spaces (edit_baton);
 
   if (dir_baton)
     printf ("FINISH_DIR '%s'\n", (char *)((svn_string_t *) dir_baton)->data);
@@ -166,10 +166,10 @@ test_finish_directory (void *walk_baton, void *dir_baton)
 
 
 svn_error_t *
-test_finish_file (void *walk_baton, void *file_baton)
+test_finish_file (void *edit_baton, void *file_baton)
 {
-  print_spaces (walk_baton);
-  dec_spaces (walk_baton);
+  print_spaces (edit_baton);
+  dec_spaces (edit_baton);
 
   if (file_baton)
     printf ("FINISH_FILE '%s'\n", 
@@ -183,20 +183,20 @@ test_finish_file (void *walk_baton, void *file_baton)
 
 
 svn_error_t *
-test_apply_textdelta (void *walk_baton, void *parent_baton, void *file_baton,
+test_apply_textdelta (void *edit_baton, void *parent_baton, void *file_baton,
                       svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
 {
   char *Aname = ((svn_string_t *) file_baton)->data ? 
     ((char *) ((svn_string_t *) file_baton)->data) : "(unknown)";
 
-  print_spaces (walk_baton);
+  print_spaces (edit_baton);
 
   printf ("TEXT-DELTA event within file '%s'.\n", Aname);
 
   /* Set the value of HANDLER and HANDLER_BATON here */
   *handler        = my_vcdiff_windoweater;
-  *handler_baton  = walk_baton;
+  *handler_baton  = edit_baton;
 
   return SVN_NO_ERROR;
 }
@@ -207,7 +207,7 @@ test_apply_textdelta (void *walk_baton, void *parent_baton, void *file_baton,
 
 svn_error_t *
 test_add_file (svn_string_t *name,
-               void *walk_baton, void *parent_baton,
+               void *edit_baton, void *parent_baton,
                svn_string_t *ancestor_path,
                long int ancestor_version,
                void **file_baton)
@@ -215,8 +215,8 @@ test_add_file (svn_string_t *name,
   char *Aname = name ? name->data : "(unknown)";
   char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
 
-  inc_spaces (walk_baton);
-  print_spaces (walk_baton);
+  inc_spaces (edit_baton);
+  print_spaces (edit_baton);
 
   printf ("ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
           Aname, ancestor, ancestor_version);
@@ -231,7 +231,7 @@ test_add_file (svn_string_t *name,
 
 svn_error_t *
 test_replace_file (svn_string_t *name,
-                   void *walk_baton, void *parent_baton,
+                   void *edit_baton, void *parent_baton,
                    svn_string_t *ancestor_path,
                    long int ancestor_version,
                    void **file_baton)
@@ -239,8 +239,8 @@ test_replace_file (svn_string_t *name,
   char *Aname = name ? name->data : "(unknown)";
   char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
 
-  inc_spaces (walk_baton);
-  print_spaces (walk_baton);
+  inc_spaces (edit_baton);
+  print_spaces (edit_baton);
 
   printf ("REPLACE_FILE event:  name '%s', ancestor '%s' version %d\n",
           Aname, ancestor, ancestor_version);
@@ -253,10 +253,10 @@ test_replace_file (svn_string_t *name,
 
 
 svn_error_t *
-test_change_file_prop (void *walk_baton, void *parent_baton, void *file_baton,
+test_change_file_prop (void *edit_baton, void *parent_baton, void *file_baton,
                        svn_string_t *name, svn_string_t *value)
 {
-  print_spaces (walk_baton);
+  print_spaces (edit_baton);
 
   printf ("GOT PROPCHANGE event on file '%s': ",
           (char *) ((svn_string_t *) file_baton)->data);
@@ -273,10 +273,10 @@ test_change_file_prop (void *walk_baton, void *parent_baton, void *file_baton,
 
 
 svn_error_t *
-test_change_dir_prop (void *walk_baton, void *parent_baton,
+test_change_dir_prop (void *edit_baton, void *parent_baton,
                       svn_string_t *name, svn_string_t *value)
 {
-  print_spaces (walk_baton);
+  print_spaces (edit_baton);
 
   printf ("GOT PROPCHANGE event on dir '%s': ",
           (char *) ((svn_string_t *) parent_baton)->data);
@@ -293,11 +293,11 @@ test_change_dir_prop (void *walk_baton, void *parent_baton,
 
 
 svn_error_t *
-test_change_dirent_prop (void *walk_baton, void *parent_baton,
+test_change_dirent_prop (void *edit_baton, void *parent_baton,
                          svn_string_t *entry,
                          svn_string_t *name, svn_string_t *value)
 {
-  print_spaces (walk_baton);
+  print_spaces (edit_baton);
 
   printf ("GOT PROPCHANGE event on dirent '%s': ", (char *) entry->data);
 
@@ -359,11 +359,11 @@ my_read_func (void *baton, char *buffer, apr_off_t *len, apr_pool_t *pool)
 
 int main(int argc, char *argv[])
 {
-  svn_delta_walk_t my_walker;
+  svn_delta_edit_fns_t my_editor;
   svn_error_t *err;
   apr_file_t *source_baton = NULL;
   apr_status_t status;
-  int my_walk_baton = 0;       /* This is a global that will
+  int my_edit_baton = 0;       /* This is a global that will
                                   represent how many spaces to
                                   indent our printf's */
   void *my_parent_baton = NULL;
@@ -392,28 +392,28 @@ int main(int argc, char *argv[])
     }
     
   
-  /* Fill out a walker structure, with our own routines inside it. */
-  my_walker.delete             = test_delete;
+  /* Fill out a editor structure, with our own routines inside it. */
+  my_editor.delete             = test_delete;
 
-  my_walker.add_directory      = test_add_directory;
-  my_walker.replace_directory  = test_replace_directory;
-  my_walker.finish_directory   = test_finish_directory;
+  my_editor.add_directory      = test_add_directory;
+  my_editor.replace_directory  = test_replace_directory;
+  my_editor.finish_directory   = test_finish_directory;
 
-  my_walker.add_file           = test_add_file;
-  my_walker.replace_file       = test_replace_file;
-  my_walker.finish_file        = test_finish_file;
+  my_editor.add_file           = test_add_file;
+  my_editor.replace_file       = test_replace_file;
+  my_editor.finish_file        = test_finish_file;
 
-  my_walker.apply_textdelta    = test_apply_textdelta;
+  my_editor.apply_textdelta    = test_apply_textdelta;
 
-  my_walker.change_file_prop   = test_change_file_prop;
-  my_walker.change_dir_prop    = test_change_dir_prop;
-  my_walker.change_dirent_prop = test_change_dirent_prop;
+  my_editor.change_file_prop   = test_change_file_prop;
+  my_editor.change_dir_prop    = test_change_dir_prop;
+  my_editor.change_dirent_prop = test_change_dirent_prop;
 
 
   /* Fire up the XML parser */
   err = svn_xml_auto_parse (my_read_func, source_baton, 
-                            &my_walker,                 
-                            &my_walk_baton,
+                            &my_editor,                 
+                            &my_edit_baton,
                             my_parent_baton,            
                             globalpool);
 
