@@ -9,13 +9,6 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10956
-    Fix a bug in incomplete directory handling.
-    Justification:
-      Bug can result in out-of-sync working copies.
-    Votes:
-      +1: ghudson, bliss
-
 Status of 1.1.1:
 ================
 
