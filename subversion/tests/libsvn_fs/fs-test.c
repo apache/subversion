@@ -5612,20 +5612,20 @@ branch_test (const char **msg,
     s2 = svn_fs_unparse_id (D_G_rho_id, spool);
 
     if (strcmp (s2->data, "f.0.5") != 0)
-      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                 "/A/D/G/rho id: expected f.0.5 got: %s", s2);
     if (strcmp (s1->data, "f.2.5") != 0)
-      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                 "/A/D/G2/rho id: expected d.2.5 got: %s", s1);
     
     s1 = svn_fs_unparse_id (D_G2_rho2_id, spool);
     s2 = svn_fs_unparse_id (D_G_rho2_id, spool);
     
     if (strcmp (s2->data, "f.1.5") != 0)
-      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                 "/A/D/G/rho2 id: expected d.1.5 got: %s", s2);
     if (strcmp (s1->data, "f.4.5") != 0)
-      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                 "/A/D/G2/rho2 id: expected f.4.5 got: %s", s1);
 
     SVN_ERR (svn_fs_node_id (&D_id, rev_root, "A/D", spool));
@@ -5634,10 +5634,10 @@ branch_test (const char **msg,
     s2 = svn_fs_unparse_id (D2_id, spool);
     
     if (strcmp(s1->data, "b.0.5") != 0)
-      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                 "/A/D id: expected b.0.5 got: %s", s1);
     if (strcmp(s2->data, "b.3.5") != 0)
-      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                 "/A/D2 id: expected b.3.5 got: %s", s2);
     
     SVN_ERR (svn_fs_node_id (&D2_G_id, rev_root, "A/D2/G", spool));
@@ -5646,10 +5646,10 @@ branch_test (const char **msg,
     s2 = svn_fs_unparse_id (D2_G2_id, spool);
 
     if (strcmp(s1->data, "d.3.5") != 0)
-      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                 "/A/D2/G id: expected d.3.5 got: %s", s1);
     if (strcmp(s2->data, "d.6.5") != 0)
-      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                 "/A/D2/G2 id: expected d.6.5 got: %s", s2);
     
     SVN_ERR (svn_fs_node_id (&D2_G_rho_id, rev_root, "A/D2/G/rho", spool));
@@ -5659,10 +5659,10 @@ branch_test (const char **msg,
     s2 = svn_fs_unparse_id (D2_G2_rho_id, spool);
     
     if (strcmp(s1->data, "f.3.5") != 0)
-      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                 "/A/D2/G/rho id: expected f.3.5 got: %s", s1);
     if (strcmp(s2->data, "f.6.5") != 0)
-      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                 "/A/D2/G2/rho id: expected f.6.5 got: %s", s2);
 
     SVN_ERR (svn_fs_node_id (&D2_G_rho2_id, rev_root, "A/D2/G/rho2", spool));
@@ -5672,10 +5672,10 @@ branch_test (const char **msg,
     s2 = svn_fs_unparse_id (D2_G2_rho2_id, spool);
     
     if (strcmp(s1->data, "f.5.5") != 0)
-      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                 "/A/D2/G/rho2 id: expected f.5.5 got: %s", s1);
     if (strcmp(s2->data, "f.7.5") != 0)
-      return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                 "/A/D2/G2/rho2 id: expected f.7.5 got: %s", s2);
     svn_pool_clear (spool);
   }
@@ -5745,42 +5745,42 @@ lazy_copies_created_rev (const char **msg,
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D/G/rho", spool));
   if (rev != 1)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D/G/rho created rev mistmatch expeceted 1, got: %d", rev);
 
   SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D/G/rho2", spool));
   if (rev != 2)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D/G/rho2 created rev mismatch expected 2, got: %d", rev);
 
   SVN_ERR (svn_fs_node_created_rev(&rev, rev_root, "A/D/G2/rho", spool));
   if (rev != 3)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D/G2/rho created rev mismatch expected 3, got: %d", rev);
   
   SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D/G2/rho2", spool));
   if (rev != 3)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D/G2/rho2 created rev mismatch expected 3, got: %d", rev);
 
   SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G/rho", spool));
   if (rev != 4)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G/rho created rev mismatch expected 4, got: %d", rev);
   
   SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G/rho2", spool));
   if (rev != 4)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G/rho2 created rev mismatch expected 4, got: %d", rev);
   
   SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G2/rho", spool));
   if (rev != 4)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G2/rho created rev mismatch expected 4, got: %d", rev);
 
   SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G2/rho2", spool));
   if (rev != 4)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G2/rho2 created rev mismatch expected 4, got: %d", rev);
 
   svn_pool_clear (spool);
@@ -5801,21 +5801,21 @@ lazy_copies_created_rev (const char **msg,
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G2/rho", spool));
   if (rev != 5)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G2/rho created rev mismatch expected 5, got: %d", rev);
 
   SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G2/rho2", spool));
   if (rev != 5)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G2/rho2 created rev mismatch expected 5, got: %d", rev);
   /* Also verify the created-revs on our bubble up directories. */
   SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2/G2", spool));
   if (rev != 5)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G2 created rev mismatch expected 5, got: %d", rev);
   SVN_ERR (svn_fs_node_created_rev (&rev, rev_root, "A/D2", spool));
   if (rev != 5)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2 created rev mismatch expected 5, got: %d", rev);
   
   svn_pool_destroy (spool);
@@ -5886,56 +5886,56 @@ lazy_copies_dir_entries (const char **msg,
   entry = apr_hash_get (entries, "rho", APR_HASH_KEY_STRING);
   if (entry == NULL
       || entry->created_rev != 1)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D/G/rho created rev mistmatch expeceted 1, got: %d", rev);
 
   SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D/G", spool));
   entry = apr_hash_get (entries, "rho2", APR_HASH_KEY_STRING);
   if (entry == NULL
       || entry->created_rev != 2)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D/G/rho2 created rev mistmatch expeceted 2, got: %d", rev);
 
   SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D/G2", spool));
   entry = apr_hash_get (entries, "rho", APR_HASH_KEY_STRING);
   if (entry == NULL
       || entry->created_rev != 3)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D/G2/rho created rev mismatch expected 3, got: %d", rev);
   
   SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D/G2", spool));
   entry = apr_hash_get (entries, "rho2", APR_HASH_KEY_STRING);
   if (entry == NULL
       || entry->created_rev != 3)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D/G2/rho2 created rev mismatch expected 3, got: %d", rev);
 
   SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D2/G", spool));
   entry = apr_hash_get (entries, "rho", APR_HASH_KEY_STRING);
   if (entry == NULL
       || entry->created_rev != 4)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G/rho created rev mismatch expected 4, got: %d", rev);
   
   SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D2/G", spool));
   entry = apr_hash_get (entries, "rho2", APR_HASH_KEY_STRING);
   if (entry == NULL
       || entry->created_rev != 4)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G/rho2 created rev mismatch expected 4, got: %d", rev);
   
   SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D2/G2", spool));
   entry = apr_hash_get (entries, "rho", APR_HASH_KEY_STRING);
   if (entry == NULL
       || entry->created_rev != 4)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G2/rho created rev mismatch expected 4, got: %d", rev);
 
   SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D2/G2", spool));
   entry = apr_hash_get (entries, "rho2", APR_HASH_KEY_STRING);
   if (entry == NULL
       || entry->created_rev != 4)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G2/rho2 created rev mismatch expected 4, got: %d", rev);
 
   svn_pool_clear (spool);
@@ -5958,14 +5958,14 @@ lazy_copies_dir_entries (const char **msg,
   entry = apr_hash_get (entries, "rho", APR_HASH_KEY_STRING);
   if (entry == NULL
       || entry->created_rev != 5)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G2/rho created rev mismatch expected 5, got: %d", rev);
 
   SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A/D2/G2", spool));
   entry = apr_hash_get (entries, "rho2", APR_HASH_KEY_STRING);
   if (entry == NULL
       || entry->created_rev != 5)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G2/rho2 created rev mismatch expected 5, got: %d", rev);
   
   /* Also verify the created-revs on our bubble up directories. */
@@ -5973,13 +5973,13 @@ lazy_copies_dir_entries (const char **msg,
   entry = apr_hash_get (entries, "G2", APR_HASH_KEY_STRING);
   if (entry == NULL
       || entry->created_rev != 5)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2/G2 created rev mismatch expected 5, got: %d", rev);
   SVN_ERR (svn_fs_dir_entries (&entries, rev_root, "A", spool));
   entry = apr_hash_get (entries, "D2", APR_HASH_KEY_STRING);
   if (entry == NULL
       || entry->created_rev != 5)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "/A/D2 created rev mismatch expected 5, got: %d", rev);
   
   svn_pool_destroy (spool);

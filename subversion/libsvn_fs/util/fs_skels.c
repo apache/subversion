@@ -279,15 +279,14 @@ is_valid_copy_skel (skel_t *skel)
 static int
 is_valid_change_skel (skel_t *skel, svn_fs_path_change_kind_t *kind)
 {
-  if ((svn_fs__list_length (skel) == 6)
+  if ((svn_fs__list_length (skel) == 5)
       && svn_fs__matches_atom (skel->children, "change")
       && skel->children->next->is_atom
       && skel->children->next->next->is_atom
       && skel->children->next->next->next->is_atom
-      && skel->children->next->next->next->next->is_atom
-      && skel->children->next->next->next->next->next->is_atom)
+      && skel->children->next->next->next->next->is_atom)
     {
-      skel_t *kind_skel = skel->children->next->next->next;
+      skel_t *kind_skel = skel->children->next->next;
 
       /* check the kind (and return it) */
       if (svn_fs__matches_atom (kind_skel, "reset"))
@@ -722,25 +721,21 @@ svn_fs__parse_change_skel (svn_fs__change_t **change_p,
   /* Create the returned structure */
   change = apr_pcalloc (pool, sizeof (*change));
 
-  /* PATH */
-  change->path = apr_pstrmemdup (pool, skel->children->next->data,
-                                 skel->children->next->len);
-
   /* NODE-REV-ID */
   if (skel->children->next->next->len)
-    change->noderev_id = svn_fs_parse_id (skel->children->next->next->data,
-                                          skel->children->next->next->len, 
+    change->noderev_id = svn_fs_parse_id (skel->children->next->data,
+                                          skel->children->next->len, 
                                           pool);
 
   /* KIND */
   change->kind = kind;
 
   /* TEXT-MOD */
-  if (skel->children->next->next->next->next->len)
+  if (skel->children->next->next->next->len)
     change->text_mod = 1;
 
   /* PROP-MOD */
-  if (skel->children->next->next->next->next->next->len)
+  if (skel->children->next->next->next->next->len)
     change->prop_mod = 1;
 
   /* Return the structure. */
@@ -1225,9 +1220,6 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
     {
       svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
     }
-
-  /* PATH */
-  svn_fs__prepend (svn_fs__str_atom (change->path, pool), skel);
 
   /* "change" */
   svn_fs__prepend (svn_fs__str_atom ("change", pool), skel);

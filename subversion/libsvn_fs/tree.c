@@ -904,7 +904,6 @@ get_dag (dag_node_t **dag_node_p,
 static svn_error_t *
 add_change (svn_fs_t *fs,
             const char *txn_id,
-            const char *path,
             const svn_fs_id_t *noderev_id,
             svn_fs_path_change_kind_t change_kind,
             int text_mod,
@@ -912,7 +911,6 @@ add_change (svn_fs_t *fs,
             trail_t *trail)
 {
   svn_fs__change_t change;
-  change.path = svn_fs__canonicalize_abspath (path, trail->pool);
   change.noderev_id = noderev_id;
   change.kind = change_kind;
   change.text_mod = text_mod;
@@ -982,21 +980,21 @@ txn_body_node_created_rev (void *baton, trail_t *trail)
   if (parent_path->in_lazy_land)
     {
        SVN_ERR (svn_fs__bdb_get_copy (&copy, args->root->fs, 
-                                      svn_fs__id_copy_id(
+                                      svn_fs__id_copy_id (
                                           parent_path->last_branch_id),
                                       trail));
        SVN_ERR (svn_fs__bdb_get_txn (&txn, args->root->fs,
-                                     svn_fs__id_txn_id(
-                                         copy->dst_noderev_id),
+                                     svn_fs__id_txn_id (copy->dst_noderev_id),
                                      trail));
     }
   else
     {
-       SVN_ERR (svn_fs__bdb_get_txn (&txn, args->root->fs,
-                                     svn_fs__id_txn_id (
-                                         svn_fs__dag_get_id (
-                                             parent_path->node)),
-                                     trail));
+       SVN_ERR (svn_fs__bdb_get_txn (
+                    &txn, args->root->fs,
+                    svn_fs__id_txn_id (
+                        svn_fs__dag_get_id (
+                            parent_path->node)),
+                    trail));
     }
   args->revision = txn->revision;
   return SVN_NO_ERROR;
@@ -1311,7 +1309,7 @@ txn_body_change_node_prop (void *baton,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (args->root), txn_id, 
-                       args->path, svn_fs__dag_get_id (parent_path->node),
+                       svn_fs__dag_get_id (parent_path->node),
                        svn_fs_path_change_modify, 0, 1, trail));
   
   return SVN_NO_ERROR;
@@ -1651,11 +1649,11 @@ undelete_change (svn_fs_t *fs,
     {
       /* If so, reset the changes and re-add everything except the
          deletion. */
-      SVN_ERR (add_change (fs, txn_id, path, NULL, 
+      SVN_ERR (add_change (fs, txn_id, NULL, 
                            svn_fs_path_change_reset, 0, 0, trail));
       if (this_change->change_kind == svn_fs_path_change_replace)
         {
-          SVN_ERR (add_change (fs, txn_id, path, this_change->node_rev_id, 
+          SVN_ERR (add_change (fs, txn_id, this_change->node_rev_id, 
                                svn_fs_path_change_add, this_change->text_mod, 
                                this_change->prop_mod, trail));
         }
@@ -2673,7 +2671,7 @@ txn_body_dir_entries (void *baton,
        else
          {
             const char *child_path =
-                svn_fs__canonicalize_abspath (svn_path_join(
+                svn_fs__canonicalize_abspath (svn_path_join (
                                                   args->path, dirent->name,
                                                   trail->pool),
                                               trail->pool);
@@ -2691,7 +2689,7 @@ txn_body_dir_entries (void *baton,
                                                     parent_path->last_branch_id),
                                                 trail));
                  SVN_ERR (svn_fs__bdb_get_txn (&txn, fs,
-                                               svn_fs__id_txn_id(
+                                               svn_fs__id_txn_id (
                                                    copy->dst_noderev_id),
                                                trail));
                  dirent->created_rev = txn->revision;
@@ -2777,7 +2775,7 @@ txn_body_make_dir (void *baton,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
-                       path, svn_fs__dag_get_id (sub_dir),
+                       svn_fs__dag_get_id (sub_dir),
                        svn_fs_path_change_add, 0, 0, trail));
 
   return SVN_NO_ERROR;
@@ -2851,7 +2849,7 @@ txn_body_delete (void *baton,
   
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
-                       path, svn_fs__dag_get_id (parent_path->node),
+                       svn_fs__dag_get_id (parent_path->node),
                        svn_fs_path_change_delete, 0, 0, trail));
   
   return SVN_NO_ERROR;
@@ -2964,7 +2962,7 @@ txn_body_copy (void *baton,
       /* Make a record of this modification in the changes table. */
       SVN_ERR (get_dag (&new_node, to_root, to_path, trail));
       SVN_ERR (add_change (svn_fs_root_fs (to_root), txn_id, 
-                           to_path, svn_fs__dag_get_id (new_node),
+                           svn_fs__dag_get_id (new_node),
                            kind, 0, 0, trail));
     }
   else
@@ -3126,7 +3124,7 @@ txn_body_make_file (void *baton,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
-                       path, svn_fs__dag_get_id (child),
+                       svn_fs__dag_get_id (child),
                        svn_fs_path_change_add, 0, 0, trail));
 
   return SVN_NO_ERROR;
@@ -3441,7 +3439,7 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
-                       tb->path, svn_fs__dag_get_id (tb->node),
+                       svn_fs__dag_get_id (tb->node),
                        svn_fs_path_change_modify, 1, 0, trail));
 
   return SVN_NO_ERROR;
@@ -3559,7 +3557,7 @@ txn_body_apply_text (void *baton, trail_t *trail)
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
-                       tb->path, svn_fs__dag_get_id (tb->node),
+                       svn_fs__dag_get_id (tb->node),
                        svn_fs_path_change_modify, 1, 0, trail));
 
   return SVN_NO_ERROR;

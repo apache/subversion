@@ -507,11 +507,9 @@ functionality (and with no particular sort order), and maps the
 one-to-many relationship of a transaction ID to a "change" item.
 Change items are skels of the form:
 
-   ("change" PATH ID CHANGE-KIND TEXT-MOD PROP-MOD)
+   ("change" ID CHANGE-KIND TEXT-MOD PROP-MOD)
 
 where:
-
-   * PATH is the path that was operated on to enact this change.
 
    * ID is the node revision ID of the node changed (may be a zero
      atom, but only in the "reset" kind case).
@@ -758,7 +756,7 @@ Transactions:
 
 Changes:
 
-                 CHANGE ::= ("change" PATH ID CHANGE-KIND TEXT-MOD PROP-MOD) ;
+                 CHANGE ::= ("change" ID CHANGE-KIND TEXT-MOD PROP-MOD) ;
             CHANGE-KIND ::= "add" | "delete" | "replace" | "modify" ;
                TEXT-MOD ::= atom ;
                PROP-MOD ::= atom ;

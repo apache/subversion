@@ -263,9 +263,6 @@ typedef struct
 /*** Change ***/
 typedef struct
 {
-  /* Path of the change. */
-  const char *path;
-
   /* Node revision ID of the change. */
   const svn_fs_id_t *noderev_id;
 
