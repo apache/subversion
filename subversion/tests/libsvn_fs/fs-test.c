@@ -318,6 +318,41 @@ write_and_read_file (const char **msg)
 #endif /* 0 */
 
 
+/* Create a file! */
+static svn_error_t *
+create_mini_tree_transaction (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+
+  *msg = "make a file, a subdir, and another file in that subdir!";
+
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-9")); /* helper */
+
+  /* Begin a new transaction that is based on revision 0.  */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+
+  /* Get the txn root */
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  
+  /* Create a new file in the root directory. */
+  SVN_ERR (svn_fs_make_file (txn_root, "wine.txt", pool));
+
+  /* Create a new directory in the root directory. */
+  SVN_ERR (svn_fs_make_dir (txn_root, "keg", pool));
+
+  /* Now, create a file in our new directory. */
+  SVN_ERR (svn_fs_make_file (txn_root, "keg/beer.txt", pool));
+
+  /* Close the transaction and fs. */
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 
 /* The test table.  */
@@ -330,6 +365,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   trivial_transaction,
   reopen_trivial_transaction,
   create_file_transaction,
+  create_mini_tree_transaction,
   verify_txn_list,
   0
 };
