@@ -124,7 +124,7 @@ $ svn status -v myfile
 
         <varlistentry>
           <term><option>--extensions</option> (<option>-x</option>)
-          <replaceable>"ARGS"</replaceable></term>
+          <replaceable>ARGS</replaceable></term>
           <listitem>
             <para>Specifies an argument or arguments that Subversion
               should pass to an external diff command when providing

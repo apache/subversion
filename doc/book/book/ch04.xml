@@ -41,12 +41,12 @@
       documents are almost the same, after all; they only differ in
       small, specific ways.</para>
 
-    <para>This is the basic concept of a <firstterm>branch</firstterm>
-      &mdash;namely, a line of development that exists independently of
-      another line, yet still shares a common history if you look far
-      enough back in time.  A branch always begins life as a copy of
-      something, and moves on from there, generating its own
-      history.</para>
+    <para>This is the basic concept of a
+      <firstterm>branch</firstterm>&mdash;namely, a line of
+      development that exists independently of another line, yet still
+      shares a common history if you look far enough back in time.  A
+      branch always begins life as a copy of something, and moves on
+      from there, generating its own history.</para>
 
       <figure id="svn-ch-4-dia1">
         <title>Branches of Development</title>
@@ -59,8 +59,8 @@
       related to one another.  It also helps you duplicate changes
       from one branch to another.  Finally, it can make portions of
       your working copy reflect different branches, so that you can
-      "mix and match" different lines of development in your daily
-      work.</para>
+      <quote>mix and match</quote> different lines of development in
+      your daily work.</para>
 
   </sect1>
   
@@ -71,9 +71,9 @@
     <title>Using Branches</title> 
 
     <para>At this point, you should understand how each commit creates
-      an entire new filesystem tree (called a "revision") in the
-      repository.  If not, go back and read about revisions in  <xref
-      linkend="svn-ch-2-sect-3.2"/>.</para>
+      an entire new filesystem tree (called a <quote>revision</quote>)
+      in the repository.  If not, go back and read about revisions in
+      <xref linkend="svn-ch-2-sect-3.2"/>.</para>
 
     <para>For this chapter, we'll go back to the same example from
       Chapter 2.  Remember that you and your collaborator, Sally, are
@@ -152,7 +152,8 @@
         project policy.  Let's say that your team has a policy of
         creating branches in the <filename>/calc/branches</filename>
         area of the repository, and you want to name your branch
-        "my-calc-branch".  You'll want to create a new directory,
+        <literal>my-calc-branch</literal>.  You'll want to create a
+        new directory,
         <filename>/calc/branches/my-calc-branch</filename>, which
         begins its life as a copy of
         <filename>/calc/trunk</filename>. </para>
@@ -246,21 +247,23 @@ Committed revision 341.
           duplicate any data.  Instead, it creates a new directory
           entry that points to an <emphasis>existing</emphasis> tree.
           If you're a Unix user, this is the same concept as a
-          hard-link.  From there, the copy is said to be "lazy".  That
-          is, if you commit a change to one file within the copied
-          directory, then only that file changes&mdash;the rest of the
-          files continue to exist as links to the original files in
-          the original directory.</para>
+          hard-link.  From there, the copy is said to be
+          <quote>lazy</quote>.  That is, if you commit a change to one
+          file within the copied directory, then only that file
+          changes&mdash;the rest of the files continue to exist as
+          links to the original files in the original
+          directory.</para>
       
         <para>This is why you'll often hear Subversion users talk
-          about "cheap copies".  It doesn't matter how large the
-          directory is&mdash;it takes a very tiny, constant amount of
-          time to make a copy of it.  In fact, this feature is the
-          basis of how commits work in Subversion: each revision is a
-          "cheap copy" of the previous revision, with a few items
-          lazily changed within.  (To read more about this, visit
-          Subversion's website and read about the "bubble up" method
-          in Subversion's design documents.)</para>
+          about <quote>cheap copies</quote>.  It doesn't matter how
+          large the directory is&mdash;it takes a very tiny, constant
+          amount of time to make a copy of it.  In fact, this feature
+          is the basis of how commits work in Subversion: each
+          revision is a <quote>cheap copy</quote> of the previous
+          revision, with a few items lazily changed within.  (To read
+          more about this, visit Subversion's website and read about
+          the <quote>bubble up</quote> method in Subversion's design
+          documents.)</para>
 
         <para>Of course, these internal mechanics of copying and
           sharing data are hidden from the user, who simply sees
@@ -429,9 +432,9 @@ Changed paths:
             extra historical information.</para>
         </listitem>
         <listitem>
-          <para>Subversion has no internal concept of a branch
-          &mdash;only copies.  When you copy a directory, the
-          resulting directory is only a "branch" because
+          <para>Subversion has no internal concept of a
+          branch&mdash;only copies.  When you copy a directory, the
+          resulting directory is only a <quote>branch</quote> because
           <emphasis>you</emphasis> attach that meaning to it.  You may
           think of the directory differently, or treat it differently,
           but to Subversion it's just an ordinary directory that
@@ -464,17 +467,17 @@ Changed paths:
     <para>So, the good news is that you and Sally aren't interfering
       with each other.  The bad news is that it's very easy to drift
       <emphasis>too</emphasis> far apart.  Remember that one of the
-      problems with the "crawl in a hole" strategy is that by the time
-      you're finished with your branch, it may be near-impossible to
-      merge your changes back into the trunk without a huge number of
-      conflicts.</para>
+      problems with the <quote>crawl in a hole</quote> strategy is
+      that by the time you're finished with your branch, it may be
+      near-impossible to merge your changes back into the trunk
+      without a huge number of conflicts.</para>
     
     <para>Instead, you and Sally might continue to share changes as
       you work.  It's up to you to decide which changes are worth
-      sharing; Subversion gives you the ability to selectively "copy"
-      changes between branches.  And when you're completely finished
-      with your branch, your entire set of branch changes can be
-      copied back into the trunk.</para>
+      sharing; Subversion gives you the ability to selectively
+      <quote>copy</quote> changes between branches.  And when you're
+      completely finished with your branch, your entire set of branch
+      changes can be copied back into the trunk.</para>
     
 
     <sect2 id="svn-ch-4-sect-3.1">
@@ -561,11 +564,11 @@ M  integer.c
 
       <para>The output of <command>svn merge</command> shows that your
         copy of <filename>integer.c</filename> was patched.  It now
-        contains Sally's change&mdash;the change has been "copied" from the
-        trunk to your working copy of your private branch, and now
-        exists as a local modification.  At this point, it's up to you
-        to review the local modification and make sure it works
-        correctly.</para>
+        contains Sally's change&mdash;the change has been
+        <quote>copied</quote> from the trunk to your working copy of
+        your private branch, and now exists as a local modification.
+        At this point, it's up to you to review the local modification
+        and make sure it works correctly.</para>
 
       <para>In another scenario, it's possible that things may not have
         gone so well, and that <filename>integer.c</filename> may have
@@ -593,7 +596,7 @@ Committed revision 360.
 </screen>
 
       <para>As you'll see in the next sections, this is a very
-        important "best practice" to follow.</para>
+        important <quote>best practice</quote> to follow.</para>
 
       <sidebar>
         <title>Why Not Use Patches Instead?</title>
@@ -763,9 +766,10 @@ $ svn status
         <para>The <option>--dry-run</option> option doesn't actually
           apply any local changes to the working copy.  It only shows
           status codes that <emphasis>would</emphasis> be printed in a
-          real merge.  It's useful for getting a "high level" preview
-          of the potential merge, for those times when running
-          <command>svn diff</command> gives too much detail.</para>
+          real merge.  It's useful for getting a <quote>high
+          level</quote> preview of the potential merge, for those
+          times when running <command>svn diff</command> gives too
+          much detail.</para>
 
       </sect3>
 
@@ -958,10 +962,10 @@ Committed revision 481.
         change made way back in revision 303, which changed
         <filename>integer.c</filename>, is completely wrong.  It never
         should have been committed.  You can use <command>svn
-        merge</command> to "undo" the change in your working copy, and
-        then commit the local modification to the repository.  All you
-        need to do is to specify a <emphasis>reverse</emphasis>
-        difference:</para>
+        merge</command> to <quote>undo</quote> the change in your
+        working copy, and then commit the local modification to the
+        repository.  All you need to do is to specify a
+        <emphasis>reverse</emphasis> difference:</para>
 
 
 <screen>
@@ -1007,10 +1011,11 @@ Committed revision 350.
         <filename>calc</filename> project between revisions 303 and
         349, they'll still see the bad change, right?</para>
 
-      <para>Yes, that's true.  When we talk about "removing" a change,
-        we're really talking about "removing it from HEAD".  The
-        original change still exists in the repository's history.  For
-        most situations, this is good enough.  Most people are only
+      <para>Yes, that's true.  When we talk about
+        <quote>removing</quote> a change, we're really talking about
+        <quote>removing it from HEAD</quote>.  The original change
+        still exists in the repository's history.  For most
+        situations, this is good enough.  Most people are only
         interested in tracking the HEAD of a project anyway.  There
         are special cases, however, where you really might want to
         destroy all evidence of the commit.  (Perhaps somebody
@@ -1040,8 +1045,8 @@ Committed revision 350.
         information is never lost.  Even when you delete a file or
         directory, it may be gone from the HEAD revision, but the
         object still exists in earlier revisions.  One of the most
-        common FAQs from new users is: "how do I get my old file or
-        directory back?"</para>
+        common questions new users ask is, <quote>How do I get my old
+        file or directory back?</quote></para>
 
       <para>The first step is to define exactly <emphasis
         role="bold">which</emphasis> item you're trying to resurrect.
@@ -1052,20 +1057,23 @@ Committed revision 350.
         every version of your file or directory can be defined by a
         specific coordinate pair.</para>
 
-      <para>Subversion has no "attic" directory like CVS does
-        <footnote><para>Because CVS doesn't version trees, it creates an
-        "attic" area within each repository directory as a way of
-        remembering deleted files.</para></footnote>, so you need to use
-        <command>svn log</command> to discover the exact coordinate
-        pair you wish to resurrect.  A good strategy is to run
-        <command>svn log --verbose</command> in a directory which used
-        to contain your deleted item.  The <option>--verbose</option>
-        option shows a list of all changed items in each revision; all
-        you need to do is find the revision in which you deleted the
-        file or directory.  You can do this visually, or by using
-        another tool to examine the log output (via
-        <command>grep</command>, or perhaps via an incremental search
-        in an editor.)</para>
+      <para>Subversion has no <filename>Attic</filename> directory
+        like CVS does,
+        <footnote><para>Because CVS doesn't version trees, it creates
+          an <filename>Attic</filename> area within each repository
+          directory as a way of remembering deleted
+          files.</para>
+        </footnote>
+        so you need to use <command>svn
+        log</command> to discover the exact coordinate pair you wish
+        to resurrect.  A good strategy is to run <command>svn log
+        --verbose</command> in a directory which used to contain your
+        deleted item.  The <option>--verbose</option> option shows a
+        list of all changed items in each revision; all you need to do
+        is find the revision in which you deleted the file or
+        directory.  You can do this visually, or by using another tool
+        to examine the log output (via <command>grep</command>, or
+        perhaps via an incremental search in an editor.)</para>
 
       <screen>
 $ cd parent-dir
@@ -1094,12 +1102,12 @@ Changed paths:
         choices.</para>
       
       <para>One option is to use <command>svn merge</command> to apply
-        revision 808 "in reverse".  (We've already discussed how to
-        undo changes, see <xref linkend="svn-ch-4-sect-4.2"/>.)  This
-        would have the affect of re-adding <filename>real.c</filename>
-        as a local modification.  The file would be scheduled for
-        addition, and after a commit, the file would again exist in
-        HEAD.</para>
+        revision 808 <quote>in reverse</quote>.  (We've already
+        discussed how to undo changes, see <xref
+        linkend="svn-ch-4-sect-4.2"/>.)  This would have the affect of
+        re-adding <filename>real.c</filename> as a local modification.
+        The file would be scheduled for addition, and after a commit,
+        the file would again exist in HEAD.</para>
 
       <para>In this particular example, however, this is probably not
         the best strategy.  Reverse-applying revision 808 would not
@@ -1115,8 +1123,8 @@ Changed paths:
       <para>A second, more targeted strategy is not to use
         <command>svn merge</command> at all, but rather the
         <command>svn copy</command> command.  Simply copy the exact
-        revision and path "coordinate pair" from the repository to
-        your working copy:</para>
+        revision and path <quote>coordinate pair</quote> from the
+        repository to your working copy:</para>
 
       <screen>
 $ svn copy --revision 807 \
@@ -1181,12 +1189,13 @@ $ svn info | grep URL
 URL: http://svn.example.com/repos/calc/branches/my-calc-branch
 </screen>
 
-    <para>After "switching" to the branch, your working copy is no
-      different than what you would get from doing a fresh checkout of
-      the directory.  And it's usually more efficient to use this
-      command, because often branches only differ by a small degree.
-      The server sends only the minimal set of changes necessary to
-      make your working copy reflect the branch directory.</para>
+    <para>After <quote>switching</quote> to the branch, your working
+      copy is no different than what you would get from doing a fresh
+      checkout of the directory.  And it's usually more efficient to
+      use this command, because often branches only differ by a small
+      degree.  The server sends only the minimal set of changes
+      necessary to make your working copy reflect the branch
+      directory.</para>
 
     <para>The <command>svn switch</command> command also takes a
       <option>--revision</option> (<option>-r</option>) option, so you
@@ -1216,9 +1225,10 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       receive normal 'trunk' updates to most of their working copy,
       but the switched portions will remain immune (unless someone
       commits a change to their branch).  This feature adds a whole
-      new dimension to the concept of a "mixed working copy"&mdash;
-      not only can working copies contain a mixture of working
-      revisions, but a mixture of repository locations as well.</para>
+      new dimension to the concept of a <quote>mixed working
+      copy</quote>&mdash;not only can working copies contain a mixture
+      of working revisions, but a mixture of repository locations as
+      well.</para>
     
     <para>If your working copy contains a number of switched subtrees
       from different repository locations, it continues to function as
@@ -1301,10 +1311,11 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       after each commit.</para>
 
     <para>However, people often want to give more human-friendly names
-      to tags, like "release-1.0".  And they want to make snapshots of
-      smaller subdirectories of the filesystem.  After all, it's not
-      so easy to remember that release-1.0 of a piece of software is a
-      particular subdirectory of revision 4822.</para>
+      to tags, like <literal>release-1.0</literal>.  And they want to
+      make snapshots of smaller subdirectories of the filesystem.
+      After all, it's not so easy to remember that release-1.0 of a
+      piece of software is a particular subdirectory of revision
+      4822.</para>
 
     <sect2 id="svn-ch-4-sect-6.1">
       <title>Creating a Simple Tag</title>
@@ -1366,8 +1377,8 @@ Committed revision 351.
     <sect2 id="svn-ch-4-sect-6.2">
       <title>Creating a Complex Tag</title>
       
-      <para>Sometimes you may want your "snapshot" to be more
-        complicated than a single directory at a single
+      <para>Sometimes you may want your <quote>snapshot</quote> to be
+        more complicated than a single directory at a single
         revision.</para>
       
       <para>For example, pretend your project is much larger than our
@@ -1412,9 +1423,9 @@ Committed revision 352.
         collaborator to see them.  Instead of running <command>svn
         diff</command> and sending a patchfile (which won't capture
         tree changes), you can instead use <command>svn copy</command>
-        to "upload" your working copy to a private area of the
-        repository.  Your collaborator can then either checkout a
-        verbatim copy of your working copy, or use <command>svn
+        to <quote>upload</quote> your working copy to a private area
+        of the repository.  Your collaborator can then either checkout
+        a verbatim copy of your working copy, or use <command>svn
         merge</command> to receive your exact changes.</para>
 
     </sect2>
@@ -1454,8 +1465,8 @@ Committed revision 352.
 
       <para>If a repository contains multiple projects, admins
         typically index their layout by project (see <xref
-        linkend="svn-ch-5-sect-6.1"/> to read more about "project
-        roots"):</para>
+        linkend="svn-ch-5-sect-6.1"/> to read more about
+        <quote>project roots</quote>):</para>
 
 <screen>
 /paint/trunk
@@ -1535,14 +1546,15 @@ Committed revision 376.
         short lifetime: you may have created it to fix a bug or
         implement a new feature.  When your task is done, so is the
         branch.  In software development, though, it's also common to
-        have two "main" branches running side-by-side for very long
-        periods.  For example, suppose it's time to release a stable
-        <filename>calc</filename> project to the public, and you know
-        it's going to take a couple of months to shake bugs out of the
-        software.  You don't want people to add new features to the
-        project, but you don't want to tell all developers to stop
-        programming either.  So instead, you create a "stable" branch
-        of the software that won't change much:</para>
+        have two <quote>main</quote> branches running side-by-side for
+        very long periods.  For example, suppose it's time to release
+        a stable <filename>calc</filename> project to the public, and
+        you know it's going to take a couple of months to shake bugs
+        out of the software.  You don't want people to add new
+        features to the project, but you don't want to tell all
+        developers to stop programming either.  So instead, you create
+        a <quote>stable</quote> branch of the software that won't
+        change much:</para>
 
 <screen>
 $ svn copy http://svn.example.com/repos/calc/trunk \

@@ -151,14 +151,14 @@
           simplicity, thread-safety, support for cursors, and so
           on.</para>
 
-        <para>Berkeley DB provides real transaction support&mdash;
-          perhaps its most powerful feature.  Multiple processes
-          accessing your Subversion repositories don't have to worry
-          about accidentally clobbering each other's data.  The
-          isolation provided by the transaction system is such that
-          for any given operation, the Subversion repository code sees
-          a static view of the database&mdash;not a database that is
-          constantly changing at the hand of some other
+        <para>Berkeley DB provides real transaction
+          support&mdash;perhaps its most powerful feature.  Multiple
+          processes accessing your Subversion repositories don't have
+          to worry about accidentally clobbering each other's data.
+          The isolation provided by the transaction system is such
+          that for any given operation, the Subversion repository code
+          sees a static view of the database&mdash;not a database that
+          is constantly changing at the hand of some other
           process&mdash;and can make decisions based on that view.  If
           the decision made happens to conflict with what another
           process is doing, the entire operation is rolled back as if
@@ -258,7 +258,7 @@ $ svnadmin create path/to/repos
       machine where the repository resides to examine or modify
       aspects of the repository, and are in fact unable to perform
       tasks across a network.  A common mistake made by Subversion
-      newcomers is trying to pass URLs (even "local"
+      newcomers is trying to pass URLs (even <quote>local</quote>
       <literal>file:</literal> ones) to these two programs.</para>
 
     <para>So, after you've run the <command>svnadmin create</command>
@@ -1386,8 +1386,8 @@ $
           commands may be specified at a single command prompt,
           separated by a semicolon.  Also, the shell understands the
           notions of relative and absolute paths, and will properly
-          handle the "<literal>.</literal>" and
-          "<literal>..</literal>" special path components.</para>
+          handle the <literal>.</literal> and
+          <literal>..</literal> special path components.</para>
 
         <para>The <literal>youngest</literal> command displays the
           youngest revision.  This is useful for determining the range
@@ -1893,9 +1893,9 @@ $ svnadmin dump myrepos &gt; dumpfile
         contains all the data stored in your repository in the
         requested range of revisions.  Note that <command>svnadmin
         dump</command> is reading revision trees from the repository
-        just like any other "reader" process would (<command>svn
-        checkout</command>, for example.)  So it's safe to run this
-        command at any time.</para>
+        just like any other <quote>reader</quote> process would
+        (<command>svn checkout</command>, for example.)  So it's safe
+        to run this command at any time.</para>
 
       <para>The other subcommand in the pair, <command>svnadmin
         load</command>, parses the standard input stream as a

@@ -246,8 +246,8 @@ r12 | ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
           return anything on the day of the 27th.</para>
 
         <para>If you want to include the 27th in your search, you can
-          either specify the 27th with the time (<literal>"2002-11-27
-          23:59"</literal>), or just specify the next day
+          either specify the 27th with the time (<literal>2002-11-27
+          23:59</literal>), or just specify the next day
           (<literal>2002-11-28</literal>).</para>
         
       </sidebar>
@@ -1186,16 +1186,17 @@ $ svn status README
           <filename>.svn</filename> administrative areas.  This allows
           Subversion to report&mdash;and revert&mdash;local
           modifications to those files <emphasis>without network
-          access</emphasis>.  This cache (called the "text-base") also
-          allows Subversion to send the user's local modifications
-          during a commit to the server as a compressed delta against
-          the pristine version.  Having this cache is a tremendous
-          benefit&mdash;even if you have a fast net connection, it's
-          much faster to send only a file's changes rather than the
-          whole file to the server.  At first glance, this might not
-          seem that important, but imagine the repercussions if you
-          try to commit a one line change to a 400MB file and have to
-          send the whole file to the server!</para>
+          access</emphasis>.  This cache (called the
+          <quote>text-base</quote>) also allows Subversion to send the
+          user's local modifications during a commit to the server as
+          a compressed delta against the pristine version.  Having
+          this cache is a tremendous benefit&mdash;even if you have a
+          fast net connection, it's much faster to send only a file's
+          changes rather than the whole file to the server.  At first
+          glance, this might not seem that important, but imagine the
+          repercussions if you try to commit a one line change to a
+          400MB file and have to send the whole file to the
+          server!</para>
     </sidebar>
 
     </sect2>
@@ -1759,13 +1760,14 @@ $
         <para>At first glance, this seems like an error, but you need
           to remember that while revisions are repository-wide,
           <command>svn log</command> operates on a path in the
-          repository (if you supply no path, Subversion defaults to
-          <literal>"."</literal>).  As a result, if you're operating
-          in a subdirectory of your working copy and attempt to log a
-          revision where nothing beneath your current directory
-          changed, Subversion will give you an empty log.  If you want
-          to see what changed in that revision, try running the same
-          command from the top directory of your working copy.</para>
+          repository.  If you supply no path, Subversion uses the
+          current working directory as the default target.  As a
+          result, if you're operating in a subdirectory of your
+          working copy and attempt to log a revision where nothing
+          beneath your current directory changed, Subversion will give
+          you an empty log.  If you want to see what changed in that
+          revision, try running the same command from the top
+          directory of your working copy.</para>
 
       </sidebar>
            

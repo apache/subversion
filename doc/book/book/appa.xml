@@ -279,7 +279,7 @@ Head revision:   1066
       means that it doesn't yet exist in the working copy.)</para>
 
     <!-- ###TODO describe -u here as well as -uv. -u and -v use
-    different "long" formats and need to be documented
+    different <quote>long</quote> formats and need to be documented
     separately. Moreover, as you can combine -u and -v, it needs to be
     explained what each of them does. As -u is much more important
     than -v, and the example following that paragraph *is* about -u,

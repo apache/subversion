@@ -25,10 +25,10 @@
       Subversion is a relatively new version control system designed
       to be the successor to CVS.  The designers set out to win the
       hearts of CVS users in two ways: by creating an open-source
-      system with a design (and "look and feel") similar to CVS, and
-      by attempting to fix most of CVS's noticeable flaws.  While the
-      result isn't necessarily the next great evolution in version
-      control design, Subversion <emphasis>is</emphasis> very
+      system with a design (and <quote>look and feel</quote>) similar
+      to CVS, and by attempting to fix most of CVS's noticeable flaws.
+      While the result isn't necessarily the next great evolution in
+      version control design, Subversion <emphasis>is</emphasis> very
       powerful, very usable, and very flexible.
     </para>
 

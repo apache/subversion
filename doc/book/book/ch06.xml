@@ -30,11 +30,12 @@
     
     <para>Subversion was designed with an abstract network layer.
       This means that a repository can be programmatically accessed by
-      any sort of server process, and the client "repository access"
-      API allows programmers to write plugins that speak relevant
-      network protocols.  In theory, Subversion can sport an infinite
-      number of network implementations.  In practice, there are only
-      two servers at the time of writing.</para>
+      any sort of server process, and the client <quote>repository
+      access</quote> API allows programmers to write plugins that
+      speak relevant network protocols.  In theory, Subversion can
+      sport an infinite number of network implementations.  In
+      practice, there are only two servers at the time of
+      writing.</para>
     
     <para>Apache is an extremely popular webserver; using the
       <command>mod_dav_svn</command> module, Apache can access a
@@ -44,16 +45,16 @@
       program that speaks a custom protocol with clients.</para>
 
     <para>Note that Subversion, as an open-source project, does not
-      officially endorse any server as "primary" or "official".
-      Neither network implementation is treated as a second-class
-      citizen; each server has distinct advantages and disadvantages.
-      In fact, it's possible for different servers to run in parallel,
-      each accessing your repositories in its own way, and each
-      without hindering the other (see <xref
-      linkend="svn-ch-6-sect-5"/>).  Here's a brief overview and
-      comparison of the two available Subversion servers&mdash; as
-      an administrator, it's up to you to choose whatever works best
-      for you and your users.</para>
+      officially endorse any server as <quote>primary</quote> or
+      <quote>official</quote>.  Neither network implementation is
+      treated as a second-class citizen; each server has distinct
+      advantages and disadvantages.  In fact, it's possible for
+      different servers to run in parallel, each accessing your
+      repositories in its own way, and each without hindering the
+      other (see <xref linkend="svn-ch-6-sect-5"/>).  Here's a brief
+      overview and comparison of the two available Subversion
+      servers&mdash;as an administrator, it's up to you to choose
+      whatever works best for you and your users.</para>
       
 
     <table id="svn-ch-06-table-1">
@@ -176,14 +177,15 @@
         to the server.  Once authentication is complete, the server
         responds with the original information the client asked for.
         Notice that this system is different from systems like CVS,
-        where the client pre-emptively offers credentials ("logs in")
-        to the server before ever making a request.  In Subversion,
-        the server "pulls" credentials by challenging the client at
-        the appropriate moment, rather than the client "pushing" them.
-        This makes certain operations more elegant.  For example, if a
-        server is configured to allow anyone in the world to read a
-        repository, then the server will never issue an authentication
-        challenge when a client attempts to <command>svn
+        where the client pre-emptively offers credentials (<quote>logs
+        in</quote>) to the server before ever making a request.  In
+        Subversion, the server <quote>pulls</quote> credentials by
+        challenging the client at the appropriate moment, rather than
+        the client <quote>pushing</quote> them.  This makes certain
+        operations more elegant.  For example, if a server is
+        configured to allow anyone in the world to read a repository,
+        then the server will never issue an authentication challenge
+        when a client attempts to <command>svn
         checkout</command>.</para>
 
       <para>If the client's network request writes new data to the
@@ -212,7 +214,7 @@
         disk.  By default, whenever the commandline client
         successfully authenticates itself to a server, it saves the
         credentials in the user's private runtime configuration
-        area&mdash; in <literal>~/.subversion/auth/</literal> on
+        area&mdash;in <literal>~/.subversion/auth/</literal> on
         Unix-like systems or
         <literal>%APPDATA%/Subversion/auth/</literal> on Windows.
         (The runtime area is covered in more detail in <xref
@@ -227,14 +229,14 @@
         information.</para>
 
       <para>The security-paranoid people may be thinking to
-        themselves, "caching passwords on disk?  That's terrible!  You
-        should never do that!"  But please remain calm.  First, the
-        <literal>auth/</literal> caching area is permission-protected
-        so that only the user (owner) can read data from it, not the
-        world at large.  If that's still not safe enough for you, you
-        can disable credential caching.  To disable caching for a
-        single command, pass the <literal>--no-auth-cache</literal>
-        option:</para>
+        themselves, <quote>Caching passwords on disk?  That's
+        terrible!  You should never do that!</quote>  But please remain
+        calm.  First, the <literal>auth/</literal> caching area is
+        permission-protected so that only the user (owner) can read
+        data from it, not the world at large.  If that's still not
+        safe enough for you, you can disable credential caching.  To
+        disable caching for a single command, pass the
+        <literal>--no-auth-cache</literal> option:</para>
 
 <screen>
 $ svn commit -F log_msg.txt --no-auth-cache
@@ -308,11 +310,12 @@ END
         subcommands accept these options; however it is important to
         understand using these options <emphasis>does not</emphasis>
         automatically send credentials to the server.  As discussed
-        earlier, the server "pulls" credentials from the client when
-        it deems necessary; the client cannot "push" them at will.  If
-        a username and/or password are passed as options, they will
+        earlier, the server <quote>pulls</quote> credentials from the
+        client when it deems necessary; the client cannot
+        <quote>push</quote> them at will.  If a username and/or
+        password are passed as options, they will
         <emphasis>only</emphasis> be presented to the server if the
-        server requests them.  
+        server requests them.
 
           <footnote><para>Again, a common mistake is to misconfigure a
            server so that it never issues an authentication challenge.
@@ -421,8 +424,8 @@ svn           3690/udp   # Subversion
         <command>svnserve</command> process to service it.</para>
 
       <para>A second option is to run <command>svnserve</command> as a
-        standalone "daemon" process.  Use the <option>-d</option>
-        option for this:</para>
+        standalone <quote>daemon</quote> process.  Use the
+        <option>-d</option> option for this:</para>
 
         <screen>
 $ svnserve -d
@@ -432,25 +435,26 @@ $               # svnserve is now running, listening on port 3690
       <para>When running <command>svnserve</command> in daemon mode,
         you can use the <option>--listen-port=</option> and
         <option>--listen-host=</option> options to customize the exact
-        port and hostname to "bind" to.</para>
+        port and hostname to <quote>bind</quote> to.</para>
 
       <para>There's still a third way to invoke
-        <command>svnserve</command>, and that's in "tunnel mode", with
-        the <option>-t</option> option.  This mode assumes that a
-        remote-service program such as <command>RSH</command> or
-        <command>SSH</command> has successfully authenticated a user
-        and is now invoking a private <command>svnserve</command>
-        process <emphasis>as that user</emphasis>.  The
-        <command>svnserve</command> program behaves normally
-        (communicating via <emphasis>stdin</emphasis> and
-        <emphasis>stdout</emphasis>), and assumes that the traffic is
-        being automatically redirected over some sort of tunnel back
-        to the client.  When <command>svnserve</command> is invoked by
-        a tunnel agent like this, be sure that the authenticated user
-        has full read and write access to the repository database
-        files. (See <xref linkend="svn-ch-6-sidebar-1"/>.)  It's
-        essentially the same as a local user accessing the repository
-        via <literal>file:///</literal> URLs. </para>
+        <command>svnserve</command>, and that's in <quote>tunnel
+        mode</quote>, with the <option>-t</option> option.  This mode
+        assumes that a remote-service program such as
+        <command>RSH</command> or <command>SSH</command> has
+        successfully authenticated a user and is now invoking a
+        private <command>svnserve</command> process <emphasis>as that
+        user</emphasis>.  The <command>svnserve</command> program
+        behaves normally (communicating via <emphasis>stdin</emphasis>
+        and <emphasis>stdout</emphasis>), and assumes that the traffic
+        is being automatically redirected over some sort of tunnel
+        back to the client.  When <command>svnserve</command> is
+        invoked by a tunnel agent like this, be sure that the
+        authenticated user has full read and write access to the
+        repository database files. (See <xref
+        linkend="svn-ch-6-sidebar-1"/>.)  It's essentially the same as
+        a local user accessing the repository via
+        <literal>file:///</literal> URLs. </para>
 
       <sidebar id="svn-ch-6-sidebar-1">
         <title>Servers and Permissions:  A Word of Warning</title>        
@@ -527,15 +531,15 @@ $ svn checkout svn://host.example.com/project1
 
           <itemizedlist>
             <listitem><para>the client may be allowed to make requests
-                anonymously, without ever receiving an authentication
-                challenge, OR</para></listitem>
+              anonymously, without ever receiving an authentication
+              challenge, OR</para></listitem>
 
             <listitem><para>the client may be challenged for
-                authentication at any time, OR</para></listitem>
+              authentication at any time, OR</para></listitem>
 
-            <listitem><para>if operating in "tunnel mode", the client
-                will declare itself to be already externally
-                authenticated.</para></listitem>
+            <listitem><para>if operating in <quote>tunnel
+              mode</quote>, the client will declare itself to be
+              already externally authenticated.</para></listitem>
           </itemizedlist>
         </listitem>
 
@@ -561,11 +565,12 @@ $ svn checkout svn://host.example.com/project1
         mechanism for controlling authentication and authorization
         policies.  The file has the same format as other configuration
         files (see <xref linkend="svn-ch-7-sect-1"/>): section names
-        are marked by <literal>[square brackets]</literal>, comments
-        begin with "<literal>#</literal>" characters, and each section
-        contains specific variables that can be set (<literal>variable
-        = value</literal>).  Let's walk through this file and learn
-        how to use them.  </para>
+        are marked by square brackets (<literal>[</literal> and
+        <literal>]</literal>), comments begin with hashes
+        (<literal>#</literal>), and each section contains
+        specific variables that can be set (<literal>variable =
+        value</literal>).  Let's walk through this file and learn how
+        to use them.  </para>
 
       <sect3 id="svn-ch-6-sect-3.2.1">
         <title>Create a 'users' file and realm</title>
@@ -582,11 +587,11 @@ realm = example realm
 </screen>
 
         <para>The <literal>realm</literal> is a name that you define.
-            It tells clients which sort of "authentication namespace"
-            they're connecting to; the Subversion client displays it
-            in the authentication prompt, and uses it as a key (along
-            with the server's hostname and port) for caching
-            credentials on disk (see <xref
+            It tells clients which sort of <quote>authentication
+            namespace</quote> they're connecting to; the Subversion
+            client displays it in the authentication prompt, and uses
+            it as a key (along with the server's hostname and port)
+            for caching credentials on disk (see <xref
             linkend="svn-ch-6-sect-2.2"/>.)  The
             <literal>password-db</literal> variable points to a
             separate file that contains a list of usernames and
@@ -625,11 +630,11 @@ sally = barpassword
         allowed to do.  The variables <literal>anon-access</literal>
         and <literal>auth-access</literal> can be set to the values
         <literal>none</literal>, <literal>read</literal>, or
-        <literal>write</literal>.   "<literal>none</literal>"
-        restricts all access of any kind, "<literal>read</literal>"
-        allows read-only access to the repository, and
-        "<literal>write</literal>" allows complete read/write access
-        to the repository.  For example:</para>
+        <literal>write</literal>.  Setting the value to
+        <literal>none</literal>" restricts all access of any kind;
+        <literal>read</literal> allows read-only access to the
+        repository, and <literal>write</literal> allows complete
+        read/write access to the repository.  For example:</para>
 
 <screen>
 [general]
@@ -661,14 +666,14 @@ auth-access = write
 </screen>
 
         <para>Notice that <command>svnserve</command> only understands
-          "blanket" access control.  A user either has universal
-          read/write access, universal read access, or no access.
-          There is no detailed control over access to specific paths
-          within the repository.  For many projects and sites, this
-          level of access control is more than adequate.  However, if
-          you need per-directory access control, you'll need to use
-          Apache instead of <command>svnserve</command> as your server
-          process.</para>
+          <quote>blanket</quote> access control.  A user either has
+          universal read/write access, universal read access, or no
+          access.  There is no detailed control over access to
+          specific paths within the repository.  For many projects and
+          sites, this level of access control is more than adequate.
+          However, if you need per-directory access control, you'll
+          need to use Apache instead of <command>svnserve</command> as
+          your server process.</para>
 
       </sect3>
 
@@ -682,8 +687,8 @@ auth-access = write
         system accounts.  On the other hand, some administrators
         already have well-established SSH authentication frameworks in
         place.  In these situations, all of the project's users
-        already have system accounts and the ability to "SSH into" the
-        server machine.</para>
+        already have system accounts and the ability to <quote>SSH
+        into</quote> the server machine.</para>
 
       <para>It's easy to use SSH in conjunction with
       <command>svnserve</command>.  The client simply uses the
@@ -709,7 +714,7 @@ baz
         process on the remote machine, running as user 'harry'.  The
         <command>svnserve</command> command is being invoked in tunnel
         mode (<option>-t</option>) and all network protocol is being
-        "tunneled" over the encrypted connection by
+        <quote>tunneled</quote> over the encrypted connection by
         <command>ssh</command>, the tunnel-agent.
         <command>svnserve</command> is aware that it's running as user
         'harry', and if the client performs a commit, the
@@ -767,7 +772,7 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
         options.  In this case, accessing a
         <literal>svn+joessh://</literal> URL would invoke the
         particular SSH binary with <option>-p 29934</option> as
-        arguments&mdash; useful if you want the tunnel program to
+        arguments&mdash;useful if you want the tunnel program to
         connect to a non-standard port.  Second, it shows how to
         define a custom environment variable that can override the
         name of the tunneling program.  If we were to set the
@@ -788,11 +793,11 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
     
     <title>httpd, the Apache HTTP server</title>
 
-    <para>The Apache HTTP Server is a "heavy duty" network server that
-      Subversion can leverage.  Via a custom module,
-      <command>httpd</command> makes Subversion repositories available
-      to clients via the WebDAV/DeltaV protocol, which is an extension
-      to HTTP 1.1 (see <systemitem
+    <para>The Apache HTTP Server is a <quote>heavy duty</quote>
+      network server that Subversion can leverage.  Via a custom
+      module, <command>httpd</command> makes Subversion repositories
+      available to clients via the WebDAV/DeltaV protocol, which is an
+      extension to HTTP 1.1 (see <systemitem
       class="url">http://www.webdav.org/</systemitem> for more
       information.) This protocol takes the ubiquitous HTTP protocol
       that is core of the World Wide Web, and adds
@@ -1068,12 +1073,12 @@ ServerName svn.example.com
 &lt;/Location&gt;
 </screen>
 
-      <para>...then your repository is "anonymously" accessible to the
-         world.  Until you configure some authentication and
-         authorization policies, the Subversion repositories you make
-         available via the <filename>Location</filename> directive
-         will be generally accessible to everyone.  In other
-         words,</para>
+      <para>...then your repository is <quote>anonymously</quote>
+         accessible to the world.  Until you configure some
+         authentication and authorization policies, the Subversion
+         repositories you make available via the
+         <filename>Location</filename> directive will be generally
+         accessible to everyone.  In other words,</para>
       
       <itemizedlist>
         <listitem>
@@ -1835,8 +1840,9 @@ jane = r
           possible to access the repository via third-party DAV
           clients.  Most modern operating systems (Win32, OS X, and
           Linux) have the built-in ability to mount a DAV server as a
-          standard network "share".  This is a complicated topic;  for
-          details, read <xref linkend="svn-ap-c"/>.</para>
+          standard network <quote>share</quote>.  This is a
+          complicated topic; for details, read <xref
+          linkend="svn-ap-c"/>.</para>
 
         
       </sect3>
