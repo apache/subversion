@@ -583,13 +583,20 @@ count_components (const char *path)
 }
 
 
+struct file_mod_t
+{
+  svn_client_commit_item_t *item;
+  void *file_baton;
+};
+
+
 static svn_error_t *
 do_item_commit (const char *url,
                 svn_client_commit_item_t *item,
                 const svn_delta_editor_t *editor,
                 apr_array_header_t *db_stack,
                 int *stack_ptr,
-                apr_array_header_t *fb_stack,
+                apr_array_header_t *file_mods,
                 apr_pool_t *pool)
 {
   svn_wc_entry_t *entry = item->entry;
@@ -638,7 +645,6 @@ do_item_commit (const char *url,
           if (! file_baton)
             SVN_ERR (editor->open_file (url, parent_baton, entry->revision,
                                         pool, &file_baton));
-          SVN_ERR (editor->change_file_prop (file_baton, "p", NULL, pool));
         }
       else
         {
@@ -648,31 +654,39 @@ do_item_commit (const char *url,
                                    entry->revision, FALSE, pool));
               dir_baton = ((void **) db_stack->elts)[*stack_ptr - 1];
             }
-          SVN_ERR (editor->change_dir_prop (dir_baton, "p", NULL, pool));
         }
+
+      SVN_ERR (svn_wc_transmit_prop_deltas 
+               (item->path, kind, editor,
+                (kind == svn_node_dir) ? dir_baton : file_baton, pool));
     }
 
   /* Finally, handle text mods (in that we need to open a file if it
-     hasn't already been opened). */
-  if (kind == svn_node_file)
+     hasn't already been opened, and we need to put the file baton in
+     our FILES hash). */
+  if ((kind == svn_node_file) &&
+      (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
     {
-      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
-        {
-          if (! file_baton)
-            SVN_ERR (editor->open_file (url, parent_baton,
-                                        item->entry->revision,
-                                        pool, &file_baton));
-        }
-      else if (file_baton)
-        {
-          SVN_ERR (editor->close_file (file_baton));
-          file_baton = NULL;
-        }
+      struct file_mod_t mod;
+
+      if (! file_baton)
+        SVN_ERR (editor->open_file (url, parent_baton,
+                                    item->entry->revision,
+                                    pool, &file_baton));
+
+      /* Copy in the contents of the mod structure to the array.  Note
+         that this is NOT a copy of a pointer reference, but a copy of
+         the structure's contents!! */
+      mod.item = item;
+      mod.file_baton = file_baton;
+      (*((struct file_mod_t *) apr_array_push (file_mods))) = mod;
+      return SVN_NO_ERROR;
     }
 
-  /* If we got a file baton, add it to the file baton stack. */
+  /* Close any outstanding file batons that didn't get caught by the
+     "has local mods" conditional above. */
   if (file_baton)
-    (*((void **) apr_array_push (fb_stack))) = file_baton;
+    SVN_ERR (editor->close_file (file_baton));
   
   return SVN_NO_ERROR;
 }
@@ -697,7 +711,8 @@ svn_client__do_commit (apr_array_header_t *commit_items,
 {
   svn_stringbuf_t *base_url;
   apr_array_header_t *db_stack;
-  apr_array_header_t *fb_stack = apr_array_make (pool, 4, sizeof (void *));
+  apr_array_header_t *file_mods 
+    = apr_array_make (pool, 1, sizeof (struct file_mod_t));
   int i, stack_ptr = 0;
 
   /* Sort and condense our COMMIT_ITEMS. */
@@ -737,10 +752,8 @@ svn_client__do_commit (apr_array_header_t *commit_items,
            the current item).  ***/
       if ((i > 0) && (last_url->len > common->len))
         {
-          int j, count;
-
-          count = count_components (last_url->data + common->len + 1);
-          for (j = 0; j < count; j++)
+          int count = count_components (last_url->data + common->len + 1);
+          while (count--)
             {
               SVN_ERR (pop_stack (db_stack, &stack_ptr, editor));
             }
@@ -784,10 +797,29 @@ svn_client__do_commit (apr_array_header_t *commit_items,
 
       /*** Step D - Commit the item.  ***/
       SVN_ERR (do_item_commit (item_url->data, item, editor,
-                               db_stack, &stack_ptr, fb_stack, pool));
+                               db_stack, &stack_ptr, file_mods, pool));
 
       /* Save our state for the next iteration. */
       last_url = (item->entry->kind == svn_node_dir) ? item_url : item_dir;
+    }
+
+  /* Close down any remaining open directory batons. */
+  while (stack_ptr--)
+    {
+      SVN_ERR (pop_stack (db_stack, &stack_ptr, editor));
+    }
+
+  /* Transmit outstanding text deltas. */
+  for (i = 0; i < file_mods->nelts; i++)
+    {
+      struct file_mod_t *mod
+        = ((struct file_mod_t *) file_mods->elts) + i;
+      svn_client_commit_item_t *item = mod->item;
+      void *file_baton = mod->file_baton;
+
+      printf ("   Sending : %s\n", item->url->data);
+      SVN_ERR (svn_wc_transmit_text_deltas 
+               (item->path, item->entry, editor, file_baton, pool));
     }
 
   /* Close the edit. */
