@@ -17,46 +17,32 @@ package org.tigris.subversion.lib;
  *
  */
 
-public final class Revision {
-    public final static long INVALID_REVISION=-1;
-    private final long revision;
+public final class Schedule 
+{
+    /**
+     * IMPORTANT: KEEP THIS IN SYNC WITH THE
+     * DEFINITION OF svn_wc_schedule_t
+     */
+    public final static int NORMAL=0;
+    public final static int ADD=1;
+    public final static int DELETE=2;
+    public final static int REPLACE=3;
 
-    public Revision(long _revision)
-    {
-	super();
+    private final int schedule;
 
-	revision = _revision;
-    }
+    public Schedule(int _schedule) 
+	{
+	    super();
+	    schedule = _schedule;
+	}
 
-    public Revision(Revision _revision)
-    {
-	this(_revision.toLong());
-    }
+    public Schedule(Schedule _schedule)
+	{
+	    this(_schedule.getSchedule());
+	}
 
-    public static boolean isValidRevision(Revision _revision)
-    {
-	return isValidRevision(_revision.toLong());
-    }
-
-    public static boolean isValidRevision(long _revision)
-    {
-	return _revision >= 0;
-    }
-
-    public final long toLong()
-    {
-	return revision;
-    }
-
-    public static long toLong(Revision _revision)
-    {
-	return _revision.toLong();
-    }
+    public final int getSchedule()
+	{
+	    return schedule;
+	}
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../../../../svn-dev.el")
- * end: 
- */
-
