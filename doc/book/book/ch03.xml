@@ -45,12 +45,11 @@
     <title>Import</title>
 
     <para>You use <command>svn import</command> to import a new
-    project into a Subversion repository.  While this is most likely
-    the very first thing you will do when you set up your Subversion
-    server, it's not something that happens very often.  For a
-    detailed description of import, see <xref
-    linkend="svn-ch-3-sect-7.3"/> later in this chapter.
-    </para>
+      project into a Subversion repository.  While this is most likely
+      the very first thing you will do when you set up your Subversion
+      server, it's not something that happens very often.  For a
+      detailed description of import, see <xref
+      linkend="svn-ch-3-sect-7.3"/> later in this chapter.</para>
 
   </sect1>
 
@@ -1170,13 +1169,14 @@ $ svn status foo
 
         <note>
           <para><command>svn revert</command>
-          <replaceable>ITEM</replaceable> has exactly the same effect as
-          deleting <replaceable>ITEM</replaceable> from your working
-          copy and then running <command>svn update -r BASE</command>
-          <replaceable>ITEM</replaceable>.  However, if you're reverting
-          a file, <command>svn revert</command> has one very noticeable
-          difference&mdash;it doesn't have to communicate with the
-          repository to restore your file.</para>
+            <replaceable>ITEM</replaceable> has exactly the same
+            effect as deleting <replaceable>ITEM</replaceable> from
+            your working copy and then running <command>svn update -r
+            BASE</command> <replaceable>ITEM</replaceable>.  However,
+            if you're reverting a file, <command>svn revert</command>
+            has one very noticeable difference&mdash;it doesn't have
+            to communicate with the repository to restore your
+            file.</para>
         </note>
 
         <para>Or perhaps you mistakenly removed a file from version
@@ -1234,8 +1234,8 @@ $ svn status README
       <title>Resolve Conflicts (Merging Others' Changes)</title>
            
       <para>We've already seen how <command>svn status -u</command>
-          can predict conflicts.  Suppose you run <command>svn
-          update</command> and some interesting things occur:</para>
+        can predict conflicts.  Suppose you run <command>svn
+        update</command> and some interesting things occur:</para>
       
       <screen>
 $ svn update
@@ -1366,14 +1366,12 @@ svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict
           <listitem>
             <para>Merge the conflicted text <quote>by hand</quote> (by
               examining and editing the conflict markers within the
-              file).
-            </para>
+              file).</para>
           </listitem>
 
           <listitem>
             <para>Copy one of the temporary files on top of your
-        working file.
-            </para>
+              working file.</para>
           </listitem>
 
           <listitem>
@@ -1448,7 +1446,7 @@ Prosciutto
 </screen>
 
         <para>The text between the second and third sets of conflict
-        markers is the text from Sally's commit:</para>
+          markers is the text from Sally's commit:</para>
 
         <screen>
 =======
@@ -1522,8 +1520,8 @@ $ svn resolved sandwich.txt
         <title>Punting: Using <command>svn revert</command></title>
 
         <para>If you get a conflict, and upon examination decide that
-        you want to throw out your changes and start your edits again,
-        just revert your changes:</para>
+          you want to throw out your changes and start your edits
+          again, just revert your changes:</para>
 
         <screen>
 $ svn revert sandwich.txt
@@ -1533,7 +1531,7 @@ sandwich.txt
 </screen>
 
         <para>Note that when you revert a conflicted file, you don't
-        have to run <command>svn resolved</command>.</para>
+          have to run <command>svn resolved</command>.</para>
 
       </sect3>
 
@@ -1556,13 +1554,13 @@ sandwich.txt
         changes to the repository.</para>
       
       <para>The <command>svn commit</command> command sends all of
-           your changes to the repository.  When you commit a change,
-           you need to supply a <firstterm>log message</firstterm>,
-           describing your change.  Your log message will be attached
-           to the new revision you create.  If your log message is
-           brief, you may wish to supply it on the command line using
-           the <option>--message</option> (or
-           <option>-m</option>) option:</para>
+        your changes to the repository.  When you commit a change, you
+        need to supply a <firstterm>log message</firstterm>,
+        describing your change.  Your log message will be attached to
+        the new revision you create.  If your log message is brief,
+        you may wish to supply it on the command line using the
+        <option>--message</option> (or <option>-m</option>)
+        option:</para>
            
       <screen>
 $ svn commit --message "Corrected number of cheese slices."
@@ -1740,8 +1738,8 @@ $ svn log -r 19:5            # shows logs 5 through 19 in reverse order
 $ svn log -r 8               # shows log for revision 8
 </screen>
         
-      <para>You can also examine the log history of a single file or directory.
-      For example:</para>
+      <para>You can also examine the log history of a single file or
+        directory.  For example:</para>
            
       <screen>
 $ svn log foo.c
@@ -1817,7 +1815,7 @@ $
       
       <para>In fact, it turns out that there are
         <emphasis>three</emphasis> distinct uses of <command>svn
-          diff</command>:</para>
+        diff</command>:</para>
 
       <itemizedlist>
 
@@ -1911,12 +1909,12 @@ $
 </screen>
           
         <para>Not only can you use <command>svn diff</command> to
-           compare files in your working copy to the repository, but
-           if you supply a URL argument, you can examine the
-           differences between items in the repository without even
-           having a working copy.  This is especially useful if you
-           wish to inspect changes in a file when you don't have a
-           working copy on your local machine:</para>
+          compare files in your working copy to the repository, but if
+          you supply a URL argument, you can examine the differences
+          between items in the repository without even having a
+          working copy.  This is especially useful if you wish to
+          inspect changes in a file when you don't have a working copy
+          on your local machine:</para>
            
         <screen>
 $ svn diff --revision 4:5 http://svn.red-bean.com/repos/example/trunk/text/rules.txt
@@ -2036,8 +2034,8 @@ $ svn update --revision 1729 # Updates an existing working copy to r1729
     <title>Other Useful Commands</title>
 
       <para>While not as frequently used as the commands previously
-      discussed in this chapter, you will occasionally need these
-      commands.</para>
+        discussed in this chapter, you will occasionally need these
+        commands.</para>
 
     <sect2 id="svn-ch-3-sect-7.1">
       <title><command>svn cleanup</command></title>
@@ -2119,14 +2117,14 @@ subdir/
   <sect1 id="svn-ch-3-sect-8">
     <title>Summary</title>
         
-      <para>Now we've covered most of the Subversion client
-          commands.  Notable exceptions are those dealing with
-          branching and merging (see <xref linkend="svn-ch-4"/>) and
-          properties (see <xref linkend="svn-ch-7-sect-2"/>).
-          However, you may want to take a moment to skim through <xref
-          linkend="svn-ch-9"/> to get an idea of all the many
-          different commands that Subversion has&mdash;and how you can
-          use them to make your work easier.</para>
+      <para>Now we've covered most of the Subversion client commands.
+        Notable exceptions are those dealing with branching and
+        merging (see <xref linkend="svn-ch-4"/>) and properties (see
+        <xref linkend="svn-ch-7-sect-2"/>). However, you may want to
+        take a moment to skim through <xref linkend="svn-ch-9"/> to
+        get an idea of all the many different commands that Subversion
+        has&mdash;and how you can use them to make your work
+        easier.</para>
 
   </sect1>
 
