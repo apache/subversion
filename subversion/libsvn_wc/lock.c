@@ -28,7 +28,7 @@
 
 static svn_error_t *
 svn_wc__do_adm_close (svn_wc_adm_access_t *adm_access,
-                      svn_boolean_t abort);
+                      svn_boolean_t preserve_lock);
 
 static svn_error_t *
 svn_wc__lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
