@@ -1044,6 +1044,7 @@ txn_body_write_close_rep (void *baton, trail_t *trail)
   struct rep_write_baton *wb = baton;
   unsigned char digest[MD5_DIGESTSIZE];
   svn_fs__representation_t *rep;
+  struct apr_md5_ctx_t tmp_context;
 
   /* ### Thought: if we fixed apr-util MD5 contexts to allow repeated
      digestification, then we wouldn't need a stream close function at
@@ -1053,7 +1054,16 @@ txn_body_write_close_rep (void *baton, trail_t *trail)
      a checksum mismatch, it just happens that our code never tries to
      do that anyway. */
 
-  apr_md5_final (digest, &(wb->md5_context));
+  /* apr_md5_final() invalidates the md5_context structure.  But if we
+     ever retry_txn(), this whole routine may run again, so we need to
+     preserve our original md5_context. 
+
+     ### Because apr_md5_ctx_t is transparent and shallow, the
+     memcpy() below is safe.  But ideally, we'd want something like
+     apr_md5_ctx_dup() in the future.     
+  */
+  memcpy (&tmp_context, &(wb->md5_context), sizeof(tmp_context));
+  apr_md5_final (digest, &tmp_context);
 
   SVN_ERR (svn_fs__bdb_read_rep (&rep, wb->fs, wb->rep_key, trail));
   memcpy (rep->checksum, digest, MD5_DIGESTSIZE);
