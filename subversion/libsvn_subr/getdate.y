@@ -76,16 +76,18 @@
    unportable getdate.c's), but that seems to cause as many problems
    as it solves.  */
 
-extern struct tm	*gmtime();
-extern struct tm	*localtime();
+/* ### if these prototypes don't match the system's prototypes all
+ * this will break. */
+extern struct tm	*gmtime(const time_t *t);
+extern struct tm	*localtime(const time_t *t);
 
 #define yyparse getdate_yyparse
 #define yylex getdate_yylex
 #define yyerror getdate_yyerror
 
-static int yyparse ();
-static int yylex ();
-static int yyerror ();
+static int yyparse (void);
+static int yylex (void);
+static int yyerror (const char *s);
 
 #define EPOCH		1970
 #define HOUR(x)		((time_t)(x) * 60)
@@ -96,7 +98,7 @@ static int yyerror ();
 **  An entry in the lexical lookup table.
 */
 typedef struct _TABLE {
-    char	*name;
+    const char	*name;
     int		type;
     time_t	value;
 } TABLE;
@@ -555,7 +557,7 @@ static TABLE const MilitaryTable[] = {
 /* ARGSUSED */
 static int
 yyerror(s)
-    char	*s;
+    const char	*s;
 {
   return 0;
 }
