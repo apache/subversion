@@ -70,16 +70,14 @@
 @titlepage
 @title @titlefont{Subversion User Manual}
 @c @subtitle{A New Version Control System}
-@c @author Jim Blandy <@email{jimb@@redhat.com}>
-@author written by various Subversion developers
-
+@author Subversion Development Project @url{http://subversion.tigris.org}
 
 @page
 @vskip 0pt plus 1filll
 Copyright @copyright{} 2001 CollabNet, Inc. @*
 See @xref{License} for details. @*
 First version: June 2001.  @*
-Last updated:  $Date: 2001-06-06 17:53:39 $
+Last updated:  $Date: 2001-07-20 21:57:43 $
 
 @end titlepage
 @c -----------------------------------------------------------------
@@ -101,16 +99,19 @@ This manual describes the behavior of the Subversion command-line client.
 @c  If you have a set of behaviors to document, just create a new
 @c  chapter document and @include it below.  We'll rearrange all the
 @c  information some other day.
+
 @menu
 * Model::                     The versioning model used by Subversion.
 * Adds::                      How file and directory additions work.
 * Removals::                  How file and directory removals work.
+* Directory Versioning::      Why versioning directories is tricky.
 * License::                   You may modify and redistribute this document.
 @end menu
 
 @include model.texi
 @include adds.texi
 @include removals.texi
+@include dirversioning.texi
 @include license.texi
 
 @bye
