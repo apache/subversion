@@ -7,14 +7,16 @@ import string
 import sys
 from svn import core, fs, delta, repos
 
-# Set to 1 to use msgfmt to check the syntax of the po file
-USE_MSGFMT = 0
+# Set to the path of the 'msgfmt' executable to use msgfmt to check
+# the syntax of the po file
 
-if USE_MSGFMT:
+USE_MSGFMT = None
+
+if USE_MSGFMT is not None:
   import popen2
   class MsgFmtChecker:
     def __init__(self):
-      self.pipe = popen2.Popen3("msgfmt -c -o /dev/null -")
+      self.pipe = popen2.Popen3("%s -c -o /dev/null -" % (USE_MSGFMT))
       self.pipe.fromchild.close()
       self.io_error = 0
 
