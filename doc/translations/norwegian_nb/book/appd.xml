@@ -161,13 +161,13 @@
       <varlistentry>
         <term>cvs2svn (<systemitem
           class="url">http://cvs2svn.tigris.org/</systemitem>)</term>
-       <listitem><para>CVS-to-Subversion conversion</para></listitem>
+        <listitem><para>CVS-to-Subversion conversion</para></listitem>
       </varlistentry>
 
       <varlistentry>
         <term>vss2svn (<systemitem
           class="url">http://vss2svn.tigris.org/</systemitem>)</term>
-       <listitem><para>Microsoft SourceSafe to Subversion conversion</para></listitem>
+        <listitem><para>Microsoft SourceSafe to Subversion conversion</para></listitem>
       </varlistentry>
 
       <varlistentry>
@@ -190,7 +190,7 @@
       <varlistentry>
         <term>Kwiki (<systemitem
           class="url">http://www.kwiki.org/</systemitem>)</term>
-       <listitem><para>Wiki with a Subversion backup
+        <listitem><para>Wiki with a Subversion backup
           backend</para></listitem>
       </varlistentry>
 
@@ -212,7 +212,7 @@
       <varlistentry>
         <term>Subwiki (<systemitem
           class="url">http://subwiki.tigris.org/</systemitem>)</term>
-       <listitem><para>Wiki that uses Subversion for its data
+        <listitem><para>Wiki that uses Subversion for its data
           repository</para></listitem>
       </varlistentry>
 

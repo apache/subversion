@@ -1024,15 +1024,22 @@ Checked out revision 1.
 
     <itemizedlist>
       <!-- @ENGLISH {{{
-      <listitem><para>Enter your working copy and edit a
-      file's contents.</para></listitem>
-      <listitem><para>Run <command>svn diff</command> to see unified
-      diff output of your changes.</para></listitem>
-      <listitem><para>Run <command>svn commit</command> to commit the
-      new version of your file to the repository.</para></listitem>
-      <listitem><para>Run <command>svn update</command> to bring your
-      working copy <quote>up-to-date</quote> with the repository.
-      </para></listitem>
+      <listitem>
+        <para>Enter your working copy and edit a file's
+          contents.</para>
+      </listitem>
+      <listitem>
+        <para>Run <command>svn diff</command> to see unified diff
+          output of your changes.</para>
+      </listitem>
+      <listitem>
+        <para>Run <command>svn commit</command> to commit the new
+          version of your file to the repository.</para>
+      </listitem>
+      <listitem>
+        <para>Run <command>svn update</command> to bring your working
+          copy <quote>up-to-date</quote> with the repository.</para>
+      </listitem>
       @ENGLISH }}} -->
       <listitem>
         <para>G&#229; inn i arbeidskopien og rediger innholdet av en 

@@ -1229,7 +1229,7 @@ $
           For example, say you have the following output from
           <command>svn status</command>:</para>
 
-       <screen>
+        <screen>
 $ svn status calc
  M     calc/button.c
 ?      calc/calculator
@@ -2060,18 +2060,18 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
         the new version of the library, with absolutely no
         complications or conflicts.</para>
 
-     <para>But things aren't always that simple, and in fact it is
-       quite common for source files to get moved around between
-       releases of software.  This complicates the process of ensuring
-       that our modifications are still valid for the new version of
-       code, and can quickly degrade into a situation where we have to
-       manually recreate our customizations in the new version.  Once
-       Subversion knows about the history of a given source
-       file&mdash;including all its previous locations&mdash;the
-       process of merging in the new version of the library is pretty
-       simple.  But we are responsible for telling Subversion how the
-       source file layout changed from vendor drop to vendor
-       drop.</para>
+      <para>But things aren't always that simple, and in fact it is
+        quite common for source files to get moved around between
+        releases of software.  This complicates the process of
+        ensuring that our modifications are still valid for the new
+        version of code, and can quickly degrade into a situation
+        where we have to manually recreate our customizations in the
+        new version.  Once Subversion knows about the history of a
+        given source file&mdash;including all its previous
+        locations&mdash;the process of merging in the new version of
+        the library is pretty simple.  But we are responsible for
+        telling Subversion how the source file layout changed from
+        vendor drop to vendor drop.</para>
 
     </sect2>
 
