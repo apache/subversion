@@ -90,14 +90,6 @@ the section for unapproved changes.)
       Votes:
        +1: ghudson, kfogel, bliss
 
-    * Issue #1713
-      Change svn_filesize_t to a signed value.
-      Justification:  Inconsistent with what we support and breaks
-        SVN_INVALID_FILESIZE.
-      Votes:
-       +1: ghudson, kfogel, bliss, dionisos
-
-
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
 These changes are to Subversion bindings.  Many are dependent on

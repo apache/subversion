@@ -114,13 +114,13 @@ typedef long int svn_revnum_t;
 
 
 /** The size of a file in the Subversion FS. */
-typedef apr_uint64_t svn_filesize_t;
+typedef apr_int64_t svn_filesize_t;
 
 /** The 'official' invalid file size constant. */
 #define SVN_INVALID_FILESIZE ((svn_filesize_t) -1)
 
 /** In @c printf()-style functions, format file sizes using this. */
-#define SVN_FILESIZE_T_FMT APR_UINT64_T_FMT
+#define SVN_FILESIZE_T_FMT APR_INT64_T_FMT
 
 /* Parse a base-10 numeric string into a 64-bit unsigned numeric value. */
 /* NOTE: Private. For use by Subversion's own code only. See issue #1644. */
