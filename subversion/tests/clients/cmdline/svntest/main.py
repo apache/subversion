@@ -217,7 +217,7 @@ def run_one_test(n, test_list):
 # Three Modes, dependent on sys.argv:
 # 1) No arguments: all tests are run
 # 2) Number 'n' as arg: only test n is run
-# 3) String "list" as arg: test description is displayed with number
+# 3) String "list" as arg: test numbers & descriptions are listed
 def run_tests(test_list):
   "Main routine to run all tests in TEST_LIST."
 
@@ -243,7 +243,8 @@ def run_tests(test_list):
   got_error = 0
   for n in range(len(test_list)):
     if n:
-      got_error = run_one_test(n, test_list)
+      if run_one_test(n, test_list):
+        got_error = 1
   return got_error
 
 
@@ -266,5 +267,5 @@ if os.path.exists(temp_dir):
 
 ### End of file.
 # local variables:
-# eval: (load-file "../../../svn-dev.el")
+# eval: (load-file "../../../../svn-dev.el")
 # end:
