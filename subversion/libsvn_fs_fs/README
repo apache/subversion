@@ -90,9 +90,10 @@ Workplan
      assumption that node-revs contain only deltas against the empty
      base.  Use the tool from (2) to generate test cases to ensure
      that the code works.
-     (Status: Substantial progress.)
+     (Status: Done.)
 
   4. Develop a format for the directory part of mutable transactions.
+     (Status: Started.)
 
   5. Produce some test case transactions, either using an extension of
      the tool from (2) or by hand.
