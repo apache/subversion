@@ -137,7 +137,6 @@ replace_directory (svn_stringbuf_t *name,
 static svn_error_t *
 close_directory (void *dir_baton)
 {
-  svn_error_t *err;
   struct dir_baton *d = dir_baton;
   char statchar_buf[3] = "_ ";
 
