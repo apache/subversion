@@ -183,7 +183,7 @@ Changes to svn_delta_edit_fns_t:
 
    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    Change #1:  New editor creation/finishing methods
-   STATUS: Will be done by Ben, Mike, or self, unless someone volunteers.
+   STATUS: Being done by Karl.
    The Way It Works Now:
       When created, an {editor, edit_baton} are returned to the editor's
       driver.  The first call is always replace_root(), and when
@@ -449,3 +449,44 @@ Changes to svn_delta_edit_fns_t:
       I think it's all been explained above.  Other folks, feel free to
       add to this explanation.
 
+   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   Change #8:  Single point of editor creation 
+   STATUS: Will be done by Karl.
+   Status Quo:
+        Each editor "implementation" allocates its own static editor
+        structure.
+   
+   Proposed Change:
+        In the delta library, a single routine returns a "dummy" editor
+        structure full of dummy pointers.  The editor-implementor then
+        fills only the pointers it cares about.
+      
+        (See jimb's description at the bottom of this message)
+   
+   Rationale:
+        Easy to extend the editor when we need to;  no more re-writing of
+        every editor implementation every time we do so.
+   
+        Because it's a C struct, we should also remain backwards
+        binary-compatible if we keep slapping fields onto the end.  :)
+   
+   
+   Jim Blandy <jimb@zwingli.cygnus.com> writes:
+   > Instead, libsvn_delta should provide the following function:
+   > 
+   > /* Allocate and return a new function table for the `dummy' editor ---
+   >    one which ignores every function called on it.  This editor uses
+   >    the null pointer for all its batons.  All function pointers are
+   >    initialized to dummy functions.  You needn't test whether a
+   >    function pointer is non-zero before using it --- you can just call
+   >    the function.
+   > 
+   >    Real editors should construct their own function tables by calling
+   >    this function, and then installing pointers to their own functions
+   >    for the editor operations they care about.  This rule allows us to
+   >    extent svn_delta_edit_fns_t with new functions without having to
+   >    change the code for all the editors that don't care about the new
+   >    function.
+   > 
+   >    Allocate the function table in POOL.  */
+   > svn_delta_edit_fns_t *svn_delta_make_edit_fns (apr_pool_t *pool);
