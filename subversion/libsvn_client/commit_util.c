@@ -292,9 +292,9 @@ harvest_committables (apr_hash_t *committables,
     {
       /* If the commit item is a directory, lock it, else lock its parent. */
       if (entry->kind == svn_node_dir)
-        lock_dir (locked_dirs, path, pool);
+        SVN_ERR (lock_dir (locked_dirs, path, pool));
       else
-        lock_dir (locked_dirs, p_path, pool);
+        SVN_ERR (lock_dir (locked_dirs, p_path, pool));
 
       /* Finally, add the committable item. */
       add_committable (committables, path, entry->kind, url,
