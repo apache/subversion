@@ -86,16 +86,43 @@ AC_DEFUN(SVN_FIND_JDK,
     JAR="$JAVA_BIN/jar"
 
     dnl Prefer Jikes (for speed) if available.
-    dnl ### Improve following test.
-    for jikes in /usr/bin/jikes /usr/local/bin/jikes; do
-      if test -x "$jikes"; then
-        JAVAC="$jikes"
-        JAVA_CLASSPATH="$JDK/jre/lib"
-        for jar in $JDK/jre/lib/*.jar; do
-          JAVA_CLASSPATH="$JAVA_CLASSPATH:$jar"
-        done
+    jikes_options="/usr/local/bin/jikes /usr/bin/jikes"
+    AC_ARG_WITH(jikes,
+                AC_HELP_STRING([--with-jikes=PATH],
+                               [Specify the path to a jikes binary to use
+                                it as your Java compiler.  The default is to
+                                look for jikes (PATH optional).  This behavior
+                                can be switched off by supplying 'no'.]),
+    [
+        if test "$withval" != "no" -a "$withval" != "yes"; then
+          dnl Assume a path was provided.
+          jikes_options="$withval $jikes_options"
+        fi
+        requested_jikes="$withval"  # will be 'yes' if path unspecified
+    ])
+    if test "$requested_jikes" != "no"; then
+      dnl Look for a usable jikes binary.
+      for jikes in $jikes_options; do
+        if test -z "$jikes_found" -a -x "$jikes"; then
+          jikes_found="yes"
+          JAVAC="$jikes"
+          JAVA_CLASSPATH="$JDK/jre/lib"
+          for jar in $JDK/jre/lib/*.jar; do
+            JAVA_CLASSPATH="$JAVA_CLASSPATH:$jar"
+          done
+        fi
+      done
+    fi
+    if test -n "$requested_jikes" -a "$requested_jikes" != "no"; then
+      dnl Jikes was explicitly requested.  Verify that it was provided.
+      if test -z "$jikes_found"; then
+        AC_MSG_ERROR([Could not find a usable version of Jikes])
+      elif test -n "$jikes_found" -a "$requested_jikes" != "yes" \
+                -a "$JAVAC" != "$requested_jikes"; then
+        AC_MSG_WARN([--with-jikes PATH was invalid, substitute found])
       fi
-    done
+    fi
+
     dnl Add javac flags.
     if test "$enable_debugging" = "yes"; then
       JAVAC_FLAGS="-g"
