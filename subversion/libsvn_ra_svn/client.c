@@ -777,7 +777,7 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   /* Parameter 3: end rev (optional) */
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  if (SVN_IS_VALID_REVNUM(start))
+  if (SVN_IS_VALID_REVNUM(end))
     SVN_ERR(svn_ra_svn_write_number(conn, pool, end));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   /* Parameter 4: changed-paths */
