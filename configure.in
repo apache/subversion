@@ -509,6 +509,20 @@ AC_SUBST(SVN_RA_LIB_DEPS)
 AC_SUBST(SVN_RA_LIB_LINK)
 
 
+dnl Possibly compile JavaHL (experimental)
+do_javahl_build=no
+AC_ARG_ENABLE(javahl,
+  AC_HELP_STRING([--enable-javahl],
+             [Enable compilation of Java high-level bindings (requires C++)]),
+  [ if test "$enableval" = "yes" ; then
+        do_javahl_build="yes"
+    fi
+  ])
+
+if test "$do_javahl_build" = "yes"; then
+  AC_PROG_CXX
+fi
+
 dnl Pass some config data ----------------------------
 
 AC_SUBST(abs_builddir)

@@ -142,6 +142,11 @@ class GeneratorBase:
               self.graph.add(DT_SWIG_C, sources[0], include_deps[short][0])
         continue
 
+      if isinstance(sources[0], ObjectFile) or \
+        isinstance(sources[0], HeaderFile):
+        if sources[0].source_generated == 1:
+          continue
+
       hdrs = [ ]
       for short in _find_includes(sources[0].filename, include_deps):
         self.graph.add(DT_OBJECT, objname, include_deps[short][0])
@@ -259,6 +264,7 @@ class ObjectFile(DependencyNode):
   def __init__(self, filename, compile_cmd = None):
     DependencyNode.__init__(self, filename)
     self.compile_cmd = compile_cmd
+    self.source_generated = 0
 
 class SWIGObject(ObjectFile):
   def __init__(self, filename, lang):
@@ -268,6 +274,12 @@ class SWIGObject(ObjectFile):
     ### hmm. this is Makefile-specific
     self.compile_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
     self.source_generated = 1
+
+class HeaderFile(DependencyNode):
+  def __init__(self, filename, classname = None, compile_cmd = None):
+    DependencyNode.__init__(self, filename)
+    self.classname = classname
+    self.compile_cmd = compile_cmd
 
 class SourceFile(DependencyNode):
   def __init__(self, filename, reldir):
@@ -348,9 +360,7 @@ class TargetLinked(Target):
     self.install = options.get('install')
     self.compile_cmd = options.get('compile-cmd')
     self.sources = options.get('sources', '*.c')
-
-    ### hmm. this is Makefile-specific
-    self.link_cmd = '$(LINK)'
+    self.link_cmd = options.get('link-cmd', '$(LINK)')
 
     self.external_lib = options.get('external-lib')
     self.external_project = options.get('external-project')
@@ -380,10 +390,12 @@ class TargetLinked(Target):
     sources.sort()
 
     for src, reldir in sources:
-      if src[-2:] != '.c':
+      if src[-2:] == '.c':
+        objname = src[:-2] + self.objext
+      elif src[-4:] == '.cpp':
+        objname = src[:-4] + self.objext
+      else:
         raise GenError('ERROR: unknown file extension on ' + src)
-
-      objname = src[:-2] + self.objext
 
       ofile = ObjectFile(objname, self.compile_cmd)
 
@@ -590,6 +602,132 @@ class TargetSWIGProject(TargetProject):
     TargetProject.__init__(self, name, options, cfg, extmap)
     self.lang = options.get('lang')
 
+class TargetJava(TargetLib):
+  def __init__(self, name, options, cfg, extmap):
+    TargetLib.__init__(self, name, options, cfg, extmap)
+    self.link_cmd = options.get('link-cmd')
+    self.deps = [ ]
+    self.filename = ''
+
+class TargetJavaHeaders(TargetJava):
+  def __init__(self, name, options, cfg, extmap):
+    TargetJava.__init__(self, name, options, cfg, extmap)
+    self.objext = '.class'
+    self.javah_objext = '.h'
+    self.headers = options.get('headers')
+    self.classes = options.get('classes')
+    self.package = options.get('package')
+    self.extra_classes = string.split(options.get('extra-classes'))
+    self.output_dir = self.headers
+
+  def add_dependencies(self, graph, cfg, extmap):
+    sources = _collect_paths(self.sources, self.path)
+
+    for src, reldir in sources:
+      if src[-5:] != '.java':
+        raise GenError('ERROR: unknown file extension on ' + src)
+
+      class_path = os.path.split(src[:-5])
+
+      class_header = os.path.join(self.headers, class_path[1] + '.h')
+      class_pkg_list = string.split(self.package, '.')
+      class_pkg = ''
+      for dir in class_pkg_list:
+        class_pkg = os.path.join(class_pkg, dir)
+      class_file = ObjectFile(os.path.join(self.classes, class_pkg,
+                                            class_path[1] + self.objext))
+      class_file.source_generated = 1
+      hfile = HeaderFile(class_header, self.package + '.' + class_path[1],
+                         self.compile_cmd)
+      hfile.source_generated = 1
+      graph.add(DT_OBJECT, hfile, class_file)
+      self.deps.append(hfile)
+
+      # target (a linked item) depends upon object
+      graph.add(DT_LINK, self.name, hfile)
+
+    for extra in self.extra_classes:
+      hfile = HeaderFile('', self.package + '.' + extra)
+      hfile.source_generated = 1
+      self.deps.append(hfile)
+
+    # collect all the paths where stuff might get built
+    ### we should collect this from the dependency nodes rather than
+    ### the sources. "what dir are you going to put yourself into?"
+    graph.add(DT_LIST, LT_TARGET_DIRS, self.path)
+    graph.add(DT_LIST, LT_TARGET_DIRS, self.classes)
+    graph.add(DT_LIST, LT_TARGET_DIRS, self.headers)
+    for pattern in string.split(self.sources):
+      idx = string.rfind(pattern, '/')
+      if idx != -1:
+        ### hmm. probably shouldn't be os.path.join() right here
+        ### (at this point in the control flow; defer to output)
+        graph.add(DT_LIST, LT_TARGET_DIRS, os.path.join(self.path,
+                                                        pattern[:idx]))
+
+    graph.add(DT_INSTALL, self.name, self)
+
+
+  def get_dep_targets(self, target):
+    return [ self.target ]
+
+class TargetJavaClasses(TargetJava):
+  def __init__(self, name, options, cfg, extmap):
+    TargetJava.__init__(self, name, options, cfg, extmap)
+    self.objext = '.class'
+    self.lang = 'java'
+    self.classes = options.get('classes')
+    self.output_dir = self.classes
+
+  def add_dependencies(self, graph, cfg, extmap):
+    sources = _collect_paths(self.sources, self.path)
+
+    for src, reldir in sources:
+      if src[-5:] == '.java':
+        objname = src[:-5] + self.objext
+      else:
+        raise GenError('ERROR: unknown file extension on ' + src)
+
+      ofile = ObjectFile(objname, self.compile_cmd)
+      sfile = SourceFile(src, reldir)
+
+      # object depends upon source
+      graph.add(DT_OBJECT, ofile, sfile)
+      self.deps.append(sfile)
+
+      # target (a linked item) depends upon object
+      graph.add(DT_LINK, self.name, ofile)
+
+    # collect all the paths where stuff might get built
+    ### we should collect this from the dependency nodes rather than
+    ### the sources. "what dir are you going to put yourself into?"
+    graph.add(DT_LIST, LT_TARGET_DIRS, self.path)
+    graph.add(DT_LIST, LT_TARGET_DIRS, self.classes)
+    for pattern in string.split(self.sources):
+      idx = string.rfind(pattern, '/')
+      if idx != -1:
+        ### hmm. probably shouldn't be os.path.join() right here
+        ### (at this point in the control flow; defer to output)
+        graph.add(DT_LIST, LT_TARGET_DIRS, os.path.join(self.path,
+                                                        pattern[:idx]))
+
+    graph.add(DT_INSTALL, self.name, self)
+
+  class Section(TargetLib.Section):
+    def create_targets(self, graph, name, cfg, extmap):
+      self.targets = { }
+      target = self.target_class(name, self.options, cfg, extmap)
+      target.add_dependencies(graph, cfg, extmap)
+      self.targets = target
+
+    def get_targets(self):
+      return self.targets.values()
+
+    def get_dep_targets(self, target):
+      target = self.targets
+      return target and [target] or [ ]
+
+
 _build_types = {
   'exe' : TargetExe,
   'script' : TargetScript,
@@ -602,6 +740,8 @@ _build_types = {
   'swig_project' : TargetSWIGProject,
   'ra-module': TargetRaModule,
   'apache-mod': TargetApacheMod,
+  'javah' : TargetJavaHeaders,
+  'java' : TargetJavaClasses,
   }
 
 
