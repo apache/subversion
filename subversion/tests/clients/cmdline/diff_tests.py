@@ -253,15 +253,9 @@ def replace_a_file():
 
 def check_replace_a_file(diff_output):
   "check diff for replace a file"
-  if check_diff_output(diff_output,
+  return check_diff_output(diff_output,
                        os.path.join('A', 'D', 'G', 'rho'),
-                       'D'):
-    return 1
-  if check_diff_output(diff_output,
-                       os.path.join('A', 'D', 'G', 'rho'),
-                       'A'):
-    return 1
-  return 0
+                       'M')
     
 #----------------------------------------------------------------------
 

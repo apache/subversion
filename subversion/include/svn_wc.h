@@ -1777,7 +1777,10 @@ svn_boolean_t svn_wc_is_entry_prop (const char *name);
 /* Diffs */
 
 
-/** Return an @a editor/@a edit_baton for diffing a working copy against the
+/**
+ * @since New in 1.1.
+ *
+ * Return an @a editor/@a edit_baton for diffing a working copy against the
  * repository.
  *
  * @a anchor/@a target represent the base of the hierarchy to be compared.
@@ -1789,6 +1792,11 @@ svn_boolean_t svn_wc_is_entry_prop (const char *name);
  * is a directory.  If @a recurse is @c TRUE then @a anchor should be part of 
  * an access baton set for the @a target hierarchy.
  *
+ * @a ignore_ancestry determines whether paths that have discontinuous node
+ * ancestry are treated as delete/add or as simple modifications.  If
+ * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
+ * result in the diff given as a full delete followed by an add.
+ *
  * If @a use_text_base is true, then compare the repository against
  * the working copy's text-base files, rather than the working files.
  *
@@ -1797,6 +1805,27 @@ svn_boolean_t svn_wc_is_entry_prop (const char *name);
  *
  * If @a cancel_func is non-null, it will be used along with @a cancel_baton 
  * to periodically check if the client has canceled the operation.
+ */
+svn_error_t *svn_wc_get_diff_editor2 (svn_wc_adm_access_t *anchor,
+                                      const char *target,
+                                      const svn_wc_diff_callbacks_t *callbacks,
+                                      void *callback_baton,
+                                      svn_boolean_t recurse,
+                                      svn_boolean_t ignore_ancestry,
+                                      svn_boolean_t use_text_base,
+                                      svn_boolean_t reverse_order,
+                                      svn_cancel_func_t cancel_func,
+                                      void *cancel_baton,
+                                      const svn_delta_editor_t **editor,
+                                      void **edit_baton,
+                                      apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Similar to svn_wc_get_diff_editor2(), but with @ignore_ancestry
+ * always set to @c FALSE.
  */
 svn_error_t *svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
                                      const char *target,
@@ -1812,7 +1841,10 @@ svn_error_t *svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
                                      apr_pool_t *pool);
 
 
-/** Compare working copy against the text-base.
+/**
+ * @since New in 1.1.
+ *
+ * Compare working copy against the text-base.
  *
  * @a anchor/@a target represent the base of the hierarchy to be compared.
  *
@@ -1822,6 +1854,26 @@ svn_error_t *svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
  * @a recurse determines whether to descend into subdirectories when @a target
  * is a directory.  If @a recurse is @c TRUE then @a anchor should be part of 
  * an access baton set for the @a target hierarchy.
+ *
+ * @a ignore_ancestry determines whether paths that have discontinuous node
+ * ancestry are treated as delete/add or as simple modifications.  If
+ * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
+ * result in the diff given as a full delete followed by an add.
+ */
+svn_error_t *svn_wc_diff2 (svn_wc_adm_access_t *anchor,
+                           const char *target,
+                           const svn_wc_diff_callbacks_t *callbacks,
+                           void *callback_baton,
+                           svn_boolean_t recurse,
+                           svn_boolean_t ignore_ancestry,
+                           apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Similar to svn_wc_diff2(), but with @a ignore_ancestry always set
+ * to @c FALSE.
  */
 svn_error_t *svn_wc_diff (svn_wc_adm_access_t *anchor,
                           const char *target,
@@ -1829,6 +1881,7 @@ svn_error_t *svn_wc_diff (svn_wc_adm_access_t *anchor,
                           void *callback_baton,
                           svn_boolean_t recurse,
                           apr_pool_t *pool);
+
 
 /** Given a @a path to a file or directory under version control, discover
  * any local changes made to properties and/or the set of 'pristine'
