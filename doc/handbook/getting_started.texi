@@ -37,7 +37,7 @@ of files.  (And is still darn good at managing source code.)
 
 @subsection History
 
-Subversion aims to be the successor to CVS (@url{http://www.cvshome.org}).
+Subversion aims to be the successor to CVS (@uref{http://www.cvshome.org}).
 
 At the time of writing, CVS is the standard Free revision control system
 used by the open-source community.  It has a hard-earned, well deserved
@@ -52,7 +52,7 @@ development model while fixing the most obvious flaws.  Existing CVS
 users are the first target audience: any CVS user should be able to
 start using Subversion with little effort.
 
-Collabnet (@url{http://www.collab.net}) provided the initial funding
+Collabnet (@uref{http://www.collab.net}) provided the initial funding
 in 2000 to begin development work, and the effort has now blossomed
 into a large, open-source project backed by a community of free
 software developers.
@@ -213,7 +213,7 @@ server, Subversion gets all these features for free.
 
 Subversion uses WebDAV as its network protocol.  DAV (Distributed
 Authoring and Versioning) is a whole discussion in itself (see
-@url{http://www.webdav.org}) -- but in short, it's an extension to
+@uref{http://www.webdav.org}) -- but in short, it's an extension to
 HTTP that allows reads/writes and "versioning" of files over the web.
 The Subversion project is hoping to ride a slowly rising tide of
 support for this protocol: all of the latest file-browsers for Win32,
@@ -688,7 +688,7 @@ A  wc/baz/bloo
 
 Now we have a working copy in a local directory called @file{wc}, which
 represents the location @file{/myproj} in the repository (assuming the
-repository's root is @url{file:///usr/local/svn/repos}.)
+repository's root is @uref{file:///usr/local/svn/repos}.)
 
 For the sake of example, let's duplicate the working copy, and pretend
 it belongs to someone else:

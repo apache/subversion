@@ -530,7 +530,7 @@ Subversion source tree.
 
 In general, you should also be able to find the latest version of this
 file by grabbing it directly from Subversion's own repository:
-@url{http://svn.collab.net/repos/svn/trunk/INSTALL}
+@uref{http://svn.collab.net/repos/svn/trunk/INSTALL}
 
 @c ------------------------------------------------------------------
 @node Quick reference sheet
@@ -549,7 +549,7 @@ in texinfo?
 The main FAQ for the project can viewed directly in Subversion's
 repository:
 
-@url{http://svn.collab.net/repos/svn/trunk/www/project_faq.html}
+@uref{http://svn.collab.net/repos/svn/trunk/www/project_faq.html}
 
 
 @c ------------------------------------------------------------------
@@ -558,7 +558,7 @@ repository:
 
 For a full description of how to contribute to Subversion, read the
 @file{HACKING} file at the top of Subversion's source tree.  It's also
-available at @url{http://svn.collab.net/repos/svn/trunk/HACKING}.
+available at @uref{http://svn.collab.net/repos/svn/trunk/HACKING}.
 
 In a nutshell: Subversion behaves like many open-source projects.  One
 begins by participating in discussion on mailing lists, then by
