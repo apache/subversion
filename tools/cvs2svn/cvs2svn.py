@@ -1914,6 +1914,13 @@ def read_resync(fname):
       resync[digest].append([t1_l, t1_u, t2])
     else:
       resync[digest] = [ [t1_l, t1_u, t2] ]
+
+  # For each digest, sort the resync items in it in increasing order,
+  # based on the lower time bound.
+  digests = resync.keys()
+  for digest in digests:
+    (resync[digest]).sort()
+
   return resync
 
 
