@@ -31,10 +31,11 @@
 #define SVN_FS__REPOS_CUSTOM_DIR  "custom"  /* User space; svn stays out. */
 
 /* In the repository conf directory, look for these files. */
-#define SVN_FS__REPOS_CONF_PRECOMMIT_HOOKS   "pre-commit.conf"
-#define SVN_FS__REPOS_CONF_POSTCOMMIT_HOOKS  "post-commit.conf"
-#define SVN_FS__REPOS_CONF_READ_SENTINELS    "read-sentinels.conf"
-#define SVN_FS__REPOS_CONF_WRITE_SENTINELS   "write-sentinels.conf"
+#define SVN_FS__REPOS_CONF_START_COMMIT_HOOKS  "start-commit.conf"
+#define SVN_FS__REPOS_CONF_PRE_COMMIT_HOOKS    "pre-commit.conf"
+#define SVN_FS__REPOS_CONF_POST_COMMIT_HOOKS   "post-commit.conf"
+#define SVN_FS__REPOS_CONF_READ_SENTINELS      "read-sentinels.conf"
+#define SVN_FS__REPOS_CONF_WRITE_SENTINELS     "write-sentinels.conf"
 
 
 /*** The filesystem structure.  ***/
