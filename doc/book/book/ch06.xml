@@ -30,8 +30,15 @@
       module definitions to instruct Subversion to pull data from
       multiple repositories.  We'll cover in detail some of the
       additional client- and server-side tools that are part of the
-      Subversion distribution.  And by the end of this chapter, you'll
-      be a Subversion power-user&mdash;or we'll refund your money!
+      Subversion distribution.</para>
+
+    <para>Before reading this chapter, you should be familiar with the
+      basic file and directory versioning capabilities of Subversion.
+      If you haven't already read about those, or if you need a
+      refresher, we crecommend that you check out <xref
+      linkend="svn-ch-1" /> and <xref linkend="svn-ch-2" />.  Once
+      you've mastered the basics and consumed this chapter, you'll be
+      a Subversion power-user&mdash;or we'll refund your money!
       <footnote>
         <para>This offer applies only to those who, like most folks,
           pay nothing for Subversion.</para>
@@ -216,7 +223,7 @@ REGEDIT4
         proxy-related options) and per-user settings (editor programs
         and passoword storage, among others).  Also note that all the
         options are effectively commented out.  You need only to
-        remove the hash character (<literal>#</literal>) from the
+        remove the hash (<literal>#</literal>) character from the
         beginning of the option names, and set the values as you
         desire.</para>
 
@@ -475,7 +482,29 @@ collabnet = svn.collab.net
   <sect1 id="svn-ch-6-sect-2">
     <title>Properties</title>
 
-    <para>
+    <para>We've already covered in detail how Subversion stores and
+      retrieves various versions of files and directories in its
+      repository.  Whole chapters have been devoted to this most
+      foundational piece of functionality provided by the tool.  And
+      if the versioning support stopped there, Subversion would still
+      be complete from version control perspective.  But it
+      doesn't.</para>
+
+    <para>In addition to versioning your directories and files,
+      Subversion provides interfaces for adding, modifying, and
+      removing versioned metadata on each of your versioned
+      directories and files.  We refer to this metadata as
+      <firstterm>properties</firstterm>, and they can be thought of as
+      two-column tables that map property names to arbitrary values
+      attached to each item in your working copy.  Generally speaking,
+      the names and values of the properties can be whatever you want
+      them to be, with the constraint that the names must be
+      human-readable text.</para>
+
+    <para>Properties show up elsewhere in Subversion,
+      too&mdash;attached to the revisions stored in the
+      repository. <!-- ### was here --></para>
+
     <!-- ### cmpilato todo: come back to this, and use this layout:
 
          - Introduction to properties (what, and more important, why?) 
@@ -490,12 +519,6 @@ collabnet = svn.collab.net
              - svn:executable
     -->
 
-    <para>Subversion allows you to attach arbitrary
-      <quote>metadata</quote> to files and directories.  We refer to
-      this data as <firstterm>properties</firstterm>, and they can be
-      thought of as collections of name/value pairs (hash-tables)
-      attached to each item in your working copy.</para>
-  
     <para>To set or get a property on a file or directory, use the
       <command>svn propset</command> and <command>svn
       propget</command> commands.  To list all properties attached to
