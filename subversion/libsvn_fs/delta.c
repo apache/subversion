@@ -449,6 +449,8 @@ send_text_delta (struct context *c,
     {
       SVN_ERR (svn_txdelta_next_window (&window, delta_stream));
       SVN_ERR (delta_handler (window, delta_handler_baton));
+      if (window)
+        svn_txdelta_free_window (window);
     }
   while (window);
 
