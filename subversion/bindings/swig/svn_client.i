@@ -27,7 +27,7 @@
 /* -----------------------------------------------------------------------
    don't wrap the following items
 */
-%ignore svn_client_proplist_item_s;
+%ignore svn_client_proplist_item_t;
 
 /* -----------------------------------------------------------------------
    these types (as 'type **') will always be an OUT param
