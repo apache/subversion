@@ -189,12 +189,9 @@ int main(int argc, const char *const *argv)
           exit(0);
         }
 
+      /* ### We should try to use threads when APR_HAS_FORK isn't
+       * defined (such as on Windows). */
 #if APR_HAS_FORK
-      /* This definitely won't work on Windows, which doesn't have the
-       * concept of forking a process at all.  I'm not sure how to
-       * structure a forking daemon process under Windows.  (Threads?
-       * Our library code isn't perfectly thread-safe at the
-       * moment.) -ghudson */
       status = apr_proc_fork(&proc, connection_pool);
       if (status == APR_INCHILD)
         {
