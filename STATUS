@@ -80,3 +80,16 @@ Candidate changes:
     This fix doesn't try to fix the ipv6 issue, just the SIGSEGV.
     Votes:
       +1: dwhedon
+
+  * r8890
+    Implement anonymous access checking in mod_authz_svn.
+    Fix access checking even if no user authentication is required.
+    Justification: Will make a configuration more secure by default.
+    Votes:
+      +1: striker
+
+  * r8892
+    Finish Issue #1588 - mod_authz_svn should work with SVNParentPath.
+    Notes: No API changes.
+    Votes:
+      +1: striker
