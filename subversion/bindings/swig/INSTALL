@@ -259,7 +259,7 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
         Release\subversion\bindings\swig\java\_repos.dll
         Release\subversion\bindings\swig\java\_wc.dll
 
-     Your app needs to load one or more of the DLLs files by calling
+     Your app needs to load one or more of the DLL files by calling
      System.loadLibrary() or System.load() and have the JAR file in
      its classpath.
 
