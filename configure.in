@@ -36,10 +36,17 @@ dnl Check for programs ---------------------
 dnl Look for a C compiler
 AC_PROG_CC
 
-dnl Add some useful GCC-specific flags
+dnl Add some useful GCC-specific flags.
 case "$GCC" in
   yes )
-    CFLAGS="$CFLAGS -Wall -Wmissing-prototypes -Wpointer-arith" ;;
+    ## GCC can provide some helpful warnings.
+    CFLAGS="$CFLAGS -Wall -Wmissing-prototypes -Wpointer-arith"
+    ## At the moment, we don't want optimization, because we're
+    ## debugging.
+    changequote(,)
+    CFLAGS="`echo $CFLAGS' ' | sed -e 's/-O[^ ]* //'`"
+    changequote([,])
+  ;;
 esac
 
 dnl Look for a BSD-compatible install program
