@@ -224,6 +224,11 @@ txn_body_abort_txn (void *baton, trail_t *trail)
   SVN_ERR (svn_fs_txn_name (&txn_id, txn, txn->pool));
   SVN_ERR (svn_fs__bdb_get_txn (&fstxn, txn->fs, txn_id, trail));
 
+  /* Verify that this transaction hasn't been assigned a revision (and
+     therefore that it is mutable). */
+  if (SVN_IS_VALID_REVNUM (fstxn->revision))
+    return svn_fs__err_txn_not_mutable (txn->fs, txn_id);
+
   /* Delete the mutable portion of the tree hanging from the
      transaction. */
   SVN_ERR (svn_fs__dag_delete_if_mutable (txn->fs, fstxn->root_id,
