@@ -34,7 +34,7 @@
 /* A device to record the targets of commits, and ensuring that proper
    commit closure happens on them (namely, revision setting and wc
    property setting).  This is passed to the `commit hook' routine by
-   svn_fs_get_editor.  (   ) */
+   svn_repos_get_commit_editor.  (   ) */
 struct commit_cleanup_baton
 {
   /* Allocation for this baton, as well as all committed_targets */
@@ -54,7 +54,7 @@ struct commit_cleanup_baton
 };
 
 
-/* An instance of svn_ra_local__commit_hook_t.
+/* An instance of svn_repos_commit_callback_t.
  * 
  * BATON is `struct commit_cleanup_baton *'.  Loop over all committed
  * target paths in BATON->committed_targets, invoking
@@ -143,13 +143,20 @@ reporter_link_path (void *reporter_baton,
                     svn_revnum_t revision)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  const char *repos_path = NULL, *fs_path = NULL;
+  const char *fs_path = NULL;
+  int repos_url_len;
 
-  /* Derive a FS path from URL. */
-  SVN_ERR (svn_ra_local__split_URL 
-           (&repos_path, &fs_path, url, rbaton->session->pool));
-  
-  return svn_repos_link_path (rbaton->report_baton, path, 
+  url = svn_path_uri_decode(url, rbaton->session->pool);
+  repos_url_len = strlen(rbaton->session->repos_url);
+  if (strncmp(url, rbaton->session->repos_url, repos_url_len) != 0)
+    return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+                              rbaton->session->pool,
+                              "'%s'\n"
+                              "is not the same repository as\n"
+                              "'%s'", url, rbaton->session->repos_url);
+  fs_path = url + repos_url_len;
+
+  return svn_repos_link_path (rbaton->report_baton, path,
                               fs_path, revision);
 }
 
@@ -216,16 +223,12 @@ svn_ra_local__open (void **session_baton,
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
      repository. */
-  SVN_ERR_W (svn_ra_local__split_URL (&(session->repos_path),
+  SVN_ERR_W (svn_ra_local__split_URL (&(session->repos),
+                                      &(session->repos_url),
                                       &(session->fs_path),
                                       session->repository_URL,
                                       session->pool),
              "Unable to open an ra_local session to URL");
-
-  /* Open the filesystem at located at environment `repos_path' */
-  SVN_ERR (svn_repos_open (&(session->repos),
-                           session->repos_path,
-                           session->pool));
 
   /* Cache the filesystem object from the repos here for
      convenience. */
@@ -351,21 +354,22 @@ svn_ra_local__get_commit_editor (void *session_baton,
                                  const char **committed_author,
                                  const char *log_msg)
 {
-  svn_ra_local__session_baton_t *sess_baton = session_baton;
+  svn_ra_local__session_baton_t *sess = session_baton;
   struct commit_cleanup_baton *cb
-    = apr_pcalloc (sess_baton->pool, sizeof (*cb));
+    = apr_pcalloc (sess->pool, sizeof (*cb));
 
   /* Construct a commit cleanup baton */
-  cb->pool = sess_baton->pool;
-  cb->fs = sess_baton->fs;
+  cb->pool = sess->pool;
+  cb->fs = sess->fs;
   cb->new_rev = new_rev;
   cb->committed_date = committed_date;
   cb->committed_author = committed_author;
                                          
   /* Get the repos commit-editor */     
-  SVN_ERR (svn_ra_local__get_editor (editor, edit_baton, sess_baton,
-                                     log_msg, cleanup_commit, cb,
-                                     sess_baton->pool));
+  SVN_ERR (svn_repos_get_commit_editor (editor, edit_baton, sess->repos,
+                                        sess->repos_url, sess->fs_path,
+                                        sess->username, log_msg,
+                                        cleanup_commit, cb, sess->pool));
 
   return SVN_NO_ERROR;
 }
@@ -412,7 +416,8 @@ make_reporter (void *session_baton,
 {
   svn_ra_local__session_baton_t *sbaton = session_baton;
   void *rbaton;
-  const char *other_repos_path = NULL, *other_fs_path = NULL;
+  int repos_url_len;
+  const char *other_fs_path = NULL;
 
   /* Get the HEAD revision if one is not supplied. */
   if (! SVN_IS_VALID_REVNUM(revision))
@@ -422,19 +427,19 @@ make_reporter (void *session_baton,
      regular filesystem path. */
   if (other_url)
     {
-      /* Pull the relevant fs-path portion out of switch_url. */
-      SVN_ERR_W (svn_ra_local__split_URL (&other_repos_path, &other_fs_path,
-                                          other_url, sbaton->pool),
-                 "Invalid switch URL");
+      other_url = svn_path_uri_decode (other_url, sbaton->pool);
+      repos_url_len = strlen(sbaton->repos_url);
       
       /* Sanity check:  the other_url better be in the same repository as
          the original session url! */
-      if (strcmp (sbaton->repos_path, other_repos_path) != 0)
+      if (strncmp (other_url, sbaton->repos_url, repos_url_len) != 0)
         return svn_error_createf 
           (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, sbaton->pool,
            "'%s'\n"
            "is not the same repository as\n"
-           "'%s'", other_repos_path, sbaton->repos_path);
+           "'%s'", other_url, sbaton->repos_url);
+
+      other_fs_path = other_url + repos_url_len;
     }
 
   /* Pass back our reporter */
