@@ -4721,6 +4721,12 @@ get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
 }
 
 
+static int my_rand (int scalar)
+{
+  return (int)(((float)rand() / (float)RAND_MAX) * (float)scalar);
+}
+
+
 /* Put pseudo-random bytes in buffer BUF (which is LEN bytes long).
    If FULL is TRUE, simply replace every byte in BUF with a
    pseudo-random byte, else, replace a pseudo-random collection of
@@ -4734,21 +4740,26 @@ random_data_to_buffer (char *buf,
   apr_size_t num_bytes;
   apr_size_t offset;
 
+  int ds_off = 0;
+  char dataset[30] = "abcdefghijklmnopqrstuvwxyz .!?";
+
   if (full)
     {
       for (i = 0; i < buf_len; i++)
         {
-          buf[i] = (char) ((rand() / RAND_MAX) * 255.0);
+          ds_off = my_rand (sizeof (dataset));
+          buf[i] = dataset[ds_off];
         }
 
       return;
     }
 
-  num_bytes = (int) (((rand() / RAND_MAX) * (buf_len / 100)) + 1);
+  num_bytes = my_rand (buf_len / 100) + 1;
   for (i = 0; i < num_bytes; i++)
     {
-      offset = (int) ((rand() / RAND_MAX) * (buf_len - 1));
-      buf[offset] = (char) ((rand() / RAND_MAX) * 255.0);
+      offset = my_rand (buf_len - 1);
+      ds_off = my_rand (sizeof (dataset));
+      buf[offset] = dataset[ds_off];
     }
 
   return;
@@ -4989,6 +5000,128 @@ check_root_revision (const char **msg,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+undeltify (const char **msg,
+           svn_boolean_t msg_only,
+           apr_pool_t *pool)
+{ 
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t youngest_rev = 0;
+  int i;
+  apr_pool_t *subpool;
+  const char *greek_files[12][1 + 10] = { 
+    /* name          per-rev contents ... */
+    { "iota",        0 },
+    { "A/mu",        0 },
+    { "A/B/lambda",  0 },
+    { "A/B/E/alpha", 0 },
+    { "A/B/E/beta",  0 },
+    { "A/D/gamma",   0 },
+    { "A/D/G/pi",    0 },
+    { "A/D/G/rho",   0 },
+    { "A/D/G/tau",   0 },
+    { "A/D/H/chi",   0 },
+    { "A/D/H/psi",   0 },
+    { "A/D/H/omega", 0 }
+  };
+  
+  *msg = "pound on the filesystem's explicit undeltification code";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs_and_repos 
+           (&fs, "test-repo-undeltify", pool));
+
+  /* Make 10 revisions. */
+  while (youngest_rev < 10)
+    {
+      /* Start the next transaction */
+      SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
+      SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+
+      /* The first time through, create the Greek tree. */
+      if (youngest_rev == 0)
+        SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+      
+      /* Modify each file.  */
+      for (i = 0; i < 12; i++)
+        {
+          char buf[1025];
+          random_data_to_buffer (buf, 1024, TRUE);
+          buf[1024] = 0;
+          greek_files[i][youngest_rev + 1] = apr_pstrdup (pool, buf);
+          SVN_ERR (svn_test__set_file_contents 
+                   (txn_root, 
+                    greek_files[i][0], 
+                    greek_files[i][youngest_rev + 1], 
+                    pool));
+        }
+
+      /* Commit the mods. */
+      SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+      SVN_ERR (svn_fs_close_txn (txn));
+    }
+  
+  /* Now, undeltify each file, in each revision (starting with the
+     youngest, and going backward to revision 0), verifying that its
+     contents are as expected. */
+  subpool = svn_pool_create (pool);
+  while (youngest_rev)
+    {
+      svn_fs_root_t *rev_root;
+
+      /* Get a revision root. */
+      SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, subpool));
+
+      for (i = 0; i < 12; i++)
+        {
+          svn_stringbuf_t *contents;
+
+          /* Get the file's contents, and make sure they are what we
+             expected. */
+          SVN_ERR (svn_test__get_file_contents (rev_root,
+                                                greek_files[i][0],
+                                                &contents,
+                                                subpool));
+          if (strcmp (greek_files[i][youngest_rev], contents->data))
+            return svn_error_createf
+              (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+               "undeltify: %s:%ld stored contents seem strangely wrong",
+               greek_files[i][0], youngest_rev);
+
+          /* Now, the fun part:  undeltify this file. */
+          SVN_ERR (svn_fs_undeltify (rev_root, greek_files[i][0], 0, subpool));
+
+          /* Now get its file contents... */
+          SVN_ERR (svn_test__get_file_contents (rev_root,
+                                                greek_files[i][0],
+                                                &contents,
+                                                subpool));
+
+          /* ...and make sure they 'check out'.  */
+          if (strcmp (greek_files[i][youngest_rev], contents->data))
+            return svn_error_createf
+              (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+               "undeltify: %s:%ld undeltified contents seem oddly incorrect",
+               greek_files[i][0], youngest_rev);
+        }
+
+      svn_pool_clear (subpool);
+      youngest_rev--;
+    }
+  svn_pool_destroy (subpool);
+
+  svn_fs_close_fs (fs);
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /* The test table.  */
 
@@ -5026,6 +5159,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   check_all_revisions,
   large_file_integrity,
   check_root_revision,
+  undeltify,
   0
 };
 

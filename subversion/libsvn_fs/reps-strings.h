@@ -158,6 +158,14 @@ svn_error_t *svn_fs__rep_deltify (svn_fs_t *fs,
                                   trail_t *trail);
 
 
+/* Ensure that REP refers to storage that is maintained as fulltext,
+   not as a delta against other strings, in FS, as part of TRAIL.  */
+svn_error_t *svn_fs__rep_undeltify (svn_fs_t *fs,
+                                    const char *rep,
+                                    trail_t *trail);
+
+
+
 #endif /* SVN_LIBSVN_FS_REPS_STRINGS_H */
 
 
