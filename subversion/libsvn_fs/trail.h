@@ -142,7 +142,7 @@ typedef struct trail_t trail_t;
    That is:
    - Begin a new Berkeley DB transaction, DB_TXN, in the filesystem FS.
    - Allocate a subpool of POOL, TXN_POOL.
-   - Start a new trail, TRAIL, based on DB_TXN and TXN_POOL.
+   - Start a new trail, TRAIL, pointing to DB_TXN and TXN_POOL.
    - Apply TXN_BODY to BATON and TRAIL.  TXN_BODY should try to do
      some series of DB operations which needs to be atomic, using
      TRAIL->db_txn as the transaction, and TRAIL->pool for allocation.
@@ -150,7 +150,8 @@ typedef struct trail_t trail_t;
      happens, TXN_BODY should simply return with an appropriate
      svn_error_t, E.
    - If TXN_BODY returns SVN_NO_ERROR, then commit the transaction,
-     run any completion functions, and return SVN_NO_ERROR.
+     run any completion functions, and return SVN_NO_ERROR.  Do *not*
+     free TXN_POOL.
    - If E is a Berkeley DB error indicating that a deadlock occurred,
      run all undo and completion functions, abort the DB transaction,
      and free TXN_POOL.  Then retry the whole thing from the top.
