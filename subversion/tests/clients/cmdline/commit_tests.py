@@ -171,7 +171,7 @@ def make_standard_slew_of_changes(wc_dir):
 #----------------------------------------------------------------------
 
 def commit_one_file():
-  "Commit wc_dir/A/D/H/omega. (anchor=A/D/H, tgt=omega)"
+  "commit one file."
 
   # Bootstrap:  make independent repo and working copy.
   sbox = sandbox(commit_one_file)
@@ -205,10 +205,136 @@ def commit_one_file():
                                                 None, None,
                                                 omega_path)
 
+  
+#----------------------------------------------------------------------
+
+def commit_multiple_targets():
+  "commit multiple targets"
+
+  sbox = sandbox(commit_multiple_targets)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # This test will commit three targets:  psi, B, and pi.  In that order.
+
+  # Make local mods to many files.
+  AB_path = os.path.join(wc_dir, 'A', 'B')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  svntest.main.file_append (lambda_path, 'new appended text for lambda')
+  svntest.main.file_append (rho_path, 'new appended text for rho')
+  svntest.main.file_append (pi_path, 'new appended text for pi')
+  svntest.main.file_append (omega_path, 'new appended text for omega')
+  svntest.main.file_append (psi_path, 'new appended text for psi')
+
+  # Just for kicks, add a property to A/D/G as well.  We'll make sure
+  # that it *doesn't* get committed.
+  ADG_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  svntest.main.run_svn(None, 'propset', 'foo', 'bar', ADG_path)
+
+  # Created expected output tree for 'svn ci'.  We should see changes
+  # only on these three targets, no others.  
+  output_list = [ [psi_path, None, {}, {'verb' : 'Sending' }],
+                  [lambda_path, None, {}, {'verb' : 'Sending' }],
+                  [pi_path, None, {}, {'verb' : 'Sending' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but our three targets should be at 2.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if ((item[0] != psi_path) and (item[0] != lambda_path)
+        and (item[0] != pi_path)):
+      item[3]['wc_rev'] = '1'
+    # rho and omega should still display as locally modified:
+    if ((item[0] == rho_path) or (item[0] == omega_path)):
+      item[3]['status'] = 'M '
+    # A/D/G should still have a local property set, too.
+    if (item[0] == ADG_path):
+      item[3]['status'] = '_M'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                expected_output_tree,
+                                                expected_status_tree,
+                                                None,
+                                                None, None,
+                                                None, None,
+                                                psi_path, AB_path, pi_path)
+
+#----------------------------------------------------------------------
+
+
+def commit_multiple_targets_2():
+  "commit multiple targets, 2nd variation"
+
+  sbox = sandbox(commit_multiple_targets_2)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox);
+  
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # This test will commit three targets:  psi, B, omega and pi.  In that order.
+
+  # Make local mods to many files.
+  AB_path = os.path.join(wc_dir, 'A', 'B')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  svntest.main.file_append (lambda_path, 'new appended text for lambda')
+  svntest.main.file_append (rho_path, 'new appended text for rho')
+  svntest.main.file_append (pi_path, 'new appended text for pi')
+  svntest.main.file_append (omega_path, 'new appended text for omega')
+  svntest.main.file_append (psi_path, 'new appended text for psi')
+
+  # Just for kicks, add a property to A/D/G as well.  We'll make sure
+  # that it *doesn't* get committed.
+  ADG_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  svntest.main.run_svn(None, 'propset', 'foo', 'bar', ADG_path)
+
+  # Created expected output tree for 'svn ci'.  We should see changes
+  # only on these three targets, no others.  
+  output_list = [ [psi_path, None, {}, {'verb' : 'Sending' }],
+                  [lambda_path, None, {}, {'verb' : 'Sending' }],
+                  [omega_path, None, {}, {'verb' : 'Sending' }],
+                  [pi_path, None, {}, {'verb' : 'Sending' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but our four targets should be at 2.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if ((item[0] != psi_path) and (item[0] != lambda_path)
+        and (item[0] != pi_path) and (item[0] != omega_path)):
+      item[3]['wc_rev'] = '1'
+    # rho should still display as locally modified:
+    if (item[0] == rho_path):
+      item[3]['status'] = 'M '
+    # A/D/G should still have a local property set, too.
+    if (item[0] == ADG_path):
+      item[3]['status'] = '_M'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                expected_output_tree,
+                                                expected_status_tree,
+                                                None,
+                                                None, None,
+                                                None, None,
+                                                psi_path, AB_path,
+                                                omega_path, pi_path)
+
 #----------------------------------------------------------------------
 
 def commit_inclusive_dir():
-  "Commit wc_dir/A/D -- includes D. (anchor=A, tgt=D)"
+  "commit wc_dir/A/D -- includes D. (anchor=A, tgt=D)"
 
   # Bootstrap:  make independent repo and working copy.
   sbox = sandbox(commit_inclusive_dir)
@@ -265,7 +391,7 @@ def commit_inclusive_dir():
 #----------------------------------------------------------------------
 
 def commit_top_dir():
-  "Commit wc_dir -- (anchor=wc_dir, tgt={})"
+  "commit wc_dir -- (anchor=wc_dir, tgt={})"
 
   # Bootstrap:  make independent repo and working copy.
   sbox = sandbox(commit_top_dir)
@@ -389,7 +515,7 @@ def commit_unversioned_thing():
 # regression test for bug #391
 
 def nested_dir_replacements():
-  "Replace two nested dirs, verify empty contents"
+  "replace two nested dirs, verify empty contents"
 
   # Bootstrap:  make independent repo and working copy.
   sbox = sandbox(nested_dir_replacements)
@@ -981,6 +1107,8 @@ def merge_mixed_revisions():
 # list all tests here, starting with None:
 test_list = [ None,
               commit_one_file,
+              commit_multiple_targets,
+              commit_multiple_targets_2,
               commit_inclusive_dir,
               commit_top_dir,
               commit_unversioned_thing,
