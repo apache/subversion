@@ -17,6 +17,7 @@
 #include "err.h"
 #include "dbt.h"
 #include "skel.h"
+#include "trail.h"
 #include "validate.h"
 #include "nodes-table.h"
 
@@ -273,15 +274,14 @@ svn_error_t *
 svn_fs__get_rep (skel_t **skel_p,
                  svn_fs_t *fs,
                  const svn_fs_id_t *id,
-                 DB_TXN *db_txn,
-                 apr_pool_t *pool)
+                 trail_t *trail)
 {
   int db_err;
   DBT key, value;
   skel_t *skel;
 
-  db_err = fs->nodes->get (fs->nodes, db_txn,
-                           svn_fs__id_to_dbt (&key, id, pool),
+  db_err = fs->nodes->get (fs->nodes, trail->db_txn,
+                           svn_fs__id_to_dbt (&key, id, trail->pool),
                            svn_fs__result_dbt (&value),
                            0);
 
@@ -292,11 +292,11 @@ svn_fs__get_rep (skel_t **skel_p,
   /* Handle any other error conditions.  */
   SVN_ERR (DB_WRAP (fs, "reading node representation", db_err));
 
-  /* Make sure the skel's contents get freed when POOL is destroyed.  */
-  svn_fs__track_dbt (&value, pool);
+  /* Make sure the skel's contents get freed when TRAIL->pool is destroyed.  */
+  svn_fs__track_dbt (&value, trail->pool);
 
   /* Parse and check the REPRESENTATION skel.  */
-  skel = svn_fs__parse_skel (value.data, value.size, pool);
+  skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
   if (! skel
       || ! is_valid_representation (skel))
     return svn_fs__err_corrupt_representation (fs, id);
@@ -310,9 +310,10 @@ svn_error_t *
 svn_fs__put_rep (svn_fs_t *fs,
                  const svn_fs_id_t *id, 
                  skel_t *skel,
-                 DB_TXN *db_txn,
-                 apr_pool_t *pool)
+                 trail_t *trail)
 {
+  DB_TXN *db_txn = trail->db_txn;
+  apr_pool_t *pool = trail->pool;
   DBT key, value;
 
   if (! is_valid_representation (skel))
@@ -335,8 +336,7 @@ svn_fs__put_rep (svn_fs_t *fs,
 svn_error_t *
 svn_fs__new_node_id (svn_fs_id_t **id_p,
                      svn_fs_t *fs,
-                     DB_TXN *db_txn,
-                     apr_pool_t *pool)
+                     trail_t *trail)
 {
   int db_err;
   DBC *cursor = 0;
@@ -345,7 +345,7 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
 
   /* Create a database cursor.  */
   SVN_ERR (DB_WRAP (fs, "choosing new node ID (creating cursor)",
-                    fs->nodes->cursor (fs->nodes, db_txn, &cursor, 0)));
+                    fs->nodes->cursor (fs->nodes, trail->db_txn, &cursor, 0)));
 
   /* Find the last entry in the `nodes' table, and increment its node
      number.  */
@@ -370,10 +370,10 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
       SVN_ERR (DB_WRAP (fs, "choosing new node ID (finding last entry)",
                         db_err));
     }
-  svn_fs__track_dbt (&key, pool);
+  svn_fs__track_dbt (&key, trail->pool);
 
   /* Try to parse the key as a node revision ID.  */
-  id = svn_fs_parse_id (key.data, key.size, pool);
+  id = svn_fs_parse_id (key.data, key.size, trail->pool);
   if (! id
       || svn_fs_id_length (id) < 2)
     {
@@ -454,11 +454,12 @@ svn_error_t *
 svn_fs__new_successor_id (svn_fs_id_t **successor_p,
                           svn_fs_t *fs,
                           const svn_fs_id_t *id,
-                          DB_TXN *db_txn, 
-                          apr_pool_t *pool)
+                          trail_t *trail)
 {
   int id_len = svn_fs_id_length (id);
   svn_fs_id_t *new_id;
+  apr_pool_t *pool = trail->pool;
+  DB_TXN *db_txn = trail->db_txn;
   DBT key, value;
   int db_err;
 
