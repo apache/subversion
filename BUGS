@@ -1,0 +1,15 @@
+If you've found a bug in Subversion, please report it to
+
+   dev@subversion.tigris.org
+
+If the bug is in the APR library, please report it to all of these
+lists:
+
+   dev@subversion.tigris.org
+   new-httpd@apache.org
+
+   (If the above two aren't getting results for some reason, Greg
+   Stein suggests Ryan Bloom <rbb@apache.org>, "who could be
+   considered the lead for APR", as a backup.)
+
+If the bug is in Neon, try Joe Orton <joe@orton.demon.co.uk>.
