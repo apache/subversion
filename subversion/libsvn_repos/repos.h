@@ -136,12 +136,19 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
 
    REV is the revision whose property was changed.
    AUTHOR is the authenticated name of the user who changed the prop.
-   NAME is the name of the property that was changed.  */
+   NAME is the name of the property that was changed, and OLD_VALUE is
+   that property's value immediately before the change, or null if
+   none.
+
+   ### The old value will be passed to the post-revprop hook either
+   ### on stdin, or in a tempfile.  We're still figuring out which
+   ### way to do it, stay tuned... */
 svn_error_t *
 svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
                                       svn_revnum_t rev,
                                       const char *author,
                                       const char *name,
+                                      svn_string_t *old_value,
                                       apr_pool_t *pool);
 
 

@@ -194,15 +194,18 @@ svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                               svn_revnum_t rev,
                               const char *author,
                               const char *name,
-                              const svn_string_t *value,
+                              const svn_string_t *new_value,
                               apr_pool_t *pool)
 {
+  svn_string_t *old_value;
+
   SVN_ERR (validate_prop (name, pool));
+  SVN_ERR (svn_fs_revision_prop (&old_value, repos->fs, rev, name, pool));
   SVN_ERR (svn_repos__hooks_pre_revprop_change (repos, rev, author, name, 
-                                                value, pool));
-  SVN_ERR (svn_fs_change_rev_prop (repos->fs, rev, name, value, pool));
+                                                new_value, pool));
+  SVN_ERR (svn_fs_change_rev_prop (repos->fs, rev, name, new_value, pool));
   SVN_ERR (svn_repos__hooks_post_revprop_change (repos, rev, author, 
-                                                 name, pool));
+                                                 name, old_value, pool));
 
   return SVN_NO_ERROR;
 }

@@ -583,15 +583,16 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
  * post-revprop-change hooks around the change.  Use @a pool for
  * temporary allocations.
  *
- * @a rev, @a name, and @a value are as in @c svn_fs_commit_txn().  
- * @a author is the authenticated username of the person changing the 
- * property value (if available).
+ * @a rev is the revision whose property to change, @a name is the
+ * name of the property, and @a new_value is the new value of the
+ * property.   @a author is the authenticated username of the person
+ * changing the property value, or null if not available.
  */
 svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                                            svn_revnum_t rev,
                                            const char *author,
                                            const char *name,
-                                           const svn_string_t *value,
+                                           const svn_string_t *new_value,
                                            apr_pool_t *pool);
 
 
