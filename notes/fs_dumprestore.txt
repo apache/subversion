@@ -80,17 +80,19 @@ always ignored, for backwards compatibility.
 Revision-number: N
 [Revision-content-checksum: blob]
 Revision-content-length: L
+
    ...N bytes of property data.  Properties are stored in the same
    human-readable hashdump format used by working copy property files,
    except that they end with "PROPS-END\n" for better readability.
 
 Node-path: /absolute/path/to/node/in/filesystem
-Node-kind: file | dir
-[Node-action: add | delete | replace] (1)
+Node-kind: file | dir  (1)
+Node-action: change | add | delete | replace
 [Node-copied-from: X, path ]
 [Node-copy-source-checksum: blob] (2)
 [Node-content-checksum: blob]
 Node-content-length: Y
+
    ... Y bytes of content data, divided into 'props' and 'text'
    sections.  The properties come first; their total length (including
    formatting) is included in Node-content-length.  The "PROPS-END\n"
@@ -101,12 +103,12 @@ Node-content-length: Y
 
 Notes:
 
-(1) the absence of this field implies that we're *modifying* the path,
-    that it must already exist in the previous revision.
+(1) if the node represents a deletion, this field is optional.
 
 (2) this is a checksum of the source of the copy.  a loader process
     can use this checksum to determine that the copyfrom path/rev
     already present in a filesystem is really the *correct* one to use.
+
 
 
 

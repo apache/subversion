@@ -32,6 +32,11 @@ extern "C" {
 #include <apr_file_io.h>
 
 
+
+/* The longest the "K <number>" line can be in one of our hashdump files. */
+#define SVN_KEYLINE_MAXLEN 100
+
+
 /*----------------------------------------------------*/
 
 /*** Reading/writing hashtables to disk ***/

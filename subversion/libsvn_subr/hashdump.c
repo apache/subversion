@@ -68,7 +68,6 @@
  *
  */
 
-#define SVN_KEYLINE_MAXLEN 100     /* The longest a "key" line can be */
 
 
 
