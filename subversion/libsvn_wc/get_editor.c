@@ -450,7 +450,7 @@ open_root (void *edit_baton,
 
 
 static svn_error_t *
-delete_entry (svn_stringbuf_t *name, void *parent_baton)
+delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
 {
   svn_error_t *err;
   struct dir_baton *parent_dir_baton = parent_baton;

@@ -99,16 +99,18 @@ open_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
 
 
 static svn_error_t *
-delete_entry (svn_stringbuf_t *name, void *parent_baton)
+delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
 {
   struct dir_baton *d = parent_baton;
   svn_error_t *err;
 
-  err = (* (d->edit_baton->editor_1->delete_entry)) (name, d->dir_baton_1);
+  err = (* (d->edit_baton->editor_1->delete_entry)) 
+    (name, revision, d->dir_baton_1);
   if (err)
     return err;
   
-  err = (* (d->edit_baton->editor_2->delete_entry)) (name, d->dir_baton_2);
+  err = (* (d->edit_baton->editor_2->delete_entry)) 
+    (name, revision, d->dir_baton_2);
   if (err)
     return err;
   

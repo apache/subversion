@@ -117,7 +117,6 @@ typedef enum svn_delta__XML_t
 #define SVN_DELTA__XML_ATTR_ID               "id"
 #define SVN_DELTA__XML_ATTR_NAME             "name"
 #define SVN_DELTA__XML_ATTR_TARGET_REV       "target-rev"
-#define SVN_DELTA__XML_ATTR_VER              "ver"
 
 
 

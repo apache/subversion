@@ -350,12 +350,18 @@ do_stack_append (svn_xml__digger_t *digger,
     return xml_validation_error (pool, tagname, FALSE);
   
   /* ancestry information can only appear as <file> or <dir> attrs */
-  else if ((new_frame->ancestor_path
-            || (new_frame->ancestor_revision >= 0))
+  else if (new_frame->ancestor_path
            && (new_frame->tag != svn_delta__XML_file)
            && (new_frame->tag != svn_delta__XML_dir))
     return xml_validation_error (pool, tagname, FALSE);
   
+  /* revisions can only appears in <file>, <dir>, and <delete> tags. */
+  else if (SVN_IS_VALID_REVNUM(new_frame->ancestor_revision)
+           && (new_frame->tag != svn_delta__XML_delete)
+           && (new_frame->tag != svn_delta__XML_file)
+           && (new_frame->tag != svn_delta__XML_dir))
+    return xml_validation_error (pool, tagname, FALSE);
+
   /* Final check: if this is an <add> or <open>, make sure the
      "name" attribute is unique within the parent <tree-delta>. */
   
@@ -490,10 +496,13 @@ do_directory_callback (svn_xml__digger_t *digger,
 /* Called when we find a <delete> tag after a <tree-delta> tag. */
 static svn_error_t *
 do_delete_dirent (svn_xml__digger_t *digger, 
-                  svn_xml__stackframe_t *youngest_frame)
+                  svn_xml__stackframe_t *youngest_frame,
+                  const char **atts)
 {
   svn_stringbuf_t *dirent_name = NULL;
   svn_error_t *err;
+  const char *ver;
+  svn_revnum_t revision = SVN_INVALID_REVNUM;
 
   /* Retrieve the "name" field from the current <delete> tag */
   dirent_name = youngest_frame->name;
@@ -504,8 +513,15 @@ do_delete_dirent (svn_xml__digger_t *digger,
        NULL, digger->pool,
        "do_delete_dirent: <delete> tag has no 'name' field.");
 
+  /* Get the revision from the tag attributes. */
+  ver = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
+  if (ver)
+    revision = atoi (ver);
+
   /* Call our editor's callback */
-  err = digger->editor->delete_entry (dirent_name, youngest_frame->baton);
+  err = digger->editor->delete_entry (dirent_name, 
+                                      revision,
+                                      youngest_frame->baton);
   if (err)
     return err;
 
@@ -1115,7 +1131,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     if ( (new_frame->tag == svn_delta__XML_delete) &&
          (new_frame->previous->tag == svn_delta__XML_treedelta) )
       {
-        err = do_delete_dirent (my_digger, new_frame);
+        err = do_delete_dirent (my_digger, new_frame, atts);
         if (err)
           svn_xml_signal_bailout (err, my_digger->svn_parser);
         return;

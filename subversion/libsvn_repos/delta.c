@@ -631,7 +631,7 @@ delete (struct context *c,
         svn_stringbuf_t *target_entry,
         apr_pool_t *pool)
 {
-  return c->editor->delete_entry (target_entry, dir_baton);
+  return c->editor->delete_entry (target_entry, SVN_INVALID_REVNUM, dir_baton);
 }
 
 

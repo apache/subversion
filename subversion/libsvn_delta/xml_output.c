@@ -373,19 +373,30 @@ open_root (void *edit_baton, svn_revnum_t base_revision, void **dir_baton)
 
 
 static svn_error_t *
-delete_entry (svn_stringbuf_t *name, void *parent_baton)
+delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = db->edit_baton;
   svn_stringbuf_t *str;
   apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
+  apr_hash_t *att;
   apr_size_t len;
 
   str = get_to_elem (eb, elem_tree_delta, pool);
-  svn_xml_make_open_tag (&str, pool, svn_xml_self_closing, 
-                         SVN_DELTA__XML_TAG_DELETE,
-                         SVN_DELTA__XML_ATTR_NAME, name, NULL);
+  att = apr_hash_make (pool);
+
+  apr_hash_set (att, SVN_DELTA__XML_ATTR_NAME, 
+                strlen(SVN_DELTA__XML_ATTR_NAME), name);
+  if (SVN_IS_VALID_REVNUM(revision))
+    {
+      apr_hash_set (att, SVN_DELTA__XML_ATTR_BASE_REV, 
+                    strlen(SVN_DELTA__XML_ATTR_BASE_REV), 
+                    svn_stringbuf_createf (pool, "%lu", 
+                                           (unsigned long) revision));
+    }
+  svn_xml_make_open_tag_hash (&str, pool, svn_xml_self_closing, 
+                              SVN_DELTA__XML_TAG_DELETE, att);
 
   len = str->len;
   err = svn_stream_write (eb->output, str->data, &len);

@@ -253,6 +253,7 @@ static svn_error_t * upd_open_root(void *edit_baton,
 }
 
 static svn_error_t * upd_delete_entry(svn_stringbuf_t *name,
+                                      svn_revnum_t revision,
 				      void *parent_baton)
 {
   item_baton_t *parent = parent_baton;

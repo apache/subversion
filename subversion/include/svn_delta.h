@@ -430,8 +430,12 @@ typedef struct svn_delta_edit_fns_t
 
   /* Deleting things.  */
        
-  /* Remove the directory entry named NAME.  */
+  /* Remove the directory entry named NAME, a child of the directory
+     represented by PARENT_BATON.  REVISION is used as a sanity check
+     to ensure that you are removing the revision of NAME that you
+     really think you are. */
   svn_error_t *(*delete_entry) (svn_stringbuf_t *name,
+                                svn_revnum_t revision,
                                 void *parent_baton);
 
 

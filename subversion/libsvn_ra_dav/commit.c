@@ -590,6 +590,7 @@ static svn_error_t * commit_open_root(void *edit_baton,
 }
 
 static svn_error_t * commit_delete_entry(svn_stringbuf_t *name,
+                                         svn_revnum_t revision,
                                          void *parent_baton)
 {
   resource_baton_t *parent = parent_baton;

@@ -74,11 +74,12 @@ open_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
 
 
 static svn_error_t *
-delete_entry (svn_stringbuf_t *name, void *parent_baton)
+delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
 {
   struct dir_baton *d = parent_baton;
 
-  svn_stringbuf_t *printable_name = svn_stringbuf_dup (d->path, d->edit_baton->pool);
+  svn_stringbuf_t *printable_name = 
+    svn_stringbuf_dup (d->path, d->edit_baton->pool);
   svn_path_add_component (printable_name, name, svn_path_local_style);
 
   printf ("D  %s\n", printable_name->data);
