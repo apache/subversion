@@ -236,9 +236,6 @@ typedef struct svn_opt_revision_t
  * It is typical, though not required, for @a *start_revision and
  * @a *end_revision to be @c svn_opt_revision_unspecified kind on entry.
  *
- * If a revision specifier is invalid, return an @c
- * SVN_ERR_CL_ARG_PARSING_ERROR.
- *
  * Use @a pool for temporary allocations.
  */
 int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
