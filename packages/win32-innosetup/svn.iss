@@ -44,48 +44,55 @@ ShowTasksTreeLines=true
 AllowNoIcons=true
 
 [Tasks]
-Name: desktopicon; Description: Create &desktop icon for the Subversion documentation; GroupDescription: Desktop icons:; Components: main
-Name: quicklaunchicon; Description: Create &Quick Launch icon for the Subversion Documentation; GroupDescription: Quick Launch icons:; MinVersion: 4.01.1998,5.00.2195; Components: main
+Name: desktopicon; Description: Create &desktop icon for the Subversion documentation; GroupDescription: Desktop icons:
+Name: quicklaunchicon; Description: Create &Quick Launch icon for the Subversion Documentation; GroupDescription: Quick Launch icons:; MinVersion: 4.01.1998,5.00.2195
 
 [Files]
 ; Subversion files --------------------------------------------------------------
 Source: in\subversion\Readme.dist; DestDir: {app}; DestName: Readme.txt
 Source: W32notes.txt; DestDir: {app}
-Source: {#= path_svnclient}\README.txt; DestDir: {app}; Components: main; DestName: Buildnotes.txt
-Source: {#= path_setup_in}\subversion\svn-proxy-template.reg; DestDir: {app}; Components: main; Flags: ignoreversion
-Source: {#= path_svnclient}\svn.exe; DestDir: {app}; Components: main; Flags: ignoreversion
-Source: {#= path_svnadmin}\svnadmin.exe; DestDir: {app}; Components: main; Flags: ignoreversion
-Source: {#= path_svnlook}\svnlook.exe; DestDir: {app}; Components: main; Flags: ignoreversion
-Source: {#= path_svnserve}\svnserve.exe; DestDir: {app}; Components: main; Flags: ignoreversion
-Source: {#= path_svnversion}\svnversion.exe; DestDir: {app}; Components: main; Flags: ignoreversion
-Source: {#= path_svndumpfilter}\svndumpfilter.exe; DestDir: {app}; Components: main; Flags: ignoreversion
-Source: {#= path_davsvn}\mod_dav_svn.so; DestDir: {app}\apache2\modules; Components: main; Flags: ignoreversion
-Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\apache2\modules; Components: main; Flags: ignoreversion
-Source: {#= path_svnclient}\libdb40.dll; DestDir: {app}; Components: main
-Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Components: main; Flags: ignoreversion
-Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}; Components: main
-Source: {#= path_setup_in}\doc\svn-doc.chm; DestDir: {app}\doc; Components: main
-Source: missing_msvcp60dll.html; DestDir: {app}\doc; Components: main; Check: VCRuntimeNotFound
-Source: missing_shfolderdll.html; DestDir: {app}\doc; Components: main; Check: ShFolderDllNotFound
+Source: {#= path_setup_in}\subversion\svn-proxy-template.reg; DestDir: {app}; Flags: ignoreversion
+Source: {#= path_svnclient}\..\README.txt; DestDir: {app}; DestName: Buildnotes.txt
+Source: {#= path_svnclient}\svn.exe; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_svnadmin}\svnadmin.exe; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_svnlook}\svnlook.exe; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_svnserve}\svnserve.exe; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_svnversion}\svnversion.exe; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_svndumpfilter}\svndumpfilter.exe; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_brkdb_dll}\libdb40.dll; DestDir: {app}\bin
+Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Flags: ignoreversion
 
-; SSL stuff
-Source: {#= path_ssl}\libeay32.dll; DestDir: {app}; Components: main; Flags: ignoreversion
-Source: {#= path_ssl}\ssleay32.dll; DestDir: {app}; Components: main; Flags: ignoreversion
+Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}
+Source: {#= path_setup_in}\doc\svn-doc.chm; DestDir: {app}\doc
 
-; Berkeley stuff --------------------------------------------------------------
-Source: {#= path_brkdb_bin}\db_*.exe; DestDir: {app}; Components: db
-Source: {#= path_brkdb_bin}\ex_*.exe; DestDir: {app}; Components: db
-Source: {#= path_brkdb_bin}\excxx_*.exe; DestDir: {app}; Components: db
-Source: {#= path_brkdb_bin}\libdb4*.dll; DestDir: {app}; Components: db
-Source: {#= path_brkdb_bin}\libdb4*.exp; DestDir: {app}; Components: db
-Source: {#= path_brkdb_inc}\db.h; DestDir: {app}\include\berkeley; Components: db
-Source: {#= path_brkdb_inc}\db_cxx.h; DestDir: {app}\include\berkeley; Components: db
-Source: {#= path_brkdb_inc2}\cxx_common.h; DestDir: {app}\include\berkeley; Components: db
-Source: {#= path_brkdb_inc2}\cxx_except.h; DestDir: {app}\include\berkeley; Components: db
-Source: {#= path_brkdb_lib}\libdb4*.lib; DestDir: {app}\lib\berkeley; Components: db
+;SSL
+Source: {#= path_ssl}\libeay32.dll; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_ssl}\ssleay32.dll; DestDir: {app}\bin; Flags: ignoreversion
 
-; Helpers ---------------------------------------------------------------------
-Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Components: main; Flags: ignoreversion
+; Missing stuff
+Source: missing_msvcp60dll.html; DestDir: {app}\doc; Check: VCRuntimeNotFound
+Source: missing_shfolderdll.html; DestDir: {app}\doc; Check: ShFolderDllNotFound
+
+; httpd modules
+Source: {#= path_davsvn}\mod_dav_svn.so; DestDir: {app}\httpd; Flags: ignoreversion
+Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\httpd; Flags: ignoreversion
+
+
+;Helpers ---------------------------------------------------------------------
+Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Flags: ignoreversion
+
+; Debug symbols;
+Source: {#= path_svnclient_pdb}\svn.pdb; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_svnadmin_pdb}\svnadmin.pdb; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_svnlook_pdb}\svnlook.pdb; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_svnserve_pdb}\svnserve.pdb; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_svnversion_pdb}\svnversion.pdb; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_svndumpfilter_pdb}\svndumpfilter.pdb; DestDir: {app}\bin; Flags: ignoreversion
+
+Source: {#= path_davsvn_pdb}\mod_dav_svn.pdb; DestDir: {app}\httpd; Flags: ignoreversion
+Source: {#= path_authzsvn_pdb}\mod_authz_svn.pdb; DestDir: {app}\httpd; Flags: ignoreversion
+
+Source: {#= path_iconv_pdb}\*.pdb; DestDir: {app}\iconv; Flags: ignoreversion
 
 ; Internet Shortcuts ----------------------------------------------------------
 Source: svn.url; DestDir: {app}
@@ -94,13 +101,13 @@ Source: svn.url; DestDir: {app}
 Filename: {app}\svn.url; Section: InternetShortcut; Key: URL; String: http://subversion.tigris.org/
 
 [Icons]
-Name: {group}\Subversion on the Web; Filename: {app}\svn.url; Components: main
-Name: {group}\Uninstall Subversion; Filename: {uninstallexe}; Components: main
-Name: {group}\Licenses\Subversion; Filename: {app}\SubversionLicense.txt; Components: main
-Name: {group}\Licenses\Berkeley DB Licence; Filename: {app}\BerkeleyLicense.txt; Components: main
-Name: {group}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Components: main; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0
-Name: {userdesktop}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Components: main; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0; Tasks: desktopicon
-Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Components: main; Comment: The standard Subversion Documentation; IconFilename: {app}\svn.exe; IconIndex: 0; MinVersion: 4.01.1998,5.00.2195; Tasks: quicklaunchicon
+Name: {group}\Subversion on the Web; Filename: {app}\svn.url
+Name: {group}\Uninstall Subversion; Filename: {uninstallexe}
+Name: {group}\Licenses\Subversion; Filename: {app}\SubversionLicense.txt
+Name: {group}\Licenses\Berkeley DB Licence; Filename: {app}\BerkeleyLicense.txt
+Name: {group}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0
+Name: {userdesktop}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0; Tasks: desktopicon
+Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Comment: The standard Subversion Documentation; IconFilename: {app}\svn.exe; IconIndex: 0; MinVersion: 4.01.1998,5.00.2195; Tasks: quicklaunchicon
 Name: {group}\Read Me; Filename: {app}\Readme.txt
 Name: {group}\Download and install msvcp60.dll; Filename: {app}\doc\missing_msvcp60dll.html; Check: VCRuntimeNotFound
 Name: {group}\Download and install shfolder.dll; Filename: {app}\doc\missing_shfolderdll.html; Check: ShFolderDllNotFound
@@ -112,13 +119,8 @@ Type: files; Name: {app}\svn.url
 EnableISX=true
 
 [Types]
-Name: full; Description: Full installation
-Name: compact; Description: Compact installation
-Name: custom; Description: Custom Installation; Flags: iscustom
 
 [Components]
-Name: main; Description: Subversion application files; Flags: fixed; Types: custom compact full
-Name: db; Description: Berkley 4 Database application files; Types: custom full
 
 [Registry]
 Root: HKCU; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueData: {app}\svn.exe; Flags: uninsdeletekeyifempty uninsdeletevalue
@@ -134,12 +136,11 @@ Root: HKLM; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName
 Root: HKLM; Subkey: SYSTEM\CurrentControlSet\Control\Session Manager\Environment; ValueType: string; ValueName: APR_ICONV_PATH; ValueData: {app}\iconv; Flags: uninsdeletevalue noerror
 
 [Run]
-Filename: {app}\helpers\svnpath.exe; Parameters: "add ""{app}"""
+Filename: {app}\helpers\svnpath.exe; Parameters: "add ""{app}\bin"""
 
 [UninstallRun]
-Filename: {app}\helpers\svnpath.exe; Parameters: "remove ""{app}"""
+Filename: {app}\helpers\svnpath.exe; Parameters: "remove ""{app}\bin"""
 
 [Code]
 #include "isx_main.pas"
-
 
