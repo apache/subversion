@@ -393,7 +393,7 @@ wrap_close_directory (void *dir_baton)
 static struct wrap_file_baton *
 make_file_baton (struct wrap_dir_baton *db)
 {
-  apr_pool_t *file_pool = svn_pool_create (db->dir_pool);
+  apr_pool_t *file_pool = svn_pool_create (db->eb->edit_pool);
   struct wrap_file_baton *fb = apr_palloc (file_pool, sizeof (*fb));
 
   fb->eb = db->eb;
