@@ -726,7 +726,7 @@ parse_date (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
       /* ### todo: check if apr_time_t is valid? */
     }
 
-  if (*right_date)
+  if (right_date)
     {
       if (! revision_from_word (&(os->end_revision), right_date))
         {
