@@ -68,14 +68,16 @@ char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
  *
  * Input:  an APR or SVN custom error code,
  *         a "child" error to wrap,
- *         a descriptive message,
+ *         a specific message
  *
  * Returns:  a new error structure (containing the old one).
  *
  * Notes: Errors are always allocated in a subpool of the global pool,
  *        since an error's lifetime is generally not related to the
  *        lifetime of any convenient pool.  Errors must be freed
- *        with @c svn_error_clear().
+ *        with @c svn_error_clear().  The specific message should be NULL
+ *        if there is nothing to add to the general message associated
+ *        with the error code.
  *
  *        If creating the "bottommost" error in a chain, pass @c NULL for
  *        the child argument.
