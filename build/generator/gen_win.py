@@ -351,56 +351,100 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     else:
       depends = self.sections['__CONFIG__'].get_dep_targets(target)
 
-    depends.extend(self.get_win_depends(target))
+    depends.extend(self.get_win_depends(target, FILTER_PROJECTS))
 
-    depends = filter(lambda x: hasattr(x, 'proj_name'), depends)
     depends.sort() ### temporary
     return depends
     
-  
-  def get_win_depends(self, target):
+  def get_win_depends(self, target, mode):
     """Return the list of dependencies for target"""
 
-    deps = {}
+    dep_dict = {}
 
-    top_static = isinstance(target, gen_base.TargetLib) and target.msvc_static
-    self.get_win_depends_impl(target, deps, top_static)
+    if isinstance(target, gen_base.TargetLib) and target.msvc_static:
+      self.get_static_win_depends(target, dep_dict)
+    else:
+      self.get_linked_win_depends(target, dep_dict)
 
-    deps = deps.keys()
+    deps = []
+
+    if mode == FILTER_PROJECTS:
+      for dep, (is_proj, is_lib, is_static) in dep_dict.items():
+        if is_proj:
+          deps.append(dep)
+    elif mode == FILTER_LIBS:
+      for dep, (is_proj, is_lib, is_static) in dep_dict.items():
+        if is_static or (is_lib and not is_proj):
+          deps.append(dep)
+    else:
+      raise NotImplementedError
+
     deps.sort()
     return deps
 
-  def get_win_depends_impl(self, target, deps, top_static):  
-    # true if we're iterating over top level dependencies
-    # (inverse of recursion logic below)
-    top_call = top_static or not isinstance(target, gen_base.TargetLib) \
-               or not target.msvc_static 
+  def get_direct_depends(self, target):
+    """Read target dependencies from graph
+    return value is list of (dependency, (is_project, is_lib, is_static)) tuples
+    """
+    deps = []
 
-    for dep in (self.graph.get_sources(gen_base.DT_LINK, target.name) +
-                self.graph.get_sources(gen_base.DT_NONLIB, target.name)):
+    for dep in self.graph.get_sources(gen_base.DT_LINK, target.name):
       if not isinstance(dep, gen_base.Target):
         continue
 
-      dep_lib = isinstance(dep, gen_base.TargetLib)
+      is_project = hasattr(dep, 'proj_name')
+      is_lib = isinstance(dep, gen_base.TargetLib)
+      is_static = is_lib and dep.msvc_static
+      deps.append((dep, (is_project, is_lib, is_static)))
 
-      # if adding dependencies for a static library, add only non-libraries.
-      # otherwise add all top level dependencies and any libraries that
-      # static library dependencies depend on.
-      if (top_static and not dep_lib) or \
-         (not top_static and (top_call or dep_lib)):
-        deps[dep] = None
-      
+    for dep in self.graph.get_sources(gen_base.DT_NONLIB, target.name):
+      is_project = hasattr(dep, 'proj_name')
+      is_lib = isinstance(dep, gen_base.TargetLib)
+      is_static = is_lib and dep.msvc_static
+      deps.append((dep, (is_project, is_lib, is_static)))
+
+    return deps
+
+  def get_static_win_depends(self, target, deps):
+    """Find project dependencies for a static library project"""
+    for dep, dep_kind in self.get_direct_depends(target):
+      is_proj, is_lib, is_static = dep_kind
+
+      # recurse for projectless targets
+      if not is_proj:
+        self.get_static_win_depends(dep, deps)
+
+      # Only add project dependencies on non-library projects. If we added
+      # project dependencies on libraries, MSVC would copy those libraries
+      # into the static archive. This would waste space and lead to linker
+      # warnings about multiply defined symbols. Instead, the library
+      # dependencies get added to any DLLs or EXEs that depend on this static
+      # library (see get_linked_win_depends() implementation).
+      if not is_lib:
+        deps[dep] = dep_kind
+
       # a static library can depend on another library through a fake project
-      if top_static and dep_lib and dep.msvc_fake:
-        deps[dep.msvc_fake] = None
+      elif dep.msvc_fake:
+        deps[dep.msvc_fake] = dep_kind
 
-      # if dependency is a projectless external library, recurse to treat
-      # its dependencies as if they were target's
-      inherit_deps = dep_lib and not dep.path and not dep.external_project
-      
-      # also recurse into static dependencies of nonstatic targets
-      if (not top_static and dep_lib and dep.msvc_static) or inherit_deps:
-        self.get_win_depends_impl(dep, deps, top_static)
+  def get_linked_win_depends(self, target, deps, static_recurse=0):
+    """Find project dependencies for a DLL or EXE project"""
+
+    for dep, dep_kind in self.get_direct_depends(target):
+      is_proj, is_lib, is_static = dep_kind
+
+      # recurse for projectless dependencies
+      if not is_proj:
+        self.get_linked_win_depends(dep, deps, 0)
+
+      # also recurse into static library dependencies
+      elif is_static:
+        self.get_linked_win_depends(dep, deps, 1)
+
+      # add all top level dependencies and any libraries that
+      # static library dependencies depend on.
+      if not static_recurse or is_lib:
+        deps[dep] = dep_kind
 
   def get_win_defines(self, target, cfg):
     "Return the list of defines for target"
@@ -493,13 +537,11 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if isinstance(target, gen_base.TargetSWIG) and target.lang == 'perl':
       nondeplibs.append(self.perl_lib)
 
-    for dep in self.get_win_depends(target):
-      if isinstance(dep, gen_base.TargetLib):
-        if dep.msvc_static:
-          nondeplibs.extend(dep.msvc_libs)
+    for dep in self.get_win_depends(target, FILTER_LIBS):
+      nondeplibs.extend(dep.msvc_libs)
 
-        if dep.external_lib == '$(SVN_DB_LIBS)':
-          nondeplibs.append(dblib)
+      if dep.external_lib == '$(SVN_DB_LIBS)':
+        nondeplibs.append(dblib)
 
     return gen_base.unique(nondeplibs)
 
@@ -568,4 +610,7 @@ if sys.platform == "win32":
 else:
   def escape_shell_arg(str):
     return "'" + string.replace(str, "'", "'\\''") + "'"
+
+FILTER_LIBS = 1
+FILTER_PROJECTS = 2
 
