@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <string.h>
 #include "svn_pools.h"
+#include "svn_private_config.h"
 
 svn_error_t *
 svn_ra_local__split_URL (const char **repos_path,
@@ -62,8 +63,38 @@ svn_ra_local__split_URL (const char **repos_path,
        "svn_ra_local__split_URL: URL contains unsupported hostname\n"
        "   (%s)", URL);
 
+
   /* Duplicate the URL, starting at the top of the path */
+#ifndef SVN_WIN32
   candidate_url = apr_pstrdup (subpool, path);
+#else  /* SVN_WIN32 */
+  /* On Windows, we'll typically have to skip the leading / if the
+     path starts with a drive letter.  Like most Web browsers, We
+     support two variants of this schema:
+
+         file:///X:/path    and
+         file:///X|/path
+
+    Note that, at least on WinNT and above,  file:////./X:/path  will
+    also work, so we must make sure the transformation doesn't break
+    that, and  file:///path  (that looks within the current drive
+    only) should also keep working. */
+ {
+   static const char valid_drive_letters[] =
+     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+   if (path[1] && strchr(valid_drive_letters, path[1])
+       && (path[2] == ':' || path[2] == '|')
+       && path[3] == '/')
+     {
+       char *const dup_path = apr_pstrdup (subpool, ++path);
+       if (dup_path[1] == '|')
+         dup_path[1] = ':';
+       candidate_url = dup_path;
+     }
+   else
+     candidate_url = apr_pstrdup (subpool, path);
+ }
+#endif /* SVN_WIN32 */
 
   /* Loop, trying to open a repository at URL.  If this fails, remove
      the last component from the URL, then try again. */
