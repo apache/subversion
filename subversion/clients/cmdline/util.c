@@ -151,12 +151,10 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
                                                         svn_path_local_style,
                                                         pool);
       /* If this target is not a Subversion administrative directory,
-         don't add it to the target list.  TODO:  Perhaps this check
-         should not call the target a SVN admin dir unless
-         svn_wc_check_wc passes on the target, too? */
-      if (! svn_string_compare 
-          (basename, 
-           svn_string_create (SVN_WC_ADM_DIR_NAME, pool)))
+         add it to the target list.  TODO: Perhaps this check should
+         not call the target a SVN admin dir unless svn_wc_check_wc
+         passes on the target, too? */
+      if (strcmp (basename->data, SVN_WC_ADM_DIR_NAME))
         array_push_svn_string (targets, os->argv[os->ind], pool);
     }
 
