@@ -70,6 +70,9 @@
    conventions. */
 #define SVN_PATH_REPOS_STYLE 2
 
+/* Pass this when you want a component added using URL conventions ('/'). */
+#define SVN_PATH_URL_STYLE 3
+
 
 /* Add a COMPONENT (a null-terminated C-string) to PATH. */
 void svn_path_add_component_nts (svn_string_t *path, 
