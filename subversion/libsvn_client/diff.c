@@ -157,9 +157,7 @@ merge_cmd (const char *older,
   switch (action)
     {
     case svn_diff_action_modify:
-      /* ### dammit, we don't have a common parent for the 3 fulltexts!!! */
-      SVN_ERR (svn_wc_merge (".",
-                             older, yours, mine,
+      SVN_ERR (svn_wc_merge (older, yours, mine,
                              left_label, right_label, target_label,
                              subpool));
       /* ### shouldn't diff_or_merge take a trace-editor option?  */

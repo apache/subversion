@@ -1062,8 +1062,10 @@ svn_io_run_diff3 (const char *dir,
      error. */
   if ((*exitcode != 0) && (*exitcode != 1))
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, pool, 
-                              "Error running %s:  exitcode was %d",
-                              SVN_CLIENT_DIFF3, *exitcode);
+                              "Error running %s:  exitcode was %d, args were:"
+                              "\nin directory %s, basenames:\n%s\n%s\n%s",
+                              SVN_CLIENT_DIFF3, *exitcode,
+                              dir, mine, older, yours);
 
   return SVN_NO_ERROR;
 }

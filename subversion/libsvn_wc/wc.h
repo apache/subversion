@@ -463,9 +463,9 @@ svn_error_t *svn_wc__adm_destroy (svn_stringbuf_t *path,
          SVN_WC__LOG_ATTR_ARG_4   : RIGHT_LABEL
          SVN_WC__LOG_ATTR_ARG_5   : TARGET_LABEL
 
-   Of course, these attributes should be paths that are *relative* to
-   the directory in which the log is running, as with all other log
-   commands.
+   Of course, the three paths should be *relative* to the directory in
+   which the log is running, as with all other log commands.  (Usually
+   they're just basenames within loggy->path.)
  */
 #define SVN_WC__LOG_MERGE        "merge"
 
