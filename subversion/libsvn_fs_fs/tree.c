@@ -2622,6 +2622,14 @@ apply_textdelta (void *baton, apr_pool_t *pool)
      if the node for which we are searching doesn't exist. */
   SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, txn_id, pool));
 
+  /* Check to see if path is locked;  if so, check that we can use it. */
+  if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_fs__allow_locked_operation 
+             (tb->path,
+              svn_fs_fs__dag_node_kind (parent_path->node),
+              tb->root->fs,
+              0, pool));
+
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, pool));
   tb->node = parent_path->node;
@@ -2798,6 +2806,14 @@ apply_text (void *baton, apr_pool_t *pool)
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
   SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, txn_id, pool));
+
+  /* Check to see if path is locked;  if so, check that we can use it. */
+  if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_fs__allow_locked_operation 
+             (tb->path,
+              svn_fs_fs__dag_node_kind (parent_path->node),
+              tb->root->fs,
+              0, pool));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, pool));
