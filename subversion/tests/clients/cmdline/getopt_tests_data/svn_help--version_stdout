@@ -1,5 +1,5 @@
 help (?, h): Display this usage message.
-usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]
+usage: help [SUBCOMMAND [SUBCOMMAND ... ]]
 
 Valid options:
   --version                : print client version info
