@@ -556,6 +556,12 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
   svn_path_add_component (full_path, sname, svn_path_local_style);
   svn_wc_entry (&entry, full_path, loggy->pool);
 
+  if (! entry)
+    /* Hmm....this entry is already absent from the revision control
+       system...this is odd.  TODO:  Figure out if this is the result
+       of a bug. */
+    return SVN_NO_ERROR;
+
   /* Remove the object from revision control -- whether it's a
      single file or recursive directory removal.  Attempt
      attempt to destroy all working files & dirs too. */
@@ -897,12 +903,13 @@ log_do_committed (struct log_runner *loggy,
           err = svn_wc__entry_modify
             (loggy->path,
              sname,
-             (SVN_WC__ENTRY_MODIFY_REVISION |
-              SVN_WC__ENTRY_MODIFY_SCHEDULE |
-              SVN_WC__ENTRY_MODIFY_EXISTENCE |
-              SVN_WC__ENTRY_MODIFY_CONFLICTED |
-              SVN_WC__ENTRY_MODIFY_TEXT_TIME |
-              SVN_WC__ENTRY_MODIFY_PROP_TIME),
+             (SVN_WC__ENTRY_MODIFY_REVISION 
+              | SVN_WC__ENTRY_MODIFY_SCHEDULE 
+              | SVN_WC__ENTRY_MODIFY_EXISTENCE
+              | SVN_WC__ENTRY_MODIFY_CONFLICTED
+              | SVN_WC__ENTRY_MODIFY_TEXT_TIME
+              | SVN_WC__ENTRY_MODIFY_PROP_TIME
+              | SVN_WC__ENTRY_MODIFY_FORCE),
              atoi (revstr),
              svn_node_none,
              svn_wc_schedule_normal,
