@@ -1,3 +1,40 @@
+Version 0.25.0 (released 06 July 2003, revision 6387, branches/release-0.25.0)
+
+User-visible changes:
+ * command line options:
+   . new --force option for svn export (r6327,#1296)
+   . new --force-log for commit, copy, delete, import, mkdir, move (r6294)
+   . --force no longer needed for commit
+
+ * commands
+   . new -  svnadmin archive (r6310)
+   . changed - svn import syntax now 'svn import [PATH] URL' (r6288,#933,#735)
+   . fixed - Search PATH for external diff commands (r6373)
+   . fixed - 'svn switch' memory bug (r6296)
+   . fixed - 'svn mkdir' coredump (r6388,#1369)
+
+ * python bindings now in -tools rpm for  Mandrake 9.1 (r6374)
+ * allow parent-into-child copies, provided they are not WC->WC. (r6348,#1367)
+ * fixed - Apache module installation order (r6382-6,#1381)	
+
+Developer-visible changes:
+
+ * Win32 build system
+   . new - .vcproj files for svn_config project and APR (r6311)
+   . fixed - SWIG bindings for Win32 (r6304)
+   . vcproj generator now works (r6316)
+   . swig's generated .c files now dependent on headers in .i files (r6379)
+   . refactored code common to dsp & vcproj into gen_win.py (r6328)
+
+ * fixed
+   . SEGFAULTs in SWIG bindings (r6339)
+   . potential SEGFAULTs in 'REPORT vcc' backward-compatibility code (r6377)
+   . mod_dav_svn's autoversioning failure on PUT (r6312)
+   . 'svn switch' memory bug (r6296)
+
+ * changed - mailer.py now uses svn_repos_replay()
+
+
 Version 0.24.2 (released 18 June 2003, revision 6284, branches/release-0.24.2)
 
  User-visible changes:
