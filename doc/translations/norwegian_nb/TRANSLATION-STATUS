@@ -4,17 +4,8 @@ documentation.
 
 1. Synchronisation history against the English version
 
-  1.1. /trunk
-
-    Updated r12408:12893.
-    r12409: Updated against r12408.
-    r12183: Updated against r12181.
-    r11832: Updated against r11831.
-    r11642: Updated against r11641.
-    r11605: Updated against r11602.
-    r11529: Updated against r11528.
-    r11419: Copied all the files from the svnbook_nb repository into the 
-            Subversion tree.
+  The revision number for the last synchronisation is stored in the 
+  LAST_UPDATED file.
 
 2. File status
 

@@ -177,11 +177,19 @@ install-misc-ps: $(MDOCS_PS_TARGET) $(MDOCS_INSTALL_DIR)
 
 # Stuff below here is added for building the Norwegian version.
 
+COLLAB=http://svn.collab.net/repos/svn
+
 BUILDTMP_DIR = build.tmp
 BOOKFILES = appa.xml appb.xml appc.xml appd.xml book.xml ch00.xml \
             ch01.xml ch02.xml ch03.xml ch04.xml ch05.xml ch06.xml \
             ch07.xml ch08.xml ch09.xml colo.xml copyright.xml \
             foreword.xml glossary.xml
+
+BDTMP = bd.tmp
+BDFILES = book.xml foreword.xml ch00.xml ch01.xml ch02.xml ch03.xml \
+          ch04.xml appa.xml ch05.xml ch06.xml ch07.xml ch08.xml \
+          ch09.xml appb.xml appc.xml appd.xml copyright.xml colo.xml \
+          glossary.xml
 
 build: dircheck htmlbook copytobuild
 
@@ -222,6 +230,17 @@ convfiles:
 		mv $$dest.tmp $$dest; \
 		echo "OK."; \
 	done
+
+bookdiff:
+	mkdir $(BDTMP)
+	svn co -N -r`cat LAST_UPDATED` $(COLLAB)/trunk/doc/book/book $(BDTMP)/eng
+	svn co -N $(COLLAB)/trunk/doc/translations/norwegian_nb/book $(BDTMP)/norw
+	for _ptd in $(BDFILES); do \
+		cat $(BDTMP)/eng/$$_ptd | bin/clean_files -e >>$(BDTMP)/eng.txt; \
+		cat $(BDTMP)/norw/$$_ptd | bin/clean_files -e >>$(BDTMP)/norw.txt; \
+	done
+	vimdiff $(BDTMP)/norw.txt $(BDTMP)/eng.txt
+	@echo The temporary files are still in $(BDTMP)/ for you to play with.
 
 # $Id$
 # vim: set ts=4 sw=4 sts=4 noet :
