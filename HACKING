@@ -34,8 +34,7 @@ TABLE OF CONTENTS
    * Commit access
    * The configuration/build system under unix
    * How to release a distribution tarball
-   * Release numbering
-   * Compatibility
+   * Release numbering, compatibility, and deprecation
    * Stabilizing a release branch
 
 
@@ -1376,12 +1375,34 @@ See notes/releases.txt.
 
 
 
-Release numbering and compatibility
-===================================
+Release numbering, compatibility, and deprecation
+=================================================
 
-Subversion uses the same release numbering guidelines as APR (see
-http://apr.apache.org/versioning.html), with a few extensions.  The
-extensions are:
+Subversion uses "MAJOR.MINOR.PATCH" release numbers, with the same
+guidelines as APR (see http://apr.apache.org/versioning.html), plus a
+few extensions, described later.  The general idea is:
+
+   1) Upgrading/downgrading between different patch releases in the
+      same MAJOR.MINOR line never breaks code.  It may cause bugfixes
+      to disappear/reappear, but API signatures and semantics remain
+      the same.  (Of course, the semantics may change in the trivial
+      ways appropriate for bugfixes, just not in ways that would force
+      adjustments in calling code.)
+
+   2) Upgrading to a new minor release in the same major line may
+      cause new APIs to appear, but not remove any APIs.  Any code
+      written to the old minor number will work with any later minor
+      number in that line.  However, downgrading afterwards may not
+      work, if new code has been written that takes advantage of the
+      new APIs.
+
+   3) When the major number changes, all bets are off.  This is the
+      only opportunity for a full reset of the APIs, and while we try
+      not to gratuitously remove interfaces, we will use it to clean
+      house a bit.
+
+Subversion extends the APR guidelines to cover client/server
+compatibility questions:
 
  1. A patch or minor number release of a server (or client) never
     breaks compatibility with a client (or server) in the same major
@@ -1422,7 +1443,8 @@ extensions are:
     a working copy or repository that doesn't work with previous minor
     releases, where "make" could mean "upgrade" as well as "create".
 
-Any unqualified triplet indicates a stable release:
+Subversion does not use the "even==stable, odd==unstable" convention;
+any unqualified triplet indicates a stable release:
 
    1.0.1  -->  first stable patch release of 1.0
    1.1.0  -->  next stable minor release of 1.x after 1.0.x
@@ -1471,6 +1493,33 @@ We have no mechanism for releasing dated snapshots.  If we want code
 to get wider distribution than just those who build from working
 copies, we put out a prerelease.
 
+Deprecation:
+------------
+
+When a new, improved version of an API is introduced, the old one
+remains for compatibility, at least until the next release.  However,
+we mark the old one as deprecated and point to the new one, so people
+know to write to the new API if at all possible.  When deprecating,
+mention the release after which the deprecation was introduced, and
+point to the new API.  If possible, replace the old API documentation
+with a diff to the new one.  For example:
+
+   /**
+    * @deprecated Provided for backward compatibility with the 1.0.0 API.
+    *
+    * Similar to svn_repos_dump_fs2(), but with the @a use_deltas
+    * parameter always set to @c FALSE.
+    */
+   svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
+                                   svn_stream_t *dumpstream,
+                                   svn_stream_t *feedback_stream,
+                                   svn_revnum_t start_rev,
+                                   svn_revnum_t end_rev,
+                                   svn_boolean_t incremental,
+                                   svn_cancel_func_t cancel_func,
+                                   void *cancel_baton,
+                                   apr_pool_t *pool);
+   
 
 
 Stabilizing and maintaining releases
