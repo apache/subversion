@@ -382,8 +382,9 @@ svn_xml_write_tag (apr_file_t *file,
 
 /*** XML output via a tree delta `editor'. ***/
 
-/* FIXME: I'm not sure we'll need all of these structures... unless
-   we're doing postfix vdeltas, hmmm, then we probably do, yeah. */
+/* FIXME: below is a skeleton of a tree-editor to output xml.  It can
+   be completed right now, it doesn't depend on anything else that's
+   incomplete. */
 
 struct edit_baton
 {
