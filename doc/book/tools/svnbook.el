@@ -7,6 +7,12 @@
 
 (xml-mode)
 
+;; We need to eval the local variables (specifically
+;; sgml-parent-document) after setting the mode to xml-mode so that we
+;; can get all the xml goodness that C-c C-t (sgml-list-valid-tags)
+;; gives us.
+(hack-local-variables)
+
 ;; *lots* of great stuff here: http://www.snee.com/bob/sgmlfree/emcspsgm.html
 ;;
 ;; For possible use. -Fitz
