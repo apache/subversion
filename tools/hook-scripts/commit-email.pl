@@ -9,10 +9,11 @@
 # Options:
 #    -h hostname       :  Hostname to append to author for 'From:'
 #    -l logfile        :  File to which mail contents should be appended
+#    -r email_address  :  Set email Reply-To header to this email address
 #    -s subject_prefix :  Subject line prefix
 #    
 # ====================================================================
-# Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2002 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -26,6 +27,8 @@
 # ====================================================================
 
 use strict;
+use Carp;
+use Getopt::Long;
 
 ######################################################################
 #  CONFIGURATION SECTION
@@ -40,6 +43,21 @@ my $svnlook = "/usr/local/bin/svnlook";
 ######################################################################
 # Initial setup/command-line handling
 
+# now, we see if there are any options included in the argument list
+my $logfile = '';
+my $hostname = '';
+my $reply_to = '';
+my $subject_prefix = '';
+
+GetOptions('hostname=s' => \$hostname,
+           'logfile=s'  => \$logfile,
+           'reply_to=s' => \$reply_to,
+           'subject=s'  => \$subject_prefix)
+    or &usage;
+
+# check that there are enough remaining command line options
+&usage("$0: too few arguments") unless @ARGV > 2;
+
 # get the REPOS from the arguments
 my $repos = shift @ARGV;
 
@@ -49,62 +67,35 @@ my $rev = shift @ARGV;
 # initialize the EMAIL_ADDRS to the remaining arguments
 my @email_addrs = @ARGV;
 
-# now, we see if there are any options included in the argument list
-my $logfile = '';
-my $hostname = '';
-my $subject_prefix = '';
-while (scalar @email_addrs)
-{
-    my $option = shift @email_addrs;
-    if ($option eq '-h')
-    {
-        # found a hostname option
-        $hostname = shift @email_addrs;
-    }
-    elsif ($option eq '-l')
-    {
-        # found a logfile option
-        $logfile = shift @email_addrs;
-    }
-    elsif ($option eq '-s')
-    {
-        # found a subject prefix option
-        $subject_prefix = shift @email_addrs;
-    }
-    else
-    {
-        # not an option, put it back!
-        unshift @email_addrs, ($option);
-        last;
-    }
-}
-
 ######################################################################
 # Harvest data using svnlook
 
-my @svnlooklines = ();
-my @output = ();
-my $line;
+# change into /tmp so that svnlook diff can create its .svnlook directory
+my $tmp_dir = '/tmp';
+chdir($tmp_dir)
+    or die "$0: cannot chdir `$tmp_dir': $!\n";
 
 # get the auther, date, and log from svnlook
-open (INPUT, "$svnlook $repos rev $rev info |") 
-    or die ("Error running svnlook (info)");
-@svnlooklines = <INPUT>;
-close (INPUT);
+my @command = ($svnlook, $repos, 'rev', $rev, 'info');
+my ($status, @svnlooklines) = &safe_read_from_pipe(@command);
+if ($status) {
+    die join("\n", "$0: @command failed with this output:", @svnlooklines),
+        "\n";
+}
 my $author = shift @svnlooklines;
 my $date = shift @svnlooklines;
 shift @svnlooklines;
-my @log = @svnlooklines;
-chomp $author;
-chomp $date;
+my @log = map { "$_\n" } @svnlooklines;
 
 # figure out what directories have changed (using svnlook)
-open (INPUT, "$svnlook $repos rev $rev dirs-changed |")
-    or die ("Error running svnlook (dirs-changed)");
-my @dirschanged = <INPUT>;
+my @dirschanged;
+@command = ($svnlook, $repos, 'rev', $rev, 'dirs-changed');
+($status, @dirschanged) = &safe_read_from_pipe(@command);
+if ($status) {
+    die join("\n", "$0: @command failed with this output:", @dirschanged),
+        "\n";
+}
 my $rootchanged = 0;
-close (INPUT);
-chomp @dirschanged;
 grep 
 {
     # lose the trailing slash if one exists (except in the case of '/')
@@ -114,16 +105,18 @@ grep
 @dirschanged; 
 
 # figure out what's changed (using svnlook)
-open (INPUT, "$svnlook $repos rev $rev changed |") 
-    or die ("Error running svnlook (changed)");
-@svnlooklines = <INPUT>;
-close (INPUT);
+@command = ($svnlook, $repos, 'rev', $rev, 'changed');
+($status, @svnlooklines) = &safe_read_from_pipe(@command);
+if ($status) {
+    die join("\n", "$0: @command failed with this output:", @svnlooklines),
+        "\n";
+}
 
 # parse the changed nodes
 my @adds = ();
 my @dels = ();
 my @mods = ();
-foreach $line (@svnlooklines)
+foreach my $line (@svnlooklines)
 {
     my $path;
     my $code;
@@ -147,10 +140,13 @@ foreach $line (@svnlooklines)
 }
 
 # get the diff from svnlook
-open (INPUT, "$svnlook $repos rev $rev diff |") 
-    or die ("Error running svnlook (diff)");
-my @difflines = <INPUT>;
-close (INPUT);
+my @difflines;
+@command = ($svnlook, $repos, 'rev', $rev, 'diff');
+($status, @difflines) = &safe_read_from_pipe(@command);
+if ($status) {
+    die join("\n", "$0: @command failed with this output:", @difflines),
+        "\n";
+}
 
 ######################################################################
 # Mail headers
@@ -162,7 +158,7 @@ if (($rootchanged == 0) and (scalar @commonpieces > 1))
 {
     my $firstline = shift (@dirschanged);
     push (@commonpieces, split ('/', $firstline));
-    foreach $line (@dirschanged)
+    foreach my $line (@dirschanged)
     {
         my @pieces = ();
         my $i = 0;
@@ -210,39 +206,41 @@ if ($hostname =~ /\w/)
 {
     $mail_from = "$mail_from\@$hostname";
 }
-push (@output, ("To: $userlist\n"));
-push (@output, ("From: $mail_from\n"));
-push (@output, ("Subject: $subject\n"));
-push (@output, ("Reply-to: dev\@subversion.tigris.org\n"));
-push (@output, ("\n"));
+
+my @output;
+push (@output, "To: $userlist\n");
+push (@output, "From: $mail_from\n");
+push (@output, "Subject: $subject\n");
+push (@output, "Reply-to: $reply_to\n") if $reply_to;
+push (@output, "\n");
 
 # mail body
-push (@output, ("Author: $author\n"));
-push (@output, ("Date: $date\n"));
-push (@output, ("New Revision: $rev\n"));
-push (@output, ("\n"));
+push (@output, "Author: $author\n");
+push (@output, "Date: $date\n");
+push (@output, "New Revision: $rev\n");
+push (@output, "\n");
 if (scalar @adds)
 {
     @adds = sort @adds;
-    push (@output, ("Added:\n"));
-    push (@output, (@adds));
+    push (@output, "Added:\n");
+    push (@output, @adds);
 }
 if (scalar @dels)
 {
     @dels = sort @dels;
-    push (@output, ("Removed:\n"));
-    push (@output, (@dels));
+    push (@output, "Removed:\n");
+    push (@output, @dels);
 }
 if (scalar @mods)
 {
     @mods = sort @mods;
-    push (@output, ("Modified:\n"));
-    push (@output, (@mods));
+    push (@output, "Modified:\n");
+    push (@output, @mods);
 }
-push (@output, ("Log:\n"));
-push (@output, (@log));
-push (@output, ("\n"));
-push (@output, (@difflines));
+push (@output, "Log:\n");
+push (@output, @log);
+push (@output, "\n");
+push (@output, map { "$_\n" } @difflines);
 
 
 # dump output to logfile (if its name is not empty)
@@ -261,4 +259,51 @@ if (($sendmail =~ /\w/) and ($userlist =~ /\w/))
         or die ("Error opening a pipe to sendmail");
     print SENDMAIL @output;
     close SENDMAIL;
+}
+
+exit 0;
+
+sub usage {
+  warn "@_\n" if @_;
+  die "usage: $0 [options] REPOS REVNUM email_address1 [email_address2 ... ]]\n",
+      "options are\n",
+      "  -h hostname        Hostname to append to author for 'From:'\n",
+      "  -l logfile         File to which mail contents should be appended\n",
+      "  -r email_address   Set email Reply-To header to this email address\n",
+      "  -s subject_prefix  Subject line prefix\n";
+}
+
+sub safe_read_from_pipe {
+  unless (@_) {
+    croak "$0: safe_read_from_pipe passed no arguments.\n";
+  }
+  print "Running @_\n";
+  my $pid = open(SAFE_READ, '-|');
+  unless (defined $pid) {
+    die "$0: cannot fork: $!\n";
+  }
+  unless ($pid) {
+    open(STDERR, ">&STDOUT") or
+      die "$0: cannot dup STDOUT: $!\n";
+    exec(@_) or
+      die "$0: cannot exec `@_': $!\n";
+  }
+  my @output;
+  while (<SAFE_READ>) {
+    chomp;
+    push(@output, $_);
+  }
+  close(SAFE_READ);
+  my $result = $?;
+  my $exit   = $result >> 8;
+  my $signal = $result & 127;
+  my $cd     = $result & 128 ? "with core dump" : "";
+  if ($signal or $cd) {
+    warn "$0: pipe from `@_' failed $cd: exit=$exit signal=$signal\n";
+  }
+  if (wantarray) {
+    return ($result, @output);
+  } else {
+    return $result;
+  }
 }
