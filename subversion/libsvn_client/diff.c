@@ -699,6 +699,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   void *ra_baton, *session1, *session2;
   svn_ra_plugin_t *ra_lib;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
+  svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   
   props1 = apr_hash_make (pool);
   props2 = apr_hash_make (pool);
@@ -755,8 +756,13 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   err = svn_wc_merge (tmpfile1, tmpfile2,
                       target_wcpath,
                       oldrev_str, newrev_str, ".working", pool);
-  if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
-    return err;  
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_CONFLICT)
+        return err;  
+      else
+        text_state = svn_wc_notify_state_conflicted;
+    }
              
   SVN_ERR (svn_io_remove_file (tmpfile1, pool));
   SVN_ERR (svn_io_remove_file (tmpfile2, pool));
@@ -769,6 +775,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
 
   if (notify_func)
     {
+
       /* First check that regular props changed. */
       if (propchanges->nelts > 0)
         {
@@ -783,12 +790,14 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
             prop_state = svn_wc_notify_state_unchanged;
         }
 
+      /* ### todo: Detect the actual text state, and pass that below.  */
+
       (*notify_func) (notify_baton,
                       target_wcpath,
                       svn_wc_notify_update_update,
                       svn_node_file,
                       NULL,
-                      svn_wc_notify_state_unknown, /* ### discover this! */
+                      text_state, 
                       prop_state,
                       SVN_INVALID_REVNUM);
     }
