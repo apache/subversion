@@ -62,7 +62,8 @@ static svn_opt_subcommand_t
   subcommand_load,
   subcommand_lscr,
   subcommand_lstxns,
-  subcommand_lsdblogs,
+  subcommand_list_dblogs,
+  subcommand_list_unused_dblogs,
   subcommand_recover,
   subcommand_rmtxns,
   subcommand_setlog;
@@ -78,7 +79,6 @@ enum
     svnadmin__force_uuid,
     svnadmin__parent_dir,
     svnadmin__bdb_txn_nosync,
-    svnadmin__only_unused,
     svnadmin__config_dir
   };
 
@@ -129,9 +129,6 @@ static const apr_getopt_option_t options_table[] =
 
     {SVN_FS_CONFIG_BDB_TXN_NOSYNC, svnadmin__bdb_txn_nosync, 0,
      "disable fsync at transaction commit [Berkeley DB]"},
-
-    {"only-unused", svnadmin__only_unused, 0,
-     "list only unused log files, that can be archived"},
 
     {"config-dir", svnadmin__config_dir, 1,
      "read user configuration files from directory ARG"},
@@ -189,15 +186,17 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "repository.)\n",
      {svnadmin__follow_copies} },
 
-    {"lsdblogs", subcommand_lsdblogs, {0},
-     "usage: svnadmin lsdblogs REPOS_PATH\n\n"
-     "List Berkeley DB log files.\n\n"
-     "WARNING: if you do not specify the --only-unused flag to this command,\n"
-     "the list of displayed logfiles will include those still in use by your\n"
-     "repository.  Modifying or deleting logfiles which are still in use\n"
+    {"list-dblogs", subcommand_list_dblogs, {0},
+     "usage: svnadmin list-dblogs REPOS_PATH\n\n"
+     "List all Berkeley DB log files.\n\n"
+     "WARNING: Modifying or deleting logfiles which are still in use\n"
      "will cause your repository to be corrupted.\n",
-     {svnadmin__only_unused} },
+     {0} },
 
+    {"list-unused-dblogs", subcommand_list_unused_dblogs, {0},
+     "usage: svnadmin list-unused-dblogs REPOS_PATH\n\n"
+     "List unused Berkeley DB log files.\n\n",
+     {0} },
 
     {"lstxns", subcommand_lstxns, {0},
      "usage: svnadmin lstxns REPOS_PATH\n\n"
@@ -240,7 +239,6 @@ struct svnadmin_opt_state
   svn_boolean_t follow_copies;                      /* --copies */
   svn_boolean_t quiet;                              /* --quiet */
   svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
-  svn_boolean_t only_unused;                        /* --only-unused */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   const char *on_disk;
@@ -503,8 +501,8 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 
 /* This implements `svn_opt_subcommand_t'. */
-svn_error_t *
-subcommand_lsdblogs (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+static svn_error_t *
+list_dblogs (apr_getopt_t *os, void *baton, svn_boolean_t only_unused, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   apr_array_header_t *logfiles;
@@ -512,7 +510,7 @@ subcommand_lsdblogs (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   
   SVN_ERR (svn_repos_db_logfiles (&logfiles,
                                   opt_state->repository_path,
-                                  opt_state->only_unused,
+                                  only_unused,
                                   pool));
   
   /* Loop, printing log files.  We append the log paths to the
@@ -528,6 +526,24 @@ subcommand_lsdblogs (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       printf ("%s\n", svn_path_local_style (log_native, pool));
     }
   
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_list_dblogs (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  SVN_ERR (list_dblogs (os, baton, FALSE, pool));
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_list_unused_dblogs (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  SVN_ERR (list_dblogs (os, baton, TRUE, pool));
   return SVN_NO_ERROR;
 }
 
@@ -775,9 +791,6 @@ main (int argc, const char * const *argv)
         break;
       case svnadmin__bdb_txn_nosync:
         opt_state.bdb_txn_nosync = TRUE;
-        break;
-      case svnadmin__only_unused:
-        opt_state.only_unused = TRUE;
         break;
       case svnadmin__config_dir:
         opt_state.config_dir = apr_pstrdup(pool, svn_path_canonicalize(opt_arg,
