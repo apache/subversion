@@ -44,7 +44,7 @@ II. Administration
 III. Appendices
 
   1. obtaining freebsd
-  2. biliography
+  2. bibliography
   3. net resources
 
 *Indices of Tables/Figures/Examples*
@@ -74,9 +74,9 @@ I. Getting Started
       [put pointer to appendix 1, so CVS users can read the 'diff']
        a. The non-locking model
              [Jim's great conversational explanation]   
-       b. Quick walkthrough
+       b. Quick walk-through
              [explanation of ra_local vs. ra_dav]
-             [repos creation/tour/walkthrough from our README doc]
+             [repos creation/tour/walk-through from our README doc]
 
 
 II. Client Cookbook
