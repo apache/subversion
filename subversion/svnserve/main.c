@@ -328,6 +328,7 @@ int main(int argc, const char *const *argv)
           if (listen_once && err
               && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
             svn_handle_error(err, stdout, FALSE);
+          svn_error_clear(err);
 
           apr_socket_close(usock);
           apr_socket_close(sock);
