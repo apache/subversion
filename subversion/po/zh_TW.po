@@ -4689,7 +4689,7 @@ msgstr "自來源檔案庫移除多餘的紀錄檔"
 msgid ""
 "wait instead of exit if the repository is in\n"
 "                             use by another process"
-msgstr ""
+msgstr "如果檔案庫被其它行程所用, 等待而不逕自結束"
 
 #: svnadmin/main.c:282
 msgid ""
