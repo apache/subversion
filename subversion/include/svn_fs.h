@@ -660,7 +660,7 @@ svn_error_t *svn_fs_rename (svn_fs_root_t *root,
                             apr_pool_t *pool);
 
 
-/* Create a a copy of FROM_PATH in FROM_ROOT named TO_PATH in TO_ROOT.
+/* Create a copy of FROM_PATH in FROM_ROOT named TO_PATH in TO_ROOT.
    If FROM_PATH in FROM_ROOT is a directory, copy the tree it refers
    to recursively.
 
@@ -736,9 +736,12 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t **contents_p,
 
 
 /* Set *YOUNGEST_P to the number of the youngest revision in filesystem FS.
+   Use POOL for all temporary allocation.
+
    The oldest revision in any filesystem is numbered zero.  */
 svn_error_t *svn_fs_youngest_rev (svn_revnum_t *youngest_p,
-                                  svn_fs_t *fs);
+                                  svn_fs_t *fs,
+                                  apr_pool_t *pool);
 
 
 /* Set *VALUE_P to the value of the property named PROPNAME on
