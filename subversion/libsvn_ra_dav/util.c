@@ -267,6 +267,7 @@ svn_error_t *svn_ra_dav__parsed_request(ne_session *sess,
   int rv;
   int decompress_rv;
   int code;
+  int expected_code;
   const char *msg;
   svn_error_t *err = SVN_NO_ERROR;
   svn_ra_ne_session_baton_t *sess_baton =
@@ -362,8 +363,13 @@ svn_error_t *svn_ra_dav__parsed_request(ne_session *sess,
   if (err) /* If the error parser had a problem */
     goto error;
 
-  if (code != 200
-      || rv != NE_OK)
+  /* Set the expected code based on the method. */
+  expected_code = 200;
+  if (strcmp(method, "PROPFIND") == 0)
+    expected_code = 207;
+
+  if ((code != expected_code) 
+      || (rv != NE_OK))
     {
       msg = apr_psprintf(pool, "%s of '%s'", method, url);
       err = svn_ra_dav__convert_error(sess, msg, rv);
