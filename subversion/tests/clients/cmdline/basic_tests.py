@@ -1569,6 +1569,20 @@ def uri_syntax(sbox):
   # for us, it's only important to know that it _did_ error (as
   # opposed to segfaulting), so we don't examine the error text.
 
+def basic_checkout_file(sbox):
+  "trying to check out a file should fail"
+
+  sbox.build()
+
+  iota_url = svntest.main.current_repo_url + '/iota'
+
+  output, errput = svntest.main.run_svn(1, 'co', iota_url)
+
+  for line in errput:
+    if string.find(line, "refers to a file") != -1:
+      break
+  else:
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
@@ -1601,6 +1615,7 @@ test_list = [ None,
               basic_add_ignores,
               basic_import_ignores,
               uri_syntax,
+              basic_checkout_file,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

@@ -94,6 +94,10 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                                   "URL '%s' doesn't exist", URL);
+      else if (kind == svn_node_file)
+        return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE , NULL,
+                                  "URL '%s' refers to a file, not a directory",
+                                  URL);
 
       /* Get the repos UUID. */
       SVN_ERR (ra_lib->get_uuid (session, &uuid, pool));
