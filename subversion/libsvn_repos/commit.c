@@ -428,7 +428,7 @@ open_file (const char *path,
   
   /* If the node our caller has is an older revision number than the
      one in our transaction, return an out-of-dateness error. */
-  if (base_revision < cr_rev)
+  if (SVN_IS_VALID_REVNUM(base_revision) && (base_revision < cr_rev))
     return out_of_date (full_path, eb->txn_name);
 
   /* Build a new file baton */
