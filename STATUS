@@ -19,7 +19,7 @@ Candidate changes:
     Justification:  reported by a user, an unnecessary restriction.
     Notes:  change just sets a flag differently for this case.  See #830.
     Votes:
-      +1: sussman
+      +1: sussman, jszakmeister
       +0: dlr, gstein
 
   * r8616
@@ -41,23 +41,23 @@ Candidate changes:
     Justification:  Fixes svn_error_t leaks.
     Notes
     Votes:
-      +1: cmpilato, kfogel
+      +1: cmpilato, kfogel, jszakmeister
 
   * r8838
     Finish issue #1750 -- svn export [url] doesn't export any svn:externals
     Votes:
-      +1: cmpilato
+      +1: cmpilato, jszakmeister
 
   * r8839
     Finish Issue #1756 -- import doesn't handle svn:eol-style or svn:keywords
     Justification:  Allows malformed data into the repository.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, jszakmeister
 
   * r8842
     Finish Issue #1741 - svn status -v shows unwanted status of externals.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, jszakmeister
 
   * r8846
     Add an example wrapper to help svn+ssh users using setgid svnserve.
@@ -69,4 +69,4 @@ Candidate changes:
     Fix compressed streams on LP64 arch.
     Justification: potential seg fault
     Votes:
-       +1: kfogel, cmpilato
+       +1: kfogel, cmpilato, jszakmeister
