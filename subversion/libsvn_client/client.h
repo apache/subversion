@@ -130,7 +130,7 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
    which represents the protocol METHOD.  */
 svn_error_t * svn_client__get_authenticator (void **authenticator,
                                              void **auth_baton,
-                                             apr_uint64_t method,
+                                             enum svn_ra_auth_method method,
                                              void *callback_baton,
                                              apr_pool_t *pool);
 

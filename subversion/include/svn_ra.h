@@ -144,8 +144,11 @@ typedef struct svn_ra_reporter_t
 
 
 /* List all known authenticator objects (protocols) here. */
-#define SVN_RA_AUTH_USERNAME                       0x0001
-#define SVN_RA_AUTH_SIMPLE_PASSWORD                0x0002
+enum svn_ra_auth_method
+{
+  svn_ra_auth_username,
+  svn_ra_auth_simple_password
+};
 /* ### someday add other protocols here: PRIVATE_KEY, CERT, etc. */
   
 
@@ -161,7 +164,7 @@ typedef struct svn_ra_reporter_t
 
 
 /* A protocol which only needs a username.  (used by ra_local)
-   (matches type SVN_RA_AUTH_USERNAME above.)  */
+   (matches type svn_ra_auth_username above.)  */
 typedef struct svn_ra_username_authenticator_t
 {
   /* Get a username from the client. */
@@ -179,7 +182,7 @@ typedef struct svn_ra_username_authenticator_t
 
 
 /* A protocol which needs a username and password (used by ra_dav)
-   (matches type SVN_RA_AUTH_SIMPLE_PASSWORD above.)  */
+   (matches type svn_ra_auth_simple_password above.)  */
 typedef struct svn_ra_simple_password_authenticator_t
 {
   /* Get a username and password from the client.  If FORCE_PROMPT is
@@ -224,7 +227,7 @@ typedef struct svn_ra_callbacks_t
      which represents the protocol METHOD.  */
   svn_error_t *(*get_authenticator) (void **authenticator,
                                      void **auth_baton,
-                                     apr_uint64_t method,
+                                     enum svn_ra_auth_method method,
                                      void *callback_baton,
                                      apr_pool_t *pool);
 

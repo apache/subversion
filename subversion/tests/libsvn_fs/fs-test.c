@@ -4069,34 +4069,28 @@ check_old_revisions (const char **msg,
      retrieve all the committed revisions. */
   {
     /* right-side numbers match revision numbers */
-    const char *iota_contents_1
-      = "This is the file 'iota'.\n";
+#define iota_contents_1 "This is the file 'iota'.\n"
 
     /* Add a char to the front. */
-    const char *iota_contents_2
-      = "XThis is the file 'iota'.\n";
+#define iota_contents_2 "XThis is the file 'iota'.\n"
 
     /* Add a char to the end. */
-    const char *iota_contents_3
-      = "XThis is the file 'iota'.\nX";
+#define iota_contents_3 "XThis is the file 'iota'.\nX"
 
     /* Add a couple of chars in the middle. */
-    const char *iota_contents_4
-      = "XThis is the X file 'iota'.\nX";
+#define iota_contents_4 "XThis is the X file 'iota'.\nX"
 
     /* Randomly add and delete chars all over. */
-    const char *iota_contents_5
-      = "XTYhQis is ACK, PHHHT! no longer 'ioZZZZZta'.blarf\nbye";
+#define iota_contents_5 \
+    "XTYhQis is ACK, PHHHT! no longer 'ioZZZZZta'.blarf\nbye"
 
     /* Reassure iota that it will live for quite some time. */
-    const char *iota_contents_6
-      = "Matthew 5:18 (Revised Standard Version) --\n\
+#define iota_contents_6 "Matthew 5:18 (Revised Standard Version) --\n\
 For truly, I say to you, till heaven and earth pass away, not an iota,\n\
-not a dot, will pass from the law until all is accomplished.";
+not a dot, will pass from the law until all is accomplished."
 
     /* Revert to the original contents. */
-    const char *iota_contents_7
-      = "This is the file 'iota'.\n";
+#define iota_contents_7 "This is the file 'iota'.\n"
 
     /* Revision 2. */
     SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));

@@ -288,7 +288,7 @@ store_user_and_pass (void *baton)
 
 svn_error_t * svn_client__get_authenticator (void **authenticator,
                                              void **auth_baton,
-                                             apr_uint64_t method,
+                                             enum svn_ra_auth_method method,
                                              void *callback_baton,
                                              apr_pool_t *pool)
 {
@@ -301,7 +301,7 @@ svn_error_t * svn_client__get_authenticator (void **authenticator,
   /* Return a specific authenticator vtable. */
   switch (method)
     {
-    case SVN_RA_AUTH_USERNAME:
+    case svn_ra_auth_username:
       {
         svn_ra_username_authenticator_t *ua = apr_pcalloc (pool, sizeof(*ua));
 
@@ -315,7 +315,7 @@ svn_error_t * svn_client__get_authenticator (void **authenticator,
         break;
       }
 
-    case SVN_RA_AUTH_SIMPLE_PASSWORD:
+    case svn_ra_auth_simple_password:
       {
         svn_ra_simple_password_authenticator_t *ua 
           = apr_pcalloc (pool, sizeof(*ua));

@@ -167,11 +167,11 @@ static const svn_ra_reporter_t ra_local_reporter =
 
 
 static svn_error_t *
-open (void **session_baton,
-      svn_stringbuf_t *repos_URL,
-      const svn_ra_callbacks_t *callbacks,
-      void *callback_baton,
-      apr_pool_t *pool)
+svn_ra_local__open (void **session_baton,
+                    svn_stringbuf_t *repos_URL,
+                    const svn_ra_callbacks_t *callbacks,
+                    void *callback_baton,
+                    apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *session;
   void *a, *auth_baton;
@@ -185,7 +185,7 @@ open (void **session_baton,
   /* Get the username by "pulling" it from the callbacks. */
   SVN_ERR (callbacks->get_authenticator (&a,
                                          &auth_baton, 
-                                         SVN_RA_AUTH_USERNAME, 
+                                         svn_ra_auth_username, 
                                          callback_baton, pool));
 
   authenticator = (svn_ra_username_authenticator_t *) a;
@@ -232,7 +232,7 @@ open (void **session_baton,
 
 
 static svn_error_t *
-close (void *session_baton)
+svn_ra_local__close (void *session_baton)
 {
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
@@ -250,8 +250,8 @@ close (void *session_baton)
 
 
 static svn_error_t *
-get_latest_revnum (void *session_baton,
-                   svn_revnum_t *latest_revnum)
+svn_ra_local__get_latest_revnum (void *session_baton,
+                                 svn_revnum_t *latest_revnum)
 {
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
@@ -264,9 +264,9 @@ get_latest_revnum (void *session_baton,
 
 
 static svn_error_t *
-get_dated_revision (void *session_baton,
-                    svn_revnum_t *revision,
-                    apr_time_t tm)
+svn_ra_local__get_dated_revision (void *session_baton,
+                                  svn_revnum_t *revision,
+                                  apr_time_t tm)
 {
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
@@ -279,13 +279,17 @@ get_dated_revision (void *session_baton,
 
 
 static svn_error_t *
-get_commit_editor (void *session_baton,
-                   const svn_delta_editor_t **editor,
-                   void **edit_baton,
-                   svn_revnum_t *new_rev,
-                   const char **committed_date,
-                   const char **committed_author,
-                   svn_stringbuf_t *log_msg)
+svn_ra_local__get_commit_editor (void *session_baton,
+                                 const svn_delta_editor_t **editor,
+                                 void **edit_baton,
+                                 svn_revnum_t *new_rev,
+                                 const char **committed_date,
+                                 const char **committed_author,
+                                 svn_stringbuf_t *log_msg,
+                                 svn_ra_get_wc_prop_func_t get_func,
+                                 svn_ra_set_wc_prop_func_t set_func,
+                                 svn_ra_close_commit_func_t close_func,
+                                 void *close_baton)
 {
   const svn_delta_editor_t *commit_editor;
   const svn_delta_editor_t *tracking_editor;
@@ -337,18 +341,18 @@ get_commit_editor (void *session_baton,
 
 
 static svn_error_t *
-do_checkout (void *session_baton,
-             svn_revnum_t revision,
-             svn_boolean_t recurse,
-             const svn_delta_edit_fns_t *editor,
-             void *edit_baton)
+svn_ra_local__do_checkout (void *session_baton,
+                           svn_revnum_t revision,
+                           svn_boolean_t recurse,
+                           const svn_delta_edit_fns_t *editor,
+                           void *edit_baton)
 {
   svn_revnum_t revnum_to_fetch;
   svn_ra_local__session_baton_t *sbaton = 
     (svn_ra_local__session_baton_t *) session_baton;
   
   if (! SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR (get_latest_revnum (sbaton, &revnum_to_fetch));
+    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_fetch));
   else
     revnum_to_fetch = revision;
 
@@ -365,14 +369,14 @@ do_checkout (void *session_baton,
 
 
 static svn_error_t *
-do_update (void *session_baton,
-           const svn_ra_reporter_t **reporter,
-           void **report_baton,
-           svn_revnum_t update_revision,
-           svn_stringbuf_t *update_target,
-           svn_boolean_t recurse,
-           const svn_delta_edit_fns_t *update_editor,
-           void *update_baton)
+svn_ra_local__do_update (void *session_baton,
+                         const svn_ra_reporter_t **reporter,
+                         void **report_baton,
+                         svn_revnum_t update_revision,
+                         svn_stringbuf_t *update_target,
+                         svn_boolean_t recurse,
+                         const svn_delta_edit_fns_t *update_editor,
+                         void *update_baton)
 {
   svn_delta_edit_fns_t *pipe_editor;
   struct svn_pipe_edit_baton *pipe_edit_baton;
@@ -391,7 +395,7 @@ do_update (void *session_baton,
     svn_path_add_component_nts (switch_path, target);
   
   if (! SVN_IS_VALID_REVNUM(update_revision))
-    SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
+    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_update_to));
   else
     revnum_to_update_to = update_revision;
 
@@ -426,15 +430,15 @@ do_update (void *session_baton,
 
 
 static svn_error_t *
-do_switch (void *session_baton,
-           const svn_ra_reporter_t **reporter,
-           void **report_baton,
-           svn_revnum_t update_revision,
-           svn_stringbuf_t *update_target,
-           svn_boolean_t recurse,
-           svn_stringbuf_t *switch_url,
-           const svn_delta_edit_fns_t *update_editor,
-           void *update_baton)
+svn_ra_local__do_switch (void *session_baton,
+                         const svn_ra_reporter_t **reporter,
+                         void **report_baton,
+                         svn_revnum_t update_revision,
+                         svn_stringbuf_t *update_target,
+                         svn_boolean_t recurse,
+                         svn_stringbuf_t *switch_url,
+                         const svn_delta_edit_fns_t *update_editor,
+                         void *update_baton)
 {
   svn_delta_edit_fns_t *pipe_editor;
   struct svn_pipe_edit_baton *pipe_edit_baton;
@@ -462,7 +466,7 @@ do_switch (void *session_baton,
                               sbaton->repos_path->data);
 
   if (! SVN_IS_VALID_REVNUM(update_revision))
-    SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
+    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_update_to));
   else
     revnum_to_update_to = update_revision;
 
@@ -520,13 +524,13 @@ do_switch (void *session_baton,
 
 
 static svn_error_t *
-do_status (void *session_baton,
-           const svn_ra_reporter_t **reporter,
-           void **report_baton,
-           svn_stringbuf_t *status_target,
-           svn_boolean_t recurse,
-           const svn_delta_edit_fns_t *status_editor,
-           void *status_baton)
+svn_ra_local__do_status (void *session_baton,
+                         const svn_ra_reporter_t **reporter,
+                         void **report_baton,
+                         svn_stringbuf_t *status_target,
+                         svn_boolean_t recurse,
+                         const svn_delta_edit_fns_t *status_editor,
+                         void *status_baton)
 {
   svn_revnum_t revnum_to_update_to;
   svn_stringbuf_t *switch_path;
@@ -542,7 +546,7 @@ do_status (void *session_baton,
   if (target)
     svn_path_add_component_nts (switch_path, target);
 
-  SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
+  SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_update_to));
 
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
@@ -563,13 +567,13 @@ do_status (void *session_baton,
 
 
 static svn_error_t *
-get_log (void *session_baton,
-         const apr_array_header_t *paths,
-         svn_revnum_t start,
-         svn_revnum_t end,
-         svn_boolean_t discover_changed_paths,
-         svn_log_message_receiver_t receiver,
-         void *receiver_baton)
+svn_ra_local__get_log (void *session_baton,
+                       const apr_array_header_t *paths,
+                       svn_revnum_t start,
+                       svn_revnum_t end,
+                       svn_boolean_t discover_changed_paths,
+                       svn_log_message_receiver_t receiver,
+                       void *receiver_baton)
 {
   svn_ra_local__session_baton_t *sbaton = session_baton;
   apr_array_header_t *abs_paths
@@ -609,10 +613,10 @@ get_log (void *session_baton,
 
 
 static svn_error_t *
-do_check_path (svn_node_kind_t *kind,
-               void *session_baton,
-               const char *path,
-               svn_revnum_t revision)
+svn_ra_local__do_check_path (svn_node_kind_t *kind,
+                             void *session_baton,
+                             const char *path,
+                             svn_revnum_t revision)
 {
   svn_ra_local__session_baton_t *sbaton = session_baton;
   svn_fs_root_t *root;
@@ -643,12 +647,12 @@ do_check_path (svn_node_kind_t *kind,
 
 /* Getting just one file. */
 static svn_error_t *
-get_file (void *session_baton,
-          const char *path,
-          svn_revnum_t revision,
-          svn_stream_t *stream,
-          svn_revnum_t *fetched_rev,
-          apr_hash_t **props)
+svn_ra_local__get_file (void *session_baton,
+                        const char *path,
+                        svn_revnum_t revision,
+                        svn_stream_t *stream,
+                        svn_revnum_t *fetched_rev,
+                        apr_hash_t **props)
 {
   svn_fs_root_t *root;
   svn_stream_t *contents;
@@ -776,19 +780,19 @@ static const svn_ra_plugin_t ra_local_plugin =
 {
   "ra_local",
   "Module for accessing a repository on local disk.",
-  open,
-  close,
-  get_latest_revnum,
-  get_dated_revision,
-  get_commit_editor,
-  get_file,
-  do_checkout,
-  do_update,
-  do_switch,
-  do_status,
+  svn_ra_local__open,
+  svn_ra_local__close,
+  svn_ra_local__get_latest_revnum,
+  svn_ra_local__get_dated_revision,
+  svn_ra_local__get_commit_editor,
+  svn_ra_local__get_file,
+  svn_ra_local__do_checkout,
+  svn_ra_local__do_update,
+  svn_ra_local__do_switch,
+  svn_ra_local__do_status,
   NULL,
-  get_log,
-  do_check_path
+  svn_ra_local__get_log,
+  svn_ra_local__do_check_path
 };
 
 

@@ -322,13 +322,13 @@ get_user_and_pass (char **username,
 static svn_error_t *
 get_authenticator (void **authenticator,
                    void **auth_baton,
-                   apr_uint64_t method,
+                   enum svn_ra_auth_method method,
                    void *baton,
                    apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
 
-  if (method == SVN_RA_AUTH_USERNAME)
+  if (method == svn_ra_auth_username)
     {
       svn_ra_username_authenticator_t *auth;
 
@@ -338,7 +338,7 @@ get_authenticator (void **authenticator,
       *authenticator = auth;
       *auth_baton = (void *)cb->callback;
     }
-  else if (method == SVN_RA_AUTH_SIMPLE_PASSWORD)
+  else if (method == svn_ra_auth_simple_password)
     {
       svn_ra_simple_password_authenticator_t *auth;
       auth = apr_palloc (pool, sizeof (*auth));
