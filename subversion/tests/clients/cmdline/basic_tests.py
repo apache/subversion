@@ -592,7 +592,8 @@ def basic_cleanup():
   # Run cleanup (### todo: cleanup doesn't currently print anything)
   stdout_lines, stderr_lines = svntest.main.run_svn('cleanup', wc_dir)
   if len (stderr_lines) > 0:
-    print "Cleanup command printed to stderr."
+    print "Cleanup command printed the following to stderr:"
+    print stderr_lines
     return 1
   
   # Verify unlocked status.
