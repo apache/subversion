@@ -1003,6 +1003,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
   struct authz_read_baton arb;
+  apr_pool_t *subpool = svn_pool_create(resource->pool);
 
   /* Construct the authz read check baton. */
   arb.r = resource->info->r;
@@ -1251,6 +1252,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   for (child = doc->root->first_child; child != NULL; child = child->next)
     if (child->ns == ns)
       {
+        /* Clear our subpool. */
+        svn_pool_clear(subpool);
+
         if (strcmp(child->name, "entry") == 0)
           {
             const char *path;
@@ -1284,14 +1288,14 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               }
 
             /* get cdata, stipping whitespace */
-            path = dav_xml_get_cdata(child, resource->pool, 1);
+            path = dav_xml_get_cdata(child, subpool, 1);
             
             if (! linkpath)
               serr = svn_repos_set_path(rbaton, path, rev,
-                                        start_empty, resource->pool);
+                                        start_empty, subpool);
             else
               serr = svn_repos_link_path(rbaton, path, linkpath, rev,
-                                         start_empty, resource->pool);
+                                         start_empty, subpool);
             if (serr != NULL)
               {
                 svn_error_clear(svn_repos_abort_report(rbaton, resource->pool));
@@ -1305,22 +1309,19 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                doing a regular update (not a `switch') */
             if (linkpath && (! dst_path))
               {
-                const char *this_path
-                  = svn_path_join_many(resource->pool, 
-                                       src_path, target, path, NULL);
+                const char *this_path;
                 if (! uc.pathmap)
                   uc.pathmap = apr_hash_make(resource->pool);
+                this_path = svn_path_join_many(apr_hash_pool_get(uc.pathmap),
+                                               src_path, target, path, NULL);
                 add_to_path_map(uc.pathmap, this_path, linkpath);
               }
           }
         else if (strcmp(child->name, "missing") == 0)
           {
-            const char *path;
-
             /* get cdata, stipping whitespace */
-            path = dav_xml_get_cdata(child, resource->pool, 1);
-
-            serr = svn_repos_delete_path(rbaton, path, resource->pool);
+            const char *path = dav_xml_get_cdata(child, subpool, 1);
+            serr = svn_repos_delete_path(rbaton, path, subpool);
             if (serr != NULL)
               {
                 svn_error_clear(svn_repos_abort_report(rbaton, resource->pool));
@@ -1411,6 +1412,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                  "and response generation for the update "
                                  "report.");
     }
+
+  /* Destroy our subpool. */
+  svn_pool_destroy(subpool);
 
   return NULL;
 }
