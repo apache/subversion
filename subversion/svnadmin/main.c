@@ -73,18 +73,18 @@ create_stdio_stream (svn_stream_t **stream,
   return SVN_NO_ERROR;   
 }
 
-/** Helper to parse local repository path. 
- * Try parsing next parameter of @a os as a local path to repository.
- * If successfull *@a repos_path will contain internal style path to
- * the repository.
+/* Helper to parse local repository path.  Try parsing next parameter
+ * of OS as a local path to repository.  If successfull *REPOS_PATH
+ * will contain internal style path to the repository.
  */
 static svn_error_t *
-parse_local_repos_path(apr_getopt_t *os, const char ** repos_path, 
-                       apr_pool_t *pool)
+parse_local_repos_path (apr_getopt_t *os, 
+                        const char ** repos_path, 
+                        apr_pool_t *pool)
 {
   *repos_path = NULL;
 
-  /* Check to see if there is one more paramater. */
+  /* Check to see if there is one more parameter. */
   if (os->ind < os->argc)
     {
       const char * path = os->argv[os->ind++];
@@ -106,6 +106,33 @@ parse_local_repos_path(apr_getopt_t *os, const char ** repos_path,
 
   return SVN_NO_ERROR;   
 }
+
+
+/* Custom filesystem warning function. */
+static void
+warning_func (void *baton, 
+              svn_error_t *err)
+{
+  if (! err)
+    return;
+  err = svn_error_quick_wrap 
+    (err, "The filesystem warning function was called");
+  svn_handle_error (err, stderr, FALSE);
+}
+
+
+/* Helper to open a repository and set a warning func (so we don't
+ * SEGFAULT when libsvn_fs's default handler gets run).  */
+static svn_error_t *
+open_repos (svn_repos_t **repos,
+            const char *path,
+            apr_pool_t *pool)
+{
+  SVN_ERR (svn_repos_open (repos, path, pool));
+  svn_fs_set_warning_func (svn_repos_fs (*repos), warning_func, NULL);
+  return SVN_NO_ERROR;
+}
+
 
 
 /** Subcommands. **/
@@ -352,7 +379,7 @@ subcommand_deltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_revnum_t youngest, revision;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
   SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
 
@@ -415,7 +442,7 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
   svn_revnum_t youngest;
 
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
   SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
 
@@ -502,7 +529,7 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   svn_stream_t *stdin_stream, *stdout_stream = NULL;
 
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   
   /* Read the stream from STDIN.  Users can redirect a file. */
   SVN_ERR (create_stdio_stream (&stdin_stream,
@@ -531,7 +558,7 @@ subcommand_lstxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   apr_array_header_t *txns;
   int i;
   
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
   SVN_ERR (svn_fs_list_transactions (&txns, fs, pool));
   
@@ -563,7 +590,7 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Since db transactions may have been replayed, it's nice to tell
      people what the latest revision is.  It also proves that the
      recovery actually worked. */
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   SVN_ERR (svn_fs_youngest_rev (&youngest_rev, svn_repos_fs (repos), pool));
   printf ("The latest repos revision is %"
           SVN_REVNUM_T_FMT ".\n", youngest_rev);
@@ -633,7 +660,7 @@ subcommand_rmtxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   int i;
   apr_pool_t *subpool = svn_pool_create (pool);
   
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
   
   SVN_ERR (svn_opt_parse_all_args (&args, os, pool));
@@ -719,7 +746,7 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                        NULL, pool));
 
   /* Open the filesystem  */
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
 
   /* If we are bypassing the hooks system, we just hit the filesystem
      directly. */
@@ -752,7 +779,7 @@ subcommand_verify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* This whole process is basically just a dump of the repository
      with no interest in the output. */
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   SVN_ERR (svn_fs_youngest_rev (&youngest, svn_repos_fs (repos), pool));
   SVN_ERR (create_stdio_stream (&stderr_stream, apr_file_open_stderr, pool));
   SVN_ERR (svn_repos_dump_fs (repos, NULL, stderr_stream, 

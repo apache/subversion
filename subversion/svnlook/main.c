@@ -1527,8 +1527,21 @@ do_tree (svnlook_ctxt_t *c,
   return SVN_NO_ERROR;
 }
 
-
-/*** Subcommands. ***/
+
+/* Custom filesystem warning function. */
+static void
+warning_func (void *baton, 
+              svn_error_t *err)
+{
+  if (! err)
+    return;
+  err = svn_error_quick_wrap 
+    (err, "The filesystem warning function was called");
+  svn_handle_error (err, stderr, FALSE);
+}
+
+
+/* Factory function for the context baton. */
 static svn_error_t *
 get_ctxt_baton (svnlook_ctxt_t **baton_p,
                 struct svnlook_opt_state *opt_state,
@@ -1538,6 +1551,7 @@ get_ctxt_baton (svnlook_ctxt_t **baton_p,
 
   SVN_ERR (svn_repos_open (&(baton->repos), opt_state->repos_path, pool));
   baton->fs = svn_repos_fs (baton->repos);
+  svn_fs_set_warning_func (baton->fs, warning_func, NULL);
   baton->show_ids = opt_state->show_ids;
   baton->no_diff_deleted = opt_state->no_diff_deleted;
   baton->is_revision = opt_state->txn ? FALSE : TRUE;
@@ -1552,6 +1566,10 @@ get_ctxt_baton (svnlook_ctxt_t **baton_p,
   *baton_p = baton;
   return SVN_NO_ERROR;
 }
+
+
+
+/*** Subcommands. ***/
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
