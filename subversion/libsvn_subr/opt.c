@@ -585,7 +585,13 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
             return svn_error_createf (SVN_ERR_BAD_URL, 0,
                                       _("URL '%s' is not properly URI-encoded"),
                                       utf8_target);
-                                      
+          
+          /* Verify that no backpaths are present in the URL. */
+          if (svn_path_is_backpath_present (utf8_target))
+            return svn_error_createf (SVN_ERR_BAD_URL, 0,
+                                      _("URL '%s' contains a '..' element"),
+                                      utf8_target);
+          
           /* strip any trailing '/' */
           target = svn_path_canonicalize (utf8_target, pool);
         }
