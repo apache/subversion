@@ -880,7 +880,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
 svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
                    svn_boolean_t tunnel, apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err, *io_err;
   apr_uint64_t ver;
   const char *mech, *mecharg, *user = NULL, *client_url, *repos_url, *fs_path;
   apr_array_header_t *caplist;
@@ -953,10 +953,15 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
 
   err = find_repos(client_url, root, &repos, &repos_url, &fs_path, pool);
   if (err)
-    svn_ra_svn_write_cmd_failure(conn, pool, err);
-  else
-    svn_ra_svn_write_cmd_response(conn, pool, "");
-  svn_error_clear(err);
+    {
+      io_err = svn_ra_svn_write_cmd_failure(conn, pool, err);
+      svn_error_clear(err);
+      if (io_err)
+        return io_err;
+      SVN_ERR(svn_ra_svn_flush(conn, pool));
+      return SVN_NO_ERROR;
+    }
+  svn_ra_svn_write_cmd_response(conn, pool, "");
 
   b.repos = repos;
   b.url = client_url;
