@@ -167,20 +167,6 @@ typedef struct svn_xml__stackframe_t
  * digger->stack.  This "stack" keeps track of the XML nesting and
  * aids in the validation of the XML.
  *
- *    Note ("heads we win, tails we lose"):
- *    =====================================
- *    A digger only stores the head of the stack, even though the
- *    place we hook things onto is the tail.  While it would be
- *    technically more efficient to keep a pointer to tail, it would
- *    also be more error-prone, since it's another thing to keep track
- *    of.  And the maximum chain length of the delta is proportional
- *    to the max directory depth of the tree the delta represents,
- *    since we always snip off any completed portion of the delta
- *    (i.e., every time we encounter a closing tag, we remove what it
- *    closed from the delta).  So cdr'ing down the chain to the end is
- *    not so bad.  Given that deltas usually result in file IO of some
- *    kind, a little pointer chasing should be lost in the noise.
- *
  * The digger structure also holds critical information given to us by
  * the uber-caller of "svn_delta_parse", such as batons and a editor_t
  * structure which tells us what to do in the case of certain parse
