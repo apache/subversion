@@ -78,13 +78,16 @@ Package=<4>
     Project_Dep_Name tests_libsvn_delta_vdelta
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name tests_libsvn_delta_diff
+    Project_Dep_Name tests_libsvn_diff_diff
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name tests_libsvn_delta_diff3
+    Project_Dep_Name tests_libsvn_diff_diff3
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name tests_libsvn_delta_diff_diff3
+    Project_Dep_Name tests_libsvn_diff_diff4
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_diff_diff_diff3
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name tests_libsvn_fs_skel
@@ -256,6 +259,21 @@ Package=<4>
 ###############################################################################
 
 Project: "libsvn_delta"=.\subversion\libsvn_delta\libsvn_delta.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_diff"=.\subversion\libsvn_diff\libsvn_diff.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -465,6 +483,9 @@ Package=<4>
     Project_Dep_Name libsvn_delta
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name libsvn_diff
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name libsvn_subr
     End Project Dependency
     Begin Project Dependency
@@ -648,7 +669,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_delta_diff"=.\subversion\tests\libsvn_delta\diff_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_diff_diff"=.\subversion\tests\libsvn_diff\diff_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -656,11 +677,17 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_diff
+    End Project Dependency
 }}}
 
 ###############################################################################
 
-Project: "tests_libsvn_delta_diff3"=.\subversion\tests\libsvn_delta\diff3_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_diff_diff3"=.\subversion\tests\libsvn_diff\diff3_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -668,11 +695,17 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_diff
+    End Project Dependency
 }}}
 
 ###############################################################################
 
-Project: "tests_libsvn_delta_diff_diff3"=.\subversion\tests\libsvn_delta\diff_diff3_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_diff_diff4"=.\subversion\tests\libsvn_diff\diff4_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -680,6 +713,30 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_diff
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_diff_diff_diff3"=.\subversion\tests\libsvn_diff\diff_diff3_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_diff
+    End Project Dependency
 }}}
 
 ###############################################################################
