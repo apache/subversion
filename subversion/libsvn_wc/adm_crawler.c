@@ -749,8 +749,7 @@ svn_wc_transmit_prop_deltas (const char *path,
   SVN_ERR (svn_wc__prop_path (&props, path, adm_access, FALSE, pool));
   
   /* Get the full path of the prop-base `pristine' file */
-  if ((entry->schedule == svn_wc_schedule_replace)
-      || (entry->schedule == svn_wc_schedule_add))
+  if (entry->schedule == svn_wc_schedule_replace)
     {
       /* do nothing: baseprop hash should be -empty- for comparison
          purposes.  if they already exist on disk, they're "leftover"
