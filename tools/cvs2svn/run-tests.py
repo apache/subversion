@@ -185,7 +185,7 @@ def parse_log(svn_repos):
       log.msg += line
       i += 1
 
-  log_start_re = re.compile('^rev (?P<rev>[0-9]+):  '
+  log_start_re = re.compile('^r(?P<rev>[0-9]+) \| '
                             '(?P<author>[^\|]+) \| '
                             '(?P<date>[^\|]+) '
                             '\| (?P<lines>[0-9]+) (line|lines)$')
