@@ -1165,7 +1165,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
           (*stream)->wstream =
             svn_txdelta_parse_svndiff((*stream)->delta_handler,
                                       (*stream)->delta_baton,
-                                      FALSE,
+                                      TRUE,
                                       resource->pool);
         }
     }
