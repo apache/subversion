@@ -391,6 +391,8 @@ static void add_props(const svn_ra_dav_resource_t *r,
           continue;
         }
 #undef NSLEN
+
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
 #define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
       if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
         {
@@ -406,6 +408,8 @@ static void add_props(const svn_ra_dav_resource_t *r,
           continue;
         }
 #undef NSLEN
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+
 #define NSLEN (sizeof(SVN_DAV_PROP_NS_SVN) - 1)
       if (strncmp(key, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
         {
@@ -421,6 +425,8 @@ static void add_props(const svn_ra_dav_resource_t *r,
           (*setter)(baton, skey, sval);
         }
 #undef NSLEN
+
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
 #define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
       else if (strncmp(key, SVN_PROP_PREFIX, NSLEN) == 0)
         {
@@ -440,6 +446,8 @@ static void add_props(const svn_ra_dav_resource_t *r,
           (*setter)(baton, skey, sval);
         }
 #undef NSLEN
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+
       else
         {
           /* If we get here, then we have a property that is neither
@@ -920,6 +928,8 @@ filter_props (apr_hash_t *props,
                      APR_HASH_KEY_STRING, 
                      svn_string_create(val, pool));    
 #undef NSLEN
+
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
       /* ### Backwards compatibility: look for old 'svn:custom:'
          namespace and strip it away, instead of the good URI
          namespace.  REMOVE this block someday! */
@@ -929,6 +939,8 @@ filter_props (apr_hash_t *props,
                      APR_HASH_KEY_STRING, 
                      svn_string_create(val, pool));    
 #undef NSLEN
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+
       /* If the property is in the 'svn' namespace, then it's a
          normal user-controlled property coming from the fs.  Just
          strip off the URI prefix, add an 'svn:', and add to the hash. */
@@ -937,12 +949,15 @@ filter_props (apr_hash_t *props,
         {
           const char *newkey = apr_pstrcat(pool,
                                            SVN_PROP_PREFIX,
-                                           (const char *)key + NSLEN);
+                                           (const char *)key + NSLEN,
+                                           NULL);
           apr_hash_set(props, newkey, 
                        APR_HASH_KEY_STRING, 
                        svn_string_create(val, pool));    
         }
 #undef NSLEN
+
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
       /* ### Backwards compatibility: look for old 'svn:' instead
          of the good URI namespace.  Filter out
          baseline-rel-path. REMOVE this block someday! */
@@ -956,6 +971,8 @@ filter_props (apr_hash_t *props,
                          svn_string_create(val, pool));    
         }
 #undef NSLEN
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+
       else if (strcmp(key, SVN_RA_DAV__PROP_CHECKED_IN) == 0)
         {
           /* ### I *think* we have to remove any old
@@ -1158,6 +1175,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
                            sizeof(SVN_DAV_PROP_NS_SVN)) == 0)
             entry->has_props = TRUE;
 
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
           else if (strncmp((const char *)kkey, SVN_PROP_CUSTOM_PREFIX,
                            sizeof(SVN_PROP_CUSTOM_PREFIX)) == 0)
             entry->has_props = TRUE;
@@ -1167,6 +1185,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
             if (strcmp((const char *)kkey + sizeof(SVN_PROP_PREFIX),
                        "baseline-relative-path") != 0)
               entry->has_props = TRUE;          
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
         }
 
       /* created_rev & friends */

@@ -26,7 +26,7 @@
 #include "dav_svn.h"
 #include "svn_pools.h"
 #include "svn_time.h"
-
+#include "svn_dav.h"
 
 /*
 ** The namespace URIs that we use. This list and the enumeration must
@@ -35,13 +35,19 @@
 static const char * const dav_svn_namespace_uris[] =
 {
     "DAV:",
-    SVN_PROP_PREFIX,    /* ### need to get this approved from IANA */
+    SVN_DAV_PROP_NS_DAV,
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+    SVN_PROP_PREFIX,
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
     NULL	/* sentinel */
 };
 enum {
     DAV_SVN_NAMESPACE_URI_DAV,  /* the DAV: namespace URI */
-    DAV_SVN_NAMESPACE_URI       /* the svn: namespace URI */
+    DAV_SVN_NAMESPACE_URI,      /* the dav<->ra_dav namespace URI */
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+    DAV_SVN_NAMESPACE_URI_OLD   /* the OLD dav<->ra_dav namespace URI */
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 };
 
 #define SVN_RO_DAV_PROP(name) \
@@ -58,8 +64,18 @@ enum {
 #define SVN_RW_SVN_PROP(sym,name) \
 	{ DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 1 }
 
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+#define SVN_RO_SVN_OLD_PROP(sym,name) \
+	{ DAV_SVN_NAMESPACE_URI_OLD, #name, SVN_OLD_PROPID_##sym, 0 }
+#define SVN_RW_SVN_OLD_PROP(sym,name) \
+	{ DAV_SVN_NAMESPACE_URI_OLD, #name, SVN_OLD_PROPID_##sym, 1 }
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+
 enum {
-  SVN_PROPID_baseline_relative_path = 1
+  SVN_PROPID_baseline_relative_path = 1,
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+  SVN_OLD_PROPID_baseline_relative_path
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 };
 
 static const dav_liveprop_spec dav_svn_props[] =
@@ -85,6 +101,9 @@ static const dav_liveprop_spec dav_svn_props[] =
 
   /* SVN properties */
   SVN_RO_SVN_PROP(baseline_relative_path, baseline-relative-path),
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+  SVN_RO_SVN_OLD_PROP(baseline_relative_path, baseline-relative-path),
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
   { 0 } /* sentinel */
 };
@@ -406,6 +425,9 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         }
       break;
 
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+    case SVN_OLD_PROPID_baseline_relative_path:
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
     case SVN_PROPID_baseline_relative_path:
       /* only defined for VCRs */
       /* ### VCRs within the BC should not have this property! */

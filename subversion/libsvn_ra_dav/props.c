@@ -62,9 +62,9 @@ static const elem_defn elem_definitions[] =
 
   /* SVN elements */
   { ELEM_baseline_relpath, SVN_RA_DAV__PROP_BASELINE_RELPATH, 1 },
-  /* ### REMOVE the old version of this someday: */
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
   { ELEM_baseline_relpath_old, SVN_RA_DAV__PROP_BASELINE_RELPATH_OLD, 1 },
-
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   { 0 }
 };
 
@@ -83,9 +83,10 @@ static const struct ne_xml_elm neon_descriptions[] =
   /* SVN elements */
   { SVN_DAV_PROP_NS_DAV, "baseline-relative-path", ELEM_baseline_relpath,
     NE_XML_CDATA },
-  /* ### REMOVE this someday: */
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
   { SVN_PROP_PREFIX, "baseline-relative-path", ELEM_baseline_relpath_old,
     NE_XML_CDATA },
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
   { NULL }
 };
@@ -106,9 +107,11 @@ typedef struct {
 static const ne_propname starting_props[] =
 {
   { "DAV:", "version-controlled-configuration" },
-  { SVN_PROP_PREFIX, "baseline-relative-path" },
-  { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
   { "DAV:", "resourcetype" },
+  { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+  { SVN_PROP_PREFIX, "baseline-relative-path" },
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   { NULL }
 };
 
@@ -212,7 +215,9 @@ static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid ch
           {
           case ELEM_baseline_coll:
           case ELEM_baseline_relpath:
-          case ELEM_baseline_relpath_old: /* ### REMOVE ME someday */
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+          case ELEM_baseline_relpath_old:
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
           case ELEM_checked_in:
           case ELEM_resourcetype:
           case ELEM_vcc:
@@ -562,12 +567,10 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
     const char *relative_path;
     const char *relative_path_old;
     
-    /* ### someday, we need to REMOVE the support for the old baseline
-       stuffs: */
-
     relative_path = apr_hash_get(rsrc->propset,
                                  SVN_RA_DAV__PROP_BASELINE_RELPATH,
                                  APR_HASH_KEY_STRING);
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
     relative_path_old = apr_hash_get(rsrc->propset,
                                      SVN_RA_DAV__PROP_BASELINE_RELPATH_OLD,
                                      APR_HASH_KEY_STRING);
@@ -601,6 +604,16 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
             /* cool. keep the new relative_path. */
           }
       }
+#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+    if (relative_path == NULL)
+      {
+        /* ### better error reporting... */        
+        /* ### need an SVN_ERR here */
+        return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                                "The relative-path property was not "
+                                "found on the resource.");
+      }
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
     
     /* don't forget to tack on the parts we lopped off in order
        to find the VCC... */

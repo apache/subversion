@@ -26,7 +26,7 @@
 #include "dav_svn.h"
 #include "svn_xml.h"
 #include "svn_pools.h"
-
+#include "svn_dav.h"
 
 struct dav_db {
   const dav_resource *resource;
@@ -57,7 +57,20 @@ static const char *get_repos_path (struct dav_resource_private *info)
 static void get_repos_propname(dav_db *db, const dav_prop_name *name,
                                const char **repos_propname)
 {
-  if (strcmp(name->ns, SVN_PROP_PREFIX) == 0)
+  if (strcmp(name->ns, SVN_DAV_PROP_NS_SVN) == 0)
+    {
+      /* recombine the namespace ("svn:") and the name. */
+      svn_stringbuf_set(db->work, SVN_PROP_PREFIX);
+      svn_stringbuf_appendcstr(db->work, name->name);
+      *repos_propname = db->work->data;
+    }
+  else if (strcmp(name->ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+    {
+      /* the name of a custom prop is just the name -- no ns URI */
+      *repos_propname = name->name;
+    }
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+  else if (strcmp(name->ns, SVN_PROP_PREFIX) == 0)
     {
       /* recombine the namespace ("svn:") and the name. */
       svn_stringbuf_set(db->work, SVN_PROP_PREFIX);
@@ -69,6 +82,7 @@ static void get_repos_propname(dav_db *db, const dav_prop_name *name,
       /* the name of a custom prop is just the name -- no ns URI */
       *repos_propname = name->name;
     }
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   else
     {
       *repos_propname = NULL;
@@ -129,7 +143,7 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
   if (propname == NULL)
     return dav_new_error(db->p, HTTP_CONFLICT, 0,
                          "Properties may only be defined in the "
-                         SVN_PROP_PREFIX " and " SVN_PROP_CUSTOM_PREFIX
+                         SVN_DAV_PROP_NS_SVN " and " SVN_DAV_PROP_NS_CUSTOM
                          " namespaces.");
 
   /* Working Baseline or Working (Version) Resource */
@@ -197,8 +211,13 @@ static void dav_svn_db_close(dav_db *db)
 
 static dav_error *dav_svn_db_define_namespaces(dav_db *db, dav_xmlns_info *xi)
 {
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
   dav_xmlns_add(xi, "S", SVN_PROP_PREFIX);
   dav_xmlns_add(xi, "C", SVN_PROP_CUSTOM_PREFIX);
+#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+  dav_xmlns_add(xi, "S", SVN_DAV_PROP_NS_SVN);
+  dav_xmlns_add(xi, "C", SVN_DAV_PROP_NS_CUSTOM);
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
   /* ### we don't have any other possible namespaces right now. */
 
@@ -227,10 +246,17 @@ static dav_error *dav_svn_db_output_value(dav_db *db,
   /* XML-escape our properties before sending them across the wire. */
   svn_xml_escape_string(&xmlsafe, propval, db->resource->pool);
 
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
   if (strcmp(name->ns, SVN_PROP_CUSTOM_PREFIX) == 0)
     prefix = "C:";
   else
     prefix = "S:";
+#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+  if (strcmp(name->ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
+    prefix = "C:";
+  else
+    prefix = "S:";
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
   if (xmlsafe->len == 0)
     {
@@ -364,8 +390,10 @@ static void get_name(dav_db *db, dav_prop_name *pname)
 
       apr_hash_this(db->hi, &name, NULL, NULL);
 
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
 #define PREFIX_LEN (sizeof(SVN_PROP_PREFIX) - 1)
       if (strncmp(name, SVN_PROP_PREFIX, PREFIX_LEN) == 0)
+#undef PREFIX_LEN
         {
           pname->ns = SVN_PROP_PREFIX;
           pname->name = (const char *)name + 4;
@@ -375,6 +403,20 @@ static void get_name(dav_db *db, dav_prop_name *pname)
           pname->ns = SVN_PROP_CUSTOM_PREFIX;
           pname->name = name;
         }
+#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+#define PREFIX_LEN (sizeof(SVN_PROP_PREFIX) - 1)
+      if (strncmp(name, SVN_PROP_PREFIX, PREFIX_LEN) == 0)
+#undef PREFIX_LEN
+        {
+          pname->ns = SVN_DAV_PROP_NS_SVN;
+          pname->name = (const char *)name + 4;
+        }
+      else
+        {
+          pname->ns = SVN_DAV_PROP_NS_CUSTOM;
+          pname->name = name;
+        }
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
     }
 }
 
