@@ -309,8 +309,8 @@ txn_body_attach_lock (void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_base__attach_lock (svn_lock_t *lock,
-                          svn_fs_t *fs,
+svn_fs_base__attach_lock (svn_fs_t *fs,
+                          svn_lock_t *lock,
                           svn_boolean_t force,
                           svn_revnum_t current_rev,
                           apr_pool_t *pool)

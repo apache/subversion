@@ -810,10 +810,10 @@ svn_fs_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path,
 }
 
 svn_error_t *
-svn_fs_attach_lock (svn_lock_t *lock, svn_fs_t *fs, svn_boolean_t force,
+svn_fs_attach_lock (svn_fs_t *fs, svn_lock_t *lock, svn_boolean_t force,
                     svn_revnum_t current_rev, apr_pool_t *pool)
 {
-  return fs->vtable->attach_lock (lock, fs, force, current_rev, pool);  
+  return fs->vtable->attach_lock (fs, lock, force, current_rev, pool);  
 }
 
 svn_error_t *

@@ -140,7 +140,7 @@ typedef struct fs_vtable_t
                         const char *path, const char *comment,
                         svn_boolean_t force, long int timeout,
                         svn_revnum_t current_rev, apr_pool_t *pool);
-  svn_error_t *(*attach_lock) (svn_lock_t *lock, svn_fs_t *fs,
+  svn_error_t *(*attach_lock) (svn_fs_t *fs, svn_lock_t *lock,
                                svn_boolean_t force, svn_revnum_t current_rev,
                                apr_pool_t *pool);
   svn_error_t *(*generate_token) (const char **token, svn_fs_t *fs,

@@ -794,8 +794,8 @@ dav_svn_append_locks(dav_lockdb *lockdb,
     return derr;
 
   /* Now use the svn_lock_t to actually perform the lock. */
-  serr = svn_repos_fs_attach_lock(slock,
-                                  resource->info->repos->repos,
+  serr = svn_repos_fs_attach_lock(resource->info->repos->repos,
+                                  slock,
                                   info->lock_steal,
                                   info->working_revnum,
                                   resource->pool);
@@ -961,8 +961,8 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
   slock->expiration_date = (apr_time_t)new_time * APR_USEC_PER_SEC;
 
   /* Now use the tweaked svn_lock_t to 'refresh' the existing lock. */
-  serr = svn_repos_fs_attach_lock(slock,
-                                  resource->info->repos->repos,
+  serr = svn_repos_fs_attach_lock(resource->info->repos->repos,
+                                  slock,
                                   TRUE, /* forcibly steal existing lock */
                                   SVN_INVALID_REVNUM,
                                   resource->pool);
