@@ -20,7 +20,13 @@
 #include "dav_svn.h"
 
 
-static const char *dav_svn_get_vsn_header(void)
+static void dav_svn_get_vsn_options(apr_pool_t *p, ap_text_header *phdr)
+{
+}
+
+static dav_error *dav_svn_get_option(const dav_resource *resource,
+                                     const ap_xml_elem *elem,
+                                     ap_text_header *option)
 {
   return NULL;
 }
@@ -107,7 +113,8 @@ static dav_error *dav_svn_remove_label(const dav_resource *resource,
 }
 
 const dav_hooks_vsn dav_svn_hooks_vsn = {
-  dav_svn_get_vsn_header,
+  dav_svn_get_vsn_options,
+  dav_svn_get_option,
   dav_svn_vsn_control,
   dav_svn_checkout,
   dav_svn_uncheckout,
