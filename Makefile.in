@@ -192,7 +192,7 @@ external-all external-clean external-distclean external-install:
 ### temporary hack. Neon does not have an "extraclean" and neither does db
 ### If we don't have extraclean -- do the next best thing.
 external-extraclean:
-        @list='$(EXTERNAL_PROJECT_DIRS)';                                \
+	@list='$(EXTERNAL_PROJECT_DIRS)';                                \
         for i in $$list; do                                              \
             if test "$$i" = "neon" || test "$$i" = "db/dist"; then       \
                 echo "------ making distclean(no extraclean) in $$i";    \
