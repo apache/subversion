@@ -830,6 +830,7 @@ static svn_error_t *
 svn_ra_dav__lock(void *session_baton,
                  svn_lock_t **lock,
                  const char *path,
+                 const char *comment,
                  svn_boolean_t force,
                  svn_revnum_t current_rev,
                  apr_pool_t *pool)
