@@ -87,6 +87,8 @@
     db-4.X.</a></li>
 <li><a href="#redhat-db">I'm getting "Function not implemented" errors on
     RedHat 9, and nothing works.  How do I fix this?</a></li>
+<li><a href="#no-author">Why does SVN log say "(no author)" for files
+    committed or imported via Apache (ra_dav)?</a></li>
 <p>
 
 <strong>References:</strong>
@@ -1044,6 +1046,29 @@ This can be fixed in one of several ways:
 </p>
 
 <![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="no-author">Why does SVN log say "(no author)" for files
+    committed or imported via Apache (ra_dav)?</a></h3>
+
+<p>If you allow anonymous write access to the repository via Apache,
+the Apache server never challenges the SVN client for a username, and
+instead permits the write operation without authentication.  Since
+Subversion has no idea who did the operation, this results in a log
+like this:</p>
+
+<blockquote><pre>
+$ svn log
+------------------------------------------------------------------------
+rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
+</pre></blockquote>
+
+<p>See the Subversion Book (<a
+href="http://svnbook.red-bean.com/book.html#svn-ch-5-sect-4"
+>"Networking a Repository"</a>)
+to learn about configuring access restrictions in Apache.</p>
+
+
+<![CDATA[=========================================================]]>
 
 
 <p>
