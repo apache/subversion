@@ -80,12 +80,15 @@ svn_fs_bdb__lock_token_delete (svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key;
+  int db_err;
 
   svn_fs_base__str_to_dbt (&key, path);
   svn_fs_base__trail_debug (trail, "lock-tokens", "del");
-  SVN_ERR (BDB_WRAP (fs, "deleting entry from 'lock-tokens' table",
-                     bfd->lock_tokens->del (bfd->lock_tokens,
-                                           trail->db_txn, &key, 0)));
+  db_err = bfd->lock_tokens->del (bfd->lock_tokens, trail->db_txn, &key, 0);
+  
+  if (db_err == DB_NOTFOUND)
+    return svn_fs_base__err_no_such_lock (fs, path); 
+  SVN_ERR (BDB_WRAP (fs, "deleting entry from 'lock-tokens' table", db_err));
   
   return SVN_NO_ERROR;
 }
@@ -113,7 +116,6 @@ svn_fs_bdb__lock_token_get (const char **lock_token_p,
   SVN_ERR (BDB_WRAP (fs, "reading lock token", db_err));
 
   *lock_token_p = apr_pstrmemdup(trail->pool, value.data, value.size);
-
   return SVN_NO_ERROR;
 }
 

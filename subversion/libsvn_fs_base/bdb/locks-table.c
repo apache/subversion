@@ -61,7 +61,6 @@ svn_fs_bdb__lock_add (svn_fs_t *fs,
                       svn_lock_t *lock,
                       trail_t *trail)
 {
-
   base_fs_data_t *bfd = fs->fsap_data;
   skel_t *lock_skel;
   DBT key, value;
@@ -89,13 +88,16 @@ svn_fs_bdb__lock_delete (svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key;
+  int db_err;
 
   svn_fs_base__str_to_dbt (&key, lock_token);
   svn_fs_base__trail_debug (trail, "locks", "del");
-  SVN_ERR (BDB_WRAP (fs, "deleting entry from 'locks' table",
-                     bfd->locks->del (bfd->locks,
-                                      trail->db_txn, &key, 0)));
+  db_err = bfd->locks->del (bfd->locks, trail->db_txn, &key, 0);
   
+  if (db_err == DB_NOTFOUND)
+    return svn_fs_base__err_bad_lock_token (fs, lock_token);
+  SVN_ERR (BDB_WRAP (fs, "deleting lock from 'locks' table", db_err));
+
   return SVN_NO_ERROR;
 }
 

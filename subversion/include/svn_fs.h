@@ -1495,7 +1495,11 @@ svn_error_t *svn_fs_get_lock_from_path (svn_lock_t **lock,
 /** If @a token points to a lock in @a fs, set @a *lock to an
  * svn_lock_t which represents the lock, allocated in @a pool.
  *  
- * If @a token dosen't point to a lock, set @a *lock to NULL.
+ * If @a token doesn't point to a lock, set @a *lock to NULL.
+ *
+ * If @a token points to a lock that has expired, then return
+ * SVN_ERR_FS_LOCK_EXPIRED.  (And incidentally, the lock is really
+ * gone.)
  */
 svn_error_t *svn_fs_get_lock_from_token (svn_lock_t **lock,
                                         svn_fs_t *fs,

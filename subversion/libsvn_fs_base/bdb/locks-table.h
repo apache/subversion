@@ -41,8 +41,8 @@ int svn_fs_bdb__open_locks_table (DB **locks_p,
    Use LOCK_TOKEN as the key, presumably a string form of an apr_uuid_t.
    Convert LOCK into a skel and store it as the value.
 
-   Return SVN_ERR_FS_BAD_LOCK_TOKEN if a LOCK_TOKEN already exists as
-   a table key.  (This is a table with unique keys.) */
+   Warning:  if LOCK_TOKEN already exists as a key, then its value
+   will be overwritten. */
 svn_error_t *svn_fs_bdb__lock_add (svn_fs_t *fs,
                                    const char *lock_token,
                                    svn_lock_t *lock,
