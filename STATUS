@@ -33,13 +33,6 @@ Candidate changes:
     Votes:
       +1: lundblad
 
-  * r11137
-    Fix the verbose log code for revisions with no changed paths.
-    Justification:
-      Shallow silly bug.
-    Votes:
-      +1: bliss, kfogel, lundblad
-
   * r11172
     Fix encoding bug in svnlook log and author.
     Justification:
