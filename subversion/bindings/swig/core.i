@@ -33,7 +33,6 @@
 
 /* ### for now, let's not try to handle these structures. swig complains
    ### about setting the 'const char *' inside the struct might leak mem  */
-%ignore svn_log_changed_path_t;
 
 /* ### We also get complaints about possible memory leakage for svn_dirent,
    ### but we can live with it for now. */
@@ -41,6 +40,13 @@
 
 /* ### for now, let's ignore this thing. */
 %ignore svn_prop_t;
+
+/* -----------------------------------------------------------------------
+   The "copyfrom_path" member of a "svn_log_changed_path_t" struct has to
+   be read only because there's no reliable way to free the old value
+   when assigning the new one. 
+*/
+%immutable svn_log_changed_path_t::copyfrom_path;
 
 %include svn_types.h
 
