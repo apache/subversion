@@ -50,17 +50,14 @@ svn_wc__entries_init (svn_stringbuf_t *path,
                       svn_stringbuf_t *url,
                       apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_status_t apr_err;
   apr_file_t *f = NULL;
   svn_stringbuf_t *accum = NULL;
   char *initial_revstr = apr_psprintf (pool, "%d", 0);
 
   /* Create the entries file, which must not exist prior to this. */
-  err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_ENTRIES,
-                               (APR_WRITE | APR_CREATE | APR_EXCL), pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__open_adm_file (&f, path, SVN_WC__ADM_ENTRIES,
+                                  (APR_WRITE | APR_CREATE | APR_EXCL), pool));
 
   /* Make a the XML standard header, to satisfy bureacracy. */
   svn_xml_make_header (&accum, pool);
@@ -106,9 +103,7 @@ svn_wc__entries_init (svn_stringbuf_t *path,
 
   /* Now we have a `entries' file with exactly one entry, an entry
      for this dir.  Close the file and sync it up. */
-  err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_ENTRIES, 1, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__close_adm_file (f, path, SVN_WC__ADM_ENTRIES, 1, pool));
 
   return SVN_NO_ERROR;
 }
@@ -586,10 +581,8 @@ read_entries (apr_hash_t *entries,
   struct entries_accumulator *accum;
 
   /* Open the entries file. */
-  err = svn_wc__open_adm_file (&infile, path, SVN_WC__ADM_ENTRIES,
-                               APR_READ, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__open_adm_file (&infile, path, SVN_WC__ADM_ENTRIES,
+                                  APR_READ, pool));
 
   /* Set up userData for the XML parser. */
   accum = apr_palloc (pool, sizeof (*accum));
@@ -624,9 +617,7 @@ read_entries (apr_hash_t *entries,
   } while (!APR_STATUS_IS_EOF(apr_err));
 
   /* Close the entries file. */
-  err = svn_wc__close_adm_file (infile, path, SVN_WC__ADM_ENTRIES, 0, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__close_adm_file (infile, path, SVN_WC__ADM_ENTRIES, 0, pool));
 
   /* Clean up the xml parser */
   svn_xml_free_parser (svn_parser);
@@ -644,16 +635,13 @@ svn_wc_entry (svn_wc_entry_t **entry,
               svn_stringbuf_t *path,
               apr_pool_t *pool)
 {
-  svn_error_t *err;
   enum svn_node_kind kind;
   apr_hash_t *entries = apr_hash_make (pool);
   svn_boolean_t is_wc;
 
   *entry = NULL;
 
-  err = svn_io_check_path (path, &kind, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
 
   /* ### todo:
      Make an innocent way to discover that a dir/path is or is not
@@ -664,18 +652,14 @@ svn_wc_entry (svn_wc_entry_t **entry,
 
   if (kind == svn_node_dir)
     {
-      err = svn_wc_check_wc (path, &is_wc, pool);
-      if (err)
-        return err;
-      else if (! is_wc)
+      SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
+      if (! is_wc)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
            "svn_wc_entry: %s is not a working copy directory", path->data);
 
 
-      err = svn_wc_entries_read (&entries, path, pool);
-      if (err)
-        return err;
+      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
 
       *entry
         = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
@@ -700,17 +684,13 @@ svn_wc_entry (svn_wc_entry_t **entry,
       if (svn_path_is_empty (dir))
         svn_stringbuf_set (dir, ".");
 
-      err = svn_wc_check_wc (dir, &is_wc, pool);
-      if (err)
-        return err;
-      else if (! is_wc)
+      SVN_ERR (svn_wc_check_wc (dir, &is_wc, pool));
+      if (! is_wc)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
            "svn_wc_entry: %s is not a working copy directory", path->data);
       
-      err = svn_wc_entries_read (&entries, dir, pool);
-      if (err)
-        return err;
+      SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
       
       *entry = apr_hash_get (entries, basename->data, basename->len);
     }
@@ -1360,7 +1340,6 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
                       apr_pool_t *pool,
                       ...)
 {
-  svn_error_t *err;
   svn_wc_entry_t *entry_before, *entry_after;
   svn_boolean_t entry_was_deleted_p = FALSE;
   apr_hash_t *entries = NULL;
@@ -1369,8 +1348,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
   va_start (ap, pool);
 
   /* Load whole entries file */
-  err = svn_wc_entries_read (&entries, path, pool);
-  if (err) return err;
+  SVN_ERR (svn_wc_entries_read (&entries, path, pool));
   
   if (name == NULL)
     name = svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
