@@ -493,8 +493,8 @@ bdb_write_config  (svn_fs_t *fs)
                                     dbconfig_file_name);
         }
 
-      if ((DB_VERSION_MAJOR == dbconfig_options[i].bdb_major
-           && DB_VERSION_MINOR >= dbconfig_options[i].bdb_minor
+      if (((DB_VERSION_MAJOR == dbconfig_options[i].bdb_major
+            && DB_VERSION_MINOR >= dbconfig_options[i].bdb_minor)
            || DB_VERSION_MAJOR > dbconfig_options[i].bdb_major)
           && value != NULL && strcmp (value, "0") != 0)
         choice = dbconfig_options[i].active;
