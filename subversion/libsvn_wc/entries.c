@@ -768,7 +768,7 @@ svn_wc__entry_merge_sync (svn_string_t *path,
  *    LEAVE_DIR is called on the first component of P
  */
 static void
-svn_wc_compose_paths (apr_hash_t *paths, apr_pool_t *pool)
+svn_wc__compose_paths (apr_hash_t *paths, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 
