@@ -211,6 +211,7 @@ log_end_element(void *userdata,
       break;
     case ELEM_log_item:
       {
+        svn_error_t *err;
         /* Compatability cruft so that we can provide limit functionality 
            even if the server doesn't support it.
 
@@ -224,7 +225,7 @@ log_end_element(void *userdata,
             return SVN_RA_DAV__XML_INVALID;
           }
  
-        svn_error_t *err = (*(lb->receiver))(lb->receiver_baton,
+        err = (*(lb->receiver))(lb->receiver_baton,
                                              lb->changed_paths,
                                              lb->revision,
                                              lb->author,
