@@ -32,9 +32,9 @@ ARGS="$COMMON_ARGS $INCLUDE $LIBS -o lib$NATIVE_CLASS_NAME.so $OBJS"
 #second, compile the library that is needed by the unit test
 #INCLUDE="$COMMON_INCLUDE -I. -Itests"
 INCLUDE="$COMMON_INCLUDE"
-OBJS="$COMMON_OBJS tests/main.c tests/jni_vector.c"
+OBJS="$COMMON_OBJS tests/main.c tests/nativewrapper.c"
 #OBJS="$COMMON_OBJS"
-NATIVE_CLASS_NAME="svn_jni_tests"
+NATIVE_CLASS_NAME="svn_jni_nativewrapper"
 OUTPUT="-o lib$NATIVE_CLASS_NAME.so"
 ARGS="$COMMON_ARGS $INCLUDE $LIBS -o lib$NATIVE_CLASS_NAME.so $OBJS"
 echo $ARGS
