@@ -14,8 +14,6 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
- */
-/**
  *
  * @file Revision.cpp
  * @brief Implementation of the class Revision
