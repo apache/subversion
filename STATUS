@@ -35,13 +35,6 @@ Candidate changes:
       +1: pmayweg
       +0: breser
 
-  * r10819, r10855
-    Avoid repository corruption if executed with closed std{in,out,err}
-    Justification:
-      Simple fix for a nasty problem that has bitten at least one user.
-    Votes:
-       +1: bliss, breser, ghudson
-
   * Issue #1862
     Fix the 'file not found' update error.
     Notes:
