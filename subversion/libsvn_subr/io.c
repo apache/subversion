@@ -159,10 +159,27 @@ svn_io_open_unique_file (apr_file_t **f,
       apr_err = apr_file_open (f, unique_name_apr, flag,
                                APR_OS_DEFAULT, pool);
 
-      if (APR_STATUS_IS_EEXIST(apr_err) || APR_STATUS_IS_EACCES(apr_err))
+      if (APR_STATUS_IS_EEXIST (apr_err))
         continue;
       else if (apr_err)
         {
+          /* On Win32, CreateFile failswith an "Access Denied" error
+             code, rather than "File Already Exists", if the colliding
+             name belongs to a directory. */
+          if (APR_STATUS_IS_EACCES (apr_err))
+            {
+              apr_finfo_t finfo;
+              apr_status_t apr_err_2 = apr_stat (&finfo, unique_name_apr,
+                                                 APR_FINFO_TYPE, pool);
+
+              if (APR_STATUS_IS_SUCCESS (apr_err_2)
+                  && (finfo.filetype == APR_DIR))
+                continue;
+
+              /* Else ignore apr_err_2; better to fall through and
+                 return the original error. */
+            }
+
           *f = NULL;
           *unique_name_p = NULL;
           return svn_error_createf
