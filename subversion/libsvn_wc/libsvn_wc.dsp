@@ -139,6 +139,10 @@ SOURCE=.\status_editor.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\translate.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\util.c
 # End Source File
 # End Group
