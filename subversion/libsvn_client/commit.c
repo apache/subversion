@@ -691,13 +691,20 @@ remove_tmpfiles (apr_hash_t *tempfiles,
     {
       const void *key;
       void *val;
-      svn_node_kind_t kind;
+      svn_error_t *err;
 
       svn_pool_clear (subpool);
       apr_hash_this (hi, &key, NULL, &val);
-      SVN_ERR (svn_io_check_path ((const char *)key, &kind, subpool));
-      if (kind == svn_node_file)
-        SVN_ERR (svn_io_remove_file ((const char *)key, subpool));
+
+      err = svn_io_remove_file ((const char *)key, subpool);
+
+      if (err)
+        {
+          if (err->apr_err != APR_ENOENT)
+            return err;
+          else
+            svn_error_clear (err);
+        }
     }
 
   /* Remove the subpool. */
