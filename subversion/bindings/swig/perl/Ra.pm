@@ -7,6 +7,7 @@ SVN::Ra - Subversion remote acess functions
 
 =head1 SYNOPSIS
 
+    require SVN::Core;
     require SVN::Ra;
     my $ra = SVN::Ra->new ('file:///tmp/svmtest');
     print $ra->get_latest_revnum ();
