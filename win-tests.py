@@ -1,7 +1,6 @@
-import os, sys, string, shutil, traceback
-
 ### FIXME: Any sh clone will do
-shell =  'C:/PROGRA~1/Cygnus/cygwin/bin/bash.exe'
+shell = None
+#shell =  'C:/PROGRA~1/Cygnus/cygwin/bin/bash.exe'
 ###
 
 tests = ['subversion/tests/libsvn_subr/hashdump-test.exe',
@@ -10,9 +9,18 @@ tests = ['subversion/tests/libsvn_subr/hashdump-test.exe',
          'subversion/tests/libsvn_subr/time-test.exe',
          'subversion/tests/libsvn_wc/translate-test.exe',
          'subversion/tests/libsvn_delta/random-test.exe',
-         'subversion/tests/clients/cmdline/xmltests/svn-test.sh',
-         'subversion/tests/clients/cmdline/xmltests/svn-test2.sh',
          'subversion/tests/libsvn_subr/target-test.py']
+
+shell_tests = ['subversion/tests/clients/cmdline/xmltests/svn-test.sh',
+               'subversion/tests/clients/cmdline/xmltests/svn-test2.sh']
+if shell is not None:
+  tests += shell_tests
+else:
+  print '================================================================'
+  print 'WARNING: You did not define a shell interpreter.'
+  print '         The following tests will be skipped:\n'
+  for t in shell_tests: print t
+  print '================================================================'
 
 fs_tests = ['subversion/tests/libsvn_fs/run-fs-tests.py',
             'subversion/tests/libsvn_repos/run-repos-tests.py']
@@ -34,6 +42,7 @@ client_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
                 'subversion/tests/clients/cmdline/svnadmin_tests.py']
 
 
+import os, sys, string, shutil, traceback
 
 # Have to move the executables where the tests expect them to be
 if len(sys.argv) == 1 or sys.argv[1] == 'd' or sys.argv[1] == 'debug':
