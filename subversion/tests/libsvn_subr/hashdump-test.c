@@ -57,6 +57,8 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_hash.h"
+
 
 
 int
@@ -111,8 +113,6 @@ main (void)
 
   return 0;
 }
-
-#endif /* SVN_TEST */
 
 
 
