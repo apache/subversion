@@ -28,8 +28,8 @@ Candidate changes:
       a simple propset, rather than text changes to every affected file.
       Patch has been filed in the issue for more than a year!
     Votes:
-      +1: maxb
-      +1 (r10645 only, so far): cmpilato, bliss
+      +1: maxb, bliss
+      +1 (r10645 only, so far): cmpilato
 
   * r10674
     Make ./configure behave nicer in the presence of old Apache.
