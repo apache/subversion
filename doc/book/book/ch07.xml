@@ -117,7 +117,7 @@
         a text editor, and modify the desired option's value.  If at
         any time you wish to have the default configuration settings
         restored, you can simply remove (or rename) your configuration
-        directory, and then run some innocuous <command>svn</command>
+        directory and then run some innocuous <command>svn</command>
         command, such as <command>svn --version</command>.  A new
         configuration directory with the default contents will be
         created.</para>
@@ -1325,7 +1325,7 @@ I      calc/debug_log.3.gz
           a <firstterm>keyword anchor</firstterm> at the desired
           location in the file.  This anchor is just a string of text
           formatted as
-          <literal>$</literal><replaceable>KeywordName</replaceable><literal>$</literal></para>
+          <literal>$</literal><replaceable>KeywordName</replaceable><literal>$</literal>.</para>
 
         <para>Subversion defines the list of keywords available for
           substitution.  That list contains the following five
@@ -1575,7 +1575,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
                 contains a file with an
                 <literal>svn:eol-style</literal> property set to
                 <literal>native</literal>, that file will contain
-                <literal>CRLF</literal> EOL markers.  A unix user
+                <literal>CRLF</literal> EOL markers.  A Unix user
                 checking out a working copy which contains the same
                 file will see <literal>LF</literal> EOL markers in his
                 copy of the file.</para>
@@ -1775,7 +1775,10 @@ Fetching external item into calc/third-party/skins
       themselves.</para>
 
     <para>The support that exists for externals definitions in
-      Subversion today can be a little misleading, though.  The
+      Subversion today can be a little misleading, though.  First, an
+      externals definition can only point to directories, not files.
+      Second, the externals definition cannot point to relative paths
+      (paths like <filename>../../skins/myskin</filename>).  Third, the
       working copies created via the externals definition support are
       still disconnected from the primary working copy (on whose
       versioned directories the <literal>svn:externals</literal>
