@@ -63,7 +63,6 @@ free_cl (void *p)
 {
   svn_client_auth_baton_t *auth_baton = p;
 
-  apr_pool_destroy (auth_baton->pool);
   free (auth_baton);
 }
 
@@ -76,7 +75,6 @@ cl_new (int argc, VALUE *argv, VALUE class)
   rb_scan_args (argc, argv, "00&", &auth);
   obj = Data_Make_Struct (class, svn_client_auth_baton_t, 0, free_cl,
                           auth_baton);
-  auth_baton->pool = svn_pool_create (NULL);
   auth_baton->prompt_callback = cl_prompt;
   auth_baton->prompt_baton = (void *) auth;
   rb_iv_set (obj, "@auth", auth);
