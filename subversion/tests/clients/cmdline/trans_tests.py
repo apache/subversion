@@ -253,6 +253,88 @@ def disable_translation():
   # with and without local mods, check status, and commit.
   
   return 0
+
+
+#----------------------------------------------------------------------
+
+# Regression test for bug discovered by Vladmir Prus <ghost@cs.msu.csu>.
+# This is a slight rewrite of his test, to use the run_and_verify_* API.
+# This is for issue #631.
+
+def update_modified_with_translation(sbox):
+  "update locally modified file with eol-style 'native'"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Replace contents of rho and set eol translation to 'native'
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  f = open(rho_path, "w")
+  f.write("1\n2\n3\n4\n5\n6\n7\n8\n9\n")
+  f.close()
+  svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'native', rho_path)
+
+  # Create expected output and status trees of a commit.
+  output_list = [ [rho_path, None, {}, {'verb' : 'Sending' }] ]
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if (item[0] != rho_path):  # everything else is at working rev 1    
+      item[3]['wc_rev'] = '1'
+    else:  # rho_path has props
+      item[3]['status'] = '__'
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit revision 2:  it has the new rho.
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            rho_path):
+    return 1
+
+  # Change rho again
+  f = open(rho_path, "w")
+  f.write("1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n")
+  f.close()
+
+  # Commit revision 3 
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
+  for item in status_list:
+    if (item[0] != rho_path):  # everything else is at working rev 1    
+      item[3]['wc_rev'] = '1'
+    else:  # rho_path has props
+      item[3]['status'] = '__'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            rho_path):
+    return 1
+
+  # Locally modify rho again.
+  f = open(rho_path, "w")
+  f.write("1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n10\n")
+  f.close()
+
+  # Prepare trees for an update to rev 1.
+  output_list = [ [rho_path, None, {}, {'status' : 'GU' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  my_greek_tree = svntest.main.copy_greek_tree()
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+
+  # Updating back to revision 1 should not error; the merge should
+  # work, with eol-translation turned on.
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               None,
+                                               None, None, None, None, 0,
+                                               '-r', '1')
+
   
 
 ########################################################################
@@ -262,9 +344,10 @@ def disable_translation():
 # list all tests here, starting with None:
 test_list = [ None,
               keywords_from_birth,
-              enable_translation,
-              checkout_translated,
-              disable_translation,
+              # enable_translation,
+              # checkout_translated,
+              # disable_translation,
+              # update_modified_with_translation,
              ]
 
 if __name__ == '__main__':
