@@ -869,14 +869,14 @@ change_file_prop (void *file_baton,
                                                  0, /* not tmp */
                                                  fb->pool,
                                                  SVN_WC__ADM_PROP_BASE,
-                                                 fb->name,
+                                                 fb->name->data,
                                                  NULL);
 
       working_propfile_path = svn_wc__adm_path (fb->dir_baton->path,
                                                 0, /* not tmp */
                                                 fb->pool,
                                                 SVN_WC__ADM_PROPS,
-                                                fb->name,
+                                                fb->name->data,
                                                 NULL);
 
       err = load_prop_file (pristine_propfile_path,
@@ -1065,7 +1065,7 @@ close_file (void *file_baton)
                                              TRUE, /* tmp area */
                                              fb->pool,
                                              SVN_WC__ADM_PROP_BASE,
-                                             fb->name,
+                                             fb->name->data,
                                              NULL);
       
       err = save_prop_file (base_prop_tmp_path, fb->baseprops, fb->pool);
@@ -1076,7 +1076,7 @@ close_file (void *file_baton)
                                               TRUE, /* tmp area */
                                               fb->pool,
                                               SVN_WC__ADM_PROPS,
-                                              fb->name,
+                                              fb->name->data,
                                               NULL);
       
       err = save_prop_file (local_prop_tmp_path, fb->localprops, fb->pool);
