@@ -71,3 +71,10 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r10458
+    Properly return values for ra->get_rev. Allow SVN::Delta::Editor subclasses
+    to use invokers provided by the parent class.
+    Justification:
+      Bindings only, wrapping completeness.
+    Votes:
+      +1: clkao
