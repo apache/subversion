@@ -1161,8 +1161,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
         {
           if (!merge_b->dry_run)
             SVN_ERR (svn_wc_add (path, adm_access,
-                                 copyfrom_url,
-                                 merge_b->revision->value.number,
+                                 copyfrom_url, rev,
                                  merge_b->ctx->cancel_func,
                                  merge_b->ctx->cancel_baton,
                                  NULL, NULL, /* no notification func! */
