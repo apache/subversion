@@ -1183,8 +1183,65 @@ write_string (void *baton, const char *data, apr_size_t *len)
 
   return SVN_NO_ERROR;
 }
+
+
+/* Baton for svn_write_fn_t write_string_set(). */
+struct write_string_set_baton
+{
+  /* The fs where lives the string we're writing. */
+  svn_fs_t *fs;
+
+  /* The key of the string we're writing to.  Typically this is
+     initialized to NULL, so svn_fs__string_append() can fill in a
+     value. */
+  const char *key;
+
+  /* The amount of txdelta data written to the current
+     string-in-progress. */
+  apr_size_t size;
+
+  /* The trail we're writing in. */
+  trail_t *trail;
+};
+
+
+/* Function of type `svn_write_fn_t', for writing to a string;
+   BATON is `struct write_string_baton *'.
+
+   On the first call, BATON->key is null.  A new string key in
+   BATON->fs is chosen and stored in BATON->key; each call appends
+   *LEN bytes from DATA onto the string.  *LEN is never changed; if
+   the write fails to write all *LEN bytes, an error is returned.  */
+static svn_error_t *
+write_string_set (void *baton, const char *data, apr_size_t *len)
+{
+  struct write_string_set_baton *wb = baton;
+
+  SVN_ERR (svn_fs__string_append (wb->fs,
+                                  &(wb->key),
+                                  *len,
+                                  data,
+                                  wb->trail));
+
+  if (wb->key == NULL)
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, wb->trail->pool,
+                             "write_string_set: Failed to get new string key");
+
+  wb->size += *len;
+  return SVN_NO_ERROR;
+}
+
 #endif /* ! DELTIFYING */
 
+
+typedef struct window_write_t
+{
+  const char *key; /* string key for this window */
+  apr_size_t svndiff_len; /* amount of svndiff data written to the string */
+  apr_size_t text_off; /* offset of fulltext data represented by this window */
+  apr_size_t text_len; /* amount of fulltext data represented by this window */
+
+} window_write_t;
 
 svn_error_t *
 svn_fs__rep_deltify (svn_fs_t *fs,
@@ -1196,19 +1253,29 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   svn_stream_t *source_stream; /* stream to read the source */
   svn_stream_t *target_stream; /* stream to read the target */
   svn_txdelta_stream_t *txdelta_stream; /* stream to read delta windows  */
-  
-  /* stream to write new (deltified) target data */
+
+  /* window-y things, and an array to track them */
+  window_write_t *ww;
+  apr_array_header_t *windows = apr_array_make (trail->pool, 1, sizeof (ww));
+
+  /* stream to write new (deltified) target data and its baton */
   svn_stream_t *new_target_stream;
-  struct write_string_baton new_target_baton;
+  struct write_string_set_baton new_target_baton;
   
-  /* window handler for writing to above stream */
+  /* window handler/baton for writing to above stream */
   svn_txdelta_window_handler_t new_target_handler;
-  
-  /* baton for aforementioned window handler */
   void *new_target_handler_baton;
   
   /* yes, we do windows */
   svn_txdelta_window_t *window;
+
+  /* The current offset into the fulltext that our window is about to
+     write.  This doubles, after all windows are written, as the
+     total size of the svndiff data for the deltification process. */
+  apr_size_t tview_off = 0;
+
+  /* The total amount of diff data written while deltifying. */
+  apr_size_t diffsize = 0;
 
   /* TARGET's original string key */
   const char *orig_str_key;
@@ -1225,40 +1292,56 @@ svn_fs__rep_deltify (svn_fs_t *fs,
        "svn_fs__rep_deltify: attempt to deltify \"%s\" against itself",
        target);
 
-  /* Set up a string to receive the svndiff data. */
+  /* Set up a handler for the svndiff data, which will write each
+     window to its own string in the `strings' table. */
   new_target_baton.fs = fs;
   new_target_baton.trail = trail;
-  new_target_baton.key = NULL;
   new_target_stream = svn_stream_create (&new_target_baton, trail->pool);
-  svn_stream_set_write (new_target_stream, write_string);
+  svn_stream_set_write (new_target_stream, write_string_set);
 
-  /* Right now, we just write the delta as a single svndiff string.
-     See the section "Random access to delta-encoded files" in the
-     top-level IDEAS file for leads on other things we could do here,
-     though. */
-
+  /* Get streams to our source and target text data. */
   source_stream = svn_fs__rep_contents_read_stream (fs, source, 0,
                                                     trail, trail->pool);
-
   target_stream = svn_fs__rep_contents_read_stream (fs, target, 0,
                                                     trail, trail->pool);
 
+  /* Setup a stream to convert the textdelta data into svndiff windows. */
   svn_txdelta (&txdelta_stream, source_stream, target_stream, trail->pool);
+  svn_txdelta_to_svndiff (new_target_stream, trail->pool,
+                          &new_target_handler, &new_target_handler_baton);
 
-  svn_txdelta_to_svndiff (new_target_stream,
-                          trail->pool,
-                          &new_target_handler,
-                          &new_target_handler_baton);
-
+  /* Now, loop, manufacturing and dispatching windows of svndiff data. */
   do
     {
+      /* Reset some baton variables. */
+      new_target_baton.size = 0;
+      new_target_baton.key = NULL;
+
+      /* Fetch the next window of txdelta data. */
       SVN_ERR (svn_txdelta_next_window (&window, txdelta_stream));
+
+      /* Send off this package to be written as svndiff data. */
       SVN_ERR (new_target_handler (window, new_target_handler_baton));
       if (window)
-        svn_txdelta_free_window (window);
-      
+        {
+          /* Add a new window description to our array. */
+          ww = apr_pcalloc (trail->pool, sizeof (*ww));
+          ww->key = new_target_baton.key;
+          ww->svndiff_len = new_target_baton.size;
+          ww->text_off = tview_off;
+          ww->text_len = window->tview_len;
+          (*((window_write_t **)(apr_array_push (windows)))) = ww;
+
+          /* Update our recordkeeping variables. */
+          tview_off += window->tview_len;
+          diffsize += ww->svndiff_len;
+           
+          /* Free the window. */
+          svn_txdelta_free_window (window);
+        }
+
     } while (window);
-  
+
   /* Having processed all the windows, we can query the MD5 digest
      from the stream.  */
   digest = svn_txdelta_md5_digest (txdelta_stream);
@@ -1271,66 +1354,79 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   /* Get the size of the target's original string data.  Note that we
      don't use svn_fs__rep_contents_size() for this; that function
      always returns the fulltext size, whereas we need to know the
-     actual amount of storage used by this representation.  */
+     actual amount of storage used by this representation.  Check the
+     size of the new string.  If it is larger than the old one, this
+     whole deltafication might not be such a bright idea. */
   {
     skel_t *old_rep;
+    apr_size_t old_size;
+
     SVN_ERR (svn_fs__read_rep (&old_rep, fs, target, trail));
     SVN_ERR (string_key (&orig_str_key, old_rep, trail->pool));
-  }
-    
-  /* Check the size of the new string.  If it is larger than the old
-     one, this whole deltafication might not be such a bright
-     idea. */
-  {
-    apr_size_t old_size, new_size;
-
-    /* Now, get the sizes of the old and new strings. */
     SVN_ERR (svn_fs__string_size (&old_size, fs, orig_str_key, trail));
-    SVN_ERR (svn_fs__string_size (&new_size, fs, new_target_baton.key, trail));
-    
-    /* If this is not such a bright idea, stop thinking it!  Remove
-       the string we just created. */
-    if (new_size >= old_size)
+    if (diffsize >= old_size)
       {
-        SVN_ERR (svn_fs__string_delete (fs, new_target_baton.key, trail));
+        /* The new data is NOT an space optimization, so let's destroy
+           the string(s) we created, and get outta here. */
+        int i;
+        for (i = 0; i < windows->nelts; i++)
+          {
+            ww = ((window_write_t **)(windows->elts))[i];
+            SVN_ERR (svn_fs__string_delete (fs, ww->key, trail));
+          }
         return SVN_NO_ERROR;
       }
   }
 
-  /* Now `new_target_baton.key' has the key of the new string.  We
-     should hook it into the representation. */
+  /* Hook the new strings we wrote into the rest of the filesystem by
+     building a new representation skel to replace our old one. */
   {
-    skel_t *header   = svn_fs__make_empty_list (trail->pool);
-    skel_t *diff     = svn_fs__make_empty_list (trail->pool);
-    skel_t *checksum = svn_fs__make_empty_list (trail->pool);
+    int i;
     skel_t *rep      = svn_fs__make_empty_list (trail->pool);
-    const char *size_str;
+    skel_t *header   = svn_fs__make_empty_list (trail->pool);
 
-    /* The header. */
+    /* Loop backwards through the windows we wrote, creating and
+       prepending skels to our rep. */
+    for (i = windows->nelts; i > 0; i--)
+      {
+        const char *size_str;
+        const char *offset_str;
+        skel_t *win      = svn_fs__make_empty_list (trail->pool);
+        skel_t *winhdr   = svn_fs__make_empty_list (trail->pool);
+        skel_t *diff     = svn_fs__make_empty_list (trail->pool);
+        skel_t *checksum = svn_fs__make_empty_list (trail->pool);
+
+        ww = ((window_write_t **)(windows->elts))[i-1];
+
+        offset_str = apr_psprintf (trail->pool, "%ul", ww->text_off);
+        size_str = apr_psprintf (trail->pool, "%ul", ww->text_len);
+
+        /* The diff. */
+        svn_fs__prepend (svn_fs__str_atom (ww->key, trail->pool), diff);
+        svn_fs__prepend (svn_fs__str_atom ("svndiff", trail->pool), diff);
+        
+        /* The checksum. */
+        svn_fs__prepend (svn_fs__mem_atom (digest, 
+                                           MD5_DIGESTSIZE, 
+                                           trail->pool), checksum);
+        svn_fs__prepend (svn_fs__str_atom ("md5", trail->pool), checksum);
+
+        /* The window. */
+        svn_fs__prepend (svn_fs__str_atom (source, trail->pool), win);
+        svn_fs__prepend (checksum, win);
+        svn_fs__prepend (svn_fs__str_atom (size_str, trail->pool), win);
+        svn_fs__prepend (diff, win);
+
+        /* The window header. */
+        svn_fs__prepend (win, winhdr);
+        svn_fs__prepend (svn_fs__str_atom (offset_str, trail->pool), winhdr);
+
+        /* Add this window item to the rep. */
+        svn_fs__prepend (winhdr, rep);
+      }
+
+    /* Don't forget to prepend the header! */
     svn_fs__prepend (svn_fs__str_atom ("delta", trail->pool), header);
-    
-    /* The diff. */
-    svn_fs__prepend (svn_fs__str_atom (new_target_baton.key, trail->pool), 
-                     diff);
-    svn_fs__prepend (svn_fs__str_atom ("svndiff", trail->pool), diff);
-
-    /* The size. */
-    {
-      apr_size_t size;
-      SVN_ERR (svn_fs__rep_contents_size (&size, fs, target, trail));
-      size_str = apr_psprintf (trail->pool, "%ul", size);
-    }
-
-    /* The checksum. */
-    svn_fs__prepend (svn_fs__mem_atom (digest, MD5_DIGESTSIZE, trail->pool), 
-                     checksum);
-    svn_fs__prepend (svn_fs__str_atom ("md5", trail->pool), checksum);
-
-    /* The rep. */
-    svn_fs__prepend (checksum, rep);
-    svn_fs__prepend (svn_fs__str_atom (size_str, trail->pool), rep);
-    svn_fs__prepend (diff, rep);
-    svn_fs__prepend (svn_fs__str_atom (source, trail->pool), rep);
     svn_fs__prepend (header, rep);
 
     /* Write out the new representation. */
