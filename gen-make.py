@@ -75,11 +75,18 @@ def _usage_exit():
   print "           look for Berkley DB headers and libs in"
   print "           DIR"
   print
+  print "  --with-neon=DIR"
+  print "           the Neon sources are in DIR"
+  print
   print "  --with-httpd=DIR"
   print "           the httpd sources and binaries required"
   print "           for building mod_dav_svn are in DIR;"
   print "           implies --with-apr{-util, -iconv}, but"
   print "           you can override them"
+  print
+  print "  --with-libintl=DIR"
+  print "           look for GNU libintl headers and libs in DIR;"
+  print "           implies --enable-nls"
   print
   print "  --with-openssl=DIR"
   print "           tell neon to look for OpenSSL headers"
@@ -134,7 +141,9 @@ if __name__ == '__main__':
                                 'with-apr-util=',
                                 'with-apr-iconv=',
                                 'with-berkeley-db=',
+                                'with-neon=',
                                 'with-httpd=',
+                                'with-libintl=',
                                 'with-openssl=',
                                 'with-zlib=',
                                 'with-junit=',

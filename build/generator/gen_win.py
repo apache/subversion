@@ -7,6 +7,7 @@ import sys
 import string
 import fnmatch
 import re
+import glob
 
 try:
   from cStringIO import StringIO
@@ -34,7 +35,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     self.apr_util_path = 'apr-util'
     self.apr_iconv_path = 'apr-iconv'
     self.bdb_path = 'db4-win32'
+    self.neon_path = 'neon'
     self.httpd_path = None
+    self.libintl_path = None
     self.zlib_path = None
     self.openssl_path = None
     self.junit_path = None
@@ -61,10 +64,15 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         self.apr_util_path = val
       elif opt == '--with-apr-iconv':
         self.apr_iconv_path = val
+      elif opt == '--with-neon':
+        self.neon_path = val
       elif opt == '--with-httpd':
         self.httpd_path = val
         del self.skip_sections['mod_dav_svn']
         del self.skip_sections['mod_authz_svn']
+      elif opt == '--with-libintl':
+        self.libintl_path = val
+        self.enable_nls = 1
       elif opt == '--with-junit':
         self.junit_path = val
       elif opt == '--with-zlib':
@@ -137,23 +145,23 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         print 'Wrote %s' % svnissdeb
 
     # Generate the build_neon.bat file
-    data = {'expat_path': self.apr_util_path
-                          and (os.path.abspath(self.apr_util_path) 
-                               + '/xml/expat/lib'),
-            'zlib_path': self.zlib_path 
+    data = {'neon_path': os.path.abspath(self.neon_path),
+            'expat_path': os.path.join(os.path.abspath(self.apr_util_path),
+                                       'xml', 'expat', 'lib'),
+            'zlib_path': self.zlib_path
                          and os.path.abspath(self.zlib_path),
-            'openssl_path': self.openssl_path 
+            'openssl_path': self.openssl_path
                             and os.path.abspath(self.openssl_path)}
     self.write_with_template(os.path.join('build', 'win32', 'build_neon.bat'),
                              'build_neon.ezt', data)
-    
+
     # Generate the build_locale.bat file
     pofiles = []
     if self.enable_nls:
       for po in os.listdir(os.path.join('subversion', 'po')):
         if fnmatch.fnmatch(po, '*.po'):
           pofiles.append(POFile(po[:-3]))
-    
+
     data = {'pofiles': pofiles}
     self.write_with_template(os.path.join('build', 'win32', 'build_locale.bat'),
                              'build_locale.ezt', data)
@@ -619,9 +627,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                        self.apath(self.apr_path, "include"),
                        self.apath(self.apr_util_path, "include"),
                        self.apath(self.apr_util_path, "xml/expat/lib"),
-                       self.path("neon/src"),
+                       self.apath(self.neon_path, "src"),
                        self.apath(self.bdb_path, "include"),
                        self.path("subversion") ]
+
+    if self.libintl_path:
+      fakeincludes.append(self.apath(self.libintl_path, 'inc'))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -658,7 +669,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     nondeplibs = target.msvc_libs[:]
     if self.enable_nls:
-      nondeplibs.extend(['intl.lib'])
+      if self.libintl_path:
+        nondeplibs.append(self.apath(self.libintl_path, 'lib', 'intl.lib'))
+      else:
+        nondeplibs.append('intl.lib')
 
     if isinstance(target, gen_base.TargetExe):
       nondeplibs.append('setargv.obj')
@@ -724,6 +738,29 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     template.generate(fout, data)
 
     self.write_file_if_changed(fname, fout.getvalue())
+
+  def write_neon_project_file(self, name):
+    neon_path = os.path.abspath(self.neon_path)
+    self.move_proj_file(os.path.join('build', 'win32'), name,
+                        (('neon_path', neon_path),
+                         ('neon_sources',
+                          glob.glob(os.path.join(neon_path, 'src', '*.c'))),
+                         ('neon_headers',
+                          glob.glob(os.path.join(neon_path, 'src', '*.h'))),
+                        ))
+
+  def move_proj_file(self, path, name, params=()):
+    ### Move our slightly templatized pre-built project files into place --
+    ### these projects include apr, neon, locale, config, etc.
+
+    dest_file = os.path.join(path, name)
+    source_template = name + '.ezt'
+    data = {
+      'version' : self.vsnet_proj_ver,
+      }
+    for key, val in params:
+      data[key] = val
+    self.write_with_template(dest_file, source_template, data)
 
   def write(self):
     "Override me when creating a new project type"

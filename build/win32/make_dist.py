@@ -72,7 +72,7 @@ class OptFile(Action):
 
   def run(self, dir, cfg):
     path = self._safe_expand(cfg, self.path)
-    if path is None:
+    if path is None or not os.path.isfile(path):
       print 'make_dist: File not found:', self.path
       return
     if self.name is None:
@@ -151,6 +151,18 @@ class InstallJar(Action):
     _system('"%s" cvf "%s" -C "%s" .'
             % (cfg.get('tools', 'jar'), jarfile, source))
 
+class InstallMoFiles(Action):
+  def __init__(self, source):
+    self.source = source
+
+  def run(self, dir, cfg):
+    pattern = os.path.join(self._expand(cfg, self.source), '*.mo')
+    for mofile in glob.glob(pattern):
+      localedir = os.path.join(dir, os.path.basename(mofile)[:-3],
+                               'LC_MESSAGES')
+      os.makedirs(localedir)
+      self._copy_file(mofile, os.path.join(localedir, 'subversion.mo'))
+
 # This is the distribution tree
 _disttree = {'': OptFile('%(readme)s', 'README.txt'),
 
@@ -173,8 +185,13 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                      File('%(@apr-util)s/%(aprrel)s/libaprutil.dll'),
                      File('%(@apr-util)s/%(aprrel)s/libaprutil.pdb'),
                      File('%(@berkeley-db)s/bin/libdb%(bdbver)s.dll'),
+                     OptFile('%(@berkeley-db)s/bin/libdb%(bdbver)s.pdb'),
                      OptFile('%(@openssl)s/out32dll/libeay32.dll'),
+                     OptFile('%(@openssl)s/out32dll/libeay32.pdb'),
                      OptFile('%(@openssl)s/out32dll/ssleay32.dll'),
+                     OptFile('%(@openssl)s/out32dll/ssleay32.pdb'),
+                     OptFile('%(@libintl)s/bin/intl.dll'),
+                     OptFile('%(@libintl)s/bin/intl.pdb'),
                      ),
 
              'doc': InstallDocs('%(srcdir)s/doc/doxygen.conf',
@@ -196,7 +213,10 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
              'lib': FileGlob('%(blddir)s/libsvn_*/*.lib'),
              'lib/apr': File('%(@apr)s/%(aprrel)s/libapr.lib'),
              'lib/apr-iconv': File('%(@apr-iconv)s/%(aprrel)s/libapriconv.lib'),
-             'lib/apr-util': File('%(@apr-util)s/%(aprrel)s/libaprutil.lib'),
+             'lib/apr-util': (File('%(@apr-util)s/%(aprrel)s/libaprutil.lib'),
+                              File('%(@apr-util)s/%(aprxml)s/xml.lib'),
+                              File('%(@apr-util)s/%(aprxml)s/xml_src.pdb'),
+                              ),
              'lib/neon': (File('%(@neon)s/libneon.lib'),
                           OptFile('%(@zlib)s/zlibstat.lib'),
                           ),
@@ -205,6 +225,8 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
              'perl/SVN': (FileGlob('%(bindsrc)s/swig/perl/native/*.pm'),
                           FileGlob('%(binddir)s/swig/perl/*.dll'),
                           FileGlob('%(binddir)s/swig/perl/*.pdb'),
+                          FileGlob('%(binddir)s/swig/perl/libsvn_swig_perl/libsvn*.pdb'),
+                          FileGlob('%(binddir)s/swig/perl/libsvn_swig_perl/libsvn*.dll'),
                           ),
 
              'python': None,
@@ -219,6 +241,9 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                         InstallJar('svnjavahl.jar',
                                    '%(bindsrc)s/java/javahl/classes'),
                         ),
+
+             'share': None,
+             'share/locale': InstallMoFiles('%(svndir)s/po'),
              }
 
 
@@ -340,7 +365,8 @@ def _make_dist(cfg):
         action.run(dir, cfg)
 
     xpdb = '-x "*.pdb"'
-    _make_zip('',        ('/README.txt', '/bin', '/httpd', '/iconv'), xpdb)
+    _make_zip('',        ('/README.txt', '/bin', '/httpd',
+                          '/iconv', '/share/locale'), xpdb)
     _make_zip('_dev',    ('/README.txt', '/doc', '/include', '/lib'), xpdb)
     _make_zip('_javahl', ('/README.txt', '/javahl'), xpdb)
     _make_zip('_pdb',    ('',), '-i "*.pdb"')

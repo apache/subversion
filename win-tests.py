@@ -143,7 +143,7 @@ def copy_execs(dummy, dirname, names):
       pass
 
 def locate_libs():
-  "Move APR DLLs to a known location and set env vars"
+  "Move DLLs to a known location and set env vars"
   def get(cp, section, option, default):
     if cp.has_option(section, option):
       return cp.get(section, option)
@@ -163,6 +163,10 @@ def locate_libs():
   shutil.copy(apr_dll_path, abs_objdir)
   shutil.copy(aprutil_dll_path, abs_objdir)
   shutil.copy(apriconv_dll_path, abs_objdir)
+
+  libintl_path = get(cp, 'options', '--with-libintl', None)
+  if libintl_path is not None:
+    shutil.copy(os.path.join(libintl_path, 'bin', 'intl.dll'), abs_objdir)
 
   os.environ['APR_ICONV_PATH'] = apriconv_so_path
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
