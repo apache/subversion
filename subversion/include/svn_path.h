@@ -386,6 +386,22 @@ const char *svn_path_url_add_component (const char *url,
                                         const char *component,
                                         apr_pool_t *pool);
 
+/** Convert @a iri (Internationalized URI) to an URI.
+ * The return value may be the same as @a iri if it was already
+ * a URI.  Else, allocate the return value in @a pool. */
+const char *svn_path_uri_from_iri (const char *iri,
+                                   apr_pool_t *pool);
+
+/** URI-encode certain characters in @a uri that are not valid in an URI, but
+ * doesn't have any special meaning in @a uri at their positions.  If no
+ * characters need escaping, just return @a uri.
+ *
+ * NOTE: Currently, this function escapes <, >, ", space, {, }, |, \, ^, and `.
+ * This may be extended in the future to do context-dependent escaping.
+ */
+const char *svn_path_uri_autoescape (const char *uri,
+                                     apr_pool_t *pool);
+
 /** @} */
 
 /** Charset conversion stuff
