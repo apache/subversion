@@ -270,6 +270,7 @@ main (int argc, char **argv)
       {
         err = svn_cl__get_trace_editor (&trace_editor,
                                         &trace_edit_baton,
+                                        target,
                                         pool);
         if (err)
           goto handle_error;
@@ -283,6 +284,7 @@ main (int argc, char **argv)
       {
         err = svn_cl__get_trace_editor (&trace_editor,
                                         &trace_edit_baton,
+                                        target,
                                         pool);
         if (err)
           goto handle_error;
