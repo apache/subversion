@@ -753,7 +753,8 @@ txn_body_get_dirents (void *baton, trail_t *trail)
   dag_node_t *node;
 
   /* Get the node. */
-  SVN_ERR (svn_fs_base__dag_get_node (&node, trail->fs, args->id, trail));
+  SVN_ERR (svn_fs_base__dag_get_node (&node, trail->fs, args->id, 
+                                      trail, trail->pool));
 
   /* If immutable, do nothing and return. */
   if (! svn_fs_base__dag_check_mutable (node, args->txn_id))
@@ -765,7 +766,8 @@ txn_body_get_dirents (void *baton, trail_t *trail)
     return SVN_NO_ERROR;
 
   /* Else it's mutable.  Get it's dirents. */
-  return svn_fs_base__dag_dir_entries (args->dirents, node, trail);
+  return svn_fs_base__dag_dir_entries (args->dirents, node, 
+                                       trail, trail->pool);
 }
 
 
@@ -781,7 +783,7 @@ txn_body_remove_node (void *baton, trail_t *trail)
 {
   struct remove_node_args *args = baton;
   return svn_fs_base__dag_remove_node (trail->fs, args->id, args->txn_id,
-                                       trail);
+                                       trail, trail->pool);
 }
 
 
