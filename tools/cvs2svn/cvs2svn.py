@@ -1028,7 +1028,11 @@ class Dumper:
       return 1
 
   def copy_path(self, svn_src_path, svn_src_rev, svn_dst_path, entries=None):
-    """Emit a copy of SVN_SRC_PATH at SVN_SRC_REV to SVN_DST_PATH.
+    """If it wouldn't be redundant to do so, emit a copy of SVN_SRC_PATH at
+    SVN_SRC_REV to SVN_DST_PATH.
+
+    Return 1 if the copy was done, None otherwise.
+
     If ENTRIES is not None, it is a dictionary whose keys are the full
     set of entries the new copy is expected to have -- and therefore
     any entries in the new dst but not in ENTRIES will be removed.
@@ -1062,7 +1066,9 @@ class Dumper:
         self.dumpfile.write('Node-path: %s\n'
                             'Node-action: delete\n'
                             '\n' % (svn_dst_path + '/' + ent))
-
+      return 1
+    return None
+    
   def prune_entries(self, path, expected):
     """Delete any entries in PATH that are not in list EXPECTED.
     PATH need not be a directory, but of course nothing will happen if
@@ -1605,11 +1611,11 @@ class SymbolicNameTracker:
           copy_dst = make_path(ctx, dst_path, name, None)
 
         if (rev != parent_rev):
-          parent_rev = rev
           if jit_new_rev and jit_new_rev[0]:
             dumper.start_revision(make_revision_props(ctx, name, is_tag))
             jit_new_rev[0] = None
-          dumper.copy_path(src_path, parent_rev, copy_dst, val)
+          if dumper.copy_path(src_path, rev, copy_dst, val):
+            parent_rev = rev
         else:
           # Even if we kept the already-present revision of this entry
           # instead of copying a new one, we still need to prune out

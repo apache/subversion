@@ -1,0 +1,16 @@
+This CVSROOT/ directory is only here to convince CVS that this is a
+real repository.  Without it, CVS operations fail with an error like:
+
+  cvs [checkout aborted]: .../main-cvsrepos/CVSROOT: No such file or directory
+
+Of course, CVS doesn't seem to require that there actually be any
+files in CVSROOT/, which kind of makes one wonder why it cares about
+the directory at all.
+This CVSROOT/ directory is only here to convince CVS that this is a
+real repository.  Without it, CVS operations fail with an error like:
+
+  cvs [checkout aborted]: .../main-cvsrepos/CVSROOT: No such file or directory
+
+Of course, CVS doesn't seem to require that there actually be any
+files in CVSROOT/, which kind of makes one wonder why it cares about
+the directory at all.
