@@ -1262,19 +1262,17 @@ create_unique_tmpdir (const char **name, apr_pool_t *pool)
 {
   const char *unique_name;
   const char *sys_tmp_dir;
-  const char *base_apr;
   const char *base;
   unsigned int i;
 
   SVN_ERR (svn_io_temp_dir (&sys_tmp_dir, pool));
   base = svn_path_join (sys_tmp_dir, "svnlook", pool);
-  SVN_ERR (svn_path_cstring_from_utf8 (&base_apr, base, pool));
 
   for (i = 1; i <= 99999; i++)
     {
       svn_error_t *err;
 
-      unique_name = apr_psprintf (pool, "%s.%u", base_apr, i);
+      unique_name = apr_psprintf (pool, "%s.%u", base, i);
       err = svn_io_dir_make (unique_name, APR_OS_DEFAULT, pool);
 
       if (!err)
