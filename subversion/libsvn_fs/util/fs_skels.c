@@ -490,12 +490,12 @@ svn_fs__parse_representation_skel (svn_fs__representation_t **rep_p,
     {
       memcpy (rep->checksum,
               header_skel->children->next->next->children->next->data,
-              MD5_DIGESTSIZE);
+              APR_MD5_DIGESTSIZE);
     }
   else
     {
       /* Older repository, no checksum, so manufacture an all-zero checksum */
-      memset (rep->checksum, 0, MD5_DIGESTSIZE);
+      memset (rep->checksum, 0, APR_MD5_DIGESTSIZE);
     }
   
   /* KIND-SPECIFIC stuff */
@@ -909,7 +909,7 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
     skel_t *checksum_skel = svn_fs__make_empty_list (pool);
     svn_fs__prepend (svn_fs__mem_atom
                      (rep->checksum,
-                      MD5_DIGESTSIZE / sizeof (*(rep->checksum)), pool),
+                      APR_MD5_DIGESTSIZE / sizeof (*(rep->checksum)), pool),
                      checksum_skel);
     svn_fs__prepend (svn_fs__str_atom ("md5", pool), checksum_skel);
     svn_fs__prepend (checksum_skel, header_skel);

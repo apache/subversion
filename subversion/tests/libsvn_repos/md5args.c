@@ -55,7 +55,7 @@ main (int argc, const char * const *argv)
   int i;
   apr_pool_t *pool;
   svn_stringbuf_t *string, *digest_str;
-  unsigned char digest[MD5_DIGESTSIZE];
+  unsigned char digest[APR_MD5_DIGESTSIZE];
 
   if (apr_initialize () != APR_SUCCESS)
     {
@@ -79,7 +79,7 @@ main (int argc, const char * const *argv)
     }
 
   /* Create our expected digest. */
-  if (strlen (argv[1]) != (MD5_DIGESTSIZE * 2))
+  if (strlen (argv[1]) != (APR_MD5_DIGESTSIZE * 2))
     {
       printf ("md5 checksum has unexpected length.\n");
       exit (-2);
@@ -99,7 +99,7 @@ main (int argc, const char * const *argv)
   /* Now, run the MD5 digest calculation on that string. */
   apr_md5 (digest, string->data, string->len);
   digest_str = svn_stringbuf_create ("", pool);
-  for (i = 0; i < MD5_DIGESTSIZE; i++)
+  for (i = 0; i < APR_MD5_DIGESTSIZE; i++)
     {
       svn_stringbuf_t *tmp_str = 
         svn_stringbuf_createf (pool, "%02X", digest[i]);
