@@ -1,13 +1,3 @@
 The subdirectories contain distribution and platform specific versions of
 RPM package builders.
 
-TODO
-====
-
-RedHat 7.x, RedHat 8.x, RedHat 9.x :
-
-1. Figure out how to get rid of perl Config package dependency or just
-   generate a perl-config RPM package.
-
-2. Run cvs2svn tests during RPM generation.
-
