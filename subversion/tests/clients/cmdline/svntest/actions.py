@@ -232,11 +232,15 @@ def run_and_verify_status(wc_dir_name, output_tree,
   mytree = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
-  if tree.compare_trees (mytree, output_tree,
-                                 singleton_handler_a, a_baton,
-                                 singleton_handler_b, b_baton):
-    return 1
-
+  if (singleton_handler_a or singleton_handler_b):
+    if tree.compare_trees (mytree, output_tree,
+                           singleton_handler_a, a_baton,
+                           singleton_handler_b, b_baton):
+      return 1
+  else:
+    if tree.compare_trees (mytree, output_tree):
+      return 1
+    
   return 0
 
 
