@@ -69,9 +69,8 @@ svn_cl__mkdir (apr_getopt_t *os,
   if (err)
     {
       if (err->apr_err == APR_EEXIST)
-        return svn_error_createf
-          (err->apr_err, err,
-           "Try 'svn add' or 'svn add --non-recursive' instead?");
+        return svn_error_quick_wrap
+          (err, "Try 'svn add' or 'svn add --non-recursive' instead?");
       else
         return err;
     }
