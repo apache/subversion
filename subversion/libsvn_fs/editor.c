@@ -25,8 +25,7 @@ struct edit_baton
 {
   apr_pool_t *pool;
 
-  /* Run hook(svn_revnum_t new_rev, svn_string_t *log_msg, hook_baton)
-     when the commit finishes. */
+  /* Hook to run when when the commit is done. */
   svn_fs_commit_hook_t *hook;
   void *hook_baton;
 };
@@ -36,21 +35,28 @@ struct dir_baton
 {
   struct edit_baton *edit_baton;
   struct dir_baton *parent;
-  svn_string_t *name;
+  svn_string_t *name;  /* just this entry, not full path */
 };
 
 
 struct file_baton
 {
   struct dir_baton *parent;
-  svn_string_t *name;
+  svn_string_t *name;  /* just this entry, not full path */
 };
 
 
 static svn_error_t *
 begin_edit (void *edit_baton, void **root_baton)
 {
-  *root_baton = edit_baton;
+  struct edit_baton *eb = edit_baton;
+  struct dir_baton *db = apr_pcalloc (eb->pool, sizeof (*db));
+
+  db->edit_baton = edit_baton;
+  db->parent = NULL;
+  db->name = svn_string_create ("", eb->pool);
+
+  *root_baton = db;
   return SVN_NO_ERROR;
 }
 
@@ -69,7 +75,14 @@ add_directory (svn_string_t *name,
                long int ancestor_revision,
                void **child_baton)
 {
-  *child_baton = parent_baton;
+  struct dir_baton *pb = parent_baton;
+  struct dir_baton *db = apr_pcalloc (pb->edit_baton->pool, sizeof (*db));
+  
+  db->parent = pb;
+  db->edit_baton = pb->edit_baton;
+  db->name = svn_string_dup (name, pb->edit_baton->pool);
+
+  *child_baton = db;
   return SVN_NO_ERROR;
 }
 
@@ -81,7 +94,14 @@ replace_directory (svn_string_t *name,
                    long int ancestor_revision,
                    void **child_baton)
 {
-  *child_baton = parent_baton;
+  struct dir_baton *pb = parent_baton;
+  struct dir_baton *db = apr_pcalloc (pb->edit_baton->pool, sizeof (*db));
+  
+  db->parent = pb;
+  db->edit_baton = pb->edit_baton;
+  db->name = svn_string_dup (name, pb->edit_baton->pool);
+
+  *child_baton = db;
   return SVN_NO_ERROR;
 }
 
@@ -125,7 +145,13 @@ add_file (svn_string_t *name,
           long int ancestor_revision,
           void **file_baton)
 {
-  *file_baton = parent_baton;
+  struct dir_baton *pb = parent_baton;
+  struct file_baton *fb = apr_pcalloc (pb->edit_baton->pool, sizeof (*fb));
+
+  fb->parent = pb;
+  fb->name = svn_string_dup (name, pb->edit_baton->pool);
+
+  *file_baton = fb;
   return SVN_NO_ERROR;
 }
 
@@ -137,7 +163,13 @@ replace_file (svn_string_t *name,
               long int ancestor_revision,
               void **file_baton)
 {
-  *file_baton = parent_baton;
+  struct dir_baton *pb = parent_baton;
+  struct file_baton *fb = apr_pcalloc (pb->edit_baton->pool, sizeof (*fb));
+
+  fb->parent = pb;
+  fb->name = svn_string_dup (name, pb->edit_baton->pool);
+
+  *file_baton = fb;
   return SVN_NO_ERROR;
 }
 
@@ -152,7 +184,7 @@ change_file_prop (void *file_baton,
 
 
 static svn_error_t *
-change_dir_prop (void *parent_baton,
+change_dir_prop (void *dir_baton,
                  svn_string_t *name,
                  svn_string_t *value)
 {
