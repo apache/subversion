@@ -155,7 +155,7 @@
             to each are semantically incompatible.  Suddenly A and B
             don't work together anymore. The locking system was
             powerless to prevent the problem&mdash;yet it somehow
-            provided a sense of false security.  It's easy for Harry and
+            provided a false sense of security.  It's easy for Harry and
             Sally to imagine that by locking files, each is beginning a
             safe, insulated task, and thus inhibits them from
             discussing their incompatible changes early
