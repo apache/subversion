@@ -795,6 +795,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "###   http-compression         Whether to compress HTTP requests\n"
         "###   neon-debug-mask          Debug mask for Neon HTTP library\n"
         "###   ssl-authority-files      List of files, each of a trusted CAs\n"
+        "###   ssl-trust-default-ca     Trust the system 'default' CAs\n" 
         "###   ssl-ignore-unknown-ca    Allow untrusted server certificates\n"
         "###   ssl-ignore-invalid-date  Allow expired/postdated certificates\n"
         "###   ssl-ignore-host-mismatch Allow certificates for other servers\n"
