@@ -116,10 +116,17 @@ copy_node_revision (svn_fs__node_revision_t *noderev,
   if (noderev->predecessor_id)
     nr->predecessor_id = svn_fs__id_copy (noderev->predecessor_id, pool);
   nr->predecessor_count = noderev->predecessor_count;
-  if (noderev->prop_key)
-    nr->prop_key = apr_pstrdup (pool, noderev->prop_key);
-  if (noderev->data_key)
-    nr->data_key = apr_pstrdup (pool, noderev->data_key);
+  if (noderev->copyfrom)
+    nr->copyfrom = svn_fs__id_copy (noderev->copyfrom, pool);
+  if (noderev->copyroot)
+    nr->copyroot = svn_fs__id_copy (noderev->copyroot, pool);
+  nr->predecessor_count = noderev->predecessor_count;
+  nr->prop_offset = noderev->prop_offset;
+  nr->prop_revision = noderev->prop_revision;
+  nr->data_offset = noderev->data_offset;
+  nr->data_size = noderev->data_size;
+  nr->data_revision = noderev->data_revision;
+  
   if (noderev->edit_key)
     nr->edit_key = apr_pstrdup (pool, noderev->edit_key);
   if (noderev->created_path)
@@ -214,11 +221,10 @@ svn_fs__dag_get_revision (svn_revnum_t *rev,
                           dag_node_t *node,
                           apr_pool_t *pool)
 {
-  /* Use the txn ID from the NODE's id to look up the transaction and
-     get its revision number.  */
-  return svn_fs__txn_get_revision 
-    (rev, svn_fs__dag_get_fs (node), 
-     svn_fs__id_txn_id (svn_fs__dag_get_id (node)), pool);
+  /* Look up the committed revision from the Node-ID. */
+  *rev = svn_fs__id_rev (node->id);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -467,9 +473,9 @@ svn_fs__dag_revision_root (dag_node_t **node_p,
                            svn_revnum_t rev,
                            apr_pool_t *pool)
 {
-  const svn_fs_id_t *root_id;
+  svn_fs_id_t *root_id;
 
-  SVN_ERR (svn_fs__rev_get_root (&root_id, fs, rev, pool));
+  SVN_ERR (svn_fs__fs_rev_get_root (&root_id, fs, rev, pool));
   return svn_fs__dag_get_node (node_p, fs, root_id, pool);
 }
 
@@ -706,7 +712,7 @@ svn_fs__dag_file_length (svn_filesize_t *length,
   /* Go get a fresh node-revision for FILE, and . */
   SVN_ERR (get_node_revision (&noderev, file, pool));
 
-  abort ();
+  SVN_ERR (svn_fs__fs_file_length (length, noderev, pool));
 
   return SVN_NO_ERROR;
 }
@@ -939,13 +945,13 @@ svn_fs__things_different (svn_boolean_t *props_changed,
 
   /* Compare property keys. */
   if (props_changed != NULL)
-    *props_changed = (! svn_fs__same_keys (noderev1->prop_key, 
-                                           noderev2->prop_key));
+    *props_changed = (! svn_fs__fs_noderev_same_prop_key (noderev1,
+                                                          noderev2));
 
   /* Compare contents keys. */
   if (contents_changed != NULL)
-    *contents_changed = (! svn_fs__same_keys (noderev1->data_key, 
-                                              noderev2->data_key));
+    *contents_changed = (! svn_fs__fs_noderev_same_data_key (noderev1,
+                                                             noderev2));
   
   return SVN_NO_ERROR;
 }

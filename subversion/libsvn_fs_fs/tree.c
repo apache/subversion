@@ -1500,7 +1500,7 @@ merge (svn_stringbuf_t *conflict_p,
        it doesn't do a brute-force comparison on textual contents, so
        it won't do that here either.  Checking to see if the propkey
        atoms are `equal' is enough. */
-    if (! svn_fs__same_keys (tgt_nr->prop_key, anc_nr->prop_key))
+    if (! svn_fs__fs_noderev_same_prop_key (tgt_nr, anc_nr))
       {
         return conflict_err (conflict_p, target_path);
       }
