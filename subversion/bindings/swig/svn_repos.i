@@ -65,12 +65,6 @@
     void **edit_baton
 };
 
-%typemap(perl5, in) (svn_repos_commit_callback_t hook, void *callback_baton) {
-    $1 = svn_swig_pl_thunk_commit_callback;
-    $2 = (void *)$input;
-    SvREFCNT_inc($input);
-};
-
 /* ----------------------------------------------------------------------- */
 
 %include svn_repos.h

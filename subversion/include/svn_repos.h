@@ -362,18 +362,6 @@ svn_repos_replay (svn_fs_root_t *root,
 
 /* Making commits. */
 
-/** Callback function type for commits.
- *
- * When a filesystem commit succeeds, an instance of this is invoked on 
- * the @a new_revision, @a date, and @a author of the commit, along with 
- * the @a baton closure.
- */
-typedef svn_error_t * (*svn_repos_commit_callback_t) (
-    svn_revnum_t new_revision,
-    const char *date,
-    const char *author,
-    void *baton);
-
 /** Return an @a editor and @a edit_baton to commit changes to @a session->fs,
  * beginning at location 'rev:@a base_path', where "rev" is the argument
  * given to @c open_root().  Store @a user as the author of the commit and
@@ -398,7 +386,7 @@ svn_error_t *svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                                           const char *base_path,
                                           const char *user,
                                           const char *log_msg,
-                                          svn_repos_commit_callback_t hook,
+                                          svn_commit_callback_t callback,
                                           void *callback_baton,
                                           apr_pool_t *pool);
 

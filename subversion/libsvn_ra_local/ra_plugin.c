@@ -28,72 +28,6 @@
 #include <apr_want.h>
 
 /*----------------------------------------------------------------*/
-
-/** Callbacks **/
-
-/* A device to record the targets of commits, and ensuring that proper
-   commit closure happens on them (namely, revision setting and wc
-   property setting).  This is passed to the `commit hook' routine by
-   svn_repos_get_commit_editor.  (   ) */
-struct commit_cleanup_baton
-{
-  /* Allocation for this baton, as well as all committed_targets */
-  apr_pool_t *pool;
-
-  /* The filesystem that we just committed to. */
-  svn_fs_t *fs;
-
-  /* If non-null, store the new revision here. */
-  svn_revnum_t *new_rev;
-
-  /* If non-null, store the repository date of the commit here. */
-  const char **committed_date;
-
-  /* If non-null, store the repository author of the commit here. */
-  const char **committed_author;
-};
-
-
-/* An instance of svn_repos_commit_callback_t.
- * 
- * BATON is `struct commit_cleanup_baton *'.  Loop over all committed
- * target paths in BATON->committed_targets, invoking
- * BATON->close_func() on each one with NEW_REV.
- *
- * Set *(BATON->new_rev) to NEW_REV, and copy COMMITTED_DATE and
- * COMMITTED_AUTHOR to *(BATON->committed_date) and
- * *(BATON->committed_date) respectively, allocating the new storage
- * in BATON->pool.
- *
- * This routine is originally passed as a "hook" to the filesystem
- * commit editor.  When we get here, the track-editor has already
- * stored committed targets inside the baton.
- */
-static svn_error_t *
-cleanup_commit (svn_revnum_t new_rev,
-                const char *committed_date,
-                const char *committed_author,
-                void *baton)
-{
-  struct commit_cleanup_baton *cb = baton;
-
-  /* Store the new revision information in the baton. */
-  if (cb->new_rev)
-    *(cb->new_rev) = new_rev;
-
-  if (cb->committed_date)
-    *(cb->committed_date) = committed_date 
-                            ? apr_pstrdup (cb->pool, committed_date) 
-                            : NULL;
-
-  if (cb->committed_author)
-    *(cb->committed_author) = committed_author
-                              ? apr_pstrdup (cb->pool, committed_author) 
-                              : NULL;
-
-  return SVN_NO_ERROR;
-}
-
 
 
 /* The reporter vtable needed by do_update() */
@@ -364,27 +298,18 @@ static svn_error_t *
 svn_ra_local__get_commit_editor (void *session_baton,
                                  const svn_delta_editor_t **editor,
                                  void **edit_baton,
-                                 svn_revnum_t *new_rev,
-                                 const char **committed_date,
-                                 const char **committed_author,
                                  const char *log_msg,
+                                 svn_commit_callback_t callback,
+                                 void *callback_baton,
                                  apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session_baton;
-  struct commit_cleanup_baton *cb = apr_pcalloc (pool, sizeof (*cb));
-
-  /* Construct a commit cleanup baton */
-  cb->pool = pool;
-  cb->fs = sess->fs;
-  cb->new_rev = new_rev;
-  cb->committed_date = committed_date;
-  cb->committed_author = committed_author;
                                          
   /* Get the repos commit-editor */     
   SVN_ERR (svn_repos_get_commit_editor (editor, edit_baton, sess->repos,
                                         sess->repos_url, sess->fs_path,
                                         sess->username, log_msg,
-                                        cleanup_commit, cb, pool));
+                                        callback, callback_baton, pool));
 
   return SVN_NO_ERROR;
 }

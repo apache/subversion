@@ -1229,24 +1229,39 @@ svn_client__do_commit (const char *base_url,
   return SVN_NO_ERROR;
 }
 
+/* Commit callback baton */
 
-svn_client_commit_info_t *
-svn_client__make_commit_info (svn_revnum_t revision,
-                              const char *author,
-                              const char *date,
-                              apr_pool_t *pool)
+struct commit_baton {
+  svn_client_commit_info_t **info;
+  apr_pool_t *pool;
+};
+
+svn_error_t *svn_client__commit_get_baton (void **baton,
+                                           svn_client_commit_info_t **info,
+                                           apr_pool_t *pool)
 {
-  svn_client_commit_info_t *info;
+  struct commit_baton *cb = apr_pcalloc (pool, sizeof (*cb));
+  cb->info = info;
+  cb->pool = pool;
+  *baton = cb;
 
-  if (date || author || SVN_IS_VALID_REVNUM (revision))
-    {
-      info = apr_palloc (pool, sizeof (*info));
-      info->date = date ? apr_pstrdup (pool, date) : NULL;
-      info->author = author ? apr_pstrdup (pool, author) : NULL;
-      info->revision = revision;
-      return info;
-    }
-  return NULL;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_client__commit_callback (svn_revnum_t revision,
+                                          const char *date,
+                                          const char *author,
+                                          void *baton)
+{
+  struct commit_baton *cb = baton;
+  svn_client_commit_info_t **info = cb->info;
+
+  *info = apr_palloc (cb->pool, sizeof (**info));
+  (*info)->date = date ? apr_pstrdup (cb->pool, date) : NULL;
+  (*info)->author = author ? apr_pstrdup (cb->pool, author) : NULL;
+  (*info)->revision = revision;
+
+  return SVN_NO_ERROR;
 }
 
 

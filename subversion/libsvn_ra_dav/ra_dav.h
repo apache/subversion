@@ -218,10 +218,9 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_editor_t **editor,
   void **edit_baton,
-  svn_revnum_t *new_rev,
-  const char **committed_date,
-  const char **committed_author,
   const char *log_msg,
+  svn_commit_callback_t callback,
+  void *callback_baton,
   apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__get_file(
