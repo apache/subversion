@@ -1666,7 +1666,10 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                                      apr_pool_t *pool);
 
 
-/** Assuming @a path is under version control and in a state of conflict, 
+/**
+ * @since New in 1.2.
+ *
+ * Assuming @a path is under version control and in a state of conflict, 
  * then take @a path *out* of this state.  If @a resolve_text is true then 
  * any text conflict is resolved, if @a resolve_props is true then any 
  * property conflicts are resolved.  If @a recursive is true, then search
@@ -1692,6 +1695,22 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
  * information to @c notify_func (if non-@c NULL.)  If only text or only 
  * property conflict resolution was requested, and it was successful, then 
  * success gets reported.
+ */
+svn_error_t *svn_wc_resolved_conflict2 (const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        svn_boolean_t resolve_text,
+                                        svn_boolean_t resolve_props,
+                                        svn_boolean_t recursive,
+                                        svn_wc_notify_func_t notify_func,
+                                        void *notify_baton,
+                                        svn_cancel_func_t cancel_func,
+                                        void *cancel_baton,
+                                        apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ *
+ * Similar to svn_wc_resolved_conflict2(), but without cancellation support.
  */
 svn_error_t *svn_wc_resolved_conflict (const char *path,
                                        svn_wc_adm_access_t *adm_access,

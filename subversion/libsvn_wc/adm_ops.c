@@ -2091,6 +2091,25 @@ svn_wc_resolved_conflict (const char *path,
                           void *notify_baton,                         
                           apr_pool_t *pool)
 {
+  return svn_wc_resolved_conflict2 (path, adm_access,
+                                    resolve_text, resolve_props, recursive,
+                                    notify_func, notify_baton,
+                                    NULL, NULL, pool);
+
+}
+
+svn_error_t *
+svn_wc_resolved_conflict2 (const char *path,
+                           svn_wc_adm_access_t *adm_access,
+                           svn_boolean_t resolve_text,
+                           svn_boolean_t resolve_props,
+                           svn_boolean_t recursive,
+                           svn_wc_notify_func_t notify_func,
+                           void *notify_baton,                         
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *pool)
+{
   struct resolve_callback_baton *baton = apr_pcalloc (pool, sizeof(*baton));
 
   baton->resolve_text = resolve_text;
@@ -2114,7 +2133,7 @@ svn_wc_resolved_conflict (const char *path,
     {
       SVN_ERR (svn_wc_walk_entries2 (path, adm_access,
                                      &resolve_walk_callbacks, baton,
-                                     FALSE, NULL, NULL, pool));
+                                     FALSE, cancel_func, cancel_baton, pool));
 
     }
 
