@@ -133,10 +133,10 @@ add_dir_recursive (const char *dirname,
 /* The main body of svn_client_add;  uses an existing access baton. */
 svn_error_t *
 svn_client__add (const char *path, 
-                svn_boolean_t recursive,
-                svn_wc_adm_access_t *adm_access,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+                 svn_boolean_t recursive,
+                 svn_wc_adm_access_t *adm_access,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   svn_error_t *err;
