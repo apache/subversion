@@ -264,7 +264,10 @@
 }
 
 /* -----------------------------------------------------------------------
-   get_logs takes a callback function, so we have to thunk it
+   Callback: svn_log_message_receiver_t
+   svn_client_log()
+   svn_ra get_log()
+   svn_repos_get_logs()
 */
 
 %typemap(python, in) (svn_log_message_receiver_t receiver, 
@@ -280,8 +283,11 @@
 
 
 /* -----------------------------------------------------------------------
-   thunk commit_callback
+   Callback: svn_commit_callback_t
+   svn_ra get_commit_editor()
+   svn_repos_get_commit_editor()
 */
+
 %typemap(perl5, in) (svn_commit_callback_t callback, void *callback_baton) {
     $1 = svn_swig_pl_thunk_commit_callback;
     $2 = (void *)$input;
@@ -375,7 +381,10 @@
 }
 
 /* -----------------------------------------------------------------------
-   dirents hash
+   apr_hash_t **dirents
+   svn_client_ls()
+   svn_io_get_dirents()
+   svn_ra get_dir()
 */
 
 %typemap(python,in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
