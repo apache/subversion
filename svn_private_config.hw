@@ -45,4 +45,7 @@
 /* Link pipe repos access library to client */
 #define SVN_LIBSVN_CLIENT_LINKS_RA_SVN
 
+/* Defined to be the path to the installed binaries */
+#define SVN_BINARY_DIR "/usr/local/bin"
+
 #endif /* CONFIG_HW */

@@ -166,6 +166,9 @@ dnl they will not have things such as ${bindir} available
 SVN_BINDIR="`eval echo ${SVN_BINDIR}`"
 AC_SUBST(SVN_BINDIR)
 
+dnl provide ${bindir} in svn_private.h for use in compiled code
+AC_DEFINE_UNQUOTED(SVN_BINARY_DIR, "${SVN_BINDIR}",
+        [Defined to be the path to the installed binaries])
 
 dnl This directory is where we will store our data. We don't want to
 dnl evaluate it so that later changes in datadir will propagate properly
