@@ -95,6 +95,10 @@ SOURCE=.\delta.c
 
 SOURCE=.\reporter.c
 # End Source File
+# Begin Source File
+
+SOURCE=.\rev_hunt.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
