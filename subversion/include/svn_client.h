@@ -62,7 +62,9 @@ extern "C" {
 
 /* Perform a checkout from URL, providing pre- and post-checkout hook
    editors and batons (BEFORE_EDITOR, BEFORE_EDIT_BATON /
-   AFTER_EDITOR, AFTER_EDIT_BATON).
+   AFTER_EDITOR, AFTER_EDIT_BATON).  These editors are purely optional
+   and exist only for extensibility;  pass four NULLs here if you
+   don't need them.
 
    PATH will be the root directory of your checked out working copy.
 
@@ -95,7 +97,9 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
 
 /* Perform an update of PATH (part of a working copy), providing pre-
    and post-checkout hook editors and batons (BEFORE_EDITOR,
-   BEFORE_EDIT_BATON / AFTER_EDITOR, AFTER_EDIT_BATON).
+   BEFORE_EDIT_BATON / AFTER_EDITOR, AFTER_EDIT_BATON).  These editors
+   are purely optional and exist only for extensibility; pass four
+   NULLs here if you don't need them.
 
    If XML_SRC is NULL, then the update will come from the repository
    that PATH was originally checked-out from.  An invalid REVISION
@@ -147,7 +151,11 @@ svn_client_undelete (svn_stringbuf_t *path,
 
 /* Import a tree, using optional pre- and post-commit hook editors
  * (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
- * AFTER_EDIT_BATON).  Store LOG_MSG as the log for the commit.
+ * AFTER_EDIT_BATON).  These editors are purely optional and exist
+ * only for extensibility; pass four NULLs here if you don't need
+ * them.
+ *
+ * Store LOG_MSG as the log for the commit.
  * 
  * PATH is the path to local tree being imported.  PATH can be a file
  * or directory.
@@ -179,8 +187,7 @@ svn_client_undelete (svn_stringbuf_t *path,
  * behavior confuses most people, and I think eventually svn _should_
  * turn the tree into a working copy, or at least should offer the
  * option. However, doing so is a bit involved, and we don't need it
- * right now.
- */
+ * right now.  */
 svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
                                 void *before_edit_baton,
                                 const svn_delta_edit_fns_t *after_editor,
@@ -196,7 +203,11 @@ svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
 
 /* Perform an commit, providing pre- and post-commit hook editors and
    batons (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
-   AFTER_EDIT_BATON).  Store LOG_MSG as the log for the commit.
+   AFTER_EDIT_BATON).  These editors are purely optional and exist
+   only for extensibility; pass four NULLs here if you don't need
+   them.
+
+   Store LOG_MSG as the log for the commit.
 
    TARGETS is an array of svn_stringbuf_t * paths to commit.  They need
    not be canonicalized nor condensed; this function will take care of
