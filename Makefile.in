@@ -206,10 +206,10 @@ local-extraclean: local-distclean
               ac-helpers/ltmain.sh
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean swig-py-ext-clean
+local-clean: fast-clean check-clean
 
 # clean everything, including test output.
-local-distclean: fast-distclean check-clean swig-py-ext-clean
+local-distclean: fast-distclean check-clean
 
 local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
 
