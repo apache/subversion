@@ -25,6 +25,9 @@ import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.util.Arrays;
 
+import junit.framework.Test;
+import junit.framework.TestSuite;
+
 public class BasicTests extends SVNTests
 {
     static
@@ -35,6 +38,14 @@ public class BasicTests extends SVNTests
     public BasicTests()
     {
         testBaseName = "basic_test";
+    }
+
+    public static Test suite() {
+        return new TestSuite(BasicTests.class);
+    }
+
+    public static void main(String[] args) {
+        junit.textui.TestRunner.run(suite());
     }
 
     public void testBasicCheckout() throws Throwable

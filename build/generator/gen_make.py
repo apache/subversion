@@ -74,13 +74,12 @@ class Generator(gen_base.GeneratorBase):
         self.ofile.write(
           '%s_DEPS = %s %s\n'
           '%s: $(%s_DEPS)\n'
-          '\t%s -d %s '
+          '\t%s -d %s -classpath %s:$(%s_CLASSPATH) '
           % (targ_varname, target_ob.add_deps, string.join(objects + deps),
 
              target_ob.name, targ_varname,
-             target_ob.link_cmd, target_ob.output_dir))
-        if isinstance(target_ob, gen_base.TargetJavaHeaders):
-          self.ofile.write('-classpath %s ' % target_ob.classes);
+             target_ob.link_cmd, target_ob.output_dir, target_ob.classes,
+             targ_varname))
         for dep in target_ob.deps:
           if isinstance(dep, gen_base.SourceFile):
             self.ofile.write('%s ' % os.path.join('$(abs_srcdir)', dep.filename))
