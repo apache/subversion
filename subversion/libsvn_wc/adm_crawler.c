@@ -803,6 +803,86 @@ verify_tree_deletion (svn_stringbuf_t *dir,
 }
 
 
+/* Helper: search down the directory STACK, looking for the nearest
+   'copyfrom' url.  Once we've found the root of the copy, derive a
+   new copyfrom url by walking back up to ENTRY_NAME.  Return the new
+   url in *COPYFROM_URL. */
+static svn_error_t *
+derive_copyfrom_url (svn_stringbuf_t **copyfrom_url,
+                     svn_stringbuf_t *entry_name,
+                     struct stack_object *stack)
+{
+  svn_stringbuf_t *root_copyfrom_url = NULL;
+
+  /* current stack object we're examining */
+  struct stack_object *stackptr = stack;
+  
+  /* Walk down the stack until we find a non-NULL dir baton. */
+  while (1)  
+    {
+      root_copyfrom_url = 
+        (svn_stringbuf_t *) apr_hash_get (stackptr->this_dir->attributes,
+                                          SVN_WC_ENTRY_ATTR_COPYFROM_URL,
+                                          APR_HASH_KEY_STRING);      
+      if (root_copyfrom_url != NULL)
+        /* found the nearest copy history, so move on. */
+        break;
+      
+      if (stackptr->previous)
+        {
+          /* There's a previous stack frame, so descend. */
+          stackptr = stackptr->previous;
+        }
+      else
+        {
+          /* Can't descend?  We must be at stack bottom, and yet found
+             no copy history.  This is a bogus working copy! */
+          return svn_error_createf 
+            (SVN_ERR_WC_CORRUPT, 0, NULL, stack->pool,
+             "Can't find any copy history in any parent of copied dir '%s'.",
+             stack->path->data);
+        }
+    }
+
+  /* Dup the root url. */
+  root_copyfrom_url = svn_stringbuf_dup (root_copyfrom_url, stack->pool);
+
+  /* Now walk _up_ the stack, augmenting root_copyfrom_url. */
+  while (1)  
+    {
+      if (stackptr->next)
+        {
+          char *dirname;
+
+          /* Move up the stack */
+          stackptr = stackptr->next;
+
+          /* Fetch the 'name' attribute of this parent directory. */
+          dirname = (char *) apr_hash_get (stackptr->this_dir->attributes,
+                                           SVN_WC_ENTRY_ATTR_NAME,
+                                           APR_HASH_KEY_STRING);         
+          /* Add it to the url. */
+          svn_path_add_component_nts (root_copyfrom_url, dirname,
+                                      svn_path_url_style);
+        }
+      else 
+        {
+          /* Can't move up the stack anymore?  We must be at the top
+             of the stack.  We're all done. */
+          break;
+        }
+    }
+
+  /* Lastly, add the original entry's name to the derived url. */
+  svn_path_add_component (root_copyfrom_url, entry_name, svn_path_url_style);
+
+  /* Return the results. */
+  *copyfrom_url = root_copyfrom_url;
+  
+  return SVN_NO_ERROR;
+}
+
+
 /* Forward declaration for co-dependent recursion. */
 static svn_error_t *
 crawl_dir (svn_stringbuf_t *path,
@@ -818,6 +898,79 @@ crawl_dir (svn_stringbuf_t *path,
            apr_hash_t *locks,
            apr_pool_t *top_pool);
 
+
+/*
+  report_single_mod() has the burden of noticing many different entry
+  states -- schedules, existences, and so on.  Here are the different
+  things it can encounter:
+
+      A. copied && revision is different:
+
+            search upward for root of copy, derive new copyfrom args,
+            do another add-with-history.  look for local mods.
+
+      B. scheduled addition (rev=0)
+
+            do a regular add, don't look for local mods.
+
+      C. scheduled addition (copyfrom_args)
+
+            do an add-with-history, using copyfrom args provided.
+            look for local mods.
+
+      D. scheduled deletion -OR- existence=deleted
+
+            do a delete, don't look for local mods.
+
+      E. replacement type 1:  (schedule=replace)
+
+            do a delete.
+            then do EITHER a regular add (not looking for local mods),
+                or an add-with-history (and look for local mods)
+
+      F. replacement type 2:  existence=deleted, schedule=add
+         (i.e. a commit has happened between the delete and add)
+
+            same actions as replacement type 1.
+         
+   
+MAIN LOGIC:
+
+   bool do_delete=0, do_add=0;
+   string copyfrom_args = NULL;
+
+   // this happens in cases D, E, F
+   if (schedule==delete OR schedule==replace OR existence==deleted)
+     do_delete = 1;
+   
+   // this happens in cases B, C, E, F
+   if (schedule==add OR schedule==replace)
+     do_add = 1;
+     copyfrom_args = entry->atts->copyfrom_args // if they exist
+   
+   // this happens in case A
+   if (existence==copied && rev is different than parent && schedule==normal)
+     do_add = 1;
+     copyfrom_args = derive_from_copy_root(); 
+
+   if (do_delete)
+      editor->delete()
+
+   if (do_add)
+      if (copyfrom_args)
+          editor->add_*(copyfrom_args)
+          if file, maybe mark for txdelta
+      else
+          do_mod_check = 0
+          editor->add_*()
+          if file, definitely mark for txdelta
+
+   else if (! do_add && ! do_delete)
+      ...look for mods, maybe mark for txdelta
+
+   if (dir)
+      recurse;
+*/
 
 /* Report modifications to file or directory NAME in STACK->path
    (represented by ENTRY).  NAME is NOT SVN_WC_ENTRY_THIS_DIR.
@@ -853,42 +1006,77 @@ report_single_mod (const char *name,
 {
   svn_stringbuf_t *full_path;
   svn_stringbuf_t *entry_name;
+
+  /* If the entry is a directory, and we need to recurse, this is the
+     baton we will use to do so.  */
   void *new_dir_baton = NULL;
-  svn_boolean_t do_add = FALSE, do_delete = FALSE;
+
+  /* These will be filled in (if necessary) later on, if we end up
+     doing an add-with-history. */
   svn_stringbuf_t *copyfrom_url = NULL, *copyfrom_rev_str = NULL;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
 
-      
+  /* By default, assume we're only going to look for local mods. */
+  svn_boolean_t do_add = FALSE, do_delete = FALSE;
+
+  /* Sanity check:  'this_dir' is ignored.  */
   if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
     return SVN_NO_ERROR;
-
+  
   entry_name = svn_stringbuf_create (name, (*stack)->pool);
-
+  
   /* This entry gets deleted if marked for deletion or replacement,
-     and if the algorithm is not in "adds only" mode. */
-  if ((! adds_only)
-      && ((entry->schedule == svn_wc_schedule_delete)
-          || (entry->schedule == svn_wc_schedule_replace)))
-    {
-      do_delete = TRUE;
-    }
+     or was already 'deleted' in an earlier commit. */
+  if (! adds_only)
+    if ((entry->schedule == svn_wc_schedule_delete)
+        || (entry->schedule == svn_wc_schedule_replace)
+        || (entry->existence == svn_wc_existence_deleted))
+      {
+        do_delete = TRUE;
+      }
 
   /* This entry gets added if marked for addition or replacement. */
   if ((entry->schedule == svn_wc_schedule_add)
       || (entry->schedule == svn_wc_schedule_replace))
     {
       do_add = TRUE;
+      
+      /* If the entry itself has 'copyfrom' args, find them now. */
+      copyfrom_url = 
+        (svn_stringbuf_t *) apr_hash_get (entry->attributes,
+                                          SVN_WC_ENTRY_ATTR_COPYFROM_URL,
+                                          APR_HASH_KEY_STRING);      
+      copyfrom_rev_str = 
+        (svn_stringbuf_t *) apr_hash_get (entry->attributes,
+                                          SVN_WC_ENTRY_ATTR_COPYFROM_REV,
+                                          APR_HASH_KEY_STRING);
+      if (copyfrom_rev_str)
+        copyfrom_rev = atoi(copyfrom_rev_str->data);
+    }
+  
+  /* If the entry is part of a 'copied' subtree, and isn't scheduled
+     for addition or deletion, we -might- need to do an
+     add-with-history if it has a different working rev than its
+     parent. */
+  if ((entry->existence == svn_wc_existence_copied)
+      && (entry->schedule == svn_wc_schedule_normal)
+      && (entry->revision != (*stack)->this_dir->revision))
+    {
+      do_add = TRUE;
+      
+      /* Derive the copyfrom url by inheriting it from the nearest
+         parental 'root' of the copy. */
+      SVN_ERR (derive_copyfrom_url (&copyfrom_url, entry_name, *stack));
+
+      /* The copyfrom revision is whatever the 'different' working rev
+         is. */
+      copyfrom_rev = entry->revision;
+
+      /* If existence is copied, there *better* be some copyfrom args
+         above us somewhere!!!   ### take this out later, return error. */
+      assert(copyfrom_url != NULL);
     }
 
-  /* If the entry's existence is `deleted' and it's still scheduled
-     for addition, do -both- actions, to insure an accurate repos
-     transaction. */
-  if ((entry->schedule == svn_wc_schedule_add)
-      && (entry->existence == svn_wc_existence_deleted))
-    {
-      do_delete = TRUE;
-      do_add = TRUE;
-    }
 
   /* Construct a full path to the current entry */
   full_path = svn_stringbuf_dup ((*stack)->path, (*stack)->pool);
@@ -903,13 +1091,12 @@ report_single_mod (const char *name,
                                         (*stack)->pool));
 
 
-  /* Here's a guide to the very long logic that extends below.  For
-   * each entry in the current dir (STACK->path), the examination
-   * looks like this:
+  /* Here's a guide to the very long logic that extends below.
    *
-   *   if (deleted)...
-   *   if (added)...
-   *   else if (local mods)...
+   *   if (do_delete)...
+   *   if (do_add)...
+   *   else if (!do_delete && !do_add)
+   *      look for local mods
    *   if (dir)
    *      recurse() */
 
@@ -932,7 +1119,6 @@ report_single_mod (const char *name,
 
       /* Delete the entry */
       SVN_ERR (editor->delete_entry (entry_name, *dir_baton));
-          
     }  
   /* END DELETION CHECK */
   
@@ -952,20 +1138,7 @@ report_single_mod (const char *name,
       if (! *dir_baton)
         SVN_ERR (do_dir_replaces (dir_baton,
                                   *stack, editor, edit_baton,
-                                  locks, top_pool));
-      
-      /* Find out if the entry has "copyfrom" args (i.e. is a copy) */
-      copyfrom_url = 
-        (svn_stringbuf_t *) apr_hash_get (entry->attributes,
-                                          SVN_WC_ENTRY_ATTR_COPYFROM_URL,
-                                          APR_HASH_KEY_STRING);      
-      copyfrom_rev_str = 
-        (svn_stringbuf_t *) apr_hash_get (entry->attributes,
-                                          SVN_WC_ENTRY_ATTR_COPYFROM_REV,
-                                          APR_HASH_KEY_STRING);
-      if (copyfrom_rev_str)
-        copyfrom_rev = atoi(copyfrom_rev_str->data);
-      
+                                  locks, top_pool));      
 
       /* Adding a new directory: */
       if (entry->kind == svn_node_dir)
@@ -991,7 +1164,7 @@ report_single_mod (const char *name,
               SVN_ERR (editor->add_directory (entry_name,
                                               *dir_baton,
                                               copyfrom_url, copyfrom_rev,
-                                              &new_dir_baton));
+                                              &new_dir_baton));             
             }
           
           /* History or not, decide if there are props to send. */
@@ -1000,7 +1173,6 @@ report_single_mod (const char *name,
           if (prop_modified_p)
             SVN_ERR (do_prop_deltas (full_path, entry, editor, 
                                      tb->editor_baton, (*stack)->pool));
-
         }
       
       /* Adding a new file: */
@@ -1051,7 +1223,7 @@ report_single_mod (const char *name,
   
 
   /* LOCAL MOD CHECK */
-  else if (! (adds_only || do_delete))
+  else if (! (do_add || do_delete))
     {
       svn_boolean_t text_modified_p, prop_modified_p;
           
@@ -1059,9 +1231,9 @@ report_single_mod (const char *name,
       SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path, 
                                        (*stack)->pool));
           
-      /* Only check for local propchanges if we're looking at a file,
-         or if we're looking at SVN_WC_ENTRY_THIS_DIR.  Otherwise,
-         each directory will end up being checked twice! */
+      /* Only check for local propchanges if we're looking at a file. 
+         Our caller, crawl_dir(), is looking for propchanges on each
+         directory it examines. */
       if (entry->kind == svn_node_dir)
         prop_modified_p = FALSE;
       else
@@ -1212,8 +1384,9 @@ crawl_dir (svn_stringbuf_t *path,
   /* If the `.' entry is marked with ADD, then we *only* want to
      notice child entries that are also added.  It makes no sense to
      look for deletes or local mods in an added directory.
-
-     Unless, of course, the add has copyfrom history. */
+     
+     Unless, of course, the add has 'copyfrom' history; when we enter
+     a 'copied' subtree, we want to notice all things. */
   if ((this_dir_entry->schedule == svn_wc_schedule_add)
       || (this_dir_entry->schedule == svn_wc_schedule_replace))
     if ((apr_hash_get (this_dir_entry->attributes,
@@ -1287,9 +1460,11 @@ crawl_dir (svn_stringbuf_t *path,
       /* Get the entry for this file or directory. */
       current_entry = (svn_wc_entry_t *) val;
 
-      /* If the entry's existence is `deleted', skip it. */
+      /* If the entry's existence is `deleted', skip it... unless it's
+         scheduled for addition, or is part of a 'copied' subtree. */
       if ((current_entry->existence == svn_wc_existence_deleted)
-          && (current_entry->schedule != svn_wc_schedule_add))
+          && (current_entry->schedule != svn_wc_schedule_add)
+          && (current_entry->existence != svn_wc_existence_copied))
         continue;
       
       /* Report mods for a single entry. */
