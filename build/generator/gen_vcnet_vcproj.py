@@ -178,6 +178,7 @@ class Generator(gen_win.WinGeneratorBase):
     guidvals.sort()
 
     data = {
+      'version': self.vsnet_version,
       'targets' : targets,
       'configs' : configs,
       'platforms' : self.platforms,
