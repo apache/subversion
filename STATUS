@@ -17,7 +17,7 @@ Candidate changes:
       of fsfs.  As the default to fsfs is a change in behavior for
       1.2.0, it's now especially important to display this info.
     Votes:
-      +1: dlr, lundblad
+      +1: dlr, lundblad, jerenkrantz
 
   * r13936
     Doxygen tweaks.
