@@ -39,56 +39,57 @@
       </varlistentry>
 
       <varlistentry>
-        <term>psvn.el (<systemitem class="url">
-          http://xsteve.nit.at/prg/vc_svn/</systemitem>)</term>
-        <listitem><para>Subversion interface for emacs</para></listitem>
+        <term>psvn.el (<systemitem
+          class="url">http://xsteve.nit.at/prg/vc_svn/</systemitem>)</term>
+        <listitem><para>Subversion interface for
+          emacs</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>RapidSVN (<systemitem class="url">
-          http://rapidsvn.tigris.org/</systemitem>)</term>
+        <term>RapidSVN (<systemitem
+          class="url">http://rapidsvn.tigris.org/</systemitem>)</term>
         <listitem><para>Cross-platform Subversion GUI, based on the
           WxPython libaries</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Subclipse (<systemitem class="url">
-          http://subclipse.tigris.org/</systemitem>)</term>
+        <term>Subclipse (<systemitem
+          class="url">http://subclipse.tigris.org/</systemitem>)</term>
         <listitem><para>Subversion plugin for the Eclipse
           environment</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Subway (<systemitem class="url">
-          http://nidaros.homedns.org/subway/</systemitem>)</term>
+        <term>Subway (<systemitem
+          class="url">http://nidaros.homedns.org/subway/</systemitem>)</term>
         <listitem><para>Microsoft SCC provider for
           Subversion</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>sourcecross.org (<systemitem class="url">
-           http://www.sourcecross.org/</systemitem>)</term>
+        <term>sourcecross.org (<systemitem
+          class="url">http://www.sourcecross.org/</systemitem>)</term>
         <listitem><para>Microsoft SCC provider for
           Subversion</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Supervision (<systemitem class="url">
-          http://supervision.tigris.org/</systemitem>)</term>
+        <term>Supervision (<systemitem
+          class="url">http://supervision.tigris.org/</systemitem>)</term>
         <listitem><para>Java/Swing visual client for
           Subversion</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Sven (<systemitem class="url">
-          http://www.nikwest.de/Software/#SvenOverview</systemitem>)</term>
+        <term>Sven (<systemitem
+          class="url">http://www.nikwest.de/Software/#SvenOverview</systemitem>)</term>
         <listitem><para>Native GUI for Subversion using the Mac OS X
           Cocoa framework</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Svn4Eclipse (<systemitem class="url">
-          http://svn4eclipse.tigris.org/</systemitem>)</term>
+        <term>Svn4Eclipse (<systemitem
+          class="url">http://svn4eclipse.tigris.org/</systemitem>)</term>
         <listitem><para>Subversion plugin for the Eclipse
           IDE</para></listitem>
       </varlistentry>
@@ -101,8 +102,8 @@
       </varlistentry>
 
       <varlistentry>
-        <term>TortoiseSVN (<systemitem class="url">
-          http://tortoisesvn.tigris.org/</systemitem>)</term>
+        <term>TortoiseSVN (<systemitem
+          class="url">http://tortoisesvn.tigris.org/</systemitem>)</term>
         <listitem><para>Subversion client, implemented as a Microsoft
           Windows shell extension</para></listitem>
       </varlistentry>
@@ -133,15 +134,15 @@
       </varlistentry>
 
       <varlistentry>
-        <term>Subversion (<systemitem class="url">
-          http://subversion.tigris.org/</systemitem>)</term>
+        <term>Subversion (<systemitem
+          class="url">http://subversion.tigris.org/</systemitem>)</term>
         <listitem><para>Python, Perl, and Java bindings to Subversion
           API, mirroring the core C API</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>SVNCPP (<systemitem class="url">
-          http://rapidsvn.tigris.org/</systemitem>)</term>
+        <term>SVNCPP (<systemitem
+          class="url">http://rapidsvn.tigris.org/</systemitem>)</term>
         <listitem><para>C++ object-oriented bindings for the
           Subversion client API</para></listitem>
       </varlistentry>
@@ -160,12 +161,12 @@
       <varlistentry>
         <term>cvs2svn (<systemitem
           class="url">http://cvs2svn.tigris.org/</systemitem>)</term>
-        <listitem><para>CVS-to-Subversion conversion</para></listitem>
+       <listitem><para>CVS-to-Subversion conversion</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Subversion VCP Plugin (<systemitem class="url">
-          http://svn.clkao.org/revml/branches/svn-perl/</systemitem>)</term>
+        <term>Subversion VCP Plugin (<systemitem
+          class="url">http://svn.clkao.org/revml/branches/svn-perl/</systemitem>)</term>
         <listitem><para>VCP plugin for CVS-to-Subversion</para></listitem>
       </varlistentry>
 
@@ -183,13 +184,13 @@
       <varlistentry>
         <term>Kwiki (<systemitem
           class="url">http://www.kwiki.org/</systemitem>)</term>
-        <listitem><para>Wiki with a Subversion backup
+       <listitem><para>Wiki with a Subversion backup
           backend</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Subissue (<systemitem class="url">
-          http://subissue.tigris.org/</systemitem>)</term>
+        <term>Subissue (<systemitem
+          class="url">http://subissue.tigris.org/</systemitem>)</term>
         <listitem><para>Track issues directly in your 
           Subversion repository</para></listitem>
       </varlistentry>
@@ -197,7 +198,7 @@
       <varlistentry>
         <term>Subwiki (<systemitem
           class="url">http://subwiki.tigris.org/</systemitem>)</term>
-        <listitem><para>Wiki that uses Subversion for its data
+       <listitem><para>Wiki that uses Subversion for its data
           repository</para></listitem>
       </varlistentry>
 
@@ -209,8 +210,8 @@
       </varlistentry>
 
       <varlistentry>
-        <term>submaster (<systemitem class="url">
-          http://www.rocklinux.org/submaster.html</systemitem>)</term>
+        <term>submaster (<systemitem
+          class="url">http://www.rocklinux.org/submaster.html</systemitem>)</term>
         <listitem><para>System for distributed software development,
           based on Subversion</para></listitem>
       </varlistentry>
@@ -227,29 +228,29 @@
     <variablelist>
 
       <varlistentry>
-        <term>SVN::Web (<systemitem class="url">
-          http://svn.elixus.org/repos/member/clkao/</systemitem>)</term>
+        <term>SVN::Web (<systemitem
+          class="url">http://svn.elixus.org/repos/member/clkao/</systemitem>)</term>
         <listitem><para>Perl-based Subversion repository Web
           interface</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>ViewCVS (<systemitem class="url">
-           http://viewcvs.sourceforge.net/</systemitem>)</term>
+        <term>ViewCVS (<systemitem
+          class="url">http://viewcvs.sourceforge.net/</systemitem>)</term>
         <listitem><para>Python-based CGI script for browsing CVS and
           Subversion repositories</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>WebSVN (<systemitem class="url">
-          http://websvn.tigris.org/</systemitem>)</term>
+        <term>WebSVN (<systemitem
+          class="url">http://websvn.tigris.org/</systemitem>)</term>
         <listitem><para>PHP-based Subversion repository
           browser</para></listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Trac (<systemitem class="url">
-          http://projects.edgewall.com/trac</systemitem>)</term>
+        <term>Trac (<systemitem
+          class="url">http://projects.edgewall.com/trac</systemitem>)</term>
         <listitem><para>Minimalistic web-based software project
           management and bug/issue tracking system with version
           control interfaces and integrated Wiki
