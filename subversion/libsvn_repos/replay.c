@@ -303,7 +303,7 @@ svn_repos_replay (svn_fs_root_t *root,
     {
       const void *key;
       void *val;
-      apr_size_t keylen;
+      apr_ssize_t keylen;
       const char *path;
       svn_fs_path_change_t *change;
 
