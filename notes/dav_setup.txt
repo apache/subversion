@@ -32,6 +32,12 @@
        threads), but should be left out for other platforms (which
        will cause Apache to default to a threaded model of operation)
 
+     Note: if you build Subversion with --enable-maintainer-mode, then
+     do the same for Apache. mod_dav_svn uses Apache's maintainer-mode
+     stuff from its headers, so you want to ensure that Apache is
+     built with the same assumption. Just add --enable-maintainer-mode
+     to the configure line above.
+
 5.  make && make install
 
 6.  Go back into your subversion working copy and run ./autogen.sh if
