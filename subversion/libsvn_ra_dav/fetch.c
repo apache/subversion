@@ -1506,7 +1506,7 @@ static void
 make_ne_propname (ne_propname *prop,
                   const char *name)
 {
-  if (strncmp(name, SVN_PROP_PREFIX, (sizeof (SVN_PROP_PREFIX) - 1)) == 0)
+  if (strncmp(name, SVN_PROP_PREFIX, (sizeof(SVN_PROP_PREFIX) - 1)) == 0)
     {
       prop->nspace = SVN_DAV_PROP_NS_SVN;
       prop->name = name + sizeof(SVN_PROP_PREFIX) - 1;
@@ -1531,7 +1531,8 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   int rv;
 
   ne_proppatch_operation po[2] = { { 0 } };
-  ne_propname prop, wanted_props[] =
+  ne_propname prop;
+  ne_propname wanted_props[] =
     {
       { "DAV:", "auto-version" },
       { NULL }
