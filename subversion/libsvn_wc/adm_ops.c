@@ -676,8 +676,21 @@ svn_wc_delete (const char *path,
           /* Deleting a directory that has been added but not yet
              committed is easy, just remove the adminstrative dir. */
 
-          SVN_ERR (svn_wc_remove_from_revision_control
-                   (dir_access, SVN_WC_ENTRY_THIS_DIR, FALSE, pool));
+          if (dir_access != adm_access)
+            {
+              SVN_ERR (svn_wc_remove_from_revision_control
+                       (dir_access, SVN_WC_ENTRY_THIS_DIR, FALSE, pool));
+            }
+          else
+            {
+              /* adm_probe_retrieve returned the parent access baton,
+                 which is the same access baton that we came in here
+                 with!  this means we're dealing with a missing item
+                 that's scheduled for addition.  Easiest to just
+                 remove the entry.  */
+              svn_wc__entry_remove (entries, base_name);
+              SVN_ERR (svn_wc__entries_write (entries, parent_access, pool));
+            }
         }
       else
         {
