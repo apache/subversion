@@ -1,0 +1,70 @@
+SUBVERSION'S COPY AND MOVE FUNCTIONALITY
+
+Please direct all comments and suggestions to 
+C. Michael Pilato <cmpilato@collab.net>.
+
+--
+
+Here is how I plan to handle the four basic cases for `svn copy/move',
+as determined by the type of paths supplied as the SRC and DST
+arguments to the copy command.
+
+* Case I - SRC is working copy path, DST is working copy path:
+
+   I don't care actually care about this case.  Ben Collins-Sussman
+   (and svn_wc_copy) is handling this. :-)
+
+* Case II - SRC is working copy path, DST is repository URL:
+
+   To accomplish this operation, we drive the commit crawler/editor in
+   pretty much the same way we would if performing an import, except
+   we are using an existing working copy to determine the items being
+   imported instead of disk dirents.  All items in SRC tree are added,
+   either implicitly (as a side effect of their parents having been
+   added) or explicitly (at the top of the SRC tree, or because they
+   have a different revision from that of their parent).  Also, local
+   modifications to items in SRC are transmitted as part of the commit
+   as well.
+
+   Moves are disallowed in this case.
+
+* Case III - SRC is repository URL, DST is working copy path:
+
+   Treat this is a special checkout of SRC (at the optionally supplied
+   revision, even), except that once the checkout is complete, you
+   have DST scheduled for commit as a copy.
+
+   Moves are disallowed in this case.
+
+* Case IV - SRC is repository URL, DST is repository URL:
+
+   This is a freaky special commit drive, where we operate purely on
+   our ability to split paths up into components, and then "crawl"
+   those trees based purely on the layout of those path components.
+
+   Actually, for copies this is pretty much a four-line commit:
+
+      e->replace_root (dst)
+        e->add_(file/dir) (dst_basename, copyfrom=src)
+        e->close_(file/dir)
+      e->close_dir
+      e->close_edit
+
+   The part that requires all the path component attention is if this
+   is a move, because we have make sure to anchor the edit at the
+   longest common ancestor of SRC and DST so we can delete SRC as part
+   of the same transaction as our addition of DST.
+
+      e->replace_root (longest_common_path (src, dst))
+        [a bunch of e->replace_dirs to get to dst's parent]
+          e->add_(file/dir) (dst_basename, copyfrom=src)
+          e->close_(file/dir)
+        [a bunch of e->close_dirs back up the stack]
+        [a bunch of e->replace_dirs to get to src's parent]
+          e->delete_entry (src_basename)
+        [a bunch of e->close_dirs back up the stack]
+      e->close_dir
+      e->close_edit
+
+
+
