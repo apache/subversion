@@ -63,8 +63,6 @@ svn_cl__delete (apr_getopt_t *os,
   int i;
   svn_client_commit_info_t *commit_info = NULL;
   apr_pool_t *subpool;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -76,8 +74,8 @@ svn_cl__delete (apr_getopt_t *os,
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
+                          FALSE, pool);
 
   subpool = svn_pool_create (pool);
   for (i = 0; i < targets->nelts; i++)
@@ -92,7 +90,7 @@ svn_cl__delete (apr_getopt_t *os,
         (&commit_info, target, NULL, opt_state->force, 
          &svn_cl__get_log_message,
          log_msg_baton,
-         notify_func, notify_baton, ctx, subpool);
+         ctx, subpool);
 
       if (err)
         err = svn_cl__may_need_force (err);

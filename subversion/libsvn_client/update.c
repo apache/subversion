@@ -40,8 +40,6 @@ svn_error_t *
 svn_client_update (const char *path,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
-                   svn_wc_notify_func_t notify_func,
-                   void *notify_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -88,7 +86,7 @@ svn_client_update (const char *path,
                                      target,
                                      revnum,
                                      recurse,
-                                     notify_func, notify_baton,
+                                     ctx->notify_func, ctx->notify_baton,
                                      &update_editor, &update_edit_baton,
                                      traversal_info,
                                      pool));
@@ -135,7 +133,7 @@ svn_client_update (const char *path,
          update_editor will be driven by svn_repos_dir_delta. */
       err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
                                     TRUE, recurse,
-                                    notify_func, notify_baton,
+                                    ctx->notify_func, ctx->notify_baton,
                                     traversal_info, pool);
       
       /* Sleep for one second to ensure timestamp integrity. */
@@ -153,7 +151,6 @@ svn_client_update (const char *path,
      the primary operation.  */
   if (recurse)
     SVN_ERR (svn_client__handle_externals (traversal_info,
-                                           notify_func, notify_baton,
                                            TRUE, /* update unchanged ones */
                                            ctx,
                                            pool));

@@ -39,8 +39,7 @@
 static svn_error_t *
 add_dir_recursive (const char *dirname,
                    svn_wc_adm_access_t *adm_access,
-                   svn_wc_notify_func_t notify_added,
-                   void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   apr_dir_t *dir;
@@ -53,7 +52,7 @@ add_dir_recursive (const char *dirname,
   /* Add this directory to revision control. */
   SVN_ERR (svn_wc_add (dirname, adm_access,
                        NULL, SVN_INVALID_REVNUM,
-                       notify_added, notify_baton, pool));
+                       ctx->notify_func, ctx->notify_baton, pool));
 
   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, dirname, pool));
 
@@ -84,13 +83,11 @@ add_dir_recursive (const char *dirname,
 
       if (this_entry.filetype == APR_DIR)
         /* Recurse. */
-        SVN_ERR (add_dir_recursive (fullpath, dir_access,
-                                    notify_added, notify_baton,
-                                    subpool));
+        SVN_ERR (add_dir_recursive (fullpath, dir_access, ctx, subpool));
 
       else if (this_entry.filetype == APR_REG)
         SVN_ERR (svn_wc_add (fullpath, dir_access, NULL, SVN_INVALID_REVNUM,
-                             notify_added, notify_baton, subpool));
+                             ctx->notify_func, ctx->notify_baton, subpool));
 
       /* Clean out the per-iteration pool. */
       svn_pool_clear (subpool);
@@ -124,8 +121,7 @@ add_dir_recursive (const char *dirname,
 svn_error_t *
 svn_client_add (const char *path, 
                 svn_boolean_t recursive,
-                svn_wc_notify_func_t notify_func,
-                void *notify_baton,
+                svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -137,11 +133,10 @@ svn_client_add (const char *path,
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if ((kind == svn_node_dir) && recursive)
-    err = add_dir_recursive (path, adm_access,
-                             notify_func, notify_baton, pool);
+    err = add_dir_recursive (path, adm_access, ctx, pool);
   else
     err = svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
-                      notify_func, notify_baton, pool);
+                      ctx->notify_func, ctx->notify_baton, pool);
 
   err2 = svn_wc_adm_close (adm_access);
   if (err2)
@@ -160,8 +155,6 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   const char *path,
                   svn_client_get_commit_log_t log_msg_func,
                   void *log_msg_baton,
-                  svn_wc_notify_func_t notify_func,
-                  void *notify_baton,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
@@ -253,7 +246,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
   /* This is a regular "mkdir" + "svn add" */
   SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
   
-  err = svn_client_add (path, FALSE, notify_func, notify_baton, pool);
+  err = svn_client_add (path, FALSE, ctx, pool);
 
   /* Trying to add a directory with the same name as a file that is
      scheduled for deletion is not supported.  Leaving an unversioned

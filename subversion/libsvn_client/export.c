@@ -170,17 +170,13 @@ svn_error_t *
 svn_client_export (const char *from,
                    const char *to,
                    svn_opt_revision_t *revision,
-                   svn_wc_notify_func_t notify_func,
-                   void *notify_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   if (svn_path_is_url (from))
     {
       /* export directly from the repository by doing a checkout first. */
-      SVN_ERR (svn_client_checkout (notify_func,
-                                    notify_baton,
-                                    from,
+      SVN_ERR (svn_client_checkout (from,
                                     to,
                                     revision,
                                     TRUE,

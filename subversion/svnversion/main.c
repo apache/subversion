@@ -89,7 +89,7 @@ main(int argc, char *argv[])
   SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, argv[1], NULL, pool));
   wc_path = svn_path_canonicalize (wc_path, pool);
   err = svn_client_status (&status_hash, &youngest, wc_path, TRUE, TRUE,
-                           FALSE, FALSE, NULL, NULL, &ctx, pool);
+                           FALSE, FALSE, &ctx, pool);
   if (err)
     {
       svn_node_kind_t kind;

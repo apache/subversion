@@ -69,8 +69,6 @@ svn_cl__checkout (apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *local_dir;
   const char *repos_url;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
   int i;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -98,8 +96,8 @@ svn_cl__checkout (apr_getopt_t *os,
     }
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, TRUE, FALSE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, TRUE, FALSE,
+                          FALSE, pool);
 
   subpool = svn_pool_create (pool);
   for (i = 0; i < targets->nelts - 1; ++i)
@@ -123,9 +121,7 @@ svn_cl__checkout (apr_getopt_t *os,
                                     svn_path_basename (repos_url, subpool),
                                     subpool);
 
-      SVN_ERR (svn_client_checkout (notify_func,
-                                    notify_baton,
-                                    repos_url,
+      SVN_ERR (svn_client_checkout (repos_url,
                                     target_dir,
                                     &(opt_state->start_revision),
                                     opt_state->nonrecursive ? FALSE : TRUE,

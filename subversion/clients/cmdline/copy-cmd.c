@@ -46,8 +46,6 @@ svn_cl__copy (apr_getopt_t *os,
   const char *src_path, *dst_path;
   svn_boolean_t src_is_url, dst_is_url;
   svn_client_commit_info_t *commit_info = NULL;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
   void *log_msg_baton;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -93,8 +91,8 @@ svn_cl__copy (apr_getopt_t *os,
     {
       /* URL->WC : Use checkout-style notification. */
       if (! opt_state->quiet)
-        svn_cl__get_notifier (&notify_func, &notify_baton, TRUE, FALSE, FALSE,
-			      pool);
+        svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, TRUE,
+                              FALSE, FALSE, pool);
     }
   else
     /* URL->URL : No notification needed. */
@@ -108,7 +106,6 @@ svn_cl__copy (apr_getopt_t *os,
                                             dst_path, NULL, 
                                             &svn_cl__get_log_message,
                                             log_msg_baton,
-                                            notify_func, notify_baton,
                                             ctx, pool)));
 
   if (commit_info && ! opt_state->quiet)

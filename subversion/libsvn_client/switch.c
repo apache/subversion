@@ -53,8 +53,6 @@ svn_client_switch (const char *path,
                    const char *switch_url,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
-                   svn_wc_notify_func_t notify_func,
-                   void *notify_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -154,7 +152,7 @@ svn_client_switch (const char *path,
          on. */
       SVN_ERR (svn_wc_get_switch_editor (adm_access, target,
                                          revnum, switch_url, recurse,
-                                         notify_func, notify_baton,
+                                         ctx->notify_func, ctx->notify_baton,
                                          &switch_editor, &switch_edit_baton,
                                          traversal_info, pool));
 
@@ -177,7 +175,7 @@ svn_client_switch (const char *path,
          externals except the ones directly affected by the switch. */ 
       err = svn_wc_crawl_revisions (path, adm_access, reporter, report_baton,
                                     TRUE, recurse,
-                                    notify_func, notify_baton,
+                                    ctx->notify_func, ctx->notify_baton,
                                     NULL, /* no traversal info */
                                     pool);
 
@@ -189,7 +187,6 @@ svn_client_switch (const char *path,
          handling external items (and any errors therefrom) doesn't
          delay the primary operation.  */
       SVN_ERR (svn_client__handle_externals (traversal_info,
-                                             notify_func, notify_baton,
                                              FALSE,
                                              ctx,
                                              pool));
@@ -274,13 +271,14 @@ svn_client_switch (const char *path,
                                       switch_url, /* new url */
                                       pool));     
 
-        if (notify_func != NULL)
-          (*notify_func) (notify_baton, path, svn_wc_notify_update_update,
-                          svn_node_file,
-                          NULL,
-                          content_state,
-                          prop_state,
-                          SVN_INVALID_REVNUM);
+        if (ctx->notify_func != NULL)
+          (*ctx->notify_func) (ctx->notify_baton, path,
+                               svn_wc_notify_update_update,
+                               svn_node_file,
+                               NULL,
+                               content_state,
+                               prop_state,
+                               SVN_INVALID_REVNUM);
       }
     }
   

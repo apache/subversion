@@ -51,8 +51,6 @@ svn_cl__commit (apr_getopt_t *os,
   apr_array_header_t *condensed_targets;
   const char *base_dir;
   svn_client_commit_info_t *commit_info = NULL;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
   void *log_msg_baton;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -81,14 +79,13 @@ svn_cl__commit (apr_getopt_t *os,
     }
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
+                          FALSE, pool);
 
   /* Commit. */
   log_msg_baton = svn_cl__make_log_msg_baton (opt_state, base_dir, pool);
   SVN_ERR (svn_cl__cleanup_log_msg
            (log_msg_baton, svn_client_commit (&commit_info,
-                                              notify_func, notify_baton,
                                               targets,
                                               svn_cl__get_log_message,
                                               log_msg_baton,

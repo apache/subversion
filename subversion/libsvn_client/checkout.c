@@ -42,9 +42,7 @@
 
 
 svn_error_t *
-svn_client_checkout (svn_wc_notify_func_t notify_func,
-                     void *notify_baton,
-                     const char *URL,
+svn_client_checkout (const char *URL,
                      const char *path,
                      const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
@@ -78,8 +76,8 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
                                        URL,
                                        revnum,
                                        recurse,
-                                       notify_func,
-                                       notify_baton,
+                                       ctx->notify_func,
+                                       ctx->notify_baton,
                                        &checkout_editor,
                                        &checkout_edit_baton,
                                        traversal_info,
@@ -123,11 +121,7 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
   /* We handle externals after the initial checkout is complete, so
      that fetching external items (and any errors therefrom) doesn't
      delay the primary checkout.  */
-  SVN_ERR (svn_client__handle_externals
-           (traversal_info,
-            notify_func, notify_baton,
-            FALSE, ctx,
-            pool));
+  SVN_ERR (svn_client__handle_externals (traversal_info, FALSE, ctx, pool));
 
   return SVN_NO_ERROR;
 }

@@ -45,8 +45,6 @@ svn_cl__mkdir (apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
   svn_client_commit_info_t *commit_info = NULL;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -58,8 +56,8 @@ svn_cl__mkdir (apr_getopt_t *os,
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
+                          FALSE, pool);
 
   for (i = 0; i < targets->nelts; i++)
     {
@@ -70,7 +68,7 @@ svn_cl__mkdir (apr_getopt_t *os,
       SVN_ERR (svn_cl__cleanup_log_msg
                (lmb, svn_client_mkdir (&commit_info, target, 
                                        &svn_cl__get_log_message,
-                                       lmb, notify_func, notify_baton,
+                                       lmb,
                                        ctx, pool)));
 
       if (commit_info && ! opt_state->quiet)

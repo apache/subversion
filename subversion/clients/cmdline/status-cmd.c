@@ -45,8 +45,6 @@ svn_cl__status (apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -55,7 +53,7 @@ svn_cl__status (apr_getopt_t *os,
                                          FALSE, pool));
 
   /* The notification callback. */
-  svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, 
+  svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE, 
                         FALSE, pool);
 
   /* Add "." if user passed 0 arguments */
@@ -76,7 +74,6 @@ svn_cl__status (apr_getopt_t *os,
                                   opt_state->verbose,
                                   opt_state->update,
                                   opt_state->no_ignore,
-                                  notify_func, notify_baton,
                                   ctx, pool));
 
       /* Now print the structures to the screen.
