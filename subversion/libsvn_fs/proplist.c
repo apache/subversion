@@ -73,7 +73,13 @@ svn_fs__make_prop_hash (apr_hash_t **prop_hash,
       skel_t *this_name = prop;
       skel_t *this_value = prop->next;
 
-      apr_hash_set (table, this_name->data, this_name->len,
+      /* note: we need to copy and null-terminate the key (to produce a C
+         string; the data in a skel_t references the raw skel string), and
+         create an svn_stringbuf_t structure for the value. */
+
+      apr_hash_set (table,
+                    apr_pstrndup(pool, this_name->data, this_name->len),
+                    this_name->len,
                     svn_string_ncreate (this_value->data, 
                                         this_value->len, 
                                         pool));
