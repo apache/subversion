@@ -305,7 +305,7 @@ svn_auth_save_credentials (svn_auth_iterstate_t *state,
   if (! creds)
     return SVN_NO_ERROR;
 
-  /* Do not save the creds id SVN_AUTH_PARAM_NO_AUTH_CACHE is set */
+  /* Do not save the creds if SVN_AUTH_PARAM_NO_AUTH_CACHE is set */
   no_auth_cache = apr_hash_get (auth_baton->parameters, 
                                 SVN_AUTH_PARAM_NO_AUTH_CACHE,
                                 APR_HASH_KEY_STRING);
