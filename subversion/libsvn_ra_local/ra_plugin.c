@@ -143,8 +143,9 @@ get_commit_editor (void *session_baton,
                    const svn_delta_edit_fns_t **editor,
                    void **edit_baton,
                    svn_string_t *log_msg,
-                   svn_ra_close_commit_func_t close_func,
+                   svn_ra_get_wc_prop_func_t get_func,
                    svn_ra_set_wc_prop_func_t set_func,
+                   svn_ra_close_commit_func_t close_func,
                    void *close_baton)
 {
   svn_delta_edit_fns_t *commit_editor, *tracking_editor;

@@ -32,14 +32,12 @@ extern "C" {
 
 
 
-/* A function type for "cleaning up" after a commit.  The client layer
-   supplies this routine to an RA layer.  RA calls this routine on
-   each PATH that was committed, allowing the client to bump revision
-   numbers. */
-typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *close_baton,
-                                                    svn_string_t *path,
-                                                    svn_revnum_t new_rev);
-
+/* A function type which allows the RA layer to fetch WC properties
+   during a commit.  */
+typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *close_baton,
+                                                   svn_string_t *path,
+                                                   svn_string_t *name,
+                                                   svn_string_t **value);
 
 /* A function type which allows the RA layer to store WC properties
    after a commit.  */
@@ -47,6 +45,15 @@ typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *close_baton,
                                                    svn_string_t *path,
                                                    svn_string_t *name,
                                                    svn_string_t *value);
+
+
+/* A function type for "cleaning up" after a commit.  The client layer
+   supplies this routine to an RA layer.  RA calls this routine on
+   each PATH that was committed, allowing the client to bump revision
+   numbers. */
+typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *close_baton,
+                                                    svn_string_t *path,
+                                                    svn_revnum_t new_rev);
 
 
 /* A vtable structure which allows a working copy to describe a
@@ -110,27 +117,32 @@ typedef struct svn_ra_plugin_t
 
 
   /* Begin a commit against `rev:path' using LOG_MSG.  `rev' is the
-     argument passed to replace_root(), and `path' is built into the
-     SESSION_BATON's URL.
+     argument that will be passed to replace_root(), and `path' is
+     built into the SESSION_BATON's URL.  
      
      RA returns an *EDITOR and *EDIT_BATON capable of transmitting a
      commit to the repository, which is then driven by the client.
 
-     RA must guarantee:
-     
-          1. That it will track each item that is committed
-          2. That close_edit() will "finish" the commit by calling
-             CLOSE_FUNC (with CLOSE_BATON) on each item that was
-             committed.  
+     The client must supply three functions to the RA layer, each of
+     which requires the CLOSE_BATON:
 
-     Optionally, the RA layer may also call SET_FUNC to store WC
-     properties on committed items.  */
+       * The GET_FUNC will be used by the RA layer to fetch any WC
+         properties during the commit.
+
+       * The SET_FUNC will be used by the RA layer to set any WC
+         properties, after the commit completes.
+
+       * The CLOSE_FUNC will be used by the RA layer to bump the
+         revisions of each committed item, after the commit completes.
+          
+  */
   svn_error_t *(*get_commit_editor) (void *session_baton,
                                      const svn_delta_edit_fns_t **editor,
                                      void **edit_baton,
                                      svn_string_t *log_msg,
-                                     svn_ra_close_commit_func_t close_func,
+                                     svn_ra_get_wc_prop_func_t get_func,
                                      svn_ra_set_wc_prop_func_t set_func,
+                                     svn_ra_close_commit_func_t close_func,
                                      void *close_baton);
 
 
