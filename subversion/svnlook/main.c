@@ -118,7 +118,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     
     {"date", subcommand_date, {0},
      "usage: svnlook date REPOS_PATH\n\n"
-     "Print the date.\n",
+     "Print the datestamp.\n",
      {'r', 't'} },
 
     {"diff", subcommand_diff, {0},
@@ -128,7 +128,8 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 
     {"dirs-changed", subcommand_dirschanged, {0},
      "usage: svnlook dirs-changed REPOS_PATH\n\n"
-     "Print the directories that were changed.\n",
+     "Print the directories that were themselves changed (property edits)\n"
+     "or whose file children were changed.\n",
      {'r', 't'} },
     
     {"help", subcommand_help, {"?", "h"},
@@ -138,7 +139,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 
     {"info", subcommand_info, {0},
      "usage: svnlook info REPOS_PATH\n\n"
-     "Print the author, date, log message size, and log message.\n",
+     "Print the author, datestamp, log message size, and log message.\n",
      {'r', 't'} },
 
     {"log", subcommand_log, {0},

@@ -140,10 +140,10 @@ local-extraclean: local-distclean
               ac-helpers/ltmain.sh
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean
+local-clean: fast-clean check-clean swig-py-ext-clean
 
 # clean everything, including test output.
-local-distclean: fast-distclean check-clean
+local-distclean: fast-distclean check-clean swig-py-ext-clean
 
 local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
 
@@ -276,7 +276,7 @@ doc-clean:
 
 swig-py-ext:
 	@if test -z "$(SWIG)"; then                                 \
-	    echo 'SWIG variable is not defined; this rule is unavailable' >&2; \
+	    echo 'SWIG variable not defined; this rule is unavailable' >&2; \
 	    echo 'Re-run configure --with-swig' >&2;               \
 	    exit 1;                                                \
 	fi
@@ -294,6 +294,9 @@ install-swig-py-ext:
          $(PYTHON) $(SWIG_SRC_DIR)/python/setup.py          \
             -S$(SWIG_SRC_DIR)                               \
             install --prefix $(DESTDIR)$(prefix))
+
+swig-py-ext-clean:
+	rm -rf $(SWIG_BUILD_DIR)/python/build
 
 ### Build a tarball.
 dist: 
