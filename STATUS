@@ -70,6 +70,7 @@ section for approved changes.)
      Notes: bindings would need updating
      Votes:
       +1: mbk
+      -0: gstein
       -1: kfogel. see:
            http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=54039
            Message-Id:  <200401082033.i08KXMv45357@newton.ch.collab.net>
@@ -81,7 +82,7 @@ section for approved changes.)
      Notes:  typical "needs a subpool" leak, like all the ones we fixed
              last October.
      Votes:
-      +1: sussman, cmpilato
+      +1: sussman, cmpilato, gstein
 
 
 Core changes that already have three +1 votes and no vetos.  (If you
