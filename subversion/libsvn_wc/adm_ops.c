@@ -1431,6 +1431,82 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
 
 
 
+/* Helper for svn_wc_resolve_conflict;  deliberately ignores errors
+   from apr_file_remove().  */
+static void 
+attempt_deletion (svn_stringbuf_t *parent_dir,
+                  svn_stringbuf_t *basename,
+                  apr_pool_t *pool)
+{
+  svn_stringbuf_t *full_path = svn_stringbuf_dup (parent_dir, pool);
+  svn_path_add_component (full_path, basename);
+ 
+  apr_file_remove (full_path->data, pool);
+}
+
+
+svn_error_t *
+svn_wc_resolve_conflict (svn_stringbuf_t *path,
+                         svn_wc_notify_func_t notify_func,
+                         void *notify_baton,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *old, *new, *work, *prej, *parent, *basename;
+  svn_boolean_t text_conflict, prop_conflict;
+  svn_wc_entry_t *entry = NULL;
+
+  /* Feh, ignoring the return value here.  We just want to know
+     whether we got the entry or not. */
+  svn_wc_entry (&entry, path, pool);
+  if (! entry)
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+                              "Not under version control: '%s'", path->data);
+
+  svn_path_split (path, &parent, &basename, pool);
+
+  /* Sanity check: see if libsvn_wc thinks this item is in a state of
+     conflict at all.   If not, just go home.*/
+  SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
+                                parent, entry, pool));
+  if ((! text_conflict) && (! prop_conflict))
+    return SVN_NO_ERROR;
+
+  /* If the entry is tracking the three backup fulltexts or a .prej
+     file, attempt to delete them all.  */
+  old = apr_hash_get (entry->attributes, SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
+                      APR_HASH_KEY_STRING);
+  new = apr_hash_get (entry->attributes, SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
+                      APR_HASH_KEY_STRING);
+  work = apr_hash_get (entry->attributes, SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
+                       APR_HASH_KEY_STRING);
+  prej = apr_hash_get (entry->attributes, SVN_WC__ENTRY_ATTR_PREJFILE,
+                       APR_HASH_KEY_STRING);
+  
+  /* Yes indeed, being able to map a function over a list would be nice. */
+  if (old)
+    attempt_deletion (parent, old, pool);
+  if (new)
+    attempt_deletion (parent, new, pool);
+  if (work)
+    attempt_deletion (parent, work, pool);
+  if (prej)
+    attempt_deletion (parent, prej, pool);
+
+  if (notify_func)
+    {
+      /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
+         state of conflict.  If not, report the successful resolution.  */     
+      SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
+                                    parent, entry, pool));
+      if ((! text_conflict) && (! prop_conflict))
+        (*notify_func) (notify_baton, svn_wc_notify_resolve, path->data);
+    }
+          
+  return SVN_NO_ERROR;
+}
+
+
+
 svn_error_t *
 svn_wc_get_auth_file (svn_stringbuf_t *path,
                       const char *filename,

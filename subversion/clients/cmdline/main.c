@@ -257,9 +257,17 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "revert", svn_cl__revert, {0},
     "Restore pristine working copy file (undo all local edits)\n"
     "usage: revert TARGET1 [TARGET2 [TARGET3 ... ]]\n\n"
-    "    Note:  this routine does not require network access, and will\n"
-    "    remove any .rej produced when a file is in a state of conflict.\n",
+    "    Note:  this routine does not require network access, and \n"
+    "    resolves any conflicted states.\n",
     {svn_cl__targets_opt, svn_cl__recursive_opt} },
+
+  { "resolve", svn_cl__resolve, {0},
+    "Remove 'conflicted' state on working copy files or directories.\n"
+    "usage: resolve TARGET1 [TARGET2 [TARGET3 ... ]]\n\n"
+    "    Note:  this routine does not semantically resolve conflict markers;\n"
+    "    it merely removes conflict-related artifact files and allows TARGET\n"
+    "    to be committed again.\n",
+    {svn_cl__targets_opt} },
   
   { "status", svn_cl__status, {"stat", "st"},
     "Print the status of working copy files and directories.\n"

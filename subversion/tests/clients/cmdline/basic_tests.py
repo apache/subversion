@@ -303,7 +303,7 @@ def detect_conflict_files(node, extra_files):
 
 
 def basic_conflict(sbox):
-  "basic conflict"
+  "basic conflict creation and resolution"
 
   if sbox.build():
     return 1
@@ -409,7 +409,28 @@ Original appended text for rho
     # print extra_files
     return 1
 
-  return 0
+  # So now mu and rho are both in a "conflicted" state.  Run 'svn
+  # resolve' on them.
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'resolve',
+                                                    mu_path_backup,
+                                                    rho_path_backup)
+  if len (stderr_lines) > 0:
+    print "Resolve command printed the following to stderr:"
+    print stderr_lines
+    return 1
+
+  # See if they've changed back to plain old 'M' state.
+  for item in status_list:
+    if (item[0] == mu_path_backup) or (item[0] == rho_path_backup):
+      item[3]['status'] = 'M '
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # There should be *no* extra backup files lying around the working
+  # copy after resolving the conflict; thus we're not passing a custom
+  # singleton handler.
+  return svntest.actions.run_and_verify_status (wc_backup,
+                                                expected_status_tree)
+                                                
 
 #----------------------------------------------------------------------
 

@@ -72,6 +72,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_delete,
   svn_wc_notify_restore,
   svn_wc_notify_revert,
+  svn_wc_notify_resolve,
   svn_wc_notify_update
   
 } svn_wc_notify_action_t;
@@ -508,6 +509,29 @@ svn_error_t *svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
                                                   svn_stringbuf_t *name,
                                                   svn_boolean_t destroy_wf,
                                                   apr_pool_t *pool);
+
+
+/* Assuming PATH is under version control and in a state of conflict,
+   then take PATH *out* of this state.
+
+   Needless to say, this function doesn't touch conflict markers or
+   anything of that sort -- only a human can semantically resolve a
+   conflict.  Instead, this function simply marks a file as "having
+   been resolved", clearing the way for a commit.  
+
+   The implementation details are opaque, as our "conflicted" criteria
+   might change over time.  (At the moment, this routine removes the
+   three fulltext 'backup' files and any .prej file created in a conflict.)
+
+   If PATH is not under version control, return SVN_ERR_ENTRY_NOT_FOUND.  
+   If PATH isn't in a state of conflict to begin with, do nothing, and
+   return SVN_NO_ERROR.  If PATH was successfully taken out of a state
+   of conflict, report this information to NOTIFY_FUNC (if non-NULL.)
+ */
+svn_error_t *svn_wc_resolve_conflict (svn_stringbuf_t *path,
+                                      svn_wc_notify_func_t notify_func,
+                                      void *notify_baton,
+                                      apr_pool_t *pool);
 
 
 /*** Commits. ***/
