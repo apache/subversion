@@ -120,3 +120,11 @@ Candidate changes:
       data loss because those paths aren't included in a dump.
     Votes:
       +1: ghudson
+
+   * r10800 (Issue #2031)
+     Add -lstdc++ to javahl binding DSO at link-time.
+     Justification:
+       The javahl shared library does not link correctly on certain platforms.
+       (This is really a libtool bug.)
+     Votes:
+      +1: jerenkrantz
