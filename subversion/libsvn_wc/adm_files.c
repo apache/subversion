@@ -361,13 +361,13 @@ prop_path_internal (svn_string_t **prop_path,
     return err;
 
   /* kff todo: some factorization can be done on most callers of
-     svn_wc__check_wc()? */
+     svn_wc_check_wc()? */
 
   is_wc = FALSE;
   entry_name = NULL;
   if (kind == svn_node_dir)
     {
-      err = svn_wc__check_wc (path, &is_wc, pool);
+      err = svn_wc_check_wc (path, &is_wc, pool);
       if (err)
         return err;
     }
@@ -388,7 +388,7 @@ prop_path_internal (svn_string_t **prop_path,
       svn_path_split (path, prop_path, &entry_name,
                       svn_path_local_style, pool);
  
-      err = svn_wc__check_wc (*prop_path, &is_wc, pool);
+      err = svn_wc_check_wc (*prop_path, &is_wc, pool);
       if (err)
         return err;
       else if (! is_wc)
