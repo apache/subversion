@@ -39,7 +39,7 @@ static const char * const dav_svn_namespace_uris[] =
     "DAV:",
     SVN_DAV_PROP_NS_DAV,
 
-    NULL	/* sentinel */
+    NULL        /* sentinel */
 };
 enum {
     DAV_SVN_NAMESPACE_URI_DAV,  /* the DAV: namespace URI */
@@ -47,18 +47,18 @@ enum {
 };
 
 #define SVN_RO_DAV_PROP(name) \
-	{ DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##name, 0 }
+        { DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##name, 0 }
 #define SVN_RW_DAV_PROP(name) \
-	{ DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##name, 1 }
+        { DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##name, 1 }
 #define SVN_RO_DAV_PROP2(sym,name) \
-	{ DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##sym, 0 }
+        { DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##sym, 0 }
 #define SVN_RW_DAV_PROP2(sym,name) \
-	{ DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##sym, 1 }
+        { DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##sym, 1 }
 
 #define SVN_RO_SVN_PROP(sym,name) \
-	{ DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 0 }
+        { DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 0 }
 #define SVN_RW_SVN_PROP(sym,name) \
-	{ DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 1 }
+        { DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 1 }
 
 
 enum {
@@ -641,13 +641,13 @@ void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
         return;
 
     if (!resource->exists) {
-	/* a lock-null resource */
-	/*
-	** ### technically, we should insert empty properties. dunno offhand
-	** ### what part of the spec said this, but it was essentially thus:
-	** ### "the properties should be defined, but may have no value".
-	*/
-	return;
+        /* a lock-null resource */
+        /*
+        ** ### technically, we should insert empty properties. dunno offhand
+        ** ### what part of the spec said this, but it was essentially thus:
+        ** ### "the properties should be defined, but may have no value".
+        */
+        return;
     }
 
     pool = resource->info->pool;

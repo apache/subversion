@@ -125,17 +125,17 @@ Java_org_tigris_subversion_lib_ClientImpl_status
   if( !hasException )
     {
       target_stringbuf = 
-	svn_stringbuf_create_from_string(target_string, 
-					 pool);
+        svn_stringbuf_create_from_string(target_string, 
+                                         pool);
 
       if( target_stringbuf == NULL )
-	{
-	  /* seems like the conversion didnt succeed */
-	  hasException = JNI_TRUE;
-	  misc__throw_exception_by_name(env, 
+        {
+          /* seems like the conversion didnt succeed */
+          hasException = JNI_TRUE;
+          misc__throw_exception_by_name(env, 
                                         SVN_JNI__SUBVERSION_EXCEPTION,
                                         SVN_JNI__ERROR_CREATE_STRINGBUF);
-	}
+        }
 
     }
 
@@ -168,16 +168,16 @@ Java_org_tigris_subversion_lib_ClientImpl_status
          the change to the Java interface. */
 
       if( error != NULL )
-	{
+        {
 #ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
           SVN_JNI__DEBUG_STR(error->message);
 #endif
-	  /* in the case of an error, throw a java exception */
-	  hasException = JNI_TRUE;
-	  misc__throw_exception_by_name(env, 
+          /* in the case of an error, throw a java exception */
+          hasException = JNI_TRUE;
+          misc__throw_exception_by_name(env, 
                                         SVN_JNI__SUBVERSION_EXCEPTION,
                                         SVN_JNI__ERROR_CLIENT_STATUS);
-	}
+        }
 #ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
       fprintf(stderr, "\n<<<svn_client_status\n");
 #endif
@@ -197,10 +197,10 @@ Java_org_tigris_subversion_lib_ClientImpl_status
        * = 2 references
        */
       if( (*env)->PushLocalFrame(env, 2) >= 0 )
-	{
-	  /* now we do have a fresh new vector */
-	  if( !hasException )
-	    {
+        {
+          /* now we do have a fresh new vector */
+          if( !hasException )
+            {
               int i;
               apr_array_header_t *statusarray;
 
@@ -215,8 +215,8 @@ Java_org_tigris_subversion_lib_ClientImpl_status
                 {
                   const svn_item_t *item;
                   svn_wc_status_t *status = NULL;
-		  jstring jpath = NULL;
-		  jobject jstatus = NULL;
+                  jstring jpath = NULL;
+                  jobject jstatus = NULL;
 
 
                   item = &APR_ARRAY_IDX(statusarray, i, const svn_item_t);
@@ -225,28 +225,28 @@ Java_org_tigris_subversion_lib_ClientImpl_status
                   if( !status->entry)
                     continue;
 
-		  /* convert native string to java string */
-		  jpath = string__c_to_j(env, item->key, &hasException);
+                  /* convert native string to java string */
+                  jpath = string__c_to_j(env, item->key, &hasException);
 
-		  /* convert svn_wc_status_t to java class Status */
+                  /* convert svn_wc_status_t to java class Status */
                   if( !hasException )
-		    {
-		      jstatus = status__create(env, status, 
+                    {
+                      jstatus = status__create(env, status, 
                                                &hasException);
                       //jstatus = string__c_to_j(env, path, &hasException);
-		    }
+                    }
 
-		  /* put entry into java vector */
-		  if( !hasException )
-		    {
+                  /* put entry into java vector */
+                  if( !hasException )
+                    {
                       jstring string = 
                         string__c_to_j(env, "test", &hasException);
                       vector__add(env, vector, string, &hasException);
-		      //vector__add(env, vector, jstatus, 
+                      //vector__add(env, vector, jstatus, 
                       //&hasException);
 
-		    }
-		  
+                    }
+
                   /* delete local refs... */
                   if( jpath != NULL )
                     {
@@ -269,21 +269,21 @@ Java_org_tigris_subversion_lib_ClientImpl_status
 #endif
                     }
 
-		  if( hasException )
+                  if( hasException )
                     {
                       break;
                     }
-		} /* while( ... ) */
+                } /* while( ... ) */
 
 #ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
               SVN_JNI__DEBUG_BOOL(hasException);
               fprintf(stderr, "\nend of while loop!\n");
 #endif
 
-	    } /* if( !_hasException ) */
+            } /* if( !_hasException ) */
 
-	  (*env)->PopLocalFrame(env, vector);
-	} /* if( ... Push ... ) */
+          (*env)->PopLocalFrame(env, vector);
+        } /* if( ... Push ... ) */
     }
 
   /* destroy the local pool */

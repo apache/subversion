@@ -244,7 +244,7 @@ create_stringbuf (char *data, apr_size_t size, apr_pool_t *pool)
 
   new_string->data = data;
   new_string->len = size;
-  new_string->blocksize = size + 1;	/* we know there is a null-term */
+  new_string->blocksize = size + 1; /* we know there is a null-term */
   new_string->pool = pool;
 
   return new_string;

@@ -64,24 +64,24 @@ hashtable__create(JNIEnv *env, jboolean *hasException)
                                     SVN_JNI_HASHTABLE__CLASS);
 
       if( !_hasException )
-	{
-	  hashtableConstructor = 
+        {
+          hashtableConstructor = 
             j__get_method(env, &_hasException, 
                           hashtableClass,
                           SVN_JNI_HASHTABLE__CONSTRUCTOR,
                           SVN_JNI_HASHTABLE__CONSTRUCTOR_SIG);
-	}
+        }
 
       if( !_hasException )
-	{
-	  hashtable = (*env)->NewObject(env, hashtableClass,
-					hashtableConstructor);
-	}
+        {
+          hashtable = (*env)->NewObject(env, hashtableClass,
+                                        hashtableConstructor);
+        }
 
       if( hashtable == NULL )
-	{
-	  _hasException = JNI_TRUE;
-	}
+        {
+          _hasException = JNI_TRUE;
+        }
 
 #ifdef SVN_JNI_HASHTABLE__DEBUG
       SVN_JNI__DEBUG_PTR(hashtableClass);
@@ -154,16 +154,16 @@ hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
           fprintf(stderr, ")\n");
 #endif
 
-	  result = (*env)->CallObjectMethod(env, hashtable, hashtablePut,
+          result = (*env)->CallObjectMethod(env, hashtable, hashtablePut,
                                             key, value);
-	  _hasException = (*env)->ExceptionCheck(env);
+          _hasException = (*env)->ExceptionCheck(env);
 #ifdef SVN_JNI_HASHTABLE__DEBUG
           fprintf(stderr, "<<<CallObjectMethod(");
           SVN_JNI__DEBUG_PTR(result);
           SVN_JNI__DEBUG_BOOL(_hasException);
           fprintf(stderr, ")\n");
 #endif
-	}
+        }
 
       /* pop local references */
       (*env)->PopLocalFrame(env, result);

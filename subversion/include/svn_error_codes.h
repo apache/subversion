@@ -54,16 +54,16 @@ extern "C" {
 #if defined(SVN_ERROR_BUILD_ARRAY)
 
 #define SVN_ERROR_START \
-	static const err_defn error_table[] = { \
-	  { SVN_WARNING, "Warning" },
+        static const err_defn error_table[] = { \
+          { SVN_WARNING, "Warning" },
 #define SVN_ERRDEF(num, offset, str) { num, str },
 #define SVN_ERROR_END { 0, NULL } };
 
 #elif !defined(SVN_ERROR_ENUM_DEFINED)
 
 #define SVN_ERROR_START \
-	typedef enum svn_errno_t { \
-	  SVN_WARNING = APR_OS_START_USERERR + 1,
+        typedef enum svn_errno_t { \
+          SVN_WARNING = APR_OS_START_USERERR + 1,
 #define SVN_ERRDEF(num, offset, str) /** str */ num = offset,
 #define SVN_ERROR_END SVN_ERR_LAST } svn_errno_t;
 

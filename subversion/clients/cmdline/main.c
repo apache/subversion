@@ -770,7 +770,7 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__editor_cmd_opt:
         opt_state.editor_cmd = apr_pstrdup (pool, opt_arg);
-	break;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */

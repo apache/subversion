@@ -58,39 +58,39 @@ string__j_to_svn_string(JNIEnv *env,
       _hasException = (*env)->ExceptionCheck(env);
 
       if( !_hasException )
-	{
-	  char *buffer;
-	  jsize len = (*env)->GetStringUTFLength(env, jstr);
-	  buffer = (char *)malloc(len + 1);
+        {
+          char *buffer;
+          jsize len = (*env)->GetStringUTFLength(env, jstr);
+          buffer = (char *)malloc(len + 1);
 
-	  /* did the memory allocation succeed? 
-	   * otherwise throw an exception */
-	  if( buffer == NULL )
-	    {
-	      misc__throw_exception_by_name(env, 
+          /* did the memory allocation succeed? 
+           * otherwise throw an exception */
+          if( buffer == NULL )
+            {
+              misc__throw_exception_by_name(env, 
                                       "java/lang/OutOfMemoryError", 
                                       NULL);
-	      _hasException = JNI_TRUE;
-	    }
-	  else
-	    {
-	      (*env)->GetStringUTFRegion(env, jstr, 0, len, buffer);
-	      buffer[len] = 0;
+              _hasException = JNI_TRUE;
+            }
+          else
+            {
+              (*env)->GetStringUTFRegion(env, jstr, 0, len, buffer);
+              buffer[len] = 0;
 
-	      if( (*env)->ExceptionCheck(env) )
-		{
-		  _hasException = JNI_TRUE;
-		}
+              if( (*env)->ExceptionCheck(env) )
+                {
+                  _hasException = JNI_TRUE;
+                }
 
-	      if( !_hasException )
-		{
-		  result = svn_string_create(buffer, pool);
-		}
+              if( !_hasException )
+                {
+                  result = svn_string_create(buffer, pool);
+                }
 
-	      /* ...and release the buffer */
-	      free(buffer);
-	    }
-	} /* if( !_hasException ) */
+              /* ...and release the buffer */
+              free(buffer);
+            }
+        } /* if( !_hasException ) */
 
       (*env)->PopLocalFrame(env, NULL);
 

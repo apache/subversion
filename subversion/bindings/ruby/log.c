@@ -51,19 +51,19 @@ svn_ruby_log_receiver (void *baton,
       paths = rb_hash_new ();
 
       for (hi = apr_hash_first (pool, changed_paths); hi;
-	   hi = apr_hash_next (hi))
-	{
-	  const void *key;
-	  void *val;
-	  apr_ssize_t key_len;
-	  char action;
+           hi = apr_hash_next (hi))
+        {
+          const void *key;
+          void *val;
+          apr_ssize_t key_len;
+          char action;
 
-	  apr_hash_this (hi, &key, &key_len, &val);
-	  action = (char) ((svn_log_changed_path_t *) val)->action;
-	  rb_hash_aset (paths, rb_str_new (key, key_len),
-			rb_str_new (&action, 1));
+          apr_hash_this (hi, &key, &key_len, &val);
+          action = (char) ((svn_log_changed_path_t *) val)->action;
+          rb_hash_aset (paths, rb_str_new (key, key_len),
+                        rb_str_new (&action, 1));
 
-	}
+        }
     }
   else
     paths = Qnil;

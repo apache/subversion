@@ -240,7 +240,7 @@ fs_revision_prop (VALUE self, VALUE aRev, VALUE aPropname)
   pool = svn_pool_create (fs->pool);
 
   err = svn_fs_revision_prop (&value, fs->fs, rev,
-			      StringValuePtr (aPropname), pool);
+                              StringValuePtr (aPropname), pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -326,7 +326,7 @@ fs_change_rev_prop (VALUE self, VALUE aRev, VALUE aName, VALUE aValue)
                                 RSTRING (aValue)->len, pool);
 
   err = svn_fs_change_rev_prop (fs->fs, rev,
-				StringValuePtr (aName), value, pool);
+                                StringValuePtr (aName), value, pool);
   apr_pool_destroy (pool);
   if (err)
     svn_ruby_raise (err);

@@ -124,7 +124,7 @@ open_root (void *edit_baton,
 
 static svn_error_t *
 delete_entry (svn_stringbuf_t *name,
-	      svn_revnum_t revision,
+              svn_revnum_t revision,
               void *parent_baton)
 {
   VALUE self = (VALUE) parent_baton;
@@ -367,8 +367,8 @@ apply_textdelta (void *file_baton,
           svn_ruby_delta_edit_t *editor;
 
           Data_Get_Struct (self, svn_ruby_delta_edit_t, editor);
-	  return svn_ruby_error ("applyTextDelta returned wrong object",
-				 editor->pool);
+          return svn_ruby_error ("applyTextDelta returned wrong object",
+                                 editor->pool);
         }
     }
   return SVN_NO_ERROR;

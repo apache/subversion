@@ -261,7 +261,7 @@ splay_range_index (apr_size_t offset, range_index_t *ndx)
               tree->left = node->right;
               node->right = tree;
               tree = node;
-	    }
+            }
           if (tree->left == NULL)
             break;
 
@@ -269,7 +269,7 @@ splay_range_index (apr_size_t offset, range_index_t *ndx)
           right->left = tree;
           right = tree;
           tree = tree->left;
-	}
+        }
       else if (offset > tree->offset)
         {
           if (tree->right != NULL
@@ -280,7 +280,7 @@ splay_range_index (apr_size_t offset, range_index_t *ndx)
               tree->right = node->left;
               node->left = tree;
               tree = node;
-	    }
+            }
           if (tree->right == NULL)
             break;
 
@@ -288,7 +288,7 @@ splay_range_index (apr_size_t offset, range_index_t *ndx)
           left->right = tree;
           left = tree;
           tree = tree->right;
-	}
+        }
       else
         break;
     }

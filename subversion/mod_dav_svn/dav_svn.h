@@ -503,7 +503,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                                     apr_pool_t *pool);
 
 dav_error * dav_svn__update_report(const dav_resource *resource,
-				   const apr_xml_doc *doc,
+                                   const apr_xml_doc *doc,
                                    ap_filter_t *output);
 
 /* ### todo: document this, as soon as understand what the heck it

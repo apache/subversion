@@ -52,9 +52,9 @@ misc__throw_exception_by_name(JNIEnv *env,
 
       /* if class is null, an exception already has occured */
       if( cls != NULL )
-	{
-	  (*env)->ThrowNew(env, cls, msg);
-	}
+        {
+          (*env)->ThrowNew(env, cls, msg);
+        }
 
       /* pop stack frame */
       (*env)->PopLocalFrame(env, NULL);

@@ -251,8 +251,8 @@ static void send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
   revision = dav_svn_get_safe_cr(baton->uc->rev_root, path, pool);
     
   href = dav_svn_build_uri(baton->uc->resource->info->repos,
-			   DAV_SVN_BUILD_URI_VERSION,
-			   revision, path, 0 /* add_href */, pool);
+                           DAV_SVN_BUILD_URI_VERSION,
+                           revision, path, 0 /* add_href */, pool);
 
   send_xml(baton->uc, 
            "<D:checked-in><D:href>%s</D:href></D:checked-in>" DEBUG_CR, 
@@ -352,7 +352,7 @@ static void open_helper(svn_boolean_t is_dir,
 
   send_xml(child->uc, "<S:open-%s name=\"%s\" rev=\"%"
            SVN_REVNUM_T_FMT "\">" DEBUG_CR,
-	   DIR_OR_FILE(is_dir), qname, base_revision);
+           DIR_OR_FILE(is_dir), qname, base_revision);
 
   send_vsn_url(child, pool);
 
@@ -420,7 +420,7 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 }
 
 static svn_error_t * upd_set_target_revision(void *edit_baton,
-					     svn_revnum_t target_revision,
+                                             svn_revnum_t target_revision,
                                              apr_pool_t *pool)
 {
   update_ctx_t *uc = edit_baton;
@@ -478,7 +478,7 @@ static svn_error_t * upd_open_root(void *edit_baton,
 
 static svn_error_t * upd_delete_entry(const char *path,
                                       svn_revnum_t revision,
-				      void *parent_baton,
+                                      void *parent_baton,
                                       apr_pool_t *pool)
 {
   item_baton_t *parent = parent_baton;
@@ -491,11 +491,11 @@ static svn_error_t * upd_delete_entry(const char *path,
 }
 
 static svn_error_t * upd_add_directory(const char *path,
-				       void *parent_baton,
-				       const char *copyfrom_path,
-				       svn_revnum_t copyfrom_revision,
+                                       void *parent_baton,
+                                       const char *copyfrom_path,
+                                       svn_revnum_t copyfrom_revision,
                                        apr_pool_t *pool,
-				       void **child_baton)
+                                       void **child_baton)
 {
   return add_helper(TRUE /* is_dir */,
                     path, parent_baton, copyfrom_path, copyfrom_revision, pool,
@@ -514,8 +514,8 @@ static svn_error_t * upd_open_directory(const char *path,
 }
 
 static svn_error_t * upd_change_xxx_prop(void *baton,
-					 const char *name,
-					 const svn_string_t *value,
+                                         const char *name,
+                                         const svn_string_t *value,
                                          apr_pool_t *pool)
 {
   item_baton_t *b = baton;
@@ -572,11 +572,11 @@ static svn_error_t * upd_close_directory(void *dir_baton,
 }
 
 static svn_error_t * upd_add_file(const char *path,
-				  void *parent_baton,
-				  const char *copyfrom_path,
-				  svn_revnum_t copyfrom_revision,
+                                  void *parent_baton,
+                                  const char *copyfrom_path,
+                                  svn_revnum_t copyfrom_revision,
                                   apr_pool_t *pool,
-				  void **file_baton)
+                                  void **file_baton)
 {
   return add_helper(FALSE /* is_dir */,
                     path, parent_baton, copyfrom_path, copyfrom_revision, pool,
@@ -633,8 +633,8 @@ static svn_error_t * upd_close_file(void *file_baton,
 
 
 dav_error * dav_svn__update_report(const dav_resource *resource,
-				   const apr_xml_doc *doc,
-				   ap_filter_t *output)
+                                   const apr_xml_doc *doc,
+                                   ap_filter_t *output)
 {
   svn_delta_editor_t *editor;
   apr_xml_elem *child;
@@ -804,7 +804,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "The state report gatherer could not be "
-				 "created.");
+                                 "created.");
     }
 
   /* scan the XML doc for state information */
@@ -962,9 +962,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       /* ### This removes the fs txn.  todo: check error. */
       svn_repos_abort_report(rbaton);
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-				 "A failure occurred during the completion "
-				 "and response generation for the update "
-				 "report.");
+                                 "A failure occurred during the completion "
+                                 "and response generation for the update "
+                                 "report.");
     }
 
   return NULL;

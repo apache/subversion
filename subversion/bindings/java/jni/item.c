@@ -32,7 +32,7 @@
  */
 jobject
 item__create(JNIEnv *env, jobject jpath, jobject jstatus, 
-	     jboolean *hasException)
+             jboolean *hasException)
 {
   jobject jitem = NULL;
   jboolean _hasException = JNI_FALSE;
@@ -47,25 +47,25 @@ item__create(JNIEnv *env, jobject jpath, jobject jstatus,
       jmethodID itemConstructor = NULL;
       
       itemClass = (*env)->FindClass(env,
-				    "org/tigris/subversion/lib/Item");
+                                    "org/tigris/subversion/lib/Item");
       if( itemClass == NULL )
-	{
-	  _hasException = JNI_TRUE;
-	}
+        {
+          _hasException = JNI_TRUE;
+        }
       else
-	{
-	    itemConstructor = (*env)->GetMethodID(env, itemClass,
-						  "<init>",
-						  SVN_JNI_ITEM__CONSTRUCTOR);
+        {
+          itemConstructor = (*env)->GetMethodID(env, itemClass,
+                                                "<init>",
+                                                SVN_JNI_ITEM__CONSTRUCTOR);
 
-	    if( itemConstructor == NULL )
-	    {
-		_hasException = JNI_TRUE;
-	    }
+          if( itemConstructor == NULL )
+            {
+              _hasException = JNI_TRUE;
+            }
 
-	    /* here has to be some code to call the constructor
-	       and do stuff */
-	}
+          /* here has to be some code to call the constructor
+             and do stuff */
+        }
 
       (*env)->PopLocalFrame(env, jitem);
     }
@@ -80,4 +80,4 @@ item__create(JNIEnv *env, jobject jpath, jobject jstatus,
   }
 
   return jitem;
-}				       
+}

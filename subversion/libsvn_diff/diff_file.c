@@ -975,8 +975,8 @@ svn_diff3_file_output(apr_file_t *output_file,
 
       if (finfo.size == 0)
         {
-	  baton.buffer[idx] = NULL;
-	}
+          baton.buffer[idx] = NULL;
+        }
 
 #if APR_HAS_MMAP
       else
@@ -991,7 +991,7 @@ svn_diff3_file_output(apr_file_t *output_file,
             }
 
           baton.buffer[idx] = mm[idx]->mm;
-	}
+        }
 
 #else
       else
@@ -1005,7 +1005,7 @@ svn_diff3_file_output(apr_file_t *output_file,
               return svn_error_createf(rv, NULL, "Failed to read file '%s'.",
                                        baton.path[idx]);
             }
-	}
+        }
 
       rv = apr_file_close(file[idx]);
       if (rv != APR_SUCCESS)

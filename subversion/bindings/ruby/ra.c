@@ -500,11 +500,11 @@ struct close_commit_baton_t
 
 static svn_error_t *
 ra_close_commit (void *close_baton,
-		 svn_stringbuf_t *path,
-		 svn_boolean_t recurse,
-		 svn_revnum_t new_rev,
-		 const char *rev_date,
-		 const char *rev_author)
+                 svn_stringbuf_t *path,
+                 svn_boolean_t recurse,
+                 svn_revnum_t new_rev,
+                 const char *rev_date,
+                 const char *rev_author)
 {
   struct close_commit_baton_t *bt = close_baton;
   int error;
@@ -596,7 +596,7 @@ ra_do_checkout (VALUE self, VALUE aRevision, VALUE aDeltaEditor)
 
   svn_ruby_delta_editor (&editor, &edit_baton, aDeltaEditor);
   err = ra->plugin->do_checkout (ra->session_baton, revision,
-				 TRUE,
+                                 TRUE,
                                  editor, edit_baton);
 
   if (err)
@@ -638,7 +638,7 @@ ra_do_update (int argc, VALUE *argv, VALUE self)
                                &reporter, &report_baton,
                                revision,
                                update_target,
-			       RTEST (recurse),
+                               RTEST (recurse),
                                editor, edit_baton);
 
   apr_pool_destroy (pool);
@@ -682,10 +682,10 @@ ra_get_log (int argc, VALUE *argv, VALUE self)
   end = NUM2LONG (aEnd);
 
   err = ra->plugin->get_log (ra->session_baton,
-			     paths, start, end,
-			     RTEST (discover_changed_paths),
-			     svn_ruby_log_receiver,
-			     (void *)&baton);
+                             paths, start, end,
+                             RTEST (discover_changed_paths),
+                             svn_ruby_log_receiver,
+                             (void *)&baton);
 
   apr_pool_destroy (baton.pool);
   if (err)
@@ -710,7 +710,7 @@ ra_check_path (VALUE self, VALUE aPath, VALUE aRevision)
   revision = NUM2LONG (aRevision);
 
   err = ra->plugin->check_path (&kind, ra->session_baton,
-				StringValuePtr (aPath), revision);
+                                StringValuePtr (aPath), revision);
   if (err)
     svn_ruby_raise (err);
 

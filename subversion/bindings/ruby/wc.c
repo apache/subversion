@@ -827,7 +827,7 @@ void svn_ruby_init_wc (void)
   rb_define_singleton_method (cSvnWc, "propSet", wc_prop_set, 3);
   rb_define_singleton_method (cSvnWc, "wcProp?", is_wc_prop, 1);
   rb_define_singleton_method (cSvnWc, "getPristineCopyPath",
-			      wc_get_pristine_copy_path, 1);
+                              wc_get_pristine_copy_path, 1);
   rb_define_singleton_method (cSvnWc, "cleanup", wc_cleanup, 1);
   /* rb_define_singleton_method (cSvnWc, "revert", wc_revert, 2); */
 
@@ -871,7 +871,7 @@ void svn_ruby_init_wc (void)
   rb_define_method (cSvnWcStatus, "propStatus", wc_status_prop_status, 0);
   rb_define_method (cSvnWcStatus, "locked?", wc_status_is_locked, 0);
   rb_define_method (cSvnWcStatus, "reposTextStatus",
-		    wc_status_repos_text_status, 0);
+                    wc_status_repos_text_status, 0);
   rb_define_method (cSvnWcStatus, "reposPropStatus",
-		    wc_status_repos_prop_status, 0);
+                    wc_status_repos_prop_status, 0);
 }

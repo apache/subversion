@@ -13,7 +13,7 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-	
+
 // SVNStatus.h : Declaration of the CSVNStatus COM object.
 
 #ifndef WINSVN_STATUS_H_
@@ -25,17 +25,17 @@
 /////////////////////////////////////////////////////////////////////////////
 // CSVNStatus
 class ATL_NO_VTABLE CSVNStatus : 
-	public CComObjectRootEx<CComMultiThreadModel>,
-	public CComCoClass<CSVNStatus, &CLSID_SVNStatus>,
-	public ISupportErrorInfo,
-	public IDispatchImpl<ISVNStatus, &IID_ISVNStatus, &LIBID_SVNCOMLib>
+        public CComObjectRootEx<CComMultiThreadModel>,
+        public CComCoClass<CSVNStatus, &CLSID_SVNStatus>,
+        public ISupportErrorInfo,
+        public IDispatchImpl<ISVNStatus, &IID_ISVNStatus, &LIBID_SVNCOMLib>
 {
 public:
-	CSVNStatus()
-	{
-		m_pUnkMarshaler = NULL;
-		pszName = NULL;
-	}
+        CSVNStatus()
+        {
+                m_pUnkMarshaler = NULL;
+                pszName = NULL;
+        }
 
 DECLARE_REGISTRY_RESOURCEID(IDR_SVNSTATUS)
 DECLARE_GET_CONTROLLING_UNKNOWN()
@@ -43,47 +43,47 @@ DECLARE_GET_CONTROLLING_UNKNOWN()
 DECLARE_PROTECT_FINAL_CONSTRUCT()
 
 BEGIN_COM_MAP(CSVNStatus)
-	COM_INTERFACE_ENTRY(ISVNStatus)
-	COM_INTERFACE_ENTRY(IDispatch)
-	COM_INTERFACE_ENTRY(ISupportErrorInfo)
-	COM_INTERFACE_ENTRY_AGGREGATE(IID_IMarshal, m_pUnkMarshaler.p)
+        COM_INTERFACE_ENTRY(ISVNStatus)
+        COM_INTERFACE_ENTRY(IDispatch)
+        COM_INTERFACE_ENTRY(ISupportErrorInfo)
+        COM_INTERFACE_ENTRY_AGGREGATE(IID_IMarshal, m_pUnkMarshaler.p)
 END_COM_MAP()
 
-	HRESULT 
-	FinalConstruct()
-	{
-		return CoCreateFreeThreadedMarshaler(
-			GetControllingUnknown(), &m_pUnkMarshaler.p);
-	}
+        HRESULT 
+        FinalConstruct()
+        {
+                return CoCreateFreeThreadedMarshaler(
+                        GetControllingUnknown(), &m_pUnkMarshaler.p);
+        }
 
-	void 
-	FinalRelease()
-	{
-		m_pUnkMarshaler.Release();
-		if (pszName != NULL)
-			delete pszName;
-		pszName = NULL;
-	}
+        void 
+        FinalRelease()
+        {
+                m_pUnkMarshaler.Release();
+                if (pszName != NULL)
+                        delete pszName;
+                pszName = NULL;
+        }
 
-	CComPtr<IUnknown> m_pUnkMarshaler;
+        CComPtr<IUnknown> m_pUnkMarshaler;
 
-	EWCStatus text_status;
-    EWCStatus prop_status;
-    svn_node_kind_t kind;     /* Is it a file, a dir, or... ?  */
-	CHAR *pszName;
+        EWCStatus text_status;
+        EWCStatus prop_status;
+        svn_node_kind_t kind;     /* Is it a file, a dir, or... ?  */
+        CHAR *pszName;
 
 // ISupportsErrorInfo
-	STDMETHOD(InterfaceSupportsErrorInfo)(REFIID riid);
+        STDMETHOD(InterfaceSupportsErrorInfo)(REFIID riid);
 
 // ISVNStatus
 public:
-	STDMETHOD(get_is_directory)(/*[out, retval]*/ VARIANT_BOOL *pVal);
-	STDMETHOD(get_name)(/*[out, retval]*/ BSTR *pVal);
-	STDMETHOD(get_prop_status)(/*[out, retval]*/ EWCStatus *pVal);
-	STDMETHOD(get_text_status)(/*[out, retval]*/ EWCStatus *pVal);
+        STDMETHOD(get_is_directory)(/*[out, retval]*/ VARIANT_BOOL *pVal);
+        STDMETHOD(get_name)(/*[out, retval]*/ BSTR *pVal);
+        STDMETHOD(get_prop_status)(/*[out, retval]*/ EWCStatus *pVal);
+        STDMETHOD(get_text_status)(/*[out, retval]*/ EWCStatus *pVal);
 
 // C++ only access
-	HRESULT init(svn_wc_status_t *status, CHAR *pszName);
+        HRESULT init(svn_wc_status_t *status, CHAR *pszName);
 
 };
 

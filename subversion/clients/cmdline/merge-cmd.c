@@ -75,7 +75,7 @@ svn_cl__merge (apr_getopt_t *os,
   if (targets->nelts == 0)
     {
       return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0,
-			       "" /* message is unused */);
+                               "" /* message is unused */);
     }
 
   if (using_alternate_syntax)

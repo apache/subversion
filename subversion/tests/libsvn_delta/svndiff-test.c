@@ -65,7 +65,7 @@ main (int argc, char **argv)
   apr_initialize();
   svn_txdelta (&txdelta_stream,
                svn_stream_from_aprfile (source_file, pool),
-	       svn_stream_from_aprfile (target_file, pool),
+               svn_stream_from_aprfile (target_file, pool),
                pool);
 
   err = svn_stream_for_stdout (&stdout_stream, pool);
