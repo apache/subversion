@@ -134,7 +134,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       SWIG_SUITABLE=no
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
       AC_MSG_WARN([This is not compatible with Subversion])
-      AC_MSG_WARN([Subversion can use SWIG versions 1.3.19, 1.3.20, 1.3.21]
+      AC_MSG_WARN([Subversion can use SWIG versions 1.3.19, 1.3.20, 1.3.21])
       AC_MSG_WARN([or 1.3.24 or later])
     fi
 
