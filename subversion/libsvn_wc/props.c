@@ -1261,14 +1261,8 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
      pay attention to any base-props;  they might be residual from the
      old deleted file. */
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));  
-  if (entry 
-      && ((entry->schedule == svn_wc_schedule_replace)
-          || (entry->schedule == svn_wc_schedule_add)))
+  if (entry && (entry->schedule == svn_wc_schedule_replace))
     {
-      /* svn_wc_add() guarantees that a newly added file has no
-         working props at all; thus if this file is non-empty, the
-         user must have modified them.  Hopefully the caller will know
-         to ignore the baseprops as well!  */
       *modified_p = wempty ? FALSE : TRUE;
       goto cleanup;        
     }
