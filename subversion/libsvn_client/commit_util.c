@@ -313,6 +313,12 @@ harvest_committables (apr_hash_t *committables,
          to test for textual mods.  Directories simply don't have text! */
       if (entry->kind == svn_node_file)
         {
+          /* Check for text mods.  If EOL_PROP_CHANGED is TRUE, then
+             we need to force a translated byte-for-byte comparison
+             against the text-base so that a timestamp comparison
+             won't bail out early.  Depending on how the svn:eol-style
+             prop was changed, we might have to send new text to the
+             server to match the new newline style.  */
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
             SVN_ERR (svn_wc_text_modified_p (&text_mod, path, eol_prop_changed,
                                              adm_access, pool));
@@ -331,6 +337,13 @@ harvest_committables (apr_hash_t *committables,
       /* See if there are property modifications to send. */
       SVN_ERR (check_prop_mods (&prop_mod, &eol_prop_changed, path, 
                                 adm_access, pool));
+
+      /* Check for text mods on files.  If EOL_PROP_CHANGED is TRUE,
+         then we need to force a translated byte-for-byte comparison
+         against the text-base so that a timestamp comparison won't
+         bail out early.  Depending on how the svn:eol-style prop was
+         changed, we might have to send new text to the server to
+         match the new newline style.  */
       if (entry->kind == svn_node_file)
         SVN_ERR (svn_wc_text_modified_p (&text_mod, path, eol_prop_changed, 
                                          adm_access, pool));

@@ -416,7 +416,7 @@ def eol_change_is_text_mod(sbox):
 
   # add a new file to the working copy.
   foo_path = os.path.join(wc_dir, 'foo')
-  f = open(foo_path, "w")
+  f = open(foo_path, 'wb')
   if svntest.main.windows:
     f.write("1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n")
   else:
@@ -442,7 +442,7 @@ def eol_change_is_text_mod(sbox):
     return 1
 
   # check 2: do the files have the right contents now?
-  f = open(foo_path, "r")
+  f = open(foo_path, 'rb')
   contents = f.read()
   f.close()
   if svntest.main.windows:
@@ -451,7 +451,7 @@ def eol_change_is_text_mod(sbox):
   else:
     if contents != "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
       return 1
-  f = open(os.path.join(wc_dir, '.svn', 'text-base', 'foo.svn-base'))
+  f = open(os.path.join(wc_dir, '.svn', 'text-base', 'foo.svn-base'), 'rb')
   base_contents = f.read()
   f.close()
   if contents != base_contents:
