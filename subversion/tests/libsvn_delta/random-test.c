@@ -49,22 +49,32 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 #include "apr_general.h"
 #include "apr_getopt.h"
 #include "svn_delta.h"
 #include "svn_error.h"
 
+#define DEFAULT_ITERATIONS 30
 #define DEFAULT_MAXLEN (100 * 1024)
 #define SEEDS 50
 #define MAXSEQ 100
+
+static unsigned long
+myrand (unsigned long *seed)
+{
+  *seed = (*seed * 1103515245 + 12345) & 0xffffffff;
+  return *seed;
+}
 
 /* Generate a temporary file containing sort-of random data.  Diffs
    between files of random data tend to be pretty boring, so we try to
    make sure there are a bunch of common substrings between two runs
    of this function with the same seedbase.  */
 static FILE *
-generate_random_file (int maxlen, unsigned long seedbase)
+generate_random_file (int maxlen, unsigned long subseed_base,
+                      unsigned long *seed)
 {
   int len, seqlen;
   FILE *fp;
@@ -72,16 +82,16 @@ generate_random_file (int maxlen, unsigned long seedbase)
 
   fp = tmpfile ();
   assert (fp != NULL);
-  len = rand () % maxlen;       /* We might go over this by a bit.  */
+  len = myrand (seed) % maxlen;       /* We might go over this by a bit.  */
   while (len > 0)
     {
       /* Generate a pseudo-random sequence of up to MAXSEQ bytes,
          where the seed is in the range [seedbase..seedbase+MAXSEQ-1].
          (Use our own pseudo-random number generator here to avoid
          clobbering the seed of the libc random number generator.)  */
-      seqlen = rand () % MAXSEQ;
+      seqlen = myrand (seed) % MAXSEQ;
       len -= seqlen;
-      r = seedbase + rand () % SEEDS;
+      r = subseed_base + myrand (seed) % SEEDS;
       while (seqlen-- > 0)
         { 
           putc (r % 256, fp);
@@ -138,22 +148,25 @@ main (int argc, char **argv)
   apr_pool_t *pool;
   apr_status_t status;
   char optch;
-  const char *optarg;
-  unsigned int seed;
-  unsigned long seedbase;
-  int seed_set = 0, maxlen = DEFAULT_MAXLEN, c1, c2;
+  const char *optarg, *progname;
+  unsigned long seed, seed_save, subseed_base;
+  int seed_set = 0, maxlen = DEFAULT_MAXLEN, iterations = DEFAULT_ITERATIONS;
+  int c1, c2, i;
   svn_txdelta_stream_t *stream;
   svn_txdelta_window_t *window;
   svn_txdelta_window_handler_t *handler;
   void *handler_baton;
   svn_error_t *err;
 
+  progname = strrchr (argv[0], '/');
+  progname = (progname == NULL) ? argv[0] : progname + 1;
+
   apr_initialize();
 
   /* Read options.  */
   pool = svn_pool_create (NULL, NULL);
   apr_initopt (&opt, NULL, argc, argv);
-  while ((status = apr_getopt (opt, "s:l:", &optch, &optarg)) == APR_SUCCESS)
+  while ((status = apr_getopt (opt, "s:l:n:", &optch, &optarg)) == APR_SUCCESS)
     {
       switch (optch)
         {
@@ -164,6 +177,9 @@ main (int argc, char **argv)
         case 'l':
           maxlen = atoi (optarg);
           break;
+        case 'n':
+          iterations = atoi (optarg);
+          break;
         }
     }
   apr_destroy_pool (pool);
@@ -173,64 +189,73 @@ main (int argc, char **argv)
       return 1;
     }
 
+  /* Pick a seed if one wasn't given, and save it.  Print it out in
+   * case we dump core or something.  */
   if (!seed_set)
-    {
-      seed = (unsigned int) apr_now ();
-      printf ("Using seed %d\n", seed);
-      srand (seed);
-    }
+    seed = (unsigned int) apr_now ();
+  seed_save = seed;
+  printf("%s using seed %lu\n", progname, seed_save);
 
-  /* Generate source and target files for the delta and its application.  */
-  seedbase = rand ();
-  source = generate_random_file (maxlen, seedbase);
-  target = generate_random_file (maxlen, seedbase);
-  source_copy = copy_tempfile (source);
-  rewind (source);
-  target_regen = tmpfile ();
-
-  /* Create and simultaneously apply a delta between the source and target.  */
-  pool = svn_pool_create (NULL, NULL);
-  err = svn_txdelta (&stream,
-                     read_from_file, source,
-                     read_from_file, target,
-                     pool);
-  if (err == SVN_NO_ERROR)
-    err = svn_txdelta_apply (read_from_file, source_copy,
-                             write_to_file, target_regen, pool,
-                             &handler, &handler_baton);
-  while (err == SVN_NO_ERROR)
+  for (i = 0; i < iterations; i++)
     {
-      err = svn_txdelta_next_window (&window, stream);
+      /* Generate source and target for the delta and its application.  */
+      subseed_base = myrand (&seed);
+      source = generate_random_file (maxlen, subseed_base, &seed);
+      target = generate_random_file (maxlen, subseed_base, &seed);
+      source_copy = copy_tempfile (source);
+      rewind (source);
+      target_regen = tmpfile ();
+
+      /* Create and apply a delta between the source and target.  */
+      pool = svn_pool_create (NULL, NULL);
+      err = svn_txdelta (&stream,
+                         read_from_file, source,
+                         read_from_file, target,
+                         pool);
       if (err == SVN_NO_ERROR)
-        err = handler (window, handler_baton);
-      if (window == NULL)
-        break;
-      svn_txdelta_free_window (window);
-    }
-  if (err != SVN_NO_ERROR)
-    {
-      svn_handle_error (err, stderr);
-      exit (1);
-    }
-  svn_txdelta_free (stream);
-  apr_destroy_pool (pool);
-
-  /* Compare the two files.  */
-  rewind (target);
-  rewind (target_regen);
-  while (1)
-    {
-      c1 = getc (target);
-      c2 = getc (target_regen);
-      if (c1 == EOF && c2 == EOF)
-        break;
-      if (c1 != c2)
+        err = svn_txdelta_apply (read_from_file, source_copy,
+                                 write_to_file, target_regen, pool,
+                                 &handler, &handler_baton);
+      while (err == SVN_NO_ERROR)
         {
-          printf ("Regenerated files differ; test failed.\n");
+          err = svn_txdelta_next_window (&window, stream);
+          if (err == SVN_NO_ERROR)
+            err = handler (window, handler_baton);
+          if (window == NULL)
+            break;
+          svn_txdelta_free_window (window);
+        }
+      if (err != SVN_NO_ERROR)
+        {
+          printf ("FAIL: %s 1: random delta test error, seed %lu\n",
+                  progname, seed_save);
           exit (1);
         }
+      svn_txdelta_free (stream);
+      apr_destroy_pool (pool);
+
+      /* Compare the two files.  */
+      rewind (target);
+      rewind (target_regen);
+      while (1)
+        {
+          c1 = getc (target);
+          c2 = getc (target_regen);
+          if (c1 == EOF && c2 == EOF)
+            break;
+          if (c1 != c2)
+            {
+              printf ("FAIL: %s 1: random delta test mismatch, seed %lu\n",
+                      progname, seed_save);
+              exit (1);
+            }
+        }
+      fclose(source);
+      fclose(target);
+      fclose(source_copy);
+      fclose(target_regen);
     }
-  printf ("Test succeeded.\n");
+  printf ("PASS: %s 1: random delta testing, seed %lu\n", progname, seed_save);
   exit (0);
 }
 
