@@ -248,9 +248,28 @@ struct decode_baton
    file for more detail on the encoding format.  */
 
 static const unsigned char *
-decode_int (svn_filesize_t *val,
-            const unsigned char *p,
-            const unsigned char *end)
+decode_file_offset (svn_filesize_t *val,
+                    const unsigned char *p,
+                    const unsigned char *end)
+{
+  /* Decode bytes until we're done.  */
+  *val = 0;
+  while (p < end)
+    {
+      *val = (*val << 7) | (*p & 0x7f);
+      if (((*p++ >> 7) & 0x1) == 0)
+        return p;
+    }
+  return NULL;
+}
+
+
+/* Same as above, only decide into a size variable. */
+
+static const unsigned char *
+decode_size (apr_size_t *val,
+             const unsigned char *p,
+             const unsigned char *end)
 {
   /* Decode bytes until we're done.  */
   *val = 0;
@@ -273,8 +292,6 @@ decode_instruction (svn_txdelta_op_t *op,
                     const unsigned char *p,
                     const unsigned char *end)
 {
-  svn_filesize_t val;
-
   if (p == end)
     return NULL;
 
@@ -291,17 +308,15 @@ decode_instruction (svn_txdelta_op_t *op,
   op->length = *p++ & 0x3f;
   if (op->length == 0)
     {
-      p = decode_int (&val, p, end);
+      p = decode_size (&op->length, p, end);
       if (p == NULL)
         return NULL;
-      op->length = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
     }
   if (op->action_code != svn_txdelta_new)
     {
-      p = decode_int (&val, p, end);
+      p = decode_size (&op->offset, p, end);
       if (p == NULL)
         return NULL;
-      op->offset = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
     }
 
   return p;
@@ -326,17 +341,12 @@ count_and_verify_instructions (int *ninst,
   while (p < end)
     {
       p = decode_instruction (&op, p, end);
-      if (p == NULL || op.offset < 0 || op.length <= 0
-          || op.length > tview_len - tpos)
+      if (p == NULL || op.length <= 0 || op.length > tview_len - tpos)
         {
           if (p == NULL)
             return svn_error_createf
               (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
                "Invalid diff stream: insn %d cannot be decoded", n);
-          else if (op.offset < 0)
-            return svn_error_createf
-              (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-               "Invalid diff stream: insn %d has negative offset", n);
           else if (op.length <= 0)
             return svn_error_createf
               (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
@@ -393,7 +403,7 @@ write_handler (void *baton,
 {
   struct decode_baton *db = (struct decode_baton *) baton;
   const unsigned char *p, *end;
-  svn_filesize_t val, sview_offset;
+  svn_filesize_t sview_offset;
   apr_size_t sview_len, tview_len, inslen, newlen, remaining, npos;
   apr_size_t buflen = *len;
   svn_txdelta_op_t *op;
@@ -439,37 +449,30 @@ write_handler (void *baton,
       p = (const unsigned char *) db->buffer->data;
       end = (const unsigned char *) db->buffer->data + db->buffer->len;
 
-      p = decode_int (&val, p, end);
+      p = decode_file_offset (&sview_offset, p, end);
       if (p == NULL)
         return SVN_NO_ERROR;
-      sview_offset = val;
 
-      p = decode_int (&val, p, end);
+      p = decode_size (&sview_len, p, end);
       if (p == NULL)
         return SVN_NO_ERROR;
-      sview_len = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
 
-      p = decode_int (&val, p, end);
+      p = decode_size (&tview_len, p, end);
       if (p == NULL)
         return SVN_NO_ERROR;
-      tview_len = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
 
-      p = decode_int (&val, p, end);
+      p = decode_size (&inslen, p, end);
       if (p == NULL)
         return SVN_NO_ERROR;
-      inslen = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
 
-      p = decode_int (&val, p, end);
+      p = decode_size (&newlen, p, end);
       if (p == NULL)
         return SVN_NO_ERROR;
-      newlen = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
 
-      /* Check for integer overflow (don't want to let the input trick
-         us into invalid pointer games using negative numbers).  */
-      /* FIXME: Some of these are apr_size_t, which is
-         unsigned. Should they be apr_ptrdiff_t instead? --xbc */
-      if (sview_offset < 0 || sview_len < 0 || tview_len < 0 || inslen < 0
-          || newlen < 0 || inslen + newlen < 0 || sview_offset + sview_len < 0)
+      /* Check for integer overflow.  */
+      if (sview_offset < 0 || inslen + newlen < inslen
+          || sview_len + tview_len < sview_len
+          || sview_offset + sview_len < sview_offset)
         return svn_error_create (SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL, 
                                  "Svndiff contains corrupt window header");
 
