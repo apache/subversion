@@ -44,24 +44,17 @@ svn_wc_relocate (const char *path,
   svn_node_kind_t kind;
   apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
-  svn_boolean_t is_file = FALSE;
-  char *base;
   int from_len;
 
   SVN_ERR(svn_io_check_path(path, &kind, pool));
 
-  if (kind == svn_node_file)
-    {
-      base = svn_path_basename(path, pool);
-      is_file = TRUE;
-    }
-
   from_len = strlen(from);
 
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
 
-  if (is_file)
+  if (kind == svn_node_file)
     {
+      const char *base = svn_path_basename(path, pool);
       svn_wc_entry_t *entry = apr_hash_get(entries, base, APR_HASH_KEY_STRING);
       if (!entry)
         return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, NULL,
@@ -120,6 +113,8 @@ svn_wc_relocate (const char *path,
         {
           svn_wc_adm_access_t *subdir_access;
           const char *subdir = svn_path_join (path, key, pool);
+          if (svn_wc__adm_missing(adm_access, subdir))
+            continue;
           SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access, subdir,
                                       pool));
           SVN_ERR(svn_wc_relocate(subdir, subdir_access, from, to,

@@ -141,7 +141,7 @@ _svn()
 		         --no-ignore"
 		;;
 	switch|sw)
-		cmdOpts="$rOpts $nOpts $qOpts $pOpts"
+		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts"
 		;;
 	update|up)
 		cmdOpts="$rOpts $nOpts $qOpts $pOpts"
