@@ -206,7 +206,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   dav_svn_authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = NULL;
-  unsigned int limit = 0;
+  int limit = 0;
   int ns;
 
   /* These get determined from the request document. */

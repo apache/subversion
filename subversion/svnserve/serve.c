@@ -894,10 +894,10 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  &strict_node, &limit));
 
   /* If we got an unspecified number then the user didn't send us anything,
-     so we assume no limit.  If it's larger than UINT_MAX then someone is 
+     so we assume no limit.  If it's larger than INT_MAX then someone is 
      messing with us, since we know the svn client libraries will never send
      us anything that big, so play it safe and default to no limit. */
-  if (limit == SVN_RA_SVN_UNSPECIFIED_NUMBER || limit > UINT_MAX)
+  if (limit == SVN_RA_SVN_UNSPECIFIED_NUMBER || limit > INT_MAX)
     limit = 0;
 
   full_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
@@ -916,7 +916,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.fs_path = b->fs_path;
   lb.conn = conn;
   err = svn_repos_get_logs3(b->repos, full_paths, start_rev, end_rev,
-                            (unsigned int) limit, changed_paths, strict_node,
+                            (int) limit, changed_paths, strict_node,
                             NULL, NULL, log_receiver, &lb, pool);
 
   write_err = svn_ra_svn_write_word(conn, pool, "done");
