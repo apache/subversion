@@ -388,14 +388,38 @@ collabnet = svn.collab.net
             </listitem>
           </varlistentry>
           <varlistentry>
-            <term><literal>svn-tunnel-agent</literal></term>
+            <term><literal>ssl-trust-default-ca</literal></term>
             <listitem>
-              <para>This specifies the external agent program through
-                which to tunnel SVN protocol requests.</para>
+              <para>Set this variable to <literal>yes</literal> if you
+                want Subversion to automatically trust the set of
+                "default" CAs that ship with OpenSSL.</para>
             </listitem>
           </varlistentry>
-	  <!-- ###TODO add entries for other options shown in .REG file
-	  example, e.g., ssl-trust-default-ca, etc. -->
+          <varlistentry>
+            <term><literal>ssl-client-cert-file</literal></term>
+            <listitem>
+              <para>If host (or set of hosts) requries an SSL client
+                certificate, you'll normally be prompted for a path to
+                your certificate.  By setting this variable to that
+                same path, Subversion will be able to find your client
+                certificate automatically without prompting you.
+                There's no standard place to store your certificate on
+                disk; Subversion will grab it from any path you
+                specify.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>ssl-client-cert-password</literal></term>
+            <listitem>
+              <para>If your SSL client certificate file is encrypted
+                by a passphrase, Subversion will prompt you for the
+                passphrase whenever the certificate is used.  If you
+                find this annoying (and don't mind storing the
+                password in the <filename>servers</filename> file),
+                then you can set this variable to the certificate's
+                passphrase.  You won't be prompted anymore.</para>
+            </listitem>
+          </varlistentry>
         </variablelist>
 
       </sect3>
@@ -531,43 +555,83 @@ collabnet = svn.collab.net
                 ignored items, see <xref linkend="svn-ch-7-sect-2.3.3"
                 />.</para>
             </listitem>
-
+          </varlistentry>
+          
+          <varlistentry>
             <term><literal>enable-auto-props</literal></term>
             <listitem>
               <para>This instructs Subversion to automatically set
-              properties on newly added or imported files.  The
-              default value is <literal>no</literal>, so set this to
-              <literal>yes</literal> to enable Auto-props.</para>
-            </listitem>
+                properties on newly added or imported files.  The
+                default value is <literal>no</literal>, so set this to
+                <literal>yes</literal> to enable Auto-props.</para>
 
+              <para>The <literal>auto-props</literal> section controls
+                the Subversion client's ability to automatically set
+                properties on files when they are added or imported.
+                It contains any number of key-value pairs in the
+                format <literal>REGEX = PROPNAME=PROPVALUE</literal>
+                where <literal>REGEX</literal> is a regular expression
+                that matches a set of filenames and the rest of the
+                line is the property and its value.  Multiple matches
+                on a file will result in multiple propsets for that
+                file; however, there is no guarantee that auto-props
+                will be applied in the order in which they are listed
+                in the config file, so you can't have one rule
+                <quote>override</quote> another.  You can find several
+                examples of auto-props usage in the
+                <filename>config</filename> file.  Lastly, don't
+                forget to set <literal>enable-auto-props</literal> to
+                <literal>yes</literal> if you want to enable
+                auto-props. </para>
+            </listitem>            
           </varlistentry>
+
+          <varlistentry>
+            <term><literal>log-encoding</literal></term>
+            <listitem>         
+              <para>This variable sets the default character set
+                encoding for commit log messages.  It's a permanent
+                form of the <option>--encoding</option> option (see
+                <xref linkend="svn-ch-9-sect-1.1"/>.)  The Subversion
+                repository stores log messages in UTF8, and assumes
+                that your log message is written using your operating
+                system's native locale.  You should specify a
+                different encoding if your commit messages are written
+                in any other encoding.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><literal>use-commit-times</literal></term>
+            <listitem>         
+              <para>Normally your working copy files have timestamps
+                that reflect the last time they were touched by any
+                process, whether that be your own editor or by some
+                <command>svn</command> subcommand.  This is generally
+                convenient for people developing software, because
+                build systems often look at timestamps as a way of
+                deciding which files need to be recompiled.</para>
+
+              <para>In other situations, however, it's sometimes nice
+                for the working copy files to have timestamps that
+                reflect the last time they were changed in the
+                repository.  The <command>svn export</command> command
+                always places these "last-commit timestamps" on trees
+                that it produces.  By setting this config variable to
+                <literal>yes</literal>, the <command>svn
+                checkout</command>, <command>svn update</command>,
+                <command>svn switch</command>, and <command>svn
+                revert</command> commands will also set last-commit
+                timestamps on files that they touch.</para>
+            </listitem>
+          </varlistentry>
+          
 	  <!-- ###TODO add description of other options shown in example
-	   registry file, e.g., log-encoding, etc. -->
+          registry file, e.g., log-encoding, etc. -->
         </variablelist>
 
-
-        <para>The <literal>auto-props</literal> section controls the
-          Subversion client's ability to automatically set properties
-          on files when they are added or imported.  It contains any
-          number of key-value pairs in the format <literal>REGEX =
-          PROPNAME=PROPVALUE</literal> where <literal>REGEX</literal>
-          is a regular expression that matches a set of filenames and
-          the rest of the line is the property and its value.
-          Multiple matches on a file will result in multiple propsets
-          for that file; however, there is no guarantee that
-          auto-props will be applied in the order in which they are
-          listed in the config file, so you can't have one rule
-          <quote>override</quote> another.  You can find several
-          examples of auto-props usage in the
-          <filename>config</filename> file.  Lastly, don't forget to
-          set <literal>enable-auto-props</literal> to
-          <literal>yes</literal> if you want to enable auto-props.
-        </para>
-
-
-
       </sect3>
->
+
     </sect2>
   </sect1>
 

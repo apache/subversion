@@ -48,7 +48,7 @@
       something, and moves on from there, generating its own
       history.</para>
 
-      <figure id="svn-ch4-dia1">
+      <figure id="svn-ch-4-dia1">
         <title>Branches of Development</title>
         <graphic fileref="images/ch04dia1.png"/>
       </figure>
@@ -85,7 +85,7 @@
       The projects themselves are subdirectories of
       <filename>trunk</filename>, which we'll explain later on.</para>
     
-      <figure id="svn-ch4-dia2">
+      <figure id="svn-ch-4-dia2">
         <title>Starting Repository Layout</title>
         <graphic fileref="images/ch04dia2.png"/>
       </figure>
@@ -265,8 +265,8 @@ Committed revision 341.
     <sect2 id="svn-ch-4-sect-2.2">
       <title>Working with Your Branch</title> 
 
-      <para>Now that you've created a new branch of the project, you
-        can check out a new working copy to start using it:</para>
+      <para>Now that you've created a branch of the project, you can
+        check out a new working copy to start using it:</para>
 
 <screen>
 $ svn checkout http://svn.example.com/repos/branches/calc/my-calc-branch
@@ -277,10 +277,15 @@ Checked out revision 341.
 </screen>
 
       <para>There's nothing special about this working copy; it simply
-        mirrors a different location of the repository.  When you
+        mirrors a different directory in the repository.  When you
         commit changes, however, Sally won't ever see them when she
         updates.  Her working copy is of
-        <filename>/trunk/calc</filename>.</para>
+        <filename>/trunk/calc</filename>.  Also, be sure to read <xref
+        linkend="svn-ch-4-sect-5"/> later in this chapter, too: the
+        <command>svn switch</command> command is an alternative to
+        checking out a new working copy of the branch; it allows you
+        to convert an existing working copy (or portion thereof) to
+        reflect the new branch location.</para>
 
       <para>Let's pretend that a week goes by, and the following
       commits happen:</para>
@@ -443,7 +448,7 @@ r98 | sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
       copied back into the trunk.</para>
     
 
-    <sect2 id="svn-ch4-sect-3.1">
+    <sect2 id="svn-ch-4-sect-3.1">
       <title>Copying Specific Changes</title>
       
 
@@ -647,47 +652,93 @@ U   my-calc-branch/integer.c
       
     </sect2>
 
-    <sect2 id="svn-ch4-sect-3.2">
-      <title>Best Practices:  Tracking Merges Manually</title>
+    <sect2 id="svn-ch-4-sect-3.2">
+      <title>Best Practices for Merging</title>
 
-      <para>Merging changes sounds simple enough, but in practice it
-        can become a headache.  The problem is that if you repeatedly
-        merge changes from one branch to another, you might
-        accidentally merge the same change <emphasis>twice</emphasis>.
-        When this happens, sometimes things will work fine.  When
-        patching a file, Subversion typically notices if the file
-        already has the change, and does nothing.  But if the
-        already-existing change has been modified in any way, you'll
-        get a conflict.</para>
+      <sect3 id="svn-ch-4-sect-3.2.1">
+        <title>Tracking Merges Manually</title>
 
-      <para>Ideally, your version control system should prevent the
-        double-application of changes to a branch.  It should
-        automatically remember which changes a branch has already
-        received, and be able to list them for you.  It should use
-        this information to help automate merges as much as
-        possible.</para>
+        <para>Merging changes sounds simple enough, but in practice it
+          can become a headache.  The problem is that if you
+          repeatedly merge changes from one branch to another, you
+          might accidentally merge the same change
+          <emphasis>twice</emphasis>.  When this happens, sometimes
+          things will work fine.  When patching a file, Subversion
+          typically notices if the file already has the change, and
+          does nothing.  But if the already-existing change has been
+          modified in any way, you'll get a conflict.</para>
 
-      <para>Unfortunately, Subversion is not such a system.  Like CVS,
-        Subversion 1.0 does not yet record any information about merge
-        operations.  When you commit local modifications, the
-        repository has no idea whether those changes came from running
-        <command>svn merge</command>, or from just hand-editing the
-        files.</para>
+        <para>Ideally, your version control system should prevent the
+          double-application of changes to a branch.  It should
+          automatically remember which changes a branch has already
+          received, and be able to list them for you.  It should use
+          this information to help automate merges as much as
+          possible.</para>
 
-      <para>What does this mean to you, the user?  It means that until
-        the day Subversion grows this feature, you'll have to track
-        merge information yourself.  The best place to do this is in
-        the commit log-message.  As demonstrated in the earlier
-        example, it's recommended that your log-message mention a
-        specific revision number (or range of revisions) that are
-        being merged into your branch.  Later on, you can run
-        <command>svn log</command> to review which changes your branch
-        already contains.  This will allow you to carefully construct
-        a subsequent <command>svn merge</command> command that won't
-        be redundant with previously ported changes.</para>
+        <para>Unfortunately, Subversion is not such a system.  Like
+          CVS, Subversion 1.0 does not yet record any information
+          about merge operations.  When you commit local
+          modifications, the repository has no idea whether those
+          changes came from running <command>svn merge</command>, or
+          from just hand-editing the files.</para>
 
-      <para>In the next section, we'll show some examples of this
-        technique in action.</para>
+        <para>What does this mean to you, the user?  It means that
+          until the day Subversion grows this feature, you'll have to
+          track merge information yourself.  The best place to do this
+          is in the commit log-message.  As demonstrated in the
+          earlier example, it's recommended that your log-message
+          mention a specific revision number (or range of revisions)
+          that are being merged into your branch.  Later on, you can
+          run <command>svn log</command> to review which changes your
+          branch already contains.  This will allow you to carefully
+          construct a subsequent <command>svn merge</command> command
+          that won't be redundant with previously ported
+          changes.</para>
+
+        <para>In the next section, we'll show some examples of this
+          technique in action.</para>
+
+      </sect3>
+      
+      <sect3 id="svn-ch-4-sect-3.2.2">
+        <title>Previewing Merges</title>
+        
+        <para>Because merging only results in local modifications,
+          it's not usually a high-risk operation.  If you get the
+          merge wrong the first time, simply <command>svn
+          revert</command> the changes and try again.</para>
+        
+        <para>It's possible, however, that your working copy might
+          already have local modifications.  The changes applied by a
+          merge will be mixed with your pre-existing ones, and running
+          <command>svn revert</command> is no longer an option.  The
+          two sets of changes may be impossible to separate.</para>
+
+        <para>In cases like this, people take comfort in being able to
+          predict or examine merges before they happen.  One simple
+          way to do that is to run <command>svn diff</command> with
+          the same arguments you plan to pass to <command>svn
+          merge</command>, as we already showed in our first example
+          of merging.  Another method of previewing is to pass the
+          <option>--dry-run</option> option to the merge
+          command:</para>
+
+        <screen>
+$ svn merge --dry-run -r 343:344 http://svn.example.com/repos/trunk/calc
+U  integer.c
+
+$ svn status
+#  nothing printed, working copy is still unchanged.
+</screen>
+
+        <para>The <option>--dry-run</option> option doesn't actually
+          apply any local changes to the working copy.  It only shows
+          status codes that <emphasis>would</emphasis> be printed in a
+          real merge.  It's useful for getting a "high level" preview
+          of the potential merge, for those times when running
+          <command>svn diff</command> gives too much detail.</para>
+
+      </sect3>
 
     </sect2>
 
@@ -704,7 +755,7 @@ U   my-calc-branch/integer.c
         merge</command>, and this section describes the most common
         ones you're likely to run into.</para>
 
-    <sect2 id="svn-ch4-sect-4.1">
+    <sect2 id="svn-ch-4-sect-4.1">
       <title>Merging a Whole Branch to Another</title>
 
       <para>To complete our running example, we'll move forward in
@@ -781,7 +832,7 @@ Committed revision 406.
         to your original feature or bugfix.  The repository's HEAD
         revision is now 480, and you're ready to do another merge from
         your private branch to the trunk.  But as discussed in <xref
-        linkend="svn-ch4-sect-3.2"/>, you don't want to merge the
+        linkend="svn-ch-4-sect-3.2"/>, you don't want to merge the
         changes you've already merged before;  you only want to merge
         everything "new" on your branch since the last time you
         merged.</para>
@@ -834,7 +885,7 @@ Committed revision 481.
 
     </sect2>
 
-    <sect2 id="svn-ch4-sect-4.2">
+    <sect2 id="svn-ch-4-sect-4.2">
       <title>Undoing Changes</title>
 
       <para>Another common use for <command>svn merge</command> is to
@@ -919,7 +970,7 @@ Committed revision 350.
 
     </sect2>
 
-    <sect2 id="svn-ch4-sect-4.3">
+    <sect2 id="svn-ch-4-sect-4.3">
       <title>Resurrecting Deleted Items</title>
 
       <para>The great thing about version control systems is that
@@ -981,7 +1032,7 @@ Changed paths:
       
       <para>One option is to use <command>svn merge</command> to apply
         revision 808 "in reverse".  (We've already discussed how to
-        undo changes, see <xref linkend="svn-ch4-sect-4.2"/>.)  This
+        undo changes, see <xref linkend="svn-ch-4-sect-4.2"/>.)  This
         would have the affect of re-adding <filename>real.c</filename>
         as a local modification.  The file would be scheduled for
         addition, and after a commit, the file would again exist in
@@ -1319,7 +1370,7 @@ Committed revision 352.
       flexible.  In this section, we'll offer some suggestions for
       arranging and managing your data over time.</para>
 
-    <sect2 id="svn-ch4-sect7.1">
+    <sect2 id="svn-ch-4-sect-7.1">
       <title>Repository Layout</title>
       
       <para>There are some standard, recommended ways to organize a
@@ -1336,19 +1387,10 @@ Committed revision 352.
 /tags
 </screen>
 
-      <para>If a repository contains multiple projects, people often
-        index their layout by branch:</para>
-
-<screen>
-/trunk/paint
-/trunk/calc
-/branches/paint
-/branches/calc
-/tags/paint
-/tags/calc
-</screen>
-
-    <para>&hellip;or by project:</para>
+      <para>If a repository contains multiple projects, admins
+        typically index their layout by project (see <xref
+        linkend="svn-ch-5-sect-6.1"/> to read more about "project
+        roots"):</para>
 
 <screen>
 /paint/trunk
@@ -1372,7 +1414,7 @@ Committed revision 352.
       
     </sect2>
     
-    <sect2 id="svn-ch4-sect7.2">
+    <sect2 id="svn-ch-4-sect-7.2">
       <title>Data Lifetimes</title>
 
       <para>Another nice feature of Subversion's model is that
@@ -1466,8 +1508,8 @@ Committed revision 377.
       might manage the organization and lifetimes of branches in a
       repository.</para>
 
-    <para>Remember the Subversion mantra: branches are cheap.  So use
-      them liberally!</para>
+    <para>Remember the Subversion mantra: branches and tags are cheap.
+      So use them liberally!</para>
 
   </sect1>
 
