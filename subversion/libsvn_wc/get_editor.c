@@ -55,6 +55,7 @@
 #include <assert.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include <apr_tables.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
 #include "svn_types.h"
@@ -255,12 +256,9 @@ struct file_baton
      into the locally modified props.  */
   svn_boolean_t prop_conflict;
 
-  /* Hashes containing the file's latest properies; these hashes are
-     edited in-memory as a prop-delta is received.  Of course, if we
-     ever decide to make properties "streamy", these hashes will be
-     the first ones up against the wall.  :) */
-  apr_hash_t *localprops;
-  apr_hash_t *baseprops;
+  /* An array of (svn_propdelta_t *)'s, representing all the property
+     changes to be applied to this file. */
+  apr_array_header_t *propchanges;
 
 };
 
@@ -284,9 +282,7 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_string_t *name)
   f->dir_baton  = parent_dir_baton;
   f->name       = name;
   f->path       = path;
-  f->baseprops  = NULL;
-  f->localprops = NULL;  /* Don't initialize these hashes unless we start
-                            receiving a prop-delta later on. */
+  f->propchanges = apr_make_array (subpool, 1, sizeof(svn_propdelta_t *));
 
   parent_dir_baton->ref_count++;
 
@@ -767,85 +763,6 @@ apply_textdelta (void *file_baton,
 }
 
 
-/* If PROPFILE_PATH exists and is a file, assume it's full of
-   properties and load this file into HASH.  Otherwise, leave HASH
-   untouched.  */
-static svn_error_t *
-load_prop_file (svn_string_t *propfile_path,
-                apr_hash_t *hash,
-                apr_pool_t *pool)
-{
-  svn_error_t *err;
-  enum svn_node_kind kind;
-
-  err = svn_io_check_path (propfile_path, &kind, pool);
-  if (err) return err;
-  
-  if (kind == svn_node_file)
-    {
-      /* Ah, this file already has on-disk properties.  Load 'em. */
-      apr_status_t status;
-      apr_file_t *propfile = NULL;
-            
-      status = apr_open (&propfile, propfile_path->data,
-                         APR_READ, APR_OS_DEFAULT, pool);
-      if (status)
-        return svn_error_createf (status, 0, NULL, pool,
-                                  "load_prop_file: can't open `%s'",
-                                  propfile_path->data);
-      
-      status = svn_hash_read (hash, svn_pack_bytestring,
-                              propfile, pool);
-      if (status)
-        return svn_error_createf (status, 0, NULL, pool,
-                                  "load_prop_file:  can't parse `%s'",
-                                  propfile_path->data);
-      
-      status = apr_close (propfile);
-      if (status)
-        return svn_error_createf (status, 0, NULL, pool,
-                                  "load_prop_file: can't close `%s'",
-                                  propfile_path->data);
-    }
-  
-  return SVN_NO_ERROR;
-}
-
-
-/* Given a HASH full of property name/values, write them to a file
-   located at PROPFILE_PATH */
-static svn_error_t *
-save_prop_file (svn_string_t *propfile_path,
-                apr_hash_t *hash,
-                apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  apr_file_t *prop_tmp;
-
-  apr_err = apr_open (&prop_tmp, propfile_path->data,
-                      (APR_WRITE | APR_CREATE),
-                      APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, pool,
-                              "save_prop_file: can't open `%s'",
-                              propfile_path->data);
-
-  apr_err = svn_hash_write (hash, svn_unpack_bytestring,
-                            prop_tmp);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, pool,
-                              "save_prop_file: can't write prop hash to `%s'",
-                              propfile_path->data);
-
-  apr_err = apr_close (prop_tmp);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, pool,
-                              "save_prop_file: can't close `%s'",
-                              propfile_path->data);
-
-  return SVN_NO_ERROR;
-}
-
 
 
 static svn_error_t *
@@ -853,71 +770,34 @@ change_file_prop (void *file_baton,
                   svn_string_t *name,
                   svn_string_t *value)
 {
-  svn_error_t *err;
   struct file_baton *fb = file_baton;
-  svn_string_t *my_name, *my_value;
+  svn_string_t *local_name, *local_value;
+  svn_propdelta_t *propchange, **receiver;
 
   /* Duplicate storage of name/value pair;  they should live in the
      file baton's pool, not some pool within the editor's driver. :)
   */
-  my_name = svn_string_dup (name, fb->pool);
+  local_name = svn_string_dup (name, fb->pool);
   if (value)
     /* remember that value could be NULL, signifying a property
        `delete' */
-    my_value = svn_string_dup (value, fb->pool);
+    local_value = svn_string_dup (value, fb->pool);
   else
-    my_value = NULL;
+    local_value = NULL;
 
-  /* Create the file's in-memory prophashes if they don't yet exist */
-  if (! fb->baseprops)
-    {
-      svn_string_t *pristine_propfile_path;
-      svn_string_t *working_propfile_path;
-  
-      fb->baseprops = apr_make_hash (fb->pool);
-      fb->localprops = apr_make_hash (fb->pool);
+  /* Build propchange object */
+  propchange = apr_pcalloc (fb->pool, sizeof(*propchange));
+  propchange->kind = svn_propdelta_file;
+  propchange->name = local_name;
+  propchange->value = local_value;
+  propchange->entity_name = (svn_string_t *) fb->name;
 
-      pristine_propfile_path = svn_wc__adm_path (fb->dir_baton->path,
-                                                 0, /* not tmp */
-                                                 fb->pool,
-                                                 SVN_WC__ADM_PROP_BASE,
-                                                 fb->name->data,
-                                                 NULL);
+  /* Push the object to the file baton's array of propchanges */
+  receiver = (svn_propdelta_t **) apr_push_array (fb->propchanges);
+  *receiver = propchange;
 
-      working_propfile_path = svn_wc__adm_path (fb->dir_baton->path,
-                                                0, /* not tmp */
-                                                fb->pool,
-                                                SVN_WC__ADM_PROPS,
-                                                fb->name->data,
-                                                NULL);
-
-      err = load_prop_file (pristine_propfile_path,
-                            fb->baseprops, fb->pool);
-      if (err) return err;
-
-      err = load_prop_file (working_propfile_path,
-                            fb->localprops, fb->pool);
-      if (err) return err;
-    }
-
-  /* Add the new {name, value} to the hashes.  This is exactly the
-     correct behavior of our <set> and <delete> tags : if the name
-     doesn't yet exist, now it does.  If it already exists, it will be
-     overwritten.  If value is NULL, the key is removed altogether.
-     What a coincidence that these behaviors align so perfectly.  ;) */
-  apr_hash_set (fb->baseprops, my_name->data, my_name->len, my_value);
-  
-  /* With our `local' properties, we want to signal conflicts on a
-     merge, so we should first check to see if the hash key exists.  */
-  {
-    void *val = apr_hash_get (fb->localprops, my_name->data, my_name->len);
-    if (val)
-      fb->prop_conflict = 1;
-  }
-  /* Now do the conflicting merge anyway. */
-  apr_hash_set (fb->localprops, my_name->data, my_name->len, my_value);
-
-  /* Let close_file() know to write a future log entry about this: */
+  /* Let close_file() know that propchanges are waiting to be
+     applied. */
   fb->prop_changed = 1;
 
   return SVN_NO_ERROR;
@@ -929,8 +809,6 @@ close_file (void *file_baton)
 {
   struct file_baton *fb = file_baton;
   apr_file_t *log_fp = NULL;
-  svn_string_t *base_prop_tmp_path;
-  svn_string_t *local_prop_tmp_path;
   svn_error_t *err;
   apr_status_t apr_err;
   void *local_changes;
@@ -950,8 +828,8 @@ close_file (void *file_baton)
            set if necessary.
 
          - The new pristine props for F, if any, are present in
-           the file_baton->baseprops hash, and
-           file_baton->prop_changed is set if necessary.
+           the file_baton->propchanges array, and
+           file_baton->prop_changed is set.
 
          - The SVN/entries file still reflects the old F.
 
@@ -1064,13 +942,108 @@ close_file (void *file_baton)
                              svn_wc__text_base_path (fb->name, 0, fb->pool),
                              NULL);
     }
-  
+
+  /* MERGE ANY PROPERTY CHANGES, if they exist... */
   if (fb->prop_changed)
     {
-      svn_string_t *tmp_props, *real_props;
+      int i;
+      apr_hash_t *localhash, *basehash;
+      apr_array_header_t *local_propchanges;
+      /* zillions of pathnames to compute!  yeargh!  */
+      svn_string_t *base_propfile_path, *local_propfile_path;
+      svn_string_t *base_prop_tmp_path, *local_prop_tmp_path;
       svn_string_t *tmp_prop_base, *real_prop_base;
+      svn_string_t *tmp_props, *real_props;
 
-      /* Write the merged pristine prop hash to a file in SVN/tmp/prop-base/ */
+      /* Load the base & working property files into hashes */
+      localhash = apr_make_hash (fb->pool);
+      basehash = apr_make_hash (fb->pool);
+
+      base_propfile_path = svn_wc__adm_path (fb->dir_baton->path,
+                                             0, /* not tmp */
+                                             fb->pool,
+                                             SVN_WC__ADM_PROP_BASE,
+                                             fb->name->data,
+                                             NULL);
+      
+      local_propfile_path = svn_wc__adm_path (fb->dir_baton->path,
+                                              0, /* not tmp */
+                                              fb->pool,
+                                              SVN_WC__ADM_PROPS,
+                                              fb->name->data,
+                                              NULL);
+
+      err = svn_wc__load_prop_file (base_propfile_path,
+                                    basehash, fb->pool);
+      if (err) return err;
+      
+      err = svn_wc__load_prop_file (local_propfile_path,
+                                    localhash, fb->pool);
+      if (err) return err;
+
+      /* Deduce any local propchanges the user has made since the last
+         update.  */
+      err = svn_wc__get_local_propchanges (&local_propchanges,
+                                           localhash, basehash, fb->pool);
+      if (err) return err;
+
+      /* Looping over the array of propchanges we want to apply: */
+      for (i = 0; i < fb->propchanges->nelts; i++)
+        {
+          int j;
+          int found_match = 0;          
+          svn_propdelta_t *update_change, *local_change;
+
+          update_change = (((svn_propdelta_t **)(fb->propchanges)->elts)[i]);
+          
+          /* Apply the update_change to the pristine hash, no
+             questions asked. */
+          apr_hash_set (basehash,
+                        update_change->name->data,
+                        update_change->name->len,
+                        update_change->value);
+
+          /* Now, does the update_change conflict with some local change?  */
+          
+          /* First check if the property name even exists in our list
+             of local changes... */
+          for (j = 0; j < local_propchanges->nelts; j++)
+            {
+              local_change =
+                (((svn_propdelta_t **)(local_propchanges)->elts)[j]);
+
+              if (svn_string_compare (local_change->name, update_change->name))
+                {
+                  found_match = 1;
+                  break;
+                }
+            }
+
+          if (found_match)
+            /* Now see if the two changes actually conflict */
+            if (svn_wc__conflicting_propchanges_p (update_change,
+                                                   local_change))
+              {
+                /* TODO:  write log:  mark entry as conflicted
+                   TODO:  write log:  append english to some .prej
+                   file */
+                continue;  /* skip to the next update_change */
+              }
+          
+          /* If we get here, there's no conflict and we safely apply
+             the update_change to our working property hash */
+          apr_hash_set (localhash,
+                        update_change->name->data,
+                        update_change->name->len,
+                        update_change->value);
+        }
+      
+
+      /* Done merging property changes into both pristine and working
+         hashes.  Now we write them to temporary areas.  Notice that
+         the paths computed are ABSOLUTE pathnames.  */
+
+      /* Write the merged pristine prop hash to SVN/tmp/prop-base/ */
       base_prop_tmp_path = svn_wc__adm_path (fb->dir_baton->path,
                                              TRUE, /* tmp area */
                                              fb->pool,
@@ -1078,10 +1051,10 @@ close_file (void *file_baton)
                                              fb->name->data,
                                              NULL);
       
-      err = save_prop_file (base_prop_tmp_path, fb->baseprops, fb->pool);
+      err = svn_wc__save_prop_file (base_prop_tmp_path, basehash, fb->pool);
       if (err) return err;
       
-      /* Write the merged local prop hash to a file in SVN/tmp/props/ */
+      /* Write the merged local prop hash to SVN/tmp/props/ */
       local_prop_tmp_path = svn_wc__adm_path (fb->dir_baton->path,
                                               TRUE, /* tmp area */
                                               fb->pool,
@@ -1089,9 +1062,12 @@ close_file (void *file_baton)
                                               fb->name->data,
                                               NULL);
       
-      err = save_prop_file (local_prop_tmp_path, fb->localprops, fb->pool);
+      err = svn_wc__save_prop_file (local_prop_tmp_path, localhash, fb->pool);
       if (err) return err;
       
+      /* Compute pathnames for the "mv" log entries.  Notice that
+         these paths are RELATIVE pathnames, so that each SVN subdir
+         remains separable when executing run_log().  */
       tmp_prop_base = svn_wc__adm_path (svn_string_create ("", fb->pool),
                                         1, /* tmp */
                                         fb->pool,
@@ -1140,6 +1116,11 @@ close_file (void *file_baton)
                              SVN_WC__LOG_ATTR_DEST,
                              real_props,
                              NULL);
+
+      /* All done with properties.  The next section applies to both
+         text and propchanges.  (TODO:  we need a log entry that not
+         only bumps the revision number, but also sets a new
+         timestamp.  Ask Karl about his timestamp strategy. :) ) */
     }
 
   /* Set revision. */

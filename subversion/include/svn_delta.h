@@ -655,10 +655,35 @@ svn_error_t *svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
                                        apr_pool_t *pool);
 
 
-#endif  /* SVN_DELTA_H */
 
 
 
+/***  An in-memory property delta ***/
+
+typedef struct svn_propdelta_t
+{
+  enum {
+    svn_propdelta_file,
+    svn_propdelta_dir,
+  } kind;                    /* what kind of object does this
+                                prop-delta affect? */
+
+  svn_string_t *entity_name; /* The name of the file, dir, or dirent
+                                which is being patched. */
+  
+  svn_string_t *name;        /* name of property to change */
+  svn_string_t *value;       /* new value of property; if NULL, then
+                                this property should be deleted. */
+
+} svn_propdelta_t;
+
+
+
+
+#endif  /* SVN_DELTA_H */
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
