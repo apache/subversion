@@ -143,7 +143,7 @@ svn_diff__file_datasource_open(void *baton,
   file_baton->curp[idx] = file_baton->buffer[idx];
   file_baton->endp[idx] = file_baton->buffer[idx] + finfo.size;
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -151,7 +151,7 @@ svn_error_t *
 svn_diff__file_datasource_close(void *baton,
                                 svn_diff_datasource_e datasource)
 {
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -175,7 +175,7 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
 
   if (curp == endp)
     {
-      return NULL;
+      return SVN_NO_ERROR;
     }
 
   if (!file_baton->reuse_token)
@@ -203,7 +203,7 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
   file_baton->curp[idx] = eol;
   *token = file_token;
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -270,7 +270,7 @@ svn_diff_file(svn_diff_t **diff,
   SVN_ERR(svn_diff(diff, &baton, &svn_diff__file_vtable, pool));
 
   svn_pool_destroy(baton.pool);
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -291,7 +291,7 @@ svn_diff3_file(svn_diff_t **diff,
   SVN_ERR(svn_diff3(diff, &baton, &svn_diff__file_vtable, pool));
 
   svn_pool_destroy(baton.pool);
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 
@@ -350,7 +350,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
   
   if (length == 0 && apr_file_eof(baton->file[idx]))
     {
-      return NULL;
+      return SVN_NO_ERROR;
     }
   
   do
@@ -437,7 +437,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
       baton->length[idx] = 0;
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -452,7 +452,7 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   if (svn_stringbuf_isempty(baton->hunk))
     {
       /* Nothing to flush */
-      return NULL;
+      return SVN_NO_ERROR;
     }
 
   target_line = baton->hunk_start[0] + baton->hunk_length[0]
@@ -508,7 +508,7 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   baton->hunk_length[1] = 0;
   svn_stringbuf_setempty(baton->hunk);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -578,7 +578,7 @@ svn_diff__file_output_unified_diff_modified(void *baton,
         }
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -669,7 +669,7 @@ svn_diff_file_output_unified(apr_file_t *output_file,
         }
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 
@@ -725,7 +725,7 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
   baton->current_line[idx]++;
 
   if (curp == endp)
-    return NULL;
+    return SVN_NO_ERROR;
 
   eol = memchr(curp, '\n', endp - curp);
   if (!eol)
@@ -746,7 +746,7 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
 
   baton->curp[idx] = eol;
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -772,7 +772,7 @@ svn_diff3__file_output_hunk(void *baton,
                 svn_diff3__file_output_normal, idx));
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -890,7 +890,7 @@ svn_diff3__file_output_conflict(void *baton,
 
   apr_file_putc('\n', file_baton->output_file);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1018,5 +1018,5 @@ svn_diff3_file_output(apr_file_t *output_file,
     }
 #endif
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
