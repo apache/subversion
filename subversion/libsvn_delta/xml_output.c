@@ -242,7 +242,8 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
   if ((eb->elem == elem_dir && elem == elem_dir_prop_delta)
       || (eb->elem == elem_file && elem == elem_file_prop_delta))
     {
-      svn_xml_make_open_tag (&str, pool, svn_xml_normal, "prop-delta", NULL);
+      svn_xml_make_open_tag (&str, pool, svn_xml_protect_pcdata,
+                             "prop-delta", NULL);
       eb->elem = elem;
     }
 
@@ -516,7 +517,8 @@ apply_textdelta (void *file_baton,
       /* We are inside a file element (possibly in a prop-delta) and
          are outputting a text-delta inline.  */
       str = get_to_elem (eb, elem_file, pool);
-      svn_xml_make_open_tag (&str, pool, svn_xml_normal, "text-delta", NULL);
+      svn_xml_make_open_tag (&str, pool, svn_xml_protect_pcdata,
+                             "text-delta", NULL);
     }
   else
     {
@@ -525,7 +527,7 @@ apply_textdelta (void *file_baton,
          text-delta.  */
       char buf[128];
       sprintf(buf, "%d", fb->txdelta_id);
-      svn_xml_make_open_tag (&str, pool, svn_xml_normal, "text-delta",
+      svn_xml_make_open_tag (&str, pool, svn_xml_protect_pcdata, "text-delta",
                              "id", svn_string_create (buf, pool), NULL);
     }
   fb->txdelta_id = -1;
