@@ -420,6 +420,7 @@ close_edit (void *edit_baton)
          needs to update and commit again  :) */
 
       SVN_ERR (svn_fs_abort_txn (eb->txn));
+      return err;
     }
 
   /* The commit succeeded.  Save the log message as a property of the
