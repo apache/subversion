@@ -1126,7 +1126,9 @@ Then move to that line."
 
 (defun svn-status-property-set-keyword-list ()
   (interactive)
-  (message "svn-status-property-set-keyword-list"))
+  ;; Until this function is properly implemented, signal an error so
+  ;; that the user need not wonder what the command did.
+  (error "svn-status-property-set-keyword-list not yet implemented"))
 
 ;; --------------------------------------------------------------------------------
 ;; svn-prop-edit-mode:
