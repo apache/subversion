@@ -1,4 +1,4 @@
-%define apache_version 2.0.47-0.1
+%define apache_version 2.0.48-0.1
 %define neon_version 0.24.4
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
@@ -93,6 +93,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Fri Dec 19 2003 David Summers <david@summersoft.fay.ar.us> 0.35.0-8054
+- Require httpd-2.0.48.  *** Note: I don't yet have packages for httpd-2.0.48.
+
 * Tue Oct 25 2003 Blair Zajac <blair@orcaware.com> 0.32.1-7520
 - Require neon 0.24.4.
 
