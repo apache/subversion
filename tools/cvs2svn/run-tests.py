@@ -26,6 +26,12 @@ import os
 import time
 import os.path
 
+# This script needs to run in tools/cvs2svn/.  Make sure we're there.
+if not (os.path.exists('cvs2svn.py') and os.path.exists('test-data')):
+  sys.stderr.write("error: I need to be run in 'tools/cvs2svn/' "
+                   "in the Subversion tree.\n")
+  sys.exit(1)
+
 # Find the Subversion test framework.
 sys.path += [os.path.abspath('../../subversion/tests/clients/cmdline')]
 import svntest
@@ -46,13 +52,6 @@ svnlook = 'svnlook'
 
 test_data_dir = 'test-data'
 tmp_dir = 'tmp'
-
-# This script needs to run in tools/cvs2svn/.  Make sure we're there.
-out, err = svntest.main.run_command(svn, 1, 0, 'info')
-for line in out:
-  if (line.find('Url: ') == 0) and (line.find('tools/cvs2svn') < 0):
-    sys.stderr.write('error: I need to be run in "tools/cvs2svn/"\n')
-    sys.exit(1)
 
 
 #----------------------------------------------------------------------
