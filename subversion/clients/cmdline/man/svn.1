@@ -39,6 +39,9 @@ Print client version info.
 \fB-N\fB, \fB--non-recursive\fP
 Local; run only in current working directory.
 .TP
+\fB--dry-run\fP
+Try operation but make no changes.
+.TP
 \fB-R\fP, \fB--recursive\fP
 Operate recursively (default).
 .TP
@@ -92,7 +95,7 @@ to display a list of all commands, and to request a help text for a particular
 command, run
 \fBsvn help command\fP.
 .TP
-\fBadd\fP \fIfile\fP \fR[\fI--targets file\fR] [\fI-Rq\fR]\fI
+\fBadd\fP \fIfile\fP \fR[\fI--targets file\fR] [\fI-Nq\fR]\fI
 Use this command to enroll new files in \fBsvn\fP records of your working
 directory.  The files will be added to the repository the next time you run
 "svn commit". You should use the "svn import" command to bootstrap new
@@ -100,6 +103,9 @@ sources into the source repository. "svn add" is only used for adding new
 files to an already checked-out module.
 
 \fBexample:\fP svn add foo.c bar.h baz/ bat/*.m
+.TP
+\fBcat\fP \fITARGET\fP \fR[\fITARGET ...\fR]  [\fI--username name\fR] [\fI--password arg\fR] [\fI-r\fR]\fI
+Output the content of specified files or URLs.
 .TP
 \fBcheckout\fP \fIrepository\fP \fR[\fIrepository\|.\|.\|.\fR] [\fIdestination\fR] [\fI--username name\fR] [\fI--password arg\fR] [\fI--no-auth-cache\fR] [\fI-rqN\fR]
 (Alias: co)
@@ -162,7 +168,7 @@ the repository, and deleted from your working copy.
 
 \fBexample:\fP svn delete foo.c bar.h
 .TP
-\fBdiff\fP [\fItarget...\fP] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI-rxN\fR]\fI
+\fBdiff\fP [\fItarget...\fP] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--no-diff-deleted\fR] [\fI-rxN\fR]\fI
 (Alias: di)
 Display file changes as contextual diffs. The target can be a
 directory, in which it operates recursively. The target can be an URL,
@@ -176,6 +182,8 @@ repository revision.
 
 -N/--non-recursive with a directory target will prevent recursive
 descent into subdirectories.
+
+--no-diff-deleted will not print differences for deleted files.
 
 \fBexample:\fP svn diff README
 
@@ -222,7 +230,7 @@ Print info about a versioned resource.
 (Alias: ls)
 List directory entries of a URL.
 .TP
-\fBlog\fP [\fIurl\fP] [\fIfile|dir\fP] [\fINew-Repository-Entry\fP] [\fI--targets file\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--strict] [\fI--xml\fP] [\fI-rv\fP]
+\fBlog\fP [\fIurl\fP] [\fIfile|dir\fP] [\fINew-Repository-Entry\fP] [\fI--targets file\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--strict] [\fI--xml\fP] [\fI-rqv\fP]
 Show log messages (and affected entities) for commits in which any of the
 entities in question changed.  If none were specified, then recursive
 inclusion is the default.  The set of messages can be further restricted
@@ -230,7 +238,9 @@ by a revision range specification (using -r). A URL can also
 be specific to retrieve logs from a remote repository. If the URL is
 passed alone, then only that entry will be searched. If paths are also
 supplied with the URL, then only those paths are searched, based at the
-given URL.
+given URL.  With -v, also print all affected paths with each log message.
+With -q, don't print the log message body itself (note that this is 
+compatible with -v).
 
 \fBexample:\fP svn log
 
