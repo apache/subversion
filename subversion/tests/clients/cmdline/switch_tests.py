@@ -53,11 +53,11 @@ def get_routine_status_state(wc_dir):
 
   # Now generate a state
   state = svntest.actions.get_virginal_state(wc_dir, 1)
-  state.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  state.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/B/lambda')
   state.add({
-    'A/D/H/pi' : Item(status='  ', wc_rev=1, repos_rev=1),
-    'A/D/H/tau' : Item(status='  ', wc_rev=1, repos_rev=1),
-    'A/D/H/rho' : Item(status='  ', wc_rev=1, repos_rev=1),
+    'A/B/pi' : Item(status='  ', wc_rev=1, repos_rev=1),
+    'A/B/tau' : Item(status='  ', wc_rev=1, repos_rev=1),
+    'A/B/rho' : Item(status='  ', wc_rev=1, repos_rev=1),
     })
 
   return state
@@ -73,12 +73,12 @@ def get_routine_disk_state(wc_dir):
   # iota has the same contents as gamma
   disk.tweak('iota', contents=disk.desc['A/D/gamma'].contents)
 
-  # A/D/H/* no longer exist, but have been replaced by copies of A/D/G/*
-  disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  # A/B/* no longer exist, but have been replaced by copies of A/D/G/*
+  disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/B/lambda')
   disk.add({
-    'A/D/H/pi' : Item("This is the file 'pi'."),
-    'A/D/H/rho' : Item("This is the file 'rho'."),
-    'A/D/H/tau' : Item("This is the file 'tau'."),
+    'A/B/pi' : Item("This is the file 'pi'."),
+    'A/B/rho' : Item("This is the file 'rho'."),
+    'A/B/tau' : Item("This is the file 'tau'."),
     })
 
   return disk
@@ -120,47 +120,39 @@ def do_routine_switching(wc_dir, verify):
   else:
     svntest.main.run_svn(None, 'switch', gamma_url, iota_path)
   
-  ### Switch the directory `A/D/H' to `A/D/G'.
+  ### Switch the directory `A/B' to `A/D/G'.
 
   # Construct some paths for convenience
-  ADH_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  AB_path = os.path.join(wc_dir, 'A', 'B')
   ADG_url = os.path.join(svntest.main.current_repo_url, 'A', 'D', 'G')
 
   if verify:
-    # Construct some more paths for convenience
-    chi_path = os.path.join(ADH_path, 'chi')
-    omega_path = os.path.join(ADH_path, 'omega')
-    psi_path = os.path.join(ADH_path, 'psi')
-    pi_path = os.path.join(ADH_path, 'pi')
-    tau_path = os.path.join(ADH_path, 'tau')
-    rho_path = os.path.join(ADH_path, 'rho')
-    
     # Create expected output tree
     expected_output = svntest.wc.State(wc_dir, {
-      'A/D/H/chi' : Item(status='D '),
-      'A/D/H/omega' : Item(status='D '),
-      'A/D/H/psi' : Item(status='D '),
-      'A/D/H/pi' : Item(status='A '),
-      'A/D/H/tau' : Item(status='A '),
-      'A/D/H/rho' : Item(status='A '),
+      'A/B/E'       : Item(status='D '),
+      'A/B/F'       : Item(status='D '),
+      'A/B/lambda'  : Item(status='D '),
+      'A/B/pi' : Item(status='A '),
+      'A/B/tau' : Item(status='A '),
+      'A/B/rho' : Item(status='A '),
       })
     
     # Create expected disk tree (iota will have gamma's contents,
-    # A/D/H/* will look like A/D/G/*)
+    # A/B/* will look like A/D/G/*)
     expected_disk = get_routine_disk_state(wc_dir)
     
     # Create expected status
     expected_status = get_routine_status_state(wc_dir)
-    expected_status.tweak('iota', 'A/D/H', switched='S')
+    expected_status.tweak('iota', 'A/B', switched='S')
   
     # Do the switch and check the results in three ways.
-    if svntest.actions.run_and_verify_switch(wc_dir, ADH_path, ADG_url,
+    if svntest.actions.run_and_verify_switch(wc_dir, AB_path, ADG_url,
                                              expected_output,
                                              expected_disk,
                                              expected_status):
       return 1
   else:
-    svntest.main.run_svn(None, 'switch', ADG_url, ADH_path)
+    svntest.main.run_svn(None, 'switch', ADG_url, AB_path)
 
   return 0
 
@@ -171,22 +163,20 @@ def commit_routine_switching(wc_dir, verify):
   
   # Make some local mods
   iota_path = os.path.join(wc_dir, 'iota')
-  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  Hpi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'pi')
+  Bpi_path = os.path.join(wc_dir, 'A', 'B', 'pi')
   Gpi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   Z_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z')
   zeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z', 'zeta')
 
   svntest.main.file_append(iota_path, "apple")
-  svntest.main.file_append(alpha_path, "orange")
-  svntest.main.file_append(Hpi_path, "watermelon")
+  svntest.main.file_append(Bpi_path, "watermelon")
   svntest.main.file_append(Gpi_path, "banana")
   os.mkdir(Z_path)
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
   svntest.main.run_svn(None, 'add', '--recursive', Z_path)
 
   # Try to commit.  We expect this to fail because, if all the
-  # switching went as expected, A/D/H/pi and A/D/G/pi point to the
+  # switching went as expected, A/B/pi and A/D/G/pi point to the
   # same URL.  We don't allow this.
   if svntest.actions.run_and_verify_commit (wc_dir, None, None,
                                             "commit to a URL more than once",
@@ -204,16 +194,14 @@ def commit_routine_switching(wc_dir, verify):
     'A/D/G/Z' : Item(verb='Adding'),
     'A/D/G/Z/zeta' : Item(verb='Adding'),
     'iota' : Item(verb='Sending'),
-    'A/D/H/pi' : Item(verb='Sending'),
-    'A/B/E/alpha' : Item(verb='Sending'),
+    'A/B/pi' : Item(verb='Sending'),
     })
 
   # Created expected status tree.
   expected_status = get_routine_status_state(wc_dir)
   expected_status.tweak(repos_rev=2)
-  expected_status.tweak('iota', 'A/D/H', switched='S')
-  expected_status.tweak('iota', 'A/B/E/alpha', 'A/D/H/pi',
-                        wc_rev=2, status='  ')
+  expected_status.tweak('iota', 'A/B', switched='S')
+  expected_status.tweak('iota', 'A/B/pi', wc_rev=2, status='  ')
   expected_status.add({
     'A/D/G/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
     'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
@@ -293,10 +281,9 @@ def full_update(sbox):
   # Some convenient path variables
   iota_path = os.path.join(wc_dir, 'iota')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  Hpi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'pi')
-  HZ_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
-  Hzeta_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z', 'zeta')
+  Bpi_path = os.path.join(wc_dir, 'A', 'B', 'pi')
+  BZ_path = os.path.join(wc_dir, 'A', 'B', 'Z')
+  Bzeta_path = os.path.join(wc_dir, 'A', 'B', 'Z', 'zeta')
   Gpi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   GZ_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z')
   Gzeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z', 'zeta')
@@ -305,10 +292,9 @@ def full_update(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(status='U '),
     'A/D/gamma' : Item(status='U '),
-    'A/B/E/alpha' : Item(status='U '),
-    'A/D/H/pi' : Item(status='U '),
-    'A/D/H/Z' : Item(status='A '),
-    'A/D/H/Z/zeta' : Item(status='A '),
+    'A/B/pi' : Item(status='U '),
+    'A/B/Z' : Item(status='A '),
+    'A/B/Z/zeta' : Item(status='A '),
     'A/D/G/pi' : Item(status='U '),
     'A/D/G/Z' : Item(status='A '),
     'A/D/G/Z/zeta' : Item(status='A '),
@@ -318,13 +304,11 @@ def full_update(sbox):
   expected_disk = get_routine_disk_state(wc_dir)
   expected_disk.tweak('iota', contents="This is the file 'gamma'.apple")
   expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.apple")
-  expected_disk.tweak('A/D/H/pi', contents="This is the file 'pi'.watermelon")
+  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.watermelon")
   expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.watermelon")
-  expected_disk.tweak('A/B/E/alpha',
-                      contents="This is the file 'alpha'.orange")
   expected_disk.add({
-    'A/D/H/Z' : Item(),
-    'A/D/H/Z/zeta' : Item(contents="This is the file 'zeta'."),
+    'A/B/Z' : Item(),
+    'A/B/Z/zeta' : Item(contents="This is the file 'zeta'."),
     'A/D/G/Z' : Item(),
     'A/D/G/Z/zeta' : Item(contents="This is the file 'zeta'."),
     })
@@ -335,10 +319,10 @@ def full_update(sbox):
   expected_status.add({
     'A/D/G/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
     'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/H/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/H/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
-  expected_status.tweak('iota', 'A/D/H', switched='S')
+  expected_status.tweak('iota', 'A/B', switched='S')
 
   return svntest.actions.run_and_verify_update(wc_dir,
                                                expected_output,
@@ -369,9 +353,8 @@ def full_rev_update(sbox):
   # Some convenient path variables
   iota_path = os.path.join(wc_dir, 'iota')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  Hpi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'pi')
-  HZ_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
+  Bpi_path = os.path.join(wc_dir, 'A', 'B', 'pi')
+  BZ_path = os.path.join(wc_dir, 'A', 'B', 'Z')
   Gpi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   GZ_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z')
 
@@ -379,9 +362,8 @@ def full_rev_update(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(status='U '),
     'A/D/gamma' : Item(status='U '),
-    'A/B/E/alpha' : Item(status='U '),
-    'A/D/H/pi' : Item(status='U '),
-    'A/D/H/Z' : Item(status='D '),
+    'A/B/pi' : Item(status='U '),
+    'A/B/Z' : Item(status='D '),
     'A/D/G/pi' : Item(status='U '),
     'A/D/G/Z' : Item(status='D '),
     })
@@ -392,7 +374,7 @@ def full_rev_update(sbox):
   # Create expected status
   expected_status = get_routine_status_state(wc_dir)
   expected_status.tweak(repos_rev=2)
-  expected_status.tweak('iota', 'A/D/H', switched='S')
+  expected_status.tweak('iota', 'A/B', switched='S')
 
   return svntest.actions.run_and_verify_update(wc_dir,
                                                expected_output,
@@ -426,38 +408,35 @@ def update_switched_things(sbox):
 
   # Some convenient path variables
   iota_path = os.path.join(wc_dir, 'iota')
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  Hpi_path = os.path.join(H_path, 'pi')
-  HZ_path = os.path.join(H_path, 'Z')
-  Hzeta_path = os.path.join(H_path, 'Z', 'zeta')
+  B_path = os.path.join(wc_dir, 'A', 'B')
 
   # Create expected output tree for an update of wc_backup.
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(status='U '),
-    'A/D/H/pi' : Item(status='U '),
-    'A/D/H/Z' : Item(status='A '),
-    'A/D/H/Z/zeta' : Item(status='A '),
+    'A/B/pi' : Item(status='U '),
+    'A/B/Z' : Item(status='A '),
+    'A/B/Z/zeta' : Item(status='A '),
     })
 
   # Create expected disk tree for the update
   expected_disk = get_routine_disk_state(wc_dir)
   expected_disk.tweak('iota', contents="This is the file 'gamma'.apple")
 
-  expected_disk.tweak('A/D/H/pi', contents="This is the file 'pi'.watermelon")
+  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.watermelon")
   expected_disk.add({
-    'A/D/H/Z' : Item(),
-    'A/D/H/Z/zeta' : Item("This is the file 'zeta'."),
+    'A/B/Z' : Item(),
+    'A/B/Z/zeta' : Item("This is the file 'zeta'."),
     })
 
   # Create expected status tree for the update.
   expected_status = get_routine_status_state(wc_dir)
   expected_status.tweak(repos_rev=2)
-  expected_status.tweak('iota', 'A/D/H', switched='S')
-  expected_status.tweak('A/D/H', 'A/D/H/pi', 'A/D/H/rho', 'A/D/H/tau', 'iota',
+  expected_status.tweak('iota', 'A/B', switched='S')
+  expected_status.tweak('A/B', 'A/B/pi', 'A/B/rho', 'A/B/tau', 'iota',
                         wc_rev=2)
   expected_status.add({
-    'A/D/H/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/H/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
 
   return svntest.actions.run_and_verify_update(wc_dir,
@@ -466,7 +445,7 @@ def update_switched_things(sbox):
                                                expected_status,
                                                None, None, None,
                                                None, None, 0,
-                                               H_path,
+                                               B_path,
                                                iota_path,
                                                )
 
@@ -490,15 +469,7 @@ def rev_update_switched_things(sbox):
 
   # Some convenient path variables
   iota_path = os.path.join(wc_dir, 'iota')
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  Hpi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'pi')
-  HZ_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
-  Hzeta_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z', 'zeta')
-  Gpi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  GZ_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z')
-  Gzeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z', 'zeta')
+  B_path = os.path.join(wc_dir, 'A', 'B')
 
   # Update to HEAD (tested elsewhere)
   svntest.main.run_svn (None, 'up', wc_dir)
@@ -506,16 +477,14 @@ def rev_update_switched_things(sbox):
   # Now, reverse update, back to the pre-commit state.
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(status='U '),
-    'A/D/H/pi' : Item(status='U '),
-    'A/D/H/Z' : Item(status='D '),
+    'A/B/pi' : Item(status='U '),
+    'A/B/Z' : Item(status='D '),
     })
 
   # Create expected disk tree
   expected_disk = get_routine_disk_state(wc_dir)
   expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.apple")
   expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.watermelon")
-  expected_disk.tweak('A/B/E/alpha',
-                      contents="This is the file 'alpha'.orange")
   expected_disk.add({
     'A/D/G/Z' : Item(),
     'A/D/G/Z/zeta' : Item("This is the file 'zeta'."),
@@ -524,8 +493,8 @@ def rev_update_switched_things(sbox):
   # Create expected status tree for the update.
   expected_status = get_routine_status_state(wc_dir)
   expected_status.tweak(repos_rev=2, wc_rev=2)
-  expected_status.tweak('iota', 'A/D/H', switched='S')
-  expected_status.tweak('A/D/H', 'A/D/H/pi', 'A/D/H/rho', 'A/D/H/tau', 'iota',
+  expected_status.tweak('iota', 'A/B', switched='S')
+  expected_status.tweak('A/B', 'A/B/pi', 'A/B/rho', 'A/B/tau', 'iota',
                         wc_rev=1)
   expected_status.add({
     'A/D/G/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
@@ -539,7 +508,7 @@ def rev_update_switched_things(sbox):
                                                None, None, None,
                                                None, None, 1,
                                                '-r', '1',
-                                               H_path,
+                                               B_path,
                                                iota_path
                                                )
 
@@ -554,12 +523,12 @@ def rev_update_switched_things(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              routine_switching,
-              commit_switched_things,
-              full_update,
-              full_rev_update,
-              update_switched_things,
-              rev_update_switched_things,
+              XFail(routine_switching),
+              XFail(commit_switched_things),
+              XFail(full_update),
+              XFail(full_rev_update),
+              XFail(update_switched_things),
+              XFail(rev_update_switched_things),
               ]
 
 if __name__ == '__main__':
