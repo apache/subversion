@@ -920,7 +920,7 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
 	croak("Unable to convert from SWIG Type");
     }
     *c_baton = perl_callbacks;
-
+    svn_swig_pl_hold_ref_in_pool (pool, perl_callbacks);
     return SVN_NO_ERROR;
 }
 
