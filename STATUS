@@ -9,13 +9,6 @@ Status of 1.0.9:
 
 Candidate changes:
 
-  * r11137
-    Fix the verbose log code for revisions with no changed paths.
-    Justification:
-      Shallow silly bug.
-    Votes:
-      +1: bliss, lundblad, ghudson
-
   * r11143, r11145
     Fix broken RPM build caused by changes to book Makefile right before
     1.0.7 was released.
