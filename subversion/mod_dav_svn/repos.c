@@ -1096,9 +1096,10 @@ dav_svn_split_uri (request_rec *r,
               }
             
             if (defn->name == NULL)
-              dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
-                            SVN_ERR_APMOD_MALFORMED_URI,
-                            "Couldn't match subdir after special_uri.");
+              return
+                dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                              SVN_ERR_APMOD_MALFORMED_URI,
+                              "Couldn't match subdir after special_uri.");
           }
       }
     else
