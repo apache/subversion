@@ -1845,29 +1845,28 @@ class Commit:
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
       svn_path = make_path(ctx, cvs_path, br)
       print '    deleting %s : %s' % (cvs_rev, svn_path)
-      if cvs_rev != '1.1':
-        if svn_rev == SVN_INVALID_REVNUM:
-          svn_rev = dumper.start_revision(props)
-        # Uh, can this even happen on a deleted path?  Hmmm.  If not,
-        # there's no risk, since tags and branches would just be empty
-        # and therefore enrooting would be a no-op.  Still, it would
-        # be clearer to know for sure and simply not call it.
-        sym_tracker.enroot_tags(svn_path, svn_rev, tags)
-        sym_tracker.enroot_branches(svn_path, svn_rev, branches)
-        ### FIXME: this will return path_deleted == None if no path
-        ### was deleted.  But we'll already have started the revision
-        ### by then, so it's a bit late to use the knowledge!  Need to
-        ### reorganize things so that starting the revision is a
-        ### callback with its own internal conditional, so anyone can
-        ### just invoke when they know they're really about to do
-        ### something.
-        ###
-        ### Right now what happens is we get an empty revision
-        ### (assuming nothing else happened in this revision).
-        path_deleted, closed_tags, closed_branches = \
-                      dumper.delete_path(svn_path, tags, branches, ctx.prune)
-        sym_tracker.close_tags(svn_path, svn_rev, closed_tags)
-        sym_tracker.close_branches(svn_path, svn_rev, closed_branches)
+      if svn_rev == SVN_INVALID_REVNUM:
+        svn_rev = dumper.start_revision(props)
+      # Uh, can this even happen on a deleted path?  Hmmm.  If not,
+      # there's no risk, since tags and branches would just be empty
+      # and therefore enrooting would be a no-op.  Still, it would
+      # be clearer to know for sure and simply not call it.
+      sym_tracker.enroot_tags(svn_path, svn_rev, tags)
+      sym_tracker.enroot_branches(svn_path, svn_rev, branches)
+      ### FIXME: this will return path_deleted == None if no path
+      ### was deleted.  But we'll already have started the revision
+      ### by then, so it's a bit late to use the knowledge!  Need to
+      ### reorganize things so that starting the revision is a
+      ### callback with its own internal conditional, so anyone can
+      ### just invoke when they know they're really about to do
+      ### something.
+      ###
+      ### Right now what happens is we get an empty revision
+      ### (assuming nothing else happened in this revision).
+      path_deleted, closed_tags, closed_branches = \
+                    dumper.delete_path(svn_path, tags, branches, ctx.prune)
+      sym_tracker.close_tags(svn_path, svn_rev, closed_tags)
+      sym_tracker.close_branches(svn_path, svn_rev, closed_branches)
 
     if svn_rev != SVN_INVALID_REVNUM:
       print '    new revision:', svn_rev
