@@ -514,7 +514,8 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
       const svn_string_t *value;
       SVN_ERR(svn_ra_dav__get_dir(ras, "", 0, NULL, NULL, &props));
       value = apr_hash_get(props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING);
-      ras->uuid = value->data;
+      if (value) 
+        ras->uuid = value->data;
     }
 
   *uuid = ras->uuid;
