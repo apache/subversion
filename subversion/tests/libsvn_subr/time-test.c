@@ -137,11 +137,13 @@ test_time_from_cstring_old (const char **msg,
      * all platforms. */
     for (ft = failure_old_tests; *ft; ft++)
       {
-        if (SVN_NO_ERROR == svn_time_from_cstring (&timestamp, *ft, pool))
+        svn_error_t *err = svn_time_from_cstring (&timestamp, *ft, pool);
+        if (! err)
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL,
              "svn_time_from_cstring (%s) succeeded when it should have failed",
              *ft);
+        svn_error_clear (err);
       }
 
   return SVN_NO_ERROR;
