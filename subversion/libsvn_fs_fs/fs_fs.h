@@ -118,8 +118,8 @@ svn_boolean_t svn_fs__fs_noderev_same_data_key (svn_fs__node_revision_t *a,
 #define SVN_FS_FS__COPYROOT          "copyroot"
 
 /* Kinds that a node-rev can be. */
-#define SVN_FS_FS__FILE              "file"     /* node-rev kind for file */
-#define SVN_FS_FS__DIR               "dir"      /* node-rev kind for directory */
+#define SVN_FS_FS__FILE              "file"   /* node-rev kind for file */
+#define SVN_FS_FS__DIR               "dir"    /* node-rev kind for directory */
 #define SVN_FS_FS__SOFT              "soft"
 #define SVN_FS_FS__HARD              "hard"
 

@@ -68,8 +68,7 @@ svn_fs__fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Read in the uuid. */
   uuid_size = APR_UUID_FORMATTED_LENGTH;
-  SVN_ERR (svn_io_file_read (uuid_file, buffer,
-                             &uuid_size, pool));
+  SVN_ERR (svn_io_file_read (uuid_file, buffer, &uuid_size, pool));
 
   buffer[APR_UUID_FORMATTED_LENGTH] = 0;
 
@@ -90,13 +89,14 @@ svn_fs__fs_youngest_revision (svn_revnum_t *youngest_p,
   apr_size_t len;
 
   SVN_ERR (svn_io_file_open (&revision_file,
-                             svn_path_join (fs->fs_path, SVN_FS_FS__CURRENT, pool),
+                             svn_path_join (fs->fs_path, SVN_FS_FS__CURRENT,
+                                            pool),
                              APR_READ, APR_OS_DEFAULT, pool));
 
-  len = sizeof(buf);
+  len = sizeof (buf);
   SVN_ERR (svn_io_file_read (revision_file, buf, &len, pool));
 
-  *youngest_p = atoi(buf);
+  *youngest_p = atoi (buf);
 
   SVN_ERR (svn_io_file_close (revision_file, pool));
 
@@ -133,13 +133,13 @@ static svn_error_t * read_header_block (apr_hash_t **headers,
       apr_size_t limit;
       char *local_name, *local_value;
 
-      limit = sizeof(header_str);
-      SVN_ERR (svn_io_read_length_line(file, header_str, &limit, pool));
+      limit = sizeof (header_str);
+      SVN_ERR (svn_io_read_length_line (file, header_str, &limit, pool));
 
-      if (strlen(header_str)==0)
+      if (strlen (header_str) == 0)
         break; /* end of header block */
       
-      header_len = strlen(header_str);
+      header_len = strlen (header_str);
 
       while (header_str[i] != ':')
         {
@@ -167,9 +167,7 @@ static svn_error_t * read_header_block (apr_hash_t **headers,
       local_name = apr_pstrdup (pool, name);
       local_value = apr_pstrdup (pool, value);
 
-      apr_hash_set (*headers, local_name,
-                    APR_HASH_KEY_STRING,
-                    local_value);
+      apr_hash_set (*headers, local_name, APR_HASH_KEY_STRING, local_value);
     }
 
   return SVN_NO_ERROR;
@@ -191,12 +189,10 @@ open_and_seek_revision (apr_file_t **file,
   rev_filename = apr_psprintf (pool, "r%" SVN_REVNUM_T_FMT, rev);
 
   SVN_ERR (svn_io_file_open (&rev_file,
-                             svn_path_join (fs->fs_path,
-                                            rev_filename, pool),
+                             svn_path_join (fs->fs_path, rev_filename, pool),
                              APR_READ, APR_OS_DEFAULT, pool));
 
-  SVN_ERR (svn_io_file_seek (rev_file, APR_SET,
-                             &offset, pool));
+  SVN_ERR (svn_io_file_seek (rev_file, APR_SET, &offset, pool));
 
   *file = rev_file;
 
@@ -222,45 +218,49 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
 
   SVN_ERR (read_header_block (&headers, revision_file, pool) );
 
-  noderev = apr_pcalloc (pool, sizeof(*noderev));
+  noderev = apr_pcalloc (pool, sizeof (*noderev));
 
   /* Read the node-rev id. */
   value = apr_hash_get (headers, SVN_FS_FS__NODE_ID, APR_HASH_KEY_STRING);
 
-  noderev->id = svn_fs_parse_id (value, strlen(value), pool);
+  noderev->id = svn_fs_parse_id (value, strlen (value), pool);
 
   /* Read the type. */
   value = apr_hash_get (headers, SVN_FS_FS__KIND, APR_HASH_KEY_STRING);
 
   if ((value == NULL) ||
-      (strcmp (value, SVN_FS_FS__FILE)!=0 && strcmp (value, SVN_FS_FS__DIR)))
+      (strcmp (value, SVN_FS_FS__FILE) != 0 && strcmp (value, SVN_FS_FS__DIR)))
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                              "Missing kind field in node-rev.");
 
-  if (strcmp (value, SVN_FS_FS__FILE)==0)
+  if (strcmp (value, SVN_FS_FS__FILE) == 0)
     {
       noderev->kind = svn_node_file;
-    } else {
+    }
+  else
+    {
       noderev->kind = svn_node_dir;
     }
 
   /* Read the 'count' field. */
   value = apr_hash_get (headers, SVN_FS_FS__COUNT, APR_HASH_KEY_STRING);
-
   if (value == NULL)
     {
       noderev->predecessor_count = 0;
-    } else {
+    }
+  else
+    {
       noderev->predecessor_count = atoi (value);
     }
 
   /* Get the properties location. */
   value = apr_hash_get (headers, SVN_FS_FS__PROPS, APR_HASH_KEY_STRING);
-
   if (value == NULL)
     {
       noderev->prop_offset = -1;
-    } else {
+    }
+  else
+    {
       char *str, *last_str;
 
       str = apr_strtok (value, " ", &last_str);
@@ -280,11 +280,12 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
 
   /* Get the data location. */
   value = apr_hash_get (headers, SVN_FS_FS__REP, APR_HASH_KEY_STRING);
-
   if (value == NULL)
     {
       noderev->data_offset = -1;
-    } else {
+    }
+  else
+    {
       char *str, *last_str;
 
       str = apr_strtok (value, " ", &last_str);
@@ -318,30 +319,29 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
 
   /* Get the created path. */
   value = apr_hash_get (headers, SVN_FS_FS__CPATH, APR_HASH_KEY_STRING);
-
   if (value == NULL)
     {
       return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                "Missing cpath in node-rev");
-    } else {
+    }
+  else
+    {
       noderev->created_path = apr_pstrdup (pool, value);
     }
 
   /* Get the copyroot. */
   value = apr_hash_get (headers, SVN_FS_FS__COPYROOT, APR_HASH_KEY_STRING);
-
   if (value == NULL)
     {
       noderev->copyroot = NULL;
     }
   else
     {
-      noderev->copyroot = svn_fs_parse_id (value, strlen(value), pool);
+      noderev->copyroot = svn_fs_parse_id (value, strlen (value), pool);
     }
 
   /* Get the copyfrom. */
   value = apr_hash_get (headers, SVN_FS_FS__COPYFROM, APR_HASH_KEY_STRING);
-
   if (value == NULL)
     {
       noderev->copyfrom = NULL;
@@ -374,7 +374,7 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
           return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                    "Malformed copyfrom line in node-rev");
 
-      noderev->copyroot = svn_fs_parse_id (str, strlen(str), pool);
+      noderev->copyroot = svn_fs_parse_id (str, strlen (str), pool);
     }
 
   *noderev_p = noderev;
@@ -452,7 +452,7 @@ read_rep_line (rep_args_t **rep_args_p,
   svn_boolean_t delta_base = FALSE;
   rep_args_t *rep_args;
   
-  limit = sizeof(buffer);
+  limit = sizeof (buffer);
   SVN_ERR (svn_io_read_length_line (file, buffer, &limit, pool));
 
   rep_args = apr_pcalloc (pool, sizeof (*rep_args));
@@ -546,8 +546,8 @@ svn_fs__fs_rep_contents_dir (apr_hash_t **entries_p,
 
       str = apr_strtok (NULL, " ", &last_str);
       if (str == NULL)
-          return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                   "Directory entry corrupt");
+        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                 "Directory entry corrupt");
       
       dirent->id = svn_fs_parse_id (str, strlen (str), pool);
 
@@ -573,8 +573,7 @@ get_fs_id_at_offset (svn_fs_id_t **id_p,
   apr_hash_t *headers;
   const char *node_id_str;
   
-  SVN_ERR (svn_io_file_seek (rev_file, APR_SET,
-                             &offset, pool));
+  SVN_ERR (svn_io_file_seek (rev_file, APR_SET, &offset, pool));
 
   SVN_ERR (read_header_block (&headers, rev_file, pool));
 
@@ -591,7 +590,7 @@ get_fs_id_at_offset (svn_fs_id_t **id_p,
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                              "Corrupt node-id in node-rev");
 
-  *id_p=id;
+  *id_p = id;
 
   return SVN_NO_ERROR;
 }
@@ -620,24 +619,23 @@ get_root_offset (apr_off_t *root_offset,
   SVN_ERR (svn_io_file_read (rev_file, buf, &num_bytes, pool));
 
   /* The last byte should be a newline. */
-  if (buf[num_bytes-1]!='\n')
+  if (buf[num_bytes - 1] != '\n')
     {
-            return svn_error_createf
-              (SVN_ERR_FS_CORRUPT, NULL,
-               "Revision file lacks trailing newline.");
+      return svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
+                                "Revision file lacks trailing newline.");
     }
 
   /* Look for the next previous newline. */
-  for (i = num_bytes-2; i >= 0; i--)
+  for (i = num_bytes - 2; i >= 0; i--)
     {
       if (buf[i] == '\n') break;
     }
 
   if (i < 0)
     {
-            return svn_error_createf
-              (SVN_ERR_FS_CORRUPT, NULL,
-               "Final line in revision file longer than 64 characters.");
+      return svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
+                                "Final line in revision file longer than 64 "
+                                "characters.");
     }
 
   *root_offset = apr_atoi64 (&buf[i]);
@@ -667,12 +665,11 @@ svn_fs__fs_rev_get_root (svn_fs_id_t **root_id_p,
 
   SVN_ERR (get_root_offset (&root_offset, revision_file, pool));
 
-  SVN_ERR (get_fs_id_at_offset (&root_id, revision_file,
-                                root_offset, pool));
+  SVN_ERR (get_fs_id_at_offset (&root_id, revision_file, root_offset, pool));
 
   SVN_ERR (svn_io_file_close (revision_file, pool));
 
-  *root_id_p=root_id;
+  *root_id_p = root_id;
   
   return SVN_NO_ERROR;
 }
@@ -687,9 +684,8 @@ svn_fs__fs_revision_proplist (apr_hash_t **proplist_p,
   apr_file_t *revprop_file;
   apr_hash_t *proplist;
 
-  revprop_filename = apr_psprintf (pool,
-                                   "r%" SVN_REVNUM_T_FMT  SVN_FS_FS__REV_PROPS_EXT,
-                                   rev);
+  revprop_filename =
+    apr_psprintf (pool, "r%" SVN_REVNUM_T_FMT SVN_FS_FS__REV_PROPS_EXT, rev);
 
   SVN_ERR (svn_io_file_open (&revprop_file,
                              svn_path_join (fs->fs_path,
@@ -732,8 +728,12 @@ svn_boolean_t
 svn_fs__fs_noderev_same_prop_key (svn_fs__node_revision_t *a,
                                   svn_fs__node_revision_t *b)
 {
-  if (a->prop_offset != b->prop_offset) return FALSE;
-  if (a->prop_revision != b->prop_revision) return FALSE;
+  if (a->prop_offset != b->prop_offset)
+    return FALSE;
+
+  if (a->prop_revision != b->prop_revision)
+    return FALSE;
+
   return TRUE;
 }
 
@@ -742,7 +742,11 @@ svn_boolean_t
 svn_fs__fs_noderev_same_data_key (svn_fs__node_revision_t *a,
                                   svn_fs__node_revision_t *b)
 {
-  if (a->data_offset != b->data_offset) return FALSE;
-  if (a->data_revision != b->data_revision) return FALSE;
+  if (a->data_offset != b->data_offset)
+    return FALSE;
+
+  if (a->data_revision != b->data_revision)
+    return FALSE;
+
   return TRUE;
 }
