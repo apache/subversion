@@ -1,0 +1,47 @@
+This code is for creating and interpreting `vcdiff'.  
+
+The full specification of the vcdiff format is in the draft RFC
+(draft-korn-vcdiff-01.txt), and some discussion of how to *generate*
+diffs may be found there as well.
+
+This README provides an informal summary of how we implement vcdiff,
+in three sections:
+
+   1. The vcdiff format and how to use it.
+   2. Generating vcdiffs.
+
+
+
+1. The vcdiff format and how to use it.
+=======================================
+
+ *** holy cow i'm at home reading the paper.  -kff ***
+
+
+
+
+
+
+
+
+
+
+
+A vdiff consists of a 4 byte header, followed by a series of
+"sections".  Each section is 
+
+   A 4 byte header -- the letters "VCD" with their eighth bits set,
+   then a format version number:
+
+      byte 1         byte 2           byte 3        byte 4
+      ----------     ----------       ----------    -------------------
+      0xd6           0xc3             0xc4          0x0
+      `V' + 1<<7     `C' + 1<<7       `D' + 1<<7    Version (currently 0)
+
+   
+
+
+
+2. Generating vcdiffs.
+======================
+
