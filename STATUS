@@ -99,3 +99,10 @@ Candidate changes:
     Justification: Should work out of the tarball.
     Votes:
       +1: breser
+
+  * r10478
+    Fix crashes and small leaks in mod_dav_svn.
+    Justification:
+      Crashes are unnice.
+    Votes:
+      +1: lundblad
