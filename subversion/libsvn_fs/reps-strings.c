@@ -423,6 +423,7 @@ rep_read_range (svn_fs_t *fs,
       apr_size_t off;        /* offset into svndiff data */
       apr_size_t amt;        /* how much svndiff data to/was read */
       const char *base_rep;  /* representation this delta is based against */
+      svn_error_t *err;
       
       /* Extract the base rep key from this rep. */
       base_rep = apr_pstrndup (trail->pool,
@@ -451,9 +452,16 @@ rep_read_range (svn_fs_t *fs,
         SVN_ERR (svn_fs__string_read (fs, str_key, chunk, off, &amt, trail));
         off += amt;
         SVN_ERR (svn_stream_write (wstream, chunk, &amt));
-      } while ((wb.done == FALSE) && (amt == sizeof (chunk)));
+      } while ((wb.done == FALSE) && (amt != 0));
 
-      SVN_ERR (svn_stream_close (wstream));
+      /* Close the stream.  The only error allowable here is an
+         unexpected end of data, which we know might happen if we fill
+         the caller's buffer up before we finish using all the svndiff
+         data. */
+      err = svn_stream_close (wstream);
+      if (err && (err->apr_err != SVN_ERR_SVNDIFF_UNEXPECTED_END))
+        return err;
+
       *len = wb.len_read;
 
       /* ### todo: hmmm, I just realized something: the way this
