@@ -64,6 +64,9 @@ struct dir_baton
 
   svn_string_t *path;  /* the -absolute- path to this dir in the fs */
 
+  apr_pool_t *subpool; /* my personal subpool, in which I am allocated. */
+  int ref_count;       /* how many still-open batons depend on my pool. */
+                  
 };
 
 
@@ -78,6 +81,33 @@ struct file_baton
 };
 
 
+
+/* Helper function:  knows when to free dir batons. */
+static svn_error_t *
+decrement_dir_ref_count (struct dir_baton *db)
+{
+  db->ref_count--;
+
+  /* Check to see if *any* child batons still depend on this
+     directory's pool. */
+  if (db->ref_count == 0)
+    {
+      struct dir_baton *dbparent = db->parent;
+
+      /* Destroy all memory used by this baton, including the baton
+         itself! */
+      apr_pool_destroy (db->subpool);
+      
+      /* Tell your parent that you're gone. */
+      SVN_ERR (decrement_dir_ref_count (dbparent));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 
 /*** Editor functions ***/
 
@@ -86,9 +116,9 @@ replace_root (void *edit_baton,
               svn_revnum_t base_revision,
               void **root_baton)
 {
-  /* ben sez: kff todo: figure out breaking into subpools soon */
+  apr_pool_t *subpool;
+  struct dir_baton *dirb;
   struct edit_baton *eb = edit_baton;
-  struct dir_baton *dirb = apr_pcalloc (eb->pool, sizeof (*dirb));
 
   /* Begin a subversion transaction, cache its name, and get its
      root object. */
@@ -98,11 +128,15 @@ replace_root (void *edit_baton,
   /* Finish filling out the root dir baton.  The `base_path' field is
      an -absolute- path in the filesystem, upon which all dir batons
      will telescope.  */
+  subpool = svn_pool_create (eb->pool);
+  dirb = apr_pcalloc (subpool, sizeof (*dirb));
   dirb->edit_baton = edit_baton;
   dirb->base_rev = base_revision;
   dirb->parent = NULL;
-  dirb->path = svn_string_dup (eb->base_path, eb->pool);
- 
+  dirb->subpool = subpool;
+  dirb->path = svn_string_dup (eb->base_path, dirb->subpool);
+  dirb->ref_count = 1;
+
   *root_baton = dirb;
   return SVN_NO_ERROR;
 }
@@ -116,11 +150,11 @@ delete_entry (svn_string_t *name,
   struct dir_baton *parent = parent_baton;
   struct edit_baton *eb = parent->edit_baton;
 
-  svn_string_t *path_to_kill = svn_string_dup (parent->path, eb->pool);
+  svn_string_t *path_to_kill = svn_string_dup (parent->path, parent->subpool);
   svn_path_add_component (path_to_kill, name, svn_path_repos_style);
 
   /* This routine is a mindless wrapper. */
-  SVN_ERR (svn_fs_delete (eb->txn_root, path_to_kill->data, eb->pool));
+  SVN_ERR (svn_fs_delete (eb->txn_root, path_to_kill->data, parent->subpool));
 
   return SVN_NO_ERROR;
 }
@@ -135,10 +169,11 @@ add_directory (svn_string_t *name,
                svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
+  apr_pool_t *subpool;
   struct dir_baton *new_dirb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-
+  
   /* Sanity check. */  
   if (copyfrom_path && (copyfrom_revision <= 0))
     return 
@@ -147,12 +182,19 @@ add_directory (svn_string_t *name,
        "fs editor: add_dir `%s': got copyfrom_path, but no copyfrom_rev",
        name->data);
 
-  /* Build a new dir baton for this directory */
-  new_dirb = apr_pcalloc (eb->pool, sizeof (*new_dirb));
+  /* Build a new dir baton for this directory in a subpool of parent's
+     pool. */
+  subpool = svn_pool_create (pb->subpool);
+  new_dirb = apr_pcalloc (subpool, sizeof (*new_dirb));
   new_dirb->edit_baton = eb;
   new_dirb->parent = pb;
-  new_dirb->path = svn_string_dup (pb->path, eb->pool);
+  new_dirb->ref_count = 1;
+  new_dirb->subpool = subpool;
+  new_dirb->path = svn_string_dup (pb->path, new_dirb->subpool);
   svn_path_add_component (new_dirb->path, name, svn_path_repos_style);
+  
+  /* Increment parent's refcount. */
+  pb->ref_count++;
 
   if (copyfrom_path)
     {
@@ -161,10 +203,11 @@ add_directory (svn_string_t *name,
       svn_fs_root_t *copyfrom_root;
 
       SVN_ERR (svn_fs_revision_root (&copyfrom_root, eb->fs,
-                                     copyfrom_revision, eb->pool));
+                                     copyfrom_revision, new_dirb->subpool));
 
       SVN_ERR (svn_fs_copy (copyfrom_root, copyfrom_path->data,
-                            eb->txn_root, new_dirb->path->data, eb->pool));
+                            eb->txn_root, new_dirb->path->data,
+                            new_dirb->subpool));
 
       /* And don't forget to fill out the the dir baton */
       new_dirb->base_rev = copyfrom_revision;
@@ -172,7 +215,8 @@ add_directory (svn_string_t *name,
   else
     {
       /* No ancestry given, just make a new directory. */      
-      SVN_ERR (svn_fs_make_dir (eb->txn_root, new_dirb->path->data, eb->pool));
+      SVN_ERR (svn_fs_make_dir (eb->txn_root, new_dirb->path->data,
+                                new_dirb->subpool));
 
       /* Inherent revision from parent. */
       new_dirb->base_rev = pb->base_rev;
@@ -190,16 +234,23 @@ replace_directory (svn_string_t *name,
                    svn_revnum_t base_revision,
                    void **child_baton)
 {
+  apr_pool_t *subpool;
   struct dir_baton *new_dirb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
 
   /* Build a new dir baton for this directory */
-  new_dirb = apr_pcalloc (eb->pool, sizeof (*new_dirb));
+  subpool = svn_pool_create (pb->subpool);
+  new_dirb = apr_pcalloc (subpool, sizeof (*new_dirb));
   new_dirb->edit_baton = eb;
   new_dirb->parent = pb;
-  new_dirb->path = svn_string_dup (pb->path, eb->pool);
+  new_dirb->subpool = subpool;
+  new_dirb->ref_count = 1;
+  new_dirb->path = svn_string_dup (pb->path, new_dirb->subpool);
   svn_path_add_component (new_dirb->path, name, svn_path_repos_style);
+
+  /* Increment parent's refcount. */
+  pb->ref_count++;
 
   /* If this dir is at a different revision than its parent, make a
      cheap copy into our transaction. */
@@ -208,9 +259,10 @@ replace_directory (svn_string_t *name,
       svn_fs_root_t *other_root;
 
       SVN_ERR (svn_fs_revision_root (&other_root, eb->fs,
-                                     base_revision, eb->pool));
+                                     base_revision, new_dirb->subpool));
       SVN_ERR (svn_fs_copy (other_root, new_dirb->path->data,
-                            eb->txn_root, new_dirb->path->data, eb->pool));
+                            eb->txn_root, new_dirb->path->data,
+                            new_dirb->subpool));
     }
   else
     /* If it's the same rev as parent, just inherit the rev_root. */
@@ -224,11 +276,9 @@ replace_directory (svn_string_t *name,
 static svn_error_t *
 close_directory (void *dir_baton)
 {
-  /* The fs doesn't give one whit that we're done making changes to
-     any particular directory... it's all happening inside one svn
-     transaction tree.
-
-     Thus this routine is a no-op! */
+  /* Don't free the baton, just decrement its ref count.  If the
+     refcount is 0, *then* it will be freed. */
+  SVN_ERR (decrement_dir_ref_count (dir_baton));
 
   return SVN_NO_ERROR;
 }
@@ -239,9 +289,13 @@ close_file (void *file_baton)
 {
   struct file_baton *fb = file_baton;
 
-  /* Free any memory used while streamily writing file contents. */
+  /* Tell the parent that one less subpool depends on its own pool. */
+  SVN_ERR (decrement_dir_ref_count (fb->parent));
+
+  /* Destroy all memory used by this baton, including the baton
+     itself! */
   apr_pool_destroy (fb->subpool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -273,6 +327,7 @@ add_file (svn_string_t *name,
           long int copy_revision,
           void **file_baton)
 {
+  apr_pool_t *subpool;
   struct file_baton *new_fb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
@@ -286,11 +341,15 @@ add_file (svn_string_t *name,
        name->data);
 
   /* Build a new file baton */
-  new_fb = apr_pcalloc (eb->pool, sizeof (*new_fb));
+  subpool = svn_pool_create (pb->subpool);
+  new_fb = apr_pcalloc (subpool, sizeof (*new_fb));
   new_fb->parent = pb;
-  new_fb->subpool = svn_pool_create (eb->pool);
+  new_fb->subpool = subpool;
   new_fb->path = svn_string_dup (pb->path, new_fb->subpool);
   svn_path_add_component (new_fb->path, name, svn_path_repos_style);
+
+  /* Increment parent's refcount. */
+  pb->ref_count++;
 
   if (copy_path)
     {
@@ -299,15 +358,17 @@ add_file (svn_string_t *name,
       svn_fs_root_t *copy_root;
 
       SVN_ERR (svn_fs_revision_root (&copy_root, eb->fs,
-                                     copy_revision, eb->pool));
+                                     copy_revision, new_fb->subpool));
 
       SVN_ERR (svn_fs_copy (copy_root, copy_path->data,
-                            eb->txn_root, new_fb->path->data, eb->pool));
+                            eb->txn_root, new_fb->path->data,
+                            new_fb->subpool));
     }
   else
     {
       /* No ancestry given, just make a new file. */      
-      SVN_ERR (svn_fs_make_file (eb->txn_root, new_fb->path->data, eb->pool));
+      SVN_ERR (svn_fs_make_file (eb->txn_root, new_fb->path->data,
+                                 new_fb->subpool));
     }
 
   *file_baton = new_fb;
@@ -323,16 +384,21 @@ replace_file (svn_string_t *name,
               svn_revnum_t base_revision,
               void **file_baton)
 {
+  apr_pool_t *subpool;
   struct file_baton *new_fb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
 
   /* Build a new file baton */
-  new_fb = apr_pcalloc (eb->pool, sizeof (*new_fb));
+  subpool = svn_pool_create (pb->subpool);
+  new_fb = apr_pcalloc (subpool, sizeof (*new_fb));
   new_fb->parent = pb;
-  new_fb->subpool = svn_pool_create (eb->pool);
+  new_fb->subpool = subpool;
   new_fb->path = svn_string_dup (pb->path, new_fb->subpool);
   svn_path_add_component (new_fb->path, name, svn_path_repos_style);
+
+  /* Increment parent's refcount. */
+  pb->ref_count++;
 
   /* If this file is at a different revision than its parent, make a
      cheap copy into our transaction. */
@@ -341,9 +407,10 @@ replace_file (svn_string_t *name,
       svn_fs_root_t *other_root;
 
       SVN_ERR (svn_fs_revision_root (&other_root, eb->fs,
-                                     base_revision, eb->pool));
+                                     base_revision, new_fb->subpool));
       SVN_ERR (svn_fs_copy (other_root, new_fb->path->data,
-                            eb->txn_root, new_fb->path->data, eb->pool));
+                            eb->txn_root, new_fb->path->data,
+                            new_fb->subpool));
     }
 
 
@@ -363,7 +430,7 @@ change_file_prop (void *file_baton,
 
   /* This routine is a mindless wrapper. */
   SVN_ERR (svn_fs_change_node_prop (eb->txn_root, fb->path->data,
-                                    name, value, eb->pool));
+                                    name, value, fb->subpool));
 
   return SVN_NO_ERROR;
 }
@@ -379,7 +446,7 @@ change_dir_prop (void *dir_baton,
 
   /* This routine is a mindless wrapper. */
   SVN_ERR (svn_fs_change_node_prop (eb->txn_root, db->path->data,
-                                    name, value, eb->pool));
+                                    name, value, db->subpool));
 
   return SVN_NO_ERROR;
 }
@@ -422,7 +489,11 @@ close_edit (void *edit_baton)
      TODO:  What if we crash right at this line?  We'd have a new
      revision with no log message.  In the future, we need to make the
      log message part of the same db txn that executes within
-     svn_fs_commit_txn -- probably by passing it right in.  */
+     svn_fs_commit_txn -- probably by passing it right in. 
+
+     Followup: actually, jimb will soon allow us to set the "log"
+     property on the *transaction*, up at the top of this function, so
+     that the commit_txn() call will merge it all at once. */
   SVN_ERR (svn_fs_change_rev_prop (eb->fs, new_revision,
                                    svn_string_create (SVN_PROP_REVISION_LOG,
                                                       eb->pool),
