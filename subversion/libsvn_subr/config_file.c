@@ -389,7 +389,10 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
 
         case '#':               /* Comment */
           if (count == 0)
-            ch = skip_to_eoln(fd);
+            {
+              ch = skip_to_eoln(fd);
+              ++ctx.line;
+            }
           else
             {
               ch = EOF;
@@ -684,7 +687,7 @@ svn_config_ensure (apr_pool_t *pool)
         "# [thirdgroup]\n"
         "# svn-tunnel-agent = ssh\n"
         "\n"
-        "### You can set default HTTP parameters in the 'defaults' section.\n"
+        "### You can set default parameters in the 'defaults' section.\n"
         "### These parameters apply if no corresponding parameter is set in\n"
         "### a specifically matched group as shown above.  Thus, if you go\n"
         "### through the same proxy server to reach every site on the\n"
