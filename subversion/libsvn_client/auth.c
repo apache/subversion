@@ -33,7 +33,7 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_utf.h"
-
+#include "svn_config.h"
 #include "client.h"
 
 
@@ -284,7 +284,17 @@ store_user_and_pass (void *baton)
     SVN_ERR (store_username (cb->auth_baton->username, baton));
 
   if (cb->auth_baton->password)
-    SVN_ERR (store_password (cb->auth_baton->password, baton));
+    {
+      /* Only store the password if configuration permits. */
+      struct svn_config_t *cfg;
+      const char *val;
+      
+      SVN_ERR (svn_config_read_config (&cfg, cb->pool));
+      svn_config_get (cfg, &val, "auth", "store_password", "yes");
+      
+      if (strcmp (val, "yes") == 0)
+        SVN_ERR (store_password (cb->auth_baton->password, baton));
+    }
   
   return SVN_NO_ERROR;
 }
