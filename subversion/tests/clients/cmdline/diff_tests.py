@@ -97,18 +97,56 @@ def count_diff_output(diff_output):
   return diff_count
 
 ######################################################################
+# diff on a repository subset and check the output
+
+def diff_check_repo_subset(wc_dir, repo_subset, check_fn, do_diff_r):
+  "diff and check for part of the repository"
+
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', repo_subset)
+  if check_fn(diff_output):
+    os.chdir(was_cwd)
+    return 1
+
+  if do_diff_r:
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-rHEAD',
+                                                   repo_subset)
+    if check_fn(diff_output):
+      os.chdir(was_cwd)
+      return 1
+
+  os.chdir(was_cwd)
+  return 0
+
+######################################################################
 # Changes makers and change checkers
 
 def update_a_file():
   "update a file"
   svntest.main.file_append(os.path.join('A', 'B', 'E', 'alpha'), "new atext")
   return 0
-  
+
 def check_update_a_file(diff_output):
   "check diff for update a file"
   return check_diff_output(diff_output,
                            os.path.join('A', 'B', 'E', 'alpha'),
                            'M')
+
+def diff_check_update_a_file_repo_subset(wc_dir):
+  "diff and check update a file for a rpeository subset"
+
+  repo_subset = os.path.join('A', 'B')
+  if diff_check_repo_subset(wc_dir, repo_subset, check_update_a_file, 1):
+    return 1
+  
+  repo_subset = os.path.join('A', 'B', 'E', 'alpha')
+  if diff_check_repo_subset(wc_dir, repo_subset, check_update_a_file, 1):
+    return 1
+
+  return 0
+  
 
 #----------------------------------------------------------------------
 
@@ -129,6 +167,18 @@ def check_add_a_file_reverse(diff_output):
   return check_diff_output(diff_output,
                            os.path.join('A', 'B', 'E', 'theta'),
                            'D')
+
+def diff_check_add_a_file_repo_subset(wc_dir):
+  "diff and check add a file for a repository subset"
+
+  repo_subset = os.path.join('A', 'B')
+  if diff_check_repo_subset(wc_dir, repo_subset, check_add_a_file, 1):
+    return 1
+  
+  repo_subset = os.path.join('A', 'B', 'E', 'theta')
+  ### TODO: diff -rHEAD doesn't work for added file
+  if diff_check_repo_subset(wc_dir, repo_subset, check_add_a_file, 0):
+    return 1
 
 #----------------------------------------------------------------------
 
@@ -151,6 +201,21 @@ def check_add_a_file_in_a_subdir_reverse(diff_output):
   return check_diff_output(diff_output,
                            os.path.join('A', 'B', 'T', 'phi'),
                            'D')
+
+def diff_check_add_a_file_in_a_subdir_repo_subset(wc_dir):
+  "diff and check add a file in a subdir for a repository subset"
+
+  repo_subset = os.path.join('A', 'B', 'T')
+  ### TODO: diff -rHEAD doesn't work for added subdir
+  if diff_check_repo_subset(wc_dir, repo_subset,
+                            check_add_a_file_in_a_subdir, 0):
+    return 1
+  
+  repo_subset = os.path.join('A', 'B', 'T', 'phi')
+  ### TODO: diff -rHEAD doesn't work for added file in subdir
+  if diff_check_repo_subset(wc_dir, repo_subset,
+                            check_add_a_file_in_a_subdir, 0):
+    return 1
 
 #----------------------------------------------------------------------
 
@@ -212,6 +277,13 @@ def change_diff_commit_diff(wc_dir, revision, change_fn, check_fn):
 
   change_fn()
 
+  # diff without revision doesn't use an editor
+  diff_output, err_output = svntest.main.run_svn(None, 'diff')
+  if check_fn(diff_output):
+    os.chdir(was_cwd)
+    return 1
+
+  # diff with revision runs an editor
   diff_output, err_output = svntest.main.run_svn(None, 'diff', '-rHEAD')
   if check_fn(diff_output):
     os.chdir(was_cwd)
@@ -228,15 +300,14 @@ def change_diff_commit_diff(wc_dir, revision, change_fn, check_fn):
   return 0
 
 ######################################################################
-# update, check the diff
+# check the diff
 
-def just_diff(wc_dir, rev_up, rev_check, check_fn):
-  "check that the given diff is seen"
+def just_diff(wc_dir, rev_check, check_fn):
+  "update and check that the given diff is seen"
 
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
 
-  svntest.main.run_svn(None, 'up', '-r', rev_up)
   diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', rev_check)
   if check_fn(diff_output):
     os.chdir(was_cwd)
@@ -244,6 +315,20 @@ def just_diff(wc_dir, rev_up, rev_check, check_fn):
 
   os.chdir(was_cwd)
   return 0
+
+######################################################################
+# update, check the diff
+
+def update_diff(wc_dir, rev_up, rev_check, check_fn):
+  "update and check that the given diff is seen"
+
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+
+  svntest.main.run_svn(None, 'up', '-r', rev_up)
+  os.chdir(was_cwd)
+
+  return just_diff(wc_dir, rev_check, check_fn)
 
 ######################################################################
 # check a pure repository rev1:rev2 diff
@@ -342,17 +427,17 @@ def diff_multiple_reverse():
     return 1
 
   # check diffs both ways
-  if just_diff(wc_dir, 4, 1, check_update_a_file):
+  if update_diff(wc_dir, 4, 1, check_update_a_file):
     return 1
-  if just_diff(wc_dir, 4, 1, check_add_a_file_in_a_subdir):
+  if just_diff(wc_dir, 1, check_add_a_file_in_a_subdir):
     return 1
-  if just_diff(wc_dir, 4, 1, check_add_a_file):
+  if just_diff(wc_dir, 1, check_add_a_file):
     return 1
-  if just_diff(wc_dir, 1, 4, check_update_a_file):
+  if update_diff(wc_dir, 1, 4, check_update_a_file):
     return 1
-  if just_diff(wc_dir, 1, 4, check_add_a_file_in_a_subdir_reverse):
+  if just_diff(wc_dir, 4, check_add_a_file_in_a_subdir_reverse):
     return 1
-  if just_diff(wc_dir, 1, 4, check_add_a_file_reverse):
+  if just_diff(wc_dir, 4, check_add_a_file_reverse):
     return 1
 
   # check pure repository diffs
@@ -413,6 +498,35 @@ def diff_non_recursive():
   
   return 0
 
+# test 7
+def diff_repo_subset():
+  "diff only part of the repository"
+
+  sbox = sandbox(diff_repo_subset)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+
+  update_a_file()
+  add_a_file()
+  add_a_file_in_a_subdir()
+
+  os.chdir(was_cwd)
+  
+  if diff_check_update_a_file_repo_subset(wc_dir):
+    return 1
+  
+  if diff_check_add_a_file_repo_subset(wc_dir):
+    return 1
+  
+  if diff_check_add_a_file_in_a_subdir_repo_subset(wc_dir):
+    return 1
+  
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -424,7 +538,8 @@ test_list = [ None,
               diff_add_a_file_in_a_subdir,
               diff_replace_a_file,
               diff_multiple_reverse,
-              diff_non_recursive
+              diff_non_recursive,
+              diff_repo_subset,
              ]
 
 if __name__ == '__main__':
