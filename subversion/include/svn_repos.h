@@ -69,42 +69,26 @@ svn_error_t *svn_repos_get_editor (svn_delta_edit_fns_t **editor,
 
 /* The `reporter' vtable routines (for updates). */
 
+/* Construct and return a REPORT_BATON to hold context while collecting
+   working copy revision state. When the collection of state is completed,
+   then the UPDATE_EDITOR will be driven to describe how to change the
+   working copy into revision REVNUM of filesystem FS. The description of
+   the working copy state will be relative to FS_BASE in the filesystem.
 
-/* A structure used by the routines within the `reporter' vtable,
-   driven by the client as it describes its working copy revisions. */
-typedef struct svn_repos_report_baton_t
-{
-  /* The transaction being built in the repository, a mirror of the
-     working copy. */
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-
-  /* The location under which all reporting will happen (in the fs) */
-  svn_string_t *base_path;
-
-  /* finish_report() calls svn_fs_dir_delta(), and uses this arg to
-     decide which revision to compare the transaction against. */
-  svn_revnum_t revnum_to_update_to;
-
-  /* The working copy editor driven by svn_fs_dir_delta(). */
-  const svn_delta_edit_fns_t *update_editor;
-  void *update_edit_baton;
-
-  /* This hash describes the mixed revisions in the transaction; it
-     maps pathnames (char *) to revision numbers (svn_revnum_t). */
-  apr_hash_t *path_rev_hash;
-
-  /* Pool from the session baton. */
-  apr_pool_t *pool;
-
-} svn_repos_report_baton_t;
+   All allocation for the context and collected state will occur in POOL. */
+svn_error_t *
+svn_repos_begin_report (void **report_baton,
+                        svn_revnum_t revnum,
+                        svn_fs_t *fs,
+                        svn_string_t *fs_base,
+                        const svn_delta_edit_fns_t *update_editor,
+                        void *update_baton,
+                        apr_pool_t *pool);
 
 
-
-/* Given a properly constructed REPORT_BATON, this routine will build
-   REVISION:PATH into the current transaction.  This routine is called
-   multiple times to create a transaction that is a "mirror" of a
+/* Given a REPORT_BATON constructed by svn_repos_begin_report(), this routine
+   will build REVISION:PATH into the current transaction.  This routine is
+   called multiple times to create a transaction that is a "mirror" of a
    working copy. */
 svn_error_t *
 svn_repos_set_path (void *report_baton,

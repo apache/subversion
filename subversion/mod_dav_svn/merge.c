@@ -20,6 +20,7 @@
 #include <util_filter.h>
 
 #include "svn_fs.h"
+#include "svn_repos.h"
 
 #include "dav_svn.h"
 
@@ -84,9 +85,9 @@ static mr_baton *make_child_baton(mr_baton *parent, const char *name,
   mr_baton *subdir;
 
   if (is_dir)
-    pool = svn_pool_create(parent->mrc->pool);
+    pool = svn_pool_create(parent->pool);
   else
-    pool = parent->mrc->pool;
+    pool = parent->pool;
 
   subdir = apr_pcalloc(pool, sizeof(*subdir));
   subdir->mrc = parent->mrc;
@@ -318,6 +319,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   svn_revnum_t *rev_ptr;
   svn_delta_edit_fns_t *editor;
   merge_response_ctx mrc = { 0 };
+  svn_string_t *rootpath;
 
   serr = svn_fs_revision_root(&committed_root, repos->fs, new_rev, pool);
   if (serr != NULL)
@@ -402,12 +404,12 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   mrc.root = committed_root;
   mrc.repos = repos;
 
-  serr = svn_repos_dir_delta(previous_root, 
-                             svn_string_create ("/", pool), revs,
-                             committed_root, 
-                             svn_string_create ("/", pool),
-                             editor, &mrc, pool);
+  /* ### grumble */
+  rootpath = svn_string_create("/", pool);
 
+  serr = svn_repos_dir_delta(previous_root, rootpath, revs,
+                             committed_root, rootpath,
+                             editor, &mrc, pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

@@ -192,7 +192,7 @@ static void *create_private(void *userdata, const char *url)
   /* parse the PATH element out of the URL
 
      Note: mod_dav does not (currently) use an absolute URL, but simply a
-     server-relative path.
+     server-relative path (i.e. this uri_parse is effectively a no-op).
   */
   (void) uri_parse(url, &parsed_url, NULL);
   url_path = apr_pstrdup(pc->pool, parsed_url.path);

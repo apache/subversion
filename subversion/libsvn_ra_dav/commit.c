@@ -690,6 +690,10 @@ static svn_error_t * commit_apply_txdelta(void *file_baton,
   SVN_ERR( svn_io_open_unique_file(&baton->tmpfile, &baton->fname, path,
                                    ".ra_dav", subpool) );
 
+  /* ### register a cleanup on our subpool which removes the file. this
+     ### will ensure that the file always gets tossed, even if we exit
+     ### with an error. */
+
   stream = svn_stream_create(baton, subpool);
   svn_stream_set_write(stream, commit_stream_write);
   svn_stream_set_close(stream, commit_stream_close);

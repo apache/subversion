@@ -386,22 +386,6 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
   return 0;
 }
 
-static void copy_href(svn_string_t *dst, const char *src)
-{
-  struct uri parsed_url;
-
-  /* parse the PATH element out of the URL and store it.
-
-     ### do we want to verify the rest matches the current session?
-
-     Note: mod_dav does not (currently) use an absolute URL, but simply a
-     server-relative path (i.e. this uri_parse is effectively a no-op).
-  */
-  (void) uri_parse(src, &parsed_url, NULL);
-  svn_string_set(dst, parsed_url.path);
-  uri_free(&parsed_url);
-}
-
 static int end_element(void *userdata, const struct hip_xml_elm *elm,
                        const char *cdata)
 {
@@ -418,11 +402,11 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
 
         case DAV_ELM_response:
           /* we're now working on this href... */
-          copy_href(mc->href, cdata);
+          svn_ra_dav__copy_href(mc->href, cdata);
           break;
 
         case ELEM_checked_in:
-          copy_href(mc->vsn_url, cdata);
+          svn_ra_dav__copy_href(mc->vsn_url, cdata);
           break;
         }
       break;
@@ -548,11 +532,9 @@ svn_error_t * svn_ra_dav__merge_activity(
   mc.close_commit = close_commit;
   mc.close_baton = close_baton;
 
-  /* ### it would be nice to create these with N bytes of storage, and
-     ### avoid copying anything into them. */
-  mc.href = svn_string_ncreate("", 0, pool);
-  mc.vsn_name = svn_string_ncreate("", 0, pool);
-  mc.vsn_url = svn_string_ncreate("", 0, pool);
+  mc.href = MAKE_BUFFER(pool);
+  mc.vsn_name = MAKE_BUFFER(pool);
+  mc.vsn_url = MAKE_BUFFER(pool);
 
   /* ### damn it */
   mc.vsn_url_name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, pool);
