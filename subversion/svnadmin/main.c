@@ -46,7 +46,7 @@ create_stdio_stream (svn_stream_t **stream,
   apr_status_t apr_err = open_fn (&stdio_file, pool);  
 
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't opening stdio file");
+    return svn_error_wrap_apr (apr_err, "Can't open stdio file");
   
   *stream = svn_stream_from_aprfile (stdio_file, pool);
   return SVN_NO_ERROR;   
@@ -74,7 +74,7 @@ parse_local_repos_path(apr_getopt_t *os, const char ** repos_path,
   if (*repos_path == NULL)
     {
       return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
-                               "repository argument required");
+                               "Repository argument required");
     }
   else if (svn_path_is_url (*repos_path))
     {
@@ -359,11 +359,11 @@ subcommand_deltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (start > end)
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "first revision cannot be higher than second");
+       "First revision cannot be higher than second");
   if ((start > youngest) || (end > youngest))
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "revisions must not be greater than the youngest revision (%" 
+       "Revisions must not be greater than the youngest revision (%" 
        SVN_REVNUM_T_FMT ")", youngest);
 
   /* Loop over the requested revision range, performing the
@@ -426,11 +426,11 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (lower > upper)
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "first revision cannot be higher than second");
+       "First revision cannot be higher than second");
   if ((lower > youngest) || (upper > youngest))
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "revisions must not be greater than the youngest revision (%" 
+       "Revisions must not be greater than the youngest revision (%" 
        SVN_REVNUM_T_FMT ")", youngest);
 
   /* Run the dump to STDOUT.  Let the user redirect output into
@@ -672,16 +672,16 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   if (opt_state->start_revision.kind != svn_opt_revision_number)
     return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              "missing revision");
+                              "Missing revision");
   else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
     return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              "only one revision allowed");
+                              "Only one revision allowed");
     
   SVN_ERR (svn_opt_parse_all_args (&args, os, pool));
 
   if (args->nelts != 1)
     return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              "exactly one file argument required");
+                              "Exactly one file argument required");
   
   SVN_ERR (svn_utf_cstring_to_utf8 (&filename_utf8,
                                     APR_ARRAY_IDX (args, 0, const char *),

@@ -121,7 +121,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     return svn_error_create 
       (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
        "None of the environment variables SVN_EDITOR, VISUAL or EDITOR is "
-       "set, and no 'editor-cmd' run-time configuration option was found.");
+       "set, and no 'editor-cmd' run-time configuration option was found");
 
   /* Convert file contents from UTF-8 */
   SVN_ERR (svn_utf_cstring_from_utf8 (&contents_native, contents, pool));
@@ -290,7 +290,7 @@ svn_cl__make_log_msg_baton (void **baton,
              a deliberate encoding, and even if it is, we still
              can't handle it. */
           return svn_error_create (SVN_ERR_CL_BAD_LOG_MESSAGE, NULL,
-                                   "Log message contains a zero byte.");
+                                   "Log message contains a zero byte");
         }
       lmb->message = opt_state->filedata->data;
     }      
@@ -518,7 +518,7 @@ svn_cl__get_log_message (const char **log_msg,
             err = svn_error_quick_wrap 
               (err, "Could not use external editor to fetch log message; "
                "consider setting the $SVN_EDITOR environment variable "
-               "or using the --message (-m) or --file (-F) options.");
+               "or using the --message (-m) or --file (-F) options");
           return err;
         }
 

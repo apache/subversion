@@ -99,7 +99,7 @@ delta_string_keys (apr_array_header_t **keys,
   if (rep->kind != svn_fs__rep_kind_delta)
     return svn_error_create 
       (SVN_ERR_FS_GENERAL, NULL,
-       "delta_string_key: representation is not of type 'delta'");
+       "Representation is not of type 'delta'");
 
   /* Set up a convenience variable. */
   chunks = rep->contents.delta.chunks;
@@ -470,7 +470,7 @@ rep_read_range (svn_fs_t *fs,
               if (first_chunk->version != chunk->version)
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   "diff version inconsistencies in representation '%s'",
+                   "Diff version inconsistencies in representation '%s'",
                    rep_key);
 
               rep_key = chunk->rep_key;
@@ -725,7 +725,7 @@ svn_fs__rep_contents (svn_string_t *str,
   if (contents_size > SVN_MAX_OBJECT_SIZE)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
-       "svn_fs__rep_contents: rep contents are too large "
+       "Rep contents are too large "
        "(got %" SVN_FILESIZE_T_FMT ", limit is %" APR_SIZE_T_FMT ")",
        contents_size, SVN_MAX_OBJECT_SIZE);
   else
@@ -740,7 +740,7 @@ svn_fs__rep_contents (svn_string_t *str,
   if (len != str->len)
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
-       "svn_fs__rep_contents: failure reading rep \"%s\"", rep_key);
+       "Failure reading rep '%s'", rep_key);
 
   /* Just the standard paranoia. */
   {
@@ -756,7 +756,7 @@ svn_fs__rep_contents (svn_string_t *str,
     if (! svn_md5_digests_match (checksum, rep->checksum))
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         "svn_fs__rep_contents: checksum mismatch on rep \"%s\":\n"
+         "Checksum mismatch on rep '%s':\n"
          "   expected:  %s\n"
          "     actual:  %s\n", rep_key,
          svn_md5_digest_to_cstring (rep->checksum, trail->pool),
@@ -840,7 +840,7 @@ txn_body_read_rep (void *baton, trail_t *trail)
               if (! svn_md5_digests_match (checksum, rep->checksum))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   "txn_body_read_rep: checksum mismatch on rep \"%s\":\n"
+                   "Checksum mismatch on rep '%s':\n"
                    "   expected:  %s\n"
                    "     actual:  %s\n", args->rb->rep_key,
                    svn_md5_digest_to_cstring (rep->checksum, trail->pool),
@@ -853,7 +853,7 @@ txn_body_read_rep (void *baton, trail_t *trail)
       return
         svn_error_create
         (SVN_ERR_FS_REP_CHANGED, NULL,
-         "txn_body_read_rep: null rep, but offset past zero already");
+         "Null rep, but offset past zero already");
     }
   else
     *(args->len) = 0;
@@ -965,7 +965,7 @@ rep_write (svn_fs_t *fs,
   if (! rep_is_mutable (rep, txn_id))
     svn_error_createf
       (SVN_ERR_FS_REP_NOT_MUTABLE, NULL,
-       "rep_write: rep \"%s\" is not mutable", rep_key);
+       "Rep '%s' is not mutable", rep_key);
 
   if (rep->kind == svn_fs__rep_kind_fulltext)
     {
@@ -979,7 +979,7 @@ rep_write (svn_fs_t *fs,
          in this file, and it creates them fulltext. */
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         "rep_write: rep \"%s\" both mutable and non-fulltext", rep_key);
+         "Rep '%s' both mutable and non-fulltext", rep_key);
     }
   else /* unknown kind */
     abort ();
@@ -1156,7 +1156,7 @@ rep_contents_clear (svn_fs_t *fs,
   if (! rep_is_mutable (rep, txn_id))
     return svn_error_createf
       (SVN_ERR_FS_REP_NOT_MUTABLE, NULL,
-       "svn_fs__rep_contents_clear: rep \"%s\" is not mutable", rep_key);
+       "Rep '%s' is not mutable", rep_key);
 
   assert (rep->kind == svn_fs__rep_kind_fulltext);
 
@@ -1275,7 +1275,7 @@ write_svndiff_strings (void *baton, const char *data, apr_size_t *len)
   /* Make sure we (still) have a key. */
   if (wb->key == NULL)
     return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
-                             "write_string_set: Failed to get new string key");
+                             "Failed to get new string key");
 
   /* Restore *LEN to the value it *would* have been were it not for
      header stripping. */
@@ -1350,7 +1350,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   if (strcmp (target, source) == 0)
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
-       "svn_fs__rep_deltify: attempt to deltify \"%s\" against itself",
+       "Attempt to deltify '%s' against itself",
        target);
 
   /* Set up a handler for the svndiff data, which will write each
@@ -1416,7 +1416,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   if (! digest)
     return svn_error_createf
       (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT, NULL,
-       "svn_fs__rep_deltify: failed to calculate MD5 digest for '%s'",
+       "Failed to calculate MD5 digest for '%s'",
        source);
 
   /* Construct a list of the strings used by the old representation so

@@ -658,13 +658,13 @@ svn_fs__dag_set_entry (dag_node_t *node,
   if (node->kind != svn_node_dir)
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       "Attempted to set entry in non-directory node.");
+       "Attempted to set entry in non-directory node");
   
   /* Check it's mutable. */
   if (! svn_fs__dag_check_mutable (node, txn_id))
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       "Attempted to set entry in immutable node.");
+       "Attempted to set entry in immutable node");
 
   return set_entry (node, entry_name, id, txn_id, trail);
 }
@@ -724,7 +724,7 @@ svn_fs__dag_set_proplist (dag_node_t *node,
       svn_string_t *idstr = svn_fs_unparse_id (node->id, node->pool);
       return svn_error_createf 
         (SVN_ERR_FS_NOT_MUTABLE, NULL,
-         "Can't set_proplist on *immutable* node-revision %s", idstr->data);
+         "Can't set proplist on *immutable* node-revision %s", idstr->data);
     }
 
   /* Go get a fresh NODE-REVISION for this node. */
@@ -947,13 +947,13 @@ svn_fs__dag_delete (dag_node_t *parent,
   if (parent->kind != svn_node_dir)
     return svn_error_createf
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       "Attempted to delete entry '%s' from *non*-directory node.", name);    
+       "Attempted to delete entry '%s' from *non*-directory node", name);    
 
   /* Make sure parent is mutable. */
   if (! svn_fs__dag_check_mutable (parent, txn_id))
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
-       "Attempted to delete entry '%s' from immutable directory node.", name);
+       "Attempted to delete entry '%s' from immutable directory node", name);
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
@@ -1169,7 +1169,7 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
   if (file->kind != svn_node_file)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FILE, NULL,
-       "Attempted to get textual contents of a *non*-file node.");
+       "Attempted to get textual contents of a *non*-file node");
   
   /* Go get a fresh node-revision for FILE. */
   SVN_ERR (get_node_revision (&noderev, file, trail));
@@ -1202,7 +1202,7 @@ svn_fs__dag_file_length (svn_filesize_t *length,
   if (file->kind != svn_node_file)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FILE, NULL,
-       "Attempted to get length of a *non*-file node.");
+       "Attempted to get length of a *non*-file node");
 
   /* Go get a fresh node-revision for FILE, and . */
   SVN_ERR (get_node_revision (&noderev, file, trail));
@@ -1226,7 +1226,7 @@ svn_fs__dag_file_checksum (unsigned char digest[],
   if (file->kind != svn_node_file)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FILE, NULL,
-       "Attempted to get checksum of a *non*-file node.");
+       "Attempted to get checksum of a *non*-file node");
 
   SVN_ERR (get_node_revision (&noderev, file, trail));
   if (noderev->data_key)
@@ -1255,13 +1255,13 @@ svn_fs__dag_get_edit_stream (svn_stream_t **contents,
   if (file->kind != svn_node_file)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FILE, NULL,
-       "Attempted to set textual contents of a *non*-file node.");
+       "Attempted to set textual contents of a *non*-file node");
   
   /* Make sure our node is mutable. */
   if (! svn_fs__dag_check_mutable (file, txn_id))
     return svn_error_createf 
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
-       "Attempted to set textual contents of an immutable node.");
+       "Attempted to set textual contents of an immutable node");
 
   /* Get the node revision. */
   SVN_ERR (get_node_revision (&noderev, file, trail));
@@ -1305,13 +1305,13 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
   if (file->kind != svn_node_file)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FILE, NULL,
-       "Attempted to set textual contents of a *non*-file node.");
+       "Attempted to set textual contents of a *non*-file node");
   
   /* Make sure our node is mutable. */
   if (! svn_fs__dag_check_mutable (file, txn_id))
     return svn_error_createf 
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
-       "Attempted to set textual contents of an immutable node.");
+       "Attempted to set textual contents of an immutable node");
 
   /* Get the node revision. */
   SVN_ERR (get_node_revision (&noderev, file, trail));
@@ -1333,7 +1333,7 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, 
            NULL,
-           "svn_fs__dag_finalize_edits: checksum mismatch, rep \"%s\":\n"
+           "Checksum mismatch, rep '%s':\n"
            "   expected:  %s\n"
            "     actual:  %s\n",
            noderev->edit_key, checksum, hex);

@@ -199,7 +199,7 @@ svn_categorize_props (const apr_array_header_t *proplist,
         /* Technically this can't happen, but might as well have the
            code ready in case that ever changes. */
         return svn_error_createf (SVN_ERR_BAD_PROP_KIND, NULL,
-                                  "bad prop kind for property '%s'",
+                                  "Bad property kind for property '%s'",
                                   prop->name);
 
       if (newprop)

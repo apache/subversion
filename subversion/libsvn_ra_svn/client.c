@@ -418,7 +418,7 @@ static svn_error_t *find_tunnel_agent(const char *tunnel, const char *user,
 
   if (!val || !*val)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                             "Undefined tunnel scheme %s", tunnel);
+                             "Undefined tunnel scheme '%s'", tunnel);
 
   /* If the scheme definition begins with "$varname", it means there
    * is an environment variable which can override the command. */
@@ -806,7 +806,7 @@ static svn_error_t *ra_svn_get_file(void *baton, const char *path,
       if (strcmp(hex_digest, expected_checksum) != 0)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           "ra_svn_get_file: checksum mismatch for '%s':\n"
+           "Checksum mismatch for '%s':\n"
            "   expected checksum:  %s\n"
            "   actual checksum:    %s\n",
            path, expected_checksum, hex_digest);

@@ -453,7 +453,7 @@ translate_newline (const char *eol_str,
            (strncmp (src_format, newline_buf, newline_len)))) 
         return svn_error_create
           (SVN_ERR_IO_INCONSISTENT_EOL, NULL,
-           "inconsistent line-endings in source stream, repair flag is off.");
+           "Inconsistent line-endings in source stream");
     }
   else
     {

@@ -234,7 +234,7 @@ delete_entry (const char *path,
   SVN_ERR (svn_fs_check_path (&kind, base_root, base_path, pool));
   if (kind == svn_node_none)
     return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
-                              "'%s' not found in FS", path);
+                              "'%s' not found in filesystem", path);
   node->kind = kind;
 
   return SVN_NO_ERROR;

@@ -112,7 +112,7 @@ static svn_error_t *
 out_of_date (const char *path, const char *txn_name)
 {
   return svn_error_createf (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-                            "out of date: '%s' in transaction '%s'",
+                            "Out of date: '%s' in transaction '%s'",
                             path, txn_name);
 }
 
@@ -217,7 +217,7 @@ add_directory (const char *path,
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
     return svn_error_createf 
       (SVN_ERR_FS_GENERAL, NULL,
-       "add_dir '%s': got copy_path, but no copy_rev", full_path);
+       "Got source path but no source revision for '%s'", full_path);
 
   if (copy_path)
     {
@@ -241,7 +241,7 @@ add_directory (const char *path,
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
         return svn_error_createf 
           (SVN_ERR_FS_GENERAL, NULL,
-           "add_dir '%s': copy_url is from different repo", full_path);
+           "Source url '%s' is from different repository", full_path);
 
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
 
@@ -349,7 +349,7 @@ add_file (const char *path,
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
     return svn_error_createf 
       (SVN_ERR_FS_GENERAL, NULL,
-       "add_file '%s': got copy_path, but no copy_rev", full_path);
+       "Got source path but no source revision for '%s'", full_path);
 
   if (copy_path)
     {      
@@ -373,7 +373,7 @@ add_file (const char *path,
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
             return svn_error_createf 
               (SVN_ERR_FS_GENERAL, NULL,
-               "add_file '%s': copy_url is from different repo", full_path);
+               "Source url '%s' is from different repository", full_path);
       
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
 
@@ -479,7 +479,7 @@ close_file (void *file_baton,
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             "close_file: checksum mismatch for resulting fulltext\n"
+             "Checksum mismatch for resulting fulltext\n"
              "(%s):\n"
              "   expected checksum:  %s\n"
              "   actual checksum:    %s\n",

@@ -188,8 +188,7 @@ svn_io_open_unique_file (apr_file_t **f,
   *unique_name_p = NULL;
   return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                             NULL,
-                            "svn_io_open_unique_file: unable to make name for "
-                            "'%s'", path);
+                            "Unable to make name for '%s'", path);
 }
 
 #if 1 /* TODO: Remove this code when APR 0.9.6 is released. */
@@ -419,19 +418,19 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
   SVN_ERR (svn_io_check_path (src, &kind, subpool));
   if (kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                              "svn_io_copy_dir: '%s' is not a directory.",
+                              "Source '%s' is not a directory",
                               src);
 
   SVN_ERR (svn_io_check_path (dst_parent, &kind, subpool));
   if (kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                              "svn_io_copy_dir: '%s' is not a directory.",
+                              "Destination '%s' is not a directory",
                               dst_parent);
 
   SVN_ERR (svn_io_check_path (dst_path, &kind, subpool));
   if (kind != svn_node_none)
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                              "svn_io_copy_dir: '%s' already exists.",
+                              "Destination '%s' already exists",
                               dst_path);
   
   SVN_ERR (svn_path_cstring_from_utf8 (&dst_path_apr, dst_path, pool));
@@ -441,7 +440,6 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
   status = apr_dir_make (dst_path_apr, APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,
-                              "svn_io_copy_dir: "
                               "Unable to create directory '%s'",
                               dst_path);
 
@@ -805,7 +803,7 @@ svn_io_is_file_executable(svn_boolean_t *executable,
   apr_err = apr_uid_current (&uid, &gid, pool);
 
   if (apr_err)
-    return svn_error_wrap_apr(apr_err, "Error getting UID of process.");
+    return svn_error_wrap_apr(apr_err, "Error getting UID of process");
     
   /* Check executable bit for current user. */
   if (apr_uid_compare(uid, file_info.user) == APR_SUCCESS)
@@ -903,7 +901,7 @@ svn_stringbuf_from_file (svn_stringbuf_t **result,
     return svn_error_create
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          "svn_stringbuf_from_file: "
-         "reading from stdin is currently broken, so disabled");
+         "Reading from stdin is currently broken, so disabled");
 
   SVN_ERR (svn_io_file_open (&f, filename, APR_READ, APR_OS_DEFAULT, pool));
 
@@ -1485,7 +1483,6 @@ svn_io_run_diff3 (const char *dir,
      error. */
   if ((*exitcode != 0) && (*exitcode != 1))
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL, 
-                              "svn_io_run_diff3: "
                               "Error running '%s':  exitcode was %d, args were:"
                               "\nin directory '%s', basenames:\n%s\n%s\n%s",
                               diff3_utf8, *exitcode,
@@ -1515,8 +1512,7 @@ svn_io_detect_mimetype (const char **mimetype,
   SVN_ERR (svn_io_check_path (file, &kind, pool));
   if (kind != svn_node_file)
     return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                              "svn_io_detect_mimetype: "
-                              "Can't detect mimetype of non-file '%s'",
+                              "Can't detect MIME type of non-file '%s'",
                               file);
 
   SVN_ERR (svn_io_file_open (&fh, file, APR_READ, 0, pool));
@@ -2142,7 +2138,7 @@ svn_io_read_version_file (int *version,
   /* If there was no data in PATH, return an error. */
   if (len == 0)
     return svn_error_createf (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                              "reading '%s'", path);
+                              "Reading '%s'", path);
 
   /* Check that the first line contains only digits. */
   {
@@ -2157,7 +2153,7 @@ svn_io_read_version_file (int *version,
         if (! apr_isdigit (c))
           return svn_error_createf
             (SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
-             "first line of '%s' contains non-digit", path);
+             "First line of '%s' contains non-digit", path);
       }
   }
 

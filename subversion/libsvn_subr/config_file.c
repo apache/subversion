@@ -378,10 +378,10 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
     {
       if (errno != ENOENT)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't open config file \"%s\"", file);
+                                  "Can't open config file '%s'", file);
       else if (must_exist && errno == ENOENT)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't find config file \"%s\"", file);
+                                  "Can't find config file '%s'", file);
       else
         return SVN_NO_ERROR;
     }

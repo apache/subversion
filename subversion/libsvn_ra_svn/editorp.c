@@ -592,7 +592,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            "apply-textdelta already active");
+                            "Apply-textdelta already active");
   SVN_CMD_ERR(ds->editor->apply_textdelta(entry->baton, base_checksum,
                                           entry->pool, &wh, &wh_baton));
   entry->dstream = svn_txdelta_parse_svndiff(wh, wh_baton, TRUE, entry->pool);
@@ -613,7 +613,7 @@ static svn_error_t *ra_svn_handle_textdelta_chunk(svn_ra_svn_conn_t *conn,
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (!entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            "apply-textdelta not active");
+                            "Apply-textdelta not active");
   SVN_CMD_ERR(svn_stream_write(entry->dstream, str->data, &str->len));
   return SVN_NO_ERROR;
 }
@@ -631,7 +631,7 @@ static svn_error_t *ra_svn_handle_textdelta_end(svn_ra_svn_conn_t *conn,
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
   if (!entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                            "apply-textdelta not active");
+                            "Apply-textdelta not active");
   SVN_CMD_ERR(svn_stream_close(entry->dstream));
   entry->dstream = NULL;
   return SVN_NO_ERROR;

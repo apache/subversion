@@ -77,7 +77,7 @@ wc_to_wc_copy (const char *src_path,
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   if (src_kind == svn_node_none)
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                              "Path '%s' does not exist.", src_path);
+                              "Path '%s' does not exist", src_path);
 
   /* If DST_PATH does not exist, then its basename will become a new
      file or dir added to its parent (possibly an implicit '.').  If
@@ -96,7 +96,7 @@ wc_to_wc_copy (const char *src_path,
     }
   else
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                              "File '%s' already exists.", dst_path);
+                              "File '%s' already exists", dst_path);
 
   if (is_move)
     {
@@ -407,12 +407,12 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                                    &attempt_kind, pool));
       if (attempt_kind != svn_node_none)
         return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                  "Path '%s' already exists.", dst_rel);
+                                  "Path '%s' already exists", dst_rel);
     }
   else
     {
       return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                                "Unrecognized node kind of '%s'.", dst_url);
+                                "Unrecognized node kind of '%s'", dst_url);
     }
 
   /* Create a new commit item and add it to the array. */
@@ -627,7 +627,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
       /* DST_URL is an existing file, which can't be overwritten or
          used as a container, so error out. */
       return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                "File '%s' already exists.", dst_url);
+                                "File '%s' already exists", dst_url);
     }
 
   /* Create a new commit item and add it to the array. */
@@ -815,7 +815,7 @@ repos_to_wc_copy (const char *src_url,
   else if (dst_kind != svn_node_none)  /* must be a file */
     {
       return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                                "File '%s' already exists.", dst_path);
+                                "File '%s' already exists", dst_path);
     }
 
   /* Now that dst_path has possibly been reset, check that there's
@@ -926,7 +926,7 @@ repos_to_wc_copy (const char *src_url,
              at the moment when we pass a NULL copyfromurl. */
           
           return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                   "Source URL is from foreign repository.");
+                                   "Source URL is from foreign repository");
         }
     } /* end directory case */
 

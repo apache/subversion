@@ -180,7 +180,7 @@ def commit_routine_switching(wc_dir, verify):
   # same URL.  We don't allow this.
   svntest.actions.run_and_verify_commit(
     wc_dir, None, None,
-    "svn: Cannot commit both .* as they refer to the same URL.$",
+    "svn: Cannot commit both .* as they refer to the same URL$",
     None, None, None, None,
     wc_dir)
 

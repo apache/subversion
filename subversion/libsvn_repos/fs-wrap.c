@@ -51,7 +51,7 @@ svn_repos_fs_commit_txn (const char **conflict_p,
   if ((err = svn_repos__hooks_post_commit (repos, *new_rev, pool)))
     return svn_error_create
       (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
-       "Commit succeeded, but post-commit hook failed.");
+       "Commit succeeded, but post-commit hook failed");
 
   return SVN_NO_ERROR;
 }
@@ -151,7 +151,7 @@ validate_prop (const char *name,
     return svn_error_createf 
       (SVN_ERR_REPOS_BAD_ARGS, NULL,
        "Storage of non-regular property '%s' is disallowed through the "
-       "repository interface, and could indicate a bug in your client.", 
+       "repository interface, and could indicate a bug in your client", 
        name);
   return SVN_NO_ERROR;
 }

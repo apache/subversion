@@ -622,7 +622,7 @@ svn_error_t *
 svn_cl__check_cancel (void *baton)
 {
   if (cancelled)
-    return svn_error_create (SVN_ERR_CANCELLED, NULL, "caught SIGINT");
+    return svn_error_create (SVN_ERR_CANCELLED, NULL, "Caught SIGINT");
   else
     return SVN_NO_ERROR;
 }
@@ -926,7 +926,7 @@ main (int argc, const char * const *argv)
           {
             err = svn_error_create (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                     "--auto-props and --no-auto-props are "
-                                    "mutually exclusive.");
+                                    "mutually exclusive");
             svn_handle_error (err, stderr, FALSE);
             svn_error_clear (err);
             svn_pool_destroy (pool);
@@ -939,7 +939,7 @@ main (int argc, const char * const *argv)
           {
             err = svn_error_create (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                     "--auto-props and --no-auto-props are "
-                                    "mutually exclusive.");
+                                    "mutually exclusive");
             svn_handle_error (err, stderr, FALSE);
             svn_error_clear (err);
             svn_pool_destroy (pool);
@@ -1049,7 +1049,7 @@ main (int argc, const char * const *argv)
           err = svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE,
                                   NULL,
                                   "Log message file is a versioned file; "
-                                  "use '--force-log' to override.");
+                                  "use '--force-log' to override");
           svn_handle_error (err, stderr, FALSE);
           svn_error_clear (err);
           svn_pool_destroy (pool);
@@ -1063,7 +1063,7 @@ main (int argc, const char * const *argv)
           err = svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
                                   "The log message is a pathname "
                                   "(was -F intended?); use '--force-log' "
-                                  "to override.");
+                                  "to override");
           svn_handle_error (err, stderr, FALSE);
           svn_error_clear (err);
           svn_pool_destroy (pool);

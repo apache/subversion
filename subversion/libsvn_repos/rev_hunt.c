@@ -56,7 +56,7 @@ get_time (apr_time_t *tm,
   if (! date_str)    
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
-       "failed to find tm on revision %" SVN_REVNUM_T_FMT, rev);
+       "Failed to find time on revision %" SVN_REVNUM_T_FMT, rev);
 
   SVN_ERR (svn_time_from_cstring (tm, date_str->data, pool));
 
@@ -191,12 +191,12 @@ svn_repos_history (svn_fs_t *fs,
   if (! SVN_IS_VALID_REVNUM (start))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, 0, 
-       "svn_repos_revisions_changed: invalid start revision %" 
+       "Invalid start revision %" 
        SVN_REVNUM_T_FMT, start);
   if (! SVN_IS_VALID_REVNUM (end))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, 0, 
-       "svn_repos_revisions_changed: invalid end revision %" 
+       "Invalid end revision %" 
        SVN_REVNUM_T_FMT, end);
 
   /* Ensure that the input is ordered. */

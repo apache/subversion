@@ -147,7 +147,7 @@ svn_fs__bdb_new_successor_id (svn_fs_id_t **successor_p,
       svn_string_t *new_id_str = svn_fs_unparse_id (new_id, trail->pool);
       return svn_error_createf 
         (SVN_ERR_FS_ALREADY_EXISTS, err,
-         "successor id '%s' (for '%s') already exists in filesystem '%s'",  
+         "Successor id '%s' (for '%s') already exists in filesystem '%s'",  
          new_id_str->data, id_str->data, fs->path);
     }
 

@@ -694,7 +694,7 @@ svn_wc_transmit_text_deltas (const char *path,
   /* Open a filehandle for tmp text-base. */
   SVN_ERR_W (svn_io_file_open (&localfile, tmp_base,
                                APR_READ, APR_OS_DEFAULT, pool),
-             "svn_wc_transmit_text_deltas: error opening local file");
+             "Error opening local file");
 
   /* Create a text-delta stream object that pulls data out of the two
      files. */

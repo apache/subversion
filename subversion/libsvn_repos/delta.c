@@ -174,7 +174,7 @@ authz_root_check (svn_fs_root_t *root,
 
       if (! allowed)
         return svn_error_create (SVN_ERR_AUTHZ_ROOT_UNREADABLE, 0,
-                                 "Unable to open root of edit.");
+                                 "Unable to open root of edit");
     }
 
   return SVN_NO_ERROR;
@@ -187,7 +187,7 @@ not_a_dir_error (const char *role,
 {
   return svn_error_createf 
     (SVN_ERR_FS_NOT_DIRECTORY, 0,
-     "not_a_dir_error: invalid %s directory '%s'",
+     "Invalid %s directory '%s'",
      role, path ? path : "(null)");
 }
 
@@ -225,7 +225,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   /* TGT_FULLPATH must be valid. */
   if (! tgt_fullpath)
     return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0,
-                             "svn_repos_dir_delta: invalid target path");
+                             "Invalid target path");
 
   /* Calculate the fs path implicitly used for editor->open_root, so
      we can do an authz check on that path first. */
@@ -251,7 +251,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                          || tgt_kind != svn_node_dir))
     return svn_error_create 
       (SVN_ERR_FS_PATH_SYNTAX, 0,
-       "svn_repos_dir_delta: invalid editor anchoring; at least one of the "
+       "Invalid editor anchoring; at least one of the "
        "input paths is not a directory and there was no source entry");
   
   /* Set the global target revision if one can be determined. */

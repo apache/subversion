@@ -341,7 +341,7 @@ static svn_error_t * convert_exception(JNIEnv *jenv, apr_pool_t *pool)
   else
     {
       status = APR_EGENERAL;
-      msg = "the Java callback raised an exception";
+      msg = "The Java callback raised an exception";
     }
   result = svn_error_create(status, NULL, msg);
 

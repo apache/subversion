@@ -65,7 +65,7 @@ check_bdb_version (apr_pool_t *pool)
       || (major == SVN_FS_WANT_DB_MAJOR && minor == SVN_FS_WANT_DB_MINOR
           && patch < SVN_FS_WANT_DB_PATCH))
     return svn_error_createf (SVN_ERR_FS_GENERAL, 0,
-                              "bad database version: got %d.%d.%d,"
+                              "Bad database version: got %d.%d.%d,"
                               " should be at least %d.%d.%d",
                               major, minor, patch,
                               SVN_FS_WANT_DB_MAJOR,
@@ -76,7 +76,7 @@ check_bdb_version (apr_pool_t *pool)
      the one we compiled with. */
   if (major != DB_VERSION_MAJOR || minor != DB_VERSION_MINOR)
     return svn_error_createf (SVN_ERR_FS_GENERAL, 0,
-                              "bad database version:"
+                              "Bad database version:"
                               " compiled with %d.%d.%d,"
                               " running against %d.%d.%d",
                               DB_VERSION_MAJOR,
@@ -94,7 +94,7 @@ check_already_open (svn_fs_t *fs)
 {
   if (fs->env)
     return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0,
-                             "filesystem object already open");
+                             "Filesystem object already open");
   else
     return SVN_NO_ERROR;
 }

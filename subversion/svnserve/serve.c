@@ -87,7 +87,7 @@ static svn_error_t *get_fs_path(const char *repos_url, const char *url,
   len = strlen(repos_url);
   if (strncmp(url, repos_url, len) != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                             "'%s'\nis not the same repository as\n'%s'",
+                             "'%s' is not the same repository as '%s'",
                              url, repos_url);
   *fs_path = url + len;
   return SVN_NO_ERROR;
@@ -985,7 +985,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
 
   if(apr_err)
     return svn_error_create(SVN_ERR_BAD_FILENAME, NULL,
-                            "Couldn't determine repository path.");
+                            "Couldn't determine repository path");
 
   SVN_ERR(svn_path_cstring_to_utf8(&full_path, buffer, pool));
   full_path = svn_path_canonicalize(full_path, pool);
