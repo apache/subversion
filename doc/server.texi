@@ -359,7 +359,7 @@ Now it gets more tricky: we need to create a new version of the root
 directory.  This new root directory needs an entry to point to the
 ``new'' directory A, but directory B hasn't changed at all.  Therefore,
 our new root directory also has an entry that still points to the
-@b{old} directory B node!
+@emph{old} directory B node!
 
 @example
 @group
@@ -653,7 +653,7 @@ Let's ``tag'' directory A.  To make the clone, we create a new dir_entry
 
 Now we're all set.  In the future, the contents of directories A and B
 may change quite a lot.  However, assuming we never make any changes to
-directory T, it will @b{always} point to a particular pristine version
+directory T, it will @emph{always} point to a particular pristine version
 of directory A.  (We can use permissions to prevent anyone from writing
 to directory T.)  Thus, T is a tag.
 
