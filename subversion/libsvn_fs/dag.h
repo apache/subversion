@@ -59,7 +59,10 @@ typedef struct dag_node_t dag_node_t;
 
 
 /* Return a new dag_node_t object referring to the same node as NODE,
-   allocated in TRAIL->pool.  */
+   allocated in TRAIL->pool.  If you're trying to build a structure in
+   TRAIL->pool that wants to refer to dag nodes that may have been
+   allocated elsewhere, you can call this function, and avoid
+   inter-pool pointers.  */
 dag_node_t *svn_fs__dag_dup (dag_node_t *node,
                              trail_t *trail);
 
