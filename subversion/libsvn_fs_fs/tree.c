@@ -1357,7 +1357,41 @@ undelete_change (svn_fs_t *fs,
                  const char *txn_id,
                  apr_pool_t *pool)
 {
-  abort ();
+  apr_hash_t *changes;
+  svn_fs_path_change_t *this_change;
+
+  /* Canonicalize PATH. */
+  path = svn_fs__canonicalize_abspath (path, pool);
+
+  /* First, get the changes associated with TXN_ID. */
+  SVN_ERR (svn_fs__fs_txn_changes_fetch (&changes, fs, txn_id, pool));
+
+  /* Now, do any of those changes apply to path and indicate deletion? */
+  this_change = apr_hash_get (changes, path, APR_HASH_KEY_STRING);
+  if (this_change
+      && ((this_change->change_kind == svn_fs_path_change_delete)
+          || (this_change->change_kind == svn_fs_path_change_replace)))
+    {
+      /* If so, reset the changes and re-add everything except the
+         deletion. */
+      SVN_ERR (add_change (fs, txn_id, path, NULL,
+                           svn_fs_path_change_reset, 0, 0, pool));
+      if (this_change->change_kind == svn_fs_path_change_replace)
+        {
+          SVN_ERR (add_change (fs, txn_id, path, NULL,
+                               svn_fs_path_change_reset, 0, 0, pool));
+        }
+    }
+  else
+    {
+      /* Else, this function was called in error, OR something is not
+         as we expected it to be in the changes table. */
+      return svn_error_createf
+        (SVN_ERR_FS_CORRUPT, NULL,
+         "No deletion changes for path '%s' "
+         "in transaction '%s' of filesystem '%s'",
+         path, txn_id, fs->path);
+    }
   
   return SVN_NO_ERROR;
 }

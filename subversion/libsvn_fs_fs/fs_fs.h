@@ -303,6 +303,15 @@ svn_error_t *svn_fs__fs_delete_node_revision (svn_fs_t *fs,
                                               const svn_fs_id_t *id,
                                               apr_pool_t *pool);
 
+
+/* Find the paths which were changed in transaction TXN_ID of
+   filesystem FS and store them in *CHANGED_PATHS_P.  Get any
+   temporary allocations from POOL. */
+svn_error_t *svn_fs__fs_txn_changes_fetch (apr_hash_t **changes,
+                                           svn_fs_t *fs,
+                                           const char *txn_id,
+                                           apr_pool_t *pool);
+
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
 

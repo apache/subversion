@@ -1851,40 +1851,21 @@ read_change (svn_fs__change_t **change_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs__fs_paths_changed (apr_hash_t **changed_paths_p,
-                          svn_fs_t *fs,
-                          svn_revnum_t rev,
-                          apr_pool_t *pool)
+/* Fetch all the changed path entries from FILE and store then in
+   *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
+   *data.  Do all allocations in POOL. */
+static svn_error_t *
+fetch_all_changes (apr_hash_t *changed_paths,
+                   apr_file_t *file,
+                   apr_pool_t *pool)
 {
-  char *revision_filename;
-  apr_off_t changes_offset;
-  apr_hash_t *changed_paths;
   svn_fs__change_t *change;
-  apr_file_t *revision_file;
   apr_pool_t *iterpool = svn_pool_create (pool);
-  
-  revision_filename = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
-
-  SVN_ERR (svn_io_file_open (&revision_file,
-                             svn_path_join_many (pool, 
-                                                 fs->fs_path,
-                                                 SVN_FS_FS__REVS_DIR,
-                                                 revision_filename,
-                                                 NULL),
-                             APR_READ, APR_OS_DEFAULT, pool));
-
-  SVN_ERR (get_root_changes_offset (NULL, &changes_offset, revision_file,
-                                    pool));
-
-  SVN_ERR (svn_io_file_seek (revision_file, APR_SET, &changes_offset, pool));
-
-  changed_paths = apr_hash_make (pool);
   
   /* Read in the changes one by one, folding them into our local hash
      as necessary. */
   
-  SVN_ERR (read_change (&change, revision_file, pool));
+  SVN_ERR (read_change (&change, file, pool));
 
   while (change)
     {
@@ -1922,7 +1903,7 @@ svn_fs__fs_paths_changed (apr_hash_t **changed_paths_p,
             }
         }
 
-      SVN_ERR (read_change (&change, revision_file, pool));
+      SVN_ERR (read_change (&change, file, pool));
 
       /* Clear the per-iteration subpool. */
       svn_pool_clear (iterpool);
@@ -1931,6 +1912,67 @@ svn_fs__fs_paths_changed (apr_hash_t **changed_paths_p,
   /* Destroy the per-iteration subpool. */
   svn_pool_destroy (iterpool);
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_txn_changes_fetch (apr_hash_t **changed_paths_p,
+                              svn_fs_t *fs,
+                              const char *txn_id,
+                              apr_pool_t *pool)
+{
+  const char *changes;
+  apr_file_t *file;
+  apr_hash_t *changed_paths = apr_hash_make (pool);
+
+  changes = svn_path_join_many (pool, fs->fs_path,
+                                SVN_FS_FS__TXNS_DIR,
+                                apr_pstrcat (pool, txn_id,
+                                             SVN_FS_FS__TXNS_EXT,
+                                             NULL),
+                                SVN_FS_FS__CHANGES, NULL);
+
+  SVN_ERR (svn_io_file_open (&file, changes, APR_READ, APR_OS_DEFAULT, pool));
+
+  SVN_ERR (fetch_all_changes (changed_paths, file, pool));
+
+  SVN_ERR (svn_io_file_close (file, pool));
+
+  *changed_paths_p = changed_paths;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_paths_changed (apr_hash_t **changed_paths_p,
+                          svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          apr_pool_t *pool)
+{
+  char *revision_filename;
+  apr_off_t changes_offset;
+  apr_hash_t *changed_paths;
+  apr_file_t *revision_file;
+  
+  revision_filename = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+
+  SVN_ERR (svn_io_file_open (&revision_file,
+                             svn_path_join_many (pool, 
+                                                 fs->fs_path,
+                                                 SVN_FS_FS__REVS_DIR,
+                                                 revision_filename,
+                                                 NULL),
+                             APR_READ, APR_OS_DEFAULT, pool));
+
+  SVN_ERR (get_root_changes_offset (NULL, &changes_offset, revision_file,
+                                    pool));
+
+  SVN_ERR (svn_io_file_seek (revision_file, APR_SET, &changes_offset, pool));
+
+  changed_paths = apr_hash_make (pool);
+
+  SVN_ERR (fetch_all_changes (changed_paths, revision_file, pool));
+  
   /* Close the revision file. */
   SVN_ERR (svn_io_file_close (revision_file, pool));
 
