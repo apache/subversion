@@ -208,8 +208,7 @@ typedef struct svn_delta_digger_t
 
   /* Caller uses delta context to determine if prop data or text data. */
   svn_error_t (*data_handler) (svn_delta_digger_t *digger,
-                               const char *data,
-                               int len);
+                               svn_edit_content *eddy);
 
   /* Call handles dirs specially, because might want to create them. 
    * It gets the digger for context, but also the current edit_content
