@@ -55,6 +55,7 @@ svn_client_status (apr_hash_t **statushash,
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   svn_wc_entry_t *entry;
+  svn_stringbuf_t *parent = NULL;
   const char *URL;
   apr_hash_t *hash = apr_hash_make (pool);
 
@@ -75,7 +76,7 @@ svn_client_status (apr_hash_t **statushash,
       /* If this entry has no ancestry and isn't a directory
          (perhaps because it was just added) we'll get the
          ancestry from its parent. */
-      svn_stringbuf_t *parent = svn_stringbuf_dup (path, pool);
+      parent = svn_stringbuf_dup (path, pool);
       svn_path_remove_component (parent, svn_path_local_style);
       SVN_ERR (svn_wc_entry (&entry, parent, pool));
     }
@@ -107,10 +108,18 @@ svn_client_status (apr_hash_t **statushash,
 
              Don't throw network errors;  just treat them as
              non-fatal. */
+
+          /* ### svn_client_authenticate only accepts directory paths */
+          if (!parent && entry->kind != svn_node_dir)
+            {
+              parent = svn_stringbuf_dup (path, pool);
+              svn_path_remove_component (parent, svn_path_local_style);
+            }
           ra_err = svn_client_authenticate (&session, 
                                             ra_lib,
                                             svn_stringbuf_create (URL, pool),
-                                            path, auth_obj, pool);
+                                            (parent ? parent : path),
+                                            auth_obj, pool);
           if (ra_err) rev_unknown = TRUE;
             
           ra_err = ra_lib->get_latest_revnum (session, &latest_revnum);
