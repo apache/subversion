@@ -37,54 +37,25 @@ svn_path_get_absolute(svn_stringbuf_t **pabsolute,
                       const svn_stringbuf_t *relative,
                       apr_pool_t *pool)
 {
-  char buffer[APR_PATH_MAX];
-#ifdef WIN32
-  if (_fullpath(buffer, relative->data, APR_PATH_MAX) != NULL)
+  /* Why do I get an warning if I just use &real_buffer, in the call to 
+     apr_filepath_merge?? */
+  char real_buffer[APR_PATH_MAX];
+  char * buffer = real_buffer;
+  int apr_err = apr_filepath_merge(&buffer, NULL, relative->data,
+                                   APR_FILEPATH_NOTRELATIVE &
+                                   APR_FILEPATH_NATIVE & 
+                                   APR_FILEPATH_TRUENAME, pool);
+  if (apr_err == APR_SUCCESS)
     {
       *pabsolute = svn_stringbuf_create(buffer, pool);
+      return SVN_NO_ERROR;
     }
-  else 
+  else
     {
-      /* TODO: (kevin) Create better error messages, once I learn about
-         the errors returned from _fullpath() */
-      return svn_error_createf(APR_SUCCESS, SVN_ERR_BAD_FILENAME,
-                               NULL, pool, "Could not determine absolute "
-                               "path of %s", relative->data);
+      return svn_error_createf(SVN_ERR_BAD_FILENAME, apr_err, NULL, pool,
+                               "Couldn't determine absolute path of %s.", 
+                               relative->data);
     }
-#else
-  if (realpath(relative->data, buffer) != NULL)
-    {
-      *pabsolute = svn_stringbuf_create(buffer, pool);
-    }
-  else 
-    {
-      switch (errno)
-        {
-        case EACCES:
-            return svn_error_createf(APR_SUCCESS, SVN_ERR_RA_NOT_AUTHORIZED,
-                                     NULL, pool, "Could not get absolute path "
-                                     "for %s, because you lack permissions",
-                                     relative->data);
-            break;
-        case EINVAL: /* FALLTHRU */
-        case EIO: /* FALLTHRU */
-        case ELOOP: /* FALLTHRU */
-        case ENAMETOOLONG: /* FALLTHRU */
-        case ENOENT: /* FALLTHRU */
-        case ENOTDIR:
-            return svn_error_createf(APR_SUCCESS, SVN_ERR_BAD_FILENAME,
-                                     NULL, pool, "Could not get absolute path "
-                                     "for %s, because it is not a valid file "
-                                     "name.", relative->data);
-        default:
-            return svn_error_createf(APR_SUCCESS, SVN_ERR_BAD_FILENAME,
-                                     NULL, pool, "Could not determine if %s "
-                                     "is a file or directory.", relative->data);
-            break;
-        }
-    }
-#endif
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -97,7 +68,7 @@ svn_path_split_if_file(svn_stringbuf_t *path,
   apr_status_t apr_err = apr_stat(&finfo, path->data, APR_FINFO_TYPE, pool);
   if (apr_err != APR_SUCCESS)
     {
-      return svn_error_createf(apr_err, SVN_ERR_BAD_FILENAME, NULL,
+      return svn_error_createf(SVN_ERR_BAD_FILENAME, apr_err, NULL,
                               pool, "Couldn't determine if %s was a file or "
                               "directory.", path->data);
     }
@@ -114,7 +85,7 @@ svn_path_split_if_file(svn_stringbuf_t *path,
         }
       else 
         {
-          return svn_error_createf(APR_SUCCESS, SVN_ERR_BAD_FILENAME, NULL, pool,
+          return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, NULL, pool,
                                   "%s is neither a file nor a directory name.",
                                   path->data);
         }
