@@ -228,8 +228,7 @@
 }
 
 %typemap(perl5, argout, fragment="t_output_helper") (const char *data, apr_size_t *len) {
-    $result = newSViv(*$2);
-
+    $result = sv_2mortal (newSViv(*$2));
 }
 
 /* auth provider convertors */
