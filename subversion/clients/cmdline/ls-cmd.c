@@ -194,7 +194,7 @@ print_dirents_xml (apr_hash_t *dirents,
       sb = svn_stringbuf_create ("", subpool);
 
       /* "<entry ...>" */
-      svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "entry",
+      svn_xml_make_open_tag (&sb, subpool, svn_xml_normal, "entry",
                              "kind", kind_str (dirent->kind),
                              NULL);
 
@@ -216,7 +216,7 @@ print_dirents_xml (apr_hash_t *dirents,
         }
 
       /* "<commit revision=...>" */
-      svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "commit",
+      svn_xml_make_open_tag (&sb, subpool, svn_xml_normal, "commit",
                              "revision",
                              apr_psprintf (subpool, "%ld",
                                            dirent->created_rev),
