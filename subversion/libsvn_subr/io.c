@@ -828,17 +828,6 @@ svn_io_get_dirents (apr_hash_t **dirents,
 }
 
 
-/* Invoke PROGRAM with ARGS, using PATH as working directory.
- * Connect PROGRAM's stdin, stdout, and stderr to INFILE, OUTFILE, and
- * ERRFILE, except where they are null.
- *
- * ARGS is a list of (const char *)'s, terminated by NULL.
- * ARGS[0] is the name of the program, though it need not be the same
- * as CMD.
- *
- * INHERIT sets whether the invoked program shall inherit its environment or
- * run "clean".
- */
 svn_error_t *
 svn_io_run_cmd (const char *path,
                 const char *cmd,
@@ -1003,6 +992,53 @@ svn_io_run_diff (const char *dir,
 
   return SVN_NO_ERROR;
 }
+
+
+
+svn_error_t *
+svn_io_run_diff3 (const char *dir,
+                  const char *mine,
+                  const char *older,
+                  const char *yours,
+                  apr_file_t *merged,
+                  int *exitcode,
+                  apr_pool_t *pool)
+{
+  const char **args;
+  int nargs = 7;
+
+  apr_pool_t *subpool = svn_pool_create (pool);
+  args = apr_palloc(subpool, nargs * sizeof(char *));
+
+  args[0] = SVN_CLIENT_DIFF3;
+  args[1] = "-E";
+  args[2] = "-m";
+  args[3] = mine;
+  args[4] = older;
+  args[5] = yours;
+  args[6] = NULL;
+
+  SVN_ERR (svn_io_run_cmd (dir, SVN_CLIENT_DIFF3, args, 
+                           exitcode, NULL, 
+                           FALSE, /* clean environment */
+                           NULL, merged, NULL,
+                           subpool));
+
+  /* According to the diff3 docs, a '0' means the merge was clean, and
+     '1' means conflict markers were found.  Anything else is real
+     error. */
+  if ((*exitcode != 0) || (*exitcode != 1))
+    return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, subpool, 
+                              "Error calling %s.", SVN_CLIENT_DIFF3);
+
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 
 
 svn_error_t *

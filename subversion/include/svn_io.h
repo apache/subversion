@@ -311,8 +311,8 @@ svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
                                  apr_pool_t *pool);
 
 
-/* Invoke PROGRAM with ARGS, using PATH as working directory.
-   Connect PROGRAM's stdin, stdout, and stderr to INFILE, OUTFILE, and
+/* Invoke CMD with ARGS, using PATH as working directory.
+   Connect CMD's stdin, stdout, and stderr to INFILE, OUTFILE, and
    ERRFILE, except where they are null.
 
    EXITCODE will contain the exit code of the process upon return, and
@@ -337,7 +337,7 @@ svn_error_t *svn_io_run_cmd (const char *path,
 /* Invoke SVN_CLIENT_DIFF, with USER_ARGS (which is an array of NUM_USER_ARGS 
    arguments), if they are specified, or "-u" if they are not.  
 
-   Diff runs in DIR, and it's exit status is stored in EXITCODE, if it is not 
+   Diff runs in DIR, and its exit status is stored in EXITCODE, if it is not 
    NULL.  
 
    If LABEL is given, it will be passed in as the argument to the "-L" option.
@@ -357,26 +357,22 @@ svn_error_t *svn_io_run_diff (const char *dir,
                               apr_pool_t *pool);
 
 
-/*  Invoke SVN_CLIENT_DIFF3 within like this:
+/*  Invoke SVN_CLIENT_DIFF3 like this:
 
             diff3 -Em MINE OLDER YOURS > MERGED
 
    (Read documentation on diff3 for details about how this behaves.)
 
    The `diff3` command will execute in DIR, and return the exit status
-   in *EXITCODE.
+   in *EXITCODE.  The merged result (stdout) will be written to MERGED.
 
    The caller must insure that MINE, OLDER, and YOURS are files that
-   already exist, and they must be *relative* paths below DIR.
-
-   MERGED must also be relative to DIR, but may or may not exist.  If
-   non-existent, it will be created.  If it exists, it will be
-   overwritten.  */
+   already exist, and they are supplied as *relative* paths below DIR. */
 svn_error_t *svn_io_run_diff3 (const char *dir,
                                const char *mine,
                                const char *older,
                                const char *yours,
-                               const char *merged,
+                               apr_file_t *merged,
                                int *exitcode,
                                apr_pool_t *pool);
 
