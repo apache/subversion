@@ -165,19 +165,19 @@ usage (const char *progname, int exit_code)
      "      tree starting at PATH.\n"
 #endif /* 0 */
      "\n"
-     "   dump   REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
+     "   dump      REPOS_PATH [LOWER_REV [UPPER_REV]] [--incremental]\n"
      "      Dump the contents of filesystem to stdout in a 'dumpfile'\n"
      "      portable format, sending feedback to stderr.  Dump revisions\n"
      "      LOWER_REV through UPPER_REV. If no revisions are given, all\n"
      "      revision trees are dumped.  If just LOWER_REV is given, that one\n"
      "      revision tree is dumped.\n"
      "\n"
-     "   load   REPOS_PATH\n"
+     "   load      REPOS_PATH\n"
      "      Read a 'dumpfile'-formatted stream from stdin, committing\n"
      "      new revisions into the repository's filesystem.\n"
      "      Send progress feedback to stdout.\n"
      "\n"
-     "   lscr      REPOS_PATH PATH [COPIES]\n"
+     "   lscr      REPOS_PATH PATH [--copies]\n"
      "      Print, one-per-line and youngest-to-eldest, the revisions in\n"
      "      which PATH was modified.  Use the COPIES flag to allow this\n"
      "      operation to cross copy history while searching for revisions.\n"
@@ -190,7 +190,7 @@ usage (const char *progname, int exit_code)
      "      If just LOWER_REV is given, that revision tree is printed.\n"
      "      If two revisions are given, that range is printed, inclusive.\n"
      "\n"
-     "   lstxns    [--long] REPOS_PATH\n"
+     "   lstxns    REPOS_PATH [--long]\n"
      "      Print all txn names and, if \"--long\" is specified, their\n"
      "      metadata and trees.\n"
      "\n"
@@ -341,10 +341,10 @@ main (int argc, const char * const *argv)
         int i, copies = 0;
 
         /* There are either 4 arguments (no "copies"), or there are 5
-           arguments, the last of which is "copies".  Anything else is
+           arguments, the last of which is "--copies".  Anything else is
            bogus.  */
         if ((argc == 4) 
-            || ((argc == 5) && (! strcmp (argv[4], "copies"))))
+            || ((argc == 5) && (! strcmp (argv[4], "--copies"))))
           {
             if (argc == 5)
               copies = 1;
@@ -383,13 +383,12 @@ main (int argc, const char * const *argv)
 
         if (argc >= 4) 
           {
-            if (strcmp (argv[2], "--long") != 0)
+            if (strcmp (argv[3], "--long") != 0)
               {
                 usage (argv[0], 1);
                 /* NOTREACHED */
               }
             show_extra = TRUE;
-            INT_ERR (svn_utf_cstring_to_utf8 (&path, argv[3], NULL, pool));
           }
 
         INT_ERR (svn_repos_open (&repos, path, pool));
@@ -550,6 +549,8 @@ main (int argc, const char * const *argv)
 
     case svnadmin_cmd_dump:
       {
+        svn_boolean_t incremental = FALSE;
+        int arg_count = argc;
         svn_stream_t *stdout_stream, *stderr_stream;
         svn_revnum_t
           lower = SVN_INVALID_REVNUM,
@@ -558,11 +559,26 @@ main (int argc, const char * const *argv)
         INT_ERR (svn_repos_open (&repos, path, pool));
         fs = svn_repos_fs (repos);
 
+        if (arg_count > 6)
+          {
+            usage (argv[0], 1);
+            /* NOT REACHED */
+          }
+
+        /* Check to see if the last argument is "--incremental",
+           meaning this is an incremental dump.  */
+        if ((arg_count > 3) 
+            && (strcmp (argv[arg_count - 1], "--incremental") == 0))
+          {
+            arg_count--;
+            incremental = TRUE;
+          }
+
         /* Do the args tell us what revisions to inspect? */
-        if (argv[3])
+        if (arg_count > 3)
           {
             lower = SVN_STR_TO_REV (argv[3]);
-            if (argv[4])
+            if (arg_count > 4)
               upper = SVN_STR_TO_REV (argv[4]);
           }
         
@@ -583,7 +599,7 @@ main (int argc, const char * const *argv)
                                       apr_file_open_stderr, pool));
 
         INT_ERR (svn_repos_dump_fs (repos, stdout_stream, stderr_stream,
-                                    lower, upper, pool));
+                                    lower, upper, incremental, pool));
       }
       break;
 
