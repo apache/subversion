@@ -49,7 +49,6 @@ Greg:
    - mod_dav_svn:
       - finish repository hooks (waiting on FS a bit)
 	defer mkcol/copy/move/delete.
-	walker API now clean: implement ours. (needed for checkout)
 
       - liveprop hooks:
 	core: getcontentlength, creationdate, getetag,
@@ -61,7 +60,7 @@ Greg:
 
    - mod_dav: no apparent changes until vsn comes in
       - need: MKACTIVITY, MERGE
-      - need CHECKOUT, but most of it is there; just verify
+      - verify Vasta's work against our needs: CHECKOUT, REPORT, LABEL
 
    - libsvn_ra_dav:
       - update editor
