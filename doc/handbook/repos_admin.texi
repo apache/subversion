@@ -4,17 +4,17 @@
 How to administer a Subversion repository.  
 
 In this section, we'll mainly focus on how to use the
-@command{svnadmin} and @{svnlook} programs to work with repositories.
+@command{svnadmin} and @command{svnlook} programs to work with repositories.
 
 @menu
 * Creating a repository::
 * Examining with svnlook::
-* Hook scripts::
-* Repository maintenance::
-* Tweaking a repository::
-* Networking a repository::
-* Migrating a repository::
 @end menu
+@c * Hook scripts::
+@c * Repository maintenance::
+@c * Tweaking a repository::
+@c * Networking a repository::
+@c * Migrating a repository::
 
 
 @c ------------------------------------------------------------------
