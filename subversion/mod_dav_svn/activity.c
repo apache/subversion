@@ -77,6 +77,7 @@ const char *dav_svn_get_txn(const dav_svn_repos *repos,
 dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
                                    const char *activity_id)
 {
+  dav_error *err = NULL;
   apr_dbm_t *dbm;
   apr_status_t status;
   const char *pathname;
@@ -108,49 +109,53 @@ dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
         txn_name = value.dptr;
     }
   if (! txn_name)
-    return dav_new_error(repos->pool, HTTP_NOT_FOUND, 0,
-                         "could not find activity.");
+    {
+      apr_dbm_close(dbm);
+      return dav_new_error(repos->pool, HTTP_NOT_FOUND, 0,
+                           "could not find activity.");
+    }
+
+  /* After this point, we have to cleanup the value and database. */
 
   /* Now, we attempt to delete TXN_NAME from the Subversion
-     repository.  If we couldn't open the transaction because it was
-     not mutable, then that's not such a big deal.  Otherwise, it is. */
-  serr = svn_fs_open_txn(&txn, repos->fs, txn_name, repos->pool);
-  if (! serr)
+     repository.  If we can't abort it because it was not mutable,
+     then that's not such a big deal.  Otherwise, it is. */
+  if ((serr = svn_fs_open_txn(&txn, repos->fs, txn_name, repos->pool)))
     {
-      if ((serr = svn_fs_abort_txn (txn, repos->pool)))
+      err = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "could not open transaction.");
+      goto cleanup;
+    }
+
+  serr = svn_fs_abort_txn (txn, repos->pool);
+  if (serr)
+    {
+      if (serr->apr_err == SVN_ERR_FS_TRANSACTION_NOT_MUTABLE)
         {
-          apr_dbm_freedatum(dbm, value);
-          apr_dbm_close(dbm);
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "could not abort transaction.");
+          svn_error_clear(serr);
         }
-    }
-  else if (serr->apr_err == SVN_ERR_FS_TRANSACTION_NOT_MUTABLE)
-    {
-      svn_error_clear(serr);
-    }
-  else
-    {
-      apr_dbm_freedatum(dbm, value);
-      apr_dbm_close(dbm);
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not open transaction.");
+      else
+        {
+          err = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "could not abort transaction.");
+          goto cleanup;
+        }
     }
   
   /* Finally, we remove the activity from the activities database. */
   status = apr_dbm_delete(dbm, key);
   if (status)
     {
-      apr_dbm_freedatum(dbm, value);
-      apr_dbm_close(dbm);
-      return dav_new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                           "unable to remove activity.");
+      err = dav_new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                          "unable to remove activity.");
+      goto cleanup;
     }
 
+ cleanup:
   apr_dbm_freedatum(dbm, value);
   apr_dbm_close(dbm);
 
-  return NULL;
+  return err;
 }
 
 

@@ -1355,6 +1355,27 @@ abort_txn (const char **msg,
       }
   }
 
+  /* Test that aborting a txn that's already committed fails. */
+  {
+    svn_fs_txn_t *txn4;
+    const char *txn4_name;
+    svn_revnum_t new_rev;
+    const char *conflict;
+    svn_error_t *err;
+
+    SVN_ERR (svn_fs_begin_txn (&txn4, fs, 0, pool));
+    SVN_ERR (svn_fs_txn_name (&txn4_name, txn4, pool));
+    SVN_ERR (svn_fs_commit_txn (&conflict, &new_rev, txn4, pool));
+    err = svn_fs_abort_txn (txn4, pool);
+    if (! err)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, NULL,
+         "expected error trying to abort a committed txn; got none");
+    else if (err->apr_err != SVN_ERR_FS_TRANSACTION_NOT_MUTABLE)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, NULL,
+         "got an unexpected error trying to abort a committed txn");
+  }
   return SVN_NO_ERROR;
 }
 
