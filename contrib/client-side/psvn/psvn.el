@@ -1,5 +1,5 @@
 ;;; psvn.el --- Subversion interface for emacs
-;; Copyright (C) 2002-2003 by Stefan Reichoer
+;; Copyright (C) 2002-2004 by Stefan Reichoer
 
 ;; Author: Stefan Reichoer, <reichoer@web.de>
 ;; $Id$
@@ -64,6 +64,7 @@
 ;; .     - svn-status-goto-root-or-return
 ;; f     - svn-status-find-file
 ;; o     - svn-status-find-file-other-window
+;; v     - svn-status-view-file-other-window
 ;; I     - svn-status-parse-info
 ;; P l   - svn-status-property-list
 ;; P s   - svn-status-property-set
@@ -94,6 +95,8 @@
 ;; * eventually use the customize interface
 ;; * interactive svn-status should complete existing directories only;
 ;;   unfortunately `read-directory-name' doesn't exist in Emacs 21.3
+;; * Add repository browser
+;; * Improve support for svn blame
 
 ;; Overview over the implemented/not (yet) implemented svn sub-commands:
 ;; * add                       implemented
@@ -559,6 +562,7 @@ A and B must be line-info's"
   (define-key svn-status-mode-map [?s] 'svn-status-show-process-buffer)
   (define-key svn-status-mode-map [?f] 'svn-status-find-file)
   (define-key svn-status-mode-map [?o] 'svn-status-find-file-other-window)
+  (define-key svn-status-mode-map [?v] 'svn-status-view-file-other-window)
   (define-key svn-status-mode-map [?e] 'svn-status-toggle-edit-cmd-flag)
   (define-key svn-status-mode-map [?g] 'svn-status-update)
   (define-key svn-status-mode-map [?q] 'svn-status-bury-buffer)
@@ -708,6 +712,7 @@ A and B must be line-info's"
   .     - svn-status-goto-root-or-return
   f     - svn-status-find-file
   o     - svn-status-find-file-other-window
+  v     - svn-status-view-file-other-window
   I     - svn-status-parse-info
   P l   - svn-status-property-list
   P s   - svn-status-property-set
@@ -759,8 +764,15 @@ used on startup of `svn-status'"
       (svn-status-get-line-information))))
 
 (defun svn-status-find-file-other-window ()
+  "Open the file in the other window for editing."
   (interactive)
   (find-file-other-window (svn-status-line-info->filename
+                           (svn-status-get-line-information))))
+
+(defun svn-status-view-file-other-window ()
+  "Open the file in the other window for viewing."
+  (interactive)
+  (view-file-other-window (svn-status-line-info->filename
                            (svn-status-get-line-information))))
 
 (defun svn-status-find-file-or-examine-directory ()
@@ -1970,10 +1982,10 @@ If ARG then show diff between some other vesion of the selected files."
   (set-buffer "*svn-status*")
   (svn-status-show-svn-diff-for-marked-files arg))
 
-(defun svn-log-edit-svn-log ()
-  (interactive)
+(defun svn-log-edit-svn-log (arg)
+  (interactive "P")
   (set-buffer "*svn-status*")
-  (svn-status-show-svn-log))
+  (svn-status-show-svn-log arg))
 
 (defun svn-log-edit-svn-status ()
   (interactive)
