@@ -30,16 +30,18 @@
 %ignore svn_client_proplist_item_s;
 
 /* -----------------------------------------------------------------------
-   all "targets" arrays are constant inputs of svn_stringbuf_t*
+   all "targets" and "diff_options" arrays are constant inputs of
+   svn_stringbuf_t *
  */
-%typemap(in) const apr_array_header_t *targets =
-    const apr_array_header_t *STRINGLIST;
+%apply const apr_array_header_t *STRINGLIST {
+    const apr_array_header_t *targets,
+    const apr_array_header_t *diff_options
+};
 
 /* -----------------------------------------------------------------------
    fix up the return hash for svn_client_propget()
 */
-%typemap(ignore) apr_hash_t **props = apr_hash_t **PROPHASH;
-%typemap(argout) apr_hash_t **props = apr_hash_t **PROPHASH;
+%apply apr_hash_t **PROPHASH { apr_hash_t **props };
 
 /* -----------------------------------------------------------------------
    handle the return value for svn_client_proplist()
@@ -76,12 +78,6 @@
     }
     $result = t_output_helper($result, list);
 }
-
-/* -----------------------------------------------------------------------
-   the "diff_options" in svn_client_diff() is a STRINGLIST, too
-*/
-%typemap(in) const apr_array_header_t *diff_options =
-    const apr_array_header_t *STRINGLIST;
 
 /* -----------------------------------------------------------------------
    handle the "statushash" OUTPUT param for svn_client_status()

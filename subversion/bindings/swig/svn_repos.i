@@ -39,8 +39,9 @@
 /* -----------------------------------------------------------------------
    handle the 'paths' parameter appropriately
 */
-%typemap(in) const apr_array_header_t *paths =
-    const apr_array_header_t *STRINGLIST;
+%apply const apr_array_header_t *STRINGLIST {
+    const apr_array_header_t *paths
+};
 
 /* ----------------------------------------------------------------------- */
 
