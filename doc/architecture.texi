@@ -103,8 +103,7 @@ connection to a server via a protocol of choice.  However, most of the
 API represents operations defined by the "main" Subversion library.
 (@xref{Semantics}.)
 
-For interface details, examine the header files @dfn{svn-client-wc.h}
-and @dfn{svn-client-net.h}.
+For interface details, @xref{Client}.
         
 @c ------------------------------------------------------------------
 @node Network Layer
@@ -145,6 +144,7 @@ Depending on whether DAV or HTTP 1.1 is used, an appropriate Apache
 module will translate the method-requests back into Subversion
 semantics, making calls to the "main" Subversion library.
 
+For details, @xref{Protocol}.
 
 @c ------------------------------------------------------------------
 @node Server Layer
@@ -155,16 +155,14 @@ Subversion library and the Subversion Filesystem.
 
 The @dfn{Main Subversion library} provides an API representing general
 version-control services that the client requires (@xref{Semantics}.)
-Interface details are visible in @dfn{svn-main.h}.
 
 These high-level routines make calls directly into the @dfn{Subversion
 Filesystem library}.  The Subversion Filesystem defines a simple,
 abstract UNIX-like filesystem with a twist: write () calls are versioned
-and atomic, and no data is ever deleted!  (@xref{Filesystem}.)  Details
-are in @dfn{svn-fs.h}.
+and atomic, and no data is ever deleted!  (@xref{Filesystem}.)
 
 These filesystem calls then talk to disk, either through a set of
 Berkeley DBM files, or a more powerful SQL database.  (Although any
 back-end with a concept of atomic "transactions" will work.)
 
-
+For a more detailed explanation: @xref{Server}.
