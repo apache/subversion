@@ -623,6 +623,12 @@ svn_wc_run_cmd_in_directory (svn_stringbuf_t *path,
                              apr_pool_t *pool);
 
 
+/* Recurse from PATH, cleaning up unfinished log business.  Perform
+   necessary allocations in POOL.  */
+svn_error_t *
+svn_wc_cleanup (svn_stringbuf_t *path, apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
