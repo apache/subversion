@@ -41,6 +41,11 @@ ch05:
 
 To be fixed by sussman:
 
+ch06:  mod_authz_svn:  clarify that the most specific match wins:
+ 
+         * [repos:/foo] overrides [/foo]
+         * "harry = " overrides "* = r"
+
 
 appC:
 

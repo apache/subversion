@@ -103,6 +103,25 @@ new features and fixes many smaller bugs.</p>
     and directories.</p>
 
 
+<h3>Commandline auto-escaping of URI and IRIs</h3>
+
+<p>In the 1.0 commandline client, users had to escape URLs manually.
+    The client only accepted "legally correct" URLs, such as</p>
+<pre>
+  svn checkout http://host/path%20with%20space/project/espa%F1a
+</pre>
+<p>The 1.1 commandline client now knows how to do what web-browsers
+    have been doing for long time: it auto-escape characters like
+    spaces and other upper-ascii i18n characters.</p>
+<pre>
+  svn checkout "http://host/path with space/project/espa&ntilde;a"
+</pre>
+<p>The definition of an Internationalized URL (IRI) is still a work in
+    progress; see <a
+    href="http://www.w3.org/International/iri-edit/">the draft spec</a>.</p>
+
+
+
 <h3>Localized messages</h3>
 
 <p>Subversion 1.1 is now using gettext() to display translated error,
