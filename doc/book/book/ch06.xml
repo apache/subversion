@@ -120,6 +120,14 @@
         --version</command>, and the missing file will be recreated in
         its default state.</para>
 
+      <para>The per-user configuration area also contains a cache of
+        authentication data.  The <filename>auth</filename> directory
+        holds a set of subdirectories that contain pieces of cached
+        information used by Subversion's various supported
+        authentication methods.  This directory is created in such a
+        way that only the user herself has permission to read its
+        contents.</para>
+
     </sect2>
 
     <!-- ***************************************************************** -->
@@ -711,7 +719,7 @@ red-beans-and-rice.
         store properties with empty values, you can't remove a
         property altogether using <command>propedit</command> or
         <command>propset</command>.  For example, this command will
-        <emphasis>not</emphasis> work:</para>
+        <emphasis>not</emphasis> yield the desired effect:</para>
 
       <screen>
 $ svn propset license '' calc/button.c
@@ -1761,6 +1769,11 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
        drop.</para>
 
     </sect2>
+
+    <!-- TODO: Try to clarify some of the steps for svn-load-dirs.pl
+         (Garrett sez they've been "glossed over".  Also, consider
+         another section on bypassing svn-load-dirs.pl altogether and
+         running with just svn merge with 'ignore-ancestry' option. -->
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-6-sect-4.2">
