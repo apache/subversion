@@ -177,19 +177,22 @@ doc-html: doc/programmer/design/svn-design.html doc/user/manual/svn-manual.html
 doc-ps: doc/programmer/design/svn-design.ps doc/user/manual/svn-manual.ps
 doc-pdf: doc/programmer/design/svn-design.pdf doc/user/manual/svn-manual.pdf
 
-## Build a tarball.
+### Build a tarball.
 #
 # Notes:
 # 
-# After Subversion is checked into itself, it will be a lot easier to
-# define this rule in terms of what should be included in the dist,
-# instead of what shouldn't.
+# Creating a distribution is only half-automated at the moment -- it
+# requires a lot of hand-holding from a knowledgable developer.  Once
+# we go self-hosting and get the first distribution tarball released,
+# this will be totally rewritten to take advantage of the eminently
+# parseable `svn status' command output.
 # 
 # Although `make distclean' should clean up apr and neon, in reality
 # neon/src/ still has .o files afterwards.  So we clean them up by
 # hand below.  Better to patch Neon, of course; but the fix wasn't
 # obvious to me -- something to do with @NEONOBJS@ in
 # neon/src/Makefile.in?
+#
 dist: ChangeLog
 	@rm -rf ${DIST_SANDBOX}
 	@mkdir ${DIST_SANDBOX}
@@ -197,7 +200,7 @@ dist: ChangeLog
 	@cp -v -d -r * ${DIST_SANDBOX}/subversion
 	@rm -rf `find ${DIST_SANDBOX}/subversion -name CVS -print`
 	@rm -rf `find ${DIST_SANDBOX}/subversion -name .cvsignore -print`
-	@(cd ${DIST_SANDBOX}/subversion;                                  \
+	@(cd ${DIST_SANDBOX}/subversion;                                 \
          make distclean;                                                 \
          ./autogen.sh;                                                   \
          rm -f neon/src/*.o;                                             \
