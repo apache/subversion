@@ -102,7 +102,7 @@ static int shim_startelm(void *userdata, int parent_state, const char *nspace,
   int rc;
 
   if (!elem)
-    return NE_XML_ABORT;
+    return NE_XML_DECLINE; /* Let Neon handle this */
 
   /* TODO: explore an option of keeping element pointer in the baton
    * to cut one loop in endelm */
