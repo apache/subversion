@@ -26,24 +26,43 @@ repositories with no real problems.  As an example, the whole first
 year of Subversion's own history was converted from CVS into a 3000+
 revision svn repository.  It took about 30 minutes.
 
-* To use this script:
 
-     - Install RCS.  cvs2svn uses the "co" command.  The RCS home page
-       is http://www.cs.purdue.edu/homes/trinkle/RCS/.
+* Prerequisites:
 
-     - Get at least python 2.0.
+  - Install RCS.  cvs2svn uses the "co" command.  The RCS home page
+    is http://www.cs.purdue.edu/homes/trinkle/RCS/.
 
-     - Make sure you have GNU 'sort' installed, or some other sort
-       program that handles large files other than by reading them
-       entirely into memory.
+  - Get at least Python 2.0; see http://www.python.org/.
 
-     - If you're not running cvs2svn.py from this directory, then make
-       sure to install the rcsparse/ tree somewhere where Python can
-       find it.  Note that it's a CVS working copy, so we can update
-       it easily :-).  Except for `compat.py', that comes from
-       viewcvs/lib/compat.py.
+  - Make sure you have GNU 'sort' installed, or some other sort
+    program that handles large files other than by reading them
+    entirely into memory.  GNU sort is part of the coreutils
+    package, see http://www.gnu.org/software/coreutils/.
 
-       Rcsparse is currently part of ViewCVS, see
-       http://viewcvs.sourceforge.net/.  Someday rcsparse will be an
-       independent Python project, and then we can depend on it in a
-       more normal way.
+  - If you're not running cvs2svn.py from this directory, then make
+    sure to install the rcsparse/ tree somewhere where Python can
+    find it.  Note that it's a CVS working copy, so we can update
+    it easily :-).  Except for 'compat.py', which comes from
+    viewcvs/lib/compat.py.
+
+    Rcsparse is currently part of ViewCVS, see
+    http://viewcvs.sourceforge.net/.  Someday rcsparse will be an
+    independent Python project, and then we can depend on it in a
+    more normal way.
+
+
+* Basic usage:
+
+  To create a new Subversion repository by creating an existing CVS
+  repository, run the script like this:
+
+     $ cvs2svn.py --create -s NEW_SVNREPOS CVSREPOS
+
+  To create a Subversion dumpfile (suitable for 'svnadmin load') from
+  a CVS repository, run it like this:
+
+     $ cvs2svn.py --dump-only --dumpfile DUMPFILE CVSREPOS
+
+  To see more options, run:
+
+     $ cvs2svn.py --help
