@@ -131,49 +131,26 @@ svn_client_cat (svn_stream_t *out,
 
       if (keywords)
         {
+          svn_string_t *date, *author;
           apr_hash_t *revprops;
-          const char *url;
+          apr_time_t when = 0;
 
           SVN_ERR (ra_lib->rev_proplist(session, rev, &revprops, pool));
 
-          if (svn_path_is_url (path_or_url))
-            url = path_or_url;
-          else
-            {
-              svn_wc_adm_access_t *adm_access;
-              const svn_wc_entry_t *entry;
+          date = apr_hash_get (revprops, SVN_PROP_REVISION_DATE,
+                               APR_HASH_KEY_STRING);
+          author = apr_hash_get (revprops, SVN_PROP_REVISION_AUTHOR,
+                                 APR_HASH_KEY_STRING);
+          if (date)
+            SVN_ERR (svn_time_from_cstring (&when, date->data, pool));
 
-              SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path_or_url,
-                                              FALSE, FALSE, pool));
-              SVN_ERR (svn_wc_entry (&entry, path_or_url, adm_access, FALSE, 
-                                     pool));
-              if (entry && entry->url)
-                url = entry->url;
-              else
-                url = NULL;
-            }
-
-          {
-            svn_string_t *date = apr_hash_get (revprops,
-                                               SVN_PROP_REVISION_DATE,
-                                               APR_HASH_KEY_STRING);
-            svn_string_t *author = apr_hash_get (revprops,
-                                                 SVN_PROP_REVISION_AUTHOR,
-                                                 APR_HASH_KEY_STRING);
-
-            apr_time_t when = 0;
-
-            if (date)
-              SVN_ERR (svn_time_from_cstring (&when, date->data, pool));
-
-            SVN_ERR (svn_subst_build_keywords
-                     (&kw, keywords->data, 
-                      apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev),
-                      url,
-                      when,
-                      author ? author->data : NULL,
-                      pool));
-          }
+          SVN_ERR (svn_subst_build_keywords
+                   (&kw, keywords->data, 
+                    apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev),
+                    url,
+                    when,
+                    author ? author->data : NULL,
+                    pool));
         }
 
       SVN_ERR (svn_subst_translate_stream (tmp_stream, out, eol, FALSE, &kw,
