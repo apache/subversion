@@ -833,7 +833,7 @@ pre-commit.tmpl
 
       <para>A Berkeley DB environment is an encapsulation of one or
         more databases, log files, region files and configuration
-        files.  The Berkeley DB environment has it own set of default
+        files.  The Berkeley DB environment has its own set of default
         configuration values for things like the number of locks
         allowed to be taken out at any given time, or the maximum size
         of the journaling log files, etc.  Subversion's filesystem
