@@ -703,13 +703,20 @@ svn_wc__save_prop_file (svn_stringbuf_t *propfile_path,
    If conflicts are found when merging, they are placed into a
    temporary .prej file within SVN. Log entries are then written to
    move this file into PATH, or to append the conflicts to the file's
-   already-existing .prej file in PATH.  */
+   already-existing .prej file in PATH.
+
+   Any conflicts are also returned in a hash that maps (const char *)
+   propnames -> conflicting (svn_prop_t *) objects in the PROPCHANGES
+   array.  In this case, *CONFLICTS will be allocated in POOL.  If no
+   conflicts occurred, then *CONFLICTS is simply allocated as an empty
+   hash. */
 svn_error_t *
 svn_wc__do_property_merge (svn_stringbuf_t *path,
                            const svn_stringbuf_t *name,
                            apr_array_header_t *propchanges,
                            apr_pool_t *pool,
-                           svn_stringbuf_t **entry_accum);
+                           svn_stringbuf_t **entry_accum,
+                           apr_hash_t **conflicts);
 
 
 /* Get a single 'wcprop' NAME for versioned object PATH, return in
