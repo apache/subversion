@@ -545,6 +545,148 @@ def receive_overlapping_same_change(sbox):
 
   return 0
 
+#----------------------------------------------------------------------
+
+# Helper for update_to_revert_text_conflicts() test -- a singleton handler.
+def detect_conflict_files(node, extra_files):
+  """NODE has been discovered an an extra file on disk.  Verify that
+  it matches one of the regular expressions in the EXTRA_FILES list.
+  If it matches, remove the match from the list.  If it doesn't match,
+  raise an exception."""
+
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
+      return 0
+
+  print "Found unexpected disk object:", node.name
+  raise svntest.tree.SVNTreeUnequal
+
+def update_to_revert_text_conflicts(sbox):
+  "delete files and update to resolve text conflicts"
+  
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = wc_dir + 'backup'
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Make a couple of local mods to files which will be committed
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append (mu_path, '\nOriginal appended text for mu')
+  svntest.main.file_append (rho_path, '\nOriginal appended text for rho')
+  svntest.main.run_svn (None, 'propset', 'Kubla', 'Khan', rho_path)
+
+  # Make a couple of local mods to files which will be conflicted
+  mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
+  rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append (mu_path_backup,
+                             '\nConflicting appended text for mu')
+  svntest.main.file_append (rho_path_backup,
+                             '\nConflicting appended text for rho')
+  svntest.main.run_svn (None, 'propset', 'Kubla', 'Xanadu', rho_path_backup)
+
+  # Created expected output tree for 'svn ci'
+  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }],
+                  [rho_path, None, {}, {'verb' : 'Sending' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but mu and rho should be at revision 2.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if (item[0] != mu_path) and (item[0] != rho_path):
+      item[3]['wc_rev'] = '1'
+    if (item[0] == rho_path):
+      item[3]['status'] = '__'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit.
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+                                            expected_status_tree, None,
+                                            None, None, None, None, wc_dir):
+    print "commit failed"
+    return 1
+
+  # Create expected output tree for an update of the wc_backup.
+  output_list = [ [mu_path_backup, None, {}, {'status' : 'C '}],
+                  [rho_path_backup, None, {}, {'status' : 'CC'}] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  
+  # Create expected disk tree for the update.
+  my_greek_tree = svntest.main.copy_greek_tree()
+  my_greek_tree[2][1] =  """<<<<<<< .mine
+This is the file 'mu'.
+Conflicting appended text for mu=======
+This is the file 'mu'.
+Original appended text for mu>>>>>>> .r2
+"""
+  my_greek_tree[14][1] = """<<<<<<< .mine
+This is the file 'rho'.
+Conflicting appended text for rho=======
+This is the file 'rho'.
+Original appended text for rho>>>>>>> .r2
+"""
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+
+  # Create expected status tree for the update.
+  status_list = svntest.actions.get_virginal_status_list(wc_backup, '2')
+  for item in status_list:
+    if (item[0] == mu_path_backup) or (item[0] == rho_path_backup):
+      item[3]['status'] = 'C '
+    if (item[0] == rho_path_backup):
+      item[3]['status'] = 'CC'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # "Extra" files that we expect to result from the conflicts.
+  # These are expressed as list of regexps.  What a cool system!  :-)
+  extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
+                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine', 'rho.*\.prej']
+  
+  # Do the update and check the results in three ways.
+  # All "extra" files are passed to detect_conflict_files().
+  if svntest.actions.run_and_verify_update(wc_backup,
+                                           expected_output_tree,
+                                           expected_disk_tree,
+                                           expected_status_tree,
+                                           None,
+                                           detect_conflict_files,
+                                           extra_files):
+    print "update 1 failed"
+    return 1
+  
+  # verify that the extra_files list is now empty.
+  if len(extra_files) != 0:
+    print "didn't get expected extra files"
+    return 1
+
+  # remove the conflicting files to clear text conflict but not props conflict
+  os.remove(mu_path_backup)
+  os.remove(rho_path_backup)
+
+  # ### TODO: Can't get run_and_verify_update to work here :-( I get
+  # the error "Unequal Types: one Node is a file, the other is a
+  # directory". Use run_svn and then run_and_verify_status instead
+  stdout_lines, stdout_lines = svntest.main.run_svn(None, 'up', wc_backup)  
+  if len (stdout_lines) > 0:
+    print "update 2 failed"
+    return 1
+
+  # Create expected status tree
+  status_list = svntest.actions.get_virginal_status_list(wc_backup, '2')
+  for item in status_list:
+    if (item[0] == rho_path_backup):
+      item[3]['status'] = '_C'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_status (wc_backup,
+                                                expected_status_tree)
+
 ########################################################################
 # Run the tests
 
@@ -556,6 +698,7 @@ test_list = [ None,
               update_ignores_added,
               update_to_rev_zero,
               receive_overlapping_same_change,
+              update_to_revert_text_conflicts,
               # update_missing,
              ]
 
