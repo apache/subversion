@@ -680,9 +680,10 @@ print_version_info (const char *pgm_name,
             "   compiled %s, %s\n\n"), pgm_name, SVN_VERSION,
                                       __DATE__, __TIME__);
   fputs (_("Copyright (C) 2000-2004 CollabNet.\n"
-    "Subversion is open source software, see http://subversion.tigris.org/\n"
-    "This product includes software developed by CollabNet "
-    "(http://www.Collab.Net/).\n\n"), stdout);
+           "Subversion is open source software, see"
+           " http://subversion.tigris.org/\n"
+           "This product includes software developed by CollabNet "
+           "(http://www.Collab.Net/).\n\n"), stdout);
 
   if (footer)
     {

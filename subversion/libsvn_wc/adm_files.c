@@ -403,8 +403,9 @@ open_adm_file (apr_file_t **handle,
         {
           /* We don't handle append.  To do so we would need to copy the
              contents into the apr_file_t once it has been opened. */
-          return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                   _("APR_APPEND not supported for adm files"));
+          return svn_error_create
+            (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+             _("APR_APPEND not supported for adm files"));
         }
 
       /* Need to own the temporary file, so don't reuse an existing one. */
@@ -448,7 +449,7 @@ open_adm_file (apr_file_t **handle,
         {
           err = svn_error_quick_wrap(err,
                                _("Your .svn/tmp directory may be missing or "
-                               "corrupt; run 'svn cleanup' and try again"));
+                                 "corrupt; run 'svn cleanup' and try again"));
         }
     }
 
@@ -629,7 +630,7 @@ svn_wc__open_props (apr_file_t **handle,
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("No such thing as 'base' "
-                             "working copy properties!"));
+                               "working copy properties!"));
 
   else if (base)
     {
@@ -704,7 +705,7 @@ svn_wc__close_props (apr_file_t *fp,
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("No such thing as 'base' "
-                             "working copy properties!"));
+                               "working copy properties!"));
 
   else if (base)
     {
@@ -768,7 +769,7 @@ svn_wc__sync_props (const char *path,
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("No such thing as 'base' "
-                             "working copy properties!"));
+                               "working copy properties!"));
 
   else if (base)
     {

@@ -130,9 +130,9 @@ svn_error_t * svn_ra_dav__get_activity_collection(
       /* ### error */
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
-                              "requested activity-collection-set; "
-                              "this often means that "
-                              "the URL is not WebDAV-enabled"));
+                                "requested activity-collection-set; "
+                                "this often means that "
+                                "the URL is not WebDAV-enabled"));
     }
 
   *activity_coll = oc.activity_coll;

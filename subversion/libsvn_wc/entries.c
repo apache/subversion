@@ -803,7 +803,7 @@ check_entries (apr_hash_t *entries,
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT, NULL,
              _("Corrupt working copy: "
-             "'%s' in directory '%s' has an invalid schedule"),
+               "'%s' in directory '%s' has an invalid schedule"),
              name, path);
         }
 
@@ -1399,13 +1399,13 @@ fold_scheduling (apr_hash_t *entries,
         return 
           svn_error_createf (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
                              _("Can't add '%s' to deleted directory; "
-                             "try undeleting its parent directory first"),
+                               "try undeleting its parent directory first"),
                              name);
       if (*schedule == svn_wc_schedule_replace)
         return 
           svn_error_createf (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
                              _("Can't replace '%s' in deleted directory; "
-                             "try undeleting its parent directory first"),
+                               "try undeleting its parent directory first"),
                              name);
     }
 
@@ -1820,5 +1820,5 @@ svn_wc_mark_missing_deleted (const char *path,
   else
     return svn_error_createf (SVN_ERR_WC_PATH_FOUND, NULL,
                               _("Unexpectedly found '%s': "
-                              "path is marked 'missing'"), path);
+                                "path is marked 'missing'"), path);
 }

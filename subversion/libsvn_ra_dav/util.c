@@ -649,7 +649,7 @@ parsed_request(ne_session *sess,
     {
       err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                               _("The %s request returned invalid XML "
-                              "in the response: %s (%s)"),
+                                "in the response: %s (%s)"),
                               method, msg, url);
       goto cleanup;
     }

@@ -927,7 +927,7 @@ svn_wc_add (const char *path,
           return svn_error_createf 
             (SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
              _("Can't replace '%s' with a node of a differing type; "
-             "commit the deletion, update the parent, and then add '%s'"),
+               "commit the deletion, update the parent, and then add '%s'"),
              path, path);
         }
       if (orig_entry->schedule == svn_wc_schedule_delete)
@@ -1457,7 +1457,7 @@ svn_wc_revert (const char *path,
             {
               return svn_error_create (SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
                 _("Cannot revert addition of current directory; "
-                "please try again from the parent directory"));
+                  "please try again from the parent directory"));
             }
               
           SVN_ERR (svn_wc_entries_read (&entries, parent_access, TRUE, pool));
