@@ -9,7 +9,7 @@ Subversion Tarball Release Procedure
 
 3. Bump product version number in svn_version.h and CHANGES.  Commit.
 
-4. ./dist.sh
+4. ./dist.sh [ARGS ...]  (see dist.sh for details about ARGS).
 
 5. Test the tarball:
 
