@@ -534,3 +534,48 @@ const char *svn_config_find_group (svn_config_t *cfg, const char *key,
   svn_config_enumerate (cfg, master_section, search_groups, &gb);
   return gb.match;
 }
+
+
+const char*
+svn_config_get_server_setting(svn_config_t *cfg,
+                              const char* server_group,
+                              const char* option_name,
+                              const char* default_value)
+{
+  const char* retval;
+  svn_config_get(cfg, &retval, SVN_CONFIG_SECTION_GLOBAL,
+                 option_name, default_value);
+  if (server_group)
+    {
+      svn_config_get(cfg, &retval, server_group, option_name, retval);
+    }
+  return retval;
+}
+
+svn_error_t*
+svn_config_get_server_setting_int(svn_config_t *cfg,
+                                  const char *server_group,
+                                  const char *option_name,
+                                  apr_int64_t default_value,
+                                  apr_int64_t *result_value,
+                                  apr_pool_t *pool)
+{
+  const char* tmp_value;
+  char* end_pos;
+  char *default_value_str = apr_psprintf(pool,
+                                         "%" APR_INT64_T_FMT,
+                                         default_value); 
+  tmp_value = svn_config_get_server_setting(cfg, server_group,
+                                            option_name, default_value_str);
+
+  /* read tmp_value as an int now */
+  *result_value = apr_strtoi64(tmp_value, &end_pos, 0);
+  
+  if (*end_pos != 0) 
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                              "non-integer in integer option");
+    }
+  return NULL;
+}
+

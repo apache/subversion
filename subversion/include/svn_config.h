@@ -190,6 +190,34 @@ const char *svn_config_find_group (svn_config_t *cfg, const char *key,
                                    const char *master_section,
                                    apr_pool_t *pool);
 
+/** Retrieve value corresponding to @a option_name for a given
+ *  @a server_group in @a cfg , or return @a default_value if none is found.
+ *
+ *  The config will first be checked for a default, then will be checked for
+ *  an override in a server group.
+ */
+const char*
+svn_config_get_server_setting(svn_config_t *cfg,
+                              const char* server_group,
+                              const char* option_name,
+                              const char* default_value);
+
+/** Retrieve value into @a result_value corresponding to @a option_name for a
+ *  given @a server_group in @a cfg, or return @a default_value if none is
+ *  found.
+ *
+ *  The config will first be checked for a default, then will be checked for
+ *  an override in a server group. If the value found is not a valid integer,
+ *  a @c svn_error_t* will be returned.
+ */
+svn_error_t*
+svn_config_get_server_setting_int(svn_config_t *cfg,
+                                  const char *server_group,
+                                  const char *option_name,
+                                  apr_int64_t default_value,
+                                  apr_int64_t *result_value,
+                                  apr_pool_t *pool);
+
 
 /** Ensure that the user's ~/.subversion/ area exists, and create no-op 
  * template files for any absent config files.

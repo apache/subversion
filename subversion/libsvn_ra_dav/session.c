@@ -39,63 +39,6 @@
 #include "ra_dav.h"
 
 
-/** Retrieve value corresponding to @a option_name for a given
- *  @a server_group in @a cfg , or return @a default_value if none is found.
- *
- *  The config will first be checked for a default, then will be checked for
- *  an override in a server group.
- */
-static const char*
-get_server_setting(svn_config_t *cfg,
-                   const char* server_group,
-                   const char* option_name,
-                   const char* default_value)
-{
-  const char* retval;
-  svn_config_get(cfg, &retval, "default", option_name, default_value);
-  if (server_group)
-    {
-      svn_config_get(cfg, &retval, server_group, option_name, retval);
-    }
-  return retval;
-}
-
-/** Retrieve value into @a result_value corresponding to @a option_name for a
- *  given @a server_group in @a cfg, or return @a default_value if none is
- *  found.
- *
- *  The config will first be checked for a default, then will be checked for
- *  an override in a server group. If the value found is not a valid integer,
- *  a @c svn_error_t* will be returned.
- */
-static svn_error_t*
-get_server_setting_int(svn_config_t *cfg,
-                       const char *server_group,
-                       const char *option_name,
-                       apr_int64_t default_value,
-                       apr_int64_t *result_value,
-                       apr_pool_t *pool)
-{
-  const char* tmp_value;
-  char* end_pos;
-  char *default_value_str = apr_psprintf(pool,
-                                         "%" APR_INT64_T_FMT,
-                                         default_value); 
-  tmp_value = get_server_setting(cfg, server_group,
-                                 option_name, default_value_str);
-
-  /* read tmp_value as an int now */
-  *result_value = apr_strtoi64(tmp_value, &end_pos, 0);
-  
-  if (*end_pos != 0) 
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                              "non-integer in integer option");
-    }
-  return NULL;
-}
-
-
 /* a cleanup routine attached to the pool that contains the RA session
    baton. */
 static apr_status_t cleanup_session(void *sess)
@@ -137,165 +80,6 @@ static int request_auth(void *userdata, const char *realm, int attempt,
   apr_cpystrn(password, creds->password, NE_ABUFSIZ);
 
   return 0;
-}
-
-
-
-/* retieve ssl server CA failure overrides (if any) from servers
-   config */
-static svn_error_t *
-server_ssl_file_first_credentials(void **credentials,
-                                  void **iter_baton,
-                                  void *provider_baton,
-                                  apr_hash_t *parameters,
-                                  apr_pool_t *pool)
-{
-  const char *temp_setting;
-  svn_config_t *cfg = apr_hash_get(parameters,
-                                   SVN_AUTH_PARAM_CONFIG,
-                                   APR_HASH_KEY_STRING);
-  const char *server_group = apr_hash_get(parameters,
-                                          SVN_AUTH_PARAM_SERVER_GROUP,
-                                          APR_HASH_KEY_STRING);
-
-  svn_auth_cred_server_ssl_t *cred =
-    apr_palloc(pool, sizeof(svn_auth_cred_server_ssl_t));
-
-  cred->failures_allow = 0;
-  temp_setting = get_server_setting(cfg, server_group, 
-                                    "ssl-ignore-unknown-ca", NULL);
-  cred->failures_allow = temp_setting ? NE_SSL_UNKNOWNCA : 0;
-  temp_setting = get_server_setting(cfg, server_group, 
-                                    "ssl-ignore-host-mismatch", NULL);
-  cred->failures_allow |= temp_setting ? NE_SSL_CNMISMATCH : 0;
-  temp_setting = get_server_setting(cfg, server_group, 
-                                    "ssl-ignore-invalid-date", NULL);
-  cred->failures_allow |=
-    temp_setting ? (NE_SSL_NOTYETVALID|NE_SSL_EXPIRED) : 0;
-  return NULL;
-}
-
-/* retrieve and load the ssl client certificate file from servers
-   config */
-static svn_error_t *
-client_ssl_cert_file_first_credentials(void **credentials,
-                                       void **iter_baton,
-                                       void *provider_baton,
-                                       apr_hash_t *parameters,
-                                       apr_pool_t *pool)
-{
-  svn_config_t *cfg = apr_hash_get(parameters, 
-                                   SVN_AUTH_PARAM_CONFIG,
-                                   APR_HASH_KEY_STRING);
-  const char *server_group = apr_hash_get(parameters,
-                                          SVN_AUTH_PARAM_SERVER_GROUP,
-                                          APR_HASH_KEY_STRING);
-  svn_auth_cred_client_ssl_t *cred =
-    apr_palloc(pool, sizeof(svn_auth_cred_client_ssl_t));
-  
-  const char* cert_type;
-
-  cred->cert_file = get_server_setting(cfg, server_group,
-                                 "ssl-client-cert-file", NULL);
-  cred->key_file = get_server_setting(cfg, server_group,
-                                "ssl-client-key-file", NULL);
-  cert_type = get_server_setting(cfg, server_group,
-                                "ssl-client-cert-type", "pem");
-  if ((strcmp(cert_type, "pem") == 0) ||
-      (strcmp(cert_type, "PEM") == 0))
-    {
-      cred->cert_type = svn_auth_ssl_pem_cert_type;
-    }
-  else if ((strcmp(cert_type, "pkcs12") == 0) ||
-           (strcmp(cert_type, "PKCS12") == 0))
-    {
-      cred->cert_type = svn_auth_ssl_pkcs12_cert_type;
-    }
-  else
-  {
-    cred->cert_type = svn_auth_ssl_unknown_cert_type;
-  }
-  *credentials = cred;
-  return NULL;
-}
-
-/* retrieve and load a password for a client certificate from servers
-   file */
-static svn_error_t *
-client_ssl_pw_file_first_credentials(void **credentials,
-                                     void **iter_baton,
-                                     void *provider_baton,
-                                     apr_hash_t *parameters,
-                                     apr_pool_t *pool)
-{
-  svn_config_t *cfg = apr_hash_get(parameters,
-                                   SVN_AUTH_PARAM_CONFIG,
-                                   APR_HASH_KEY_STRING);
-  const char *server_group = apr_hash_get(parameters,
-                                          SVN_AUTH_PARAM_SERVER_GROUP,
-                                          APR_HASH_KEY_STRING);
-
-  const char *password = get_server_setting(cfg, server_group,
-                                            "ssl-client-cert-password", NULL);
-  if (password)
-    {
-      svn_auth_cred_client_ssl_pass_t *cred =
-        apr_palloc(pool, sizeof(svn_auth_cred_client_ssl_pass_t));
-      
-      /* does nothing so far */
-      *credentials = cred;
-    }
-  else *credentials = NULL;
-  return NULL;
-}
-
-static const svn_auth_provider_t server_ssl_file_provider = 
-  {
-    SVN_AUTH_CRED_SERVER_SSL,
-    &server_ssl_file_first_credentials,
-    NULL,
-    NULL
-  };
-
-static const svn_auth_provider_t client_ssl_cert_file_provider =
-  {
-    SVN_AUTH_CRED_CLIENT_SSL,
-    client_ssl_cert_file_first_credentials,
-    NULL,
-    NULL
-  };
-
-static const svn_auth_provider_t client_ssl_pw_file_provider =
-  {
-    SVN_AUTH_CRED_CLIENT_PASS_SSL,
-    client_ssl_pw_file_first_credentials,
-    NULL,
-    NULL
-  };
-
-
-void 
-svn_ra_dav_get_ssl_server_file_provider (const svn_auth_provider_t **provider,
-                                         void **provider_baton,
-                                         apr_pool_t *pool)
-{
-  *provider = &server_ssl_file_provider;
-}
-
-void 
-svn_ra_dav_get_ssl_client_file_provider (const svn_auth_provider_t **provider,
-                                         void **provider_baton,
-                                         apr_pool_t *pool)
-{
-  *provider = &client_ssl_cert_file_provider;
-}
-
-void
-svn_ra_dav_get_ssl_pw_file_provider (const svn_auth_provider_t **provider,
-                                     void **provider_baton,
-                                     apr_pool_t *pool)
-{
-  *provider = &client_ssl_pw_file_provider;
 }
 
 
@@ -754,8 +538,9 @@ svn_ra_dav__open (void **session_baton,
   if (is_ssl_session)
     {
       const char *authorities_file;
-      authorities_file = get_server_setting(cfg, server_group,
-                                            "ssl-authorities-file", NULL);
+      authorities_file = svn_config_get_server_setting(cfg, server_group,
+                                                       "ssl-authorities-file",
+                                                       NULL);
       
       if (authorities_file != NULL)
         {

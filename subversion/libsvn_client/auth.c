@@ -412,3 +412,165 @@ svn_client_get_username_prompt_provider (const svn_auth_provider_t **provider,
   *provider = &username_prompt_provider;
   *provider_baton = pb;
 }
+
+
+
+/* retieve ssl server CA failure overrides (if any) from servers
+   config */
+static svn_error_t *
+server_ssl_file_first_credentials(void **credentials,
+                                  void **iter_baton,
+                                  void *provider_baton,
+                                  apr_hash_t *parameters,
+                                  apr_pool_t *pool)
+{
+  const char *temp_setting;
+  svn_config_t *cfg = apr_hash_get(parameters,
+                                   SVN_AUTH_PARAM_CONFIG,
+                                   APR_HASH_KEY_STRING);
+  const char *server_group = apr_hash_get(parameters,
+                                          SVN_AUTH_PARAM_SERVER_GROUP,
+                                          APR_HASH_KEY_STRING);
+
+  svn_auth_cred_server_ssl_t *cred =
+    apr_palloc(pool, sizeof(svn_auth_cred_server_ssl_t));
+
+  cred->failures_allow = 0;
+  temp_setting = svn_config_get_server_setting(cfg, server_group, 
+                                               "ssl-ignore-unknown-ca", NULL);
+  cred->failures_allow = temp_setting ? SVN_AUTH_SSL_UNKNOWNCA : 0;
+  temp_setting = svn_config_get_server_setting(cfg, server_group, 
+                                               "ssl-ignore-host-mismatch",
+                                               NULL);
+  cred->failures_allow |= temp_setting ? SVN_AUTH_SSL_CNMISMATCH : 0;
+  temp_setting = svn_config_get_server_setting(cfg, server_group, 
+                                               "ssl-ignore-invalid-date",
+                                               NULL);
+  cred->failures_allow |=
+    temp_setting ? (SVN_AUTH_SSL_NOTYETVALID | SVN_AUTH_SSL_EXPIRED) : 0;
+  return NULL;
+}
+
+/* retrieve and load the ssl client certificate file from servers
+   config */
+static svn_error_t *
+client_ssl_cert_file_first_credentials(void **credentials,
+                                       void **iter_baton,
+                                       void *provider_baton,
+                                       apr_hash_t *parameters,
+                                       apr_pool_t *pool)
+{
+  svn_config_t *cfg = apr_hash_get(parameters, 
+                                   SVN_AUTH_PARAM_CONFIG,
+                                   APR_HASH_KEY_STRING);
+  const char *server_group = apr_hash_get(parameters,
+                                          SVN_AUTH_PARAM_SERVER_GROUP,
+                                          APR_HASH_KEY_STRING);
+  svn_auth_cred_client_ssl_t *cred =
+    apr_palloc(pool, sizeof(svn_auth_cred_client_ssl_t));
+  
+  const char* cert_type;
+
+  cred->cert_file = svn_config_get_server_setting(cfg, server_group,
+                                                  "ssl-client-cert-file",
+                                                  NULL);
+  cred->key_file = svn_config_get_server_setting(cfg, server_group,
+                                                 "ssl-client-key-file", NULL);
+  cert_type = svn_config_get_server_setting(cfg, server_group,
+                                            "ssl-client-cert-type", "pem");
+  if ((strcmp(cert_type, "pem") == 0) ||
+      (strcmp(cert_type, "PEM") == 0))
+    {
+      cred->cert_type = svn_auth_ssl_pem_cert_type;
+    }
+  else if ((strcmp(cert_type, "pkcs12") == 0) ||
+           (strcmp(cert_type, "PKCS12") == 0))
+    {
+      cred->cert_type = svn_auth_ssl_pkcs12_cert_type;
+    }
+  else
+  {
+    cred->cert_type = svn_auth_ssl_unknown_cert_type;
+  }
+  *credentials = cred;
+  return NULL;
+}
+
+/* retrieve and load a password for a client certificate from servers file */
+static svn_error_t *
+client_ssl_pw_file_first_credentials(void **credentials,
+                                     void **iter_baton,
+                                     void *provider_baton,
+                                     apr_hash_t *parameters,
+                                     apr_pool_t *pool)
+{
+  svn_config_t *cfg = apr_hash_get(parameters,
+                                   SVN_AUTH_PARAM_CONFIG,
+                                   APR_HASH_KEY_STRING);
+  const char *server_group = apr_hash_get(parameters,
+                                          SVN_AUTH_PARAM_SERVER_GROUP,
+                                          APR_HASH_KEY_STRING);
+
+  const char *password =
+      svn_config_get_server_setting(cfg, server_group,
+                                    "ssl-client-cert-password", NULL);
+  if (password)
+    {
+      svn_auth_cred_client_ssl_pass_t *cred =
+        apr_palloc(pool, sizeof(svn_auth_cred_client_ssl_pass_t));
+      
+      /* does nothing so far */
+      *credentials = cred;
+    }
+  else *credentials = NULL;
+  return NULL;
+}
+
+static const svn_auth_provider_t server_ssl_file_provider = 
+  {
+    SVN_AUTH_CRED_SERVER_SSL,
+    &server_ssl_file_first_credentials,
+    NULL,
+    NULL
+  };
+
+static const svn_auth_provider_t client_ssl_cert_file_provider =
+  {
+    SVN_AUTH_CRED_CLIENT_SSL,
+    client_ssl_cert_file_first_credentials,
+    NULL,
+    NULL
+  };
+
+static const svn_auth_provider_t client_ssl_pw_file_provider =
+  {
+    SVN_AUTH_CRED_CLIENT_PASS_SSL,
+    client_ssl_pw_file_first_credentials,
+    NULL,
+    NULL
+  };
+
+
+void 
+svn_client_get_ssl_server_file_provider (const svn_auth_provider_t **provider,
+                                         void **provider_baton,
+                                         apr_pool_t *pool)
+{
+  *provider = &server_ssl_file_provider;
+}
+
+void 
+svn_client_get_ssl_client_file_provider (const svn_auth_provider_t **provider,
+                                         void **provider_baton,
+                                         apr_pool_t *pool)
+{
+  *provider = &client_ssl_cert_file_provider;
+}
+
+void
+svn_client_get_ssl_pw_file_provider (const svn_auth_provider_t **provider,
+                                     void **provider_baton,
+                                     apr_pool_t *pool)
+{
+  *provider = &client_ssl_pw_file_provider;
+}

@@ -203,12 +203,19 @@ typedef struct
  *  times.  @a failures_allow is set for each flag allowed.
  *
  *  failures flags defined within neon:
- *  * NE_SSL_NOTYETVALID : certificate is not yet valid
- *  * NE_SSL_EXPIRED     : certificate has expired
- *  * NE_SSL_CNMISMATCH  : name on certificate does not match server
- *  * NE_SSL_UNKNOWNCA   : certificate is signed by an untrusted authority
+ *  * SVN_AUTH_SSL_NOTYETVALID : certificate is not yet valid
+ *  * SVN_AUTH_SSL_EXPIRED     : certificate has expired
+ *  * SVN_AUTH_SSL_CNMISMATCH  : name on certificate does not match server
+ *  * SVN_AUTH_SSL_UNKNOWNCA   : cert is signed by an untrusted authority
  */
+#define SVN_AUTH_SSL_NOTYETVALID (1<<0)
+#define SVN_AUTH_SSL_EXPIRED     (1<<1)
+#define SVN_AUTH_SSL_CNMISMATCH  (1<<2)
+#define SVN_AUTH_SSL_UNKNOWNCA   (1<<3)
+#define SVN_AUTH_SSL_FAILMASK    (0x0f)
+
 #define SVN_AUTH_CRED_SERVER_SSL "svn:ssl:server"
+#
 typedef struct
 {
   int failures_allow;

@@ -19,61 +19,15 @@
  * @brief libsvn_ra_dav functions for use by clients
  */
 
-/** Set @a *provider and @ *provider_baton to an authentication
- *  provider for type @c svn_auth_cred_server_ssl_t. This provider retrieves
- *  its credentials from the configuration mechanism. The returned credential
- *  is used to override SSL security on an error.
- *  
- *  This provider requires certain run-time parameters be present in
- *  the auth_baton:
- *
- *     - a loaded @c svn_config_t object
- *        (@c SVN_AUTH_PARAM_CONFIG)
- *
- *     - the name of the server-specific settings group if available
- *        (@c SVN_AUTH_PARAM_SERVER_GROUP)
- */
-void 
-svn_ra_dav_get_ssl_server_file_provider (const svn_auth_provider_t **provider,
-                                         void **provider_baton,
-                                         apr_pool_t *pool);
-
-/** Set @a *provider and @ *provider_baton to an authentication
- *  provider for type @c svn_auth_cred_client_ssl_t. This provider retrieves
- *  its credentials from the configuration mechanism. The returned credential
- *  is used to load the appropriate client certificate for authentication when
- *  requested by a server. 
- *  
- *  This provider requires certain run-time parameters be present in
- *  the auth_baton:
- *
- *     - a loaded @c svn_config_t object
- *        (@c SVN_AUTH_PARAM_CONFIG)
- *
- *     - the name of the server-specific settings group if available
- *        (@c SVN_AUTH_PARAM_SERVER_GROUP)
- */
-void 
-svn_ra_dav_get_ssl_client_file_provider (const svn_auth_provider_t **provider,
-                                         void **provider_baton,
-                                         apr_pool_t *pool);
-
-/** Set @a *provider and @ *provider_baton to an authentication
- *  provider for type @c svn_auth_cred_client_ssl_pass_t. This provider
- *  retrieves its credentials from the configuration mechanism. The returned
- *  credential is used when a loaded client certificate is protected by a
- *  passphrase.
- *  
- *  This provider requires certain run-time parameters be present in
- *  the auth_baton:
- *
- *     - a loaded @c svn_config_t object
- *        (@c SVN_AUTH_PARAM_CONFIG)
- *
- *     - the name of the server-specific settings group if available
- *        (@c SVN_AUTH_PARAM_SERVER_GROUP)
- */
 void
-svn_ra_dav_get_ssl_pw_file_provider (const svn_auth_provider_t **provider,
-                                     void **provider_baton,
-                                     apr_pool_t *pool);
+svn_ra_dav_get_ssl_server_prompt_provider(const svn_auth_provider_t **provider,
+                                          void **provider_baton,
+                                          apr_pool_t *pool);
+void
+svn_ra_dav_get_ssl_client_prompt_provider(const svn_auth_provider_t **provider,
+                                          void **provider_baton,
+                                          apr_pool_t *pool);
+void
+svn_ra_dav_get_ssl_pw_prompt_provider(const svn_auth_provider_t **provider,
+                                      void **provider_baton,
+                                      apr_pool_t *pool);

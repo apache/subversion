@@ -44,7 +44,6 @@
 #include "svn_time.h"
 #include "svn_utf.h"
 #include "svn_auth.h"
-#include "svn_ra_dav.h"
 #include "cl.h"
 
 
@@ -983,21 +982,21 @@ main (int argc, const char * const *argv)
       = username_wc_provider;
 
 #ifndef NO_SSL
-    svn_ra_dav_get_ssl_server_file_provider
+    svn_client_get_ssl_server_file_provider
       (&ssl_server_file_provider->vtable,
        &ssl_server_file_provider->provider_baton,
        pool);
     *(svn_auth_provider_object_t **)apr_array_push (providers)
       = ssl_server_file_provider;
 
-    svn_ra_dav_get_ssl_client_file_provider
+    svn_client_get_ssl_client_file_provider
       (&ssl_client_cred_file_provider->vtable,
        &ssl_client_cred_file_provider->provider_baton,
        pool);
     *(svn_auth_provider_object_t **)apr_array_push (providers)
       = ssl_client_cred_file_provider;
 
-    svn_ra_dav_get_ssl_pw_file_provider
+    svn_client_get_ssl_pw_file_provider
       (&ssl_client_pw_file_provider->vtable,
        &ssl_client_pw_file_provider->provider_baton,
        pool);
