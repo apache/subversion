@@ -374,7 +374,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
                     user_deps.append(ofile)
 
-                  cbuild = "swig %s -%s -nopm -module SVN::%s %s -o %s $(InputPath)" % \
+                  cbuild = "swig %s -%s -noproxy -nopm -module SVN::%s %s -o %s $(InputPath)" % \
                            (self.swig_options, target.lang, modules[target.name],
                             string.join(map(lambda x: "-I%s" % self.quote(x),
                                             includes)),
