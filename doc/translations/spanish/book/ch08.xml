@@ -1372,24 +1372,27 @@ if __name__ == '__main__':
   <sect1 id="svn-ch-8-sect-4">
     <title>WebDAV</title>
 
-    <para>WebDAV (shorthand for <quote>Web-based Distributed Authoring
-      and Versioning</quote>) is an extension of the standard HTTP
-      protocol designed to make the web into a read/write medium,
-      instead of the basically read-only medium that exists today.
-      The theory is that directories and files can be shared&mdash;as
-      both readable and writable objects&mdash;over the web.  RFCs
-      2518 and 3253 describe the WebDAV/DeltaV extensions to HTTP, and
-      are available (along with a lot of other useful information) at
-      <systemitem
+    <para>WebDAV (acrónimo de <quote>Web-based Distributed Authoring
+      and Versioning</quote><footnote><para>N.T.: Gestión y
+      versionado distribuído vía web</para></footnote>) es
+      una extensión del protocolo estándar HTTP diseñada para
+      transformar la web en un medio de lectura y escritura,
+      en lugar del medio básicamente de sólo lectura que existe
+      hoy en día.  La teoría es que los directorios y ficheros
+      pueden ser compartidos&mdash;tanto como objetos de lectura y
+      escritura&mdash;sobre la web. Los RFCs 2518 y 3253 describen
+      las extensiones WebDAV/DeltaV de HTTP, y están disponibles
+      (junto con bastante información útil) en <systemitem
       class="url">http://www.webdav.org/</systemitem>.</para>
 
-    <para>A number of operating system file browsers are already able
-      to mount networked directories using WebDAV.  On Win32, the
-      Windows Explorer can browse what it calls WebFolders (which are
-      just WebDAV-ready network locations) as if they were regular
-      shared folders.  Mac OS X also has this capability, as do the
-      Nautilus and Konqueror browsers (under GNOME and KDE,
-      respectively).</para>
+    <para>Varios navegadores de ficheros en diferentes sistemas
+      operativos ya son capaces de montar directorios por red
+      usando WebDAV. En Win32, el explorador de Windows puede
+      navegar por lo que llama WebFolders (que son localizaciones
+      red montadas con WebDAV) como si fuesen normales carpetas
+      compartidas. Mac OS X también tiene esta capacidad, al igual
+      que los navegadores Nautilus y Konqueror (bajo GNOME y KDE,
+      respectivamente).</para>
 
     <para>How does all of this apply to Subversion?  The mod_dav_svn
       Apache module uses HTTP, extended by WebDAV and DeltaV, as one
