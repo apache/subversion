@@ -206,6 +206,8 @@ dag_node_cache_get (svn_fs_root_t *root,
   if (root->kind != revision_root)
     return NULL;
 
+  assert (*path == '/');
+
   /* Look in the cache for our desired item. */
   cache_item = apr_hash_get (root->node_cache, path, APR_HASH_KEY_STRING);
   if (cache_item)
@@ -238,6 +240,8 @@ dag_node_cache_set (svn_fs_root_t *root,
   /* Currently, we only handle revision roots. */
   if (root->kind != revision_root)
     return;
+
+  assert (*path == '/');
 
   /* We're adding a new cache item.  First, see if we have room for it
      (otherwise, make some room). */
@@ -794,14 +798,17 @@ open_path (parent_path_t **parent_path_p,
           copy_id_inherit_t inherit;
           const char *copy_path = NULL;
           svn_error_t *err = SVN_NO_ERROR;
+          dag_node_t *cached_node;
 
           /* If we found a directory entry, follow it.  First, we
              check our node cache, and, failing that, we hit the DAG
              layer. */
-          child = dag_node_cache_get (root, path_so_far);
-          if (! child)
+          cached_node = dag_node_cache_get (root, path_so_far);
+          if (cached_node)
+            child = cached_node;
+          else
             err = svn_fs__dag_open (&child, here, entry, trail);
-
+          
           /* "file not found" requires special handling.  */
           if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
             {
@@ -836,8 +843,9 @@ open_path (parent_path_t **parent_path_p,
           parent_path->copy_inherit = inherit;
           parent_path->copy_src_path = apr_pstrdup (pool, copy_path);
 
-          /* Cache the node we found. */
-          dag_node_cache_set (root, path_so_far, child);
+          /* Cache the node we found (if it wasn't already cached). */
+          if (! cached_node)
+            dag_node_cache_set (root, path_so_far, child);
         }
       
       /* Are we finished traversing the path?  */
