@@ -244,57 +244,58 @@ svn_error_clear (svn_error_t *err)
     }
 }
 
-
-static const char *
-convert_string_for_output (const char *src, apr_pool_t *pool)
-{
-  const char *dest;
-  svn_error_t *err = svn_cmdline_cstring_from_utf8 (&dest, src, pool);
-  if (err)
-    {
-      svn_error_clear (err);
-      dest = svn_cmdline_cstring_from_utf8_fuzzy (src, pool);
-    }
-  return dest;
-}
-
-
 static void
 print_error (svn_error_t *err, FILE *stream, svn_boolean_t print_strerror)
 {
   char errbuf[256];
   const char *err_string;
+  svn_error_t *temp_err = NULL;  /* ensure initialized even if
+                                    err->file == NULL */
+  const char *file_utf8;
 
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
 
 #ifdef SVN_DEBUG
-  if (err->file)
-    /* Note: err->file is _not_ in UTF-8, because it's expanded from
-             the __FILE__ preprocessor macro. */
-    fprintf (stream, "%s:%ld", err->file, err->line);
+  /* Note: err->file is _not_ in UTF-8, because it's expanded from
+           the __FILE__ preprocessor macro. */
+  if (err->file
+      && !(temp_err = svn_utf_cstring_to_utf8 (&file_utf8, err->file,
+                                               err->pool)))
+    svn_error_clear (svn_cmdline_fprintf (stream, err->pool,
+                                          "%s:%ld", err->file, err->line));
   else
-    fputs (SVN_FILE_LINE_UNDEFINED, stream);
+    {
+      svn_error_clear (svn_cmdline_fputs (SVN_FILE_LINE_UNDEFINED,
+                                          stream, err->pool));
+      svn_error_clear (temp_err);
+    }
 
-  fprintf (stream, ": (apr_err=%d)\n", err->apr_err);
+  svn_error_clear (svn_cmdline_fprintf (stream, err->pool,
+                                        ": (apr_err=%d)\n", err->apr_err));
 #endif /* SVN_DEBUG */
   
   /* Only print the same APR error string once. */
   if (err->message)
-    fprintf (stream, "svn: %s\n",
-             convert_string_for_output (err->message, err->pool));
+    svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "svn: %s\n",
+                                          err->message));
   else if (print_strerror)
     {
       /* Is this a Subversion-specific error code? */
       if ((err->apr_err > APR_OS_START_USEERR)
           && (err->apr_err <= APR_OS_START_CANONERR))
-        err_string = convert_string_for_output
-          (svn_strerror (err->apr_err, errbuf, sizeof (errbuf)), err->pool);
+        err_string = svn_strerror (err->apr_err, errbuf, sizeof (errbuf));
       /* Otherwise, this must be an APR error code. */
-      else
-        err_string = apr_strerror (err->apr_err, errbuf, sizeof (errbuf));
-
-      fprintf (stream, "svn: %s\n", err_string);
+      else if ((temp_err = svn_utf_cstring_to_utf8
+                (&err_string, apr_strerror (err->apr_err, errbuf,
+                                            sizeof (errbuf)), err->pool)))
+        {
+          svn_error_clear (temp_err);
+          err_string = _("Can't recode error string from APR");
+        }
+      
+      svn_error_clear (svn_cmdline_fprintf (stream, err->pool,
+                                            "svn: %s\n", err_string));
     }
 }
 
@@ -321,8 +322,8 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 void
 svn_handle_warning (FILE *stream, svn_error_t *err)
 {
-  fprintf (stream, "svn: warning: %s\n",
-           convert_string_for_output (err->message, err->pool));
+  svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "svn: warning: %s\n",
+                                       err->message));
   fflush (stream);
 }
 
