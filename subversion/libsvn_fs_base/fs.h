@@ -79,6 +79,7 @@ typedef struct
   /* The filesystem UUID (or NULL if not-yet-known; see svn_fs_get_uuid). */
   const char *uuid;
 
+  /* A baton for collecting detailed errors from Berkeley DB. */
   bdb_errcall_baton_t *errcall_baton;
 } base_fs_data_t;
 
