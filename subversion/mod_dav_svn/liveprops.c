@@ -153,11 +153,11 @@ static svn_error_t *svn_svn_get_path_revprop(svn_string_t **propval,
 
   /* Get the property of the created revision. The authz is already
      performed, so we don't need to do it here too. */
-  return svn_repos_fs_revision_prop(propval,
-                                    resource->info->repos->repos,
-                                    committed_rev,
-                                    propname,
-                                    NULL, NULL, pool);
+  return svn_repos__fs_revision_prop(propval,
+                                     resource->info->repos->repos,
+                                     committed_rev,
+                                     propname,
+                                     NULL, NULL, pool);
 }
 
 static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
