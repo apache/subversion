@@ -25,10 +25,6 @@ MUST HAVE
 
     - research interoperability with popular dav clients (collabnet folks)
 
-* fix svn_xml_is_xml_safe.  currently, it allows invalid UTF8!  (lundblad)
-
-* remove auto-force behaviour for svn unlock URL. (lundblad)
-
 * decide if/how to handle locking of schedule-add paths.
   also decide if/how 'svn lock/unlock URL' should work on nonexistent paths.
 
