@@ -36,3 +36,21 @@ to take something on.
    This probably can't be started until the versioning filesystem is
    substantially complete, but is completely parallelizable then.
    Remember to get branches right. :-)
+
+
+3. Autoconf Robustifying
+
+   a) Berkeley DB 
+
+      Right now, we have an m4 macro that checks that libdb.so >=3.14.
+      We need this script to be smart enough to *locate* both the
+      library and header file, no matter where they're installed.
+
+      ...i.e. the GNU linker doesn't automatically search
+      /usr/local/lib, although this is often where libdb lives.  
+
+      ...i.e. the compiler can't find "db.h" even though it's sitting
+      inside /usr/local/include/db3/ on my FreeBSD system.
+
+     You get the idea.  :)
+
