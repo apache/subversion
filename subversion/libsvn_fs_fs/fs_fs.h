@@ -18,6 +18,8 @@
 #ifndef SVN_LIBSVN_FS__FS_FS_H
 #define SVN_LIBSVN_FS__FS_FS_H
 
+#include "revs-txns.h"
+
 /* Open the fsfs filesystem pointed to by PATH and associate it with
    filesystem object FS.  Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__open (svn_fs_t *fs,
@@ -338,5 +340,12 @@ svn_error_t * svn_fs_fs__move_into_place (const char *old_filename,
 svn_error_t * svn_fs_fs__dup_perms (const char *filename,
                                     const char *perms_reference,
                                     apr_pool_t *pool);
+
+/* Return the path to the file containing revision REV in FS.
+   Allocate the new char * from POOL. */
+const char *svn_fs_fs__path_rev (svn_fs_t *fs, 
+                                 svn_revnum_t rev, 
+                                 apr_pool_t *pool);
+
 
 #endif

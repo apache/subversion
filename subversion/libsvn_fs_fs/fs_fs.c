@@ -141,8 +141,8 @@ path_lock (svn_fs_t *fs, apr_pool_t *pool)
   return svn_path_join (fs->path, PATH_LOCK_FILE, pool);
 }
 
-static const char *
-path_rev (svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+const char *
+svn_fs_fs__path_rev (svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   return svn_path_join_many (pool, fs->path, PATH_REVS_DIR,
                              apr_psprintf (pool, "%ld", rev), NULL);
@@ -401,7 +401,7 @@ open_and_seek_revision (apr_file_t **file,
 {
   apr_file_t *rev_file;
 
-  SVN_ERR (svn_io_file_open (&rev_file, path_rev (fs, rev, pool),
+  SVN_ERR (svn_io_file_open (&rev_file, svn_fs_fs__path_rev (fs, rev, pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   SVN_ERR (svn_io_file_seek (rev_file, APR_SET, &offset, pool));
@@ -981,7 +981,7 @@ svn_fs_fs__rev_get_root (svn_fs_id_t **root_id_p,
   svn_fs_id_t *root_id;
   svn_error_t *err;
 
-  err = svn_io_file_open (&revision_file, path_rev (fs, rev, pool),
+  err = svn_io_file_open (&revision_file, svn_fs_fs__path_rev (fs, rev, pool),
                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
   if (err && APR_STATUS_IS_ENOENT (err->apr_err))
     {
@@ -2127,7 +2127,7 @@ svn_fs_fs__paths_changed (apr_hash_t **changed_paths_p,
   apr_hash_t *changed_paths;
   apr_file_t *revision_file;
   
-  SVN_ERR (svn_io_file_open (&revision_file, path_rev (fs, rev, pool),
+  SVN_ERR (svn_io_file_open (&revision_file, svn_fs_fs__path_rev (fs, rev, pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   SVN_ERR (get_root_changes_offset (NULL, &changes_offset, revision_file,
@@ -3590,8 +3590,8 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
     }
 
   /* Move the finished rev file into place. */
-  old_rev_filename = path_rev (fs, old_rev, subpool);
-  rev_filename = path_rev (fs, new_rev, subpool);
+  old_rev_filename = svn_fs_fs__path_rev (fs, old_rev, subpool);
+  rev_filename = svn_fs_fs__path_rev (fs, new_rev, subpool);
   SVN_ERR (svn_fs_fs__move_into_place (proto_filename, rev_filename, 
                                        old_rev_filename, subpool));
 
@@ -3718,7 +3718,8 @@ svn_fs_fs__write_revision_zero (svn_fs_t *fs)
 {
   apr_pool_t *pool = fs->pool;
 
-  SVN_ERR (svn_io_file_create (path_rev (fs, 0, pool), "PLAIN\nEND\nENDREP\n"
+  SVN_ERR (svn_io_file_create (svn_fs_fs__path_rev (fs, 0, pool), 
+                               "PLAIN\nEND\nENDREP\n"
                                "id: 0.0.r0/17\n"
                                "type: dir\n"
                                "count: 0\n"

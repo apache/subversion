@@ -33,6 +33,7 @@
 #include "lock.h"
 #include "tree.h"
 #include "err.h"
+#include "fs_fs.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
@@ -124,6 +125,7 @@ abs_path_to_lock_file (const char **abs_path,
 
 /* ###Shouldn't abs_path_to_lock_file and base_path_to_lock_file be
    using this function? */
+/* ###TODO Rename this to base_lock_dir or somesuch. */
 /* Set BASE_PATH to the directory in FS where lock files (and lock
    entries files) are stored. */
 static svn_error_t *
@@ -199,19 +201,21 @@ write_entries_file (apr_hash_t *entries,
 
 /* Create ENTRIES and read lock entries file at PATH, adding each
    child hash as a key as a char * in ENTRIES.  The value should be
-   ignored.  If FD is non-NULL, read entries from FD instead of PATH. */
+   ignored.  If EXISTING_FD is non-NULL, read entries from EXISTING_FD
+   instead of PATH. */
 static svn_error_t *
 read_entries_file (apr_hash_t **entries,
                    const char *path, 
-                   apr_file_t *fd,
+                   apr_file_t *existing_fd,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
+  apr_file_t *fd;
   apr_size_t buf_len = (APR_MD5_DIGESTSIZE * 2) + 1; /* Add room for "\n". */
 
   *entries = apr_hash_make (pool);
 
-  if (!fd) /* Only open PATH if fd is NULL. */
+  if (!existing_fd) /* Only open PATH if fd is NULL. */
     {
       err = svn_io_file_open (&fd, path, APR_READ, APR_OS_DEFAULT, pool);
       if (err && APR_STATUS_IS_ENOENT (err->apr_err))
@@ -224,6 +228,8 @@ read_entries_file (apr_hash_t **entries,
       if (err)
         return err;
     }
+  else
+    fd = existing_fd;
 
   while (1729)
     {
@@ -245,6 +251,9 @@ read_entries_file (apr_hash_t **entries,
                     APR_HASH_KEY_STRING, &(buf[0])); /* Grab a byte for val.*/
 
     }
+  /* Only close fd if we weren't passed an existing (already open) fd. */
+  if (!existing_fd)
+    SVN_ERR (svn_io_file_close (fd, pool));
   
   return SVN_NO_ERROR;
 }
@@ -264,10 +273,27 @@ repository_abs_path(const char *path,
 
 
 
+/* Set the filesystem permissions on PATH to the same as those on the
+   file for the initial revision (0) of FS. */
+static svn_error_t *
+fix_path_perms (const char *path,
+                svn_fs_t *fs, 
+                apr_pool_t *pool)
+{
+  svn_revnum_t revnum = 0;
+  const char *ref_path = svn_fs_fs__path_rev (fs, revnum, pool);
+
+  SVN_ERR (svn_fs_fs__dup_perms (path, ref_path, pool));
+  return SVN_NO_ERROR;
+}
+
+
+
 /* If ABS_PATH exists, add DIGEST_STR to it iff it's not already in
    it.  Else, create ABS_PATH with DIGEST_STR as its only member. */
 static svn_error_t *
 add_hash_to_entries_file (const char *abs_path,
+                          svn_fs_t *fs,
                           const char *digest_str,
                           apr_pool_t *pool)
 {
@@ -299,7 +325,35 @@ add_hash_to_entries_file (const char *abs_path,
       SVN_ERR (svn_io_file_write_full (fd, content, strlen (content), 
                                        NULL, pool));
       SVN_ERR (svn_io_file_close (fd, pool));
+      SVN_ERR (fix_path_perms (abs_path, fs, pool));
     }
+
+  return SVN_NO_ERROR;
+}
+
+/* Create a directory at PATH with the same permissions as
+   REF_PATH. */
+static svn_error_t *
+make_dir (const char *path,
+          const char *ref_path,
+          apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  err = svn_io_dir_make (path, APR_OS_DEFAULT, pool);
+
+  /* If no error, then we successfully created the directory--tweak
+     the perms.*/
+  if (!err)
+    SVN_ERR (svn_fs_fs__dup_perms (path, ref_path, pool));
+
+  /* Any error other than EEXIST is a real error. */ 
+  if (err && !APR_STATUS_IS_EEXIST (err->apr_err))
+    return err;
+
+  /* If EEXIST, then clear the error */
+  if (err && APR_STATUS_IS_EEXIST (err->apr_err))
+    svn_error_clear (err);
 
   return SVN_NO_ERROR;
 }
@@ -316,18 +370,15 @@ write_lock_to_file (svn_fs_t *fs,
   apr_hash_t *hash;
   apr_file_t *fd;
   svn_stream_t *stream;
-  apr_status_t status;
   apr_array_header_t *nodes;
   char const *abs_path, *node_name;
   const char *digest_str, *path, *path_so_far = "/";
   int i;
 
+  /* Make sure that the base dir exists. */
   SVN_ERR (base_path_to_lock_file (&abs_path, fs, pool));
-  status = apr_dir_make_recursive (abs_path, APR_OS_DEFAULT, pool);
   
-  if (status)
-    return svn_error_wrap_apr (status, _("Can't create lock directory '%s'"),
-                               abs_path);
+  SVN_ERR (make_dir (abs_path, fs->path, pool));
 
   path = repository_abs_path (lock->path, pool);
   nodes = svn_path_decompose (path, pool);
@@ -352,7 +403,7 @@ write_lock_to_file (svn_fs_t *fs,
 
       SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path_so_far, pool));
 
-      SVN_ERR (add_hash_to_entries_file (abs_path, digest_str, pool));
+      SVN_ERR (add_hash_to_entries_file (abs_path, fs, digest_str, pool));
     }
 
   /* Create our hash and load it up. */
@@ -381,6 +432,8 @@ write_lock_to_file (svn_fs_t *fs,
              apr_psprintf (pool,
                            _("Cannot write lock hash to '%s'"),
                            svn_path_local_style (abs_path, pool)));
+  SVN_ERR (svn_io_file_close (fd, pool));
+  SVN_ERR (fix_path_perms (abs_path, fs, pool));
   return SVN_NO_ERROR;
 }
 
@@ -485,19 +538,21 @@ generate_new_lock (svn_lock_t **lock_p,
 }
 
 
-/* Read lock from file in FS at ABS_PATH into LOCK_P.  If open FD is
-   non-NULL, use FD instead of opening a new file. */
+/* Read lock from file in FS at ABS_PATH into LOCK_P.  If open
+   EXISTING_FD is non-NULL, use EXISTING_FD instead of opening a new
+   file. */
 static svn_error_t *
 read_lock_from_abs_path (svn_lock_t **lock_p,
                          svn_fs_t *fs,
                          const char *abs_path,
-                         apr_file_t *fd,
+                         apr_file_t *existing_fd,
                          apr_pool_t *pool)
 {
   svn_lock_t *lock;
   apr_hash_t *hash;
   svn_stream_t *stream;
   apr_status_t status;
+  apr_file_t *fd;
   const char *val;
   apr_finfo_t finfo;
 
@@ -512,14 +567,20 @@ read_lock_from_abs_path (svn_lock_t **lock_p,
   if (status  && !APR_STATUS_IS_ENOENT (status))
     return svn_error_wrap_apr (status, _("Can't stat '%s'"), abs_path);
 
-  if (!fd) /* Only open the file if we haven't been passed an apr_file_t. */
+  /* Only open the file if we haven't been passed an apr_file_t. */
+  if (!existing_fd)
     SVN_ERR (svn_io_file_open (&fd, abs_path, APR_READ, APR_OS_DEFAULT, pool));
+  else
+    fd = existing_fd;
 
   hash = apr_hash_make (pool);
 
   stream = svn_stream_from_aprfile(fd, pool);
   SVN_ERR_W (svn_hash_read2 (hash, stream, SVN_HASH_TERMINATOR, pool),
              apr_psprintf (pool, _("Can't parse '%s'"), abs_path));
+
+  if (!existing_fd)
+    SVN_ERR (svn_io_file_close (fd, pool));
 
   /* Create our lock and load it up. */
   lock = apr_palloc (pool, sizeof (*lock));
