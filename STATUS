@@ -59,6 +59,7 @@ These changes are to the "core" of Subversion:
      Copyright notice fixes.
      Justification: Why have copyright notices at all unless legally proper?
      Votes:
+      +0: cmpilato
       +1 (concept): jerenkrantz
       +1: rooneg, ghudson, dionisos
 
@@ -67,7 +68,7 @@ These changes are to the "core" of Subversion:
      Constructor for svn_client_ctx_t
      Justification: Constructor helps with backward compatibility.
      Votes:
-      +0: jerenkrantz, gstein
+      +0: jerenkrantz, gstein, cmpilato
       +1: rooneg, ghudson
 
 
@@ -79,7 +80,7 @@ These changes are to the "core" of Subversion:
             http://www.contactor.se/~dast/svn/archive-2003-12/0736.shtml.
      Votes:
       -0: gstein
-      +0: jerenkrantz
+      +0: jerenkrantz, cmpilato
       +1: ghudson, dionisos, epg
 
 
@@ -89,13 +90,14 @@ These changes are to the "core" of Subversion:
      Notes: svnserve -u (believe usernames) was deprecated in 0.34.
      Votes:
       +1: jerenkrantz, rooneg, ghudson, epg
-      +0: gstein
+      +0: gstein, cmpilato
 
 
    * Issue #1644
      apr_ and APR_ namespace symbols in Subversion
      Justification: API stability, non-interference w/ APR's namespace
      Votes:
+      +0: cmpilato
       +1: jerenkrantz, ghudson (#1644 attachment Dec 19 17:03:00), epg
 
 
@@ -113,6 +115,7 @@ These changes are to the "core" of Subversion:
      Fix a handle leak that caused a test failure on Windows.
      Justification: Windows correctness, test failure, and went into 0.35.1.
      Votes:
+      +0: cmpilato
       +1: brane, jerenkrantz, ghudson, dionisos, gstein
 
 
@@ -121,14 +124,14 @@ These changes are to the "core" of Subversion:
      Justification: Correctness, and went into 0.35.1.
      Votes:
       +1: brane, jerenkrantz, ghudson
-      +0: gstein
+      +0: gstein, cmpilato
 
 
    * r8021
      'svn revert' performance improvement (timestamp sleep once, not N times)
      Justification: trivial; API change; makes error returns correct priority
      Votes:
-      +1: jerenkrantz, rooneg, ghudson, dionisos, epg
+      +1: jerenkrantz, rooneg, ghudson, dionisos, epg, cmpilato
       -0: gstein (revert of many files is uncommon)
 
 
@@ -160,7 +163,7 @@ These changes are to the "core" of Subversion:
      Notes: See Concerns field of r8013 above.
      Votes:
       +1: bliss, ghudson
-      +0: gstein
+      +0: gstein, cmpilato
 
 
    * r8065
@@ -183,6 +186,7 @@ These changes are to the "core" of Subversion:
      Fix for bindings build on Windows. Related to issue 1666.
      Justification: Python bindings will not build otherwise. Low risk.
      Votes:
+       +0: cmpilato
        +1: brane, jerenkrantz, gstein
 
 
@@ -190,7 +194,7 @@ These changes are to the "core" of Subversion:
      Rename 'svn_repos_authz_read_func_t' to 'svn_repos_authz_func_t'.
      Justification: API stability; and, old name was overly restrictive.
      Votes:
-      +1: jerenkrantz, jszakmeister, epg
+      +1: jerenkrantz, jszakmeister, epg, cmpilato
       -0: gstein
 
 
@@ -198,7 +202,7 @@ These changes are to the "core" of Subversion:
      Add a pool parameter to finish_abort and abort_report.
      Justification: API stability; low risk
      Votes:
-      +1: jerenkrantz, ghudson, bliss, jszakmeister, epg
+      +1: jerenkrantz, ghudson, bliss, jszakmeister, epg, cmpilato
       -0: gstein
 
 
@@ -207,13 +211,14 @@ These changes are to the "core" of Subversion:
      Justification: Conform to docstring; correctness; low risk
      Votes:
       +1: jerenkrantz, rooneg, jszakmeister, epg
-      +0: gstein
+      +0: gstein, cmpilato
 
 
    * r8098
      Load RA modules as foo-MAJOR.so.0 instead of foo-MAJOR.so.
      Justification: Low risk; we should be nice to binary packagers.
      Votes:
+      +0: cmpilato
       +1: ghudson, epg
 
 
@@ -221,7 +226,7 @@ These changes are to the "core" of Subversion:
      Rename 'store-password' option renamed to 'store-auth-creds'
      Justification: API stability; low risk;  more accurate name.
      Votes:
-      +1: bliss
+      +1: bliss, cmpilato
       -0: gstein
 
 
@@ -230,7 +235,7 @@ These changes are to the "core" of Subversion:
      Justification: API stability; essentially zero risk
      Votes:
       +1: ghudson, jszakmeister, epg
-      +0: gstein
+      +0: gstein, cmpilato
 
 
    * r8114
@@ -238,7 +243,7 @@ These changes are to the "core" of Subversion:
      Justification: Low risk, makes client robust in face of server changes.
      Votes:
       +1: ghudson, jszakmeister, epg
-      +0: gstein
+      +0: gstein, cmpilato
 
 
    * r8115
@@ -253,7 +258,7 @@ These changes are to the "core" of Subversion:
      Justification: API change; allow better report processing; no risk.
      Votes:
       +1: ghudson, jszakmeister, epg
-      +0: gstein
+      +0: gstein, cmpilato
 
 
    * Issue #408
@@ -261,6 +266,7 @@ These changes are to the "core" of Subversion:
      Justification: API change; avoid permanent support for bizarre and
      unpredictable date formats.
      Votes:
+      +0: cmpilato
       +1: mbk, ghudson, dionisos, epg
       -1: gstein (why such a change now? sheesh)
 
@@ -269,13 +275,14 @@ These changes are to the "core" of Subversion:
      Fix a compiler warning.
      Justification: trivially fixes embarassing warning; zero risk.
      Votes:
-      +1: mbk, ghudson, dionisos, jszakmeister, gstein, epg
+      +1: mbk, ghudson, dionisos, jszakmeister, gstein, epg, cmpilato
 
 
    * r8035, r8036, r8037, r8128, r8156
      Blame UI changes.
      Justification: much nicer user experience; low risk.
      Votes:
+      +0: cmpilato
       +1: mbk, jszakmeister
       -0: gstein (alternative is to remove the late-added 'blame' feature)
 
@@ -284,7 +291,7 @@ These changes are to the "core" of Subversion:
      Improved blame cancellation support.
      Justification: better UI, fixes latent tempfile leak; low risk.
      Votes:
-      +1: mbk, rooneg, jszakmeister
+      +1: mbk, rooneg, jszakmeister, cmpilato
       -0: gstein (or remove the feature)
 
 
@@ -340,8 +347,17 @@ These changes are to the "core" of Subversion:
      Justification: Make svnserve more user friendly, low risk.
      Votes:
       +1: bliss, ghudson
+      +0: cmpilato
       -0: gstein
      
+   * r8154
+     Fix a small bug in the FS history harvesting code.  
+     Notes:  The codespeak repository is sufficient complex enough
+             (history-wise) to trigger this bug (seen by the inability
+             to run 'svn blame' on certain files in the repository).
+
+     Votes:
+      +1: cmpilato
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
