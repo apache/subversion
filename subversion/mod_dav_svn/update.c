@@ -267,9 +267,8 @@ static void open_helper(svn_boolean_t is_dir,
   child = make_child_baton(parent, path, pool);
 
   qname = apr_xml_quote_string(pool, child->name, 1);
-  /* ### Sat 24 Nov 2001: leaving this as "replace-" while clients get
-     upgraded.  Will change to "open-" soon.  -kff */
-  send_xml(child->uc, "<S:replace-%s name=\"%s\" rev=\"%"
+
+  send_xml(child->uc, "<S:open-%s name=\"%s\" rev=\"%"
            SVN_REVNUM_T_FMT "\">" DEBUG_CR,
 	   DIR_OR_FILE(is_dir), qname, base_revision);
 
@@ -335,9 +334,7 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
   if (baton->added)
     send_xml(baton->uc, "</S:add-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
   else
-    /* ### Sat 24 Nov 2001: leaving this as "replace-" while clients get
-       upgraded.  Will change to "open-" soon.  -kff */
-    send_xml(baton->uc, "</S:replace-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
+    send_xml(baton->uc, "</S:open-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
 }
 
 static svn_error_t * upd_set_target_revision(void *edit_baton,
@@ -382,9 +379,7 @@ static svn_error_t * upd_open_root(void *edit_baton,
       send_xml(uc, "<S:resource path=\"%s\">" DEBUG_CR, qpath);
     }
   else    
-    /* ### Sat 24 Nov 2001: leaving this as "replace-" while clients get
-       upgraded.  Will change to "open-" soon.  -kff */
-    send_xml(uc, "<S:replace-directory rev=\"%" SVN_REVNUM_T_FMT "\">"
+    send_xml(uc, "<S:open-directory rev=\"%" SVN_REVNUM_T_FMT "\">"
              DEBUG_CR, base_revision);
 
   send_vsn_url(b, pool);
