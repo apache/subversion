@@ -69,6 +69,8 @@ struct dir_baton
 {
   struct edit_baton *edit_baton;
   struct dir_baton *parent_dir_baton;
+  svn_boolean_t added;
+  svn_boolean_t prop_changed;
   svn_string_t *path;
 };
 
@@ -77,6 +79,9 @@ struct file_baton
 {
   struct dir_baton *parent_dir_baton;
   svn_string_t *path;
+  svn_boolean_t added;
+  svn_boolean_t text_changed;
+  svn_boolean_t prop_changed;
 };
 
 
@@ -104,7 +109,7 @@ delete (svn_string_t *name, void *parent_baton)
   svn_string_t *printable_name = svn_string_dup (d->path, d->edit_baton->pool);
   svn_path_add_component (printable_name, name, svn_path_local_style);
 
-  printf ("D %s\n", printable_name->data);
+  printf ("D  %s\n", printable_name->data);
   return SVN_NO_ERROR;
 }
 
@@ -124,10 +129,11 @@ add_directory (svn_string_t *name,
   child_d->parent_dir_baton = parent_d;
   child_d->path = svn_string_dup (parent_d->path, child_d->edit_baton->pool);
   svn_path_add_component (child_d->path, name, svn_path_local_style);
+  child_d->added = TRUE;
 
   *child_baton = child_d;
 
-  printf ("A %s\n", name->data);
+  printf ("A  %s\n", name->data);
   return SVN_NO_ERROR;
 }
 
@@ -151,7 +157,7 @@ replace_directory (svn_string_t *name,
   *child_baton = child_d;
 
   /* Don't print anything for a directory replace -- this event is
-     implied by events beneath it, which will be printed. */
+     implied by printing events beneath it. */
 
   return SVN_NO_ERROR;
 }
@@ -160,6 +166,13 @@ replace_directory (svn_string_t *name,
 static svn_error_t *
 close_directory (void *dir_baton)
 {
+  struct dir_baton *d = dir_baton;
+
+  if (d->added)
+    printf ("A  %s\n", d->path->data);
+  if (d->prop_changed)
+    printf ("X  %s\n", d->path->data);
+
   return SVN_NO_ERROR;
 }
 
@@ -167,8 +180,18 @@ close_directory (void *dir_baton)
 static svn_error_t *
 close_file (void *file_baton)
 {
-  /* kff todo: actually, this is the only file func that will print
-     anything out.  There will be a baton to tell it what to print. */
+  struct file_baton *fb = file_baton;
+
+  if (! fb->added)
+    {
+      if (fb->text_changed && fb->prop_changed)
+        printf ("UX %s\n", fb->path->data);
+      else if (fb->text_changed)
+        printf ("U  %s\n", fb->path->data);
+      else if (fb->prop_changed)
+        printf ("X  %s\n", fb->path->data);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -192,8 +215,8 @@ apply_textdelta (void *file_baton,
                  svn_txdelta_window_handler_t **handler,
                  void **handler_baton)
 {
-  /* kff todo: this would flag a mod in the baton. */
-
+  struct file_baton *fb = file_baton;
+  fb->text_changed = TRUE;
   *handler = window_handler;
   return SVN_NO_ERROR;
 }
@@ -213,11 +236,11 @@ add_file (svn_string_t *name,
   child_fb->parent_dir_baton = parent_d;
   child_fb->path = svn_string_dup (parent_d->path, parent_d->edit_baton->pool);
   svn_path_add_component (child_fb->path, name, svn_path_local_style);
+  child_fb->added = TRUE;
 
   *file_baton = child_fb;
 
-  /* kff todo: see comments in close_file() */
-  printf ("A %s\n", child_fb->path->data);
+  printf ("A  %s\n", child_fb->path->data);
   return SVN_NO_ERROR;
 }
 
@@ -239,8 +262,6 @@ replace_file (svn_string_t *name,
 
   *file_baton = child_fb;
 
-  /* kff todo: see comments in close_file() */
-  printf ("U %s\n", child_fb->path->data);
   return SVN_NO_ERROR;
 }
 
@@ -251,9 +272,7 @@ change_file_prop (void *file_baton,
                   svn_string_t *value)
 {
   struct file_baton *fb = file_baton;
-
-  /* kff todo: see comments in close_file() */
-  printf ("X %s\n", fb->path->data);
+  fb->prop_changed = TRUE;
   return SVN_NO_ERROR;
 }
 
@@ -264,8 +283,7 @@ change_dir_prop (void *parent_baton,
                  svn_string_t *value)
 {
   struct dir_baton *d = parent_baton;
-
-  printf ("X %s\n", d->path->data);
+  d->prop_changed = TRUE;
   return SVN_NO_ERROR;
 }
 
