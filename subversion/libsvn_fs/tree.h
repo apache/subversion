@@ -15,9 +15,8 @@
 #define SVN_LIBSVN_FS_TREE_H
 
 
-/* Set *ROOT_P to a node referring to the root of TXN in FS, as part
-   of TRAIL.  */
-svn_error_t *svn_fs__txn_root_node (svn_fs_node_t **root_p,
+/* Set *ROOT_P to the root of TXN in FS, as part of TRAIL. */
+svn_error_t *svn_fs__txn_root_node (svn_fs_root_t **root_p,
                                     svn_fs_t *fs,
                                     const char *txn,
                                     trail_t *trail);
