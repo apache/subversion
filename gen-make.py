@@ -95,6 +95,10 @@ def main(fname, oname=None, skip_depends=0):
         objname = src[:-2] + objext
         objects.append(objname)
         file_deps.append((src, objname))
+      elif src[-5:] == '.texi':
+        objname = src[:-5] + objext
+        objects.append(objname)
+        file_deps.append((src, objname))
       else:
         print 'ERROR: unknown file extension on', src
         errors = 1
@@ -291,6 +295,15 @@ class Target:
       if not install:
         install = 'lib'
     elif type == 'doc':
+      tfile = name
+      self.objext = '.info'
+      # ### todo: working here
+      # print ""
+      # print "DOC name:",name
+      # print "DOC path:",path
+      # print "DOC install:",install
+      # print "DOC type:",type
+      # print ""
       pass
     else:
       raise GenMakeError('ERROR: unknown build type: ' + type)
