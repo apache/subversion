@@ -140,7 +140,7 @@ cl_checkout (int argc, VALUE *argv, VALUE self)
   void *after_edit_baton = NULL;
   svn_client_auth_baton_t *auth_baton;
   svn_stringbuf_t *URL, *path;
-  svn_revnum_t revision = SVN_INVALID_REVNUM;
+  svn_client_revision_t revision;
   apr_time_t tm = 0;
   svn_stringbuf_t *xml_src;
   apr_pool_t *pool;
@@ -150,20 +150,9 @@ cl_checkout (int argc, VALUE *argv, VALUE self)
   rb_scan_args (argc, argv, "3*", &aURL, &aPath, &aRevOrTime, &rest);
   Check_Type (aURL, T_STRING);
   Check_Type (aPath, T_STRING);
-  if (rb_obj_is_kind_of (aRevOrTime, rb_cTime) == Qtrue)
-    {
-      time_t sec, usec;
-      sec = NUM2LONG (rb_funcall (aRevOrTime, rb_intern ("tv_sec"), 0));
-      usec = NUM2LONG (rb_funcall (aRevOrTime, rb_intern ("tv_usec"), 0));
-      tm = sec * APR_USEC_PER_SEC + usec;
-    }
-  else
-    revision = NUM2LONG (aRevOrTime);
-
+  revision = svn_ruby_parse_revision (aRevOrTime);
   cl_get_parse_arg (rest, &before_editor, &before_edit_baton,
                     &after_editor, &after_edit_baton, &xml);
-  if (xml && revision == SVN_INVALID_REVNUM)
-    rb_raise (rb_eArgError, "xmlSrc requires explicit revision");
   
   pool = svn_pool_create (NULL);
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
@@ -176,8 +165,8 @@ cl_checkout (int argc, VALUE *argv, VALUE self)
 
   err = svn_client_checkout (before_editor, before_edit_baton,
                              after_editor, after_edit_baton,
-                             auth_baton, URL, path, revision,
-                             TRUE, tm, xml_src, pool);
+                             auth_baton, URL, path, &revision,
+                             TRUE, xml_src, pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -197,7 +186,7 @@ cl_update (int argc, VALUE *argv, VALUE self)
   void *after_edit_baton = NULL;
   svn_client_auth_baton_t *auth_baton;
   svn_stringbuf_t *path;
-  svn_revnum_t revision = SVN_INVALID_REVNUM;
+  svn_client_revision_t revision;
   apr_time_t tm = 0;
   svn_stringbuf_t *xml_src;
   apr_pool_t *pool;
@@ -206,20 +195,10 @@ cl_update (int argc, VALUE *argv, VALUE self)
 
   rb_scan_args (argc, argv, "3*", &aPath, &aRevOrTime, &recurse, &rest);
   Check_Type (aPath, T_STRING);
-  if (rb_obj_is_kind_of (aRevOrTime, rb_cTime) == Qtrue)
-    {
-      time_t sec, usec;
-      sec = NUM2LONG (rb_funcall (aRevOrTime, rb_intern ("tv_sec"), 0));
-      usec = NUM2LONG (rb_funcall (aRevOrTime, rb_intern ("tv_usec"), 0));
-      tm = sec * APR_USEC_PER_SEC + usec;
-    }
-  else
-    revision = NUM2LONG (aRevOrTime);
+  revision = svn_ruby_parse_revision (aRevOrTime);
 
   cl_get_parse_arg (rest, &before_editor, &before_edit_baton,
                     &after_editor, &after_edit_baton, &xml);
-  if (xml && revision == SVN_INVALID_REVNUM)
-    rb_raise (rb_eArgError, "xmlSrc requires explicit revision");
 
   pool = svn_pool_create (NULL);
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
@@ -232,7 +211,7 @@ cl_update (int argc, VALUE *argv, VALUE self)
   err = svn_client_update (before_editor, before_edit_baton,
                            after_editor, after_edit_baton,
                            auth_baton, path, xml_src,
-                           revision, tm, RTEST (recurse),
+                           &revision, RTEST (recurse),
                            NULL, NULL, pool);
   if (err)
     {
@@ -613,7 +592,7 @@ cl_copy (int argc, VALUE *argv, VALUE self)
   svn_client_commit_info_t *commit_info;
   svn_stringbuf_t *src_path, *dst_path, *message;
   svn_client_auth_baton_t *auth_baton;
-  svn_revnum_t src_rev;
+  svn_client_revision_t src_revision;
   const svn_delta_edit_fns_t *before_editor = NULL;
   void *before_edit_baton = NULL;
   const svn_delta_edit_fns_t *after_editor = NULL;
@@ -629,7 +608,7 @@ cl_copy (int argc, VALUE *argv, VALUE self)
     Check_Type (aMessage, T_STRING);
 
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
-  src_rev = NUM2LONG (srcRev);
+  src_revision = svn_ruby_parse_revision (srcRev);
   if (beforeEditor != Qnil)
       svn_ruby_delta_editor (&before_editor, &before_edit_baton, beforeEditor);
   if (afterEditor != Qnil)
@@ -642,7 +621,7 @@ cl_copy (int argc, VALUE *argv, VALUE self)
   else
     message = svn_stringbuf_ncreate (StringValuePtr (aMessage),
 				     RSTRING (aMessage)->len, pool);
-  err = svn_client_copy (&commit_info, src_path, src_rev, dst_path,
+  err = svn_client_copy (&commit_info, src_path, &src_revision, dst_path,
 			 auth_baton, message,
 			 before_editor, before_edit_baton,
 			 after_editor, after_edit_baton, NULL, NULL, pool);
