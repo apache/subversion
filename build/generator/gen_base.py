@@ -310,11 +310,15 @@ class SWIGUtilPython(ObjectFile):
 class SWIGUtilJava(ObjectFile):
   ### hmm. this is Makefile-specific
   build_cmd = '$(COMPILE_SWIG_JAVA)'
+class SWIGUtilPerl(ObjectFile):
+  ### hmm. this is Makefile-specific
+  build_cmd = '$(COMPILE_SWIG_PL)'
 
 _custom_build = {
   'apache-mod' : ApacheObject,
   'swig-py' : SWIGUtilPython,
   'swig-java' : SWIGUtilJava,
+  'swig-pl' : SWIGUtilPerl,
   }
 
 class SWIGLibrary(DependencyNode):
