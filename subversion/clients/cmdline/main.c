@@ -292,7 +292,6 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "The default TARGET is '.', meaning the repository URL of the current\n"
     "working directory.\n\n"
     "With --verbose, the following fields show the status of the item:\n\n"
-    "  'P' if the item has any Properties\n"
     "  Revision number of the last commit\n"
     "  Author of the last commit\n"
     "  Size (in bytes)\n"
