@@ -599,9 +599,9 @@ add_directory (const char *path,
   /* Convert copyfrom_path into a stringbuf. */
   cfpath = copyfrom_path ? svn_stringbuf_create (copyfrom_path, pool) : NULL;
       
-  /* Check that an object by this name doesn't already exist. */
+  /* Check that a non-directory object by this name doesn't already exist. */
   SVN_ERR (svn_io_check_path (db->path->data, &kind, db->pool));
-  if (kind != svn_node_none)
+  if (kind != svn_node_none && kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
                               "failed to add dir`%s': object already exists",
                               db->path->data);

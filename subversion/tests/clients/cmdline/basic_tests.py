@@ -26,6 +26,18 @@ import svntest
 # (abbreviation)
 path_index = svntest.actions.path_index
 
+#----------------------------------------------------------------------
+
+def expect_extra_files(node, extra_files):
+  """singleton handler for expected singletons"""
+
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern))
+      return 0
+  print "Found unexpected disk object:", node.name
+  raise svntest.tree.SVNTreeUnequal
 
 ######################################################################
 # Tests
@@ -42,7 +54,7 @@ def basic_checkout(sbox):
 
   wc_dir = sbox.wc_dir
 
-  # checkout of a different URL into a working copy fails
+  # Checkout of a different URL into a working copy fails
   A_url = os.path.join(svntest.main.current_repo_url, 'A')
   stdout_lines, stderr_lines = svntest.main.run_svn (1, 'checkout', A_url,
                                                      '-d', wc_dir)
@@ -51,6 +63,50 @@ def basic_checkout(sbox):
     if re.match('.*<Obstructed update>', stderr_line):
       obstructed_update_error = 1
   if not obstructed_update_error:
+    return 1
+
+  # Make some changes to the working copy
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append (mu_path, 'appended mu text')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  os.remove(lambda_path)
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', G_path)
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  for item in status_list:
+    if item[0] == mu_path:
+      item[3]['status'] = 'M '
+    if item[0] == lambda_path:
+      item[3]['status'] = '! '
+    if (item[0] == G_path
+        or item[0] == os.path.join(G_path, 'pi')
+        or item[0] == os.path.join(G_path, 'rho')
+        or item[0] == os.path.join(G_path, 'tau')):
+      item[3]['status'] = 'D '
+  extra_files = ['lambda']
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  if (svntest.actions.run_and_verify_status (wc_dir, expected_output_tree,
+                                             None, None,
+                                             expect_extra_files, extra_files)
+      or len(extra_files) != 0):
+    print "Status check 1 failed"
+    return 1
+
+  # Repeat checkout of original URL into working copy with modifications
+  url = svntest.main.current_repo_url
+  stdout_lines, stderr_lines = svntest.main.run_svn (1, 'checkout', url,
+                                                     '-d', wc_dir)
+  if len (stderr_lines) != 0:
+    print "repeat checkout failed"
+    return 1
+
+  # lambda is restored
+  for item in status_list:
+    if item[0] == lambda_path:
+      item[3]['status'] = '_ '
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
+    print "Status check 2 failed"
     return 1
 
 #----------------------------------------------------------------------
@@ -427,23 +483,6 @@ def basic_merge(sbox):
 #----------------------------------------------------------------------
 
 
-# Helper for basic_conflict() test -- a custom singleton handler.
-def detect_conflict_files(node, extra_files):
-  """NODE has been discovered an an extra file on disk.  Verify that
-  it matches one of the regular expressions in the EXTRA_FILES list.
-  If it matches, remove the match from the list.  If it doesn't match,
-  raise an exception."""
-
-  for pattern in extra_files:
-    mo = re.match(pattern, node.name)
-    if mo:
-      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
-      return 0
-
-  print "Found unexpected disk object:", node.name
-  raise svntest.tree.SVNTreeUnequal
-
-
 def basic_conflict(sbox):
   "basic conflict creation and resolution"
 
@@ -523,13 +562,13 @@ Original appended text for rho>>>>>>> .r2
                  'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',]
   
   # Do the update and check the results in three ways.
-  # All "extra" files are passed to detect_conflict_files().
+  # All "extra" files are passed to expect_extra_files().
   if svntest.actions.run_and_verify_update(wc_backup,
                                            expected_output_tree,
                                            expected_disk_tree,
                                            expected_status_tree,
                                            None,
-                                           detect_conflict_files,
+                                           expect_extra_files,
                                            extra_files):
     return 1
   
