@@ -216,15 +216,10 @@ svn_cl__print_status_list (apr_hash_t *statushash,
       if ((skip_unrecognized) && (! status->entry))
         continue;
 
-      if (status->text_status != svn_wc_status_none)
-        {
-          if (detailed)
-            print_long_format (path, status);
-          else
-            print_short_format (path, status);
-        }
-      else 
-        printf (">>>   \"%s\" does not exist   <<<\n", path);
+      if (detailed)
+        print_long_format (path, status);
+      else
+        print_short_format (path, status);
     }
 
   /* If printing in detailed format, we might have a head revision to
