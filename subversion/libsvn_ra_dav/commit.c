@@ -121,7 +121,7 @@ typedef struct
 ** properties which must be deleted. Properties which are changed/added
 ** will use their new values.
 */
-static const int singleton_delete_prop;
+static const int singleton_delete_prop = 0;
 #define DELETE_THIS_PROP (&singleton_delete_prop)
 
 /* this property will be fetched from the server when we don't find it
