@@ -138,10 +138,12 @@ const apr_getopt_option_t svn_cl__options[] =
                       N_("enable automatic properties")},
     {"no-auto-props", svn_cl__no_autoprops_opt, 0,
                       N_("disable automatic properties")},
-    {"native-eol", svn_cl__native_eol_opt, 1,
-         "Use a different EOL marker than the standard\n"
-         "                             system marker for files with a native svn:eol-style\n"
-         "                             property.  ARG may be one of 'LF', 'CR', 'CRLF'\n"},
+    {"native-eol",    svn_cl__native_eol_opt, 1,
+                      N_("Use a different EOL marker than the standard\n"
+                      "                             system marker for files "
+                      "with a native svn:eol-style\n"
+                      "                             property.  ARG may be one "
+                      "of 'LF', 'CR', 'CRLF'\n")},
     {0,               0, 0, 0}
   };
 
