@@ -72,6 +72,8 @@ struct file_baton
 
   svn_string_t *path;  /* the -absolute- path to this file in the fs */
 
+  apr_pool_t *subpool;  /* used by apply_textdelta() */
+
 };
 
 
@@ -212,12 +214,11 @@ close_directory (void *dir_baton)
 static svn_error_t *
 close_file (void *file_baton)
 {
-  /* The fs doesn't give one whit that we're done making changes to
-     any particular file... it's all happening inside one svn
-     transaction tree.
+  struct file_baton *fb = file_baton;
 
-     Thus this routine is a no-op! */
-
+  /* Free any memory used while streamily writing file contents. */
+  apr_pool_destroy (fb->subpool);
+  
   return SVN_NO_ERROR;
 }
 
@@ -234,7 +235,7 @@ apply_textdelta (void *file_baton,
   /* This routine is a mindless wrapper. */
   SVN_ERR (svn_fs_apply_textdelta (handler, handler_baton,
                                    eb->root, fb->path->data,
-                                   eb->pool));
+                                   fb->subpool));
   
   return SVN_NO_ERROR;
 }
@@ -264,7 +265,8 @@ add_file (svn_string_t *name,
   /* Build a new file baton */
   new_fb = apr_pcalloc (eb->pool, sizeof (*new_fb));
   new_fb->parent = pb;
-  new_fb->path = svn_string_dup (pb->path, eb->pool);
+  new_fb->subpool = svn_pool_create (eb->pool);
+  new_fb->path = svn_string_dup (pb->path, new_fb->subpool);
   svn_path_add_component (new_fb->path, name, svn_path_repos_style);
 
   if (copy_path)
@@ -305,7 +307,8 @@ replace_file (svn_string_t *name,
   /* Build a new file baton */
   new_fb = apr_pcalloc (eb->pool, sizeof (*new_fb));
   new_fb->parent = pb;
-  new_fb->path = svn_string_dup (pb->path, eb->pool);
+  new_fb->subpool = svn_pool_create (eb->pool);
+  new_fb->path = svn_string_dup (pb->path, new_fb->subpool);
   svn_path_add_component (new_fb->path, name, svn_path_repos_style);
 
   *file_baton = new_fb;
