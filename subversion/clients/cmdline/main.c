@@ -411,9 +411,9 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'F', 'q', 'r', svn_cl__targets_opt, 'R', svn_cl__revprop_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt, svn_cl__force_opt} },
   
-  { "resolve", svn_cl__resolve, {0},
+  { "resolved", svn_cl__resolved, {0},
     "Remove 'conflicted' state on working copy files or directories.\n"
-    "usage: resolve PATH...\n\n"
+    "usage: resolved PATH...\n\n"
     "  Note:  this routine does not semantically resolve conflict markers;\n"
     "  it merely removes conflict-related artifact files and allows PATH\n"
     "  to be committed again.\n",

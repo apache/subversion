@@ -272,7 +272,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_restore,
   svn_wc_notify_revert,
   svn_wc_notify_failed_revert,
-  svn_wc_notify_resolve,
+  svn_wc_notify_resolved,
   svn_wc_notify_status,
   svn_wc_notify_skip,
 

@@ -903,10 +903,10 @@ svn_client_revert (const char *path,
  * call @a ctx->notify_func with @a ctx->notify_baton and @a path.
  */
 svn_error_t *
-svn_client_resolve (const char *path,
-                    svn_boolean_t recursive,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_resolved (const char *path,
+                     svn_boolean_t recursive,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
 
 
 /** Copy @a src_path to @a dst_path.

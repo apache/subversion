@@ -581,13 +581,13 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_cleanup
 
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
- * Method:    resolve
+ * Method:    resolved
  * Signature: (Ljava/lang/String;Z)V
  */
-JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_resolve
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_resolved
   (JNIEnv* env, jobject jthis, jstring jpath, jboolean jrecurse)
 {
-	JNIEntry(SVNClient, resolve);
+	JNIEntry(SVNClient, resolved);
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
@@ -599,7 +599,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_resolve
 	{
 		return;
 	}
-	cl->resolve(path, jrecurse ? true: false);
+	cl->resolved(path, jrecurse ? true: false);
 }
 
 /*

@@ -106,7 +106,7 @@ notify (void *baton,
       printf ("Failed to revert %s -- try updating instead.\n", path_native);
       break;
 
-    case svn_wc_notify_resolve:
+    case svn_wc_notify_resolved:
       printf ("Resolved conflicted state of %s\n", path_native);
       break;
 

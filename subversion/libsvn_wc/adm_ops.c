@@ -1949,7 +1949,7 @@ resolve_conflict_on_entry (const char *path,
                                         entry, pool));
           if ((! (resolve_text && text_conflict))
               && (! (resolve_props && prop_conflict)))
-            (*notify_func) (notify_baton, path, svn_wc_notify_resolve,
+            (*notify_func) (notify_baton, path, svn_wc_notify_resolved,
                             svn_node_unknown,
                             NULL,
                             svn_wc_notify_state_unknown,

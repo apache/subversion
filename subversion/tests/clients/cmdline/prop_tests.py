@@ -371,8 +371,8 @@ def update_conflict_props(sbox):
     raise svntest.SVNUnexpectedOutput
 
   # Resolve the conflicts
-  svntest.main.run_svn(None, 'resolve', mu_path)
-  svntest.main.run_svn(None, 'resolve', A_path)
+  svntest.main.run_svn(None, 'resolved', mu_path)
+  svntest.main.run_svn(None, 'resolved', A_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/mu', 'A', status=' M')
