@@ -474,7 +474,8 @@ static svn_error_t *ra_svn_end_commit(void *baton)
 {
   ra_svn_commit_callback_baton_t *ccb = baton;
 
-  return svn_ra_svn_read_tuple(ccb->conn, ccb->pool, "rcc", ccb->new_rev,
+  return svn_ra_svn_read_tuple(ccb->conn, ccb->pool, "r(?c)(?c)",
+                               ccb->new_rev,
                                ccb->committed_date,
                                ccb->committed_author);
 }
