@@ -87,9 +87,6 @@ svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
   /* It would be nice to use apr_strftime(), but APR doesn't give a
      way to convert back, so we wouldn't be able to share the format
      string between the writer and reader. */
-  /* XXX: Enable this bit of code and remove the one below when a
-     bootstrap tarball has been released with this change included.
-
   t_cstr = apr_psprintf (pool,
                          timestamp_format,
                          exploded_time.tm_year + 1900,
@@ -99,8 +96,9 @@ svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
                          exploded_time.tm_min,
                          exploded_time.tm_sec,
                          exploded_time.tm_usec);
-  */
 
+  /* ### Remove this when the old style timestamp parsing is taken
+     out. 
   t_cstr = apr_psprintf (pool,
                          old_timestamp_format,
                          apr_day_snames[exploded_time.tm_wday],
@@ -114,6 +112,7 @@ svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
                          exploded_time.tm_yday + 1,
                          exploded_time.tm_isdst,
                          exploded_time.tm_gmtoff);
+  */
 
   return t_cstr;
 }
