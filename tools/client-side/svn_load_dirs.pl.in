@@ -99,9 +99,10 @@ if (defined $opt_import_tag_location and $repos_load_rel_path eq '.')
     &usage("$0: cannot set import_dir to `.' and use -t command line option.");
   }
 
-# Set the commit options.
-my @svn_commit_options;
-&set_commit_options($opt_svn_username, $opt_svn_password);
+# Set the svn command line options that are used anytime svn connects
+# to the repository.
+my @svn_use_repos_cmd_opts;
+&set_svn_use_repos_cmd_opts($opt_svn_username, $opt_svn_password);
 
 # Check that the repository base URL, the import and tag directories
 # do not contain any ..'s.  Also, the import and tag directories
@@ -259,7 +260,7 @@ if (defined $property_config_filename and length $property_config_filename)
   }
 
 # Check that the svn base URL works by running svn log on it.
-read_from_process($svn, 'log', $repos_base_uri);
+read_from_process($svn, 'log', @svn_use_repos_cmd_opts, $repos_base_uri);
 
 my $orig_cwd = cwd;
 
@@ -283,7 +284,7 @@ my $repos_base_path_segment;
       $repos_root_uri_path = shift @path_segments;
       push(@r_path_segments, $repos_root_uri_path);
       $r->path_segments(@r_path_segments);
-      if (safe_read_from_pipe($svn, 'log', $r) == 0)
+      if (safe_read_from_pipe($svn, 'log', @svn_use_repos_cmd_opts, $r) == 0)
         {
           $repos_root_uri = $r;
           last;
@@ -340,7 +341,9 @@ my $native_eol = &determine_native_eol;
 # fixed directory name.
 my $checkout_dir_name = 'ZZZ';
 print "Checking out $repos_base_uri into $temp_dir/$checkout_dir_name\n";
-read_from_process($svn, 'co', $repos_base_uri, $checkout_dir_name);
+read_from_process($svn, 'checkout',
+                  @svn_use_repos_cmd_opts,
+                  $repos_base_uri, $checkout_dir_name);
 
 # Change into the top level directory of the repository and record the
 # absolute path to this location because the script will come back
@@ -414,7 +417,8 @@ my $wc_top_dir_cwd = cwd;
       $message = wrap('', '  ', $message);
 
       read_from_process($svn, 'add', '-N', @dirs_to_create);
-      read_from_process($svn, 'commit', @svn_commit_options, '-m', $message);
+      read_from_process($svn, 'commit', @svn_use_repos_cmd_opts,
+                        '-m', $message);
     }
   else
     {
@@ -1069,7 +1073,9 @@ while (defined (my $load_dir = &get_next_load_dir))
       }
 
     my $message = wrap('', '', "Load $load_dir into $repos_load_abs_path.\n");
-    read_from_process($svn, 'commit', @svn_commit_options, '-m', $message);
+    read_from_process($svn, 'commit',
+                      @svn_use_repos_cmd_opts,
+                      '-m', $message);
 
     # Now remove any files and directories to be deleted in the
     # repository.
@@ -1094,7 +1100,8 @@ while (defined (my $load_dir = &get_next_load_dir))
                             "",
                             "Tag $repos_load_abs_path as " .
                             "$repos_tag_abs_path.\n");
-        read_from_process($svn, 'cp', '-m', $message, $from_url, $to_url);
+        read_from_process($svn, 'cp', @svn_use_repos_cmd_opts,
+                          '-m', $message, $from_url, $to_url);
       }
 
     # Finally, go to the top of the svn checked out tree and do an
@@ -1102,7 +1109,7 @@ while (defined (my $load_dir = &get_next_load_dir))
     chdir($wc_top_dir_cwd)
       or die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
 
-    read_from_process($svn, 'update');
+    read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
 
     # Now run a recursive diff between the original source directory
     # and the tag for a consistency check.
@@ -1162,30 +1169,36 @@ sub get_next_load_dir
   if ($line =~ m|(\S+)\s+(\S+)|)
     {
       $line = $1;
-      set_commit_options($2, $opt_svn_password);
+      set_svn_use_repos_cmd_opts($2, $opt_svn_password);
     }
   $line;
 }
 
-# Set additional options for svn commit.
-sub set_commit_options
+# This constant stores the commonly used string to indicate that a
+# subroutine has been passed an incorrect number of arguments.
+use vars qw($INCORRECT_NUMBER_OF_ARGS);
+$INCORRECT_NUMBER_OF_ARGS = "passed incorrect number of arguments.\n";
+
+# Set the svn command line options that are used anytime svn connects
+# to the repository.
+sub set_svn_use_repos_cmd_opts
 {
   unless (@_ == 2)
     {
-      confess "$0: set_commit_options passed incorrect number of arguments.\n";
+      confess "$0: set_svn_use_repos_cmd_opts $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $username = shift;
   my $password = shift;
 
-  @svn_commit_options = ();
+  @svn_use_repos_cmd_opts = ();
   if (defined $username and length $username)
     {
-      push(@svn_commit_options, '--username', $username);
+      push(@svn_use_repos_cmd_opts, '--username', $username);
     }
   if (defined $password)
     {
-      push(@svn_commit_options, '--password', $password);
+      push(@svn_use_repos_cmd_opts, '--password', $password);
     }
 }
 
@@ -1193,7 +1206,7 @@ sub get_tag_dir
 {
   unless (@_ == 1)
     {
-      confess "$0: get_tag_dir passed incorrect number of arguments.\n";
+      confess "$0: get_tag_dir $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $load_dir = shift;
@@ -1242,7 +1255,7 @@ sub safe_read_from_pipe
 {
   unless (@_)
     {
-      croak "$0: safe_read_from_pipe passed no arguments.\n";
+      croak "$0: safe_read_from_pipe $INCORRECT_NUMBER_OF_ARGS";
     }
   print "Running @_\n";
   my $pid = open(SAFE_READ, '-|');
@@ -1288,7 +1301,7 @@ sub read_from_process
 {
   unless (@_)
     {
-      croak "$0: read_from_process passed no arguments.\n";
+      croak "$0: read_from_process $INCORRECT_NUMBER_OF_ARGS";
     }
   my ($status, @output) = &safe_read_from_pipe(@_);
   if ($status)
@@ -1315,8 +1328,7 @@ sub recursive_ls_and_hash
 {
   unless (@_ == 1)
     {
-      croak "$0: recursive_ls_and_hash passed incorrect number of ",
-            "arguments.\n";
+      croak "$0: recursive_ls_and_hash $INCORRECT_NUMBER_OF_ARGS";
     }
 
   # This is the directory to change into.
@@ -1362,7 +1374,7 @@ sub commit_renames
 {
   unless (@_ == 4)
     {
-      croak "$0: commit_renames passed incorrect number of arguments.\n";
+      croak "$0: commit_renames $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $load_dir          = shift;
@@ -1391,8 +1403,8 @@ sub commit_renames
   my $cwd = cwd;
   chdir($wc_top_dir_cwd)
     or die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
-  read_from_process($svn, 'commit', @svn_commit_options, '-m', $message);
-  read_from_process($svn, 'update');
+  read_from_process($svn, 'commit', @svn_use_repos_cmd_opts, '-m', $message);
+  read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
   chdir($cwd)
     or die "$0: cannot chdir `$cwd': $!\n";
 
@@ -1415,7 +1427,7 @@ sub contained_in
 {
   unless (@_ == 3)
     {
-      croak "$0: contain_in passed incorrect number of arguments.\n";
+      croak "$0: contain_in $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $contained      = shift;
@@ -1450,7 +1462,7 @@ sub filter_renamed_files
 {
   unless (@_ == 2)
     {
-      croak "$0: filter_renamed_files passed incorrect number of arguments.\n";
+      croak "$0: filter_renamed_files $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $array_ref = shift;
@@ -1478,7 +1490,7 @@ sub digest_hash_file
 {
   unless (@_ == 1)
     {
-      croak "$0: digest_hash_file passed incorrect number of arguments.\n";
+      croak "$0: digest_hash_file $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $filename = shift;
@@ -1503,7 +1515,7 @@ sub get_yes_or_no
 {
   unless (@_ == 1)
     {
-      croak "$0: get_yes_or_no passed incorrect number of arguments.\n";
+      croak "$0: get_yes_or_no $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $message = shift;
@@ -1569,8 +1581,7 @@ sub convert_file_to_native_eol
 {
   unless (@_ == 1)
     {
-      croak "$0: convert_file_to_native_eol passed incorrect number of ",
-            "arguments.\n";
+      croak "$0: convert_file_to_native_eol $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $filename = shift;
@@ -1629,7 +1640,7 @@ sub split_line
 {
   unless (@_ == 1)
     {
-      croak "$0: split_line passed incorrect number of arguments.\n";
+      croak "$0: split_line $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $line = shift;
