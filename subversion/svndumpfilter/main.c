@@ -275,6 +275,107 @@ new_revision_record (void **revision_baton,
 }
 
 
+/* Finalize revision */
+static svn_error_t *
+close_revision (void *revision_baton)
+{
+  struct revision_baton_t *rb = revision_baton;
+  int bytes_used;
+  char buf[SVN_KEYLINE_MAXLEN];
+  apr_hash_index_t *hi;
+  apr_pool_t *hash_pool = apr_hash_pool_get (rb->props);
+  svn_stringbuf_t *props = svn_stringbuf_create ("", hash_pool);
+  apr_pool_t *subpool = svn_pool_create (hash_pool);
+
+  /* If this revision has no nodes left because the ones it had were
+     dropped, and we are not dropping empty revisions, and we were not
+     told to preserve revision props, then we want to fixup the
+     revision props to only contain:
+       - the date
+       - a log message that reports that this revision is just stuffing. */
+  if ((! rb->pb->preserve_revprops)
+      && (! rb->has_nodes) 
+      && rb->had_dropped_nodes 
+      && (! rb->pb->drop_empty_revs))
+    {
+      apr_hash_t *old_props = rb->props;
+      rb->has_props = TRUE;
+      rb->props = apr_hash_make (hash_pool);
+      apr_hash_set (rb->props, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING,
+                    apr_hash_get (old_props, SVN_PROP_REVISION_DATE, 
+                                  APR_HASH_KEY_STRING));
+      apr_hash_set (rb->props, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                    svn_string_create (_("This is an empty revision for "
+                                         "padding."), hash_pool));
+    }
+
+  /* Now, "rasterize" the props to a string, and append the property
+     information to the header string.  */
+  if (rb->has_props)
+    {
+      for (hi = apr_hash_first (subpool, rb->props); 
+           hi; 
+           hi = apr_hash_next (hi))
+        {
+          const void *key;
+          void *val;
+          apr_hash_this (hi, &key, NULL, &val);
+          write_prop_to_stringbuf (&props, key, val);
+        }
+      svn_stringbuf_appendcstr (props, "PROPS-END\n");
+      svn_stringbuf_appendcstr (rb->header,
+                                SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
+      sprintf (buf, ": %" APR_SIZE_T_FMT "%n", props->len, &bytes_used);
+      svn_stringbuf_appendbytes (rb->header, buf, bytes_used);
+      svn_stringbuf_appendbytes (rb->header, "\n", 1);
+    }
+
+  svn_stringbuf_appendcstr (rb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
+  sprintf (buf, ": %" APR_SIZE_T_FMT "%n", props->len, &bytes_used);
+  svn_stringbuf_appendbytes (rb->header, buf, bytes_used);
+  svn_stringbuf_appendbytes (rb->header, "\n", 1);
+
+  /* put an end to headers */
+  svn_stringbuf_appendbytes (rb->header, "\n", 1);
+
+  /* put an end to revision */
+  svn_stringbuf_appendbytes (props,  "\n", 1);
+
+  /* write out the revision */
+  /* Revision is written out in the following cases:
+     1. No --drop-empty-revs has been supplied.
+     2. --drop-empty-revs has been supplied,
+     but revision has not all nodes dropped
+     3. Revision had no nodes to begin with.
+  */
+  if (rb->has_nodes
+      || (! rb->pb->drop_empty_revs)
+      || (! rb->had_dropped_nodes))
+    {
+      SVN_ERR (svn_stream_write (rb->pb->out_stream,
+                                 rb->header->data , &(rb->header->len)));
+      SVN_ERR (svn_stream_write (rb->pb->out_stream,
+                                 props->data      , &(props->len)));
+      SVN_ERR (svn_stream_write (rb->pb->out_stream,
+                                 rb->body->data   , &(rb->body->len)));
+      if (! rb->pb->quiet)
+        SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
+                                      _("Revision %ld committed as %ld.\n"),
+                                      rb->rev_orig, rb->rev_actual));
+    }
+  else
+    {
+      rb->pb->rev_drop_count++;
+      if (! rb->pb->quiet)
+        SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
+                                      _("Revision %ld skipped.\n"),
+                                      rb->rev_orig));
+    }
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
+
 /* UUID record here: dump it, as we do not filter them. */
 static svn_error_t *
 uuid_record (const char *uuid, void *parse_baton, apr_pool_t *pool)
@@ -430,71 +531,6 @@ new_node_record (void **node_baton,
 }
 
 
-static svn_error_t *
-set_revision_property (void *revision_baton,
-                       const char *name,
-                       const svn_string_t *value)
-{
-  struct revision_baton_t *rb = revision_baton;
-  apr_pool_t *hash_pool = apr_hash_pool_get (rb->props);
-
-  rb->has_props = TRUE;
-  apr_hash_set (rb->props, apr_pstrdup (hash_pool, name),
-                APR_HASH_KEY_STRING, svn_string_dup (value, hash_pool));
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-set_node_property (void *node_baton,
-                   const char *name,
-                   const svn_string_t *value)
-{
-  struct node_baton_t *nb = node_baton;
-
-  if (nb->do_skip)
-    return SVN_NO_ERROR;
-
-  if (!nb->has_props)
-    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                             _("Delta property block detected - "
-                               "not supported by svndumpfilter"));
-
-  write_prop_to_stringbuf (&(nb->props), name, value);
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-remove_node_props (void *node_baton)
-{
-  struct node_baton_t *nb = node_baton;
-
-  /* In this case, not actually indicating that the node *has* props,
-     rather that we know about all the props that it has, since it now
-     has none. */
-  nb->has_props = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-set_fulltext (svn_stream_t **stream, void *node_baton)
-{
-  struct node_baton_t *nb = node_baton;
-
-  if (!nb->do_skip)
-    {
-      *stream = nb->body_stream;
-      nb->has_text = TRUE;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Finalize node */
 static svn_error_t *
 close_node (void *node_baton)
@@ -556,103 +592,68 @@ close_node (void *node_baton)
   return SVN_NO_ERROR;
 }
 
-/* Finalize revision */
+
 static svn_error_t *
-close_revision (void *revision_baton)
+set_revision_property (void *revision_baton,
+                       const char *name,
+                       const svn_string_t *value)
 {
   struct revision_baton_t *rb = revision_baton;
-  int bytes_used;
-  char buf[SVN_KEYLINE_MAXLEN];
-  apr_hash_index_t *hi;
   apr_pool_t *hash_pool = apr_hash_pool_get (rb->props);
-  svn_stringbuf_t *props = svn_stringbuf_create ("", hash_pool);
-  apr_pool_t *subpool = svn_pool_create (hash_pool);
 
-  /* If this revision has no nodes left because the ones it had were
-     dropped, and we are not dropping empty revisions, and we were not
-     told to preserve revision props, then we want to fixup the
-     revision props to only contain:
-       - the date
-       - a log message that reports that this revision is just stuffing. */
-  if ((! rb->pb->preserve_revprops)
-      && (! rb->has_nodes) 
-      && rb->had_dropped_nodes 
-      && (! rb->pb->drop_empty_revs))
+  rb->has_props = TRUE;
+  apr_hash_set (rb->props, apr_pstrdup (hash_pool, name),
+                APR_HASH_KEY_STRING, svn_string_dup (value, hash_pool));
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+set_node_property (void *node_baton,
+                   const char *name,
+                   const svn_string_t *value)
+{
+  struct node_baton_t *nb = node_baton;
+
+  if (nb->do_skip)
+    return SVN_NO_ERROR;
+
+  if (!nb->has_props)
+    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Delta property block detected - "
+                               "not supported by svndumpfilter"));
+
+  write_prop_to_stringbuf (&(nb->props), name, value);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+remove_node_props (void *node_baton)
+{
+  struct node_baton_t *nb = node_baton;
+
+  /* In this case, not actually indicating that the node *has* props,
+     rather that we know about all the props that it has, since it now
+     has none. */
+  nb->has_props = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+set_fulltext (svn_stream_t **stream, void *node_baton)
+{
+  struct node_baton_t *nb = node_baton;
+
+  if (!nb->do_skip)
     {
-      apr_hash_t *old_props = rb->props;
-      rb->has_props = TRUE;
-      rb->props = apr_hash_make (hash_pool);
-      apr_hash_set (rb->props, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING,
-                    apr_hash_get (old_props, SVN_PROP_REVISION_DATE, 
-                                  APR_HASH_KEY_STRING));
-      apr_hash_set (rb->props, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                    svn_string_create (_("This is an empty revision for "
-                                         "padding."), hash_pool));
+      *stream = nb->body_stream;
+      nb->has_text = TRUE;
     }
 
-  /* Now, "rasterize" the props to a string, and append the property
-     information to the header string.  */
-  if (rb->has_props)
-    {
-      for (hi = apr_hash_first (subpool, rb->props); 
-           hi; 
-           hi = apr_hash_next (hi))
-        {
-          const void *key;
-          void *val;
-          apr_hash_this (hi, &key, NULL, &val);
-          write_prop_to_stringbuf (&props, key, val);
-        }
-      svn_stringbuf_appendcstr (props, "PROPS-END\n");
-      svn_stringbuf_appendcstr (rb->header,
-                                SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
-      sprintf (buf, ": %" APR_SIZE_T_FMT "%n", props->len, &bytes_used);
-      svn_stringbuf_appendbytes (rb->header, buf, bytes_used);
-      svn_stringbuf_appendbytes (rb->header, "\n", 1);
-    }
-
-  svn_stringbuf_appendcstr (rb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
-  sprintf (buf, ": %" APR_SIZE_T_FMT "%n", props->len, &bytes_used);
-  svn_stringbuf_appendbytes (rb->header, buf, bytes_used);
-  svn_stringbuf_appendbytes (rb->header, "\n", 1);
-
-  /* put an end to headers */
-  svn_stringbuf_appendbytes (rb->header, "\n", 1);
-
-  /* put an end to revision */
-  svn_stringbuf_appendbytes (props,  "\n", 1);
-
-  /* write out the revision */
-  /* Revision is written out in the following cases:
-     1. No --drop-empty-revs has been supplied.
-     2. --drop-empty-revs has been supplied,
-     but revision has not all nodes dropped
-     3. Revision had no nodes to begin with.
-  */
-  if (rb->has_nodes
-      || (! rb->pb->drop_empty_revs)
-      || (! rb->had_dropped_nodes))
-    {
-      SVN_ERR (svn_stream_write (rb->pb->out_stream,
-                                 rb->header->data , &(rb->header->len)));
-      SVN_ERR (svn_stream_write (rb->pb->out_stream,
-                                 props->data      , &(props->len)));
-      SVN_ERR (svn_stream_write (rb->pb->out_stream,
-                                 rb->body->data   , &(rb->body->len)));
-      if (! rb->pb->quiet)
-        SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
-                                      _("Revision %ld committed as %ld.\n"),
-                                      rb->rev_orig, rb->rev_actual));
-    }
-  else
-    {
-      rb->pb->rev_drop_count++;
-      if (! rb->pb->quiet)
-        SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
-                                      _("Revision %ld skipped.\n"),
-                                      rb->rev_orig));
-    }
-  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
