@@ -83,10 +83,9 @@ get_svn_options() {
              -e 's/\( arg\)* * : .*//;p' |
       # Remove brackets; put each word on its own line.
       tr -d '] ' | tr '[' '\n'
-    # The following options are always accepted but not listed in the help,
-    # nor currently offered as completions.
-    #echo "-h"
-    #echo "--help"
+    # The following options are always accepted but not listed in the help
+    echo "-h"
+    echo "--help"
   } | sort
   
 }
@@ -101,8 +100,6 @@ includes "he" "help"
 includes "" "?"
 includes "" "h"
 includes "" "help"
-includes "" "-h"
-includes "" "--help"
 includes "" "--version"
 
 echo "Checking list of subcommands"
