@@ -29,7 +29,7 @@ extern "C" {
 
 
 /*** Repository format number. */
-#define SVN_REPOS__FORMAT_NUMBER     4
+#define SVN_REPOS__FORMAT_NUMBER     3
 
 
 /*** Repository layout. ***/

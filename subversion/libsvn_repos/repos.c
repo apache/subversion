@@ -1590,11 +1590,11 @@ check_repos_path (const char *path,
 }
 
 
-/* Verify that REPOS's's format is suitable; possibly upgrade it. 
+/* Verify that REPOS's format is suitable.
    Use POOL for temporary allocation. */
 static svn_error_t *
 check_repos_format (svn_repos_t *repos,
-                     apr_pool_t *pool)
+                    apr_pool_t *pool)
 {
   int format;
   const char *format_path;
@@ -1602,16 +1602,7 @@ check_repos_format (svn_repos_t *repos,
   format_path = svn_path_join (repos->path, SVN_REPOS__FORMAT, pool);
   SVN_ERR (svn_io_read_version_file (&format, format_path, pool));
 
-  if (format == 3 && SVN_REPOS__FORMAT_NUMBER == 4)
-    {
-      /* Silently upgrade repository format 3 to 4, since libsvn_repos
-         will automatically do the right things for that. */
-      format = 4;
-      SVN_ERR (svn_io_write_version_file
-               (svn_path_join (repos->path, SVN_REPOS__FORMAT, pool),
-                format, pool));
-    }
-  else if (format != SVN_REPOS__FORMAT_NUMBER)
+  if (format != SVN_REPOS__FORMAT_NUMBER)
     {
       return svn_error_createf 
         (SVN_ERR_REPOS_UNSUPPORTED_VERSION, NULL,
