@@ -47,6 +47,7 @@
 #include "txn.h"
 #include "dag.h"
 #include "tree.h"
+#include "revs-txns.h"
 #include "bdb/txn-table.h"
 #include "bdb/rev-table.h"
 #include "bdb/nodes-table.h"

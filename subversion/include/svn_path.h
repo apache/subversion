@@ -292,6 +292,13 @@ apr_array_header_t *svn_path_decompose (const char *path,
                                         apr_pool_t *pool);
 
 
+/* Test that NAME is a single path component, that is:
+     - not NULL or empty.
+     - not a `/'-separated directory path
+     - not `.' or `..'  
+*/
+svn_boolean_t svn_path_is_single_path_component (const char *name);
+
 
 /* Test if PATH2 is a child of PATH1.
    If not, return NULL.

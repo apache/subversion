@@ -51,9 +51,10 @@ svn_error_t *svn_fs__get_rev (svn_fs__revision_t **revision_p,
                               svn_revnum_t rev,
                               trail_t *trail);
 
-/* Store REVISION in FS as part of TRAIL, and return the new
-   filesystem revision number in *REV.  Do any necessary temporary
-   allocation in TRAIL->pool.  */
+/* Store REVISION in FS as revision *REV as part of TRAIL.  If *REV is
+   an invalid revision number, create a brand new revision and return
+   its revision number as *REV to the caller.  Do any necessary
+   temporary allocation in TRAIL->pool.  */
 svn_error_t *svn_fs__put_rev (svn_revnum_t *rev,
                               svn_fs_t *fs,
                               const svn_fs__revision_t *revision,

@@ -29,10 +29,10 @@
 #include "fs.h"
 #include "key-gen.h"
 #include "node-rev.h"
-#include "reps-strings.h"
 #include "trail.h"
-#include "validate.h"
 #include "id.h"
+#include "reps-strings.h"
+#include "revs-txns.h"
 
 #include "util/fs_skels.h"
 
@@ -340,7 +340,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
 {
   svn_fs__node_revision_t noderev;
   svn_fs__revision_t revision;
-  svn_revnum_t rev;
+  svn_revnum_t rev = SVN_INVALID_REVNUM;
   svn_fs_t *fs = fs_baton;
   svn_string_t date;
   const char *txn_id;
@@ -579,7 +579,7 @@ make_entry (dag_node_t **child_p,
   svn_fs__node_revision_t new_noderev;
 
   /* Make sure that NAME is a single path component. */
-  if (! svn_fs__is_single_path_component (name))
+  if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
        "Attempted to create a node with an illegal name `%s'", name);
@@ -811,7 +811,7 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
        "Attempted to clone child of non-mutable node");
 
   /* Make sure that NAME is a single path component. */
-  if (! svn_fs__is_single_path_component (name))
+  if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
        "Attempted to make a child clone with an illegal name `%s'", name);
@@ -937,7 +937,7 @@ delete_entry (dag_node_t *parent,
        "Attempted to delete entry `%s' from immutable directory node.", name);
 
   /* Make sure that NAME is a single path component. */
-  if (! svn_fs__is_single_path_component (name))
+  if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
        "Attempted to delete a node with an illegal name `%s'", name);
@@ -1174,7 +1174,7 @@ svn_fs__dag_link (dag_node_t *parent,
        "Can't add a link to a mutable child");
 
   /* Make sure that NAME is a single path component. */
-  if (! svn_fs__is_single_path_component (name))
+  if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
        "Attempted to link to a node with an illegal name `%s'", name);
@@ -1388,7 +1388,7 @@ svn_fs__dag_open (dag_node_t **child_p,
        "Attempted to open non-existant child node \"%s\"", name);
   
   /* Make sure that NAME is a single path component. */
-  if (! svn_fs__is_single_path_component (name))
+  if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
        "Attempted to open node with an illegal name `%s'", name);
@@ -1555,6 +1555,8 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
   revision.id = root->id;
   revision.proplist = transaction->proplist;
   revision.txn = txn_id;
+  if (new_rev)
+    *new_rev = SVN_INVALID_REVNUM;
   SVN_ERR (svn_fs__put_rev (new_rev, fs, &revision, trail));
 
   /* Set a date on the commit.  We wait until now to fetch the date,
