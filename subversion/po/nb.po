@@ -1230,7 +1230,6 @@ msgstr ""
 "kataloger.\n"
 
 #: clients/cmdline/main.c:600
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1314,7 +1313,7 @@ msgstr ""
 "  arbeidskopien.\n"
 "  Med argumentet -v vises komplett informasjon om hvert objekt.\n"
 "\n"
-"  De første fem kolonnene har hver en bredde på ett tegn:\n"
+"  De første seks kolonnene har hver en bredde på ett tegn:\n"
 "    Kolonne en: Viser om objektet er lagt til, slettet eller endret.\n"
 "      « » Ingen endringer\n"
 "      «A» Lagt til\n"
@@ -1342,12 +1341,18 @@ msgstr ""
 "    Kolonne fem: Om plassering er forandret i forhold til arbeidskopien.\n"
 "      « » Normal\n"
 "      «S» Forandret\n"
-"    Kolonne seks: Om nøkkel som representerer depotlås er til stede\n"
-"      ' ' normal\n"
-"      'K' låsnøkkel finnes\n"
+"    Kolonne seks: Nøkkel for depotlås\n"
+"      (uten -u)\n"
+"      ' ' ingen låsnøkkel\n"
+"      'K' låsnøkkel til stede\n"
+"      (med -u)\n"
+"      ' ' ikke låst i depotet, ingen låsnøkkel\n"
+"      'K' låst i depotet, låsnøKkel til stede\n"
+"      'O' låst i depotet, låsnøkkel i en annen («Other») arbeidskopi\n"
+"      'T' låst i depotet, låsnøkkel tilstede, men sTjålet\n"
+"      'B' ikke låst i depotet, låsnøkkel til stede, men Brutt\n"
 "\n"
-"  Hvis -v er angitt, vises det i kolonne åtte om objektet er gått ut på\n"
-"  dato:\n"
+"  Utdateringsinformasjonen kommer til syne i den niende kolonnen (med -u):\n"
 "      «*» En nyere versjon ligger i depotet\n"
 "      « » Arbeidskopien er oppdatert\n"
 "\n"
@@ -7574,6 +7579,13 @@ msgid ""
 "  auth-access = read|write|none (default write)\n"
 "Forcing all access to read-only for now\n"
 msgstr ""
+"Advarsel: -R er avlegs.\n"
+"Anonym tilgang er nå skrivebeskyttet som standard.\n"
+"For å forandre dette, bruk conf/svnserve.conf i depotet:\n"
+"  [general]\n"
+"  anon-access = read|write|none (standard: read)\n"
+"  auth-access = read|write|none (standard: write)\n"
+"Setter all tilgang til skrivebeskyttet i denne omgang\n"
 
 #: svnserve/main.c:358
 msgid "Option --tunnel-user is only valid in tunnel mode.\n"
@@ -7584,39 +7596,39 @@ msgid "You must specify one of -d, -i, -t or -X.\n"
 msgstr "En av disse må spesifiseres: -d, -i, -t eller -X.\n"
 
 #: svnserve/main.c:406
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create server socket: %s\n"
-msgstr "Kan ikke opprette sokkel"
+msgstr "Kan ikke opprette tjenersokkel: %s\n"
 
 #: svnserve/main.c:423
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get address info: %s\n"
-msgstr "Kan ikke sette aksesstid for «%s»"
+msgstr "Kan ikke hente adresseinfo: %s\n"
 
 #: svnserve/main.c:437
-#, fuzzy, c-format
+#, c-format
 msgid "Can't bind server socket: %s\n"
-msgstr "Kan ikke finne post for «%s»"
+msgstr "Kan ikke binde tjenersokkel: %s\n"
 
 #: svnserve/main.c:480
-#, fuzzy, c-format
+#, c-format
 msgid "Can't accept client connection: %s\n"
-msgstr "Kan ikke skrive til forbindelse"
+msgstr "Kan ikke akseptere klienttilkobling: %s\n"
 
 #: svnserve/main.c:535
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create threadattr: %s\n"
-msgstr "Kan ikke opprette katalogen «%s»"
+msgstr "Kan ikke opprette trådegenskap: %s\n"
 
 #: svnserve/main.c:544
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set detached state: %s\n"
-msgstr "Kan ikke sette aksesstid for «%s»"
+msgstr "Kan ikke kjøre i bakgrunnen: %s\n"
 
 #: svnserve/main.c:558
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create thread: %s\n"
-msgstr "Kan ikke opprette katalogen «%s»"
+msgstr "Kan ikke opprette tråd: %s\n"
 
 #: svnversion/main.c:108
 msgid "Finished"
