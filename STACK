@@ -21,10 +21,16 @@ Karl working copy todo:
    - work on properties, or work with someone on props
    - fix working copy identification/allergy code
    - oh my goodness, what is *up* with that bug in free_file_baton?
-   - timestamps
    - reduce or remove svn_wc__write_adm_item() and v_write_adm_item(),
      because they're now redundant with the generalized XML output
      code.
+   - to get commits working:
+         - check XML outputter (get_to_elem)
+         - find & fix that pesky alloc bug, arrgh, is it in APR pools??
+         - have working crawler, that puts in commit tokens
+         - make sure timestamp code works
+         - find out about the prop_delta problem
+         - finish svn_wc_commit_close()
 
 Ben and Karl more later:
    - xml dtd, for both xml deltas and wc formats
