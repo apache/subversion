@@ -71,6 +71,10 @@ class TestCase:
                                  self.pred.list_mode(),
                                  self.pred.func.__doc__)
 
+  def _print_name(self):
+    print os.path.basename(sys.argv[0]), \
+          str(self.index) + ":", self.pred.func.__doc__
+
   def run(self, args):
     if self.pred.cond:
       error = 0
@@ -84,16 +88,17 @@ class TestCase:
       except KeyboardInterrupt:
         print "Interrupted"
         sys.exit(0)
-      except SystemExit:
-        print "Got a SystemExit exception, exiting."
-        sys.exit(0)
+      except SystemExit, ex:
+        print "Caught SystemExit(%d), skipping cleanup" % ex.code
+        print ('PASS: ', 'FAIL: ')[ex.code != 0],
+        self._print_name()
+        raise
       except:
         print "caught unexpected exception"
         traceback.print_exc(file=sys.stdout)
       print self.pred.run_text(error),
       error = self.pred.convert_error(error)
-    print os.path.basename(sys.argv[0]), \
-          str(self.index) + ":", self.pred.func.__doc__
+    self._print_name()
     return error
 
 
