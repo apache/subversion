@@ -387,7 +387,7 @@ def ctrl_char_in_log():
 
 
 def overdead():
-  "handle branches rooted in a redeleted revision"
+  "handle many consecutive dead revisions"
   repos, wc, logs = ensure_conversion('overdead')
 
 
