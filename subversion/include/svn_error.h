@@ -130,6 +130,9 @@ typedef enum svn_errno_t {
   /* No names available for tmp files. */
   SVN_ERR_IO_TMP_NAMES_EXHAUSTED,
 
+  /* If a working copy conflict is found (say, during a commit) */
+  SVN_ERR_WC_FOUND_CONFLICT,
+
   /* A general filesystem error.  */
   SVN_ERR_FS_GENERAL,
 
