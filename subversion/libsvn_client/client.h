@@ -409,7 +409,7 @@ svn_client__do_commit (const char *base_url,
 
    Use POOL for temporary allocation. */
 svn_error_t *svn_client__handle_externals_changes
-   (void *traversal_info,
+   (svn_wc_traversal_info_t *traversal_info,
     const svn_delta_editor_t *before_editor,
     void *before_edit_baton,
     const svn_delta_editor_t *after_editor,

@@ -297,7 +297,7 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
 
 
 svn_error_t *
-svn_client__handle_externals_changes (void *traversal_info,
+svn_client__handle_externals_changes (svn_wc_traversal_info_t *traversal_info,
                                       const svn_delta_editor_t *before_editor,
                                       void *before_edit_baton,
                                       const svn_delta_editor_t *after_editor,
