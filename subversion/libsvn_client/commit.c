@@ -54,6 +54,8 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
   apr_hash_t *targets = NULL;
+  void *ra_baton, *session;
+  svn_ra_plugin_t *ra_lib;
   struct svn_wc_close_commit_baton ccb = {path, pool};
   apr_array_header_t *tgt_array = apr_array_make (pool, 1,
                                                   sizeof(svn_string_t *));
@@ -97,8 +99,6 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
     }
   else /* We're committing to an RA layer */
     {
-      void *ra_baton, *session;
-      svn_ra_plugin_t *ra_lib;
       svn_wc_entry_t *entry;
       const char *URL;
 
@@ -138,17 +138,18 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
      is called, revisions will be bumped. */
   SVN_ERR (svn_wc_crawl_local_mods (&targets, path, editor, edit_baton, pool));
 
-  /* If we were committing into XML, close the file. */
   if (xml_dst && xml_dst->data)
     {
-      /* Close the xml file */
+      /* If we were committing into XML, close the xml file. */      
       apr_err = apr_file_close (dst);
       if (apr_err)
         return svn_error_createf (apr_err, 0, NULL, pool,
                                   "error closing %s", xml_dst->data);      
     }
-     
-
+  else
+    /* We were committing to RA, so close the session. */
+    SVN_ERR (ra_lib->close (session));
+    
   /* THE END. */
 
   return SVN_NO_ERROR;
