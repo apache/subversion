@@ -58,7 +58,7 @@ DAV Lock-Object:
 
 * all svn_fs_* read routines still take (root, path), but in the
   special case where root represents the HEAD revision, each read
-  routine must new look up 'path' in the lock table, because the
+  routine must now look up 'path' in the lock table, because the
   latest version of the file might be in a txn.
 
 * svn_fs_unlock(lock-object)
