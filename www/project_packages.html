@@ -47,15 +47,12 @@
 
 <li><p>The 1.0 development line is no longer active.</p>
 
-   <ul>
-     <li><p>We are no longer fixing bugs and doing 1.0.x releases.
-          Only the discovery of a horrible data-loss or security bug
-          would prompt us to do another 1.0.x release.</p></li>
+   <p>We are no longer fixing bugs and doing 1.0.x releases.  Only the
+      discovery of a horrible data-loss or security bug would prompt
+      us to do another 1.0.x release.  If you discover a bug in 1.0,
+      it is likely already fixed in a later development line.  If you
+      report the bug, you'll probably be told to upgrade first.</p>
 
-     <li><p>If you report a bug in 1.0, it is likely already fixed in
-          a later development line.  If you report the bug, you'll
-          probably be told to upgrade.</p></li>
-   </ul>
    </li>
 
 <li><p>How does one upgrade to the latest release?</p>
@@ -63,11 +60,12 @@
     <p>There's nothing special to do.  Just install "on top of" an
        older release.  Any Subversion 1.X program is
        forward-compatible with newer 1.Y libraries.  No repository
-       dump/load is required.  As long as clients and servers are in
-       the 1.X line, older clients work fine against newer servers and
-       newer clients work fine against older servers.  The only caveat
-       is that if the client and server versions don't match, certain
-       new features may not be available.</p>
+       dump/load is required.  As long as a client and server both
+       have the same major release number (1), an older client works
+       with a newer server and a newer client works with an older
+       server.  The only caveat is that if the client and server minor
+       release numbers don't match (e.g 1.0 and 1.1), then not all new
+       features may not be available.</p>
 
    </li>
 
