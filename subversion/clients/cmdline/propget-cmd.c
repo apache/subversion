@@ -34,10 +34,12 @@
 /*** Code. ***/
 
 static int
-print_prop(void *propname, const char *filename, const char *propval)
+print_prop(const svn_string_t *propname,
+           const char *filename,
+           const svn_string_t *propval)
 {
-  const char *pn = propname;
-  printf("%s - %s : %s\n", filename, pn, propval);
+  /* ### This won't handle binary property values properly. */
+  printf("%s - %s : %s\n", filename, propname->data, propval->data);
   return 1;
 }
 
@@ -65,12 +67,22 @@ svn_cl__propget (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-      apr_table_t *props;
+      /* ### Main code should propably be changed to make arguments
+         svn_string_t's instead of svn_stringbuf_t's */
+      svn_string_t pname = { propname->data, propname->len };
+      apr_hash_t *props;
+      apr_hash_index_t *hi;
 
       SVN_ERR (svn_client_propget (&props, propname, target,
                                    opt_state->recursive, pool));
 
-      apr_table_do(&print_prop,propname->data, props, NULL); 
+      for (hi = apr_hash_first(pool, props); hi; apr_hash_next(hi))
+        {
+          const char * filename; 
+          const svn_string_t *propval;
+          apr_hash_this(hi, (const void **)&filename, NULL, (void **)&propval);
+          print_prop(&pname, filename, propval);
+        }
     }
 
   return SVN_NO_ERROR;
