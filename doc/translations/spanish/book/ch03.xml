@@ -792,7 +792,7 @@ Updated to revision 2.
         <para>Anteriormente en este capítulo, dijimos que tiene que enviar
           cualquier cambio que usted haga en orden para que <!--TODO:in
           order for the repository to reflect these changes-->el
-          repositorio refleje estos cambios. Esto no enteramente cierto
+          repositorio refleje estos cambios. Esto no es enteramente cierto
           <!--TODO: entirely true... podria quedar mejor "no es del todo
           cierto-->&mdash;<emphasis>hay</emphasis> algunos usos-casos que
           inmediatamente envian los cambios del árbol al repositorio. Esto
@@ -804,20 +804,22 @@ Updated to revision 2.
           <command>svn delete</command> pueden trabajar con URLs.</para>
 
 
-        <para>URL operations behave in this manner because commands
-          that operate on a working copy can use the working copy as a
-          sort of <quote>staging area</quote> to set up your changes
-          before committing them to the repository.  Commands that
-          operate on URLs don't have this luxury, so when you operate
-          directly on a URL, any of the above actions represent an
-          immediate commit.</para>
+        <para>Las operaciones de URL se comportan de esta manera porque
+          los comandos que manipulan <!--TODO:operate-->en una copia de
+          trabajo pueden usar la copia de trabajo como una clase de
+          <quote>area de estancamiento</quote><!--TODO:staging area to set
+          up your changes before-->para preparar sus cambios antes de
+          enviarlos al repositorio. Los comandos que operan sobre URLs
+          no tienen este lujo, asi cuando usted opera directamente sobre
+          una URL, cualquiera de las acciones anteriores representa un
+          envio inmediato.</para>
 
       </sidebar>
 
     </sect2>
 
     <sect2 id="svn-ch-3-sect-4.3">
-      <title>Examine Your Changes</title>
+      <title>Examine Sus Cambios</title>
       
       <para>Once you've finished making changes, you need to commit
         them to the repository, but before you do so, it's usually a
