@@ -409,6 +409,41 @@ def gen_key():
   return key
 
 
+class Change:
+  """Class for recording what actually happened when a change is made,
+  because not all of the result is guessable by the caller.
+  See RepositoryMirror.change_path() for more.
+
+  The fields are
+
+    op:
+       'A' if path was added, 'C' if changed, or '-' if no action.
+
+    closed_tags:
+       List of tags that this path can no longer be the source of,
+       that is, tags which could be rooted in the path before the
+       change, but not after.
+
+    closed_branches:
+       Like closed_tags, but for branches.
+
+    deleted_entries:
+       The list of entries deleted from the destination after
+       copying a directory, or None.
+
+    copyfrom_rev:
+       The actual revision from which the path was copied, which
+       may be one less than the requested revision when the path
+       was deleted in the requested revision, or None."""
+  def __init__(self, op, closed_tags, closed_branches,
+               deleted_entries=None, copyfrom_rev=None):
+    self.op = op
+    self.closed_tags = closed_tags
+    self.closed_branches = closed_branches
+    self.deleted_entries = deleted_entries
+    self.copyfrom_rev = copyfrom_rev
+
+
 class RepositoryMirror:
   def __init__(self):
     # This corresponds to the 'revisions' table in a Subversion fs.
@@ -513,18 +548,8 @@ class RepositoryMirror:
                   copyfrom_path=None, copyfrom_rev=None,
                   expected_entries=None):
     """Record a change to PATH.  PATH may not have a leading slash.
-
-    Return a tuple of three or four elements.  The first three are
-    always present, and the fourth only when EXPECTED_ENTRIES is
-    present:
-
-       op, closed_tags, closed_branches, [deleted_entries]
-
-    Op is 'A' if the path was added or 'C' if it already existed;
-    closed_tags and closed_branches are lists of symbolic names closed
-    off by this change -- that is, tags or branches which could be
-    rooted in the previous revision of PATH, but not in this revision,
-    because this rev changes PATH.  (See below for [deleted_entries].)
+    Return a Change instance representing the result of the
+    change.
 
     TAGS are any tags that sprout from this revision of PATH, BRANCHES
     are any branches that sprout from this revision of PATH.
@@ -539,14 +564,15 @@ class RepositoryMirror:
     exit if the copyfrom args are present but the node also already
     exists.  Reasonable -- but not what we do :-).  The most useful
     behavior for callers is instead to report that nothing was done,
-    by returning '-' for OP, so that's what we do.
+    by returning '-' for Change.op, so that's what we do.
 
     It is an error for only one copyfrom argument to be present.
 
     If EXPECTED_ENTRIES is not None, then it holds entries expected
     to be in the dst after the copy.  Any entries in the new dst but
-    not in EXPECTED_ENTRIES will be removed (ignoring keys beginning
-    with '/'), and the removed entries returned in [deleted_entries].
+    not in EXPECTED_ENTRIES are removed (ignoring keys beginning with
+    '/'), and the removed entries returned in Change.deleted_entries,
+    which are otherwise None.
 
     No action is taken for keys in EXPECTED_ENTRIES but not in the
     dst; it is assumed that the caller will compensate for these by
@@ -617,17 +643,26 @@ class RepositoryMirror:
       # and return:
       if copyfrom_path:
         if expected_entries:
-          return OP_NOOP, old_names[0], old_names[1], []
+          return Change(OP_NOOP, old_names[0], old_names[1], [])
         else:
-          return OP_NOOP, old_names[0], old_names[1]
+          return Change(OP_NOOP, old_names[0], old_names[1])
       # else
       op = OP_CHANGE
       new_val = marshal.loads(self.nodes_db[parent[last_component]])
 
     leaf_key = gen_key()
     deletions = []
+    actual_copy_rev = copyfrom_rev
     if copyfrom_path:
       new_val = self.probe_path(copyfrom_path, copyfrom_rev)
+      if new_val == None:
+        # Sometimes a branch is rooted in a revision that RCS has
+        # marked as 'dead'.  Since that path will have been deleted in
+        # the corresponding Subversion revision, we use the revision
+        # right before it as the copyfrom rev, and return that to the
+        # caller so it can emit the right dumpfile instructions.
+        actual_copy_rev = copyfrom_rev - 1
+        new_val = self.probe_path(copyfrom_path, actual_copy_rev)
     if expected_entries:
       for ent in new_val.keys():
         if (ent[0] != '/') and (not expected_entries.has_key(ent)):
@@ -641,9 +676,9 @@ class RepositoryMirror:
     self.nodes_db[leaf_key] = marshal.dumps(new_val)
 
     if expected_entries:
-      return op, old_names[0], old_names[1], deletions
+      return Change(op, old_names[0], old_names[1], deletions, actual_copy_rev)
     else:
-      return op, old_names[0], old_names[1]
+      return Change(op, old_names[0], old_names[1], None, actual_copy_rev)
 
   def delete_path(self, path, tags, branches, prune=None):
     """Delete PATH from the tree.  PATH may not have a leading slash.
@@ -924,13 +959,12 @@ class Dumper:
     No action is taken for keys in ENTRIES but not in the dst; it is
     assumed that the caller will compensate for these by calling
     copy_path again with other arguments."""
-    op, ign1, ign2, deletions = self.repos_mirror.change_path(svn_dst_path,
-                                                              [], [],
-                                                              self.add_dir,
-                                                              svn_src_path,
-                                                              svn_src_rev,
-                                                              entries)
-    if op == 'A':
+    change = self.repos_mirror.change_path(svn_dst_path,
+                                           [], [],
+                                           self.add_dir,
+                                           svn_src_path, svn_src_rev,
+                                           entries)
+    if change.op == 'A':
       # We don't need to include "Node-kind:" for copies; the loader
       # ignores it anyway and just uses the source kind instead.
       self.dumpfile.write('Node-path: %s\n'
@@ -938,9 +972,9 @@ class Dumper:
                           'Node-copyfrom-rev: %d\n'
                           'Node-copyfrom-path: /%s\n'
                           '\n'
-                          % (svn_dst_path, svn_src_rev, svn_src_path))
+                          % (svn_dst_path, change.copyfrom_rev, svn_src_path))
 
-      for ent in deletions:
+      for ent in change.deleted_entries:
         self.dumpfile.write('Node-path: %s\n'
                             'Node-action: delete\n'
                             '\n' % (svn_dst_path + '/' + ent))
@@ -949,12 +983,12 @@ class Dumper:
     """Delete any entries in PATH that are not in list EXPECTED.
     PATH need not be a directory, but of course nothing will happen if
     it's a file.  Entries beginning with '/' are ignored as usual."""
-    ign1, ign2, ign3, deletions = self.repos_mirror.change_path(path,
-                                                                [], [],
-                                                                self.add_dir,
-                                                                None, None,
-                                                                expected)
-    for ent in deletions:
+    change = self.repos_mirror.change_path(path,
+                                           [], [],
+                                           self.add_dir,
+                                           None, None,
+                                           expected)
+    for ent in change.deleted_entries:
       self.dumpfile.write('Node-path: %s\n'
                           'Node-action: delete\n'
                           '\n' % (path + '/' + ent))
@@ -993,10 +1027,10 @@ class Dumper:
     # to determine if this path exists in head yet.  But that wouldn't
     # be perfectly reliable, both because of 'cvs commit -r', and also
     # the possibility of file resurrection.
-    op, closed_tags, closed_branches = \
-        self.repos_mirror.change_path(svn_path, tags, branches, self.add_dir)
+    change = self.repos_mirror.change_path(svn_path, tags, branches,
+                                           self.add_dir)
 
-    if op == OP_ADD:
+    if change.op == OP_ADD:
       action = 'add'
     else:
       action = 'change'
@@ -1052,7 +1086,7 @@ class Dumper:
 
     # This record is done.
     self.dumpfile.write('\n')
-    return closed_tags, closed_branches
+    return change.closed_tags, change.closed_branches
 
   def delete_path(self, svn_path, tags, branches, prune=None):
     """If SVN_PATH exists in the head mirror, output the deletion to

@@ -57,7 +57,16 @@ desc
 
 1.4
 log
-@Documentation update.
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"Documentation update."
 @
 text
 @<html>
@@ -117,7 +126,16 @@ platforms.  It currently supports:
 
 1.3
 log
-@Merger of new API branch (volsung_20010721) with head.
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"Merger of new API branch (volsung_20010721) with head."
 @
 text
 @d12 1
@@ -134,7 +152,16 @@ a46 1
 
 1.2
 log
-@documetation????  WHAT!?!
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"documetation????  WHAT!?!"
 
 jack.
 @
@@ -147,8 +174,17 @@ There is no documentation yet.
 
 1.2.2.1
 log
-@Initial branch of libao to new API.  Great fear and trembling shall
-sweep the land...
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"Initial branch of libao to new API.  Great fear and trembling shall
+sweep the land..."
 @
 text
 @d1 1
@@ -210,9 +246,18 @@ platforms.  It currently supports:
 
 1.2.2.2
 log
-@We now use a ranking system to select a defaut driver from the range of
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"We now use a ranking system to select a defaut driver from the range of
 possible drivers.  Note that the null device is no longer a possible
-default device to prevent user confusion that we have had in the past.
+default device to prevent user confusion that we have had in the past."
 @
 text
 @d31 1
@@ -223,7 +268,16 @@ a31 1
 
 1.1
 log
-@Initial revision
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"Initial revision"
 @
 text
 @@
@@ -231,7 +285,16 @@ text
 
 1.1.1.1
 log
-@The first sample...
+@This file was supplied by Jack Moffitt <jack@@xiph.org> to help us
+reproduce a bug in which cvs2svn.py would throw an exception when it
+tried to create a file branch rooted in a 'dead' RCS revision.  See
+http://subversion.tigris.org/issues/show_bug.cgi?id=1417 for 
+more details.
+
+The original file was ao/doc/index.html,v, and the log message for
+this revision was:
+
+"The first sample..."
 @
 text
 @@
