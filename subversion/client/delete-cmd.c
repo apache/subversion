@@ -69,8 +69,9 @@ static const char *get_help[] = {
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__delete( int argc, const char **argv, apr_pool_t* pool,
-                svn_cl__opt_state_t *p_opt_state )
+svn_cl__delete (int argc, const char **argv, 
+                svn_cl__opt_state_t *p_opt_state,
+                apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
   svn_string_t *target = GET_OPT_STATE(p_opt_state, target);

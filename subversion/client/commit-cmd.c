@@ -65,8 +65,9 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__commit( int argc, const char **argv, apr_pool_t* pool,
-                svn_cl__opt_state_t *p_opt_state )
+svn_cl__commit (int argc, const char **argv, 
+                svn_cl__opt_state_t *p_opt_state,
+                apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
   err = svn_client_commit (GET_OPT_STATE(p_opt_state, target),

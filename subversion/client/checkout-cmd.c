@@ -65,8 +65,9 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__checkout( int argc, const char **argv, apr_pool_t* pool,
-                  svn_cl__opt_state_t *p_opt_state )
+svn_cl__checkout (int argc, const char **argv, 
+                  svn_cl__opt_state_t *p_opt_state,
+                  apr_pool_t *pool)
 {
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
