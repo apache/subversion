@@ -413,7 +413,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
           apr_file_close (log_fp);
           return svn_error_createf (apr_err, NULL,
                                     "svn_wc_merge_prop_diffs:"
-                                    "error writing log for %s", path);
+                                    "error writing log for '%s'", path);
         }
 
       SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
@@ -910,7 +910,7 @@ svn_wc__wcprop_set (const char *name,
   apr_err = svn_hash_write (prophash, fp, pool);
   if (apr_err)
     return svn_error_createf (apr_err, NULL,
-                              "can't write prop hash for %s", path);
+                              "can't write prop hash for '%s'", path);
   
   /* Close file, and doing an atomic "move". */
   SVN_ERR (svn_wc__close_props (fp, path, 0, 1,
@@ -1028,7 +1028,7 @@ validate_prop_against_node_kind (const char *name,
       break;
     default:
       return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                "%s is not a file or directory", path);
+                                "'%s' is not a file or directory", path);
     }
 
   while (*node_kind_prohibit)
@@ -1164,7 +1164,7 @@ svn_wc_prop_set (const char *name,
   apr_err = svn_hash_write (prophash, fp, pool);
   if (apr_err)
     return svn_error_createf (apr_err, NULL,
-                              "can't write prop hash for %s", path);
+                              "can't write prop hash for '%s'", path);
   
   /* Close file, and doing an atomic "move". */
   SVN_ERR (svn_wc__close_props (fp, path, 0, 0,

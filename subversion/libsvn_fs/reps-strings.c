@@ -1419,7 +1419,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   if (! digest)
     return svn_error_createf
       (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT, NULL,
-       "svn_fs__rep_deltify: failed to calculate MD5 digest for %s",
+       "svn_fs__rep_deltify: failed to calculate MD5 digest for '%s'",
        source);
 
   /* Construct a list of the strings used by the old representation so

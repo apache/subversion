@@ -171,7 +171,7 @@ file_new (VALUE class, VALUE aPath, VALUE flag)
                           pool);
   if (status)
     svn_ruby_raise (svn_error_createf (status, 0,
-                                       "Failed to open file %s",
+                                       "Failed to open file '%s'",
                                        path));
 
   stream = svn_stream_from_aprfile (file, pool);

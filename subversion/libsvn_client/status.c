@@ -90,7 +90,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       "add_update_info_to_status_hash: %s is not under revision control",
+       "add_update_info_to_status_hash: '%s' is not under revision control",
        anchor);
   if (! entry->url)
     return svn_error_createf

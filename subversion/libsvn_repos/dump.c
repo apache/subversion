@@ -459,7 +459,7 @@ dump_node (struct edit_baton *eb,
                  should never happen. */
               return 
                 svn_error_createf (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                   "Error dumping textual contents of %s.",
+                                   "Error dumping textual contents of '%s'.",
                                    path);
             }
         

@@ -440,7 +440,7 @@ open_writable_binary_file (apr_file_t **fh,
      it as best as we care to try above. */
   if (svn_path_is_empty (dir))
     return svn_error_createf (err->apr_err, err,
-                              "Error opening writable file %s", path);
+                              "Error opening writable file '%s'", path);
 
   path_pieces = svn_path_decompose (dir, pool);
   if (! path_pieces->nelts)
@@ -463,7 +463,7 @@ open_writable_binary_file (apr_file_t **fh,
         {
           if (err)
             return svn_error_createf (err->apr_err, err,
-                                      "Error creating dir %s (path exists)", 
+                                      "Error creating dir '%s' (path exists)", 
                                       full_path);
         }
     }
@@ -475,7 +475,7 @@ open_writable_binary_file (apr_file_t **fh,
                           APR_OS_DEFAULT, pool);
   if (err)
     return svn_error_createf (err->apr_err, err,
-                              "Error opening writable file %s", path);
+                              "Error opening writable file '%s'", path);
     
   return SVN_NO_ERROR;
 }
@@ -505,7 +505,7 @@ dump_contents (apr_file_t *fh,
       if ((apr_err) || (len2 != len))
         return svn_error_createf 
           (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, NULL,
-           "Error writing contents of %s", path);
+           "Error writing contents of '%s'", path);
       if (len != sizeof (buffer))
         break;
     }

@@ -317,7 +317,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   else
     {
       return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                                "unrecognized node kind of %s.", dst_url);
+                                "unrecognized node kind of '%s'.", dst_url);
     }
 
   /* Fetch RA commit editor. */

@@ -594,7 +594,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
             ;
           else
             return svn_error_createf (apr_err, NULL,
-                                      "Error resolving case of %s.",
+                                      "Error resolving case of '%s'.",
                                       utf8_target);
 
           /* convert back to UTF-8. */

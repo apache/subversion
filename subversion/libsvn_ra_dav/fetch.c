@@ -483,7 +483,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               "Could not create a GET request for %s",
+                               "Could not create a GET request for '%s'",
                                url);
     }
 

@@ -880,7 +880,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
         break;
       if (!*candidate || strcmp(candidate, "/") == 0)
         return svn_error_createf(SVN_ERR_RA_SVN_REPOS_NOT_FOUND, NULL,
-                                 "No repository found in %s", url);
+                                 "No repository found in '%s'", url);
       candidate = svn_path_dirname(candidate, pool);
     }
   *fs_path = apr_pstrdup(pool, full_path + strlen(candidate));

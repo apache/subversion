@@ -588,7 +588,7 @@ delete_entry (const char *path,
     {
       apr_file_close (log_fp);
       return svn_error_createf (apr_err, NULL,
-                                "delete error writing %s's log file",
+                                "delete error writing log file for '%s'.",
                                 pb->path);
     }
 
@@ -1080,7 +1080,7 @@ add_or_open_file (const char *path,
   if ((! adding) && (! entry))
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               "trying to open non-versioned file "
-                              "%s in directory %s",
+                              "'%s' in directory '%s'",
                               fb->name, pb->path);
   
         
@@ -1787,7 +1787,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
     {
       apr_file_close (log_fp);
       return svn_error_createf (apr_err, NULL,
-                                "svn_wc_install_file: error writing %s's log",
+                                "svn_wc_install_file: error writing log for '%s'.",
                                 file_path);
     }
 
@@ -2239,7 +2239,7 @@ check_wc_root (svn_boolean_t *wc_root,
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       "svn_wc_is_wc_root: %s is not a versioned resource", path);
+       "svn_wc_is_wc_root: '%s' is not a versioned resource", path);
   if (kind)
     *kind = entry->kind;
 
@@ -2267,7 +2267,7 @@ check_wc_root (svn_boolean_t *wc_root,
   if (! p_entry->url)
     return svn_error_createf 
       (SVN_ERR_ENTRY_MISSING_URL, NULL,
-       "svn_wc_is_wc_root: %s has no ancestry information.", 
+       "svn_wc_is_wc_root: '%s' has no ancestry information.", 
        parent);
 
   /* If PATH's parent in the WC is not its parent in the repository,

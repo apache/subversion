@@ -56,7 +56,7 @@ svn_wc_check_wc (const char *path,
     {
       return svn_error_createf
         (APR_ENOENT, NULL,
-         "svn_wc_check_wc: %s does not exist", path);
+         "svn_wc_check_wc: '%s' does not exist", path);
     }
   else if (kind != svn_node_dir)
     *wc_format = 0;
@@ -223,14 +223,14 @@ contents_identical_p (svn_boolean_t *identical_p,
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, NULL,
-           "contents_identical_p: full read failed on %s.", 
+           "contents_identical_p: full read failed on '%s'.", 
            file1);
 
       status = apr_file_read_full (file2_h, buf2, sizeof(buf2), &bytes_read2);
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, NULL,
-           "contents_identical_p: full read failed on %s.", 
+           "contents_identical_p: full read failed on '%s'.", 
            file2);
       
       if ((bytes_read1 != bytes_read2)
@@ -245,13 +245,13 @@ contents_identical_p (svn_boolean_t *identical_p,
   if (status)
     return svn_error_createf 
       (status, NULL,
-       "contents_identical_p: failed to close %s.", file1);
+       "contents_identical_p: failed to close '%s'.", file1);
 
   status = apr_file_close (file2_h);
   if (status)
     return svn_error_createf 
       (status, NULL,
-       "contents_identical_p: failed to close %s.", file2);
+       "contents_identical_p: failed to close '%s'.", file2);
 
   return SVN_NO_ERROR;
 }

@@ -126,7 +126,7 @@ svn_client_log (const apr_array_header_t *targets,
       if (! entry)
         return svn_error_createf
           (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-          "svn_client_log: %s is not under revision control", base_name);
+          "svn_client_log: '%s' is not under revision control", base_name);
       if (! entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
