@@ -400,6 +400,20 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 
 
 /*-----------------------------------------------------------------*/
+
+#if APR_HAS_THREADS
+/* Cleanup function to reset the allocator mutex so that apr_alloctor_free
+   doesn't try to lock a destroyed mutex during pool cleanup.*/
+
+static apr_status_t
+allocator_reset_mutex (void *allocator)
+{
+  apr_allocator_mutex_set(allocator, NULL);
+  return APR_SUCCESS;
+}
+#endif /* APR_HAS_THREADS */
+
+
 /*
    Macros to make the preprocessor logic less confusing.
    We need to always have svn_pool_xxx aswell as
@@ -459,6 +473,8 @@ SVN_POOL_FUNC_DEFINE(apr_pool_t *, svn_pool_create)
           abort_on_pool_failure (apr_err);
 
         apr_allocator_mutex_set (allocator, mutex);
+        apr_pool_cleanup_register (ret_pool, allocator,
+                                   allocator_reset_mutex, NULL);
       }
 #endif /* APR_HAS_THREADS */
 
@@ -517,6 +533,8 @@ SVN_POOL_FUNC_DEFINE(void, svn_pool_clear)
       apr_allocator_mutex_set (allocator, NULL);
       (void) apr_thread_mutex_create (&mutex, APR_THREAD_MUTEX_DEFAULT, pool);
       apr_allocator_mutex_set (allocator, mutex);
+      apr_pool_cleanup_register (pool, allocator,
+                                 allocator_reset_mutex, NULL);
 #endif /* APR_HAS_THREADS */
 	
       /* Here we have a problematic situation.  We cleared the pool P,
