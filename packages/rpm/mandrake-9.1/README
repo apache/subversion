@@ -1,4 +1,4 @@
-Last Update: Mon Sep 21 14:31:59 EDT 2003
+Last Update: Mon Sep 21 18:31:59 EDT 2003
 
 There is a new Makefile in place with additional support files.
 
@@ -33,6 +33,8 @@ Development builds on --version parameters report complete machine details.
 
 Blessed builds do not. Non-subversion installations report error and possible
 fix for biuld now, instead of just complaining.
+
+Removed python patch file as it was never referred to anywhere.
 
 This is a tentative update - further refinement will follow
 

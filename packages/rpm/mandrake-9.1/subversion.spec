@@ -23,6 +23,9 @@
 %define db4_rpm      @DB4_RPM@
 %define db4_ver      @DB4_VER@
 %define neon_rpm     @NEON_RPM@
+%define swig_rpm     @SWIG_RPM@
+%define swig_b_rpm   @SWIG_BUILD_RPM@
+%define swig_ver     @SWIG_VER@
 %define neon_ver     @NEON_VER@
 %define mod_activate @MOD_ACTIVATE@
 %define svn_root     @BUILDROOT@
@@ -53,7 +56,6 @@
 %define tarball     %{name}-%{namever}.tar.bz2
 %define mod_conf    46_mod_dav_svn.conf
 %define rc_file     subversion.rc-%{namever}
-%define py_patch    python_swig_setup.py.patch
 %define svn_patch   svn-install.patch-%{namever}
 %define svn_version svn-version.patch-%{namever}
 
@@ -66,7 +68,6 @@ URL:		http://subversion.tigris.org
 Source0:	%{tarball}
 Source1:	%{mod_conf}
 Source2:	%{rc_file}
-Source3:	%{py_patch}
 Patch0:		%{svn_patch}
 Patch1:		%{svn_version}
 Packager:	Shamim Islam <files@poetryunlimited.com>
@@ -84,7 +85,7 @@ BuildRequires:	libsasl2-devel
 BuildRequires:  krb5-devel
 BuildRequires:	python >= 2.2.0
 BuildRequires:	libpython2.2-devel
-BuildRequires:	swig
+BuildRequires:	%{swig_b_rpm} >= %{swig_ver}
 Group:		Development/Other
 
 %description
@@ -184,6 +185,7 @@ Summary:  Subversion Misc. Tools
 Group:    Development/Other
 Requires: %{name}-base = %{version}-%{release}
 Requires: db4-utils => %{db4_ver}
+Requires: %{swig_rpm} >= %{swig_ver}
 %description tools
 This package contains a myriad tools for subversion. This package also contains
 'cvs2svn' - a program for migrating CVS repositories into Subversion repositories.
