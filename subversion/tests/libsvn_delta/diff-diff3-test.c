@@ -1394,6 +1394,82 @@ random_three_way_merge (const char **msg,
                                 original->data, modified2->data,
                                 modified1->data, combined->data, subpool));
 
+      SVN_ERR (svn_io_remove_file (filename4, pool));
+
+      svn_pool_clear (subpool);
+    }
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* This is similar to random_three_way_merge above, except this time half
+   of the original-to-modified1 changes are already present in modified2
+   (or, equivalently, half the original-to-modified2 changes are already
+   present in modified1).  Since the overlapping changes match exactly the
+   merge should work without a conflict. */
+static svn_error_t *
+merge_with_part_already_present (const char **msg,
+                                     svn_boolean_t msg_only,
+                                     apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  *msg = apr_psprintf (pool, "merge with part already present (seed:%u)",
+                       seed_val());
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < 20; ++i)
+    {
+      const char *filename1 = "pap-original";
+      const char *filename2 = "pap-modified1";
+      const char *filename3 = "pap-modified2";
+      const char *filename4 = "pap-combined";
+      svn_stringbuf_t *original, *modified1, *modified2, *combined;
+      int num_lines = 200, num_src = 20, num_dst = 20;
+      svn_boolean_t *lines = apr_pcalloc (subpool, sizeof (*lines) * num_lines);
+      struct random_mod *src_lines = apr_palloc (subpool,
+                                                 sizeof (*src_lines) * num_src);
+      struct random_mod *dst_lines = apr_palloc (subpool,
+                                                 sizeof (*dst_lines) * num_dst);
+      struct random_mod *mrg_lines = apr_palloc (subpool,
+                                                 (sizeof (*mrg_lines)
+                                                  * (num_src + num_dst / 2)));
+      
+      select_lines (src_lines, num_src, lines, num_lines);
+      /* Select half the destination changes at random */
+      select_lines (dst_lines, num_dst / 2, lines, num_lines);
+      /* Copy the other half from the source changes */
+      memcpy (dst_lines + num_dst / 2, src_lines,
+              sizeof (*dst_lines) * (num_dst - num_dst / 2));
+      memcpy (mrg_lines, src_lines, sizeof (*mrg_lines) * num_src);
+      memcpy (mrg_lines + num_src, dst_lines,
+              sizeof (*mrg_lines) * num_dst / 2);
+
+      SVN_ERR (make_random_merge_file (filename1, num_lines, NULL, 0, pool));
+      SVN_ERR (make_random_merge_file (filename2, num_lines, src_lines, num_src,
+                                       pool));
+      SVN_ERR (make_random_merge_file (filename3, num_lines, dst_lines, num_dst,
+                                       pool));
+      SVN_ERR (make_random_merge_file (filename4, num_lines, mrg_lines,
+                                       num_src + num_dst / 2, pool));
+
+      SVN_ERR (svn_stringbuf_from_file (&original, filename1, pool));
+      SVN_ERR (svn_stringbuf_from_file (&modified1, filename2, pool));
+      SVN_ERR (svn_stringbuf_from_file (&modified2, filename3, pool));
+      SVN_ERR (svn_stringbuf_from_file (&combined, filename4, pool));
+
+      SVN_ERR (three_way_merge (filename1, filename2, filename3,
+                                original->data, modified1->data,
+                                modified2->data, combined->data, subpool));
+      SVN_ERR (three_way_merge (filename1, filename3, filename2,
+                                original->data, modified2->data,
+                                modified1->data, combined->data, subpool));
+
+      SVN_ERR (svn_io_remove_file (filename4, pool));
+
       svn_pool_clear (subpool);
     }
   svn_pool_destroy (subpool);
@@ -1416,5 +1492,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (test_three_way_merge_with_conflict),
     SVN_TEST_PASS (random_trivial_merge),
     SVN_TEST_PASS (random_three_way_merge),
+    SVN_TEST_PASS (merge_with_part_already_present),
     SVN_TEST_NULL
   };
