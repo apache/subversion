@@ -34,7 +34,7 @@
 /* Change this to 1 to test deltification/undeltification.  When we're
    ready for it to be permanently on, we should just remove the
    #define altogether of course. */
-#define DELTIFYING 1
+#define DELTIFYING 0
 
 
 
