@@ -85,6 +85,11 @@ Converts CVS repositories to Subversion repositories.
 See /usr/share/doc/subversion*/tools/cvs2svn directory for more information.
 
 %changelog
+* Tue Dec 31 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4218
+- Create a svnadmin.static which is copied to svnadmin-version-release
+  when the package is erased, so users can still dump/load their repositories
+  even after they have upgraded the RPM package.
+
 * Sun Dec 29 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4206
 - Switched to new db4 package to be more like RedHat 8.0.
 - Switched to new version of apache that combines APR and APRUTILS into one
@@ -184,23 +189,6 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
 fi
 sh autogen.sh
 
-LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_repos/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_dav/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_local/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_svn/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_subr/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs \
-	" ./configure \
-	--prefix=/usr \
-	--with-swig \
-	--with-python=/usr/bin/python2.2 \
-	--with-apxs=%{apache_dir}/bin/apxs \
-	--with-apr=%{apache_dir}/bin/apr-config \
-	--with-apr-util=%{apache_dir}/bin/apu-config
 
 # Fix up mod_dav_svn installation.
 %patch0 -p1
@@ -215,6 +203,46 @@ sed -e \
 mv "${vsn_file}.tmp" "$vsn_file"
 
 %build
+LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_repos/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_dav/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_local/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_svn/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_subr/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs"
+
+# Configure static.
+LDFLAGS="${LDFLAGS}" ./configure \
+	--without-berkeley-db \
+	--disable-shared \
+	--enable-all-static \
+	--prefix=/usr \
+	--with-swig \
+	--with-python=/usr/bin/python2.2 \
+	--with-apxs=%{apache_dir}/bin/apxs \
+	--with-apr=%{apache_dir}/bin/apr-config \
+	--with-apr-util=%{apache_dir}/bin/apu-config
+
+# Make svnadmin static.
+make subversion/svnadmin/svnadmin
+
+# Move static svnadmin to safe place.
+cp subversion/svnadmin/svnadmin svnadmin.static
+
+# Configure shared.
+LDFLAGS="${LDFLAGS}" ./configure \
+	--prefix=/usr \
+	--with-swig \
+	--with-python=/usr/bin/python2.2 \
+	--with-apxs=%{apache_dir}/bin/apxs \
+	--with-apr=%{apache_dir}/bin/apr-config \
+	--with-apr-util=%{apache_dir}/bin/apu-config
+
+# Make everything shared.
+make clean
 make
 
 make swig-py-ext
@@ -247,6 +275,9 @@ sed -e 's;#!/usr/bin/env python;#!/usr/bin/env python2;' < $RPM_BUILD_DIR/%{name
 chmod a+x $RPM_BUILD_ROOT/usr/bin/cvs2svn
 cp %{SOURCE2} $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 
+# Copy svnadmin.static to destination
+cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
+
 %post
 # Only add to INFO directory if this is the only instance installed.
 if [ "$1"x = "1"x ]; then
@@ -258,6 +289,12 @@ if [ "$1"x = "1"x ]; then
 fi
 
 %preun
+# Save current copy of svnadmin.static
+echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version}-%{release}"
+echo "Erase this program only after you make sure you won't need to dump/reload"
+echo "any of your repositories to upgrade to a new version of the database."
+cp /usr/bin/svnadmin-%{version}-%{release}.static /usr/bin/svnadmin-%{version}-%{release}
+
 # Only delete from INFO directory if this is the last instance being deleted.
 if [ "$1"x = "0"x ]; then
    if [ -x /sbin/install-info ]; then
@@ -312,6 +349,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc tools subversion/LICENSE
 /usr/bin/svn
 /usr/bin/svnadmin
+/usr/bin/svnadmin-%{version}-%{release}.static
 /usr/bin/svnlook
 /usr/bin/svnserve
 /usr/lib/libsvn_auth*so*
