@@ -787,15 +787,18 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               apr_pool_t *pool);
 
 
-/** Merge changes from @a url1/@a revision1 to @a url2/@a revision2 into 
+/** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into 
  * the working-copy path @a target_wcpath.
+ *
+ * @a source1 and @a source2 are either URLs that refer to entries in the 
+ * repository, or paths to entries in the working copy.
  *
  * By "merging", we mean:  apply file differences using
  * @c svn_wc_merge, and schedule additions & deletions when appropriate.
  *
- * @a url1 and @a url2 must both represent the same node kind -- that is,
- * if @a url1 is a directory, @a url2 must also be, and if @a url1 is a
- * file, @a url2 must also be.
+ * @a source1 and @a source2 must both represent the same node kind -- that 
+ * is, if @a source1 is a directory, @a source2 must also be, and if @a source1 
+ * is a file, @a source2 must also be.
  *
  * If either @a revision1 or @a revision2 has an `unspecified' or
  * unrecognized `kind', return @c SVN_ERR_CLIENT_BAD_REVISION.
@@ -825,9 +828,9 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  * repository.
  */
 svn_error_t *
-svn_client_merge (const char *URL1,
+svn_client_merge (const char *source1,
                   const svn_opt_revision_t *revision1,
-                  const char *URL2,
+                  const char *source2,
                   const svn_opt_revision_t *revision2,
                   const char *target_wcpath,
                   svn_boolean_t recurse,

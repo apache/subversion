@@ -505,6 +505,8 @@ struct merge_cmd_baton {
   svn_boolean_t dry_run;
   const char *target;                 /* Working copy target of merge */
   const char *url;                    /* The second URL in the merge */
+  const char *path;                   /* The wc path of the second target, this
+                                         can be NULL if we don't have one. */
   const svn_opt_revision_t *revision; /* Revision of second URL in the merge */
   svn_client_ctx_t *ctx;
 
@@ -922,12 +924,15 @@ convert_to_url (const char **url,
 
 
 
-/* PATH1, PATH2, and TARGET_WCPATH all better be directories.   For
-   the single file case, the caller do the merging manually. */
+/* URL1/PATH1, URL2/PATH2, and TARGET_WCPATH all better be directories.   For
+   the single file case, the caller does the merging manually.  PATH1 and PATH2 
+   can be NULL. */
 static svn_error_t *
 do_merge (const char *URL1,
+          const char *path1,
           const svn_opt_revision_t *revision1,
           const char *URL2,
+          const char *path2,
           const svn_opt_revision_t *revision2,
           const char *target_wcpath,
           svn_wc_adm_access_t *adm_access,
@@ -967,9 +972,9 @@ do_merge (const char *URL1,
                                         ctx, pool));
   /* Resolve the revision numbers. */
   SVN_ERR (svn_client__get_revision_number
-           (&start_revnum, ra_lib, session, revision1, NULL, pool));
+           (&start_revnum, ra_lib, session, revision1, path1, pool));
   SVN_ERR (svn_client__get_revision_number
-           (&end_revnum, ra_lib, session, revision2, NULL, pool));
+           (&end_revnum, ra_lib, session, revision2, path2, pool));
 
   /* Open a second session used to request individual file
      contents. Although a session can be used for multiple requests, it
@@ -1014,14 +1019,17 @@ do_merge (const char *URL1,
 }
 
 
-/* Get REVISION of the file at URL.  Return in *FILENAME the name of a file
-   containing the file contents, in *PROPS a hash containing the properties
-   and in *REV the revision.  All allocation occurs in POOL. */
+/* Get REVISION of the file at URL.  SOURCE is a path that refers to that 
+   file's entry in the working copy, or NULL if we don't have one.  Return in 
+   *FILENAME the name of a file containing the file contents, in *PROPS a hash 
+   containing the properties and in *REV the revision.  All allocation occurs 
+   in POOL. */
 static svn_error_t *
 single_file_merge_get_file (const char **filename,
                             apr_hash_t **props,
                             svn_revnum_t *rev,
                             const char *url,
+                            const char *path,
                             const svn_opt_revision_t *revision,
                             void *ra_baton,
                             const char *auth_dir,
@@ -1038,7 +1046,7 @@ single_file_merge_get_file (const char **filename,
                                         NULL, NULL, FALSE, TRUE, 
                                         merge_b->ctx, pool));
   SVN_ERR (svn_client__get_revision_number (rev, ra_lib, session, revision,
-                                            NULL, pool));
+                                            path, pool));
   SVN_ERR (svn_io_open_unique_file (&fp, filename, 
                                     merge_b->target, ".tmp",
                                     FALSE, pool));
@@ -1056,6 +1064,7 @@ single_file_merge_get_file (const char **filename,
 /* The single-file, simplified version of do_merge. */
 static svn_error_t *
 do_single_file_merge (const char *URL1,
+                      const char *path1,
                       const svn_opt_revision_t *revision1,
                       svn_wc_adm_access_t *adm_access,
                       struct merge_cmd_baton *merge_b,
@@ -1079,12 +1088,13 @@ do_single_file_merge (const char *URL1,
   /* ### heh, funny.  we could be fetching two fulltexts from two
      *totally* different repositories here.  :-) */
   SVN_ERR (single_file_merge_get_file (&tmpfile1, &props1, &rev1,
-                                       URL1, revision1,
+                                       URL1, path1, revision1,
                                        ra_baton, auth_dir, merge_b, pool));
 
   SVN_ERR (single_file_merge_get_file (&tmpfile2, &props2, &rev2,
-                                       merge_b->url, merge_b->revision,
-                                       ra_baton, auth_dir, merge_b, pool));
+                                       merge_b->url, merge_b->path, 
+                                       merge_b->revision, ra_baton, auth_dir,
+                                       merge_b, pool));
 
   /* Discover any svn:mime-type values in the proplists */
   pval = apr_hash_get (props1, SVN_PROP_MIME_TYPE, strlen(SVN_PROP_MIME_TYPE));
@@ -1723,9 +1733,9 @@ svn_client_diff (const apr_array_header_t *options,
 
 
 svn_error_t *
-svn_client_merge (const char *URL1,
+svn_client_merge (const char *source1,
                   const svn_opt_revision_t *revision1,
-                  const char *URL2,
+                  const char *source2,
                   const svn_opt_revision_t *revision2,
                   const char *target_wcpath,
                   svn_boolean_t recurse,
@@ -1738,6 +1748,35 @@ svn_client_merge (const char *URL1,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   struct merge_cmd_baton merge_cmd_baton;
+  const char *URL1, *URL2;
+  const char *path1;
+
+  /* if source1 or source2 are paths, we need to get the the underlying url
+   * from the wc and save the initial path we were passed so we can use it as 
+   * a path parameter (either in the baton or not).  otherwise, the path 
+   * will just be NULL, which means we won't be able to figure out some kind 
+   * of revision specifications, but in that case it won't matter, because 
+   * those ways of specifying a revision are meaningless for a url.
+   */
+  SVN_ERR (svn_client_url_from_path (&URL1, source1, pool));
+  if (! URL1)
+    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                              "'%s' has no URL", source1);
+
+  SVN_ERR (svn_client_url_from_path (&URL2, source2, pool));
+  if (! URL2)
+    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL, 
+                              "'%s' has no URL", source2);
+
+  if (URL1 == source1)
+    path1 = NULL;
+  else
+    path1 = source1;
+
+  if (URL2 == source2)
+    merge_cmd_baton.path = NULL;
+  else
+    merge_cmd_baton.path = source2;
 
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target_wcpath,
                                   ! dry_run, recurse, pool));
@@ -1771,7 +1810,7 @@ svn_client_merge (const char *URL1,
      PATH2 are files as well, and do a single-file merge. */
   if (entry->kind == svn_node_file)
     {
-      SVN_ERR (do_single_file_merge (URL1, revision1,
+      SVN_ERR (do_single_file_merge (URL1, path1, revision1,
                                      adm_access,
                                      &merge_cmd_baton,
                                      pool));
@@ -1782,8 +1821,10 @@ svn_client_merge (const char *URL1,
   else if (entry->kind == svn_node_dir)
     {
       SVN_ERR (do_merge (URL1,
+                         path1,
                          revision1,
                          URL2,
+                         merge_cmd_baton.path,
                          revision2,
                          target_wcpath,
                          adm_access,

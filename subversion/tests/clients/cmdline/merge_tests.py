@@ -1119,6 +1119,94 @@ def merge_with_implicit_target (sbox):
   finally:
     os.chdir(was_cwd)
 
+def merge_with_prev (sbox):
+  "merge operations using PREV revision"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  
+  # Change mu for revision 2
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  orig_mu_text = svntest.tree.get_text(mu_path);
+  added_mu_text = ""
+  for x in range(2,11):
+    added_mu_text = added_mu_text + '\nThis is line ' + `x` + ' in mu'
+  added_mu_text += "\n"
+  svntest.main.file_append(mu_path, added_mu_text)
+
+  zot_path = os.path.join(wc_dir, 'A', 'zot')
+  
+  svntest.main.file_append(zot_path, "bar")
+  svntest.main.run_svn(None, 'add', zot_path)
+
+  # Create expected output tree for initial commit
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    'A/zot' : Item(verb='Adding'),
+    })
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but mu should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A', repos_rev=2)
+  expected_status.tweak('A/mu', wc_rev=2)
+  expected_status.add({'A/zot' : Item(status='  ', wc_rev=2, repos_rev=2)})
+  
+  # Initial commit.
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None, None, None,
+                                         wc_dir)
+
+  # Make some other working copies
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+  
+  another_wc = sbox.add_wc_path('another')
+  svntest.actions.duplicate_dir(wc_dir, another_wc)
+
+  was_cwd = os.getcwd()
+  try:
+    os.chdir(os.path.join(other_wc, 'A'))
+
+    # Try to revert the last change to mu via svn merge
+    out, err = svntest.main.run_svn(0, 'merge', '-r', 'HEAD:PREV',
+                                    'mu')
+    if err:
+      raise svntest.Failure
+
+    # sanity-check resulting file
+    if (svntest.tree.get_text('mu') != orig_mu_text):
+      raise svntest.Failure
+
+  finally:
+    os.chdir(was_cwd)
+
+  try:
+    os.chdir(another_wc)
+
+    # ensure 'A' will be at revision 2
+    out, err = svntest.main.run_svn(0, 'up')
+    if err:
+      raise svntest.Failure
+
+    # now try a revert on a directory, and verify that it removed the zot
+    # file we had added previously
+    out, err = svntest.main.run_svn(0, 'merge', '-r', 'COMMITTED:PREV',
+                                    'A', 'A')
+    if err:
+      raise svntest.Failure
+
+    if (svntest.tree.get_text('A/zot') != None):
+      raise svntest.Failure
+    
+  finally:
+    os.chdir(was_cwd)
+    
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -1134,6 +1222,7 @@ test_list = [ None,
               merge_with_implicit_target,
               merge_catches_nonexistent_target,
               XFail(merge_similar_unrelated_trees),
+              merge_with_prev,
               # merge_one_file,          # See issue #1150.
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
