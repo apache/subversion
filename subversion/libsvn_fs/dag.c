@@ -308,6 +308,108 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
 }
 
 
+/* Create a new mutable file named NAME in PARENT, as part of TRAIL.
+   Set *CHILD_P to a reference to the new node, allocated in
+   TRAIL->pool.  The new file's contents are the empty string, and it
+   has no properties.  PARENT must be mutable.  NAME must be a single
+   path component; it cannot be a slash-separated directory path.  */
+svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
+                                    dag_node_t *parent,
+                                    const char *name,
+                                    trail_t *trail)
+{
+  svn_fs_id_t *new_node_id;
+
+  if (! svn_fs__dag_is_mutable (parent)) /* is the parent mutable? */
+    {
+      /* return some nasty error */
+    }
+
+  {
+    skel_t *noderev_skel;
+    skel_t *header_skel;
+    skel_t *flag_skel;
+    svn_string_t *id_str;
+
+    /* Call .toString() on parent's id -- oops!  This isn't Java! */
+    id_str = svn_fs_unparse_id (parent->id, trail->pool);
+    
+    /* Create a new skel for our new node, the format of which is
+       (HEADER KIND-SPECIFIC), where HEADER is (file PROPLIST ()
+       (mutable PARENT-ID)), and KIND-SPECIFIC is an empty atom. */
+    
+    /* Step 1: create the FLAG skel. */
+    flag_skel = svn_fs__make_empty_list (trail->pool);
+    svn_fs__prepend (svn_fs__str_atom (id_str->data, trail->pool),
+                     flag_skel);
+    svn_fs__prepend (svn_fs__str_atom ((char *) "mutable", trail->pool), 
+                     flag_skel);
+    /* Now we have a FLAG skel: (mutable PARENT-ID) */
+    
+    /* Step 2: create the HEADER skel. */
+    header_skel = svn_fs__make_empty_list (trail->pool);
+    svn_fs__prepend (flag_skel, header_skel);
+    svn_fs__prepend (svn_fs__make_empty_list (trail->pool),
+                     header_skel);
+    svn_fs__prepend (svn_fs__str_atom ((char *) "file", trail->pool),
+                     header_skel);
+    /* Now we have a HEADER skel: (file () FLAG) */
+    
+    /* Step 3: assemble the NODE-REVISION skel. */
+    noderev_skel = svn_fs__make_empty_list (trail->pool);
+    svn_fs__prepend (svn_fs__str_atom ((char *) "", trail->pool),
+                     noderev_skel);
+    svn_fs__prepend (header_skel, noderev_skel);
+    /* All done, skel-wise.  We have a NODE-REVISION skel:
+       (HEADER DATA), where DATA is empty. */
+    
+    /* Time to actually create our new node */
+    SVN_ERR (svn_fs__create_node (&new_node_id, parent->fs,
+                                  noderev_skel, trail));
+  }
+
+  {
+    skel_t *pnoderev_skel;
+    skel_t *entry_skel;
+    svn_string_t *node_id_str;
+
+    /* Get a string representation of the node id we created above. */
+    node_id_str = svn_fs_unparse_id (new_node_id, trail->pool);
+
+    /* Now, we need to tell the parent that it has another new mouth
+       to feed.  So, we get the NODE-REVISION skel of the parent... */
+    SVN_ERR (svn_fs__get_node_revision (&pnoderev_skel,
+                                        parent->fs,
+                                        parent->id,
+                                        trail));
+
+    /* ...and we construct a new ENTRY skel to be added to the
+       parent's NODE-REVISION skel... */
+    entry_skel = svn_fs__make_empty_list (trail->pool);
+    svn_fs__prepend (svn_fs__str_atom (node_id_str->data, trail->pool),
+                     entry_skel);
+    svn_fs__prepend (svn_fs__str_atom ((char *) name, trail->pool),
+                     entry_skel);
+
+    /* ...and now we have an ENTRY skel for this new child: (NAME ID).
+       So.  We now get to slap this entry into the parent's list of
+       entries. 
+
+       cmpilato todo: figure out if we're supposed to make sure no
+       entry of the same name exists here already, and whether that
+       check should happen here or not. 
+    */
+    svn_fs__append (entry_skel, pnoderev_skel);
+
+    /* Finally, update the parent's stored skel. */
+    SVN_ERR (svn_fs__put_node_revision (parent->fs,
+                                        parent->id,
+                                        pnoderev_skel,
+                                        trail));
+  }
+  return SVN_NO_ERROR;
+}
+
 
 /* 
  * local variables:
