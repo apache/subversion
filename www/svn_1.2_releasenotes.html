@@ -256,6 +256,34 @@ choice.</p>
 
 <p/>
 
+<dt><h4>Cached passwords are encyrypted on Windows (<em>Windows client
+feature</em>)</h4></dt>
+
+<dd>
+
+<p>On Windows 2000 and later, the command-line client encrypts the
+cached passwords used for authenticating to a remote Subversion server
+(via the <tt>http://</tt> or <tt>svn://</tt> protocols). Existing,
+unencrypted cached passwords are automatically encrypted the first
+time they are used.</p>
+
+<p><strong>Note:</strong> The client uses the standard Windows
+Cryptography services to encrypt and decrypt the password. Among other
+things, this means that the encryption key is managed by Windows and
+can only be accessed by the user account that owns it. If an
+administrator forcibly resets the account password, the encryption key
+(and consequently the cached passwords) will no longer be accesible
+(by the way, the same holds for the contents of NTFS-encrypted
+files). The Subversion client will detect this and proceed as if the
+password were not known; that is, it will prompt the user for the
+password when necessary.</p>
+
+<p><strong>Note:</strong> This feature does not extend to stored
+passphrases for client SSL certificates.</p>
+</dd>
+
+<p/>
+
 
 <dt><h4>Bugfixes:</h4></dt>
 <dd>More than N bugs fixed.  See the <a
