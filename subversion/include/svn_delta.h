@@ -342,7 +342,7 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  * Read and parse one delta window in svndiff format from the
  * readable stream @a stream and place it in @a *window, allocating
  * the result in @a pool.  The caller must take responsibility for
- * stripping off the four-byte 'SVN&lt;ver&gt;' header at the beginning of
+ * stripping off the four-byte 'SVN@<ver@>' header at the beginning of
  * the svndiff document before reading the first window, and must
  * provide the version number (the value of the fourth byte) to each
  * invocation of this routine with the @a svndiff_version argument. */
@@ -357,7 +357,7 @@ svn_error_t *svn_txdelta_read_svndiff_window (svn_txdelta_window_t **window,
  * Skip one delta window in svndiff format in the file @a file.  and
  * place it in @a *window, allocating the result in @a pool.  The
  * caller must take responsibility for stripping off the four-byte
- * 'SVN&lt;ver&gt;' header at the beginning of the svndiff document before
+ * 'SVN@<ver@>' header at the beginning of the svndiff document before
  * reading or skipping the first window, and must provide the version
  * number (the value of the fourth byte) to each invocation of this
  * routine with the @a svndiff_version argument. */

@@ -52,16 +52,18 @@ const svn_version_t *svn_fs_version (void);
 typedef struct svn_fs_t svn_fs_t;
 
 
-/** Filesystem configuration options. */
+/** @defgroup fs_config_opts Filesystem configuration options
+ * @{ */
 #define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
 #define SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE        "bdb-log-autoremove"
 
-/* @since New in 1.1. */
+/** @since New in 1.1. */
 #define SVN_FS_CONFIG_FS_TYPE                   "fs-type"
-/* @since New in 1.1. */
+/** @since New in 1.1. */
 #define SVN_FS_TYPE_BDB                         "bdb"
-/* @since New in 1.1. */
+/** @since New in 1.1. */
 #define SVN_FS_TYPE_FSFS                        "fsfs"
+/** @} */
 
 
 /** The type of a warning callback function.  @a baton is the value specified
@@ -484,19 +486,21 @@ svn_string_t *svn_fs_unparse_id (const svn_fs_id_t *id,
 typedef struct svn_fs_txn_t svn_fs_txn_t;
 
 
-/* @since New in 1.2  -- for use with svn_fs_begin_txn2() */
+/** @defgroup svn_fs_begin_txn2_flags Bitmask flags for svn_fs_begin_txn2()
+ * @since New in 1.2
+ * @{ */
 
-/* Do on-the-fly out-of-dateness checks.  That is, an fs routine may
+/** Do on-the-fly out-of-dateness checks.  That is, an fs routine may
  * throw error if a caller tries to edit an out-of-date item in the
  * transaction.   ### NOTE:   NOT YET IMPLEMENTED. 
  */
 #define SVN_FS_TXN_CHECK_OOD                     0x00001
 
-/* Do on-the-fly lock checks.  That is, an fs routine may throw error
+/** Do on-the-fly lock checks.  That is, an fs routine may throw error
  * if a caller tries to edit a locked item without having rights to the lock.
  */
 #define SVN_FS_TXN_CHECK_LOCKS                   0x00002
-
+/** @} */
 
 /** @since New in 1.2
  *

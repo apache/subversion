@@ -82,8 +82,8 @@ extern "C" {
 /** A simple counted string. */
 typedef struct svn_string_t
 {
-  const char *data;
-  apr_size_t len;
+  const char *data; /**< pointer to the bytestring */
+  apr_size_t len;   /**< length of bytestring */
 } svn_string_t;
 
 /** A buffered string, capable of appending without an allocation and copy 

@@ -148,14 +148,16 @@ extern const apr_uint32_t *const svn_ctype_table;
  * @{
  */
 
-#define SVN_CTYPE_ASCII_MINUS            45 /**< '-' */
-#define SVN_CTYPE_ASCII_DOT              46 /**< '.' */
-#define SVN_CTYPE_ASCII_COLON            58 /**< ':' */
-#define SVN_CTYPE_ASCII_UNDERSCORE       95 /**< '_' */
-#define SVN_CTYPE_ASCII_TAB               9
-#define SVN_CTYPE_ASCII_LINEFEED         10
-#define SVN_CTYPE_ASCII_CARRIAGERETURN   13       
+#define SVN_CTYPE_ASCII_MINUS            45 /**< ASCII value of '-' */
+#define SVN_CTYPE_ASCII_DOT              46 /**< ASCII value of '.' */
+#define SVN_CTYPE_ASCII_COLON            58 /**< ASCII value of ':' */
+#define SVN_CTYPE_ASCII_UNDERSCORE       95 /**< ASCII value of '_' */
+#define SVN_CTYPE_ASCII_TAB               9 /**< ASCII value of a tab */
+#define SVN_CTYPE_ASCII_LINEFEED         10 /**< ASCII value of a line feed */
+#define SVN_CTYPE_ASCII_CARRIAGERETURN   13
+  /**< ASCII value of a carriage return */
 #define SVN_CTYPE_ASCII_DELETE          127
+  /**< ASCII value of a delete character */
 
 
 /** @} */
