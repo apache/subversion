@@ -29,22 +29,20 @@ class Generator(gen_win.WinGeneratorBase):
       config_type=1
       target.output_name = target.name + '.exe'
     elif isinstance(target, gen_base.TargetLib):
-      if isinstance(target, gen_base.TargetApacheMod):
-        #DLL
-        target.output_name = target.name + '.so'
-        config_type=2
-      elif isinstance(target, gen_base.TargetSWIG):
-        config_type=2
-        target.output_name = os.path.basename(target.filename)  
-      else:
-        #LIB
+      if target.msvc_static:
         config_type=4
         target.output_name = '%s-%d.lib' % (target.name, self.cfg.version)
+      else:
+        config_type=2
+        target.output_name = os.path.basename(target.filename)
     elif isinstance(target, gen_base.TargetProject):
       config_type=1
       target.output_name = target.name + '.exe'
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
+
+    if isinstance(target, gen_base.TargetApacheMod):
+      target.output_name = target.name + '.so'
 
     configs = self.get_configs(target, rootpath)
 
