@@ -22,16 +22,6 @@ Candidate changes:
       +1: jszakmeister, dionisos
       +0: kfogel, lundblad
 
-  * r11215, r11264
-    SVN has needed a good packaging script for Win32 since forever.
-    Justification:
-      This and the related build and test script changes will make
-      creating 1.1.x Win32 binary packages a lot easier.
-    Note: This depends on other changes not mentioned above; I'll
-      develop the patch on branches/1.1.x-build.
-    Votes:
-      +1: brane
-
   * r11439, r11669
     Fix slow "svn st" where the targets are files by not locking the whole
     anchor tree.
@@ -95,7 +85,7 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r11730 (Issue #2108):
+  * r11730, r11743 (Issue #2108)
     Fix UNC paths on Cygwin.
     Justification:
       Regression from 1.0.x
