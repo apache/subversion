@@ -44,6 +44,7 @@ Candidate changes:
     Justification: The old ones weren't portable and caused problems on Win32.
     Votes:
       +1: breser
+      +0: dionisos
 
   * r9439
     Update many references to neon 0.24.5.
@@ -63,4 +64,10 @@ Candidate changes:
     Justification: commit-email.pl uses 'svnlook diff', and 'svnlook
     diff' on, say, and large import, can get *really* nasty memory-wise.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, dionisos
+
+  * r9697
+    Fix potential attack path in pre-commit-hook template.
+    Justification: Don't offer templates we don't want to use ourselves.
+    Votes:
+      +1: dionisos
