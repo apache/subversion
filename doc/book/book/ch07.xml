@@ -97,13 +97,14 @@
         configuration area override those in the system-wide one, and
         command-line arguments supplied to the <command>svn</command>
         program have the final word on behavior.  On Unix-like
-        platforms, the system-wide configuration area is expected to be
-        the <filename>/etc/subversion</filename> directory; on Windows
-        machines, it looks for a <filename>Subversion</filename>
-        directory inside the common Application Data location (again,
-        as specified by the Windows Registry).  Unlike the per-user
-        case, the <command>svn</command> program does not attempt to
-        create the system-wide configuration area.</para>
+        platforms, the system-wide configuration area is
+        expected to be the <filename>/etc/subversion</filename>
+        directory; on Windows machines, it looks for a
+        <filename>Subversion</filename> directory inside the common
+        <filename>Application Data</filename> location (again, as
+        specified by the Windows Registry).  Unlike the per-user
+        case, the <command>svn</command> program does not attempt
+        to create the system-wide configuration area.</para>
 
       <para>The configuration area currently contains three
         files&mdash;two configuration files (<filename>config</filename> and
