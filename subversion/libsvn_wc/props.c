@@ -1012,7 +1012,17 @@ svn_wc_prop_set (svn_string_t *name,
 }
 
 
+svn_boolean_t
+svn_wc_is_wc_prop (svn_string_t *name)
+{
+  size_t prefix_len = sizeof (SVN_PROP_WC_PREFIX) - 1;
 
+  if ((name->len < prefix_len)
+      || (strncmp (name->data, SVN_PROP_WC_PREFIX, prefix_len) != 0))
+    return FALSE;
+  else
+    return TRUE;
+}
 
 
 

@@ -392,21 +392,6 @@ prep_directory (svn_string_t *path,
 }
 
 
-/* Return TRUE iff property NAME is a 'wc' property. */
-static svn_boolean_t
-is_wc_prop (svn_string_t *name)
-{
-  size_t prefix_len = sizeof (SVN_PROP_WC_PREFIX) - 1;
-
-  if ((name->len < prefix_len)
-      || (strncmp (name->data, SVN_PROP_WC_PREFIX, prefix_len) != 0))
-    return FALSE;
-  else
-    return TRUE;
-}
-
-
-
 
 /*** The callbacks we'll plug into an svn_delta_edit_fns_t structure. ***/
 
@@ -655,7 +640,7 @@ change_dir_prop (void *dir_baton,
 
   /* If this is a 'wc' prop, store it in the administrative area and
      get on with life.  It's not a regular versioned property. */
-  if (is_wc_prop (name))
+  if (svn_wc_is_wc_prop (name))
     {
       SVN_ERR (svn_wc__wcprop_set (name, value, db->path, db->pool));
       return SVN_NO_ERROR;
@@ -1001,7 +986,7 @@ change_file_prop (void *file_baton,
   propchange->value = local_value;
 
   /* If this is a 'wc' prop, store it in a different array. */
-  if (is_wc_prop (name))
+  if (svn_wc_is_wc_prop (name))
     {
       receiver = (svn_prop_t **) apr_array_push (fb->wcpropchanges);
       *receiver = propchange;

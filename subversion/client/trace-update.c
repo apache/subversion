@@ -316,7 +316,10 @@ change_file_prop (void *file_baton,
                   svn_string_t *value)
 {
   struct file_baton *fb = file_baton;
-  fb->prop_changed = TRUE;
+
+  if (! svn_wc_is_wc_prop (name))
+    fb->prop_changed = TRUE;
+
   return SVN_NO_ERROR;
 }
 
@@ -327,7 +330,10 @@ change_dir_prop (void *parent_baton,
                  svn_string_t *value)
 {
   struct dir_baton *d = parent_baton;
-  d->prop_changed = TRUE;
+
+  if (! svn_wc_is_wc_prop (name))
+    d->prop_changed = TRUE;
+
   return SVN_NO_ERROR;
 }
 
@@ -349,12 +355,6 @@ svn_cl__get_trace_update_editor (const svn_delta_edit_fns_t **editor,
   /* Set up the edit context. */
   eb->pool = svn_pool_create (pool);
   eb->initial_path = svn_string_dup (initial_path, eb->pool);
-
-  /* Hack off the last component of the path since the update editor
-     is doing the same thing.  Stuff looks so much better when the
-     paths match up. */
-  svn_path_remove_component (eb->initial_path,
-                             svn_path_local_style);
 
   /* Set up the editor. */
   trace_editor->replace_root = replace_root;
