@@ -121,7 +121,7 @@ delta_stack_to_path (svn_delta_stackframe_t *stack, apr_pool_t *pool)
   /* ... then walk down the stack appending to it. */
   while (p)
     {
-      if (stack->kind == svn_XML_content) /* "<dir ...>" or "<file ...>" */
+      if (p->kind == svn_XML_content) /* "<dir ...>" or "<file ...>" */
         {
           if (! svn_string_isempty (path))
             {
@@ -129,9 +129,9 @@ delta_stack_to_path (svn_delta_stackframe_t *stack, apr_pool_t *pool)
               svn_string_appendbytes (path, &dirsep, 1, pool);
             }
 
-          svn_string_appendstr (path, stack->name, pool);
+          svn_string_appendstr (path, p->previous->name, pool);
 
-          if (stack->content_kind == svn_content_file)
+          if (p->content_kind == svn_content_file)
             break;
         }
 
