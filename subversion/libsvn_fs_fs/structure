@@ -18,8 +18,13 @@ The layout of the FS directory is:
   current       File specifying current revision
   write-lock    Lockfile for commits
 
-The format of the "current" file is a single line containing the most
-recent committed revision number.
+Files in the revprops directory are in the hash dump format used by
+svn_hash_write.
+
+The format of the "current" file is a single line of the form
+"<youngest-revision> <next-node-id> <next-copy-id>\n" giving the
+youngest revision, the next unique node-ID, and the next unique
+copy-ID for the repository.
 
 The "write-lock" file only exists when a process is holding a
 write-lock for the final phase of a commit.  It contains a line
@@ -34,13 +39,28 @@ can worry about the details of this file a little later.]
 Node-revision IDs
 -----------------
 
-In order to maintain a close relationship to the BDB implementation,
-we must be able to efficiently look up a node-rev given only its ID.
-To allow this, the txn-id field of a node-ID contains either
-"r<rev>/<offset>" for a node-revision within a committed revision, or
-"t<txnid>" for a node-revision within an uncommitted transaction.
-Node-revision IDs within in a rev file can only use the
-"r<rev>/<offset>" txn-id form.
+In order to support efficient lookup of node-revisions by their IDs
+and to simplify the allocation of fresh node-IDs during a transaction,
+we treat the fields of a node-ID in new and interesting ways.
+
+Within a revision file, node-revs have a txn-id field of the form
+"r<rev>/<offset>", to support easy lookup.  The node-id and copy-id
+fields are unique base36 values as in the BDB implementation.
+
+New node-revision IDs assigned within a transaction have the txn-id
+field of "t<txnid>".  The node-id or copy-id field may be base36
+values if the node-revision is derived from a pre-existing node and/or
+copy; if the node-revision must have a freshly-assigned node-id or
+copy-id, it uses "_" followed by a base36 unique to the transaction.
+During the final phase of a commit, node-revision IDs are rewritten to
+have unique node-ID and copy-ID fields and to have "r<rev>/<offset>"
+txn-id fields.
+
+The temporary assignment of node-ID and copy-ID fields has
+implications for svn_fs_compare_ids and svn_fs_check_related.  The IDs
+_1.0.t1 is not related to the ID _1.0.t2 even though they have the
+same node-ID, because temporary node-IDs are restricted in scope to
+the transactions they belong to.
 
 Revision file format
 --------------------
@@ -61,9 +81,9 @@ empty stream.  After the initial line comes raw svndiff data, followed
 by a cosmetic trailer "ENDREP\n".
 
 If the a representation is for the text contents of a directory node,
-the expanded contents are in the form of a dumped hash map (a la
-svn_hash_write) mapping entry names to "<type> <id>" pairs, where
-<type> is "file" or "dir" and <id> gives the ID of the child node-rev.
+the expanded contents are in hash dump format mapping entry names to
+"<type> <id>" pairs, where <type> is "file" or "dir" and <id> gives
+the ID of the child node-rev.
 
 If a representation is for a property list, the expanded contents are
 in the form of a dumped hash map mapping property names to property
@@ -130,10 +150,41 @@ ASCII decimal.
 Transaction layout
 ------------------
 
-A transaction directory will look something like this:
+A transaction directory has the following layout:
 
   rev                  Protype rev file with new text reps
+  props                Contains transaction props
+  next-ids             Contains the next temporary node-ID and copy-ID
   <node-id>.<copy-id>  Subdir for each new node-rev
     props                New property list for node-rev
-    contents             Subdir containing new directory contents
+    contents             File containing directory contents
     node-rev             New node-rev data
+
+The two kinds of props files are both in hash dump format.
+
+The "latest" file contains a single line "<next-temp-node-id>
+<next-temp-copy-id>\n" giving the next temporary node-ID and copy-ID
+assignments.
+
+The contents file begins with a copy of the hash dump representation
+of the directory entries from the old node-rev (or a dump of the empty
+hash for new directories), and then an entry for each change made to
+the directory.  Additions and replacements are represented in the
+usual hash dump form ("K <len>\n<key>\nV <len>\n<value>\n"); deletions
+are represented in the form "D <len>\n<key>\n".
+
+The node-rev files have the same format as node-revs in a revision
+file, except that the "text" and "props" fields are augmented as
+follows:
+
+  * The "props" field may have the value "this" if properties have
+    been changed and are contained in a "props" file within the
+    node-rev subdirectory.
+
+  * For directory node-revs, the "text" field may have the value
+    "this" if entries have been changed and are contained in a
+    "contents" file in the node-rev subdirectory.
+
+  * For file node-revs, the "text" field may have the value "this
+    <offset> <length> <size> <digest>" if the text representation is
+    within the prototype rev file.
