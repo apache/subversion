@@ -26,20 +26,26 @@
 
 #include <apr.h>
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
 /** Table of flags for character classification. */
 extern const apr_uint32_t *const svn_ctype_table;
 
 
 /** Check if @a c is in the character class described by @a flags.
  * The @a flags is a bitwise-or combination of @t SVN_CTYPE_* *
- * constants.
+ * constants. Uses #svn_ctype_table.
  */
 #define svn_ctype_test(c, flags) \
   (0 != (svn_ctype_table[(unsigned char)(c)] & (flags)))
 
 
 /**
- * @defgroup ctype_basic Basic character classification - ASCII only
+ * @defgroup ctype_basic Basic character classification - 7-bit ASCII only
  * @{
  */
 
@@ -66,44 +72,44 @@ extern const apr_uint32_t *const svn_ctype_table;
 #define SVN_CTYPE_PRINT    (SVN_CTYPE_GRAPH | SVN_CTYPE_SPACE)
 
 
-/** Check if @c is an ASCII control character. */
+/** Check if @a c is an ASCII control character. */
 #define svn_ctype_iscntrl(c)  svn_ctype_test((c), SVN_CTYPE_CNTRL)
 
-/** Check if @c is an ASCII whitespace character. */
+/** Check if @a c is an ASCII whitespace character. */
 #define svn_ctype_isspace(c)  svn_ctype_test((c), SVN_CTYPE_SPACE)
 
-/** Check if @c is an ASCII digit. */
+/** Check if @a c is an ASCII digit. */
 #define svn_ctype_isdigit(c)  svn_ctype_test((c), SVN_CTYPE_DIGIT)
 
-/** Check if @c is an ASCII uppercase letter. */
+/** Check if @a c is an ASCII uppercase letter. */
 #define svn_ctype_isupper(c)  svn_ctype_test((c), SVN_CTYPE_UPPER)
 
-/** Check if @c is an ASCII lowercase letter. */
+/** Check if @a c is an ASCII lowercase letter. */
 #define svn_ctype_islower(c)  svn_ctype_test((c), SVN_CTYPE_LOWER)
 
-/** Check if @c is an ASCII punctuation mark. */
+/** Check if @a c is an ASCII punctuation mark. */
 #define svn_ctype_ispunct(c)  svn_ctype_test((c), SVN_CTYPE_PUNCT)
 
-/** Check if @c is an ASCII character. */
+/** Check if @a c is an ASCII character. */
 #define svn_ctype_isascii(c)  svn_ctype_test((c), SVN_CTYPE_ASCII)
 
-/** Check if @c is an ASCII letter. */
+/** Check if @a c is an ASCII letter. */
 #define svn_ctype_isalpha(c)  svn_ctype_test((c), SVN_CTYPE_ALPHA)
 
-/** Check if @c is an ASCII letter or decimal digit. */
+/** Check if @a c is an ASCII letter or decimal digit. */
 #define svn_ctype_isalnum(c)  svn_ctype_test((c), SVN_CTYPE_ALNUM)
 
-/** Check if @c is an ASCII hexadecimal digit. */
+/** Check if @a c is an ASCII hexadecimal digit. */
 #define svn_ctype_isxdigit(c) svn_ctype_test((c), SVN_CTYPE_XDIGIT)
 
-/** Check if @c is an ASCII graphical (visible printable) character. */
+/** Check if @a c is an ASCII graphical (visible printable) character. */
 #define svn_ctype_isgraph(c)  svn_ctype_test((c), SVN_CTYPE_GRAPH)
 
-/** Check if @c is an ASCII printable character. */
+/** Check if @a c is an ASCII printable character. */
 #define svn_ctype_isprint(c)  svn_ctype_test((c), SVN_CTYPE_PRINT)
 
 /** @} */
-
+
 /**
  * @defgroup ctype_extra Extended character classification
  * @{
@@ -123,16 +129,16 @@ extern const apr_uint32_t *const svn_ctype_table;
 /** All valid UTF-8 bytes. */
 #define SVN_CTYPE_UTF8     (SVN_CTYPE_ASCII | SVN_CTYPE_UTF8MBC)
 
-/** Check if @c is a UTF-8 multibyte lead byte. */
+/** Check if @a c is a UTF-8 multibyte lead byte. */
 #define svn_ctype_isutf8lead(c) svn_ctype_test((c), SVN_CTYPE_UTF8LEAD)
 
-/** Check if @c is a UTF-8 multibyte continuation (non-lead) byte. */
+/** Check if @a c is a UTF-8 multibyte continuation (non-lead) byte. */
 #define svn_ctype_isutf8cont(c) svn_ctype_test((c), SVN_CTYLE_UTF8CONT)
 
-/** Check if @c is part of a UTF-8 multibyte character. */
+/** Check if @a c is part of a UTF-8 multibyte character. */
 #define svn_ctype_isutf8mbc(c)  svn_ctype_test((c), SVN_CTYPE_UTF8MBC)
 
-/** Check if @c valid in UTF-8. */
+/** Check if @a c is valid in UTF-8. */
 #define svn_ctype_isutf8(c)     svn_ctype_test((c), SVN_CTYPE_UTF8)
 
 /** @} */
