@@ -52,15 +52,19 @@ def main(fname, gentype, verfname=None, oname=None,
 
 def _usage_exit():
   "print usage, exit the script"
-  print "USAGE:  gen-make.py [-s] [-t TYPE] [conf-file]"
-  print "  -s  skip dependency generation"
-  print "  -t  use the TYPE generator; can be one of:"
+  print "USAGE:  gen-make.py [options...] [conf-file]"
+  print "  -s       skip dependency generation"
+  print "  -t TYPE  use the TYPE generator; can be one of:"
   items = gen_modules.items()
   items.sort()
   for name, (module, desc) in items:
-    print '      %-12s  %s' % (name, desc)
+    print '           %-12s  %s' % (name, desc)
   print
-  print "      The default generator type is 'make'"
+  print "           The default generator type is 'make'"
+  print
+  print "  --with-httpd=DIR              [Windows]"
+  print "           the (compiled) httpd sources required"
+  print "           for building mod_dav_svn are in DIR."
   sys.exit(0)
 
 if __name__ == '__main__':
