@@ -109,7 +109,7 @@ static svn_error_t *bump_resource(merge_ctx_t *mc, char *path, char *vsn_url)
   svn_string_t vsn_url_str = { 0 };
 
   /* import case. just punt for now. */
-  if (mc->close_baton == NULL)
+  if (mc->close_commit == NULL)
     return NULL;
 
   /* ### damned callbacks take svn_string_t even though they don't plan
