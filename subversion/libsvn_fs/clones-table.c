@@ -161,7 +161,7 @@ svn_fs__record_clone (svn_fs_t *fs,
 				     clone_id_string->len,
 				     pool),
 		   clone);
-  svn_fs__prepend (svn_fs__str_atom ("cloned", pool), clone);
+  svn_fs__prepend (svn_fs__str_atom ((char *) "cloned", pool), clone);
 
   SVN_ERR (DB_WRAP (fs, "recording clone creation",
 		    fs->clones->put (fs->clones, trail->db_txn,
@@ -195,7 +195,7 @@ svn_fs__record_rename (svn_fs_t *fs,
 				     parent_id_string->len,
 				     pool),
 		   clone);
-  svn_fs__prepend (svn_fs__str_atom ("moved", pool), clone);
+  svn_fs__prepend (svn_fs__str_atom ((char *) "moved", pool), clone);
 
   SVN_ERR (DB_WRAP (fs, "recording clone reparenting",
 		    fs->clones->put (fs->clones, trail->db_txn,

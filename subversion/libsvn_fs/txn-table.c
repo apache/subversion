@@ -37,8 +37,8 @@ svn_fs__open_transactions_table (DB **transactions_p,
     DBT key, value;
 
     DB_ERR (txns->put (txns, 0,
-		       svn_fs__str_to_dbt (&key, "next-id"),
-		       svn_fs__str_to_dbt (&value, "0"),
+		       svn_fs__str_to_dbt (&key, (char *) "next-id"),
+		       svn_fs__str_to_dbt (&value, (char *) "0"),
 		       0));
   }
 
@@ -70,7 +70,7 @@ put_txn (svn_fs_t *fs,
 				     unparsed_base_root_id->len,
 				     pool),
 		   txn_skel);
-  svn_fs__prepend (svn_fs__str_atom ("transaction", pool), txn_skel);
+  svn_fs__prepend (svn_fs__str_atom ((char *) "transaction", pool), txn_skel);
 
   /* Only in the context of this function do we know that the DB call
      will not attempt to modify svn_txn, so the cast belongs here.  */
@@ -95,7 +95,7 @@ allocate_txn_id (char **id_p,
   apr_size_t next_id;
   char *next_id_str;
 
-  svn_fs__str_to_dbt (&key, "next-id");
+  svn_fs__str_to_dbt (&key, (char *) "next-id");
 
   /* Get the current value associated with the `next-id' key in the
      transactions table.  */

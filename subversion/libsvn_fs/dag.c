@@ -43,7 +43,7 @@ dag_init_fs (void *fs_baton, trail_t *trail)
     static const char rep_skel[] = "(fulltext ((dir ()) ()))";
     SVN_ERR (svn_fs__put_rep (fs,
                               svn_fs_parse_id ("0.0", 3, trail->pool),
-                              svn_fs__parse_skel (rep_skel,
+                              svn_fs__parse_skel ((char *) rep_skel,
                                                   sizeof (rep_skel) - 1,
                                                   trail->pool),
                               trail->db_txn,
@@ -56,7 +56,7 @@ dag_init_fs (void *fs_baton, trail_t *trail)
     static const char rev_skel[] = "(revision  3 0.0  ())";
     svn_revnum_t rev = 0;
     SVN_ERR (svn_fs__put_rev (&rev, fs,
-                              svn_fs__parse_skel (rev_skel,
+                              svn_fs__parse_skel ((char *) rev_skel,
                                                   sizeof (rev_skel) - 1,
                                                   trail->pool),
                               trail->db_txn,
