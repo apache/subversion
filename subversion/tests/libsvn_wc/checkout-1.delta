@@ -17,6 +17,18 @@
               </new>
               <new name="E">
                 <dir ancestor="/A/B/E">
+                  <tree-delta>
+                    <new name="alpha">
+                      <file ancestor="/A/B/E/alpha">
+                        <text-delta>This is the file 'alpha'.</text-delta>
+                      </file>
+                    </new>
+                    <new name="beta">
+                      <file ancestor="/A/B/E/beta">
+                        <text-delta>This is the file 'beta'.</text-delta>
+                      </file>
+                    </new>
+                  </tree-delta>
                 </dir>
               </new>
               <new name="F">

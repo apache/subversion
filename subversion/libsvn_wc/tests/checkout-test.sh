@@ -7,19 +7,7 @@ if [ ! -x ./checkout-test ]; then
     exit 1
 fi
 
-# Run the binary
+# First get rid of any remnant of the last run.
+rm -rf A
 
-./checkout-test < checkout-1.delta > checkout-1.out
-
-# Copied from hashdump-test.sh:
-#
-## # Compare the two output files
-## 
-## diff checkout.out checkout2.out
-## 
-## if [ $? -ne 0 ]; then
-##     echo "Error: checkout output files aren't identical."
-##     exit 1
-## else
-##     exit 0
-## fi
+./checkout-test checkout-1.delta
