@@ -234,7 +234,7 @@ The specified activity does not exist.
           <note>
             <para>The following instructions are specific to the
               graphical version of Ethereal, and may not apply to the
-              commandline version (whose binary is usually named
+              command line version (whose binary is usually named
               <command>tethereal</command>).</para>
           </note>
 

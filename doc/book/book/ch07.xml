@@ -1046,7 +1046,7 @@ if __name__ == '__main__':
         bindings.  Once you have the SWIG interface files properly
         configured, generation of the specific wrappers for all the
         supported SWIG languages (which currently includes versions of
-        Tcl, Python, Perl, Java, Ruby, Mzscheme, Guile, and PHP)
+        Guile, Java, Mzscheme, OCaml, Perl, PHP, Python, Ruby, and Tcl)
         should theoretically be trivial.  Still, some extra
         programming is required to compensate for complex APIs that
         SWIG needs some help generalizing.  For more information on
@@ -1644,7 +1644,7 @@ A  build.conf
         failing to supply a good log message) is to submit changes
         that cause failure in the test suite.</para>
 
-      <!-- TODO: Describe building and testing on Windows. -->
+      <!-- ### TODO: Describe building and testing on Windows. -->
 
       <para>In the best-case scenario, you will have actually added
         appropriate tests to that test suite which verify that your
