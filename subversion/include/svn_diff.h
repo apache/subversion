@@ -194,24 +194,9 @@ typedef struct svn_diff_output_fns_t
      tokens in the original data, and at MODIFIED_START for MODIFIED_LENGHT
      tokens in the modified data.
 
-     If doing a three-way diff, then all three datasources have
-     conflicting data ranges.  The range LATEST_START, LATEST_LENGTH in
-     the "latest" datasource conflicts with the range ORIGINAL_START,
-     ORIGINAL_LENGTH in the original data, and also conflicts with the
-     range MODIFIED_START, MODIFIED_LENGTH in the modified data.  */
-  svn_error_t *(*output_conflict) (void *output_baton,
-                                   apr_off_t original_start,
-                                   apr_off_t original_length,
-                                   apr_off_t modified_start,
-                                   apr_off_t modified_length,
-                                   apr_off_t latest_start,
-                                   apr_off_t latest_length);
-
-  /* ------ The following callbacks are used by three-way diffs only --- */
-
-  /* An identical data range was discovered between the "original" and
-     "latest" datasources, but this conflicts with a range in the
-     "modified" datasource. */
+     If doing a three-way diff, then an identical data range was discovered
+     between the "original" and "latest" datasources, but this conflicts with
+     a range in the "modified" datasource. */
   svn_error_t *(*output_diff_modified) (void *output_baton,
                                         apr_off_t original_start,
                                         apr_off_t original_length,
@@ -219,7 +204,9 @@ typedef struct svn_diff_output_fns_t
                                         apr_off_t modified_length,
                                         apr_off_t latest_start,
                                         apr_off_t latest_length);
-  
+
+  /* ------ The following callbacks are used by three-way diffs only --- */
+
   /* An identical data range was discovered between the "original" and
      "modified" datasources, but this conflicts with a range in the
      "latest" datasource. */
@@ -241,6 +228,19 @@ typedef struct svn_diff_output_fns_t
                                       apr_off_t modified_length,
                                       apr_off_t latest_start,
                                       apr_off_t latest_length);
+
+  /* All three datasources have conflicting data ranges.  The range
+     LATEST_START, LATEST_LENGTH in the "latest" datasource conflicts with
+     the range ORIGINAL_START, ORIGINAL_LENGTH in the "original" datasource,
+     and also conflicts with the range MODIFIED_START, MODIFIED_LENGTH in the
+     "modified" datasource.  */
+  svn_error_t *(*output_conflict) (void *output_baton,
+                                   apr_off_t original_start,
+                                   apr_off_t original_length,
+                                   apr_off_t modified_start,
+                                   apr_off_t modified_length,
+                                   apr_off_t latest_start,
+                                   apr_off_t latest_length);
 } svn_diff_output_fns_t;
 
 
