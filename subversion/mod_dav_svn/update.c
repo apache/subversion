@@ -134,7 +134,7 @@ static void add_helper(svn_boolean_t is_dir,
   qname = apr_xml_quote_string(child->pool, name, 1);
 
   if (copyfrom_path == NULL)
-    send_xml(child->uc, "<S:add-%s name=\"%s\"/>" DEBUG_CR,
+    send_xml(child->uc, "<S:add-%s name=\"%s\">" DEBUG_CR,
              DIR_OR_FILE(is_dir), qname);
   else
     {
@@ -307,7 +307,9 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
 {
   item_baton_t *file = file_baton;
 
-  send_xml(file->uc, "<S:fetch-file/>" DEBUG_CR);
+  /* if we added the file, then no need to tell the client to fetch it */
+  if (!file->added)
+    send_xml(file->uc, "<S:fetch-file/>" DEBUG_CR);
 
   *handler = noop_handler;
 
@@ -439,25 +441,44 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
   /* scan the XML doc for state information */
   for (child = doc->root->first_child; child != NULL; child = child->next)
-    if (child->ns == ns && strcmp(child->name, "entry") == 0)
+    if (child->ns == ns)
       {
-	svn_revnum_t rev;
-	const char *path;
+        if (strcmp(child->name, "entry") == 0)
+          {
+            svn_revnum_t rev;
+            const char *path;
 
-	/* ### assume first/only attribute is the rev */
-	rev = atol(child->attr->value);
+            /* ### assume first/only attribute is the rev */
+            rev = atol(child->attr->value);
 
-	path = dav_xml_get_cdata(child, resource->pool, 1 /* strip_white */);
+            path = dav_xml_get_cdata(child, resource->pool, 1 /* strip_white */);
 
-	svn_stringbuf_set(pathstr, path);
-	serr = svn_repos_set_path(rbaton, pathstr, rev);
-	if (serr != NULL)
-	  {
-	    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-				       "A failure occurred while recording "
-				       "one of the items of working copy "
-				       "state.");
-	  }
+            svn_stringbuf_set(pathstr, path);
+            serr = svn_repos_set_path(rbaton, pathstr, rev);
+            if (serr != NULL)
+              {
+                return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                           "A failure occurred while "
+                                           "recording one of the items of "
+                                           "working copy state.");
+              }
+          }
+        else if (strcmp(child->name, "missing") == 0)
+          {
+            const char *path;
+
+            path = dav_xml_get_cdata(child, resource->pool, 1 /* strip_white */);
+
+            svn_stringbuf_set(pathstr, path);
+            serr = svn_repos_delete_path(rbaton, pathstr);
+            if (serr != NULL)
+              {
+                return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                           "A failure occurred while "
+                                           "recording one of the (missing) "
+                                           "items of working copy state.");
+              }
+          }
       }
 
   /* this will complete the report, and then drive our editor to generate
