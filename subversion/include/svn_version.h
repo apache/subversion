@@ -65,7 +65,7 @@ extern "C" {
  *
  * Modify for every released patch.
  */
-#define SVN_VER_PATCH      1
+#define SVN_VER_PATCH      2
 
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */

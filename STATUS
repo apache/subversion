@@ -4,7 +4,7 @@ See "Stabilizing and maintaining releases" in trunk/HACKING for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.1.1:
+Status of 1.1.2:
 ================
 
 Candidate changes:
@@ -28,11 +28,6 @@ Candidate changes:
       Correctness issue.
     Votes:
       +1: mbk, jpieper, dionisos, kfogel
-
-Status of 1.1.2:
-================
-
-Candidate changes:
 
   * r11215, r11264
       SVN has needed a good packaging script for Win32 since forever.
