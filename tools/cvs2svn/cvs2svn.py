@@ -66,9 +66,6 @@ OP_CHANGE = 'C'
 
 DIGEST_END_IDX = 9 + (sha.digestsize * 2)
 
-verbose = 1
-
-
 # Officially, CVS symbolic names must use a fairly restricted set of
 # characters.  Unofficially, we don't care if some repositories out
 # there don't abide by this, as long as their tags start with a letter
@@ -334,8 +331,7 @@ def visit_file(arg, dirname, files):
       cd.set_fname(os.path.join(dirname[:-6], fname))
     else:
       cd.set_fname(pathname)
-    if verbose:
-      print pathname
+    print pathname
     try:
       p.parse(open(pathname, 'rb'), cd)
       stats[0] = stats[0] + 1
@@ -2129,15 +2125,13 @@ def convert(ctx, start_pass=1):
   times = [ None ] * len(_passes)
   for i in range(start_pass - 1, len(_passes)):
     times[i] = time.time()
-    if verbose:
-      print '----- pass %d -----' % (i + 1)
+    print '----- pass %d -----' % (i + 1)
     _passes[i](ctx)
   times.append(time.time())
 
-  if verbose:
-    for i in range(start_pass, len(_passes)+1):
-      print 'pass %d: %d seconds' % (i, int(times[i] - times[i-1]))
-    print ' total:', int(times[len(_passes)] - times[start_pass-1]), 'seconds'
+  for i in range(start_pass, len(_passes)+1):
+    print 'pass %d: %d seconds' % (i, int(times[i] - times[i-1]))
+  print ' total:', int(times[len(_passes)] - times[start_pass-1]), 'seconds'
 
 
 def usage(ctx):
