@@ -15,6 +15,7 @@ libsvn_fs_la_SOURCES =				\
                         fs.h                    \
 			id.c			\
                         id.h                    \
+                        node-rev.c              \
                         node-rev.h              \
                         node.h                  \
 			nodes-table.c		\
@@ -40,7 +41,6 @@ libsvn_fs_la_SOURCES =				\
 #		       delta.c			\
 #		       file.c			\
 #                      file.h                   \
-#		       rep.c			\
 #		       revision.c               \
 #                      revision.h
 
