@@ -121,17 +121,6 @@ Greg:
 	- what is missing?
 	- what is needed for SVN vs DAV/DeltaV interop?
 
-      - liveprop hooks:
-	core: getcontentlength, creationdate, getetag,
-	      getlastmodified, resourcetype
-	deltav: label-name-set
-
-      - vsn hooks: ???  REPORT and MKACTIVITY first
-        REPORT: need the SVN:status-report
-	need: MERGE (activity)
-	validate proper support for VERSION-CONTROL. this would be the 
-	  missing piece for DeltaV "Core" support.
-
       - vsn hooks: any others for DAV/DeltaV interop?
 
       - version resource URL prep should look up the node
