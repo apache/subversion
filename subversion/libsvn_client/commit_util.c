@@ -244,8 +244,13 @@ harvest_committables (apr_hash_t *committables,
           cf_rev = entry->revision;
           if (copy_mode)
             cf_url = entry->url;
-          else
+          else if (copyfrom_url)
             cf_url = copyfrom_url;
+          else
+            return svn_error_createf 
+              (SVN_ERR_BAD_URL, 0, NULL,
+               "Commit item '%s' has copy flag but no copyfrom url\n"
+               "See issue #830", path);
         }
     }
 
@@ -275,7 +280,10 @@ harvest_committables (apr_hash_t *committables,
     {
       /* Check for local mods: text+props for files, props alone for dirs. */
       if (entry->kind == svn_node_file)
-        SVN_ERR (svn_wc_text_modified_p (&text_mod, path, adm_access, subpool));
+        {
+          SVN_ERR (svn_wc_text_modified_p (&text_mod, path, 
+                                           adm_access, subpool));
+        }
       SVN_ERR (svn_wc_props_modified_p (&prop_mod, path, adm_access, subpool));
     }
 
@@ -621,10 +629,28 @@ svn_client__condense_commit_items (const char **base_url,
 #ifdef SVN_CLIENT_COMMIT_DEBUG
   /* ### TEMPORARY CODE ### */
   printf ("COMMITTABLES: (base url=%s)\n", *base_url);
+  printf ("   FLAGS     REV  REL-URL (COPY-URL)\n");
   for (i = 0; i < ci->nelts; i++)
     {
-      url = (((svn_client_commit_item_t **) ci->elts)[i])->url;
-      printf ("   %s\n", url ? url : "");
+      svn_client_commit_item_t *this_item
+        = ((svn_client_commit_item_t **) ci->elts)[i];
+      char flags[6];
+      flags[0] = (this_item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+                   ? 'a' : '-';
+      flags[1] = (this_item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+                   ? 'd' : '-';
+      flags[2] = (this_item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
+                   ? 't' : '-';
+      flags[3] = (this_item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
+                   ? 'p' : '-';
+      flags[4] = (this_item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+                   ? 'c' : '-';
+      flags[5] = '\0';
+      printf ("   %s  %6" SVN_REVNUM_T_FMT "  %s (%s)\n", 
+              flags,
+              this_item->revision,
+              this_item->url ? this_item->url : "",
+              this_item->copyfrom_url ? this_item->copyfrom_url : "none");
     }  
 #endif /* SVN_CLIENT_COMMIT_DEBUG */
 
@@ -763,6 +789,19 @@ do_item_commit (const char *url,
                            ? svn_pool_create (apr_hash_pool_get (file_mods))
                            : NULL);
   const char *url_decoded = svn_path_uri_decode (url, pool);
+
+  /* Validation. */
+  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+    {
+      if (! copyfrom_url)
+        return svn_error_createf 
+          (SVN_ERR_BAD_URL, 0, NULL,
+           "Commit item '%s' has copy flag but no copyfrom url", url);
+      if (! SVN_IS_VALID_REVNUM (item->revision))
+        return svn_error_createf 
+          (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL,
+           "Commit item '%s' has copy flag but an invalid revision", url);
+    }
 
   /* Get the parent dir_baton. */
   parent_baton = ((void **) db_stack->elts)[*stack_ptr - 1];
