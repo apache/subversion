@@ -3,7 +3,7 @@
 
 ## Recurse into these subdirectories:
 
-SUBDIRS = subversion doc
+SUBDIRS = apr subversion doc
 
 
 ## Use Karl's script to create a Changelog from CVS.
