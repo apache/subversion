@@ -519,12 +519,16 @@ change_file_prop (void *file_baton,
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->parent->edit_baton;
   svn_string_t propvalue;
-  propvalue.data = value->data;
-  propvalue.len = value->len;
+
+  if (value)
+    {
+      propvalue.data = value->data;
+      propvalue.len = value->len;
+    }
 
   /* This routine is a mindless wrapper. */
-  SVN_ERR (svn_fs_change_node_prop (eb->txn_root, fb->path->data,
-                                    name->data, &propvalue, fb->subpool));
+  SVN_ERR (svn_fs_change_node_prop (eb->txn_root, fb->path->data, name->data, 
+                                    value ? &propvalue : NULL, fb->subpool));
 
   return SVN_NO_ERROR;
 }
