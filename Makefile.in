@@ -200,7 +200,7 @@ local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
 
 ### HACK!! Find a better way to do this
 revision-install:
-	subversion/svnversion/svnversion $(top_srcdir) /repos/svn/trunk > $(DESTDIR)/$(includedir)/subversion-1/svn-revision.txt
+	subversion/svnversion/svnversion $(top_srcdir) /repos/svn/trunk > $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt
 
 install-static: @INSTALL_STATIC_RULES@
 
