@@ -51,6 +51,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
 #if defined(SVN_ERROR_BUILD_ARRAY)
 
 #define SVN_ERROR_START \
@@ -91,8 +93,6 @@ extern "C" {
         the offset, again so that the values of other errors are not
         perturbed.
 */
-
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 #define SVN_ERR_CATEGORY_SIZE 5000
 
@@ -141,6 +141,8 @@ extern "C" {
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
+/** Collection of Subversion error code values, located within the
+ * APR user error space. */
 SVN_ERROR_START
 
   /* validation ("BAD_FOO") errors */

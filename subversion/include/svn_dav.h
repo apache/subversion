@@ -49,12 +49,14 @@ extern "C" {
  */
 #define SVN_DAV_OPTIONS_HEADER "X-SVN-Options"
 
-/** Specific options that can appear in the options-header: */
+/** @{
+ * Specific options that can appear in the options-header: */
 #define SVN_DAV_OPTION_NO_MERGE_RESPONSE "no-merge-response"
 #define SVN_DAV_OPTION_LOCK_BREAK        "lock-break"
 #define SVN_DAV_OPTION_LOCK_STEAL        "lock-steal"
 #define SVN_DAV_OPTION_RELEASE_LOCKS     "release-locks"
 #define SVN_DAV_OPTION_KEEP_LOCKS        "keep-locks"
+/** @} */
 
 /** This header is used when an svn client wants to tell mod_dav_svn
  * exactly what revision of a resource it thinks it's operating on.
@@ -68,7 +70,8 @@ extern "C" {
     and use it to fill in svn_lock_t->creation_date.   */
 #define SVN_DAV_CREATIONDATE_HEADER "X-SVN-Creation-Date"
 
-/** These headers are for client and server to verify that the base
+/** @{
+ * These headers are for client and server to verify that the base
  * and the result of a change transmission are the same on both
  * sides, regardless of what transformations (svndiff deltification,
  * gzipping, etc) the data may have gone through in between.  
@@ -87,6 +90,7 @@ extern "C" {
  */
 #define SVN_DAV_BASE_FULLTEXT_MD5_HEADER "X-SVN-Base-Fulltext-MD5"
 #define SVN_DAV_RESULT_FULLTEXT_MD5_HEADER "X-SVN-Result-Fulltext-MD5"
+/** @} */
 
 /* ### should add strings for the various XML elements in the reports
    ### and things. also the custom prop names. etc.
