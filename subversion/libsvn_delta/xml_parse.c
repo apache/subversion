@@ -1053,7 +1053,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
           return;
         }
 
-      new_frame->ancestor_path = my_digger->base_path;
+      new_frame->ancestor_path = svn_stringbuf_create (my_digger->base_path,
+                                                       my_digger->pool);
       new_frame->ancestor_revision = my_digger->base_revision;
     }
 
@@ -1413,7 +1414,7 @@ svn_error_t *
 svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
                            const svn_delta_edit_fns_t *editor,
                            void *edit_baton,
-                           svn_stringbuf_t *base_path, 
+                           const char *base_path, 
                            svn_revnum_t base_revision,
                            apr_pool_t *pool)
 {
@@ -1432,7 +1433,7 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   digger->pool             = main_subpool;
   digger->stack            = NULL;
   digger->editor           = editor;
-  digger->base_path        = base_path;
+  digger->base_path        = apr_pstrdup (main_subpool, base_path);
   digger->base_revision    = base_revision;
   digger->edit_baton       = edit_baton;
   digger->rootdir_baton    = NULL;
@@ -1507,7 +1508,7 @@ svn_error_t *
 svn_delta_xml_auto_parse (svn_stream_t *source,
                           const svn_delta_edit_fns_t *editor,
                           void *edit_baton,
-                          svn_stringbuf_t *base_path,
+                          const char *base_path,
                           svn_revnum_t base_revision,
                           apr_pool_t *pool)
 {

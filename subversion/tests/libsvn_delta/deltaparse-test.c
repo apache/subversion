@@ -32,6 +32,8 @@
 /* libsvn_test.la requires this symbol */ 
 svn_error_t *(*test_funcs[])(const char **msg, apr_pool_t *p) = { 0, 0 };
 
+#define BASE_PATH "/root"
+
 
 int
 main (int argc, char *argv[])
@@ -43,8 +45,6 @@ main (int argc, char *argv[])
   apr_status_t status;
   void *edit_baton;
   svn_stream_t *out_stream;
-
-  svn_stringbuf_t *base_path;
 
 
   /* Process args */
@@ -70,9 +70,6 @@ main (int argc, char *argv[])
       exit (1);
     }
 
-  /* Set context variable for evaluating a tree-delta */
-  base_path = svn_stringbuf_create ("/root", globalpool);
-
   /* Set up a stream to print to stdout. */
   out_stream = svn_stream_from_stdio (stdout, globalpool);
 
@@ -84,14 +81,14 @@ main (int argc, char *argv[])
                              out_stream, 
                              3, 
                              TRUE,
-                             base_path, 
+                             svn_stringbuf_create (BASE_PATH, globalpool),
                              globalpool);
   
   /* Fire up the XML parser */
   err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (file, globalpool),
                                   editor,
                                   edit_baton,
-                                  base_path,
+                                  BASE_PATH,
                                   37,    /* random base revision */
                                   globalpool);
 

@@ -203,7 +203,7 @@ typedef struct svn_xml__digger_t
   const svn_delta_edit_fns_t *editor;
 
   /* General "context variables" used when evaluating a tree-delta */
-  svn_stringbuf_t *base_path;
+  const char *base_path;
   svn_revnum_t base_revision;
 
   /* Userdata structures that we need to keep track of while we parse,

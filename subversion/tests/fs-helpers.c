@@ -169,11 +169,14 @@ svn_test__set_file_contents (svn_fs_root_t *root,
 {
   svn_txdelta_window_handler_t consumer_func;
   void *consumer_baton;
-  svn_stringbuf_t *wstring = svn_stringbuf_create (contents, pool);
+  svn_string_t string;
 
   SVN_ERR (svn_fs_apply_textdelta (&consumer_func, &consumer_baton,
                                    root, path, pool));
-  SVN_ERR (svn_txdelta_send_string (wstring, consumer_func,
+
+  string.data = contents;
+  string.len = strlen(contents);
+  SVN_ERR (svn_txdelta_send_string (&string, consumer_func,
                                     consumer_baton, pool));
 
   return SVN_NO_ERROR;

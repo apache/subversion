@@ -4730,7 +4730,8 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
   svn_fs_root_t *txn_root, *rev_root;
   svn_revnum_t youngest_rev = 0;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_stringbuf_t contents;
+  svn_string_t contents;
+  char *content_buffer;
   unsigned char digest[MD5_DIGESTSIZE];
   unsigned char digest_list[100][MD5_DIGESTSIZE];
   svn_txdelta_window_handler_t wh_func;
@@ -4741,10 +4742,10 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-large-file-integrity", pool));
 
   /* Set up our file contents string buffer. */
-  contents.data = apr_palloc (pool, filesize);
+  content_buffer = apr_palloc (pool, filesize);
+
+  contents.data = content_buffer;
   contents.len = filesize;
-  contents.blocksize = filesize;
-  contents.pool = pool;
 
   /* THE PLAN:
 
@@ -4764,7 +4765,7 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_fs_make_file (txn_root, "bigfile", subpool));
-  random_data_to_buffer (contents.data, filesize, TRUE);
+  random_data_to_buffer (content_buffer, filesize, TRUE);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4778,7 +4779,7 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
   svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-  random_data_to_buffer (contents.data, 20, TRUE);
+  random_data_to_buffer (content_buffer, 20, TRUE);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4791,7 +4792,7 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
   svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-  random_data_to_buffer (contents.data + (filesize - 20), 20, TRUE);
+  random_data_to_buffer (content_buffer + (filesize - 20), 20, TRUE);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4805,8 +4806,8 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
   svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-  random_data_to_buffer (contents.data, 20, TRUE);
-  random_data_to_buffer (contents.data + (filesize - 20), 20, TRUE);
+  random_data_to_buffer (content_buffer, 20, TRUE);
+  random_data_to_buffer (content_buffer + (filesize - 20), 20, TRUE);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4823,7 +4824,7 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
       svn_pool_clear (subpool);
       SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-      random_data_to_buffer (contents.data, filesize, FALSE);
+      random_data_to_buffer (content_buffer, filesize, FALSE);
       apr_md5 (digest, contents.data, contents.len);
       SVN_ERR (svn_fs_apply_textdelta 
                (&wh_func, &wh_baton, txn_root, "bigfile", subpool));

@@ -63,7 +63,7 @@ apply_delta (svn_stream_t *delta,
   return svn_delta_xml_auto_parse (delta,
                                    editor,
                                    edit_baton,
-                                   svn_stringbuf_create ("", pool),
+                                   "",
                                    revision,
                                    pool);
 }
