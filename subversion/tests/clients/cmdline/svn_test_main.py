@@ -40,6 +40,11 @@
 import sys     # for argv[]
 import os      # for popen2()
 import shutil  # for rmtree()
+import re      # to parse version string
+import string  # for atof()
+
+# The minimum required version of Python needed to run these tests.
+python_required_version = 2.0
 
 # Global:  set this to the location of the svn binary
 svn_binary = '../../../client/svn'
@@ -106,7 +111,7 @@ def run_svnadmin(*varargs):
                                        # to guarantee the process is done.
   if pipe.close():
     print "ERROR running svnadmin:", output
-    exit(1)
+    sys.exit(1)
   
   
   
@@ -193,6 +198,18 @@ def client_test(test_list):
         got_error = run_test(n, test_list)
     return got_error
 
+###########################################################
+#
+#  Sanity check for anyone importing this module:
+#  Make sure they're using a recent-enough version of python.
+
+match = re.search('^(\d+\.\d+)', sys.version)
+this_version = string.atof(match.group(1))
+if (this_version < python_required_version):  
+  print "Error: this test suite requires python", python_required_version
+  print "       but you have python", this_version
+  sys.exit(1)
+  
 
 
 ### End of file.
