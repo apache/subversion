@@ -20,17 +20,6 @@ Candidate changes:
       -0: ghudson (what's the point of putting code cleanups into 1.1?)
       +1: cmpilato
 
-  * r10645, r10764
-    Add new abbreviation 'Revision' for 'LastChangedRevision'.
-    Justification:
-      Tiny patch. Drastically eases conversion from CVS for repositories
-      using $Revision$ and wanting to continue to use it for subversion -
-      a simple propset, rather than text changes to every affected file.
-      Patch has been filed in the issue for more than a year!
-    Votes:
-      +1: maxb, bliss, ghudson
-      +1 (r10645 only, so far): cmpilato
-
   * r10674
     Make ./configure behave nicer in the presence of old Apache.
     Justification:
