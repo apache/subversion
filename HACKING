@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-08-10 16:27:53 $
+              Last updated:  $Date: 2001-08-10 16:32:51 $
 
 
 TABLE OF CONTENTS
@@ -412,6 +412,11 @@ In addition to the GNU standards, Subversion uses these conventions:
      has only one author, we want to make sure others feel free to
      make changes.  People might be unnecessarily hesitant if someone
      appears to have staked ownership on the file.
+
+   * There are many other unspoken conventions maintained througout
+     the code, that are only noticed when someone unintentionally
+     fails to follow them.  Just try to have a sensitive eye for the
+     way things are done, and when in doubt, ask.
 
 
 
