@@ -91,6 +91,10 @@ SOURCE=.\base64.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\getdate.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\hashdump.c
 # End Source File
 # Begin Source File
@@ -120,6 +124,10 @@ SOURCE=.\svn_string.c
 # Begin Source File
 
 SOURCE=.\target.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\time.c
 # End Source File
 # Begin Source File
 
