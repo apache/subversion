@@ -89,5 +89,21 @@ Candidate changes:
 
   * Issue #1733, attachment 305
     Backport r8551 to 1.0.X to cause blame to bail on binary files.
-    Justification: Nicer behavior to the end user. 
+    Justification:  Nicer behavior to the end user. 
     Votes:
+
+  * r8838
+    Finish issue #1750 -- svn export [url] doesn't export any svn:externals
+    Votes:
+      +1: cmpilato
+
+  * r8839
+    Finish Issue #1756 -- import doesn't handle svn:eol-style or svn:keywords
+    Justification:  Allows malformed data into the repository.
+    Votes:
+      +1: cmpilato
+
+  * r8842
+    Finish Issue #1741 - svn status -v shows unwanted status of externals.
+    Votes:
+      +1: cmpilato
