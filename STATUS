@@ -78,13 +78,6 @@ section for approved changes.)
            Message-Id:  <200401082033.i08KXMv45357@newton.ch.collab.net>
 
 
-   * r8235
-     Fix the erroneous username prompt if store-auth-creds=no
-     Justification: Fix obvious silly bug, low risk.
-     Votes:
-      +1: bliss, kfogel, jszakmeister
-
-
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
