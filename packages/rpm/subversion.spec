@@ -1,7 +1,7 @@
 %define neon_version 0.17.2
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
-Version: M5
+Version: 0.6.0
 Release: @RELEASE@
 Copyright: BSD
 Group: Utilities/System
@@ -47,7 +47,7 @@ package.
 %package devel
 Group: Utilities/System
 Summary: Development package for Subversion developers.
-Requires: ${name} = %{version}-${release}
+Requires: %{name} = %{version}-${release}
 %description devel
 The subversion-devel package includes the static libraries and include files
 for developers interacing with the subversion package.
