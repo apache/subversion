@@ -70,8 +70,8 @@ COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CF
 # special SWIG compilation
 COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c $<
 
-LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(LT_LDFLAGS) $(COMPILE) $(LDFLAGS) -rpath $(libdir)
-LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(LT_LDFLAGS) $(COMPILE) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR)
+LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(LT_LDFLAGS) $(CC) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
+LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(LT_LDFLAGS) $(CC) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR)
 
 INSTALL = @INSTALL@
 INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
