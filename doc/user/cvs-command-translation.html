@@ -1,0 +1,224 @@
+<html>
+<head>
+<title>CVS to SVN Command Translation</title>
+</head>
+
+<body>
+
+<center>
+ <h1>CVS to SVN Command Translation</h1>
+</center>
+
+
+<h2>Purpose</h2>
+
+<p>This document provides an alternate method of learning Subversion.
+Many users dislike learning new technology via a theoretical "top
+down" approach, as provided by the <a
+href="http://svnbook.red-bean.com">Subversion Book</a>.  Instead, this
+document presents Subversion from the "bottom up": it shows a CVS
+command or task, and then shows the equivalent task in Subversion
+(along with a relevant book link.) It's essentially a re-indexing of
+topics covered by the book, keyed on CVS concepts.</p>
+
+
+<h2>Table of Contents</h2>
+
+<ul>
+
+<li>Setup</li>
+
+   <ul>
+     <li>Repository creation</li>
+     <li>Importing data</li>
+     <li>Installing a server</li>
+     <li>Authenticating</li>
+     <li>Browsing the repository</li>
+     <li>Checking out a working copy</li>
+   </ul>
+
+<li>Basic Work Cycle</li>
+   <ul>
+     <li>Seeing changed files</li>
+     <li>Scheduling additions or deletions</li>
+     <li>Copying and moving</li>
+     <li>Undoing local changes</li>
+     <li>Updating and committing</li>
+     <li>Resolving conflicts</li>
+     <li>Adding a binary file</li>
+     <li>Using native line-endings</li>
+   </ul>
+
+<li>Examining history</li>
+   <ul>
+     <li>Seeing history of an item</li>
+     <li>Comparing two versions of an item</li>
+   </ul>
+
+<li>Branching/Tagging/Merging</li>
+
+   <ul>
+     <li>Creating a branch</li>
+     <li>Moving a working copy to a branch</li>
+     <li>Finding the beginning of a branch</li>
+     <li>Porting a single change</li>
+     <li>Merging a whole branch</li>
+     <li>Reverting a committed change</li>
+     <li>Resurrecting deleted items</li>
+     <li>Creating a tag</li>
+     <li>Tweaking a tag</li>
+     <li>Seeing all tags</li>
+     <li>Comparing two tags</li>
+     <li>Seeing logs between two tags</li>
+   </ul>
+
+<li>Other tasks</li>
+   
+   <ul>
+     <li>Using modules</li>
+     <li>Line endings and keywords</li>
+   </ul>
+
+</ul>
+
+
+<hr>
+
+<h3>Finding the beginning of a branch</h3>
+
+<p>If you're attempting to merge an entire branch into another, you
+need to compare the "root" and "tip" of the source branch, and then
+merge those differences into a working copy of the target branch.
+Obviously the "tip" of the branch can be represented by using the
+<tt>HEAD</tt> keyword.  But how do you find the "birth" revision of
+the source branch?</p>
+
+<p>The easiest solution is to run</p>
+
+<pre>
+   $ svn log -v --stop-on-copy source-branch-URL
+   [...]
+</pre>
+
+<p>This command will display every change ever made to the branch, but
+<tt>--stop-on-copy</tt> option will cause the output to stop as soon
+as detects a copy operation in the branch's history.  By definition,
+then, the very last log entry printed will show the copy being made.
+It will look something like:</p>
+
+<pre>
+r9189 | joe | 2004-03-22 10:10:47 -0600 (Mon, 22 Mar 2004) | 1 line
+Changed paths:
+   A /branches/mybranch (from /trunk:9188)
+</pre>
+
+<p>In this case, you would then know to compare revisions 9189 and
+HEAD of the branch in order to perform the merge:</p>
+
+<pre>
+   $ svn merge -r9189:HEAD source-branch-URL target-branch-WC
+   [...]
+</pre>
+
+
+
+<h3>Seeing all of a project's tags</h3>
+
+<p>Assuming you've been following a consistent policy for creating
+tag-copies, then this is just a matter of running <tt>svn ls</tt> on a
+directory containing your tags.  Typically you would run it on the
+<tt>/tags</tt> directory in your repository, although you're certainly
+free to organize this directory in a more complex way, or invent a
+different convention altogether.</p>
+
+<p>As an example, you can see all of Subversion's tags by running:</p>
+
+<pre>
+   $ svn ls --verbose http://svn.collab.net/repos/svn/tags
+     [...]
+       7739 kfogel              Nov 13 22:05 0.33.0/
+       7796 josander            Nov 18 12:15 0.33.1/
+       7932 josander            Dec 03 17:54 0.34.0/
+       8045 josander            Dec 19 15:13 0.35.0/
+       8063 josander            Dec 20 11:20 0.35.1/
+       8282 josander            Jan 13 14:15 0.36.0/
+       8512 josander            Jan 24 17:31 0.37.0/
+       8810 kfogel              Feb 23 03:44 1.0.0/
+     [...]
+</pre>
+
+
+<h3>Seeing the differences between two tags</h3>
+
+<p>Just use <tt>svn diff</tt> in its fully expanded form, which
+compares any two URLs:</p>
+
+<pre>
+   $ svn diff tagURL1 tagURL2
+   [...]
+</pre>
+
+
+
+
+<h3>Seeing logs between two tags</h3>
+
+<p>This is a somewhat common practice in CVS, and is doable in Subversion,
+but requires a little bit more work.  Assuming that you've made two
+tags of <tt>/trunk</tt> at different points in time, the ultimate goal
+here is to run </p>
+
+<pre>
+   $ svn log -rX:Y trunkURL
+</pre>
+
+<p>...where X and Y are the revisions from which the two tags were
+copied.  To discover X and Y, you can use the same technique
+described in the previous section ("finding the beginning of a
+branch".)  Just use the <tt>--stop-on-copy</tt> option when logging the
+history of each tag.  No commits happen on tag directories, so the
+following commands should each produce exactly <em>one</em> log
+entry:</p>
+
+<pre>
+   $ svn log -v --stop-on-copy tag1-URL
+
+   r3520 | joe | 2004-03-12 15:28:43 -0600 (Fri, 12 Mar 2004) | 1 line
+   [...]
+
+   $ svn log -v --stop-on-copy tag2-URL
+   a
+   r4177 | joe | 2004-03-12 15:28:43 -0600 (Fri, 12 Mar 2004) | 1 line
+   [...]
+</pre>
+
+<p>So in this example, the values of X and Y are 3520 and 4177.  Now
+you can view all <tt>/trunk</tt> changes between those two points in time:</p>
+
+<pre>
+   $ svn log -r3520:4177 trunkURL
+   [...]
+</pre>
+
+
+<h3>Fixing an incorrect tag</h3>
+
+<p>If your tag is a bit off, you can "adjust" it just as people often
+do in CVS.  Simply check out a working copy of the tag directory, make
+any changes you wish, and commit.</p>
+
+<p>Remember, because branches and tags are directories, they can also
+be deleted when they're no longer of any use to your project.  They'll
+continue to exist in the repository's history.</p>
+
+
+
+
+
+<h3>Creating/using "modules"</h3>
+
+<p>Compare CVS Modules vs. svn:externals.</p>
+
+
+</body>
+</html>
