@@ -105,14 +105,14 @@ section for approved changes.)
          contains "Unknown" instead of the platform abbreviation.
       Notes:
       Votes:
-       +1: david, ghudson
+       +1: david, ghudson, jszakmeister
 
 
     * r8361
       Fix wc-to-wc copies with non-ASCII characters in a non-UTF-8 locale.
       Justification: obvious run-time bug, trivial fix
       Votes:
-       +1: philip, ghudson
+       +1: philip, ghudson, jszakmeister
 
 
     * r8368
