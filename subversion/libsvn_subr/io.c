@@ -698,6 +698,74 @@ apr_dir_remove_recursively (const char *path, apr_pool_t *pool)
 
 
 
+svn_error_t *
+svn_io_get_dirents (apr_hash_t **dirents,
+                    svn_stringbuf_t *path,
+                    apr_pool_t *pool)
+{
+  apr_status_t status; 
+  apr_dir_t *this_dir;
+  apr_finfo_t this_entry;
+  apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
+
+  /* These exist so we can use their addresses as hash values! */
+  static const enum svn_node_kind static_svn_node_file = svn_node_file;
+  static const enum svn_node_kind static_svn_node_dir = svn_node_dir;
+  static const enum svn_node_kind static_svn_node_unknown = svn_node_unknown;
+
+  *dirents = apr_hash_make (pool);
+  
+  status = apr_dir_open (&this_dir, path->data, pool);
+  if (status) 
+    return
+      svn_error_createf (status, 0, NULL, pool,
+                         "svn_io_get_dirents:  failed to open dir '%s'",
+                         path->data);
+
+  for (status = apr_dir_read (&this_entry, flags, this_dir);
+       APR_STATUS_IS_SUCCESS (status);
+       status = apr_dir_read (&this_entry, flags, this_dir))
+    {
+      if ((strcmp (this_entry.name, "..") == 0)
+          || (strcmp (this_entry.name, ".") == 0))
+        continue;
+      else
+        {
+          const char *name = apr_pstrdup (pool, this_entry.name);
+          
+          if (this_entry.filetype == APR_REG)
+            apr_hash_set (*dirents, name, APR_HASH_KEY_STRING,
+                          &static_svn_node_file);
+          else if (this_entry.filetype == APR_DIR)
+            apr_hash_set (*dirents, name, APR_HASH_KEY_STRING,
+                          &static_svn_node_dir);
+          else
+            /* ### symlinks, etc. will fall into this category for now.
+               someday subversion will recognize them. :)  */
+            apr_hash_set (*dirents, name, APR_HASH_KEY_STRING,
+                          &static_svn_node_unknown);
+        }
+    }
+
+  if (! (APR_STATUS_IS_ENOENT (status)))
+    return 
+      svn_error_createf (status, 0, NULL, pool,
+                         "svn_io_get_dirents:  error while reading dir '%s'",
+                         path->data);
+
+  status = apr_dir_close (this_dir);
+  if (status) 
+    return
+      svn_error_createf (status, 0, NULL, pool,
+                         "svn_io_get_dirents:  failed to close dir '%s'",
+                         path->data);
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+
 
 
 

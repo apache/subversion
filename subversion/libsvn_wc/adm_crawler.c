@@ -1117,16 +1117,13 @@ report_local_mods (svn_stringbuf_t *path,
 
 
 /* The recursive crawler that describes a mixed-revision working
-   copy.  Used for updates.
+   copy to an RA layer.  Used to initiate updates.
 
    This is a depth-first recursive walk of DIR_PATH under WC_PATH.
    Look at each entry and check if its revision is different than
-   DIR_REV.  If so, report this fact to REPORTER.
-
-   Note: we're conspicuously creating a subpool in POOL and freeing it
-   at each level of subdir recursion; this is a safety measure that
-   protects us when reporting info on outrageously large or deep
-   trees. */
+   DIR_REV.  If so, report this fact to REPORTER.  If an entry is
+   missing from disk, report its absence to REPORTER.  If an
+   unversioned object is discovered, print `?' next to it.  */
 static svn_error_t *
 report_revisions (svn_stringbuf_t *wc_path,
                   svn_stringbuf_t *dir_path,
@@ -1135,16 +1132,63 @@ report_revisions (svn_stringbuf_t *wc_path,
                   void *report_baton,
                   apr_pool_t *pool)
 {
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
+  apr_hash_t *entries, *dirents, *xdirents;
+  apr_hash_index_t *hi, *hi2;
   apr_pool_t *subpool = svn_pool_create (pool);
 
+  /* Construct the actual 'fullpath' = wc_path + dir_path */
   svn_stringbuf_t *full_path = svn_string_dup (wc_path, subpool);
   svn_path_add_component (full_path, dir_path, svn_path_local_style);
-  
-  SVN_ERR (svn_wc_entries_read (&entries, full_path, subpool));
 
-  /* Loop over this directory's entries: */
+  /* Get both the SVN Entries and the actual on-disk entries. */
+  SVN_ERR (svn_wc_entries_read (&entries, full_path, subpool));
+  SVN_ERR (svn_io_get_dirents (&xdirents, full_path, subpool));
+
+  /* Phase 1:  Print out every unrecognized (unversioned) object. */
+
+  /* step 1.  shrink xdirents. */
+  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t klen;
+      void *val;
+      apr_hash_this (hi, &key, &klen, &val);
+
+      /* if we find a match in dirents, remove it from dirents. */
+      if (apr_hash_get (xdirents, key, klen))
+        apr_hash_set (xdirents, key, klen, NULL);          
+    }
+  
+  /* step 2. Now print all the 'leftovers' in dirents */
+  for (hi = apr_hash_first (xdirents); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t klen;
+      void *val;
+      const char *keystring;
+      svn_stringbuf_t *current_entry_name;
+      svn_stringbuf_t *printable_path;
+
+      apr_hash_this (hi, &key, &klen, &val);
+      keystring = (const char *) key;
+      current_entry_name = svn_string_create (keystring, subpool);
+      printable_path = svn_string_dup (full_path, subpool);
+      svn_path_add_component (printable_path, current_entry_name,
+                              svn_path_local_style);
+
+      /* Ignore the administrative subdir, of course. */
+      if (strcmp (keystring, SVN_WC_ADM_DIR_NAME))
+        /* ### REMOVE THIS:  We should write to a feedback stream! */
+        printf("?    %s\n", printable_path->data);
+    }
+
+
+  /* Phase 2:  Do the real reporting and recursing. */
+
+  /* Get the dirents again. */
+  SVN_ERR (svn_io_get_dirents (&dirents, full_path, subpool));  
+
+  /* Looping over current directory's SVN entries: */
   for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
@@ -1154,15 +1198,16 @@ report_revisions (svn_stringbuf_t *wc_path,
       svn_stringbuf_t *current_entry_name;
       svn_wc_entry_t *current_entry; 
       svn_stringbuf_t *full_entry_path;
+      enum svn_node_kind *dirent_kind;
 
       /* Get the next entry */
       apr_hash_this (hi, &key, &klen, &val);
       keystring = (const char *) key;
       current_entry = (svn_wc_entry_t *) val;
 
-      /* Compute the name of the entry */
+      /* Compute the name of the entry.  Skip THIS_DIR altogether. */
       if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
-        current_entry_name = NULL;
+        continue;
       else
         current_entry_name = svn_string_create (keystring, subpool);
 
@@ -1174,38 +1219,68 @@ report_revisions (svn_stringbuf_t *wc_path,
 
       /* The Big Tests: */
       
-      /* If it's a file with a different rev than its parent, report. */
-      if ((current_entry->kind == svn_node_file) 
-          && (current_entry->revision != dir_rev))
-        SVN_ERR (reporter->set_path (report_baton,
-                                     full_entry_path,
-                                     current_entry->revision));
-      
-      /* If entry is a dir (and not `.')... */
-      if ((current_entry->kind == svn_node_dir) && current_entry_name)
+      /* If the entry isn't on disk, report it as missing. */
+      dirent_kind = (enum svn_node_kind *) apr_hash_get (dirents, key, klen);
+      if (! dirent_kind)
+        SVN_ERR (reporter->delete_path (report_baton, full_entry_path));
+
+      else /* The entry exists on disk. */
         {
-          /* First check to see if it has a different rev than its
-             parent.  It might need to be reported. */
-          svn_wc_entry_t *subdir_entry;
-          svn_stringbuf_t *megalong_path = svn_string_dup (wc_path, subpool);
-          svn_path_add_component (megalong_path, full_entry_path,
-                                  svn_path_local_style);
-          SVN_ERR (svn_wc_entry (&subdir_entry, megalong_path, subpool));
+          if (current_entry->kind == svn_node_file) 
+            {
+              if (*dirent_kind != svn_node_file)
+                /* If the dirent changed kind, report it as missing.
+                   Later on, the update editor will return an
+                   'obstructed update' error.  :)  */
+                SVN_ERR (reporter->delete_path (report_baton,
+                                                full_entry_path));       
 
-          if (subdir_entry->revision != dir_rev)
-            SVN_ERR (reporter->set_path (report_baton,
-                                         full_entry_path,
-                                         subdir_entry->revision));          
-          /* Recurse. */
-          SVN_ERR (report_revisions (wc_path,
-                                     full_entry_path,
-                                     subdir_entry->revision,
-                                     reporter, report_baton,
-                                     subpool));
-        }
-    }
+              /* Otherwise, possibly report a differing revision. */
+              else if (current_entry->revision !=  dir_rev)                
+                SVN_ERR (reporter->set_path (report_baton,
+                                             full_entry_path,
+                                             current_entry->revision));
+            }
 
-  /* We're done examining this dir's entries, so free them. */
+          else if (current_entry->kind == svn_node_dir)
+            {
+              if (*dirent_kind != svn_node_dir)
+                /* No excuses here.  If the user changed a
+                   revision-controlled directory into something else,
+                   the working copy is FUBAR.  It can't receive
+                   updates within this dir anymore.  Throw a real
+                   error. */
+                return svn_error_createf
+                  (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, subpool,
+                   "The entry '%s' is no longer a directory,\n which prevents proper updates. \nPlease remove this entry and try updating again.",
+                   full_entry_path->data);
+              
+              /* Otherwise, possibly report a differing revision, and
+                 recurse. */
+              {
+                svn_wc_entry_t *subdir_entry;
+                svn_stringbuf_t *megalong_path = 
+                  svn_string_dup (wc_path, subpool);
+                svn_path_add_component (megalong_path, full_entry_path,
+                                        svn_path_local_style);
+                SVN_ERR (svn_wc_entry (&subdir_entry, megalong_path, subpool));
+                
+                if (subdir_entry->revision != dir_rev)
+                  SVN_ERR (reporter->set_path (report_baton,
+                                               full_entry_path,
+                                               subdir_entry->revision));
+                /* Recurse. */
+                SVN_ERR (report_revisions (wc_path,
+                                           full_entry_path,
+                                           subdir_entry->revision,
+                                           reporter, report_baton,
+                                           subpool));
+              }
+            } /* end directory case */
+        } /* end 'entry exists on disk' */   
+    } /* end main entries loop */
+
+  /* We're done examining this dir's entries, so free everything. */
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;

@@ -833,13 +833,21 @@ add_or_replace_file (svn_stringbuf_t *name,
      kind. */
 
   /* Sanity checks. */
-  if (adding && entry)
-    return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL,
-                              parent_dir_baton->pool,
-                              "trying to add versioned file "
-                              "%s in directory %s",
-                              name->data, parent_dir_baton->path->data);
-  else if ((! adding) && (! entry))
+
+  /* ben sez:  why do we need this sanity check?  if we're trying to
+     add a file that's already in `entries', then it's probably
+     because the user deleted the working version and ran 'svn up'.
+     either way, it certainly doesn't hurt to re-add the file.  we
+     can't possibly get the entry showing up twice in `entries', since
+     it's a hash;  and we know that we won't lose any local mods. */
+  /*  if (adding && entry)
+      return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL,
+      parent_dir_baton->pool,
+      "trying to add versioned file "
+      "%s in directory %s",
+      name->data, parent_dir_baton->path->data); */
+
+  if ((! adding) && (! entry))
     return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL,
                               parent_dir_baton->pool,
                               "trying to replace non-versioned file "
