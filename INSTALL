@@ -117,6 +117,11 @@ I.    BUILD REQUIREMENTS
 
           $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr-iconv
 
+      Be sure to use a native Windows CVS client (as opposed to
+      Cygwin's version) so that the .dsp files get carriage-returns at
+      the ends of their lines.  Otherwise Visual Studio will complain
+      that it doesn't reccognize the .dsp files.
+
 
       2.  autoconf 2.50 or newer (Unix only)
 
