@@ -60,7 +60,6 @@ struct svn_diff__node_t
   svn_diff__node_t     *right;
 
   void                 *token;
-  svn_diff__position_t *position[3];
 };
 
 struct svn_diff__tree_t
@@ -72,7 +71,6 @@ struct svn_diff__tree_t
 struct svn_diff__position_t
 {
   svn_diff__position_t *next;
-  svn_diff__position_t *next_in_node;
   svn_diff__node_t     *node;
   apr_off_t             offset;
 };
@@ -105,7 +103,8 @@ svn_diff__tree_insert_token(svn_diff__tree_t *tree,
                             const svn_diff_fns_t *vtable,
                             void *token,
                             apr_off_t offset,
-                            int idx)
+                            int idx,
+                            apr_pool_t *pool)
 {
   svn_diff__node_t *node;
   svn_diff__node_t **node_ref;
@@ -128,13 +127,10 @@ svn_diff__tree_insert_token(svn_diff__tree_t *tree,
             vtable->token_discard(diff_baton, token);
 
           /* Create a new position */
-          position = apr_palloc(tree->pool, sizeof(svn_diff__position_t));
+          position = apr_palloc(pool, sizeof(svn_diff__position_t));
           position->next = NULL;
-          position->next_in_node = parent->position[idx];
           position->node = parent;
           position->offset = offset;
-
-          parent->position[idx] = position;
 
           return position;
         }
@@ -154,19 +150,14 @@ svn_diff__tree_insert_token(svn_diff__tree_t *tree,
   node->left = NULL;
   node->right = NULL;
   node->token = token;
-  node->position[0] = NULL;
-  node->position[1] = NULL;
 
   *node_ref = node;
 
   /* Create a new position */
-  position = apr_palloc(tree->pool, sizeof(svn_diff__position_t));
+  position = apr_palloc(pool, sizeof(svn_diff__position_t));
   position->next = NULL;
-  position->next_in_node = NULL;
   position->node = node;
   position->offset = offset;
-
-  node->position[idx] = position;
 
   return position;
 }
@@ -207,7 +198,8 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
                      void *diff_baton,
                      const svn_diff_fns_t *vtable,
                      svn_diff_datasource_e datasource,
-                     int position_idx)
+                     int position_idx,
+                     apr_pool_t *pool)
 {
   svn_diff__position_t *start_position;
   svn_diff__position_t *position = NULL;
@@ -231,7 +223,8 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
       position = svn_diff__tree_insert_token(tree,
                                              diff_baton, vtable,
                                              token, offset,
-                                             position_idx);
+                                             position_idx,
+                                             pool);
       *position_ref = position;
       position_ref = &position->next;
     }
@@ -331,8 +324,7 @@ svn_diff__snake(apr_off_t k,
 
 static
 svn_diff__lcs_t *
-svn_diff__lcs(svn_diff__tree_t *tree,
-              svn_diff__position_t *position_list1, /* pointer to tail (ring) */
+svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
               int idx1, int idx2,
               apr_pool_t *pool)
@@ -427,12 +419,14 @@ svn_diff(svn_diff_t **diff,
   SVN_ERR(svn_diff__get_tokens(&position_list[0],
                                tree,
                                diff_baton, vtable,
-                               svn_diff_datasource_original, 0));
+                               svn_diff_datasource_original, 0,
+                               subpool));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[1],
                                tree,
                                diff_baton, vtable,
-                               svn_diff_datasource_modified, 1));
+                               svn_diff_datasource_modified, 1,
+                               subpool));
 
   /* The cool part is that we don't need the tokens anymore.
    * Allow the app to clean them up if it wants to.
@@ -440,17 +434,15 @@ svn_diff(svn_diff_t **diff,
   if (vtable->token_discard_all != NULL)
     vtable->token_discard_all(diff_baton);
 
+  /* ### We don't need the nodes in the tree either anymore.  However,
+   * ### we are using the same pool for the tree and the positions,
+   * ### so destroying/clearing that pool is not an option.
+   */
+
   /* Get the lcs */
-  lcs = svn_diff__lcs(tree,
-                      position_list[0],
-                      position_list[1],
+  lcs = svn_diff__lcs(position_list[0], position_list[1],
                       0, 1,
                       subpool);
-
-  /* ### We don't need the nodes in the tree either anymore.  However,
-   * ### the tree pool is also used for the positions, so we can't get
-   * ### rid of them.  Split this later.
-   */
 
   /* Produce a diff */
   {
@@ -534,36 +526,37 @@ svn_diff3(svn_diff_t **diff,
   SVN_ERR(svn_diff__get_tokens(&position_list[0],
                                tree,
                                diff_baton, vtable,
-                               svn_diff_datasource_original, 0));
+                               svn_diff_datasource_original, 0,
+                               subpool));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[1],
                                tree,
                                diff_baton, vtable,
-                               svn_diff_datasource_modified, 1));
+                               svn_diff_datasource_modified, 1,
+                               subpool));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[2],
                                tree,
                                diff_baton, vtable,
-                               svn_diff_datasource_latest, 2));
+                               svn_diff_datasource_latest, 2,
+                               subpool));
 
   /* Get rid of the tokens, we don't need them to calc the diff */
   if (vtable->token_discard_all != NULL)
     vtable->token_discard_all(diff_baton);
 
+  /* ### We don't need the nodes in the tree either anymore.  However,
+   * ### we are using the same pool for the tree and the positions,
+   * ### so destroying/clearing that pool is not an option.
+   */
+
   /* Get the lcs for original-modified and original-latest */
-  lcs_om = svn_diff__lcs(tree,
-                         position_list[0], position_list[1],
+  lcs_om = svn_diff__lcs(position_list[0], position_list[1],
                          0, 1,
                          subpool);
-  lcs_ol = svn_diff__lcs(tree,
-                         position_list[0], position_list[2],
+  lcs_ol = svn_diff__lcs(position_list[0], position_list[2],
                          0, 2,
                          subpool);
-
-  /* ### We don't need the nodes in the tree either anymore.  However,
-   * ### the tree pool is also used for the positions, so we can't get
-   * ### rid of them.  Split this later.
-   */
 
   /* Produce a merged diff */
   {
@@ -764,8 +757,7 @@ svn_diff3(svn_diff_t **diff,
                         position[0]->next = start_position[0];
                         position[1]->next = start_position[1];
 
-                        *lcs_ref = svn_diff__lcs(tree,
-                                                 position[0], position[1],
+                        *lcs_ref = svn_diff__lcs(position[0], position[1],
                                                  1, 2,
                                                  subpool2);
                       }
