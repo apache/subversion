@@ -94,10 +94,10 @@ svn_ra_local__split_URL (svn_string_t **repos_path,
   SVN_ERR (svn_fs_close_fs (test_fs));
 
   /* What remains of URL after being hacked at in the previous step is
-     FS_PATH.  REPOS_PATH is what we've hacked off in the process.  We
+     REPOS_PATH.  FS_PATH is what we've hacked off in the process.  We
      need to make sure these are allocated in the -original- pool. */
-  *fs_path = svn_string_dup (url, pool);
-  *repos_path = svn_string_create (path + strlen (url->data), pool);
+  *repos_path = svn_string_dup (url, pool);
+  *fs_path = svn_string_create (path + url->len, pool);
 
   /* Destroy our temporary memory pool. */
   apr_pool_destroy (subpool);
