@@ -1146,7 +1146,7 @@ close_file (void *file_baton)
           err = svn_io_open_unique_file (&reject_file,
                                          &reject_filename,
                                          fb->path,
-                                         ".rej",
+                                         SVN_WC__TEXT_REJ_EXT,
                                          fb->pool);
           if (err)
             return err;

@@ -349,10 +349,11 @@ svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool)
 }
 
 
-svn_string_t *
-svn_wc__text_base_path (const svn_string_t *path,
-                        svn_boolean_t tmp,
-                        apr_pool_t *pool)
+static svn_string_t *
+thing_path (const svn_string_t *path,
+            const char *thing,
+            svn_boolean_t tmp,
+            apr_pool_t *pool)
 {
   svn_string_t *newpath, *basename;
   svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
@@ -361,12 +362,31 @@ svn_wc__text_base_path (const svn_string_t *path,
                         0,
                         pool,
                         tmp ? SVN_WC__ADM_TMP : "",
-                        SVN_WC__ADM_TEXT_BASE,
+                        thing,
                         basename->data,
                         NULL);
     
   return newpath;
 }
+
+
+svn_string_t *
+svn_wc__text_base_path (const svn_string_t *path,
+                        svn_boolean_t tmp,
+                        apr_pool_t *pool)
+{
+  return thing_path (path, SVN_WC__ADM_TEXT_BASE, tmp, pool);
+}
+
+
+svn_string_t *
+svn_wc__file_prop_path (const svn_string_t *filepath,
+                        svn_boolean_t tmp,
+                        apr_pool_t *pool)
+{
+  return thing_path (filepath, SVN_WC__ADM_PROP_BASE, tmp, pool);
+}
+
 
 
 

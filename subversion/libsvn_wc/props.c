@@ -411,11 +411,6 @@ svn_wc__get_existing_reject_file (svn_string_t **reject_file,
    close_file() and close_dir(): */
 
 
-/* Given PATH/NAME (represting a node of type KIND) and an array of
-   PROPCHANGES, merge the changes into the working copy.  Necessary
-   log entries will be appended to ENTRY_ACCUM.  
-
-   Note that `merging' here means dealing with conflicts too.  */
 svn_error_t *
 svn_wc__do_property_merge (svn_string_t *path,
                            const svn_string_t *name,
@@ -551,7 +546,7 @@ svn_wc__do_property_merge (svn_string_t *path,
                 err = svn_io_open_unique_file (&reject_tmp_fp,
                                                &reject_tmp_path,
                                                tmparea,
-                                               ".prej",
+                                               SVN_WC__PROP_REJ_EXT,
                                                pool);
                 if (err) return err;
 
@@ -698,7 +693,7 @@ svn_wc__do_property_merge (svn_string_t *path,
           err = svn_io_open_unique_file (&reject_fp,
                                          &reject_path,
                                          name,
-                                         ".prej",
+                                         SVN_WC__PROP_REJ_EXT,
                                          pool);
           if (err) return err;
 
