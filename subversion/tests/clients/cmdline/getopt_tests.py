@@ -25,8 +25,6 @@ import svntest
 
 ######################################################################
 # Tests
-#
-#   Each test must return 0 on success or non-zero on failure.
 
 #----------------------------------------------------------------------
 
@@ -123,7 +121,7 @@ def run_one_test(sbox, basename, *varargs):
     print "====="
     map(sys.stdout.write, actual_stdout)
     print "====="
-    return 1
+    raise svntest.Failure
 
   if exp_stderr != actual_stderr:
     print "Standard error does not match."
@@ -135,41 +133,39 @@ def run_one_test(sbox, basename, *varargs):
     print "====="
     map(sys.stdout.write, actual_stderr)
     print "====="
-    return 1
-
-  return 0
+    raise svntest.Failure
 
 def getopt_no_args(sbox):
   "run svn with no arguments"
-  return run_one_test(sbox, 'svn')
+  run_one_test(sbox, 'svn')
 
 def getopt__version(sbox):
   "run svn --version"
-  return run_one_test(sbox, 'svn--version', '--version')
+  run_one_test(sbox, 'svn--version', '--version')
 
 def getopt__version__quiet(sbox):
   "run svn --version --quiet"
-  return run_one_test(sbox, 'svn--version--quiet', '--version', '--quiet')
+  run_one_test(sbox, 'svn--version--quiet', '--version', '--quiet')
 
 def getopt__help(sbox):
   "run svn --help"
-  return run_one_test(sbox, 'svn--help', '--help')
+  run_one_test(sbox, 'svn--help', '--help')
 
 def getopt_help(sbox):
   "run svn help"
-  return run_one_test(sbox, 'svn_help', 'help')
+  run_one_test(sbox, 'svn_help', 'help')
 
 def getopt_help__version(sbox):
   "run svn help --version"
-  return run_one_test(sbox, 'svn_help--version', 'help', '--version')
+  run_one_test(sbox, 'svn_help--version', 'help', '--version')
 
 def getopt_help_log_switch(sbox):
   "run svn help log switch"
-  return run_one_test(sbox, 'svn_help_log_switch', 'help', 'log', 'switch')
+  run_one_test(sbox, 'svn_help_log_switch', 'help', 'log', 'switch')
 
 def getopt_help_bogus_cmd(sbox):
   "run svn help bogus-cmd"
-  return run_one_test(sbox, 'svn_help_bogus-cmd', 'help', 'bogus-cmd')
+  run_one_test(sbox, 'svn_help_bogus-cmd', 'help', 'bogus-cmd')
 
 ########################################################################
 # Run the tests
