@@ -1925,9 +1925,9 @@ svn_wc_save_simple_creds (svn_boolean_t *saved,
  *  SVN_AUTH_PARAM_DEFAULT_USERNAME and @c SVN_AUTH_PARAM_DEFAULT_PASSWORD).
  */
 void 
-svn_wc_get_simple_wc_provider (const svn_auth_provider_t **provider,
-                               void **provider_baton,
-                               apr_pool_t *pool);
+svn_wc_get_simple_provider (const svn_auth_provider_t **provider,
+                            void **provider_baton,
+                            apr_pool_t *pool);
 
 
 /** The specialized runtime parameters required by the simple wc
