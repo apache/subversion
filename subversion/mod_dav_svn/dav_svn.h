@@ -154,6 +154,12 @@ const char *dav_svn_get_special_uri(request_rec *r);
 dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
                                 const char *message);
 
+/* activity functions for looking up and storing ACTIVITY->TXN mappings */
+const char *dav_svn_get_txn(dav_svn_repos *repos, const char *activity_id);
+dav_error *dav_svn_store_activity(dav_svn_repos *repos,
+                                  const char *activity_id,
+                                  const char *txn_name);
+
 #endif /* DAV_SVN_H */
 
 

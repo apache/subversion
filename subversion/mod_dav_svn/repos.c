@@ -106,6 +106,16 @@ static int dav_svn_parse_activity_uri(dav_resource_combined *comb,
 static const struct special_defn
 {
   const char *name;
+
+  /*
+   * COMB is the resource that we are constructing. Any elements that
+   * can be determined from the PATH may be set in COMB. However, further
+   * operations are not allowed (we don't want anything besides a parse
+   * error to occur).
+   *
+   * PATH does not contain a leading slash. Given "/root/$svn/xxx/the/path"
+   * as the request URI, the PATH variable will be "the/path"
+   */
   int (*parse)(dav_resource_combined *comb, const char *path);
 
 } special_subdirs[] =
@@ -298,6 +308,11 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
 
 static dav_error * dav_svn_prep_activity(dav_resource_combined *comb)
 {
+  const char *txn_name = dav_svn_get_txn(comb->priv.repos,
+                                         comb->priv.object_name);
+
+  comb->res.exists = txn_name != NULL;
+
   return NULL;
 }
 
@@ -414,7 +429,10 @@ static dav_error * dav_svn_get_resource(request_rec *r,
      lifetime to store here. */
   comb->priv.path = svn_string_create(relative, r->pool);
 
+  /* create the repository structure and stash it away */
   repos = apr_pcalloc(r->pool, sizeof(*repos));
+  repos->pool = r->pool;
+
   comb->priv.repos = repos;
 
   /* We are assuming the root_uri will live at least as long as this
