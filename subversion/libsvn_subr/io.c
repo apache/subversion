@@ -613,7 +613,6 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
   svn_node_kind_t kind;
   apr_status_t status;
   const char *dst_path;
-  const char *dst_path_apr;
   apr_dir_t *this_dir;
   apr_finfo_t this_entry;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
@@ -644,11 +643,9 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                               "Destination '%s' already exists",
                               dst_path);
   
-  SVN_ERR (svn_path_cstring_from_utf8 (&dst_path_apr, dst_path, pool));
-
   /* Create the new directory. */
   /* ### TODO: copy permissions? */
-  SVN_ERR (svn_io_dir_make (dst_path_apr, APR_OS_DEFAULT, pool));
+  SVN_ERR (svn_io_dir_make (dst_path, APR_OS_DEFAULT, pool));
 
   /* Loop over the dirents in SRC.  ('.' and '..' are auto-excluded) */
   SVN_ERR (svn_io_dir_open (&this_dir, src, subpool));
