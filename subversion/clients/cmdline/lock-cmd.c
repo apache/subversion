@@ -103,6 +103,7 @@ svn_cl__lock (apr_getopt_t *os,
   const char *base_dir;
   const char *comment;
   const char *tmp_file = NULL;
+  svn_error_t *err;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
                                           opt_state->targets, pool));
@@ -122,15 +123,33 @@ svn_cl__lock (apr_getopt_t *os,
       const char *target = ((const char **) (targets->elts))[i];
 
       svn_pool_clear (subpool);
-      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
+      if ((err = svn_cl__check_cancel (ctx->cancel_baton)))
+        goto leave_msg;
 
-      SVN_ERR (svn_client_lock (&lock, target, comment, opt_state->force,
-                                ctx, subpool));
-      SVN_ERR (svn_cmdline_printf (subpool,
-                                   _("'%s' locked by user '%s'.\n"),
-                                   target, lock->owner));
+      if ((err = svn_client_lock (&lock, target, comment, opt_state->force,
+                                  ctx, subpool)))
+        goto leave_msg;
+
+      if ((err = svn_cmdline_printf (subpool,
+                                    _("'%s' locked by user '%s'.\n"),
+                                     target, lock->owner)))
+        goto leave_msg;
     }
   svn_pool_destroy (subpool);
 
+  if (tmp_file)
+    SVN_ERR (svn_io_remove_file (tmp_file, pool));
+
   return SVN_NO_ERROR;
+
+ leave_msg:
+  if (tmp_file)
+    svn_error_compose
+      (err,
+       svn_error_create (err->apr_err,
+                         svn_error_createf (err->apr_err, NULL,
+                                            "   '%s'", tmp_file),
+                         _("Your lock comment was left in "
+                         "a temporary file:")));
+  return err;
 }
