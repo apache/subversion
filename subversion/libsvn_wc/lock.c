@@ -97,7 +97,7 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
 svn_error_t *
 svn_wc__unlock (svn_string_t *path, apr_pool_t *pool)
 {
-  return svn_wc__remove_adm_thing (path, SVN_WC__ADM_LOCK, pool);
+  return svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_LOCK, NULL);
 }
 
 

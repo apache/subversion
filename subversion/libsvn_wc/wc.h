@@ -173,11 +173,10 @@ svn_error_t *svn_wc__write_adm_entry (apr_file_t *fp,
                                       const char *entry,
                                       ...);
 
-/* Remove `PATH/<adminstrative_subdir>/THING'. 
-   kff todo: just using it for files, not dirs, at the moment. */
-svn_error_t *svn_wc__remove_adm_thing (svn_string_t *path,
-                                       const char *thing,
-                                       apr_pool_t *pool);
+/* Remove `PATH/<adminstrative_subdir>/THING'. */
+svn_error_t *svn_wc__remove_adm_file (svn_string_t *path,
+                                       apr_pool_t *pool,
+                                       ...);
 
 /* Open the text-base for FILE.
  * FILE can be any kind of path ending with a filename.
