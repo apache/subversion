@@ -8,7 +8,7 @@
   <simplesect>
 
     <para>Branches and tags are general concepts common to almost all
-      revision control systems.  If you're not familiar with these
+      version control systems.  If you're not familiar with these
       ideas, you can find a good introductory explanation in Karl
       Fogel's free CVS book: <systemitem
       class="url">http://cvsbook.red-bean.com/cvsbook.html#Branching_Basics</systemitem></para><!--
