@@ -526,7 +526,7 @@ svn_fs__get_mutable_rep (const char **new_rep_key,
      we were provided was not mutable.  So, let's make a new
      representation and return its key to the caller. */
   SVN_ERR (svn_fs__bdb_string_append (fs, &new_str, 0, NULL, trail));
-  rep = make_fulltext_rep (new_str, txn_id, svn_md5_empty_string_digest,
+  rep = make_fulltext_rep (new_str, txn_id, svn_md5_empty_string_digest (),
                            trail->pool);
   SVN_ERR (svn_fs__bdb_write_new_rep (new_rep_key, fs, rep, trail));
 
@@ -1166,7 +1166,7 @@ rep_contents_clear (svn_fs_t *fs,
   if (str_key && *str_key)
     {
       SVN_ERR (svn_fs__bdb_string_clear (fs, str_key, trail));
-      memcpy (rep->checksum, svn_md5_empty_string_digest, MD5_DIGESTSIZE);
+      memcpy (rep->checksum, svn_md5_empty_string_digest (), MD5_DIGESTSIZE);
       SVN_ERR (svn_fs__bdb_write_rep (fs, rep_key, rep, trail));
     }
   return SVN_NO_ERROR;

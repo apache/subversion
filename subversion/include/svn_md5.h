@@ -34,7 +34,7 @@ extern "C" {
 
 
 /** The MD5 digest for the empty string. */
-extern const unsigned char svn_md5_empty_string_digest[];
+const unsigned char *svn_md5_empty_string_digest();
 
 
 /** Return the hex representation of @a digest, which must be
