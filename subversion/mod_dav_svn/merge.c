@@ -270,7 +270,8 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   if (creationdate)
     {
       (void) ap_fputstrs(output, bb,
-                         "<D:creationdate>", creationdate->data, 
+                         "<D:creationdate>", 
+                         apr_xml_quote_string(pool, creationdate->data, 1),
                          "</D:creationdate>" DEBUG_CR,
                          NULL);
     }
@@ -278,7 +279,8 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
     {
       (void) ap_fputstrs(output, bb,
                          "<D:creator-displayname>", 
-                         creator_displayname->data,
+                         apr_xml_quote_string(pool, 
+                                              creator_displayname->data, 1),
                          "</D:creator-displayname>" DEBUG_CR,
                          NULL);
     }
