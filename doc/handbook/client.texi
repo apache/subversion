@@ -166,7 +166,7 @@ human (you); we discuss this situation further down.
 
 
 
-@subsection Make changes  (@samp{svn add}, @samp{svn rm}, @samp{svn cp}, @samp{mv})
+@subsection Make changes  (@samp{svn add}, @samp{svn rm}, @samp{svn cp}, @samp{svn mv})
 
 Now you can to get to work and make changes in your working copy. It's
 usually most convenient to create a ``task'' for yourself, such as
@@ -1030,6 +1030,21 @@ steps to make sure that mistakes are minimized.  You still need to use
 the merge commands to merge the new versions of foobar into your own
 local copy containing your local modifications.
 
+This script has the following enhancements over @samp{svn import}:
+
+@itemize @bullet
+@item
+Can be run at any point in time to bring an existing directory in the
+repository to exactly match an external directory.  This scripts run all
+the @samp{svn add}, @samp{svn rm} and optionally any @samp{svn mv}
+commands as necessary.
+@item
+Optionally tag the newly imported directory.
+@item
+Optionally add arbitrary properties to files and directories that match
+a regular expression.
+@end itemize
+
 This script takes care of complications where Subversion requires a
 commit before renaming a file or directory twice, such as if you had a
 vendor branch that renamed @file{foobar-1.1/docs/doc.ps} to
@@ -1088,6 +1103,66 @@ renames.  At this point, you can indicate that @file{main.c} was renamed to
 The script will then delete @file{dead.c} and add @file{doc} and
 @file{doc/*} to the Subversion repository and finally create a tag
 foobar-1.1 in @url{http://svnhost/repos/vendor/foobar/foobar-1.1}.
+
+The script also accepts a separate configuration file for applying
+properties to specific files and directories matching a regular
+expression that are @emph{added} to the repository.  This script will
+not modify properties of already existing files or directories in the
+repository.  This configuration file is specified to
+@command{svn_load_dirs.pl} using the @option{-p} command line option.
+The format of the file is either two or four columns.
+
+@samp{regular_expression  control  property_name  property_value}
+
+The @samp{regular_expression} is a Perl style regular expression.  The
+@samp{control} column must either be set to @samp{break} or @samp{cont}.
+It is used to tell @samp{svn_load_dirs.pl} if the following lines in the
+configuration file should be examined for a match or if all matching
+should stop.  If @samp{control} is set to @samp{break}, then no more
+lines from the configuration file will be matched.  If @samp{control} is
+set to @samp{cont}, which is short for continue, then more comparisons
+will be made.  Multiple properties can be set for one file or directory
+this way.  The last two columns, @samp{property_name} and
+@samp{property_value} are optional and are applied to matching files and
+directories.
+
+If you have whitespace in any of the @samp{regular_expression},
+@samp{property_name} or @samp{property_value} columns, you must surround
+the value with either a single or double quote.  You can protect single
+or double quotes with a \ character.  The \ character is removed by this
+script @emph{only} for whitespace or quote characters, so you do not
+need to protect any other characters, beyond what you would normally
+protect for the regular expression.
+
+This sample configuration file was used to load on a Unix box a number
+of Zip files containing Windows files with @samp{CRLF} end of lines.
+
+@verbatim
+   \.doc$              break   svn:mime-type   application/msword
+   \.ds(p|w)$          break   svn:eol-style   CRLF
+   \.ilk$              break   svn:eol-style   CRLF
+   \.ncb$              break   svn:eol-style   CRLF
+   \.opt$              break   svn:eol-style   CRLF
+   \.exe$              break   svn:mime-type   application/octet-stream
+   dos2unix-eol\.sh$   break
+   .*                  break   svn:eol-style   native
+@end verbatim
+
+In this example, all the files should be converted to the native end of
+line style, which the last line of the configuration handles.  The
+exception is @file{dos2unix-eol.sh}, which contains embedded @samp{CR}'s
+used to find and replace Windows @samp{CRLF} end of line characters with
+Unix's @samp{LF} characters.  Since @command{svn} and
+@command{svn_load_dirs.pl} convert all @samp{CR}, @samp{CRLF} and
+@samp{LF}'s to the native end of line style when @samp{svn:eol-style} is
+set to @samp{native}, this file should be left untouched.  Hence, the
+@samp{break} with no property settings.
+
+The Windows Visual C++ and Visual Studio files (@file{*.dsp},
+@file{*.dsw}, etc.) should retain their @samp{CRLF} line endings on any
+operating system and any @file{*.doc} files are always treated as binary
+files, hence the @samp{svn:mime-type} setting of
+@samp{application/msword}.
 
 @subsection Removing a branch or tag with @samp{svn rm}
 
