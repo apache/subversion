@@ -314,7 +314,7 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
                            apr_pool_t *pool, svn_ra_svn_edit_callback callback,
                            void *callback_baton)
 {
-  svn_delta_editor_t *ra_svn_editor = svn_delta_default_editor (pool);
+  svn_delta_editor_t *ra_svn_editor = svn_delta_default_editor(pool);
   ra_svn_edit_baton_t *eb;
 
   eb = apr_palloc(pool, sizeof(*eb));
