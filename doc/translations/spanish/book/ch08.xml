@@ -116,24 +116,27 @@
       </tgroup>
     </table>
 
-    <para>The fact that the word <quote>miscellaneous</quote> only
-      appears once in <xref linkend="svn-ch-8-table-1"/> is a good
-      sign.  The Subversion development team is serious about making
-      sure that functionality lives in the right layer and libraries.
-      Perhaps the greatest advantage of the modular design is its lack
-      of complexity from a developer's point of view.  As a developer,
-      you can quickly formulate that kind of <quote>big
-      picture</quote> that allows you to pinpoint the location of
-      certain pieces of functionality with relative ease.</para>
+    <para>El hecho de que la palabra <quote>miscelánea</quote>
+      sólo aparezca una vez en <xref linkend="svn-ch-8-table-1"/>
+      es una buena señal. El equipo de desarrollo de Subversion está
+      seriamente dedicado a que las funcionalidades vivan en la
+      capa y librería correctas.  Quizás la mayor de las ventajas
+      del diseño modular es su falta de complejidad desde el punto
+      de vista de un desarrollador. Como desarrollador, usted puede
+      formular rápidamente este <quote>gran mapa</quote> <!-- TODO
+      buscar traducción adecuada de big picture --> que le permite
+      marcar la localización de ciertas partes de la funcionalidad
+      con relativa facilidad.</para>
 
-    <para>Another benefit of modularity is the ability to replace a
-      given module with a whole new library that implements the same
-      API without affecting the rest of the code base.  In some sense,
-      this happens within Subversion already.  The libsvn_ra_dav,
-      libsvn_ra_local, and libsvn_ra_svn all implement the same
-      interface.  And all three communicate with the Repository
-      Layer&mdash;libsvn_ra_dav and libsvn_ra_svn do so across a
-      network, and libsvn_ra_local connects to it directly.</para>
+    <para>Otro gran beneficio de la modularidad es la posibilidad
+      de reemplazar un módulo concreto con una nueva librería
+      que implementa la misma API sin afectar al resto del código
+      fuente. En cierto sentido, esto ya ocurre dentro de Subversion.
+      Las librerías libsvn_ra_dav, libsvn_ra_local, y libsvn_ra_svn
+      implementan la misma interfaz. Y las tres se comunican con la
+      capa de repositorio;libsvn_ra_dav y libsvn_ra_svn lo hacen
+      a través de la red, mientras que libsvn_ra_local accede
+      directamente.</para>
 
     <para>The client itself also highlights modularity in the
       Subversion design.  While Subversion currently comes with only a
