@@ -26,8 +26,9 @@ Candidate changes:
     Justification:
       The javahl shared library does not link correctly on certain platforms.
       (This is really a libtool bug.)
+      (Well, more that we use libtool 1.4, which has no C++ support.)
     Votes:
-     +1: jerenkrantz, breser
+     +1: jerenkrantz, breser, ghudson
 
   * r10819, r10855
     Avoid repository corruption if executed with closed std{in,out,err}
