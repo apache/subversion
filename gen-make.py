@@ -59,9 +59,9 @@ def main(fname, oname=None):
     build_dirs[path] = None
 
     if install.has_key(install_type):
-      install[install_type].append(tpath)
+      install[install_type].append(target)
     else:
-      install[install_type] = [ tpath ]
+      install[install_type] = [ target ]
 
     sources, s_errors = _collect_paths(parser.get(target, 'sources'), path)
     errors = errors or s_errors
@@ -133,8 +133,45 @@ def main(fname, oname=None):
   cfiles = filter(_filter_clean_files, build_targets.values())
   ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
-  for area, files in install.items():
-    if area != 'test':
+  for area, inst_targets in install.items():
+    files = [ ]
+    for t in inst_targets:
+      files.append(build_targets[t])
+
+    if area == 'apache-mod':
+      ofile.write('install-mods-shared: %s\n' % (string.join(files),))
+      la_tweaked = { }
+      for file in files:
+        base, ext = os.path.splitext(os.path.basename(file))
+        name = string.replace(base, 'libmod_', '')
+        ofile.write('\t$(INSTALL_MOD_SHARED) -n %s %s\n' % (name, file))
+        if ext == '.la':
+          la_tweaked[file + '-a'] = None
+
+      for t in inst_targets:
+        for dep in deps[t]:
+          bt = build_targets[dep]
+          if bt[-3:] == '.la':
+            la_tweaked[bt + '-a'] = None
+      la_tweaked = la_tweaked.keys()
+
+      ofile.write('\ninstall-mods-static: %s\n'
+                  '\t$(mkinstalldirs) $(APACHE_TARGET)\n'
+                  '\t$(mkinstalldirs) %s\n'
+                  % (string.join(la_tweaked),
+                     os.path.join('$(APACHE_TARGET)', '.libs')))
+      for file in la_tweaked:
+        dirname, fname = os.path.split(file)
+        base = os.path.splitext(fname)[0]
+        ofile.write('\t$(INSTALL_MOD_STATIC) %s %s\n'
+                    '\t$(INSTALL_MOD_STATIC) %s %s\n'
+                    % (os.path.join(dirname, '.libs', base + '.a'),
+                       os.path.join('$(APACHE_TARGET)', '.libs', base + '.a'),
+                       file,
+                       os.path.join('$(APACHE_TARGET)', base + '.la')))
+      ofile.write('\n')
+
+    elif area != 'test':
       ofile.write('install-%s: %s\n'
                   '\t$(mkinstalldirs) $(%sdir)\n'
                   % (area, string.join(files), area))
@@ -151,6 +188,10 @@ def main(fname, oname=None):
   for file in includes:
     ofile.write('\t$(INSTALL_INCLUDE) %s $(includedir)/%s\n'
                 % (file, os.path.basename(file)))
+
+  ofile.write('\n# handy shortcut targets\n')
+  for target, tpath in build_targets.items():
+    ofile.write('%s: %s\n' % (target, tpath))
   ofile.write('\n')
 
   if errors or i_errors:
