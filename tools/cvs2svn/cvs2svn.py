@@ -670,21 +670,17 @@ class RepositoryMirror:
         actual_copy_rev = copyfrom_rev - 1
         new_val = self.probe_path(copyfrom_path, actual_copy_rev)
     if expected_entries:
-      approved_entries = new_val.get(self.approved_entries)
+      approved_entries = new_val.get(self.approved_entries) or { }
       new_approved_entries = { }
-      if approved_entries == None:
-        approved_entries = { }
-      else:
-        approved_entries = marshal.loads(approved_entries)
       for ent in new_val.keys():
-        if ((ent[0] != '/')
-            and not expected_entries.has_key(ent)
-            and not approved_entries.has_key(ent)):
-          del new_val[ent]
-          deletions.append(ent)
-        else:
-          new_approved_entries[ent] = 1
-      new_val[self.approved_entries] = marshal.dumps(new_approved_entries)
+        if (ent[0] != '/'):
+          if (not expected_entries.has_key(ent)
+              and not approved_entries.has_key(ent)):
+            del new_val[ent]
+            deletions.append(ent)
+          else:
+            new_approved_entries[ent] = 1
+      new_val[self.approved_entries] = new_approved_entries
     parent[last_component] = leaf_key
     self.nodes_db[parent_key] = marshal.dumps(parent)
     self.symroots_db[path] = marshal.dumps((tags, branches))
