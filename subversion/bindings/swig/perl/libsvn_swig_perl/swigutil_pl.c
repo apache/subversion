@@ -1219,7 +1219,17 @@ svn_error_t *svn_swig_pl_blame_func (void *baton,
 }
 
 /* default pool support */
-apr_pool_t *current_pool;
+static apr_pool_t *current_pool = 0;
+
+apr_pool_t *svn_swig_pl_get_current_pool (void)
+{
+  return current_pool;
+}
+
+void svn_swig_pl_set_current_pool (apr_pool_t *pool)
+{
+  current_pool = pool;
+}
 
 apr_pool_t *svn_swig_pl_make_pool (SV *obj)
 {
