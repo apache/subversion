@@ -4767,9 +4767,7 @@ random_data_to_buffer (char *buf,
 
 
 static svn_error_t *
-large_file_integrity (const char **msg,
-                      svn_boolean_t msg_only,
-                      apr_pool_t *pool)
+file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
 { 
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
@@ -4782,16 +4780,6 @@ large_file_integrity (const char **msg,
   svn_txdelta_window_handler_t wh_func;
   void *wh_baton;
   int j;
-
-  /* Because we've had problems in the past with files with sizes >
-     svn_txdelta__window_size, our file should be at least one byte
-     bigger than that. */
-  apr_size_t filesize = svn_txdelta__window_size + 1;
-
-  *msg = "create and modify a large file, verifying its integrity";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -4875,7 +4863,7 @@ large_file_integrity (const char **msg,
   /* Alright, now we're just going to go crazy.  Let's make many more
      edits -- pseudo-random numbers and offsets of bytes changed to
      more pseudo-random values.  */
-  for (j = youngest_rev; j < 10; j++)
+  for (j = youngest_rev; j < 30; j = youngest_rev)
     {
       svn_pool_clear (subpool);
       SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
@@ -4908,6 +4896,38 @@ large_file_integrity (const char **msg,
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+medium_file_integrity (const char **msg,
+                       svn_boolean_t msg_only,
+                       apr_pool_t *pool)
+{ 
+  *msg = "create and modify a medium file, verifying its integrity";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Being no larger than the standard delta window size affects
+     deltification internally, so test that. */
+  return file_integrity_helper (svn_txdelta_window_size, pool);
+}
+
+
+static svn_error_t *
+large_file_integrity (const char **msg,
+                       svn_boolean_t msg_only,
+                       apr_pool_t *pool)
+{ 
+  *msg = "create and modify a large file, verifying its integrity";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Being larger than the standard delta window size affects
+     deltification internally, so test that. */
+  return file_integrity_helper (svn_txdelta_window_size + 1, pool);
 }
 
 
@@ -5175,6 +5195,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   commit_date,
   check_old_revisions,
   check_all_revisions,
+  medium_file_integrity,
   large_file_integrity,
   check_root_revision,
   undeltify_deltify,

@@ -49,9 +49,6 @@ void svn_txdelta__vdelta (svn_txdelta_window_t *window,
                           apr_size_t target_len,
                           apr_pool_t *pool);
 
-/* The delta window size. */
-extern apr_size_t svn_txdelta__window_size;
-
 
 
 /* These are the in-memory tree-delta stackframes; they are used to

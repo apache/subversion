@@ -117,6 +117,9 @@ typedef struct svn_txdelta_op_t {
 } svn_txdelta_op_t;
 
 
+/* The delta window size. */
+extern apr_size_t svn_txdelta_window_size;
+
 /* How to produce the next stretch of the target string.  */
 typedef struct svn_txdelta_window_t {
 

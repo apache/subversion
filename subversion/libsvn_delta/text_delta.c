@@ -167,7 +167,7 @@ svn_txdelta (svn_txdelta_stream_t **stream,
   (*stream)->pool = subpool;
   (*stream)->more = TRUE;
   (*stream)->pos = 0;
-  (*stream)->buf = apr_palloc (subpool, 3 * svn_txdelta__window_size);
+  (*stream)->buf = apr_palloc (subpool, 3 * svn_txdelta_window_size);
   (*stream)->saved_source_len = 0;
 
   /* Initialize MD5 digest calculation. */
@@ -226,13 +226,13 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
     {
       svn_error_t *err;
       apr_size_t total_source_len;
-      apr_size_t new_source_len = svn_txdelta__window_size;
-      apr_size_t target_len = svn_txdelta__window_size;
+      apr_size_t new_source_len = svn_txdelta_window_size;
+      apr_size_t target_len = svn_txdelta_window_size;
 
       /* If there is no saved source data yet, read an extra half
          window of data this time to get things started. */
       if (stream->saved_source_len == 0)
-        new_source_len += svn_txdelta__window_size / 2;
+        new_source_len += svn_txdelta_window_size / 2;
 
       /* Read the source stream. */
       err = svn_stream_read (stream->source,
@@ -277,8 +277,8 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
                            stream->pool);
 
       /* Save the last window's worth of data from the source view. */
-      stream->saved_source_len = (total_source_len < svn_txdelta__window_size)
-        ? total_source_len : svn_txdelta__window_size;
+      stream->saved_source_len = (total_source_len < svn_txdelta_window_size)
+        ? total_source_len : svn_txdelta_window_size;
       memmove (stream->buf,
                stream->buf + total_source_len - stream->saved_source_len,
                stream->saved_source_len);
