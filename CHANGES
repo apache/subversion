@@ -1,3 +1,22 @@
+Version 0.22.0 (released 24 Apr 2003, revision XXXX, branches/release-0.22)
+
+ User-visible changes:
+ * svn diff -r BASE:HEAD and other edge cases fixed (#977)
+ * svn diff and merge now have --ignore-ancestry option (#1034)
+ * svn ci -N DIR no longer errors during post-commit (#1239)
+ * update vn-svn.el (#1250, #1253)
+ * improvements to svn_load_dirs.pl (#1223, 1215)
+ * misc ra_svn bug fixes and protocol change
+ * fix mmap failures on HP-UX
+ * fix some client memory leaks
+
+ Developer-visible changes:
+ * finish transition to new xml prop namespaces for mod_dav_svn (#840)
+ * minimize full tree locks and number of system calls (#1245)
+ * auto-generated .dsp files (#850)
+ * fix ETag of directory (#1251)
+
+
 Version 0.21.0 (released 15 Apr 2003, revision 5639, branches/release-0.21)
 
  User-visible changes:
