@@ -79,3 +79,9 @@ Candidate changes:
     Votes:
       +1: david
 
+  * r11673
+    Fix leak in UTF-8 routines.
+    Justification:
+      Leak introduced in 1.1.1.
+    Votes:
+      +1: lundblad
