@@ -127,7 +127,7 @@ installed APU, nor an APR-util build directory.])
     dnl We attempt to guess what the data will be *after* configure is run.
     dnl Note, if we don't see configure, but do have configure.in, it'd be
     dnl nice to run buildconf, but that's for another day.
-    if test "$apu_found" = "no" && test -n "$1" && test -x "$1/configure"; then
+    if test "$apu_found" = "no" && test -d "$1" && test -x "$1/configure"; then
       apu_found="reconfig"
       apu_srcdir="$1"
       if test -n "$2"; then
