@@ -76,13 +76,16 @@ progress.
     in CVS.</p>
 </li>
 
-<li><strong>Apache as network server, WebDAV/DeltaV for protocol</strong>
-    <p>Subversion uses the HTTP-based WebDAV/DeltaV protocol for
-    network communications, and uses the Apache web server to provide
+<li><strong>Apache as network server, WebDAV/DeltaV for protocol
+    (separate standalone server also available)</strong> <p>Subversion
+    uses the HTTP-based WebDAV/DeltaV protocol for network
+    communications, and uses the Apache web server to provide
     repository-side network service.  This gives Subversion a big
     advantage in stability and interoperability, and provides various
-    key features for free: authentication, basic authorization,
-    wire compression, and repository browsing, for example.</p> 
+    key features for free: authentication, basic authorization, wire
+    compression, and repository browsing, for example.  For people
+    who simply want to tunnel a custom protocol over ssh, Subversion
+    also has a basic standalone server process.</p>
 </li>
 
 <li><strong>Branching and tagging are cheap (constant time) operations</strong>
