@@ -196,7 +196,6 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
                         const char *svn_txn,
                         trail_t *trail)
 {
-  svn_error_t *err;
   svn_fs_id_t *base_root_id, *root_id;
   dag_node_t *root_node;  /* The node we'll return. */
   skel_t *root_skel;      /* Skel contents of the node we'll return. */
@@ -205,9 +204,7 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
      If it has, return the clone.  Else clone it, and return the
      clone. */
 
-  err = svn_fs__get_txn (&root_id, &base_root_id, fs, svn_txn, trail);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__get_txn (&root_id, &base_root_id, fs, svn_txn, trail));
 
   /* Oh, give me a clone... */
   if (svn_fs_id_eq (root_id, base_root_id))  /* root as yet uncloned */
@@ -216,26 +213,21 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
 
       /* Of my own flesh and bone...
          (Get the skel for the base node.) */
-      err = svn_fs__get_node_revision (&base_skel, fs, base_root_id, trail);
-      if (err)
-        return err;
+      SVN_ERR (svn_fs__get_node_revision (&base_skel, fs, base_root_id,
+                                          trail));
 
       /* With its Y-chromosome changed to X
          (Create the new, mutable root node.) */
       /* kff todo: put_representation_skel doesn't seem to do anything
          with mutability yet... */
-      err = svn_fs__create_successor
-        (&root_id, fs, base_root_id, base_skel, trail);
-      if (err)
-        return err;
+      SVN_ERR (svn_fs__create_successor (&root_id, fs, base_root_id, base_skel,
+                                         trail));
     }
 
   /* One way or another, base_root_id now identifies a cloned root node. */
 
   /* Get the skel for the new root node. */
-  err = svn_fs__get_node_revision (&root_skel, fs, root_id, trail);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__get_node_revision (&root_skel, fs, root_id, trail));
 
   /* kff todo: Hmm, time for a constructor?  Do any of these need to
      be copied?  I don't think so... */
