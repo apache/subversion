@@ -434,7 +434,14 @@ static void record_prop_change(apr_pool_t *pool,
 static int do_setprop(void *rec, const char *name, const char *value)
 {
   ne_buffer *body = rec;
-  ne_buffer_concat(body, "<S:", name, ">", value, "</S:", name, ">", NULL);
+
+  /* use custom prefix for anything that doesn't start with "svn:" */
+  if (strncmp(name, "svn:", 4) == 0)
+    ne_buffer_concat(body, "<S:", name + 4, ">", value, "</S:", name + 4, ">",
+                     NULL);
+  else
+    ne_buffer_concat(body, "<C:", name, ">", value, "</C:", name, ">", NULL);
+
   return 1;
 }
 
@@ -458,8 +465,8 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
 
   ne_buffer_zappend(body,
                     "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
-                    "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:S=\""
-                    SVN_RA_DAV__CUSTOM_NAMESPACE "\">");
+                    "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:C=\""
+                    SVN_RA_DAV__CUSTOM_NAMESPACE "\" xmlns:S=\"svn:\">");
 
   if (rb->prop_changes != NULL)
     {
@@ -476,8 +483,13 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
       
       for (n = 0; n < rb->prop_deletes->nelts; n++) 
         {
-          ne_buffer_concat(body, "<S:", ((const char **)rb->prop_deletes->elts)[n],
-                           "/>", NULL);
+          const char *name = APR_ARRAY_IDX(rb->prop_deletes, n, const char *);
+
+          /* use custom prefix for anything that doesn't start with "svn:" */
+          if (strncmp(name, "svn:", 4) == 0)
+            ne_buffer_concat(body, "<S:", name + 4, "/>", NULL);
+          else
+            ne_buffer_concat(body, "<C:", name, "/>", NULL);
         }
 
       ne_buffer_zappend(body, "</D:prop></D:remove>");
