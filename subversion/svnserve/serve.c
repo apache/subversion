@@ -1395,7 +1395,7 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       l = val;
       SVN_ERR(write_lock(conn, pool, l));
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
 
   return SVN_NO_ERROR;
 }
