@@ -103,10 +103,13 @@ svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
 
 /** Checks the working copy to determine the node type of @a path.  If 
  * @a path is a versioned directory then the behaviour is like that of
- * @c svn_wc_adm_open, otherwise, if @a path is a file, an unversioned 
- * directory, or does not exist, then the behaviour is like that of 
- * @c svn_wc_adm_open with @a path replaced by the parent directory of 
- * @a path.
+ * @c svn_wc_adm_open, otherwise, if @a path is a file or does not
+ * exist, then the behaviour is like that of @c svn_wc_adm_open with
+ * @a path replaced by the parent directory of @a path.  If @a path is
+ * an unversioned directory, the behaviour is also like that of
+ * @c svn_wc_adm_open on the parent, except that if the open fails,
+ * then the returned SVN_ERR_WC_NOT_DIRECTORY error refers to @a path,
+ * not to @a path's parent.
  */
 svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                                     svn_wc_adm_access_t *associated,
