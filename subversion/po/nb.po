@@ -2,31 +2,6 @@
 # Copyright (C) 2004 Collab Net.
 # This file is distributed under the same license as the subversion package.
 #
-# Dictionary:
-#
-# checkout - hente ut, uthenting
-# client - klient
-# commit - sende inn, innsending
-# destination - mål
-# directory - katalog
-# item - element
-# merge - flette
-# module - modul
-# path - sti
-# plugin - programtillegg
-# property - egenskap
-# repository - depot
-# revision - revisjon
-# server - tjener
-# socket - sokkel
-# source - kilde
-# stack - stabel
-# subcommand - delkommando
-# target - mål
-# URL - URL
-# usage - bruk
-# working copy - arbeidskopi
-#
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
