@@ -1221,7 +1221,19 @@ expand_keyword (svn_wc_keywords_t *keywords,
       if (! value)
         keywords->date = svn_string_create ("", pool);
       else
-        keywords->date = svn_string_create_from_buf (value, pool);
+        {
+          /* Our dates are pretty ugly by default, for example:
+             "Mon 28 Jan 2002 16:17:09.777994 (day 028, dst 0, gmt_off -21600)"
+             So for presentation, we end the date right on the dot. */
+          char *dot_spot = strchr (value->data, '.');
+          if (dot_spot)
+            {
+              *dot_spot = '\0';
+              value->len = strlen (value->data);
+            }
+
+          keywords->date = svn_string_create_from_buf (value, pool);
+        }
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
            || (! strcmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
