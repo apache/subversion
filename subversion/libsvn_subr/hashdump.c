@@ -238,7 +238,7 @@ svn_hash_write (apr_hash_t *hash,
 static apr_status_t
 read_length_line (apr_file_t *file, char *buf, size_t *limit)
 {
-  int i;
+  size_t i;
   apr_status_t err;
   char c;
 
