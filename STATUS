@@ -91,18 +91,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: epg, ghudson, jszakmeister
 
-  * r12636
-    Dataloss bug in svndumpfilter - delete-all-properties-from-node operations
-    are lost.
-    Justification:
-      Dataloss!
-    Branch:
-      1.1.x-svndumpfilter r12656:12657
-      Does not itself conflict, but present on branch so that does not
-      cause conflicts in the merge of later revisions.
-    Votes:
-      +1: maxb, dionisos, jszakmeister
-
   * r11050
     Add install dependencies for libsvn_fs and libsvn_fs_base.
     Justification:
