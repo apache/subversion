@@ -510,10 +510,10 @@ svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
 
 
 svn_error_t *
-svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
-                     svn_wc_adm_access_t *associated,
-                     const char *path,
-                     apr_pool_t *pool)
+svn_wc__adm_retrieve_internal (svn_wc_adm_access_t **adm_access,
+                               svn_wc_adm_access_t *associated,
+                               const char *path,
+                               apr_pool_t *pool)
 {
   if (associated->set)
     *adm_access = apr_hash_get (associated->set, path, APR_HASH_KEY_STRING);
@@ -521,10 +521,29 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
     *adm_access = associated;
   else
     *adm_access = NULL;
-  if (! *adm_access || *adm_access == &missing)
+
+  if (*adm_access == &missing)
+    *adm_access = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
+                     svn_wc_adm_access_t *associated,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  SVN_ERR (svn_wc__adm_retrieve_internal (adm_access, associated, path, pool));
+
+  /* Most of the code expects access batons to exist, so returning an error
+     generally makes the calling code simpler as it doesn't need to check
+     for NULL batons. */
+  if (! *adm_access)
     return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
                               "directory '%s' not locked",
                               path);
+
   return SVN_NO_ERROR;
 }
 

@@ -678,23 +678,13 @@ svn_wc_entry (const svn_wc_entry_t **entry,
   const char *entry_name;
   svn_wc_adm_access_t *dir_access;
 
-  svn_error_t *err = svn_wc_adm_retrieve (&dir_access, adm_access, path, pool);
-  if (err && err->apr_err != SVN_ERR_WC_NOT_LOCKED)
-    return err;
-
-  if (err)
+  SVN_ERR (svn_wc__adm_retrieve_internal (&dir_access, adm_access, path, pool));
+  if (! dir_access)
     {
       const char *dir_path, *base_name;
       svn_path_split (path, &dir_path, &base_name, pool);
-      svn_error_clear (err);
-      err = svn_wc_adm_retrieve (&dir_access, adm_access, dir_path, pool);
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_NOT_LOCKED)
-            return err;
-          dir_access = NULL;
-          svn_error_clear (err);
-        }
+      SVN_ERR (svn_wc__adm_retrieve_internal (&dir_access, adm_access, dir_path,
+                                              pool));
       entry_name = base_name;
     }
   else
