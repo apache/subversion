@@ -24,12 +24,40 @@ apr_pool_t *globalpool;
 svn_error_t *
 my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
 {
+  int i;
+
   printf ("Windoweater: yum, got me a window of vcdiff data!\n");
   
-  /* TODO:  delve into the vcdiff window and print the data. */
+  /* Delve into the vcdiff window and print the data. */
+  for (i = 0; i < window->num_ops; i++)
+    {
+      switch (window->ops[i].op)
+        {
+        case svn_delta_new:
+          {
+            size_t startaddr = (window->new->data +
+                                (window->ops[i].offset));
+            svn_string_t *str = 
+              svn_string_ncreate (startaddr,
+                                  (window->ops[i].length),
+                                  globalpool);
+
+            printf ("--- new data -- : %s\n",
+                    svn_string_2cstring (str, globalpool));
+          }
+        case svn_delta_source:
+          {
+          }
+        case svn_delta_target:
+        default:
+          {
+          }
+        }
+              
+    }
 
   /* This deallocates the whole subpool created to hold the window.
-     We're donewith the window, so we should clean up! */
+     We're done with the window, so we should clean up. */
   svn_free_delta_window (window);
 
   return SVN_NO_ERROR;
