@@ -1320,11 +1320,24 @@ close_edit (void *edit_baton)
 {
   struct edit_baton *eb = edit_baton;
   
+  /* By definition, anybody "driving" this editor for update purposes
+     at a *minimum* must have called set_target_revision() at the
+     outset, and close_edit() at the end -- even if it turned out that
+     no changes ever had to be made, and replace_root() was never
+     called.  That's fine.  But regardless, when the edit is over,
+     this editor needs to make sure that *all* paths have had their
+     revisions bumped to the new target revision. */
+
+  if (! eb->is_checkout)  /* checkouts already have a uniform wc
+                             revision;  only updates need this
+                             bumping. */
+    SVN_ERR (svn_wc__ensure_uniform_revision (eb->dest_dir,
+                                              eb->target_revision,
+                                              eb->pool));
+
   /* The edit is over, free its pool. */
   apr_pool_destroy (eb->pool);
-  
-  /* kff todo:  Wow.  Is there _anything_ else that needs to be done? */
-  
+    
   return SVN_NO_ERROR;
 }
 
