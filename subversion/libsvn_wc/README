@@ -17,31 +17,69 @@ working copy accumulates uncommitted changes, some of which may affect
 its tree layout.  By commit time, the working copy's layout could be
 arbitrarily different from the repository tree on which it was based.
 
-Worse, even after an update/commit, the working copy and the
-repository are not necessarily perfect mirrors, since updates leave
-local changes, and updates/commits don't always involve the entire
-working copy.
+Furthermore, even after an update/commit, the working copy and the
+repository are not necessarily perfect mirrors, since the entire tree
+is not always involved (thus local changes and local out-of-datenesses
+can remain).
 
-To resolve all situations safely, we must carefully define what
-constitutes a "conflict" between a repository and a working copy, and
-describe how such conflicts are resolved.
+To resolve all situations safely, we must carefully define what is a
+conflict between repository and working copy, and describe how such
+conflicts are resolved.
 
 The principles and definitions below do not presume any particular
 tree delta format; the semantics require merely that working copies
 and repositories have some way to communicate their `state' to each
-other.
+other:
 
-  * Modifying a file's contents is a change to that file only.
+  (A) Modifying a file's contents is a change to that file only.
 
-  * Renames, adds, and deletes are considered changes to *both* the
-    target entity and its parent.
+  (B) Renames, adds, and deletes are considered changes to *both* the
+      target entity and its parent.
 
-  * A working copy's "state" is a snapshot (maybe as a skelta?) that
-    shows the base versions, and any changes, for all entities in the
-    working copy.
+  (C) A working copy's "state" is a snapshot (maybe a skelta?) that
+      shows the base versions, and any changes, for all entities in
+      the working copy.  (Thus, given a wc state, the repository could
+      theoretically reconstruct the entire working copy, modulo any
+      uncomitted local changes.)
 
-  * A repository's "state", relative to a particular working copy
-    state, is a list of all entities that have changed w.r.t. that wc
-    state.
+  (D) The repository's "relative state" is a list of all entities that
+      have changed in the repository relative to a given working copy
+      state.
 
-  * Two changes "conflict" if they change the same thing.
+  (E) Two changes "conflict" if they change the same thing.
+
+  (F) The server never accepts a delta based on a wc state that
+      conflicts with the repository.  The client is always responsible
+      for sending non-conflicting deltas.
+
+Given these principles, the process for updates is largely the same as
+for commits, so the two are described together here:
+
+   1. The working copy creates a snapshot (W) of its state, and sends
+      it to the server.
+
+   2. The server checks if the entities listed in W have changed in
+      the repository too [see footnote 1].  If there are no conflicts,
+      then the commit is registered and a token sent back (or, if this
+      is an update, the server sends back the appropriate delta).
+
+   3. If there is a conflict, then...
+
+         - commit case:
+             Server sends back a message telling the working
+             copy it must update.  By principle (F), the client can
+             only commit based on a non-conflicting state, therefore
+             the client must not only update, but also resolve any
+             conflicts, before it can successfully commit.
+
+         - update case:
+             Well, this is where all the hardship happens. :-)
+
+
+
+
+--------------------------- Footnotes -----------------------------------
+
+[1] Working copy is not always wanting to compare against LATEST; the
+request may need some way of specifying which *repository* revisions
+to compare against as well!
