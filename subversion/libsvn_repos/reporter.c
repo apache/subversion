@@ -91,7 +91,8 @@ static void add_to_path_map(apr_hash_t *hash,
   const char *repos_path = linkpath ? linkpath : norm_path;
 
   /* now, geez, put the path in the map already! */
-  apr_hash_set (hash, path, APR_HASH_KEY_STRING, (void *) repos_path);
+  apr_hash_set (hash, path, APR_HASH_KEY_STRING, 
+                (void *) apr_pstrdup (apr_hash_pool_get (hash), repos_path));
 }
 
 
@@ -249,7 +250,7 @@ svn_repos_link_path (void *report_baton,
      reported) + path (stuff relative to the target...this is the
      empty string in the file case since the target is the file
      itself, not a directory containing the file). */
-  from_path = svn_path_join_many (rbaton->pool, 
+  from_path = svn_path_join_many (pool, 
                                   rbaton->base_path,
                                   rbaton->target ? rbaton->target : path,
                                   rbaton->target ? path : NULL,
@@ -275,8 +276,7 @@ svn_repos_link_path (void *report_baton,
   /* Remove this path/link_path in our hashtable of linked paths. */
   if (! rbaton->linked_paths)
     rbaton->linked_paths = apr_hash_make (rbaton->pool);
-  add_to_path_map (rbaton->linked_paths, from_path, 
-                   link_path ? apr_pstrdup (rbaton->pool, link_path) : NULL);
+  add_to_path_map (rbaton->linked_paths, from_path, link_path);
 
   return SVN_NO_ERROR;
 }
