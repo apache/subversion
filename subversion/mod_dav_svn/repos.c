@@ -788,6 +788,19 @@ static dav_resource *dav_svn_create_private_resource(
   return &comb->res;
 }
 
+static void log_warning(void *baton, const char *fmt, ...)
+{
+  request_rec *r = baton;
+  va_list va;
+  const char *s;
+
+  va_start(va, fmt);
+  s = apr_pvsprintf(r->pool, fmt, va);
+  va_end(va);
+
+  ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s", s);
+}
+
 static dav_error * dav_svn_get_resource(request_rec *r,
                                         const char *root_path,
                                         const char *label,
@@ -917,6 +930,8 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                                               "filesystem at %s", fs_path));
     }
 
+  /* capture warnings during cleanup of the FS */
+  svn_fs_set_warning_func(repos->fs, log_warning, r);
 
   /* Figure out the type of the resource. Note that we have a PARSE step
      which is separate from a PREP step. This is because the PARSE can
