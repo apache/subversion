@@ -260,8 +260,8 @@ fix_path_perms (const char *path,
 }
 
 
-/* Create a directory at PATH with the same permissions as
-   REF_PATH. */
+/* If directory PATH does not exist, create it and give it the same
+   permissions as REF_PATH. */
 static svn_error_t *
 make_dir (const char *path,
           const char *ref_path,
