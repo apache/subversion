@@ -55,7 +55,7 @@ Candidate changes:
     Notes:
       r11490 is just cleanups.  But makes it merge cleanly.
     Votes:
-      +1: breser, jszakmeister, lundblad
+      +1: breser, jszakmeister
 
   * r11483 (Issue #2091)
     Unitialized variable on Win98.
