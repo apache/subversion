@@ -124,7 +124,7 @@ store_locks_callback (void *baton,
 
       if (do_lock)
         {
-          if (ra_err)
+          if (!ra_err)
             SVN_ERR (svn_wc_add_lock (abs_path, lock, adm_access, lb->pool));
         }
       else /* unlocking */
@@ -385,10 +385,7 @@ svn_client_lock (apr_array_header_t **locks_p,
   SVN_ERR (svn_ra_lock (ra_session, &locks, path_revs, comment, 
                         force, store_locks_callback, &cb, pool));
 
-  /* Unlock the wc.
-   * ### TODO: Why is this necessary here and yet apparently not in
-   * ### svn_client_unlock?
-   */
+  /* Unlock the wc. */
   if (adm_access)
     svn_wc_adm_close (adm_access);
 
@@ -446,6 +443,10 @@ svn_client_unlock (apr_array_header_t *targets,
   /* Unlock the paths. */
   SVN_ERR (svn_ra_unlock (ra_session, path_tokens, force, 
                           store_locks_callback, &cb, pool));
+
+  /* Unlock the wc. */
+  if (adm_access)
+    svn_wc_adm_close (adm_access);
 
   return SVN_NO_ERROR;
 }
