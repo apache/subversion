@@ -953,7 +953,7 @@ Committed revision 481.
 
       <para>Another common use for <command>svn merge</command> is to
         roll back a change that has already been committed.  Suppose
-        you working away happily on a working copy of
+        you're working away happily on a working copy of
         <filename>/calc/trunk</filename>, and you discover that the
         change made way back in revision 303, which changed
         <filename>integer.c</filename>, is completely wrong.  It never
