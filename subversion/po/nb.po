@@ -36,7 +36,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-12-19 12:15+0100\n"
+"POT-Creation-Date: 2004-12-29 16:47+0100\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -548,8 +548,7 @@ msgstr ""
 "  Hvis REV er spesifisert, bestemmer dette revisjonen URLen først blir\n"
 "  lett opp.\n"
 "\n"
-"  Nettadressens basenavn blir brukt som målkatalog hvis STI er "
-"utelatt.\n"
+"  Nettadressens basenavn blir brukt som målkatalog hvis STI er utelatt.\n"
 "  Hvis flere nettadresser oppgis, blir hver nettadresse hentet ut i en "
 "under-\n"
 "  katalog under STI hvor underkatalogen får samme navn som nettadressens\n"
@@ -2710,13 +2709,12 @@ msgstr "Objekt '%s' for innsending har kopimerke, men ingen copyfrom-URL\n"
 #: libsvn_client/copy.c:1074 libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1380 libsvn_client/diff.c:1993
 #: libsvn_client/diff.c:2469 libsvn_client/diff.c:2576 libsvn_client/log.c:129
-#: libsvn_client/prop_commands.c:187 libsvn_client/prop_commands.c:416
-#: libsvn_client/prop_commands.c:568 libsvn_client/prop_commands.c:926
+#: libsvn_client/prop_commands.c:207 libsvn_client/prop_commands.c:436
+#: libsvn_client/prop_commands.c:590 libsvn_client/prop_commands.c:948
 #: libsvn_client/ra.c:180 libsvn_client/revisions.c:90
 #: libsvn_client/status.c:128 libsvn_client/switch.c:104
-#: libsvn_client/update.c:82 libsvn_wc/adm_ops.c:2104 libsvn_wc/copy.c:386
-#: libsvn_wc/entries.c:1382 libsvn_wc/entries.c:1801 libsvn_wc/props.c:281
-#: libsvn_wc/questions.c:171
+#: libsvn_wc/adm_ops.c:2104 libsvn_wc/copy.c:386 libsvn_wc/entries.c:1382
+#: libsvn_wc/entries.c:1801 libsvn_wc/props.c:281 libsvn_wc/questions.c:171
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' er ikke under versjonskontroll"
@@ -2987,7 +2985,7 @@ msgid "Missing required revision specification"
 msgstr "Mangler påkrevet revisjonsspesifikasjon"
 
 #: libsvn_client/log.c:135 libsvn_client/status.c:133
-#: libsvn_client/update.c:86
+#: libsvn_client/update.c:83
 #, c-format
 msgid "Entry '%s' has no URL"
 msgstr "Posten '%s' mangler nettadresse"
@@ -3005,26 +3003,31 @@ msgstr "Ingen get_dir() tilgjengelig for URL-klasse"
 msgid "URL '%s' non-existent in that revision"
 msgstr "URL-en '%s' finnes ikke i den revisjonen"
 
-#: libsvn_client/prop_commands.c:164
+#: libsvn_client/prop_commands.c:104
+#, c-format
+msgid "'%s' is a wcprop, thus not accessible to clients"
+msgstr "'%s' er en arbeidskopiegenskap (wcprop), og er derfor ikke tilgjengelig for klienter"
+
+#: libsvn_client/prop_commands.c:182
 #, c-format
 msgid "Revision property '%s' not allowed in this context"
 msgstr "Revisjonsegenskapen '%s' er ikke tillatt i denne sammenhengen."
 
-#: libsvn_client/prop_commands.c:174
+#: libsvn_client/prop_commands.c:194
 #, c-format
 msgid "Setting property on non-local target '%s' not yet supported"
 msgstr "Å sette egenskap på ikke-lokalt mål '%s' er foreløpig ikke støttet"
 
-#: libsvn_client/prop_commands.c:180 libsvn_client/prop_commands.c:248
+#: libsvn_client/prop_commands.c:200 libsvn_client/prop_commands.c:268
 #, c-format
 msgid "Bad property name: '%s'"
 msgstr "Ugyldig navn på egenskap: '%s'"
 
-#: libsvn_client/prop_commands.c:244
+#: libsvn_client/prop_commands.c:264
 msgid "Value will not be set unless forced"
 msgstr "Verdien blir ikke satt uten tvang"
 
-#: libsvn_client/prop_commands.c:470 libsvn_client/prop_commands.c:733
+#: libsvn_client/prop_commands.c:490 libsvn_client/prop_commands.c:755
 #, c-format
 msgid "Unknown node kind for '%s'"
 msgstr "Ukjent nodetype for '%s'"
@@ -4123,47 +4126,47 @@ msgstr "For tidlig slutt på innholdsdata i dumpstrøm"
 msgid "Dumpstream data appears to be malformed"
 msgstr "Data i dumpstrømmen ser ut til å være misdannet"
 
-#: libsvn_repos/load.c:227
+#: libsvn_repos/load.c:230
 msgid "Incomplete or unterminated property block"
 msgstr "Ukomplett eller uavsluttet egenskapsblokk"
 
-#: libsvn_repos/load.c:420
+#: libsvn_repos/load.c:423
 msgid "Unexpected EOF writing contents"
 msgstr "Uventet filslutt under skriving av innhold"
 
-#: libsvn_repos/load.c:449
+#: libsvn_repos/load.c:452
 msgid "Malformed dumpfile header"
 msgstr "Misdannet dumpfilheader"
 
-#: libsvn_repos/load.c:455 libsvn_repos/load.c:497
+#: libsvn_repos/load.c:458 libsvn_repos/load.c:500
 #, c-format
 msgid "Unsupported dumpfile version: %d"
 msgstr "Ustøttet dumpfilversjon: %d"
 
-#: libsvn_repos/load.c:595
+#: libsvn_repos/load.c:598
 msgid "Unrecognized record type in stream"
 msgstr "Ukjent posttype i strøm"
 
-#: libsvn_repos/load.c:821
+#: libsvn_repos/load.c:855
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
 msgstr "<<< Startet ny transaksjon, basert på opprinnelig revisjon %ld\n"
 
-#: libsvn_repos/load.c:866
+#: libsvn_repos/load.c:900
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
 msgstr "Relativ kilderevisjon %ld er ikke tilgjengelig i gjeldende depot"
 
-#: libsvn_repos/load.c:915
+#: libsvn_repos/load.c:949
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
 msgstr "Misdannet dumpstrøm: Revisjon 0 kan ikke inneholde nodeposter"
 
-#: libsvn_repos/load.c:959
+#: libsvn_repos/load.c:993
 #, c-format
 msgid "Unrecognized node-action on node '%s'"
 msgstr "Ukjent nodehendelse i node '%s'"
 
-#: libsvn_repos/load.c:1148
+#: libsvn_repos/load.c:1182
 #, c-format
 msgid ""
 "\n"
@@ -4174,7 +4177,7 @@ msgstr ""
 "------- Revisjon %ld lagt inn >>>\n"
 "\n"
 
-#: libsvn_repos/load.c:1154
+#: libsvn_repos/load.c:1188
 #, c-format
 msgid ""
 "\n"
@@ -5237,8 +5240,8 @@ msgstr ""
 
 #: libsvn_wc/lock.c:643
 #, c-format
-msgid "Working copy '%s' not locked"
-msgstr "Arbeidskopien '%s' er ikke låst"
+msgid "Working copy '%s' is missing or not locked"
+msgstr "Arbeidskopien '%s' mangler eller er ikke låst"
 
 #: libsvn_wc/lock.c:1030
 #, c-format
