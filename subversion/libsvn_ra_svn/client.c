@@ -94,27 +94,20 @@ static void parse_tunnel(const char *url, const char **tunnel,
     }
 }
 
-/* We may make multiple connections, but only need to really check for IPV6
-   support once at runtime.  */
-
-static int ipv6_supported = APR_HAVE_IPV6;
-static int ipv6_checked = 0;
-
 static svn_error_t *make_connection(const char *hostname, unsigned short port,
                                     apr_socket_t **sock, apr_pool_t *pool)
 {
   apr_sockaddr_t *sa;
   apr_status_t status;
   int family = APR_INET;
+  int ipv6_supported = APR_HAVE_IPV6;
   
   /* Make sure we have IPV6 support first before giving apr_sockaddr_info_get
-     APR_UNSPEC, becuase it may give us back an IPV6 address even if we can't
+     APR_UNSPEC, because it may give us back an IPV6 address even if we can't
      create IPV6 sockets.  */  
 
 #ifdef APR_HAVE_IPV6
-  if (ipv6_supported && ipv6_checked)
-    family = APR_UNSPEC;
-  else if (!ipv6_checked)
+  if (ipv6_supported)
     {
 #ifdef MAX_SECS_TO_LINGER
       status = apr_socket_create(sock, APR_INET6, SOCK_STREAM, pool);
@@ -129,7 +122,6 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
           apr_socket_close(*sock);
           family = APR_UNSPEC;
         }
-      ipv6_checked = 1;
     }
 #endif
 
