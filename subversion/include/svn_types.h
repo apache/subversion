@@ -254,6 +254,9 @@ typedef struct svn_dirent_t
 /** Short version of LastChangedRevision */
 #define SVN_KEYWORD_REVISION_SHORT   "Rev"
 
+/** Medium version of LastChangedRevision, matching the one CVS uses */
+#define SVN_KEYWORD_REVISION_MEDIUM  "Revision"
+
 /** The most recent date (repository time) when this file was changed. */
 #define SVN_KEYWORD_DATE_LONG        "LastChangedDate"
 

@@ -143,6 +143,7 @@ svn_subst_build_keywords (svn_subst_keywords_t *kw,
       const char *keyword = APR_ARRAY_IDX (keyword_tokens, i, const char *);
 
       if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
+          || (! strcmp (keyword, SVN_KEYWORD_REVISION_MEDIUM))
           || (! strcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
         {
           kw->revision = svn_string_create (rev, pool);
@@ -354,6 +355,12 @@ translate_keyword (char *buf,
       if (translate_keyword_subst (buf, len,
                                    SVN_KEYWORD_REVISION_LONG,
                                    (sizeof (SVN_KEYWORD_REVISION_LONG)) - 1,
+                                   expand ? keywords->revision : NULL))
+        return TRUE;
+
+      if (translate_keyword_subst (buf, len,
+                                   SVN_KEYWORD_REVISION_MEDIUM,
+                                   (sizeof (SVN_KEYWORD_REVISION_MEDIUM)) - 1,
                                    expand ? keywords->revision : NULL))
         return TRUE;
 
