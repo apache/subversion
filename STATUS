@@ -138,3 +138,10 @@ Candidate changes:
        because username, SSL server cert trust, etc, is still saved.
      Votes:
         +1: bliss
+
+   * r10819
+     Avoid repository corruption if executed with closed std{in,out,err}
+     Justification:
+       Simple fix for a nasty problem that has bitten at least one user.
+     Votes:
+        +1: bliss
