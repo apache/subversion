@@ -39,7 +39,6 @@ struct dav_lockdb_private
 {
   /* These represent 'custom' request hearders only sent by svn clients: */
   svn_boolean_t force;
-  svn_boolean_t want_creationdate;
   svn_revnum_t working_revnum;
 
   /* The original request, so we can set 'custom' output headers. */
@@ -294,10 +293,6 @@ dav_svn_open_lockdb(request_rec *r,
       /* 'svn [lock | unlock] --force' */
       if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_FORCE))
         info->force = TRUE;
-
-      /* 'svn info URL' and other commands want *all* svn_lock_t fields */
-      if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_WANT_CREATIONDATE))
-        info->want_creationdate = TRUE;
     }
 
   /* 'svn lock' wants to make svn_fs_lock() do an out-of-dateness check. */
@@ -631,8 +626,7 @@ dav_svn_append_locks(dav_lockdb *lockdb,
      svn clients can fill in svn_lock_t->creation_date.  A generic DAV
      client should just ignore the header. */
   apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
-                 svn_time_to_human_cstring (slock->creation_date,
-                                            resource->pool));
+                 svn_time_to_cstring (slock->creation_date, resource->pool));
 
   return 0;
 }

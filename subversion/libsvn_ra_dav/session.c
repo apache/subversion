@@ -29,6 +29,7 @@
 #include <ne_request.h>
 #include <ne_uri.h>
 #include <ne_auth.h>
+#include <ne_locks.h>
 
 #include "svn_error.h"
 #include "svn_ra.h"
@@ -36,6 +37,7 @@
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_path.h"
+#include "svn_time.h"
 #include "svn_private_config.h"
 
 #include "ra_dav.h"
@@ -69,6 +71,9 @@ static int request_auth(void *userdata, const char *realm, int attempt,
   svn_ra_session_t *ras = userdata;
   void *creds;
   svn_auth_cred_simple_t *simple_creds;  
+
+  /* Start by clearing the cache of any previously-fetched username. */
+  ras->auth_username = NULL;
 
   /* No auth_baton?  Give up. */
   if (! ras->callbacks->auth_baton)
@@ -107,6 +112,9 @@ static int request_auth(void *userdata, const char *realm, int attempt,
   /* ### silently truncates username/password to 256 chars. */
   apr_cpystrn(username, simple_creds->username, NE_ABUFSIZ);
   apr_cpystrn(password, simple_creds->password, NE_ABUFSIZ);
+
+  /* Cache the fetched username in ra_session. */
+  ras->auth_username = apr_pstrdup(ras->pool, simple_creds->username);
 
   return 0;
 }
@@ -826,6 +834,106 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
 
 
 
+/* Context for neon request hooks;  shared by the next three callbacks.  */
+struct lock_request_baton
+{
+  /* The method neon is about to execute. */
+  const char *method;
+
+  /* The current working revision of item being locked. */
+  svn_revnum_t current_rev;
+
+  /* Whether client is "forcing" a lock or unlock. */
+  svn_boolean_t force;
+
+  /* The creation-date returned for newly created lock. */
+  apr_time_t creation_date;
+
+  /* A place for allocating fields in this structure. */
+  apr_pool_t *pool;
+};
+
+
+
+/* A callback of type ne_header_handler, invoked when neon encounters
+   mod_dav_svn's custom 'creationdate' header in a LOCK response. */
+static void
+handle_creationdate_header(void *userdata,
+                           const char *value)
+{
+  struct lock_request_baton *lrb = userdata;
+  svn_error_t *err;
+
+  if (! value)
+    return;
+
+  err = svn_time_from_cstring (&(lrb->creation_date), value, lrb->pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      lrb->creation_date = 0;                      
+    }
+}
+
+
+
+/* A callback of type ne_create_request_fn;  called whenever neon
+   creates a request. */
+static void 
+create_request_hook(ne_request *req,
+                    void *userdata,
+                    const char *method,
+                    const char *requri)
+{
+  struct lock_request_baton *lrb = userdata;
+
+  /* If a LOCK or UNLOCK is happening, then remember the http method. */
+  if ((strcmp(method, "LOCK") == 0)
+      || (strcmp(method, "UNLOCK") == 0))  
+    lrb->method = apr_pstrdup(lrb->pool, method);
+}
+
+
+
+/* A callback of type ne_pre_send_fn;  called whenever neon is just
+   about to send a request. */
+static void
+pre_send_hook(ne_request *req,
+              void *userdata,
+              ne_buffer *header)
+{
+  struct lock_request_baton *lrb = userdata;
+
+  if (! lrb->method)
+    return;
+
+  if ((strcmp(lrb->method, "LOCK") == 0)
+      || (strcmp(lrb->method, "UNLOCK") == 0))
+    {
+      if (lrb->force)
+        ne_add_request_header(req, SVN_DAV_OPTIONS_HEADER,
+                              SVN_DAV_OPTION_FORCE);
+    }
+
+  if (strcmp(lrb->method, "LOCK") == 0)
+    {
+      /* If possible, add custom 'current_rev' header to LOCK request. */
+      if (SVN_IS_VALID_REVNUM(lrb->current_rev))
+        {
+          const char *revstr = apr_psprintf(lrb->pool, "%ld",
+                                            lrb->current_rev);
+          ne_add_request_header(req, SVN_DAV_VERSION_NAME_HEADER, revstr);
+        }
+
+      /* Register a callback for custom 'creationdate' response header. */
+      ne_add_response_header_handler(req, SVN_DAV_CREATIONDATE_HEADER,
+                                     handle_creationdate_header, lrb);
+    }
+
+}
+
+
+
 static svn_error_t *
 svn_ra_dav__lock(void *session_baton,
                  svn_lock_t **lock,
@@ -835,8 +943,62 @@ svn_ra_dav__lock(void *session_baton,
                  svn_revnum_t current_rev,
                  apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
+  svn_ra_session_t *ras = session_baton;
+  int rv;
+  const char *url;
+  svn_string_t fs_path;
+  struct lock_request_baton *lrb;
+  struct ne_lock *nlock;
+  svn_lock_t *slock;
+
+  /* To begin, we convert the incoming path into an absolute fs-path. */
+  url = svn_path_url_add_component (ras->url, path, pool);  
+  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
+                                        url, SVN_INVALID_REVNUM, pool));
+
+  /* Build context for neon callbacks and then register them. */
+  lrb = apr_pcalloc(pool, sizeof(*lrb));
+  lrb->current_rev = current_rev;
+  lrb->force = force;
+  lrb->pool = pool;
+  ne_hook_create_request(ras->sess, create_request_hook, lrb);
+  ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
+
+  /* Build a neon lock structure. */
+  nlock = ne_lock_create();
+  nlock->owner = (char *) comment;
+  if ((rv = ne_uri_parse(url, &(nlock->uri))))
+    return svn_ra_dav__convert_error(ras->sess, "Failed to parse URI",
+                                     rv, pool);
+
+  /* Issue LOCK request. */
+  rv = ne_lock(ras->sess, nlock);
+  if (rv)
+    return svn_ra_dav__convert_error(ras->sess,
+                                     "Lock request failed", rv, pool);
+
+  /* Build an svn_lock_t based on the returned ne_lock. */
+  slock = apr_pcalloc(pool, sizeof(*slock));
+  slock->path = fs_path.data;
+  slock->token = apr_pstrdup(pool, nlock->token);
+  if (nlock->owner)
+    slock->comment = apr_pstrdup(pool, nlock->owner);
+  if (ras->auth_username)
+    slock->owner = apr_pstrdup(pool, ras->auth_username);
+  if (lrb->creation_date)
+    slock->creation_date = lrb->creation_date;
+
+  if (nlock->timeout == NE_TIMEOUT_INFINITE)
+    slock->expiration_date = 0;
+  else if (nlock->timeout > 0)
+    slock->expiration_date = slock->creation_date + 
+                             apr_time_from_sec(nlock->timeout);
+
+  /* Free the neon lock struct. */
+  ne_lock_destroy(nlock);
+  
+  *lock = slock;
+  return SVN_NO_ERROR;
 }
 
 

@@ -130,6 +130,7 @@ typedef struct {
   void *callback_baton;
 
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
+  const char *auth_username;            /* last authenticated username used */
 
   svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
