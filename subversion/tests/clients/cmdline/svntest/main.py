@@ -151,20 +151,22 @@ def run_svn(*varargs):
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
-  "Run svnadmin with VARARGS."
+  "Run svnadmin with VARARGS, returns stdout, stderr as list of lines."
 
   command = svnadmin_binary
   for arg in varargs:
     command = command + " " + `arg`    # build the command string
-  pipe = os.popen(command)             # run command
-  output = pipe.read()                 # read *all* data,
-                                       # to guarantee the process is done.
-  if pipe.close():
-    print "ERROR running svnadmin:", output
-    sys.exit(1)
-  
-  
-  
+
+  infile, outfile, errfile = os.popen3(command)
+  stdout_lines = outfile.readlines()
+  stderr_lines = errfile.readlines()
+
+  outfile.close()
+  infile.close()
+  errfile.close()
+
+  return stdout_lines, stderr_lines
+
 
 # For clearing away working copies
 def remove_wc(dirname):

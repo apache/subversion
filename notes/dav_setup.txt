@@ -1,9 +1,7 @@
 
-                                DAV SETUP
-                                =========
-                                   or, 
-   how Subversion developers can create a Subversion server on UNIX,
-               by setting up Apache/mod_dav/mod_dav_svn.
+                        Subversion Server HOWTO
+                        =======================
+            installing Apache + mod_dav + mod_dav_svn on Unix
 
 
 1.  Checkout the "httpd-2.0" cvs module from apache.org.  Put it
