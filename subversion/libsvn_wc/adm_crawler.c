@@ -612,7 +612,7 @@ examine_and_report_entry (svn_string_t *path,
                           struct stack_object **stack,
                           apr_hash_t *affected_targets,
                           apr_hash_t *locks,
-                           apr_pool_t *top_pool,
+                          apr_pool_t *top_pool,
                           apr_pool_t *subpool,
                           svn_string_t *current_entry_name,
                           svn_wc_entry_t *current_entry,
@@ -981,7 +981,8 @@ report_local_mods (svn_string_t *path,
                               svn_path_local_style);
 
       /* Do the dirty work.  No recursion here.  For a single file,
-         stack should already contain a stackframe for PATH. */
+         stack should already contain a stackframe for PATH (which
+         should be the immediate parent of the file.) */
       SVN_ERR (examine_and_report_entry (path, &dir_baton,
                                          filename,
                                          editor, edit_baton,
@@ -990,56 +991,57 @@ report_local_mods (svn_string_t *path,
                                          top_pool, subpool,
                                          filename,
                                          file_entry,
-                                         full_path_to_file));      
+                                         full_path_to_file));
+
+      return SVN_NO_ERROR;
     }
 
   /* Else do real recursion on PATH. */
-  else 
+
+  /* Push the current {path, baton, this_dir} to the top of the stack */
+  push_stack (stack, path, dir_baton, this_dir, subpool);
+  
+  /* Loop over each entry */
+  for (entry_index = apr_hash_first (entries); entry_index;
+       entry_index = apr_hash_next (entry_index))
     {
-      /* Push the current {path, baton, this_dir} to the top of the stack */
-      push_stack (stack, path, dir_baton, this_dir, subpool);
+      const void *key;
+      const char *keystring;
+      apr_size_t klen;
+      void *val;
+      svn_string_t *current_entry_name;
+      svn_wc_entry_t *current_entry; 
+      svn_string_t *full_path_to_entry;
+      
+      /* Get the next entry name (and structure) from the hash */
+      apr_hash_this (entry_index, &key, &klen, &val);
+      keystring = (const char *) key;
+      
+      if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
+        current_entry_name = NULL;
+      else
+        current_entry_name = svn_string_create (keystring, subpool);
+      current_entry = (svn_wc_entry_t *) val;
+      
+      /* Construct a full path to the current entry */
+      full_path_to_entry = svn_string_dup (path, subpool);
+      if (current_entry_name != NULL)
+        svn_path_add_component (full_path_to_entry, current_entry_name,
+                                svn_path_local_style);
+      
+      /* Do the dirty work, and mutually recurse. */
+      SVN_ERR (examine_and_report_entry (path, &dir_baton,
+                                         filename,
+                                         editor, edit_baton,
+                                         stack,
+                                         affected_targets, locks,
+                                         top_pool, subpool,
+                                         current_entry_name,
+                                         current_entry,
+                                         full_path_to_entry));          
 
-      /* Loop over each entry */
-      for (entry_index = apr_hash_first (entries); entry_index;
-           entry_index = apr_hash_next (entry_index))
-        {
-          const void *key;
-          const char *keystring;
-          apr_size_t klen;
-          void *val;
-          svn_string_t *current_entry_name;
-          svn_wc_entry_t *current_entry; 
-          svn_string_t *full_path_to_entry;
-      
-          /* Get the next entry name (and structure) from the hash */
-          apr_hash_this (entry_index, &key, &klen, &val);
-          keystring = (const char *) key;
-      
-          if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
-            current_entry_name = NULL;
-          else
-            current_entry_name = svn_string_create (keystring, subpool);
-          current_entry = (svn_wc_entry_t *) val;
-      
-          /* Construct a full path to the current entry */
-          full_path_to_entry = svn_string_dup (path, subpool);
-          if (current_entry_name != NULL)
-            svn_path_add_component (full_path_to_entry, current_entry_name,
-                                    svn_path_local_style);
-      
-          /* Do the dirty work, and mutually recurse. */
-          SVN_ERR (examine_and_report_entry (path, &dir_baton,
-                                             filename,
-                                             editor, edit_baton,
-                                             stack,
-                                             affected_targets, locks,
-                                             top_pool, subpool,
-                                             current_entry_name,
-                                             current_entry,
-                                             full_path_to_entry));          
+    }  /* Done examining all entries in this subdir. */
 
-        }  /* Done examining all entries in this subdir. */
-    }
   
 
   /**                                                           **/
@@ -1330,6 +1332,9 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
                 }
             }
           
+          /* Note:  when we get here, the topmost stackframe is
+                    *guaranteed* to be the parent of TARGET, whether
+                    TARGET be a file or dir. */
           
           /* Figure out if TARGET is a file or a dir. */
           SVN_ERR(svn_wc_entry (&tgt_entry, target, pool));
