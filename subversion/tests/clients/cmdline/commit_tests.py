@@ -23,7 +23,6 @@ import string, sys, os
 import svntest
 
 # (abbreviation)
-path_index = svntest.actions.path_index
 Item = svntest.wc.StateItem
 
 

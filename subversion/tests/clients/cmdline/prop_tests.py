@@ -23,6 +23,9 @@ import string, sys, re, os.path
 import svntest
 
 
+Item = svntest.wc.StateItem
+
+
 ######################################################################
 # Tests
 #
@@ -46,21 +49,15 @@ def make_local_props(sbox):
                        os.path.join(wc_dir, 'A', 'mu'))  
   svntest.main.run_svn(None, 'propset', 'red', 'rojo',
                        os.path.join(wc_dir, 'A', 'D', 'G'))  
-  svntest.main.run_svn(None, 'propset', 'red', 'rojo',
-                       os.path.join(wc_dir, 'A', 'D', 'G'))  
   svntest.main.run_svn(None, 'propset', 'yellow', 'amarillo',
                        os.path.join(wc_dir, 'A', 'D', 'G'))
 
   # Make sure they show up as local mods in status
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  for item in status_list:
-    if item[0] == os.path.join(wc_dir, 'A', 'mu'):
-      item[3]['status'] = '_M'
-    if item[0] == os.path.join(wc_dir, 'A', 'D', 'G'):
-      item[3]['status'] = '_M'
-  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='_M')
+  expected_status.tweak('A/D/G', status='_M')
 
-  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
   # Remove one property
@@ -68,11 +65,9 @@ def make_local_props(sbox):
                        os.path.join(wc_dir, 'A', 'D', 'G'))  
 
   # What we expect the disk tree to look like:
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree[2][2]['blue'] = 'azul'  # A/mu
-  my_greek_tree[2][2]['green'] = 'verde'  # A/mu
-  my_greek_tree[12][2]['red'] = 'rojo'  # A/D/G
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', props={'blue' : 'azul', 'green' : 'verde'})
+  expected_disk.tweak('A/D/G', props={'red' : 'rojo'})
 
   # Read the real disk tree.  Notice we are passing the (normally
   # disabled) "load props" flag to this routine.  This will run 'svn
@@ -80,7 +75,7 @@ def make_local_props(sbox):
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
 
   # Compare actual vs. expected disk trees.
-  return svntest.tree.compare_trees(expected_disk_tree, actual_disk_tree)
+  return svntest.tree.compare_trees(expected_disk.old_tree(), actual_disk_tree)
 
 
 #----------------------------------------------------------------------
@@ -101,23 +96,20 @@ def commit_props(sbox):
   svntest.main.run_svn(None, 'propset', 'red', 'rojo', H_path)
 
   # Create expected output tree.
-  output_list = [ [mu_path, None, {}, {'verb' : 'Sending'}],
-                  [ H_path, None, {}, {'verb' : 'Sending'}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    'A/D/H' : Item(verb='Sending'),
+    })
 
   # Created expected status tree.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  for item in status_list:
-    item[3]['repos_rev'] = '2'     # post-commit status
-    if (item[0] == mu_path) or (item[0] == H_path):
-      item[3]['wc_rev'] = '2'
-      item[3]['status'] = '__'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='__')
 
   # Commit the one file.
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None,
                                                 None, None,
                                                 None, None,
@@ -145,22 +137,19 @@ def update_props(sbox):
   svntest.main.run_svn(None, 'propset', 'red', 'rojo', H_path)
 
   # Create expected output tree.
-  output_list = [ [mu_path, None, {}, {'verb' : 'Sending'}],
-                  [ H_path, None, {}, {'verb' : 'Sending'}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    'A/D/H' : Item(verb='Sending'),
+    })
 
   # Created expected status tree.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  for item in status_list:
-    item[3]['repos_rev'] = '2'     # post-commit status
-    if (item[0] == mu_path) or (item[0] == H_path):
-      item[3]['wc_rev'] = '2'
-      item[3]['status'] = '__'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='__')
 
   # Commit the one file.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                                            expected_status_tree,
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
@@ -171,30 +160,25 @@ def update_props(sbox):
   H_path = os.path.join(wc_backup, 'A', 'D', 'H') 
   
   # Create expected output tree for an update of the wc_backup.
-  output_list = [ [mu_path,
-                   None, {}, {'status' : '_U'}],
-                  [H_path,
-                   None, {}, {'status' : '_U'}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_backup, {
+    'A/mu' : Item(status='_U'),
+    'A/D/H' : Item(status='_U'),
+    })
   
   # Create expected disk tree for the update.
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree[2][2]['blue'] = 'azul'  # A/mu
-  my_greek_tree[16][2]['red'] = 'rojo'  # A/D/H
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', props={'blue' : 'azul'})
+  expected_disk.tweak('A/D/H', props={'red' : 'rojo'})
 
   # Create expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(wc_backup, '2')
-  for item in status_list:
-    if (item[0] == mu_path) or (item[0] == H_path):
-      item[3]['status'] = '__'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.tweak('A/mu', 'A/D/H', status='__')
 
   # Do the update and check the results in three ways... INCLUDING PROPS
   return svntest.actions.run_and_verify_update(wc_backup,
-                                               expected_output_tree,
-                                               expected_disk_tree,
-                                               expected_status_tree,
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status,
                                                None, None, None, None, None, 1)
 
 #----------------------------------------------------------------------
@@ -215,21 +199,18 @@ def downdate_props(sbox):
   svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', iota_path)
 
   # Create expected output tree.
-  output_list = [ [iota_path, None, {}, {'verb' : 'Sending'}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
 
   # Created expected status tree.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  for item in status_list:
-    item[3]['repos_rev'] = '2'     # post-commit status
-    if (item[0] == iota_path):
-      item[3]['wc_rev'] = '2'
-      item[3]['status'] = '__'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('iota', wc_rev=2, status='__')
 
   # Commit the one file.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                                            expected_status_tree,
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
@@ -238,48 +219,41 @@ def downdate_props(sbox):
   svntest.main.file_append (mu_path, "some mod")
 
   # Create expected output tree.
-  output_list = [ [mu_path, None, {}, {'verb' : 'Sending'}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
 
   # Created expected status tree.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  for item in status_list:
-    item[3]['repos_rev'] = '3'     # post-commit status
-    if (item[0] == iota_path):
-      item[3]['wc_rev'] = '2'
-      item[3]['status'] = '__'
-    if (item[0] == mu_path):
-      item[3]['wc_rev'] = '3'
-      item[3]['status'] = '_ '
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=3)
+  expected_status.tweak('iota', wc_rev=2, status='__')
+  expected_status.tweak('A/mu', wc_rev=3, status='_ ')
 
   # Commit the one file.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                                            expected_status_tree,
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
   
   # Create expected output tree for an update.
-  output_list = [ [iota_path, None, {}, {'status' : '_U'}],
-                  [mu_path,   None, {}, {'status' : 'U '}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='_U'),
+    'A/mu' : Item(status='U '),
+    })
   
   # Create expected disk tree for the update.
-  my_greek_tree = svntest.main.copy_greek_tree()
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state
   
   # Create expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  for item in status_list:
-    item[3]['repos_rev'] = '3'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=3)
 
   # Do the update and check the results in three ways... INCLUDING PROPS
   return svntest.actions.run_and_verify_update(wc_dir,
-                                               expected_output_tree,
-                                               expected_disk_tree,
-                                               expected_status_tree,
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status,
                                                None, None, None, None, None, 1,
                                                '-r', '1', wc_dir)
 
@@ -305,21 +279,18 @@ def remove_props(sbox):
   svntest.main.run_svn(None, 'propdel', 'cash-sound', iota_path)
 
   # Create expected output tree.
-  output_list = [ [iota_path, None, {}, {'verb' : 'Sending'}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
 
   # Created expected status tree.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  for item in status_list:
-    item[3]['repos_rev'] = '3'     # post-commit status
-    if (item[0] == iota_path):
-      item[3]['wc_rev'] = '3'
-      item[3]['status'] = '_ '
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=3)
+  expected_status.tweak('iota', wc_rev=3, status='_ ')
 
   # Commit the one file.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                                            expected_status_tree,
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
@@ -369,30 +340,25 @@ def update_conflict_props(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', 'baz', A_path)
 
   # Create expected output tree for an update of the wc_backup.
-  output_list = [ [mu_path,
-                   None, {}, {'status' : '_C'}],
-                  [A_path,
-                   None, {}, {'status' : '_C'}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(status='_C'),
+    'A' : Item(status='_C'),
+    })
 
   # Create expected disk tree for the update.
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree[2][2]['cash-sound'] = 'beep!'  # A/mu
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', props={'cash-sound' : 'beep!'})
 
   # Create expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    if (item[0] == mu_path) or (item[0] == A_path):
-      item[3]['status'] = '_C'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/mu', 'A', status='_C')
 
   extra_files = ['mu.*\.prej', 'dir_conflicts.*\.prej']
   # Do the update and check the results in three ways... INCLUDING PROPS
   if svntest.actions.run_and_verify_update(wc_dir,
-                                           expected_output_tree,
-                                           expected_disk_tree,
-                                           expected_status_tree,
+                                           expected_output,
+                                           expected_disk,
+                                           expected_status,
                                            None,
                                            detect_conflict_files, extra_files,
                                            None, None, 1):
@@ -406,13 +372,10 @@ def update_conflict_props(sbox):
   svntest.main.run_svn(None, 'resolve', mu_path)
   svntest.main.run_svn(None, 'resolve', A_path)
 
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    if (item[0] == mu_path) or (item[0] == A_path):
-      item[3]['status'] = '_M'
-  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/mu', 'A', status='_M')
 
-  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
 ########################################################################

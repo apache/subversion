@@ -22,7 +22,10 @@ import shutil, string, sys, re, os
 # Our testing module
 import svntest
   
- 
+
+Item = svntest.wc.StateItem
+
+
 ######################################################################
 # Tests
 #
@@ -174,20 +177,18 @@ def externals_test_setup(sbox):
 
   # Commit the property changes.
 
-  output_list = [ [B_path, None, {}, {'verb' : 'Sending' }],
-                  [D_path, None, {}, {'verb' : 'Sending' }]]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_init_dir, {
+    'A/B' : Item(verb='Sending'),
+    'A/D' : Item(verb='Sending'),
+    })
 
-  status_list = svntest.actions.get_virginal_status_list(wc_init_dir, '5')
-  for item in status_list:
-    item[3]['repos_rev'] = '6'
-    if ((item[0] == B_path) or (item[0] == D_path)):
-      item[3]['wc_rev'] = '6'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_init_dir, 5)
+  expected_status.tweak(repos_rev=6)
+  expected_status.tweak('A/B', 'A/D', wc_rev=6)
 
   return svntest.actions.run_and_verify_commit(wc_init_dir,
-                                               expected_output_tree,
-                                               expected_status_tree,
+                                               expected_output,
+                                               expected_status,
                                                None, None, None, None, None,
                                                wc_init_dir)
 

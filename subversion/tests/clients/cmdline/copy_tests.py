@@ -23,9 +23,9 @@ import string, sys, os, shutil
 import svntest
 
 
-# (abbreviations)
-path_index = svntest.actions.path_index
+# (abbreviation)
 Item = svntest.wc.StateItem
+
 
 ######################################################################
 # Utilities
@@ -146,49 +146,35 @@ def basic_copy_and_move_files(sbox):
 
   # Created expected output tree for 'svn ci':
   # We should see four adds, two deletes, and one change in total.
-  output_list = [ [rho_path, None, {}, {'verb' : 'Sending' }],
-                  [rho_copy_path, None, {}, {'verb' : 'Adding' }],
-                  [alpha2_path, None, {}, {'verb' : 'Adding' }],
-                  [new_mu_path, None, {}, {'verb' : 'Adding' }],
-                  [new_iota_path, None, {}, {'verb' : 'Adding' }],
-                  [mu_path, None, {}, {'verb' : 'Deleting' }],
-                  [iota_path, None, {}, {'verb' : 'Deleting' }], ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho' : Item(verb='Sending'),
+    'A/D/rho' : Item(verb='Adding'),
+    'A/C/alpha2' : Item(verb='Adding'),
+    'A/D/H/mu' : Item(verb='Adding'),
+    'A/B/F/iota' : Item(verb='Adding'),
+    'A/mu' : Item(verb='Deleting'),
+    'iota' : Item(verb='Deleting'),
+    })
 
   # Create expected status tree; all local revisions should be at 1,
   # but several files should be at revision 2.  Also, two files should
   # be missing.  
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-    if (item[0] == rho_path) or (item[0] == mu_path):
-      item[3]['wc_rev'] = '2'
-  # New items in the status tree:
-  status_list.append([rho_copy_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([alpha2_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([new_mu_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([new_iota_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  # Items that are gone:
-  status_list.pop(path_index(status_list, mu_path))
-  status_list.pop(path_index(status_list, iota_path))
-      
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D/G/rho', 'A/mu', wc_rev=2)
+
+  expected_status.add({
+    'A/D/rho' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/C/alpha2' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/D/H/mu' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/F/iota' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    })
+
+  expected_status.remove('A/mu', 'iota')
 
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None,
                                                 None, None,
                                                 None, None,
@@ -299,35 +285,23 @@ def receive_copy_in_update(sbox):
   svntest.main.run_svn(None, 'cp', G_path, newG_path)
 
   # Created expected output tree for 'svn ci':
-  output_list = [ [newG_path, None, {}, {'verb' : 'Adding' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/newG' : Item(verb='Adding'),
+    })
 
   # Create expected status tree.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  # New items in the status tree:
-  status_list.append([newG_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([newGpi_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([newGrho_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([newGtau_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/newG' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/newG/pi' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/newG/rho' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/newG/tau' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    })
 
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None,
                                             None, None,
                                             None, None,
@@ -338,49 +312,36 @@ def receive_copy_in_update(sbox):
   # the newG directory and its contents.
 
   # Expected output of update
-  output_list = [[b_newG_path,
-                  None, {}, {'status' : 'A '}],
-                 [b_newGpi_path,
-                   None, {}, {'status' : 'A '}],
-                 [b_newGrho_path,
-                   None, {}, {'status' : 'A '}],
-                 [b_newGtau_path,
-                   None, {}, {'status' : 'A '}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_backup, {
+    'A/B/newG' : Item(status='A '),
+    'A/B/newG/pi' : Item(status='A '),
+    'A/B/newG/rho' : Item(status='A '),
+    'A/B/newG/tau' : Item(status='A '),
+    })
 
   # Create expected disk tree for the update.
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree.append(['A/B/newG', None, {}, {}])
-  my_greek_tree.append(['A/B/newG/pi', "This is the file 'pi'.", {}, {}])
-  my_greek_tree.append(['A/B/newG/rho', "This is the file 'rho'.", {}, {}])
-  my_greek_tree.append(['A/B/newG/tau', "This is the file 'tau'.", {}, {}])  
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/B/newG' : Item(),
+    'A/B/newG/pi' : Item("This is the file 'pi'."),
+    'A/B/newG/rho' : Item("This is the file 'rho'."),
+    'A/B/newG/tau' : Item("This is the file 'tau'."),
+    })
 
   # Create expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(wc_backup, '2')
-  status_list.append([b_newG_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([b_newGpi_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([b_newGrho_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([b_newGtau_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
-  
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.add({
+    'A/B/newG' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/newG/pi' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/newG/rho' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/newG/tau' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    })
+
   # Do the update and check the results in three ways.
   return svntest.actions.run_and_verify_update(wc_backup,
-                                               expected_output_tree,
-                                               expected_disk_tree,
-                                               expected_status_tree)
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status)
 
 
 #----------------------------------------------------------------------

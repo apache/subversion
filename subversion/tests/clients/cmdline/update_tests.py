@@ -21,7 +21,10 @@ import shutil, string, sys, re, os
 
 # Our testing module
 import svntest
-  
+
+
+Item = svntest.wc.StateItem
+
  
 ######################################################################
 # Tests
@@ -83,23 +86,21 @@ def update_binary_file(sbox):
   svntest.main.run_svn(None, 'add', theta_path)  
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [theta_path, None, {}, {'verb' : 'Adding' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Adding'),
+    })
 
   # Create expected status tree
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  status_list.append([theta_path, None, {},
-                      {'status' : '__',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/theta' : Item(status='__', wc_rev=2, repos_rev=2),
+    })
 
   # Commit the new binary file, creating revision 2.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                                            expected_status_tree, None,
-                                            None, None, None, None, wc_dir):
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None,
+                                           None, None, None, None, wc_dir):
     return 1
 
   # Make a backup copy of the working copy.
@@ -112,23 +113,21 @@ def update_binary_file(sbox):
   theta_contents_r3 = theta_contents + "revision 3 text"
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [theta_path, None, {}, {'verb' : 'Sending' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Sending'),
+    })
 
   # Create expected status tree
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  status_list.append([theta_path, None, {},
-                      {'status' : '__',
-                       'wc_rev' : '3',
-                       'repos_rev' : '3'}])
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/theta' : Item(status='__', wc_rev=3, repos_rev=3),
+    })
 
   # Commit original working copy again, creating revision 3.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                                            expected_status_tree, None,
-                                            None, None, None, None, wc_dir):
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None,
+                                           None, None, None, None, wc_dir):
     return 1
 
   # Now start working in the backup working copy:
@@ -138,24 +137,23 @@ def update_binary_file(sbox):
   theta_contents_local = theta_contents + "extra theta text"
 
   # Create expected output tree for an update of wc_backup.
-  output_list = [ [theta_backup_path, None, {}, {'status' : 'C '}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_backup, {
+    'A/theta' : Item(status='C '),
+    })
 
   # Create expected disk tree for the update -- 
   #    look!  binary contents, and a binary property!
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree.append(['A/theta',
-                        theta_contents_local,
-                        {'svn:mime-type' : 'application/octet-stream'}, {}])
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/theta' : Item(theta_contents_local,
+                     props={'svn:mime-type' : 'application/octet-stream'}),
+    })
 
   # Create expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(wc_backup, '3')
-  status_list.append([theta_backup_path, None, {},
-                      {'status' : 'C_',
-                       'wc_rev' : '3',
-                       'repos_rev' : '3'}])  
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
+  expected_status.add({
+    'A/theta' : Item(status='C_', wc_rev=3, repos_rev=3),
+    })
 
   # Extra 'singleton' files we expect to exist after the update.
   # In the case, the locally-modified binary file should be backed up
@@ -170,9 +168,9 @@ def update_binary_file(sbox):
   # will verify the existence (and contents) of both binary files
   # after the update finishes.
   if svntest.actions.run_and_verify_update(wc_backup,
-                                           expected_output_tree,
-                                           expected_disk_tree,
-                                           expected_status_tree,
+                                           expected_output,
+                                           expected_disk,
+                                           expected_status,
                                            None,
                                            detect_extra_files, extra_files,
                                            None, None, 1):
@@ -225,28 +223,23 @@ def update_binary_file_2(sbox):
   svntest.main.run_svn(None, 'add', theta_path, zeta_path)  
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [theta_path, None, {}, {'verb' : 'Adding' }],
-                  [zeta_path, None, {}, {'verb' : 'Adding' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Adding'),
+    'A/zeta' : Item(verb='Adding'),
+    })
 
   # Create expected status tree
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  status_list.append([theta_path, None, {},
-                      {'status' : '__',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([zeta_path, None, {},
-                      {'status' : '__',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/theta' : Item(status='__', wc_rev=2, repos_rev=2),
+    'A/zeta' : Item(status='__', wc_rev=2, repos_rev=2),
+    })
 
   # Commit the new binary filea, creating revision 2.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                                            expected_status_tree, None,
-                                            None, None, None, None, wc_dir):
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None,
+                                           None, None, None, None, wc_dir):
     return 1
 
   # Make some mods to the binary files.
@@ -256,66 +249,55 @@ def update_binary_file_2(sbox):
   new_zeta_contents = zeta_contents + "foobar"
   
   # Created expected output tree for 'svn ci'
-  output_list = [ [theta_path, None, {}, {'verb' : 'Sending' }],
-                  [zeta_path, None, {}, {'verb' : 'Sending' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Sending'),
+    'A/zeta' : Item(verb='Sending'),
+    })
 
   # Create expected status tree
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  status_list.append([theta_path, None, {},
-                      {'status' : '__',
-                       'wc_rev' : '3',
-                       'repos_rev' : '3'}])
-  status_list.append([zeta_path, None, {},
-                      {'status' : '__',
-                       'wc_rev' : '3',
-                       'repos_rev' : '3'}])
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/theta' : Item(status='__', wc_rev=3, repos_rev=3),
+    'A/zeta' : Item(status='__', wc_rev=3, repos_rev=3),
+    })
 
   # Commit original working copy again, creating revision 3.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                                            expected_status_tree, None,
-                                            None, None, None, None, wc_dir):
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None,
+                                           None, None, None, None, wc_dir):
     return 1
 
-  # Create expected output tree for an update of wc_backup.
-  output_list = [ [theta_path, None, {}, {'status' : 'U '}],
-                  [zeta_path, None, {}, {'status' : 'U '}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  # Create expected output tree for an update to rev 2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(status='U '),
+    'A/zeta' : Item(status='U '),
+    })
 
   # Create expected disk tree for the update -- 
   #    look!  binary contents, and a binary property!
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree.append(['A/theta',
-                        theta_contents,
-                        {'svn:mime-type' : 'application/octet-stream'}, {}])
-  my_greek_tree.append(['A/zeta',
-                        zeta_contents,
-                        {'svn:mime-type' : 'application/octet-stream'}, {}])
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/theta' : Item(theta_contents,
+                     props={'svn:mime-type' : 'application/octet-stream'}),
+    'A/zeta' : Item(zeta_contents,
+                    props={'svn:mime-type' : 'application/octet-stream'}),
+    })
 
   # Create expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
-  for item in status_list:
-    item[3]['wc_rev'] = '2'
-  status_list.append([theta_path, None, {},
-                      {'status' : '__',
-                       'wc_rev' : '2',
-                       'repos_rev' : '3'}])  
-  status_list.append([zeta_path, None, {},
-                      {'status' : '__',
-                       'wc_rev' : '2',
-                       'repos_rev' : '3'}])  
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=2)
+  expected_status.add({
+    'A/theta' : Item(status='__', wc_rev=2, repos_rev=3),
+    'A/zeta' : Item(status='__', wc_rev=2, repos_rev=3),
+    })
 
   # Do an update from revision 2 and make sure that our binary file
   # gets reverted to its original contents.
   return svntest.actions.run_and_verify_update(wc_dir,
-                                               expected_output_tree,
-                                               expected_disk_tree,
-                                               expected_status_tree,
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status,
                                                None, None, None,
                                                None, None, 1,
                                                '-r', '2', wc_dir)
@@ -343,30 +325,29 @@ def update_missing(sbox):
   shutil.rmtree(H_path)
 
   # Create expected output tree for an update of the missing items by name
-  output_list = [[mu_path, None, {}, {'status' : 'A '}],
-                 [rho_path, None, {}, {'status' : 'A '}],
-                 [E_path, None, {}, {'status' : 'A '}],
-                 [os.path.join(E_path, 'alpha'), None, {}, {'status' : 'A '}],
-                 [os.path.join(E_path, 'beta'), None, {}, {'status' : 'A '}],
-                 [H_path, None, {}, {'status' : 'A '}],
-                 [os.path.join(H_path, 'chi'), None, {}, {'status' : 'A '}],
-                 [os.path.join(H_path, 'omega'), None, {}, {'status' : 'A '}],
-                 [os.path.join(H_path, 'psi'), None, {}, {'status' : 'A '}]]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(status='A '),
+    'A/D/G/rho' : Item(status='A '),
+    'A/B/E' : Item(status='A '),
+    'A/B/E/alpha' : Item(status='A '),
+    'A/B/E/beta' : Item(status='A '),
+    'A/B/H' : Item(status='A '),
+    'A/B/H/chi' : Item(status='A '),
+    'A/B/H/omega' : Item(status='A '),
+    'A/B/H/psi' : Item(status='A '),
+    })
 
   # Create expected disk tree for the update.
-  my_greek_tree = svntest.main.copy_greek_tree()
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state
 
   # Create expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   
   # Do the update and check the results in three ways.
   return svntest.actions.run_and_verify_update(wc_dir,
-                                               expected_output_tree,
-                                               expected_disk_tree,
-                                               expected_status_tree,
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status,
                                                None, None, None, None, None, 0,
                                                mu_path, rho_path,
                                                E_path, H_path)
@@ -403,36 +384,29 @@ def update_ignores_added(sbox):
   # such, and maintain its revision of 1.
 
   # Create expected output tree for an update of the wc_backup.
-  output_list = []
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, { })
 
   # Create expected disk tree for the update.
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree.append(['A/B/zeta', "This is the file 'zeta'.", {}, {}])
-  for item in my_greek_tree:
-    if item[0] == 'A/D/gamma':
-      item[1] = "This is a new 'gamma' now."
-    if item[0] == 'A/D/G/rho':
-      item[1] = "This is the file 'rho'.\nMore stuff in rho."
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/B/zeta' : Item("This is the file 'zeta'."),
+    })
+  expected_disk.tweak('A/D/gamma', contents="This is a new 'gamma' now.")
+  expected_disk.tweak('A/D/G/rho',
+                      contents="This is the file 'rho'.\nMore stuff in rho.")
 
   # Create expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    if item[0] == gamma_path:
-      item[3]['wc_rev'] = '1'
-      item[3]['status'] = 'R '
-  status_list.append([zeta_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '2'}])
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/D/gamma', wc_rev=1, status='R ')
+  expected_status.add({
+    'A/B/zeta' : Item(status='A ', wc_rev=0, repos_rev=2),
+    })
   
   # Do the update and check the results in three ways.
   return svntest.actions.run_and_verify_update(wc_dir,
-                                               expected_output_tree,
-                                               expected_disk_tree,
-                                               expected_status_tree)
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status)
   
 
 #----------------------------------------------------------------------
@@ -449,18 +423,18 @@ def update_to_rev_zero(sbox):
   A_path = os.path.join(wc_dir, 'A')
 
   # Create expected output tree for an update to rev 0
-  output_list = [[iota_path, None, {}, {'status' : 'D '}],
-                 [A_path, None, {}, {'status' : 'D '}]]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='D '),
+    'A' : Item(status='D '),
+    })
 
   # Create expected disk tree for the update to rev 0
-  empty_tree = []
-  expected_disk_tree = svntest.tree.build_generic_tree(empty_tree)
+  expected_disk = svntest.wc.State(wc_dir, { })
   
   # Do the update and check the results.
   return svntest.actions.run_and_verify_update(wc_dir,
-                                               expected_output_tree,
-                                               expected_disk_tree,
+                                               expected_output,
+                                               expected_disk,
                                                None, None,
                                                None, None, None, None, 0,
                                                '-r', '0', wc_dir)
@@ -504,46 +478,39 @@ def receive_overlapping_same_change(sbox):
   other_iota_path = os.path.join(other_wc, 'iota')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [iota_path, None, {}, {'verb' : 'Sending' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
 
   # Create expected status tree
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-    if (item[0] == iota_path):
-      item[3]['wc_rev'] = '2'
-      item[3]['repos_rev'] = '2'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('iota', wc_rev=2, repos_rev=2)
 
   # Commit the change, creating revision 2.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                                            expected_status_tree, None,
-                                            None, None, None, None, wc_dir):
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None,
+                                           None, None, None, None, wc_dir):
     return 1
 
   # Expected output tree for update of other_wc.
-  output_list = [ [other_iota_path, None, {}, {'status' : 'G ' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(other_wc, {
+    'iota' : Item(status='G '),
+    })
 
   # Expected disk tree for the update.
-  dtree = svntest.main.copy_greek_tree()
-  for item in dtree:
-    if item[0] == 'iota':
-      item[1] = "This is the file 'iota'.\nA change to iota.\n"
-  expected_disk_tree = svntest.tree.build_generic_tree(dtree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota',
+                      contents="This is the file 'iota'.\nA change to iota.\n")
 
   # Expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(other_wc, '2')
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(other_wc, 2)
   
   # Do the update and check the results in three ways.
   return svntest.actions.run_and_verify_update(other_wc,
-                                               expected_output_tree,
-                                               expected_disk_tree,
-                                               expected_status_tree)
-
-  return 0
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status)
 
 #----------------------------------------------------------------------
 
@@ -592,56 +559,50 @@ def update_to_revert_text_conflicts(sbox):
   svntest.main.run_svn (None, 'propset', 'Kubla', 'Xanadu', rho_path_backup)
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }],
-                  [rho_path, None, {}, {'verb' : 'Sending' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    'A/D/G/rho' : Item(verb='Sending'),
+    })
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    if (item[0] != mu_path) and (item[0] != rho_path):
-      item[3]['wc_rev'] = '1'
-    if (item[0] == rho_path):
-      item[3]['status'] = '__'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  expected_status.tweak('A/D/G/rho', wc_rev=2, status='__')
 
   # Commit.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                                            expected_status_tree, None,
-                                            None, None, None, None, wc_dir):
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None,
+                                           None, None, None, None, wc_dir):
     print "commit failed"
     return 1
 
   # Create expected output tree for an update of the wc_backup.
-  output_list = [ [mu_path_backup, None, {}, {'status' : 'C '}],
-                  [rho_path_backup, None, {}, {'status' : 'CC'}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_backup, {
+    'A/mu' : Item(status='C '),
+    'A/D/G/rho' : Item(status='CC'),
+    })
   
   # Create expected disk tree for the update.
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree[2][1] =  """<<<<<<< .mine
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents= """<<<<<<< .mine
 This is the file 'mu'.
 Conflicting appended text for mu=======
 This is the file 'mu'.
 Original appended text for mu>>>>>>> .r2
-"""
-  my_greek_tree[14][1] = """<<<<<<< .mine
+""")
+  expected_disk.tweak('A/D/G/rho', contents="""<<<<<<< .mine
 This is the file 'rho'.
 Conflicting appended text for rho=======
 This is the file 'rho'.
 Original appended text for rho>>>>>>> .r2
-"""
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+""")
 
   # Create expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(wc_backup, '2')
-  for item in status_list:
-    if (item[0] == mu_path_backup) or (item[0] == rho_path_backup):
-      item[3]['status'] = 'C '
-    if (item[0] == rho_path_backup):
-      item[3]['status'] = 'CC'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.tweak('A/mu', status='C ')
+  expected_status.tweak('A/D/G/rho', status='CC')
 
   # "Extra" files that we expect to result from the conflicts.
   # These are expressed as list of regexps.  What a cool system!  :-)
@@ -651,9 +612,9 @@ Original appended text for rho>>>>>>> .r2
   # Do the update and check the results in three ways.
   # All "extra" files are passed to detect_conflict_files().
   if svntest.actions.run_and_verify_update(wc_backup,
-                                           expected_output_tree,
-                                           expected_disk_tree,
-                                           expected_status_tree,
+                                           expected_output,
+                                           expected_disk,
+                                           expected_status,
                                            None,
                                            detect_conflict_files,
                                            extra_files):
@@ -678,14 +639,11 @@ Original appended text for rho>>>>>>> .r2
     return 1
 
   # Create expected status tree
-  status_list = svntest.actions.get_virginal_status_list(wc_backup, '2')
-  for item in status_list:
-    if (item[0] == rho_path_backup):
-      item[3]['status'] = '_C'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.tweak('A/D/G/rho', status='_C')
 
   return svntest.actions.run_and_verify_status (wc_backup,
-                                                expected_status_tree)
+                                                expected_status)
 
 #----------------------------------------------------------------------
 
@@ -747,13 +705,12 @@ def update_delete_modified_files(sbox):
   svntest.main.file_append(alpha_path, 'appended alpha text')
   pi_path = os.path.join(G_path, 'pi')
   svntest.main.file_append(pi_path, 'appended pi text')
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  for item in status_list:
-    item[3]['repos_rev'] = '2'
-    if (item[0] == alpha_path) or (item[0] == pi_path):
-      item[3]['status'] = 'M '
-  expected_output_tree = svntest.tree.build_generic_tree(status_list)
-  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('A/B/E/alpha', 'A/D/G/pi', status='M ')
+
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
   # Update that 'deletes' modified files
@@ -763,10 +720,9 @@ def update_delete_modified_files(sbox):
     return 1
 
   # Modified files should still exist but are now unversioned
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   extra_files = [ 'alpha', 'G' ]
-  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree,
+  if svntest.actions.run_and_verify_status (wc_dir, expected_status,
                                             None, None,
                                             expect_extra_files, extra_files):
     print "status failed"
