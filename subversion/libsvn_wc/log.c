@@ -466,8 +466,9 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                  0,
                                  NULL,
                                  loggy->pool,
-                                 "unrecognized element in %s",
-                                 loggy->path->data));
+                                 "unrecognized logfile element in %s: `%s'",
+                                 loggy->path->data, eltname));
+
 
   if (err)
     svn_xml_signal_bailout (err, loggy->parser);
