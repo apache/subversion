@@ -726,8 +726,10 @@ make_path_mutable (svn_fs_root_t *root,
       /* Now make this node mutable.  */
       SVN_ERR (svn_fs__dag_clone_child (&clone,
                                         parent_path->parent->node,
+                                        parent_path_path (parent_path->parent,
+                                                          trail->pool),
                                         parent_path->entry, 
-                                        copy_id, txn_id,
+                                        copy_id, txn_id, 
                                         trail));
       
       /* If we just created a brand new copy ID, we need to store a
@@ -2527,6 +2529,8 @@ txn_body_make_dir (void *baton,
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
   SVN_ERR (svn_fs__dag_make_dir (&sub_dir,
                                  parent_path->parent->node, 
+                                 parent_path_path (parent_path->parent, 
+                                                   trail->pool),
                                  parent_path->entry,
                                  txn_id,
                                  trail));
@@ -2866,6 +2870,8 @@ txn_body_make_file (void *baton,
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
   SVN_ERR (svn_fs__dag_make_file (&child,
                                   parent_path->parent->node, 
+                                  parent_path_path (parent_path->parent,
+                                                    trail->pool),
                                   parent_path->entry,
                                   txn_id,
                                   trail));
