@@ -63,12 +63,6 @@ Security
 There is no way to disable anonymous authentication.  Fixing that
 will probably wait for a server configuration file.
 
-Port number
------------
-
-ghudson is awaiting a port assignment from IANA.  In the meantime the
-code uses a temporary port in the private range.
-
 Hook Scripts
 ------------
 

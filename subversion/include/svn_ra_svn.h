@@ -32,12 +32,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/** The well-known svn port number.
- *
- * Right now this is just a random port in the private range; I am waiting 
- * for a real port assignment. -ghudson
- */
-#define SVN_RA_SVN_PORT 51662
+/** The well-known svn port number. */
+#define SVN_RA_SVN_PORT 3690
 
 /** A specialized form of @c SVN_ERR to deal with errors which occur in an
  * @c svn_ra_svn_command_handler.
