@@ -16,7 +16,7 @@ usage: log [URL] [PATH [PATH ... ]]
     svn log http://www.example.com/repo/project foo.c bar.c
 
 Valid options:
-  -r [--revision] arg      : specify revision number ARG (or X:Y range)
+  -r [--revision] arg      : revision ARG, X:Y range ({ARG}, {X}:{Y} for dates)
   -v [--verbose]           : print extra information
   --targets arg            : pass contents of file "ARG" as additional args
   --username arg           : specify a username ARG
@@ -33,7 +33,7 @@ usage: switch URL [PATH]
   Note:  this is the way to move a working copy to a new branch.
 
 Valid options:
-  -r [--revision] arg      : specify revision number ARG (or X:Y range)
+  -r [--revision] arg      : revision ARG, X:Y range ({ARG}, {X}:{Y} for dates)
   -N [--nonrecursive]      : operate on single directory only
   -q [--quiet]             : print as little as possible
   --username arg           : specify a username ARG
