@@ -36,9 +36,9 @@
 
 #include <apr_pools.h>
 #include <apr_tables.h>
+
 #include "svn_string.h"
 #include "svn_error.h"
-#include "svn_utf.h"
 
 
 #ifdef __cplusplus
@@ -212,30 +212,26 @@ svn_path_split_if_file(const char *path,
                        const char **pfile,
                        apr_pool_t *pool);
 
-/** Find the common prefix of the paths in @a targets, and remove
- * redundant paths if @a remove_redundancies is true.  The elements in
- * @a targets must be existing files or directories (as const char *).
+/** Find the common prefix of the paths in @a targets (an array of @a
+ * const char *'s), and remove redundant paths if @a
+ * remove_redundancies is true.
  *
- * Each of the elements in @a targets must be a URL, or an existing file or 
- * directory (as const char *).
- *
- *   - Set @a *pbasename to the absolute path of the common parent
- *     directory of all of the targets (if the targets are
- *     files/directories), or the common URL prefix of the targets (if
- *     they are URLs).  If the targets have no common prefix, or are a 
- *     mix of URLs and local paths, set @a *pbasename to the empty string.
+ *   - Set @a *pcommon to the absolute path of the path or URL common to
+ *     all of the targets.  If the targets have no common prefix, or
+ *     are a mix of URLs and local paths, set @a *pbasename to the
+ *     empty string.
  *
  *   - If @a pcondensed_targets is non-null, set @a *pcondensed_targets
- *     to an array of targets relative to @a *pbasename, and if 
+ *     to an array of targets relative to @a *pcommon, and if 
  *     @a remove_redundancies is true, omit any paths/URLs that are
- *     descendants of another path/URL in @a targets.  If *pbasename
+ *     descendants of another path/URL in @a targets.  If *pcommon
  *     is empty, @a *pcondensed_targets will contain full URLs and/or
  *     absolute paths; redundancies can still be removed (from both URLs 
  *     and paths).  If @a pcondensed_targets is null, leave it alone.  
  *
- * Else if there is exactly one directory target, then
+ * Else if there is exactly one target, then
  *
- *   - Set @a *pbasename to that directory, and
+ *   - Set @a *pcommon to that target, and
  *
  *   - If @a pcondensed_targets is non-null, set @a *pcondensed_targets
  *     to an array containing zero elements.  Else if
@@ -245,10 +241,9 @@ svn_path_split_if_file(const char *path,
  * applicable) @a *pcondensed_targets to @c NULL.
  *
  * NOTE: There is no guarantee that @a *pbasename is within a working
- * copy.
- */
+ * copy.  */
 svn_error_t *
-svn_path_condense_targets (const char **pbasename,
+svn_path_condense_targets (const char **pcommon,
                            apr_array_header_t **pcondensed_targets,
                            const apr_array_header_t *targets,
                            svn_boolean_t remove_redundancies,
@@ -299,9 +294,8 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
 
 
 /** Decompose @a path into an array of <tt>const char *</tt> components, 
- * allocated in @a pool.  @a style indicates the dir separator to split the 
- * string on.  If @a path is absolute, the first component will be a lone dir
- * separator (the root directory).
+ * allocated in @a pool.  If @a path is absolute, the first component will 
+ * be a lone dir separator (the root directory).
  */
 apr_array_header_t *svn_path_decompose (const char *path,
                                         apr_pool_t *pool);

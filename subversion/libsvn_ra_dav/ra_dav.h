@@ -136,14 +136,6 @@ svn_error_t * svn_ra_dav__abort_commit(
  void *session_baton,
  void *edit_baton);
 
-svn_error_t * svn_ra_dav__do_checkout (
-  void *session_baton,
-  svn_revnum_t revision,
-  svn_boolean_t recurse,
-  const svn_delta_editor_t *editor,
-  void *edit_baton,
-  apr_pool_t *pool);
-
 svn_error_t * svn_ra_dav__do_update(
   void *session_baton,
   const svn_ra_reporter_t **reporter,
@@ -355,6 +347,15 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
                                             const ne_propname *which_props,
                                             apr_pool_t *pool);
 
+/* Fetch the repository's unique Version-Controlled-Configuration url.
+   
+   Given a Neon session SESS and a URL, set *VCC to the url of the
+   repository's version-controlled-configuration resource.
+ */
+svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
+                                 ne_session *sess,
+                                 const char *url,
+                                 apr_pool_t *pool);
 
 /* Issue a PROPPATCH request on URL, transmitting PROP_CHANGES (a hash
    of const svn_string_t * values keyed on Subversion user-visible
@@ -398,24 +399,31 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
  * element, and end element handlers, respectively.  BATON is passed
  * to each as userdata.
  *
+ * SET_PARSER is a callback function which, if non-NULL, is called
+ * with the XML parser and BATON.  This is useful for providers of
+ * validation and element handlers which require access to the parser.
+ *
  * EXTRA_HEADERS is a hash of (const char *) key/value pairs to be
  * inserted as extra headers in the request.  Can be NULL.
  *
  * Use POOL for any temporary allocation.
  */
-svn_error_t *svn_ra_dav__parsed_request(ne_session *sess,
-                                        const char *method,
-                                        const char *url,
-                                        const char *body,
-                                        apr_file_t *body_file,
-                                        const struct ne_xml_elm *elements, 
-                                        ne_xml_validate_cb validate_cb,
-                                        ne_xml_startelm_cb startelm_cb, 
-                                        ne_xml_endelm_cb endelm_cb,
-                                        void *baton,
-                                        apr_hash_t *extra_headers,
-                                        apr_pool_t *pool);
-
+svn_error_t *
+svn_ra_dav__parsed_request(ne_session *sess,
+                           const char *method,
+                           const char *url,
+                           const char *body,
+                           apr_file_t *body_file,
+                           void set_parser (ne_xml_parser *parser,
+                                            void *baton),
+                           const struct ne_xml_elm *elements, 
+                           ne_xml_validate_cb validate_cb,
+                           ne_xml_startelm_cb startelm_cb, 
+                           ne_xml_endelm_cb endelm_cb,
+                           void *baton,
+                           apr_hash_t *extra_headers,
+                           apr_pool_t *pool);
+  
 
 /* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
 enum {

@@ -16,6 +16,7 @@
 # ====================================================================
 #
 
+import os
 import re
 import string
 
@@ -50,10 +51,85 @@ _filter_names = [
                     # function declaration for svn_boolean_t
   ]
 
+def scan_headers(include_dir):
+  "Return a dictionary mapping library basenames to a list of func names."
+
+  libs = { }
+
+  for header, lib in headers_to_libraries.items():
+    if not lib:
+      continue
+
+    fname = os.path.join(include_dir, 'svn_%s.h' % header)
+    funcs = extract_funcs(fname)
+
+    libname = 'libsvn_%s' % lib
+    if libs.has_key(libname):
+      libs[libname].extend(funcs)
+    else:
+      libs[libname] = funcs
+
+  ### do some cleanup tweaks
+
+  return libs
+
+#
+# Map header names to the libraries which contain the named functions
+#
+# Note: we could also use the secondary prefix (e.g. FOO in svn_FOO_), but
+# there are more of those than headers.
+#
+headers_to_libraries = {
+  'auth' : 'subr',
+  'base64' : 'subr',
+  'client' : 'client',
+  'config' : 'subr',
+  'dav' : None,
+  'delta' : 'delta',
+  'diff' : 'diff',
+  'error' : 'subr',
+  'error_codes' : None,
+  'fs' : 'fs',
+  'hash' : 'subr',
+  'io' : 'subr',
+  'md5' : 'subr',
+  'opt' : 'subr',
+  'path' : 'subr',
+  'pools' : 'subr',
+  'props' : 'subr',
+  'quoprint' : 'subr',
+  'ra' : 'ra',
+  'ra_svn' : 'ra_svn',
+  'repos' : 'repos',
+  'sorts' : 'subr',
+  'string' : 'subr',
+  'subst' : 'subr',
+  'test' : 'test',  # do we need symbols here? or just always build static?
+  'time' : 'subr',
+  'types' : 'subr',
+  'utf' : 'subr',
+  'version' : None,
+  'wc' : 'wc',
+  'xml' : 'subr',
+  }
+
+
 if __name__ == '__main__':
   # run the extractor over each file mentioned
   import sys
-  for fname in sys.argv[1:]:
-    funcs = extract_funcs(fname)
-    if funcs:
-      print string.join(funcs, '\n')
+  if len(sys.argv) == 1:
+    # no header files provided. assume we're in the include dir and extract
+    # all the function names
+    libs = scan_headers('.')
+    for lib, funcs in libs.items():
+      for f in funcs:
+        print lib, f
+
+    # compare the above output to the actual libraries using:
+    # for f in libsvn_*-1.so ; do b="`echo $f | sed 's/-.*//'`" ; nm $f | sed -n -e '/__/d' -e "/T svn_/s/.* T/$b/p" ; done
+
+  else:
+    for fname in sys.argv[1:]:
+      funcs = extract_funcs(fname)
+      if funcs:
+        print string.join(funcs, '\n')

@@ -1,5 +1,5 @@
 /*
- * delta.c:   an editor driver for svn_repos_dir_delta
+ * delta.c:   an editor driver for expressing differences between two trees
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -52,7 +52,6 @@ struct context {
   svn_boolean_t text_deltas;
   svn_boolean_t recurse;
   svn_boolean_t entry_props;
-  svn_boolean_t use_copy_history;
   svn_boolean_t ignore_ancestry;
 };
 
@@ -183,16 +182,16 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
                      svn_boolean_t entry_props,
-                     svn_boolean_t use_copy_history,
                      svn_boolean_t ignore_ancestry,
                      apr_pool_t *pool)
 {
-  void *root_baton;
+  void *root_baton = NULL;
   struct context c;
   const char *tgt_parent_dir, *tgt_entry;
   const char *src_fullpath;
   const svn_fs_id_t *src_id, *tgt_id;
   svn_error_t *err;
+  svn_revnum_t rootrev;
   int distance;
 
   /* SRC_PARENT_DIR must be valid. */
@@ -252,39 +251,21 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   c.text_deltas = text_deltas;
   c.recurse = recurse;
   c.entry_props = entry_props;
-  c.use_copy_history = use_copy_history;
   c.ignore_ancestry = ignore_ancestry;
 
-  /* Set the global target revision if one can be determined. */
-  if (svn_fs_is_revision_root (tgt_root))
-    {
-      SVN_ERR (editor->set_target_revision 
-               (edit_baton, svn_fs_revision_root_revision (tgt_root), pool));
-    }
-  else if (svn_fs_is_txn_root (tgt_root))
-    {
-      svn_fs_t *fs = svn_fs_root_fs (tgt_root);
-      const char *txn_name = svn_fs_txn_root_name (tgt_root, pool);
-      svn_fs_txn_t *txn;
+  /* Set the global target revision. */
+  SVN_ERR (editor->set_target_revision 
+           (edit_baton, svn_fs_root_revision (tgt_root), pool));
 
-      SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name, pool));
-      SVN_ERR (editor->set_target_revision (edit_baton, 
-                                            svn_fs_txn_base_revision (txn),
-                                            pool));
-      SVN_ERR (svn_fs_close_txn (txn));
-    }
-
-  /* Get our root_baton... */
-  SVN_ERR (editor->open_root 
-           (edit_baton, 
-            get_path_revision (src_root, src_parent_dir, pool),
-            pool, &root_baton));
+  /* Get our editor root's revision. */
+  rootrev = get_path_revision (src_root, src_parent_dir, pool);
 
   /* Construct the full path of the source item (SRC_ENTRY may by NULL
      or empty, which is fine).  */
   src_fullpath = svn_path_join_many (pool, src_parent_dir, src_entry, NULL);
 
-  /* Get the node ids for the source and target paths. */
+  /* Get the node ids for the source and target paths.  If one or the
+     other doesn't exist, we have to handle those cases specially. */
   err = svn_fs_node_id (&tgt_id, tgt_root, tgt_path, pool);
   if (err)
     {
@@ -293,6 +274,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
           /* Caller thinks that target still exists, but it doesn't.
              So just delete the target and go home.  */
           svn_error_clear (err);
+          SVN_ERR (editor->open_root (edit_baton, rootrev, pool, &root_baton));
           SVN_ERR (delete (&c, root_baton, src_fullpath, pool));
           goto cleanup;
         }
@@ -309,59 +291,69 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
           /* The target has been deleted from our working copy. Add
              back a new one. */
           svn_error_clear (err);
-          SVN_ERR (add_file_or_dir (&c, root_baton,
-                                    tgt_parent_dir,
-                                    tgt_entry,
-                                    pool));
+          SVN_ERR (editor->open_root (edit_baton, rootrev, pool, &root_baton));
+          SVN_ERR (add_file_or_dir (&c, root_baton, tgt_parent_dir,
+                                    tgt_entry, pool));
+          goto cleanup;
         }
       else
         {
           return err;
         }
     }
+
+  /* Compare our two node revision ids. */
+  distance = svn_fs_compare_ids (src_id, tgt_id);
+
+  if (distance == 0)
+    {
+      /* They're the same node!  No-op (you gotta love those). */
+      goto cleanup;
+    }
   else if (src_entry && *src_entry != '\0')
     {
       /* Use the distance between the node ids to determine the best
          way to update the requested entry. */
-      distance = svn_fs_compare_ids (src_id, tgt_id);
-      if (distance == 0)
-        {
-          /* They're the same node!  No-op (you gotta love those). */
-        }
-      else if ((distance == -1) && (! ignore_ancestry))
+      if ((distance == -1) && (! ignore_ancestry))
         {
           /* The nodes are not related at all.  Delete the one, and
              add the other. */
+          SVN_ERR (editor->open_root (edit_baton, rootrev, pool, &root_baton));
           SVN_ERR (delete (&c, root_baton, src_fullpath, pool));
-          SVN_ERR (add_file_or_dir (&c, root_baton,
-                                    tgt_parent_dir,
-                                    tgt_entry,
-                                    pool));
+          SVN_ERR (add_file_or_dir (&c, root_baton, tgt_parent_dir,
+                                    tgt_entry, pool));
         }
       else
         {
           /* The nodes are at least related.  Just replace the one
              with the other. */
-          SVN_ERR (replace_file_or_dir (&c, root_baton,
-                                        src_parent_dir,
-                                        src_entry,
-                                        tgt_parent_dir,
-                                        tgt_entry,
-                                        pool));
+          SVN_ERR (editor->open_root (edit_baton, rootrev, pool, &root_baton));
+          SVN_ERR (replace_file_or_dir (&c, root_baton, src_parent_dir, 
+                                        src_entry, tgt_parent_dir, 
+                                        tgt_entry, pool));
         }
     }
   else
     {
       /* There is no entry given, so update the whole parent directory. */
-      SVN_ERR (delta_dirs (&c, root_baton,
-                           src_fullpath, tgt_path,
-                           pool));
+      SVN_ERR (editor->open_root (edit_baton, rootrev, pool, &root_baton));
+      SVN_ERR (delta_dirs (&c, root_baton, src_fullpath, tgt_path, pool));
     }
 
  cleanup:
 
-  /* Make sure we close the root directory we opened above. */
-  SVN_ERR (editor->close_directory (root_baton, pool));
+#if 1
+  /*** Temporary kludge for compatibility with older ra_dav clients
+       while they learn that it's okay to have an editor drive with no
+       open_root().  This should be sometime after the 0.24 release
+       (See issue #1159). ***/
+  if (! root_baton)
+    SVN_ERR (editor->open_root (edit_baton, rootrev, pool, &root_baton));
+#endif 
+
+  /* Make sure we close the root directory if we opened one above. */
+  if (root_baton)
+    SVN_ERR (editor->close_directory (root_baton, pool));
 
   /* Close the edit. */
   SVN_ERR (editor->close_edit (edit_baton, pool));
@@ -381,16 +373,20 @@ get_path_revision (svn_fs_root_t *root,
                    apr_pool_t *pool)
 {
   svn_revnum_t revision;
+  svn_error_t *err;
 
   /* Easy out -- if ROOT is a revision root, we can use the revision
      that it's a root of. */
   if (svn_fs_is_revision_root (root))
-    return svn_fs_revision_root_revision (root);
+    return svn_fs_root_revision (root);
 
   /* Else, this must be a transaction root, so ask the filesystem in
      what revision this path was created. */
-  if (svn_fs_node_created_rev (&revision, root, path, pool))
-    revision = SVN_INVALID_REVNUM;
+  if ((err = svn_fs_node_created_rev (&revision, root, path, pool)))
+    {
+      revision = SVN_INVALID_REVNUM;
+      svn_error_clear (err);
+    }
 
   /* If we don't get back a valid revision, this path is mutable in
      the transaction.  We should probably examing the node on which it
@@ -595,10 +591,6 @@ send_text_delta (struct context *c,
            (file_baton, base_checksum, pool,
             &delta_handler, &delta_handler_baton));
 
-  /* Our editor didn't provide a window handler, so don't sweat the deltas. */
-  if (delta_handler == NULL)
-    return SVN_NO_ERROR;
-
   if (c->text_deltas && delta_stream)
     {
       /* Deliver the delta stream to the file.  */
@@ -718,8 +710,6 @@ add_file_or_dir (struct context *c, void *dir_baton,
 {
   int is_dir;
   const char *t_fullpath;
-  svn_revnum_t copied_from_revision = SVN_INVALID_REVNUM;
-  const char *copied_from_path = NULL;
   struct context *context = c;
 
   assert (target_parent && target_entry);
@@ -730,33 +720,14 @@ add_file_or_dir (struct context *c, void *dir_baton,
   /* Is the target a file or a directory?  */
   SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root, t_fullpath, pool));
 
-  if (c->use_copy_history)
-    {
-      SVN_ERR (svn_fs_copied_from (&copied_from_revision,
-                                   &copied_from_path,
-                                   c->target_root,
-                                   t_fullpath,
-                                   pool));
-    }
-
-  if ((SVN_IS_VALID_REVNUM (copied_from_revision)) && copied_from_path)
-    {
-      context = apr_palloc (pool, sizeof (*context));
-      *context = *c;
-      SVN_ERR (svn_fs_revision_root (&(context->source_root),
-                                     svn_fs_root_fs (context->target_root),
-                                     copied_from_revision, pool));
-    }
-
   if (is_dir)
     {
       void *subdir_baton;
 
       SVN_ERR (context->editor->add_directory 
                (edit_path (c, t_fullpath), dir_baton,
-                copied_from_path, copied_from_revision, pool, &subdir_baton));
-      SVN_ERR (delta_dirs (context, subdir_baton,
-                           copied_from_path, t_fullpath, pool));
+                NULL, SVN_INVALID_REVNUM, pool, &subdir_baton));
+      SVN_ERR (delta_dirs (context, subdir_baton, NULL, t_fullpath, pool));
       SVN_ERR (context->editor->close_directory (subdir_baton, pool));
     }
   else
@@ -766,9 +737,8 @@ add_file_or_dir (struct context *c, void *dir_baton,
 
       SVN_ERR (context->editor->add_file 
                (edit_path (c, t_fullpath), dir_baton,
-                copied_from_path, copied_from_revision, pool, &file_baton));
-      SVN_ERR (delta_files (context, file_baton,
-                            copied_from_path, t_fullpath, pool));
+                NULL, SVN_INVALID_REVNUM, pool, &file_baton));
+      SVN_ERR (delta_files (context, file_baton, NULL, t_fullpath, pool));
       SVN_ERR (svn_fs_file_md5_checksum (digest, context->target_root,
                                          t_fullpath, pool));
       SVN_ERR (context->editor->close_file

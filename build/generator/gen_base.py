@@ -24,7 +24,7 @@ class GeneratorBase:
   #        file-type is 'target', 'object', ...
   #
 
-  def __init__(self, fname, verfname):
+  def __init__(self, fname, verfname, options=None):
     parser = ConfigParser.ConfigParser(_cfg_defaults)
     parser.read(fname)
 
@@ -47,11 +47,16 @@ class GeneratorBase:
     self.fs_test_deps = [ ]
     self.target_dirs = { }
     self.manpages = [ ]
-    self.infopages = [ ]
     self.graph = DependencyGraph()
+
+    if not hasattr(self, 'skip_targets'):
+      self.skip_targets = { }
 
     # PASS 1: collect the targets and some basic info
     for target in _filter_targets(parser.sections()):
+      if self.skip_targets.has_key(target):
+        continue
+
       install = parser.get(target, 'install')
       type = parser.get(target, 'type')
 
@@ -60,6 +65,7 @@ class GeneratorBase:
         raise GenError('ERROR: unknown build type: ' + type)
 
       target_ob = target_class(target,
+                               parser.get(target, 'description'),
                                parser.get(target, 'path'),
                                install,
                                parser.get(target, 'custom'), ### bogus
@@ -97,7 +103,6 @@ class GeneratorBase:
       target_ob.add_dependencies(parser.get(target, 'sources'), self.graph)
 
       self.manpages.extend(string.split(parser.get(target, 'manpages')))
-      self.infopages.extend(string.split(parser.get(target, 'infopages')))
 
       if type not in ('script', 'project', 'external', 'utility'):
         # collect test programs
@@ -334,8 +339,9 @@ lang_abbrev = {
 
 ### we should turn these targets into DependencyNode subclasses...
 class Target:
-  def __init__(self, name, path, install, custom, cfg, extmap):
+  def __init__(self, name, desc, path, install, custom, cfg, extmap):
     self.name = name
+    self.desc = desc
     self.path = path
     self.cfg = cfg
 
@@ -405,8 +411,8 @@ class TargetExe(TargetLinked):
   default_install = 'bin'
   default_sources = '*.c'
 
-  def __init__(self, name, path, install, custom, cfg, extmap):
-    Target.__init__(self, name, path, install, custom, cfg, extmap)
+  def __init__(self, name, desc, path, install, custom, cfg, extmap):
+    Target.__init__(self, name, desc, path, install, custom, cfg, extmap)
 
     self.objext = extmap['exe', 'object']
     self.output = os.path.join(path, name + extmap['exe', 'target'])
@@ -426,8 +432,8 @@ class TargetLib(TargetLinked):
   default_install = 'lib'
   default_sources = '*.c'
 
-  def __init__(self, name, path, install, custom, cfg, extmap):
-    Target.__init__(self, name, path, install, custom, cfg, extmap)
+  def __init__(self, name, desc, path, install, custom, cfg, extmap):
+    Target.__init__(self, name, desc, path, install, custom, cfg, extmap)
 
     self.objext = extmap['lib', 'object']
 
@@ -456,8 +462,8 @@ class TargetSWIG(Target):
   default_install = 'swig'
   # no default_sources
 
-  def __init__(self, name, path, install, custom, cfg, extmap):
-    Target.__init__(self, name, path, install, custom, cfg, extmap)
+  def __init__(self, name, desc, path, install, custom, cfg, extmap):
+    Target.__init__(self, name, desc, path, install, custom, cfg, extmap)
 
     self._objext = extmap['lib', 'object']
     self._libext = extmap['lib', 'target']
@@ -557,7 +563,6 @@ _cfg_defaults = {
   'sources' : '',
   'libs' : '',
   'manpages' : '',
-  'infopages' : '',
   'custom' : '',
   'install' : '',
   'testing' : '',
@@ -566,6 +571,7 @@ _cfg_defaults = {
   'release' : '',
   'debug' : '',
   'project_name' : '',
+  'description' : '',
   }
 
 _predef_sections = [

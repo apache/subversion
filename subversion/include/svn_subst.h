@@ -24,6 +24,8 @@
 #ifndef SVN_SUBST_H
 #define SVN_SUBST_H
 
+#include "svn_types.h"
+#include "svn_string.h"
 #include "svn_io.h"
 
 #ifdef __cplusplus
@@ -82,6 +84,25 @@ typedef struct svn_subst_keywords_t
   const svn_string_t *url;
   const svn_string_t *id;
 } svn_subst_keywords_t;
+
+
+/** Fill in an <tt>svn_subst_keywords_t *</tt> @a kw with the appropriate 
+ * contents given an @a keywords_string (the contents of the svn:keywords 
+ * property for the file in question), the revision @a rev, the @a url, 
+ * the @a date the file was committed on, and the @a author of the last 
+ * commit.  Any of these can be @c NULL to indicate that the information is 
+ * not present, or @c 0 for @a date.
+ * 
+ * All memory is allocated out of @a pool.
+ */
+svn_error_t *
+svn_subst_build_keywords (svn_subst_keywords_t *kw,
+                          const char *keywords_string,
+                          const char *rev,
+                          const char *url,
+                          apr_time_t date,
+                          const char *author,
+                          apr_pool_t *pool);
 
 
 /** Return @c TRUE if @a a and @a b do not hold the same keywords.

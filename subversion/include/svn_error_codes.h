@@ -688,6 +688,10 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 8,
               "Revision range is not allowed")
 
+  SVN_ERRDEF (SVN_ERR_CLIENT_INVALID_RELOCATION,
+              SVN_ERR_CLIENT_CATEGORY_START + 9,
+              "Inter-repository relocation not allowed")
+
   /* misc errors */
 
   SVN_ERRDEF (SVN_ERR_BASE,

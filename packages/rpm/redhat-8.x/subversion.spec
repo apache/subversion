@@ -1,5 +1,5 @@
 %define apache_version 2.0.45-0.1
-%define neon_version 0.23.2
+%define neon_version 0.23.9
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_*_check to 0.
@@ -23,21 +23,23 @@ Requires: httpd-apr >= %{apache_version}
 Requires: db4 >= 4.0.14
 Requires: expat
 Requires: neon >= %{neon_version}
-#Requires: /sbin/install-info
-BuildPreReq: httpd >= %{apache_version}
-BuildPreReq: httpd-devel >= %{apache_version}
-BuildPreReq: httpd-apr-devel >= %{apache_version}
+Requires: python >= 2
+Obsoletes: subversion-cvs2svn
 BuildPreReq: autoconf >= 2.53
 BuildPreReq: db4-devel >= 4.0.14
+BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
+BuildPreReq: httpd >= %{apache_version}
+BuildPreReq: httpd-apr-devel >= %{apache_version}
+BuildPreReq: httpd-devel >= %{apache_version}
 BuildPreReq: libtool >= 1.4.2
+BuildPreReq: libxslt >= 1.0.27
 BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
 BuildPreReq: python
 BuildPreReq: python-devel
 BuildPreReq: swig >= 1.3.16
-BuildPreReq: texinfo
 BuildPreReq: zlib-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
@@ -75,14 +77,14 @@ BuildPreReq: httpd-devel >= %{apache_version}
 The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
-%package cvs2svn
+%package python
 Group: Utilities/System
-Summary: Converts CVS repositories to Subversion repositories.
+Summary: Allows Python scripts to directly use Subversion repositories.
 Requires: swig-runtime >= 1.3.16
-%description cvs2svn
-Converts CVS repositories to Subversion repositories.
-
-See /usr/share/doc/subversion*/tools/cvs2svn directory for more information.
+Requires: python >= 2
+Obsoletes: subversion-cvs2svn
+%description python
+Provides Python (SWIG) support for Subversion.
 
 %package tools
 Group: Utilities/System
@@ -91,6 +93,28 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Jun 07 2003 David Summers <david@summersoft.fay.ar.us> 0.23.0-6163
+- svn-design.info is no longer built.
+
+* Sat May 24 2003 David Summers <david@summersoft.fay.ar.us> 0.23.0-6036
+- Track changes to Python SWIG build.
+- Now requires neon-0.23.9 to pick up bug and security fixes.
+- Now builds the book and puts it in /usr/share/doc/subversion-VERSION/book
+  directory.  RedHat 7.x and RedHat 8.x users who build this RPM will need to
+  install or upgrade to the RedHat 9.0 docbook-style-xsl and libxslt packages.
+
+* Thu May 15 2003 David Summers <david@summersoft.fay.ar.us> 0.22.2-5943
+- The subversion package now requires python 2 because cvs2svn has been
+  unswigified and just depends on python 2.
+- The new subversion-python package requires python 2.
+
+* Sat May 10 2003 David Summers <david@summersoft.fay.ar.us> 0.22.1-5879
+- svn-config has been taken back out of the distribution.
+- cvs2svn no longer requires SWIG, so rename the subversion-cvs2svn package to 
+  subversion-python and move the cvs2svn and RCS parser into the subversion
+  package.
+- Added cvs2svn man page.
+
 * Sun Apr 13 2003 David Summers <david@summersoft.fay.ar.us> 0.20.1-5610
 - Added svndumpfilter.
 
@@ -277,7 +301,7 @@ LDFLAGS="${LDFLAGS}" ./configure \
 make clean
 make
 
-# Build cvs2svn python bindings
+# Build python bindings
 make swig-py
 
 %if %{make_ra_local_check}
@@ -330,8 +354,9 @@ sed -e 's;#!/usr/bin/env python;#!/usr/bin/env python2;' < $RPM_BUILD_DIR/%{name
 chmod a+x $RPM_BUILD_ROOT/usr/bin/cvs2svn
 mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 cp -r tools/cvs2svn/rcsparse $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages/rcsparse
-mv $RPM_BUILD_ROOT/usr/lib/svn-python/svn $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
+cp $RPM_BUILD_DIR/subversion-%{version}/tools/cvs2svn/cvs2svn.1 $RPM_BUILD_ROOT/usr/share/man/man1
 
 # Copy svnadmin.static to destination
 cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
@@ -340,15 +365,10 @@ cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
 mkdir -p $RPM_BUILD_ROOT/usr/lib/subversion
 cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 
-%post
-# Only add to INFO directory if this is the only instance installed.
-if [ "$1"x = "1"x ]; then
-   if [ -x /sbin/install-info ]; then
-      /sbin/install-info /usr/share/info/svn-design.info.gz \
-         /usr/share/info/dir \
-         --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
-   fi
-fi
+# Set up book generation and installation
+(cd doc/book; make XSL_DIR=/usr/share/sgml/docbook/xsl-stylesheets all-html)
+cp -r doc/book/book/html-chunk book
+cp -r doc/book/book/images     book/images
 
 %preun
 # Save current copy of svnadmin.static
@@ -356,15 +376,6 @@ echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version
 echo "Erase this program only after you make sure you won't need to dump/reload"
 echo "any of your repositories to upgrade to a new version of the database."
 cp /usr/bin/svnadmin-%{version}-%{release}.static /usr/bin/svnadmin-%{version}-%{release}
-
-# Only delete from INFO directory if this is the last instance being deleted.
-if [ "$1"x = "0"x ]; then
-   if [ -x /sbin/install-info ]; then
-      /sbin/install-info --delete /usr/share/info/svn-design.info.gz \
-         /usr/share/info/dir \
-         --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
-   fi
-fi
 
 %post server
 # Restart apache server if needed.
@@ -387,6 +398,8 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 %doc BUGS CHANGES COMMITTERS COPYING HACKING IDEAS INSTALL PORTING README
 %doc subversion/LICENSE
+%doc book
+/usr/bin/cvs2svn
 /usr/bin/svn
 /usr/bin/svnadmin
 /usr/bin/svnadmin-%{version}-%{release}.static
@@ -402,15 +415,14 @@ rm -rf $RPM_BUILD_ROOT
 /usr/lib/libsvn_repos*so*
 /usr/lib/libsvn_subr*so*
 /usr/lib/libsvn_wc*so*
+/usr/lib/python2.2/site-packages/rcsparse
 /usr/share/man/man1/*
-/usr/share/info/*
 
 %files devel
 %defattr(-,root,root)
 /usr/lib/libsvn*.a
 /usr/lib/libsvn*.la
 /usr/include/subversion-1
-/usr/bin/svn-config
 
 %files server
 %defattr(-,root,root)
@@ -418,11 +430,10 @@ rm -rf $RPM_BUILD_ROOT
 %{apache_dir}/lib/httpd/modules/mod_dav_svn.la
 %{apache_dir}/lib/httpd/modules/mod_dav_svn.so
 
-%files cvs2svn
+%files python
 %defattr(-,root,root)
-/usr/bin/cvs2svn
 /usr/lib/python2.2/site-packages/svn
-/usr/lib/python2.2/site-packages/rcsparse
+/usr/lib/python2.2/site-packages/libsvn
 /usr/lib/libsvn_swig_py*so*
 
 %files tools

@@ -25,8 +25,11 @@
 #ifndef SVN_RA_SVN_H
 #define SVN_RA_SVN_H
 
+#include <apr.h>
+#include <apr_pools.h>
 #include <apr_network_io.h>
-#include <svn_delta.h>
+
+#include "svn_delta.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -172,6 +175,16 @@ svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   svn_ra_svn_item_t **item);
 
+/** Scan data on @c conn until we find something which looks like the
+ * beginning of an svn server greeting (an open paren followed by a
+ * whitespace character).  This function is appropriate for beginning
+ * a client connection opened in tunnel mode, since people's dotfiles
+ * sometimes write output to stdout.  It may only be called at the
+ * beginning of a client connection.
+ */
+svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
+                                             apr_pool_t *pool);
+
 /** Parse an array of @c svn_item_t structures as a tuple, using a
  * printf-like interface.  The format string @a fmt may contain:
  *
@@ -216,22 +229,21 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool,
                                           const char *fmt, ...);
 
-/** Accept commands over the network and handle them according to
- * @a commands.  Command handlers will be passed @a conn, a subpool of 
- * @a pool (cleared after each command is handled), the parameters of the
- * command, and @a baton.  Commands will be accepted until a terminating
- * command is received (a command with "terminate" set in the command
- * table).  Normally, this function will only halt and return an error
- * when a communications failure occurs, and will send other errors to
- * the remote connection as command failures.  If @a pass_through_errors
- * is set, all errors will be returned (after being sent to the remote
- * connection if appropriate).
+/** Accept commands over the network and handle them according to @a
+ * commands.  Command handlers will be passed @a conn, a subpool of @a
+ * pool (cleared after each command is handled), the parameters of the
+ * command, and @a baton.  Commands will be accepted until a
+ * terminating command is received (a command with "terminate" set in
+ * the command table).  If a command handler returns an errors wrapped
+ * in SVN_RA_SVN_CMD_ERR (see the SVN_CMD_ERR macro above), the error
+ * will be reported to the other side of the connection and the
+ * command loop will continue; any other kind of error (typically a
+ * network or protocol error) is passed through to the caller.
  */
 svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool,
                                         const svn_ra_svn_cmd_entry_t *commands,
-                                        void *baton,
-                                        svn_boolean_t pass_through_errors);
+                                        void *baton);
 
 /** Write a command over the network, using the same format string notation 
  * as svn_ra_svn_write_tuple.
@@ -262,16 +274,12 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
                            void *callback_baton);
 
 /** Receive edit commands over the network and use them to drive @a editor
- * with @a edit_baton.
- *
- * On return, @a *aborted will be set if the edit was aborted.  See the 
- * @c svn_ra_svn_handle_commands description for the meaning of 
- * @a pass_through_errors.
+ * with @a edit_baton.  On return, @a *aborted will be set if the edit was
+ * aborted.
  */
 svn_error_t *svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const svn_delta_editor_t *editor,
                                      void *edit_baton,
-                                     svn_boolean_t pass_through_errors,
                                      svn_boolean_t *aborted);
 
 #ifdef __cplusplus

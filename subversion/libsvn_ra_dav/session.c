@@ -172,7 +172,7 @@ client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
       pw_creds = creds;
       if (pw_creds)
         {
-          strncpy(pwbuf, pw_creds->password, len);
+          apr_cpystrn(pwbuf, pw_creds->password, len);
         }
     }
   apr_pool_destroy(pool);
@@ -607,7 +607,7 @@ svn_ra_dav__open (void **session_baton,
     {
       const char *authorities_file;
       authorities_file = svn_config_get_server_setting(cfg, server_group,
-                                                       "ssl-authorities-file",
+                                                       SVN_CONFIG_OPTION_SSL_AUTHORITIES_FILE,
                                                        NULL);
       
       if (authorities_file != NULL)
@@ -679,7 +679,6 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__get_commit_editor,
   svn_ra_dav__get_file,
   svn_ra_dav__get_dir,
-  svn_ra_dav__do_checkout,
   svn_ra_dav__do_update,
   svn_ra_dav__do_switch,
   svn_ra_dav__do_status,

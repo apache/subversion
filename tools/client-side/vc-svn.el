@@ -20,10 +20,10 @@
 ;;; To do here:
 ;;; Provide more of the optional VC backend functions: 
 ;;; - dir-state
-;;; - mode-line-string, to show newly added files, modified props?
-;;;   see vc-cvs-mode-line-string
 ;;; - merge across arbitrary revisions
-;;; - allow getting read-only copies for vc-version-other-window etc
+;;;
+;;; Maybe we want more info in mode-line-string.  Status of props?  Status 
+;;; compared to what's in the repository (svn st -u) ? 
 ;;;
 ;;; VC passes the vc-svn-register function a COMMENT argument, which
 ;;; is like the file description in CVS and RCS.  Could we store the
@@ -195,8 +195,9 @@ The documentation for the function `vc-state' describes the possible values."
    ;; positives, if the clauses preceding them didn't screen those
    ;; out.  Making a pattern more selective could break something.
 
-   ;; nil                 The given file is not under version control.
-   ((looking-at "\\?") nil)
+   ;; nil                 The given file is not under version control,
+   ;;                     or does not exist.
+   ((looking-at "\\?\\|^$") nil)
 
    ;; 'needs-patch        The file has not been edited by the
    ;;                     user, but there is a more recent version
@@ -337,7 +338,7 @@ to be merged."
     ;; vc-cvs does something like this
     (vc-file-setprop file 'vc-checkout-time 0)
     (vc-file-setprop file 'vc-workfile-version
-		     (vc-svn-workfile-version file))))
+                     (vc-svn-workfile-version file))))
 
 
 (defun vc-svn-print-log (file)
@@ -345,14 +346,12 @@ to be merged."
   (vc-do-command nil 'async vc-svn-program-name file "log"))
 
 
-;;; This never gets called, due to a bug vc-print-log that makes it 
-;;; try to use log-view-mode no matter what the back end.  Boo.
 (defun vc-svn-show-log-entry (version)
   "Search the log entry for VERSION in the current buffer.
 Make sure it is displayed in the buffer's window."
   (when (re-search-forward (concat "^-+\n\\(rev\\) "
                                    (regexp-quote version)
-                                   ":[^|]|[^|]| [0-9]+ lines?"))
+                                   ":[^|]+|[^|]+| [0-9]+ lines?"))
     (goto-char (match-beginning 1))
     (recenter 1)))
 
@@ -408,5 +407,8 @@ This function returns a status of either 0 (no differences found), or
       (if (or async (> (buffer-size (get-buffer "*vc-diff*")) 0))
           1 0))))
 
+(defun vc-svn-find-version (file rev buffer)
+  (vc-do-command buffer 0 vc-svn-program-name file 
+         "cat" "-r" rev))
 
 (provide 'vc-svn)

@@ -40,7 +40,6 @@
 
 #include "svn_types.h"
 #include "svn_string.h"
-#include "svn_auth.h"
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_ra.h"    /* for svn_ra_reporter_t type */
@@ -62,6 +61,16 @@ extern "C" {
  * then the set of batons can be passed around by passing a single baton.
  */
 typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
+
+/** Relocation validation callback typedef.
+ *
+ * Called for each relocated file/directory.  @a uuid contains the
+ * expected repository UUID, @a url contains the tentative URL.
+ */
+
+typedef svn_error_t *svn_wc_relocation_validator(void *baton,
+                                                 const char *uuid,
+                                                 const char *url);
 
 /** Return, in @a *adm_access, a pointer to a new access baton for the working
  * copy administrative area associated with the directory @a path.  If
@@ -103,10 +112,13 @@ svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
 
 /** Checks the working copy to determine the node type of @a path.  If 
  * @a path is a versioned directory then the behaviour is like that of
- * @c svn_wc_adm_open, otherwise, if @a path is a file, an unversioned 
- * directory, or does not exist, then the behaviour is like that of 
- * @c svn_wc_adm_open with @a path replaced by the parent directory of 
- * @a path.
+ * @c svn_wc_adm_open, otherwise, if @a path is a file or does not
+ * exist, then the behaviour is like that of @c svn_wc_adm_open with
+ * @a path replaced by the parent directory of @a path.  If @a path is
+ * an unversioned directory, the behaviour is also like that of
+ * @c svn_wc_adm_open on the parent, except that if the open fails,
+ * then the returned SVN_ERR_WC_NOT_DIRECTORY error refers to @a path,
+ * not to @a path's parent.
  */
 svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                                     svn_wc_adm_access_t *associated,
@@ -570,6 +582,9 @@ typedef struct svn_wc_entry_t
   /** deleted, but parent rev lags behind */
   svn_boolean_t deleted;
 
+  /** for THIS_DIR entry, implies whole entries file is incomplete */
+  svn_boolean_t incomplete;
+
   /** copyfrom location */
   const char *copyfrom_url;
 
@@ -767,6 +782,28 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
                                           apr_pool_t *pool);
                        
 
+
+/* Ensure that an administrative area exists for PATH, so that PATH is a
+ * working copy subdir based on URL at REVISION.
+ *
+ * If the administrative area does not exist then it will be created and
+ * initialized to a unlocked state.
+ *
+ * If the administrative area already exists then the given URL must match
+ * the URL in the administrative area or an error will be returned. The
+ * given REVISION must also match except for the special case of adding a
+ * directory that has a name matching one scheduled for deletion, in which
+ * case REVISION must be zero.
+ *
+ * Do not ensure existence of PATH itself; if PATH does not exist,
+ * return error. 
+ */
+svn_error_t *svn_wc_ensure_adm (const char *path,
+                                const char *url,
+                                svn_revnum_t revision,
+                                apr_pool_t *pool);
+
+
 
 /** 
  * @defgroup svn_wc_status working copy status.
@@ -837,7 +874,10 @@ enum svn_wc_status_kind
     svn_wc_status_ignored,
 
     /** an unversioned resource is in the way of the versioned resource */
-    svn_wc_status_obstructed
+    svn_wc_status_obstructed,
+
+    /** a directory doesn't contain a complete entries list  */
+    svn_wc_status_incomplete
 };
 
 /** Structure for holding the "status" of a working copy item. 
@@ -1279,6 +1319,8 @@ svn_wc_crawl_revisions (const char *path,
 
 /** Set @a *wc_root to @c TRUE if @a path represents a "working copy root",
  * @c FALSE otherwise.  Use @a pool for any intermediate allocations.
+ *
+ * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
  * NOTE: Due to the way in which "WC-root-ness" is calculated, passing
  * a @a path of `.' to this function will always return @c TRUE.
@@ -1833,6 +1875,34 @@ svn_wc_cleanup (const char *path,
                 void *cancel_baton,
                 apr_pool_t *pool);
 
+/**
+ * Changing repository references at @a path that begin with
+ * @a from to begin with @a to instead.  Perform necessary allocations in
+ * @a pool.  If @a recurse is true, do so.
+ *
+ * @a adm_access is an access baton for the directory containing
+ * @a path. @a adm_access must not be NULL.
+ *
+ * @a validator will be called for each newly generated URL.
+ *
+ * @param path Working copy directory
+ * @param adm_access Admin access baton (may not be NULL)
+ * @param from Original URL
+ * @param to New URL
+ * @param recurse Whether to recurse into subdirectories
+ * @param validator URL change-validation callback
+ * @param validator_baton Baton for validator
+ * @param pool The pool from which to perform memory allocations
+ **/
+svn_error_t *
+svn_wc_relocate (const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 void *validator_baton,
+                 svn_wc_relocation_validator *validator,
+                 apr_pool_t *pool);
 
 /** Revert changes to @a path (perhaps in a @a recursive fashion).  Perform
  * necessary allocations in @a pool.

@@ -22,10 +22,10 @@
 #ifndef SVN_TYPES_H
 #define SVN_TYPES_H
 
-#include <apr.h>        /* for apr_size_t */
-
-/* ### these should go away, but I don't feel like working on it yet */
+/* ### this should go away, but it causes too much breakage right now */
 #include <stdlib.h>
+
+#include <apr.h>        /* for apr_size_t */
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_tables.h>
@@ -69,6 +69,10 @@ typedef struct svn_error
 /** index into an apr_array_header_t */
 #define APR_ARRAY_IDX(ary,i,type) (((type *)(ary)->elts)[i])
 
+/** easier array-pushing syntax */
+#define APR_ARRAY_PUSH(ary,type) (*((type *)apr_array_push (ary)))
+
+
 /** The various types of nodes in the Subversion filesystem. */
 typedef enum
 {

@@ -183,7 +183,7 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
   apr_hash_index_t *this;
   apr_hash_t *hash = ra_baton;
   
-  /* Figure out which RA library key matches URL */
+  /* Figure out which RA library key matches URL. */
   for (this = apr_hash_first (pool, hash); this; this = apr_hash_next (this))
     {
       const void *key;
@@ -195,8 +195,11 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
       apr_hash_this (this, &key, &keylen, &val);
       keystr = key;
 
-      /* case-sensitive scheme comparison */
-      if (memcmp (keystr, URL, keylen) == 0 && URL[keylen] == ':')
+       /* Case-insensitive comparison, per RFC 2396 section 3.1.  Allow
+          URL to contain a trailing "+foo" section in the scheme, since
+          that's how we specify tunnel schemes in ra_svn. */
+       if (strncasecmp (keystr, URL, keylen) == 0 &&
+           (URL[keylen] == ':' || URL[keylen] == '+'))
         {
           *library = (svn_ra_plugin_t *) val;          
           return SVN_NO_ERROR; 

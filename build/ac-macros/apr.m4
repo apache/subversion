@@ -101,7 +101,15 @@ AC_DEFUN(SVN_DOWNLOAD_APR,
   echo ""
   echo "   cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr"
   echo ""
-  echo "Run that right here in the top-level of the Subversion tree."
+  echo "Run that right here in the top level of the Subversion tree,"
+  echo "then run autogen.sh again."
+  echo ""
+  echo "Whichever of the above you do, you probably need to do"
+  echo "something similar for apr-util, either providing both"
+  echo "--with-apr and --with-apr-util to 'configure', or"
+  echo "getting both from CVS with:"
+  echo ""
+  echo "   cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr apr-util"
   echo ""
   AC_MSG_ERROR([no suitable apr found])
 ])

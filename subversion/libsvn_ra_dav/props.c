@@ -157,8 +157,8 @@ typedef struct propfind_ctx_t
   int status; /* status for the current <propstat> (or 0 if unknown). */
   apr_hash_t *propbuffer; /* holds properties until their status is known. */
   ne_xml_elmid last_open_id; /* the id of the last opened tag. */
+  ne_xml_parser *parser; /* xml parser handling the PROPSET request. */
 
-  ne_xml_parser *parser;
   apr_pool_t *pool;
 
 } propfind_ctx_t;
@@ -298,6 +298,8 @@ static int start_element(void *userdata,
       /* these are our user-visible properties, presumably. */
       pc->encoding = ne_xml_get_attr(pc->parser, atts, SVN_DAV_PROP_NS_DAV,
                                      "encoding");
+      if (pc->encoding)
+        pc->encoding = apr_pstrdup(pc->pool, pc->encoding);
       break;
 
     default:
@@ -431,6 +433,7 @@ static int end_element(void *userdata,
             {
               return 1;
             }
+          pc->encoding = NULL;
         }
       else /* no encoding, so just transform the CDATA into an svn_string_t. */
         {
@@ -447,6 +450,14 @@ static int end_element(void *userdata,
   return 0;
 }
 
+
+static void set_parser(ne_xml_parser *parser,
+                       void *baton)
+{
+  propfind_ctx_t *pc = baton;
+  pc->parser = parser;
+}
+  
 
 svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                     ne_session *sess,
@@ -508,8 +519,9 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   pc.props = apr_hash_make(pool);
 
   /* Create and dispatch the request! */
-  err = svn_ra_dav__parsed_request(sess, "PROPFIND", url, body->data, 0,
-                                   propfind_elements, validate_element,
+  err = svn_ra_dav__parsed_request(sess, "PROPFIND", url, body->data, 0, 
+                                   set_parser, propfind_elements, 
+                                   validate_element, 
                                    start_element, end_element, 
                                    &pc, extra_headers, pool);
 
@@ -609,6 +621,107 @@ svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
 }
 
 
+/* Shared helper func: given a public URL which may not exist in HEAD,
+   use SESS to search up parent directories until we can retrieve a
+   *RSRC (allocated in POOL) containing a standard set of "starting"
+   props: {VCC, resourcetype, baseline-relative-path}.  
+
+   Also return *MISSING_PATH (allocated in POOL), which is the
+   trailing portion of the URL that did not exist.  If an error
+   occurs, *MISSING_PATH isn't changed. */
+static svn_error_t * search_for_starting_props(svn_ra_dav_resource_t **rsrc,
+                                               const char **missing_path,
+                                               ne_session *sess,
+                                               const char *url,
+                                               apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_size_t len;
+  svn_stringbuf_t *path_s;
+  ne_uri parsed_url;
+  const char *lopped_path = "";
+
+  /* Split the url into it's component pieces (schema, host, path,
+     etc).  We want the path part. */
+  ne_uri_parse (url, &parsed_url);
+
+  path_s = svn_stringbuf_create (parsed_url.path, pool);
+
+  /* Try to get the starting_props from the public url.  If the
+     resource no longer exists in HEAD, we'll get a failure.  That's
+     fine: just keep removing components and trying to get the
+     starting_props from parent directories. */
+  
+  while (! svn_path_is_empty (path_s->data))
+    {
+      err = svn_ra_dav__get_starting_props(rsrc, sess, path_s->data,
+                                           NULL, pool);
+      if (! err)
+        break;   /* found an existing parent! */
+      
+      if (err->apr_err != SVN_ERR_RA_DAV_REQUEST_FAILED)
+        return err;  /* found a _real_ error */
+
+      /* else... lop off the basename and try again. */
+      lopped_path = svn_path_join(svn_path_basename (path_s->data, pool),
+                                  lopped_path,
+                                  pool);
+      len = path_s->len;
+      svn_path_remove_component(path_s);
+      if (path_s->len == len)          
+        /* whoa, infinite loop, get out. */
+        return svn_error_quick_wrap(err,
+                                    "The path was not part of a repository");
+      
+      svn_error_clear (err);
+    }
+
+  if (svn_path_is_empty (path_s->data))
+    {
+      /* entire URL was bogus;  not a single part of it exists in
+         the repository!  */
+      err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                              "No part of path '%s' was found in "
+                              "repository HEAD.", parsed_url.path);
+      ne_uri_free(&parsed_url);
+      return err;
+    }
+  ne_uri_free(&parsed_url);
+  
+  *missing_path = lopped_path;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
+                                 ne_session *sess,
+                                 const char *url,
+                                 apr_pool_t *pool)
+{
+  svn_ra_dav_resource_t *rsrc;
+  const char *lopped_path;
+  const svn_string_t *vcc_s;
+  
+  /* ### Someday, possibly look for memory-cached VCC in the RA session. */
+
+  /* ### Someday, possibly look for disk-cached VCC via get_wcprop callback. */
+
+  /* Finally, resort to a set of PROPFINDs up parent directories. */
+  SVN_ERR( search_for_starting_props(&rsrc, &lopped_path,
+                                     sess, url, pool) );
+
+  vcc_s = apr_hash_get(rsrc->propset,
+                       SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
+  if (! vcc_s)
+    return svn_error_create(APR_EGENERAL, NULL,
+                             "The VCC property was not found on the "
+                             "resource.");
+
+  *vcc = vcc_s->data;
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
                                             svn_ra_dav_resource_t **bln_rsrc,
                                             ne_session *sess,
@@ -620,9 +733,8 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
   svn_ra_dav_resource_t *rsrc;
   const svn_string_t *vcc;
   const svn_string_t *relative_path;
-  ne_uri parsed_url;
   const char *my_bc_relative;
-  const char *lopped_path = "";
+  const char *lopped_path;
 
   /* ### we may be able to replace some/all of this code with an
      ### expand-property REPORT when that is available on the server. */
@@ -647,60 +759,9 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
         parent directories.
   */
 
-  /* Split the url into it's component pieces (schema, host, path,
-     etc).  We want the path part. */
-  ne_uri_parse (url, &parsed_url);
-
-  /* ### do we want to optimize the props we fetch, based on what the
-     ### user has requested? i.e. omit resourcetype when is_dir is NULL
-     ### and omit relpath when bc_relative is NULL. */
-
-  {
-    /* Try to get the starting_props from the public url.  If the
-       resource no longer exists in HEAD, we'll get a failure.  That's
-       fine: just keep removing components and trying to get the
-       starting_props from parent directories. */
-    svn_error_t *err;
-    apr_size_t len;
-    svn_stringbuf_t *path_s = svn_stringbuf_create (parsed_url.path, pool);
-
-    while (! svn_path_is_empty (path_s->data))
-      {
-        err = svn_ra_dav__get_starting_props(&rsrc, sess, path_s->data,
-                                             NULL, pool);
-        if (! err)
-          break;   /* found an existing parent! */
-
-        if (err->apr_err != SVN_ERR_RA_DAV_REQUEST_FAILED)
-          return err;  /* found a _real_ error */
-
-        /* else... lop off the basename and try again. */
-        lopped_path = svn_path_join(svn_path_basename (path_s->data, pool),
-                                    lopped_path,
-                                    pool);
-        len = path_s->len;
-        svn_path_remove_component(path_s);
-        if (path_s->len == len)          
-            /* whoa, infinite loop, get out. */
-          return svn_error_quick_wrap(err,
-                                      "The path was not part of a repository");
-
-        svn_error_clear (err);
-      }
-
-    if (svn_path_is_empty (path_s->data))
-      {
-        /* entire URL was bogus;  not a single part of it exists in
-           the repository!  */
-        err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                "No part of path '%s' was found in "
-                                "repository HEAD.", parsed_url.path);
-        ne_uri_free(&parsed_url);
-        return err;
-      }
-    ne_uri_free(&parsed_url);
-  }
-
+  SVN_ERR( search_for_starting_props(&rsrc, &lopped_path,
+                                     sess, url, pool) );
+  
   vcc = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
   if (vcc == NULL)
     {

@@ -26,8 +26,8 @@
 
 #include <apr_pools.h>
 
-#include <svn_types.h>
-#include <svn_error.h>
+#include "svn_types.h"
+#include "svn_error.h"
 
 
 #ifdef __cplusplus
@@ -61,7 +61,14 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_TIMEOUT              "http-timeout"
 #define SVN_CONFIG_OPTION_HTTP_COMPRESSION          "http-compression"
 #define SVN_CONFIG_OPTION_NEON_DEBUG_MASK           "neon-debug-mask"
-#define SVN_CONFIG_OPTION_SVN_TUNNEL_AGENT          "svn-tunnel-agent"
+#define SVN_CONFIG_OPTION_SSL_AUTHORITIES_FILE      "ssl-authorities-file"
+#define SVN_CONFIG_OPTION_SSL_IGNORE_UNKNOWN_CA     "ssl-ignore-unknown-ca"
+#define SVN_CONFIG_OPTION_SSL_IGNORE_INVALID_DATE   "ssl-ignore-invalid-date"
+#define SVN_CONFIG_OPTION_SSL_IGNORE_HOST_MISMATCH  "ssl-ignore-host-mismatch"
+#define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE      "ssl-client-cert-file"
+#define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_TYPE      "ssl-client-cert-type"
+#define SVN_CONFIG_OPTION_SSL_CLIENT_KEY_FILE       "ssl-client-key-file"
+#define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_PASSWORD  "ssl-client-cert-password"
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
@@ -75,6 +82,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_GLOBAL_IGNORES            "global-ignores"
 #define SVN_CONFIG_OPTION_LOG_ENCODING              "log-encoding"
 #define SVN_CONFIG_OPTION_TEMPLATE_ROOT             "template-root"
+#define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 
 
 /** Read configuration information from the standard sources and merge
@@ -168,7 +176,7 @@ int svn_config_enumerate (svn_config_t *cfg, const char *section,
                           svn_config_enumerator_t callback, void *baton);
 
 
-/** Enumerate the group @a master_Section in @a cfg.  Each variable
+/** Enumerate the group @a master_section in @a cfg.  Each variable
  * value is interpreted as a list of glob patterns (separated by comma
  * and optional whitespace).  Return the name of the first variable
  * whose value matches @a key, or @c NULL if no variable matches.

@@ -33,18 +33,6 @@
 #define SVN_FS_WANT_DB_PATCH	14
 
 
-/* Default paths to diff and diff3. We require a recent enough version
-   of GNU diffutils where diff3 supports the --diff-program option.
-   These locations and flags can be changed in the Registry or user
-   config file anyway. */
-#ifndef SVN_CLIENT_DIFF
-#  define SVN_CLIENT_DIFF "C:\\Cygwin\\bin\\diff.exe"
-#endif
-#ifndef SVN_CLIENT_DIFF3
-#  define SVN_CLIENT_DIFF3 "C:\\Cygwin\\bin\\diff3.exe"
-#  define SVN_DIFF3_HAS_DIFF_PROGRAM_ARG 1
-#endif
-
 /* Location of the on-disk and in-repos templates. */
 #define SVN_TEMPLATE_ROOT_DIR "C:\\SVN\\templates"
 

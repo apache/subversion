@@ -63,9 +63,12 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 {
   int i;
 
-  SVN_ERR (svn_io_file_printf (file, "\nProperty changes on: %s\n", path));
+  SVN_ERR (svn_io_file_printf (file,
+                               APR_EOL_STR "Property changes on: %s"
+                               APR_EOL_STR, path));
   apr_file_printf (file, 
-     "___________________________________________________________________\n");
+     "___________________________________________________________________"
+     APR_EOL_STR);
 
   for (i = 0; i < propchanges->nelts; i++)
     {
@@ -80,7 +83,8 @@ display_prop_diffs (const apr_array_header_t *propchanges,
       else
         original_value = NULL;
       
-      SVN_ERR (svn_io_file_printf (file, "Name: %s\n", propchange->name));
+      SVN_ERR (svn_io_file_printf (file, "Name: %s" APR_EOL_STR,
+                                   propchange->name));
 
       /* For now, we have a rather simple heuristic: if this is an
          "svn:" property, then assume the value is UTF-8 and must
@@ -98,7 +102,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
             else
               printable_val = original_value->data;
             
-            apr_file_printf (file, "   - %s\n", printable_val);
+            apr_file_printf (file, "   - %s" APR_EOL_STR, printable_val);
           }
         
         if (propchange->value != NULL)
@@ -109,12 +113,12 @@ display_prop_diffs (const apr_array_header_t *propchanges,
             else
               printable_val = propchange->value->data;
 
-            apr_file_printf (file, "   + %s\n", printable_val);
+            apr_file_printf (file, "   + %s" APR_EOL_STR, printable_val);
           }
       }
     }
 
-  apr_file_printf (file, "\n");
+  apr_file_printf (file, APR_EOL_STR);
 
   return SVN_NO_ERROR;
 }
@@ -153,6 +157,11 @@ struct diff_cmd_baton {
 
   /* Client config hash (may be NULL). */
   apr_hash_t *config;
+
+  /* Set this flag if you want diff_file_changed to output diffs
+     unconditionally, even if the diffs are empty. */
+  svn_boolean_t force_diff_output;
+
 };
 
 
@@ -239,16 +248,16 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       if (path1[0] == '\0')
         path1 = apr_psprintf (subpool, "%s", path);
       else if (path1[0] == '/')
-        path1 = apr_psprintf (subpool, "%s (...%s)", path, path1);
+        path1 = apr_psprintf (subpool, "%s\t(...%s)", path, path1);
       else
-        path1 = apr_psprintf (subpool, "%s (.../%s)", path, path1);
+        path1 = apr_psprintf (subpool, "%s\t(.../%s)", path, path1);
 
       if (path2[0] == '\0')
         path2 = apr_psprintf (subpool, "%s", path);
       else if (path2[0] == '/')
-        path2 = apr_psprintf (subpool, "%s (...%s)", path, path2);
+        path2 = apr_psprintf (subpool, "%s\t(...%s)", path, path2);
       else
-        path2 = apr_psprintf (subpool, "%s (.../%s)", path, path2);
+        path2 = apr_psprintf (subpool, "%s\t(.../%s)", path, path2);
       
       label1 = diff_label (path1, rev1, subpool);
       label2 = diff_label (path2, rev2, subpool);
@@ -273,7 +282,8 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
     {
       /* Print out the diff header. */
       SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
-      SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
+      SVN_ERR (svn_io_file_printf (outfile, "Index: %s" APR_EOL_STR
+                                   "%s" APR_EOL_STR,
                                    path_native, equal_string));
 
       SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
@@ -306,13 +316,14 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
         }
 
       SVN_ERR (svn_diff_file_diff (&diff, tmpfile1, tmpfile2, subpool));
-      if (svn_diff_contains_diffs (diff))
+      if (svn_diff_contains_diffs (diff) || diff_cmd_baton->force_diff_output)
         {
           svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
 
           /* Print out the diff header. */
           SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
-          SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
+          SVN_ERR (svn_io_file_printf (outfile, "Index: %s" APR_EOL_STR
+                                       "%s" APR_EOL_STR,
                                        path_native, equal_string));
 
           /* If either file is marked as a known binary type, just
@@ -326,22 +337,25 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
             {
               svn_io_file_printf 
                 (outfile,
-                 "Cannot display: file marked as a binary type.\n");
+                 "Cannot display: file marked as a binary type." APR_EOL_STR);
               
               if (mt1_binary && !mt2_binary)
                 svn_io_file_printf (outfile,
-                                    "svn:mime-type = %s\n", mimetype1);
+                                    "svn:mime-type = %s" APR_EOL_STR,
+                                    mimetype1);
               else if (mt2_binary && !mt1_binary)
                 svn_io_file_printf (outfile,
-                                    "svn:mime-type = %s\n", mimetype2);
+                                    "svn:mime-type = %s" APR_EOL_STR,
+                                    mimetype2);
               else if (mt1_binary && mt2_binary)
                 {
                   if (strcmp (mimetype1, mimetype2) == 0)
                     svn_io_file_printf (outfile,
-                                        "svn:mime-type = %s\n", mimetype1);
+                                        "svn:mime-type = %s" APR_EOL_STR,
+                                        mimetype1);
                   else
                     svn_io_file_printf (outfile,
-                                        "svn:mime-type = (%s, %s)\n",
+                                        "svn:mime-type = (%s, %s)" APR_EOL_STR,
                                         mimetype1, mimetype2);
                 }
             }
@@ -383,9 +397,20 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
-  return diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
-                            diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
-                            mimetype1, mimetype2, diff_baton);
+  /* We want diff_file_changed to unconditionally show diffs, even if
+     the diff is empty (as would be the case if an empty file were
+     added.)  It's important, because 'patch' would still see an empty
+     diff and create an empty file.  It's also important to let the
+     user see that *something* happened. */
+  diff_cmd_baton->force_diff_output = TRUE;
+
+  SVN_ERR (diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
+                              diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
+                              mimetype1, mimetype2, diff_baton));
+  
+  diff_cmd_baton->force_diff_output = FALSE;
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -415,7 +440,8 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
-  svn_io_file_printf(diff_cmd_baton->outfile, "Index: %s (deleted)\n%s\n", 
+  svn_io_file_printf(diff_cmd_baton->outfile,
+                     "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR, 
                      path, equal_string);
 
   return SVN_NO_ERROR;
@@ -660,11 +686,12 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
       svn_path_split (mine, &parent_path, NULL, merge_b->pool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
-      SVN_ERR (svn_client__delete (NULL, mine, parent_access, merge_b->force,
-                                   merge_b->ctx, subpool));
+      SVN_ERR (svn_client__wc_delete (mine, parent_access, merge_b->force,
+                                      merge_b->dry_run, merge_b->ctx, subpool));
       break;
     case svn_node_dir:
-      /* ### create a .drej conflict or something someday? */
+      /* ### Create a .drej conflict or something someday?  If force is set
+         ### should we carry out the delete? */
       return svn_error_createf (SVN_ERR_WC_NOT_FILE, NULL,
                                 "Cannot schedule file '%s' for deletion, "
                                 "because a directory by that name "
@@ -776,11 +803,12 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
       svn_path_split (path, &parent_path, NULL, merge_b->pool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
-      SVN_ERR (svn_client__delete (NULL, path, parent_access, merge_b->force,
-                                   merge_b->ctx, subpool));
+      SVN_ERR (svn_client__wc_delete (path, parent_access, merge_b->force,
+                                      merge_b->dry_run, merge_b->ctx, subpool));
       break;
     case svn_node_file:
-      /* ### create a .drej conflict or something someday? */
+      /* ### Create a .drej conflict or something someday?  If force is set
+         ### should we carry out the delete? */
       return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
                                 "Cannot schedule directory '%s' for deletion, "
                                 "because a file by that name "
@@ -984,7 +1012,7 @@ do_merge (const char *URL1,
                             URL2,
                             diff_editor, diff_edit_baton, pool));
   
-  SVN_ERR (reporter->set_path (report_baton, "", start_revnum, pool));
+  SVN_ERR (reporter->set_path (report_baton, "", start_revnum, FALSE, pool));
   
   SVN_ERR (reporter->finish_report (report_baton));
   
@@ -1590,7 +1618,8 @@ do_diff (const apr_array_header_t *options,
                                 URL2,
                                 diff_editor, diff_edit_baton, pool));
 
-      SVN_ERR (reporter->set_path (report_baton, "", start_revnum, pool));
+      SVN_ERR (reporter->set_path (report_baton, "", start_revnum,
+                                   FALSE, pool));
       SVN_ERR (reporter->finish_report (report_baton));
     }
 

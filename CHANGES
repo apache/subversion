@@ -1,12 +1,66 @@
-Version 0.22.0 (released 24 Apr 2003, revision XXXX, branches/release-0.22)
+Version 0.24.0 (released XX XXX XXXX, revision XXXX, branches/release-0.24)
+
+ User-visible changes:
+ * new 'svn diff [--old OLD] [--new NEW]' syntax
+
+
+Version 0.23.0 (released 16 May 2003, revision 5962, branches/release-0.23.0)
+
+ User-visible changes:
+ * 'svn cat' now performs keyword expansion (#399)
+ * 'svn export' keyword expansion fixed
+ * checkouts are now restartable (#730)
+ * ssh ra_svn tunnel agent specified with svn+ssh://hostname/path syntax.
+ * remove dependency on external diff program
+ * don't error out early on unversioned files (#774)
+ * fix commands where REPORT fails if item isn't in HEAD (#891)
+ * updates now receive checksums like checkouts (#1101)
+ * 'svn revert dir' now resets property timestamp (#1163)
+ * fix instances of client showing help instead of error message (#1265)
+ * fix incorrect path in 'not a working copy' error messages (#1291)
+ * fix cvs2svn.py file added on branch problem (#1302)
+ * fix various vc-svn.el problems (#1257, #1268)
+ * fix various psvn problems (#1270)
+ * various Win32 build fixes
+
+ Developer-visible changes:
+ * fix various gcc 3.3 warnings (#1031)
+ * fix various memory errors/leaks
+ * remove java/jni bindings
+
+
+Version 0.22.2 (released 13 May 2003, revision 5918, branches/release-0.22.2)
+
+ User-visible changes:
+ * fix Win32 build
+ * properly handle on-disk template errors
+ * fix bogus uuid bug in cvs2svn.py
+
+ Developer-visible changes:
+ * none
+
+
+Version 0.22.1 (released 9 May 2003, revision 5874, branches/release-0.22.1)
+
+ User-visible changes:
+ * fix shared library installation problem
+ * update cvs2svn.py script
+
+ Developer-visible changes:
+ * none
+
+
+Version 0.22.0 (released 7 May 2003, revision 5842, branches/release-0.22)
 
  User-visible changes:
  * svn diff -r BASE:HEAD and other edge cases fixed (#977)
  * svn diff and merge now have --ignore-ancestry option (#1034)
  * svn ci -N DIR no longer errors during post-commit (#1239)
+ * ra_dav now optional (#617)
  * update vn-svn.el (#1250, #1253)
  * improvements to svn_load_dirs.pl (#1223, #1215)
  * misc ra_svn bug fixes and protocol change
+ * log-encoding option now properly only applied to logs
  * fix mmap failures on HP-UX
  * fix some client memory leaks
 
@@ -15,6 +69,7 @@ Version 0.22.0 (released 24 Apr 2003, revision XXXX, branches/release-0.22)
  * minimize full tree locks and number of system calls (#1245)
  * auto-generated .dsp files (#850)
  * fix ETag of directory (#1251)
+ * added export editor (#1230)
 
 
 Version 0.21.0 (released 15 Apr 2003, revision 5639, branches/release-0.21)

@@ -115,10 +115,7 @@ create_lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
 
   return svn_error_createf (SVN_ERR_WC_LOCKED, NULL,
                             "working copy locked: %s",
-                            /* ### do we have a utility function that
-                               converts the empty path to a
-                               non-canonical, but readable form? */
-                            (adm_access->path[0] ? adm_access->path : "."));
+                            svn_path_local_style (adm_access->path, pool));
 }
 
 
@@ -307,7 +304,8 @@ do_open (svn_wc_adm_access_t **adm_access,
         }
       if (wc_format == 0 || wc_format > SVN_WC__VERSION)
         return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                                  "'%s' is not a working copy", path);
+                                  "'%s' is not a working copy",
+                                  svn_path_local_style (path, pool));
     }
 
   /* Need to create a new lock */
@@ -451,6 +449,7 @@ svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                        svn_boolean_t tree_lock,
                        apr_pool_t *pool)
 {
+  svn_error_t *err;
   const char *dir;
   int wc_format;
 
@@ -463,8 +462,32 @@ svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
   if (dir != path)
     tree_lock = FALSE;
 
-  SVN_ERR (svn_wc_adm_open (adm_access, associated, dir, write_lock, tree_lock,
-                            pool));
+  err = svn_wc_adm_open (adm_access, associated, dir, write_lock, tree_lock,
+                         pool);
+  if (err)
+    {
+      /* If we got an error on the parent dir, that means we failed to
+         get an access baton for the child in the first place.  And if
+         the reason we couldn't get the child access baton is that the
+         child is not a versioned directory, then return an error
+         about the child, not the parent. */ 
+      svn_node_kind_t child_kind;
+      SVN_ERR (svn_io_check_path (path, &child_kind, pool));
+
+      if ((dir != path)
+          && (child_kind == svn_node_dir)
+          && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
+        {
+          return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                                    "'%s' is not a working copy",
+                                    svn_path_local_style (path, pool));
+        }
+      else
+        {
+          return err;
+        }
+    }
+
   if (wc_format && ! (*adm_access)->wc_format)
     (*adm_access)->wc_format = wc_format;
 

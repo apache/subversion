@@ -27,7 +27,7 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 
 
 /* #################################################################
@@ -436,7 +436,6 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                                  FALSE, /* don't bother with text-deltas */
                                  TRUE, /* Do recurse into subdirectories */
                                  FALSE, /* Do not allow entry props */
-                                 FALSE, /* Do not allow copyfrom args */
                                  FALSE, /* Do not ignore ancestry */
                                  pool);
       if (serr != NULL)

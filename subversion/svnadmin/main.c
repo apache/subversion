@@ -68,7 +68,8 @@ static svn_opt_subcommand_t
 
 enum 
   { 
-    svnadmin__incremental = SVN_OPT_FIRST_LONGOPT_ID,
+    svnadmin__version = SVN_OPT_FIRST_LONGOPT_ID,
+    svnadmin__incremental,
     svnadmin__follow_copies,
     svnadmin__on_disk_template,
     svnadmin__in_repos_template,
@@ -92,6 +93,9 @@ static const apr_getopt_option_t options_table[] =
 
     {NULL,            '?', 0,
      "show help on a subcommand"},
+
+    {"version",       svnadmin__version, 0,
+     "show version information"},
 
     {"revision",      'r', 1,
      "specify revision number ARG (or X:Y range)"},
@@ -156,7 +160,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"help", subcommand_help, {"?", "h"},
      "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
      "Display this usage message.\n",
-     {0} },
+     {svnadmin__version} },
 
     {"load", subcommand_load, {0},
      "usage: svnadmin load REPOS_PATH\n\n"
@@ -212,6 +216,7 @@ struct svnadmin_opt_state
   const char *repository_path;
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
+  svn_boolean_t version;                            /* --version */
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t follow_copies;                      /* --copies */
   svn_boolean_t quiet;                              /* --quiet */
@@ -342,13 +347,16 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 static svn_error_t *
 subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
+  struct svnadmin_opt_state *opt_state = baton;
   const char *header =
     "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
     "Type \"svnadmin help <subcommand>\" for help on a specific subcommand.\n"
     "\n"
     "Available subcommands:\n";
 
-  SVN_ERR (svn_opt_print_help (os, "svnadmin", FALSE, FALSE, NULL,
+  SVN_ERR (svn_opt_print_help (os, "svnadmin", 
+                               opt_state ? opt_state->version : FALSE,
+                               FALSE, NULL,
                                header, cmd_table, options_table, NULL,
                                pool));
   
@@ -391,7 +399,7 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_fs_t *fs;
   svn_fs_root_t *rev_root;
   svn_revnum_t youngest_rev;
-  apr_array_header_t *revs, *args, *paths;
+  apr_array_header_t *revs, *args;
   const char *path_utf8;
   int i;
 
@@ -401,18 +409,16 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                               "exactly one path argument required");
 
-  paths = apr_array_make (pool, 1, sizeof (const char *));
   SVN_ERR (svn_utf_cstring_to_utf8 (&path_utf8,
                                     APR_ARRAY_IDX (args, 0, const char *),
                                     NULL, pool));
-  *(const char **)apr_array_push(paths) =
-    svn_path_internal_style (path_utf8, pool);
+  path_utf8 = svn_path_internal_style (path_utf8, pool);
   
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
   svn_fs_youngest_rev (&youngest_rev, fs, pool);
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool));
-  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, paths,
+  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path_utf8,
                                      opt_state->follow_copies, pool));
   for (i = 0; i < revs->nelts; i++)
     {
@@ -598,6 +604,7 @@ main (int argc, const char * const *argv)
   /* Parse options. */
   apr_getopt_init (&os, pool, argc, argv);
   os->interleave = 1;
+
   while (1)
     {
       const char *opt_arg;
@@ -656,6 +663,10 @@ main (int argc, const char * const *argv)
         break;
       case 'h':
       case '?':
+        opt_state.help = TRUE;
+        break;
+      case svnadmin__version:
+        opt_state.version = TRUE;
         opt_state.help = TRUE;
         break;
       case svnadmin__incremental:

@@ -872,7 +872,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
   for (i = start_rev; i <= end_rev; i++)
     {
       svn_revnum_t from_rev, to_rev;
-      svn_fs_root_t *from_root, *to_root;
+      svn_fs_root_t *to_root;
 
       /* Special-case the initial revision dump: it needs to contain
          *all* nodes, because it's the foundation of all future
@@ -909,18 +909,30 @@ svn_repos_dump_fs (svn_repos_t *repos,
                                 fs, to_rev, "/", stream, feedback_stream,
                                 start_rev, subpool));
 
-      /* Drive the editor. */
-      SVN_ERR (svn_fs_revision_root (&from_root, fs, from_rev, subpool));
+      /* Drive the editor in one way or another. */
       SVN_ERR (svn_fs_revision_root (&to_root, fs, to_rev, subpool));
-      SVN_ERR (svn_repos_dir_delta (from_root, "/", NULL, 
-                                    to_root, "/",
-                                    dump_editor, dump_edit_baton,
-                                    FALSE, /* don't send text-deltas */
-                                    TRUE, /* recurse */
-                                    FALSE, /* don't send entry props */
-                                    TRUE, /* send copyfrom args */
-                                    FALSE, /* don't ignore ancestry */
-                                    subpool));
+
+      /* If this is the first revision of a non-incremental dump,
+         we're in for a full tree dump.  Othersise, we want to simply
+         replay the revision.  */
+      if ((i == start_rev) && (! incremental))
+        {
+          svn_fs_root_t *from_root;
+          SVN_ERR (svn_fs_revision_root (&from_root, fs, from_rev, subpool));
+          SVN_ERR (svn_repos_dir_delta (from_root, "/", NULL, 
+                                        to_root, "/",
+                                        dump_editor, dump_edit_baton,
+                                        FALSE, /* don't send text-deltas */
+                                        TRUE, /* recurse */
+                                        FALSE, /* don't send entry props */
+                                        FALSE, /* don't ignore ancestry */
+                                        subpool));
+        }
+      else
+        {
+          SVN_ERR (svn_repos_replay (to_root, dump_editor, 
+                                     dump_edit_baton, subpool));
+        }
 
     loop_end:
       /* Reuse all memory consumed by the dump of this one revision. */

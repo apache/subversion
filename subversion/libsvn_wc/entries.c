@@ -62,12 +62,14 @@
 svn_error_t *
 svn_wc__entries_init (const char *path,
                       const char *url,
+                      svn_revnum_t initial_rev,
                       apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_file_t *f = NULL;
   svn_stringbuf_t *accum = NULL;
-  char *initial_revstr = apr_psprintf (pool, "%d", 0);
+  char *initial_revstr =  apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                                        initial_rev);
 
   /* Create the entries file, which must not exist prior to this. */
   SVN_ERR (svn_wc__open_adm_file (&f, path, SVN_WC__ADM_ENTRIES,
@@ -86,19 +88,29 @@ svn_wc__entries_init (const char *path,
                          NULL);
 
   /* Add an entry for the dir itself -- name is absent, only the
-     revision and default ancestry are present as xml attributes. */
-  svn_xml_make_open_tag 
-    (&accum,
-     pool,
-     svn_xml_self_closing,
-     SVN_WC__ENTRIES_ENTRY,
-     SVN_WC__ENTRY_ATTR_KIND,
-     SVN_WC__ENTRIES_ATTR_DIR_STR,
-     SVN_WC__ENTRY_ATTR_REVISION,
-     initial_revstr,
-     SVN_WC__ENTRY_ATTR_URL,
-     url,
-     NULL);
+     revision and default ancestry are present as xml attributes, and
+     possibly an 'incomplete' flag if  the revnum is > 0. */
+  if ((initial_rev == 0) || (! SVN_IS_VALID_REVNUM(initial_rev)))
+    svn_xml_make_open_tag 
+      (&accum,
+       pool,
+       svn_xml_self_closing,
+       SVN_WC__ENTRIES_ENTRY,
+       SVN_WC__ENTRY_ATTR_KIND, SVN_WC__ENTRIES_ATTR_DIR_STR,
+       SVN_WC__ENTRY_ATTR_REVISION, initial_revstr,
+       SVN_WC__ENTRY_ATTR_URL, url,
+       NULL);    
+  else
+    svn_xml_make_open_tag 
+      (&accum,
+       pool,
+       svn_xml_self_closing,
+       SVN_WC__ENTRIES_ENTRY,
+       SVN_WC__ENTRY_ATTR_KIND, SVN_WC__ENTRIES_ATTR_DIR_STR,
+       SVN_WC__ENTRY_ATTR_REVISION, initial_revstr,
+       SVN_WC__ENTRY_ATTR_URL, url,
+       SVN_WC__ENTRY_ATTR_INCOMPLETE, "true",
+       NULL);
 
   /* Close the top-level form. */
   svn_xml_make_close_tag (&accum,
@@ -327,6 +339,34 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       }
   }
 
+  /* Is this entry incomplete? */
+  {
+    const char *incompletestr;
+      
+    incompletestr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, 
+                                  APR_HASH_KEY_STRING);
+        
+    entry->incomplete = FALSE;
+    if (incompletestr)
+      {
+        if (! strcmp (incompletestr, "true"))
+          entry->incomplete = TRUE;
+        else if (! strcmp (incompletestr, "false"))
+          entry->incomplete = FALSE;
+        else if (! strcmp (incompletestr, ""))
+          entry->incomplete = FALSE;
+        else
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             "Entry '%s' has invalid '%s' value",
+             (name ? name : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC__ENTRY_ATTR_INCOMPLETE);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
+      }
+  }
+
+
   /* Attempt to set up timestamps. */
   {
     const char *text_timestr, *prop_timestr;
@@ -469,14 +509,15 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
   if ((dst->revision == SVN_INVALID_REVNUM) && (dst->kind != svn_node_dir))
     dst->revision = src->revision;
   
-  /* Inherits parent's url if doesn't have a url of one's own and is not
-     marked for addition.  An entry being added doesn't really have
-     url yet.  */
-  if ((! dst->url) 
+  /* Inherits parent's url if doesn't have a url of one's own. */
+  if (! dst->url) 
+    dst->url = svn_path_url_add_component (src->url, dst->name, pool);
+
+  if ((! dst->uuid) 
       && (! ((dst->schedule == svn_wc_schedule_add)
              || (dst->schedule == svn_wc_schedule_replace))))
     {
-      dst->url = svn_path_url_add_component (src->url, dst->name, pool);
+      dst->uuid = src->uuid;
     }
 }
 
@@ -902,6 +943,10 @@ write_entry (svn_stringbuf_t **output,
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_DELETED, APR_HASH_KEY_STRING,
                 (entry->deleted ? "true" : NULL));
 
+  /* Incomplete state */
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, APR_HASH_KEY_STRING,
+                (entry->incomplete ? "true" : NULL));
+
   /* Timestamps */
   if (entry->text_time)
     {
@@ -1165,6 +1210,10 @@ fold_entry (apr_hash_t *entries,
   /* Deleted state */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_DELETED)
     cur_entry->deleted = entry->deleted;
+
+  /* Incomplete state */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_INCOMPLETE)
+    cur_entry->incomplete = entry->incomplete;
 
   /* Text/prop modification times */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)

@@ -19,6 +19,7 @@
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
+#include "svn_pools.h"
 #include "repos.h"
 
 /* A structure used by the routines within the `reporter' vtable,
@@ -26,6 +27,11 @@
 typedef struct svn_repos_report_baton_t
 {
   svn_repos_t *repos;
+
+  /* The revision on which we will base our transaction.  This start
+     off as SVN_INVALID_REVNUM, and then is set by the first call to
+     set_path().  */
+  svn_revnum_t txn_base_rev;
 
   /* The transaction being built in the repository, a mirror of the
      working copy. */
@@ -148,46 +154,134 @@ static const char *get_from_path_map(apr_hash_t *hash,
 }
 
 
+/* Use POOL to delete all children and props of directory FS_PATH in
+   TXN_ROOT. */
+static svn_error_t *
+remove_directory_children (const char *fs_path,
+                           svn_fs_root_t *txn_root,
+                           apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *children, *props;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  
+  SVN_ERR (svn_fs_dir_entries (&children, txn_root, fs_path, pool));
+  
+  for (hi = apr_hash_first (pool, children); hi;
+       hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      svn_fs_dirent_t *dirent;
+      const char *child_path;
+      
+      apr_hash_this (hi, &key, &klen, &val);
+      dirent = val;
+      
+      child_path = svn_path_join (fs_path, dirent->name, subpool);
+      SVN_ERR (svn_fs_delete_tree (txn_root, child_path, subpool));
+      
+      svn_pool_clear (subpool);
+    }
+
+  SVN_ERR (svn_fs_node_proplist (&props, txn_root, fs_path, pool));
+
+  for (hi = apr_hash_first (pool, props); hi;
+       hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      const char *propname;
+      
+      apr_hash_this (hi, &key, &klen, &val);
+      propname = key;
+
+      SVN_ERR (svn_fs_change_node_prop (txn_root, fs_path,
+                                        propname, NULL, subpool));
+      svn_pool_clear (subpool);
+    }
+
+  svn_pool_destroy (subpool);  
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+begin_txn (svn_repos_report_baton_t *rbaton)
+{
+  /* Start a transaction based on initial_rev. */
+  SVN_ERR (svn_repos_fs_begin_txn_for_update (&(rbaton->txn),
+                                              rbaton->repos,
+                                              rbaton->txn_base_rev,
+                                              rbaton->username,
+                                              rbaton->pool));
+  SVN_ERR (svn_fs_txn_root (&(rbaton->txn_root), rbaton->txn, rbaton->pool));
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_repos_set_path (void *report_baton,
                     const char *path,
                     svn_revnum_t revision,
+                    svn_boolean_t start_empty,
                     apr_pool_t *pool)
 {
   svn_repos_report_baton_t *rbaton = report_baton;
-  svn_revnum_t *rev_ptr = apr_palloc (pool, sizeof (*rev_ptr));
-  
-  /* If this is the very first call, no txn exists yet. */
-  if (! rbaton->txn)
-    {
-      /* ### need to change svn_path_is_empty() */
-      svn_stringbuf_t *pathbuf = svn_stringbuf_create (path, pool);
+  svn_boolean_t first_time = FALSE;
 
+  /* Sanity check: make that we didn't call this with a bogus revision. */
+  if (! SVN_IS_VALID_REVNUM (revision))
+    return svn_error_create
+      (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
+       "svn_repos_set_path: invalid revision passed to report.");
+
+  if (! SVN_IS_VALID_REVNUM (rbaton->txn_base_rev))
+    { 
       /* Sanity check: make that we didn't call this with real data
          before simply informing the reporter of our base revision. */
-      if (! svn_path_is_empty (pathbuf->data))
-        return 
-          svn_error_create
+      if (! svn_path_is_empty (path))
+        return svn_error_create
           (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
            "svn_repos_set_path: initial revision report was bogus.");
 
-      /* Start a transaction based on REVISION. */
-      SVN_ERR (svn_repos_fs_begin_txn_for_update (&(rbaton->txn),
-                                                  rbaton->repos,
-                                                  revision,
-                                                  rbaton->username,
-                                                  rbaton->pool));
-      SVN_ERR (svn_fs_txn_root (&(rbaton->txn_root), rbaton->txn,
-                                rbaton->pool));
+      /* Barring previous problems, squirrel away our based-on revision. */
+      rbaton->txn_base_rev = revision;
+      first_time = TRUE;
     }
 
-  else  /* this is not the first call to set_path. */ 
+  /* If we haven't yet created a transaction, we either haven't made
+     it past our first set_path, or we haven't seen any interesting
+     reporter calls yet.  So what's interesting?  link_path()s,
+     delete_path()s, and set_path()s with either a different REVISION
+     than the based-on revision, or the START_EMPTY flag set. */
+  if ((! rbaton->txn) && (revision == rbaton->txn_base_rev) && (! start_empty))
+    return SVN_NO_ERROR;
+  
+  if (first_time)
     {
-      svn_fs_root_t *from_root;
+      if (start_empty)
+        {
+          /* If our first call has START_EMPTY set, we need to start
+             up the transaction stuffs and then clean out the starting
+             directory. */
+          SVN_ERR (begin_txn (rbaton));
+          SVN_ERR (remove_directory_children (rbaton->base_path, 
+                                              rbaton->txn_root, pool));
+        }
+    }
+  else
+    {
       const char *from_path;
+      svn_fs_root_t *from_root;
       const char *link_path;
 
+      /* Create the transaction if we haven't yet done so. */
+      if (! rbaton->txn)
+        SVN_ERR (begin_txn (rbaton));
+        
       /* The path we are dealing with is the anchor (where the
          reporter is rooted) + target (the top-level thing being
          reported) + path (stuff relative to the target...this is the
@@ -198,17 +292,16 @@ svn_repos_set_path (void *report_baton,
                                       rbaton->target ? rbaton->target : path,
                                       rbaton->target ? path : NULL,
                                       NULL);
-
+      
       /* However, the path may be the child of a linked thing, in
          which case we'll be linking from somewhere entirely
          different. */
-      link_path = get_from_path_map (rbaton->linked_paths, from_path, 
-                                     pool);
-
+      link_path = get_from_path_map (rbaton->linked_paths, from_path, pool);
+          
       /* Create the "from" root. */
       SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
                                      revision, pool));
-
+      
       /* Copy into our txn (use svn_fs_revision_link if we can). */
       if (strcmp (link_path, from_path))
         SVN_ERR (svn_fs_copy (from_root, link_path,
@@ -216,6 +309,14 @@ svn_repos_set_path (void *report_baton,
       else
         SVN_ERR (svn_fs_revision_link (from_root, rbaton->txn_root, 
                                        from_path, pool));
+
+      if (start_empty)
+        {
+          /* Destroy any children & props of the path.  We assume that
+             the client will (later) re-add the entries it knows about. */
+          SVN_ERR (remove_directory_children (from_path, rbaton->txn_root, 
+                                              pool));
+        }
     }
 
   return SVN_NO_ERROR;
@@ -226,12 +327,17 @@ svn_repos_link_path (void *report_baton,
                      const char *path,
                      const char *link_path,
                      svn_revnum_t revision,
+                     svn_boolean_t start_empty,
                      apr_pool_t *pool)
 {
   svn_fs_root_t *from_root;
   const char *from_path;
   svn_repos_report_baton_t *rbaton = report_baton;
-  svn_revnum_t *rev_ptr = apr_palloc (pool, sizeof(*rev_ptr));
+
+  /* If we haven't already started a main transaction, we need to do
+     so now. */
+  if (! rbaton->txn)
+    SVN_ERR (begin_txn (rbaton));
 
   /* If this is the very first call, no second txn exists yet.  Of
      course, we'll only use it if we're "updating", not when we're
@@ -282,6 +388,11 @@ svn_repos_link_path (void *report_baton,
   if (! rbaton->linked_paths)
     rbaton->linked_paths = apr_hash_make (rbaton->pool);
   add_to_path_map (rbaton->linked_paths, from_path, link_path);
+  
+  if (start_empty)
+    /* Destroy any children & props of the path.  We assume that the
+       client will (later) re-add the entries it knows about.  */
+    SVN_ERR (remove_directory_children (from_path, rbaton->txn_root, pool));
 
   return SVN_NO_ERROR;
 }
@@ -296,6 +407,11 @@ svn_repos_delete_path (void *report_baton,
   const char *delete_path;
   svn_repos_report_baton_t *rbaton = report_baton;
   
+  /* If we haven't already started a main transaction, we need to do
+     so now. */
+  if (! rbaton->txn)
+    SVN_ERR (begin_txn (rbaton));
+
   /* The path we are dealing with is the anchor (where the
      reporter is rooted) + target (the top-level thing being
      reported) + path (stuff relative to the target...this is the
@@ -327,22 +443,31 @@ svn_repos_delete_path (void *report_baton,
 svn_error_t *
 svn_repos_finish_report (void *report_baton)
 {
-  svn_fs_root_t *target_root;
-  svn_repos_report_baton_t *rbaton = (svn_repos_report_baton_t *) report_baton;
+  svn_fs_root_t *root1, *root2;
+  svn_repos_report_baton_t *rbaton = report_baton;
   const char *tgt_path;
 
   /* If nothing was described, then we have an error */
-  if (rbaton->txn == NULL)
-    return svn_error_create(SVN_ERR_REPOS_NO_DATA_FOR_REPORT, NULL,
-                            "svn_repos_finish_report: no transaction was "
-                            "present, meaning no data was provided.");
+  if (! SVN_IS_VALID_REVNUM (rbaton->txn_base_rev))
+    return svn_error_create (SVN_ERR_REPOS_NO_DATA_FOR_REPORT, NULL,
+                             "svn_repos_finish_report: no transaction was "
+                             "present, meaning no data was provided.");
+
+  /* Use the first transaction as a source if we made one, else get
+     the root of the revision we would have based a transaction on. */
+  if (rbaton->txn)
+    root1 = rbaton->txn_root;
+  else
+    SVN_ERR (svn_fs_revision_root (&root1, rbaton->repos->fs,
+                                   rbaton->txn_base_rev,
+                                   rbaton->pool));
 
   /* Use the second transacation as a target if we made one, else get
      the root of the revision we want to update to. */
   if (rbaton->txn2)
-    target_root = rbaton->txn2_root;
+    root2 = rbaton->txn2_root;
   else
-    SVN_ERR (svn_fs_revision_root (&target_root, rbaton->repos->fs,
+    SVN_ERR (svn_fs_revision_root (&root2, rbaton->repos->fs,
                                    rbaton->revnum_to_update_to,
                                    rbaton->pool));
 
@@ -356,22 +481,22 @@ svn_repos_finish_report (void *report_baton)
                                    NULL);
 
   /* Drive the update-editor. */
-  SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, 
+  SVN_ERR (svn_repos_dir_delta (root1,
                                 rbaton->base_path, 
                                 rbaton->target,
-                                target_root, 
+                                root2,
                                 tgt_path,
                                 rbaton->update_editor,
                                 rbaton->update_edit_baton,
                                 rbaton->text_deltas,
                                 rbaton->recurse,
                                 TRUE,
-                                FALSE,
                                 rbaton->ignore_ancestry,
                                 rbaton->pool));
   
   /* Still here?  Great!  Throw out the transactions. */
-  SVN_ERR (svn_fs_abort_txn (rbaton->txn));
+  if (rbaton->txn)
+    SVN_ERR (svn_fs_abort_txn (rbaton->txn));
   if (rbaton->txn2)
     SVN_ERR (svn_fs_abort_txn (rbaton->txn2));
     
@@ -383,13 +508,12 @@ svn_repos_finish_report (void *report_baton)
 svn_error_t *
 svn_repos_abort_report (void *report_baton)
 {
-  svn_repos_report_baton_t *rbaton = (svn_repos_report_baton_t *) report_baton;
+  svn_repos_report_baton_t *rbaton = report_baton;
 
-  /* if we have transactions, then abort them. */
-  if (rbaton->txn != NULL)
+  /* If we have transactions, then abort them. */
+  if (rbaton->txn)
     SVN_ERR (svn_fs_abort_txn (rbaton->txn));
-
-  if (rbaton->txn2 != NULL)
+  if (rbaton->txn2)
     SVN_ERR (svn_fs_abort_txn (rbaton->txn2));
 
   return SVN_NO_ERROR;
@@ -417,6 +541,7 @@ svn_repos_begin_report (void **report_baton,
 
   /* Build a reporter baton. */
   rbaton = apr_pcalloc (pool, sizeof(*rbaton));
+  rbaton->txn_base_rev = SVN_INVALID_REVNUM;
   rbaton->revnum_to_update_to = revnum;
   rbaton->update_editor = editor;
   rbaton->update_edit_baton = edit_baton;

@@ -59,11 +59,14 @@ typedef enum {
   svn_cl__non_interactive_opt,
   svn_cl__no_diff_deleted,
   svn_cl__dry_run_opt,
+  svn_cl__relocate_opt,
   svn_cl__revprop_opt,
   svn_cl__diff_cmd_opt,
   svn_cl__merge_cmd_opt,
   svn_cl__ignore_ancestry_opt,
-  svn_cl__editor_cmd_opt
+  svn_cl__editor_cmd_opt,
+  svn_cl__old_cmd_opt,
+  svn_cl__new_cmd_opt
 } svn_cl__longopt_t;
 
 
@@ -111,6 +114,9 @@ typedef struct svn_cl__opt_state_t
   const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
   const char *editor_cmd;        /* external editor command. */
+  const char *old_target;        /* diff target */
+  const char *new_target;        /* diff target */
+  svn_boolean_t relocate;        /* rewrite urls (svn switch) */
 } svn_cl__opt_state_t;
 
 
@@ -162,14 +168,17 @@ extern const apr_getopt_option_t svn_cl__options[];
 extern const char svn_cl__help_header[];
 extern const char svn_cl__help_footer[];
 
-
-/* Print out commit information found in COMMIT_INFO to the console. */
-void
-svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
+
+/* Our cancellation callback. */
+svn_error_t *svn_cl__check_cancel (void *baton);
 
 
 
 /*** Command-line output functions -- printing to the user. ***/
+
+/* Print out commit information found in COMMIT_INFO to the console. */
+void svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
+
 
 /* Print a hash that maps (char *) names to (svn_wc_status_t *)
    structs to stdout for human consumption.  Prints in abbreviated

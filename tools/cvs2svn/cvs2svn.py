@@ -3,6 +3,8 @@
 # cvs2svn: ...
 #
 
+# $LastChangedRevision$
+
 import rcsparse
 import os
 import sys
@@ -17,6 +19,12 @@ import md5
 import shutil
 import anydbm
 import marshal
+
+# Make sure this Python is recent enough.
+import sys
+if sys.hexversion < 0x2000000:
+  sys.stderr.write('Python 2.0 or higher is required; see www.python.org.')
+  sys.exit(1)
 
 # Don't settle for less.
 if anydbm._defaultmod.__name__ == 'dumbdbm':
@@ -33,15 +41,27 @@ vendor_tag = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
 SVNADMIN = 'svnadmin'      # Location of the svnadmin binary.
 DATAFILE = 'cvs2svn-data'
 DUMPFILE = 'cvs2svn-dump'  # The "dumpfile" we create to load into the repos
-HEAD_MIRROR_FILE = 'cvs2svn-head-mirror.db'  # Mirror the head tree
+HEAD_MIRROR_DB = 'cvs2svn-head-mirror.db'  # Mirror the head tree
+
+# Tag and branch roots live here when their start revision is known
+# but not yet their end revision.
+OPEN_TAGS_DB = "cvs2svn-open-tags.db"
+OPEN_BRANCHES_DB = "cvs2svn-open-branches.db"
+
+# Tag and branch roots live here when both their start and end
+# revisions are known.
+BOUND_TAGS_DB = "cvs2svn-tags.db"
+BOUND_BRANCHES_DB = "cvs2svn-branches.db"
+
 REVS_SUFFIX = '.revs'
 CLEAN_REVS_SUFFIX = '.c-revs'
 SORTED_REVS_SUFFIX = '.s-revs'
-TAGS_SUFFIX = '.tags'
 RESYNC_SUFFIX = '.resync'
 
 SVNROOT = 'svnroot'
 ATTIC = os.sep + 'Attic'
+
+SVN_INVALID_REVNUM = -1
 
 COMMIT_THRESHOLD = 5 * 60	# flush a commit if a 5 minute gap occurs
 
@@ -57,7 +77,6 @@ class CollectData(rcsparse.Sink):
   def __init__(self, cvsroot, log_fname_base):
     self.cvsroot = cvsroot
     self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
-    self.tags = open(log_fname_base + TAGS_SUFFIX, 'w')
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
 
   def set_fname(self, fname):
@@ -72,20 +91,34 @@ class CollectData(rcsparse.Sink):
     self.branchlist = {}
 
   def set_branch_name(self, revision, name):
+    """Record that REVISION is the branch number for BRANCH_NAME.
+    REVISION is an RCS branch number with an odd number of components,
+    for example '1.7.2' (never '1.7.0.2')."""
     self.branch_names[revision] = name
 
   def get_branch_name(self, revision):
+    """Return the name of the branch whose branch number is REVISION.
+    REVISION is an RCS branch number with an odd number of components,
+    for example '1.7.2' (never '1.7.0.2')."""
     brev = revision[:revision.rindex(".")]
     if not self.branch_names.has_key(brev):
       return None
     return self.branch_names[brev]
 
   def add_branch_point(self, revision, branch_name):
+    """Record that BRANCH_NAME sprouts from REVISION.
+    REVISION is a non-branch revision number with an even number of
+    components, for example '1.7' (never '1.7.2' nor '1.7.0.2')."""
     if not self.branchlist.has_key(revision):
       self.branchlist[revision] = []
     self.branchlist[revision].append(branch_name)
 
   def add_cvs_branch(self, revision, branch_name):
+    """Record the root revision and branch revision for BRANCH_NAME,
+    based on REVISION.  REVISION is a CVS branch number having an even
+    number of components where the second-to-last is '0'.  For
+    example, if it's '1.7.0.2', then record that BRANCH_NAME sprouts
+    from 1.7 and has branch number 1.7.2."""
     last_dot = revision.rfind(".")
     branch_rev = revision[:last_dot]
     last2_dot = branch_rev.rfind(".")
@@ -94,22 +127,28 @@ class CollectData(rcsparse.Sink):
     self.add_branch_point(branch_rev[:last2_dot], branch_name)
 
   def get_tags(self, revision):
+    """Return a list of all tag names attached to REVISION.
+    REVISION is a regular revision number like '1.7', and the result
+    never includes branch names, only plain tags."""
     if self.taglist.has_key(revision):
       return self.taglist[revision]
     else:
       return []
 
   def get_branches(self, revision):
+    """Return a list of all branch names that sprout from REVISION.
+    REVISION is a regular revision number like '1.7'."""
     if self.branchlist.has_key(revision):
       return self.branchlist[revision]
     else:
       return []
 
   def define_tag(self, name, revision):
-    ### disable tag/branch generation until it stops making so many copies
-    return
-
-    self.tags.write('%s %s %s\n' % (name, revision, self.fname))
+    """Record a bidirectional mapping between symbolic NAME and REVISION
+    REVISION is an unprocessed revision number from the RCS file's
+    header, for example: '1.7', '1.7.0.2', or '1.1.1' or '1.1.1.1'.
+    This function will determine what kind of symbolic name it is by
+    inspection, and record it in the right places."""
     if branch_tag.match(revision):
       self.add_cvs_branch(revision, name)
     elif vendor_tag.match(revision):
@@ -199,16 +238,41 @@ class CollectData(rcsparse.Sink):
                     branch_name, self.get_tags(revision),
                     self.get_branches(revision))
 
-def branch_path(ctx, branch_name = None):
-  ### FIXME: Our recommended layout has changed, and this function
-  ### will have to change with it.
-  if branch_name:
-     return ctx.branches_base + '/' + branch_name + '/'
-  else:
-     return ctx.trunk_base + '/'
 
-def get_tag_path(ctx, tag_name):
-  return ctx.tags_base + '/' + tag_name + '/'
+def make_path(ctx, path, branch_name = None, tag_name = None):
+  """Return the trunk path, branch path, or tag path for PATH.
+  CTX holds the name of the branches or tags directory, which is found
+  under PATH's first component.
+
+  It is an error to pass both a BRANCH_NAME and a TAG_NAME."""
+
+  if branch_name and tag_name:
+    sys.stderr.write('make_path() miscalled, both branch and tag given')
+    sys.exit(1)
+
+  first_sep = path.find('/')
+
+  if first_sep == -1:
+    ret_path = ''
+    first_sep = 0
+    extra_sep = '/'
+  else:
+    ret_path = path[:first_sep] + '/'
+    extra_sep = ''
+
+  if branch_name:
+    ret_path = ret_path + ctx.branches_base + '/' \
+               + branch_name + extra_sep + path[first_sep:]
+  elif tag_name:
+    ret_path = ret_path + ctx.tags_base + '/' \
+               + tag_name + extra_sep + path[first_sep:]
+  else:
+    ret_path = ret_path + ctx.trunk_base + extra_sep \
+               + path[first_sep:]
+
+  return ret_path
+    
+
 
 def relative_name(cvsroot, fname):
   l = len(cvsroot)
@@ -276,7 +340,7 @@ def gen_key():
 class TreeMirror:
   def __init__(self):
     'Open a db file to mirror the head tree.'
-    self.db_file = HEAD_MIRROR_FILE
+    self.db_file = HEAD_MIRROR_DB
     self.db = anydbm.open(self.db_file, 'n')
     self.root_key = gen_key()
     self.db[self.root_key] = marshal.dumps({}) # Init as a dir with no entries
@@ -333,7 +397,7 @@ class TreeMirror:
 
   def delete_path(self, path, prune=None):
     """Delete PATH from the tree.  PATH may not have a leading slash.
-    Return the deleted path.
+    Return the deleted path, or None if PATH does not exist.
 
     If PRUNE is not None, then the deleted path may differ from PATH,
     because this will delete the highest possible directory.  In other
@@ -372,13 +436,26 @@ class TreeMirror:
         last_parent_dir = parent_dir
 
       # ... and old with the new:
-      parent_dir_key = parent_dir[component]
-      parent_dir = marshal.loads(self.db[parent_dir_key])
+      if parent_dir.has_key(component):
+        parent_dir_key = parent_dir[component]
+        parent_dir = marshal.loads(self.db[parent_dir_key])
+      else:
+        return None
 
       if prune and (len(parent_dir) == 1):
         highest_empty = (path_so_far, last_parent_dir, last_parent_dir_key)
       else:
         highest_empty = None
+
+    # Confirm that the parent dir actually contains the ultimate
+    # target.  It's possible that the target has been removed before;
+    # if it has, all bets are off, so do nothing and return.  (We
+    # don't prune, because if the highest_empty subtree were pruneable
+    # at all, it should have been done before now.)
+    #
+    # See run-tests.py:prune_with_care() for the scenario.
+    if not parent_dir.has_key(components[-1:][0]):
+      return None
 
     # Remove subtree, if any, then remove this entry from its parent.
     if highest_empty:
@@ -394,10 +471,6 @@ class TreeMirror:
     self.db[parent_dir_key] = marshal.dumps(parent_dir)
     
     return path
-
-  def close(self):
-    self.db.close()
-    os.remove(self.db_file)
 
 
 class Dump:
@@ -419,7 +492,9 @@ class Dump:
                         '\n')
 
   def start_revision(self, props):
-    'Write a revision, with properties, to the dumpfile.'
+    """Write the next revision, with properties, to the dumpfile.
+    Return the newly started revision."""
+
     # A revision typically looks like this:
     # 
     #   Revision-number: 1
@@ -479,10 +554,8 @@ class Dump:
     self.dumpfile.write('PROPS-END\n')
     self.dumpfile.write('\n')
 
-  def end_revision(self):
-    old_rev = self.revision
     self.revision = self.revision + 1
-    return old_rev
+    return self.revision
 
   def add_dir(self, path):
     self.dumpfile.write("Node-path: %s\n" 
@@ -584,22 +657,88 @@ class Dump:
     # This record is done.
     self.dumpfile.write('\n')
 
-  def delete_path(self, svn_path):
-    deleted_path = self.head_mirror.delete_path(svn_path, 1) # 1 means prune
-    print '    (deleted %s)' % deleted_path
-    self.dumpfile.write('Node-path: %s\n'
-                        'Node-action: delete\n'
-                        '\n' % deleted_path)
+  def delete_path(self, svn_path, prune=None):
+    """If SVN_PATH exists in the head mirror, output its deletion and
+    return the path actually deleted; else return None.  (The path
+    deleted can differ from SVN_PATH because of pruning, but only if
+    PRUNE is true.)"""
+    deleted_path = self.head_mirror.delete_path(svn_path, prune)
+    if deleted_path:
+      print '    (deleted %s)' % deleted_path
+      self.dumpfile.write('Node-path: %s\n'
+                          'Node-action: delete\n'
+                          '\n' % deleted_path)
+    return deleted_path
 
   def close(self):
     self.dumpfile.close()
-    self.head_mirror.close()
 
 
 def format_date(date):
   """Return an svn-compatible date string for DATE (seconds since epoch)."""
   # A Subversion date looks like "2002-09-29T14:44:59.000000Z"
   return time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime(date))
+
+
+class SymbolicNameTracker:
+  """Track the Subversion path/revision ranges of CVS symbolic names.
+  This is done in .db files under DIR, where the name of the .db file
+  is based on the symbolic name being tracked.  The keys are svn
+  paths, and the values are revision range tuples like '(N M)'.
+
+  The svn path will most often be a trunk path, because the path/rev
+  range recorded here is that in which the given symbolic name could
+  be rooted, *not* the path/rev on which commits to that symbolic name
+  took place (which could only happen w/ branches anyway, of course)."""
+
+  # Keys in both DB files are of the form:
+  #
+  #    SYMBOLIC_NAME/SVN_PATH
+  #
+  # (This is safe because CVS symbolic names never contain '/'.)
+  #
+  # In the open_db, the value is a single svn revision (the earliest
+  # revision from which that tag or branch could be copied).
+  #
+  # In the bound_db, the value is a tuple (start_rev, end_rev), giving
+  # the range of Subversion revisions from which that tag or branch
+  # could be copied.  The start_rev is always the same as the single
+  # revision from the open_db; once the end revision is known, the
+  # entry is removed from the open_db and a new entry is created in
+  # the bound_db.
+
+  def __init__(self, open_db_file, bound_db_file):
+    self.open_db_file = open_db_file
+    self.bound_db_file = bound_db_file
+    self.open_db = anydbm.open(open_db_file, 'n')
+    self.bound_db = anydbm.open(bound_db_file, 'n')
+
+  def track_names(self, svn_path, svn_rev, names):
+    """Track that the the symbolic names in NAMES can earliest be
+    copied from SVN_REV of SVN_PATH (which does not start with '/')."""
+    if not names: return  # early out
+    for name in names:
+      key = name + '/' + svn_path
+      if self.open_db.has_key(key):
+        found_root_rev = self.open_db[key]
+        sys.stderr.write(
+          "track_names: '%s' already claims '%s' is rooted at revision %d."
+          % (svn_path, name, svn_rev))
+        sys.exit(1)
+      else:
+        # TODO: working here, among other places
+        # print "KFF: %2d ==> %s" % (svn_rev, key)
+        pass
+
+
+class TagTracker(SymbolicNameTracker):
+  def __init__(self):
+    SymbolicNameTracker.__init__(self, OPEN_TAGS_DB, BOUND_TAGS_DB)
+
+
+class BranchTracker(SymbolicNameTracker):
+  def __init__(self):
+    SymbolicNameTracker.__init__(self, OPEN_BRANCHES_DB, BOUND_BRANCHES_DB)
 
 
 class Commit:
@@ -655,7 +794,7 @@ class Commit:
     return author, log, date
 
 
-  def commit(self, dump, ctx):
+  def commit(self, dump, ctx, tag_tracker, branch_tracker):
     # commit this transaction
     seconds = self.t_max - self.t_min
     print 'committing: %s, over %d seconds' % (time.ctime(self.t_min), seconds)
@@ -665,11 +804,11 @@ class Commit:
     if ctx.dry_run:
       for f, r, br, tags, branches in self.changes:
         # compute a repository path, dropping the ,v from the file name
-        svn_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
+        svn_path = make_path(ctx, relative_name(ctx.cvsroot, f[:-2]), br)
         print '    adding or changing %s : %s' % (r, svn_path)
       for f, r, br, tags, branches in self.deletes:
         # compute a repository path, dropping the ,v from the file name
-        svn_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
+        svn_path = make_path(ctx, relative_name(ctx.cvsroot, f[:-2]), br)
         print '    deleting %s : %s' % (r, svn_path)
       print '    (skipped; dry run enabled)'
       return
@@ -696,24 +835,59 @@ class Commit:
       print 'Try rerunning with (for example) \"--encoding=latin1\".'
       sys.exit(1)
 
-    dump.start_revision(props)
+    ### FIXME: Until we handle branches and tags, there's a
+    ### possibility that none of the code below will get used.  For
+    ### example, if the CVS file was added on a branch, then its
+    ### revision 1.1 will start out in state "dead", and the RCS file
+    ### will be in the Attic/.  If that file is the only item in the
+    ### commit, then we won't hit the `self.changes' case at all, and
+    ### we won't do anything in the `self.deletes' case, since we
+    ### don't handle the branch right now, and we special-case
+    ### revision 1.1.
+    ###
+    ### So among other things, this variable tells us whether we
+    ### actually wrote anything to the dumpfile.
+    svn_rev = SVN_INVALID_REVNUM
 
     for rcs_file, cvs_rev, br, tags, branches in self.changes:
       # compute a repository path, dropping the ,v from the file name
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
-      svn_path = branch_path(ctx, br) + cvs_path
+      svn_path = make_path(ctx, cvs_path, br)
       print '    adding or changing %s : %s' % (cvs_rev, svn_path)
+      if svn_rev == SVN_INVALID_REVNUM:
+        svn_rev = dump.start_revision(props)
+      tag_tracker.track_names(svn_path, svn_rev, tags)
+      branch_tracker.track_names(svn_path, svn_rev, branches)
       dump.add_or_change_path(cvs_path, svn_path, cvs_rev, rcs_file)
 
     for rcs_file, cvs_rev, br, tags, branches in self.deletes:
       # compute a repository path, dropping the ,v from the file name
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
-      svn_path = branch_path(ctx, br) + cvs_path
+      svn_path = make_path(ctx, cvs_path, br)
       print '    deleting %s : %s' % (cvs_rev, svn_path)
-      dump.delete_path(svn_path)
+      if cvs_rev != '1.1':
+        if svn_rev == SVN_INVALID_REVNUM:
+          svn_rev = dump.start_revision(props)
+        ### FIXME: this will return None if no path was deleted.  But
+        ### we'll already have started the revision by then, so it's a
+        ### bit late to use the knowledge!  Need to reorganize things
+        ### so that starting the revision is a callback with its own
+        ### internal conditional, so anyone can just invoke when they
+        ### know they're really about to do something.
+        ###
+        ### Right now what happens is we get an empty revision
+        ### (assuming nothing else happened in this revision), so it
+        ### won't show up 'svn log' output, even when invoked on the
+        ### root -- because no paths changed!  That needs to be fixed,
+        ### regardless of whether cvs2svn creates such revisions.
+        tag_tracker.track_names(svn_path, svn_rev, tags)
+        branch_tracker.track_names(svn_path, svn_rev, branches)
+        dump.delete_path(svn_path, ctx.prune)
 
-    previous_rev = dump.end_revision()
-    print '    new revision:', previous_rev
+    if svn_rev != SVN_INVALID_REVNUM:
+      print '    new revision:', svn_rev
+    else:
+      print '    no new revision created, as nothing to do'
 
 
 # ### This stuff left in temporarily, as a reference:
@@ -971,6 +1145,9 @@ def pass4(ctx):
   else:
     t_fs = t_repos = None
 
+  tag_tracker = TagTracker()
+  branch_tracker = BranchTracker()
+
   # A dictionary of Commit objects, keyed by digest.  Each object
   # represents one logical commit, which may involve multiple files.
   #
@@ -1000,7 +1177,15 @@ def pass4(ctx):
     if not trunk_rev.match(rev):
       ### note this could/should have caused a flush, but the next item
       ### will take care of that for us
+      ### 
+      ### TODO: working here.  Because of this condition, we're not
+      ### seeing tags and branches rooted in initial revisions (CVS's
+      ### infamous "1.1.1.1").
+      ###
+      ### See http://www.cs.uh.edu/~wjin/cvs/train/cvstrain-7.4.4.html
+      ### for excellent clarification of the vendor branch thang.
       continue
+      # pass
 
     # Each time we read a new line, we scan the commits we've
     # accumulated so far to see if any are ready for processing now.
@@ -1022,7 +1207,7 @@ def pass4(ctx):
     # part of any of them.  Sort them into time-order, then commit 'em.
     process.sort()
     for t_max, c in process:
-      c.commit(dump, ctx)
+      c.commit(dump, ctx, tag_tracker, branch_tracker)
     count = count + len(process)
 
     # Add this item into the set of still-available commits.
@@ -1039,7 +1224,7 @@ def pass4(ctx):
       process.append((c.t_max, c))
     process.sort()
     for t_max, c in process:
-      c.commit(dump, ctx)
+      c.commit(dump, ctx, tag_tracker, branch_tracker)
     count = count + len(process)
 
   dump.close()
@@ -1052,7 +1237,8 @@ def pass5(ctx):
     # ### FIXME: Er, does this "<" stuff work under Windows?
     # ### If not, then in general how do we load dumpfiles under Windows?
     print 'loading %s into %s' % (ctx.dumpfile, ctx.target)
-    os.system('%s load %s < %s' % (ctx.svnadmin, ctx.target, ctx.dumpfile))
+    os.system('%s load --ignore-uuid %s < %s'
+              % (ctx.svnadmin, ctx.target, ctx.dumpfile))
 
 _passes = [
   pass1,
@@ -1094,6 +1280,7 @@ def usage(ctx):
   print '  --trunk=PATH     path for trunk (default: %s)' % ctx.trunk_base
   # print '  --branches=PATH  path for branches (default: %s)' % ctx.branches_base
   # print '  --tags=PATH      path for tags (default: %s)' % ctx.tags_base
+  print '  --no-prune         Don\'t prune empty directories.'
   print '  --encoding=ENC   encoding of log messages in CVS repos (default: %s)' % ctx.encoding
   sys.exit(1)
 
@@ -1107,6 +1294,7 @@ def main():
   ctx.initial_revision = 1  ### Should we take a --initial-revision option?
   ctx.verbose = 0
   ctx.dry_run = 0
+  ctx.prune = 1
   ctx.create_repos = 0
   ctx.trunk_base = "trunk"
   ctx.tags_base = "tags"
@@ -1117,7 +1305,8 @@ def main():
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn',
                                [ "create", "trunk=",
-                                 "branches=", "tags=", "encoding=" ])
+                                 "branches=", "tags=", "encoding=",
+                                 "no-prune"])
   except getopt.GetoptError:
     usage(ctx)
   if len(args) != 1:
@@ -1151,6 +1340,8 @@ def main():
       ctx.branches_base = value
     elif opt == '--tags':
       ctx.tags_base = value
+    elif opt == '--no-prune':
+      ctx.prune = None
     elif opt == '--encoding':
       ctx.encoding = value
 

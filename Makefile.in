@@ -32,6 +32,7 @@ MDOCS_DIR = ${BOOK_TOP}/misc-docs
 DOC_DIRS = $(DESIGN_DIR) $(BOOK_DIR) $(MDOCS_DIR) 
 
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
+SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
 ### these should go away; gen-make should place this into BUILD_DIRS
 SWIG_DIRS = subversion/bindings/swig/python     \
@@ -71,7 +72,8 @@ swig_py_libdir = @libdir@
 swig_java_libdir = @libdir@
 
 ### these possibly need further discussion
-swig_pydir = @libdir@/svn-python/svn
+swig_pydir = @libdir@/svn-python/libsvn
+swig_pydir_extra = @libdir@/svn-python/svn
 swig_javadir = @libdir@/svn-java
 
 ### should search for these...
@@ -82,6 +84,7 @@ DVIPDF = dvipdf
 
 
 CC = @CC@
+EXEEXT = @EXEEXT@
 
 SHELL = @SHELL@
 LIBTOOL = @SVN_LIBTOOL@
@@ -134,8 +137,8 @@ LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS
 
 # these commands run SWIG to generate wrapper source files (*.c)
 ### should we protect against swig not being available?
-RUN_SWIG_PY = $(SWIG) -c -python -noproxy $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
-RUN_SWIG_JAVA = cd ${SWIG_SRC_DIR}/java/org/tigris/subversion/swig && $(SWIG) -c -java -noproxy -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
+RUN_SWIG_PY = $(SWIG) -c -python $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
+RUN_SWIG_JAVA = cd ${SWIG_SRC_DIR}/java/org/tigris/subversion/swig && $(SWIG) -c -java -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
 
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
@@ -165,7 +168,12 @@ INSTALL_SWIG_JAVA = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA_LIB = $(INSTALL_LIB)
 
 # additional installation rules for the SWIG wrappers
-INSTALL_EXTRA_SWIG_PY=$(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python/svn" "$(DESTDIR)$(swig_pydir)"
+INSTALL_EXTRA_SWIG_PY=\
+   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python" "$(DESTDIR)$(swig_pydir)" ; \
+   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python/svn" "$(DESTDIR)$(swig_pydir_extra)"; \
+   if test $(abs_srcdir) != $(abs_builddir); then \
+       $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_BUILD_DIR}/python" "$(DESTDIR)$(swig_pydir)" ; \
+   fi
 INSTALL_EXTRA_SWIG_JAVA=:
 
 APXS = @APXS@ 
@@ -178,6 +186,7 @@ JAVAC = @JAVAC@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 
+TESTS = $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
 
 all: external-all local-all
 clean: external-clean local-clean
@@ -224,6 +233,9 @@ revision-install:
 
 install-static: @INSTALL_STATIC_RULES@
 
+# "make check CLEANUP=true" will clean up directories for successful tests.
+# "make check TESTS=subversion/tests/clients/cmdline/basic_tests.py"
+#  will perform only basic tests (likewise for other tests).
 check: $(TEST_DEPS) @FS_TEST_DEPS@
 	@$(PYTHON) $(top_srcdir)/build/pycheck.py;                         \
 	flags="--verbose";                                                 \
@@ -235,7 +247,7 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 	fi;                                                                \
 	$(PYTHON) $(top_srcdir)/build/run_tests.py $$flags                 \
 		  '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
-		  $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
+		  $(TESTS)
 
 # First, set up Apache as documented in
 # subversion/tests/clients/cmdline/README.
@@ -246,6 +258,12 @@ davcheck:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline
 svncheck: 
 	@make check BASE_URL=svn://localhost
+
+# First make sure you can ssh to localhost and that "svnserve" is in
+# the path of the resulting shell.
+svnsshcheck:
+	@make check \
+	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/clients/cmdline
 
 check-clean:
 	rm -rf subversion/tests/clients/cmdline/repositories   \

@@ -27,6 +27,8 @@
 #include "svn_error.h"
 #include "svn_subst.h"
 #include "svn_io.h"
+#include "svn_time.h"
+#include "svn_path.h"
 #include "client.h"
 
 
@@ -45,6 +47,7 @@ svn_client_cat (svn_stream_t *out,
   svn_node_kind_t url_kind;
   svn_string_t *mime_type;
   svn_string_t *eol_style;
+  svn_string_t *keywords;
   apr_hash_t *props;
   const char *auth_dir;
   const char *url;
@@ -85,12 +88,13 @@ svn_client_cat (svn_stream_t *out,
 
   mime_type = apr_hash_get (props, SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
   eol_style = apr_hash_get (props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING);
+  keywords = apr_hash_get (props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
 
   /* FIXME: Someday we should also check the keywords property and if it's 
    * set do keyword expansion, but that's a fair amount of work. */
 
   if ((mime_type && svn_mime_type_is_binary (mime_type->data))
-      || (! eol_style))
+      || (! eol_style && ! keywords))
     {
       /* Either it's a binary file, or it's a text file with no special eol 
          style. */
@@ -98,14 +102,14 @@ svn_client_cat (svn_stream_t *out,
     }
   else
     {
-      svn_subst_keywords_t *kw = NULL;
+      svn_subst_keywords_t kw = { 0 };
       svn_subst_eol_style_t style;
       const char *tmp_filename;
       svn_stream_t *tmp_stream;
       apr_file_t *tmp_file;
       apr_status_t apr_err;
       apr_off_t off = 0;
-      const char *eol;
+      const char *eol = NULL;
 
       /* grab a temporary file to write the target to. */
       SVN_ERR (svn_io_open_unique_file (&tmp_file, &tmp_filename, "", ".tmp", 
@@ -122,12 +126,34 @@ svn_client_cat (svn_stream_t *out,
         return svn_error_createf (apr_err, NULL, "seek failed on '%s'.",
                                   tmp_filename);
 
-      /* FIXME: set the kw to the appropriate value as found in the keywords 
-         property before translating it. */
+      if (eol_style)
+        svn_subst_eol_style_from_value (&style, &eol, eol_style->data);
 
-      svn_subst_eol_style_from_value (&style, &eol, eol_style->data);
+      if (keywords)
+        {
+          svn_string_t *date, *author;
+          apr_hash_t *revprops;
+          apr_time_t when = 0;
 
-      SVN_ERR (svn_subst_translate_stream (tmp_stream, out, eol, FALSE, kw,
+          SVN_ERR (ra_lib->rev_proplist(session, rev, &revprops, pool));
+
+          date = apr_hash_get (revprops, SVN_PROP_REVISION_DATE,
+                               APR_HASH_KEY_STRING);
+          author = apr_hash_get (revprops, SVN_PROP_REVISION_AUTHOR,
+                                 APR_HASH_KEY_STRING);
+          if (date)
+            SVN_ERR (svn_time_from_cstring (&when, date->data, pool));
+
+          SVN_ERR (svn_subst_build_keywords
+                   (&kw, keywords->data, 
+                    apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev),
+                    url,
+                    when,
+                    author ? author->data : NULL,
+                    pool));
+        }
+
+      SVN_ERR (svn_subst_translate_stream (tmp_stream, out, eol, FALSE, &kw,
                                            TRUE));
 
       SVN_ERR (svn_stream_close (tmp_stream));

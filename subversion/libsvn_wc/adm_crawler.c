@@ -103,7 +103,9 @@ restore_file (const char *file_path,
    This is a depth-first recursive walk of DIR_PATH under ADM_ACCESS.
    Look at each entry and check if its revision is different than
    DIR_REV.  If so, report this fact to REPORTER.  If an entry is
-   missing from disk, report its absence to REPORTER.  
+   missing from disk, report its absence to REPORTER.  If an entry has
+   a different URL than expected, report that to REPORTER.  Finally,
+   if REPORT_EVERYTHING is set, then report all children unconditionally.
 
    If TRAVERSAL_INFO is non-null, record this directory's
    value of svn:externals in both TRAVERSAL_INFO->externals_old and
@@ -127,6 +129,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                   void *notify_baton,
                   svn_boolean_t restore_files,
                   svn_boolean_t recurse,
+                  svn_boolean_t report_everything,
                   svn_wc_traversal_info_t *traversal_info,
                   apr_pool_t *pool)
 {
@@ -198,8 +201,10 @@ report_revisions (svn_wc_adm_access_t *adm_access,
 
       /*** The Big Tests: ***/
 
-      /* If the entry is 'deleted', make sure the server knows its missing. */
-      if (current_entry->deleted)
+      /* If the entry is 'deleted', make sure the server knows its
+         missing... unless we're reporting everything, in which case
+         it's already missing on the server.  */
+      if (current_entry->deleted && (! report_everything))
         {
           SVN_ERR (reporter->delete_path (report_baton, this_path, iterpool));
           continue;
@@ -220,7 +225,9 @@ report_revisions (svn_wc_adm_access_t *adm_access,
           /* If the dirent changed kind, report it as missing and
              move on to the next entry.  Later on, the update
              editor will return an 'obstructed update' error.  :) */
-          if (dirent_kind && (*dirent_kind != svn_node_file))
+          if (dirent_kind
+              && (*dirent_kind != svn_node_file)
+              && (! report_everything))
             {
               SVN_ERR (reporter->delete_path (report_baton, this_path, 
                                               iterpool));
@@ -252,20 +259,36 @@ report_revisions (svn_wc_adm_access_t *adm_access,
 
             }
 
+          if (report_everything)
+            {
+              /* Report the file unconditionally, one way or another. */
+              if (strcmp (current_entry->url, this_url) != 0)
+                SVN_ERR (reporter->link_path (report_baton, this_path,
+                                              current_entry->url,
+                                              current_entry->revision,
+                                              FALSE, iterpool));
+              else
+                SVN_ERR (reporter->set_path (report_baton, this_path,
+                                             current_entry->revision,
+                                             FALSE, iterpool));              
+            }
+
           /* Possibly report a disjoint URL ... */
-          if ((current_entry->schedule != svn_wc_schedule_add)
-              && (current_entry->schedule != svn_wc_schedule_replace)
-              && (strcmp (current_entry->url, this_url) != 0))
+          else if ((current_entry->schedule != svn_wc_schedule_add)
+                   && (current_entry->schedule != svn_wc_schedule_replace)
+                   && (strcmp (current_entry->url, this_url) != 0))
             SVN_ERR (reporter->link_path (report_baton,
                                           this_path,
                                           current_entry->url,
                                           current_entry->revision,
+                                          FALSE,
                                           iterpool));
           /* ... or perhaps just a differing revision. */
           else if (current_entry->revision !=  dir_rev)
             SVN_ERR (reporter->set_path (report_baton,
                                          this_path,
                                          current_entry->revision,
+                                         FALSE,
                                          iterpool));
         } /* end file case */
       
@@ -276,8 +299,10 @@ report_revisions (svn_wc_adm_access_t *adm_access,
           const svn_wc_entry_t *subdir_entry;
 
           /* If a directory is missing from disk, we have no way to
-             recreate it locally, so report as missing and move along. */
-          if (missing)
+             recreate it locally, so report as missing and move
+             along.  Again, don't bother if we're reporting
+             everything, because the dir is already missing on the server. */
+          if (missing && (! report_everything))
             {
               SVN_ERR (reporter->delete_path (report_baton, this_path,
                                               iterpool));
@@ -305,18 +330,36 @@ report_revisions (svn_wc_adm_access_t *adm_access,
           SVN_ERR (svn_wc_entry (&subdir_entry, this_full_path, subdir_access,
                                  TRUE, iterpool));
 
+          if (report_everything)
+            {
+              /* Report the dir unconditionally, one way or another. */
+              if (strcmp (subdir_entry->url, this_url) != 0)
+                SVN_ERR (reporter->link_path (report_baton, this_path,
+                                              subdir_entry->url,
+                                              subdir_entry->revision,
+                                              subdir_entry->incomplete,
+                                              iterpool));
+              else
+                SVN_ERR (reporter->set_path (report_baton, this_path,
+                                             subdir_entry->revision,
+                                             subdir_entry->incomplete,
+                                             iterpool));              
+            }
+
           /* Possibly report a disjoint URL ... */
-          if (strcmp (subdir_entry->url, this_url) != 0)
+          else if (strcmp (subdir_entry->url, this_url) != 0)
             SVN_ERR (reporter->link_path (report_baton,
                                           this_path,
                                           subdir_entry->url,
                                           subdir_entry->revision,
+                                          subdir_entry->incomplete,
                                           iterpool));
           /* ... or perhaps just a differing revision. */
           else if (subdir_entry->revision != dir_rev)
             SVN_ERR (reporter->set_path (report_baton,
                                          this_path,
                                          subdir_entry->revision,
+                                         subdir_entry->incomplete,
                                          iterpool));
 
           /* Recurse. */
@@ -325,6 +368,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                                      reporter, report_baton,
                                      notify_func, notify_baton,
                                      restore_files, recurse,
+                                     subdir_entry->incomplete,
                                      traversal_info,
                                      iterpool));
         } /* end directory case */
@@ -381,7 +425,9 @@ svn_wc_crawl_revisions (const char *path,
   /* The first call to the reporter merely informs it that the
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
-  SVN_ERR (reporter->set_path (report_baton, "", base_rev, pool));
+  SVN_ERR (reporter->set_path (report_baton, "", base_rev,
+                               entry->incomplete , /* start_empty ? */
+                               pool));
 
   if (entry->schedule != svn_wc_schedule_delete)
     {
@@ -415,6 +461,7 @@ svn_wc_crawl_revisions (const char *path,
                                   reporter, report_baton,
                                   notify_func, notify_baton,
                                   restore_files, recurse,
+                                  entry->incomplete,
                                   traversal_info,
                                   pool);
           if (err)
@@ -464,6 +511,7 @@ svn_wc_crawl_revisions (const char *path,
                                         "",
                                         entry->url,
                                         entry->revision,
+                                        FALSE,
                                         pool));
         }
       else if (entry->revision != base_rev)
@@ -473,7 +521,7 @@ svn_wc_crawl_revisions (const char *path,
              of the report (not some file in a subdirectory of a target
              directory), and that target is a file, we need to pass an
              empty string to set_path. */
-          err = reporter->set_path (report_baton, "", base_rev, pool);
+          err = reporter->set_path (report_baton, "", base_rev, FALSE, pool);
           if (err)
             goto abort_report;
         }
@@ -601,17 +649,10 @@ svn_wc_transmit_text_deltas (const char *path,
 
   /* Tell the editor that we're about to apply a textdelta to the
      file baton; the editor returns to us a window consumer routine
-     and baton.  If there is no handler provided, just close the file
-     and get outta here.  */
+     and baton.  */
   SVN_ERR (editor->apply_textdelta
            (file_baton,
             base_digest_hex, pool, &handler, &wh_baton));
-
-  if (! handler)
-    {
-      SVN_ERR (svn_io_remove_file (tmp_base, pool));
-      return editor->close_file (file_baton, NULL, pool);
-    }
 
   /* Alert the caller that we have created a temporary file that might
      need to be cleaned up. */

@@ -28,8 +28,6 @@
 
 #include <apr.h>
 #include <apr_pools.h>
-#include <apr_tables.h>
-#include <apr_md5.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
@@ -677,13 +675,6 @@ typedef struct
    * SVN_ERR_CHECKSUM_MISMATCH (if there is no base text, there may
    * still be an error if @a base_checksum is neither null nor the hex
    * MD5 checksum of the empty string).
-   *
-   * If @a *handler is set to @c NULL, then the editor is indicating to 
-   * the driver that it is not interested in receiving information about
-   * the changes in this file. The driver can use this information to
-   * avoid computing changes. Note that the editor knows the change
-   * has occurred (by virtue of this function being invoked), but is
-   * simply indicating that it doesn't want the details.
    */
   svn_error_t *(*apply_textdelta) (void *file_baton,
                                    const char *base_checksum,
@@ -749,6 +740,14 @@ typedef struct
  */
 svn_delta_editor_t *svn_delta_default_editor (apr_pool_t *pool);
 
+/** A text-delta window handler which does nothing.
+ *
+ * Editors can return this handler from apply_textdelta if they don't
+ * care about text delta windows.
+ */
+svn_error_t *svn_delta_noop_window_handler (svn_txdelta_window_t *window,
+                                            void *baton);
+
 /** Return a cancellation editor that wraps @a wrapped_editor.
  *
  * The @a editor will call @a cancel_func with @a cancel_baton when each of 
@@ -766,6 +765,64 @@ svn_delta_get_cancellation_editor (svn_cancel_func_t cancel_func,
                                    const svn_delta_editor_t **editor,
                                    void **edit_baton,
                                    apr_pool_t *pool);
+
+/** @} */
+
+
+/** Path-based editor drives.
+ * 
+ * @defgroup svn_delta_path_delta_drivers path-based delta drivers
+ * @{
+ */
+
+/** Callback function type for svn_delta_path_driver().
+ *
+ * The handler of this callback is given the callback baton @a
+ * callback_baton, @a path, and the @a parent_baton which represents
+ * path's parent directory as created by the editor passed to
+ * svn_delta_path_driver().
+ *
+ * If @a path represents a directory, the handler must return a @a
+ * *dir_baton for @a path, generated from the same editor (so that the
+ * driver can later close that directory).
+ *
+ * If, however, @a path represents a file, the handler should NOT
+ * return any file batons.  It can close any opened or added files
+ * immediately, or delay that close until the end of the edit when
+ * svn_delta_path_driver() returns.
+ *
+ * Finally, if @a parent_baton is @c NULL, then the root of the edit
+ * is also one of the paths passed to svn_delta_path_driver().  The
+ * handler of this callback must call the editor's open_root()
+ * function and return the top-level root dir baton in @a *dir_baton. 
+ */
+typedef svn_error_t *
+(*svn_delta_path_driver_cb_func_t) (void **dir_baton,
+                                    void *parent_baton,
+                                    void *callback_baton,
+                                    const char *path,
+                                    apr_pool_t *pool);
+  
+
+/** Drive @a editor (with its @a edit_baton) in such a way that
+ * each path in @a paths is traversed in a depth-first fashion.  As
+ * each path is hit as part of the editor drive, use @a
+ * callback_func and @a callback_baton to allow the caller to handle
+ * the portion of the editor drive related to that path.  
+ *
+ * Use @a revision as the revision number passed to intermediate
+ * directory openings.  
+ *
+ * Use @a pool for all necessary allocations. 
+ */
+svn_error_t *
+svn_delta_path_driver (const svn_delta_editor_t *editor,
+                       void *edit_baton,
+                       svn_revnum_t revision,
+                       apr_array_header_t *paths,
+                       svn_delta_path_driver_cb_func_t callback_func,
+                       void *callback_baton,
+                       apr_pool_t *pool);
 
 /** @} */
 

@@ -1019,6 +1019,133 @@ def update_receive_illegal_name(sbox):
   else:
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+
+def update_deleted_missing_dir(sbox):
+  "update missing dir to revision in which it is absent"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+
+  # Create a new revision with directories deleted
+  svntest.main.run_svn(None, 'rm', E_path)  
+  svntest.main.run_svn(None, 'rm', H_path)  
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg', E_path, H_path)  
+
+  # Update back to the old revision
+  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)  
+
+  # Delete the directories from disk
+  svntest.main.safe_rmtree(E_path)
+  svntest.main.safe_rmtree(H_path)
+
+  # Create expected output tree for an update of the missing items by name
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E' : Item(status='D '),
+    'A/D/H' : Item(status='D '),
+    })
+
+  # Create expected disk tree for the update.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_disk.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  expected_status.tweak(wc_rev=1, repos_rev=2)
+  
+  # Do the update, specifying the deleted paths explicitly. 
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 
+                                        0, "-r", "2", E_path, H_path)
+
+  # Update back to the old revision again
+  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)  
+
+  # Delete the directories from disk
+  svntest.main.safe_rmtree(E_path)
+  svntest.main.safe_rmtree(H_path)
+
+  # This time we're updating the whole working copy
+  expected_status.tweak(wc_rev=2, repos_rev=2)
+
+  # Do the update, on the whole working copy this time
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 
+                                        0, "-r", "2", wc_dir)
+
+#----------------------------------------------------------------------
+
+# Issue 919.  This test was written as a regression test for "item
+# should remain 'deleted' when an update deletes a sibling", but it
+# fails due to issue 919.
+def another_hudson_problem(sbox):
+  "another \"hudson\" problem: updates that delete"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Delete/commit gamma thus making it 'deleted'
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
+  svntest.main.run_svn(None, 'rm', gamma_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/D/gamma')
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # Delete directory G from the repository
+  out, err = svntest.main.run_svn(None, 'rm',
+                                  '-m', 'log msg',
+                                  svntest.main.current_repo_url + '/A/D/G')
+  if out != ['\n', 'Committed revision 3.\n']:
+    raise svntest.Failure
+
+  # Remove corresponding tree from working copy
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  svntest.main.safe_rmtree(G_path)
+
+  # Update missing directory to receive the delete, this should mark G
+  # as 'deleted' and should not alter gamma's entry.  G doesn't get
+  # marked deleted which is why this test is an XFail
+
+  # Sigh, I can't get run_and_verify_update to work (but not because
+  # of issue 919 as far as I can tell)
+  out, err = svntest.main.run_svn(None, 'up', G_path)
+  if out != ['D  '+G_path+'\n', 'Updated to revision 3.\n']:
+    raise svntest.Failure
+
+  # Both G and gamma should be 'deleted', update should produce no output
+  expected_output = svntest.wc.State(wc_dir, { })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                         'A/D/gamma')
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                       'A/D/gamma')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)  
+
 ########################################################################
 # Run the tests
 
@@ -1037,7 +1164,9 @@ test_list = [ None,
               update_replace_dir,
               update_single_file,
               prop_update_on_scheduled_delete,
-              update_receive_illegal_name
+              update_receive_illegal_name,
+              update_deleted_missing_dir,
+              XFail(another_hudson_problem),
              ]
 
 if __name__ == '__main__':

@@ -38,7 +38,7 @@
 #include "svn_sorts.h"
 #include "svn_version.h"
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 
 
 struct dav_stream {
@@ -1931,6 +1931,9 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       }
     else
       {
+        const char *name = resource->info->repos->repo_name;
+        const char *href = resource->info->repos_path;
+
         ap_fputs(output, bb, "<?xml version=\"1.0\"?>\n");
         ap_fprintf(output, bb,
                    "<?xml-stylesheet type=\"text/xsl\" href=\"%s\"?>\n",
@@ -1939,18 +1942,18 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         ap_fputs(output, bb,
                  "<svn version=\"" SVN_VERSION "\"\n"
                  "     href=\"http://subversion.tigris.org/\">\n");
-
         ap_fputs(output, bb, "  <index");
-        if (resource->info->repos->repo_name)
-            ap_fprintf(output, bb, " name=\"%s\"",
-                       resource->info->repos->repo_name);
+        if (name)
+          ap_fprintf(output, bb, " name=\"%s\"",
+                     apr_xml_quote_string(resource->pool, name, 1));
         if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
           ap_fprintf(output, bb, " rev=\"%" SVN_REVNUM_T_FMT "\"",
                      resource->info->root.rev);
-        if (resource->info->repos_path)
+        if (href)
           ap_fprintf(output, bb, " path=\"%s\"",
-                     ap_escape_uri(resource->pool,
-                                   resource->info->repos_path));
+                     apr_xml_quote_string(resource->pool,
+                                          ap_escape_uri(resource->pool, href),
+                                          1));
         ap_fputs(output, bb, ">\n");
       }
 
@@ -2003,13 +2006,17 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         href = ap_escape_uri(entry_pool, href);
 
         if (gen_html)
-          ap_fprintf(output, bb,
-                     "  <li><a href=\"%s\">%s</a></li>\n",
-                     href, name);
+          {
+            ap_fprintf(output, bb,
+                       "  <li><a href=\"%s\">%s</a></li>\n",
+                       href, name);
+          }
         else
           {
             const char *const tag = (is_dir ? "dir" : "file");
-
+            name = apr_xml_quote_string(entry_pool, name, 1);
+            href = apr_xml_quote_string(entry_pool, href, 1);
+            
             /* ### This is where the we could search for props */
 
             ap_fprintf(output, bb,

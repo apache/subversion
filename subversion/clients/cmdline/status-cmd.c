@@ -89,6 +89,8 @@ svn_cl__status (apr_getopt_t *os,
                                  opt_state->verbose,
                                  opt_state->quiet,
                                  subpool);
+
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       svn_pool_clear (subpool);
     }
 

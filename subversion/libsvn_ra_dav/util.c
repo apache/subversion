@@ -248,18 +248,21 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
 
 
 
-svn_error_t *svn_ra_dav__parsed_request(ne_session *sess,
-                                        const char *method,
-                                        const char *url,
-                                        const char *body,
-                                        apr_file_t *body_file,
-                                        const struct ne_xml_elm *elements, 
-                                        ne_xml_validate_cb validate_cb,
-                                        ne_xml_startelm_cb startelm_cb, 
-                                        ne_xml_endelm_cb endelm_cb,
-                                        void *baton,
-                                        apr_hash_t *extra_headers,
-                                        apr_pool_t *pool)
+svn_error_t *
+svn_ra_dav__parsed_request(ne_session *sess,
+                           const char *method,
+                           const char *url,
+                           const char *body,
+                           apr_file_t *body_file,
+                           void set_parser (ne_xml_parser *parser,
+                                            void *baton),
+                           const struct ne_xml_elm *elements, 
+                           ne_xml_validate_cb validate_cb,
+                           ne_xml_startelm_cb startelm_cb, 
+                           ne_xml_endelm_cb endelm_cb,
+                           void *baton,
+                           apr_hash_t *extra_headers,
+                           apr_pool_t *pool)
 {
   ne_request *req;
   ne_decompress *decompress_main;
@@ -303,7 +306,12 @@ svn_error_t *svn_ra_dav__parsed_request(ne_session *sess,
   /* create a parser to read the normal response body */
   success_parser = ne_xml_create();
   ne_xml_push_handler(success_parser, elements,
-                       validate_cb, startelm_cb, endelm_cb, baton);
+                      validate_cb, startelm_cb, endelm_cb, baton);
+
+  /* if our caller is interested in having access to this parser, call
+     the SET_PARSER callback with BATON. */
+  if (set_parser != NULL)
+    set_parser(success_parser, baton);
 
   /* create a parser to read the <D:error> response body */
   error_parser = ne_xml_create();

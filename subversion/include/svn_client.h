@@ -33,9 +33,9 @@
 #define SVN_CLIENT_H
 
 #include <apr_tables.h>
+
 #include "svn_types.h"
 #include "svn_wc.h"
-#include "svn_ra.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_opt.h"
@@ -82,81 +82,76 @@ typedef svn_error_t *
                         apr_pool_t *pool);
 
 
-/** Fetch an authentication provider which prompts the user for name
- * and password.
- *
- * Set @a *provider and @a *provider_baton to an authentication
- * provider of type @c svn_auth_cred_simple_t that gets information by
- * prompting the user with @a prompt_func and @a prompt_baton.  If
- * either @c SVN_AUTH_PARAM_DEFAULT_USERNAME or @c
+/** Create and return @a *provider, an authentication provider of type
+ * svn_auth_cred_simple_t that gets information by prompting the user
+ * with @a prompt_func and @a prompt_baton.  If either @c
+ * SVN_AUTH_PARAM_DEFAULT_USERNAME or @c
  * SVN_AUTH_PARAM_DEFAULT_PASSWORD is defined as a runtime parameter
  * in the @c auth_baton, then return the default argument(s) when @c
  * svn_auth_first_credentials is called.  If @c
  * svn_auth_first_credentials fails, then re-prompt @a retry_limit
- * number of times (via @c svn_auth_next_credentials). */
+ * number of times (via @c svn_auth_next_credentials).
+ */
 void 
-svn_client_get_simple_prompt_provider (const svn_auth_provider_t **provider,
-                                       void **provider_baton,
+svn_client_get_simple_prompt_provider (svn_auth_provider_object_t **provider,
                                        svn_client_prompt_t prompt_func,
                                        void *prompt_baton,
                                        int retry_limit,
                                        apr_pool_t *pool);
 
 
-/** Set @a *provider and @a *provider_baton to an authentication
- * provider of type @c svn_auth_cred_username_t that gets information by
- * prompting the user with @a prompt_func and @a prompt_baton.  If
- * @c SVN_AUTH_PARAM_DEFAULT_USERNAME is defined as a runtime parameter
+/** Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_username_t that gets information by prompting the
+ * user with @a prompt_func and @a prompt_baton.  If @c
+ * SVN_AUTH_PARAM_DEFAULT_USERNAME is defined as a runtime parameter
  * in the @c auth_baton, then return the default argument when @c
  * svn_auth_first_credentials is called.  If @c
  * svn_auth_first_credentials fails, then re-prompt @a retry_limit
- * number of times (via @c svn_auth_next_credentials). */
+ * number of times (via @c svn_auth_next_credentials).
+ */
 void 
-svn_client_get_username_prompt_provider (const svn_auth_provider_t **provider,
-                                         void **provider_baton,
+svn_client_get_username_prompt_provider (svn_auth_provider_object_t **provider,
                                          svn_client_prompt_t prompt_func,
                                          void *prompt_baton,
                                          int retry_limit,
                                          apr_pool_t *pool);
 
 
-/** Set @a *provider and @ *provider_baton to an authentication
- *  provider of type @c svn_auth_cred_simple_t that gets/sets
- *  information from the user's ~/.subversion configuration directory. 
+/** Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_simple_t that gets/sets information from the user's
+ * ~/.subversion configuration directory.
  *  
- *  If a default username or password is available, this provider will
- *  honor them as well, and return them when @c
- *  svn_auth_first_credentials is called.  (see @c
- *  SVN_AUTH_PARAM_DEFAULT_USERNAME and @c
- *  SVN_AUTH_PARAM_DEFAULT_PASSWORD).
+ * If a default username or password is available, this provider will
+ * honor them as well, and return them when @c
+ * svn_auth_first_credentials is called.  (see @c
+ * SVN_AUTH_PARAM_DEFAULT_USERNAME and @c
+ * SVN_AUTH_PARAM_DEFAULT_PASSWORD). 
  */
 void 
-svn_client_get_simple_provider (const svn_auth_provider_t **provider,
-                                void **provider_baton,
+svn_client_get_simple_provider (svn_auth_provider_object_t **provider,
                                 apr_pool_t *pool);
 
 
-/** Set @a *provider and @ *provider_baton to an authentication
- *  provider of type @c svn_auth_cred_username_t that gets/sets
- *  information from a user's ~/.subversion configuration directory.
+/** Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_username_t that gets/sets information from a user's
+ * ~/.subversion configuration directory.
  *
- *  If a default username is available, this provider will honor it,
- *  and return it when @c svn_auth_first_credentials is called.  (see
- *  @c SVN_AUTH_PARAM_DEFAULT_USERNAME).
+ * If a default username is available, this provider will honor it,
+ * and return it when @c svn_auth_first_credentials is called.  (see
+ * @c SVN_AUTH_PARAM_DEFAULT_USERNAME). 
  */
 void 
-svn_client_get_username_provider (const svn_auth_provider_t **provider,
-                                  void **provider_baton,
+svn_client_get_username_provider (svn_auth_provider_object_t **provider,
                                   apr_pool_t *pool);
 
 
-/** Set @a *provider and @a *provider_baton to an authentication
- *  provider for type @c svn_auth_cred_server_ssl_t. This provider retrieves
- *  its credentials from the configuration mechanism. The returned credential
- *  is used to override SSL security on an error.
+/** Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_server_ssl_t. This provider retrieves its credentials
+ * from the configuration mechanism. The returned credential is used
+ * to override SSL security on an error.
  *  
- *  This provider requires certain run-time parameters be present in
- *  the auth_baton:
+ * This provider requires certain run-time parameters be present in
+ * the auth_baton:
  *
  *     - a loaded @c svn_config_t object
  *        (@c SVN_AUTH_PARAM_CONFIG)
@@ -168,18 +163,17 @@ svn_client_get_username_provider (const svn_auth_provider_t **provider,
  *        (@c SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN)
  */
 void 
-svn_client_get_ssl_server_file_provider (const svn_auth_provider_t **provider,
-                                         void **provider_baton,
+svn_client_get_ssl_server_file_provider (svn_auth_provider_object_t **provider,
                                          apr_pool_t *pool);
 
-/** Set @a *provider and @a *provider_baton to an authentication
- *  provider for type @c svn_auth_cred_client_ssl_t. This provider retrieves
- *  its credentials from the configuration mechanism. The returned credential
- *  is used to load the appropriate client certificate for authentication when
- *  requested by a server. 
+/** Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_client_ssl_t. This provider retrieves its credentials
+ * from the configuration mechanism. The returned credential is used
+ * to load the appropriate client certificate for authentication when
+ * requested by a server.
  *  
- *  This provider requires certain run-time parameters be present in
- *  the auth_baton:
+ * This provider requires certain run-time parameters be present in
+ * the auth_baton:
  *
  *     - a loaded @c svn_config_t object
  *        (@c SVN_AUTH_PARAM_CONFIG)
@@ -188,18 +182,17 @@ svn_client_get_ssl_server_file_provider (const svn_auth_provider_t **provider,
  *        (@c SVN_AUTH_PARAM_SERVER_GROUP)
  */
 void 
-svn_client_get_ssl_client_file_provider (const svn_auth_provider_t **provider,
-                                         void **provider_baton,
+svn_client_get_ssl_client_file_provider (svn_auth_provider_object_t **provider,
                                          apr_pool_t *pool);
 
-/** Set @a *provider and @a *provider_baton to an authentication
- *  provider for type @c svn_auth_cred_client_ssl_pass_t. This provider
- *  retrieves its credentials from the configuration mechanism. The returned
- *  credential is used when a loaded client certificate is protected by a
- *  passphrase.
+/** Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_client_ssl_pass_t. This provider retrieves its
+ * credentials from the configuration mechanism. The returned
+ * credential is used when a loaded client certificate is protected by
+ * a passphrase.
  *  
- *  This provider requires certain run-time parameters be present in
- *  the auth_baton:
+ * This provider requires certain run-time parameters be present in
+ * the auth_baton:
  *
  *     - a loaded @c svn_config_t object
  *        (@c SVN_AUTH_PARAM_CONFIG)
@@ -208,57 +201,53 @@ svn_client_get_ssl_client_file_provider (const svn_auth_provider_t **provider,
  *        (@c SVN_AUTH_PARAM_SERVER_GROUP)
  */
 void
-svn_client_get_ssl_pw_file_provider (const svn_auth_provider_t **provider,
-                                     void **provider_baton,
+svn_client_get_ssl_pw_file_provider (svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
 
-/** Set @a *provider and @a *provider_baton to an authentication
- *  provider for type @c svn_auth_cred_server_ssl_t. This provider retrieves
- *  its credentials by using the @a prompt_func and @a prompt_baton. The
- *  returned credential is used to override SSL security on an error.
+/** Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_server_ssl_t. This provider retrieves its credentials
+ * by using the @a prompt_func and @a prompt_baton. The returned
+ * credential is used to override SSL security on an error.
  *  
- *  This provider requires certain run-time parameters be present in
- *  the auth_baton:
+ * This provider requires certain run-time parameters be present in
+ * the auth_baton:
  *
  *     - the failure bitmask reported by the ssl certificate validator
  *        (@c SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN)
  */
 void
-svn_client_get_ssl_server_prompt_provider(const svn_auth_provider_t **provider,
-                                          void **provider_baton,
-                                          svn_client_prompt_t prompt_func,
-                                          void *prompt_baton,
-                                          apr_pool_t *pool);
+svn_client_get_ssl_server_prompt_provider (svn_auth_provider_object_t **provider,
+                                           svn_client_prompt_t prompt_func,
+                                           void *prompt_baton,
+                                           apr_pool_t *pool);
 
-/** Set @a *provider and @a *provider_baton to an authentication
- *  provider for type @c svn_auth_cred_client_ssl_t. This provider retrieves
- *  its credentials by using the @a prompt_func and @a prompt_baton. The
- *  returned credential is used to load the appropriate client certificate for
- *  authentication when requested by a server. 
+/** Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_client_ssl_t. This provider retrieves its credentials
+ * by using the @a prompt_func and @a prompt_baton. The returned
+ * credential is used to load the appropriate client certificate for
+ * authentication when requested by a server.
  *  
- *  There are no run-time parameters required for this provider.
+ * There are no run-time parameters required for this provider. 
  */
 void
-svn_client_get_ssl_client_prompt_provider(const svn_auth_provider_t **provider,
-                                          void **provider_baton,
-                                          svn_client_prompt_t prompt_func,
-                                          void *prompt_baton,
-                                          apr_pool_t *pool);
+svn_client_get_ssl_client_prompt_provider (svn_auth_provider_object_t **provider,
+                                           svn_client_prompt_t prompt_func,
+                                           void *prompt_baton,
+                                           apr_pool_t *pool);
 
-/** Set @a *provider and @a *provider_baton to an authentication
- *  provider for type @c svn_auth_cred_client_ssl_pass_t. This provider
- *  retrieves its credentials by using the @a prompt_func and @a prompt_baton.
- *  The returned credential is used when a loaded client certificate is
- *  protected by a passphrase.
+/** Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_client_ssl_pass_t. This provider retrieves its
+ * credentials by using the @a prompt_func and @a prompt_baton.  The
+ * returned credential is used when a loaded client certificate is
+ * protected by a passphrase.
  *
- *  There are no run-time parameters required for this provider.
+ * There are no run-time parameters required for this provider. 
  */
 void
-svn_client_get_ssl_pw_prompt_provider(const svn_auth_provider_t **provider,
-                                      void **provider_baton,
-                                      svn_client_prompt_t prompt_func,
-                                      void *prompt_baton,
-                                      apr_pool_t *pool);
+svn_client_get_ssl_pw_prompt_provider (svn_auth_provider_object_t **provider,
+                                       svn_client_prompt_t prompt_func,
+                                       void *prompt_baton,
+                                       apr_pool_t *pool);
 
 
 /** This is a structure which stores a filename and a hash of property
@@ -458,6 +447,8 @@ svn_client_checkout (const char *URL,
  * @a ctx->notify_baton for each item handled by the update, and also for 
  * files restored from text-base.
  *
+ * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ *
  * Use @a pool for any temporary allocation.
  */
 svn_error_t *
@@ -518,13 +509,13 @@ svn_client_add (const char *path,
 
 /** Create a directory, either in a repository or a working copy.
  *
- * If @a path is a URL, use the authentication baton in @a ctx and 
- * @a message to immediately attempt to commit the creation of the directory 
- * @a path in the repository.  If the commit succeeds, allocate (in @a pool) 
- * and populate @a *commit_info.
+ * If @a paths contains URLs, use the authentication baton in @a ctx
+ * and @a message to immediately attempt to commit the creation of the
+ * directories in @a paths in the repository.  If the commit succeeds,
+ * allocate (in @a pool) and populate @a *commit_info.
  *
- * Else, create the directory on disk, and attempt to schedule it for
- * addition (using @c svn_client_add, whose docstring you should
+ * Else, create the directories on disk, and attempt to schedule them
+ * for addition (using @c svn_client_add, whose docstring you should
  * read).
  *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that 
@@ -534,32 +525,34 @@ svn_client_add (const char *path,
  * If @a ctx->notify_func is non-null, when the directory has been created
  * (successfully) in the working copy, call @a ctx->notify_func with
  * @a ctx->notify_baton and the path of the new directory.  Note that this is
- * only called for items added to the working copy.
- */
+ * only called for items added to the working copy.  */
 svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
-                  const char *path,
+                  apr_array_header_t *paths,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
                   
 
-/** Delete an item from a repository or working copy.
+/** Delete items from a repository or working copy.
  *
- * If @a path is a @a url, use the authentication baton in @a ctx and 
- * @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately attempt to 
- * commit a deletion of the @a url from the repository.  If the commit 
- * succeeds, allocate (in @a pool) and populate @a *commit_info.
+ * If the paths in @a paths are URLs, use the authentication baton in
+ * @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to
+ * immediately attempt to commit a deletion of the URLs from the
+ * repository.  If the commit succeeds, allocate (in @a pool) and
+ * populate @a *commit_info.  Every path must belong to the same
+ * repository.
  *
- * Else, schedule a working copy @a path for removal from the repository.
- * @a path's parent must be under revision control. This is just a
- * *scheduling* operation.  No changes will happen to the repository until
- * a commit occurs.  This scheduling can be removed with
- * @c svn_client_revert. If @a path is a file it is immediately removed from 
- * the working copy. If @a path is a directory it will remain in the working 
- * copy but all the files, and all unversioned items, it contains will be
- * removed. If @a force is not set then this operation will fail if @a path
- * contains locally modified and/or unversioned items. If @a force is set 
- * such items will be deleted.
+ * Else, schedule the working copy paths in @a paths for removal from
+ * the repository.  Each path's parent must be under revision control.
+ * This is just a *scheduling* operation.  No changes will happen to
+ * the repository until a commit occurs.  This scheduling can be
+ * removed with @c svn_client_revert. If a path is a file it is
+ * immediately removed from the working copy. If the path is a
+ * directory it will remain in the working copy but all the files, and
+ * all unversioned items, it contains will be removed. If @a force is
+ * not set then this operation will fail if any path contains locally
+ * modified and/or unversioned items. If @a force is set such items
+ * will be deleted.
  *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that 
  * this function can use to query for a commit log message when one is
@@ -567,11 +560,10 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
  *
  * If @a ctx->notify_func is non-null, then for each item deleted, call
  * @a ctx->notify_func with @a ctx->notify_baton and the path of the deleted
- * item.
- */
+ * item.  */
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
-                   const char *path,
+                   apr_array_header_t *paths,
                    svn_boolean_t force,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
@@ -867,6 +859,26 @@ svn_client_cleanup (const char *dir,
                     apr_pool_t *pool);
 
 
+/**
+ * Modify a working copy directory @a dir, changing any
+ * repository URLs that begin with @a from to begin with @a to instead,
+ * recursing into subdirectories if @a recurse is true.
+ *
+ * @param dir Working copy directory
+ * @param from Original URL
+ * @param to New URL
+ * @param recurse Whether to recurse
+ * @param pool The pool from which to perform memory allocations
+ */
+svn_error_t *
+svn_client_relocate (const char *dir,
+                     const char *from,
+                     const char *to,
+                     svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
+
+
 /** Restore the pristine version of a working copy @a path, effectively
  * undoing any local mods.  If @a path is a directory, and @a recursive 
  * is @a true, this will be a recursive operation.
@@ -874,6 +886,8 @@ svn_client_cleanup (const char *dir,
  * If @a ctx->notify_func is non-null, then for each item reverted, call
  * @a ctx->notify_func with @a ctx->notify_baton and the path of the reverted 
  * item.
+ *
+ * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  */
 svn_error_t *
 svn_client_revert (const char *path,
@@ -1130,6 +1144,8 @@ svn_client_revprop_get (const char *propname,
  * If @a recurse is false, or @a target is a file, @a *props will contain 
  * only a single element.  Otherwise, it will contain one element for each
  * versioned entry below (and including) @a target.
+ *
+ * If @a target is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  */
 svn_error_t *
 svn_client_proplist (apr_array_header_t **props,

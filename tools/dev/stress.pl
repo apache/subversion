@@ -76,6 +76,7 @@
 # can be quite hypnotic!
 
 
+use IPC::Open3;
 use Getopt::Std;
 use File::Find;
 use File::Path;
@@ -137,29 +138,23 @@ sub status_update_commit
     print "Committing:\n";
     # Use current time as log message
     my $now_time = localtime;
-    my $svn_cmd = "svn ci $wc_dir -m '$now_time'";
+    # [Windows compat] Must use double quotes for the log message.
+    my $svn_cmd = "svn ci $wc_dir -m \"$now_time\"";
 
     # Need to handle the commit carefully. It could fail for all sorts
     # of reasons, but errors that indicate a conflict are "acceptable"
     # while other errors are not.  Thus there is a need to check the
     # return value and parse the error text.
+    my $pid = open3(\*COMMIT_WRITE, \*COMMIT_READ, \*COMMIT_ERR_READ,
+                    $svn_cmd);
+    print while ( <COMMIT_READ> );
 
-    pipe COMMIT_ERR_READ, COMMIT_ERR_WRITE or die "pipe: $!\n";
-    my $pid = fork();
-    die "fork failed: $!\n" if not defined $pid;
-    if ( not $pid )
-      {
-        # This is the child process
-        open( STDERR, ">&COMMIT_ERR_WRITE" ) or die "redirect failed: $!\n";
-        exec $svn_cmd or die "exec $svn_cmd failed: $!\n";
-      }
-
-    # This is the main parent process, look for acceptable errors
-    close COMMIT_ERR_WRITE or die "close COMMIT_ERR_WRITE: $!\n";
+    # Look for acceptable errors, ones we expect to occur due to conflicts
     my $acceptable_error = 0;
     while ( <COMMIT_ERR_READ> )
       {
-        print STDERR;
+        print;
+        s/\r*$//;               # [Windows compat] Remove trailing \r's
         $acceptable_error = 1 if ( /^svn:[ ]
                                    (
                                     Transaction[ ]is[ ]out[ ]of[ ]date
@@ -171,6 +166,8 @@ sub status_update_commit
                                    $/x );
       }
     close COMMIT_ERR_READ or die "close COMMIT_ERR_READ: $!\n";
+    close COMMIT_WRITE or die "close COMMIT_WRITE: $!\n";
+    close COMMIT_READ or die "close COMMIT_READ: $!\n";
 
     # Get commit subprocess exit status
     die "waitpid: $!\n" if $pid != waitpid $pid, 0;
@@ -316,8 +313,14 @@ my %cmd_opts = ParseCommandLine();
 
 my $repo = init_repo $cmd_opts{'R'}, $cmd_opts{'c'}, $cmd_opts{'W'};
 
+# [Windows compat]
+# Replace backslashes in the path, and tweak the number of slashes
+# in the schema separator to make the URL always correct.
+my $urlsep = ($repo =~ m/^\// ? '//' : '///');
+$repo =~ s/\\/\//g;
+
 # Make URL from path if URL not explicitly specified
-$cmd_opts{'U'} = "file://$repo" if $cmd_opts{'U'} eq "none";
+$cmd_opts{'U'} = "file:$urlsep$repo" if $cmd_opts{'U'} eq "none";
 
 my $wc_dir = check_out $cmd_opts{'U'};
 

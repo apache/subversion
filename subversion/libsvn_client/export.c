@@ -32,6 +32,7 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_subst.h"
+#include "svn_time.h"
 #include "svn_md5.h"
 #include "client.h"
 
@@ -151,17 +152,14 @@ svn_client_export (const char *from,
       svn_ra_plugin_t *ra_lib;
       void *edit_baton;
       const svn_delta_editor_t *export_editor;
+      const svn_ra_reporter_t *reporter;
+      void *report_baton;
 
       URL = svn_path_canonicalize (from, pool);
       
       SVN_ERR (svn_client__get_export_editor (&export_editor, &edit_baton,
                                               to, URL, ctx, pool));
       
-      if (revision->kind == svn_opt_revision_number)
-        revnum = revision->value.number;
-      else
-        revnum = SVN_INVALID_REVNUM;
-
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
@@ -169,11 +167,26 @@ svn_client_export (const char *from,
                                             NULL, NULL, FALSE, TRUE,
                                             ctx, pool));
 
-      /* Tell RA to do a checkout of REVISION; if we pass an invalid
-         revnum, that means RA will fetch the latest revision.  */
-      SVN_ERR (ra_lib->do_checkout (session, revnum,
-                                    TRUE, /* recurse */
-                                    export_editor, edit_baton, pool));
+      /* Unfortunately, it's not kosher to pass an invalid revnum into
+         set_path(), so we actually need to convert it to HEAD. */
+      if (revision->kind == svn_opt_revision_unspecified)
+        revision->kind = svn_opt_revision_head;
+      SVN_ERR (svn_client__get_revision_number
+               (&revnum, ra_lib, session, revision, to, pool));
+
+      /* Manufacture a basic 'report' to the update reporter. */
+      SVN_ERR (ra_lib->do_update (session,
+                                  &reporter, &report_baton,
+                                  revnum,
+                                  NULL, /* no sub-target */
+                                  TRUE, /* recurse */
+                                  export_editor, edit_baton, pool));
+
+      SVN_ERR (reporter->set_path (report_baton, "", revnum,
+                                   TRUE, /* "help, my dir is empty!" */
+                                   pool));
+
+      SVN_ERR (reporter->finish_report (report_baton));               
     }
   else
     {
@@ -220,8 +233,14 @@ struct file_baton
   const svn_string_t *keywords_val;
   const svn_string_t *executable_val;
 
-  /* Keyword structure, holding any keyword vals to be substituted */
-  svn_subst_keywords_t kw;
+  /* Any keyword vals to be substituted */
+  const char *revision;
+  const char *url;
+  const char *author;
+  apr_time_t date;
+
+  /* Pool associated with this baton. */
+  apr_pool_t *pool;
 };
 
 
@@ -232,66 +251,6 @@ struct handler_baton
   apr_pool_t *pool;
   const char *tmppath;
 };
-
-
-
-/* Helper function: parse FB->KEYWORDS_VAL (presumably the value of an
-   svn:keywords property), and copy appropriate data from FB->KW into
-   NEW_KW.  This function is also responsible for possibly creating
-   the URL and ID keyword vals, which FB->KW doesn't have. */
-static void
-build_final_keyword_struct (struct file_baton *fb,
-                            svn_subst_keywords_t *new_kw,
-                            apr_pool_t *pool)
-{
-  int i;
-  apr_array_header_t *keyword_tokens;
-
-  keyword_tokens = svn_cstring_split (fb->keywords_val->data,
-                                      " \t\v\n\b\r\f",
-                                      TRUE /* chop */, pool);
-
-  for (i = 0; i < keyword_tokens->nelts; i++)
-    {
-      const char *keyword = APR_ARRAY_IDX(keyword_tokens,i,const char *);
-      
-      if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
-          || (! strcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
-        {
-          new_kw->revision = fb->kw.revision;
-        }      
-      else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
-               || (! strcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
-        {
-          new_kw->date = fb->kw.date;
-        }
-      else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
-               || (! strcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
-        {
-          new_kw->author = fb->kw.author;
-        }
-      else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
-               || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
-        {
-          const char *url = 
-            svn_path_url_add_component 
-            (fb->edit_baton->root_url, fb->path, pool);
-          
-          new_kw->url = svn_string_create (url, pool);         
-        }
-      else if ((! strcasecmp (keyword, SVN_KEYWORD_ID)))
-        {
-          const char *base_name = svn_path_basename (fb->path, pool);
-
-          new_kw->id = svn_string_createf (pool, "%s %s %s %s",
-                                           base_name,
-                                           fb->kw.revision->data,
-                                           fb->kw.date->data,
-                                           fb->kw.author->data);
-        }
-    }     
-}
-
 
 
 /* Just ensure that the main export directory exists. */
@@ -367,11 +326,13 @@ add_file (const char *path,
 {
   struct edit_baton *eb = parent_baton;
   struct file_baton *fb = apr_pcalloc (pool, sizeof(*fb));
-  const char *full_path = svn_path_join (eb->root_path,
-                                         path, pool);
-  
+  const char *full_path = svn_path_join (eb->root_path, path, pool);
+  const char *full_url = svn_path_join (eb->root_url, path, pool);
+
   fb->edit_baton = eb;
   fb->path = full_path;
+  fb->url = full_url;
+  fb->pool = pool;
 
   *baton = fb;
   return SVN_NO_ERROR;
@@ -408,7 +369,7 @@ apply_textdelta (void *file_baton,
   struct handler_baton *hb = apr_palloc (pool, sizeof (*hb));
 
   SVN_ERR (svn_io_open_unique_file (&fb->tmp_file, &(fb->tmppath),
-                                    fb->path, ".tmp", FALSE, pool));
+                                    fb->path, ".tmp", FALSE, fb->pool));
 
   hb->pool = pool;
   hb->tmppath = fb->tmppath;
@@ -447,14 +408,13 @@ change_file_prop (void *file_baton,
 
   /* Try to fill out the baton's keywords-structure too. */
   else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
-    fb->kw.revision = svn_string_dup (value, pool);
+    fb->revision = apr_pstrdup (pool, value->data);
 
   else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
-    /* ### convert to human readable date??? */
-    fb->kw.date = svn_string_dup (value, pool);
-  
+      SVN_ERR (svn_time_from_cstring (&fb->date, value->data, pool));
+
   else if (strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
-    fb->kw.author = svn_string_dup (value, pool);
+    fb->author = apr_pstrdup (pool, value->data);
 
   return SVN_NO_ERROR;
 }
@@ -468,15 +428,16 @@ close_file (void *file_baton,
             apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
+  apr_status_t apr_err;
 
-  apr_status_t apr_err = apr_file_close (fb->tmp_file);
+  /* Was a txdelta even sent? */
+  if (! fb->tmppath)
+    return SVN_NO_ERROR;
+
+  apr_err = apr_file_close (fb->tmp_file);
   if (apr_err)
     return svn_error_createf (apr_err, NULL, "error closing file `%s'",
                               fb->tmppath);
-
-  if (! fb->tmppath)
-    /* No txdelta was ever sent. */
-    return SVN_NO_ERROR;
 
   if (text_checksum)
     {
@@ -509,7 +470,9 @@ close_file (void *file_baton,
         svn_subst_eol_style_from_value (&style, &eol, fb->eol_style_val->data);
 
       if (fb->keywords_val)
-        build_final_keyword_struct (fb, &final_kw, pool);
+        SVN_ERR (svn_subst_build_keywords (&final_kw, fb->keywords_val->data, 
+                                           fb->revision, fb->url, fb->date, 
+                                           fb->author, pool));
 
       SVN_ERR (svn_subst_copy_and_translate
                (fb->tmppath, fb->path,

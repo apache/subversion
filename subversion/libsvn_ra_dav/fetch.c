@@ -118,6 +118,10 @@ typedef struct {
      for temporary construction of relative file names. */
   svn_stringbuf_t *pathbuf;
 
+  /* If a directory, this may contain a hash of prophashes returned
+     from doing a depth 1 PROPFIND. */
+  apr_hash_t *children;
+
   /* A subpool.  It's about memory.  Ya dig? */
   apr_pool_t *pool;
 
@@ -226,20 +230,6 @@ static svn_error_t *simple_store_vsn_url(const char *vsn_url,
   return NULL;
 }
 
-static svn_error_t *store_vsn_url(const svn_ra_dav_resource_t *rsrc,
-                                  void *baton,
-                                  prop_setter_t setter,
-                                  apr_pool_t *pool)
-{
-  const svn_string_t *vsn_url = apr_hash_get(rsrc->propset, 
-                                             SVN_RA_DAV__PROP_CHECKED_IN, 
-                                             APR_HASH_KEY_STRING);
-  if (vsn_url == NULL)
-    return NULL;
-
-  return simple_store_vsn_url(vsn_url->data, baton, setter, pool);
-}
-
 static svn_error_t *get_delta_base(const char **delta_base,
                                    const char *relpath,
                                    svn_ra_get_wc_prop_func_t get_wc_prop,
@@ -288,14 +278,14 @@ static svn_error_t *set_special_wc_prop (const char *key,
 }
 
 
-static void add_props(const svn_ra_dav_resource_t *r,
+static void add_props(apr_hash_t *props,
                       prop_setter_t setter,
                       void *baton,
                       apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(pool, r->propset); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
       const void *vkey;
       void *vval;
@@ -342,91 +332,6 @@ static void add_props(const svn_ra_dav_resource_t *r,
     }
 }
                       
-
-static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
-                                   const char *url,
-                                   void *dir_baton,
-                                   svn_boolean_t recurse,
-                                   apr_array_header_t *subdirs,
-                                   apr_array_header_t *files,
-                                   prop_setter_t setter,
-                                   apr_pool_t *pool)
-{
-  apr_hash_t *dirents;
-  ne_uri parsed_url;
-  apr_hash_index_t *hi;
-
-  /* Fetch all properties so we can snarf ones out of the svn:custom
-   * namspace. */
-  SVN_ERR( svn_ra_dav__get_props(&dirents, ras->sess, url, NE_DEPTH_ONE, NULL,
-                                 NULL /* allprop */, pool) );
-
-  /* ### This question is from Karl:
-   *
-   * I don't understand the implementation of this function.  The
-   * first thing we do is fetch all properties for a URL, and store
-   * them in a hash named `dirents'.  That's where I get confused --
-   * sure, if url is a directory, then its entries will show up as
-   * properties, but couldn't there be various other properties that
-   * are not entries in the dir?  Or is it guaranteed that the *only*
-   * properties we'd get above are the directory entries, and no other
-   * properties are possible?
-   *
-   * The rest of the function is just more in the same vein -- it
-   * makes sense if and only if that guarantee is present.  But I'd
-   * just be very surprised to learn that entries are the *only*
-   * possible properties one could ever get from a successful PROPFIND
-   * with depth 1 on a url.  Is it really true?
-   *
-   * Anyway, regardless of the above, svn_ra_dav__get_props() needs to
-   * get properly documented in ra_dav.h, along with
-   * svn_ra_dav__get_props_resource() and svn_ra_dav__get_one_prop().
-   * :-)
-   */
-
-  ne_uri_parse(url, &parsed_url);
-
-  for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
-    {
-      void *val;
-      svn_ra_dav_resource_t *r;
-
-      apr_hash_this(hi, NULL, NULL, &val);
-      r = val;
-
-      if (r->is_collection)
-        {
-          if (ne_path_compare(parsed_url.path, r->url) == 0)
-            {
-              /* don't insert "this dir" into the set of subdirs */
-
-              /* store the version URL for this resource */
-              SVN_ERR( store_vsn_url(r, dir_baton, setter, pool) );
-            }
-          else
-            {
-              if (recurse)
-                {
-                  subdir_t *subdir = apr_palloc(pool, sizeof(*subdir));
-
-                  subdir->rsrc = r;
-                  subdir->parent_baton = dir_baton;
-
-                  PUSH_SUBDIR(subdirs, subdir);
-                }
-            }
-        }
-      else
-        {
-          svn_ra_dav_resource_t **file = apr_array_push(files);
-          *file = r;
-        }
-    }
-
-  ne_uri_free(&parsed_url);
-
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *custom_get_request(ne_session *sess,
                                        const char *url,
@@ -654,10 +559,6 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                         &frc.handler_baton),
              "could not save file");
 
-  /* If we have no handler for the windows, we can do nothing here. */
-  if (! frc.handler)
-    return SVN_NO_ERROR;
-
   /* Only bother with text-deltas if our caller cares. */
   if (! text_deltas)
     {
@@ -677,98 +578,6 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 
   return SVN_NO_ERROR;
 }
-
-static svn_error_t *fetch_file(ne_session *sess,
-                               const svn_ra_dav_resource_t *rsrc,
-                               void *dir_baton,
-                               const svn_delta_editor_t *editor,
-                               const char *edit_path,
-                               apr_pool_t *pool)
-{
-  const char *bc_url = rsrc->url;    /* url in the Baseline Collection */
-  svn_error_t *err;
-  svn_error_t *err2;
-  void *file_baton;
-  const svn_string_t *checksum = apr_hash_get(rsrc->propset,
-                                              SVN_RA_DAV__PROP_MD5_CHECKSUM,
-                                              APR_HASH_KEY_STRING);
-
-  SVN_ERR_W( (*editor->add_file)(edit_path, dir_baton,
-                                 NULL, SVN_INVALID_REVNUM,
-                                 pool, &file_baton),
-             "could not add a file");
-
-  /* fetch_file() is only used for checkout, so we just pass NULL for the
-     simple_fetch_file() params related to fetching version URLs (for
-     fetching deltas) */
-  err = simple_fetch_file(sess, bc_url, NULL, TRUE, file_baton, 
-                          NULL, editor, NULL, NULL, pool);
-  if (err)
-    {
-      /* ### do we really need to bother with closing the file_baton? */
-      goto error;
-    }
-
-  /* Add the properties. */
-  add_props(rsrc, editor->change_file_prop, file_baton, pool);
-
-  /* store the version URL as a property */
-  err = store_vsn_url(rsrc, file_baton, editor->change_file_prop, pool);
-
- error:
-  err2 = (*editor->close_file)(file_baton,
-                               (checksum ? checksum->data : NULL),
-                               pool);
-  return err ? err : err2;
-}
-
-static svn_error_t * begin_checkout(svn_ra_session_t *ras,
-                                    svn_revnum_t revision,
-                                    const svn_string_t **activity_coll,
-                                    svn_revnum_t *target_rev,
-                                    const char **bc_root)
-{
-  apr_pool_t *pool = ras->pool;
-  svn_boolean_t is_dir;
-  svn_string_t bc_url;
-  svn_string_t bc_relative;
-
-  /* ### if REVISION means "get latest", then we can use an expand-property
-     ### REPORT rather than two PROPFINDs to reach the baseline-collection */
-
-  SVN_ERR( svn_ra_dav__get_baseline_info(&is_dir, &bc_url, &bc_relative,
-                                         target_rev, ras->sess,
-                                         ras->root.path, revision, pool) );
-  if (!is_dir)
-    {
-      /* ### eek. what to do? */
-
-      /* ### need an SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, NULL,
-                              "URL does not identify a collection.");
-    }
-
-  /* The root for the checkout is the Baseline Collection root, plus the
-     relative location of the public URL to its repository root. */
-  *bc_root = svn_path_url_add_component(bc_url.data, bc_relative.data, pool);
-
-  /* Fetch the activity-collection-set from the server, by running an
-     OPTIONS request against the bc_url, which we know is guaranteed
-     to exist in HEAD.  */
-  /* ### also need to fetch/validate the DAV capabilities */
-  SVN_ERR( svn_ra_dav__get_activity_collection(activity_coll, ras,
-                                               bc_url.data, pool) );
-  
-  /* ### ben sez: whoa, this is majorly in violation of the deltaV
-     rfc.  Our ra_dav module assumes that the activity url is *global*
-     to the server, and happily caches it in every single working copy
-     directory.  But rfc 3253 (section 13.7) states that OPTIONS
-     requests on different resources may return *different* activity
-     urls -- heck, they might be urls to complete different hosts! */
-
-  return NULL;
-}
-
 
 /* Helper (neon callback) for svn_ra_dav__get_file. */
 static void get_file_reader(void *userdata, const char *buf, size_t len)
@@ -1133,7 +942,9 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
           if (propval != NULL)
             entry->last_author = propval->data;
           
-          apr_hash_set(*dirents, svn_path_basename(childname, pool),
+          apr_hash_set(*dirents, 
+                       svn_path_uri_decode(svn_path_basename(childname, pool),
+                                           pool),
                        APR_HASH_KEY_STRING, entry);
         }
     }
@@ -1152,182 +963,6 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
 }
 
 
-
-svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
-                                      svn_revnum_t revision,
-                                      svn_boolean_t recurse,
-                                      const svn_delta_editor_t *editor,
-                                      void *edit_baton,
-                                      apr_pool_t *pool)
-{
-  svn_ra_session_t *ras = session_baton;
-  svn_error_t *err;
-  void *root_baton;
-  const svn_string_t *activity_coll;
-  svn_revnum_t target_rev;
-  const char *bc_root;
-  subdir_t *subdir;
-  apr_array_header_t *subdirs;  /* subdirs to scan (subdir_t *) */
-  apr_array_header_t *files;    /* files to grab (svn_ra_dav_resource_t *) */
-  svn_stringbuf_t *edit_path 
-    = svn_stringbuf_create ("", pool); /* telescopic path */
-  apr_pool_t *subpool;
-
-  /* ### use quick_wrap rather than SVN_ERR on some of these? */
-
-  /* this subpool will be used during various iteration loops, and cleared
-     each time. long-lived stuff should go into ras->pool. */
-  subpool = svn_pool_create(pool);
-
-  /* begin the checkout process by fetching some basic information */
-  SVN_ERR( begin_checkout(ras, revision, &activity_coll, &target_rev,
-                          &bc_root) );
-
-  /* all the files we checkout will have TARGET_REV for the revision */
-  SVN_ERR( (*editor->set_target_revision)(edit_baton, target_rev, pool) );
-
-  /* In the checkout case, we don't really have a base revision, so
-     pass SVN_IGNORED_REVNUM. */
-  SVN_ERR( (*editor->open_root)(edit_baton, SVN_IGNORED_REVNUM,
-                                pool, &root_baton) );
-
-  /* store the subdirs into an array for processing, rather than recursing */
-  subdirs = apr_array_make(pool, 5, sizeof(subdir_t *));
-  files = apr_array_make(pool, 10, sizeof(svn_ra_dav_resource_t *));
-
-  /* Build a directory resource for the root. We'll pop this off and fetch
-     the information for it. */
-  subdir = apr_palloc(pool, sizeof(*subdir));
-  subdir->parent_baton = root_baton;
-
-  subdir->rsrc = apr_pcalloc(pool, sizeof(*subdir->rsrc));
-  subdir->rsrc->url = bc_root;
-
-  PUSH_SUBDIR(subdirs, subdir);
-  do
-    {
-      const char *url;
-      svn_ra_dav_resource_t *rsrc;
-      void *parent_baton;
-      void *this_baton;
-      int i;
-
-      /* pop a subdir off the stack */
-      while (1)
-        {
-          subdir = POP_SUBDIR(subdirs);
-          parent_baton = subdir->parent_baton;
-
-          if (subdir->rsrc != NULL)
-            {
-              url = subdir->rsrc->url;
-              break;
-            }
-          /* sentinel reached. close the dir. possibly done! */
-          svn_path_remove_component(edit_path);
-          err = (*editor->close_directory) (parent_baton, subpool);
-          if (err)
-            return svn_error_quick_wrap(err, "could not finish directory");
-
-          if (subdirs->nelts == 0)
-            {
-              /* Finish the edit */
-              SVN_ERR( ((*editor->close_edit) (edit_baton, subpool)) );
-
-              /* Store auth info if necessary */
-              SVN_ERR( (svn_ra_dav__maybe_store_auth_info (ras)) );
-
-              return SVN_NO_ERROR;
-            }
-        }
-
-      if (strlen(url) > strlen(bc_root))
-        {
-          const char *comp;
-          comp = svn_path_uri_decode(svn_path_basename(url, subpool), 
-                                     subpool);
-          svn_path_add_component(edit_path, comp);
-                                     
-          SVN_ERR_W( (*editor->add_directory) (edit_path->data, parent_baton,
-                                               NULL, SVN_INVALID_REVNUM,
-                                               pool, &this_baton),
-                     "could not add directory");
-        }
-      else 
-        {
-          /* We are operating in the root of the repository */
-          this_baton = root_baton;
-        }
-
-      SVN_ERR (svn_ra_dav__get_props_resource(&rsrc,
-                                              ras->sess,
-                                              url,
-                                              NULL,
-                                              NULL,
-                                              subpool));
-      add_props(rsrc, editor->change_dir_prop, this_baton, subpool);
-
-      /* finished processing the directory. clear out the gunk. */
-      svn_pool_clear(subpool);
-
-      /* add a sentinel. this will be used to signal a close_directory
-         for this directory's baton. */
-      subdir = apr_pcalloc(pool, sizeof(*subdir));
-      subdir->parent_baton = this_baton;
-      PUSH_SUBDIR(subdirs, subdir);
-
-      err = fetch_dirents(ras, url, this_baton, recurse, subdirs, files,
-                          editor->change_dir_prop, pool);
-      if (err)
-        return svn_error_quick_wrap(err, "could not fetch directory entries");
-
-      /* ### use set_wc_dir_prop() */
-
-      /* store the activity URL as a property */
-      /* ### should we close the dir batons before returning?? */
-      SVN_ERR_W( (*editor->change_dir_prop)(this_baton, 
-                                            SVN_RA_DAV__LP_ACTIVITY_COLL,
-                                            activity_coll, pool),
-                 "could not save the URL to indicate "
-                 "where to create activities");
-
-      /* process each of the files that were found */
-      for (i = files->nelts; i--; )
-        {
-          apr_size_t edit_len = edit_path->len;
-          const char *comp;
-          rsrc = ((svn_ra_dav_resource_t **)files->elts)[i];
-          comp = svn_path_uri_decode(svn_path_basename(rsrc->url, subpool), 
-                                     subpool);
-          svn_path_add_component(edit_path, comp);
-
-          /* ### should we close the dir batons first? */
-          SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton,
-                                editor, edit_path->data, subpool),
-                     "could not checkout a file");
-          svn_stringbuf_chop(edit_path, edit_path->len - edit_len);
-
-          /* trash the per-file stuff. */
-          svn_pool_clear(subpool);
-        }
-
-      /* reset the list of files */
-      files->nelts = 0;
-
-    } while (subdirs->nelts > 0);
-
-  /* ### should never reach??? */
-
-  /* Finish the edit */
-  SVN_ERR( ((*editor->close_edit) (edit_baton, pool)) );
-
-  /* Store auth info if necessary */
-  SVN_ERR( (svn_ra_dav__maybe_store_auth_info (ras)) );
-
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
-}
 
 /* ------------------------------------------------------------------------- */
 
@@ -1410,7 +1045,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 
   *revision = SVN_INVALID_REVNUM;
   err = svn_ra_dav__parsed_request(ras->sess, "REPORT",
-                                   ras->root.path, body, NULL,
+                                   ras->root.path, body, NULL, NULL,
                                    drev_report_elements,
                                    drev_validate_element,
                                    drev_start_element, drev_end_element,
@@ -1727,6 +1362,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
   const char *att;
   svn_revnum_t base;
   const char *name;
+  const char *bc_url;
   svn_stringbuf_t *cpath = NULL;
   svn_revnum_t crev = SVN_INVALID_REVNUM;
   dir_item_t *parent_dir;
@@ -1734,7 +1370,6 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
   svn_stringbuf_t *pathbuf;
   apr_pool_t *subpool;
   const char *base_checksum = NULL;
-  const char *result_checksum = NULL;
 
   switch (elm->id)
     {
@@ -1836,6 +1471,51 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       /* Property fetching is implied in addition. */
       TOP_DIR(rb).fetch_props = TRUE;
+
+      bc_url = get_attr(atts, "bc-url");
+      if (bc_url)
+        {
+          /* Cool, we can do a pre-emptive depth-1 propfind on the
+             directory; this prevents us from doing individual
+             propfinds on added-files later on.  */
+          apr_hash_t *bc_children;
+          CHKERR( svn_ra_dav__get_props(&bc_children,
+                                        rb->ras->sess2,
+                                        bc_url,
+                                        NE_DEPTH_ONE,
+                                        NULL, NULL /* allprops */,
+                                        TOP_DIR(rb).pool) );
+          
+          /* re-index the results into a more usable hash.
+             bc_children maps bc-url->resource_t, but we want the
+             dir_item_t's hash to map vc-url->resource_t. */
+          if (bc_children)
+            {
+              apr_hash_index_t *hi;
+              TOP_DIR(rb).children = apr_hash_make (TOP_DIR(rb).pool);
+
+              for (hi = apr_hash_first(TOP_DIR(rb).pool, bc_children);
+                   hi; hi = apr_hash_next(hi))
+                {
+                  const void *key;
+                  void *val;
+                  svn_ra_dav_resource_t *rsrc;
+                  const svn_string_t *vc_url;
+
+                  apr_hash_this(hi, &key, NULL, &val);
+                  rsrc = val;
+
+                  vc_url = apr_hash_get (rsrc->propset,
+                                         SVN_RA_DAV__PROP_CHECKED_IN,
+                                         APR_HASH_KEY_STRING);
+                  if (vc_url)
+                    apr_hash_set (TOP_DIR(rb).children,
+                                  vc_url->data, vc_url->len,
+                                  rsrc->propset);                  
+                }
+            }        
+        }
+
       break;
 
     case ELEM_open_file:
@@ -1884,12 +1564,6 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       parent_dir = &TOP_DIR(rb);
       rb->file_pool = svn_pool_create(rb->ras->pool);
       rb->result_checksum = NULL;
-
-#ifdef SVN_DAV_OLD_UPDATE_CHECKSUMS
-      result_checksum = get_attr(atts, "result-checksum");
-      if (result_checksum)
-        rb->result_checksum = apr_pstrdup(rb->file_pool, result_checksum);
-#endif /* SVN_DAV_OLD_UPDATE_CHECKSUMS */
 
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
@@ -1961,14 +1635,6 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
                                 rb->ras->callbacks->get_wc_prop,
                                 rb->ras->callback_baton,
                                 rb->file_pool) );
-
-#ifdef SVN_DAV_OLD_UPDATE_CHECKSUMS
-      /* Save result_checksum for a later call to editor->close_file(). */
-      result_checksum = get_attr(atts, "result-checksum");
-      if (result_checksum)
-        rb->result_checksum = apr_pstrdup(rb->file_pool, result_checksum);
-#endif /* SVN_DAV_OLD_UPDATE_CHECKSUMS */
-
       break;
 
     case ELEM_delete_entry:
@@ -1999,7 +1665,8 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 static svn_error_t *
 add_node_props (report_baton_t *rb, apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *rsrc;
+  svn_ra_dav_resource_t *rsrc = NULL;
+  apr_hash_t *props = NULL;
 
   /* Do nothing if we aren't fetching content.  */
   if (!rb->fetch_content)
@@ -2010,14 +1677,23 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
       if (! rb->fetch_props)
         return SVN_NO_ERROR;
 
-      /* Fetch file props. */
-      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
-                                             rb->ras->sess2,
-                                             rb->href->data,
-                                             NULL,
-                                             NULL,
-                                             pool));
-      add_props(rsrc, 
+      /* Check to see if your parent directory already has your props
+         stored, possibly from a depth-1 propfind.   Otherwise just do
+         a propfind directly on the file url. */     
+      if ( ! ((TOP_DIR(rb).children)
+              && (props = apr_hash_get(TOP_DIR(rb).children, rb->href->data,
+                                       APR_HASH_KEY_STRING))) )
+        {
+          SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
+                                                 rb->ras->sess2,
+                                                 rb->href->data,
+                                                 NULL,
+                                                 NULL,
+                                                 pool));
+          props = rsrc->propset;
+        }
+
+      add_props(props, 
                 rb->editor->change_file_prop, 
                 rb->file_baton,
                 pool);
@@ -2027,14 +1703,24 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
       if (! TOP_DIR(rb).fetch_props)
         return SVN_NO_ERROR;
 
-      /* Fetch dir props. */
-      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
-                                             rb->ras->sess2,
-                                             TOP_DIR(rb).vsn_url,
-                                             NULL,
-                                             NULL,
-                                             pool));
-      add_props(rsrc, 
+      /* Check to see if your props are already stored, possibly from
+         a depth-1 propfind.  Otherwise just do a propfind directly on
+         the directory url. */     
+      if ( ! ((TOP_DIR(rb).children)
+              && (props = apr_hash_get(TOP_DIR(rb).children,
+                                       TOP_DIR(rb).vsn_url,
+                                       APR_HASH_KEY_STRING))) )
+        {
+          SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
+                                                 rb->ras->sess2,
+                                                 TOP_DIR(rb).vsn_url,
+                                                 NULL,
+                                                 NULL,
+                                                 pool));
+          props = rsrc->propset;
+        }
+
+      add_props(props, 
                 rb->editor->change_dir_prop, 
                 TOP_DIR(rb).baton, 
                 pool);
@@ -2057,6 +1743,12 @@ static int end_element(void *userdata,
       rb->current_wcprop_path = NULL;
       break;
 
+    case ELEM_update_report:
+      /* End of report; close up the editor. */
+      CHKERR( (*rb->editor->close_edit)(rb->edit_baton, rb->ras->pool) );
+      rb->edit_baton = NULL;
+      break;
+
     case ELEM_add_directory:
     case ELEM_open_directory:
 
@@ -2072,16 +1764,6 @@ static int end_element(void *userdata,
                                              TOP_DIR(rb).pool) );
       svn_pool_destroy(TOP_DIR(rb).pool);
       apr_array_pop(rb->dirs);
-
-      /* If we just popped the last directory from the stack, we can
-         close the edit. */
-      if (rb->dirs->nelts == 0)
-        {
-          /* we got the whole HTTP response thing done. now wrap up the update
-             process with a close_edit call. */
-          CHKERR( (*rb->editor->close_edit)(rb->edit_baton, rb->ras->pool) );
-          rb->edit_baton = NULL;
-        }
       break;
 
     case ELEM_add_file:
@@ -2219,6 +1901,7 @@ static int end_element(void *userdata,
 static svn_error_t * reporter_set_path(void *report_baton,
                                        const char *path,
                                        svn_revnum_t revision,
+                                       svn_boolean_t start_empty,
                                        apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
@@ -2227,11 +1910,18 @@ static svn_error_t * reporter_set_path(void *report_baton,
   svn_stringbuf_t *qpath = NULL;
 
   svn_xml_escape_cdata_cstring (&qpath, path, pool);
-  entry = apr_psprintf(pool,
-                       "<S:entry rev=\"%"
-                       SVN_REVNUM_T_FMT
-                       "\">%s</S:entry>" DEBUG_CR,
-                       revision, qpath->data);
+  if (start_empty)
+    entry = apr_psprintf(pool,
+                         "<S:entry rev=\"%"
+                         SVN_REVNUM_T_FMT
+                         "\" start-empty=\"true\">%s</S:entry>" DEBUG_CR,
+                         revision, qpath->data);
+  else
+    entry = apr_psprintf(pool,
+                         "<S:entry rev=\"%"
+                         SVN_REVNUM_T_FMT
+                         "\">%s</S:entry>" DEBUG_CR,
+                         revision, qpath->data);
 
   status = apr_file_write_full(rb->tmpfile, entry, strlen(entry), NULL);
   if (status)
@@ -2250,6 +1940,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
                                         const char *path,
                                         const char *url,
                                         svn_revnum_t revision,
+                                        svn_boolean_t start_empty,
                                         apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
@@ -2269,11 +1960,18 @@ static svn_error_t * reporter_link_path(void *report_baton,
   
   svn_xml_escape_cdata_cstring (&qpath, path, pool);
   svn_xml_escape_attr_cstring (&qlinkpath, bc_relative.data, pool);
-  entry = apr_psprintf(pool,
-                       "<S:entry rev=\"%" SVN_REVNUM_T_FMT
-                       "\" linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
-                       revision, qlinkpath->data, qpath->data);
-
+  if (start_empty)
+    entry = apr_psprintf(pool,
+                         "<S:entry rev=\"%" SVN_REVNUM_T_FMT
+                         "\" linkpath=\"/%s\" start-empty=\"true\""
+                         ">%s</S:entry>" DEBUG_CR,
+                         revision, qlinkpath->data, qpath->data);
+  else
+    entry = apr_psprintf(pool,
+                         "<S:entry rev=\"%" SVN_REVNUM_T_FMT
+                         "\" linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
+                         revision, qlinkpath->data, qpath->data);
+    
   status = apr_file_write_full(rb->tmpfile, entry, strlen(entry), NULL);
   if (status)
     {
@@ -2329,6 +2027,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   report_baton_t *rb = report_baton;
   apr_status_t status;
   svn_error_t *err;
+  const char *vcc;
 
   status = apr_file_write_full(rb->tmpfile,
                                report_tail, sizeof(report_tail) - 1, NULL);
@@ -2346,11 +2045,37 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   rb->cpathstr = MAKE_BUFFER(rb->ras->pool);
   rb->href = MAKE_BUFFER(rb->ras->pool);
 
-  err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT", rb->ras->root.path,
-                                   NULL, rb->tmpfile,
+  err = svn_ra_dav__get_vcc(&vcc, rb->ras->sess, rb->ras->url, rb->ras->pool);
+  if (err)
+    {
+      (void) apr_file_close(rb->tmpfile);
+      return err;
+    }
+
+  err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT", vcc,
+                                   NULL, rb->tmpfile, NULL,
                                    report_elements, validate_element,
                                    start_element, end_element, rb,
                                    NULL, rb->ras->pool);
+
+  if (err)
+    {
+      /* If running the update-report on the VCC failed, it's probably
+         an older server.  Fall back to the old-style, by requesting
+         the report on the src-url itself.  This runs a risk of
+         choking on issue #891 ("REPORT fails on item not in HEAD"),
+         but hey, it's better than nothing.  */
+
+      /* ### someday, remove this fallback code. */
+
+      svn_error_clear (err);
+      err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT",
+                                       rb->ras->root.path,
+                                       NULL, rb->tmpfile, NULL,
+                                       report_elements, validate_element,
+                                       start_element, end_element, rb,
+                                       NULL, rb->ras->pool);
+    }
 
   /* we're done with the file */
   (void) apr_file_close(rb->tmpfile);
@@ -2442,6 +2167,18 @@ make_reporter (void *session_baton,
   if (status)
     {
       msg = "Could not write the header for the temporary report file.";
+      goto error;
+    }
+
+  /* always write the original source path.  this is part of the "new
+     style" update-report syntax.  if the tmpfile is used in an "old
+     style' update-report request, older servers will just ignore this
+     unknown xml element. */
+  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>", ras->url);
+  status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
+  if (status)
+    {
+      msg = "Failed writing the src-path to the report tempfile.";
       goto error;
     }
 

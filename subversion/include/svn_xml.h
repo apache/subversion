@@ -29,7 +29,6 @@
 #include <apr_hash.h>
 
 #include "svn_error.h"
-#include "svn_delta.h"
 #include "svn_string.h"
 
 #ifdef __cplusplus

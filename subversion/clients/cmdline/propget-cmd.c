@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -132,16 +133,19 @@ svn_cl__propget (apr_getopt_t *os,
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
+      apr_pool_t *subpool = svn_pool_create (pool);
+
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
           apr_hash_t *props;
           apr_hash_index_t *hi;
           svn_boolean_t print_filenames = FALSE;
-          
+
+          svn_pool_clear (subpool);
           SVN_ERR (svn_client_propget (&props, pname_utf8, target,
                                        &(opt_state->start_revision),
-                                       opt_state->recursive, ctx, pool));
+                                       opt_state->recursive, ctx, subpool));
           
           /* Any time there is more than one thing to print, or where
              the path associated with a printed thing is not obvious,
@@ -167,12 +171,12 @@ svn_cl__propget (apr_getopt_t *os,
                  UTF8, so convert to the native format. */
               if (svn_prop_needs_translation (pname_utf8))
                 SVN_ERR (svn_subst_detranslate_string (&propval, propval,
-                                                       pool));
-
+                                                       subpool));
+              
               if (print_filenames) 
                 {
                   SVN_ERR (svn_utf_cstring_from_utf8 (&filename_native,
-                                                      filename, pool));
+                                                      filename, subpool));
                   SVN_ERR (stream_write (out, filename_native,
                                          strlen (filename_native)));
                   SVN_ERR (stream_write (out, " - ", 3));
@@ -181,7 +185,9 @@ svn_cl__propget (apr_getopt_t *os,
               if (! opt_state->strict)
                 SVN_ERR (stream_write (out, "\n", 1));
             }
+          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
         }
+      svn_pool_destroy (subpool);
     }
 
   return SVN_NO_ERROR;

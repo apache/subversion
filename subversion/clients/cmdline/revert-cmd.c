@@ -64,9 +64,24 @@ svn_cl__revert (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
-      
-      SVN_ERR (svn_client_revert (target, recursive, ctx, subpool));
+      svn_error_t *err;
 
+      err = svn_client_revert (target, recursive, ctx, subpool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+            {
+              if (!opt_state->quiet)
+                {
+                  svn_handle_warning (stderr, err);
+                }
+              continue;
+            }
+          else
+              return err;
+        }
+
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       svn_pool_clear (subpool);
     }
   

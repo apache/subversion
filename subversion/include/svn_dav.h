@@ -135,15 +135,6 @@ extern "C" {
 */
 
 
-/** A temporary #define to enable continual sending of result
- * checksums as XML attributes instead of as a liveprop.  
- *
- * See issue #1101 at 
- * http://subversion.tigris.org/issues/show_bug.cgi?id=1101. 
- */
-#define SVN_DAV_OLD_UPDATE_CHECKSUMS
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

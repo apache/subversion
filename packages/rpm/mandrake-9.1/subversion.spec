@@ -21,7 +21,6 @@ Source0:	subversion-%{version}-%{repos_rev}.tar.bz2
 Source1:	46_mod_dav_svn.conf
 Source2:	rcsparse.py
 Patch0:		svn-install.patch
-Patch1:		cvs2svn.patch
 %if %{build_python}
 Patch2:		python_swig_setup.py.patch
 %endif
@@ -41,7 +40,7 @@ BuildRequires:	libsasl2-devel
 BuildRequires:	python >= 2.2.0
 BuildRequires:	libpython2.2-devel
 %endif
-BuildRequires:	swig
+BuildRequires:	swig-runtime
 Group:		Development/Other
 
 %description
@@ -148,7 +147,7 @@ Summary:  Python Bindings for Subversion
 Group:    Development/Other
 Requires: %{name}-base = %{version}-%{release}
 Requires: python >= 2.2.0
-Requires: swig >= 1.3.16
+Requires: swig-runtime >= 1.3.16
 %description python
 This package contains the files necessary to use the subversion library
 functions within python scripts. This will also install a number of utility
@@ -166,7 +165,7 @@ scripts, including `cvs2svn', a CVS repository converter for subversion.
 %{_libdir}/libsvn_fs-*so*
 %{_libdir}/libsvn_subr-*so*
 %{_libdir}/libsvn_wc-*so*
-%{_libdir}/libsvn_auth-*so*
+%{_libdir}/libsvn_diff-*so*
 %{_mandir}/man1/svnadmin.*
 %{_infodir}/*
 %{_bindir}/svnversion
@@ -176,6 +175,7 @@ scripts, including `cvs2svn', a CVS repository converter for subversion.
 %defattr(-,root,root)
 %{_libdir}/libsvn_repos-*so*
 %{_bindir}/svnadmin
+%{_bindir}/svndumpfilter
 %{_bindir}/svnlook
 
 %files client-common
@@ -216,7 +216,6 @@ scripts, including `cvs2svn', a CVS repository converter for subversion.
 %{_libdir}/libsvn*.a
 %{_libdir}/libsvn*.la
 %{_includedir}/subversion-1
-%{_bindir}/svn-config
 
 %files server
 %defattr(-,root,root)
@@ -250,7 +249,6 @@ LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	--with-neon=/usr \
 	--with-apxs=/usr/sbin/apxs2
 %patch0 -p1 
-%patch1 -p1
 %if %{build_python}
 %patch2 -p1
 %endif
@@ -352,6 +350,9 @@ fi
 ######## Change Log ######## 
 ############################
 %changelog
+* Mon Jun  2 2003 Magnus Kessler <Magnus.Kessler@gmx.net> 0.24.0-6109.1mdk
+- updates for latest subversion
+
 * Wed Apr  2 2003 Michael Ballbach <ballbach@rten.net> 0.20.1-5467.1mdk
 - initial spec file for mandrake 9.1, needs a lot of work, will have
   updates in one or two days

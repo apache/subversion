@@ -258,6 +258,8 @@ def create_from_path(path, contents=None, props={}, atts={}):
 
   # get a list of all the names in the path
   # each of these will be a child of the former
+  if os.sep != "/":
+    path = path.replace(os.sep, "/")
   elements = path.split("/")
   if len(elements) == 0:
     ### we should raise a less generic error here. which?

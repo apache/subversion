@@ -27,6 +27,7 @@
 #include "svn_path.h"
 #include "svn_private_config.h"         /* for SVN_PATH_LOCAL_SEPARATOR */
 #include "svn_utf.h"
+#include "svn_io.h"                     /* for svn_io_stat() */
 
 
 /* The canonical empty path.  Can this be changed?  Well, change the empty
@@ -67,6 +68,11 @@ svn_path_local_style (const char *path, apr_pool_t *pool)
 {
   path = svn_path_canonicalize (path, pool);
   /* FIXME: Should also remove trailing /.'s, if the style says so. */
+
+  /* Internally, Subversion represents the current directory with the
+     empty string.  But users like to see "." . */
+  if (SVN_PATH_IS_EMPTY(path))
+    return ".";
 
   if ('/' != SVN_PATH_LOCAL_SEPARATOR)
     {
@@ -428,15 +434,8 @@ int
 svn_path_compare_paths (const char *path1,
                         const char *path2)
 {
-  /* ### This code is inherited from the svn_stringbuf_t version of
-     the function and is inefficient on plain strings, because it does
-     strlen() on both strings up front.  Recode and/or abstract to
-     share with svn_path_compare_paths (if that other function stays
-     around). */
-
   apr_size_t path1_len = strlen (path1);
   apr_size_t path2_len = strlen (path2);
-
   apr_size_t min_len = ((path1_len < path2_len) ? path1_len : path2_len);
   apr_size_t i = 0;
 
@@ -794,8 +793,27 @@ svn_path_is_uri_safe (const char *path)
   apr_size_t i;
 
   for (i = 0; path[i]; i++)
-    if (! uri_char_validity[((unsigned char)path[i])])
-      return FALSE;
+    {
+      /* Allow '%XX' (where each X is a hex digit) */
+      if (path[i] == '%')
+        {
+          if ((((path[i + 1] >= '0') && (path[i + 1] <= '9'))
+               || ((path[i + 1] >= 'a') && (path[i + 1] <= 'f'))
+               || ((path[i + 1] >= 'A') && (path[i + 1] <= 'F')))
+              && (((path[i + 2] >= '0') && (path[i + 2] <= '9'))
+                  || ((path[i + 2] >= 'a') && (path[i + 2] <= 'f'))
+                  || ((path[i + 2] >= 'A') && (path[i + 2] <= 'F'))))
+            {
+              i += 2;
+              continue;
+            }
+          return FALSE;
+        }
+      else if (! uri_char_validity[((unsigned char)path[i])])
+        {
+          return FALSE;
+        }
+    } 
 
   return TRUE;
 }

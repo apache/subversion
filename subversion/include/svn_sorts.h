@@ -26,7 +26,6 @@
 #include <apr_pools.h>
 #include <apr_tables.h>         /* for apr_array_header_t */
 #include <apr_hash.h>
-#include <apr_file_io.h>
 
 
 #ifdef __cplusplus

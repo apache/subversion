@@ -1,44 +1,19 @@
-Last Update: Wed Apr  2 18:40:23 PST 2003
+Last Update: Tue May 20 10:17:52 PDT 2003
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-	NOTE: I have just now gotten subversion to build on mandrake
-	9.1. The included spec file works, and you should be able to
-	just 'make' from here (assuming your local copy is a svn
-	working copy) and get rpms out of it.
-
-	But I don't have the python/cvs2svn stuff building yet, and
-	the rpms aren't organized very well. I will commit updates in
-	one or two days with more completed packages.
-
-	Below is the old README for the mandrake 9.0 RPMS. Most of it
-	is no longer valid because mandrake 9.1 ships with db4 and
-	it even ships with apache built against db4. SWIG and neon
-	still need to be updated on a 9.1 box, but that is it, phew !
-
-	-- Mike
+New Update: Look towards the bottom of the readme for some helpful notes
+from Mark Proctor <mproctor@cisco.com> experience with building subversion
+on mandrake 9.1.
 
 -----------------
 Mandrake SVN RPM:
 -----------------
 
-These are the files required to build a mandrake 9.0 RPM for subversion.
-At the moment, mandrake does not package DB4.0, it also does not package
-Neon, and it has an older version of SWIG. So, you might want to go to:
-
-http://www.rten.net/mdk-svn.html
-
-To acquire the related packages before building your own mandrake RPM.
-Also, a note on Apache2. There is a version of apache2 in cooker, but it
-is insufficient because it is not built against DB4.0. You can either get
-apache2 rpms built against DB4.0 at the above URL, or get the apache2
-SRPM and modify the spec file to build against DB4.0. A simple patch is
-included at the end of this file.
-
-When building this RPM with the neon RPM provided at the above URL, you
-may find that no libneon.so file exists in your /usr/lib. This may cause
-problems when subversion tries to build. Just create the link and it
-should work okay.
+These are the files required to build a mandrake 9.1 RPM for subversion.
+Mandrake 9.1 (thankfully) has most of the software required to build
+and install subversion. The only thing it does NOT have is a recent enough
+version of NEON. You will need to build and install your own recent 
+version, or get the source RPM from cooker or what not and update it
+yourself.
 
 To build the RPMs directly from this directory, you should be able to
 just `make'. You must have followed the setup directions in the mandrake
@@ -83,6 +58,9 @@ for subversion.
 
 subversion-python:
 ------------------
+
+  -- note: this is not building yet on mdk 9.1 --
+
 This RPM includes the python SWIG bindings for subversion. This package
 requires SWIG, the base subversion package, and any client packages one
 might want depending on what the python scripts you're writing will do.
@@ -100,12 +78,13 @@ later file being the one you should modify to include your subversion
 directory roots. Setting up the repositories and adding any users or
 groups for the process is left to the user.
 
+
 So, many combinations of packages are available depending on the type of
 installation you want to do. The apr, apr-util, and subversion-base
 packages are always required, but then you could just simply install
 neon, client-common, and client-dav to get a subversion setup for network
-repositories. Add client-local, repos, and DB4.0 for local repositories,
-or add repos and server to setup a subversion server.
+repositories. Add client-local, and repos, for local repositories, or 
+add repos and server to setup a subversion server.
 
 --------
 Contact:
@@ -115,54 +94,70 @@ Please let me know if you have problems or additions to the spec file. My
 email address is: ballbach@rten.net. Thanks.
 
 --------------------------
-Apache2 DB4.0 Specs Patch:
+Mark's Installation Notes:
 --------------------------
 
-This patch also adds --enable-maintainer-mode. The specs file for the
-mandrake RPMS for subversion also uses this tag. This is because
-subversion isn't done yet, so enabling the debug information will
-hopefully allow users to submit better traces and such.
+I couldn't get SVN to pick up db4 so I downloaded the latest src and placed in top level dir as db. i did the same for neon.
 
-This patch is verbatim from the modified SPEC file I use, except I
-removed the Packager: portion, and my changelog entry.
+!! NOTE -- db4.0 comes with mandrake 9.1, you should be able to compile subversion
+against it with the --with-berkeley-db=/usr switch to ./configure. Neon you will
+need to build and install a newer version of. You can either install it from a
+tarball, or get the source RPM and build a new one. I've done the later a few
+times and it was pretty simple.
 
---- /home/ballbach/rpm/SPECS/apache2.spec.orig	2002-10-10 14:23:34.000000000 -0600
-+++ /home/ballbach/rpm/SPECS/apache2.spec	2002-10-10 20:29:12.000000000 -0600
-@@ -37,14 +38,14 @@
- Patch4:			mod_logio-2.0.43.patch.bz2
- 
- BuildRequires:		ADVX-build
--BuildRequires:		perl >= 0:5.600 libgdbm2-devel libdb3.3-devel byacc glibc-devel libtool
-+BuildRequires:		perl >= 0:5.600 libgdbm2-devel db4.0-devel byacc glibc-devel libtool
- BuildRequires:		openssl-devel libexpat0-devel zlib-devel
- #BuildRequires:		libldap2-devel libsasl7-devel
- Prereq:			%{ap_name}-conf 
- Prereq:			%{ap_name}-common
- Prereq: 		%{ap_name}-modules = %{ap_version}
- Prereq:			%{apr_name} = %{ap_version}
--Requires:		libgdbm2 libdb3.3 glibc libexpat0 libtool
-+Requires:		libgdbm2 db4.0 glibc libexpat0 libtool
- #Requires:		libldap2 libsasl7
- BuildRoot:		%{_tmppath}/%{ap_name}-%{version}-buildroot
- Provides:		webserver 
-@@ -230,7 +231,7 @@
- Group: System/Servers
- Summary: The %{ap_name} Source
- #No use to install it if you don't have libgdbm.so and libpthread.so!
--Requires: libdb3.3-devel, db1-devel
-+Requires: db4.0-devel, db1-devel
- Requires: libgdbm2-devel, glibc-devel
- Obsoletes: apache-source
- Provides: apache-source
-@@ -376,7 +377,9 @@
- APVARS="--build=%_target_platform \
-     --host=%_target_platform \
-     --target=%_target_platform \
--    --with-dbm=db3 \
-+    --with-dbm=db4 \
-+    --with-berkeley-db=/usr/BerkeleyDB.4.0 \
-+    --enable-maintainer-mode \
-     --with-installbuilddir=%{ap_installbuilddir} \
-     --with-expat=%{_prefix} \
-     --with-pcre=%{_prefix} \
+download
+http://www.sleepycat.com/update/snapshot/db-4.0.14.zip
+http://www.webdav.org/neon/neon-0.23.7.tar.gz
+unpack each to top level and rename to db and neon respectively
+---------------------------------------------------------------------------
+Install following RPMS, devel packages are important
+libpython2.2-2.2.2-6mdk
+python-base-2.2.2-6mdk
+python-2.2.2-6mdk (not just python-base)
+
+apache2-modules-2.0.45-5mdk
+apache2-devel-2.0.45-5mdk
+apache-conf-2.0.45-4mdk
+apache2-2.0.45-5mdk
+apache2-manual-2.0.45-5mdk
+apache2-common-2.0.45-5mdk
+apache2-mod_dav-2.0.45-5mdk
+
+zlib
+zlib-devel
+
+libopenssl0.9.7-devel-0.9.7b-2mdk
+libopenssl0.9.7-0.9.7b-2mdk
+openssl-0.9.7b-2mdk
+
+---------------------------------------------------------------------------
+Even though i had libldap2-2.0.27-4mdk I get the following error:
+
+which stopped the following error
+cd subversion/libsvn_subr && /bin/sh /home/mproctor/subversion/libtool --silent --mode=link gcc  -pthread  -DNEON_ZLIB -DNEON_SSL  -L/usr/lib  -rpath /usr/local/lib -o libsvn_subr-1.la auth.lo cmdline.lo config.lo config_auth.lo config_file.lo config_win.lo error.lo getdate.lo hash.lo io.lo md5.lo opt.lo path.lo pool.lo quoprint.lo sorts.lo stream.lo subst.lo svn_base64.lo svn_string.lo target.lo time.lo utf.lo validate.lo xml.lo /usr/lib/libaprutil-0.la -lldap -llber -lgdbm -ldb-4.0 -lexpat /usr/lib/libapr-0.la -lm -lcrypt -lnsl  -ldl
+/usr/bin/ld: cannot find -lldap
+collect2: ld returned 1 exit status
+make: *** [subversion/libsvn_subr/libsvn_subr-1.la] Error 1
+
+update usr/bin/apu-conf and change the following line
+LIBS="-lldap -llber -lgdbm -ldb-4.0 -lexpat"
+to
+LIBS="-lgdbm -ldb-4.0 -lexpat"
+---------------------------------------------------------------------------
+execute ./autogen.sh
+
+---------------------------------------------------------------------------
+./configure --with-apxs=/usr/sbin/apxs2 --with-apr=/usr/bin/apr-config --with-apr-util=/usr/bin/apu-config --enable-ssl --enable-deflate
+
+---------------------------------------------------------------------------
+Subversion correctly adds web_dav_svn.so to your httpd2.conf but make sure that mod_dav.so is loaded first otherwise you get the error:
+/etc/httpd/2.0/modules/mod_dav_svn.so into server: /etc/httpd/2.0/modules/mod_dav_svn.so: undefined symbol: dav_xml_get_cdata
+
+Make sure this line is placed before mod_dav_svn is loaded
+LoadModule dav_module modules/mod_dav.so
+---------------------------------------------------------------------------
+
+
+
+
 

@@ -20,7 +20,7 @@
    because we aren't going to wrap the APR functions. Thus, we only define
    the various types in here, as necessary.
 
-   Actually, util.i wraps a few, key functions.
+   Actually, core.i wraps a few, key functions.
 */
 
 %include typemaps.i

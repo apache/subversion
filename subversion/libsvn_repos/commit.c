@@ -128,16 +128,18 @@ open_root (void *edit_baton,
 {
   struct dir_baton *dirb;
   struct edit_baton *eb = edit_baton;
+  svn_revnum_t youngest;
 
   /* Ignore BASE_REVISION.  We always build our transaction against
-     HEAD. */
-  SVN_ERR (svn_fs_youngest_rev (&base_revision, eb->fs, eb->pool));
+     HEAD.  However, we will keep it in our dir baton for out of
+     dateness checks.  */
+  SVN_ERR (svn_fs_youngest_rev (&youngest, eb->fs, eb->pool));
 
   /* Begin a subversion transaction, cache its name, and get its
      root object. */
   SVN_ERR (svn_repos_fs_begin_txn_for_commit (&(eb->txn), 
                                               eb->repos, 
-                                              base_revision, 
+                                              youngest,
                                               eb->user, 
                                               eb->log_msg,
                                               eb->pool));

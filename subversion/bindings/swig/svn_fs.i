@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-%module _fs
+%module fs
 %include typemaps.i
 
 %import apr.i
@@ -99,9 +99,6 @@ apr_array_header_t **revs {
 %typemap(perl5, argout) apr_array_header_t **revs {
     /* ### FIXME-perl */
 }
-%apply const apr_array_header_t *STRINGLIST { 
-    const apr_array_header_t *paths 
-};
 
 /* -----------------------------------------------------------------------
    all uses of "apr_hash_t **" are returning property hashes

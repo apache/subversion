@@ -7,7 +7,7 @@ import sys
 import os
 import getopt
 import difflib
-from svn import fs, util
+from svn import fs, core
 
 CHUNK_SIZE = 100000
 
@@ -25,7 +25,7 @@ def getfile(pool, path, rev=None, home='.'):
   filedata = '' 
   for i in xrange(0, rev+1):
     root = fs.revision_root(fsob, i, pool)
-    if fs.check_path(root, path, pool) != util.svn_node_none:
+    if fs.check_path(root, path, pool) != core.svn_node_none:
       first = i
       break
   print "First revision is %d" % first
@@ -41,7 +41,7 @@ def getfile(pool, path, rev=None, home='.'):
     previousdata = filedata
     filedata = ''
     while 1:
-      data = util.svn_stream_read(file, CHUNK_SIZE)
+      data = core.svn_stream_read(file, CHUNK_SIZE)
       if not data:
         break
       filedata = filedata + data
@@ -87,7 +87,7 @@ def main():
       rev = int(value)
     elif name == '-h':
       home = value
-  util.run_app(getfile, args[0], rev, home)
+  core.run_app(getfile, args[0], rev, home)
 
 if __name__ == '__main__':
   main()

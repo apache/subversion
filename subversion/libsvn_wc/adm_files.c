@@ -473,6 +473,19 @@ open_adm_file (apr_file_t **handle,
          be a reason this is useful... Anyway, we don't want the
          handle. */
       *handle = NULL;
+      /* If we receive a failure to open a file in our temporary directory,
+       * it may be because our temporary directories aren't created.
+       * Older SVN clients did not create these directories.
+       * 'svn cleanup' will fix this problem.
+       */
+      if (APR_STATUS_IS_ENOENT(err->apr_err) && (flags & APR_WRITE))
+        {
+          err = svn_error_quick_wrap(err,
+                               "Your .svn/tmp directory may be missing or "
+                               "corrupt. "
+                               "Please run 'svn cleanup' and try your "
+                               "operation again.");
+        }
     }
 
   return err;
@@ -952,7 +965,7 @@ make_empty_adm (const char *path, apr_pool_t *pool)
 {
   path = extend_with_adm_name (path, NULL, 0, pool, NULL);
 
-  SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
+  SVN_ERR (svn_io_dir_make_hidden (path, APR_OS_DEFAULT, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1015,11 +1028,14 @@ init_adm_tmp_area (svn_wc_adm_access_t *adm_access,
 }
 
 
-/* Set up a new adm area for PATH, with URL as the ancestor url.
-   The adm area starts out locked; remember to unlock it when done. */
+/* Set up a new adm area for PATH, with URL as the ancestor url, and
+   INITIAL_REV as the starting revision.  The entries file starts out
+   marked as 'incomplete.  The adm area starts out locked; remember to
+   unlock it when done. */
 static svn_error_t *
 init_adm (const char *path,
           const char *url,
+          svn_revnum_t initial_rev,
           apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -1066,7 +1082,7 @@ init_adm (const char *path,
   /** Initialize each administrative file. */
 
   /* SVN_WC__ADM_ENTRIES */
-  SVN_ERR (svn_wc__entries_init (path, url, pool));
+  SVN_ERR (svn_wc__entries_init (path, url, initial_rev, pool));
 
   /* SVN_WC__ADM_EMPTY_FILE exists because sometimes an readable, empty
      file is required (in the repository diff for example). Creating such a
@@ -1097,15 +1113,16 @@ init_adm (const char *path,
 
 
 svn_error_t *
-svn_wc__ensure_adm (const char *path,
-                    const char *url,
-                    svn_revnum_t revision,
-                    apr_pool_t *pool)
+svn_wc_ensure_adm (const char *path,
+                   const char *url,
+                   svn_revnum_t revision,
+                   apr_pool_t *pool)
 {
   svn_boolean_t exists_already;
 
   SVN_ERR (check_adm_exists (&exists_already, path, url, revision, pool));
-  return (exists_already ? SVN_NO_ERROR : init_adm (path, url, pool));
+  return (exists_already ? SVN_NO_ERROR :
+          init_adm (path, url, revision, pool));
 }
 
 

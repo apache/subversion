@@ -16,6 +16,8 @@
  * ====================================================================
  */
 
+#include <assert.h>
+
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_time.h>
@@ -38,7 +40,7 @@
 #include "svn_subst.h"
 #include "svn_opt.h"
 #include "svn_props.h"
-#include "svn_config.h"
+#include "svn_diff.h"
 
 
 /*** Some convenience macros and types. ***/
@@ -71,7 +73,8 @@ static svn_opt_subcommand_t
 /* Option codes and descriptions. */
 enum 
   { 
-    svnlook__show_ids = SVN_OPT_FIRST_LONGOPT_ID,
+    svnlook__version = SVN_OPT_FIRST_LONGOPT_ID,
+    svnlook__show_ids,
     svnlook__no_diff_deleted
   };
 
@@ -88,6 +91,9 @@ static const apr_getopt_option_t options_table[] =
 
     {NULL,            '?', 0,
      "show help on a subcommand"},
+
+    {"version",       svnlook__version, 0,
+     "show version information"},
 
     {"revision",      'r', 1,
      "specify revision number ARG"},
@@ -147,7 +153,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"help", subcommand_help, {"?", "h"},
      "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
      "Display this usage message.\n",
-     {0} },
+     {svnlook__version} },
 
     {"info", subcommand_info, {0},
      "usage: svnlook info REPOS_PATH\n\n"
@@ -197,10 +203,11 @@ struct svnlook_opt_state
   const char *arg2;        /* Usually an fs path or NULL. */
   svn_revnum_t rev;
   const char *txn;
-  svn_boolean_t show_ids;
-  svn_boolean_t help;
-  svn_boolean_t no_diff_deleted;
-  svn_boolean_t verbose;   /* Verbose output. */
+  svn_boolean_t version;          /* --version */
+  svn_boolean_t show_ids;         /* --show-ids */
+  svn_boolean_t help;             /* --help */
+  svn_boolean_t no_diff_deleted;  /* --no-diff-deleted */
+  svn_boolean_t verbose;          /* --verbose */
 };
 
 
@@ -296,10 +303,7 @@ generate_delta_tree (svn_repos_node_t **tree,
                                   base_root, root, pool, edit_pool));
 
   /* Drive our editor. */
-  SVN_ERR (svn_repos_dir_delta (base_root, "", NULL, root, "",
-                                editor, edit_baton, 
-                                FALSE, TRUE, FALSE, 
-                                use_copy_history, FALSE, edit_pool));
+  SVN_ERR (svn_repos_replay (root, editor, edit_baton, edit_pool));
 
   /* Return the tree we just built. */
   *tree = svn_repos_node_from_baton (edit_baton);
@@ -546,6 +550,129 @@ dump_contents (apr_file_t *fh,
 }
 
 
+/* Prepare temporary files *TMPFILE1 and *TMPFILE2 for diffing
+   PATH1@ROOT1 versus PATH2@ROOT2.  If either ROOT1 or ROOT2 is NULL,
+   the temporary file for its path/root will be an empty one.
+   Otherwise, its temporary file will contain the contents of that
+   path/root in the repository.
+
+   An exception to this is when either path/root has an svn:mime-type
+   property set on it which indicates that the file contains
+   non-textual data -- in this case, the *IS_BINARY flag is set and no
+   temporary files are created.
+
+   Use POOL for all that allocation goodness. */
+static svn_error_t *
+prepare_tmpfiles (const char **tmpfile1,
+                  const char **tmpfile2,
+                  svn_boolean_t *is_binary,
+                  svn_fs_root_t *root1,
+                  const char *path1,
+                  svn_fs_root_t *root2,
+                  const char *path2,
+                  apr_pool_t *pool)
+{
+  svn_string_t *mimetype;
+  apr_file_t *fh;
+
+  /* Init the return values. */
+  *tmpfile1 = NULL;
+  *tmpfile2 = NULL;
+  *is_binary = FALSE;
+
+  assert (path1 && path2);
+
+  /* Check for binary mimetypes.  If either file has a binary
+     mimetype, get outta here.  */
+  if (root1)
+    {
+      SVN_ERR (svn_fs_node_prop (&mimetype, root1, path1, 
+                                 SVN_PROP_MIME_TYPE, pool));
+      if (mimetype && svn_mime_type_is_binary (mimetype->data))
+        {
+          *is_binary = TRUE;
+          return SVN_NO_ERROR;
+        }
+    }
+  if (root2)
+    {
+      SVN_ERR (svn_fs_node_prop (&mimetype, root2, path2, 
+                                 SVN_PROP_MIME_TYPE, pool));
+      if (mimetype && svn_mime_type_is_binary (mimetype->data))
+        {
+          *is_binary = TRUE;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* Now, prepare the two temporary files, each of which will either
+     be empty, or will have real contents.  The first file we will
+     make in our temporary directory. */
+  *tmpfile2 = svn_path_join (SVNLOOK_TMPDIR, path2, pool);
+  SVN_ERR (open_writable_binary_file (&fh, *tmpfile2, pool));
+  if (root2)
+    SVN_ERR (dump_contents (fh, root2, path2, pool));
+  apr_file_close (fh);
+
+  /* The second file is constructed from the first one's path. */
+  SVN_ERR (svn_io_open_unique_file (&fh, tmpfile1, *tmpfile2, 
+                                    NULL, FALSE, pool));
+  if (root1)
+    SVN_ERR (dump_contents (fh, root1, path1, pool));
+  apr_file_close (fh);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Generate a diff label for PATH in ROOT, allocating in POOL. */
+static svn_error_t *
+generate_label (const char **label,
+                svn_fs_root_t *root,
+                const char *path,
+                apr_pool_t *pool)
+{
+  svn_fs_t *fs = svn_fs_root_fs (root);
+  svn_string_t *date;
+  const char *datestr;
+  const char *name = NULL;
+  svn_revnum_t rev = SVN_INVALID_REVNUM;
+
+  if (svn_fs_is_revision_root (root))
+    {
+      rev = svn_fs_root_revision (root);
+      SVN_ERR (svn_fs_revision_prop (&date, fs, rev, 
+                                     SVN_PROP_REVISION_DATE, pool));
+    }
+  else 
+    {
+      svn_fs_txn_t *txn;
+      name = svn_fs_txn_root_name (root, pool);
+      SVN_ERR (svn_fs_open_txn (&txn, fs, name, pool));
+      SVN_ERR (svn_fs_txn_prop (&date, txn, SVN_PROP_REVISION_DATE, pool));
+    }
+  
+  if (date)
+    {
+      datestr = date->data;
+      ((char *)datestr)[10] = ' ';
+      ((char *)datestr)[19] = '\0';
+    }
+  else
+    {
+      datestr = "                      ";
+    }
+
+  if (name)
+    *label = apr_psprintf (pool, "%s\t%s UTC (txn %s)", 
+                           path, datestr, name); 
+  else
+    *label = apr_psprintf (pool, "%s\t%s UTC (rev %" SVN_REVNUM_T_FMT ")",
+                           path, datestr, rev);
+  return SVN_NO_ERROR;
+}
+
+
 /* Recursively print all nodes in the tree that have been modified
    (do not include directories affected only by "bubble-up"). */
 static svn_error_t *
@@ -555,12 +682,12 @@ print_diff_tree (svn_fs_root_t *root,
                  const char *path /* UTF-8! */,
                  const char *base_path /* UTF-8! */,
                  svn_boolean_t no_diff_deleted,
-                 apr_hash_t *config,
                  apr_pool_t *pool)
 {
   const char *orig_path = NULL, *new_path = NULL, *path_native;
-  apr_file_t *fh1, *fh2;
+  svn_boolean_t do_diff = FALSE;
   svn_boolean_t is_copy = FALSE;
+  svn_boolean_t binary = FALSE;
 
   if (! node)
     return SVN_NO_ERROR;
@@ -600,6 +727,11 @@ print_diff_tree (svn_fs_root_t *root,
     {
       /* Here's the generalized way we do our diffs:
 
+         - First, we'll check for svn:mime-type properties on the old
+           and new files.  If either has such a property, and it
+           represents a binary type, we won't actually be doing a real
+           diff.
+           
          - First, dump the contents of the new version of the file
            into the svnlook temporary directory, building out the
            actual directories that need to be created in order to
@@ -612,7 +744,7 @@ print_diff_tree (svn_fs_root_t *root,
            new version of the file there in case something actually
            versioned has a name that looks like one of our unique
            identifiers).
-           
+
          - Next, we run 'diff', passing the repository path as the
            label.  
 
@@ -621,51 +753,26 @@ print_diff_tree (svn_fs_root_t *root,
            handling has been finished).  */
       if ((node->action == 'R') && (node->text_mod))
         {
-          new_path = svn_path_join (SVNLOOK_TMPDIR, path, pool);
-          SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
-          SVN_ERR (dump_contents (fh1, root, path, pool));
-          apr_file_close (fh1);
-
-          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path,
-                                            NULL, FALSE, pool));
-          SVN_ERR (dump_contents
-                   (fh2, base_root, base_path, pool));
-          apr_file_close (fh2);
+          do_diff = TRUE;
+          SVN_ERR (prepare_tmpfiles (&orig_path, &new_path, &binary,
+                                     base_root, base_path, root, path, pool));
         }
       if ((node->action == 'A') && (node->text_mod))
         {
-          new_path = svn_path_join (SVNLOOK_TMPDIR, path, pool);
-          SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
-          SVN_ERR (dump_contents (fh1, root, path, pool));
-          apr_file_close (fh1);
-
-          /* Create an empty file. */
-          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path,
-                                            NULL, FALSE, pool));
-          apr_file_close (fh2);
+          do_diff = TRUE;
+          SVN_ERR (prepare_tmpfiles (&orig_path, &new_path, &binary,
+                                     NULL, base_path, root, path, pool));
         }
       if (node->action == 'D')
         {
-          new_path = svn_path_join (SVNLOOK_TMPDIR, path, pool);
-          SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
-          apr_file_close (fh1);
-
-          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path,
-                                            NULL, FALSE, pool));
-          SVN_ERR (dump_contents
-                   (fh2, base_root, base_path, pool));
-          apr_file_close (fh2);
+          do_diff = TRUE;
+          SVN_ERR (prepare_tmpfiles (&orig_path, &new_path, &binary,
+                                     base_root, base_path, NULL, path, pool));
         }
     }
 
-  if (orig_path && new_path)
+  if (do_diff)
     {
-      apr_file_t *outhandle;
-      apr_status_t apr_err;
-      const char *label;
-      const char *abs_path;
-      int exitcode;
-      
       if (! is_copy)
         printf ("%s: %s\n", 
                 ((node->action == 'A') ? "Added" : 
@@ -675,38 +782,42 @@ print_diff_tree (svn_fs_root_t *root,
 
       if ((! no_diff_deleted) || (node->action != 'D'))
         {
+          svn_diff_t *diff;
+
           printf ("===========================================================\
 ===================\n");
           fflush (stdout);
 
-          /* Get an apr_file_t representing stdout, which is where
-             we'll have the diff program print to. */
-          apr_err = apr_file_open_stdout (&outhandle, pool);
-          if (apr_err)
-            return svn_error_create 
-              (apr_err, NULL,
-               "print_diff_tree: can't open handle to stdout");
+          if (binary)
+            {
+              printf ("(Binary files differ)\n");
+            }
+          else
+            {
+              SVN_ERR (svn_diff_file_diff (&diff, orig_path, new_path, pool));
+              if (svn_diff_contains_diffs (diff))
+                {
+                  apr_file_t *outhandle;
+                  apr_status_t apr_err;
+                  const char *orig_label, *new_label;
 
-          label = apr_psprintf (pool, "%s\t(original)", base_path);
-          SVN_ERR (svn_path_get_absolute (&abs_path, orig_path, pool));
-
-          {
-            const char *diff_cmd;
-            svn_config_t *cfg;
-
-            cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG,
-                                         APR_HASH_KEY_STRING) : NULL;
-
-            svn_config_get (cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS, 
-                            SVN_CONFIG_OPTION_DIFF_CMD, NULL);
-
-            SVN_ERR (svn_io_run_diff (SVNLOOK_TMPDIR, NULL, 0, label, NULL,
-                                      abs_path, path, 
-                                      &exitcode, outhandle, NULL, diff_cmd,
-                                      pool));
-          }
-
-          /* TODO: Handle exit code == 2 (i.e. diff error) here. */
+                  /* Get an apr_file_t representing stdout, which is where
+                     we'll have the diff program print to. */
+                  apr_err = apr_file_open_stdout (&outhandle, pool);
+                  if (apr_err)
+                    return svn_error_create 
+                      (apr_err, NULL,
+                       "print_diff_tree: can't open handle to stdout");
+                  
+                  SVN_ERR (generate_label (&orig_label, base_root, 
+                                           base_path, pool));
+                  SVN_ERR (generate_label (&new_label, root, path, pool));
+                  SVN_ERR (svn_diff_file_output_unified (outhandle, diff, 
+                                                         orig_path, new_path,
+                                                         orig_label, new_label,
+                                                         pool));
+                }
+            }
         }
 
       printf ("\n");
@@ -737,7 +848,7 @@ print_diff_tree (svn_fs_root_t *root,
              (root, base_root, node,
               svn_path_join (path, node->name, subpool),
               svn_path_join (base_path, node->name, subpool),
-              no_diff_deleted, config,
+              no_diff_deleted, 
               subpool));
 
     /* Recurse across siblings. */
@@ -749,7 +860,7 @@ print_diff_tree (svn_fs_root_t *root,
                  (root, base_root, node,
                   svn_path_join (path, node->name, subpool),
                   svn_path_join (base_path, node->name, subpool),
-                  no_diff_deleted, config,
+                  no_diff_deleted, 
                   pool));
       }
     
@@ -1039,12 +1150,10 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (tree)
     {
       svn_node_kind_t kind;
-      apr_hash_t *config;
 
-      SVN_ERR (svn_config_get_config (&config, pool));
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
       SVN_ERR (print_diff_tree (root, base_root, tree, "", "",
-                                c->no_diff_deleted, config, pool));
+                                c->no_diff_deleted, pool));
       SVN_ERR (svn_io_check_path (SVNLOOK_TMPDIR, &kind, pool));
       if (kind == svn_node_dir)
         SVN_ERR (svn_io_remove_dir (SVNLOOK_TMPDIR, pool));
@@ -1262,6 +1371,7 @@ subcommand_dirschanged (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 static svn_error_t *
 subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
+  struct svnlook_opt_state *opt_state = baton;
   const char *header =
     "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
     "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -1271,7 +1381,9 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     "\n"
     "Available subcommands:\n";
 
-  SVN_ERR (svn_opt_print_help (os, "svnlook", FALSE, FALSE, NULL,
+  SVN_ERR (svn_opt_print_help (os, "svnlook", 
+                               opt_state ? opt_state->version : FALSE, 
+                               FALSE, NULL,
                                header, cmd_table, options_table, NULL,
                                pool));
   
@@ -1462,6 +1574,11 @@ main (int argc, const char * const *argv)
 
         case 'h':
         case '?':
+          opt_state.help = TRUE;
+          break;
+
+        case svnlook__version:
+          opt_state.version = TRUE;
           opt_state.help = TRUE;
           break;
 

@@ -181,6 +181,88 @@ wc_to_wc_copy (const char *src_path,
 }
 
 
+struct path_driver_cb_baton
+{
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  svn_node_kind_t src_kind;
+  const char *src_url;
+  const char *src_path;
+  const char *dst_path;
+  svn_boolean_t is_move;
+  svn_boolean_t resurrection;
+  svn_revnum_t src_revnum;
+};
+
+
+static svn_error_t *
+path_driver_cb_func (void **dir_baton,
+                     void *parent_baton,
+                     void *callback_baton,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  struct path_driver_cb_baton *cb_baton = callback_baton;
+  svn_boolean_t do_delete = TRUE, do_add = FALSE;
+
+  /* Initialize return value. */
+  *dir_baton = NULL;
+
+  /* If this is a resurrection, we know the source and dest paths are
+     the same, and that our driver will only be calling us once.  */
+  if (cb_baton->resurrection)
+    {
+      /* If this is a move, we do nothing.  Otherwise, we do the copy.  */
+      if (! cb_baton->is_move)
+        do_add = TRUE;
+    }
+  /* Not a resurrection. */
+  else 
+    {
+      /* If this is a move, we check PATH to see if it is the source
+         or the destination of the move. */
+      if (cb_baton->is_move)
+        {
+          if (strcmp (cb_baton->src_path, path) == 0)
+            do_delete = TRUE;
+          else
+            do_add = TRUE;
+        }
+      /* Not a move?  This must just be the copy addition. */
+      else
+        {
+          do_add = TRUE;
+        }
+    }
+
+  if (do_delete)
+    {
+      SVN_ERR (cb_baton->editor->delete_entry (path, SVN_INVALID_REVNUM,
+                                               parent_baton, pool));
+    }
+  if (do_add)
+    {
+      if (cb_baton->src_kind == svn_node_file)
+        {
+          void *file_baton;
+          SVN_ERR (cb_baton->editor->add_file (path, parent_baton, 
+                                               cb_baton->src_url, 
+                                               cb_baton->src_revnum, 
+                                               pool, &file_baton));
+          SVN_ERR (cb_baton->editor->close_file (file_baton, NULL, pool));
+        }
+      else
+        {
+          SVN_ERR (cb_baton->editor->add_directory (path, parent_baton,
+                                                    cb_baton->src_url, 
+                                                    cb_baton->src_revnum, 
+                                                    pool, dir_baton));
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                      const char *src_url, 
@@ -191,33 +273,21 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                      svn_boolean_t is_move,
                      apr_pool_t *pool)
 {
-  const char *top_url, *src_rel, *dst_rel, *base_name, *unused;
-  apr_array_header_t *src_pieces = NULL, *dst_pieces = NULL;
+  apr_array_header_t *paths = apr_array_make (pool, 2, sizeof (const char *));
+  const char *top_url, *src_rel, *dst_rel;
   svn_revnum_t youngest;
   void *ra_baton, *sess;
   svn_ra_plugin_t *ra_lib;
   svn_node_kind_t src_kind, dst_kind;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  void *root_baton, *baton;
-  void **batons;
-  int i = 0;
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
   const char *committed_date = NULL;
   const char *committed_author = NULL;
   svn_revnum_t src_revnum;
-  const char *piece, *telepath;
   const char *auth_dir;
-
-  /* ### TODO:  Currently, this function will violate the depth-first
-     rule of editors when doing a move of something up into one of its
-     grandparent directories, such as:
-
-        svn mv http://server/repos/dir1/dir2/file http://server/repos/dir1
-
-     While it seems to work just fine, we might want to evaluate this
-     from a purely "correctness" standpoint.
-  */
+  svn_boolean_t resurrection = FALSE;
+  struct path_driver_cb_baton cb_baton;
 
   /* We have to open our session to the longest path common to both
      SRC_URL and DST_URL in the repository so we can do existence
@@ -229,52 +299,31 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
      deleted item like this:  'svn cp -rN src_URL dst_URL', then it's
      possible for src_URL == dst_URL == top_url.  In this situation,
      we want to open an RA session to the *parent* of all three. */
-  if (! strcmp (src_url, dst_url))
-    top_url = svn_path_dirname (top_url, pool);
+  if (strcmp (src_url, dst_url) == 0)
+    {
+      resurrection = TRUE;
+      top_url = svn_path_dirname (top_url, pool);
+    }
 
   /* Get the portions of the SRC and DST URLs that are relative to
-     TOP_URL. */
+     TOP_URL, and URI-decode those sections. */
   src_rel = svn_path_is_child (top_url, src_url, pool);
   if (src_rel)
-    {
-      src_rel = svn_path_uri_decode (src_rel, pool);
-      src_pieces = svn_path_decompose (src_rel, pool);
-      if ((! src_pieces) || (! src_pieces->nelts))
-        return svn_error_createf 
-          (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-           "error decomposing relative path `%s'", src_rel);
-    }
+    src_rel = svn_path_uri_decode (src_rel, pool);
   else
     src_rel = "";
 
   dst_rel = svn_path_is_child (top_url, dst_url, pool);
   if (dst_rel)
-    {
-      dst_rel = svn_path_uri_decode (dst_rel, pool);
-      dst_pieces = svn_path_decompose (dst_rel, pool);
-      if ((! dst_pieces) || (! dst_pieces->nelts))
-        return svn_error_createf 
-          (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-           "error decomposing relative path `%s'", dst_rel);
-    }
+    dst_rel = svn_path_uri_decode (dst_rel, pool);
   else
     dst_rel = "";
-
-  /* Allocate room for the root baton, the pieces of the
-     source's or destination's path, and the destination itself. */
-  {
-    int num, num2;
-    num = src_pieces ? src_pieces->nelts : 0;
-    if (((num2 = (dst_pieces ? dst_pieces->nelts : 0))) > num)
-      num = num2;
-
-    batons = apr_palloc (pool, sizeof (void *) * (num + 2));
-  }
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, top_url, pool));
 
+  /* Get the auth dir. */
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
 
   /* Open an RA session for the URL. Note that we don't have a local
@@ -284,11 +333,12 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                                         NULL, NULL, FALSE, TRUE, 
                                         ctx, pool));
 
-  /* Pass null for the path, to ensure error if trying to get a
+  /* Pass NULL for the path, to ensure error if trying to get a
      revision based on the working copy. */
   SVN_ERR (svn_client__get_revision_number
            (&src_revnum, ra_lib, sess, src_revision, NULL, pool));
-
+  
+  /* Fetch the youngest revision. */
   SVN_ERR (ra_lib->get_latest_revnum (sess, &youngest, pool));
 
   /* Use YOUNGEST for copyfrom args if not provided. */
@@ -305,31 +355,31 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Figure out the basename that will result from this operation. */
   SVN_ERR (ra_lib->check_path (&dst_kind, sess, dst_rel, youngest, pool));
-  if ((dst_kind == svn_node_none)
-      || (dst_kind == svn_node_file))
+  if (dst_kind == svn_node_none)
     {
-      svn_path_split (dst_url, &unused, &base_name, pool);
-      if (dst_pieces)
-        apr_array_pop (dst_pieces);
+      /* do nothing */
+    }
+  else if (dst_kind == svn_node_file)
+    {
+      /* We disallow the overwriting of files. */
+      return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                "fs path `%s' already exists.", dst_rel);
     }
   else if (dst_kind == svn_node_dir)
     {
       /* As a matter of client-side policy, we prevent overwriting any
-         pre-existing directory.  So we temporarily append src_url's
-         basename to dst_rel, and see if that already exists.  */
-      svn_node_kind_t some_kind;
-      const char *hypothetical_repos_path;
-      
-      base_name = svn_path_basename (src_url, pool);
-      hypothetical_repos_path 
-        = svn_path_join (dst_rel ? dst_rel : "", 
-                         svn_path_uri_decode (base_name, pool), pool);
-      SVN_ERR (ra_lib->check_path (&some_kind, sess,
-                                   hypothetical_repos_path, youngest, pool));
-      if (some_kind != svn_node_none)
+         pre-existing directory.  So we append src_url's basename to
+         dst_rel, and see if that already exists.  */
+      svn_node_kind_t attempt_kind;
+      const char *bname;
+
+      bname = svn_path_uri_decode (svn_path_basename (src_url, pool), pool);
+      dst_rel = svn_path_join (dst_rel, bname, pool);
+      SVN_ERR (ra_lib->check_path (&attempt_kind, sess, 
+                                   dst_rel, youngest, pool));
+      if (attempt_kind != svn_node_none)
         return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                  "fs path `%s' already exists.",
-                                  hypothetical_repos_path);
+                                  "fs path `%s' already exists.", dst_rel);
     }
   else
     {
@@ -344,91 +394,27 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                                       &committed_author,
                                       message, pool));
 
-  /* ### Avoiding iteration pools in the loops below until we know
-     they're necessary.  If there are performance problems with this
-     function, that's the first place to look. */
+  /* Setup our PATHS for the path-based editor drive. */
+  APR_ARRAY_PUSH (paths, const char *) = dst_rel;
+  if (is_move && (! resurrection))
+    APR_ARRAY_PUSH (paths, const char *) = src_rel;
 
-  /* Drive that editor, baby! */
-  SVN_ERR (editor->open_root (edit_baton, youngest, pool, &root_baton));
+  /* Setup the callback baton. */
+  cb_baton.editor = editor;
+  cb_baton.edit_baton = edit_baton;
+  cb_baton.src_kind = src_kind;
+  cb_baton.src_url = src_url;
+  cb_baton.src_path = src_rel;
+  cb_baton.dst_path = dst_rel;
+  cb_baton.is_move = is_move;
+  cb_baton.src_revnum = src_revnum;
+  cb_baton.resurrection = resurrection;
 
-  /* Stuff the root baton here for convenience. */
-  batons[i] = root_baton;
+  /* Call the path-based editor driver. */
+  SVN_ERR (svn_delta_path_driver (editor, edit_baton, youngest, paths,
+                                  path_driver_cb_func, &cb_baton, pool));
 
-  /* Open directories down to the place where we need to make our
-     copy. */
-  telepath = "";
-  if (dst_pieces && dst_pieces->nelts)
-    {
-      /* open_directory() all the way down to DST's parent. */
-      while (i < dst_pieces->nelts)
-        {
-          piece = (((const char **)(dst_pieces)->elts)[i]);
-          telepath = svn_path_join (telepath, piece, pool);
-          SVN_ERR (editor->open_directory (telepath, batons[i], 
-                                           youngest, pool, &(batons[i + 1])));
-          i++;
-        }
-    }
-  /* Add our file/dir with copyfrom history. */
-  telepath = svn_path_join (telepath, 
-                            svn_path_uri_decode (base_name, pool), 
-                            pool);
-  if (src_kind == svn_node_dir)
-    {
-      SVN_ERR (editor->add_directory (telepath, batons[i], src_url,
-                                      src_revnum, pool, &baton));
-      SVN_ERR (editor->close_directory (baton, pool));
-    }
-  else
-    {
-      SVN_ERR (editor->add_file (telepath, batons[i], src_url,
-                                 src_revnum, pool, &baton));
-      SVN_ERR (editor->close_file (baton, NULL, pool));
-    }
-
-  /* Now, close up all those batons (except the root
-     baton). */
-  while (i)
-    {
-      SVN_ERR (editor->close_directory (batons[i], pool));
-      batons[i--] = NULL;
-    }
-
-  /* If this was a move, we need to remove the SRC_URL. */
-  telepath = "";
-  if (is_move)
-    {
-      /* If SRC_PIECES is NULL, we're trying to move a directory into
-         itself (or one of its chidren...we should have caught that by
-         now). */
-      assert (src_pieces != NULL);
-
-      /* open_directory() all the way down to SRC's parent. */
-      while (i < (src_pieces->nelts - 1))
-        {
-          piece = (((const char **)(src_pieces)->elts)[i]);
-          telepath = svn_path_join (telepath, piece, pool);
-          SVN_ERR (editor->open_directory (telepath, batons[i], 
-                                           youngest, pool, &(batons[i + 1])));
-          i++;
-        }
-          
-      /* Delete SRC. */
-      piece = (((const char **)(src_pieces)->elts)[i]);
-      telepath = svn_path_join (telepath, piece, pool);
-      SVN_ERR (editor->delete_entry (telepath, SVN_INVALID_REVNUM, 
-                                     batons[i], pool));
-
-      /* Now, close up all those batons (except the root
-         baton). */
-      while (i)
-        {
-          SVN_ERR (editor->close_directory (batons[i--], pool));
-        }
-    }
-
-  /* Turn off the lights, close up the shop, and go home. */
-  SVN_ERR (editor->close_directory (batons[0], pool));
+  /* Close the edit. */
   SVN_ERR (editor->close_edit (edit_baton, pool));
 
   /* Fill in the commit_info structure. */
@@ -708,6 +694,7 @@ repos_to_wc_copy (const char *src_url,
   const char *src_uuid = NULL, *dst_uuid = NULL;
   svn_boolean_t same_repositories;
   const char *auth_dir;
+  svn_opt_revision_t *revision = apr_pcalloc (pool, sizeof(*revision));
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -724,9 +711,16 @@ repos_to_wc_copy (const char *src_url,
                                         ctx, pool));
       
   /* Pass null for the path, to ensure error if trying to get a
-     revision based on the working copy. */
+     revision based on the working copy.  And additionally, we can't
+     pass an 'unspecified' revnum to the update reporter;  assume HEAD
+     if not specified. */
+  revision->kind = src_revision->kind;
+  revision->value = src_revision->value;
+  if (revision->kind == svn_opt_revision_unspecified)
+    revision->kind = svn_opt_revision_head;
+
   SVN_ERR (svn_client__get_revision_number
-           (&src_revnum, ra_lib, sess, src_revision, NULL, pool));
+           (&src_revnum, ra_lib, sess, revision, NULL, pool));
 
   /* Verify that SRC_URL exists in the repository. */
   SVN_ERR (ra_lib->check_path (&src_kind, sess, "", src_revnum, pool));
@@ -827,6 +821,8 @@ repos_to_wc_copy (const char *src_url,
     {    
       const svn_delta_editor_t *editor;
       void *edit_baton;
+      const svn_ra_reporter_t *reporter;
+      void *report_baton;
 
       /* Get a checkout editor and wrap it. */
       SVN_ERR (svn_wc_get_checkout_editor (dst_path, src_url, src_revnum, 1,
@@ -837,9 +833,18 @@ repos_to_wc_copy (const char *src_url,
       
       /* Check out the new tree.  The parent dir will get no entry, so
          it will be as if the new tree isn't really there yet. */
-      SVN_ERR (ra_lib->do_checkout (sess, src_revnum, 1, 
-                                    editor,
-                                    edit_baton, pool));
+      SVN_ERR (ra_lib->do_update (sess,
+                                  &reporter, &report_baton,
+                                  src_revnum,
+                                  NULL, /* no sub-target */
+                                  TRUE, /* recurse */
+                                  editor, edit_baton, pool));
+
+      SVN_ERR (reporter->set_path (report_baton, "", src_revnum,
+                                   TRUE, /* "help, my dir is empty!" */
+                                   pool));
+
+      SVN_ERR (reporter->finish_report (report_baton));               
 
       if ((! SVN_IS_VALID_REVNUM (src_revnum))
           && same_repositories)

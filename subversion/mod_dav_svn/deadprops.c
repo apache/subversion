@@ -23,7 +23,7 @@
 
 #include <apr_hash.h>
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_dav.h"
@@ -262,7 +262,6 @@ static dav_error *dav_svn_db_output_value(dav_db *db,
 
       /* Ensure XML-safety of our property values before sending them
          across the wire. */
-#ifdef SVN_DAV_FEATURE_BINARY_PROPS
       if (! svn_xml_is_xml_safe(propval->data, propval->len))
         {
           propval = (svn_string_t *)svn_base64_encode_string(propval, pool);
@@ -270,7 +269,6 @@ static dav_error *dav_svn_db_output_value(dav_db *db,
           encoding = apr_pstrcat(pool, " V:encoding=\"base64\"", NULL);
         }
       else
-#endif
         {    
           svn_stringbuf_t *xmlval = NULL;
           svn_xml_escape_cdata_string(&xmlval, propval, pool);

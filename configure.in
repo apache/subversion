@@ -61,7 +61,6 @@ sinclude(build/ac-macros/aprutil.m4)
 sinclude(build/ac-macros/java.m4)
 sinclude(build/ac-macros/swig.m4)
 
-sinclude(build/ac-diff-test/gnu-diff.m4)
 
 dnl Grab the libtool macros
 sinclude(ac-helpers/libtool.m4)
@@ -182,6 +181,9 @@ AC_PROG_CC
 dnl Look for a C pre-processor
 AC_PROG_CPP
 
+dnl Pass EXEEXT on to the Makefiles
+AC_SUBST(EXEEXT)
+
 dnl Look for an extended grep, this macro appeared in autoconf-2.53b
 ifdef([AC_PROG_EGREP],[AC_PROG_EGREP],[])
 
@@ -277,7 +279,7 @@ fi
 if test "$svn_lib_neon" = "yes"; then
   BUILD_RULES="$BUILD_RULES dav-lib"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-dav-lib"
-  INSTALL_RULES="$INSTALL_RULES install-dav-lib"
+  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-dav-lib install-lib/'`"
 fi
 
 AC_SUBST(BUILD_RULES)
@@ -409,9 +411,6 @@ else
     changequote([,])
   fi
 fi
-
-dnl Find suitable diff utilities
-SVN_LIB_DIFFUTILS(${abs_srcdir}/build/ac-diff-test)
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',

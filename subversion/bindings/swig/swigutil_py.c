@@ -358,13 +358,7 @@ static svn_error_t * convert_python_error(void)
 typedef struct {
   PyObject *editor;     /* the editor handling the callbacks */
   PyObject *baton;      /* the dir/file baton (or NULL for edit baton) */
-  apr_pool_t *pool;     /* pool to use for errors */
 } item_baton;
-
-typedef struct {
-  PyObject *handler;    /* the window handler (a callable) */
-  apr_pool_t *pool;     /* a pool for constructing errors */
-} handler_baton;
 
 static item_baton * make_baton(apr_pool_t *pool,
                                PyObject *editor, PyObject *baton)
@@ -378,7 +372,6 @@ static item_baton * make_baton(apr_pool_t *pool,
 
   newb->editor = editor;
   newb->baton = baton;
-  newb->pool = pool;
 
   return newb;
 }
@@ -674,7 +667,7 @@ static svn_error_t * thunk_open_file(const char *path,
 static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
                                           void *baton)
 {
-  handler_baton *hb = baton;
+  PyObject *handler = baton;
   PyObject *result;
   svn_error_t *err;
 
@@ -686,16 +679,16 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
 
       /* invoke the handler with None for the window */
       /* ### python doesn't have 'const' on the format */
-      result = PyObject_CallFunction(hb->handler, (char *)"O", Py_None);
+      result = PyObject_CallFunction(handler, (char *)"O", Py_None);
 
       /* we no longer need to refer to the handler object */
-      Py_DECREF(hb->handler);
+      Py_DECREF(handler);
     }
   else
     {
       /* invoke the handler with the window */
       /* ### python doesn't have 'const' on the format */
-      result = PyObject_CallFunction(hb->handler,
+      result = PyObject_CallFunction(handler,
                                      (char *)"O&", make_ob_window, window);
     }
 
@@ -736,23 +729,22 @@ thunk_apply_textdelta(void *file_baton,
       goto finished;
     }
 
+  /* Interpret None to mean svn_delta_noop_window_handler. This is much
+     easier/faster than making code always have to write a NOOP handler
+     in Python.  */
   if (result == Py_None)
     {
       Py_DECREF(result);
-      *handler = NULL;
+
+      *handler = svn_delta_noop_window_handler;
       *h_baton = NULL;
     }
   else
     {
-      handler_baton *hb = apr_palloc(ib->pool, sizeof(*hb));
-
       /* return the thunk for invoking the handler. the baton takes our
-         'result' reference. */
-      hb->handler = result;
-      hb->pool = ib->pool;
-
+         'result' reference, which is the handler. */
       *handler = thunk_window_handler;
-      *h_baton = hb;
+      *h_baton = result;
     }
 
   err = SVN_NO_ERROR;
@@ -869,41 +861,40 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
   *edit_baton = make_baton(pool, py_editor, NULL);
 }
 
-/* This is very hacky and gross.  And did I mention broken? */
+/* This is very hacky and gross.  */
 apr_file_t *svn_swig_py_make_file (PyObject *py_file,
                                    apr_pool_t *pool)
 {
-  apr_file_t *apr_file;
-  apr_status_t status;
-  FILE *file;
-  int fd = -1;
+  apr_file_t *apr_file = NULL;
 
   if (py_file == NULL || py_file == Py_None)
     return NULL;
 
-  if (PyString_Check (py_file))
+  if (PyString_Check(py_file))
     {
-      fd = open (PyString_AS_STRING (py_file),
-                 O_CREAT | O_RDWR,
-                 S_IRUSR | S_IWUSR);
+      /* input is a path -- just open an apr_file_t */
+      apr_file_open(&apr_file, PyString_AS_STRING(py_file),
+                    APR_CREATE | APR_READ | APR_WRITE,
+                    APR_OS_DEFAULT,
+                    pool);
     }
   else if (PyFile_Check (py_file))
     {
-      file = PyFile_AsFile (py_file);
-      fd = fileno (file);
-    }
-  else if (PyInt_Check (py_file))
-    {
-      fd = PyInt_AsLong (py_file);
-    }
+      apr_status_t status;
+      FILE *file;
+      apr_os_file_t osfile;
 
-  if (fd >= 0) 
-    {  
-      status = apr_os_file_put (&apr_file, &fd, O_CREAT | O_WRONLY, pool);
+      /* input is a file object -- convert to apr_file_t */
+      file = PyFile_AsFile(py_file);
+#ifdef WIN32
+      osfile = (apr_os_file_t)_get_osfhandle(_fileno(file));
+#else
+      osfile = (apr_os_file_t)fileno(file);
+#endif
+      status = apr_os_file_put (&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
+      if (status)
+        return NULL;
     }
-
-  /* FIXME: We shouldn't just silently fail. */
-
   return apr_file;
 }
 

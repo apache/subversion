@@ -121,10 +121,12 @@ static svn_error_t *
 reporter_set_path (void *reporter_baton,
                    const char *path,
                    svn_revnum_t revision,
+                   svn_boolean_t start_empty,
                    apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_set_path (rbaton->report_baton, path, revision, pool);
+  return svn_repos_set_path (rbaton->report_baton, path,
+                             revision, start_empty, pool);
 }
 
 
@@ -143,6 +145,7 @@ reporter_link_path (void *reporter_baton,
                     const char *path,
                     const char *url,
                     svn_revnum_t revision,
+                    svn_boolean_t start_empty,
                     apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
@@ -159,7 +162,7 @@ reporter_link_path (void *reporter_baton,
   fs_path = url + repos_url_len;
 
   return svn_repos_link_path (rbaton->report_baton, path,
-                              fs_path, revision, pool);
+                              fs_path, revision, start_empty, pool);
 }
 
 
@@ -386,32 +389,6 @@ svn_ra_local__get_commit_editor (void *session_baton,
   return SVN_NO_ERROR;
 }
 
-
-static svn_error_t *
-svn_ra_local__do_checkout (void *session_baton,
-                           svn_revnum_t revision,
-                           svn_boolean_t recurse,
-                           const svn_delta_editor_t *editor,
-                           void *edit_baton,
-                           apr_pool_t *pool)
-{
-  svn_revnum_t revnum_to_fetch;
-  svn_ra_local__session_baton_t *sbaton = 
-    (svn_ra_local__session_baton_t *) session_baton;
-  
-  if (! SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_fetch, pool));
-  else
-    revnum_to_fetch = revision;
-
-  SVN_ERR (svn_repos_checkout (sbaton->fs,
-                               revnum_to_fetch,
-                               recurse,
-                               sbaton->fs_path,
-                               editor, edit_baton, pool));
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *
@@ -921,7 +898,6 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__get_commit_editor,
   svn_ra_local__get_file,
   svn_ra_local__get_dir,
-  svn_ra_local__do_checkout,
   svn_ra_local__do_update,
   svn_ra_local__do_switch,
   svn_ra_local__do_status,

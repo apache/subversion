@@ -25,8 +25,6 @@
 #ifndef SVN_ERROR_H
 #define SVN_ERROR_H
 
-#include <stdio.h>
-
 #include <apr.h>
 #include <apr_errno.h>     /* APR's error system */
 #include <apr_pools.h>
@@ -36,7 +34,7 @@
 #endif
 #include <apr_want.h>
 
-#include <svn_types.h>
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {

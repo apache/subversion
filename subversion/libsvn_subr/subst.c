@@ -84,6 +84,99 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
     }
 }
 
+/* A helper function to convert the date property to something suitable for 
+   printing out.  If LONG_P is TRUE, use the long format, otherwise use a 
+   shorter one. */
+static svn_error_t *
+date_prop_to_human (const char **human, svn_boolean_t long_p, apr_time_t when,
+                    apr_pool_t *pool)
+{
+  if (long_p)
+    *human = svn_time_to_human_cstring (when, pool);
+  else
+    {
+      apr_time_exp_t exploded_time;
+
+      apr_time_exp_gmt (&exploded_time, when);
+
+      *human = apr_psprintf (pool, "%04d-%02d-%02d %02d:%02d:%02dZ",
+                             exploded_time.tm_year + 1900,
+                             exploded_time.tm_mon + 1,
+                             exploded_time.tm_mday,
+                             exploded_time.tm_hour,
+                             exploded_time.tm_min,
+                             exploded_time.tm_sec);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_subst_build_keywords (svn_subst_keywords_t *kw,
+                          const char *keywords_val,
+                          const char *rev,
+                          const char *url,
+                          apr_time_t date,
+                          const char *author,
+                          apr_pool_t *pool)
+{
+  apr_array_header_t *keyword_tokens;
+  int i;
+
+  keyword_tokens = svn_cstring_split (keywords_val, " \t\v\n\b\r\f",
+                                      TRUE /* chop */, pool);
+
+  for (i = 0; i < keyword_tokens->nelts; ++i)
+    {
+      const char *keyword = APR_ARRAY_IDX (keyword_tokens, i, const char *);
+
+      if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
+          || (! strcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
+        {
+          kw->revision = svn_string_create (rev, pool);
+        }      
+      else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
+               || (! strcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
+        {
+          if (date)
+            {
+              const char *human_date;
+
+              SVN_ERR (date_prop_to_human (&human_date, TRUE, date, pool));
+
+              kw->date = svn_string_create (human_date, pool);
+            }
+          else
+            kw->date = svn_string_create ("", pool);
+        }
+      else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
+               || (! strcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
+        {
+          kw->author = svn_string_create (author ? author : "", pool);
+        }
+      else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
+               || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
+        {
+          kw->url = svn_string_create (url ? url : "", pool);
+        }
+      else if ((! strcasecmp (keyword, SVN_KEYWORD_ID)))
+        {
+          const char *base_name = url ? svn_path_basename (url, pool) : "";
+          const char *human_date = NULL;
+
+          if (date)
+            SVN_ERR (date_prop_to_human (&human_date, FALSE, date, pool));
+
+          kw->id = svn_string_createf (pool, "%s %s %s %s",
+                                       base_name,
+                                       rev,
+                                       human_date ? human_date : "",
+                                       author ? author : "");
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
 
 
 /*** Helpers for svn_subst_translate_stream ***/

@@ -69,6 +69,25 @@ else
   REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
 fi
 
+### are all of the subdirs present?
+if test ! -d apr; then
+  echo "ERROR: an 'apr' subdirectory must be present."
+  exit 1
+fi
+if test ! -d apr-util; then
+  echo "ERROR: an 'apr-util' subdirectory must be present."
+  exit 1
+fi
+### gjs: no apr-iconv just yet
+#if test ! -d apr-iconv; then
+#  echo "ERROR: an 'apr-iconv' subdirectory must be present."
+#  exit 1
+#fi
+if test ! -d neon; then
+  echo "ERROR: a 'neon' subdirectory must be present."
+  exit 1
+fi
+
 ### The tarball's basename, also the name of the subdirectory into which
 ### it should unpack.
 DISTNAME=subversion-${RELEASE_NAME}
@@ -94,18 +113,11 @@ fi
 # This is necessary only because "make clean" doesn't appear
 # to clean up docs at the moment.
 echo "Cleaning old docs in docs/ ..."
-rm -f doc/programmer/design/svn-design.info
-rm -f doc/programmer/design/svn-design.info-*
-rm -f doc/programmer/design/svn-design.html
-rm -f doc/programmer/design/svn-design.txt
-rm -f doc/handbook/svn-handbook.info
-rm -f doc/handbook/svn-handbook.info-*
-rm -f doc/handbook/svn-handbook.html
-rm -f doc/handbook/svn-handbook.txt
-rm -f doc/handbook/translations/french/svn-handbook-french.info
-rm -f doc/handbook/translations/french/svn-handbook-french.info-*
-rm -f doc/handbook/translations/french/svn-handbook-french.html
-rm -f doc/handbook/translations/french/svn-handbook-french.txt
+make doc-clean
+rm -f doc/translations/french/svn-handbook-french.info
+rm -f doc/translations/french/svn-handbook-french.info-*
+rm -f doc/translations/french/svn-handbook-french.html
+rm -f doc/translations/french/svn-handbook-french.txt
 
 ### Build new docs.
 echo "Building new docs in docs/ ..."
@@ -122,24 +134,21 @@ echo "Exporting revision ${VERSION} of Subversion into sandbox..."
  svn export -q -r ${VERSION} http://svn.collab.net/repos/svn/$REPOS_PATH \
         ${DISTNAME} --username none --password none)
 
-### Ship with (relatively) clean APRUTIL, APR, and neon working copies
+### Ship with (relatively) clean APR-ICONV, APR-UTIL, APR, and neon subdirs
 ### inside the tarball, just to make people's lives easier.  Always do
-### APR-UTIL first, because it depends on APR's makefile.
-echo "Copying apr-util into sandbox, making clean..."
-cp -r apr-util ${DIST_SANDBOX}/${DISTNAME}
-(cd ${DIST_SANDBOX}/${DISTNAME}/apr-util && make extraclean)
-# Defang the APRUTIL working copy.
-echo "Removing all CVS/ and .cvsignore files from apr-util..."
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr-util -name CVS -type d -print`
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr-util -name .cvsignore -print`
+### APR-ICONV and APR-UTIL first, because they depend on APR's makefile.
+### gjs: no apr-iconv just yet
+#for pkg in apr-iconv apr-util apr ; do
+for pkg in apr-util apr ; do
+  echo "Copying $pkg into sandbox, making extraclean..."
+  cp -r $pkg ${DIST_SANDBOX}/${DISTNAME}
+  (cd ${DIST_SANDBOX}/${DISTNAME}/$pkg && make extraclean)
 
-echo "Copying apr into sandbox, making clean..."
-cp -r apr ${DIST_SANDBOX}/${DISTNAME}
-(cd ${DIST_SANDBOX}/${DISTNAME}/apr && make extraclean)
-# Defang the APR working copy.
-echo "Removing all CVS/ and .cvsignore files from apr..."
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name CVS -type d -print`
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name .cvsignore -print`
+  # It may have been checked out -- defang it.
+  echo "Removing all CVS/ and .cvsignore files from $pkg..."
+  rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/$pkg -name CVS -type d -print`
+  rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/$pkg -name .cvsignore -print`
+done
 
 # Clean most of neon.
 echo "Coping neon into sandbox, making clean..."
@@ -161,12 +170,8 @@ if test -n "$files"; then
 fi
 
 ### Run autogen.sh in the dist, so we ship with a configure script.
-# First make sure autogen.sh is executable, because, as Mike Pilato
-# points out, until we get permission versioning working, it won't be
-# executable on export from svn.
 echo "Running ./autogen.sh in sandbox, to create ./configure ..."
-chmod a+x ${DIST_SANDBOX}/${DISTNAME}/autogen.sh
-(cd ${DIST_SANDBOX}/${DISTNAME} && ./autogen.sh --release)
+(cd ${DIST_SANDBOX}/${DISTNAME} && ./autogen.sh --release) || exit 1
 
 ### Copy all the pre-built docs, so we ship with ready documentation.
 echo "Copying new docs into sandbox..."

@@ -54,20 +54,39 @@ typedef struct {
   void *edit_baton;
 } ra_svn_reporter_baton_t;
 
-/* Parse an svn URL's authority section into user, host, and port components.
- * Return 0 on success, -1 on failure.  *user may be set to NULL. */
-static int parse_url(const char *url, const char **user, unsigned short *port,
-                     const char **hostname, apr_pool_t *pool)
+/* Parse an svn URL's authority section into tunnel, user, host, and
+ * port components.  Return 0 on success, -1 on failure.  *tunnel
+ * and *user may be set to NULL. */
+static int parse_url(const char *url, const char **tunnel, const char **user,
+                     unsigned short *port, const char **hostname,
+                     apr_pool_t *pool)
 {
   const char *p;
 
+  *tunnel = NULL;
   *user = NULL;
   *port = SVN_RA_SVN_PORT;
   *hostname = NULL;
 
-  if (strncmp(url, "svn://", 6) != 0)
+  if (strncasecmp(url, "svn", 3) != 0)
     return -1;
-  url += 6;
+  url += 3;
+
+  /* Get the tunnel specification, if any. */
+  if (*url == '+')
+    {
+      url++;
+      p = strchr(url, ':');
+      if (!p)
+        return -1;
+      *tunnel = apr_pstrmemdup(pool, url, p - url);
+      url = p;
+    }
+
+  if (strncmp(url, "://", 3) != 0)
+    return -1;
+  url += 3;
+
   while (1)
     {
       p = url + strcspn(url, "@:/");
@@ -95,12 +114,6 @@ static int parse_url(const char *url, const char **user, unsigned short *port,
   return 0;
 }
 
-/* A pool cleanup handler to close a socket. */
-static apr_status_t cleanup_socket(void *arg)
-{
-  return apr_socket_close(arg);
-}
-
 static svn_error_t *make_connection(const char *hostname, unsigned short port,
                                     apr_socket_t **sock, apr_pool_t *pool)
 {
@@ -121,9 +134,6 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   if (status)
     return svn_error_createf(status, NULL, "Can't connect to host '%s'",
                              hostname);
-
-  apr_pool_cleanup_register(pool, *sock, cleanup_socket,
-                            apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
 }
@@ -170,12 +180,14 @@ static svn_error_t *interpret_kind(const char *str, apr_pool_t *pool,
 /* --- REPORTER IMPLEMENTATION --- */
 
 static svn_error_t *ra_svn_set_path(void *baton, const char *path,
-                                    svn_revnum_t rev, apr_pool_t *pool)
+                                    svn_revnum_t rev,
+                                    svn_boolean_t start_empty,
+                                    apr_pool_t *pool)
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "cr", path, rev));
-  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "crb", path, rev,
+                               start_empty));
   return SVN_NO_ERROR;
 }
 
@@ -185,42 +197,38 @@ static svn_error_t *ra_svn_delete_path(void *baton, const char *path,
   ra_svn_reporter_baton_t *b = baton;
 
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "delete-path", "c", path));
-  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
   return SVN_NO_ERROR;
 }
     
 static svn_error_t *ra_svn_link_path(void *baton, const char *path,
-                                     const char *url, svn_revnum_t rev,
+                                     const char *url,
+                                     svn_revnum_t rev,
+                                     svn_boolean_t start_empty,
                                      apr_pool_t *pool)
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccr",
-                               path, url, rev));
-  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccrb", path, url,
+                               rev, start_empty));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *ra_svn_finish_report(void *baton)
 {
   ra_svn_reporter_baton_t *b = baton;
-  apr_pool_t *pool = b->pool;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "finish-report", ""));
-  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
-  SVN_ERR(svn_ra_svn_drive_editor(b->conn, pool, b->editor, b->edit_baton,
-                                  TRUE, NULL));
-  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, b->pool, "finish-report", ""));
+  SVN_ERR(svn_ra_svn_drive_editor(b->conn, b->pool, b->editor, b->edit_baton,
+                                  NULL));
+  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, b->pool, ""));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *ra_svn_abort_report(void *baton)
 {
   ra_svn_reporter_baton_t *b = baton;
-  apr_pool_t *pool = b->pool;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "abort-report", ""));
-  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, b->pool, "abort-report", ""));
   return SVN_NO_ERROR;
 }
 
@@ -252,21 +260,66 @@ static void ra_svn_get_reporter(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* --- RA LAYER IMPLEMENTATION --- */
 
-static svn_error_t *find_tunnel_agent(const char *hostname, const char **agent,
-                                      apr_hash_t *config, apr_pool_t *pool)
+static svn_error_t *find_tunnel_agent(const char *tunnel, const char *hostname,
+                                      const char ***argv, apr_hash_t *config,
+                                      apr_pool_t *pool)
 {
-  svn_config_t *cfg = config ? apr_hash_get (config, 
-                                             SVN_CONFIG_CATEGORY_SERVERS,
-                                             APR_HASH_KEY_STRING) : NULL;
-  const char *server_group;
+  svn_config_t *cfg;
+  const char *val, *var, *cmd;
+  char **cmd_argv;
+  apr_size_t len;
+  apr_status_t status;
+  int n;
 
-  server_group = svn_config_find_group(cfg, hostname, 
-                                       SVN_CONFIG_SECTION_GROUPS, pool);
-  if (! server_group)
-    server_group = SVN_CONFIG_SECTION_GLOBAL;
+  /* Look up the tunnel specification in config. */
+  cfg = config ? apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
+                              APR_HASH_KEY_STRING) : NULL;
+  svn_config_get(cfg, &val, SVN_CONFIG_SECTION_TUNNELS, tunnel, NULL);
 
-  svn_config_get(cfg, agent, server_group, SVN_CONFIG_OPTION_SVN_TUNNEL_AGENT,
-                 NULL);
+  /* We have one predefined tunnel scheme, if it isn't overridden by config. */
+  if (!val && strcmp(tunnel, "ssh") == 0)
+    val = "$SVN_SSH ssh";
+
+  if (!val || !*val)
+    return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                             "Undefined tunnel scheme %s", tunnel);
+
+  /* If the scheme definition begins with "$varname", it means there
+   * is an environment variable which can override the command. */
+  if (*val == '$')
+    {
+      val++;
+      len = strcspn(val, " ");
+      var = apr_pstrmemdup(pool, val, len);
+      cmd = getenv(var);
+      if (!cmd)
+        {
+          cmd = val + len;
+          while (*cmd == ' ')
+            cmd++;
+          if (!*cmd)
+            return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                                     "Tunnel scheme %s requires environment "
+                                     "variable %s to be defined", tunnel, var);
+        }
+    }
+  else
+    cmd = val;
+
+  /* Tokenize the command into a list of arguments. */
+  status = apr_tokenize_to_argv(cmd, &cmd_argv, pool);
+  if (status != APR_SUCCESS)
+    return svn_error_createf(status, NULL, "Can't tokenize command %s", cmd);
+
+  /* Append the fixed arguments to the result. */
+  for (n = 0; cmd_argv[n] != NULL; n++)
+    ;
+  *argv = apr_palloc(pool, (n + 4) * sizeof(char *));
+  memcpy(*argv, cmd_argv, n * sizeof(char *));
+  (*argv)[n++] = hostname;
+  (*argv)[n++] = "svnserve";
+  (*argv)[n++] = "-t";
+  (*argv)[n] = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -285,18 +338,23 @@ static svn_boolean_t find_mech(apr_array_header_t *mechlist, const char *mech)
   return FALSE;
 }
 
-/* A pool cleanup handler to close a file. */
-static apr_status_t cleanup_file(void *arg)
+/* This function handles any errors which occur in the child process
+ * created for a tunnel agent.  We write the error out as a command
+ * failure; the code in ra_svn_open() to read the server's greeting
+ * will see the error and return it to the caller. */
+static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
+                                       const char *desc)
 {
-  return apr_file_close(arg);
-}
+  svn_ra_svn_conn_t *conn;
+  apr_file_t *in_file, *out_file;
+  svn_error_t *err;
 
-/* A pool cleanup handler to wait for a process. */
-static apr_status_t cleanup_process(void *arg)
-{
-  while (apr_proc_wait(arg, NULL, NULL, APR_WAIT) == APR_CHILD_NOTDONE)
-    ;
-  return APR_SUCCESS;
+  apr_file_open_stdin(&in_file, pool);
+  apr_file_open_stdout(&out_file, pool);
+  conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
+  err = svn_error_create(status, NULL, desc);
+  svn_error_clear(svn_ra_svn_write_cmd_failure(conn, pool, err));
+  svn_error_clear(svn_ra_svn_flush(conn, pool));
 }
 
 static svn_error_t *ra_svn_open(void **sess, const char *url,
@@ -307,51 +365,50 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
 {
   svn_ra_svn_conn_t *conn;
   apr_socket_t *sock;
-  const char *hostname, *user, *status, *tunnel_agent, *args[5];
+  const char *hostname, *user, *status, *tunnel, **args;
   unsigned short port;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist, *status_param;
   apr_procattr_t *attr;
   apr_proc_t *proc;
 
-  if (parse_url(url, &user, &port, &hostname, pool) != 0)
+  if (parse_url(url, &tunnel, &user, &port, &hostname, pool) != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              "Illegal svn repository URL '%s'", url);
 
-  SVN_ERR(find_tunnel_agent(hostname, &tunnel_agent, config, pool));
-  if (tunnel_agent)
+  if (tunnel)
     {
-      /* ### It would be nice if tunnel_agent could contain flags. */
-      args[0] = tunnel_agent;
-      args[1] = hostname;
-      args[2] = "svnserve";
-      args[3] = "-t";
-      args[4] = NULL;
+      SVN_ERR(find_tunnel_agent(tunnel, hostname, &args, config, pool));
       apr_procattr_create(&attr, pool);
       apr_procattr_io_set(attr, 1, 1, 0);
       apr_procattr_cmdtype_set(attr, APR_PROGRAM_PATH);
+      apr_procattr_child_errfn_set(attr, handle_child_process_error);
       proc = apr_palloc(pool, sizeof(*proc));
-      apr_proc_create(proc, tunnel_agent, args, NULL, attr, pool);
+      apr_proc_create(proc, *args, args, NULL, attr, pool);
       conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
       conn->proc = proc;
 
-      /* Wait for the process after closing the files by registering
-       * the process cleanup before the file ones, as they are
-       * executed in LIFO order.  */
-      apr_pool_cleanup_register(pool, proc, cleanup_process,
-                                apr_pool_cleanup_null);
+      /* Arrange for the tunnel agent to get a SIGKILL on pool
+       * cleanup.  This is a little extreme, but the alternatives
+       * weren't working out:
+       *   - Closing the pipes and waiting for the process to die
+       *     was prone to mysterious hangs which are difficult to
+       *     diagnose (e.g. svnserve dumps core due to unrelated bug;
+       *     sshd goes into zombie state; ssh connection is never
+       *     closed; ssh never terminates).
+       *   - Killing the tunnel agent with SIGTERM leads to unsightly
+       *     stderr output from ssh.
+       */
+      apr_pool_note_subprocess(pool, proc, APR_KILL_ALWAYS);
 
-      /* APR pipe objects don't have a child cleanup handler.  Set one
-       * up so child processes don't hold open the tunnel agent's
-       * input and output.  Unfortunately, the child cleanup handler
-       * will flush the child process's write buffer (APR gives no way
-       * to avoid that); this means we have to be careful not to leave
-       * stuff lying around in the write buffer between ra_lib
-       * calls.
-       *
-       * Also close the files when the pool is destroyed.  */
-      apr_pool_cleanup_register(pool, proc->in, cleanup_file, cleanup_file);
-      apr_pool_cleanup_register(pool, proc->out, cleanup_file, cleanup_file);
+      /* APR pipe objects inherit by default.  But we don't want the
+       * tunnel agent's pipes held open by future child processes
+       * (such as other ra_svn sessions), so turn that off. */
+      apr_file_inherit_unset(proc->in);
+      apr_file_inherit_unset(proc->out);
+
+      /* Guard against dotfile output to stdout on the server. */
+      svn_ra_svn_skip_leading_garbage(conn, pool);
     }
   else
     {
@@ -360,14 +417,14 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
     }
 
   /* Read server's greeting. */
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nnll", &minver, &maxver,
-                                &mechlist, &caplist));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "nnll", &minver, &maxver,
+                                       &mechlist, &caplist));
   /* We only support protocol version 1. */
   if (minver > 1)
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
                              "Server requires minimum version %d",
                              (int) minver);
-  if (tunnel_agent && find_mech(mechlist, "EXTERNAL"))
+  if (tunnel && find_mech(mechlist, "EXTERNAL"))
     {
       /* Ask the server to use the ssh connection environment (on
        * Unix, that means uid) to determine the authentication name. */
@@ -560,6 +617,7 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
       SVN_ERR(svn_stream_write(stream, item->u.string->data,
                                &item->u.string->len));
     }
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   if (expected_checksum)
     {
@@ -632,22 +690,6 @@ static svn_error_t *ra_svn_get_dir(void *sess, const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_checkout(void *sess, svn_revnum_t rev,
-                                    svn_boolean_t recurse,
-                                    const svn_delta_editor_t *editor,
-                                    void *edit_baton, apr_pool_t *pool)
-{
-  svn_ra_svn_conn_t *conn = sess;
-
-  /* Tell the server to start a checkout. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "checkout", "(?r)b", rev, recurse));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
-
-  /* Let the server drive the checkout editor. */
-  SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, TRUE, NULL));
-  SVN_ERR(svn_ra_svn_flush(conn, pool));
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *ra_svn_update(void *sess,
                                   const svn_ra_reporter_t **reporter,
@@ -664,7 +706,6 @@ static svn_error_t *ra_svn_update(void *sess,
   /* Tell the server we want to start an update. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cb", rev, target,
                                recurse));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * update_editor upon finish_report(). */
@@ -689,7 +730,6 @@ static svn_error_t *ra_svn_switch(void *sess,
   /* Tell the server we want to start a switch. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "(?r)cbc", rev, target,
                                recurse, switch_url));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * update_editor upon finish_report(). */
@@ -712,7 +752,6 @@ static svn_error_t *ra_svn_status(void *sess,
 
   /* Tell the server we want to start a status operation. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "cb", target, recurse));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * status_editor upon finish_report(). */
@@ -739,7 +778,6 @@ static svn_error_t *ra_svn_diff(void *sess,
   /* Tell the server we want to start a diff. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbc", rev, target,
                                recurse, ignore_ancestry, versus_url));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * diff_editor upon finish_report(). */
@@ -871,7 +909,6 @@ static const svn_ra_plugin_t ra_svn_plugin = {
   ra_svn_commit,
   ra_svn_get_file,
   ra_svn_get_dir,
-  ra_svn_checkout,
   ra_svn_update,
   ra_svn_switch,
   ra_svn_status,

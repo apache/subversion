@@ -1,0 +1,67 @@
+head	1.3;
+access;
+symbols;
+locks; strict;
+comment	@; @;
+
+
+1.3
+date	95.12.30.18.37.22;	author jrandom;	state dead;
+branches;
+next	1.2;
+
+1.2
+date	95.12.11.00.27.53;	author jrandom;	state dead;
+branches;
+next	1.1;
+
+1.1
+date	93.06.18.05.46.07;	author jrandom;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	93.06.18.05.46.08;	author jrandom;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.3
+log
+@Remove this file for the second time, which should have no effect.
+@
+text
+@The original text of this file was much longer, but we didn't
+need it for the regression test, so we removed it.  It was
+src/gnu/usr.bin/cvs/contrib/pcl-cvs/Attic/cookie.el,v in the FreeBSD
+CVS repository.
+@
+
+
+1.2
+log
+@Remove this file for the first time.
+@
+text
+@@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@@
+
+
+1.1.1.1
+log
+@Updated CVS
+@
+text
+@@

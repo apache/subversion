@@ -217,11 +217,16 @@ svn_repos_begin_report (void **report_baton,
  * @a path; that allows the reporter to set up the correct root revision
  * (useful when creating a txn, for example).
  *
+ * If @a start_empty is set and @a path is a directory, then remove
+ * all children and props of the freshly-linked directory.  This is
+ * for 'low confidence' client reporting.
+ * 
  * All temporary allocations are done in @a pool.
  */
 svn_error_t *svn_repos_set_path (void *report_baton,
                                  const char *path,
                                  svn_revnum_t revision,
+                                 svn_boolean_t start_empty,
                                  apr_pool_t *pool);
 
 
@@ -231,12 +236,17 @@ svn_error_t *svn_repos_set_path (void *report_baton,
  * anchor/target used in the creation of the @a report_baton, @a link_path 
  * is an absolute filesystem path!
  *
+ * If @a start_empty is set and @a path is a directory, then remove
+ * all children and props of the freshly-linked directory.  This is
+ * for 'low confidence' client reporting.
+ *
  * All temporary allocations are done in @a pool.
  */
 svn_error_t *svn_repos_link_path (void *report_baton,
                                   const char *path,
                                   const char *link_path,
                                   svn_revnum_t revision,
+                                  svn_boolean_t start_empty,
                                   apr_pool_t *pool);
 
 /** Given a @a report_baton constructed by @c svn_repos_begin_report(), 
@@ -253,7 +263,9 @@ svn_error_t *svn_repos_delete_path (void *report_baton,
 
 /** Make the filesystem compare the transaction to a revision and have
  * it drive an update editor (using @c svn_repos_delta_dirs()), then
- * abort the transaction.
+ * abort the transaction.  If an error occurs during the driving of
+ * the editor, we do NOT abort the edit; that responsibility belongs
+ * to the caller, if it happens at all.
  */
 svn_error_t *svn_repos_finish_report (void *report_baton);
 
@@ -289,14 +301,6 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
  * propchange editor calls that relay special "entry props" (this
  * is typically used only for working copy updates).
  *
- * If @a use_copy_history is @c TRUE, then when copy history is present on
- * an added node, pass it through to @a editor, and express differences
- * as against the node referred to by that copy history.  Else if
- * @a use_copy_history is @c FALSE, then never pass copyfrom history, and
- * express differences as full adds (i.e., all directory entries are
- * reported as adds, and text deltas are sent against the empty
- * string).
- *
  * @a ignore_ancestry instructs the function to ignore node ancestry
  * when determining how to transmit differences.
  *
@@ -320,9 +324,24 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
                      svn_boolean_t entry_props,
-                     svn_boolean_t use_copy_history,
                      svn_boolean_t ignore_ancestry,
                      apr_pool_t *pool);
+
+/** Use the provided @a editor and @a edit_baton to describe the
+ * skeletal changes made in a particular filesystem @a root
+ * (revision or transaction).
+ *
+ * The @a editor passed to this function should be aware of the fact
+ * that calls to its change_dir_prop(), change_file_prop(), and
+ * apply_textdelta() functions will not contain meaningful data, and
+ * merely serve as indications that properties or textual contents
+ * were changed. 
+ */
+svn_error_t *
+svn_repos_replay (svn_fs_root_t *root,
+                  const svn_delta_editor_t *editor,
+                  void *edit_baton,
+                  apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/
@@ -413,22 +432,6 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
      
 */
 
-
-/* ---------------------------------------------------------------*/
-
-/* Making checkouts. */
-
-/** Recursively walk over @a revnum:@a path inside an already-open repository
- * @a fs, and drive a checkout @a editor, allocating all data in @a pool.
- */
-svn_error_t *
-svn_repos_checkout (svn_fs_t *fs, 
-                    svn_revnum_t revnum, 
-                    svn_boolean_t recurse,
-                    const char *fs_path,
-                    const svn_delta_editor_t *editor, 
-                    void *edit_baton,
-                    apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/

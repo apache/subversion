@@ -272,17 +272,24 @@ assemble_status (svn_wc_status_t **status,
 
       /* 3. Highest precedence:
 
-            a. check to see if file or dir is just missing.  This
-               overrides every possible state *except* deletion.
-               (If something is deleted or scheduled for it, we
-               don't care if the working file exists.)
+            a. check to see if file or dir is just missing, or
+               incomplete.  This overrides every possible state
+               *except* deletion.  (If something is deleted or
+               scheduled for it, we don't care if the working file
+               exists.)
 
             b. check to see if the file or dir is present in the
                file system as the same kind it was versioned as.
 
          4. Check for locked directory (only for directories). */
 
-      if (path_kind == svn_node_none)
+      if (entry->incomplete
+          && (final_text_status != svn_wc_status_deleted)
+          && (final_text_status != svn_wc_status_added))
+        {
+          final_text_status = svn_wc_status_incomplete;
+        }
+      else if (path_kind == svn_node_none)
         {
           if (final_text_status != svn_wc_status_deleted)
             final_text_status = svn_wc_status_absent;

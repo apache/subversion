@@ -23,11 +23,12 @@
 #ifndef SVN_HASH_H
 #define SVN_HASH_H
 
-#include "svn_error.h"
 #include <apr_pools.h>
-#include <apr_tables.h>         /* for apr_array_header_t */
 #include <apr_hash.h>
 #include <apr_file_io.h>
+
+#include "svn_types.h"
+#include "svn_error.h"
 
 
 #ifdef __cplusplus

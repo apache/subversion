@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 #
 #  main.py: a shared, automated test suite for Subversion
@@ -359,14 +360,12 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
     print 'ERROR:  dump failed; did not see revision', head_revision
     raise SVNRepositoryCopyFailure
 
-  load_re = re.compile(r'^------- Committed new rev (\d+)' +
-                       r' \(loaded from original rev (\d+)\) >>>$')
+  load_re = re.compile(r'^------- Committed revision (\d+) >>>$')
   expect_revision = 1
   for load_line in load_lines:
     match = load_re.match(load_line)
     if match:
-      if (match.group(1) != str(expect_revision)
-          or match.group(2) != str(expect_revision)):
+      if match.group(1) != str(expect_revision):
         print 'ERROR:  load failed:', load_line,
         raise SVNRepositoryCopyFailure
       expect_revision += 1

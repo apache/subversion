@@ -29,7 +29,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
   envvars={
     "$(SVN_APR_LIBS)": ["apr"],
-    "$(SVN_APRUTIL_LIBS)": ["aprutil"],
+    "$(SVN_APRUTIL_LIBS)": ["aprutil", "apriconv"],
     "$(NEON_LIBS)":  ["neon"],
     "$(SVN_DB_LIBS)": [],
     "$(SVN_XMLRPC_LIBS)": [],
@@ -48,7 +48,22 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       open(dest,'wb').write(open(src, 'rb').read())
       os.unlink(src)
 
-  def __init__(self, fname, verfname, subdir):
+  def parse_options(self, options):
+    self.httpd_path = None
+    self.zlib_path = None
+    self.openssl_path = None
+    self.skip_targets = { 'mod_dav_svn': None }
+
+    for opt, val in options:
+      if opt == '--with-httpd':
+        self.httpd_path = os.path.abspath(val)
+        del self.skip_targets['mod_dav_svn']
+      elif opt == '--with-zlib':
+        self.zlib_path = os.path.abspath(val)
+      elif opt == '--with-openssl':
+        self.openssl_path = os.path.abspath(val)
+
+  def __init__(self, fname, verfname, options, subdir):
     """
     Do some Windows specific setup
 
@@ -67,8 +82,11 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     create the necessary paths
 
     """
+
+    # parse (and save) the options that were passed to us
+    self.parse_options(options)
+
 ### GJS: don't do this right now
-#    self.copyfile(os.path.join("subversion","libsvn_subr","getdate.c"), os.path.join("subversion","libsvn_subr","getdate.cw"))
 #    self.movefile(os.path.join("subversion","mod_dav_svn","davlog.c"), os.path.join("subversion","mod_dav_svn","log.c"))
 #    self.movefile(os.path.join("subversion","mod_dav_svn","davrepos.c"), os.path.join("subversion","mod_dav_svn","repos.c"))
 
@@ -108,6 +126,25 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         print 'Wrote %s' % svnissrel
       if self.write_file_if_changed(svnissdeb, buf.replace("@CONFIG@", "Debug")):
         print 'Wrote %s' % svnissdeb
+
+    # Generate the build_neon.bat file
+    data = {'zlib_path': self.zlib_path,
+            'openssl_path': self.openssl_path}
+    self.write_with_template(os.path.join('build', 'win32', 'build_neon.bat'),
+                             'build_neon.ezt', data)
+
+    # gstein wrote:
+    # > we don't want to munge the working copy since we might be
+    # > generating the Windows build files on a Unix box prior to
+    # > release. this copy already occurs in svn_config.dsp. (is that
+    # > broken or something?)
+    # No, but if getdate.c doesn't exist, it won't get pulled into the
+    # libsvn_subr.dsp (or .vcproj or whatever), so it won't get built.
+    getdate_c = os.path.join('subversion', 'libsvn_subr', 'getdate.c')
+    if not os.path.exists(getdate_c):
+      getdate_cw = getdate_c + 'w'
+      print 'Copied', getdate_cw, 'to', getdate_c
+      self.copyfile(getdate_c, getdate_cw)
 
     #Initialize parent
     gen_base.GeneratorBase.__init__(self, fname, verfname)
@@ -238,10 +275,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                         ""],
                                        rootpath)
       fakeincludes.extend([
-        "$(HTTPD)/srclib/apr/include",
-        "$(HTTPD)/srclib/apr-util/include",
-        "$(HTTPD)/srclib/apr-util/xml/expat/lib",
-        "$(HTTPD)/include"
+        self.httpd_path + "/srclib/apr/include",
+        self.httpd_path + "/srclib/apr-util/include",
+        self.httpd_path + "/srclib/apr-util/xml/expat/lib",
+        self.httpd_path + "/include"
         ])
     else:
       fakeincludes = self.map_rootpath(["subversion/include",
@@ -264,22 +301,22 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if target.name == 'mod_dav_svn':
       fakelibdirs = self.map_rootpath([self.dblibpath], rootpath)
       fakelibdirs.extend([
-        "$(HTTPD)/%s" % cfg,
-        "$(HTTPD)/modules/dav/main/%s" % cfg,
-        "$(HTTPD)/srclib/apr/%s" % cfg,
-        "$(HTTPD)/srclib/apr-util/%s" % cfg,
-        "$(HTTPD)/srclib/apr-util/xml/expat/lib/%s" % libcfg
+        self.httpd_path + "/%s" % cfg,
+        self.httpd_path + "/modules/dav/main/%s" % cfg,
+        self.httpd_path + "/srclib/apr/%s" % cfg,
+        self.httpd_path + "/srclib/apr-util/%s" % cfg,
+        self.httpd_path + "/srclib/apr-util/xml/expat/lib/%s" % libcfg
         ])
     else:
       fakelibdirs = self.map_rootpath([self.dblibpath], rootpath)
 
     return self.make_windirs(fakelibdirs)
 
-  def get_win_libs(self, target):
+  def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
     
     if target.name == 'mod_dav_svn':
-      return [ self.dblibname+'.lib',
+      return [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
                'xml.lib',
                'libapr.lib',
                'libaprutil.lib',
@@ -301,7 +338,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if not isinstance(lib, gen_base.ExternalLibrary):
           continue
 
-        nondeplibs.append(lib.fname+'.lib')
+        if cfg == 'Debug' and lib.fname == self.dblibname:
+          nondeplibs.append(lib.fname+'d.lib')
+        else:
+          nondeplibs.append(lib.fname+'.lib')
 
     return nondeplibs
 
@@ -338,14 +378,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         sources[str(src), reldir] = None
 
     return sources.keys()
-
-  def find_win_project(self, base, projtypes):
-    "Find a project for base that is one of projtypes & return the projects filename"
-
-    for x in projtypes:
-      if os.path.exists(base+x):
-        return base+x
-    raise gen_base.GenError("Unable to find project file for external build rule '%s'" % base)
 
   def write_file_if_changed(self, fname, new_contents):
     """Rewrite the file if new_contents are different than its current content.

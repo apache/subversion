@@ -73,6 +73,9 @@ struct edit_baton
   /* Whether this edit will descend into subdirs */
   svn_boolean_t recurse;
 
+  /* Was the root actually opened (was this a non-empty edit)? */
+  svn_boolean_t root_opened;
+
   /* These used only in checkouts. */
   svn_boolean_t is_checkout;
   const char *ancestor_url;
@@ -277,9 +280,8 @@ make_dir_baton (const char *path,
 
 
 /* Decrement the bump_dir_info's reference count. If it hits zero,
-   then this directory is "done". This means it is safe to bump the
-   revision of the directory, and to add it as a child to its parent
-   directory.
+   then this directory is "done". This means it is safe to remove the
+   'incomplete' flag attached to the THIS_DIR entry.
 
    In addition, when the directory is "done", we loop onto the parent's
    bump information to possibly mark it as done, too.
@@ -299,45 +301,14 @@ maybe_bump_dir_info (struct edit_baton *eb,
       if (--bdi->ref_count > 0)
         return SVN_NO_ERROR;    /* directory isn't done yet */
 
-      /* Bump this dir to the new revision if this directory is, or is
-         beneath, the target of an update, or unconditionally if this
-         is a checkout. */
-      if (eb->is_checkout || bdi->parent || (! eb->target))
-        {
-          apr_uint32_t modify_flags = SVN_WC__ENTRY_MODIFY_REVISION;
-
-          tmp_entry.revision = eb->target_revision;
-          tmp_entry.url = bdi->new_URL;
-
-          if (bdi->new_URL)
-            modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
-
-          SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, bdi->path,
-                                        pool));
-          
-          SVN_ERR (svn_wc__entry_modify (adm_access, NULL, &tmp_entry,
-                                         modify_flags, TRUE, pool));
-        }
-
-      /* If this directory is newly added, then it probably doesn't
-         have an entry in the parent's list of entries (unless the
-         parent contains a phantom "deleted" entry). The directory is
-         now complete, and can be added. */
-      if (bdi->added && bdi->parent)
-        {
-          const char *name = svn_path_basename (bdi->path, pool);
-
-          tmp_entry.kind = svn_node_dir;
-          tmp_entry.deleted = FALSE;
-
-          SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
-                                        bdi->parent->path, pool));
-
-          SVN_ERR (svn_wc__entry_modify (adm_access, name, &tmp_entry,
-                                         (SVN_WC__ENTRY_MODIFY_KIND
-                                          | SVN_WC__ENTRY_MODIFY_DELETED),
-                                         TRUE, pool));
-        }
+      /* The refcount is zero, thus we remove the 'incomplete' flag.  */
+      SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, bdi->path,
+                                    pool));
+      tmp_entry.incomplete = FALSE;      
+      SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* this_dir */,
+                                     &tmp_entry,
+                                     SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                                     TRUE /* immediate write */,  pool));
     }
   /* we exited the for loop because there are no more parents */
 
@@ -499,8 +470,8 @@ prep_directory (struct dir_baton *db,
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  SVN_ERR (svn_wc__ensure_adm (db->path, ancestor_url, ancestor_revision,
-                               pool));
+  SVN_ERR (svn_wc_ensure_adm (db->path, ancestor_url, ancestor_revision,
+                              pool));
 
   if (! db->edit_baton->adm_access
       || strcmp (svn_wc_adm_access_path (db->edit_baton->adm_access),
@@ -616,9 +587,34 @@ open_root (void *edit_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d;
 
+  /* Note that something interesting is actually happening in this
+     edit run. */
+  eb->root_opened = TRUE;
+
   *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->is_checkout, pool);
   if (eb->is_checkout)
-    SVN_ERR (prep_directory (d, eb->ancestor_url, eb->target_revision, pool));
+    {
+      SVN_ERR (prep_directory (d, eb->ancestor_url,
+                               eb->target_revision, pool));
+    }
+  else if (! eb->target)
+    {
+      /* For an update with a NULL target, this is equivalent to open_dir(): */
+      svn_wc_adm_access_t *adm_access;
+      svn_wc_entry_t tmp_entry;
+
+      /* Mark directory as being at target_revision, but incomplete. */  
+      tmp_entry.revision = eb->target_revision;
+      tmp_entry.incomplete = TRUE;
+      SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
+                                    d->path, pool));
+      SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* THIS_DIR */,
+                                     &tmp_entry,
+                                     SVN_WC__ENTRY_MODIFY_REVISION |
+                                     SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                                     TRUE /* immediate write */,
+                                     pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -753,6 +749,7 @@ add_directory (const char *path,
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *parent_entry, *dir_entry;
       apr_hash_t *entries;
+      svn_wc_entry_t tmp_entry;
 
       SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
                                     pb->path, db->pool));
@@ -762,7 +759,7 @@ add_directory (const char *path,
                                                   db->name,
                                                   db->pool);
       copyfrom_revision = pb->edit_baton->target_revision;      
-
+      
       /* Extra check:  a directory by this name may not exist, but there
          may still be one scheduled for addition.  That's a genuine
          tree-conflict.  */
@@ -773,6 +770,20 @@ add_directory (const char *path,
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            "failed to add dir '%s': \nobject of the same name is already "
            "scheduled for addition", path);
+
+      /* Immediately create an entry for the new directory in the parent.
+         Note that the parent must already be either added or opened, and
+         thus it's in an 'incomplete' state just like the new dir.  */      
+      tmp_entry.kind = svn_node_dir;
+      /* (Note that there may already exist a 'ghost' entry in the
+         parent with the same name, in a 'deleted' state.  If so, it's
+         fine to overwrite it... but we need to make sure we get rid
+         of the 'deleted' flag when doing so: */
+      tmp_entry.deleted = FALSE;
+      SVN_ERR (svn_wc__entry_modify (adm_access, db->name, &tmp_entry,
+                                     SVN_WC__ENTRY_MODIFY_KIND |
+                                     SVN_WC__ENTRY_MODIFY_DELETED,
+                                     TRUE /* immediate write */, pool));
     }
 
   /* Create dir (if it doesn't yet exist), make sure it's formatted
@@ -803,6 +814,9 @@ open_directory (const char *path,
                 void **child_baton)
 {
   struct dir_baton *parent_dir_baton = parent_baton;
+  struct edit_baton *eb = parent_dir_baton->edit_baton;
+  svn_wc_entry_t tmp_entry;
+  svn_wc_adm_access_t *adm_access;
 
   /* kff todo: check that the dir exists locally, find it somewhere if
      its not there?  Yes, all this and more...  And ancestor_url and
@@ -816,6 +830,18 @@ open_directory (const char *path,
                       pool);
 
   *child_baton = this_dir_baton;
+
+  /* Mark directory as being at target_revision, but incomplete. */
+  tmp_entry.revision = eb->target_revision;
+  tmp_entry.incomplete = TRUE;
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
+                                this_dir_baton->path, pool));  
+  SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* THIS_DIR */,
+                                 &tmp_entry,
+                                 SVN_WC__ENTRY_MODIFY_REVISION |
+                                 SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                                 TRUE /* immediate write */,
+                                 pool));
 
   return SVN_NO_ERROR;
 }
@@ -873,7 +899,6 @@ close_directory (void *dir_baton,
      to deal with them. */
   if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
     {
-      char *revision_str;
       svn_wc_adm_access_t *adm_access;
       apr_file_t *log_fp = NULL;
       apr_status_t apr_err;
@@ -970,29 +995,6 @@ close_directory (void *dir_baton,
                                    SVN_WC_TIMESTAMP_WC,
                                    NULL);
         }
-
-      /* ### This isn't correct with postfix text deltas!  Changing the
-         ### revision here is correct in so far as it makes the revision
-         ### consistent with the updated properties.  Changing the revision
-         ### here may be wrong if postfix text deltas are being used as any
-         ### new files will not yet have been added to the entries file.
-         ### This only becomes a real problem if the client is interrupted
-         ### between this revision change and the postfix close_file that
-         ### adds the new entry.  It's a theoretical problem since we don't
-         ### currently use postfix text deltas. */
-      revision_str = apr_psprintf (db->pool,
-                                   "%" SVN_REVNUM_T_FMT,
-                                   db->edit_baton->target_revision);
-
-      svn_xml_make_open_tag (&entry_accum,
-                             db->pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             SVN_WC_ENTRY_THIS_DIR,
-                             SVN_WC__ENTRY_ATTR_REVISION,
-                             revision_str,
-                             NULL);
 
       accumulate_entry_props (entry_accum, SVN_WC_ENTRY_THIS_DIR, entry_props,
                               pool);
@@ -1911,7 +1913,7 @@ close_edit (void *edit_baton,
 
   /* Do nothing for checkout;  all urls and working revs are fine.
      Updates and switches, though, have to be cleaned up.  */
-  if (! eb->is_checkout)
+  if ((! eb->is_checkout) && eb->root_opened)
     {
       /* Make sure our update target now has the new working revision.
          Also, if this was an 'svn switch', then rewrite the target's
@@ -1924,6 +1926,9 @@ close_edit (void *edit_baton,
                 eb->recurse,
                 eb->switch_url,
                 eb->target_revision,
+                eb->notify_func,
+                eb->notify_baton,
+                TRUE,
                 eb->pool));
     }
 
@@ -1985,7 +1990,7 @@ make_editor (svn_wc_adm_access_t *adm_access,
     assert (ancestor_url != NULL);
 
   /* Construct an edit baton. */
-  eb = apr_palloc (subpool, sizeof (*eb));
+  eb = apr_pcalloc (subpool, sizeof (*eb));
   eb->pool            = subpool;
   eb->is_checkout     = is_checkout;
   eb->target_revision = target_revision;

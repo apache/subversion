@@ -98,7 +98,8 @@ AC_DEFUN(SVN_DOWNLOAD_APRUTIL,
   echo ""
   echo "   cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr-util"
   echo ""
-  echo "Run that right here in the top-level of the Subversion tree."
+  echo "Run that right here in the top level of the Subversion tree,"
+  echo "then run autogen.sh again."
   echo ""
   AC_MSG_ERROR([no suitable APRUTIL found])
 ])

@@ -30,7 +30,7 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 
 
 struct log_receiver_baton

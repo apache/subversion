@@ -8,9 +8,10 @@ $LastChangedDate$
 Contents:
 
      I. STATUS
-    II. WHY NOT 100% PURE JAVA?
-   III. WHY SWIG?
-    IV. TODO
+    II. WHY INTERFACES?
+   III. WHY NOT 100% PURE JAVA?
+    IV. WHY SWIG?
+     V. TODO
 
 
 I.     STATUS
@@ -34,7 +35,17 @@ I.     STATUS
        for guidance.
 
 
-II.    WHY NOT 100% PURE JAVA?
+II.    WHY INTERFACES?
+
+  A.   They present an API which is familiar to Java programmers,
+       regardless of the implementation generation method
+       (e.g. hand-coded, SWIG, etc.).
+
+  B.   They will allow for the possibility of multiple sets of Java
+       bindings for Subversion, all presenting an uniform API.
+
+
+III.   WHY NOT 100% PURE JAVA?
 
        tigris.org's C library is the reference implementation of a
        Subversion client's logic, and is the most robust client
@@ -45,7 +56,7 @@ II.    WHY NOT 100% PURE JAVA?
        loadable libraries shared by all existing implementations.
 
 
-III.   WHY SWIG?
+IV.    WHY SWIG?
 
        It's likely that Greg Stein has already answered this on the
        dev@subversion.tigris.org mailing list.  Search the archive
@@ -58,7 +69,7 @@ III.   WHY SWIG?
        generated code.
 
 
-IV.    TODO
+V.     TODO
 
        Update xela's JUnit work, adding a swig-java-check target to
        the top-level build system.

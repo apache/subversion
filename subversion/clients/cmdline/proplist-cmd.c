@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include "svn_wc.h"
+#include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
@@ -92,16 +93,33 @@ svn_cl__proplist (apr_getopt_t *os,
     }
   else  /* operate on normal, versioned properties (not revprops) */
     {
+      apr_pool_t *subpool = svn_pool_create (pool);
+
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
           apr_array_header_t *props;
           int j;
-          
-          SVN_ERR (svn_client_proplist (&props, target, 
-                                        &(opt_state->start_revision),
-                                        opt_state->recursive, ctx, pool));
-          
+          svn_error_t *err;
+
+          svn_pool_clear (subpool);
+          err = svn_client_proplist (&props, target,
+                                     &(opt_state->start_revision),
+                                     opt_state->recursive, ctx, subpool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+                {
+                  if (!opt_state->quiet)
+                    {
+                      svn_handle_warning (stderr, err);
+                    }
+                  continue;
+                }
+              else
+                  return err;
+            }
+
           for (j = 0; j < props->nelts; ++j)
             {
               svn_client_proplist_item_t *item 
@@ -109,12 +127,14 @@ svn_cl__proplist (apr_getopt_t *os,
               const char *node_name_native;
               SVN_ERR (svn_utf_cstring_from_utf8_stringbuf (&node_name_native,
                                                             item->node_name,
-                                                            pool));
+                                                            subpool));
               printf("Properties on '%s':\n", node_name_native);
               SVN_ERR (svn_cl__print_prop_hash
-                       (item->prop_hash, (! opt_state->verbose), pool));
+                       (item->prop_hash, (! opt_state->verbose), subpool));
             }
+          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
         }
+      svn_pool_destroy (subpool);
     }
 
   return SVN_NO_ERROR;

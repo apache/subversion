@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include "svn_wc.h"
+#include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -74,6 +75,11 @@ print_entry (const char *target,
     {
       SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->repos, pool));
       printf ("Repository: %s\n", native);
+    }
+ 
+  if (entry->uuid) 
+    {
+      printf ("Repository UUID: %s\n", entry->uuid);
     }
  
   if (SVN_IS_VALID_REVNUM (entry->revision))
@@ -232,7 +238,9 @@ svn_cl__info (apr_getopt_t *os,
               apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
+  apr_pool_t *subpool = svn_pool_create (pool);
   int i;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -250,35 +258,38 @@ svn_cl__info (apr_getopt_t *os,
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
 
+      svn_pool_clear (subpool);
       SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE,
-                                      opt_state->recursive, pool));
-      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
+                                      opt_state->recursive, subpool));
+      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));
       if (! entry)
         {
           /* Print non-versioned message and extra newline separator. */
 
           const char *native;
           /* Get a non-UTF8 version of the target. */
-          SVN_ERR (svn_utf_cstring_from_utf8 (&native, target, pool));
+          SVN_ERR (svn_utf_cstring_from_utf8 (&native, target, subpool));
 
           printf ("%s:  (Not a versioned resource)\n\n", native);
           continue;
         }
 
       if (entry->kind == svn_node_file)
-        SVN_ERR (print_entry (target, entry, pool));
+        SVN_ERR (print_entry (target, entry, subpool));
 
       else if (entry->kind == svn_node_dir)
         {
           if (opt_state->recursive)
             /* the generic entry-walker: */
             SVN_ERR (svn_wc_walk_entries (target, adm_access,
-                                          &entry_walk_callbacks, pool,
+                                          &entry_walk_callbacks, subpool,
                                           FALSE, pool));
           else
-            SVN_ERR (print_entry (target, entry, pool));
+            SVN_ERR (print_entry (target, entry, subpool));
         }
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
     }
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }

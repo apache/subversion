@@ -810,6 +810,85 @@ def hudson_part_2(sbox):
                                                 None, None,
                                                 wc_dir)
 
+#----------------------------------------------------------------------
+
+# Test a possible regression in our 'deleted' post-commit handling.
+#
+# This test moves files from one subdir to another, commits, then
+# updates the empty directory.  Nothing should be printed, assuming
+# all the moved files are properly marked as 'deleted' and reported to
+# the server.
+
+def hudson_part_2_1(sbox):
+  "hudson prob 2.1:  move files, update empty dir"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Move all the files in H to G
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  chi_path = os.path.join(H_path, 'chi')
+  psi_path = os.path.join(H_path, 'psi')
+  omega_path = os.path.join(H_path, 'omega') 
+
+  svntest.main.run_svn(None, 'mv', chi_path, G_path)
+  svntest.main.run_svn(None, 'mv', psi_path, G_path)
+  svntest.main.run_svn(None, 'mv', omega_path, G_path)
+  
+  # Create expected commit output.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/chi' : Item(verb='Deleting'),
+    'A/D/H/omega' : Item(verb='Deleting'),
+    'A/D/H/psi' : Item(verb='Deleting'),
+    'A/D/G/chi' : Item(verb='Adding'),
+    'A/D/G/omega' : Item(verb='Adding'),
+    'A/D/G/psi' : Item(verb='Adding'),
+    })
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/D/H/chi')
+  expected_status.remove('A/D/H/omega')
+  expected_status.remove('A/D/H/psi')
+  expected_status.add({ 'A/D/G/chi' :
+                        Item(wc_rev=2, repos_rev=2, status='  ') })
+  expected_status.add({ 'A/D/G/omega' :
+                        Item(wc_rev=2, repos_rev=2, status='  ') })
+  expected_status.add({ 'A/D/G/psi' :
+                        Item(wc_rev=2, repos_rev=2, status='  ') })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Now, assuming all three files in H are marked as 'deleted', an
+  # update of H should print absolutely nothing.
+  expected_output = svntest.wc.State(wc_dir, { })
+
+  # Reuse expected_status
+  expected_status.tweak(wc_rev=2)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  expected_disk.add({
+    'A/D/G/chi' : Item("This is the file 'chi'."),
+    })
+  expected_disk.add({
+    'A/D/G/omega' : Item("This is the file 'omega'."),
+    })
+  expected_disk.add({
+    'A/D/G/psi' : Item("This is the file 'psi'."),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)  
 
 #----------------------------------------------------------------------
 
@@ -1898,6 +1977,7 @@ test_list = [ None,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
               hudson_part_2,
+              hudson_part_2_1,
               XFail(hook_test),
               merge_mixed_revisions,
               commit_uri_unsafe,

@@ -64,7 +64,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
 static const char *writebuf_push(svn_ra_svn_conn_t *conn, const char *data,
                                  const char *end)
 {
-  apr_size_t buflen, copylen;
+  apr_ssize_t buflen, copylen;
 
   buflen = sizeof(conn->write_buf) - conn->write_pos;
   copylen = (buflen < end - data) ? buflen : end - data;
@@ -116,7 +116,7 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn,
       SVN_ERR(writebuf_flush(conn));
     }
 
-  if (end - data > sizeof(conn->write_buf))
+  if (end - data > (apr_ssize_t)sizeof(conn->write_buf))
     SVN_ERR(writebuf_output(conn, data, end - data));
   else
     writebuf_push(conn, data, end);
@@ -141,7 +141,7 @@ static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * we reach END. */
 static char *readbuf_drain(svn_ra_svn_conn_t *conn, char *data, char *end)
 {
-  apr_size_t buflen, copylen;
+  apr_ssize_t buflen, copylen;
 
   buflen = conn->read_end - conn->read_ptr;
   copylen = (buflen < end - data) ? buflen : end - data;
@@ -211,7 +211,7 @@ static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn,
   data = readbuf_drain(conn, data, end);
 
   /* Read large chunks directly into buffer. */
-  while (end - data > sizeof(conn->read_buf))
+  while (end - data > (apr_ssize_t)sizeof(conn->read_buf))
     {
       writebuf_flush(conn);
       count = end - data;
@@ -227,6 +227,43 @@ static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn,
       data = readbuf_drain(conn, data, end);
     }
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *readbuf_skip_leading_garbage(svn_ra_svn_conn_t *conn)
+{
+  char buf[256];  /* Must be smaller than sizeof(conn->read_buf) - 1. */
+  const char *p, *end;
+  apr_size_t len;
+  svn_boolean_t lparen = FALSE;
+
+  assert(conn->read_ptr == conn->read_end);
+  while (1)
+    {
+      /* Read some data directly from the connection input source. */
+      len = sizeof(buf);
+      SVN_ERR(readbuf_input(conn, buf, &len));
+      end = buf + len;
+
+      /* Scan the data for '(' WS with a very simple state machine. */
+      for (p = buf; p < end; p++)
+        {
+          if (lparen && svn_iswhitespace(*p))
+            break;
+          else
+            lparen = (*p == '(');
+        }
+      if (p < end)
+        break;
+    }
+
+  /* p now points to the whitespace just after the left paren.  Fake
+   * up the left paren and then copy what we have into the read
+   * buffer. */
+  conn->read_buf[0] = '(';
+  memcpy(conn->read_buf + 1, p, end - p);
+  conn->read_ptr = conn->read_buf;
+  conn->read_end = conn->read_buf + 1 + (end - p);
   return SVN_NO_ERROR;
 }
 
@@ -444,6 +481,12 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return read_item(conn, pool, *item, c);
 }
 
+svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
+                                             apr_pool_t *pool)
+{
+  return readbuf_skip_leading_garbage(conn);
+}
+
 /* --- READING AND PARSING TUPLES --- */
 
 /* Parse a tuple.  Advance *FMT to the end of the tuple specification
@@ -612,17 +655,17 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
 svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool,
                                         const svn_ra_svn_cmd_entry_t *commands,
-                                        void *baton,
-                                        svn_boolean_t pass_through_errors)
+                                        void *baton)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *cmdname;
   int i;
-  svn_error_t *err;
+  svn_error_t *err, *write_err;
   apr_array_header_t *params;
 
   while (1)
     {
+      apr_pool_clear(subpool);
       SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmdname, &params));
       for (i = 0; commands[i].cmdname; i++)
         {
@@ -630,35 +673,23 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
             break;
         }
       if (commands[i].cmdname)
-        {
-          err = (*commands[i].handler)(conn, subpool, params, baton);
-          if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
-            err = err->child;
-          else if (err)
-            return err;
-        }
+        err = (*commands[i].handler)(conn, subpool, params, baton);
       else
-        err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
-                                "Unknown command '%s'", cmdname);
-      if (err)
         {
-          svn_error_t *err2 = svn_ra_svn_write_cmd_failure(conn, subpool, err);
-          /* Flush so that error gets written whatever the caller does next */
-          if (! err2)
-            err2 = svn_ra_svn_flush (conn, subpool);
-          if (pass_through_errors)
-            {
-              svn_error_clear (err2);
-              return err;
-            }
-          if (err2)
-            {
-              svn_error_clear (err);
-              return err2;
-            }
+          err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
+                                  "Unknown command '%s'", cmdname);
+          err = svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
         }
-      svn_error_clear(err);
-      apr_pool_clear(subpool);
+
+      if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
+        {
+          write_err = svn_ra_svn_write_cmd_failure(conn, subpool, err->child);
+          svn_error_clear(err);
+          if (write_err)
+            return write_err;
+        }
+      else if (err)
+        return err;
 
       if (commands[i].terminate)
         break;

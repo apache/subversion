@@ -117,7 +117,10 @@ typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
  */
 typedef struct svn_ra_reporter_t
 {
-  /** Describe a working copy @a path as being at a particular @a revision.
+  /** Describe a working copy @a path as being at a particular @a revision.  
+   *
+   * If @a START_EMPTY is set and @a path is a directory, the
+   * implementor should assume the directory has no entries or props.
    *
    * This will *override* any previous @c set_path() calls made on parent
    * paths.  @a path is relative to the URL specified in @c open().
@@ -127,6 +130,7 @@ typedef struct svn_ra_reporter_t
   svn_error_t *(*set_path) (void *report_baton,
                             const char *path,
                             svn_revnum_t revision,
+                            svn_boolean_t start_empty,
                             apr_pool_t *pool);
 
   /** Describing a working copy @a path as missing.
@@ -143,12 +147,16 @@ typedef struct svn_ra_reporter_t
    * opening the RA layer), but is instead a reflection of a different
    * repository @a url at @a revision.
    *
+   * If @a START_EMPTY is set and @a path is a directory,
+   * the implementor should assume the directory has no entries or props.
+   *
    * All temporary allocations are done in @a pool.
    */
   svn_error_t *(*link_path) (void *report_baton,
                              const char *path,
                              const char *url,
                              svn_revnum_t revision,
+                             svn_boolean_t start_empty,
                              apr_pool_t *pool);
 
   /** WC calls this when the state report is finished; any directories
@@ -415,27 +423,6 @@ typedef struct svn_ra_plugin_t
                            apr_hash_t **props,
                            apr_pool_t *pool);
 
-
-  /** Check out revision @a revision of the url specified in
-   * @a session_baton, using @a editor and @a edit_baton to create the 
-   * working copy.  If @a recurse is non-zero, create the full working tree, 
-   * else just its topmost directory. 
-   *
-   * Do a complete drive of @a editor, ending with a call to @c close_edit().
-   *
-   * The editing operations of @a editor may not perform any ra
-   * operations using @a session_baton.
-   *
-   * Use @a pool for memory allocation.
-   */
-  svn_error_t *(*do_checkout) (void *session_baton,
-                               svn_revnum_t revision,
-                               svn_boolean_t recurse,
-                               const svn_delta_editor_t *editor,
-                               void *edit_baton,
-                               apr_pool_t *pool);
-
-
   /** Ask the network layer to update a working copy.
    *
    * The client initially provides an @a update_editor/@a baton to the 
@@ -691,10 +678,11 @@ typedef struct svn_ra_plugin_t
                               svn_revnum_t revision,
                               apr_pool_t *pool);
 
-  /** Set @a *uuid to the repository's UUID.  The UUID has the same lifetime
-   *  as the session_baton. 
+  /** Set @a *uuid to the repository's UUID.
    *
-   * Use @a pool for memory allocation.
+   * NOTE: the UUID has the same lifetime as the session_baton. 
+   *
+   * Use @a pool for temporary memory allocation.
    */
   svn_error_t *(*get_uuid) (void *session_baton,
                             const char **uuid,

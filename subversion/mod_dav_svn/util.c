@@ -24,7 +24,7 @@
 #include "svn_fs.h"
 #include "svn_dav.h"
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 
 
 
@@ -67,10 +67,13 @@ svn_revnum_t dav_svn_get_safe_cr(svn_fs_root_t *root,
                                  const char *path,
                                  apr_pool_t *pool)
 {
-  svn_revnum_t revision = svn_fs_revision_root_revision(root);    
+  svn_revnum_t revision = SVN_INVALID_REVNUM;
   svn_revnum_t created_rev;
   svn_fs_root_t *other_root;
   const svn_fs_id_t *id, *other_id;
+
+  if (svn_fs_is_revision_root (root))
+    revision = svn_fs_root_revision(root);
 
   if (svn_fs_node_id(&id, root, path, pool))
     return revision;   /* couldn't get id of root/path */

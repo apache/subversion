@@ -230,7 +230,7 @@ svn_error_t * svn_client__get_export_editor (const svn_delta_editor_t **editor,
 
 /* ---------------------------------------------------------------- */
 
-/*** Export ***/
+/*** Add/delete ***/
 
 /* The main logic of the public svn_client_add;  the only difference
    is that this function uses an existing access baton.
@@ -241,16 +241,17 @@ svn_error_t * svn_client__add (const char *path,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool);
 
-/* The main logic of the public svn_client_delete;  the only difference
-   is that this function takes an access baton to be used in the working 
-   copy case.  (svn_client_delete just generates an access baton if 
-   necessary and calls this func.) */
-svn_error_t * svn_client__delete (svn_client_commit_info_t **commit_info,
-                                  const char *path,
-                                  svn_wc_adm_access_t *adm_access,
-                                  svn_boolean_t force,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
+/* The main logic for client deletion from a working copy. Deletes PATH
+   from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
+   modified the delete will fail and return an error unless FORCE is TRUE.
+   If DRY_RUN is TRUE all the checks are made to ensure that the delete can
+   occur, but the working copy is not modifed. */
+svn_error_t * svn_client__wc_delete (const char *path,
+                                     svn_wc_adm_access_t *adm_access,
+                                     svn_boolean_t force,
+                                     svn_boolean_t dry_run,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 

@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import string, sys, re, os.path, shutil
 
 # Our testing module
 import svntest
@@ -817,14 +817,23 @@ def binary_props(sbox):
 
   # Bootstrap
   sbox.build()
-
-  # Some path convenience vars.
   wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+  
+  # Some path convenience vars.
   A_path = os.path.join(wc_dir, 'A')
   B_path = os.path.join(wc_dir, 'A', 'B')
   iota_path = os.path.join(wc_dir, 'iota')
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
+  A_path_bak = os.path.join(wc_backup, 'A')
+  B_path_bak = os.path.join(wc_backup, 'A', 'B')
+  iota_path_bak = os.path.join(wc_backup, 'iota')
+  lambda_path_bak = os.path.join(wc_backup, 'A', 'B', 'lambda')
+  mu_path_bak = os.path.join(wc_backup, 'A', 'mu')
 
   # Property value convenience vars.
   prop_zb   = "This property has a zer\000 byte."
@@ -832,6 +841,32 @@ def binary_props(sbox):
   prop_xml  = "This property has an <xml> tag."
   prop_binx = "This property has an <xml> tag and a zer\000 byte."
   
+  if re.search(r'^http', sbox.repo_url):
+
+    ### Remove this block of code after the final step of issue 1015
+    ### is implemented.  In its current intermediate state, ra-dav
+    ### servers can send binary props, but clients can't.  So, for
+    ### now, use ra_local to set some binary properties when ra-dav is
+    ### the main test schema.  Once the clients learn to transmit
+    ### binary props, we can lose this custom replacement of our main
+    ### working copy.
+    
+    wc_url = svntest.main.file_schema_prefix + \
+             os.path.abspath(os.getcwd()) + \
+             '/' + sbox.repo_dir
+
+    # Blow away our existing main working copy in favor of a new
+    # ra-local-based one.
+    shutil.rmtree(wc_dir)
+
+    # Checkout over ra-local.
+    output, errput = \
+            svntest.main.run_svn (None, 'checkout',
+                                  '--username', svntest.main.wc_author,
+                                  '--password', svntest.main.wc_passwd,
+                                  wc_url, wc_dir)
+    if errput: raise svntest.Failure
+
   # Set some binary properties.
   propval_path = os.path.join(wc_dir, 'propval.tmp')
   propval_file = open(propval_path, 'wb')
@@ -842,19 +877,60 @@ def binary_props(sbox):
     valf.write(value)
     valf.flush()
     svntest.main.run_svn(None, 'propset', '-F', valp, name, path)
-
+      
   set_prop('prop_zb', prop_zb, B_path)
   set_prop('prop_ff', prop_ff, iota_path)
   set_prop('prop_xml', prop_xml, lambda_path)
   set_prop('prop_binx', prop_binx, mu_path)
   set_prop('prop_binx', prop_binx, A_path)
 
+  # Create expected output and status trees.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A' : Item(verb='Sending'),
+    'A/B' : Item(verb='Sending'),
+    'iota' : Item(verb='Sending'),
+    'A/B/lambda' : Item(verb='Sending'),
+    'A/mu' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('A', 'A/B', 'iota', 'A/B/lambda', 'A/mu',
+                        wc_rev=2, status='  ')
+  
+  # Commit the propsets.
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None,
+                                         None, None,
+                                         wc_dir)
+  
+  # Create expected output, disk, and status trees for an update of
+  # the wc_backup.
+  expected_output = svntest.wc.State(wc_backup, {
+    'A' : Item(status=' U'),
+    'A/B' : Item(status=' U'),
+    'iota' : Item(status=' U'),
+    'A/B/lambda' : Item(status=' U'),
+    'A/mu' : Item(status=' U'),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+
+  # Do the update and check the results.
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 0)
+    
   # Now, check those properties.
-  check_prop('prop_zb', B_path, [prop_zb])
-  check_prop('prop_ff', iota_path, [prop_ff])
-  check_prop('prop_xml', lambda_path, [prop_xml])
-  check_prop('prop_binx', mu_path, [prop_binx])
-  check_prop('prop_binx', A_path, [prop_binx])
+  check_prop('prop_zb', B_path_bak, [prop_zb])
+  check_prop('prop_ff', iota_path_bak, [prop_ff])
+  check_prop('prop_xml', lambda_path_bak, [prop_xml])
+  check_prop('prop_binx', mu_path_bak, [prop_binx])
+  check_prop('prop_binx', A_path_bak, [prop_binx])
 
   
 ########################################################################
@@ -877,13 +953,7 @@ test_list = [ None,
               # non-Posix platforms, we won't have to skip here:
               Skip(revprop_change, (os.name != 'posix')),
               prop_value_conversions,
-              # This stuff currently fails over DAV, but I can't seem to
-              # make a conditional for that (e.g., svntest.main.test_area_url
-              # has not yet been populated at this point, so I can't check
-              # whether or not it starts with 'http').  So, skip for all
-              # RA layers until we turn on binary property support in
-              # libsvn_ra_dav (see issue #1015).
-              Skip(binary_props, 1),
+              binary_props,
              ]
 
 if __name__ == '__main__':

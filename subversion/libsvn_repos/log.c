@@ -26,6 +26,7 @@
 #include "svn_repos.h"
 #include "svn_string.h"
 #include "svn_time.h"
+#include "svn_sorts.h"
 #include "repos.h"
 
 
@@ -35,28 +36,32 @@
  * properties of the node were changed, or that the node was added or
  * deleted.
  *
- * The key is allocated in POOL; the value is (void *) 'U', 'A', 'D',
- * or 'R', for modified, added, deleted, or replaced, respectively.
+ * The CHANGED hash set and the key are allocated in POOL;
+ * the value is (void *) 'U', 'A', 'D', or 'R', for modified, added,
+ * deleted, or replaced, respectively.
  * 
  */
 static svn_error_t *
-detect_changed (apr_hash_t *changed,
+detect_changed (apr_hash_t **changed,
                 svn_fs_root_t *root,
                 apr_pool_t *pool)
 {
   apr_hash_t *changes;
   apr_hash_index_t *hi;
-  svn_log_changed_path_t *item;
   apr_pool_t *subpool = svn_pool_create (pool);
   
-  SVN_ERR (svn_fs_paths_changed (&changes, root, subpool));
-  for (hi = apr_hash_first (subpool, changes); hi; hi = apr_hash_next (hi))
+  *changed = apr_hash_make (pool);
+  SVN_ERR (svn_fs_paths_changed (&changes, root, pool));
+  for (hi = apr_hash_first (pool, changes); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
       svn_fs_path_change_t *change;
       const char *path;
       char action;
+      svn_log_changed_path_t *item;
+
+      svn_pool_clear (subpool);
 
       /* KEY will be the path, VAL the change. */
       apr_hash_this (hi, &key, NULL, &val);
@@ -102,7 +107,7 @@ detect_changed (apr_hash_t *changed,
               item->copyfrom_rev = copyfrom_rev;
             }
         }
-      apr_hash_set (changed, apr_pstrdup (pool, path), 
+      apr_hash_set (*changed, apr_pstrdup (pool, path), 
                     APR_HASH_KEY_STRING, item);
     }
 
@@ -124,7 +129,6 @@ svn_repos_get_logs (svn_repos_t *repos,
 {
   svn_revnum_t this_rev, head = SVN_INVALID_REVNUM;
   apr_pool_t *subpool = svn_pool_create (pool);
-  apr_hash_t *changed_paths;
   svn_fs_t *fs = repos->fs;
   apr_array_header_t *revs = NULL;
 
@@ -158,9 +162,69 @@ svn_repos_get_logs (svn_repos_t *repos,
       SVN_ERR (svn_fs_revision_root
                (&rev_root, fs, (start > end) ? start : end, pool));
 
-      /* And the search is on... */
-      SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, paths, 
-                                         strict_node_history ? 0 : 1, pool));
+      /* If there is only one path, we'll just get its sorted changed
+         revisions.  Else, we'll be combining all our findings into a
+         hash (to remove duplicates) and then generating a sorted
+         array from that hash. */
+      if (paths->nelts == 1)
+        {
+          /* Get the changed revisions for this path. */
+          SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, 
+                                             APR_ARRAY_IDX (paths, 0, 
+                                                            const char *),
+                                             strict_node_history ? 0 : 1, 
+                                             pool));
+        }
+      else
+        {
+          int i;
+          apr_hash_t *all_revs = apr_hash_make (pool);
+          apr_hash_index_t *hi;
+
+          /* And the search is on... */
+          for (i = 0; i < paths->nelts; i++)
+            {
+              const char *this_path = APR_ARRAY_IDX (paths, i, const char *);
+              apr_array_header_t *changed_revs;
+              int j;
+
+              /* Get the changed revisions for this path, and add them to
+                 the hash (this will eliminate duplicates). */
+              SVN_ERR (svn_fs_revisions_changed (&changed_revs,
+                                                 rev_root, 
+                                                 this_path, 
+                                                 strict_node_history ? 0 : 1, 
+                                                 pool));
+              for (j = 0; j < changed_revs->nelts; j++)
+                {
+                  svn_revnum_t chrev = 
+                    APR_ARRAY_IDX (changed_revs, j, svn_revnum_t);
+                  apr_hash_set (all_revs, (void *)chrev, sizeof (chrev), 
+                                (void *)1);
+                }
+            }
+
+          /* Now that we have a hash of all the revisions in which any of
+             our paths changed, we can convert that back into a sorted
+             array. */
+          revs = apr_array_make (pool, apr_hash_count (all_revs), 
+                                 sizeof (svn_revnum_t));
+          for (hi = apr_hash_first (pool, all_revs); 
+               hi; 
+               hi = apr_hash_next (hi))
+            {
+              const void *key;
+              svn_revnum_t revision;
+              
+              apr_hash_this (hi, &key, NULL, NULL);
+              revision = *((const svn_revnum_t *)key);
+              (*((svn_revnum_t *) apr_array_push (revs))) = revision;
+            }
+
+          /* Now sort the array */
+          qsort ((revs)->elts, (revs)->nelts, (revs)->elt_size, 
+                 svn_sort_compare_revisions);
+        }
 
       /* If no revisions were found for these entries, we have nothing
          to show. Just return now before we break a sweat.  */
@@ -173,6 +237,7 @@ svn_repos_get_logs (svn_repos_t *repos,
        ((start >= end) ? this_rev-- : this_rev++))
     {
       svn_string_t *author, *date, *message;
+      apr_hash_t *changed_paths = NULL;
 
       /* If we have a list of revs for use, check to make sure this is
          one of them.  */
@@ -203,12 +268,9 @@ svn_repos_get_logs (svn_repos_t *repos,
       if ((this_rev > 0) && discover_changed_paths)
         {
           svn_fs_root_t *newroot;
-          changed_paths = apr_hash_make (subpool);
           SVN_ERR (svn_fs_revision_root (&newroot, fs, this_rev, subpool));
-          SVN_ERR (detect_changed (changed_paths, newroot, subpool));
+          SVN_ERR (detect_changed (&changed_paths, newroot, subpool));
         }
-      else
-        changed_paths = NULL;
 
       SVN_ERR ((*receiver) (receiver_baton,
                             changed_paths,
