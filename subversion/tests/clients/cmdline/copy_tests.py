@@ -1519,7 +1519,7 @@ def old_dir_url_to_url(sbox):
 
   sbox.build()
 
-  adg_url = svntest.main.current_repo_url, + '/A/D/G'
+  adg_url = svntest.main.current_repo_url + '/A/D/G'
   pi_url = svntest.main.current_repo_url + '/A/D/G/pi'
   iota_url = svntest.main.current_repo_url + '/iota'
   new_url = svntest.main.current_repo_url + '/newfile'
