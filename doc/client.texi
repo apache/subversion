@@ -148,7 +148,7 @@ element gives the new value of the property.
 
 If either the property name or the property value contains the
 characters @samp{&}, @samp{<}, or @samp{'}, they should be replaced with
-the sequences @samp{&#38}, @samp{&#60}, or @samp{&#96}, respectively.
+the sequences @samp{&#38}, @samp{&#60}, or @samp{&#39}, respectively.
 
 
 @c -----------------------------------------------------------------------
@@ -306,7 +306,7 @@ the text @code{version='@var{v}'}, indicating a new value for
 If a filename or path appearing as a @var{name} or @var{path} in the
 description above contains the characters @samp{&}, @samp{<}, or
 @samp{'}, they should be replaced with the sequences @samp{&#38},
-@samp{&#60}, or @samp{&#96}, respectively.
+@samp{&#60}, or @samp{&#39}, respectively.
 
 Suppose we have the following source tree:
 @example
