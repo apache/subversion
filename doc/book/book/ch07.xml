@@ -1272,86 +1272,38 @@ if __name__ == '__main__':
     <para>WebDAV ("Web-based Distributed Authoring and Versioning") is
       an extension of the standard HTTP protocol designed to make the
       web into a read/write medium, instead of the basically read-only
-      medium that exists today.  The theory is that directories
-      and files can be shared&mdash;as both readable and writable
-      objects&mdash;over the web.  RFC 2518 describes the WebDAV
-      extensions to HTTP, and is available (along with a lot of other
-      useful information) at <systemitem
+      medium that exists today.  The theory is that directories and
+      files can be shared&mdash;as both readable and writable
+      objects&mdash;over the web.  RFCs 2518 and 3256 describe the
+      WebDAV/DeltaV extensions to HTTP, and are available (along with
+      a lot of other useful information) at <systemitem
       class="url">http://www.webdav.org/</systemitem>.</para>
 
     <para>A number of operating system file browsers are already able
       to mount networked directories using WebDAV.  On Win32, the
       Windows Explorer can browse what it calls "WebFolders" (which
       are just WebDAV-ready network locations) as if they were regular
-      folders on the local machine.  Mac OS X also has this
-      capability, as do the Nautilus and Konqueror browsers (under
-      GNOME and KDE, respectively).</para>
+      shared folders.  Mac OS X also has this capability, as do the
+      Nautilus and Konqueror browsers (under GNOME and KDE,
+      respectively).</para>
 
-    <sidebar>
-      <title>Browsing WebDAV locations using a standard file
-        browser</title>
-      
-      <para>WebDAV-enabled servers publish their resources as
-        collections and the files (and other collections) within them.
-        Today's operation systems are becoming extremely Web-aware,
-        and this concept maps so easily to the notion of directories
-        and files that many operation systems have built-in support
-        for viewing those locations as regular folders.  And these
-        folders can be browsed just like system folders&mdash;you can
-        open and copy files from the WebDAV folders as if they were
-        sitting on your local drive.</para>
-
-      <para>For example, on recent versions of Windows, one of the
-        items that appears when you open <literal>My
-        Computer</literal> is <literal>Web Folders</literal>.
-        Opening that icon will show you list of registered WebDAV
-        locations that you can browse further into, as well as an icon
-        for adding a new Web Folder.  In fact, if you'd like to see
-        how this works, open the <literal>Add Web Folder</literal>
-        icon, and register the URL <systemitem
-        class="url">http://svn.collab.net/repos/svn/trunk</systemitem>.
-        When you've finished, you'll have an icon in your Web Folders
-        window that, if opened, will connect you directly to the head
-        of Subversion's own development tree.  Imagine
-        that&mdash;bleeding edge Subversion code that you can copy and
-        paste right off the server and onto your local drive!</para>
-
-      <!-- Examples from other operating systems here, please -->
-
-    </sidebar>
-
-    <para>However, RFC 2518 doesn't fully implement the "versioning"
-      aspect of WebDAV.  A separate committee has created RFC 3253,
-      known as the DeltaV extensions to WebDAV, available at
-      <systemitem class="url">http://www.webdav.org/deltav/</systemitem>.  
-      These extensions add version-control concepts to WebDAV, and
-      ultimately to HTTP.</para>
-
-    <para>So how does all of this apply to Subversion?  Subversion
-      uses HTTP, extended by WebDAV and DeltaV, as its primary network
-      protocol.  Rather than implementing a new proprietary protocol,
-      the original Subversion designers decided to simply map the
-      versioning concepts and actions used by Subversion onto the
-      concepts exposed by RFCs 2518 and 3253.
+    <para>How does all of this apply to Subversion?  The mod_dav_svn
+      Apache module uses HTTP, extended by WebDAV and DeltaV, as its
+      primary network protocol.  Rather than implementing a new
+      proprietary protocol, the original Subversion designers decided
+      to simply map the versioning concepts and actions used by
+      Subversion onto the concepts exposed by RFCs 2518 and 3253.
       <footnote>
         <para>As it turns out, Subversion has more recently evolved a
-          propriety protocol anyway, implemented by the libsvn_ra_svn
+          proprietary protocol anyway, implemented by the libsvn_ra_svn
           module.</para>
       </footnote>
     </para>
 
-    <para>It is important to understand that while libsvn_ra_dav uses
-      DeltaV for communication, the Subversion client is
-      <emphasis>not</emphasis> a general-purpose DeltaV client.  In
-      fact, it expects some custom features from the server.  Further,
-      mod_dav_svn is not a general-purpose DeltaV filesystem backend.
-      It only implements a strict subset of the DeltaV specification.
-      A WebDAV or DeltaV client may very well be able to interoperate
-      with it, but only if that client operates within the narrow
-      confines of those features that the server has implemented.  The
-      Subversion development team plans to address generic WebDAV
-      interoperability in a future release of Subversion.</para>
-
+    <para>For a more thorough discussion of WebDAV, how it works, and
+      how Subversion uses it, see <xref linkend="svn-ap-d"/>.  That
+      appendix also discusses the degree to which generic WebDAV
+      clients operate against mod_dav_svn.</para>
   </sect1>
 
   <!-- ******************************************************************* -->
