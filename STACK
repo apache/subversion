@@ -72,11 +72,15 @@ Ben todo:
               pantheon: ...foo$
          -Fitz
 
+       - proplist bug:
+
+           From within a wc, `svn pl ./iota' works, and `svn pl A'
+           works, but `svn pl iota' errors.
+
+
    Ben's todo list:
 
        - finish svn_fs_is_different, make status command use it.
-
-       - change svn_ra.h so that we can check out a specific revision.
 
 
 
