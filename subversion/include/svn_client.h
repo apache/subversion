@@ -60,27 +60,10 @@ extern "C" {
 
 
 
-/*** Authentication stuff -- new M4 Edition  ***/
+/*** Authentication stuff ***/
 
 /*  The new authentication system allows the RA layer to "pull"
     information as needed from libsvn_client.  See svn_ra.h */
-
-/** A callback function type defined by the top-level client
- * application (the user of libsvn_client.)
- *
- * If libsvn_client is unable to retrieve certain authorization
- * information, it can use this callback; the application will then
- * directly query the user with @a prompt and return the answer in 
- * @c info, allocated in @a pool.  @a baton is provided at the same 
- * time as the callback, and @a hide indicates that the user's answer 
- * should not be displayed on the screen.
- */
-typedef svn_error_t *(*svn_client_prompt_t)
-       (char **info,
-        const char *prompt,
-        svn_boolean_t hide,
-        void *baton,
-        apr_pool_t *pool);
 
 
 /** This is a baton that contains information from the calling
@@ -96,7 +79,7 @@ typedef struct svn_client_auth_baton_t
   const char *password; 
   
   /** a callback provided by the app layer, for prompting the user */
-  svn_client_prompt_t prompt_callback;
+  svn_auth_prompt_t prompt_callback;
   void *prompt_baton;
 
   /* ### Right now, we only cache username and password.  Since

@@ -218,7 +218,7 @@ svn_cl__edit_externally (const char **edited_contents,
    libsvn_client routine that needs to authenticate against a
    repository. */
 
-/* This implements the `svn_client_prompt_t' interface.
+/* This implements the `svn_auth_prompt_t' interface.
 
    Display PROMPT to the user, and read a reply back from stdin,
    allocated in POOL and returned in *RESULT.  If HIDE is set, the

@@ -116,7 +116,7 @@ main (int argc, const char * const *argv)
   const char *wc_dir;
   const svn_auth_provider_t *wc_provider, *prompt_provider;
   void *wc_prov_baton, *prompt_prov_baton;
-  svn_client_prompt_t prompt_func;
+  svn_auth_prompt_t prompt_func;
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
@@ -128,8 +128,8 @@ main (int argc, const char * const *argv)
 
   /* Get the two providers from libsvn_auth */
   wc_dir = "/home/sussman/projects/svn"; /* ### CHANGE ME TO EXPERIMENT */  
-  svn_auth_get_simple_wc_provider (&wc_provider, &wc_prov_baton,
-                                   wc_dir, NULL, pool);
+  svn_wc_get_simple_wc_provider (&wc_provider, &wc_prov_baton,
+                                 wc_dir, NULL, pool);
 
   svn_auth_get_simple_prompt_provider (&prompt_provider, &prompt_prov_baton,
                                        &prompt_user, NULL,

@@ -30,7 +30,7 @@
 typedef struct
 {
   /* a callback function/baton that prompts the user */
-  svn_client_prompt_t prompt_func;
+  svn_auth_prompt_t prompt_func;
   void *prompt_baton;
 
   /* a default username, to try before prompting.  can be NULL. */
@@ -45,7 +45,7 @@ typedef struct
 typedef struct
 {
   /* the same callback from the main provider baton */
-  svn_client_prompt_t prompt_func;
+  svn_auth_prompt_t prompt_func;
   void *prompt_baton;
 
   /* how many times we've reprompted */
@@ -159,7 +159,7 @@ const svn_auth_provider_t simple_prompt_provider =
 void
 svn_auth_get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                      void **provider_baton,
-                                     svn_client_prompt_t prompt_func,
+                                     svn_auth_prompt_t prompt_func,
                                      void *prompt_baton,
                                      const char *default_username,
                                      const char *default_password,
