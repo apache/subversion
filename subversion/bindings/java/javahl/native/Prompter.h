@@ -50,9 +50,9 @@ private:
 										const svn_auth_ssl_server_cert_info_t *cert_info,
 										apr_pool_t *pool);
 	static svn_error_t *ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred_p,
-										void *baton, apr_pool_t *pool);
+										void *baton, const char *realm, apr_pool_t *pool);
 	static svn_error_t *ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred_p,
-										void *baton, apr_pool_t *pool);
+										void *baton, const char *realm, apr_pool_t *pool);
 	std::string m_answer;
 	/*
 	static svn_error_t *firstCreds (void **credentials, void **iter_baton, 
