@@ -69,6 +69,5 @@ Commit access for specific areas:
       sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
       lonestar   Martin MAURER <martin.maurer@email.de>      (svnshow)
           maxb   Max Bowsher <maxb@ukf.net>                  (cvs2svn)
-        kellin   Shamim Islam <files@poetryunlimited.com>    (Mandrake RPMs)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
 
