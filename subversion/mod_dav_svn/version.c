@@ -292,60 +292,113 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
          mutable in the txn... which means it has already passed this
          out-of-dateness check.  (Usually, this happens when looking
          at a parent directory of an already checked-out
-         resource.)  */
+         resource.)  
 
-      if (SVN_IS_VALID_REVNUM(txn_created_rev)
-          && (resource->info->root.rev != txn_created_rev))
+         Now, we come down to it.  If the created revision of the node
+         in the transaction is different from the revision parsed from
+         the version resource URL, we're in a bit of a quandry, and
+         one of a few things could be true.
+
+         - The client is trying to modify an old (out of date)
+           revision of the resource.  This is, of course,
+           unacceptable!
+
+         - The client is trying to modify a *newer* revision.  If the
+           version resource is *newer* than the transaction root, then
+           the client started a commit, a new revision was created
+           within the repository, the client fetched the new resource
+           from that new revision, changed it (or merged in a prior
+           change), and then attempted to incorporate that into the
+           commit that was initially started.  We could copy that new
+           node into our transaction and then modify it, but why
+           bother?  We can stop the commit, and everything will be
+           fine again if the user simply restarts it (because we'll
+           use that new revision as the transaction root, thus
+           incorporating the new resource, which they will then
+           modify).
+             
+         - The path/revision that client is wishing to edit and the
+           path/revision in the current transaction are actually the
+           same node, and thus this created-rev comparison didn't
+           really solidify anything after all. :-)
+      */
+
+      if (SVN_IS_VALID_REVNUM( txn_created_rev ))
         {
-          /* The node they are trying to change does not match what
-             was found in the transaction. That means they are trying
-             to modify an old (out of date) revision of the resource,
-             or they are trying to modify a *newer* revision.
+          int errorful = 0;
 
-             If the version resource is *newer* than the transaction
-             root, then the client started a commit, a new revision was
-             created within the repository, the client fetched the new
-             resource from that new revision, changed it (or merged in
-             a prior change), and then attempted to incorporate that
-             into the commit that was initially started.
+          if (resource->info->root.rev < txn_created_rev)
+            {
+              /* The item being modified is older than the one in the
+                 transaction.  The client is out of date.  */
+              errorful = 1;
+            }
+          else if (resource->info->root.rev > txn_created_rev)
+            {
+              /* The item being modified is being accessed via a newer
+                 revision than the one in the transaction.  We'll
+                 check to see if they are still the same node, and if
+                 not, return an error. */
+              const svn_fs_id_t *url_noderev_id, *txn_noderev_id;
 
-             So yes, it is possible to happen. And we could copy that new
-             node into our transaction and then modify it. But screw
-             that. We can stop the commit, and everything will be fine
-             again if the user simply restarts it (because we'll use
-             that new revision as the transaction root, thus incorporating
-             the new resource, which they will then modify).
-          */
+              if ((serr = svn_fs_node_id(&txn_noderev_id, txn_root, 
+                                         resource->info->repos_path,
+                                         resource->pool)))
+                {
+                  return dav_new_error_tag
+                    (resource->pool, HTTP_CONFLICT, serr->apr_err,
+                     "Unable to fetch the node revision id of the version "
+                     "resource within the transaction.",
+                     SVN_DAV_ERROR_NAMESPACE,
+                     SVN_DAV_ERROR_TAG);
+                }
+              if ((serr = svn_fs_node_id(&url_noderev_id,
+                                         resource->info->root.root,
+                                         resource->info->repos_path,
+                                         resource->pool)))
+                {
+                  return dav_new_error_tag
+                    (resource->pool, HTTP_CONFLICT, serr->apr_err,
+                     "Unable to fetch the node revision id of the version "
+                     "resource within the revision.",
+                     SVN_DAV_ERROR_NAMESPACE,
+                     SVN_DAV_ERROR_TAG);
+                }
+              if (svn_fs_compare_ids(url_noderev_id, txn_noderev_id) != 0)
+                {
+                  errorful = 1;
+                }
+            }
+          if (errorful)
+            {
 #if 1
-          return dav_new_error_tag
-            (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,
-             "The version resource does not correspond "
-             "to the resource within the transaction. "
-             "Either the requested version resource is "
-             "out of date (needs to be updated), or the "
-             "requested version resource is newer than "
-             "the transaction root (restart the "
-             "commit).",
-             SVN_DAV_ERROR_NAMESPACE,
-             SVN_DAV_ERROR_TAG);
+              return dav_new_error_tag
+                (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,
+                 "The version resource does not correspond to the resource "
+                 "within the transaction.  Either the requested version "
+                 "resource is out of date (needs to be updated), or the "
+                 "requested version resource is newer than the transaction "
+                 "root (restart the commit).",
+                 SVN_DAV_ERROR_NAMESPACE,
+                 SVN_DAV_ERROR_TAG);
 
 #else
-          /* ### some debugging code */
-          const char *msg;
-
-          msg = apr_psprintf(resource->pool, 
-                             "created-rev mismatch: r=%" SVN_REVNUM_T_FMT 
-                             ", t=%" SVN_REVNUM_T_FMT,
-                             resource->info->root.rev, txn_created_rev);
-
-          return dav_new_error_tag(resource->pool, HTTP_CONFLICT, 
-                                   SVN_ERR_FS_CONFLICT, msg,
-                                   SVN_DAV_ERROR_NAMESPACE,
-                                   SVN_DAV_ERROR_TAG);
+              /* ### some debugging code */
+              const char *msg;
+              
+              msg = apr_psprintf(resource->pool, 
+                                 "created-rev mismatch: r=%" SVN_REVNUM_T_FMT 
+                                 ", t=%" SVN_REVNUM_T_FMT,
+                                 resource->info->root.rev, txn_created_rev);
+              
+              return dav_new_error_tag(resource->pool, HTTP_CONFLICT, 
+                                       SVN_ERR_FS_CONFLICT, msg,
+                                       SVN_DAV_ERROR_NAMESPACE,
+                                       SVN_DAV_ERROR_TAG);
 #endif
+            }
         }
     }
-
   *working_resource = dav_svn_create_working_resource(resource,
                                                       parse.activity_id,
                                                       txn_name);
