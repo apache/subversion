@@ -24,7 +24,6 @@ Requires: db4 >= 4.0.14
 Requires: expat
 Requires: neon >= %{neon_version}
 Requires: python2
-#Requires: /sbin/install-info
 Obsoletes: subversion-cvs2svn
 BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
@@ -42,7 +41,6 @@ BuildPreReq: python2
 BuildPreReq: python2-devel
 BuildPreReq: swig >= 1.3.16
 BuildPreReq: swig-runtime >= 1.3.16
-BuildPreReq: texinfo
 BuildPreReq: zlib-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
@@ -98,6 +96,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Jun 07 2003 David Summers <david@summersoft.fay.ar.us> 0.23.0-6163
+- svn-design.info is no longer built.
+
 * Sat May 24 2003 David Summers <david@summersoft.fay.ar.us> 0.23.0-6036
 - Track changes to Python SWIG build.
 - Now requires neon-0.23.9 to pick up bug and security fixes.
@@ -367,31 +368,12 @@ cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 cp -r doc/book/book/html-chunk book
 cp -r doc/book/book/images     book/images
 
-%post
-# Only add to INFO directory if this is the only instance installed.
-if [ "$1"x = "1"x ]; then
-   if [ -x /sbin/install-info ]; then
-      /sbin/install-info /usr/share/info/svn-design.info.gz \
-         /usr/share/info/dir \
-         --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
-   fi
-fi
-
 %preun
 # Save current copy of svnadmin.static
 echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version}-%{release}."
 echo "Erase this program only after you make sure you won't need to dump/reload"
 echo "any of your repositories to upgrade to a new version of the database."
 cp /usr/bin/svnadmin-%{version}-%{release}.static /usr/bin/svnadmin-%{version}-%{release}
-
-# Only delete from INFO directory if this is the last instance being deleted.
-if [ "$1"x = "0"x ]; then
-   if [ -x /sbin/install-info ]; then
-      /sbin/install-info --delete /usr/share/info/svn-design.info.gz \
-         /usr/share/info/dir \
-         --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
-   fi
-fi
 
 %post server
 # Load subversion server into apache configuration.
@@ -455,7 +437,6 @@ rm -rf $RPM_BUILD_ROOT
 /usr/lib/libsvn_wc*so*
 /usr/lib/python2.2/site-packages/rcsparse
 /usr/share/man/man1/*
-/usr/share/info/*
 
 %files devel
 %defattr(-,root,root)
