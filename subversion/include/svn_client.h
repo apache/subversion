@@ -332,6 +332,9 @@ typedef svn_error_t *
  * @a line.
  *  
  * All allocations should be performed in @a pool.
+ *
+ * NOTE: If there is no blame information for this line, @a revision will be
+ * invalid and @a author and @a date will be NULL.
  */
 typedef svn_error_t *
 (*svn_client_blame_receiver_t) (void *baton,

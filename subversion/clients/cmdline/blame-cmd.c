@@ -58,9 +58,18 @@ blame_receiver (void *baton,
   
   if (opt_state->verbose)
     {
-      SVN_ERR (svn_time_from_cstring (&atime, date, pool));
-      time_utf8 = svn_time_to_human_cstring (atime, pool);
-      SVN_ERR (svn_cmdline_cstring_from_utf8 (&time_stdout, time_utf8, pool));
+      if (date)
+        {
+          SVN_ERR (svn_time_from_cstring (&atime, date, pool));
+          time_utf8 = svn_time_to_human_cstring (atime, pool);
+          SVN_ERR (svn_cmdline_cstring_from_utf8 (&time_stdout, time_utf8,
+                                                  pool));
+        } else
+          /* ### This is a 44 characters long string. It assumes the current
+             format of svn_time_to_human_cstring and also 3 letter
+             abbreviations for the month and weekday names.  Else, the
+             line contents will be misaligned. */
+          time_stdout = "                                           -";
       return svn_stream_printf (out, pool, "%s %10s %s %s\n", rev_str, 
                                 author ? author : "         -", 
                                 time_stdout , line);
