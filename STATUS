@@ -68,13 +68,6 @@ Approved changes (further review is welcome, but not required):
       +0: cmpilato (only tested that it didn't regress on Unix)
 
   
-  * r13553
-    Fix issue #2173 (Symbolic links from Linux are not ignored in Windows)
-    Justification:
-      High embarassment factor, a highly touted 1.1 feature that no worky.
-    Votes:
-      +1: cmpilato, jpieper, jszakmeister
-
   * r13222, r13223, r13232
     Rewrite libsvn_fs_fs's auto-merge algorithm
     Justification:
