@@ -123,17 +123,15 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   apr_xml_elem *child;
   struct log_receiver_baton lrb;
   const dav_svn_repos *repos = resource->info->repos;
-  svn_stringbuf_t *target = NULL; 
+  const char *target = NULL;
   int ns;
 
   /* These get determined from the request document. */
   svn_revnum_t start = SVN_INVALID_REVNUM;   /* defaults to HEAD */
   svn_revnum_t end = SVN_INVALID_REVNUM;     /* defaults to HEAD */
   svn_boolean_t discover_changed_paths = 0;  /* off by default */
-
-  /* ### why are these paths stringbuf? they aren't going to be changed... */
   apr_array_header_t *paths
-    = apr_array_make(resource->pool, 0, sizeof(svn_stringbuf_t *));
+    = apr_array_make(resource->pool, 0, sizeof(const char *));
 
   /* Sanity check. */
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -173,18 +171,17 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
         {
           /* Convert these relative paths to absolute paths in the
              repository. */
+          target = apr_pstrdup (resource->pool, resource->info->repos_path);
 
-          target = svn_stringbuf_create (resource->info->repos_path,
-                                         resource->pool);
           /* Don't add on an empty string, but do add the target to the
              path.  This special case means that we have passed a single
              directory to get the log of, and we need a path to call
              svn_fs_revisions_changed on. */
           if (child->first_cdata.first)
-            svn_path_add_component_nts (target,
-                                        child->first_cdata.first->text);
+            target = svn_path_join(target, child->first_cdata.first->text,
+                                   resource->pool);
 
-          (*((svn_stringbuf_t **)(apr_array_push (paths)))) = target;
+          (*((const char **)(apr_array_push (paths)))) = target;
         }
       /* else unknown element; skip it */
     }

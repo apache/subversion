@@ -84,8 +84,9 @@ static int dav_svn_parse_version_uri(dav_resource_combined *comb,
                                      int use_checked_in)
 {
   const char *slash;
+  const char *created_rev_str;
 
-  /* format: NODE_ID/REPOS_PATH */
+  /* format: CREATED_REV/REPOS_PATH */
 
   /* ### what to do with LABEL and USE_CHECKED_IN ?? */
 
@@ -95,17 +96,17 @@ static int dav_svn_parse_version_uri(dav_resource_combined *comb,
   slash = ap_strchr_c(path, '/');
   if (slash == NULL)
     {
-      /* http://host.name/repos/$svn/ver/1.2.3.4
+      /* http://host.name/repos/$svn/ver/0
 
          This URL form refers to the root path of the repository.
       */
-      comb->priv.node_id = svn_fs_parse_id(path, strlen(path), comb->res.pool);
-      comb->priv.node_id_str = path;
+      created_rev_str = apr_pstrndup(comb->res.pool, path, strlen(path));
+      comb->priv.root.rev = SVN_STR_TO_REV(created_rev_str);
       comb->priv.repos_path = "/";
     }
   else if (slash == path)
     {
-      /* the NODE_ID was missing(?)
+      /* the CREATED_REV was missing(?)
 
          ### not sure this can happen, though, because it would imply two
          ### slashes, yet those are cleaned out within get_resource
@@ -116,13 +117,13 @@ static int dav_svn_parse_version_uri(dav_resource_combined *comb,
     {
       apr_size_t len = slash - path;
 
-      comb->priv.node_id = svn_fs_parse_id(path, len, comb->res.pool);
-      comb->priv.node_id_str = apr_pstrndup(comb->res.pool, path, len);
+      created_rev_str = apr_pstrndup(comb->res.pool, path, len);
+      comb->priv.root.rev = SVN_STR_TO_REV(created_rev_str);
       comb->priv.repos_path = slash;
     }
 
-  /* if the NODE_ID parsing blew, then propagate it. */
-  if (comb->priv.node_id == NULL)
+  /* if the CREATED_REV parsing blew, then propagate it. */
+  if (comb->priv.root.rev == SVN_INVALID_REVNUM)
     return TRUE;
 
   return FALSE;
@@ -258,7 +259,7 @@ static int dav_svn_parse_vcc_uri(dav_resource_combined *comb,
       comb->priv.root.rev = revnum;
 
       /* NOTE: comb->priv.repos_path == NULL */
-      /* NOTE: comb->priv.node_id == NULL */
+      /* NOTE: comb->priv.created_rev == SVN_INVALID_REVNUM */
     }
 
   return FALSE;
@@ -328,7 +329,7 @@ static int dav_svn_parse_baseline_uri(dav_resource_combined *comb,
   comb->priv.root.rev = revnum;
 
   /* NOTE: comb->priv.repos_path == NULL */
-  /* NOTE: comb->priv.node_id == NULL */
+  /* NOTE: comb->priv.created_rev == SVN_INVALID_REVNUM */
 
   return FALSE;
 }
@@ -559,79 +560,55 @@ static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
 {
   svn_error_t *serr;
 
-  if (comb->priv.node_id != NULL)
+  /* we are accessing the Version Resource by REV/PATH */
+  
+  /* ### assert: .baselined = TRUE */
+  
+  /* if we don't have a revision, then assume the youngest */
+  if (!SVN_IS_VALID_REVNUM(comb->priv.root.rev))
     {
-      /* we are accessing the Version Resource by ID */
+      serr = svn_fs_youngest_rev(&comb->priv.root.rev,
+                                 comb->priv.repos->fs,
+                                 comb->res.pool);
+      if (serr != NULL)
+        {
+          /* ### might not be a baseline */
+          
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Could not fetch 'youngest' revision "
+                                     "to enable accessing the latest "
+                                     "baseline resource.");
+        }
+    }
+  
+  /* ### baselines have no repos_path, and we don't need to open
+     ### a root (yet). we just needed to ensure that we have the proper
+     ### revision number. */
 
-      serr = svn_fs_id_root(&comb->priv.root.root, comb->priv.repos->fs,
-                            comb->res.pool);
+  if (!comb->priv.root.root)
+    {
+      serr = svn_fs_revision_root(&comb->priv.root.root, 
+                                  comb->priv.repos->fs,
+                                  comb->priv.root.rev,
+                                  comb->res.pool);
       if (serr != NULL)
         {
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not open the Subversion FS.");
+                                     "Could not open a revision root.");
         }
-
-      serr = svn_fs_is_dir(&comb->res.collection,
-                           comb->priv.root.root,
-                           comb->priv.node_id_str,
-                           comb->res.pool);
-      if (serr != NULL)
-        {
-          if (serr->apr_err != SVN_ERR_FS_NOT_FOUND)
-            {
-              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Could not determine whether the "
-                                         "resource is a file or dir.");
-            }
-
-          /* exists == FALSE */
-        }
-      else
-        {
-          comb->res.exists = TRUE;
-        }
-
-      /* ### revise the URI to the "canonical" URI? necessary? */
     }
-  else
-    {
-      /* we are accessing the Version Resource by REV/PATH */
 
-      /* ### assert: .baselined = TRUE */
-
-      /* if we don't have a revision, then assume the youngest */
-      if (!SVN_IS_VALID_REVNUM(comb->priv.root.rev))
-        {
-          serr = svn_fs_youngest_rev(&comb->priv.root.rev,
-                                     comb->priv.repos->fs,
-                                     comb->res.pool);
-          if (serr != NULL)
-            {
-              /* ### might not be a baseline */
-
-              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Could not fetch 'youngest' revision "
-                                         "to enable accessing the latest "
-                                         "baseline resource.");
-            }
-        }
-
-      /* ### baselines have no repos_path, and we don't need to open
-         ### a root (yet). we just needed to ensure that we have the proper
-         ### revision number. */
-
-      /* ### we should probably check that the revision is valid */
-      comb->res.exists = TRUE;
-
-      /* Set up the proper URI. Most likely, we arrived here via a VCC,
-         so the URI will be incorrect. Set the canonical form. */
-      /* ### assuming a baseline */
-      comb->res.uri = dav_svn_build_uri(comb->priv.repos,
-                                        DAV_SVN_BUILD_URI_BASELINE,
-                                        comb->priv.root.rev, NULL,
-                                        0 /* add_href */,
-                                        comb->res.pool);
-    }
+  /* ### we should probably check that the revision is valid */
+  comb->res.exists = TRUE;
+  
+  /* Set up the proper URI. Most likely, we arrived here via a VCC,
+     so the URI will be incorrect. Set the canonical form. */
+  /* ### assuming a baseline */
+  comb->res.uri = dav_svn_build_uri(comb->priv.repos,
+                                    DAV_SVN_BUILD_URI_BASELINE,
+                                    comb->priv.root.rev, NULL, NULL,
+                                    0 /* add_href */,
+                                    comb->res.pool);
 
   return NULL;
 }
@@ -1113,16 +1090,9 @@ static int is_our_resource(const dav_resource *res1,
                                  res2->info->root.txn,
                                  res2->info->repos->pool);
         }
-      else if (res2->info->node_id)
-        {
-          /* regenerate the id "root" object */
-          (void) svn_fs_id_root(&(res2->info->root.root),
-                                res2->info->repos->fs,
-                                res2->info->repos->pool);
-        }
       else if (res2->info->root.rev)
         {
-          /* default:  regenerate a revision "root" object */
+          /* default:  regenerate the revision "root" object */
           (void) svn_fs_revision_root(&(res2->info->root.root),
                                       res2->info->repos->fs,
                                       res2->info->root.rev,
@@ -1317,8 +1287,7 @@ static dav_error * dav_svn_seek_stream(dav_stream *stream,
 const char * dav_svn_getetag(const dav_resource *resource)
 {
   svn_error_t *serr;
-  svn_fs_id_t *id;      /* ### want const here */
-  svn_stringbuf_t *idstr;
+  svn_revnum_t created_rev;
 
   /* if the resource doesn't exist, isn't a simple REGULAR or VERSION
      resource, or it is a Baseline, then it has no etag. */
@@ -1331,15 +1300,16 @@ const char * dav_svn_getetag(const dav_resource *resource)
 
   /* ### what kind of etag to return for collections, activities, etc? */
 
-  serr = svn_fs_node_id(&id, resource->info->root.root,
-                        DAV_SVN_REPOS_PATH(resource), resource->pool);
-  if (serr != NULL) {
-    /* ### what to do? */
-    return "";
-  }
-
-  idstr = svn_fs_unparse_id(id, resource->pool);
-  return apr_psprintf(resource->pool, "\"%s\"", idstr->data);
+  if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
+                                      resource->info->repos_path,
+                                      resource->pool)))
+    {
+      /* ### what to do? */
+      return "";
+    }
+  
+  return apr_psprintf(resource->pool, "\"%" SVN_REVNUM_T_FMT "/%s\"",
+                      created_rev, resource->info->repos_path);
 }
 
 static dav_error * dav_svn_set_headers(request_rec *r,
@@ -1388,7 +1358,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 
       serr = svn_fs_node_prop(&value,
                               resource->info->root.root,
-                              DAV_SVN_REPOS_PATH(resource),
+                              resource->info->repos_path,
                               SVN_PROP_MIME_TYPE,
                               resource->pool);
       if (serr != NULL)
@@ -1401,7 +1371,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
          so set up the Content-Length header */
       serr = svn_fs_file_length(&length,
                                 resource->info->root.root,
-                                DAV_SVN_REPOS_PATH(resource),
+                                resource->info->repos_path,
                                 resource->pool);
       if (serr != NULL)
         {
@@ -1482,7 +1452,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
     int i;
 
     serr = svn_fs_dir_entries(&entries, resource->info->root.root,
-                              DAV_SVN_REPOS_PATH(resource), resource->pool);
+                              resource->info->repos_path, resource->pool);
     if (serr != NULL)
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not fetch directory entries");
@@ -1575,7 +1545,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
       serr = svn_fs_file_contents(&stream,
                                   resource->info->root.root,
-                                  DAV_SVN_REPOS_PATH(resource),
+                                  resource->info->repos_path,
                                   resource->pool);
       if (serr != NULL)
         {
@@ -1628,7 +1598,6 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
   {
     dav_svn_uri_info info;
     svn_fs_root_t *root;
-    svn_stringbuf_t *id_str;
     int is_file;
     svn_txdelta_stream_t *txd_stream;
     svn_stream_t *o_stream;
@@ -1643,23 +1612,21 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
     if (serr != NULL)
       return dav_svn_convert_err(serr, HTTP_BAD_REQUEST,
                                  "could not parse the delta base");
-    if (info.node_id == NULL)
+    if (info.rev == SVN_INVALID_REVNUM)
       return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
                            "the delta base was not a version "
                            "resource URL");
 
     /* We are always accessing the base resource by ID, so open
        an ID root. */
-    serr = svn_fs_id_root(&root, resource->info->repos->fs,
-                          resource->pool);
+    serr = svn_fs_revision_root(&root, resource->info->repos->fs,
+                                info.rev, resource->pool);
     if (serr != NULL)
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not open a root for the base");
 
-    id_str = svn_fs_unparse_id(info.node_id, resource->pool);
-
     /* verify that it is a file */
-    serr = svn_fs_is_file(&is_file, root, id_str->data, resource->pool);
+    serr = svn_fs_is_file(&is_file, root, info.repos_path, resource->pool);
     if (serr != NULL)
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not determine if the base "
@@ -1670,9 +1637,9 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
     /* Okay. Let's open up a delta stream for the client to read. */
     serr = svn_fs_get_file_delta_stream(&txd_stream,
-                                        root, id_str->data,
+                                        root, info.repos_path,
                                         resource->info->root.root,
-                                        DAV_SVN_REPOS_PATH(resource),
+                                        resource->info->repos_path,
                                         resource->pool);
     if (serr != NULL)
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

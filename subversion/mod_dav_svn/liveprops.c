@@ -133,7 +133,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
            root object might be an ID root -or- a revision root. */
         serr = svn_fs_node_created_rev(&committed_rev,
                                        resource->info->root.root,
-                                       DAV_SVN_REPOS_PATH(resource), p);
+                                       resource->info->repos_path, p);
         if (serr != NULL)
           {
             /* ### what to do? */
@@ -169,7 +169,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
            root object might be an ID root -or- a revision root. */
         serr = svn_fs_node_created_rev(&committed_rev,
                                        resource->info->root.root,
-                                       DAV_SVN_REPOS_PATH(resource), p);
+                                       resource->info->repos_path, p);
         if (serr != NULL)
           {
             /* ### what to do? */
@@ -231,7 +231,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       if (resource->type != DAV_RESOURCE_TYPE_VERSION || !resource->baselined)
         return DAV_PROP_INSERT_NOTSUPP;
       value = dav_svn_build_uri(resource->info->repos, DAV_SVN_BUILD_URI_BC,
-                                resource->info->root.rev, NULL,
+                                resource->info->root.rev, NULL, NULL,
                                 1 /* add_href */, p);
       break;
 
@@ -252,7 +252,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             }
           s = dav_svn_build_uri(resource->info->repos,
                                 DAV_SVN_BUILD_URI_BASELINE,
-                                revnum, NULL,
+                                revnum, NULL, NULL, 
                                 0 /* add_href */, p);
           value = apr_psprintf(p, "<D:href>%s</D:href>", 
                                apr_xml_quote_string(p, s, 1));
@@ -264,24 +264,11 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         }
       else
         {
-          svn_fs_id_t *id;
-          svn_stringbuf_t *stable_id;
-
-          serr = svn_fs_node_id(&id, resource->info->root.root,
-                                resource->info->repos_path, p);
-          if (serr != NULL)
-            {
-              /* ### what to do? */
-              value = "###error###";
-              break;
-            }
-
-          stable_id = svn_fs_unparse_id(id, p);
-          svn_stringbuf_appendcstr(stable_id, resource->info->repos_path);
-
           s = dav_svn_build_uri(resource->info->repos,
                                 DAV_SVN_BUILD_URI_VERSION,
-                                SVN_INVALID_REVNUM, stable_id->data,
+                                SVN_INVALID_REVNUM,
+                                resource->info->root.root,
+                                resource->info->repos_path,
                                 0 /* add_href */, p);
           value = apr_psprintf(p, "<D:href>%s</D:href>", 
                                apr_xml_quote_string(p, s, 1));
@@ -295,7 +282,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
         return DAV_PROP_INSERT_NOTSUPP;
       value = dav_svn_build_uri(resource->info->repos, DAV_SVN_BUILD_URI_VCC,
-                                SVN_IGNORED_REVNUM, NULL,
+                                SVN_IGNORED_REVNUM, NULL, NULL, 
                                 1 /* add_href */, p);
       break;
 
@@ -320,7 +307,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
              root object might be an ID root -or- a revision root. */
           serr = svn_fs_node_created_rev(&committed_rev,
                                          resource->info->root.root,
-                                         DAV_SVN_REPOS_PATH(resource), p);
+                                         resource->info->repos_path, p);
           if (serr != NULL)
             {
               /* ### what to do? */

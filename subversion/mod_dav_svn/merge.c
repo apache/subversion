@@ -110,26 +110,20 @@ static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
   merge_response_ctx *mrc = baton->mrc;
   const char *href;
   const char *rt;
-  svn_fs_id_t *id;
-  svn_stringbuf_t *stable_id;
   const char *vsn_url;
   apr_status_t status;
 
   href = dav_svn_build_uri(mrc->repos, DAV_SVN_BUILD_URI_PUBLIC,
-                           SVN_IGNORED_REVNUM, baton->path,
+                           SVN_IGNORED_REVNUM, NULL, baton->path,
                            0 /* add_href */, baton->pool);
 
   rt = is_dir
     ? "<D:resourcetype><D:collection/></D:resourcetype>" DEBUG_CR
     : "<D:resourcetype/>" DEBUG_CR;
 
-  SVN_ERR( svn_fs_node_id(&id, mrc->root, baton->path, baton->pool) );
-
-  stable_id = svn_fs_unparse_id(id, baton->pool);
-  svn_stringbuf_appendcstr(stable_id, baton->path);
-
   vsn_url = dav_svn_build_uri(mrc->repos, DAV_SVN_BUILD_URI_VERSION,
-                              SVN_INVALID_REVNUM, stable_id->data,
+                              SVN_INVALID_REVNUM,
+                              mrc->root, baton->path,
                               0 /* add_href */, baton->pool);
 
   status = ap_fputstrs(mrc->output, mrc->bb,
@@ -343,7 +337,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   
   /* the HREF for the baseline is actually the VCC */
   vcc = dav_svn_build_uri(repos, DAV_SVN_BUILD_URI_VCC, SVN_IGNORED_REVNUM,
-                          NULL, 0 /* add_href */, pool);
+                          NULL, NULL, 0 /* add_href */, pool);
 
   /* the version-name of the baseline is the revision number */
   sprintf(revbuf, "%" SVN_REVNUM_T_FMT, new_rev);
