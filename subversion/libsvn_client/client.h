@@ -113,6 +113,10 @@ typedef struct
      password. */
   svn_boolean_t do_store;
 
+  /* Record whether or not we have new auth info to consider storing
+     in the WC. */
+  svn_boolean_t got_new_auth_info;
+
   /* An array of svn_client_commit_item_t * structures, present only
      during working copy commits. */
   apr_array_header_t *commit_items;
