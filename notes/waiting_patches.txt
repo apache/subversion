@@ -1,0 +1,46 @@
+
+* Active Coding:
+
+  * rewriting authentication system (#456):  sussman working on
+
+  * redesigning anchor/target (#?):  cmpilato working on
+
+  * rewriting mod_dav props (#382):  gstein working on
+
+
+* Debates in Progress:
+
+  * SVN vs .svn
+
+  * behaviors of 'svn status'
+
+  * solution to anchor/target problems
+
+  
+* Backlogged patches to evaluate/discuss/commit:
+
+  * Kevin:  update fixes (part of anchor/target discussion)
+
+  * Mo:  update fixes (part of anchor/target discussion)
+
+  * Mo:  use latest autoconf/libtool
+
+  * Mo:  `make check` fixes for builddir != subdir
+
+  * Mo:  implement 'svn patch' subcommand
+
+  * Dominick:  "--program-prefix/suffix' patch (part of SVN/.svn discussion)
+
+  * C. Scott:  new date parser
+
+  * C. Scott:  'make PREINSTALL=' allows installation on case-insensitive fs
+                (part of SVN/.svn discussion)
+
+  * ?:  examine FreeBSD port
+
+  * Dale:  ra_dav enhancement:  http proxy support
+
+
+
+
+
