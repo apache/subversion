@@ -62,14 +62,16 @@ extern "C" {
  * three datasources.
  *
  * An opaque type that represents a difference between either two or
- * three datasources.   This object is returned by @c svn_diff() and
- * @c svn_diff3() below, and consumed by a number of other routines.
+ * three datasources.   This object is returned by @c svn_diff(),
+ * @c svn_diff3() and @c svn_diff4 below, and consumed by a number of
+ * other routines.
  */
 typedef struct svn_diff_t svn_diff_t;
 
 /**
- * There are three types of datasources.  In GNU diff3 terminology,
- * these types correspond to the phrases "older", "mine", and "yours".
+ * There are four types of datasources.  In GNU diff3 terminology,
+ * the first three types correspond to the phrases "older", "mine",
+ * and "yours".
  */
 typedef enum svn_diff_datasource_e
 {
@@ -82,7 +84,10 @@ typedef enum svn_diff_datasource_e
   /** The latest version of the data, possibly different than the
    * user's modified version.
    */
-  svn_diff_datasource_latest
+  svn_diff_datasource_latest,
+
+  /** The common ancestor of original and modified. */
+  svn_diff_datasource_ancestor
 
 } svn_diff_datasource_e;
 
@@ -143,10 +148,23 @@ svn_error_t *svn_diff (svn_diff_t **diff,
  *
  * Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
  * return a diff object in @a *diff that represents a difference between
- * three datasources: "original", "modified", and "latest". Do all
+ * three datasources: "original", "modified", and "latest".  Do all
  * allocation in @a pool.
  */
 svn_error_t *svn_diff3 (svn_diff_t **diff,
+                        void *diff_baton,
+                        const svn_diff_fns_t *diff_fns,
+                        apr_pool_t *pool);
+
+/** Return a diff that represents the difference between four datasources.
+ *
+ * Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
+ * return a diff object in @a *diff that represents a difference between
+ * two datasources: "original" and "latest", adjusted to become a full
+ * difference between "original", "modified" and "latest" using "ancestor".
+ * Do all allocation in @a pool.
+ */
+svn_error_t *svn_diff4 (svn_diff_t **diff,
                         void *diff_baton,
                         const svn_diff_fns_t *diff_fns,
                         apr_pool_t *pool);
@@ -315,6 +333,20 @@ svn_diff3_file(svn_diff_t **diff,
                const char *original,
                const char *modified,
                const char *latest,
+               apr_pool_t *pool);
+
+/** A convenience function to produce a diff between four files.
+ *
+ * Return a diff object in @a *diff (allocated from @a pool) that represents
+ * the difference between an @a original file, @a modified file, @a latest
+ * and @a ancestor file. (The file arguments must be full paths to the files.)
+ */
+svn_error_t *
+svn_diff4_file(svn_diff_t **diff,
+               const char *original,
+               const char *modified,
+               const char *latest,
+               const char *ancestor,
                apr_pool_t *pool);
 
 /** A convenience function to produce unified diff output from the

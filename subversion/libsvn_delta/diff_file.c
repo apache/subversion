@@ -43,11 +43,11 @@ typedef struct svn_diff__file_token_t
 
 typedef struct svn_diff__file_baton_t
 {
-  const char *path[3];
+  const char *path[4];
 
-  char *buffer[3];
-  char *curp[3];
-  char *endp[3];
+  char *buffer[4];
+  char *curp[4];
+  char *endp[4];
 
   svn_diff__file_token_t *token;
   svn_boolean_t reuse_token;
@@ -70,6 +70,9 @@ svn_diff__file_datasource_to_index(svn_diff_datasource_e datasource)
 
     case svn_diff_datasource_latest:
       return 2;
+
+    case svn_diff_datasource_ancestor:
+      return 3;
     }
 
   return -1;
@@ -289,6 +292,29 @@ svn_diff3_file(svn_diff_t **diff,
   baton.pool = svn_pool_create(pool);
 
   SVN_ERR(svn_diff3(diff, &baton, &svn_diff__file_vtable, pool));
+
+  svn_pool_destroy(baton.pool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff4_file(svn_diff_t **diff,
+               const char *original,
+               const char *modified,
+               const char *latest,
+               const char *ancestor,
+               apr_pool_t *pool)
+{
+  svn_diff__file_baton_t baton;
+
+  memset(&baton, 0, sizeof(baton));
+  baton.path[0] = original;
+  baton.path[1] = modified;
+  baton.path[2] = latest;
+  baton.path[3] = ancestor;
+  baton.pool = svn_pool_create(pool);
+
+  SVN_ERR(svn_diff4(diff, &baton, &svn_diff__file_vtable, pool));
 
   svn_pool_destroy(baton.pool);
   return SVN_NO_ERROR;
