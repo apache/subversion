@@ -836,8 +836,8 @@ maybe_add_with_history (struct node_baton *nb,
       svn_fs_root_t *copy_root;
       svn_revnum_t src_rev = nb->copyfrom_rev - rb->rev_offset;
       svn_revnum_t *src_rev_from_map;
-      if (src_rev_from_map = apr_hash_get (pb->rev_map, &nb->copyfrom_rev,
-                                           sizeof(nb->copyfrom_rev)))
+      if ((src_rev_from_map = apr_hash_get (pb->rev_map, &nb->copyfrom_rev,
+                                            sizeof(nb->copyfrom_rev))))
         src_rev = *src_rev_from_map;
 
       if (! SVN_IS_VALID_REVNUM(src_rev))

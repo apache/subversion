@@ -9,13 +9,6 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10242
-    Fix a gcc compiler warning.
-    Justification:
-      Duh.  It's a compiler warning.
-    Votes:
-      +1: cmpilato, lundblad, bliss
-
   * r10604
     Cleanup some qsort-related stuff.
     Justification:
@@ -79,7 +72,7 @@ Candidate changes:
       APR_STATUS_IS_SUCCESS is no longer defined in APR HEAD.
     Votes:
       +1: mbk, lundblad
-      
+
   * r10722
     Display the targets printed for propedit in local style.
     Justification:
