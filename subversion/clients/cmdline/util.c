@@ -357,11 +357,12 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   const char *cmd;
   apr_file_t *tmp_file;
   const char *tmpfile_name;
-  const char *contents_native, *tmpfile_native;
+  const char *contents_native, *tmpfile_native, *base_dir_native;
   apr_status_t apr_err, apr_err2;
   apr_size_t written;
   apr_finfo_t finfo_before, finfo_after;
-  svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *err = SVN_NO_ERROR, *err2;
+  char *old_cwd;
   int sys_err;
 
   /* Try to find an editor in the environment. */
@@ -381,12 +382,33 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   /* Convert file contents from UTF-8 */
   SVN_ERR (svn_utf_cstring_from_utf8 (&contents_native, contents, pool));
 
-  /* Ask the working copy for a temporary file based on BASE_DIR */
-  SVN_ERR (svn_io_open_unique_file 
-           (&tmp_file, &tmpfile_name,
-            svn_path_join (base_dir, "msg", pool), ".tmp", FALSE, pool));
+  /* Move to BASE_DIR to avoid getting characters that need quoting
+     into tmpfile_name */
+  apr_err = apr_filepath_get (&old_cwd, APR_FILEPATH_NATIVE, pool);
+  if (apr_err)
+    {
+      return svn_error_create
+        (apr_err, 0, NULL, pool, "failed to get current working directory");
+    }
+  SVN_ERR (svn_utf_cstring_from_utf8 (&base_dir_native, base_dir, pool));
+  apr_err = apr_filepath_set (base_dir_native, pool);
+  if (apr_err)
+    {
+      return svn_error_createf
+        (apr_err, 0, NULL, pool,
+         "failed to change working directory to '%s'", base_dir);
+    }
 
-  /*** From here one, any problems that occur require us to cleanup
+  /*** From here on, any problems that occur require us to cd back!! ***/
+
+  /* Ask the working copy for a temporary file */
+  err = svn_io_open_unique_file 
+    (&tmp_file, &tmpfile_name,
+     "msg", ".tmp", FALSE, pool);
+  if (err)
+    goto cleanup2;
+
+  /*** From here on, any problems that occur require us to cleanup
        the file we just created!! ***/
 
   /* Dump initial CONTENTS to TMP_FILE. */
@@ -422,7 +444,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     }
 
   /* Now, run the editor command line.  */
-  cmd = apr_psprintf (pool, "%s \"%s\"", editor, tmpfile_native);
+  cmd = apr_psprintf (pool, "%s %s", editor, tmpfile_native);
   sys_err = system (cmd);
   if (sys_err != 0)
     {
@@ -463,12 +485,24 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
 
  cleanup:
 
-  apr_err = apr_file_remove (tmpfile_native, pool);
+  err2 = svn_io_remove_file (tmpfile_name, pool);
 
   /* Only report remove error if there was no previous error. */
-  if (! err && apr_err)
-    err = svn_error_createf (apr_err, 0, NULL, pool,
-                             "failed to remove '%s'", tmpfile_name);
+  if (! err && err2)
+    err = err2;
+
+ cleanup2:
+
+  /* If we against all probability can't cd back, all further relative
+     file references would be screwed up, so we have to abort. */
+  apr_err = apr_filepath_set (old_cwd, pool);
+  if (apr_err)
+    {
+      svn_handle_error (svn_error_create
+                        (apr_err, 0, NULL, pool,
+                         "failed to restore current working directory"),
+                        stderr, TRUE /* fatal */);
+    }
 
   return err;
 }
