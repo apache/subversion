@@ -93,6 +93,25 @@ apr_status_t svn_diff3(svn_diff_t **diff,
 
 
 /*
+ * Utility functions
+ */
+
+/* Determine if a diff contains conflicts.  If it
+ * does, return TRUE.
+ */
+svn_boolean_t
+svn_diff_contains_conflicts(svn_diff_t *diff);
+
+
+/* Determine if a diff contains actual differences
+ * between the datasources.  If so, return TRUE.
+ */
+svn_boolean_t
+svn_diff_contains_diffs(svn_diff_t *diff);
+
+
+
+/*
  *
  */
 typedef struct svn_diff_output_fns_t
