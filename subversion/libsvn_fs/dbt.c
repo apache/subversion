@@ -99,7 +99,7 @@ DBT *
 svn_fs__track_dbt (DBT *dbt, apr_pool_t *pool)
 {
   if (dbt->data)
-    apr_register_cleanup (pool, dbt->data, apr_free_cleanup, 0);
+    apr_register_cleanup (pool, dbt->data, apr_free_cleanup, apr_null_cleanup);
 
   return dbt;
 }
