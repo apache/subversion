@@ -47,6 +47,7 @@ struct context {
   svn_fs_root_t *target_root;
   svn_boolean_t text_deltas;
   svn_boolean_t recurse;
+  svn_boolean_t use_copyfrom_args;
   int target_is_rev;
 };
 
@@ -131,15 +132,13 @@ static svn_error_t *replace_file_or_dir (struct context *c,
                                          const char *target_entry,
                                          apr_pool_t *pool);
 
-#if 0 /* comment out until used, to avoid compiler warning */
 static svn_error_t *find_nearest_entry (svn_fs_dirent_t **s_entry,
                                         int *distance,
                                         struct context *c, 
                                         const char *source_parent, 
                                         const char *target_parent,
-                                        svn_fs_dirent_t *t_entry,
+                                        const svn_fs_dirent_t *t_entry,
                                         apr_pool_t *pool);
-#endif /* 0 */
 
 static svn_error_t *delta_dirs (struct context *c, 
                                 void *dir_baton,
@@ -173,6 +172,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      void *edit_baton,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
+                     svn_boolean_t use_copyfrom_args,
                      apr_pool_t *pool)
 {
   void *root_baton;
@@ -241,6 +241,12 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   c.target_is_rev = svn_fs_is_revision_root (tgt_root);
   c.recurse = recurse;
   c.text_deltas = text_deltas;
+
+#if SVN_REPOS_SUPPORT_COPY_FROM_ARGS
+  c.use_copyfrom_args = use_copyfrom_args;
+#else
+  c.use_copyfrom_args = FALSE;
+#endif
 
   /* Set the global target revision if the target is a revision. */
   if (c.target_is_rev)
@@ -810,7 +816,6 @@ replace_file_or_dir (struct context *c,
 }
 
 
-#if 0   /* commented out to avoid unused function warning */
 /* Do a `replace' edit in DIR_BATON, replacing the entry named
    T_ENTRY->name in the directory TARGET_PARENT with the closest
    related node available in SOURCE_PARENT.  If no relative can be
@@ -922,7 +927,6 @@ find_nearest_entry (svn_fs_dirent_t **s_entry,
 
   return SVN_NO_ERROR;
 }
-#endif /* 0 */
 
 
 /* Emit deltas to turn SOURCE_PATH into TARGET_PATH.  Assume that
@@ -1021,31 +1025,35 @@ delta_dirs (struct context *c,
                 }
               else if (distance == -1)
                 {
-#if SVN_FS_SUPPORT_COPY_FROM_ARGS
                   svn_fs_dirent_t *best_entry;
-                  int best_distance;
+                  int best_distance = distance;
 
-                  SVN_ERR (find_nearest_entry (&best_entry, &best_distance,
-                                               c, source_path, 
-                                               target_path, t_entry));
-
-                  if (best_distance == -1)
-#endif
+                  /* If we are allowed to use copyfrom args, try to
+                     find a related entry that we might use as an
+                     optimization over simply deleting the old thing
+                     and add the new one. */
+                  if (c->use_copyfrom_args)
                     {
-                      /* We found no ancestral match at all.  Delete this
-                         entry and create a new one from scratch. */
+                      SVN_ERR (find_nearest_entry (&best_entry, &best_distance,
+                                                   c, source_path, 
+                                                   target_path, t_entry, 
+                                                   subpool));
+                    }
+
+                  /* If we did't find a related node (or simply didn't
+                     look), just delete this entry and create a new
+                     one from scratch.  Else, replace this entry with
+                     the related node we found (sending any changes
+                     that might exist between the two). */
+                  if (best_distance == -1)
+                    {
                       SVN_ERR (delete (c, dir_baton, t_entry->name, subpool));
                       SVN_ERR (add_file_or_dir 
                                (c, dir_baton, NULL, NULL, 
                                 target_path, t_entry->name, subpool));
                     }
-#if SVN_FS_SUPPORT_COPY_FROM_ARGS
                   else
                     {
-                      /* We found a relative.  It *shouldn't* have the
-                         same name (since this case gets caught in the
-                         first distance check above), but does it really
-                         matter? */
                       SVN_ERR (replace_file_or_dir 
                                (c, dir_baton,
                                 source_path,
@@ -1054,7 +1062,6 @@ delta_dirs (struct context *c,
                                 t_entry->name,
                                 subpool));
                     } 
-#endif
                 }
               else
                 {
@@ -1079,27 +1086,29 @@ delta_dirs (struct context *c,
 
           if (c->recurse || !is_dir)
             {
-#if SVN_FS_SUPPORT_COPY_FROM_ARGS
               /* We didn't find an entry with this name in the source
                  entries hash.  This must be something new that needs to
-                 be added.  But let's first check to see if we can find an
-                 ancestor from which to copy this new entry. */
+                 be added. */
               svn_fs_dirent_t *best_entry;
-              int best_distance;
+              int best_distance = -1;
 
-              SVN_ERR (find_nearest_entry (&best_entry, &best_distance,
-                                           c, source_path, 
-                                           target_path, t_entry, subpool));
-              
+              /* If we're allowed to do so, let's first check to see
+                 if we can find an ancestor from which to copy this
+                 new entry. */
+              if (c->use_copyfrom_args)
+                {
+                  SVN_ERR (find_nearest_entry (&best_entry, &best_distance,
+                                               c, source_path, 
+                                               target_path, t_entry, subpool));
+                }
+
               /* Add (with history if we found an ancestor) this new
                  entry. */
               if (best_distance == -1)
-#endif
                 SVN_ERR (add_file_or_dir 
                          (c, dir_baton, NULL, NULL,
                           target_path, t_entry->name,
                           subpool));
-#if SVN_FS_SUPPORT_COPY_FROM_ARGS
               else
                 SVN_ERR (add_file_or_dir
                          (c, dir_baton, 
@@ -1108,7 +1117,6 @@ delta_dirs (struct context *c,
                           target_path, 
                           t_entry->name,
                           subpool));
-#endif
             } 
         }
 

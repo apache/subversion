@@ -200,6 +200,7 @@ svn_repos_finish_report (void *report_baton)
                                 rbaton->update_edit_baton,
                                 rbaton->text_deltas,
                                 rbaton->recurse,
+                                FALSE,
                                 rbaton->pool));
   
   /* Still here?  Great!  Throw out the transaction. */

@@ -210,6 +210,13 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
    If TEXT_DELTAS is FALSE, only a single NULL txdelta window will be
    sent to the window handler returned by EDITOR->apply_textdelta().
 
+   USE_COPYFROM_ARGS determines whether or not the editor's add_file
+   and add_directory functions will be called with copyfrom_*
+   arguments.  That is to say, if a node that needs to be added can be
+   optimized by simply copying another node that already exists in the
+   source tree, svn_repos_dir_delta might ask that such a copy take
+   place.
+
    Before completing successfully, this function calls EDITOR's
    close_edit(), so the caller should expect its EDIT_BATON to be
    invalid after its use with this function.
@@ -230,6 +237,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      void *edit_baton,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
+                     svn_boolean_t use_copyfrom_args,
                      apr_pool_t *pool);
 
 
@@ -409,6 +417,10 @@ typedef struct svn_repos_node_t
 
   /* The name of this node as it appears in its parent's entries list */
   const char *name;
+
+  /* The filesystem revision and path where this was copied from (if any) */
+  svn_revnum_t copyfrom_rev;
+  const char *copyfrom_path;
 
   /* Pointer to the next sibling of this node */
   struct svn_repos_node_t *sibling;
