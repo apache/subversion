@@ -22,6 +22,7 @@
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <apr_lib.h>     /* for apr_isspace() */
+#include <apr_md5.h>
 #include <apr_fnmatch.h>
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 

@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os
+import string, sys, os, re
 
 # Our testing module
 import svntest
@@ -520,8 +520,8 @@ def nested_dir_replacements(sbox):
 
   # Delete and re-add A/D (a replacement), and A/D/H (another replace).
   svntest.main.run_svn(None, 'rm', os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn(None, 'add', os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn(None, 'add', os.path.join(wc_dir, 'A', 'D', 'H'))
+  svntest.main.run_svn(None, 'add', '-N', os.path.join(wc_dir, 'A', 'D'))
+  svntest.main.run_svn(None, 'add', '-N', os.path.join(wc_dir, 'A', 'D', 'H'))
                        
   # For kicks, add new file A/D/bloo.
   svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'bloo'), "hi")
@@ -1182,7 +1182,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
 
   os.mkdir(Q_path)
   svntest.main.file_append(bloo_path, "New contents.")
-  svntest.main.run_svn(None, 'add', '--recursive', Q_path)
+  svntest.main.run_svn(None, 'add', Q_path)
   
   # Commit a regular added thing inside an added directory,
   # expecting a specific error to occur!
@@ -1499,6 +1499,102 @@ def commit_multiple_wc(sbox):
   if svntest.actions.run_and_verify_status(wc2_dir, expected_status2):
     return 1
 
+
+def commit_symlink(sbox):
+  "committing a symlink should fail"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  linktarget_path = os.path.join(wc_dir, 'linktarget')
+  svntest.main.file_append(newfile_path, 'this is a new file')
+  svntest.main.file_append(linktarget_path, 'this is just a link target')
+  svntest.main.run_svn(None, 'add', newfile_path)
+  os.remove(newfile_path)
+  os.symlink('linktarget', newfile_path)
+
+  out, err = svntest.main.run_svn(1, 'ci', '-m', 'log msg', wc_dir)
+  if err:
+    return 0
+  else:
+    return 1
+
+#----------------------------------------------------------------------
+# Regression for #1017: ra_dav was allowing the deletion of out-of-date
+# files or dirs, which majorly violates Subversion's semantics.
+
+
+def commit_out_of_date_deletions(sbox):
+  "commit deletion of out-of-date file or dir."
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = wc_dir + 'backup'
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Change omega's text, and make a propchange to A/C directory
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega') 
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  svntest.main.file_append (omega_path, 'appended omega text')
+  svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', C_path)
+
+  # Commit revision 2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/omega' : Item(verb='Sending'),
+    'A/C' : Item(verb='Sending'),
+    })
+  expected_status =  svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D/H/omega', 'A/C', wc_rev=2, status='  ')
+
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output,
+                                            expected_status,
+                                            None,
+                                            None, None,
+                                            None, None,
+                                            wc_dir):
+    return 1
+
+  # Now, in the second working copy, schedule both omega and C for deletion.
+  omega_path = os.path.join(wc_backup, 'A', 'D', 'H', 'omega') 
+  C_path = os.path.join(wc_backup, 'A', 'C')
+  svntest.main.run_svn(None, 'rm', omega_path, C_path) 
+
+  # Attempt to delete omega.  This should return an (expected)
+  # out-of-dateness error.
+  outlines, errlines = svntest.main.run_svn(1, 'commit', '-m', 'blah',
+                                            omega_path)
+  out_of_date_error = 0
+  for line in errlines:
+    if re.match(".*out of date.*", line):
+      out_of_date_error = 1;
+
+  if out_of_date_error == 0:
+    return 1
+
+  # Attempt to delete directory C.  This should return an (expected)
+  # out-of-dateness error.
+  outlines, errlines = svntest.main.run_svn(1, 'commit', '-m', 'blah',
+                                            C_path)
+  out_of_date_error = 0
+  for line in errlines:
+    if re.match(".*out of date.*", line):
+      out_of_date_error = 1;
+
+  if out_of_date_error == 0:
+    return 1
+
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -1530,6 +1626,8 @@ test_list = [ None,
               commit_current_dir,
               commit_multiple_wc,
               XFail(failed_commit),
+              Skip(commit_symlink, (os.name != 'posix')),
+              #commit_out_of_date_deletions,
              ]
 
 if __name__ == '__main__':

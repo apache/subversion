@@ -418,6 +418,8 @@ test_abort_edit (void *edit_baton,
 
 static svn_error_t *
 test_apply_textdelta (void *file_baton,
+                      const char *base_checksum,
+                      const char *result_checksum,
                       apr_pool_t *pool,
                       svn_txdelta_window_handler_t *handler,
                       void **handler_baton)

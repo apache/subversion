@@ -130,7 +130,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "Put files and directories under revision control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
     "usage: add PATH [PATH [PATH ... ]]\n",
-    {svn_cl__targets_opt, 'R', 'q'} },
+    {svn_cl__targets_opt, 'N', 'q'} },
 
   { "cat", svn_cl__cat, {0},
     "Output the content of specified files or URLs.\n"
@@ -421,7 +421,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "      'C' Conflicted\n"
     "      '?' item is not under revision control\n"
     "      '!' item is missing and was removed via a non-svn command\n"
-    "      '~' versioned as a directory, but is a file, or vice versa\n"
+    "      '~' versioned item obstructed by some item of a different kind\n"
     "    Second column: Modifications of a file's or directory's properties\n"
     "      ' ' no modifications\n"
     "      'M' Modified\n"

@@ -70,7 +70,7 @@ send_file_contents (const char *path,
   contents = svn_stream_from_aprfile (f, pool);
 
   /* Get an editor func that wants to consume the delta stream. */
-  SVN_ERR (editor->apply_textdelta (file_baton, pool,
+  SVN_ERR (editor->apply_textdelta (file_baton, NULL, NULL, pool,
                                     &handler, &handler_baton));
 
   /* Send the file's contents to the delta-window handler. */
@@ -947,19 +947,36 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                           adm_access_path, pool);
           if (bump_err)
             {
-              if (bump_err->apr_err == SVN_ERR_WC_NOT_LOCKED
-                  && have_processed_parent (commit_items, i, item->path, pool))
+              if (bump_err->apr_err == SVN_ERR_WC_NOT_LOCKED)
                 {
-                  /* This happens when the item is a directory that is
-                     deleted, and it has been processed as a child of an
-                     earlier item. */
-                  svn_error_clear (bump_err);
-                  bump_err = SVN_NO_ERROR;
-                  continue;
-                }
-              goto cleanup;
-            }
+                  if (have_processed_parent (commit_items, i,
+                                             item->path, pool))
+                    {
+                      /* This happens when the item is a directory that is
+                         deleted, and it has been processed as a child of an
+                         earlier item. */
+                      svn_error_clear (bump_err);
+                      bump_err = SVN_NO_ERROR;
+                      continue;
+                    }
 
+                  /* Is it a directory that was deleted in the commit? */
+                  if (item->kind == svn_node_dir
+                      && item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+                    {
+                      /* It better be missing then.  Assuming it is,
+                         mark as deleted in parent.  If not, then
+                         something is way bogus. */
+                      SVN_ERR (svn_wc_mark_missing_deleted (item->path,
+                                                            base_dir_access,
+                                                            pool));
+                      svn_error_clear (bump_err);
+                      bump_err = SVN_NO_ERROR;
+                      continue;                      
+                    }                  
+                }
+              goto cleanup;              
+            }
           if ((bump_err = svn_wc_entry (&entry, item->path, adm_access, TRUE,
                                         pool)))
             goto cleanup;

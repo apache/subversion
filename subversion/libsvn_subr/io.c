@@ -88,23 +88,6 @@ path_from_utf8 (const char **path_native, const char *path, apr_pool_t *pool)
     return svn_utf_cstring_from_utf8 (path_native, path, pool);
 }
 
-/** Convert a path, represented as a @c svn_stringbuf_t, from UTF-8
-    to the internal encoding used by APR. */
-static svn_error_t *
-path_from_utf8_stringbuf (const char **path_native, svn_stringbuf_t *path_buf,
-                          apr_pool_t *pool)
-{
-  svn_boolean_t path_is_utf8;
-  SVN_ERR (get_path_encoding (&path_is_utf8, pool));
-  if (path_is_utf8)
-    {
-      *path_native = apr_pstrmemdup (pool, path_buf->data, path_buf->len);
-      return SVN_NO_ERROR;
-    }
-  else
-    return svn_utf_cstring_from_utf8_stringbuf (path_native, path_buf, pool);
-}
-
 /** Convert a path from the internal encoding used by APR to UTF-8. */
 static svn_error_t *
 path_to_utf8 (const char **path_utf8, const char *path, apr_pool_t *pool)
@@ -165,50 +148,15 @@ svn_io_check_path (const char *path,
 
 svn_error_t *
 svn_io_open_unique_file (apr_file_t **f,
-                         const char **unique_name,
+                         const char **unique_name_p,
                          const char *path,
                          const char *suffix,
                          svn_boolean_t delete_on_close,
                          apr_pool_t *pool)
 {
-  char number_buf[6];
-  int i;
-  apr_size_t iterating_portion_idx;
+  unsigned int i;
+  const char *unique_name;
   const char *unique_name_native;
-  svn_stringbuf_t *unique_name_buf;
-
-  /* The random portion doesn't have to be very random; it's just to
-     avoid a series of collisions where someone has filename NAME and
-     also NAME.00001.tmp, NAME.00002.tmp, etc, under version control
-     already, which might conceivably happen.  The random portion is a
-     last-ditch safeguard against that case.  It's okay, and even
-     preferable, for tmp files to collide with each other, though, so
-     that the iterating portion changes instead.  Taking the pointer
-     as an unsigned short int has more or less this effect. */
-  int random_portion_width;
-  char *random_portion = apr_psprintf 
-    (pool, "%hu%n",
-     (unsigned int)unique_name,
-     &random_portion_width);
-
-  unique_name_buf = svn_stringbuf_create (path, pool);
-
-  /* Not sure of a portable PATH_MAX constant to use here, so just
-     guessing at 255. */
-  if (unique_name_buf->len >= 255)
-    {
-      int chop_amt = (unique_name_buf->len - 255)
-                      + random_portion_width
-                      + 3  /* 2 dots */
-                      + 5  /* 5 digits of iteration portion */
-                      + strlen (suffix);
-      svn_stringbuf_chop (unique_name_buf, chop_amt);
-    }
-
-  iterating_portion_idx = unique_name_buf->len + random_portion_width + 2;
-  svn_stringbuf_appendcstr (unique_name_buf,
-                            apr_psprintf (pool, ".%s.00000%s",
-                                          random_portion, suffix));
 
   for (i = 1; i <= 99999; i++)
     {
@@ -219,21 +167,27 @@ svn_io_open_unique_file (apr_file_t **f,
       if (delete_on_close)
         flag |= APR_DELONCLOSE;
 
-      /* Tweak last attempted name to get the next one. */
-      sprintf (number_buf, "%05d", i);
-      unique_name_buf->data[iterating_portion_idx + 0] = number_buf[0];
-      unique_name_buf->data[iterating_portion_idx + 1] = number_buf[1];
-      unique_name_buf->data[iterating_portion_idx + 2] = number_buf[2];
-      unique_name_buf->data[iterating_portion_idx + 3] = number_buf[3];
-      unique_name_buf->data[iterating_portion_idx + 4] = number_buf[4];
+      /* Special case the first attempt -- if we can avoid having a
+         generated numeric portion at all, that's best.  So first we
+         try with just the suffix; then future tries add a number
+         before the suffix.  (A do-while loop could avoid the repeated
+         conditional, but it's not worth the clarity loss.)
+
+         If the first attempt fails, the first number will be "2".
+         This is good, since "1" would misleadingly imply that that
+         the second attempt was actually the first... and if someone's
+         got conflicts on their conflicts, we probably don't want to
+         add to their confusion :-). */
+      if (i == 1)
+        unique_name = apr_psprintf (pool, "%s%s", path, suffix);
+      else
+        unique_name = apr_psprintf (pool, "%s.%u%s", path, i, suffix);
 
       /* Hmmm.  Ideally, we would append to a native-encoding buf
-         while iterating, then convert it back to UTF-8 for
+         before starting iteration, then convert back to UTF-8 for
          return. But I suppose that would make the appending code
          sensitive to i18n in a way it shouldn't be... Oh well. */
-      SVN_ERR (path_from_utf8_stringbuf (&unique_name_native,
-                                         unique_name_buf,
-                                         pool));
+      SVN_ERR (path_from_utf8 (&unique_name_native, unique_name, pool));
       
       apr_err = apr_file_open (f, unique_name_native, flag,
                                APR_OS_DEFAULT, pool);
@@ -242,24 +196,21 @@ svn_io_open_unique_file (apr_file_t **f,
         continue;
       else if (apr_err)
         {
-          char *filename = unique_name_buf->data;
           *f = NULL;
-          *unique_name = NULL;
-          return svn_error_createf (apr_err,
-                                    NULL,
-                                    "svn_io_open_unique_file: "
-                                    "error attempting %s",
-                                    filename);
+          *unique_name_p = NULL;
+          return svn_error_createf
+            (apr_err, NULL,
+             "svn_io_open_unique_file: error attempting %s", unique_name);
         }
       else
         {
-          *unique_name = unique_name_buf->data;
+          *unique_name_p = unique_name;
           return SVN_NO_ERROR;
         }
     }
 
   *f = NULL;
-  *unique_name = NULL;
+  *unique_name_p = NULL;
   return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                             NULL,
                             "svn_io_open_unique_file: unable to make name for "
@@ -607,14 +558,13 @@ svn_io_filesizes_different_p (svn_boolean_t *different_p,
 
 
 svn_error_t *
-svn_io_file_checksum (svn_stringbuf_t **checksum_p,
+svn_io_file_checksum (unsigned char digest[],
                       const char *file,
                       apr_pool_t *pool)
 {
   struct apr_md5_ctx_t context;
   apr_file_t *f = NULL;
   apr_status_t apr_err;
-  unsigned char digest[MD5_DIGESTSIZE];
   char buf[BUFSIZ];  /* What's a good size for a read chunk? */
 
   /* ### The apr_md5 functions return apr_status_t, but they only
@@ -646,7 +596,6 @@ svn_io_file_checksum (svn_stringbuf_t **checksum_p,
        "svn_io_file_checksum: error closing '%s'", file);
 
   apr_md5_final (digest, &context);
-  *checksum_p = svn_base64_from_md5 (digest, pool);
 
   return SVN_NO_ERROR;
 }

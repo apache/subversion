@@ -34,9 +34,8 @@
 
 typedef struct svn_diff__file_token_t
 {
-  apr_off_t length;
-
-  unsigned char md5[MD5_DIGESTSIZE];
+  apr_off_t   length;
+  const char *line;
 } svn_diff__file_token_t;
 
 
@@ -44,11 +43,9 @@ typedef struct svn_diff__file_baton_t
 {
   const char *path[3];
 
-  apr_file_t *file[3];
-  apr_size_t  length[3];
-
-  char buffer[3][4096];
+  char *buffer[3];
   char *curp[3];
+  char *endp[3];
 
   svn_diff__file_token_t *token;
   svn_boolean_t reuse_token;
@@ -82,13 +79,41 @@ svn_diff__file_datasource_open(void *baton,
                                svn_diff_datasource_e datasource)
 {
   svn_diff__file_baton_t *file_baton = baton;
+  apr_file_t *file;
+  apr_finfo_t finfo;
+  apr_status_t rv;
   int idx;
 
   idx = svn_diff__file_datasource_to_index(datasource);
-  file_baton->length[idx] = 0;
 
-  SVN_ERR( svn_io_file_open(&file_baton->file[idx], file_baton->path[idx],
-                            APR_READ, APR_OS_DEFAULT, file_baton->pool) );
+  SVN_ERR(svn_io_file_open(&file, file_baton->path[idx],
+                           APR_READ, APR_OS_DEFAULT, file_baton->pool));
+
+  rv = apr_file_info_get(&finfo, APR_FINFO_SIZE, file);
+  if (rv != APR_SUCCESS)
+    {
+      return svn_error_createf(rv, NULL, "Failed to get file info '%s'.",
+                               file_baton->path[idx]);
+    }
+
+  file_baton->buffer[idx] = apr_palloc(file_baton->pool, finfo.size + 1);
+  rv = apr_file_read_full(file, file_baton->buffer[idx], finfo.size, NULL);
+  if (rv != APR_SUCCESS)
+    {
+      return svn_error_createf(rv, NULL, "Failed to read file '%s'.",
+                               file_baton->path[idx]);
+    }
+
+  rv = apr_file_close(file);
+  if (rv != APR_SUCCESS)
+    {
+      return svn_error_createf(rv, NULL, "failed to close file '%s'.",
+                               file_baton->path[idx]);
+    }
+
+  file_baton->curp[idx] = file_baton->buffer[idx];
+  file_baton->endp[idx] = file_baton->buffer[idx] + finfo.size;
+  *file_baton->endp[idx] = '\n';
 
   return NULL;
 }
@@ -98,19 +123,6 @@ svn_error_t *
 svn_diff__file_datasource_close(void *baton,
                                 svn_diff_datasource_e datasource)
 {
-  svn_diff__file_baton_t *file_baton = baton;
-  int idx;
-  apr_status_t rv;
-
-  idx = svn_diff__file_datasource_to_index(datasource);
-
-  rv = apr_file_close(file_baton->file[idx]);
-  if (rv != APR_SUCCESS)
-    {
-      return svn_error_createf(rv, NULL, "failed to close file '%s'.",
-                               file_baton->path[idx]);
-    }
-
   return NULL;
 }
 
@@ -121,11 +133,8 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
 {
   svn_diff__file_baton_t *file_baton = baton;
   svn_diff__file_token_t *file_token;
-  apr_md5_ctx_t md5_ctx;
-  apr_status_t rv;
   int idx;
-  apr_file_t *file;
-  apr_size_t length;
+  char *endp;
   char *curp;
   char *eol;
 
@@ -133,11 +142,10 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
 
   idx = svn_diff__file_datasource_to_index(datasource);
 
-  length = file_baton->length[idx];
-  file = file_baton->file[idx];
   curp = file_baton->curp[idx];
+  endp = file_baton->endp[idx];
 
-  if (length == 0 && apr_file_eof(file))
+  if (curp == endp)
     {
       return NULL;
     }
@@ -155,55 +163,15 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
 
   file_token->length = 0;
 
-  apr_md5_init(&md5_ctx);
+  eol = strchr(curp, '\n');
+  if (eol != endp)
+    eol++;
 
-  do
-    {
-      if (length > 0)
-        {
-          eol = memchr(curp, '\n', length);
+  file_token->line = curp;
+  file_token->length = eol - curp;
 
-          if (eol != NULL)
-            {
-              apr_size_t len;
-             
-              eol++;
-              len = (apr_size_t)(eol - curp);
-              
-              file_token->length += len;
-              length -= len;
-              apr_md5_update(&md5_ctx, curp, len);
-
-              file_baton->curp[idx] = eol;
-              file_baton->length[idx] = length;
-
-              rv = APR_SUCCESS;
-              break;
-            }
-
-          file_token->length += length;
-          apr_md5_update(&md5_ctx, curp, length);
-        }
-
-      file_baton->length[idx] = 0;
-      curp = file_baton->buffer[idx];
-      length = sizeof(file_baton->buffer[idx]);
-
-      rv = apr_file_read(file, curp, &length);
-    }
-  while (rv == APR_SUCCESS);
-
-  if (rv != APR_SUCCESS && ! APR_STATUS_IS_EOF(rv))
-    {
-      return svn_error_createf(rv, NULL, "error reading from '%s'.",
-                               file_baton->path[idx]);
-    }
-
-  if (file_token->length > 0)
-    {
-      apr_md5_final(file_token->md5, &md5_ctx);
-      *token = file_token;
-    }
+  file_baton->curp[idx] = eol;
+  *token = file_token;
 
   return NULL;
 }
@@ -223,7 +191,7 @@ svn_diff__file_token_compare(void *baton,
   if (file_token1->length > file_token2->length)
     return 1;
 
-  return memcmp(file_token1->md5, file_token2->md5, MD5_DIGESTSIZE);
+  return memcmp(file_token1->line, file_token2->line, file_token1->length);
 }
 
 static
@@ -265,16 +233,17 @@ svn_diff_file(svn_diff_t **diff,
 svn_error_t *
 svn_diff3_file(svn_diff_t **diff,
                const char *original,
-               const char *modified1,
-               const char *modified2,
+               const char *modified,
+               const char *latest,
                apr_pool_t *pool)
 {
   svn_diff__file_baton_t baton;
 
   memset(&baton, 0, sizeof(baton));
   baton.path[0] = original;
-  baton.path[1] = modified1;
-  baton.path[2] = modified2;
+  baton.path[1] = modified;
+  baton.path[2] = latest;
+  baton.pool = pool;
 
   return svn_diff3(diff, &baton, &svn_diff__file_vtable, pool);
 }
@@ -284,7 +253,7 @@ svn_diff3_file(svn_diff_t **diff,
 
 #define SVN_DIFF__UNIFIED_CONTEXT_SIZE 3
 
-typedef struct svn_diff__file_output_unified_baton_t
+typedef struct svn_diff__file_output_baton_t
 {
   apr_file_t *output_file;
 
@@ -586,7 +555,7 @@ static const svn_diff_output_fns_t svn_diff__file_output_unified_vtable =
   svn_diff__file_output_unified_diff_modified,
   NULL, /* output_diff_latest */
   NULL, /* output_diff_common */
-  NULL  /* output_diff_conflict */
+  NULL  /* output_conflict */
 };
 
 svn_error_t *
@@ -646,6 +615,280 @@ svn_diff_file_output_unified(apr_file_t *output_file,
                                        "failed to close file '%s'.",
                                        baton.path[i]);
             }
+        }
+    }
+
+  return NULL;
+}
+
+
+/** Display diff3 **/
+
+typedef struct svn_diff3__file_output_baton_t
+{
+  apr_file_t *output_file;
+
+  const char *path[3];
+  apr_file_t *file[3];
+
+  apr_off_t   current_line[3];
+
+  char        buffer[3][4096];
+  apr_size_t  length[3];
+  char       *curp[3];
+
+  const char *conflict_start;
+  const char *conflict_seperator;
+  const char *conflict_end;
+
+  apr_pool_t *pool;
+} svn_diff3__file_output_baton_t;
+
+typedef enum svn_diff3__file_output_type_e
+{
+  svn_diff3__file_output_skip,
+  svn_diff3__file_output_normal,
+} svn_diff3__file_output_type_e;
+
+
+static
+svn_error_t *
+svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
+                            svn_diff3__file_output_type_e type,
+                            int idx)
+{
+  char *curp;
+  char *eol;
+  apr_size_t length;
+  apr_size_t len;
+  apr_status_t rv;
+  svn_boolean_t bytes_processed = FALSE;
+
+  length = baton->length[idx];
+  curp = baton->curp[idx];
+
+  /* Lazily update the current line even if we're at EOF.
+   */
+  baton->current_line[idx]++;
+
+  if (length == 0 && apr_file_eof(baton->file[idx]))
+    {
+      return NULL;
+    }
+
+  do
+    {
+      if (length > 0)
+        {
+          eol = memchr(curp, '\n', length);
+
+          if (eol != NULL)
+            {
+              eol++;
+              len = (apr_size_t)(eol - curp);
+              length -= len;
+
+              if (type != svn_diff3__file_output_skip)
+                {
+                  rv = apr_file_write(baton->output_file, curp, &len);
+                  if (rv != APR_SUCCESS)
+                    {
+                       return svn_error_create(rv, NULL,
+                         "svn_diff3_file_output: error writing file.");
+                    }
+                }
+
+              baton->curp[idx] = eol;
+              baton->length[idx] = length;
+
+              rv = APR_SUCCESS;
+
+              break;
+            }
+
+          if (type != svn_diff3__file_output_skip)
+            {
+              rv = apr_file_write(baton->output_file, curp, &len);
+              if (rv != APR_SUCCESS)
+                {
+                  return svn_error_create(rv, NULL,
+                    "svn_diff3_file_output: error writing file.");
+                }
+            }
+
+          bytes_processed = TRUE;
+        }
+
+      curp = baton->buffer[idx];
+      length = sizeof(baton->buffer[idx]);
+
+      rv = apr_file_read(baton->file[idx], curp, &length);
+    }
+  while (rv == APR_SUCCESS);
+
+  if (rv != APR_SUCCESS && ! APR_STATUS_IS_EOF(rv))
+    {
+      return svn_error_createf(rv, NULL, "error reading from '%s'.",
+                               baton->path[idx]);
+    }
+
+  if (APR_STATUS_IS_EOF(rv))
+    {
+      baton->length[idx] = 0;
+    }
+
+  return NULL;
+}
+
+static
+svn_error_t *
+svn_diff3__file_output_hunk(void *baton,
+  int idx,
+  apr_off_t target_line, apr_off_t target_length)
+{
+  svn_diff3__file_output_baton_t *output_baton = baton;
+
+  /* Skip lines until we are at the start of the changed range */
+  while (output_baton->current_line[idx] < target_line)
+    {
+      SVN_ERR(svn_diff3__file_output_line(output_baton,
+                svn_diff3__file_output_skip, idx));
+    }
+
+  target_line += target_length;
+
+  while (output_baton->current_line[idx] < target_line)
+    {
+      SVN_ERR(svn_diff3__file_output_line(output_baton,
+                svn_diff3__file_output_normal, idx));
+    }
+
+  return NULL;
+}
+
+static
+svn_error_t *
+svn_diff3__file_output_common(void *baton,
+  apr_off_t original_start, apr_off_t original_length,
+  apr_off_t modified_start, apr_off_t modified_length,
+  apr_off_t latest_start, apr_off_t latest_length)
+{
+  return svn_diff3__file_output_hunk(baton, 0,
+           original_start, original_length);
+}
+
+static
+svn_error_t *
+svn_diff3__file_output_diff_modified(void *baton,
+  apr_off_t original_start, apr_off_t original_length,
+  apr_off_t modified_start, apr_off_t modified_length,
+  apr_off_t latest_start, apr_off_t latest_length)
+{
+  return svn_diff3__file_output_hunk(baton, 1,
+           modified_start, modified_length);
+}
+
+static
+svn_error_t *
+svn_diff3__file_output_diff_latest(void *baton,
+  apr_off_t original_start, apr_off_t original_length,
+  apr_off_t modified_start, apr_off_t modified_length,
+  apr_off_t latest_start, apr_off_t latest_length)
+{
+  return svn_diff3__file_output_hunk(baton, 2,
+           latest_start, latest_length);
+}
+
+static
+svn_error_t *
+svn_diff3__file_output_conflict(void *baton,
+  apr_off_t original_start, apr_off_t original_length,
+  apr_off_t modified_start, apr_off_t modified_length,
+  apr_off_t latest_start, apr_off_t latest_length,
+  svn_diff_t *diff);
+
+static const svn_diff_output_fns_t svn_diff3__file_output_vtable =
+{
+  svn_diff3__file_output_common,
+  svn_diff3__file_output_diff_modified,
+  svn_diff3__file_output_diff_latest,
+  svn_diff3__file_output_diff_modified, /* output_diff_common */
+  svn_diff3__file_output_conflict
+};
+
+static
+svn_error_t *
+svn_diff3__file_output_conflict(void *baton,
+  apr_off_t original_start, apr_off_t original_length,
+  apr_off_t modified_start, apr_off_t modified_length,
+  apr_off_t latest_start, apr_off_t latest_length,
+  svn_diff_t *diff)
+{
+  apr_status_t rv;
+  svn_diff3__file_output_baton_t *file_baton = baton;
+
+  if (diff)
+    {
+      return svn_diff_output(diff, baton,
+                             &svn_diff3__file_output_vtable);
+    }
+
+  rv = apr_file_puts(file_baton->conflict_start, file_baton->output_file);
+
+  SVN_ERR(svn_diff3__file_output_hunk(baton, 1,
+            modified_start, modified_length));
+
+  rv = apr_file_puts(file_baton->conflict_seperator, file_baton->output_file);
+
+  SVN_ERR(svn_diff3__file_output_hunk(baton, 2,
+            latest_start, latest_length));
+
+  rv = apr_file_puts(file_baton->conflict_end, file_baton->output_file);
+
+  return NULL;
+}
+
+svn_error_t *
+svn_diff3_file_output(apr_file_t *output_file,
+                      svn_diff_t *diff,
+                      const char *original_path,
+                      const char *modified_path,
+                      const char *latest_path,
+                      const char *conflict_start,
+                      const char *conflict_seperator,
+                      const char *conflict_end,
+                      apr_pool_t *pool)
+{
+  svn_diff3__file_output_baton_t baton;
+  int i;
+
+  memset(&baton, 0, sizeof(baton));
+  baton.output_file = output_file;
+  baton.pool = pool;
+  baton.path[0] = original_path;
+  baton.path[1] = modified_path;
+  baton.path[2] = latest_path;
+  baton.conflict_start = conflict_start ? conflict_start : "<<<< MODIFIED\n";
+  baton.conflict_seperator = conflict_seperator ? conflict_seperator : "==== LATEST\n";
+  baton.conflict_end = conflict_end ? conflict_end : ">>>> END\n";
+
+  for (i = 0; i < 3; i++)
+    {
+      SVN_ERR( svn_io_file_open(&baton.file[i], baton.path[i],
+                                APR_READ, APR_OS_DEFAULT, pool) );
+    }
+
+  SVN_ERR(svn_diff_output(diff, &baton,
+                          &svn_diff3__file_output_vtable));
+
+  for (i = 0; i < 3; i++)
+    {
+      apr_status_t rv = apr_file_close(baton.file[i]);
+      if (rv != APR_SUCCESS)
+        {
+          return svn_error_createf(rv, NULL,
+                                   "failed to close file '%s'.",
+                                   baton.path[i]);
         }
     }
 

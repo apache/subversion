@@ -146,7 +146,7 @@ Steps:
       % svn co http://svn.orcaware.com:8000/repos
       % cd repos
       % mkdir tags tags/orca trunk trunk/orca
-      % svn add tags tags/orca trunk trunk/orca
+      % svn add tags trunk
       % svn commit -m 'Create initial directory tree structure for projects.'
 
    This script will create any subdirectories required to import your

@@ -24,6 +24,7 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include <apr_md5.h>
 #include <apr_tables.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
@@ -37,6 +38,8 @@
 #include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_md5.h"
+#include "svn_base64.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_private_config.h"
@@ -645,6 +648,13 @@ add_directory (const char *path,
        "failed to add directory '%s': object of the same name already exists",
        db->path);
 
+  /* It may not be named the same as the administrative directory. */
+  if (strcmp (svn_path_basename (path, pool), SVN_WC_ADM_DIR_NAME) == 0)
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+       "failed to add directory '%s': \nobject of the same name as the "
+       "administrative directory", db->path);
+
   /* Either we got real copyfrom args... */
   if (copyfrom_path || SVN_IS_VALID_REVNUM (copyfrom_revision))
     {
@@ -1125,6 +1135,8 @@ open_file (const char *name,
 
 static svn_error_t *
 apply_textdelta (void *file_baton, 
+                 const char *base_checksum,
+                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
@@ -1170,21 +1182,33 @@ apply_textdelta (void *file_baton,
            no checksum always matches. */
         if (ent && ent->checksum)
           {
-            svn_stringbuf_t *checksum;
+            unsigned char digest[MD5_DIGESTSIZE];
+            const char *hex_digest;
             const char *tb;
 
             tb = svn_wc__text_base_path (fb->path, FALSE, subpool);
-            SVN_ERR (svn_io_file_checksum (&checksum, tb, subpool));
+            SVN_ERR (svn_io_file_checksum (digest, tb, subpool));
+            hex_digest = svn_md5_digest_to_cstring (digest, pool);
             
-            if (strcmp (checksum->data, ent->checksum) != 0)
+            if (strcmp (hex_digest, ent->checksum) != 0)
               {
-                return svn_error_createf
-                  (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                   "apply_textdelta: checksum mismatch for '%s':\n"
-                   "   recorded checksum: %s\n"
-                   "   actual checksum:   %s\n",
-                   tb, ent->checksum, checksum->data);
-                
+                /* Compatibility hack: working copies created before
+                   13 Jan 2003 may have entry checksums stored in
+                   base64.  See svn_io_file_checksum_base64()'s doc
+                   string for details. */ 
+                const char *base64_digest
+                  = (svn_base64_from_md5 (digest, pool))->data;
+
+                if (strcmp (base64_digest, ent->checksum) != 0)
+                  {
+                    return svn_error_createf
+                      (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                       "apply_textdelta: checksum mismatch for '%s':\n"
+                       "   recorded checksum:        %s\n"
+                       "   actual checksum (hex):    %s\n"
+                       "   actual checksum (base64): %s\n",
+                       tb, ent->checksum, hex_digest, base64_digest);
+                  }
               }
           }
       }
@@ -1731,8 +1755,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
                              NULL);
 
       {
-        svn_stringbuf_t *checksum;
-        SVN_ERR (svn_io_file_checksum (&checksum, new_text_path, pool));
+        unsigned char digest[MD5_DIGESTSIZE];
+        SVN_ERR (svn_io_file_checksum (digest, new_text_path, pool));
         svn_xml_make_open_tag (&log_accum,
                                pool,
                                svn_xml_self_closing,
@@ -1740,7 +1764,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
                                SVN_WC__LOG_ATTR_NAME,
                                base_name,
                                SVN_WC__ENTRY_ATTR_CHECKSUM,
-                               checksum->data,
+                               svn_md5_digest_to_cstring (digest, pool),
                                NULL);
       }
     }

@@ -121,6 +121,7 @@ harvest_committables (apr_hash_t *committables,
   apr_hash_t *entries = NULL;
   svn_boolean_t text_mod = FALSE, prop_mod = FALSE;
   apr_byte_t state_flags = 0;
+  svn_node_kind_t kind;
   const char *p_path;
   svn_boolean_t tc, pc;
   const char *cf_url = NULL;
@@ -132,10 +133,22 @@ harvest_committables (apr_hash_t *committables,
   /* Make P_PATH the parent dir. */
   p_path = svn_path_dirname (path, pool);
 
-  /* Return error on unknown path kinds. */
+  /* Return error on unknown path kinds.  We check both the entry and
+     the node itself, since a path might have changed kind since its
+     entry was written. */
   if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
-    return svn_error_create 
-      (SVN_ERR_NODE_UNKNOWN_KIND, NULL, path);
+    return svn_error_createf
+      (SVN_ERR_NODE_UNKNOWN_KIND, NULL, "Unknown entry kind for \"%s\"", path);
+
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+
+  if ((kind != svn_node_file)
+      && (kind != svn_node_dir)
+      && (kind != svn_node_none))
+    {
+      return svn_error_createf
+        (SVN_ERR_NODE_UNKNOWN_KIND, NULL, "Unknown kind for \"%s\"", path);
+    }
 
   /* Get a fully populated entry for PATH if we can, and check for
      conflicts. If this is a directory ... */
@@ -372,8 +385,38 @@ harvest_committables (apr_hash_t *committables,
 
           /* Recurse. */
           if (this_entry->kind == svn_node_dir)
-            SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, full_path,
-                                          loop_pool));
+            {
+              svn_error_t *lockerr;
+              lockerr = svn_wc_adm_retrieve (&dir_access, adm_access,
+                                             full_path, loop_pool);
+
+              if (lockerr)
+                {
+                  if (lockerr->apr_err == SVN_ERR_WC_NOT_LOCKED)
+                    {
+                      /* A missing, schedule-delete child dir is
+                         allowable.  Just don't try to recurse. */
+                      svn_node_kind_t childkind;
+                      SVN_ERR (svn_io_check_path (full_path,
+                                                  &childkind, loop_pool));
+                      if (childkind == svn_node_none
+                          && this_entry->schedule == svn_wc_schedule_delete)
+                        {
+                          add_committable (committables, full_path,
+                                           this_entry->kind, used_url,
+                                           SVN_INVALID_REVNUM, 
+                                           NULL,
+                                           SVN_CLIENT_COMMIT_ITEM_DELETE);
+                          svn_pool_clear (loop_pool);
+                          continue; /* don't recurse! */
+                        }
+                      else
+                        return lockerr;
+                    }
+                  else
+                    return lockerr;
+                }
+            }
           else
             dir_access = adm_access;
 

@@ -131,6 +131,13 @@ struct diff_cmd_baton {
   apr_file_t *outfile;
   apr_file_t *errfile;
 
+  /* The original targets passed to the diff command.  We may need
+     these to construct distinctive diff labels when comparing the
+     same relative path in the same revision, under different anchors
+     (for example, when comparing a trunk against a branch). */
+  const char *orig_path_1;
+  const char *orig_path_2;
+
   /* These are the numeric representations of the revisions passed to
      svn_client_diff, either may be SVN_INVALID_REVNUM.  We need these
      because some of the svn_wc_diff_callbacks_t don't get revision
@@ -201,8 +208,53 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
   SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
                                path, equal_string));
 
-  label1 = diff_label (path, rev1, subpool);
-  label2 = diff_label (path, rev2, subpool);
+  if (rev1 == rev2)
+    {
+      /* ### Holy cow.  Due to anchor/target weirdness, we can't
+         simply join diff_cmd_baton->orig_path_1 with path, ditto for
+         orig_path_2.  That will work when they're directory URLs, but
+         not for file URLs.  Nor can we just use anchor1 and anchor2
+         from do_diff(), at least not without some more logic here.
+         What a nightmare.
+
+         For now, to distinguish the two paths, we'll just put the
+         unique portions of the original targets in parentheses before
+         the received path, with ellipses for handwaving.  This makes
+         the labels a bit clumsy, but at least distinctive.  Better
+         solutions are possible, they'll just take more thought. */
+      const char *path1 = diff_cmd_baton->orig_path_1;
+      const char *path2 = diff_cmd_baton->orig_path_2;
+      int i;
+
+      for (i = 0; path1[i] && path2[i] && (path1[i] == path2[i]); i++)
+        ;
+
+      path1 = path1 + i;
+      path2 = path2 + i;
+
+      if (path1[0] == '\0')
+        path1 = apr_psprintf (subpool, "%s", path);
+      else if (path1[0] == '/')
+        path1 = apr_psprintf (subpool, "(...%s) %s", path1, path);
+      else
+        path1 = apr_psprintf (subpool, "(.../%s) %s", path1, path);
+
+      if (path2[0] == '\0')
+        path2 = apr_psprintf (subpool, "%s", path);
+      else if (path2[0] == '/')
+        path2 = apr_psprintf (subpool, "(...%s) %s", path2, path);
+      else
+        path2 = apr_psprintf (subpool, "(.../%s) %s", path2, path);
+      
+      label1 = diff_label (path1, rev1, subpool);
+      label2 = diff_label (path2, rev2, subpool);
+    }
+  else
+    {
+      label1 = diff_label (path, rev1, subpool);
+      label2 = diff_label (path, rev2, subpool);
+    }
+
   SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
                             tmpfile1, tmpfile2, 
                             &exitcode, outfile, errfile, subpool));
@@ -347,9 +399,11 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
   const char *target_label = ".working";
-  const char *left_label = apr_psprintf (subpool, ".r%" SVN_REVNUM_T_FMT,
+  const char *left_label = apr_psprintf (subpool,
+                                         ".merge-left.r%" SVN_REVNUM_T_FMT,
                                          older_rev);
-  const char *right_label = apr_psprintf (subpool, ".r%" SVN_REVNUM_T_FMT,
+  const char *right_label = apr_psprintf (subpool,
+                                          ".merge-right.r%" SVN_REVNUM_T_FMT,
                                           yours_rev);
   svn_boolean_t has_local_mods;
   enum svn_wc_merge_outcome_t merge_outcome;
@@ -1307,6 +1361,9 @@ svn_client_diff (const apr_array_header_t *options,
   diff_callbacks.dir_deleted = diff_dir_deleted;
   diff_callbacks.props_changed = diff_props_changed;
     
+  diff_cmd_baton.orig_path_1 = path1;
+  diff_cmd_baton.orig_path_2 = path2;
+
   diff_cmd_baton.options = options;
   diff_cmd_baton.pool = pool;
   diff_cmd_baton.outfile = outfile;

@@ -49,6 +49,26 @@ extern "C" {
  */
 #define SVN_DAV_OPTIONS_HEADER "X-SVN-Options"
 
+/** These headers are for client and server to verify that the base
+ * and the result of a change transmission are the same on both
+ * sides, regardless of what transformations (svndiff deltification,
+ * gzipping, etc) the data may have gone through in between.  
+ *
+ * The result md5 is always used whenever file contents are
+ * transferred, because every transmission has a resulting text.
+ *
+ * The base md5 is used to verify the base text against which svndiff
+ * data is being applied.  Note that even for svndiff transmissions,
+ * base verification is not strictly necessary (and may therefore be
+ * unimplemented), as any error will be caught by the verification of
+ * the final result.  However, if the problem is that the base text is
+ * corrupt, the error will be caught earlier if the base md5 is used.
+ *
+ * Normal WebDAV or DeltaV clients don't use these.
+ */
+#define SVN_DAV_BASE_FULLTEXT_MD5_HEADER "X-SVN-Base-Fulltext-MD5"
+#define SVN_DAV_RESULT_FULLTEXT_MD5_HEADER "X-SVN-Result-Fulltext-MD5"
+
 /** Specific options that can appear in the options-header: */
 #define SVN_DAV_OPTION_NO_MERGE_RESPONSE "no-merge-response"
 

@@ -3185,6 +3185,41 @@ svn_fs_file_length (apr_off_t *length_p,
 }
 
 
+struct file_checksum_args
+{
+  svn_fs_root_t *root;
+  const char *path;
+  unsigned char *digest;  /* OUT parameter, MD5_DIGESTSIZE bytes long */
+};
+
+static svn_error_t *
+txn_body_file_checksum (void *baton,
+                        trail_t *trail)
+{
+  struct file_checksum_args *args = baton;
+  dag_node_t *file;
+  
+  SVN_ERR (get_dag (&file, args->root, args->path, trail));
+  return svn_fs__dag_file_checksum (args->digest, file, trail);
+}
+
+svn_error_t *
+svn_fs_file_md5_checksum (unsigned char digest[],
+                          svn_fs_root_t *root,
+                          const char *path,
+                          apr_pool_t *pool)
+{
+  struct file_checksum_args args;
+
+  args.root = root;
+  args.path = path;
+  args.digest = digest;
+  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_file_checksum, &args, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* --- Machinery for svn_fs_file_contents() ---  */
 
 

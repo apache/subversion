@@ -74,35 +74,39 @@ svn_error_t *svn_io_check_path (const char *path,
  * Open a new file (for writing) with a unique name based on utf-8
  * encoded @a path, in the same directory as @a path.  The file handle is
  * returned in @a *f, and the name, which ends with @a suffix, is returned
- * in @a *unique_name, also utf8-encoded.  If @a delete_on_close is set,
+ * in @a *unique_name_p, also utf8-encoded.  If @a delete_on_close is set,
  * then the @c APR_DELONCLOSE flag will be used when opening the file. The
  * @c APR_BUFFERED flag will always be used.
  *
- * The name will include as much of @a path as possible, then a dot,
- * then a random portion, then another dot, then an iterated attempt
- * number (00001 for the first try, 00002 for the second, etc), and
- * end with @a suffix.  For example, if @a path is
+ * @a suffix may not be null.
+ *
+ * The first attempt will just append @a suffix.  If the result is not
+ * a unique name, then subsequent attempts will append a dot,
+ * followed by an iteration number ("1", then "2", and so on),
+ * followed by the suffix.  For example, if @a path is
  *
  *    tests/t1/A/D/G/pi
  *
- * then @c svn_io_open_unique_file(&f, &uniqe_name, @a path, ".tmp", pool) 
- * might pick
+ * then successive calls to
  *
- *    tests/t1/A/D/G/pi.3221223676.00001.tmp
+ *    @c svn_io_open_unique_file(&f, &uniqe_name, @a path, ".tmp", pool) 
  *
- * the first time, then
+ * will open
  *
- *    tests/t1/A/D/G/pi.3221223676.00002.tmp
+ *    tests/t1/A/D/G/pi.tmp
+ *    tests/t1/A/D/G/pi.2.tmp
+ *    tests/t1/A/D/G/pi.3.tmp
+ *    tests/t1/A/D/G/pi.4.tmp
+ *    tests/t1/A/D/G/pi.5.tmp
+ *    ...
  *
- * if called again while the first unique file still exists.
- *
+ * @a *unique_name_p will never be exactly the same as @a path, even
+ * if @a path does not exist.
+ * 
  * It doesn't matter if @a path is a file or directory, the unique name will
  * be in @a path's parent either way.
  *
- * @a *unique_name will never be exactly the same as @a path, even if @a path 
- * does not exist.
- * 
- * @a *f and @a *unique_name are allocated in @a pool.
+ * Allocate @a *f and @a *unique_name_p in @a pool.
  *
  * If no unique name can be found, @c SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED is
  * the error returned.
@@ -112,15 +116,9 @@ svn_error_t *svn_io_check_path (const char *path,
  *
  *    - @c tmpnam() is not thread-safe.
  *    - @c tempname() tries standard system tmp areas first.
- *
- * Claim of Historical Evitability: the random portion of the name is
- * there because someday, someone will have a directory full of files
- * whose names match the iterating portion and suffix (say, a
- * database's holding area).  The random portion is a safeguard
- * against that case.
  */
 svn_error_t *svn_io_open_unique_file (apr_file_t **f,
-                                      const char **unique_name,
+                                      const char **unique_name_p,
                                       const char *path,
                                       const char *suffix,
                                       svn_boolean_t delete_on_close,
@@ -282,13 +280,11 @@ svn_error_t *svn_io_filesizes_different_p (svn_boolean_t *different_p,
                                            apr_pool_t *pool);
 
 
-/** Get the md5 checksum of @a file.
- *
- * Store a base64-encoded md5 checksum of @a file's contents in
- * @a *checksum_p.  @a file is utf8-encoded.  Allocate @a checksum_p in 
- * @a pool, and use @a pool for any temporary allocation.
+/** Put the md5 checksum of @a file into @a digest.
+ * @a digest points to MD5_DIGESTSIZE bytes of storage.
+ * Use @a pool only for temporary allocations.
  */
-svn_error_t *svn_io_file_checksum (svn_stringbuf_t **checksum_p,
+svn_error_t *svn_io_file_checksum (unsigned char digest[],
                                    const char *file,
                                    apr_pool_t *pool);
 

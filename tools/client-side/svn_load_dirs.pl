@@ -413,7 +413,7 @@ my $wc_top_dir_cwd = cwd;
         }
       $message = wrap('', '  ', $message);
 
-      read_from_process($svn, 'add', @dirs_to_create);
+      read_from_process($svn, 'add', '-N', @dirs_to_create);
       read_from_process($svn, 'commit', @svn_commit_options, '-m', $message);
     }
   else
@@ -1007,7 +1007,7 @@ while (defined (my $load_dir = &get_next_load_dir))
       {
         my @add_files = sort {length($a) <=> length($b) || $a cmp $b}
                         keys %add_files;
-        read_from_process($svn, 'add', @add_files);
+        read_from_process($svn, 'add', '-N', @add_files);
 
         # Add properties on the added files.
         foreach my $add_file (@add_files)

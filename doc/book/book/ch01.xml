@@ -58,25 +58,28 @@
       software.)  In 1999, Karl Fogel published a book about CVS and
       the open-source development model it enables.  Karl and Jim had
       long talked about writing a replacement for CVS; Jim had even
-      drafted a new, theoretical repository design, and come up with a
-      good name.  Finally, in February of 2000, Brian Behlendorf of
-      CollabNet (http://www.collab.net) offered Karl a full-time job
-      to write a CVS replacement.  Karl gathered a team together and
-      work began in May.  Because Subversion was developed openly
-      under a free license, it quickly attracted a community of
-      developers.</para>
+      drafted a new, theoretical repository design, and had come up
+      with a good project name.  Finally, in February of 2000, Brian
+      Behlendorf of CollabNet (http://www.collab.net) offered Karl a
+      full-time job to write a CVS replacement.  Karl gathered a team
+      together and work began in May.  Because Subversion was
+      developed openly under a free license, it quickly attracted a
+      community of developers.</para>
 
-    <para>The original design team settled on a few simple goals.
+    <para>The original design team settled on two simple goals.
       First, it was decided that Subversion should be a functional
-      replacement for CVS.  That is, it should do everything that CVS
-      does, preserving the same development model while fixing the
-      most obvious flaws.  Secondly, with existing CVS users as the
-      first target audience, Subversion should be written such that
-      any CVS user should be able to start using it with little
-      effort.</para>
+      replacement for CVS.  That is, it should match CVS's features,
+      preserve the same development model, but still fix the most
+      obvious flaws.  Second, Subversion should be written such that
+      any CVS user can start using it with little effort.</para>
 
-    <para>While CollabNet can be credited with initiating and funding
-      a very large chunk of the work (it pays the salaries of a few
+    <para>After fourteen months of coding, Subversion became
+      "self-hosting" on August 31, 2001.  That is, Subversion
+      developers stopped using CVS to manage Subversion's own source
+      code and started using Subversion instead.</para>
+
+    <para>While CollabNet is credited with initiating and funding a
+      very large chunk of the work (it pays the salaries of a few
       full-time Subversion developers), the project is still a typical
       open-source project, governed by the usual meritocratic rules.
       CollabNet owns the copyright on the code, but that copyright is
@@ -94,69 +97,94 @@
 
     <title>Subversion's Features</title>
 
-    <para>What sort of things does Subversion do better than CVS?
-      Here's a short list to whet your appetite:</para>
+    <para>How does Subversion improve upon CVS's design?  Here's a
+      short list to whet your appetite.  If you're not familiar with
+      CVS, you may not understand all of these features.  Fear not:
+      Chapter 2 will provide you with a gentle introduction to version
+      control.</para>
 
     <variablelist>
 
       <varlistentry>
-        <term>Advanced network layer</term>
-        <listitem>
-          <para>The Subversion network server is Apache, and client
-            and server speak WebDAV protocol to one another.  ###TODO
-            Xref to Designe
-          </para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
-        <term>Faster network access</term>
-        <listitem>
-          <para>A binary diffing algorithm is used to store
-            and transmit deltas in both directions, regardless of whether a file
-            is of text or binary type.</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
-        <term>Meta-data</term>
-        <listitem>
-          <para>Each file or directory has an invisible hash table
-            attached.  You can invent and store any arbitrary key/value pairs you
-            wish: owner, perms, icons, app-creator, mime-type, personal notes,
-            etc.  This is a general-purpose feature for users.  Properties are
-            versioned over time, just like file contents.</para>
-        </listitem>
-      </varlistentry>
-      
-      <varlistentry>
-        <term>Hackability</term>
-        <listitem>
-          <para>Subversion has no historical baggage; it is primarily
-            a collection of shared C libraries with well-defined APIs.  This makes
-            Subversion extremely maintainable and usable by other applications and
-            languages.</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
         <term>Directory versioning</term>
         <listitem>
-          <para>The Subversion repository doesn't use RCS files like
-            CVS; instead, it implements a <quote>virtual</quote>
-            versioned filesystem that tracks changes to directory/file
-            heirarchies over time.  Files <emphasis>and</emphasis>
-            directories are versioned.  At last, there are real
-            client-side <command>move</command> and
-            <command>copy</command> commands.</para>
+          <para>The Subversion repository doesn't only track the
+            history of individual files; instead, it implements a
+            <quote>virtual</quote> versioned filesystem that tracks
+            changes to trees over time.  Files
+            <emphasis>and</emphasis> directories are versioned.  As a
+            result, there are real client-side <command>move</command>
+            and <command>copy</command> commands that operate on files
+            and directories.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
         <term>Atomic commits</term>
         <listitem>
-          <para>A commit either goes into the repository
-            completely, or not all.</para>
+          <para>A commit either goes into the repository completely,
+            or not all.  This allows developers to commit changes as
+            logical <quote>changesets</quote>.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Versioned metadata</term>
+        <listitem>
+          <para>Each file and directory has an invisible set of
+            <quote>properties</quote> attached.  You can invent and
+            store any arbitrary key/value pairs you wish.  Properties
+            are versioned over time, just like file contents.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Advanced network layer</term>
+        <listitem>
+          <para>The Subversion network server is the Apache web
+            server, and the Subversion client and server speak the
+            WebDAV protocol to one another, which is an extension of
+            HTTP.  This gives Subversion a big advantage in stability
+            and interoperability, and provides various key features
+            for free: authentication, authorization, wire compression,
+            and repository browsing, for example. <!-- mention
+            svnserve here someday -->
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Better binary handling</term>
+        <listitem>
+          <para>Subversion expresses file differences using a binary
+            diffing algorithm, which works equally well on both text
+            and binary files.  Text and binary files are stored
+            equally compressed in the repository, and differences are
+            transmitted in both directions across the network.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Efficient branching and tagging</term>
+        <listitem>
+          <para>
+            There's no need for branching/tagging to proportional to
+            project size.  Subversion creates branches and tags by
+            simply copying the project, using a mechanism similar to a
+            hard-link.  Thus the operations take only a very small,
+            constant amount of time.
+          </para>
+        </listitem>
+      </varlistentry>
+      
+      <varlistentry>
+        <term>Hackability</term>
+        <listitem>
+          <para>Subversion has no historical baggage; it is
+            implemented a collection of shared C libraries with
+            well-defined APIs.  This makes Subversion extremely
+            maintainable and usable by other applications and
+            languages.</para>
         </listitem>
       </varlistentry>
 
@@ -172,7 +200,8 @@
 
     <title>Subversion's components</title>
 
-    <para>### List the binaries in a table, and what they do.</para>
+    
+
 
   </sect1>
 

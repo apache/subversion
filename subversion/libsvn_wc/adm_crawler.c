@@ -24,6 +24,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_hash.h>
+#include <apr_md5.h>
 
 #include <assert.h>
 
@@ -31,6 +32,8 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_io.h"
+#include "svn_md5.h"
+#include "svn_base64.h"
 #include "svn_sorts.h"
 #include "svn_delta.h"
 
@@ -535,7 +538,8 @@ svn_wc_transmit_text_deltas (const char *path,
      file baton; the editor returns to us a window consumer routine
      and baton.  If there is no handler provided, just close the file
      and get outta here.  */
-  SVN_ERR (editor->apply_textdelta (file_baton, pool, &handler, &wh_baton));
+  SVN_ERR (editor->apply_textdelta (file_baton, NULL, NULL, pool,
+                                    &handler, &wh_baton));
   if (! handler)
     return editor->close_file (file_baton, pool);
 
@@ -570,41 +574,61 @@ svn_wc_transmit_text_deltas (const char *path,
       /* Before we set up an svndiff stream against the old text base,
          make sure the old text base still matches its checksum.
          Otherwise we could send corrupt data and never know it. */ 
-
-      svn_stringbuf_t *checksum;
-      const char *tb = svn_wc__text_base_path (path, FALSE, pool);
       const svn_wc_entry_t *ent;
-      
       SVN_ERR (svn_wc_entry (&ent, path, adm_access, FALSE, pool));
-      SVN_ERR (svn_io_file_checksum (&checksum, tb, pool));
       
       /* For backwards compatibility, no checksum means assume a match. */
-      if (ent->checksum && (strcmp (checksum->data, ent->checksum) != 0))
+      if (ent->checksum)
         {
-          /* There is an entry checksum, but it does not match the
-             actual text base checksum.  Extreme badness.  Of course,
-             theoretically we could just switch to fulltext
-             transmission here, and everything would work fine; after
-             all, we're going to replace the text base with a new one
-             in a moment anyway, and we'd fix the checksum then.
-             But it's better to error out.  People should know that
-             their text bases are getting corrupted, so they can
-             investigate.  Other commands could be affected, too, such
-             as `svn diff'.  */
-          
-          /* Deliberately ignore error here; the error about the
-             checksum mismatch is more important to return. */
-          svn_io_remove_file (tmp_base, pool);
-          
-          if (tempfile)
-            *tempfile = NULL;
-          
-          return svn_error_createf
-            (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-             "svn_wc_transmit_text_deltas: checksum mismatch for '%s':\n"
-             "   recorded checksum: %s\n"
-             "   actual checksum:   %s\n",
-             tb, ent->checksum, checksum->data);
+          const char *tb = svn_wc__text_base_path (path, FALSE, pool);
+          unsigned char digest[MD5_DIGESTSIZE];
+          const char *hex_digest;
+
+          SVN_ERR (svn_io_file_checksum (digest, tb, pool));
+          hex_digest = svn_md5_digest_to_cstring (digest, pool);
+
+          if (strcmp (hex_digest, ent->checksum) != 0)
+            {
+              /* Compatibility hack: working copies created before
+                 13 Jan 2003 may have entry checksums stored in
+                 base64.  See svn_io_file_checksum_base64()'s doc
+                 string for details. */ 
+              const char *base64_digest
+                = (svn_base64_from_md5 (digest, pool))->data;
+
+              if (strcmp (base64_digest, ent->checksum) != 0)
+                {
+                  /* There is an entry checksum, but it does not match
+                     the actual text base checksum.  Extreme badness.
+                     Of course, theoretically we could just switch to
+                     fulltext transmission here, and everything would
+                     work fine; after all, we're going to replace the
+                     text base with a new one in a moment anyway, and
+                     we'd fix the checksum then.  But it's better to
+                     error out.  People should know that their text
+                     bases are getting corrupted, so they can
+                     investigate.  Other commands could be affected,
+                     too, such as `svn diff'.  */
+              
+                  /* Deliberately ignore error; the error about the
+                     checksum mismatch is more important to return.
+                     And wrapping the above error into the checksum
+                     error would be weird, as they're unrelated. */
+                  svn_error_clear (svn_io_remove_file (tmp_base, pool));
+
+                  if (tempfile)
+                    *tempfile = NULL;
+                  
+                  return svn_error_createf
+                    (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                     "svn_wc_transmit_text_deltas: "
+                     "checksum mismatch for '%s':\n"
+                     "   recorded checksum:        %s\n"
+                     "   actual checksum (hex):    %s\n"
+                     "   actual checksum (base64): %s\n",
+                     tb, ent->checksum, hex_digest, base64_digest);
+                }
+            }
         }
       else
         SVN_ERR (svn_wc__open_text_base (&basefile, path, APR_READ, pool));

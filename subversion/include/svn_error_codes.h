@@ -309,7 +309,9 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 13,
               "Unmergeable scheduling requested on an entry")
 
-  /* UNUSED error slot:                 + 14 */
+  SVN_ERRDEF (SVN_ERR_WC_PATH_FOUND,
+              SVN_ERR_WC_CATEGORY_START + 14,
+              "Found a working copy path.")
 
   SVN_ERRDEF (SVN_ERR_WC_FOUND_CONFLICT,
               SVN_ERR_WC_CATEGORY_START + 15,
@@ -705,6 +707,10 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_SWIG_PY_EXCEPTION_SET,
               SVN_ERR_MISC_CATEGORY_START + 13,
               "Python exception has been set with the error")
+
+  SVN_ERRDEF (SVN_ERR_CHECKSUM_MISMATCH,
+              SVN_ERR_MISC_CATEGORY_START + 14,
+              "A checksum mismatch occurred")
 
   /* command-line client errors */
 

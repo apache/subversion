@@ -866,8 +866,8 @@ svn_fs__unparse_transaction_skel (skel_t **skel_p,
   svn_fs__prepend (copies_skel, skel);
   
   /* PROPLIST */
-  svn_fs__unparse_proplist_skel (&proplist_skel, 
-                                 transaction->proplist, pool);
+  SVN_ERR (svn_fs__unparse_proplist_skel (&proplist_skel,
+                                          transaction->proplist, pool));
   svn_fs__prepend (proplist_skel, skel);
 
   /* REVISION or BASE-ID (see above) */

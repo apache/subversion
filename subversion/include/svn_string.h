@@ -318,6 +318,7 @@ svn_boolean_t svn_cstring_match_glob_list (const char *str,
                                            const char *list,
                                            apr_pool_t *pool);
 
+
 /** @} */
 
 

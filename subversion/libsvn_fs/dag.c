@@ -1294,6 +1294,27 @@ svn_fs__dag_file_length (apr_size_t *length,
 }
 
 
+svn_error_t *
+svn_fs__dag_file_checksum (unsigned char digest[],
+                           dag_node_t *file,
+                           trail_t *trail)
+{ 
+  svn_fs__node_revision_t *noderev;
+
+  if (! svn_fs__dag_is_file (file))
+    return svn_error_createf 
+      (SVN_ERR_FS_NOT_FILE, NULL,
+       "Attempted to get checksum of a *non*-file node.");
+
+  SVN_ERR (get_node_revision (&noderev, file, trail));
+  if (noderev->data_key)
+    SVN_ERR (svn_fs__rep_contents_checksum (digest, file->fs,
+                                            noderev->data_key, trail));
+  else
+    memset (digest, 0, MD5_DIGESTSIZE);
+
+  return SVN_NO_ERROR;
+}
 
 
 svn_error_t *

@@ -13,36 +13,42 @@ Added:
    file2
 Log:
 initial load
+
 Added: dir1/file3
 ==============================================================================
 --- (empty file)
 +++ dir1/file3	Sat Sep  8 18:46:40 2001
 @@ -0,0 +1 @@
 +file3
+
 Added: dir1/file4
 ==============================================================================
 --- (empty file)
 +++ dir1/file4	Sat Sep  8 18:46:40 2001
 @@ -0,0 +1 @@
 +file4
+
 Added: dir2/file5
 ==============================================================================
 --- (empty file)
 +++ dir2/file5	Sat Sep  8 18:46:40 2001
 @@ -0,0 +1 @@
 +file5
+
 Added: dir2/file6
 ==============================================================================
 --- (empty file)
 +++ dir2/file6	Sat Sep  8 18:46:40 2001
 @@ -0,0 +1 @@
 +file6
+
 Added: file1
 ==============================================================================
 --- (empty file)
 +++ file1	Sat Sep  8 18:46:40 2001
 @@ -0,0 +1 @@
 +file1
+
 Added: file2
 ==============================================================================
 --- (empty file)
@@ -80,21 +86,21 @@ New Revision: 3
 
 Added:
    dir2/file7
+      - copied unchanged from rev 1, file1
    dir3/
+      - copied from rev 1, dir1/
 Log:
 two copies
-Copied: dir2/file7 (from rev 1, file1)
-==============================================================================
-
-Copied: dir3 (from rev 1, dir1)
 Author: gstein
 Date: Sun Sep  9 03:06:40 2001
 New Revision: 4
 
 Added:
    dir3/file8
+      - copied, changed from rev 1, file1
 Log:
 copied and changed
+
 Copied: dir3/file8 (from rev 1, file1)
 ==============================================================================
 --- file1	(original)
@@ -121,6 +127,7 @@ Modified: dir1/file3
 @@ -1 +1,2 @@
  file3
 +change C4
+
 Added: file9
 ==============================================================================
 --- (empty file)
@@ -141,6 +148,7 @@ Modified:
    dir3/file3
 Log:
 adds and deletes
+
 Added: dir1/file10
 ==============================================================================
 --- (empty file)
@@ -155,6 +163,7 @@ Modified: dir3/file3
 @@ -1 +1,2 @@
  file3
 +change C5
+
 Deleted: file2
 ==============================================================================
 --- file2	Sun Sep  9 08:40:00 2001
@@ -168,16 +177,14 @@ New Revision: 7
 
 Added:
    dir6/
+      - copied from rev 5, dir3/
    dir6/dir5/
+      - copied from rev 6, dir3/dir5/
 Modified:
    dir6/file3
    dir6/file4
 Log:
 copy dir, then make a change
-
-Copied: dir6 (from rev 5, dir3)
-
-Copied: dir6/dir5 (from rev 6, dir3/dir5)
 
 Modified: dir6/file3
 ==============================================================================

@@ -169,9 +169,9 @@ notify (void *baton,
           {
             if (SVN_IS_VALID_REVNUM (revision))
               {
-		if (nb->is_export)
-		  printf ("Exported revision %" SVN_REVNUM_T_FMT ".\n",
-			  revision);
+                if (nb->is_export)
+                  printf ("Exported revision %" SVN_REVNUM_T_FMT ".\n",
+                          revision);
                 else if (nb->is_checkout)
                   printf ("Checked out revision %" SVN_REVNUM_T_FMT ".\n",
                           revision);
@@ -187,8 +187,8 @@ notify (void *baton,
               }
             else  /* no revision */
               {
-		if (nb->is_export)
-		  printf ("Export complete.\n");
+                if (nb->is_export)
+                  printf ("Export complete.\n");
                 else if (nb->is_checkout)
                   printf ("Checkout complete.\n");
                 else
