@@ -27,7 +27,7 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_delta.h"
-#include "svn_test.h"
+#include "svn_md5.h"
 
 #include "../fs-helpers.h"
 
@@ -5643,8 +5643,8 @@ verify_checksum (const char **msg,
        "verify-checksum: checksum mismatch:\n"
        "   expected:  %s\n"
        "     actual:  %s\n", 
-       svn_cstring_from_md5_digest (expected_digest, pool),
-       svn_cstring_from_md5_digest (actual_digest, pool));
+       svn_md5_digest_to_cstring (expected_digest, pool),
+       svn_md5_digest_to_cstring (actual_digest, pool));
 
   SVN_ERR (svn_fs_close_txn (txn));
   SVN_ERR (svn_fs_close_fs (fs));

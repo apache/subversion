@@ -21,6 +21,7 @@
 
 #include "svn_fs.h"
 #include "svn_pools.h"
+#include "svn_md5.h"
 
 #include "fs.h"
 #include "err.h"
@@ -757,8 +758,8 @@ svn_fs__rep_contents (svn_string_t *str,
          "svn_fs__rep_contents: checksum mismatch on rep \"%s\":\n"
          "   expected:  %s\n"
          "     actual:  %s\n", rep_key,
-         svn_cstring_from_md5_digest (rep->checksum, trail->pool),
-         svn_cstring_from_md5_digest (checksum, trail->pool));
+         svn_md5_digest_to_cstring (rep->checksum, trail->pool),
+         svn_md5_digest_to_cstring (checksum, trail->pool));
   }
 
   return SVN_NO_ERROR;
@@ -841,8 +842,8 @@ txn_body_read_rep (void *baton, trail_t *trail)
                    "txn_body_read_rep: checksum mismatch on rep \"%s\":\n"
                    "   expected:  %s\n"
                    "     actual:  %s\n", args->rb->rep_key,
-                   svn_cstring_from_md5_digest (rep->checksum, trail->pool),
-                   svn_cstring_from_md5_digest (checksum, trail->pool));
+                   svn_md5_digest_to_cstring (rep->checksum, trail->pool),
+                   svn_md5_digest_to_cstring (checksum, trail->pool));
             }
         }
     }
@@ -1605,8 +1606,8 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
        "svn_fs__rep_undeltify: checksum mismatch on rep \"%s\":\n"
        "   expected:  %s\n"
        "     actual:  %s\n", rep_key,
-       svn_cstring_from_md5_digest (rep->checksum, trail->pool),
-       svn_cstring_from_md5_digest (digest, trail->pool));
+       svn_md5_digest_to_cstring (rep->checksum, trail->pool),
+       svn_md5_digest_to_cstring (digest, trail->pool));
 
   /* Now `target_baton.key' has the key of the new string.  We
      should hook it into the representation.  So we make a new rep,
