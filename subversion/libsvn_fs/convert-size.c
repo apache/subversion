@@ -97,7 +97,9 @@ svn_fs__getsize (const char *data, apr_size_t len,
     }
   else
     {
-      *endptr = data + i;
+      /* We have to throw away the const here, to avoid constraining
+	 the caller.  */
+      *endptr = (char *) data + i;
       return value;
     }
 }
