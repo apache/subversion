@@ -553,6 +553,43 @@ bail_if_unresolved_conflict (svn_string_t *full_path,
 
 
 
+/* Given an array of starting PATHS (svn_string_t's), return the
+   longest common path that they all contain.  Return NULL if so such
+   beast exists.  */
+static svn_string_t *
+get_common_path (const apr_array_header_t *paths,
+                 apr_pool_t *pool)
+{
+  int i;
+  svn_string_t *longest_common_path;
+
+  if (paths->nelts <= 0)
+    return NULL;
+
+  longest_common_path = (((svn_string_t **)(paths)->elts)[0]);
+
+  for (i = 1; i < paths->nelts; i++)
+    {
+      svn_string_t *next_path, *the_longer;            
+
+      next_path = (((svn_string_t **)(paths)->elts)[i]);
+
+      /* might return NULL if no common base path: */
+      the_longer = svn_path_get_longest_ancestor (next_path,
+                                                  longest_common_path,
+                                                  pool);
+
+      if (! the_longer) /* at least two paths have NO common base path */
+        return NULL;
+
+      longest_common_path = the_longer;
+    }
+
+  return longest_common_path;
+}
+
+
+
 /* The recursive working-copy crawler.
 
    Enter PATH and report any local changes to EDITOR.  
@@ -570,7 +607,8 @@ bail_if_unresolved_conflict (svn_string_t *full_path,
    directory batons returned by the editor.  */
 
 static svn_error_t *
-process_subdirectory (svn_string_t *path, void *dir_baton,
+process_subdirectory (svn_string_t *path,
+                      void *dir_baton,
                       const svn_delta_edit_fns_t *editor,
                       void *edit_baton,
                       struct stack_object **stack,
