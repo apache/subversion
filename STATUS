@@ -101,12 +101,6 @@ Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
 
-    * r8384
-      Fix the SIGHUP typo.
-      Justification: Handle SIGHUP as intended by r8222.
-      Votes:
-       +1: bliss, ghudson, epg, brane
-
     * r8404
       Fix the double ctrl-c bug on Win32 and handle ctrl-break on Win32
       for svnadmin, svnlook and svn.
