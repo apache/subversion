@@ -27,6 +27,8 @@ svn_ra_local__set_path (void *report_baton,
   svn_string_t *from_path;
   svn_ra_local__report_baton_t *rbaton 
     = (svn_ra_local__report_baton_t *) report_baton;
+  svn_revnum_t *rev_ptr = apr_pcalloc (rbaton->pool, sizeof(*rev_ptr));
+
 
   /* Create the "from" root and path. */
   SVN_ERR (svn_fs_revision_root (&from_root, rbaton->fs,
@@ -37,6 +39,11 @@ svn_ra_local__set_path (void *report_baton,
   /* Copy into our txn. */
   SVN_ERR (svn_fs_copy (from_root, from_path->data,
                         rbaton->txn_root, from_path->data, rbaton->pool));
+
+  /* Remember this path in our hashtable. */
+  *rev_ptr = revision;
+  apr_hash_set (rbaton->path_rev_hash, from_path->data,
+                from_path->len, rev_ptr);
 
   return SVN_NO_ERROR;
 }

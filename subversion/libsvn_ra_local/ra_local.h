@@ -96,6 +96,10 @@ typedef struct svn_ra_local__report_baton_t
   const svn_delta_edit_fns_t *update_editor;
   void *update_edit_baton;
 
+  /* This hash describes the mixed revisions in the transaction; it
+     maps pathnames (char *) to revision numbers (svn_revnum_t). */
+  apr_hash_t *path_rev_hash;
+
   /* Pool from the session baton. */
   apr_pool_t *pool;
 
