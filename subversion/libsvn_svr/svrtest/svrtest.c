@@ -1,9 +1,9 @@
 
 /* Testing basic Subversion server stuff. */
 
-#include <svn_svr.h>
-#include <svn_parse.h>
 #include <stdio.h>
+#include "svn_svr.h"
+#include "svn_parse.h"
 
 int
 main ()

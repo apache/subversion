@@ -61,9 +61,9 @@
 ****************************************************************/
 
 
-#include <svn_svr.h>     /* declarations for this library */
-#include <svn_fs.h>      /* the Subversion filesystem API */
-#include <svn_string.h>  /* Subversion bytestring routines */
+#include "svn_svr.h"     /* declarations for this library */
+#include "svn_fs.h"      /* the Subversion filesystem API */
+#include "svn_string.h"  /* Subversion bytestring routines */
 
 
 

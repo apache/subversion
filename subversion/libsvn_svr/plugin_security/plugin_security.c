@@ -67,7 +67,7 @@
    libapr can use them as DSO's! */
 
 
-#include <svn_svr.h>     /* describes server architecture */
+#include "svn_svr.h"     /* describes server architecture */
 
 
 /*

@@ -50,7 +50,7 @@
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <stdio.h>       /* for putch() and printf() */
 #include <ctype.h>       /* for isspace() */
-#include <svn_string.h>  /* loads <svn_types.h> and <apr_pools.h> */
+#include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 
 
 
