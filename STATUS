@@ -9,7 +9,7 @@ Status of 1.1.1:
 
 Candidate changes:
 
-  * r10788, r10796, r10904, r10914
+  * r10788, r10796, r10904, r10914, r11551
     Fix performance regression in character encoding translations.  Most
     noticable on Win32, but impacts other platforms as well.
     Justification:
@@ -20,7 +20,8 @@ Candidate changes:
       This conflicts with the branch.  See the 1.1.x-r10788 branch.
       Causes httpd to crash on exit in some cases without r11458.
     Votes:
-      +1: lundblad, ghudson
+      +1: lundblad
+      +1: ghudson (not r11551)
 
   * r11284, r11321
     Fix memory usage bloat in ra-dav commits.
