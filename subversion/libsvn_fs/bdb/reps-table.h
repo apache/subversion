@@ -29,6 +29,15 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/*** Creating the `representations' table. ***/
+
+/* Open a `representations' table in ENV.  If CREATE is non-zero,
+   create one if it doesn't exist.  Set *REPS_P to the new table.
+   Return a Berkeley DB error code.  */
+int svn_fs__bdb_open_reps_table (DB **reps_p, DB_ENV *env, int create);
+
+
+
 /*** Storing and retrieving reps.  ***/
 
 /* Set *REP_P to point to the representation for the key KEY in

@@ -27,6 +27,16 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Open a `uuids' table in @a env.
+ *
+ * Open a `uuids' table in @a env.  If @a create is non-zero, create
+ * one if it doesn't exist.  Set @a *uuids_p to the new table.  
+ * Return a Berkeley DB error code.
+ */
+int svn_fs__bdb_open_uuids_table (DB **uuids_p,
+                                  DB_ENV *env,
+                                  int create);
+
 /* Get the UUID at index @a idx in the uuids table within @a fs,
  * storing the result in @a *uuid.
  */

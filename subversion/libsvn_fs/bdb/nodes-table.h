@@ -27,6 +27,17 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Creating and opening the `nodes' table.  */
+
+
+/* Open a `nodes' table in ENV.  If CREATE is non-zero, create
+   one if it doesn't exist.  Set *NODES_P to the new table.  
+   Return a Berkeley DB error code.  */
+int svn_fs__bdb_open_nodes_table (DB **nodes_p,
+                                  DB_ENV *env,
+                                  int create);
+
+
 /* Check FS's `nodes' table to find an unused node number, and set
    *ID_P to the ID of the first revision of an entirely new node in
    FS, with copy_id COPY_ID, created in transaction TXN_ID, as part
