@@ -60,7 +60,7 @@ svn_fs_get_uuid (svn_fs_t *fs,
       args.fs = fs;
       args.idx = 1;
       args.uuid = uuid;
-      SVN_ERR (svn_fs__retry (fs, txn_body_get_uuid, &args, 1, pool));
+      SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_uuid, &args, pool));
 
       /* Toss what we find into the cache. */
       if (*uuid)
@@ -98,7 +98,7 @@ svn_fs_set_uuid (svn_fs_t *fs,
   args.fs = fs;
   args.idx = 1;
   args.uuid = uuid;
-  SVN_ERR (svn_fs__retry (fs, txn_body_set_uuid, &args, 1, pool));
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_set_uuid, &args, pool));
 
   /* Toss our value into the cache. */
   if (uuid)

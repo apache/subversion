@@ -90,7 +90,7 @@ struct undo {
 static svn_error_t *
 begin_trail (trail_t **trail_p,
              svn_fs_t *fs,
-             int use_txn,
+             svn_boolean_t use_txn,
              apr_pool_t *pool)
 {
   trail_t *trail = apr_pcalloc (pool, sizeof (*trail));
@@ -98,11 +98,11 @@ begin_trail (trail_t **trail_p,
   trail->pool = svn_pool_create (pool);
   trail->scratchpool = svn_pool_create (trail->pool);
   trail->undo = 0;
-
-  /* Maybe create a Berkeley DB transaction (if one exists). */
   if (use_txn)
     SVN_ERR (BDB_WRAP (fs, "beginning Berkeley DB transaction",
                        fs->env->txn_begin (fs->env, 0, &trail->db_txn, 0)));
+  else
+    trail->db_txn = NULL;
 
   *trail_p = trail;
   return SVN_NO_ERROR;
@@ -121,7 +121,6 @@ abort_trail (trail_t *trail,
     if (undo->when & undo_on_failure)
       undo->func (undo->baton);
 
-  /* Abort the Berkeley DB transaction (if one exists). */
   if (trail->db_txn)
     SVN_ERR (BDB_WRAP (fs, "aborting Berkeley DB transaction",
                        trail->db_txn->abort (trail->db_txn)));
@@ -166,54 +165,15 @@ commit_trail (trail_t *trail,
 }
 
 
-#if defined(SVN_FS__TRAIL_DEBUG)
-#undef svn_fs__retry
-
-svn_error_t *
-svn_fs__retry (svn_fs_t *fs,
-               svn_error_t *(*txn_body) (void *baton, trail_t *trail),
-               void *baton,
-               int use_txn,
-               apr_pool_t *pool)
-{
-  return svn_fs__retry_debug (fs, txn_body, baton, use_txn, pool,
-                              "unknown", "", 0);
-}					 
-#else
-svn_error_t *
-svn_fs__retry_debug (svn_fs_t *fs,
-                     svn_error_t *(*txn_body) (void *baton, trail_t *trail),
-                     void *baton,
-                     int use_txn,
-                     apr_pool_t *pool,
-                     const char *txn_body_fn_name,
-                     const char *filename,
-                     int line)
-{
-  return svn_fs__retry (fs, txn_body, baton, use_txn, pool);
-}
-#endif
-
-#if !defined(SVN_FS__TRAIL_DEBUG)
-svn_error_t *
-svn_fs__retry (
-  svn_fs_t *fs,
-  svn_error_t *(*txn_body) (void *baton, trail_t *trail),
-  void *baton,
-  int use_txn,
-  apr_pool_t *pool)
-#else
-svn_error_t *
-svn_fs__retry_debug (
-  svn_fs_t *fs,
-  svn_error_t *(*txn_body) (void *baton, trail_t *trail),
-  void *baton,
-  int use_txn,
-  apr_pool_t *pool,
-  const char *txn_body_fn_name,
-  const char *filename,
-  int line)
-#endif
+static svn_error_t *
+do_retry (svn_fs_t *fs,
+          svn_error_t *(*txn_body) (void *baton, trail_t *trail),
+          void *baton,
+          svn_boolean_t use_txn,
+          apr_pool_t *pool,
+          const char *txn_body_fn_name,
+          const char *filename,
+          int line)
 {
   for (;;)
     {
@@ -230,8 +190,9 @@ svn_fs__retry_debug (
         {
           /* The transaction succeeded!  Commit it.  */
           SVN_ERR (commit_trail (trail, fs));
-
-          print_trail_debug (trail, txn_body_fn_name, filename, line);
+          
+          if (use_txn)
+            print_trail_debug (trail, txn_body_fn_name, filename, line);
 
           return SVN_NO_ERROR;
         }
@@ -255,6 +216,47 @@ svn_fs__retry_debug (
       SVN_ERR (abort_trail (trail, fs));
     }
 }
+
+
+svn_error_t *
+svn_fs__retry_debug (svn_fs_t *fs,
+                     svn_error_t *(*txn_body) (void *baton, trail_t *trail),
+                     void *baton,
+                     apr_pool_t *pool,
+                     const char *txn_body_fn_name,
+                     const char *filename,
+                     int line)
+{
+  return do_retry (fs, txn_body, baton, TRUE, pool, 
+                   txn_body_fn_name, filename, line);
+}					 
+
+
+#if defined(SVN_FS__TRAIL_DEBUG)
+#undef svn_fs__retry_txn
+#endif
+
+svn_error_t *
+svn_fs__retry_txn (svn_fs_t *fs,
+                   svn_error_t *(*txn_body) (void *baton, trail_t *trail),
+                   void *baton,
+                   apr_pool_t *pool)
+{
+  return do_retry (fs, txn_body, baton, TRUE, pool, 
+                   "unknown", "", 0);
+}					 
+
+
+svn_error_t *
+svn_fs__retry (svn_fs_t *fs,
+               svn_error_t *(*txn_body) (void *baton, trail_t *trail),
+               void *baton,
+               apr_pool_t *pool)
+{
+  return do_retry (fs, txn_body, baton, FALSE, pool, 
+                   NULL, NULL, 0);
+}					 
+
 
 
 static void
