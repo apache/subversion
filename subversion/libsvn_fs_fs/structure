@@ -1,8 +1,6 @@
-This is a placeholder for a file describing file formats and layouts.
-For the moment, it just describes in general terms the decisions we
-have to make.
-
-See the "Design" section of the README file for a design overview.
+This file describes the file formats and layouts of a libsvn_fs_fs
+repository.  See the "Design" section of the README file for a design
+overview.
 
 Layout of the FS directory
 --------------------------
@@ -62,6 +60,52 @@ _1.0.t1 is not related to the ID _1.0.t2 even though they have the
 same node-ID, because temporary node-IDs are restricted in scope to
 the transactions they belong to.
 
+Copy-IDs and copy roots
+-----------------------
+
+Copy-IDs are assigned in the same manner as they are in the BDB
+implementation:
+
+  * A node-rev resulting from a creation operation (with no copy
+    history) receives the copy-ID of its parent directory.
+
+  * A node-rev resulting from a copy operation receives a fresh
+    copy-ID, as one would expect.
+
+  * A node-rev resulting from a modification operation receives a
+    copy-ID depending on whether its predecessor derives from a
+    copy operation or whether it derives from a creation operation
+    with no intervening copies:
+
+      - If the predecessor does not derive from a copy, the new
+        node-rev receives the copy-ID of its parent directory.  If the
+        node-rev is being modified through its created-path, this will
+        be the same copy-ID as the predecessor node-rev has; however,
+        if the node-rev is being modified through a copied ancestor
+        directory (i.e. we are performing a "lazy copy"), this will be
+        a different copy-ID.
+
+      - If the predecessor derives from a copy and the node-rev is
+        being modified through its created-path, the new node-rev
+        receives the copy-ID of the predecessor.
+
+      - If the predecessor derives from a copy and the node-rev is not
+        being modified through its created path, the new node-rev
+        receives a fresh copy-ID.  This is called a "soft copy"
+        operation, as distinct from a "true copy" operation which was
+        actually requested through the svn_fs interface.  Soft copies
+        exist to ensure that the same <node-ID,copy-ID> pair is not
+        used twice within a transaction.
+
+Unlike the BDB implementation, we do not have a "copies" table.
+Instead, each node-revision record contains a "copyroot" field
+identifying the node-rev resulting from the true copy operation most
+proximal to the node-rev.  If the node-rev does not itself derive from
+a copy operation, then the copyroot field identifies the copy of an
+ancestor directory; if no ancestor directories derive from a copy
+operation, then the copyroot field identifies the root directory of
+rev 0.
+
 Revision file format
 --------------------
 
@@ -107,22 +151,21 @@ defined:
             <size> gives size of expanded rep
             <digest> gives hex MD5 digest of expanded rep
   cpath     FS pathname node was created at
-  copyfrom  "{soft|hard} <rev> <path>" of copyfrom data
-  copyroot  The ID of the root node-revision of the copy
+  copyfrom  "<rev> <path>" of copyfrom data
+  copyroot  "<rev> <created-path>" of the root of this copy
 
-The predecessor of a node-rev crosses copy history; together with the
-count field, it allows efficient determination of the base for
-skip-deltas.  The first node-rev of a node contains no "pred" field.
-In a node-revision resulting from a copy, the "copyfrom" field gives
-the copyfrom data.  The "copyroot" field identifies the root
-node-revision of the copy; it may be omitted if the node-rev is its
-own copy root (as is the case for node-revs with copy history, and for
-the root node of revision 0).  Note that since copy IDs are inherited
-from parent directory to child, the root of a node-rev's copy may
-belong to a different node, perhaps of a different type, than the
-node-rev itself does.
-
-A node-revision with no properties may omit the "props" field.
+The predecessor of a node-rev crosses both soft and true copies;
+together with the count field, it allows efficient determination of
+the base for skip-deltas.  The first node-rev of a node contains no
+"pred" field.  A node-revision with no properties may omit the "props"
+field.  In a node-revision resulting from a true copy operation, the
+"copyfrom" field gives the copyfrom data.  The "copyroot" field
+identifies the root node-revision of the copy; it may be omitted if
+the node-rev is its own copy root (as is the case for node-revs with
+copy history, and for the root node of revision 0).  Copy roots are
+identified by revision and created-path, not by node-rev ID, because a
+copy root may be a node-rev which exists later on within the same
+revision file, meaning its offset is not yet known.
 
 Changed-path data is represented as a series of lines, each containing
 "<id> <action> <text-mod> <prop-mod> <path>\n", where <id> is the
