@@ -99,10 +99,12 @@ typedef struct svn_delta_digger_t
 
   /* Caller optionally decides what to do with unrecognized elements. */
   svn_error_t (*unknown_elt_handler) (svn_delta_digger_t *digger,
-                                      const char *data,
+                                      const char *name,
                                       const char **atts);
 
 } svn_delta_digger_t;
+
+
 
 
 

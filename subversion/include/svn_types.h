@@ -307,6 +307,23 @@ typedef struct svn_delta_t
 } svn_delta_t;
 
 
+
+/* An enumerated type that can indicates one of the Subversion-delta
+   XML tag categories; needed for walking & building a
+   delta-in-progress */
+
+typedef enum
+{
+  svn_XML_treedelta = 1,
+  svn_XML_edit,
+  svn_XML_editcontent,
+  svn_XML_propdelta,
+  svn_XML_textdelta
+  
+} svn_XML_elt_t
+
+
+
 /* A skelta is just a tree delta with empty pdeltas and vdeltas. */
 typedef svn_delta_t svn_skelta_t;
 
