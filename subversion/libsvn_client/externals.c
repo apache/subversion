@@ -46,12 +46,13 @@ struct handle_external_item_change_baton
   /* The directory that has this externals property. */
   const char *parent_dir;
 
-  /* Passed through to svn_client_checkout(). */
+  /* Passed through to svn_client_* functions. */
   svn_client_ctx_t *ctx;
 
   /* If set, then run update on items that didn't change. */
   svn_boolean_t update_unchanged;
   svn_boolean_t *timestamp_sleep;
+  svn_boolean_t is_export;
 
   /* A scratchwork pool -- do not put anything in here that needs to
      outlive the hash diffing callback! */
@@ -175,7 +176,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
   /* Don't bother to check status, since we'll get that for free by
      attempting to retrieve the hash values anyway.  */
 
-  if (ib->old_desc)
+  if ((ib->old_desc) && (! ib->is_export))
     old_item = apr_hash_get (ib->old_desc, key, klen);
   else
     old_item = NULL;
@@ -235,11 +236,22 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                                  svn_wc_notify_state_unknown,
                                  SVN_INVALID_REVNUM);
 
-      SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
-                                              &(new_item->revision),
-                                              TRUE, /* recurse */
-                                              ib->timestamp_sleep,
-                                              ib->ctx, ib->pool));
+      if (ib->is_export)
+        /* ### It should be okay to "force" this export.  Externals
+           only get created in subdirectories of versioned
+           directories, so an external directory couldn't already
+           exist before the parent export process unless a versioned
+           directory above it did, which means the user would have
+           already had to force these creations to occur. */
+        SVN_ERR (svn_client_export (NULL, new_item->url, path,
+                                    &(new_item->revision),
+                                    TRUE, ib->ctx, ib->pool));
+      else
+        SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
+                                                &(new_item->revision),
+                                                TRUE, /* recurse */
+                                                ib->timestamp_sleep,
+                                                ib->ctx, ib->pool));
     }
   else if (! new_item)
     {
@@ -394,6 +406,7 @@ struct handle_externals_desc_change_baton
   svn_client_ctx_t *ctx;
   svn_boolean_t update_unchanged;
   svn_boolean_t *timestamp_sleep;
+  svn_boolean_t is_export;
 
   apr_pool_t *pool;
 };
@@ -429,6 +442,7 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
   ib.parent_dir        = (const char *) key;
   ib.ctx               = cb->ctx;
   ib.update_unchanged  = cb->update_unchanged;
+  ib.is_export         = cb->is_export;
   ib.timestamp_sleep   = cb->timestamp_sleep;
   ib.pool              = svn_pool_create (cb->pool);
 
@@ -460,9 +474,34 @@ svn_client__handle_externals (svn_wc_traversal_info_t *traversal_info,
   cb.ctx               = ctx;
   cb.update_unchanged  = update_unchanged;
   cb.timestamp_sleep   = timestamp_sleep;
+  cb.is_export         = FALSE;
   cb.pool              = pool;
 
-  SVN_ERR (svn_hash_diff (externals_old, externals_new,
+  SVN_ERR (svn_hash_diff (cb.externals_old, cb.externals_new,
+                          handle_externals_desc_change, &cb, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client__fetch_externals (apr_hash_t *externals,
+                             svn_boolean_t is_export,
+                             svn_boolean_t *timestamp_sleep,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool)
+{
+  struct handle_externals_desc_change_baton cb;
+
+  cb.externals_new     = externals;
+  cb.externals_old     = apr_hash_make (pool);
+  cb.ctx               = ctx;
+  cb.update_unchanged  = TRUE;
+  cb.timestamp_sleep   = timestamp_sleep;
+  cb.is_export         = is_export;
+  cb.pool              = pool;
+
+  SVN_ERR (svn_hash_diff (cb.externals_old, cb.externals_new,
                           handle_externals_desc_change, &cb, pool));
 
   return SVN_NO_ERROR;
