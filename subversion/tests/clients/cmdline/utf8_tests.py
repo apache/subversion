@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, stat, string, sys, re, os.path, os
+import shutil, stat, string, sys, re, os.path, os, locale
 
 # Our testing module
 import svntest
@@ -33,7 +33,7 @@ Item = wc.StateItem
 # data.  In theory this data has different interpretations when
 # converting from 2 different charsets into UTF-8.
 
-i18n_filename = "b‘Á≈";
+i18n_filename =  "b‘Á≈";
 
 i18n_logmsg = "drie√´ntwintig keer was √©√©n keer teveel";
 
@@ -53,15 +53,23 @@ def basic_utf8_conversion(sbox):
   wc_dir = sbox.wc_dir
 
   # Set our environment's locale to ISO-8859-1
-  os.putenv('LC_ALL', 'ISO-8859-1')
+  locale.setlocale(locale.LC_ALL, 'en_US.ISO8859-1')
 
   # Create the new i18n file and schedule it for addition
   svntest.main.file_append(os.path.join(wc_dir, i18n_filename), "hi")
-  svntest.main.run_svn(None, 'add', os.path.join(wc_dir, i18n_filename))
+  outlines, errlines = svntest.main.run_svn(None,
+                                            'add',
+                                            os.path.join(wc_dir,
+                                                         i18n_filename))
+  if errlines:
+    print "Failed to schedule i18n filename for addition"
+    return 1
 
   outlines, inlines = svntest.main.run_svn(None, # no error expected
-                                           'commit', '-m', i18n_logmsg)
+                                           'commit', '-m', i18n_logmsg,
+                                           wc_dir)
   if errlines:
+    print "Failed to commit i18n filename"
     return 1
 
 
