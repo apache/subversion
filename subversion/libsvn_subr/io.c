@@ -354,23 +354,10 @@ svn_error_t *
 svn_io_set_file_read_only (const char *path, apr_pool_t *pool)
 {
   apr_status_t status;
-  apr_fileattrs_t attributes;
-
-#ifdef SVN__APR_FILE_ATTRS_GET
-  /* This is what I would do if the get function was available in APR. If
-     the attribute removing stuff gets in to APR and we don't do this, then
-     setting read-only will remove executable. Since we don't ever set
-     executable at present that is not a big problem */
-  status = apr_file_attrs_get (path, &attributes, pool);
-  if (!APR_STATUS_IS_SUCCESS(status))
-    return svn_error_createf (status, 0, NULL, pool,
-                             "failed to get attributes for file '%s'", path);
-#else
-  attributes = 0;
-#endif
-
-  attributes |= APR_FILE_ATTR_READONLY;
-  status = apr_file_attrs_set (path, attributes, pool);
+  status = apr_file_attrs_set (path,
+                               APR_FILE_ATTR_READONLY,
+                               APR_FILE_ATTR_READONLY,
+                               pool);
   if (status && status != APR_ENOTIMPL)
     return svn_error_createf (status, 0, NULL, pool,
                              "failed to set file '%s' read-only", path);
