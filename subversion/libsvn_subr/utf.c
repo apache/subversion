@@ -38,7 +38,7 @@
 
 /* Return the apr_xlate handle for converting native characters to UTF-8.
    Create one if it doesn't exist.  If unable to find a handle, or
-   unable to create one because apr_xlate_open returned EINVAL, then
+   unable to create one because apr_xlate_open returned APR_EINVAL, then
    set *RET to null and return SVN_NO_ERROR; if fail for some other
    reason, return error. */
 static svn_error_t *
@@ -70,8 +70,7 @@ get_ntou_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
   /* Try to create one. */
   apr_err = apr_xlate_open (ret, "UTF-8", APR_LOCALE_CHARSET, global_pool);
 
-  /* apr_xlate_open returns EINVAL if no handle could be found. */
-  if (apr_err == EINVAL)
+  if (APR_STATUS_IS_EINVAL (apr_err) || APR_STATUS_IS_ENOTIMPL (apr_err))
     {
       *ret = NULL;
       return SVN_NO_ERROR;
@@ -90,7 +89,7 @@ get_ntou_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
 
 /* Return the apr_xlate handle for converting UTF-8 to native characters.
    Create one if it doesn't exist.  If unable to find a handle, or
-   unable to create one because apr_xlate_open returned EINVAL, then
+   unable to create one because apr_xlate_open returned APR_EINVAL, then
    set *RET to null and return SVN_NO_ERROR; if fail for some other
    reason, return error. */
 static svn_error_t *
@@ -122,8 +121,7 @@ get_uton_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
   /* Try to create one. */
   apr_err = apr_xlate_open (ret, APR_LOCALE_CHARSET, "UTF-8", global_pool);
 
-  /* apr_xlate_open returns EINVAL if no handle could be found. */
-  if (apr_err == EINVAL)
+  if (APR_STATUS_IS_EINVAL (apr_err) || APR_STATUS_IS_ENOTIMPL (apr_err))
     {
       *ret = NULL;
       return SVN_NO_ERROR;
