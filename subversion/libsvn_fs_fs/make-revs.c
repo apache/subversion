@@ -45,6 +45,7 @@ struct parse_baton
   apr_pool_t *rev_pool;
   apr_file_t *rev_file;
   svn_stream_t *rev_stream;
+  svn_stream_t *delta_stream;
   apr_hash_t *deleted_paths;
   apr_hash_t *added_paths;
   apr_hash_t *modified_paths;
@@ -52,6 +53,7 @@ struct parse_baton
   apr_md5_ctx_t md5_ctx;
   int next_node_id;
   int next_copy_id;
+  svn_stream_t *empty_stream;
   apr_pool_t *pool;
 };
 
@@ -938,7 +940,7 @@ text_write(void *baton, const char *data, apr_size_t *len)
   struct parse_baton *pb = baton;
 
   apr_md5_update(&pb->md5_ctx, data, *len);
-  return svn_io_file_write_full(pb->rev_file, data, *len, len, pb->pool);
+  return svn_stream_write(pb->delta_stream, data, len);
 }
 
 static svn_error_t *
@@ -950,6 +952,7 @@ text_close(void *baton)
   unsigned char digest[APR_MD5_DIGESTSIZE];
   apr_off_t offset;
 
+  SVN_ERR(svn_stream_close(pb->delta_stream));
   apr_md5_final(digest, &pb->md5_ctx);
   rep->digest = svn_md5_digest_to_cstring(digest, pb->pool);
 
@@ -970,6 +973,8 @@ set_fulltext(svn_stream_t **stream, void *baton)
   struct parse_baton *pb = baton;
   struct entry *entry = pb->current_node;
   struct rep_pointer *rep = &entry->text_rep;
+  svn_txdelta_window_handler_t wh;
+  void *whb;
 
   /* Record the current offset of the rev file as the text rep location. */
   rep->rev = pb->current_rev;
@@ -977,7 +982,12 @@ set_fulltext(svn_stream_t **stream, void *baton)
   SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &rep->off, pb->pool));
 
   /* Write a representation header to the rev file. */
-  SVN_ERR(svn_io_file_write_full(pb->rev_file, "PLAIN\n", 6, NULL, pb->pool));
+  SVN_ERR(svn_io_file_write_full(pb->rev_file, "DELTA\n", 6, NULL, pb->pool));
+
+  /* Prepare to write the svndiff data. */
+  svn_txdelta_to_svndiff(pb->rev_stream, pb->rev_pool, &wh, &whb);
+  pb->delta_stream = svn_txdelta_target_push(wh, whb, pb->empty_stream,
+                                             pb->rev_pool);
 
   /* Get ready to compute the MD5 digest. */
   apr_md5_init(&pb->md5_ctx);
@@ -1077,6 +1087,7 @@ main(int argc, char **argv)
   pb.rev_stream = NULL;
   pb.next_node_id = 0;
   pb.next_copy_id = 0;
+  pb.empty_stream = svn_stream_empty(pool);
   pb.pool = pool;
   err = svn_repos_parse_dumpstream2(instream, &parser, &pb, NULL, NULL, pool);
   if (!err)
