@@ -163,6 +163,8 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
       svn_stringbuf_t *anchor, *target;
       const svn_delta_edit_fns_t *editor;
       void *edit_baton;
+      const svn_delta_editor_t *new_editor;
+      void *new_edit_baton;
       void *root_baton, *dir_baton;
       svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
       const char *committed_date = NULL;
@@ -183,18 +185,24 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
       /* Fetch RA commit editor */
       SVN_ERR (ra_lib->get_commit_editor
                (session,
-                &editor, &edit_baton,
+                &new_editor, &new_edit_baton,
                 &committed_rev,
                 &committed_date,
                 &committed_author,
                 log_msg ? log_msg : svn_stringbuf_create ("", pool),
                 NULL, NULL, NULL, NULL));
 
+      /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+         can use it with an old driver. */
+      svn_delta_compat_wrap (&editor, &edit_baton, 
+                             new_editor, new_edit_baton, pool);
+
       SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM,
                                   &root_baton));
       SVN_ERR (editor->add_directory (target, root_baton, NULL, 
                                       SVN_INVALID_REVNUM, &dir_baton));
       SVN_ERR (editor->close_directory (dir_baton));
+      /* ### close_directory(root_baton) is needed here! */
       SVN_ERR (editor->close_edit (edit_baton));
 
       /* Fill in the commit_info structure. */

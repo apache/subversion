@@ -36,9 +36,9 @@
 /*** Helpers ***/
 
 static svn_error_t *
-apply_delta (const svn_delta_edit_fns_t *before_editor,
+apply_delta (const svn_delta_editor_t *before_editor,
              void *before_edit_baton,
-             const svn_delta_edit_fns_t *after_editor,
+             const svn_delta_editor_t *after_editor,
              void *after_edit_baton,
              svn_stream_t *delta,
              svn_stringbuf_t *dest,
@@ -49,9 +49,11 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
              svn_boolean_t is_update)
 {
   const svn_delta_editor_t *editor;
-  const svn_delta_edit_fns_t *wrap_editor;
   void *edit_baton;
+  const svn_delta_editor_t *wrap_editor;
   void *wrap_edit_baton;
+  const svn_delta_edit_fns_t *wrapped_old_editor;
+  void *wrapped_old_edit_baton;
   svn_error_t *err;
 
   /* If not given an ancestor path, we will (for the time being)
@@ -85,24 +87,24 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
   if (err)
     return err;
 
+  svn_delta_wrap_editor (&wrap_editor,
+                         &wrap_edit_baton,
+                         before_editor,
+                         before_edit_baton,
+                         editor,
+                         edit_baton,
+                         after_editor,
+                         after_edit_baton,
+                         pool);
+
   /* ### todo:  This is a TEMPORARY wrapper around our editor so we
      can use it with an old driver. */
-  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
-                         editor, edit_baton, pool);
-
-  svn_delta_wrap_old_editor (&wrap_editor,
-                             &wrap_edit_baton,
-                             before_editor,
-                             before_edit_baton,
-                             wrap_editor,
-                             wrap_edit_baton,
-                             after_editor,
-                             after_edit_baton,
-                             pool);
+  svn_delta_compat_wrap (&wrapped_old_editor, &wrapped_old_edit_baton, 
+                         wrap_editor, wrap_edit_baton, pool);
 
   return svn_delta_xml_auto_parse (delta,
-                                   wrap_editor,
-                                   wrap_edit_baton,
+                                   wrapped_old_editor,
+                                   wrapped_old_edit_baton,
                                    ancestor_path->data,
                                    ancestor_revision,
                                    pool);
@@ -111,9 +113,9 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
 
 
 static svn_error_t *
-do_edits (const svn_delta_edit_fns_t *before_editor,
+do_edits (const svn_delta_editor_t *before_editor,
           void *before_edit_baton,
-          const svn_delta_edit_fns_t *after_editor,
+          const svn_delta_editor_t *after_editor,
           void *after_edit_baton,
           svn_stringbuf_t *path,
           svn_stringbuf_t *xml_src,
@@ -167,9 +169,9 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
+svn_client__checkout_internal (const svn_delta_editor_t *before_editor,
                                void *before_edit_baton,
-                               const svn_delta_edit_fns_t *after_editor,
+                               const svn_delta_editor_t *after_editor,
                                void *after_edit_baton,
                                svn_stringbuf_t *path,
                                svn_stringbuf_t *xml_src,
@@ -186,9 +188,9 @@ svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
 
 
 svn_error_t *
-svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
+svn_client__update_internal (const svn_delta_editor_t *before_editor,
                              void *before_edit_baton,
-                             const svn_delta_edit_fns_t *after_editor,
+                             const svn_delta_editor_t *after_editor,
                              void *after_edit_baton,
                              svn_stringbuf_t *path,
                              svn_stringbuf_t *xml_src,

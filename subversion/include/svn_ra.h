@@ -337,7 +337,7 @@ typedef struct svn_ra_plugin_t
      COMMITTED_AUTHOR may be null, in which case not touched.
   */
   svn_error_t *(*get_commit_editor) (void *session_baton,
-                                     const svn_delta_edit_fns_t **editor,
+                                     const svn_delta_editor_t **editor,
                                      void **edit_baton,
                                      svn_revnum_t *new_rev,
                                      const char **committed_date,

@@ -276,7 +276,7 @@ get_dated_revision (void *session_baton,
 
 static svn_error_t *
 get_commit_editor (void *session_baton,
-                   const svn_delta_edit_fns_t **editor,
+                   const svn_delta_editor_t **editor,
                    void **edit_baton,
                    svn_revnum_t *new_rev,
                    const char **committed_date,
@@ -289,17 +289,15 @@ get_commit_editor (void *session_baton,
 {
   const svn_delta_editor_t *commit_editor;
   const svn_delta_editor_t *tracking_editor;
-  const svn_delta_edit_fns_t *wrap_cmt_editor, *wrap_trk_editor;
-  const svn_delta_edit_fns_t *composed_editor;
-  void *commit_edit_baton, *composed_edit_baton;
-  void *tracking_edit_baton, *wrap_cmt_edit_baton, *wrap_trk_edit_baton;
+  void *commit_edit_baton;
+  void *tracking_edit_baton;
   
-  svn_ra_local__session_baton_t *sess_baton = 
-    (svn_ra_local__session_baton_t *) session_baton;
+  svn_ra_local__session_baton_t *sess_baton = session_baton;
 
   /* Construct a commit cleanup baton */
   struct commit_cleanup_baton *cb
     = apr_pcalloc (sess_baton->pool, sizeof (*cb));
+
   cb->pool = sess_baton->pool;
   cb->close_func = close_func;
   cb->set_func = set_func;
@@ -317,11 +315,6 @@ get_commit_editor (void *session_baton,
                                      cleanup_commit, cb,
                                      sess_baton->pool));
 
-  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
-     can use it with an old driver. */
-  svn_delta_compat_wrap (&wrap_cmt_editor, &wrap_cmt_edit_baton, 
-                         commit_editor, commit_edit_baton, sess_baton->pool);
-
   /* Get the commit tracking editor, telling it to store committed
      targets, and NOT to bump revisions.  (The FS editor will do this
      for us.)  */
@@ -331,22 +324,13 @@ get_commit_editor (void *session_baton,
                                               cb->committed_targets,
                                               SVN_INVALID_REVNUM,
                                               NULL, NULL));
-
-  /* ### todo: This is a TEMPORARY wrapper around our editor so we
-     can use it with an old driver. */
-  svn_delta_compat_wrap (&wrap_trk_editor, &wrap_trk_edit_baton, 
-                         tracking_editor, tracking_edit_baton, 
-                         sess_baton->pool);
   
-  /* Set up a pipeline between the editors, creating a composed editor. */
-  svn_delta_compose_old_editors (&composed_editor, &composed_edit_baton,
-                                 wrap_cmt_editor, wrap_cmt_edit_baton,
-                                 wrap_trk_editor, wrap_trk_edit_baton,
-                                 sess_baton->pool);
+  /* Compose the two editors, returning the composition by reference. */
+  svn_delta_compose_editors (editor, edit_baton,
+                             commit_editor, commit_edit_baton,
+                             tracking_editor, tracking_edit_baton,
+                             sess_baton->pool);
 
-  /* Give the magic composed-editor back to the client */
-  *editor = composed_editor;
-  *edit_baton = composed_edit_baton;
   return SVN_NO_ERROR;
 }
 

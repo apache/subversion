@@ -487,7 +487,8 @@ typedef struct
      directory baton UNLESS the editor has taken precautions to
      allocate it in a pool of the appropriate lifetime (the DIR_POOL
      passed to open_directory and add_directory definitely does not
-     have the proper lifetime).
+     have the proper lifetime). In general, it is recommended to simply
+     avoid keeping a parent directory baton in a file baton.
   */
 
   /* Set the target revision for this edit to TARGET_REVISION.  This
@@ -760,13 +761,13 @@ svn_delta_edit_fns_t *svn_delta_old_default_editor (apr_pool_t *pool);
  * is not an error.
  */
 void
-svn_delta_compose_old_editors (const svn_delta_edit_fns_t **new_editor,
-                               void **new_edit_baton,
-                               const svn_delta_edit_fns_t *editor_1,
-                               void *edit_baton_1,
-                               const svn_delta_edit_fns_t *editor_2,
-                               void *edit_baton_2,
-                               apr_pool_t *pool);
+svn_delta_compose_editors (const svn_delta_editor_t **new_editor,
+                           void **new_edit_baton,
+                           const svn_delta_editor_t *editor_1,
+                           void *edit_baton_1,
+                           const svn_delta_editor_t *editor_2,
+                           void *edit_baton_2,
+                           apr_pool_t *pool);
 
 
 /* Compose BEFORE_EDITOR, BEFORE_EDIT_BATON with MIDDLE_EDITOR,
@@ -783,15 +784,15 @@ svn_delta_compose_old_editors (const svn_delta_edit_fns_t **new_editor,
  * MIDDLE_EDITOR must not be null.  I'm not going to tell you what
  * happens if it is.
  */
-void svn_delta_wrap_old_editor (const svn_delta_edit_fns_t **new_editor,
-                                void **new_edit_baton,
-                                const svn_delta_edit_fns_t *before_editor,
-                                void *before_edit_baton,
-                                const svn_delta_edit_fns_t *middle_editor,
-                                void *middle_edit_baton,
-                                const svn_delta_edit_fns_t *after_editor,
-                                void *after_edit_baton,
-                                apr_pool_t *pool);
+void svn_delta_wrap_editor (const svn_delta_editor_t **new_editor,
+                            void **new_edit_baton,
+                            const svn_delta_editor_t *before_editor,
+                            void *before_edit_baton,
+                            const svn_delta_editor_t *middle_editor,
+                            void *middle_edit_baton,
+                            const svn_delta_editor_t *after_editor,
+                            void *after_edit_baton,
+                            apr_pool_t *pool);
 
 
 /* These public structures are for use in customizing a 'pipe' editor;

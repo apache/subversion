@@ -192,9 +192,9 @@ typedef struct svn_client_commit_info_t
 
    Use POOL for any temporary allocation. */
 svn_error_t *
-svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
+svn_client_checkout (const svn_delta_editor_t *before_editor,
                      void *before_edit_baton,
-                     const svn_delta_edit_fns_t *after_editor,
+                     const svn_delta_editor_t *after_editor,
                      void *after_edit_baton,
                      svn_client_auth_baton_t *auth_baton,
                      svn_stringbuf_t *URL,
@@ -231,9 +231,9 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
    
    Use POOL for any temporary allocation. */
 svn_error_t *
-svn_client_update (const svn_delta_edit_fns_t *before_editor,
+svn_client_update (const svn_delta_editor_t *before_editor,
                    void *before_edit_baton,
-                   const svn_delta_edit_fns_t *after_editor,
+                   const svn_delta_editor_t *after_editor,
                    void *after_edit_baton,
                    svn_client_auth_baton_t *auth_baton,
                    svn_stringbuf_t *path,
@@ -269,9 +269,9 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
 
    Use POOL for any temporary allocation. */
 svn_error_t *
-svn_client_switch (const svn_delta_edit_fns_t *before_editor,
+svn_client_switch (const svn_delta_editor_t *before_editor,
                    void *before_edit_baton,
-                   const svn_delta_edit_fns_t *after_editor,
+                   const svn_delta_editor_t *after_editor,
                    void *after_edit_baton,
                    svn_client_auth_baton_t *auth_baton,
                    svn_stringbuf_t *path,
@@ -396,9 +396,9 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
    right now.  
 */
 svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
-                                const svn_delta_edit_fns_t *before_editor,
+                                const svn_delta_editor_t *before_editor,
                                 void *before_edit_baton,
-                                const svn_delta_edit_fns_t *after_editor,
+                                const svn_delta_editor_t *after_editor,
                                 void *after_edit_baton, 
                                 svn_client_auth_baton_t *auth_baton,   
                                 svn_stringbuf_t *path,
@@ -442,9 +442,9 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
  */
 svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
-                   const svn_delta_edit_fns_t *before_editor,
+                   const svn_delta_editor_t *before_editor,
                    void *before_edit_baton,
-                   const svn_delta_edit_fns_t *after_editor,
+                   const svn_delta_editor_t *after_editor,
                    void *after_edit_baton,
                    svn_client_auth_baton_t *auth_baton,
                    const apr_array_header_t *targets,
@@ -641,9 +641,9 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
                  svn_stringbuf_t *message,
-                 const svn_delta_edit_fns_t *before_editor,
+                 const svn_delta_editor_t *before_editor,
                  void *before_edit_baton,
-                 const svn_delta_edit_fns_t *after_editor,
+                 const svn_delta_editor_t *after_editor,
                  void *after_edit_baton,
                  svn_wc_notify_func_t notify_func,
                  void *notify_baton,
