@@ -17,17 +17,11 @@
 
 #include <string.h>
 
-#define APU_WANT_DB
-#include <apu_want.h>
-
 #include "svn_fs.h"
 #include "svn_pools.h"
 #include "fs.h"
 #include "err.h"
 #include "node-rev.h"
-#include "reps-strings.h"
-
-#include "bdb/nodes-table.h"
 
 
 /* Creating completely new nodes.  */
@@ -39,17 +33,10 @@ svn_fs__create_node (const svn_fs_id_t **id_p,
                      svn_fs__node_revision_t *noderev,
                      const char *copy_id,
                      const char *txn_id,
-                     trail_t *trail)
+                     apr_pool_t *pool)
 {
-  svn_fs_id_t *id;
-
-  /* Find an unused ID for the node.  */
-  SVN_ERR (svn_fs__bdb_new_node_id (&id, fs, copy_id, txn_id, trail));
-
-  /* Store its NODE-REVISION skel.  */
-  SVN_ERR (svn_fs__bdb_put_node_revision (fs, id, noderev, trail));
-
-  *id_p = id;
+  abort ();
+  
   return SVN_NO_ERROR;
 }
 
@@ -64,18 +51,10 @@ svn_fs__create_successor (const svn_fs_id_t **new_id_p,
                           svn_fs__node_revision_t *new_noderev,
                           const char *copy_id,
                           const char *txn_id,
-                          trail_t *trail)
+                          apr_pool_t *pool)
 {
-  svn_fs_id_t *new_id;
+  abort ();
 
-  /* Choose an ID for the new node, and store it in the database.  */
-  SVN_ERR (svn_fs__bdb_new_successor_id (&new_id, fs, old_id, copy_id,
-                                         txn_id, trail));
-
-  /* Store the new skel under that ID.  */
-  SVN_ERR (svn_fs__bdb_put_node_revision (fs, new_id, new_noderev, trail));
-
-  *new_id_p = new_id;
   return SVN_NO_ERROR;
 }
 
@@ -86,10 +65,9 @@ svn_fs__create_successor (const svn_fs_id_t **new_id_p,
 svn_error_t *
 svn_fs__delete_node_revision (svn_fs_t *fs,
                               const svn_fs_id_t *id,
-                              trail_t *trail)
+                              apr_pool_t *pool)
 {
-  /* ### todo: here, we should adjust other nodes to compensate for
-     the missing node. */
+  abort ();
 
-  return svn_fs__bdb_delete_nodes_entry (fs, id, trail);
+  return SVN_NO_ERROR;
 }

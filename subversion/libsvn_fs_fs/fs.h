@@ -43,24 +43,6 @@ struct svn_fs_t
   /* The path to the repository's top-level directory. */
   char *path;
 
-  /* A Berkeley DB environment for all the filesystem's databases.
-     This establishes the scope of the filesystem's transactions.  */
-  DB_ENV *env;
-
-  /* The filesystem's various tables.  See `structure' for details.  */
-  DB *changes;
-  DB *copies;
-  DB *nodes;
-  DB *representations;
-  DB *revisions;
-  DB *strings;
-  DB *transactions;
-  DB *uuids;
-
-  /* A boolean for tracking when we have a live Berkeley DB
-     transaction trail alive. */
-  svn_boolean_t in_txn_trail;
-
   /* A callback function for printing warning messages, and a baton to
      pass through to it.  */
   svn_fs_warning_callback_t warning;
