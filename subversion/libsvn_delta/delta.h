@@ -50,15 +50,6 @@
 /* ==================================================================== */
 
 
-
-/* Given a delta stream STREAM, set *READ_FN and *READ_BATON to a `read'-like
-   function that will return a VCDIFF-format byte stream.
-   (Do we need a `free' function for disposing of DATA somehow?)  */
-extern svn_error_t *svn_delta_to_vcdiff (svn_delta_read_fn_t **read_fn,
-                                         void **read_baton,
-                                         svn_delta_stream_t *stream);
-
-
 /* Return a vcdiff parser object, PARSER.  If we're receiving a
    vcdiff-format byte stream, one block of bytes at a time, we can
    pass each block in succession to svn_vcdiff_parse, with PARSER as
@@ -74,7 +65,8 @@ extern svn_vcdiff_parser_t *svn_make_vcdiff_parser (svn_delta_handler_t
    PARSER.  When we've accumulated enough data for a complete window,
    call PARSER's consumer function.  */
 extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
-                                      char *buffer, apr_off_t *len);
+                                      const char *buffer,
+                                      apr_off_t *len);
 
 /* These are the in-memory tree-delta stackframes; they are used to
  * keep track of a delta's state while the XML stream is being parsed.
@@ -117,9 +109,9 @@ typedef enum svn_XML_t
 
 typedef struct svn_delta_stackframe_t
 {
-  svn_XML_t tag;     /* represents an open <tag> */
-  void *baton;       /* holds caller data for a particular subdirectory */
-  svn_string_t *name /* if the tag had a "name" attribute attached */
+  svn_XML_t tag;      /* represents an open <tag> */
+  void *baton;        /* holds caller data for a particular subdirectory */
+  svn_string_t *name; /* if the tag had a "name" attribute attached */
   
   struct svn_delta_stackframe_t *next;
   struct svn_delta_stackframe_t *previous;
