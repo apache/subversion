@@ -546,12 +546,10 @@ calc/Makefile:6
       </variablelist>
       
       
-      <para>This may sound like a lot to keep track of, but as you
-        will learn in a later chapter, the <command>svn
-        status</command> command will show you the state of any item
-        in your working copy.  <!-- ###TODO xref the relevant section that
-        details 'status' -->
-      </para>
+      <para>This may sound like a lot to keep track of, but the
+        <command>svn status</command> command will show you the state
+        of any item in your working copy.  For more information on
+        that command, see <xref linkend="svn-ch-3-sect-4.3.1" />.</para>
      
     </sect2>
     
