@@ -301,14 +301,6 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
  * propchange editor calls that relay special "entry props" (this
  * is typically used only for working copy updates).
  *
- * If @a use_copy_history is @c TRUE, then when copy history is present on
- * an added node, pass it through to @a editor, and express differences
- * as against the node referred to by that copy history.  Else if
- * @a use_copy_history is @c FALSE, then never pass copyfrom history, and
- * express differences as full adds (i.e., all directory entries are
- * reported as adds, and text deltas are sent against the empty
- * string).
- *
  * @a ignore_ancestry instructs the function to ignore node ancestry
  * when determining how to transmit differences.
  *
@@ -332,9 +324,24 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
                      svn_boolean_t entry_props,
-                     svn_boolean_t use_copy_history,
                      svn_boolean_t ignore_ancestry,
                      apr_pool_t *pool);
+
+/** Use the provided @a editor and @a edit_baton to describe the
+ * skeletal changes made in a particular filesystem @a root
+ * (revision or transaction).
+ *
+ * The @a editor passed to this function should be aware of the fact
+ * that calls to its change_dir_prop(), change_file_prop(), and
+ * apply_textdelta() functions will not contain meaningful data, and
+ * merely serve as indications that properties or textual contents
+ * were changed. 
+ */
+svn_error_t *
+svn_repos_replay (svn_fs_root_t *root,
+                  const svn_delta_editor_t *editor,
+                  void *edit_baton,
+                  apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/

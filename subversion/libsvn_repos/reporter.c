@@ -491,7 +491,6 @@ svn_repos_finish_report (void *report_baton)
                                 rbaton->text_deltas,
                                 rbaton->recurse,
                                 TRUE,
-                                FALSE,
                                 rbaton->ignore_ancestry,
                                 rbaton->pool));
   

@@ -982,7 +982,6 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      FALSE, /* no text deltas */
                                      recurse,
                                      TRUE, /* send entryprops */
-                                     FALSE, /* no copy history */
                                      FALSE, /* don't ignore ancestry */
                                      resource->pool);
 
