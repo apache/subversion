@@ -191,12 +191,12 @@ typedef enum svn_errno_t {
  * pool will be a subpool of it, and will inherit the containing
  * pool's dedicated error subpool.
  *
- * If anything goes wrong, *ABORT_FUNC will be invoked with the
- * appropriate APR error code, or else a default abort function which
- * exits the program will be run.
+ * If anything goes wrong with the pool creation, then an abort function
+ * will be called, which will exit the program. If future allocations from
+ * this pool cannot be fulfilled, then the abort function will be called,
+ * terminating the program.
  */
-apr_pool_t *svn_pool_create (apr_pool_t *parent_pool,
-                             int (*abort_func) (int retcode));
+apr_pool_t *svn_pool_create (apr_pool_t *parent_pool);
 
 
 

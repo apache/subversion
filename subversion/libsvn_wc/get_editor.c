@@ -142,7 +142,7 @@ make_dir_baton (svn_string_t *name,
                 struct dir_baton *parent_baton,
                 apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (pool);
   struct dir_baton *d = apr_pcalloc (subpool, sizeof (*d));
   svn_string_t *parent_path
     = parent_baton ? parent_baton->path : edit_baton->dest_dir;
@@ -251,7 +251,7 @@ struct file_baton
 static struct file_baton *
 make_file_baton (struct dir_baton *parent_dir_baton, svn_string_t *name)
 {
-  apr_pool_t *subpool = svn_pool_create (parent_dir_baton->pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (parent_dir_baton->pool);
   struct file_baton *f = apr_pcalloc (subpool, sizeof (*f));
   svn_string_t *path = svn_string_dup (parent_dir_baton->path,
                                        subpool);
@@ -356,7 +356,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   if (err != SVN_NO_ERROR)
     {
       /* We failed to apply the patch; clean up the temporary file.  */
-      apr_pool_t *pool = svn_pool_create (fb->pool, NULL);
+      apr_pool_t *pool = svn_pool_create (fb->pool);
       svn_string_t *tmppath = svn_wc__text_base_path (fb->path, TRUE, pool);
 
       apr_remove_file (tmppath->data, pool);
@@ -635,7 +635,7 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
-  apr_pool_t *subpool = svn_pool_create (fb->pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (fb->pool);
   struct handler_baton *hb = apr_palloc (subpool, sizeof (*hb));
   svn_error_t *err;
 
@@ -956,7 +956,7 @@ make_editor (svn_string_t *dest,
              apr_pool_t *pool)
 {
   struct edit_baton *eb;
-  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Else nothing in the way, so continue. */
 

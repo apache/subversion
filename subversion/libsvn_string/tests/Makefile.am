@@ -10,6 +10,7 @@ INCLUDES = -I../../include -I../../../apr/include
 ## Libraries this binary depends upon:
 stringtest_LDADD = ../libsvn_string.la                              \
                    ../../tests-common/libsvn_tests_main.la          \
+                   ../../libsvn_subr/libsvn_subr.la                 \
                    ../../../apr/libapr.a
 
 

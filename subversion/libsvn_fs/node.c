@@ -294,7 +294,7 @@ svn_fs__open_node_by_id (svn_fs_node_t **node_p,
      ourselves.  */
   if (! node)
     {
-      apr_pool_t *skel_pool = svn_pool_create (fs->pool, 0);
+      apr_pool_t *skel_pool = svn_pool_create (fs->pool);
       skel_t *nv, *kind;
 
       SVN_ERR (get_node_version_skel (&nv, fs, id, skel_pool));
@@ -330,7 +330,7 @@ svn_fs__init_node (apr_size_t size,
 		   kind_t kind)
 {
   /* Create the node's subpool.  */
-  apr_pool_t *pool = svn_pool_create (fs->pool, 0);
+  apr_pool_t *pool = svn_pool_create (fs->pool);
   svn_fs_node_t *node = apr_pcalloc (pool, size);
 
   node->fs = fs;

@@ -80,7 +80,7 @@ make_error_internal (apr_status_t apr_err,
       apr_pool_t *error_pool;
       apr_get_userdata ((void **) &error_pool, SVN_ERROR_POOL, pool);
       if (error_pool)
-        newpool = svn_pool_create (error_pool, NULL);
+        newpool = svn_pool_create (error_pool);
       else
         newpool = pool;
     }
@@ -118,33 +118,29 @@ make_error_internal (apr_status_t apr_err,
 /*** Setting a semi-global error pool. ***/
 
 static int
-default_abort (int retcode)
+abort_on_pool_failure (int retcode)
 {
   abort ();
 }
 
 
 apr_pool_t *
-svn_pool_create (apr_pool_t *parent_pool,
-                 int (*abort_func) (int retcode))
+svn_pool_create (apr_pool_t *parent_pool)
 {
   apr_pool_t *ret_pool;
   apr_status_t apr_err;
   apr_pool_t *error_pool;
 
-  if (! abort_func)
-    abort_func = default_abort;
-
-  ret_pool = apr_make_sub_pool (parent_pool, abort_func);
+  ret_pool = apr_make_sub_pool (parent_pool, abort_on_pool_failure);
 
   if (parent_pool)
     {
       apr_get_userdata ((void **) &error_pool, SVN_ERROR_POOL, parent_pool);
       if (! error_pool)
-        (*abort_func) (SVN_ERR_BAD_CONTAINING_POOL);
+        (*abort_on_pool_failure) (SVN_ERR_BAD_CONTAINING_POOL);
     }
   else
-    error_pool = apr_make_sub_pool (ret_pool, abort_func);
+    error_pool = apr_make_sub_pool (ret_pool, abort_on_pool_failure);
 
   /* Set the error pool on its parent. */
   apr_err = apr_set_userdata (error_pool,
@@ -152,7 +148,7 @@ svn_pool_create (apr_pool_t *parent_pool,
                               apr_null_cleanup,
                               ret_pool);
   if (apr_err)
-    (*abort_func) (apr_err);
+    (*abort_on_pool_failure) (apr_err);
 
   /* Set the error pool on itself. */
   apr_err = apr_set_userdata (error_pool,
@@ -160,7 +156,7 @@ svn_pool_create (apr_pool_t *parent_pool,
                               apr_null_cleanup,
                               error_pool);
   if (apr_err)
-    (*abort_func) (apr_err);
+    (*abort_on_pool_failure) (apr_err);
 
   return ret_pool;
 }
@@ -264,7 +260,7 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
     svn_handle_error (err->child, stream, 0);
 
   if (fatal)
-    default_abort (1);
+    abort ();
 }
 
 

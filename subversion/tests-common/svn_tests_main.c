@@ -52,8 +52,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "apr_pools.h"
-#include "apr_strings.h"
+#include <apr_pools.h>
+#include <apr_strings.h>
+
+#include "svn_error.h"
 
 
 /* All Subversion test programs have a single global memory pool that
@@ -145,12 +147,9 @@ main (int argc, char *argv[])
       printf ("apr_initialize() failed.\n");
       exit (1);
     }
-  /* This is one place we don't use svn_pool_create(). */
-  if (apr_create_pool (&pool, NULL) != APR_SUCCESS)
-    {
-      printf ("apr_create_pool() failed.\n");
-      exit (1);
-    }
+
+  /* set up the global pool */
+  pool = svn_pool_create (NULL);
 
   /* Strip off any leading path components from the program name.  */
   prog_name = strrchr (argv[0], '/');

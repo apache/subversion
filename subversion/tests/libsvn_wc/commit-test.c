@@ -413,7 +413,7 @@ main (int argc, char *argv[])
 
   /* Init global memory pool */
   apr_initialize ();
-  globalpool = svn_pool_create (NULL, NULL);
+  globalpool = svn_pool_create (NULL);
 
   rootdir = svn_string_create (argv[1], globalpool);
       

@@ -84,7 +84,7 @@ int main(int argc, char **argv)
   svn_string_t *ccc_string;
 
   apr_initialize();
-  pool = svn_pool_create (NULL, NULL);
+  pool = svn_pool_create (NULL);
   foo_string = svn_string_create ("foo", pool);
   bar_string = svn_string_create ("bar", pool);
   baz_string = svn_string_create ("baz", pool);

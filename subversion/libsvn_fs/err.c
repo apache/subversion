@@ -83,13 +83,6 @@ svn_fs__dberrf (apr_pool_t *pool, int db_err, char *fmt, ...)
 }
 
 
-int
-svn_fs__pool_abort (int retcode)
-{
-  abort ();
-}
-
-
 svn_error_t *
 svn_fs__check_db (svn_fs_t *fs, const char *operation, int db_err)
 {

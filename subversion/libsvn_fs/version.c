@@ -135,7 +135,7 @@ svn_fs__version_root (svn_fs_id_t **id_p,
 		      svn_vernum_t v,
 		      apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (pool, 0);
+  apr_pool_t *subpool = svn_pool_create (pool);
   skel_t *version, *id_skel;
   svn_fs_id_t *id;
 

@@ -148,7 +148,7 @@ static svn_error_t *
 window_handler (svn_txdelta_window_t *window, void *baton)
 {
   struct encoder_baton *eb = baton;
-  apr_pool_t *pool = svn_pool_create (eb->pool, NULL);
+  apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_string_t *instructions = svn_string_create ("", pool);
   svn_string_t *header = svn_string_create ("", pool);
   unsigned char ibuf[128], *ip;
@@ -212,7 +212,7 @@ svn_txdelta_to_svndiff (svn_write_fn_t *write_fn,
 			svn_txdelta_window_handler_t **handler,
 			void **handler_baton)
 {
-  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (pool);
   apr_size_t len = 4;
   struct encoder_baton *eb;
 
@@ -491,7 +491,7 @@ write_handler (void *baton,
 
   /* Make a new subpool and buffer, saving aside the remaining data in
      the old buffer.  */
-  db->subpool = svn_pool_create (db->pool, NULL);
+  db->subpool = svn_pool_create (db->pool);
   p += newlen;
   remaining = db->buffer->data + db->buffer->len - (const char *) p;
   db->buffer = svn_string_ncreate ((const char *) p, remaining, db->subpool);
@@ -531,13 +531,13 @@ svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
                            svn_write_fn_t **write_fn,
                            void **write_baton)
 {
-  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (pool);
   struct decode_baton *db = apr_palloc (pool, sizeof (*db));
 
   db->consumer_func = handler;
   db->consumer_baton = handler_baton;
   db->pool = subpool;
-  db->subpool = svn_pool_create (subpool, NULL);
+  db->subpool = svn_pool_create (subpool);
   db->buffer = svn_string_create ("", db->subpool);
   db->last_sview_offset = 0;
   db->last_sview_len = 0;

@@ -8,8 +8,8 @@ CFLAGS = @CFLAGS@ -pthread
 INCLUDES = -I../../include -I../../../apr/include
 
 ## Libraries this binary depends upon:
-hashdump_test_LDADD = ../libsvn_subr.la                         \
-                      ../../tests-common/libsvn_tests_main.la   \
+hashdump_test_LDADD = ../../tests-common/libsvn_tests_main.la   \
+                      ../libsvn_subr.la                         \
                       ../../libsvn_string/libsvn_string.la      \
                       ../../../apr/libapr.a
 

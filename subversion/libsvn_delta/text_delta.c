@@ -104,7 +104,7 @@ svn_error_t *
 svn_txdelta__init_window (svn_txdelta_window_t **window,
                           svn_txdelta_stream_t *stream)
 {
-  apr_pool_t *pool = svn_pool_create (stream->pool, NULL);
+  apr_pool_t *pool = svn_pool_create (stream->pool);
   assert (pool != NULL);
 
   (*window) = apr_palloc (pool, sizeof (**window));
@@ -186,7 +186,7 @@ svn_txdelta (svn_txdelta_stream_t **stream,
              void *target_baton,
              apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (pool);
   assert (subpool != NULL);
 
   *stream = apr_palloc (subpool, sizeof (**stream));
@@ -248,7 +248,7 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
       apr_size_t source_len = svn_txdelta__window_size;
       apr_size_t target_len = svn_txdelta__window_size;
       apr_size_t source_total, copy_len;
-      apr_pool_t *temp_pool = svn_pool_create (stream->pool, NULL);
+      apr_pool_t *temp_pool = svn_pool_create (stream->pool);
       char *buffer;
 
       /* If there is no saved source data yet, read an extra half
@@ -489,7 +489,7 @@ svn_txdelta_apply (svn_read_fn_t *source_fn,
                    svn_txdelta_window_handler_t **handler,
                    void **handler_baton)
 {
-  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (pool);
   struct apply_baton *ab;
   assert (pool != NULL);
 

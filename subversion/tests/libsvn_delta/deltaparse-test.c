@@ -423,7 +423,7 @@ main (int argc, char *argv[])
 
   /* Init global memory pool */
   apr_initialize ();
-  globalpool = svn_pool_create (NULL, NULL);
+  globalpool = svn_pool_create (NULL);
 
   /* Open a file full of XML, create "source baton" (the filehandle)
      that my_read_func() will slurp XML from. */

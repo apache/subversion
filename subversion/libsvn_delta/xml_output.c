@@ -127,7 +127,7 @@ struct file_baton
 static struct dir_baton *
 make_dir_baton (struct edit_baton *eb, enum elemtype addreplace)
 {
-  apr_pool_t *subpool = svn_pool_create (eb->pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (eb->pool);
   struct dir_baton *db = apr_palloc (subpool, sizeof (*db));
 
   db->edit_baton = eb;
@@ -140,7 +140,7 @@ make_dir_baton (struct edit_baton *eb, enum elemtype addreplace)
 static struct file_baton *
 make_file_baton (struct edit_baton *eb, enum elemtype addreplace)
 {
-  apr_pool_t *subpool = svn_pool_create (eb->pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (eb->pool);
   struct file_baton *fb = apr_palloc (subpool, sizeof (*fb));
 
   fb->edit_baton = eb;
@@ -262,7 +262,7 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
                    svn_string_t *ancestor_path, svn_vernum_t ancestor_version)
 {
   svn_string_t *str;
-  apr_pool_t *pool = svn_pool_create (eb->pool, NULL);
+  apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
   apr_size_t len;
   apr_hash_t *att;
@@ -300,7 +300,7 @@ output_propset (struct edit_baton *eb, enum elemtype elem,
                 svn_string_t *name, svn_string_t *value)
 {
   svn_string_t *str;
-  apr_pool_t *pool = svn_pool_create (eb->pool, NULL);
+  apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
   apr_size_t len;
 
@@ -328,7 +328,7 @@ replace_root (void *edit_baton,
               void **dir_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
-  apr_pool_t *pool = svn_pool_create (eb->pool, NULL);
+  apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_string_t *str = NULL;
   apr_size_t len;
   svn_error_t *err;
@@ -352,7 +352,7 @@ delete (svn_string_t *name, void *parent_baton)
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = db->edit_baton;
   svn_string_t *str;
-  apr_pool_t *pool = svn_pool_create (eb->pool, NULL);
+  apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
   apr_size_t len;
 
@@ -478,7 +478,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 {
   struct file_baton *fb = (struct file_baton *) baton;
   struct edit_baton *eb = fb->edit_baton;
-  apr_pool_t *pool = svn_pool_create (eb->pool, NULL);
+  apr_pool_t *pool = svn_pool_create (eb->pool);
   apr_size_t len;
   svn_string_t *str;
   svn_error_t *err;
@@ -508,7 +508,7 @@ apply_textdelta (void *file_baton,
   struct file_baton *fb = (struct file_baton *) file_baton;
   struct edit_baton *eb = fb->edit_baton;
   svn_string_t *str;
-  apr_pool_t *pool = svn_pool_create (eb->pool, NULL);
+  apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
   apr_size_t len;
 
@@ -622,7 +622,7 @@ svn_delta_get_xml_editor (svn_write_fn_t *output,
 			  apr_pool_t *pool)
 {
   struct edit_baton *eb;
-  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   *editor = &tree_editor;
   eb = apr_palloc (subpool, sizeof (*eb));

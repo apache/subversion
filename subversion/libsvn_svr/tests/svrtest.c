@@ -19,7 +19,7 @@ main ()
       exit (1);
     }
 
-  pool = svn_pool_create (NULL, NULL);
+  pool = svn_pool_create (NULL);
 
   /* Parse the file "./testpolicy.conf" */
 

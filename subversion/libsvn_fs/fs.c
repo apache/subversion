@@ -183,7 +183,7 @@ svn_fs_new (apr_pool_t *parent_pool)
   /* Allocate a new filesystem object in its own pool, which is a
      subpool of POOL.  */
   {
-    apr_pool_t *pool = svn_pool_create (parent_pool, 0);
+    apr_pool_t *pool = svn_pool_create (parent_pool);
 
     new = NEW (pool, svn_fs_t);    
     memset (new, 0, sizeof (*new));
