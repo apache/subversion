@@ -319,7 +319,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
       - If UPDATE is set, then the repository will be contacted, and
         the collection of structures will be augmented with
         information about out-of-dateness.  This directly corresponds
-        to the "-u" (--update) flag in the commandline client app.
+        to the "-u" (--show-updates) flag in the commandline client app.
 
   */
 svn_error_t *
