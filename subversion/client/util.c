@@ -95,7 +95,7 @@ svn_cl__parse_num_args (apr_getopt_t *os,
   opt_state->args = apr_array_make (pool, 0, sizeof (svn_string_t *));
 
   /* loop for num_args and add each arg to the args array */
-  for (i = 0; i < (num_args - 1); i++)
+  for (i = 0; i < num_args; i++)
     {
       if (os->ind >= os->argc)
         {
