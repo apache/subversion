@@ -1072,7 +1072,8 @@ merge (const char **conflict_p,
    *               {
    *                 if (target entry points to same id as ancestor E)
    *                   change target to point to same id as source entry;
-   *                 else if (target entry id different from source entry id)
+   *                 else if ((target entry id different from source)
+   *                          && (target entry not descended from source))
    *                   {
    *                     if (all 3 entries point to directories)
    *                       // We know they are different directories, so...
@@ -1080,7 +1081,8 @@ merge (const char **conflict_p,
    *                     else
    *                       conflict;
    *                   }
-   *                 // Else target entry same as source entry; do nothing.
+   *                 // Else target entry same as source entry, or is
+   *                 // descendant of source entry; either way, leave it.
    *               }
    *           }
    *         else if (E exists in source but not target)
@@ -1207,7 +1209,8 @@ merge (const char **conflict_p,
                       SVN_ERR (svn_fs__dag_set_entry
                                (tnode, t_entry->name, s_entry->id, trail));
                     }
-                  /* or if target entry is different from both, then... */
+                  /* or if target entry is different from both and
+                     unrelated to source, then... */
                   else if (! svn_fs_id_is_ancestor (s_entry->id, t_entry->id))
                     {
                       dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
@@ -1341,8 +1344,9 @@ merge (const char **conflict_p,
                         }
                     }
                   /* Else target entry has changed since ancestor
-                     entry, but it changed to the same thing as source
-                     entry, so we need do nothing. */
+                     entry, but it changed either to source entry or
+                     to a successor of source entry, so we need do
+                     nothing. */
                 }
             }
           /* E exists in source but not target */
