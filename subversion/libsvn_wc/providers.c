@@ -43,6 +43,21 @@ typedef struct
 
 /*** Common Helpers ***/
 
+/* Fetch username, and optionally password, from @a parameters or from
+ * disk cache, and store in @a *username and @a *password.  Try the
+ * parameters first, then try fetching from the current directory as a
+ * working copy.  @a password may be null (in which case not used),
+ * but @a username may not be null.
+ *
+ * If there are no creds in @a parameters, and the current directory
+ * either is not a working copy or does not contain auth data, then
+ * set both creds to null and @a *got_creds to FALSE; else if able to
+ * return either a username or password, set @a *got_creds to TRUE.
+ *
+ * If fetched creds from disk, set @a pb->username and @a pb->password
+ * accordingly, so save_creds() can avoid writing out unchanged data
+ * to disk.
+ */
 static svn_error_t *
 get_creds (const char **username,
            const char **password,
@@ -58,6 +73,7 @@ get_creds (const char **username,
   const char *def_password = apr_hash_get (parameters, 
                                            SVN_AUTH_PARAM_DEFAULT_PASSWORD,
                                            APR_HASH_KEY_STRING);
+
   pb->base_dir = apr_hash_get (parameters, SVN_AUTH_PARAM_SIMPLE_WC_WCDIR,
                                APR_HASH_KEY_STRING);
   pb->base_access = apr_hash_get (parameters,
@@ -66,8 +82,7 @@ get_creds (const char **username,
 
   /* Set the default return values. */
   *got_creds = FALSE;
-  if (username)
-    *username = NULL;
+  *username = NULL;
   if (password)
     *password = NULL;
 
@@ -94,19 +109,27 @@ get_creds (const char **username,
         }
     }
   
-  /* If we read values from the cache, we want to remember those. */
+  /* If we read values from the cache, we want to remember those, so
+     we can avoid writing unchanged values back out again (not a
+     correctness point, just about efficiency). */
   if (susername && susername->data)
     pb->username = susername->data;
   if (spassword && spassword->data)
     pb->password = spassword->data;
       
-  if (username)
-    *username
-      = def_username ? def_username : susername ? susername->data : NULL;
+  *username = def_username ? def_username : susername ? susername->data : NULL;
   if (password)
     *password
       = def_password ? def_password : spassword ? spassword->data : NULL;
-  *got_creds = TRUE;
+
+  /* Note the funny conditional.  It's possible that in some weird
+     circumstance we might fetch just a password; in that case, we
+     set *got_creds according to whether we were able to return that
+     password to the caller.  After all, if we couldn't return it,
+     then we effectively didn't get it, as it's useless. */
+  if (*username || (password && *password))
+    *got_creds = TRUE;
+
   return SVN_NO_ERROR;
 }
 
