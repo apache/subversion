@@ -64,13 +64,31 @@ excludes() {
 }
 
 # Print the valid subcommands for "svn", one per line, sorted.
+# Exclude any synonym that is just a truncation of its full name.
 # Usage: get_svn_subcommands
 get_svn_subcommands() {
   svn help |
     # Find the relevant lines.
     sed -n -e '1,/^Available subcommands:$/d;/^$/q;p' |
-    # Remove brackets and commas; put each word on its own line.
-    tr -d ' )' | tr '(,' '\n' |
+    # Remove brackets and commas
+    tr -d ' )' | tr '(,' ' ' |
+    # Remove simple abbreviations
+    ( while read SYNONYMS; do
+        for CMD in $SYNONYMS; do
+          for SYNONYM in $SYNONYMS; do
+            if [ $CMD != "?" ]; then
+              case $SYNONYM in
+              $CMD) ;;
+              $CMD*) CMD= ; break ;;
+              esac
+            fi
+          done
+          if [ $CMD ]; then
+            echo $CMD
+          fi
+        done
+      done
+    ) |
     sort
 }
 
