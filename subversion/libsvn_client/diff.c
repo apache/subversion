@@ -439,7 +439,6 @@ merge_callbacks =
 static svn_error_t *
 do_merge (const svn_delta_editor_t *after_editor,
           void *after_edit_baton,
-          const apr_array_header_t *options,
           svn_client_auth_baton_t *auth_baton,
           svn_stringbuf_t *path1,
           const svn_client_revision_t *revision1,
@@ -807,7 +806,6 @@ svn_client_diff (const apr_array_header_t *options,
 svn_error_t *
 svn_client_merge (const svn_delta_editor_t *after_editor,
                   void *after_edit_baton,
-                  const apr_array_header_t *options,  /* ### ??? */
                   svn_client_auth_baton_t *auth_baton,
                   svn_stringbuf_t *path1,
                   const svn_client_revision_t *revision1,
@@ -829,7 +827,6 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
      diff-editor thing:*/
 
   return do_merge (after_editor, after_edit_baton,
-                   options,
                    auth_baton,
                    path1,
                    revision1,
