@@ -44,6 +44,11 @@ extern "C" {
 typedef struct svn_fs_t svn_fs_t;
 
 
+/** Filesystem configuration options. */
+#define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
+#define SVN_FS_CONFIG_BDB_TXN_NOSYNC_LEN        14
+
+
 /** Create a new filesystem object in @a pool.
  *
  * It doesn't refer to any actual repository yet; you need to invoke

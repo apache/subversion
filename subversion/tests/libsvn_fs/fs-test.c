@@ -308,7 +308,8 @@ call_functions_with_unopened_fs (const char **msg,
   svn_fs_t *fs;
   svn_error_t *err;
   apr_hash_t *fs_config = apr_hash_make (pool);
-  apr_hash_set (fs_config, "bdb-txn-nosync", 14, "1");
+  apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                SVN_FS_CONFIG_BDB_TXN_NOSYNC_LEN, "1");
   fs = svn_fs_new (fs_config, pool);
 
   *msg = "call functions with unopened filesystem and check errors";

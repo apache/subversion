@@ -474,7 +474,9 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 
     if (fs->config)
       {
-        void *value = apr_hash_get (fs->config, "bdb-txn-nosync", 14);
+        void *value = apr_hash_get (fs->config,
+                                    SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                                    SVN_FS_CONFIG_BDB_TXN_NOSYNC_LEN);
         if (value != NULL)
           {
             apr_err = apr_file_write_full (dbconfig_file, dbconfig_txn_nosync,
