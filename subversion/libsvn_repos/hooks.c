@@ -48,6 +48,7 @@ run_hook_cmd (const char *name,
               const char *cmd,
               const char **args,
               svn_boolean_t check_exitcode,
+              apr_file_t *stdin_handle,
               apr_pool_t *pool)
 {
   apr_file_t *read_errhandle, *write_errhandle, *null_handle;
@@ -70,7 +71,7 @@ run_hook_cmd (const char *name,
       (apr_err, "Can't create null stdout for hook '%s'", cmd);
 
   err = svn_io_run_cmd (".", cmd, args, &exitcode, &exitwhy, FALSE,
-                        NULL, null_handle, write_errhandle, pool);
+                        stdin_handle, null_handle, write_errhandle, pool);
 
   /* This seems to be done automatically if we pass the third parameter of
      apr_procattr_child_in/out_set(), but svn_io_run_cmd()'s interface does
@@ -120,6 +121,26 @@ run_hook_cmd (const char *name,
   return err;
 }
 
+
+/* Create a temporary file F that will automatically be deleted when it is
+   closed.  Fill it with VALUE, and leave it open and rewound, ready to be
+   read from. */
+static svn_error_t *
+create_temp_file (apr_file_t **f, const svn_string_t *value, apr_pool_t *pool)
+{
+  const char *dir, *fname;
+  apr_off_t offset = 0;
+
+  SVN_ERR (svn_io_temp_dir (&dir, pool));
+  SVN_ERR (svn_io_open_unique_file (f, &fname,
+                                    svn_path_join (dir, "hook-input", pool),
+                                    "", TRUE /* delete on close */, pool));
+  SVN_ERR (svn_io_file_write_full (*f, value->data, value->len, NULL, pool));
+  SVN_ERR (svn_io_file_seek (*f, APR_SET, &offset, pool));
+  return SVN_NO_ERROR;
+}
+
+
 /* Check if the HOOK program exists and is a file, using POOL for
    temporary allocations. Returns the hook program if found,
    otherwise NULL. */
@@ -154,6 +175,7 @@ check_hook_cmd (const char *hook, apr_pool_t *pool)
   return NULL;
 }
 
+
 svn_error_t *
 svn_repos__hooks_start_commit (svn_repos_t *repos,
                                const char *user,
@@ -170,7 +192,7 @@ svn_repos__hooks_start_commit (svn_repos_t *repos,
       args[2] = user ? user : "";
       args[3] = NULL;
 
-      SVN_ERR (run_hook_cmd ("start-commit", hook, args, TRUE, pool));
+      SVN_ERR (run_hook_cmd ("start-commit", hook, args, TRUE, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -193,7 +215,7 @@ svn_repos__hooks_pre_commit (svn_repos_t *repos,
       args[2] = txn_name;
       args[3] = NULL;
 
-      SVN_ERR (run_hook_cmd ("pre-commit", hook, args, TRUE, pool));
+      SVN_ERR (run_hook_cmd ("pre-commit", hook, args, TRUE, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -216,7 +238,7 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
       args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
       args[3] = NULL;
 
-      SVN_ERR (run_hook_cmd ("post-commit", hook, args, FALSE, pool));
+      SVN_ERR (run_hook_cmd ("post-commit", hook, args, FALSE, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -236,8 +258,10 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
   if ((hook = check_hook_cmd (hook, pool)))
     {
       const char *args[6];
+      apr_file_t *stdin_handle;
 
-      /* ### somehow pass the new value as stdin to hook? */
+      /* Pass the new value as stdin to hook */
+      SVN_ERR (create_temp_file (&stdin_handle, value, pool));
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
@@ -246,7 +270,10 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
       args[4] = name;
       args[5] = NULL;
 
-      SVN_ERR (run_hook_cmd ("pre-revprop-change", hook, args, TRUE, pool));
+      SVN_ERR (run_hook_cmd ("pre-revprop-change", hook, args, TRUE,
+                             stdin_handle, pool));
+
+      SVN_ERR (svn_io_file_close (stdin_handle, pool));
     }
   else
     {
@@ -288,7 +315,8 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
       args[4] = name;
       args[5] = NULL;
 
-      SVN_ERR (run_hook_cmd ("post-revprop-change", hook, args, FALSE, pool));
+      SVN_ERR (run_hook_cmd ("post-revprop-change", hook, args, FALSE,
+                             NULL, pool));
     }
 
   return SVN_NO_ERROR;
