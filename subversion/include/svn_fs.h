@@ -868,14 +868,12 @@ svn_error_t *svn_fs_file_delta (svn_txdelta_stream_t **stream_p,
 
 /* Hook function type for commits.  When a filesystem commit happens,
  * one of these should be invoked on the NEW_REVISION that resulted
- * from the commit, the LOG_MSG (kff todo: should that be a stream?
- * Nah, string is prolly fine.), and the BATON that was provided with
- * the hook originally.
+ * from the commit, and the BATON that was provided with the hook
+ * originally.
  *
  * See svn_fs_get_editor for an example user.
  */
 typedef svn_error_t *svn_fs_commit_hook_t (svn_revnum_t new_revision,
-                                           svn_string_t *log_msg,
                                            void *baton);
 
 
@@ -886,11 +884,10 @@ typedef svn_error_t *svn_fs_commit_hook_t (svn_revnum_t new_revision,
  *
  * Calling (*EDITOR)->close_edit completes the commit.  Before
  * close_edit returns, but after the commit has succeeded, it will
- * invoke HOOK with the new revision number, log message, and
- * HOOK_BATON as arguments.  If HOOK returns an error, that error will
- * be returned from close_edit, else close_edit will return
- * successfully (unless it encountered an error before invoking
- * HOOK).
+ * invoke HOOK with the new revision number and HOOK_BATON as
+ * arguments.  If HOOK returns an error, that error will be returned
+ * from close_edit, otherwise close_edit will return successfully
+ * (unless it encountered an error before invoking HOOK).
  */
 svn_error_t *svn_fs_get_editor (svn_delta_edit_fns_t **editor,
                                 void **edit_baton,

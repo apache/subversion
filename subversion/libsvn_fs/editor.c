@@ -198,9 +198,8 @@ close_edit (void *edit_baton)
   svn_error_t *err;
   struct edit_baton *eb = edit_baton;
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
-  svn_string_t *log_msg = svn_string_create ("kff todo", eb->pool);
 
-  err = (*eb->hook) (new_revision, log_msg, eb->hook_baton);
+  err = (*eb->hook) (new_revision, eb->hook_baton);
 
   return SVN_NO_ERROR;
 }
