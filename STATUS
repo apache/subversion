@@ -49,8 +49,7 @@ Candidate changes:
                     repeatedly complained about.
     Votes:
       +0: sussman (not yet reviewed)
-      +1: breser (including r10431)
-      +1: ghudson (without r10431)
+      +1: breser, ghudson
 
   * r10190
     Allow properties with colons in their name to be read with propget
