@@ -162,8 +162,6 @@ dnl Check for header files ----------------
 dnl Standard C headers
 AC_HEADER_STDC
 
-CPPFLAGS="$CPPFLAGS -D_POSIX_SOURCE=1"
-
 dnl Check for typedefs, structures, and compiler characteristics ----------
 
 dnl if compiler doesn't understand `const', then define it empty
@@ -201,7 +199,7 @@ AC_ARG_WITH(maintainer-mode,
     if test "$GCC" = "yes"; then
       dnl SVN_DEBUG enables specific features for developer builds
       dnl AP_DEBUG enables specific (Apache) features for developer builds
-      CFLAGS="$CFLAGS -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wpointer-arith -Wwrite-strings -Wshadow -Wredundant-decls -DSVN_DEBUG -DAP_DEBUG";
+      CFLAGS="$CFLAGS -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wpointer-arith -Wwrite-strings -Wshadow -DSVN_DEBUG -DAP_DEBUG";
     fi
   fi
 ])

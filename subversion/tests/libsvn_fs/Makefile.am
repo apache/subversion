@@ -18,10 +18,6 @@ fs_test_LDADD = ${COMMON_LIBS}
 
 INCLUDES = -I$(srcdir)/.. @SVN_INCLUDES@ @SVN_APR_INCLUDES@
 
-## ### db.h uses u_long which is a BSDism. make sure it has the right
-## ### typedefs from sys/types.h
-CPPFLAGS = @CPPFLAGS@ -D_BSD_SOURCE=1
-
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 
