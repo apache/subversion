@@ -819,7 +819,6 @@ wcprop_list (apr_hash_t **props,
 }
 
 
-
 /* This is what RA_DAV will use to fetch 'wc' properties.  It will be
    passed to ra_session_baton->do_commit(). */
 svn_error_t *
@@ -841,6 +840,7 @@ svn_wc__wcprop_get (svn_string_t **value,
 
   return SVN_NO_ERROR;
 }
+
 
 
 /* This is what RA_DAV will use to store 'wc' properties.  It will be
@@ -875,6 +875,7 @@ svn_wc__wcprop_set (svn_string_t *name,
 
   return SVN_NO_ERROR;
 }
+
 
 
 
@@ -986,6 +987,7 @@ svn_wc_prop_set (svn_string_t *name,
 
   return SVN_NO_ERROR;
 }
+
 
 
 

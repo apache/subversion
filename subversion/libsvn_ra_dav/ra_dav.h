@@ -80,7 +80,7 @@ svn_error_t * svn_ra_dav__do_update(
 */
 
 #define SVN_RA_DAV__LP_NAMESPACE \
-        "http://subversion.tigris.org/props/ra/dav/local/"
+        "svn:wc:http://subversion.tigris.org/props/ra/dav/local/"
 
 /* store the URL where Activities can be created */
 #define SVN_RA_DAV__LP_ACTIVITY_URL     SVN_RA_DAV__LP_NAMESPACE "activity-url"

@@ -618,11 +618,10 @@ svn_error_t *svn_wc__wcprop_get (svn_string_t **value,
                                  apr_pool_t *pool);
 
 /* Set a single 'wcprop' NAME to VALUE for versioned object PATH. */
-svn_error_t *
-svn_wc__wcprop_set (svn_string_t *name,
-                    svn_string_t *value,
-                    svn_string_t *path,
-                    apr_pool_t *pool);
+svn_error_t * svn_wc__wcprop_set (svn_string_t *name,
+                                  svn_string_t *value,
+                                  svn_string_t *path,
+                                  apr_pool_t *pool);
 
 
 /* 

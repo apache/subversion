@@ -364,6 +364,20 @@ prep_directory (svn_string_t *path,
 }
 
 
+/* Return TRUE iff property NAME is a 'wc' property. */
+static svn_boolean_t
+is_wc_prop (svn_string_t *name)
+{
+  if (! memcmp (name->data,
+                SVN_PROP_WC_PREFIX, /* defined in svn_types.h */
+                strlen(SVN_PROP_WC_PREFIX)))
+    return TRUE;
+  else
+    return FALSE;
+}
+
+
+
 
 /*** The callbacks we'll plug into an svn_delta_edit_fns_t structure. ***/
 
@@ -609,7 +623,17 @@ change_dir_prop (void *dir_baton,
     local_value = svn_string_dup (value, db->pool);
   else
     local_value = NULL;
+
+  /* If this is a 'wc' prop, store it in the administrative area and
+     get on with life.  It's not a regular versioned property. */
+  if (is_wc_prop (name))
+    {
+      SVN_ERR (svn_wc__wcprop_set (name, value, db->path, db->pool));
+      return SVN_NO_ERROR;
+    }
   
+  /* Else, it's a real property... */
+
   /* Build propchange object */
   propchange = apr_pcalloc (db->pool, sizeof(*propchange));
   propchange->name = local_name;
@@ -941,6 +965,16 @@ change_file_prop (void *file_baton,
     local_value = svn_string_dup (value, fb->pool);
   else
     local_value = NULL;
+
+  /* If this is a 'wc' prop, store it in the administrative area and
+     get on with life.  It's not a regular versioned property. */
+  if (is_wc_prop (name))
+    {
+      SVN_ERR (svn_wc__wcprop_set (name, value, fb->path, fb->pool));
+      return SVN_NO_ERROR;
+    }
+  
+  /* Else, it's a real property... */
 
   /* Build propchange object */
   propchange = apr_pcalloc (fb->pool, sizeof(*propchange));
