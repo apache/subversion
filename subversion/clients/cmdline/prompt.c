@@ -103,8 +103,6 @@ svn_cl__prompt_user (char **result,
 
   SVN_ERR (svn_utf_cstring_from_utf8 (&prompt_native, prompt, pool));
 
-  /* ### implement the HIDE flag later using apr_getpassword or
-     something. */
   if (! hide)
     {
       printf (prompt_native);
