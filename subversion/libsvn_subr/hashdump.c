@@ -27,6 +27,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_hash.h"
+#include "svn_io.h"
 
 
 
