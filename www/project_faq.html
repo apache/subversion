@@ -107,6 +107,24 @@ variable.</p>
 href="http://svn.collab.net/repos/svn/trunk/INSTALL">INSTALL</a>
 document;  specifically, look at section II, the "Quickstart Guide".</p>
 
+<h2>I'm getting strange errors in my httpd error log, and Subversion
+operations aren't working.</h2>
+
+<p>
+Sometimes you need to run Berkeley DB's recovery procedure.  Shut
+down apache, cd into the relevant repository's `<tt>db</tt>'
+subdirectory, and run
+"<tt>/usr/local/BerkeleyDB.<i>X</i>.<i>Y</i>/bin/db_recover&nbsp;-ve</tt>".
+<br>
+(Substitute the appropriate major and minor revision numbers of 
+Berkeley DB for "<i>X</i>" and "<i>Y</i>", of course.)
+</p>
+<p>
+Of course, we'd prefer that the repository never require human
+maintenance.  However, until we get all the bugs worked out, the above
+will sometimes be necessary.
+</p>
+
 <h2>I have other problems or questions about Subversion.  Where can I get
 more information?</h2>
 
