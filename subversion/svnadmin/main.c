@@ -650,8 +650,9 @@ recovery_started (void *baton)
   apr_pool_t *pool = (apr_pool_t *)baton;
 
   SVN_ERR (svn_cmdline_printf (pool,
-                               _("Please wait; recovering the repository may"
-                                 " take some time...\n")));
+                               _("Repository lock acquired.\n"
+                                 "Please wait; recovering the"
+                                 " repository may take some time...\n")));
   SVN_ERR (svn_cmdline_fflush (stdout));
 
   /* Enable cancellation signal handlers. */
