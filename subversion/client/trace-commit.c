@@ -76,7 +76,7 @@ delete_item (svn_string_t *name, void *parent_baton)
   svn_string_t *printable_name = svn_string_dup (d->path, d->edit_baton->pool);
   svn_path_add_component (printable_name, name, svn_path_local_style);
 
-  printf ("Deleting: %s\n", printable_name->data);
+  printf ("D <- %s\n", printable_name->data);
   return SVN_NO_ERROR;
 }
 
@@ -98,7 +98,7 @@ add_directory (svn_string_t *name,
   svn_path_add_component (child_d->path, name, svn_path_local_style);
   child_d->added = TRUE;
 
-  printf ("Adding:    %s\n", child_d->path->data);
+  printf ("A <- %s\n", child_d->path->data);
   *child_baton = child_d;
 
   return SVN_NO_ERROR;
@@ -133,43 +133,11 @@ replace_directory (svn_string_t *name,
 static svn_error_t *
 close_directory (void *dir_baton)
 {
-  /* svn_error_t *err;
-     struct dir_baton *d = dir_baton;
-     char statchar_buf[3] = "- ";
+  struct dir_baton *db = dir_baton;
 
-     if (d->prop_changed)
-     {
-      svn_wc_entry_t *entry;
-      svn_boolean_t merged, text_conflict, prop_conflict;
-      
-      err = svn_wc_entry (&entry,
-      d->path,
-      d->edit_baton->pool);
-      if (err) return err;
-      
-      err = svn_wc_conflicted_p (&text_conflict, &prop_conflict,
-      d->path,
-      entry,
-      d->edit_baton->pool);
-                                 if (err) return err;
-                                 
-                                 if (! prop_conflict)
-                                 {
-                                 err = svn_wc_props_modified_p 
-                                 (&merged, d->path, d->edit_baton->pool);
-            if (err) return err;
-            }
-            
-            if (prop_conflict)
-            statchar_buf[1] = 'C';
-      else if (merged)
-      statchar_buf[1] = 'G';
-      else
-      statchar_buf[1] = 'U';
-      
-      printf ("%s %s\n", statchar_buf, d->path->data);
-      }
-  */    
+  if (db->prop_changed)
+    printf ("M <- %s\n", db->path->data); 
+
   return SVN_NO_ERROR;
 }
 
@@ -179,68 +147,11 @@ close_file (void *file_baton)
 {
   struct file_baton *fb = file_baton;
 
-  /*  svn_error_t *err;
-      char statchar_buf[3] = "- ";
-      
-      if (fb->added)
-      {
-      statchar_buf[0] = 'A';
-      }
-      else
-      {
-      svn_wc_entry_t *entry;
-      svn_boolean_t merged, text_conflict, prop_conflict;
-      
-      err = svn_wc_entry (&entry,
-      fb->path,
-      fb->parent_dir_baton->edit_baton->pool);
-      if (err) return err;
-
-      err = svn_wc_conflicted_p (&text_conflict, &prop_conflict,
-      fb->parent_dir_baton->path,
-      entry,
-      fb->parent_dir_baton->edit_baton->pool);
-      if (err) return err;
-      
-      if (fb->text_changed)
-      {
-      if (! text_conflict)
-      {
-      err = svn_wc_text_modified_p 
-      (&merged, fb->path, fb->parent_dir_baton->edit_baton->pool);
-      if (err) return err;
-      }
-      
-      if (text_conflict)
-      statchar_buf[0] = 'C';
-      else if (merged)
-      statchar_buf[0] = 'G';
-      else
-      statchar_buf[0] = 'U';
-      }
-      if (fb->prop_changed)
-      {
-      if (! prop_conflict)
-      {
-      err = svn_wc_props_modified_p 
-      (&merged, fb->path, fb->parent_dir_baton->edit_baton->pool);
-      if (err) return err;
-      }
-      
-      if (prop_conflict)
-      statchar_buf[1] = 'C';
-      else if (merged)
-      statchar_buf[1] = 'G';
-      else
-      statchar_buf[1] = 'U';
-      }
-      } 
-  */
 
   if (fb->added)
-    printf ("Adding:    %s\n", fb->path->data); 
+    printf ("A <- %s\n", fb->path->data); 
   else
-    printf ("Changing:  %s\n", fb->path->data);
+    printf ("M <- %s\n", fb->path->data);
 
   return SVN_NO_ERROR;
 }
@@ -368,6 +279,9 @@ svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
   eb->initial_path = initial_path;
   eb->pool = pool;
+
+  if (! eb->initial_path)
+    eb->initial_path = svn_string_create (".", pool);
 
   *edit_baton = eb;
   *editor = &trace_editor;
