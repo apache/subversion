@@ -55,7 +55,13 @@
       'BUILDING A SUBVERSION SERVER' in the INSTALL file. for more
       detailed build information.
 
-   d. Run './autogen.sh && ./configure' so the docs can get built in
+   d. Grab the latest docs from http://svnbook.red-bean.com/
+
+      cd doc/book/book
+      wget http://svnbook.red-bean.com/book.pdf .
+      wget http://svnbook.red-bean.com/book.html .
+
+   e. Run './autogen.sh && ./configure' so the docs can get built in
       the branch tree (in step 4, dist.sh will move the built docs
       into the release sandbox).
 
