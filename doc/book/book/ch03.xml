@@ -1587,8 +1587,8 @@ Committed revision 4.
       <para>If you fail to specify either the
         <option>--message</option> or <option>--file</option> switch,
         then Subversion will automatically launch your favorite editor
-        (as defined in the environment variable
-        <literal>$EDITOR</literal>) for composing a log
+        (see the <literal>editor-cmd</literal> section in
+        <xref linkend="svn-ch-7-sect-1.3.2"/>) for composing a log
         message.</para>
         
         

@@ -218,7 +218,7 @@ svn_error: &hellip; The specified activity does not exist.
         
         <para>Alternatively, you may set a parameter in your client's
           <filename>servers</filename> run-time configuration file to
-          cause neon's debugging output to appear.  The numeric value
+          cause Neon's debugging output to appear.  The numeric value
           of neon-debug is a combination of the
           <literal>NE_DBG_*</literal> values in the header file
           <filename>ne_utils.h</filename>. Setting the
