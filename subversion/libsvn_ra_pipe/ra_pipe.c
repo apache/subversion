@@ -20,33 +20,7 @@
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_io.h"
-
-
-/** XML Stuff for this file (needs to go somewhere public, so libsvn_server
- * can see it.) */
-#define SVN_RA_PIPE__NAMESPACE          "svn-pipe"
-#define SVN_RA_PIPE__REQUEST_TAG        "S:request"
-#define SVN_RA_PIPE__CLOSE_SESSION_TAG  "S:close"
-#define SVN_RA_PIPE__LATEST_REVNUM_TAG  "S:latest-revnum"
-#define SVN_RA_PIPE__GET_LOG_TAG        "S:get-log"
-#define SVN_RA_PIPE__PATH_TAG           "S:path"
-#define SVN_RA_PIPE__CHECK_PATH_TAG     "S:check-path"
-#define SVN_RA_PIPE__GET_FILE_TAG       "S:get-file"
-#define SVN_RA_PIPE__CHECKOUT_TAG       "S:checkout"
-#define SVN_RA_PIPE__COMMIT_TAG         "S:commit"
-
-/* ### A bunch of these could be combined with attributes from the log stuff
- * in libsvn_wc if we made it public somewhere. (Which this will have to be
- * so that the server can use it). */
-#define SVN_RA_PIPE__ATT_DATE           "date"
-#define SVN_RA_PIPE__ATT_REV            "rev"
-#define SVN_RA_PIPE__ATT_STARTREV       "start-revision"
-#define SVN_RA_PIPE__ATT_ENDREV         "end-revision"
-#define SVN_RA_PIPE__ATT_CHANGED_PATHS  "changed-paths"
-#define SVN_RA_PIPE__ATT_VALUE          "value"
-#define SVN_RA_PIPE__ATT_PATH           "path"
-#define SVN_RA_PIPE__ATT_RECURSE        "recurse"
-#define SVN_RA_PIPE__ATT_LOG_MSG        "log-msg"
+#include "ra_pipe.h"
 
 
 /** Structures **/
@@ -115,6 +89,8 @@ svn_ra_pipe__close (void *session_baton)
                          NULL);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_self_closing,
                          SVN_RA_PIPE__CLOSE_SESSION_TAG, NULL);
+
+  svn_xml_make_close_tag (&buf, sess->pool, SVN_RA_PIPE__REQUEST_TAG);
 
   apr_err = apr_file_write_full (sess->output, buf->data, buf->len, NULL);
   if (apr_err)
@@ -248,10 +224,12 @@ static svn_error_t *
 svn_ra_pipe__do_checkout (void *session_baton,
                           svn_revnum_t revision,
                           svn_boolean_t recurse,
-                          const svn_delta_edit_fns_t *editor,
+                          const svn_delta_editor_t *editor,
                           void *edit_baton)
 {
   svn_ra_pipe__session_baton_t *sess = session_baton;
+  const svn_delta_edit_fns_t *old_editor;
+  void *old_baton;
   svn_stringbuf_t *buf = NULL;
   apr_status_t apr_err;
 
@@ -277,12 +255,18 @@ svn_ra_pipe__do_checkout (void *session_baton,
     return svn_error_create (apr_err, 0, NULL, sess->pool,
                              "ra_pipe: Could not request check_path");
 
+  svn_delta_compat_wrap (&old_editor,
+                         &old_baton,
+                         editor,
+                         edit_baton,
+                         sess->pool);
+
   SVN_ERR (svn_delta_xml_auto_parse (svn_stream_from_aprfile (sess->input,
                                                                sess->pool),
-                                     editor,
-                                     edit_baton,
+                                     old_editor,
+                                     old_baton,
                                      sess->url,
-                                     1, /* XXX: revision,*/
+                                     revision,
                                      sess->pool));
   return SVN_NO_ERROR;
 }
@@ -298,20 +282,19 @@ svn_ra_pipe__do_update (void *session_baton,
                         void *update_baton)
 {
   svn_ra_pipe__session_baton_t *sess = session_baton;
-  svn_revnum_t target_revnum;
-  if (! SVN_IS_VALID_REVNUM(update_revision))
-    SVN_ERR (svn_ra_pipe__get_latest_revnum (sess, &target_revnum));
-  else
-    target_revnum = update_revision;
-
-  /* ### Need to create a reporter that will spit out some xml stuff. */
-  *reporter = NULL;
-  *report_baton = NULL;
-
-  /* ### Throw in the stuff to get the server started here. Basically, we need
-   * to echo all of these arguments over to the server. */
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
-                           sess->pool, "ra_pipe not implemented yet");
+  return svn_ra_pipe__get_reporter (reporter,
+                                    report_baton,
+                                    sess->input,
+                                    sess->output,
+                                    sess->url,
+                                    update_target,
+                                    NULL,
+                                    update_revision,
+                                    recurse,
+                                    update_editor,
+                                    update_baton,
+                                    TRUE,
+                                    sess->pool);
 }
 
 static svn_error_t *
@@ -326,8 +309,19 @@ svn_ra_pipe__do_switch (void *session_baton,
                         void *switch_baton)
 {
   svn_ra_pipe__session_baton_t *sess = session_baton;
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
-                           sess->pool, "ra_pipe not implemented yet");
+  return svn_ra_pipe__get_reporter (reporter,
+                                    report_baton,
+                                    sess->input,
+                                    sess->output,
+                                    sess->url,
+                                    switch_target,
+                                    switch_url->data,
+                                    switch_revision,
+                                    recurse,
+                                    switch_editor,
+                                    switch_baton,
+                                    TRUE,
+                                    sess->pool);
 }
 
 static svn_error_t *
@@ -340,8 +334,19 @@ svn_ra_pipe__do_status (void *session_baton,
                         void *status_baton)
 {
   svn_ra_pipe__session_baton_t *sess = session_baton;
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
-                           sess->pool, "ra_pipe not implemented yet");
+  return svn_ra_pipe__get_reporter (reporter,
+                                    report_baton,
+                                    sess->input,
+                                    sess->output,
+                                    sess->url,
+                                    status_target,
+                                    NULL,
+                                    SVN_INVALID_REVNUM,
+                                    recurse,
+                                    status_editor,
+                                    status_baton,
+                                    FALSE,
+                                    sess->pool);
 }
 
 static svn_error_t *
