@@ -177,10 +177,6 @@ if [ "$1"x = "1"x ]; then
    /sbin/install-info /usr/share/info/svn-handbook.info.gz \
       /usr/share/info/dir \
       --entry='* Subversion: (svn-handbook).          Subversion Versioning System Manual'
-
-   /sbin/install-info /usr/share/info/svn_for_cvs_users.info.gz \
-      /usr/share/info/dir \
-      --entry='* Subversion-cvs: (svn_for_cvs_users).          Subversion Versioning System Information for CVS Users'
 fi
 
 %preun
@@ -193,10 +189,6 @@ if [ "$1"x = "0"x ]; then
    /sbin/install-info --delete /usr/share/info/svn-handbook.info.gz \
       /usr/share/info/dir \
       --entry='* Subversion: (svn-handbook).          Subversion Versioning System Manual'
-
-   /sbin/install-info --delete /usr/share/info/svn_for_cvs_users.info.gz \
-      /usr/share/info/dir \
-      --entry='* Subversion-cvs: (svn_for_cvs_users).          Subversion Versioning System Information for CVS Users'
 fi
 
 %post server
