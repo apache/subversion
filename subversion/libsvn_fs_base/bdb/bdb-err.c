@@ -47,19 +47,31 @@ bdb_err_to_apr_err (int db_err)
 
 
 svn_error_t *
-svn_fs_bdb__dberr (int db_err)
+svn_fs_bdb__dberr (bdb_errcall_baton_t *ec_baton, int db_err)
 {
-  return svn_error_create (bdb_err_to_apr_err (db_err), 0,
+  svn_error_t *child_errors;
+
+  child_errors = ec_baton->pending_errors;
+  ec_baton->pending_errors = NULL;
+
+  return svn_error_create (bdb_err_to_apr_err (db_err), child_errors,
                            db_strerror (db_err));
 }
 
 
 svn_error_t *
-svn_fs_bdb__dberrf (int db_err, const char *fmt, ...)
+svn_fs_bdb__dberrf (bdb_errcall_baton_t *ec_baton,
+                    int db_err, const char *fmt, ...)
 {
   va_list ap;
   char *msg;
-  svn_error_t *err = svn_error_create (bdb_err_to_apr_err (db_err), 0, NULL);
+  svn_error_t *err;
+  svn_error_t *child_errors;
+
+  child_errors = ec_baton->pending_errors;
+  ec_baton->pending_errors = NULL;
+
+  err = svn_error_create (bdb_err_to_apr_err (db_err), child_errors, NULL);
 
   va_start (ap, fmt);
   msg = apr_pvsprintf (err->pool, fmt, ap);
@@ -72,9 +84,13 @@ svn_fs_bdb__dberrf (int db_err, const char *fmt, ...)
 svn_error_t *
 svn_fs_bdb__wrap_db (svn_fs_t *fs, const char *operation, int db_err)
 {
+  base_fs_data_t *bfd;
+
   if (! db_err)
     return SVN_NO_ERROR;
-  return svn_fs_bdb__dberrf (db_err,
+
+  bfd = (base_fs_data_t *) fs->fsap_data;
+  return svn_fs_bdb__dberrf (bfd->errcall_baton, db_err,
                              "Berkeley DB error while %s for filesystem %s:\n",
                              operation, fs->path ? fs->path : "(none)");
 }
