@@ -38,6 +38,9 @@ http://svn.collab.net/repos/svn/tags/0.34.0
  * improvements, fixes on misc. test scripts
  * many other changes not listed here
 
+ Merged revisions after release branching:
+ * r7868 - Java bindings
+
 
 Version 0.33.1 (released 17 November 2003, revision r7782)
 http://svn.collab.net/repos/svn/tags/0.33.1
