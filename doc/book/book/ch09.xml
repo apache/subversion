@@ -1308,22 +1308,62 @@ D         over-there
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn diff [-r N[:M]] [TARGET...]</programlisting>
-          <programlisting>svn diff URL1[@N] URL2[@M]</programlisting>
+          <programlisting>svn diff [-r N[:M]] [--old OLD-TGT] [--new NEW-TGT] [PATH...]</programlisting>
+          <programlisting>svn diff -r N:M URL</programlisting>
+          <programlisting>svn diff [-r N[:M]] URL1[@N] URL2[@M]</programlisting>
+
         </refsect1>
         <refsect1>
           <title>Description</title>
 
-          <para>Display the differences between two paths.  Each
-            <replaceable>TARGET</replaceable> can be either a working copy path or URL.  If no
-            <replaceable>TARGET</replaceable> is specified, a value of
-            <quote><filename>.</filename></quote> is assumed.</para>
+          <para>Display the differences between two paths.  The three
+            different ways you can use <command>svn diff</command>
+            are:</para>
 
-          <para>If <replaceable>TARGET</replaceable> is a URL, then revs N and M must be given
-            via the <option>--revision</option>.</para>
+          <para><command>svn diff [-r N[:M]] [--old OLD-TGT] [--new
+            NEW-TGT] [PATH...]</command> displays the differences
+            between <replaceable>OLD-TGT</replaceable> and
+            <replaceable>NEW-TGT</replaceable>.  If
+            <replaceable>PATH</replaceable>s are given, they are
+            treated as relative to <replaceable>OLD-TGT</replaceable>
+            and <replaceable>NEW-TGT</replaceable> and the output is
+            restricted to differences in only those paths.
+            <replaceable>OLD-TGT</replaceable> and
+            <replaceable>NEW-TGT</replaceable> may be working copy
+            paths or
+            <replaceable>URL</replaceable><literal>[@</literal><replaceable>REV</replaceable><literal>]</literal>.
+            <replaceable>OLD-TGT</replaceable> defaults to the current
+            working directory and <replaceable>NEW-TGT</replaceable>
+            defaults to <replaceable>OLD-TGT</replaceable>.
+            <replaceable>N</replaceable> defaults to
+            <literal>BASE</literal> or, if
+            <replaceable>OLD-TGT</replaceable> is a URL, to
+            <literal>HEAD</literal>.  <replaceable>M</replaceable>
+            defaults to the current working version or, if
+            <replaceable>NEW-TGT</replaceable> is a URL, to
+            <literal>HEAD</literal>.  <command>svn diff -r N</command>
+            sets the revision of <replaceable>OLD-TGT</replaceable> to
+            <replaceable>N</replaceable>, <command>svn diff -r
+            N:M</command> also sets the revision of
+            <replaceable>NEW-TGT</replaceable> to
+            <replaceable>M</replaceable>.</para>
 
-          <para>If <replaceable>TARGET</replaceable> is a working copy path, then the
-          <option>--revision</option> switch means:</para>
+          <para><command>svn diff -r N:M URL</command> is shorthand
+            for <command>svn diff -r N:M --old=URL
+            --new=URL</command>.</para>
+
+          <para><command>svn diff [-r N[:M]] URL1[@N]
+            URL2[@M]</command> is shorthand for <command>svn diff [-r
+            N[:M]] --old=URL1 --new=URL2</command>.</para>
+
+          <para>If <replaceable>TARGET</replaceable> is a URL, then
+            revs N and M can be given either via the
+            <option>--revision</option> or by using
+            <quote>@</quote> notation as described earlier.</para>
+
+          <para>If <replaceable>TARGET</replaceable> is a working copy
+            path, then the <option>--revision</option> switch
+            means:</para>
 
           <variablelist>
 
@@ -1461,6 +1501,23 @@ Index: COMMITTERS
 --- COMMITTERS	(revision 3000)
 +++ COMMITTERS	(revision 3500)
 </screen>
+
+
+          <para>Compare revision 3000 to revision 3500 of all files in
+          <filename>trunk</filename> using range notation:</para>
+
+          <screen>
+$ svn diff -r 3000:3500 http://svn.collab.net/repos/svn/trunk
+          </screen>
+
+
+          <para>Compare revision 3000 to revision 3500 of only three
+            files in <filename>trunk</filename> using range
+            notation:</para>
+
+          <screen>
+$ svn diff -r 3000:3500 --old http://svn.collab.net/repos/svn/trunk COMMITTERS README HACKING
+          </screen>
 
           <para>If you have a working copy, you can obtain the
             differences without typing in the long URLs:</para>

@@ -50,9 +50,6 @@ To be fixed by cmpilato:
 
 To be fixed by fitz:
 
-  - new 'svn diff' UI (when it's done) -- affects ch03, ch09, and
-    maybe other chapters.
-
   - some folks want a glossary.  that's good, since we have a
     glossary.xml anyway.  :-)  probably something we do at the last minute.
     (I think O'Reilly does this)
