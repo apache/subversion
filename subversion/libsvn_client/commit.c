@@ -18,6 +18,7 @@
 
 /*** Includes. ***/
 
+#include <string.h>
 #include <assert.h>
 #include <apr_strings.h>
 #include "svn_wc.h"

@@ -18,6 +18,7 @@
 
 /*** Includes. ***/
 
+#include <string.h>
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"

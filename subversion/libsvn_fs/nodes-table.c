@@ -11,6 +11,7 @@
  * ====================================================================
  */
 
+#include <string.h>
 #include "db.h"
 #include "svn_fs.h"
 #include "fs.h"

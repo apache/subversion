@@ -16,6 +16,7 @@
 
 /*** Includes. ***/
 
+#include <string.h>
 #include <apr.h>
 #include <apr_strings.h>
 #include <apr_pools.h>
