@@ -37,7 +37,7 @@ and the @dfn{Subversion Server} library.
 @itemize @bullet
 @item
   @b{Requires:}
-  @itemize
+  @itemize @minus
   @item
     some writable disk space
   @item
@@ -45,7 +45,7 @@ and the @dfn{Subversion Server} library.
   @end itemize
 @item
   @b{Provides:}
-  @itemize
+  @itemize @minus
   @item
     a repository for storing files
   @item
