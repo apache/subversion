@@ -84,6 +84,9 @@ class TestCase:
       except KeyboardInterrupt:
         print "Interrupted"
         sys.exit(0)
+      except SystemExit:
+        print "Got a SystemExit exception, exiting."
+        sys.exit(0)
       except:
         print "caught unexpected exception"
         traceback.print_exc(file=sys.stdout)
