@@ -53,10 +53,85 @@
 #include "svn_fs.h"
 #include "fs.h"
 #include "txn.h"
+#include "version.h"
+#include "node.h"
 #include "skel.h"
 #include "convert-size.h"
 #include "dbt.h"
 #include "err.h"
+
+
+/* The private structure underlying the public svn_fs_txn_t typedef.  */
+
+struct svn_fs_txn_t {
+
+  /* This transaction's private pool, a subpool of fs->pool.
+
+     Freeing this must completely clean up the transaction object,
+     write back any buffered data, and release any database or system
+     resources it holds.  (But don't confused the transaction object
+     with the transaction it represents: freeing this does *not* abort
+     the transaction.)  */
+  apr_pool_t *pool;
+
+  /* The filesystem to which this transaction belongs.  */
+  svn_fs_t *fs;
+
+  /* The ID of this transaction --- a null-terminated string.
+     This is the key into the `transactions' table.  */
+  char *id;
+
+  /* The root directory for this transaction, or zero if the user
+     hasn't called svn_fs_replace_root yet.  */
+  svn_fs_id_t *root;
+};
+
+
+
+/* Building error objects.  */
+
+
+static svn_error_t *
+corrupt_txn (svn_fs_txn_t *txn)
+{
+  return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, txn->fs->pool,
+			    "corrupt transaction `%s' in filesystem `%s'",
+			    txn->id, txn->fs->env_path);
+}
+
+
+static svn_error_t *
+dangling_txn_id (svn_fs_txn_t *txn)
+{
+  return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, txn->fs->pool,
+			    "dangling transaction id `%s' in filesystem `%s'",
+			    txn->id, txn->fs->env_path);
+}
+
+
+#if 0
+static svn_error_t *
+no_such_txn (svn_fs_txn_t *txn)
+{
+  return svn_error_createf (SVN_ERR_FS_NO_SUCH_TRANSACTION, 0, 0,
+			    txn->fs->pool,
+			    "no transaction `%s' in filesystem `%s'",
+			    txn->id, txn->fs->env_path);
+}
+#endif
+
+
+static svn_error_t *
+bad_txn_root (svn_fs_txn_t *txn, svn_vernum_t version)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_BAD_REPLACE_ROOT, 0, 0, txn->fs->pool,
+     "the root directory of transaction `%s' is not a direct descendent\n"
+     "of the root of version `%ld', in filesystem `%s'",
+     txn->id, version, txn->fs->env_path);
+}
+
 
 
 /* Creating and opening the database's `transactions' table.  */
@@ -152,7 +227,7 @@ svn_fs__open_transactions (svn_fs_t *fs)
 
 
 
-/* Writing TRANSACTION skels to the database.  */
+/* Storing and retrieving TRANSACTION skels.  */
 
 /* Store the skel TXN_SKEL in the `transactions' table under the
    transaction id ID.  If CREATE is non-zero, return an error if an
@@ -170,16 +245,48 @@ put_transaction_skel (svn_fs_t *fs, DB_TXN *db_txn,
 		      apr_pool_t *pool)
 {
   DB *transactions = fs->transactions;
-  svn_string_t *unparsed_txn;
   DBT key, value;
 
-  unparsed_txn = svn_fs__unparse_skel (txn_skel, pool);
-  svn_fs__set_dbt (&key, id, strlen (id));
-  svn_fs__set_dbt (&value, unparsed_txn->data, unparsed_txn->len);
   SVN_ERR (DB_WRAP (fs, "storing transaction skel",
-		    transactions->put (transactions, db_txn, &key, &value, 
+		    transactions->put (transactions, db_txn,
+				       svn_fs__str_to_dbt (&key, id),
+				       svn_fs__skel_to_dbt (&value, txn_skel, 
+							    pool),
 				       create ? DB_NOOVERWRITE : 0)));
 
+  return 0;
+}
+
+/* Set *SKEL_P to point to the TRANSACTION skel for SVN_TXN, as part
+   of the Berkeley DB transaction DB_TXN.  Allocate the skel and the
+   data it points to in POOL.
+
+   Beyond verifying that it's a syntactically valid skel, this doesn't
+   validate the data in *SKEL_P at all.  */
+static svn_error_t *
+get_transaction_skel (skel_t **skel_p,
+		      svn_fs_txn_t *svn_txn,
+		      DB_TXN *db_txn,
+		      apr_pool_t *pool)
+{
+  svn_fs_t *fs = svn_txn->fs;
+  DBT key, value;
+  int db_err;
+  skel_t *txn_skel;
+
+  svn_fs__set_dbt (&key, svn_txn->id, strlen (svn_txn->id));
+  svn_fs__result_dbt (&value);
+  db_err = fs->transactions->get (fs->transactions, db_txn, &key, &value, 0);
+  if (db_err == DB_NOTFOUND)
+    return dangling_txn_id (svn_txn);
+  SVN_ERR (DB_WRAP (fs, "reading transaction", db_err));
+  svn_fs__track_dbt (&value, pool);
+
+  txn_skel = svn_fs__parse_skel (value.data, value.size, pool);
+  if (! txn_skel)
+    return corrupt_txn (svn_txn);
+
+  *skel_p = txn_skel;
   return 0;
 }
 
@@ -203,32 +310,29 @@ put_transaction_skel (svn_fs_t *fs, DB_TXN *db_txn,
    caller's responsibility to free whatever resources the transaction
    body allocates --- in this case, a cursor.  */
 static svn_error_t *
-create_txn_body (svn_fs_txn_t *svn_txn,
-		 DB_TXN *db_txn,
-		 DBC **cursor_p)
+begin_txn_body (void *baton,
+		DB_TXN *db_txn)
 {
+  svn_fs_txn_t *svn_txn = baton;
+  svn_error_t *svn_err;
   DB *transactions = svn_txn->fs->transactions;
-  DBC *cursor;
+  DBC *cursor = 0;
   DBT key, value;
   int id;
 
-  /* Jim, svn_fs__nodata_dbt keeps getting an `implicit declaration'
-     warning.  It's helpful right now have a tree that compiles
-     without warning unless something's wrong, so I've put this bogus
-     declaration here to sidestep the warning.  -karl */
-  void svn_fs__nodata_dbt (DBT *value);
-
   /* Create a cursor.  */
   SVN_ERR (DB_WRAP (svn_txn->fs, "creating transaction (allocating cursor)",
-		    transactions->cursor (transactions, db_txn, cursor_p, 0)));
-  cursor = *cursor_p;
+		    transactions->cursor (transactions, db_txn, &cursor, 0)));
 
   /* Use that cursor to get the ID of the last entry in the table.
      We only need to know the key; don't actually read any of the value.  */
-  svn_fs__result_dbt (&key);
-  svn_fs__nodata_dbt (&value);
-  SVN_ERR (DB_WRAP (svn_txn->fs, "creating transaction (getting max id)",
-		    cursor->c_get (cursor, &key, &value, DB_LAST)));
+  svn_err = DB_WRAP (svn_txn->fs, "creating transaction (getting max id)",
+		     cursor->c_get (cursor,
+				    svn_fs__result_dbt (&key),
+				    svn_fs__nodata_dbt (&value),
+				    DB_LAST));
+  if (svn_err)
+    goto error;
 
   /* Try to parse the key as a number.  */
   {
@@ -238,10 +342,13 @@ create_txn_body (svn_fs_txn_t *svn_txn,
     /* If we didn't consume the entire key as the number, then it's a
        bogus key.  */
     if (end != (char *) key.data + key.size)
-      return (svn_error_createf
-	      (SVN_ERR_FS_CORRUPT, 0, 0, svn_txn->fs->pool,
-	       "malformed ID in transaction table of filesystem `%s'",
-	       svn_txn->fs->env_path));
+      {
+	svn_err = (svn_error_createf
+		   (SVN_ERR_FS_CORRUPT, 0, 0, svn_txn->fs->pool,
+		    "malformed ID in transaction table of filesystem `%s'",
+		    svn_txn->fs->env_path));
+	goto error;
+      }
   }
 
   /* Choose a new, distinct ID.  */
@@ -261,14 +368,23 @@ create_txn_body (svn_fs_txn_t *svn_txn,
 
     /* Store the transaction skel in the database, under this ID.  */
     id_text[id_len] = 0;
-    SVN_ERR (put_transaction_skel (svn_txn->fs, db_txn, id_text,
-				   &new_txn_skel[0], 1, svn_txn->pool));
+    svn_err = put_transaction_skel (svn_txn->fs, db_txn, id_text,
+				    &new_txn_skel[0], 1, svn_txn->pool);
+    if (svn_err)
+      goto error;
 
     /* Store the ID in the transaction object.  */
     svn_txn->id = apr_pstrdup (svn_txn->pool, id_text);
   }
 
+  SVN_ERR (DB_WRAP (svn_txn->fs, "creating transaction (closing cursor)",
+		    cursor->c_close (cursor)));
   return 0;
+
+ error:
+  if (cursor)
+    cursor->c_close (cursor);
+  return svn_err;
 }
 
 
@@ -289,50 +405,172 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
 
   /* Choose an id for this transaction, and create the transaction
      record in the database.  */
-  for (;;)
-    {
-      DB_TXN *db_txn;
-      DBC *cursor = 0;
-      svn_error_t *svn_err;
-      
-      SVN_ERR (DB_WRAP (fs, "creating transaction (beginning DB transaction)",
-			txn_begin (fs->env, 0, &db_txn, 0)));
-    
-      svn_err = create_txn_body (txn, db_txn, &cursor);
-      if (! svn_err)
-	{
-	  /* The transaction succeeded!  Commit it.  */
-	  if (cursor)
-	    SVN_ERR (DB_WRAP (fs, "creating transaction (closing cursor)",
-			      cursor->c_close (cursor)));
-	  SVN_ERR (DB_WRAP (fs,
-			    "creating transaction (committing DB transaction)",
-			    txn_commit (db_txn, 0)));
-	  break;
-	}
-
-      /* Is this a real error, or do we just need to retry?  */
-      if (svn_err->apr_err != SVN_ERR_BERKELEY_DB
-	  || svn_err->src_err != DB_LOCK_DEADLOCK)
-	{
-	  /* Free the cursor and abort the transaction, but ignore any
-	     error returns.  The first error is more valuable.  */
-	  if (cursor)
-	    cursor->c_close (cursor);
-	  txn_abort (db_txn);
-	  return svn_err;
-	}
-
-      /* We deadlocked.  Abort the transaction, and try again.  */
-      if (cursor)
-	cursor->c_close (cursor);
-      SVN_ERR (DB_WRAP (fs, "creating transaction (aborting DB transaction)",
-			txn_abort (db_txn)));
-    }
+  SVN_ERR (svn_fs__retry_txn (fs, begin_txn_body, txn));
 
   /* Add the transaction to the filesystem's table of open transactions.  */
   apr_hash_set (fs->open_txns, txn->id, 0, txn);
 
   *txn_p = txn;
+  return 0;
+}
+
+
+
+/* Creating a new root directory for a transaction.  */
+
+
+struct replace_root_args {
+  svn_fs_dir_t **root_p;
+  svn_fs_txn_t *svn_txn;
+  svn_vernum_t version;
+};
+
+
+static svn_error_t *
+replace_root_body (void *baton,
+		   DB_TXN *db_txn)
+{
+  /* Unpack the true arguments, passed through svn_fs__retry_txn.  */
+  struct replace_root_args *args = baton;
+  svn_fs_dir_t **root_p = args->root_p;
+  svn_fs_txn_t *svn_txn = args->svn_txn;
+  svn_vernum_t version = args->version;
+
+  svn_fs_id_t *version_root_id;
+  svn_fs_node_t *txn_root;
+
+  /* The TRANSACTION skel for SVN_TXN, and the sub-skel that holds its
+     root directory ID.  These get read in *only* if we don't
+     have the root directory cached in the SVN_TXN object already.  */
+  skel_t *txn_skel, *root_skel;
+
+  /* Find the root of VERSION in the transaction's filesystem.  */
+  SVN_ERR (svn_fs__version_root (&version_root_id, svn_txn->fs, version,
+				 svn_txn->pool));
+
+  /* Have we cached the transaction's root directory ID?  */
+  if (! svn_txn->root)
+    {
+      /* Read in SVN_TXN's TRANSACTION skel, and try to find the root
+	 directory ID there.  */
+      SVN_ERR (get_transaction_skel (&txn_skel, svn_txn, db_txn, 
+				     svn_txn->pool));
+      if (svn_fs__list_length (txn_skel) != 2
+	  || ! txn_skel->children->is_atom
+	  || ! txn_skel->children->next->is_atom)
+	return corrupt_txn (svn_txn);
+      root_skel = txn_skel->children->next;
+
+      /* If there is a node ID, try to parse it.  */
+      if (root_skel->len > 0)
+	{
+	  svn_txn->root = svn_fs__parse_id (root_skel->data, root_skel->len,
+					    svn_txn->pool);
+	  if (! svn_txn->root)
+	    return corrupt_txn (svn_txn);
+	}
+      else
+	svn_txn->root = 0;
+    }
+      
+  /* At this point, the cache svn_txn->root is up-to-date: it is zero
+     iff the transaction has no root directory yet.  */
+  if (svn_txn->root)
+    {
+      /* Yes, we have a root directory.  Make sure it's a direct
+         ancestor of the root version.  */
+      if (! svn_fs__is_parent (version_root_id, svn_txn->root))
+	return bad_txn_root (svn_txn, version);
+
+      /* The root directory ID looks reasonable, so open the actual node.  */
+      SVN_ERR (svn_fs__open_node_by_id (&txn_root, svn_txn->fs,
+					svn_txn->root, db_txn));
+    }
+  else
+    {
+      /* No, this transaction has no root directory yet.  */
+      svn_error_t *svn_err;
+      svn_fs_node_t *version_root;
+
+      /* Open VERSION's root directory, create an immediate successor
+         to it, and establish that as SVN_TXN's root.  */
+      SVN_ERR (svn_fs__open_node_by_id (&version_root,
+					svn_txn->fs, version_root_id,
+					db_txn));
+      svn_err = svn_fs__create_successor (&txn_root, version_root,
+					  svn_txn, db_txn);
+      svn_fs_close_node (version_root);
+      if (svn_err)
+	return svn_err;
+
+      /* Record this transaction's new root directory ID.  We know that 
+	 txn_skel has been read in, and root_skel set, because svn_txn had
+	 no root directory when we began.  */
+      {
+	svn_string_t *unparsed_txn_root_id
+	  = svn_fs__unparse_id (svn_fs__node_id (txn_root), svn_txn->pool);
+	root_skel->data = unparsed_txn_root_id->data;
+	root_skel->len = unparsed_txn_root_id->len;
+
+	svn_err = put_transaction_skel (svn_txn->fs, db_txn,
+					svn_txn->id, txn_skel, 0,
+					svn_txn->pool);
+	if (svn_err)
+	  {
+	    svn_fs_close_node (txn_root);
+	    return svn_err;
+	  }
+      }
+    }
+
+  /* Make sure it's a mutable directory, as it must be.  */
+  if (! svn_fs_node_is_dir (txn_root)
+      || ! svn_fs_node_is_mutable (txn_root))
+    {
+      svn_fs_close_node (txn_root);
+      return
+	svn_error_createf
+	(SVN_ERR_FS_CORRUPT, 0, 0, svn_txn->fs->pool,
+	 "the root of transaction `%s' in filesystem `%s' is not a"
+	 " mutable directory",
+	 svn_txn->id, svn_txn->fs->env_path);
+    }
+
+  *root_p = svn_fs_node_to_dir (txn_root);
+  return 0;
+}
+
+
+svn_error_t *
+svn_fs_replace_root (svn_fs_dir_t **root_p,
+		     svn_fs_txn_t *txn,
+		     svn_vernum_t version)
+{
+  struct replace_root_args args;
+
+  args.root_p = root_p;
+  args.svn_txn = txn;
+  args.version = version;
+
+  return svn_fs__retry_txn (txn->fs, replace_root_body, &args);
+}
+
+
+
+/* Miscellaneous trivial transaction functions.  */
+
+char *
+svn_fs__txn_id (svn_fs_txn_t *txn)
+{
+  return txn->id;
+}
+
+
+svn_error_t *
+svn_fs_txn_name (svn_string_t **name_p,
+		 svn_fs_txn_t *txn,
+		 apr_pool_t *pool)
+{
+  *name_p = svn_string_ncreate (txn->id, strlen (txn->id), pool);
   return 0;
 }

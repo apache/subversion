@@ -51,9 +51,17 @@
 
 #include "db.h"
 #include "apr_pools.h"
+#include "id.h"
+#include "skel.h"
 
 /* Set all fields of DBT to zero.  Return DBT.  */
 DBT *svn_fs__clear_dbt (DBT *dbt);
+
+
+/* Set DBT to retrieve no data.  This is useful when you're just
+   probing the table to see if an entry exists, or to find a key, but
+   don't care what the value is.  Return DBT.  */
+DBT *svn_fs__nodata_dbt (DBT *dbt);
 
 
 /* Set DBT to refer to the SIZE bytes at DATA.  Return DBT.  */
@@ -96,6 +104,21 @@ DBT *svn_fs__track_dbt (DBT *dbt, apr_pool_t *pool);
 
 /* Compare two DBT values in byte-by-byte lexicographic order.  */
 int svn_fs__compare_dbt (const DBT *a, const DBT *b);
+
+
+/* Set DBT to the unparsed form of ID; allocate memory from POOL.
+   Return DBT.  */
+DBT *svn_fs__id_to_dbt (DBT *dbt, svn_fs_id_t *id, apr_pool_t *pool);
+
+
+/* Set DBT to the unparsed form of SKEL; allocate memory from POOL.
+   Return DBT.  */
+DBT *svn_fs__skel_to_dbt (DBT *dbt, skel_t *skel, apr_pool_t *pool);
+
+
+/* Set DBT to the text of the null-terminated string STR.  DBT will
+   refer to STR's storage.  Return DBT.  */
+DBT *svn_fs__str_to_dbt (DBT *dbt, char *str);
 
 
 #endif /* SVN_LIBSVN_FS_DBT_H */

@@ -4,17 +4,18 @@
 lib_LTLIBRARIES = libsvn_fs.la
 libsvn_fs_la_SOURCES = convert-size.c		\
 		       dbt.c			\
-		       delta.c			\
 		       dir.c			\
 		       err.c			\
-		       file.c			\
 		       fs.c			\
 		       id.c			\
 		       node.c			\
-		       proplist.c		\
 		       skel.c			\
 		       txn.c			\
 		       version.c
+# Set aside for the moment:
+# 		       file.c			\
+#		       delta.c			\
+
 
 INCLUDES = -I../include -I../../apr/include -I../../expat-lite
 

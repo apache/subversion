@@ -459,6 +459,42 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 
 
 
+/* Building skels.  */
+
+
+skel_t *
+svn_fs__make_atom (char *str, apr_pool_t *pool)
+{
+  skel_t *skel = NEW (pool, skel_t);
+  skel->is_atom = 1;
+  skel->data = str;
+  skel->len = strlen (str);
+
+  return skel;
+}
+
+
+skel_t *
+svn_fs__make_empty_list (apr_pool_t *pool)
+{
+  skel_t *skel = NEW (pool, skel_t);
+
+  skel->is_atom = 0;
+  skel->children = 0;
+
+  return skel;
+}
+
+
+void
+svn_fs__prepend (skel_t *skel, skel_t *list)
+{
+  skel->next = list->children;
+  list->children = skel->next;
+}
+
+
+
 /* Examining skels.  */
 
 
@@ -495,3 +531,46 @@ svn_fs__list_length (skel_t *skel)
     return len;
   }
 }
+
+
+
+/* Copying skels.  */
+
+
+skel_t *
+svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool)
+{
+  skel_t *copy = NEW (pool, skel_t);
+
+  if (skel->is_atom)
+    {
+      apr_size_t len = skel->len;
+
+      copy->is_atom = 1;
+      copy->data = NEWARRAY (pool, char, len);
+      copy->len = len;
+      memcpy (copy->data, skel->data, len);
+      copy->children = copy->next = 0;
+    }
+  else
+    {
+      skel_t *skel_child, **copy_child_ptr;
+
+      copy->is_atom = 0;
+      copy->data = 0;
+      copy->len = 0;
+
+      copy_child_ptr = &copy->children;
+      for (skel_child = skel->children;
+	   skel_child;
+	   skel_child = skel_child->next)
+	{
+	  *copy_child_ptr = svn_fs__copy_skel (skel_child, pool);
+	  copy_child_ptr = &(*copy_child_ptr)->next;
+	}
+      *copy_child_ptr = 0;
+    }
+
+  return copy;
+}
+

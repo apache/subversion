@@ -59,6 +59,9 @@ And so on.
 Node version numbers start with 1.  Thus, N.1 is the first version
 of node N.
 
+Node / branch numbers start with 1.  Thus, N.M.1 is the first
+branch off of N.M.
+
 A directory entry identifies the file or subdirectory it refers to
 using a node version number --- not a node number.  This means that
 a change to a file far down in a directory hierarchy requires the
@@ -105,32 +108,36 @@ we use the forms shown here --- a series of unsigned ASCII decimal
 numbers, separated by dots.
 
 
-NODE-VERSION: how we represent a node version
+NODE-VERSION and HEADER: how we represent a node version
 
 We represent a given version of a file or directory node using a list
-skel (see skel.h for an explanation of skels).  The first element of a
-node version skel is always an atom indicating what kind of node this
-is.  The second element is always the node's property list.  Any
-remaining elements carry the contents of the node, in a form
-that depends on the node's kind.
+skel (see skel.h for an explanation of skels).  A node version skel
+has the form:
 
-A node version skel has one of the following forms:
+    (HEADER KIND-SPECIFIC ...)
 
-("file" PROPLIST DATA)
-    This node version is a file.  DATA is an atom giving the full
-    contents of the file.  (In the future, DATA may be a list,
-    indicating that the fulltext of the file is stored elsewhere in
-    the database, or perhaps in an ordinary Unix file.)
+where HEADER is a header skel, whose structure is common to all nodes,
+and the KIND-SPECIFIC elements carry data dependent on what kind of
+node this is --- file, directory, etc.
 
-("directory" PROPLIST (ENTRY ...))
-    This node version is a directory.  The list (ENTRY ...) gives the
-    directory entries.  Each ENTRY has the form:
+HEADER has the form:
 
-        (NAME ID)
+    (KIND PROPLIST FLAG ...)
 
-    where:
-    - NAME is the name of the directory entry, in UTF-8
-    - ID is the ID of the nv to which this entry refers, and
+where:
+- KIND indicates what sort of node this is,
+- PROPLIST is the node's property list, and
+- FLAG ... is a sequence of zero or more flags.
+
+KIND must be one of the following:
+- "file", indicating that the node is a file (see FILE below).
+- "dir", indicating that the node is a directory (see DIR below).
+
+Each FLAG has one of the following forms:
+
+("mutable" TXN)
+    This is a mutable node, part of the transaction whose ID is TXN.
+    The "mutable" flag may occur only once in the FLAG ... list.
 
 Note that a node cannot change its kind from one version to the next.
 A directory node is always a directory; a file node is always a file;
@@ -144,6 +151,35 @@ We store the node kind in the node version for simplicity.  This way,
 we can store *everything* about a node in the node versions --- we
 don't need the complexity of a separate per-node structure, or the
 overhead of looking in two places.
+
+
+FILE: how files are represented.
+
+If a NODE-VERSION's header's KIND is "file", then the node-version
+skel represents a file, and has the form:
+
+    (HEADER DATA)
+
+where DATA is an atom giving the full contents of the file.  (In the
+future, DATA may have other alternate forms, indicating that the
+fulltext of the file is stored elsewhere in the database, or perhaps
+in an ordinary Unix file.)
+
+
+DIR:
+
+If the header's KIND is "dir", then the node-version skel
+represents a directory, and has the form:
+
+    (HEADER (ENTRY ...))
+
+The list (ENTRY ...) gives the directory entries; each ENTRY has the form:
+
+    (NAME ID)
+
+where:
+  - NAME is the name of the directory entry, in UTF-8, and
+  - ID is the ID of the node version to which this entry refers.
 
 
 PROPLIST: property lists for nodes and directory entries
@@ -253,10 +289,6 @@ Here's the sort order we use:
 - Nodes are sorted by their node number.
 - All the versions of a given node come together, in order of 
   increasing version number.
-- Each node's versions are followed by a record whose key is
-  "NODENUM.head".  This lets us quickly find the head of any given
-  chain of node versions by looking for "NODENUM.head", and then going
-  back one record.
 - All branches off any version of a node come immediately after that
   node, ordered by increasing version number.
 
@@ -267,28 +299,35 @@ keys:
 13.2
 13.3
 13.4
-13.head
 13.2.1.1   ; a branch from the second version of 13, with three versions
 13.2.1.2
 13.2.1.3
-13.2.1.head
 13.2.2.1   ; another branch off the same version of 13, with four versions
 13.2.2.2
 13.2.2.3
 13.2.2.4
-13.2.2.head
 13.4.1.1   ; another branch off a later version of 13, with two versions
 13.4.1.2
-13.4.1.head
 14.1     ; another node
 14.2
 14.3
-14.head
+
+We can find the latest version of node N by searching the `nodes'
+table for the last entry before N.1.1.1, the first branch off the
+node's first version.  According to the sort order, this node
+immediately follows the last version of node N.
+
+Similarly, we can find the last branch off a given node version N.V by
+searching the `nodes' table for the last entry before N.(V+1).1.1.
+According to the sort order, this node immediately follows the last
+descendant of of N.V.  This last descendent could be a branch off a
+branch off a branch ..., but by truncating the node version ID
+appropriately, we can find the last branch off of N.V.
 
 Assuming that we store the most recent version on every branch as
 fulltext, and all other versions as deltas, we can retrieve any node
-version NODE.VERSION by searching for NODE.head, and then walking
-backwards to NODE.VERSION, applying deltas as we go.
+version NODE.VERSION by searching for the last version of NODE, and
+then walking backwards to NODE.VERSION, applying deltas as we go.
 
 Since we don't want to corrupt our btree, even if we accidentally
 insert garbage keys into the table, we extend our ordering to handle
@@ -429,12 +468,18 @@ nodes as well.
 
 However, it's important to note that the `bubbling up' need happen
 only once per *complete transaction*, not once per change within the
-transaction.  Once we have created single new version of a directory
-for a given transaction, we can make as many changes as we like within
-that directory.  In other words, once the transaction contains the new
-node versions required by the `bubble up' rule, further changes to the
-same nodes needn't create any new versions --- they can proceed much
-like writes to an ordinary filesystem.
+transaction.  Once we have created a new version of a directory for a
+given transaction, we can make as many changes as we like within that
+new directory version.  In other words, once the transaction contains
+the new node versions required by the `bubble up' rule, further
+changes to the same nodes needn't create any new versions --- they can
+proceed much like writes to an ordinary filesystem.
+
+Thus, node versions which are part of an uncommitted transaction are
+called "mutable" node versions, since they may be changed in place
+until the transaction is committed.  Once a transaction is committed,
+the nodes it contains become "immutable" nodes, whose contents must
+never change.
 
 For each active transaction, we store a transaction header skel of the
 form:
@@ -447,7 +492,7 @@ the tree as modified by this transaction.  If we haven't yet created a
 root directory for this transaction, ROOT is the empty string.
 
 The database contains a table called "transactions", which is a btree
-table indexed by transaction ID, mapping each one onto a transaction
+table indexed by transaction ID, mapping each one onto a TRANSACTION
 header, and a list of all the nodes that are part of that transaction.
 The header and the nodes are stored as duplicate entries under the
 same key: the first value stored is the transaction header skel, and
@@ -460,6 +505,8 @@ beyond being unique within the repository.  The keys of the
 "transactions" table are the shorted ASCII decimal representation of
 the transaction ID.  The entries of the "transactions" table are
 sorted by the ID's numeric value.
+
+
 
 If the transaction succeeds, the transaction's root directory becomes
 the new version's root directory, after any necessary merging.  If the

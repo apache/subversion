@@ -123,7 +123,8 @@ typedef struct skel_t skel_t;
 
 
 
-/* Parsing and unparsing skels.  */
+/* Operations on skels.  */
+
 
 /* Parse the LEN bytes at DATA as the concrete representation of a
    skel, and return a skel object allocated from POOL describing its
@@ -142,13 +143,23 @@ typedef struct skel_t skel_t;
 skel_t *svn_fs__parse_skel (char *data, apr_size_t len,
 			    apr_pool_t *pool);
 
+
+/* Create an atom skel whose contents are the C string STR, allocated
+   from POOL.  */
+skel_t *svn_fs__make_atom (char *str, apr_pool_t *pool);
+
+
+/* Create an empty list skel, allocated from POOL.  */
+skel_t *svn_fs__make_empty_list (apr_pool_t *pool);
+
+
+/* Prepend SKEL to LIST.  */
+void svn_fs__prepend (skel_t *skel, skel_t *list);
+
+
 /* Return a string whose contents are a concrete representation of
    SKEL.  Allocate the string from POOL.  */
 svn_string_t *svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool);
-
-
-
-/* Examining skels.  */
 
 
 /* Return true iff SKEL is an atom whose data is the same as STR.  */
@@ -158,5 +169,8 @@ int svn_fs__is_atom (skel_t *skel, const char *str);
 /* Return the length of the list skel SKEL.  Atoms have a length of -1.  */
 int svn_fs__list_length (skel_t *skel);
 
+
+/* Make a copy of SKEL and its data in POOL.  */
+skel_t *svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool);
 
 #endif /* SVN_LIBSVN_FS_SKEL_H */
