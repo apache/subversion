@@ -71,7 +71,7 @@ fi
 
 # Handle the neon/ subdir
 if [ ! -d neon ]; then
-  neon_ver=0.7.5
+  neon_ver=0.7.7
   echo ""
   echo "You don't have a neon/ subdirectory here."
   echo "Please get neon $neon_ver from:"
