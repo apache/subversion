@@ -307,7 +307,9 @@
     _global_pool = $1 = svn_swig_pl_make_pool (ST(items-1));
 }
 %typemap(ruby, arginit) apr_pool_t *pool (apr_pool_t *_global_pool) {
-  if (argc <= $argnum) {
+  if (argc == 0) {
+    /* wrong # of arguments: we need at least a pool. */
+  } else if (argc <= $argnum) {
     if (NIL_P(argv[argc - 1])) {
       rb_raise(rb_eArgError, "pool must be not nil");
     }
