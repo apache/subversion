@@ -68,7 +68,7 @@ Candidate changes:
     Justification: Tarballs built with GNU tar will not extract on platforms
     without GNU tar due to filename length.
     Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, kfogel
       +0: dlr
 
   * r8969
@@ -76,6 +76,7 @@ Candidate changes:
     Justification: Don't waste space in the tarball by having duplictate
     images. 
     Votes:
+      +1: kfogel
 
   * Issue #1775
     Allow reverting a replaced file with no properties.
@@ -94,3 +95,4 @@ Candidate changes:
        users mailing list.
     Votes:
       +1: david
+      +0: kfogel
