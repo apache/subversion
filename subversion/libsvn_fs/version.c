@@ -60,6 +60,7 @@
 
 /* Building some often-used error objects.  */
 
+
 static svn_error_t *
 corrupt_version (svn_fs_t *fs, svn_vernum_t v)
 {
@@ -67,6 +68,16 @@ corrupt_version (svn_fs_t *fs, svn_vernum_t v)
     svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
 		       "corrupt root data for version %d of filesystem `%s'",
 		       v, fs->env_path);
+}
+
+
+static svn_error_t *
+no_such_version (svn_fs_t *fs, svn_vernum_t v)
+{
+  return
+    svn_error_createf (SVN_ERR_FS_NO_SUCH_VERSION, 0, 0, fs->pool,
+		       "filesystem `%s' has no version number %d",
+		       fs->env_path, v);
 }
 
 
@@ -87,6 +98,7 @@ get_version_skel (skel_t **skel,
 		  apr_pool_t *pool)
 {
   DBT key, value;
+  int db_err;
   char key_bytes[200];
   int key_len;
   skel_t *version;
@@ -100,10 +112,11 @@ get_version_skel (skel_t **skel,
   svn_fs__set_dbt (&key, key_bytes, key_len);
 
   svn_fs__result_dbt (&value);
-  SVN_ERR (DB_ERR (fs, "reading version root from filesystem",
-		   fs->versions->get (fs->versions,
-				      0, /* no transaction */
-				      &key, &value, 0)));
+  db_err = fs->versions->get (fs->versions, 0, /* no transaction */ 
+			      &key, &value, 0);
+  if (db_err == DB_NOTFOUND)
+    return no_such_version (fs, v);
+  SVN_ERR (DB_ERR (fs, "reading version root from filesystem", db_err));
   svn_fs__track_dbt (&value, pool);
 
   version = svn_fs__parse_skel (value.data, value.size, pool);

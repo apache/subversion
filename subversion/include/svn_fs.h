@@ -282,6 +282,9 @@ int svn_fs_id_is_ancestor (svn_fs_id_t *a, svn_fs_id_t *b);
 int svn_fs_id_distance (svn_fs_id_t *a, svn_fs_id_t *b);
 
 
+/* Return a copy of ID, allocated from POOL.  */
+svn_fs_id_t *svn_fs_copy_id (svn_fs_id_t *id, apr_pool_t *pool);
+
 
 /* Accessing properties and property lists.  */
 
@@ -390,11 +393,11 @@ void svn_fs_close_node (svn_fs_node_t *node);
    NODE explicitly, you should call `svn_fs_kill_cleanup_node', to
    cancel the cleanup request; otherwise, the cleanup function will
    still run when POOL is freed, and try to close NODE again.  */
-extern void svn_fs_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node);
+void svn_fs_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node);
 
 
 /* Cancel the request to close NODE when POOL is freed.  */
-extern void svn_fs_kill_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node);
+void svn_fs_kill_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node);
 
 
 /* Return the filesystem version number of NODE.
@@ -442,8 +445,25 @@ svn_error_t *svn_fs_open_root (svn_fs_dir_t **dir,
 
 
 /* Set *NODE to a node object representing the node named NAME in
-   PARENT_DIR.  NAME is a directory path --- a series of path
-   components, separated by slashes, encoded in UTF-8.  */
+   PARENT_DIR.  NAME is a directory path.
+
+   The details about NAME:
+
+   - NAME must be a series of path components, encoded using UTF-8,
+     and separated by slash characters (U+002f).
+   - NAME may not contain the null character (U+0000).
+   - Sequences of two or more consecutive slash characters are treated
+     like a single slash.
+   - If NAME ends with a slash, it refers to the same node it would
+     without the slash, but that node must be a directory, or else the
+     function returns an SVN_ERR_FS_PATH_SYNTAX error.
+   - If any path component is '.' or '..', the function returns an
+     SVN_ERR_FS_PATH_SYNTAX error.
+   - NAME is always interpreted relative to PARENT_DIR.  If NAME
+     starts with a '/', this function will return an
+     SVN_ERR_FS_PATH_SYNTAX error.  If you want to process absolute
+     paths, you'll need to provide a root directory object as
+     PARENT_DIR, and strip off the leading slash.  */
 svn_error_t *svn_fs_open_node (svn_fs_node_t **child,
 			       svn_fs_dir_t *parent_dir,
 			       svn_string_t *name);
@@ -530,10 +550,15 @@ svn_error_t *svn_fs_file_length (apr_off_t *length,
 
 /* Set *CONTENTS to a `read'-like function which will return the
    contents of FILE; see the description of svn_read_fn_t in
-   `svn_delta.h'.  Set *CONTENTS_BATON to a baton to pass to CONTENTS.  */
+   `svn_delta.h'.  Set *CONTENTS_BATON to a baton to pass to CONTENTS.
+   Allocate the baton in POOL.
+
+   You must keep FILE open until you are done reading data using
+   CONTENTS and CONTENTS_BATON.  */
 svn_error_t *svn_fs_file_contents (svn_read_fn_t **contents,
 				   void **contents_baton,
-				   svn_fs_file_t *file);
+				   svn_fs_file_t *file,
+				   apr_pool_t *pool);
 
 
 

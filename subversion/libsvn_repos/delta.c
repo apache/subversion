@@ -532,9 +532,9 @@ delta_files (struct context *c, void *file_baton,
 
   /* Get read functions for the file contents.  */
   SVN_ERR (svn_fs_file_contents (&ancestor_read_fn, ancestor_read_baton,
-				 ancestor_file));
+				 ancestor_file, c->pool));
   SVN_ERR (svn_fs_file_contents (&target_read_fn, target_read_baton,
-				 target_file));
+				 target_file, c->pool));
 
   SVN_ERR (send_text_delta (c, file_baton,
 			    ancestor_read_fn, ancestor_read_baton,
@@ -560,7 +560,7 @@ file_from_scratch (struct context *c,
 
   /* Get a read function for the target file's contents.  */
   SVN_ERR (svn_fs_file_contents (&target_read_fn, target_read_baton,
-				 target_file));
+				 target_file, c->pool));
 
   SVN_ERR (send_text_delta (c, file_baton,
 			    null_read_fn, 0,

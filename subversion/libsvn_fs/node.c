@@ -46,9 +46,18 @@
  * individuals on behalf of Collab.Net.
  */
 
+#include "apr.h"
+#include "apr_pools.h"
+#include "apr_hash.h"
+
+#include "svn_string.h"
+#include "svn_error.h"
 #include "svn_fs.h"
+
 #include "fs.h"
 #include "node.h"
+#include "file.h"
+#include "dir.h"
 #include "id.h"
 #include "skel.h"
 #include "err.h"
@@ -58,17 +67,40 @@
 /* Building some often-used error objects.  */
 
 static svn_error_t *
-corrupt_representation (svn_fs_t *fs, svn_fs_id_t *id)
+corrupt_id (const char *fmt, svn_fs_id_t *id, svn_fs_t *fs)
 {
   svn_string_t *unparsed_id = svn_fs__unparse_id (id, fs->pool);
 
-  return
-    svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-     "corrupt representation for node `%s' in filesystem `%s'",
-     unparsed_id->data, fs->env_path);
+  return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+			    fmt, unparsed_id->data, fs->env_path);
 }
 
+
+static svn_error_t *
+corrupt_representation (svn_fs_t *fs, svn_fs_id_t *id)
+{
+  return
+    corrupt_id ("corrupt representation for node `%s' in filesystem `%s'",
+		id, fs);
+}
+
+
+static svn_error_t *
+corrupt_node_version (svn_fs_t *fs, svn_fs_id_t *id)
+{
+  return
+    corrupt_id ("corrupt node version for node `%s' in filesystem `%s'",
+		id, fs);
+}
+
+
+static svn_error_t *
+corrupt_dangling_id (svn_fs_t *fs, svn_fs_id_t *id)
+{
+  return
+    corrupt_id ("reference to non-existent node `%s' in filesystem `%s'",
+		id, fs);
+}
 
 
 /* Reading node representations from the database.  */
@@ -84,6 +116,7 @@ get_representation_skel (skel_t **skel, svn_fs_t *fs, svn_fs_id_t *id,
 			 apr_pool_t *pool)
 {
   DBT key, value;
+  int db_err;
   svn_string_t *unparsed_id;
   skel_t *rep_skel;
 
@@ -93,10 +126,10 @@ get_representation_skel (skel_t **skel, svn_fs_t *fs, svn_fs_id_t *id,
   unparsed_id = svn_fs__unparse_id (id, pool);
   svn_fs__set_dbt (&key, unparsed_id->data, unparsed_id->len);
   svn_fs__result_dbt (&value);
-  SVN_ERR (DB_ERR (fs, "reading node representation",
-		   fs->nodes->get (fs->nodes,
-				   0, /* no transaction */
-				   &key, &value, 0)));
+  db_err = fs->nodes->get (fs->nodes, 0, /* no transaction */ &key, &value, 0);
+  if (db_err == DB_NOTFOUND)
+    return corrupt_dangling_id (fs, id);
+  SVN_ERR (DB_ERR (fs, "reading node representation", db_err));
   svn_fs__track_dbt (&value, pool);
 
   rep_skel = svn_fs__parse_skel (value.data, value.size, pool);
@@ -163,6 +196,15 @@ get_cached_node (svn_fs_t *fs, svn_fs_id_t *id)
   int id_size = svn_fs_id_length (id) * sizeof (id[0]);
   svn_fs_node_t *node = apr_hash_get (fs->node_cache, id, id_size);
 
+  /* It's important that we increment the open count now, instead of
+     letting the caller elect to do it.  When our caching policy
+     decides to free up some memory, we'll make a pass through this
+     table and free up nodes whose open count is zero.  Incrementing
+     the open count now ensures that, as long as this function's
+     operation is atomic, we won't "clean up" the node before the
+     caller is done with it.  Of course, the consequence is that the
+     caller must make sure the open count gets decremented when it's
+     done.  */
   if (node)
     node->open_count++;
 
@@ -170,7 +212,25 @@ get_cached_node (svn_fs_t *fs, svn_fs_id_t *id)
 }
 
 
-/* Add NODE to its filesystem's node cache, under its ID.  */
+/* A pool cleanup function that removes NODE from its filesystem's
+   cache.  */
+static apr_status_t
+pool_uncache_node (void *node_ptr)
+{
+  svn_fs_node_t *node = node_ptr;
+  apr_hash_t *cache = node->fs->node_cache;
+  svn_fs_id_t *id = node->id;
+  int id_size = svn_fs_id_length (id) * sizeof (id[0]);
+
+  /* Remove NODE's entry from the node cache.  */
+  apr_hash_set (cache, id, id_size, 0);
+
+  return 0;
+}
+
+
+/* Add NODE to its filesystem's node cache, under its ID.
+   Set its open count to 1.  */
 static void
 cache_node (svn_fs_node_t *node)
 {
@@ -184,6 +244,10 @@ cache_node (svn_fs_node_t *node)
   if (node->pool != fs->pool)
     abort ();
 
+  /* Sanity check: the node's open count must be zero.  */
+  if (node->open_count != 0)
+    abort ();
+
   /* Sanity check: make sure we're not writing over another node
      object that's already in the cache.  */
   {
@@ -193,25 +257,158 @@ cache_node (svn_fs_node_t *node)
       abort ();
   }
 
+  node->open_count = 1;
   apr_hash_set (fs->node_cache, id, id_size, node);
+  apr_register_cleanup (node->pool, node, pool_uncache_node, 0);
+}
+
+
+/* Decrement NODE's open count.  If it's zero, we assume that there
+   are no more references to the node outside the cache, and we may
+   dispose of it at will.  */
+static void
+close_node (svn_fs_node_t *node)
+{
+  node->open_count--;
+
+  if (node->open_count == 0)
+    /* At the moment, our cache policy is trivial: if the node's open
+       count drops to zero, we free it.  The node's pool's cleanup
+       list takes care of removing the node from the node cache.
+
+       This kind of sucks, especially for directory traversal --- the
+       nodes towards the top of the filesystem are going to get hit
+       pretty frequently.  */
+    apr_destroy_pool (node->pool);
 }
 
 
 
 /* Building node structures.  */
 
-#if 0  /* incomplete */
 svn_error_t *
-svn_fs__open_id (svn_fs_node_t **node_p,
-		 svn_fs_t *fs,
-		 svn_fs_id_t *id)
+svn_fs__open_node_by_id (svn_fs_node_t **node_p,
+			 svn_fs_t *fs,
+			 svn_fs_id_t *id)
 {
   svn_fs_node_t *node = get_cached_node (fs, id);
 
   if (node)
-    return node;
+    {
+      *node_p = node;
+      return 0;
+    }
 
   /* It's not cached; we'll have to read it in ourselves.  */
+  {
+    apr_pool_t *skel_pool = svn_pool_create (fs->pool, 0);
+    skel_t *nv, *kind;
+
+    SVN_ERR (get_node_version_skel (&nv, fs, id, skel_pool));
+    if (svn_fs__list_length (nv) < 2
+	|| ! nv->children->is_atom)
+      return corrupt_node_version (fs, id);
+
+    kind = nv->children;
+    if (svn_fs__is_atom (kind, "file"))
+      SVN_ERR (svn_fs__file_from_skel (&node, fs, id, nv, skel_pool));
+    else if (svn_fs__is_atom (kind, "dir"))
+      SVN_ERR (svn_fs__dir_from_skel (&node, fs, id, nv, skel_pool));
+    else
+      return corrupt_node_version (fs, id);
+
+    cache_node (node);
+
+    *node_p = node;
+    apr_destroy_pool (skel_pool);
+    return 0;
+  }
+}
+
+
+
+/* Common initialization for all new nodes.  */
+
+svn_fs_node_t *
+svn_fs__init_node (apr_size_t size,
+		   svn_fs_t *fs,
+		   svn_fs_id_t *id,
+		   kind_t kind)
+{
+  /* Create the node's subpool.  */
+  apr_pool_t *pool = svn_pool_create (fs->pool, 0);
+  svn_fs_node_t *node = apr_pcalloc (pool, size);
+
+  node->fs = fs;
+  node->pool = pool;
+  node->id = svn_fs_copy_id (id, node->pool);
+  node->kind = kind;
+
+  return node;
+}
+
+
+
+/* Casting, typing, and other trivial bookkeeping operations on nodes.  */
+
+int
+svn_fs_node_is_dir (svn_fs_node_t *node)
+{
+  return node->kind == kind_dir;
+}
+
+
+int
+svn_fs_node_is_file (svn_fs_node_t *node)
+{
+  return node->kind == kind_file;
+}
+
+
+apr_pool_t *
+svn_fs_node_subpool (svn_fs_node_t *node)
+{
+  return svn_pool_create (node->pool, 0);
+}
+
+
+void
+svn_fs_close_node (svn_fs_node_t *node)
+{
+  close_node (node);
+}
+
+
+svn_fs_proplist_t *
+svn_fs_node_proplist (svn_fs_node_t *node)
+{
+  return node->proplist;
+}
+
+
+
+/* Node cleanups.  */
+
+static apr_status_t
+apr_cleanup_node (void *node_ptr)
+{
+  svn_fs_node_t *node = node_ptr;
+
+  svn_fs_close_node (node);
+
   return 0;
 }
-#endif
+
+
+void
+svn_fs_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node)
+{
+  apr_register_cleanup (pool, node, apr_cleanup_node, 0);
+}
+
+
+void
+svn_fs_kill_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node)
+{
+  apr_kill_cleanup (pool, node, apr_cleanup_node);
+}

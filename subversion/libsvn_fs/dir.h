@@ -1,4 +1,4 @@
-/* proplist.c : interface to private proplist functions.
+/* dir.h : interface to directory nodes --- private to libsvn_fs
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -31,7 +31,7 @@
  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL COLLABNET OR ITS CONTRIBUTORS BE LIABLE FOR ANY
+ * IN NO EVENT SHALL COLLAB.NET OR ITS CONTRIBUTORS BE LIABLE FOR ANY
  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
  * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
@@ -46,20 +46,33 @@
  * individuals on behalf of Collab.Net.
  */
 
-#ifndef SVN_LIBSVN_FS_PROPLIST_H
-#define SVN_LIBSVN_FS_PROPLIST_H
+/* ==================================================================== */
+
+
+
+#ifndef SVN_LIBSVN_FS_DIR_H
+#define SVN_LIBSVN_FS_DIR_H
 
 #include "apr_pools.h"
 #include "svn_fs.h"
-#include "fs.h"
 #include "skel.h"
 
+/* Set *NODE to a new a svn_fs_file_t for node ID in filesystem FS,
+   whose NODE-VERSION skel is NV.  NV is allocated in SKEL_POOL, as is
+   the data it points to.  NV must be a list skel of at least two
+   elements, whose first element is the atom "file".
 
-/* Build a property list object based on the list skel PROPLIST.  POOL
-   must be the pool of the underlying object; the returned property
-   list is allocated there.  If PROPLIST is misformed, return zero.  */
-svn_fs_proplist_t *svn_fs__make_proplist (skel_t *proplist,
-					  apr_pool_t *pool);
+   The new node must not be added to the node cache, and its open
+   count must be zero.
+
+   This function will use SKEL_POOL for any temporary storage it needs
+   while constructing the new node.  (Any memory actually used by NODE
+   itself goes in NODE's pool, of course.)  */
+svn_error_t *svn_fs__dir_from_skel (svn_fs_node_t **node,
+				    svn_fs_t *fs, 
+				    svn_fs_id_t *id,
+				    skel_t *nv, 
+				    apr_pool_t *skel_pool);
 
 
-#endif /* SVN_LIBSVN_FS_PROPLIST_H */
+#endif /* SVN_LIBSVN_FS_DIR_H */

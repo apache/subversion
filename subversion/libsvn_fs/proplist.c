@@ -71,7 +71,9 @@ svn_fs__make_proplist (skel_t *proplist, apr_pool_t *pool)
     return 0;
 
   p = NEW (pool, svn_fs_proplist_t);
+  memset (p, 0, sizeof (*p));
   p->hash = apr_make_hash (pool);
+  p->pool = pool;
 
   /* Walk the property list two elements at a time.  */
   for (elt = proplist->children; elt; elt = elt->next->next)
