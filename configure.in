@@ -311,7 +311,7 @@ BUILD_RULES="base-lib lib bin test $BUILD_APACHE_RULE"
 
 if test "$svn_lib_berkeley_db" = "yes"; then
   BUILD_RULES="$BUILD_RULES bdb-lib bdb-test"
-  INSTALL_RULES="$INSTALL_RULES install-bdb-lib"
+  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-bdb-lib install-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-bdb-lib"
   BDB_TEST_DEPS="\$(BDB_TEST_DEPS)"
   BDB_TEST_PROGRAMS="\$(BDB_TEST_PROGRAMS)"
