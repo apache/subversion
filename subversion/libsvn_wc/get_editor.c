@@ -1168,6 +1168,10 @@ close_file (void *file_baton)
           svn_string_appendcstr (patch_cmd, "--reject-file");
           svn_string_appendcstr (patch_cmd, "=");
           svn_string_appendstr (patch_cmd, reject_filename);
+#if 0 /* kff todo: activate quietness when development stabilizes */
+          svn_string_appendcstr (patch_cmd, " ");
+          svn_string_appendcstr (patch_cmd, "--quiet");
+#endif /* 0 */
           svn_string_appendcstr (patch_cmd, " ");
           svn_string_appendstr (patch_cmd, fb->path);
           svn_string_appendcstr (patch_cmd, " < ");
