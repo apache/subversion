@@ -456,6 +456,22 @@ static svn_error_t * thunk_close_directory(void *dir_baton,
     return close_baton(dir_baton, "close_directory");
 }
 
+static svn_error_t * thunk_absent_directory(const char *path,
+					    void *parent_baton,
+					    apr_pool_t *pool)
+{
+    item_baton *ib = parent_baton;
+    SV *result;
+    swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
+
+    SVN_ERR (perl_callback_thunk (CALL_METHOD,
+				  "absent_directory", NULL,
+				  "OsOS", ib->editor, path, ib->baton,
+				  pool, poolinfo));
+
+    return SVN_NO_ERROR;
+}
+
 static svn_error_t * thunk_add_file(const char *path,
                                     void *parent_baton,
                                     const char *copyfrom_path,
@@ -596,6 +612,22 @@ static svn_error_t * thunk_close_file(void *file_baton,
     return SVN_NO_ERROR;
 }
 
+static svn_error_t * thunk_absent_file(const char *path,
+				       void *parent_baton,
+				       apr_pool_t *pool)
+{
+    item_baton *ib = parent_baton;
+    SV *result;
+    swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
+
+    SVN_ERR (perl_callback_thunk (CALL_METHOD,
+				  "absent_file", NULL,
+				  "OsOS", ib->editor, path, ib->baton,
+				  pool, poolinfo));
+
+    return SVN_NO_ERROR;
+}
+
 static svn_error_t * thunk_close_edit(void *edit_baton,
                                       apr_pool_t *pool)
 {
@@ -622,11 +654,13 @@ void svn_delta_make_editor(const svn_delta_editor_t **editor,
     thunk_editor->open_directory = thunk_open_directory;
     thunk_editor->change_dir_prop = thunk_change_dir_prop;
     thunk_editor->close_directory = thunk_close_directory;
+    thunk_editor->absent_directory = thunk_absent_directory;
     thunk_editor->add_file = thunk_add_file;
     thunk_editor->open_file = thunk_open_file;
     thunk_editor->apply_textdelta = thunk_apply_textdelta;
     thunk_editor->change_file_prop = thunk_change_file_prop;
     thunk_editor->close_file = thunk_close_file;
+    thunk_editor->absent_file = thunk_absent_file;
     thunk_editor->close_edit = thunk_close_edit;
     thunk_editor->abort_edit = thunk_abort_edit;
 
@@ -664,7 +698,7 @@ svn_error_t *svn_swig_pl_thunk_history_func(void *baton,
                                             svn_revnum_t revision,
                                             apr_pool_t *pool)
 {
-    SV *func = baton, *result;
+    SV *func = baton;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
 
     if (!SvOK(func))
@@ -673,6 +707,28 @@ svn_error_t *svn_swig_pl_thunk_history_func(void *baton,
     perl_callback_thunk (CALL_SV,
 			 func, NULL,
 			 "siS", path, revision, pool, poolinfo);
+
+    return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_swig_pl_thunk_authz_read_func (svn_boolean_t *allowed,
+						svn_fs_root_t *root,
+						const char *path,
+						void *baton,
+						apr_pool_t *pool)
+{
+    SV *func = baton, *result;
+    swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
+    swig_type_info *rootinfo = SWIG_TypeQuery("svn_fs_root_t *");
+
+    if (!SvOK(func))
+	return SVN_NO_ERROR;
+
+    perl_callback_thunk (CALL_SV,
+			 func, &result,
+			 "SsS", root, rootinfo, path, pool, poolinfo);
+
+    *allowed = SvIV (result);
 
     return SVN_NO_ERROR;
 }
