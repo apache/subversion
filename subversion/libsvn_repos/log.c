@@ -30,54 +30,64 @@
 
 
 
-
-/* Store as keys in CHANGED the paths of all nodes at or below NODE
- * that show a significant change.  "Significant" means that the text
- * or properties of the node were changed, or that the node was added
- * or deleted.  
+/* Store as keys in CHANGED the paths of all node in ROOT that show a
+ * significant change.  "Significant" means that the text or
+ * properties of the node were changed, or that the node was added or
+ * deleted.
  *
- * The key is allocated in POOL; the value is (void *) 'A', 'D', or
- * 'R', for added, deleted, or opened, respectively.
+ * The key is allocated in POOL; the value is (void *) 'U', 'A', 'D',
+ * or 'R', for modified, added, deleted, or replaced, respectively.
  * 
- * Standard practice is to call this on the root node of delta tree
- * generated from svn_repos_dir_delta() and its node accessor,
- * svn_repos_node_from_baton(), with PATH representing "/".
  */
-static void
+static svn_error_t *
 detect_changed (apr_hash_t *changed,
-                svn_repos_node_t *node,
-                const char *path,
+                svn_fs_root_t *root,
                 apr_pool_t *pool)
 {
-  const char *down_path = "";
+  apr_hash_t *changes;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
-  /* Recurse sideways first. */
-  if (node->sibling)
-    detect_changed (changed, node->sibling, path, pool);
-    
-  /* Then "enter" this node; but if its name is the empty string, then
-     there's no need to extend path (and indeed, the behavior
-     svn_path_add_component_nts is to strip the trailing slash even
-     when the new path is "/", so we'd end up with "", which would
-     screw everything up anyway). */ 
-  if (node->name && *(node->name))
-    down_path = svn_path_join (path, node->name, pool);
+  SVN_ERR (svn_fs_paths_changed (&changes, root, subpool));
+  for (hi = apr_hash_first (subpool, changes); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      svn_fs_path_change_t *change;
+      const char *path;
+      char action;
 
-  /* Recurse downward before processing this node. */
-  if (node->child)
-    detect_changed (changed, node->child, down_path, pool);
-    
-  /* Process this node.
-     We register all differences except for directory opens that don't
-     involve any prop mods, because those are the result from
-     bubble-up and don't belong in a change list. */
-  if (! ((node->kind == svn_node_dir)
-         && (node->action == 'R')
-         && (! node->prop_mod)))
-    apr_hash_set (changed, down_path, APR_HASH_KEY_STRING,
-                    (void *) ((int) node->action));
+      /* KEY will be the path, VAL the change. */
+      apr_hash_this (hi, &key, NULL, &val);
+      path = (const char *) key;
+      change = val;
 
-  return;
+      switch (change->change_kind)
+        {
+        case svn_fs_path_change_add:
+          action = 'A';
+          break;
+
+        case svn_fs_path_change_replace:
+          action = 'R';
+          break;
+
+        case svn_fs_path_change_delete:
+          action = 'D';
+          break;
+
+        case svn_fs_path_change_modify:
+        default:
+          action = 'U';
+          break;
+        }
+
+      apr_hash_set (changed, apr_pstrdup (pool, path), APR_HASH_KEY_STRING,
+                    (void *) ((int) action));
+    }
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -172,26 +182,10 @@ svn_repos_get_logs (svn_repos_t *repos,
 
       if ((this_rev > 0) && discover_changed_paths)
         {
-          const svn_delta_edit_fns_t *editor;
-          svn_fs_root_t *oldroot, *newroot;
-          void *edit_baton;
-
+          svn_fs_root_t *newroot;
           changed_paths = apr_hash_make (subpool);
-          
-          /* Use a dir_deltas run with the node editor between the
-             current revision and its immediate predecessor to see
-             what changed in this revision.  */
-          SVN_ERR (svn_fs_revision_root (&oldroot, fs, this_rev - 1, subpool));
           SVN_ERR (svn_fs_revision_root (&newroot, fs, this_rev, subpool));
-          SVN_ERR (svn_repos_node_editor (&editor, &edit_baton, repos,
-                                          oldroot, newroot, subpool, subpool));
-          SVN_ERR (svn_repos_dir_delta (oldroot, "", NULL,
-                                        newroot, "",
-                                        editor, edit_baton,
-                                        FALSE, TRUE, FALSE, TRUE, subpool));
-          detect_changed (changed_paths, 
-                          svn_repos_node_from_baton (edit_baton),
-                          "/", subpool);
+          SVN_ERR (detect_changed (changed_paths, newroot, subpool));
         }
 
       SVN_ERR ((*receiver) (receiver_baton,

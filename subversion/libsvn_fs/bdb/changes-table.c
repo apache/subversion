@@ -113,41 +113,52 @@ svn_fs__changes_delete (svn_fs_t *fs,
 }
 
 
-static svn_fs__change_t *
-dup_change (svn_fs__change_t *change, 
-            apr_pool_t *pool)
+/* Return a deep copy of CHANGE alloced in POOL. */
+static svn_fs_path_change_t *
+make_change (svn_fs__change_t *change, 
+             apr_pool_t *pool)
 {
-  svn_fs__change_t *new_change = apr_pmemdup (pool, change, sizeof (*change));
-  new_change->path = apr_pstrdup (pool, change->path);
-  new_change->noderev_id = svn_fs__id_copy (change->noderev_id, pool);
-  return new_change;
+  svn_fs_path_change_t *new_one = apr_palloc (pool, sizeof (*new_one));
+  new_one->node_rev_id = svn_fs__id_copy (change->noderev_id, pool);
+  new_one->change_kind = change->kind;
+  new_one->text_mod = change->text_mod;
+  new_one->prop_mod = change->prop_mod;
+  return new_one;
 }
 
 
+/* Merge the internal-use-only CHANGE into a hash of public-FS
+   svn_fs_path_change_t CHANGES, collapsing multiple changes into a
+   single summarical (is that real word?) change per path. */
 static svn_error_t *
 merge_change (apr_hash_t *changes,
               svn_fs__change_t *change)
 {
   apr_pool_t *pool = apr_hash_pool_get (changes);
-  svn_fs__change_t *old_change, *new_change;
+  svn_fs_path_change_t *old_change, *new_change;
+  const char *path;
 
   if ((old_change = apr_hash_get (changes, change->path, APR_HASH_KEY_STRING)))
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
+      
+      /* Since the path already exists in the hash, we don't have to
+         dup the allocation for the path itself. */
+      path = change->path;
 
       /* Sanity check:  we should be talking about the same node
          revision ID as our last change except where the last change
          was a deletion. */
-      if ((! svn_fs__id_eq (old_change->noderev_id, change->noderev_id))
-          && (old_change->kind != svn_fs_path_change_delete))
+      if ((! svn_fs__id_eq (old_change->node_rev_id, change->noderev_id))
+          && (old_change->change_kind != svn_fs_path_change_delete))
         return svn_error_create 
           (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
            "Invalid change ordering: new node revision ID without delete");
 
       /* Sanity check:  an add or replacement must be the first thing
          to follow a deletion. */
-      if ((old_change->kind == svn_fs_path_change_delete)
+      if ((old_change->change_kind == svn_fs_path_change_delete)
           && (! ((change->kind == svn_fs_path_change_add) 
                  || (change->kind == svn_fs_path_change_replace))))
         return svn_error_create 
@@ -159,15 +170,15 @@ merge_change (apr_hash_t *changes,
         {
         case svn_fs_path_change_delete:
           /* A deletion overrules all previous changes. */
-          old_change->kind = svn_fs_path_change_delete;
+          old_change->change_kind = svn_fs_path_change_delete;
           old_change->text_mod = change->text_mod;
           old_change->prop_mod = change->prop_mod;
           break;
 
         case svn_fs_path_change_add:
         case svn_fs_path_change_replace:
-          old_change->kind = svn_fs_path_change_replace;
-          old_change->noderev_id = svn_fs__id_copy (change->noderev_id, pool);
+          old_change->change_kind = svn_fs_path_change_replace;
+          old_change->node_rev_id = svn_fs__id_copy (change->noderev_id, pool);
           old_change->text_mod = change->text_mod;
           old_change->prop_mod = change->prop_mod;
           break;
@@ -186,14 +197,17 @@ merge_change (apr_hash_t *changes,
     }
   else
     {
-      /* This change is new to the hash, so dup it into the hash's
-         pool before adding it to the hash. */
-      new_change = dup_change (change, pool);
+      /* This change is new to the hash, so make a new public change
+         structure from the internal one (in the hash's pool), and dup
+         the path into the hash's pool, too. */
+      new_change = make_change (change, pool);
+      path = apr_pstrdup (pool, change->path);
     }
 
-  /* Add (or update) this path (we use NEW_CHANGE->path, because it is
-     guaranteed to be alloced in the hash pool) in the hash. */
-  apr_hash_set (changes, new_change->path, APR_HASH_KEY_STRING, new_change);
+  /* Add (or update) this path, removing any leading slash that might exist. */
+  if (*path == '/')
+    path++;
+  apr_hash_set (changes, path, APR_HASH_KEY_STRING, new_change);
 
   return SVN_NO_ERROR;
 }

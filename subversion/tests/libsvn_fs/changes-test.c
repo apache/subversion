@@ -330,92 +330,142 @@ get_ideal_changes (const char *txn_id,
                    apr_pool_t *pool)
 {
   apr_hash_t *ideal = apr_hash_make (pool);
-  svn_fs__change_t *change;
+  svn_fs_path_change_t *change;
   if (strcmp (txn_id, "0") == 0)
     {
       change = apr_palloc (pool, sizeof (*change));
-      change->path = "foo";
-      change->noderev_id = svn_fs_parse_id ("1.0.0", 5, pool);
-      change->kind = svn_fs_path_change_add;
+      change->node_rev_id = svn_fs_parse_id ("1.0.0", 5, pool);
+      change->change_kind = svn_fs_path_change_add;
       change->text_mod = 0;
       change->prop_mod = 1;
-      apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "foo", APR_HASH_KEY_STRING, change);
 
       change = apr_palloc (pool, sizeof (*change));
-      change->path = "bar";
-      change->noderev_id = svn_fs_parse_id ("2.0.0", 5, pool);
-      change->kind = svn_fs_path_change_add;
+      change->node_rev_id = svn_fs_parse_id ("2.0.0", 5, pool);
+      change->change_kind = svn_fs_path_change_add;
       change->text_mod = 1;
       change->prop_mod = 1;
-      apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "bar", APR_HASH_KEY_STRING, change);
 
       change = apr_palloc (pool, sizeof (*change));
-      change->path = "baz";
-      change->noderev_id = svn_fs_parse_id ("3.0.0", 5, pool);
-      change->kind = svn_fs_path_change_add;
+      change->node_rev_id = svn_fs_parse_id ("3.0.0", 5, pool);
+      change->change_kind = svn_fs_path_change_add;
       change->text_mod = 1;
       change->prop_mod = 0;
-      apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "baz", APR_HASH_KEY_STRING, change);
     }
   if (strcmp (txn_id, "1") == 0)
     {
       change = apr_palloc (pool, sizeof (*change));
-      change->path = "foo";
-      change->noderev_id = svn_fs_parse_id ("1.0.1", 5, pool);
-      change->kind = svn_fs_path_change_modify;
+      change->node_rev_id = svn_fs_parse_id ("1.0.1", 5, pool);
+      change->change_kind = svn_fs_path_change_modify;
       change->text_mod = 1;
       change->prop_mod = 0;
-      apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "foo", APR_HASH_KEY_STRING, change);
     }
   if (strcmp (txn_id, "2") == 0)
     {
       change = apr_palloc (pool, sizeof (*change));
-      change->path = "foo";
-      change->noderev_id = svn_fs_parse_id ("1.0.2", 5, pool);
-      change->kind = svn_fs_path_change_modify;
+      change->node_rev_id = svn_fs_parse_id ("1.0.2", 5, pool);
+      change->change_kind = svn_fs_path_change_modify;
       change->text_mod = 0;
       change->prop_mod = 1;
-      apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "foo", APR_HASH_KEY_STRING, change);
 
       change = apr_palloc (pool, sizeof (*change));
-      change->path = "bar";
-      change->noderev_id = svn_fs_parse_id ("2.0.2", 5, pool);
-      change->kind = svn_fs_path_change_modify;
+      change->node_rev_id = svn_fs_parse_id ("2.0.2", 5, pool);
+      change->change_kind = svn_fs_path_change_modify;
       change->text_mod = 1;
       change->prop_mod = 0;
-      apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "bar", APR_HASH_KEY_STRING, change);
     }
   if (strcmp (txn_id, "3") == 0)
     {
       change = apr_palloc (pool, sizeof (*change));
-      change->path = "baz";
-      change->noderev_id = svn_fs_parse_id ("3.0.3", 5, pool);
-      change->kind = svn_fs_path_change_modify;
+      change->node_rev_id = svn_fs_parse_id ("3.0.3", 5, pool);
+      change->change_kind = svn_fs_path_change_modify;
       change->text_mod = 1;
       change->prop_mod = 0;
-      apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "baz", APR_HASH_KEY_STRING, change);
     }
   if (strcmp (txn_id, "4") == 0)
     {
       change = apr_palloc (pool, sizeof (*change));
-      change->path = "fob";
-      change->noderev_id = svn_fs_parse_id ("4.0.4", 5, pool);
-      change->kind = svn_fs_path_change_add;
+      change->node_rev_id = svn_fs_parse_id ("4.0.4", 5, pool);
+      change->change_kind = svn_fs_path_change_add;
       change->text_mod = 1;
       change->prop_mod = 0;
-      apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "fob", APR_HASH_KEY_STRING, change);
     }
   if (strcmp (txn_id, "5") == 0)
     {
       change = apr_palloc (pool, sizeof (*change));
-      change->path = "baz";
-      change->noderev_id = svn_fs_parse_id ("5.0.5", 5, pool);
-      change->kind = svn_fs_path_change_replace;
+      change->node_rev_id = svn_fs_parse_id ("5.0.5", 5, pool);
+      change->change_kind = svn_fs_path_change_replace;
       change->text_mod = 1;
       change->prop_mod = 1;
-      apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "baz", APR_HASH_KEY_STRING, change);
     }
   return ideal;
+}
+
+
+static svn_error_t *
+compare_changes (apr_hash_t *ideals,
+                 apr_hash_t *changes,
+                 const char *txn_id,
+                 apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  
+  for (hi = apr_hash_first (pool, ideals); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      svn_fs_path_change_t *ideal_change, *change;
+      const char *path;
+
+      /* KEY will be the path, VAL the change. */
+      apr_hash_this (hi, &key, NULL, &val);
+      path = (const char *) key;
+      ideal_change = val;
+
+      /* Now get the change that refers to PATH in the actual
+         changes hash. */
+      change = apr_hash_get (changes, path, APR_HASH_KEY_STRING);
+      if (! change)
+        return svn_error_createf 
+          (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+           "missing expected change for path `%s' in txn_id `%s'", 
+           path, txn_id);
+            
+      /* Verify that the NODE-REV-ID matches. */
+      if (svn_fs_compare_ids (change->node_rev_id, 
+                              ideal_change->node_rev_id))
+        return svn_error_createf 
+          (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+           "node revision ids differ in change for key `%s'", txn_id);
+
+      /* Verify that the change KIND matches. */
+      if (change->change_kind != ideal_change->change_kind)
+        return svn_error_createf 
+          (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+           "change kinds differ in change for key `%s'", txn_id);
+
+      /* Verify that the change TEXT-MOD bit matches. */
+      if (change->text_mod != ideal_change->text_mod)
+        return svn_error_createf 
+          (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+           "change text-mod bits differ in change for key `%s'", txn_id);
+
+      /* Verify that the change PROP-MOD bit matches. */
+      if (change->prop_mod != ideal_change->prop_mod)
+        return svn_error_createf 
+          (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+           "change prop-mod bits differ in change for key `%s'", txn_id);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -440,8 +490,7 @@ changes_fetch (const char **msg,
      without error. */
   args.fs = fs;
   args.key = "blahbliggityblah";
-  SVN_ERR (svn_fs__retry_txn (args.fs, txn_body_changes_fetch,
-                              &args, pool));
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_changes_fetch, &args, pool));
   if ((! args.changes) || (apr_hash_count (args.changes)))
     return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL, pool,
                              "expected empty changes hash");
@@ -456,7 +505,6 @@ changes_fetch (const char **msg,
     {
       const char *txn_id = standard_txns[i];
       apr_hash_t *ideals;
-      apr_hash_index_t *hi;
 
       /* Get the ideal changes hash. */
       ideals = get_ideal_changes (txn_id, pool);
@@ -465,71 +513,18 @@ changes_fetch (const char **msg,
       args.fs = fs;
       args.key = txn_id;
 
-      /* And get those changes. */
-      SVN_ERR (svn_fs__retry_txn (args.fs, txn_body_changes_fetch,
-                                  &args, pool));
+      /* And get those changes via in the internal interface, and
+         verify that they are accurate. */
+      SVN_ERR (svn_fs__retry_txn (fs, txn_body_changes_fetch, &args, pool));
       if (! args.changes)
         return svn_error_createf 
           (SVN_ERR_TEST_FAILED, 0, NULL, pool,
            "got no changes for key `%s'", txn_id);
-
       if (apr_hash_count (ideals) != apr_hash_count (args.changes))
         return svn_error_createf 
           (SVN_ERR_TEST_FAILED, 0, NULL, pool,
            "unexpected number of changes for key `%s'", txn_id);
-        
-      for (hi = apr_hash_first (pool, ideals); hi; hi = apr_hash_next (hi))
-        {
-          const void *key;
-          void *val;
-          svn_fs__change_t *ideal_change, *change;
-          const char *path;
-
-          /* KEY will be the path, VAL the change. */
-          apr_hash_this (hi, &key, NULL, &val);
-          path = (const char *) key;
-          ideal_change = val;
-
-          /* Now get the change that refers to PATH in the actual
-             changes hash. */
-          change = apr_hash_get (args.changes, path, APR_HASH_KEY_STRING);
-          if (! change)
-            return svn_error_createf 
-              (SVN_ERR_TEST_FAILED, 0, NULL, pool,
-               "missing expected change for path `%s' in txn_id `%s'", 
-               path, txn_id);
-            
-          /* Verify that the PATH matches. */
-          if (strcmp (change->path, ideal_change->path))
-            return svn_error_createf 
-              (SVN_ERR_TEST_FAILED, 0, NULL, pool,
-               "paths differ in change for key `%s'", txn_id);
-
-          /* Verify that the NODE-REV-ID matches. */
-          if (svn_fs_compare_ids (change->noderev_id, 
-                                  ideal_change->noderev_id))
-            return svn_error_createf 
-              (SVN_ERR_TEST_FAILED, 0, NULL, pool,
-               "node revision ids differ in change for key `%s'", txn_id);
-
-          /* Verify that the change KIND matches. */
-          if (change->kind != ideal_change->kind)
-            return svn_error_createf 
-              (SVN_ERR_TEST_FAILED, 0, NULL, pool,
-               "change kinds differ in change for key `%s'", txn_id);
-
-          /* Verify that the change TEXT-MOD bit matches. */
-          if (change->text_mod != ideal_change->text_mod)
-            return svn_error_createf 
-              (SVN_ERR_TEST_FAILED, 0, NULL, pool,
-               "change text-mod bits differ in change for key `%s'", txn_id);
-
-          /* Verify that the change PROP-MOD bit matches. */
-          if (change->prop_mod != ideal_change->prop_mod)
-            return svn_error_createf 
-              (SVN_ERR_TEST_FAILED, 0, NULL, pool,
-               "change prop-mod bits differ in change for key `%s'", txn_id);
-        }
+      SVN_ERR (compare_changes (ideals, args.changes, txn_id, pool));
     }
 
   /* Close the filesystem. */

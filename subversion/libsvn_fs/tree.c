@@ -3347,6 +3347,47 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
 }
 
 
+struct paths_changed_args
+{
+  apr_hash_t *changes;
+  svn_fs_root_t *root;
+};
+
+
+static svn_error_t *
+txn_body_paths_changed (void *baton,
+                        trail_t *trail)
+{
+  struct paths_changed_args *args = baton;
+  const char *txn_id;
+  svn_fs_t *fs = svn_fs_root_fs (args->root);
+
+  /* Get the transaction ID from ROOT. */
+  if (svn_fs_is_revision_root (args->root))
+    SVN_ERR (svn_fs__rev_get_txn_id 
+             (&txn_id, fs, svn_fs_revision_root_revision (args->root), trail));
+  else
+    txn_id = svn_fs_txn_root_name (args->root, trail->pool);
+
+  return svn_fs__changes_fetch (&(args->changes), fs, txn_id, trail);
+}
+
+
+svn_error_t *
+svn_fs_paths_changed (apr_hash_t **changed_paths_p,
+                      svn_fs_root_t *root,
+                      apr_pool_t *pool)
+{
+  struct paths_changed_args args;
+  args.root = root;
+  args.changes = NULL;
+  SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root), txn_body_paths_changed,
+                              &args, pool));
+  *changed_paths_p = args.changes;
+  return SVN_NO_ERROR;
+}
+
+
 
 /* Creating transaction and revision root nodes.  */
 
