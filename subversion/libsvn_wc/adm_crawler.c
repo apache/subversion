@@ -107,8 +107,7 @@ push_stack (struct stack_object **stack,
             svn_wc__entry_t *entry,
             apr_pool_t *pool)
 {
-  struct stack_object *new_top =
-    apr_pcalloc (pool, sizeof(struct stack_object));
+  struct stack_object *new_top = apr_pcalloc (pool, sizeof (*new_top));
 
   /* Store path and baton in a new stack object */
   new_top->path = svn_string_dup (path, pool);
