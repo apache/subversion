@@ -280,13 +280,16 @@ where:
 - ID is the node version ID of this version's root directory, and
 - PROPLIST is the version's property list.
 
-The database contains a table called "versions", which is a btree
-mapping version numbers (as ASCII decimal numbers) onto VERSION skels.
-Version zero always has node version 0.0 as its root directory; that
-node version is guaranteed to be an empty directory.
+The database contains a table called "versions", which is a
+record-number table mapping version numbers onto VERSION skels.  Since
+Berkeley DB record numbers start with 1, whereas Subversion version
+numbers start at zero, version V is stored as record number V-1 in the
+`versions' table.  Version zero always has node version 0.0 as its
+root directory; that node version is guaranteed to be an empty
+directory.
 
 
-Transactions
+Transactions: merge rules
 
 The Subversion filesystem must provide the following characteristics:
 
@@ -368,6 +371,49 @@ ANCESTOR:
       - (1) E exists in both ANCESTOR and B, and refers to the same
         node version.  Nothing has happened to ANCESTOR/E, so no change
         is necessary.
+
+*** == something actually happens
+
+
+TRANSACTION: How we represent transactions in the database
+
+Building a transaction creates ordinary node versions in the
+filesystem: either new versions of existing nodes, or new versions on
+branches, or new nodes altogether.  The transaction's tree has its own
+version of the root directory; this is the root of a tree of the
+changed nodes, with pointers into the existing, committed tree for
+unchanged files and directory trees.  If the transaction succeeds, the
+transaction's root directory becomes the root of the new version.
+
+Nodes which are part of an uncommitted transaction may only be pointed
+to by other nodes in the same transaction; there are no pointers into
+a transaction's tree from without.  This assures that:
+- the transaction's tree, and thus the changes it contains, are
+  completely invisible to everyone outside that transaction, and
+- if the transaction fails, all its nodes can be deleted from the
+  `nodes' table, without creating any dangling references.
+
+For each active transaction, we store a transaction header skel of the form:
+
+   ("transaction" ROOT)
+
+where ROOT is the node version ID of the transaction's root directory.
+If you start traversing directories from that node version, you see
+the tree as modified by that transaction.
+
+The database contains a table called "transactions", which is a hash
+table indexed by transaction ID, mapping each one onto a transaction
+header, and a list of all the nodes that are part of that transaction.
+The header and the nodes are stored as duplicate entries under the
+same key: the first value stored is the transaction header skel, and
+each subsequent value is an atom skel whose contents are the node
+version ID of some node in the transaction.
+
+If the transaction succeeds, the transaction's root directory becomes
+the new version's root directory, after any necessary merging.  If the
+transaction fails, we delete all of its nodes from the filesystem.  In
+either case, once the transaction is finished, we delete all trace of
+it from the "transactions" table.
 
 
 Non-Historical Properties
