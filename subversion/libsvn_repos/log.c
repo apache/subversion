@@ -118,7 +118,7 @@ detect_changed (apr_hash_t **changed,
 
 
 /* Implements svn_repos_history_func_t interface.  Accumulate history
-   revisions the apr_array_header_t * which is the BATON. */
+   revisions in the apr_array_header_t * which is the BATON. */
 static svn_error_t *
 history_to_revs_array (void *baton,
                        const char *path,
