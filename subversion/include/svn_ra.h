@@ -714,6 +714,9 @@ svn_error_t * svn_ra_dav_init (int abi_version,
 svn_error_t * svn_ra_local_init (int abi_version,
                                  apr_pool_t *pool,
                                  apr_hash_t *hash);
+svn_error_t * svn_ra_svn_init (int abi_version,
+                               apr_pool_t *pool,
+                               apr_hash_t *hash);
 
 
 /*----------------------------------------------------------------------*/

@@ -1,0 +1,69 @@
+Connection establishment
+------------------------
+
+Right now only anonymous authentication is supported, which is
+minimally useful.  Desirable extensions:
+
+  * Support the EXTERNAL mechanism, and allow connections to be
+    established by tunneling over ssh or equivalent.  (This requires
+    choosing a URL syntax to indicate the use of an external agent.
+    The external agent could be specified in the URL, although that
+    might get ugly, or it could be specified by an environment
+    variable.)
+
+  * Implement the CRAM-MD5 mechanism, if it doesn't look like too much
+    code.  This is a username/password mechanism, but instead of
+    transmitting the password over the network where anyone could
+    sniff it, it uses challenges to establish that the client knows
+    the password.  By having a built-in CRAM-MD5 mechanism, we can
+    disallow the PLAIN mechanism and ensure that passwords are never
+    sent over the net in the clear using the svn protocol.  (SRP would
+    be even cooler, since it establishes a security layer; but SRP
+    looks like it would require an awful lot of code.)
+
+    It would be nice if the built-in CRAM-MD5 mechanism could be
+    file-format compatible with the Cyrus SASL library's CRAM-MD5
+    mechanism.  This would mean reading passwords from /etc/sasldb in the
+    Cyrus format.  Unfortunately, /etc/sasldb is not a plain text file
+    format; it can be in Berkeley DB (of any vintage), gdbm, or ndbm
+    format.  So that's probably hopeless.
+
+  * Allow optional linking with the Cyrus SASL library to support more
+    advanced mechanisms like SRP, GSSAPI, and STARTTLS.  Modify
+    marshal.c to support security layers provided by these mechanisms.
+
+  * In the absence of ACLs, it should be possible to at least
+    configure the server so that the anonymous user has read but not write
+    access to the repository.
+
+Another limitation is that the server cannot flexibly map client URLs
+to repositories; it can only prefix the path part of the client URL
+with a repository area.
+
+Errors
+------
+
+There are some cases where errors aren't reported properly.
+Operations like get-file and get-log don't have an opportunity to send
+some errors to the client because they send their responses as a
+stream of data items after the normal command response.  Commands
+which receive a report and then drive an editor also don't have an
+opportunity to report errors to the client.
+
+Fixing these problems requires some protocol changes.
+
+Testing
+-------
+
+The following operations remain to be tested:
+
+ * check_path
+
+Keep client URL from escaping from root (either with ../ or being absolute)
+
+Port number
+-----------
+
+ghudson is awaiting a port assignment from IANA.  In the meantime the
+code uses a temporary port in the private range.
+
