@@ -7,30 +7,25 @@ by the votes.  For example:
    * r98765 (issue #56789)
      Use an opaque type for svn_ra_get_ansible(), instead of void *.
      Justification: API stability
-     See mailing list thread http://...
      Notes:
-      jerenkrantz: This will break 1.0 compatibility.
+      See http://... regarding veto.
      Votes:
        +1: ghudson, bliss
-       +0: jimb, kfogel
-       -0: brane
        -1: jerenkrantz
 
 A change needs three +1 votes from full committers (or partial committers
 with access to the involved paths), and no vetoes, to go into the release.
 
-Voting for a change doesn't just mean you approve of it in principle.
+If you cast a veto (i.e. -1), then please include a link to a mailing
+list thread explaining your veto.  You can go back and add the link
+later if the thread isn't available at the time you commit the veto.
+
+Voting +1 on a change doesn't just mean you approve of it in principle.  
 It means you have thoroughly reviewed the change, and find it correct
 and as nondisruptive as possible.  When it is committed to the release
 branch, the log message will include the names of all who voted for
 it, as well as the original author and the person making the commit.
 All of these people are considered equally answerable for bugs.
-
-If you do cast a veto (i.e. -1), then please include your justification
-for the veto in the Notes section.  An additional condition is the +1
-'concept' vote, it means that you believe it to be 'right' conceptually
-but have not confirmed it - this person may be a starting point if more
-full +1 votes are needed for merging.
 
 Thursday, Jan. 8th, 2004 is the deadline for candidate changes to be
 voted on.  The sooner a change is listed, the more time people have to
@@ -43,10 +38,6 @@ already know about.)
    * r8016, r8019, r8028
      Copyright notice fixes.
      Justification: Why have copyright notices at all unless legally proper?
-                    And, 1.0 *will* be out in 2004!
-     Notes:
-      rooneg: This is worth it just so diffing between the branch and the 
-              trunk doesn't show differences for every damn file ;-)
      Votes:
       +1 (concept): jerenkrantz
       +1: rooneg
@@ -55,16 +46,6 @@ already know about.)
    * r8053, r8054
      Constructor for svn_client_ctx_t
      Justification: Constructor helps with backward compatibility.
-     Notes:
-      jerenkrantz: For 1.0, we'll state that svn_client_ctx_t can only add
-                   members, correct?  So, I'm not sure that adding the
-                   constructor buys us a lot - it's not opaque.  *shrug*
-      rooneg: Yeah, it doesn't force people to 'do the right thing', but it 
-              makes it possible for them to do so, and since 'the right thing' 
-              is clearly documented I think that's enough.  Plus, to make it 
-              100% bulletproof we'd need accessor functions and an opaque 
-              structure, and people didn't like that when I originally did it 
-              that way.
      Votes:
       +0: jerenkrantz
       +1: rooneg
@@ -74,9 +55,8 @@ already know about.)
      Anchor/target split may use NULL for target.
      Justification: API consistency
      Notes: Greg Hudson has said he has no intention of merging this
-            into trunk unless it goes into 1.0 too, as doesn't want
-            trunk to start out its new life with an API divergence.
-            (http://www.contactor.se/~dast/svn/archive-2003-12/0736.shtml)
+            into trunk unless it goes into 1.0 too, see
+            http://www.contactor.se/~dast/svn/archive-2003-12/0736.shtml.
      Votes:
       +0: jerenkrantz
 
@@ -92,9 +72,6 @@ already know about.)
    * Issue #1644
      apr_ and APR_ namespace symbols in Subversion
      Justification: API stability, non-interference w/ APR's namespace
-     Notes: There is a patch from Julian Foad in the issue, but I
-            think there may be more recent patches on dev@.  Voting
-            is on a specific patch, so we need the latest patch...
      Votes:
       +1: jerenkrantz (per what was in IZ)
 
@@ -116,18 +93,13 @@ already know about.)
    * r8052, r8062  (issue #1660)
      Make svn_config__parse_file do charset conversion.
      Justification: Correctness, and went into 0.35.1.
-     Notes:
-      jerenkrantz: apr_conv_utf8_to_ucs2 *will* add the null term if you pass
-                   in inbytes + 1
      Votes:
        +1 brane, jerenkrantz
 
 
    * r8021
      'svn revert' performance improvement (timestamp sleep once, not N times)
-     Justification: it's small & safe, and it's an API change.
-     Notes:
-      jerenkrantz: Also changes error returns to the correct priority.
+     Justification: trivial; API change; makes error returns correct priority
      Votes:
       +1: jerenkrantz, rooneg
 
