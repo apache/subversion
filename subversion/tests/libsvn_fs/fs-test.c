@@ -625,7 +625,6 @@ static svn_error_t *
 revision_props (const char **msg)
 {
   svn_fs_t *fs;
-  svn_fs_txn_t *txn;
   apr_hash_t *proplist;
   svn_string_t *value;
   int i;
@@ -644,12 +643,10 @@ revision_props (const char **msg)
     { "auto", "Red 2000 Chevrolet Blazer" }
     };
 
-
   *msg = "set and get some revision properties";
 
-  /* Open the fs and transaction */
+  /* Open the fs */
   SVN_ERR (create_fs_and_repos (&fs, "test-repo-rev-props"));
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
 
   /* Set some properties on the revision. */
   for (i = 0; i < 4; i++)
@@ -729,12 +726,132 @@ revision_props (const char **msg)
       }
   }
   
+  /* Close the fs. */
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+node_props (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  apr_hash_t *proplist;
+  svn_string_t *value;
+  int i;
+
+  const char *initial_props[4][2] = { 
+    { "Best Rock Artist", "Creed" },
+    { "Best Rap Artist", "Eminem" },
+    { "Best Country Artist", "(null)" },
+    { "Best Sound Designer", "Pluessman" }
+    };
+
+  const char *final_props[4][2] = { 
+    { "Best Rock Artist", "P.O.D." },
+    { "Best Rap Artist", "Busta Rhymes" },
+    { "Best Sound Designer", "Pluessman" },
+    { "Biggest Cakewalk Fanatic", "Pluessman" }
+    };
+
+  *msg = "set and get some node properties";
+
+  /* Open the fs and transaction */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-node-props"));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+
+  /* Make a node to put some properties into */
+  SVN_ERR (svn_fs_make_file (txn_root, "music.txt", pool));
+
+  /* Set some properties on the nodes. */
+  for (i = 0; i < 4; i++)
+    {
+      SVN_ERR (svn_fs_change_node_prop 
+               (txn_root, "music.txt", 
+                svn_string_create (initial_props[i][0], pool),
+                svn_string_create (initial_props[i][1], pool), 
+                pool));
+    }
+
+  /* Change some of the above properties. */
+  SVN_ERR (svn_fs_change_node_prop 
+           (txn_root, "music.txt", 
+            svn_string_create ("Best Rock Artist", pool),
+            svn_string_create ("P.O.D.", pool), 
+            pool));
+  SVN_ERR (svn_fs_change_node_prop 
+           (txn_root, "music.txt", 
+            svn_string_create ("Best Rap Artist", pool),
+            svn_string_create ("Busta Rhymes", pool), 
+            pool));
+
+  /* Remove a property altogether */
+  SVN_ERR (svn_fs_change_node_prop 
+           (txn_root, "music.txt", 
+            svn_string_create ("Best Country Artist", pool),
+            NULL,
+            pool));
+
+  /* Copy a property's value into a new property. */
+  SVN_ERR (svn_fs_node_prop 
+           (&value, 
+            txn_root, "music.txt", 
+            svn_string_create ("Best Sound Designer", pool),
+            pool));
+  SVN_ERR (svn_fs_change_node_prop 
+           (txn_root, "music.txt",
+            svn_string_create ("Biggest Cakewalk Fanatic", pool),
+            value,
+            pool));
+
+  /* Obtain a list of all current properties, and make sure it matches
+     the expected values. */
+  SVN_ERR (svn_fs_node_proplist (&proplist, txn_root, "music.txt", pool));
+  {
+    svn_string_t *prop_value;
+
+    if (apr_hash_count (proplist) != 4 )
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "unexpected number of node properties were found");
+
+    /* Loop through our list of expected node property name/value
+       pairs. */
+    for (i = 0; i < 4; i++)
+      {
+        /* For each expected property: */
+
+        /* Step 1.  Find it by name in the hash of all node props
+           returned to us by svn_fs_node_proplist.  If it can't be
+           found, return an error. */
+        prop_value = apr_hash_get (proplist, 
+                                   final_props[i][0],
+                                   strlen (final_props[i][0]));
+        if (! prop_value)
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+             "unable to find expected node property");
+
+        /* Step 2.  Make sure the value associated with it is the same
+           as what was expected, else return an error. */
+        if (strcmp (prop_value->data, final_props[i][1]))
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+             "node property had an unexpected value");
+      }
+  }
+  
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
   SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
+
 
 
 /* Set *PRESENT to true if entry NAME is present in directory PATH
@@ -1433,6 +1550,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   create_greek_tree_transaction,
   list_directory,
   revision_props,
+  node_props,
   delete_mutables,
   abort_txn,
   /* fetch_youngest_rev, */
