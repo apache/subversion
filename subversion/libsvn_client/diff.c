@@ -990,6 +990,44 @@ do_merge (const char *URL1,
 }
 
 
+/* Get REVISION of the file at URL.  Return in *FILENAME the name of a file
+   containing the file contents, in *PROPS a hash containing the properties
+   and in *REV the revision.  All allocation occurs in POOL. */
+static svn_error_t *
+single_file_merge_get_file (const char **filename,
+                            apr_hash_t **props,
+                            svn_revnum_t *rev,
+                            const char *url,
+                            const svn_opt_revision_t *revision,
+                            void *ra_baton,
+                            const char *auth_dir,
+                            struct merge_cmd_baton *merge_b,
+                            apr_pool_t *pool)
+{
+  svn_ra_plugin_t *ra_lib;
+  void *session;
+  apr_file_t *fp;
+  apr_status_t status;
+
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, auth_dir,
+                                        NULL, NULL, FALSE, TRUE, 
+                                        merge_b->ctx, pool));
+  SVN_ERR (svn_client__get_revision_number (rev, ra_lib, session, revision,
+                                            NULL, pool));
+  SVN_ERR (svn_io_open_unique_file (&fp, filename, 
+                                    merge_b->target, ".tmp",
+                                    FALSE, pool));
+  SVN_ERR (ra_lib->get_file (session, "", *rev,
+                             svn_stream_from_aprfile (fp, pool),
+                             NULL, props, pool));
+  status = apr_file_close (fp);
+  if (status)
+    return svn_error_createf (status, NULL, "failed to close '%s'", *filename);
+
+  return SVN_NO_ERROR;
+}
+                            
 
 /* The single-file, simplified version of do_merge. */
 static svn_error_t *
@@ -999,70 +1037,31 @@ do_single_file_merge (const char *URL1,
                       struct merge_cmd_baton *merge_b,
                       apr_pool_t *pool)
 {
-  apr_status_t status;
-  apr_file_t *fp1 = NULL, *fp2 = NULL;
-  const char *tmpfile1, *tmpfile2;
-  svn_stream_t *fstream1, *fstream2;
-  svn_revnum_t rev1, rev2;
   apr_hash_t *props1, *props2;
+  const char *tmpfile1, *tmpfile2;
+  svn_revnum_t rev1, rev2;
   const char *mimetype1, *mimetype2;
   svn_string_t *pval;
   apr_array_header_t *propchanges;
-  void *ra_baton, *session1, *session2;
-  svn_ra_plugin_t *ra_lib;
+  void *ra_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   const char *auth_dir;
 
-  props1 = apr_hash_make (pool);
-  props2 = apr_hash_make (pool);
-  
   SVN_ERR (svn_client__default_auth_dir (&auth_dir, merge_b->target, pool));
 
-  /* Create two temporary files that contain the fulltexts of
-     PATH1@REV1 and PATH2@REV2. */
-  SVN_ERR (svn_io_open_unique_file (&fp1, &tmpfile1, 
-                                    merge_b->target, ".tmp",
-                                    FALSE, pool));
-  SVN_ERR (svn_io_open_unique_file (&fp2, &tmpfile2, 
-                                    merge_b->target, ".tmp",
-                                    FALSE, pool));
-  fstream1 = svn_stream_from_aprfile (fp1, pool);
-  fstream2 = svn_stream_from_aprfile (fp2, pool);
-  
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1, pool));
-
-  SVN_ERR (svn_client__open_ra_session (&session1, ra_lib, URL1, auth_dir,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        merge_b->ctx, pool));
-  SVN_ERR (svn_client__get_revision_number
-           (&rev1, ra_lib, session1, revision1, NULL, pool));
-  SVN_ERR (ra_lib->get_file (session1, "", rev1, fstream1, 
-                             NULL, &props1, pool));
 
   /* ### heh, funny.  we could be fetching two fulltexts from two
      *totally* different repositories here.  :-) */
+  SVN_ERR (single_file_merge_get_file (&tmpfile1, &props1, &rev1,
+                                       URL1, revision1,
+                                       ra_baton, auth_dir, merge_b, pool));
 
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, merge_b->url, pool));
-  SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, merge_b->url,
-                                        auth_dir, NULL, NULL, FALSE,
-                                        TRUE, merge_b->ctx, pool));
-  SVN_ERR (svn_client__get_revision_number
-           (&rev2, ra_lib, session2, merge_b->revision, NULL, pool));
-  SVN_ERR (ra_lib->get_file (session2, "", rev2, fstream2, NULL,
-                             &props2, pool));
+  SVN_ERR (single_file_merge_get_file (&tmpfile2, &props2, &rev2,
+                                       merge_b->url, merge_b->revision,
+                                       ra_baton, auth_dir, merge_b, pool));
 
-  status = apr_file_close (fp1);
-  if (status)
-    return svn_error_createf (status, NULL, "failed to close '%s'.",
-                              tmpfile1);
-  status = apr_file_close (fp2);
-  if (status)
-    return svn_error_createf (status, NULL, "failed to close '%s'.",
-                              tmpfile2);   
-  
   /* Discover any svn:mime-type values in the proplists */
   pval = apr_hash_get (props1, SVN_PROP_MIME_TYPE, strlen(SVN_PROP_MIME_TYPE));
   mimetype1 = pval ? pval->data : NULL;
