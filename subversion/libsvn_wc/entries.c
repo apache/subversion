@@ -612,8 +612,10 @@ do_entry (svn_string_t *path,
     }
   else
     {
-      *version_receiver = baton->version;
-      *kind_receiver = baton->kind;
+      if (version_receiver)
+        *version_receiver = baton->version;
+      if (kind_receiver)
+        *kind_receiver = baton->kind;
     }
 
   return SVN_NO_ERROR;
