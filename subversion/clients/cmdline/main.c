@@ -75,6 +75,8 @@ const apr_getopt_option_t svn_cl__options[] =
                       "pass contents of file \"ARG\" as additional args"},
     {"xml",           svn_cl__xml_opt, 0, "output in xml"},
     {"strict",        svn_cl__strict_opt, 0, "use strict semantics"},
+    {"no-ignore",     svn_cl__no_ignore_opt, 0,
+                      "disregard default and svn:ignore property ignores"},
     {0,               0, 0}
   };
 
@@ -378,7 +380,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    _      *             965       970    sussman      ./build.conf\n"
     "    M                    965       687        joe      ./buildcheck.sh\n",
     { 'u', 'v', 'N', 'q',
-      svn_cl__auth_username_opt, svn_cl__auth_password_opt } },
+      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+      svn_cl__no_ignore_opt } },
   
   { "switch", svn_cl__switch, {"sw"},
     "Update working copy to mirror a new URL\n"
@@ -1090,6 +1093,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__strict_opt:
         opt_state.strict = TRUE;
+        break;
+      case svn_cl__no_ignore_opt:
+        opt_state.no_ignore = TRUE;
         break;
       case 'x':
         err = svn_utf_cstring_to_utf8 (&opt_state.extensions, opt_arg,

@@ -146,6 +146,7 @@ svn_client_status (apr_hash_t **statushash,
                    svn_boolean_t descend,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
+                   svn_boolean_t no_ignore,
                    apr_pool_t *pool)
 {
   apr_hash_t *hash = apr_hash_make (pool);
@@ -164,10 +165,11 @@ svn_client_status (apr_hash_t **statushash,
      These structures contain nothing but information found in the
      working copy.
 
-     Pass the GET_ALL and DESCEND flags;  this working copy function
-     understands these flags too, and will return the correct set of
-     structures.  */
-  SVN_ERR (svn_wc_statuses (hash, path, descend, get_all, strict, pool));
+     Pass the GET_ALL, DESCEND and NO_IGNORE flags;  this working copy
+     function understands these flags too, and will return the correct
+     set of structures.  */
+  SVN_ERR (svn_wc_statuses (hash, path, descend, get_all,
+                            strict, no_ignore, pool));
 
 
   /* If the caller wants us to contact the repository also... */

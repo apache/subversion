@@ -322,6 +322,14 @@ first some parent will be added-with-history (copied), which means this
 file will automatically exist in the copy.  Then the local mods will be
 further uploaded into the copy.
 
+By default, @samp{svn status} ignores files matching the regular
+expressions @samp{*.o}, @samp{*.lo}, @samp{*.la}, @samp{#*#},
+@samp{*.rej}, @samp{*~}, and @samp{.#*}.  If you want additional files
+ignored, set the @samp{svn:ignore} property on the parent directory.  If
+you want to see the status of all the files in the repository
+irrespective of @samp{svn status} and @samp{svn:ignore}'s regular
+expressions, then use the @option{--no-ignore} command line option.
+
 If a single path is passed to the command, it will tell you about it:
 
 @example

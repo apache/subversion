@@ -64,15 +64,16 @@ svn_cl__status (apr_getopt_t *os,
          switches (-n, -u, -[vV]) : */
 
       SVN_ERR (svn_client_status (&statushash, &youngest, target, auth_baton,
-                                  opt_state->nonrecursive ? 0 : 1,
+                                  opt_state->nonrecursive ? FALSE : TRUE,
                                   opt_state->verbose,
                                   opt_state->update,
+                                  opt_state->no_ignore,
                                   pool));
 
       /* Now print the structures to the screen.
          The flag we pass indicates whether to use the 'detailed'
          output format or not. */
-      svn_cl__print_status_list (statushash, 
+      svn_cl__print_status_list (statushash,
                                  youngest,
                                  (opt_state->verbose || opt_state->update),
                                  opt_state->verbose,

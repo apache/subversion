@@ -532,6 +532,7 @@ svn_client_status (apr_hash_t **statushash,
                    svn_boolean_t descend,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
+                   svn_boolean_t no_ignore,
                    apr_pool_t *pool);
 
 

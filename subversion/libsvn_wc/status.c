@@ -289,6 +289,7 @@ static svn_error_t *
 add_unversioned_items (const char *path, 
                        apr_hash_t *entries,
                        apr_hash_t *statushash,
+                       svn_boolean_t no_ignore,
                        apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -299,10 +300,14 @@ add_unversioned_items (const char *path,
   /* Read PATH's dirents. */
   SVN_ERR (svn_io_get_dirents (&dirents, path, subpool));
 
-  /* Try to load any '.svnignore' file that may be present. */
+  /* Unless specified, add default ignore regular expressions and try
+     to add any svn:ignore properties from the parent directory. */
   patterns = apr_array_make (subpool, 1, sizeof(const char *));
-  add_default_ignores (patterns);
-  SVN_ERR (add_ignore_patterns (path, patterns, subpool));
+  if (! no_ignore)
+    {
+      add_default_ignores (patterns);
+      SVN_ERR (add_ignore_patterns (path, patterns, subpool));
+    }
 
   /* Add empty status structures for each of the unversioned things. */
   for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
@@ -394,6 +399,7 @@ svn_wc_statuses (apr_hash_t *statushash,
                  svn_boolean_t descend,
                  svn_boolean_t get_all,
                  svn_boolean_t strict,
+                 svn_boolean_t no_ignore,
                  apr_pool_t *pool)
 {
   enum svn_node_kind kind;
@@ -450,7 +456,8 @@ svn_wc_statuses (apr_hash_t *statushash,
       SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
 
       /* Add the unversioned items to the status output. */
-      SVN_ERR (add_unversioned_items (path, entries, statushash, pool));
+      SVN_ERR (add_unversioned_items (path, entries, statushash,
+                                      no_ignore, pool));
 
       /* Loop over entries hash */
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -508,8 +515,9 @@ svn_wc_statuses (apr_hash_t *statushash,
                   SVN_ERR (add_status_structure (statushash, fullpath,
                                                  subdir, get_all, 
                                                  strict, pool));
-                  SVN_ERR (svn_wc_statuses (statushash, fullpath,
-                                            descend, get_all, strict, pool)); 
+                  SVN_ERR (svn_wc_statuses (statushash, fullpath, descend,
+                                            get_all, strict, no_ignore,
+                                            pool)); 
                 }
               else if ((kind == svn_node_file) || (kind == svn_node_none))
                 {
