@@ -193,8 +193,8 @@ make_xml_parser (struct version_mod *vmod)
 svn_error_t *
 svn_wc__parse_versions (svn_read_fn_t *source_fn,
                         void *source_baton,
-                        const svn_delta_walk_t *walker,
-                        void *walk_baton,
+                        const svn_delta_edit_fns_t *editor,
+                        void *edit_baton,
                         void *dir_baton,
                         apr_pool_t *pool)
 {
@@ -210,8 +210,8 @@ svn_wc__parse_versions (svn_read_fn_t *source_fn,
 
   digger->pool             = pool;
   digger->stack            = NULL;
-  digger->walker           = walker;
-  digger->walk_baton       = walk_baton;
+  digger->editor           = editor;
+  digger->edit_baton       = edit_baton;
   digger->dir_baton        = dir_baton;
   digger->validation_error = SVN_NO_ERROR;
   digger->vcdiff_parser    = NULL;

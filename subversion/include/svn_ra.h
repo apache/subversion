@@ -72,16 +72,20 @@ void svn_ra_close (svn_ra_session_t *ras);
 svn_error_t * svn_ra_checkout (svn_ra_session_t *ras,
                                const char *start_at,
                                int recurse,
-                               const svn_delta_walk_t *walker,
-                               void *walk_baton,
+                               const svn_delta_edit_fns_t *editor,
+                               void *edit_baton,
                                void *dir_baton);
 
-svn_error_t * svn_ra_get_commit_walker(svn_ra_session_t *ras,
-                                       const svn_delta_walk_t **walker,
-                                       void **walk_baton);
+svn_error_t * svn_ra_get_commit_editor(svn_ra_session_t *ras,
+                                       const svn_delta_edit_fns_t **editor,
+                                       void **edit_baton);
 
-svn_error_t * svn_ra_get_update_walker(const svn_delta_walk_t **walker,
-                                       void **walk_baton,
+svn_error_t * svn_ra_get_commit_editor(const svn_delta_edit_fns_t **editor,
+                                       void **edit_baton,
+                                       ... /* more params */);
+
+svn_error_t * svn_ra_get_update_editor(const svn_delta_edit_fns_t **editor,
+                                       void **edit_baton,
                                        ... /* more params */);
 
 

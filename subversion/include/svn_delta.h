@@ -308,7 +308,7 @@ extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
 
    So instead of representing the tree delta explicitly, we define a
    standard way for a consumer to process each piece of a tree delta
-   as soon as the producer creates it.  The `svn_delta_walk_t'
+   as soon as the producer creates it.  The `svn_delta_edit_fns_t'
    structure is a set of callback functions to be defined by a delta
    consumer, and invoked by a delta producer.  Each invocation of a
    callback function describes a piece of the delta --- a file's
@@ -317,7 +317,7 @@ extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
 
 /* A structure full of callback functions the delta source will invoke
    as it produces the delta.  */
-typedef struct svn_delta_walk_t
+typedef struct svn_delta_edit_fns_t
 {
   /* Here's how to use these functions to express a tree delta.
 
@@ -328,8 +328,8 @@ typedef struct svn_delta_walk_t
 
      At the start of traversal, the consumer provides two batons:
 
-     - WALK_BATON, a baton global to the entire delta walk.  The
-       producer should pass this value as the WALK_BATON argument to
+     - EDIT_BATON, a baton global to the entire delta edit.  The
+       producer should pass this value as the EDIT_BATON argument to
        every callback.
 
      - DIR_BATON, a baton representing the root directory.  Each
@@ -340,7 +340,7 @@ typedef struct svn_delta_walk_t
        `replace_directory', which return batons for subdirectories,
        as explained below.
 
-     In the case of `svn_xml_parse', these would be the WALK_BATON
+     In the case of `svn_xml_parse', these would be the EDIT_BATON
      and DIR_BATON arguments.  Other producers will work differently.
 
      Most of the callbacks work in the obvious way:
@@ -401,7 +401,7 @@ typedef struct svn_delta_walk_t
        
   /* Remove the directory entry named NAME.  */
   svn_error_t *(*delete) (svn_string_t *name,
-			  void *walk_baton,
+			  void *edit_baton,
                           void *parent_baton);
 
 
@@ -414,7 +414,7 @@ typedef struct svn_delta_walk_t
      ANCESTOR_PATH is zero, the changes are relative to an empty
      directory. */
   svn_error_t *(*add_directory) (svn_string_t *name,
-				 void *walk_baton,
+				 void *edit_baton,
                                  void *parent_baton,
 				 svn_string_t *ancestor_path,
 				 svn_vernum_t ancestor_version,
@@ -427,7 +427,7 @@ typedef struct svn_delta_walk_t
      changes to the base; if ANCESTOR_PATH is zero, the changes are
      relative to an empty directory.  */
   svn_error_t *(*replace_directory) (svn_string_t *name,
-				     void *walk_baton,
+				     void *edit_baton,
                                      void *parent_baton,
 				     svn_string_t *ancestor_path,
 				     svn_vernum_t ancestor_version,
@@ -438,7 +438,7 @@ typedef struct svn_delta_walk_t
      - NAME is the name of the property to change.
      - VALUE is the new value of the property, or zero if the property
      should be removed altogether.  */
-  svn_error_t *(*change_dir_prop) (void *walk_baton,
+  svn_error_t *(*change_dir_prop) (void *edit_baton,
                                    void *dir_baton,
                                    svn_string_t *name,
                                    svn_string_t *value);
@@ -450,7 +450,7 @@ typedef struct svn_delta_walk_t
      - NAME is the name of the property to change.
      - VALUE is the new value of the property, or zero if the property
      should be removed altogether.  */
-  svn_error_t *(*change_dirent_prop) (void *walk_baton,
+  svn_error_t *(*change_dirent_prop) (void *edit_baton,
                                       void *dir_baton,
                                       svn_string_t *entry,
                                       svn_string_t *name,
@@ -460,7 +460,7 @@ typedef struct svn_delta_walk_t
      (set by add_directory or replace_directory).  We won't be using
      the baton any more, so whatever resources it refers to may now be
      freed.  */
-  svn_error_t *(*finish_directory) (void *walk_baton,
+  svn_error_t *(*finish_directory) (void *edit_baton,
                                     void *dir_baton);
 
 
@@ -471,7 +471,7 @@ typedef struct svn_delta_walk_t
      it stores there will be passed through to apply_textdelta and/or
      apply_propdelta.  */
   svn_error_t *(*add_file) (svn_string_t *name,
-			    void *walk_baton,
+			    void *edit_baton,
                             void *parent_baton,
 			    svn_string_t *ancestor_path,
 			    svn_vernum_t ancestor_version,
@@ -482,7 +482,7 @@ typedef struct svn_delta_walk_t
      whatever value it stores there will be passed through to
      apply_textdelta and/or apply_propdelta.  */
   svn_error_t *(*replace_file) (svn_string_t *name,
-				void *walk_baton,
+				void *edit_baton,
                                 void *parent_baton,
 				svn_string_t *ancestor_path,
 				svn_vernum_t ancestor_version,
@@ -499,7 +499,7 @@ typedef struct svn_delta_walk_t
      delta windows as we recieve them.  The callback should set
      *HANDLER_BATON to the value we should pass as the BATON
      argument to *HANDLER.  */
-  svn_error_t *(*apply_textdelta) (void *walk_baton,
+  svn_error_t *(*apply_textdelta) (void *edit_baton,
                                    void *parent_baton,
                                    void *file_baton, 
                                    svn_txdelta_window_handler_t **handler,
@@ -510,7 +510,7 @@ typedef struct svn_delta_walk_t
      - NAME is the name of the property to change.
      - VALUE is the new value of the property, or zero if the property
      should be removed altogether.  */
-  svn_error_t *(*change_file_prop) (void *walk_baton,
+  svn_error_t *(*change_file_prop) (void *edit_baton,
                                     void *parent_baton,
                                     void *file_baton,
                                     svn_string_t *name,
@@ -519,15 +519,15 @@ typedef struct svn_delta_walk_t
   /* We are done processing a file, whose baton is FILE_BATON (set by
      `add_file' or `replace_file').  We won't be using the baton any
      more, so whatever resources it refers to may now be freed.  */
-  svn_error_t *(*finish_file) (void *walk_baton,
+  svn_error_t *(*finish_file) (void *edit_baton,
                                void *file_baton);
 
   /* All delta processing is done.  Call this, with the DIR_BATON for
      the root directory of the changes. */
-  svn_error_t *(*finish_walk) (void *walk_baton,
+  svn_error_t *(*finish_edit) (void *edit_baton,
                                void *dir_baton);
 
-} svn_delta_walk_t;
+} svn_delta_edit_fns_t;
 
 
 
@@ -535,17 +535,17 @@ typedef struct svn_delta_walk_t
 
 typedef struct svn_xml_parser_t svn_xml_parser_t;
 
-/* Given a precreated svn_delta_walk_t WALKER, return an XML parser
-   that will use it (and feed WALK_BATON and DIR_BATON to its
+/* Given a precreated svn_delta_edit_fns_t EDITOR, return an XML parser
+   that will use it (and feed EDIT_BATON and DIR_BATON to its
    callbacks.) */
-svn_xml_parser_t *svn_make_xml_parser (const svn_delta_walk_t *walker,
-                                       void *walk_baton,
+svn_xml_parser_t *svn_make_xml_parser (const svn_delta_edit_fns_t *editor,
+                                       void *edit_baton,
                                        void *dir_baton,
                                        apr_pool_t *pool);
 
 
 /* Push LEN bytes of xml data in BUFFER at SVN_XML_PARSER.  As xml is
-   parsed, WALKER callbacks will be executed with WALK_BATON and
+   parsed, EDITOR callbacks will be executed with EDIT_BATON and
    DIR_BATON.  If this is the final parser "push", ISFINAL must be set
    to true.  */
 svn_error_t *
@@ -554,15 +554,15 @@ svn_xml_parsebytes (char *buffer, apr_off_t len, int isFinal,
 
 
 /* Create a internal parser that consumes XML data from SOURCE_FN and
-   SOURCE_BATON, and invokes the callback functions in WALKER as
-   appropriate.  WALK_BATON is a data passthrough for the entire
+   SOURCE_BATON, and invokes the callback functions in EDITOR as
+   appropriate.  EDIT_BATON is a data passthrough for the entire
    traversal.  DIR_BATON is a data passthrough for the root directory;
    the callbacks can establish new DIR_BATON values for
    subdirectories.  Use POOL for allocations.  */
 extern svn_error_t *svn_xml_auto_parse (svn_read_fn_t *source_fn,
                                         void *source_baton,
-                                        const svn_delta_walk_t *walker,
-                                        void *walk_baton,
+                                        const svn_delta_edit_fns_t *editor,
+                                        void *edit_baton,
                                         void *dir_baton,
                                         apr_pool_t *pool);
 

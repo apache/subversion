@@ -57,7 +57,7 @@
   svn_delta_parse() reads an XML stream from a specified source using
   expat, validating the XML as it goes.  Whenever an interesting event
   happens, it calls a caller-specified callback routine from an
-  svn_walk_t structure.
+  svn_delta_edit_fns_t structure.
   
 */
 
@@ -451,7 +451,7 @@ set_tag_type (svn_xml__stackframe_t *frame,
 
 /* Called when we get a <dir> tag preceeded by either a <new> or
    <replace> tag; calls the appropriate callback inside
-   DIGGER->WALKER, depending on the value of REPLACE_P. */
+   DIGGER->EDITOR, depending on the value of REPLACE_P. */
 static svn_error_t *
 do_directory_callback (svn_xml__digger_t *digger, 
                        svn_xml__stackframe_t *youngest_frame,
@@ -462,10 +462,10 @@ do_directory_callback (svn_xml__digger_t *digger,
   const char *ancestor, *ver;
   svn_string_t *dir_name = NULL;
 
-  /* Only proceed if the walker callback exists. */
-  if (replace_p && (! digger->walker->replace_directory))
+  /* Only proceed if the editor callback exists. */
+  if (replace_p && (! digger->editor->replace_directory))
     return SVN_NO_ERROR;
-  if ((! replace_p) && (! digger->walker->add_directory))
+  if ((! replace_p) && (! digger->editor->add_directory))
     return SVN_NO_ERROR;
 
   /* Retrieve the "name" field from the previous <new> or <replace> tag */
@@ -486,19 +486,19 @@ do_directory_callback (svn_xml__digger_t *digger,
   if (ver)
     youngest_frame->ancestor_version = atoi (ver);
 
-  /* Call our walker's callback. */
+  /* Call our editor's callback. */
   if (replace_p)
-    err = (* (digger->walker->replace_directory)) 
+    err = (* (digger->editor->replace_directory)) 
       (dir_name,
-       digger->walk_baton,
+       digger->edit_baton,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
        &(youngest_frame->baton));
   else
-    err = (* (digger->walker->add_directory)) 
+    err = (* (digger->editor->add_directory)) 
       (dir_name,
-       digger->walk_baton,
+       digger->edit_baton,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
@@ -523,8 +523,8 @@ do_delete_dirent (svn_xml__digger_t *digger,
   svn_string_t *dirent_name = NULL;
   svn_error_t *err;
 
-  /* Only proceed if the walker callback exists. */
-  if (! (digger->walker->delete))
+  /* Only proceed if the editor callback exists. */
+  if (! (digger->editor->delete))
     return SVN_NO_ERROR;
   
   /* Retrieve the "name" field from the current <delete> tag */
@@ -536,9 +536,9 @@ do_delete_dirent (svn_xml__digger_t *digger,
        "do_delete_dirent: <delete> tag has no 'name' field.",
        NULL, digger->pool);
 
-  /* Call our walker's callback */
-  err = (* (digger->walker->delete)) (dirent_name, 
-                                      digger->walk_baton,
+  /* Call our editor's callback */
+  err = (* (digger->editor->delete)) (dirent_name, 
+                                      digger->edit_baton,
                                       youngest_frame->baton);
   if (err)
     return err;
@@ -560,10 +560,10 @@ do_file_callback (svn_xml__digger_t *digger,
   const char *ancestor, *ver;
   svn_string_t *filename = NULL;
 
-  /* Only proceed if the walker callback exists. */
-  if (replace_p && (! digger->walker->replace_file))
+  /* Only proceed if the editor callback exists. */
+  if (replace_p && (! digger->editor->replace_file))
     return SVN_NO_ERROR;
-  if ((! replace_p) && (! digger->walker->add_file))
+  if ((! replace_p) && (! digger->editor->add_file))
     return SVN_NO_ERROR;
 
   /* Retrieve the "name" field from the previous <new> or <replace> tag */
@@ -584,19 +584,19 @@ do_file_callback (svn_xml__digger_t *digger,
   if (ver)
     youngest_frame->ancestor_version = atoi (ver);
 
-  /* Call our walker's callback, and get back a window handler & baton. */
+  /* Call our editor's callback, and get back a window handler & baton. */
   if (replace_p)
-    err = (* (digger->walker->replace_file)) 
+    err = (* (digger->editor->replace_file)) 
       (filename,
-       digger->walk_baton,
+       digger->edit_baton,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
        &(youngest_frame->file_baton));
   else
-    err = (* (digger->walker->add_file)) 
+    err = (* (digger->editor->add_file)) 
       (filename,
-       digger->walk_baton,
+       digger->edit_baton,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
@@ -621,12 +621,12 @@ do_finish_directory (svn_xml__digger_t *digger)
 {
   svn_error_t *err;
 
-  /* Only proceed if the walker callback exists. */
-  if (! (digger->walker->finish_directory))
+  /* Only proceed if the editor callback exists. */
+  if (! (digger->editor->finish_directory))
     return SVN_NO_ERROR;
 
-  /* Nothing to do but caller the walker's callback, methinks. */
-  err = (* (digger->walker->finish_directory)) (digger->walk_baton,
+  /* Nothing to do but caller the editor's callback, methinks. */
+  err = (* (digger->editor->finish_directory)) (digger->edit_baton,
                                                 digger->stack->baton);
   if (err)
     return err;
@@ -644,12 +644,12 @@ do_finish_file (svn_xml__digger_t *digger)
 {
   svn_error_t *err;
 
-  /* Only proceed further if the walker callback exists. */
-  if (! (digger->walker->finish_file))
+  /* Only proceed further if the editor callback exists. */
+  if (! (digger->editor->finish_file))
     return SVN_NO_ERROR;
 
-  /* Call the walker's callback. */
-  err = (* (digger->walker->finish_file)) (digger->walk_baton,
+  /* Call the editor's callback. */
+  err = (* (digger->editor->finish_file)) (digger->edit_baton,
                                            digger->stack->file_baton);
   if (err)
     return err;
@@ -665,7 +665,7 @@ do_finish_file (svn_xml__digger_t *digger)
 
 
 
-/* When we find a new text-delta, a walker callback returns to us a
+/* When we find a new text-delta, a editor callback returns to us a
    vcdiff-window-consumption routine that we use to create a unique
    vcdiff parser.  (The vcdiff parser knows how to "push" windows of
    vcdata to the consumption routine.)  */
@@ -676,11 +676,11 @@ do_begin_textdelta (svn_xml__digger_t *digger)
   svn_txdelta_window_handler_t *window_consumer = NULL;
   void *consumer_baton = NULL;
 
-  if (digger->walker->apply_textdelta == NULL)
+  if (digger->editor->apply_textdelta == NULL)
     return SVN_NO_ERROR;
 
   /* Get a window consumer & baton! */
-  err = (* (digger->walker->apply_textdelta)) (digger->walk_baton,
+  err = (* (digger->editor->apply_textdelta)) (digger->edit_baton,
                                                digger->dir_baton,
                                                digger->file_baton,
                                                &window_consumer,
@@ -819,7 +819,7 @@ do_delete_prop (svn_xml__digger_t *digger,
 
 /* When we get a </set>, or when we get the implicit closure at the
    end of <delete />, we send off the prop-delta to the appropriate
-   walker callback.  Then blank the current prop-delta's name and
+   editor callback.  Then blank the current prop-delta's name and
    value. */
 static svn_error_t *
 do_prop_delta_callback (svn_xml__digger_t *digger)
@@ -839,27 +839,27 @@ do_prop_delta_callback (svn_xml__digger_t *digger)
     {
     case svn_propdelta_file:
       {
-        if (digger->walker->change_file_prop)
-          err = (*(digger->walker->change_file_prop)) 
-            (digger->walk_baton, digger->dir_baton, digger->file_baton,
+        if (digger->editor->change_file_prop)
+          err = (*(digger->editor->change_file_prop)) 
+            (digger->edit_baton, digger->dir_baton, digger->file_baton,
              digger->current_propdelta->name,
              value_string);
         break;
       }
     case svn_propdelta_dir:
       {
-        if (digger->walker->change_dir_prop)
-          err = (*(digger->walker->change_dir_prop)) 
-            (digger->walk_baton, digger->dir_baton,
+        if (digger->editor->change_dir_prop)
+          err = (*(digger->editor->change_dir_prop)) 
+            (digger->edit_baton, digger->dir_baton,
              digger->current_propdelta->name,
              value_string);
         break;
       }
     case svn_propdelta_dirent:
       {
-        if (digger->walker->change_dirent_prop)
-          err = (*(digger->walker->change_dirent_prop)) 
-            (digger->walk_baton, digger->dir_baton,
+        if (digger->editor->change_dirent_prop)
+          err = (*(digger->editor->change_dirent_prop)) 
+            (digger->edit_baton, digger->dir_baton,
              digger->current_propdelta->entity_name,
              digger->current_propdelta->name,
              value_string);
@@ -1223,11 +1223,11 @@ xml_handle_data (void *userData, const char *data, int len)
 
 
 
-/* Return an expat parser object which knows to make calls into WALKER
-   using WALK_BATON and DIR_BATON */
+/* Return an expat parser object which knows to make calls into EDITOR
+   using EDIT_BATON and DIR_BATON */
 svn_xml_parser_t *
-svn_make_xml_parser (const svn_delta_walk_t *walker,
-                     void *walk_baton,
+svn_make_xml_parser (const svn_delta_edit_fns_t *editor,
+                     void *edit_baton,
                      void *dir_baton,
                      apr_pool_t *pool)
 {
@@ -1240,8 +1240,8 @@ svn_make_xml_parser (const svn_delta_walk_t *walker,
 
   digger->pool             = pool;
   digger->stack            = NULL;
-  digger->walker           = walker;
-  digger->walk_baton       = walk_baton;
+  digger->editor           = editor;
+  digger->edit_baton       = edit_baton;
   digger->dir_baton        = dir_baton;
   digger->validation_error = SVN_NO_ERROR;
   digger->vcdiff_parser    = NULL;
@@ -1274,7 +1274,7 @@ svn_make_xml_parser (const svn_delta_walk_t *walker,
 
 
 /* Parse LEN bytes of xml data in BUFFER at SVN_XML_PARSER.  As xml is
-   parsed, WALKER callbacks will be executed with WALK_BATON and
+   parsed, EDITOR callbacks will be executed with EDIT_BATON and
    DIR_BATON.  If this is the final parser "push", ISFINAL must be set
    to true.  */
 svn_error_t *
@@ -1301,7 +1301,7 @@ svn_xml_parsebytes (char *buffer, apr_off_t len, int isFinal,
       return err;
     }
   
-  /* After parsing our chunk, check to see if any walker callback did
+  /* After parsing our chunk, check to see if any editor callback did
      a signal_expat_bailout() */
   if (svn_xml_parser->digger->validation_error)
       return svn_xml_parser->digger->validation_error;
@@ -1314,15 +1314,15 @@ svn_xml_parsebytes (char *buffer, apr_off_t len, int isFinal,
 /* Reads an XML stream from SOURCE_FN using expat internally,
   validating the XML as it goes (according to Subversion's own
   tree-delta DTD).  Whenever an interesting event happens, it calls a
-  caller-specified callback routine from WALKER.  
+  caller-specified callback routine from EDITOR.  
 
   Once called, it retains control and "pulls" data from SOURCE_FN
   until either the stream runs out or it encounters an error. */
 svn_error_t *
 svn_xml_auto_parse (svn_read_fn_t *source_fn,
                     void *source_baton,
-                    const svn_delta_walk_t *walker,
-                    void *walk_baton,
+                    const svn_delta_edit_fns_t *editor,
+                    void *edit_baton,
                     void *dir_baton,
                     apr_pool_t *pool)
 {
@@ -1332,8 +1332,8 @@ svn_xml_auto_parse (svn_read_fn_t *source_fn,
   svn_error_t *err = SVN_NO_ERROR;
 
   /* Create a Subversion XML parser */
-  svn_xml_parser_t *xmlparser = svn_make_xml_parser (walker,
-                                                     walk_baton,
+  svn_xml_parser_t *xmlparser = svn_make_xml_parser (editor,
+                                                     edit_baton,
                                                      dir_baton,
                                                      pool);
 
