@@ -313,8 +313,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "propdel", svn_cl__propdel, {"pdel"},
     "Remove PROPNAME from files, dirs, or revisions.\n"
-    "usage: 1. propdel [PATH [PATH ... ]]\n"
-    "       2. propdel --revprop -r REV [URL]\n\n"
+    "usage: 1. propdel PROPNAME [PATH [PATH ... ]]\n"
+    "       2. propdel PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Removes versioned props in working copy.\n"
     "  2. Removes unversioned remote prop on repos revision.\n\n",
     {'q', 'R', 'r', svn_cl__revprop_opt} },
