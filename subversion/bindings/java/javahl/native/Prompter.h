@@ -32,13 +32,29 @@
 class Prompter  
 {
 private:
+	bool m_version2;
 	jobject m_prompter;
-	Prompter(jobject jprompter);
+	Prompter(jobject jprompter, bool v2);
 	bool prompt(const char *realm, const char *username);
 	bool askYesNo(const char *realm, const char *question, bool yesIsDefault);
 	const char *askQuestion(const char *realm, const char *question, bool showAnswer);
+	int askTrust(const char *question, bool allow_permanent);
 	jstring password();
 	jstring username();
+	static svn_error_t *simple_prompt(svn_auth_cred_simple_t **cred_p, void *baton, 
+										const char *realm, const char *username, apr_pool_t *pool);
+	static svn_error_t *username_prompt(svn_auth_cred_username_t **cred_p, void *baton,
+										const char *realm, apr_pool_t *pool);
+	static svn_error_t *ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
+										void *baton,int failures, 
+										const svn_auth_ssl_server_cert_info_t *cert_info,
+										apr_pool_t *pool);
+	static svn_error_t *ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred_p,
+										void *baton, apr_pool_t *pool);
+	static svn_error_t *ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred_p,
+										void *baton, apr_pool_t *pool);
+	std::string m_answer;
+	/*
 	static svn_error_t *firstCreds (void **credentials, void **iter_baton, 
 							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool);
 	static svn_error_t *nextCreds (void **credentials, void *iter_baton,
@@ -54,13 +70,15 @@ private:
     std::string m_passWord;
 	std::string m_realm;
 	std::string m_answer;
+	*/
 public:
 	static Prompter *makeCPrompter(jobject jpromper);
 	~Prompter();
-	static svn_auth_provider_object_t *getProvider(Prompter *that);
-	static svn_auth_provider_object_t *getProviderServerSSL(Prompter *that);
-	static svn_auth_provider_object_t *getProviderClientSSL(Prompter *that);
-	static svn_auth_provider_object_t *getProviderClientSSLPass(Prompter *that);
+	svn_auth_provider_object_t *getProviderUsername();
+	svn_auth_provider_object_t *getProviderSimple();
+	svn_auth_provider_object_t *getProviderServerSSLTrust();
+	svn_auth_provider_object_t *getProviderClientSSL();
+	svn_auth_provider_object_t *getProviderClientSSLPassword();
 };
 
 #endif // !defined(AFX_PROMPTER_H__6833BB77_DDCC_4BF8_A995_5A5CBC48DF4C__INCLUDED_)

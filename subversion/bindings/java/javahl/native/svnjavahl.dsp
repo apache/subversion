@@ -649,6 +649,53 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
+
+!IF  "$(CFG)" == "svnjavahl - Win32 Release"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
+
+"..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	avac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
+
+"..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	avac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
+
+"..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	avac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
+
+"..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	avac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\org\tigris\subversion\javahl\PropertyData.java
 
 !IF  "$(CFG)" == "svnjavahl - Win32 Release"
@@ -1058,6 +1105,53 @@ InputPath="..\cls\org\tigris\subversion\javahl\Notify$Status.class"
 
 "org_tigris_subversion_javahl_Notify_Status.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	javah -force -classpath ../cls org.tigris.subversion.javahl.Notify$Status
+
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+
+!IF  "$(CFG)" == "svnjavahl - Win32 Release"
+
+# Begin Custom Build
+InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+
+"org_tigris_subversion_javahl_PrompUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
+
+# Begin Custom Build
+InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+
+"org_tigris_subversion_javahl_PrompUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
+
+# Begin Custom Build
+InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+
+"org_tigris_subversion_javahl_PrompUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+
+"org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
 
 # End Custom Build
 
