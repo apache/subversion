@@ -1994,14 +1994,14 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         const svn_fs_dirent_t *entry = item->value;
         const char *name = item->key;
         const char *href = name;
-        int is_dir;
+        int is_dir = (entry->kind == svn_node_dir);
 
         /* append a trailing slash onto the name for directories. we NEED
            this for the href portion so that the relative reference will
            descend properly. for the visible portion, it is just nice. */
         /* ### The xml output doesn't like to see a trailing slash on
            ### the visible portion, so avoid that. */
-        if (entry->kind == svn_node_dir)
+        if (is_dir)
           href = apr_pstrcat(entry_pool, href, "/", NULL);
 
         if (gen_html)
