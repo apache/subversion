@@ -1440,7 +1440,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
       if (!err)
         SVN_ERR(parse_lock(list, iterpool, &lock));
 
-      if (err && !svn_error_is_lock_error (err))
+      if (err && !SVN_ERR_IS_LOCK_ERROR (err))
         return err;
 
       if (lock_func)
@@ -1498,7 +1498,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
 
       err = svn_ra_svn_read_cmd_response(conn, iterpool, "");
 
-      if (err && !svn_error_is_unlock_error (err))
+      if (err && !SVN_ERR_IS_UNLOCK_ERROR (err))
         return err;
 
       if (lock_func)

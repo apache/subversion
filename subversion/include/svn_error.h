@@ -227,14 +227,22 @@ void svn_handle_warning (FILE *stream, svn_error_t *error);
  *
  * Return TRUE if @a err is an error specifically related to locking a
  * path in the repository, FALSE otherwise. */
-svn_boolean_t svn_error_is_lock_error (svn_error_t *err);
+#define SVN_ERR_IS_LOCK_ERROR(err)                          \
+  (err->apr_err == SVN_ERR_FS_PATH_LOCKED ||                \
+   err->apr_err == SVN_ERR_FS_OUT_OF_DATE)                  \
 
 /* 
  * @since New in 1.2.  
  *
  * Return TRUE if @a err is an error specifically related to unlocking
  * a path in the repository, FALSE otherwise. */
-svn_boolean_t svn_error_is_unlock_error (svn_error_t *err);
+#define SVN_ERR_IS_UNLOCK_ERROR(err)                        \
+  (err->apr_err == SVN_ERR_FS_PATH_NOT_LOCKED ||            \
+   err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN ||             \
+   err->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH ||        \
+   err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||               \
+   err->apr_err == SVN_ERR_RA_NOT_LOCKED ||                 \
+   err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
 
 
 #ifdef __cplusplus
