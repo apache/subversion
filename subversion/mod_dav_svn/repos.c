@@ -554,9 +554,9 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 apr_psprintf (pool, "Error checking kind of "
-                                               "path '%s' in repository",
-                                               comb->priv.repos_path),
+                                 apr_psprintf(pool, "Error checking kind of "
+                                              "path '%s' in repository",
+                                              comb->priv.repos_path),
                                  pool);
     }
 
@@ -731,14 +731,14 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
                                  pool);
     }
 
-  serr = svn_fs_check_path (&kind, comb->priv.root.root,
-                            comb->priv.repos_path, pool);
+  serr = svn_fs_check_path(&kind, comb->priv.root.root,
+                           comb->priv.repos_path, pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err
         (serr, HTTP_INTERNAL_SERVER_ERROR,
-         apr_psprintf (pool, "Error checking kind of path '%s' in repository",
-                       comb->priv.repos_path),
+         apr_psprintf(pool, "Error checking kind of path '%s' in repository",
+                      comb->priv.repos_path),
          pool);
     }
 
@@ -864,14 +864,14 @@ static void log_warning(void *baton, svn_error_t *err)
 
 
 AP_MODULE_DECLARE(dav_error *)
-dav_svn_split_uri (request_rec *r,
-                   const char *uri_to_split,
-                   const char *root_path,
-                   const char **cleaned_uri,
-                   int *trailing_slash,
-                   const char **repos_name,
-                   const char **relative_path,
-                   const char **repos_path)
+dav_svn_split_uri(request_rec *r,
+                  const char *uri_to_split,
+                  const char *root_path,
+                  const char **cleaned_uri,
+                  int *trailing_slash,
+                  const char **repos_name,
+                  const char **relative_path,
+                  const char **repos_path)
 {
   apr_size_t len1;
   int had_slash;
@@ -1144,9 +1144,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   xslt_uri = dav_svn_get_xslt_uri(r);
 
   /* This does all the work of interpreting/splitting the request uri. */
-  err = dav_svn_split_uri (r, r->uri, root_path,
-                           &cleaned_uri, &had_slash, 
-                           &repos_name, &relative, &repos_path);
+  err = dav_svn_split_uri(r, r->uri, root_path,
+                          &cleaned_uri, &had_slash, 
+                          &repos_name, &relative, &repos_path);
   if (err)
     return err;
 
@@ -1200,9 +1200,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
   /* Remember checksums, if any. */
   comb->priv.base_checksum =
-    apr_table_get (r->headers_in, SVN_DAV_BASE_FULLTEXT_MD5_HEADER);
+    apr_table_get(r->headers_in, SVN_DAV_BASE_FULLTEXT_MD5_HEADER);
   comb->priv.result_checksum =
-    apr_table_get (r->headers_in, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER);
+    apr_table_get(r->headers_in, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER);
 
   /* "relative" is part of the "uri" string, so it has the proper
      lifetime to store here. */
@@ -1265,10 +1265,10 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
           /* Return a slightly less informative error to dav. */
           svn_error_clear(serr);
-          return dav_svn_convert_err (sanitized_error,
-                                      HTTP_INTERNAL_SERVER_ERROR,
-                                      apr_psprintf(r->pool, new_msg),
-                                      r->pool);
+          return dav_svn_convert_err(sanitized_error,
+                                     HTTP_INTERNAL_SERVER_ERROR,
+                                     apr_psprintf(r->pool, new_msg),
+                                     r->pool);
         }
 
       /* Cache the open repos for the next request on this connection */
@@ -1277,7 +1277,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
     }
 
   /* cache the filesystem object */
-  repos->fs = svn_repos_fs (repos->repos);
+  repos->fs = svn_repos_fs(repos->repos);
 
   /* capture warnings during cleanup of the FS */
   svn_fs_set_warning_func(repos->fs, log_warning, r);
@@ -1412,23 +1412,23 @@ static int is_our_resource(const dav_resource *res1,
       if (res2->info->root.txn_name)
         {
           /* reopen the txn by name */
-          svn_error_clear (svn_fs_open_txn(&(res2->info->root.txn),
-                                           res2->info->repos->fs,
-                                           res2->info->root.txn_name,
-                                           res2->info->repos->pool));
+          svn_error_clear(svn_fs_open_txn(&(res2->info->root.txn),
+                                          res2->info->repos->fs,
+                                          res2->info->root.txn_name,
+                                          res2->info->repos->pool));
 
           /* regenerate the txn "root" object */
-          svn_error_clear (svn_fs_txn_root(&(res2->info->root.root),
-                                           res2->info->root.txn,
-                                           res2->info->repos->pool));
+          svn_error_clear(svn_fs_txn_root(&(res2->info->root.root),
+                                          res2->info->root.txn,
+                                          res2->info->repos->pool));
         }
       else if (res2->info->root.rev)
         {
           /* default:  regenerate the revision "root" object */
-          svn_error_clear (svn_fs_revision_root(&(res2->info->root.root),
-                                                res2->info->repos->fs,
-                                                res2->info->root.rev,
-                                                res2->info->repos->pool));
+          svn_error_clear(svn_fs_revision_root(&(res2->info->root.root),
+                                               res2->info->repos->fs,
+                                               res2->info->root.rev,
+                                               res2->info->repos->pool));
         }
     }
 
@@ -1470,10 +1470,10 @@ static int dav_svn_is_parent_resource(const dav_resource *res1,
 }
 
 
-dav_error * dav_svn_resource_kind (request_rec *r,
-                                   const char *uri,
-                                   const char *root_path,
-                                   svn_node_kind_t *kind)
+dav_error * dav_svn_resource_kind(request_rec *r,
+                                  const char *uri,
+                                  const char *root_path,
+                                  svn_node_kind_t *kind)
 {
   dav_error *derr;
   svn_error_t *serr;
@@ -1525,8 +1525,8 @@ dav_error * dav_svn_resource_kind (request_rec *r,
 
       else /* ver */
         {
-          serr = svn_fs_check_path (kind, resource->info->root.root,
-                                    resource->info->repos_path, r->pool);
+          serr = svn_fs_check_path(kind, resource->info->root.root,
+                                   resource->info->repos_path, r->pool);
 
           if (serr)
             return dav_svn_convert_err
@@ -1547,10 +1547,10 @@ dav_error * dav_svn_resource_kind (request_rec *r,
         {
           /* don't call fs_check_path on the txn, but on the original
              revision that the txn is based on. */
-          base_rev = svn_fs_txn_base_revision (resource->info->root.txn);
-          serr = svn_fs_revision_root (&base_rev_root,
-                                       resource->info->repos->fs,
-                                       base_rev, r->pool);
+          base_rev = svn_fs_txn_base_revision(resource->info->root.txn);
+          serr = svn_fs_revision_root(&base_rev_root,
+                                      resource->info->repos->fs,
+                                      base_rev, r->pool);
           if (serr)
             return dav_svn_convert_err
               (serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1559,8 +1559,8 @@ dav_error * dav_svn_resource_kind (request_rec *r,
                             base_rev),
                r->pool);
       
-          serr = svn_fs_check_path (kind, base_rev_root,
-                                    resource->info->repos_path, r->pool);
+          serr = svn_fs_check_path(kind, base_rev_root,
+                                   resource->info->repos_path, r->pool);
           if (serr)
             return dav_svn_convert_err
               (serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1876,7 +1876,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 
       mimetype = value ? value->data : "text/plain";
 
-      serr = svn_mime_type_validate (mimetype, resource->pool);
+      serr = svn_mime_type_validate(mimetype, resource->pool);
       if (serr)
         {
           /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but
@@ -2413,11 +2413,11 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
         return dav_new_error
           (dst->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
            "Copy source and destination are in different repositories.");
-      serr = svn_fs_copy (src->info->root.root,  /* root object of src rev*/
-                          src->info->repos_path, /* relative path of src */
-                          dst->info->root.root,  /* root object of dst txn*/ 
-                          dst->info->repos_path, /* relative path of dst */
-                          src->pool);
+      serr = svn_fs_copy(src->info->root.root,  /* root object of src rev*/
+                         src->info->repos_path, /* relative path of src */
+                         dst->info->root.root,  /* root object of dst txn*/ 
+                         dst->info->repos_path, /* relative path of dst */
+                         src->pool);
     }
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -2493,10 +2493,10 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
   if (SVN_IS_VALID_REVNUM(resource->info->version_name))
     {
       svn_revnum_t created_rev;
-      serr = svn_fs_node_created_rev (&created_rev,
-                                      resource->info->root.root,
-                                      resource->info->repos_path,
-                                      resource->pool);
+      serr = svn_fs_node_created_rev(&created_rev,
+                                     resource->info->root.root,
+                                     resource->info->repos_path,
+                                     resource->pool);
       if (serr)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "Could not get created rev of resource",
@@ -2504,9 +2504,9 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
 
       if (resource->info->version_name < created_rev)
         {
-          serr = svn_error_createf (SVN_ERR_RA_OUT_OF_DATE, NULL,
-                                    "Item '%s' is out of date", 
-                                    resource->info->repos_path);
+          serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
+                                   "Item '%s' is out of date", 
+                                   resource->info->repos_path);
           return dav_svn_convert_err(serr, HTTP_CONFLICT,
                                      "Can't DELETE out-of-date resource",
                                      resource->pool);
@@ -2570,11 +2570,11 @@ static dav_error * dav_svn_move_resource(dav_resource *src,
     return err;
 
   /* Copy the src to the dst. */
-  serr = svn_fs_copy (src->info->root.root,  /* the root object of src rev*/
-                      src->info->repos_path, /* the relative path of src */
-                      dst->info->root.root,  /* the root object of dst txn*/ 
-                      dst->info->repos_path, /* the relative path of dst */
-                      src->pool);
+  serr = svn_fs_copy(src->info->root.root,  /* the root object of src rev*/
+                     src->info->repos_path, /* the relative path of src */
+                     dst->info->root.root,  /* the root object of dst txn*/ 
+                     dst->info->repos_path, /* the relative path of dst */
+                     src->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Unable to make a filesystem copy.",
