@@ -125,7 +125,7 @@ get_creds (const char **username,
   /* If we were asked for a password but didn't get one, then we
      didn't get creds; but if we weren't asked for a password, then a
      username is enough to say we got creds. */
-  if (*username && ((! password) || (password && *password)))
+  if (*username && (! password || *password))
     *got_creds = TRUE;
 
   return SVN_NO_ERROR;
