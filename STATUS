@@ -7,7 +7,8 @@ delay a release, etc.
 Status of 1.1.4:
 ================
 
-Candidate changes:
+Candidate changes that seem to have become stalled
+due to persistent lack of votes:
 
   * r12075, r12448
     Add pre-0.14 dumpfile compatability.
@@ -34,6 +35,8 @@ Candidate changes:
     Votes:
       +1: ghudson, jerenkrantz
       Nominated by: David James <james82@gmail.com>
+
+Candidate changes:
 
   * r12636
     Dataloss bug in svndumpfilter - delete-all-properties-from-node operations
@@ -94,6 +97,7 @@ Approved changes (further review is welcome, but not required):
     Branch:
       1.1.x-svndumpfilter r12657:12659
       (Each merged revision committed to branch seperately)
+      NEEDS AS YET UNAPPROVED r12636 TO APPLY CLEANLY
     Votes:
       +1: maxb, sussman, dionisos
 
