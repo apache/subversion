@@ -31,7 +31,6 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_delta.h"
-#include "svn_repos.h"
 
 #ifdef __cplusplus
 extern "C" {
