@@ -293,7 +293,7 @@ import_dir (const svn_delta_editor_t *editor,
   if (! (APR_STATUS_IS_ENOENT (err->apr_err)))
     {
       return svn_error_createf
-        (err->apr_err, err, "error during import of '%s'", path);
+        (err->apr_err, err, "Error during import of '%s'", path);
     }
   /* Yes, it exited cleanly, so close the dir. */
   else
@@ -301,7 +301,7 @@ import_dir (const svn_delta_editor_t *editor,
       svn_error_clear (err);
       if ((apr_err = apr_dir_close (dir)))
         return svn_error_createf
-          (apr_err, NULL, "error closing dir '%s'", path);
+          (apr_err, NULL, "Error closing dir '%s'", path);
     }
 
   svn_pool_destroy (subpool);
@@ -406,7 +406,7 @@ import (const char *path,
           if (! new_entry)
             return svn_error_create
                 (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                 "new entry name required when importing a file");
+                 "New entry name required when importing a file");
 
           SVN_ERR (import_file (editor, root_baton,
                                 path, new_entry, ctx, pool));
@@ -516,7 +516,7 @@ get_ra_editor (void **ra_baton,
                                       &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
-                                  "the path '%s' does not exist",
+                                  "Path '%s' does not exist",
                                   base_url);
     }
 
@@ -646,14 +646,14 @@ svn_client_import (svn_client_commit_info_t **commit_info,
       if (kind == svn_node_file && (! new_entry))
         return svn_error_createf
           (SVN_ERR_ENTRY_EXISTS, NULL,
-           "the path \"%s\" already exists", url);
+           "Path '%s' already exists", url);
     }
 
   /* The repository doesn't know about the reserved. */
   if (new_entry && (strcmp (new_entry, SVN_WC_ADM_DIR_NAME) == 0))
     return svn_error_createf
       (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
-       "the name \"%s\" is reserved and cannot be imported",
+       "'%s' is a reserved name and cannot be imported",
        SVN_WC_ADM_DIR_NAME);
 
 

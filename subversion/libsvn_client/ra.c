@@ -307,9 +307,8 @@ svn_client_uuid_from_path (const char **uuid,
                          TRUE,  /* show deleted */ pool));
 
   if (! entry)
-    return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                              "svn_client_uuid_from_path: "
-                              "can't find entry for '%s'", path);
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                              "Can't find entry for '%s'", path);
 
   if (entry->uuid)
     {

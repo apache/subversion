@@ -145,8 +145,8 @@ svn_client_propset (const char *propname,
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, TRUE, TRUE, pool));
   SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
   if (!node)
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                              "'%s' -- not a versioned resource", 
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              "'%s' is not a versioned resource", 
                               target);
 
   if (recurse && node->kind == svn_node_dir)
@@ -374,7 +374,7 @@ maybe_convert_to_url (const char **new_target,
       SVN_ERR (svn_wc_adm_open (&adm_access, NULL, pdir, FALSE, FALSE, pool));
       SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
       if (! entry)
-        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+        return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                   "'%s' is not a versioned resource", 
                                   target);
       *new_target = entry->url;
@@ -429,7 +429,7 @@ remote_propget (apr_hash_t *props,
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         "unknown node kind for \"%s\"",
+         "Unknown node kind for '%s'",
          svn_path_join (target_prefix, target_relative, pool));
     }
   
@@ -534,7 +534,7 @@ svn_client_propget (apr_hash_t **props,
             {
               return svn_error_createf
                 (SVN_ERR_ILLEGAL_TARGET, NULL,
-                 "\"%s\" is a URL, but revision kind requires a working copy",
+                 "'%s' is a URL, but revision kind requires a working copy",
                  target);
             }
 
@@ -545,7 +545,7 @@ svn_client_propget (apr_hash_t **props,
       else
         {
           return svn_error_create
-            (SVN_ERR_CLIENT_BAD_REVISION, NULL, "unknown revision kind");
+            (SVN_ERR_CLIENT_BAD_REVISION, NULL, "Unknown revision kind");
         }
 
       SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
@@ -562,8 +562,8 @@ svn_client_propget (apr_hash_t **props,
                                       pool));
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
-        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                                  "'%s' -- not a versioned resource", target);
+        return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                  "'%s' is not a versioned resource", target);
       
       SVN_ERR (svn_client__get_revision_number
                (&revnum, NULL, NULL, revision, target, pool));
@@ -701,7 +701,7 @@ remote_proplist (apr_array_header_t *proplist,
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         "unknown node kind for \"%s\"",
+         "Unknown node kind for '%s'",
          svn_path_join (target_prefix, target_relative, pool));
     }
   
@@ -905,7 +905,7 @@ svn_client_proplist (apr_array_header_t **props,
             {
               return svn_error_createf
                 (SVN_ERR_ILLEGAL_TARGET, NULL,
-                 "\"%s\" is a URL, but revision kind requires a working copy",
+                 "'%s' is a URL, but revision kind requires a working copy",
                  target);
             }
 
@@ -916,7 +916,7 @@ svn_client_proplist (apr_array_header_t **props,
       else
         {
           return svn_error_create
-            (SVN_ERR_CLIENT_BAD_REVISION, NULL, "unknown revision kind");
+            (SVN_ERR_CLIENT_BAD_REVISION, NULL, "Unknown revision kind");
         }
 
       SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
@@ -933,8 +933,8 @@ svn_client_proplist (apr_array_header_t **props,
                                       pool));
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
-        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                                  "'%s' -- not a versioned resource", target);
+        return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                  "'%s' is not a versioned resource", target);
       
       SVN_ERR (svn_client__get_revision_number
                (&revnum, NULL, NULL, revision, target, pool));

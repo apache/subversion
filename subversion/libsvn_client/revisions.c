@@ -55,9 +55,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
           || (revision->kind == svn_opt_revision_head)))
     {
       return svn_error_create
-        (SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, NULL,
-         "svn_client__get_revision_number: "
-         "need ra_lib and session for date or head revisions.");
+        (SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, NULL, NULL);
     }
 
   if (revision->kind == svn_opt_revision_number)
@@ -80,9 +78,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
       /* Sanity check. */
       if (path == NULL)
         return svn_error_create
-          (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, NULL,
-           "svn_client__get_revision_number: "
-           "need a version-controlled path to fetch local revision info.");
+          (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, NULL, NULL);
 
       SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, FALSE, FALSE,
                                       pool));
@@ -92,7 +88,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
       if (! ent)
         return svn_error_createf
         (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-         "svn_client__get_revision: '%s' not under version control", path);
+	 "'%s' is not under version control", path);
       
       if ((revision->kind == svn_opt_revision_base)
           || (revision->kind == svn_opt_revision_working))
@@ -107,8 +103,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
   else
     return svn_error_createf
       (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-       "svn_client__get_revision_number: "
-       "unrecognized revision type requested for '%s'", path);
+       "Unrecognized revision type requested for '%s'", path);
   
   return SVN_NO_ERROR;
 }

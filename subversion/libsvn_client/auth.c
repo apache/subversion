@@ -73,7 +73,7 @@ svn_client__default_auth_dir (const char **auth_dir_p,
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         "unknown node kind for '%s'", path);
+         "Unknown node kind for '%s'", path);
     }
   
   return SVN_NO_ERROR;

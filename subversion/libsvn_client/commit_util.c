@@ -208,7 +208,7 @@ harvest_committables (apr_hash_t *committables,
      entry was written. */
   if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
     return svn_error_createf
-      (SVN_ERR_NODE_UNKNOWN_KIND, NULL, "Unknown entry kind for \"%s\"", path);
+      (SVN_ERR_NODE_UNKNOWN_KIND, NULL, "Unknown entry kind for '%s'", path);
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
 
@@ -217,7 +217,7 @@ harvest_committables (apr_hash_t *committables,
       && (kind != svn_node_none))
     {
       return svn_error_createf
-        (SVN_ERR_NODE_UNKNOWN_KIND, NULL, "Unknown kind for \"%s\"", path);
+        (SVN_ERR_NODE_UNKNOWN_KIND, NULL, "Unknown entry kind for '%s'", path);
     }
 
   /* Get a fully populated entry for PATH if we can, and check for
@@ -614,8 +614,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
           if (! p_entry)
             return svn_error_createf 
               (SVN_ERR_WC_CORRUPT, NULL, 
-               "Entry for '%s' is scheduled for addition, yet its parent\n"
-               "directory does not appear to be under version control", 
+               "'%s' is scheduled for addition within unversioned parent",
                target);
           if ((p_entry->schedule == svn_wc_schedule_add)
               || (p_entry->schedule == svn_wc_schedule_replace))

@@ -312,7 +312,7 @@ add_dir_recursive (const char *dirname,
       apr_err = apr_dir_close (dir);
       if (apr_err)
         return svn_error_createf
-          (apr_err, NULL, "error closing dir '%s'", dirname);
+          (apr_err, NULL, "error closing directory '%s'", dirname);
     }
 
   /* Opened by svn_wc_add */

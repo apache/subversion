@@ -107,13 +107,13 @@ svn_client_switch (const char *path,
   
   if (! entry)
     return svn_error_createf
-      (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-       "svn_client_switch: '%s' is not under version control", path);
+      (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+       "'%s' is not under version control", path);
 
   if (! entry->url)
     return svn_error_createf
       (SVN_ERR_ENTRY_MISSING_URL, NULL,
-       "svn_client_switch: entry '%s' has no URL", path);
+       "Entry '%s' has no URL", path);
 
   if (entry->kind == svn_node_file)
     {
@@ -123,13 +123,13 @@ svn_client_switch (const char *path,
       SVN_ERR (svn_wc_entry (&session_entry, anchor, adm_access, FALSE, pool));
       if (! session_entry)
         return svn_error_createf
-          (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-           "svn_client_switch: '%s' is not under version control", anchor);
+          (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+           "'%s' is not under version control", anchor);
 
       if (! session_entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
-           "svn_client_switch: directory '%s' has no URL", anchor);
+           "Directory '%s' has no URL", anchor);
     }
   else if (entry->kind == svn_node_dir)
     {

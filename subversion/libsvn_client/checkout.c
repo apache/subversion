@@ -65,8 +65,7 @@ svn_client__checkout_internal (const char *URL,
   if ((revision->kind != svn_opt_revision_number)
       && (revision->kind != svn_opt_revision_date)
       && (revision->kind != svn_opt_revision_head))
-    return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                             "Bogus revision passed to svn_client_checkout");
+    return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
   /* Canonicalize the URL. */
   URL = svn_path_canonicalize (URL, pool);
@@ -94,7 +93,7 @@ svn_client__checkout_internal (const char *URL,
       SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                  "Source URL doesn't exist: %s.", URL);
+                                  "URL '%s' doesn't exist", URL);
 
       /* Get the repos UUID. */
       SVN_ERR (ra_lib->get_uuid (session, &uuid, pool));
