@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-03-24 23:45-0300\n"
+"POT-Creation-Date: 2005-03-30 17:34-0300\n"
 "PO-Revision-Date: 2004-07-26 19:19-300\n"
 "Last-Translator: dev@subversion.tigris.org\n"
 "Language-Team: Brazilian Portuguese <dev@subversion.tigris.org>\n"
@@ -1730,7 +1730,7 @@ msgid "Can't write to '%s'"
 msgstr "Não é possível escrever em '%s'"
 
 #: clients/cmdline/util.c:207 clients/cmdline/util.c:231
-#: libsvn_fs_fs/fs_fs.c:3354
+#: libsvn_fs_fs/fs_fs.c:3360
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Não é possível executar stat '%s'"
@@ -2596,27 +2596,27 @@ msgstr "Não é possível commit não recursivo de remoção de diretório"
 msgid "Unknown entry kind for '%s'"
 msgstr "Tipo de entrada desconhecido para '%s'"
 
-#: libsvn_client/commit_util.c:237
+#: libsvn_client/commit_util.c:239
 #, c-format
 msgid "Entry '%s' has unexpectedly changed special status"
 msgstr "Entrada '%s' inesperadamente teve um estado especial modificado"
 
-#: libsvn_client/commit_util.c:287
+#: libsvn_client/commit_util.c:289
 #, c-format
 msgid "Aborting commit: '%s' remains in conflict"
 msgstr "Abortando commit: '%s' continua em conflito"
 
-#: libsvn_client/commit_util.c:343
+#: libsvn_client/commit_util.c:345
 #, c-format
 msgid "Did not expect '%s' to be a working copy root"
 msgstr "Não esperava que '%s' fosse a raiz de uma cópia de trabalho"
 
-#: libsvn_client/commit_util.c:360
+#: libsvn_client/commit_util.c:362
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
 msgstr "item de commit '%s' possui flag de cópia mas não copyfrom URL\n"
 
-#: libsvn_client/commit_util.c:607 libsvn_client/commit_util.c:732
+#: libsvn_client/commit_util.c:609 libsvn_client/commit_util.c:734
 #: libsvn_client/copy.c:1079 libsvn_client/delete.c:66
 #: libsvn_client/diff.c:1254 libsvn_client/diff.c:1896
 #: libsvn_client/diff.c:2331 libsvn_client/diff.c:2436
@@ -2631,17 +2631,17 @@ msgstr "item de commit '%s' possui flag de cópia mas não copyfrom URL\n"
 msgid "'%s' is not under version control"
 msgstr "'%s' não está sobre controle de versão"
 
-#: libsvn_client/commit_util.c:610
+#: libsvn_client/commit_util.c:612
 #, c-format
 msgid "Entry for '%s' has no URL"
 msgstr "Entrada para '%s' não possui URL"
 
-#: libsvn_client/commit_util.c:641
+#: libsvn_client/commit_util.c:643
 #, c-format
 msgid "'%s' is scheduled for addition within unversioned parent"
 msgstr "'%s' está agendado para inclusão dentro de pai não versionado"
 
-#: libsvn_client/commit_util.c:661
+#: libsvn_client/commit_util.c:663
 #, c-format
 msgid ""
 "Entry for '%s' is marked as 'copied' but is not itself scheduled\n"
@@ -2653,7 +2653,7 @@ msgstr ""
 "que\n"
 "está dentro de um diretório não versionado (ou não ainda versionado)?"
 
-#: libsvn_client/commit_util.c:701
+#: libsvn_client/commit_util.c:703
 #, c-format
 msgid ""
 "'%s' is not under version control and is not part of the commit, yet its "
@@ -2662,19 +2662,19 @@ msgstr ""
 "'%s' não está sobre controle de versão e não é parte do commit, porém seu "
 "filho '%s' é parte do commit"
 
-#: libsvn_client/commit_util.c:781
+#: libsvn_client/commit_util.c:783
 #, c-format
 msgid "Cannot commit both '%s' and '%s' as they refer to the same URL"
 msgstr ""
 "Não é possível executar commit em '%s' e '%s' porque ambos referem ao mesmo "
 "URL"
 
-#: libsvn_client/commit_util.c:925
+#: libsvn_client/commit_util.c:927
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL"
 msgstr "item de commit '%s' possui flag de cópia mas não copyfrom URL"
 
-#: libsvn_client/commit_util.c:929
+#: libsvn_client/commit_util.c:931
 #, c-format
 msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr "item de commit '%s' possui flag de cópia mas uma revisão inválida"
@@ -3185,7 +3185,7 @@ msgstr "copyroot mal formada em linha node-rev"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "copyfrom mal formada em linha node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:789 libsvn_fs_fs/fs_fs.c:2943
+#: libsvn_fs_fs/fs_fs.c:789 libsvn_fs_fs/fs_fs.c:2949
 msgid "Attempted to write to non-transaction"
 msgstr "Tentativa de escrever em não transacional"
 
@@ -3245,67 +3245,67 @@ msgstr "Tamanho da janela svndiff está corrompido"
 msgid "Directory entry corrupt"
 msgstr "Entrada de diretório corrompida"
 
-#: libsvn_fs_fs/fs_fs.c:1754
+#: libsvn_fs_fs/fs_fs.c:1760
 msgid "Missing required node revision ID"
 msgstr "Faltando ID de revisão de nó requerido"
 
-#: libsvn_fs_fs/fs_fs.c:1764
+#: libsvn_fs_fs/fs_fs.c:1770
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr "Ordem de mudança inválida: novo ID de revisão de nó sem delete"
 
-#: libsvn_fs_fs/fs_fs.c:1775
+#: libsvn_fs_fs/fs_fs.c:1781
 msgid "Invalid change ordering: non-add change on deleted path"
 msgstr "Ordem de mudança inválida: mudança não-add em caminho removido"
 
-#: libsvn_fs_fs/fs_fs.c:1920 libsvn_fs_fs/fs_fs.c:1928
-#: libsvn_fs_fs/fs_fs.c:1960 libsvn_fs_fs/fs_fs.c:1980
-#: libsvn_fs_fs/fs_fs.c:2014 libsvn_fs_fs/fs_fs.c:2019
+#: libsvn_fs_fs/fs_fs.c:1926 libsvn_fs_fs/fs_fs.c:1934
+#: libsvn_fs_fs/fs_fs.c:1966 libsvn_fs_fs/fs_fs.c:1986
+#: libsvn_fs_fs/fs_fs.c:2020 libsvn_fs_fs/fs_fs.c:2025
 msgid "Invalid changes line in rev-file"
 msgstr "Linha de mudança inválida em rev-file"
 
-#: libsvn_fs_fs/fs_fs.c:1953
+#: libsvn_fs_fs/fs_fs.c:1959
 msgid "Invalid change kind in rev file"
 msgstr "Tipo de mudança inválido em arquivo rev"
 
-#: libsvn_fs_fs/fs_fs.c:1973
+#: libsvn_fs_fs/fs_fs.c:1979
 msgid "Invalid text-mod flag in rev-file"
 msgstr "Flag text-mod inválida em rev-file"
 
-#: libsvn_fs_fs/fs_fs.c:1993
+#: libsvn_fs_fs/fs_fs.c:1999
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "Flag prop-mod inválida em rev-file"
 
-#: libsvn_fs_fs/fs_fs.c:2176
+#: libsvn_fs_fs/fs_fs.c:2182
 msgid "Copying from transactions not allowed"
 msgstr "Não é permitido copiar de transações"
 
-#: libsvn_fs_fs/fs_fs.c:2418 libsvn_fs_fs/fs_fs.c:2425
+#: libsvn_fs_fs/fs_fs.c:2424 libsvn_fs_fs/fs_fs.c:2431
 msgid "next-id file corrupt"
 msgstr "Arquivo next-id corrompido"
 
-#: libsvn_fs_fs/fs_fs.c:2651
+#: libsvn_fs_fs/fs_fs.c:2657
 msgid "Invalid change type"
 msgstr "Tipo de mudança inválido"
 
-#: libsvn_fs_fs/fs_fs.c:2962
+#: libsvn_fs_fs/fs_fs.c:2968
 msgid "Can't set text contents of a directory"
 msgstr "Não pode setar conteúdo de texto de um diretório"
 
-#: libsvn_fs_fs/fs_fs.c:3052 libsvn_fs_fs/fs_fs.c:3057
-#: libsvn_fs_fs/fs_fs.c:3064
+#: libsvn_fs_fs/fs_fs.c:3058 libsvn_fs_fs/fs_fs.c:3063
+#: libsvn_fs_fs/fs_fs.c:3070
 msgid "Corrupt current file"
 msgstr "Arquivo corrente corrompido"
 
-#: libsvn_fs_fs/fs_fs.c:3357
+#: libsvn_fs_fs/fs_fs.c:3363
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "Não é possível aplicar chmod a '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3493
+#: libsvn_fs_fs/fs_fs.c:3499
 msgid "Transaction out of date"
 msgstr "Transação desatualizada"
 
-#: libsvn_fs_fs/fs_fs.c:3733
+#: libsvn_fs_fs/fs_fs.c:3739
 msgid "No such transaction"
 msgstr "Não existe tal transação"
 
@@ -4916,48 +4916,52 @@ msgstr ""
 "sub-comando '%s' não aceita opção '%s'\n"
 "Digite 'svnadmin help %s' para uso.\n"
 
-#: svndumpfilter/main.c:374
-#, c-format
-msgid "Invalid copy source path '%s'"
-msgstr "Caminho de origem de cópia inválido '%s'"
-
-#: svndumpfilter/main.c:640
+#: svndumpfilter/main.c:378
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
 msgstr "Feito commit de revisão %ld como %ld.\n"
 
-#: svndumpfilter/main.c:648
+#: svndumpfilter/main.c:386
 #, c-format
 msgid "Revision %ld skipped.\n"
 msgstr "Revisão %ld pulada.\n"
 
-#: svndumpfilter/main.c:889
+#: svndumpfilter/main.c:489
+#, c-format
+msgid "Invalid copy source path '%s'"
+msgstr "Caminho de origem de cópia inválido '%s'"
+
+#: svndumpfilter/main.c:638
+msgid "Delta property block detected - not supported by svndumpfilter"
+msgstr "Detectado bloco de propriedade delta - não suportado por svndumpfilter"
+
+#: svndumpfilter/main.c:947
 #, c-format
 msgid ""
 "Dropped %d revision(s).\n"
 "\n"
 msgstr "Removida(s) %d revisão(ões).\n"
 
-#: svndumpfilter/main.c:895
+#: svndumpfilter/main.c:953
 msgid "Revisions renumbered as follows:\n"
 msgstr "Revisões renumeradas como a seguir:\n"
 
-#: svndumpfilter/main.c:923
+#: svndumpfilter/main.c:981
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (removida)\n"
 
-#: svndumpfilter/main.c:927
+#: svndumpfilter/main.c:985
 #, c-format
 msgid "   %ld => %ld\n"
 msgstr "   %ld => %ld\n"
 
-#: svndumpfilter/main.c:938
+#: svndumpfilter/main.c:996
 #, c-format
 msgid "Dropped %d node(s):\n"
 msgstr "Removido(s) %d nó(s):\n"
 
-#: svndumpfilter/main.c:1146
+#: svndumpfilter/main.c:1204
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -4965,7 +4969,7 @@ msgstr ""
 "\n"
 "Erro: nenhum prefixo fornecido.\n"
 
-#: svndumpfilter/main.c:1189
+#: svndumpfilter/main.c:1247
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
