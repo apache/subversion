@@ -45,6 +45,20 @@
 };
 
 /* -----------------------------------------------------------------------
+   In svn_client_checkout and svn_client_update, the xml_src parameter
+   needs to be NULL sometimes.
+*/
+
+%typemap(python,in,parse="z") const char *xml_src "";
+
+/* -----------------------------------------------------------------------
+   In svn_client_import and svn_client_commit, the xml_dst parameter
+   needs to be NULL sometimes.
+*/
+
+%typemap(python,in,parse="z") const char *xml_dst "";
+
+/* -----------------------------------------------------------------------
    fix up the return hash for svn_client_propget()
 */
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
@@ -64,7 +78,7 @@
     if (list == NULL)
         return NULL;
     ppitem = (svn_client_proplist_item_t **)(*$1)->elts;
-    for (i = 0; i < nelts; ++ppitem) {
+    for (i = 0; i < nelts; ++i, ++ppitem) {
         PyObject *item = PyTuple_New(2);
         PyObject *name = PyString_FromStringAndSize((*ppitem)->node_name->data,
                                                     (*ppitem)->node_name->len);
