@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.19 $ of this document.)
+              ($Revision: 1.20 $ of this document.)
 
 * Introduction
 
@@ -629,9 +629,8 @@ might sprout off any version in myproj's history):
 
 
   [Still writing this up, although we know how it works.  The basic
-  thing to note is how tags are totally constant space, but once you
-  start committing on a tag it becomes a branch and line-of-ancestry
-  copying is forced.] 
+  thing to note is how once you start committing on a copy,
+  line-of-ancestry copying is forced.] 
 
 
 ** How is meta-data stored
