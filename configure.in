@@ -233,14 +233,14 @@ case "$host_alias" in
 *bsdi*)
     # Check whether they've installed GNU make
     if make --version > /dev/null 2>&1; then 
-	INCLUDE_OUTPUTS="include build-outputs.mk"
+	INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
     else
 	# BSDi make
-	INCLUDE_OUTPUTS=".include \"build-outputs.mk\""
+	INCLUDE_OUTPUTS=".include \"\$(top_srcdir)/build-outputs.mk\""
     fi
     ;;
 *)
-    INCLUDE_OUTPUTS="include build-outputs.mk"
+    INCLUDE_OUTPUTS="include \$(top_srcdir)/build-outputs.mk"
     ;;
 esac
 AC_SUBST(INCLUDE_OUTPUTS)
@@ -248,6 +248,13 @@ AC_SUBST(INCLUDE_OUTPUTS)
 dnl Final step:  create the Makefile ----------------------------
 
 AC_OUTPUT([Makefile])
+
+
+dnl Create all of the build directories
+
+if test "$abs_srcdir" != "$abs_builddir"; then
+    make mkdir-init
+fi
 
 
 dnl  Print warning messages about what we did and didn't configure at the 
