@@ -125,29 +125,6 @@ svn_ruby_strbuf_hash (apr_hash_t *hash, apr_pool_t *pool)
   return obj;
 }
 
-svn_client_revision_t
-svn_ruby_parse_revision (VALUE revOrDate)
-{
-  svn_client_revision_t revision;
-  if (rb_obj_is_kind_of (revOrDate, rb_cTime) == Qtrue)
-    {
-      time_t sec, usec;
-      sec = NUM2LONG (rb_funcall (revOrDate, rb_intern ("tv_sec"), 0));
-      usec = NUM2LONG (rb_funcall (revOrDate, rb_intern ("tv_usec"), 0));
-      revision.kind = svn_client_revision_date;
-      revision.value.date = sec * APR_USEC_PER_SEC + usec;
-    }
-  else if (revOrDate == Qnil)
-    revision.kind = svn_client_revision_unspecified;
-  else
-    {
-      revision.kind = svn_client_revision_number;
-      revision.value.number = NUM2LONG (revOrDate);
-    }
-  return revision;
-}
-
-
 void
 svn_ruby_init_apr (void)
 {
