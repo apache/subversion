@@ -1,3 +1,5 @@
+#!/usr/bin/perl -w
+
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -14,7 +16,7 @@
 
 # This script can be called from a pre-commit hook on either Windows or a Unix
 # like operating system.  It implements the checks required to ensure that the
-# repository acts in a way which is compatable with a case preserving but
+# repository acts in a way which is compatible with a case preserving but
 # case insensitive file system.
 #
 # When a file is added this script checks the file tree in the repository for
@@ -45,17 +47,15 @@
 # If you have any problems with this script feel free to contact
 # Martin Tomes <martin@tomes.org.uk>
 
-# Bugfixes and some debug code added by Jeremy Bettis <jeremy@deadbeef.com>
+# Bug fixes and some debug code added by Jeremy Bettis <jeremy@deadbeef.com>
 
 use strict;
-
-my $opSys = $^O;
 
 my $svnlook;
 my $openstr;
 
 # Please check the path to svnlook is correct...
-if ($opSys eq 'MSWin32') {
+if ($^O eq 'MSWin32') {
   $svnlook = '"c:\Program Files\subversion\bin\svnlook.exe"';
   $openstr = '-|';
 } else {
@@ -65,7 +65,7 @@ if ($opSys eq 'MSWin32') {
 
 # Shift off any debug options.
 my $debug = 0;
-while ($ARGV[0] eq '-debug') {
+while (@ARGV and $ARGV[0] =~ /^-d(ebug)?$/) {
   $debug++;
   shift;
 }
@@ -73,44 +73,57 @@ while ($ARGV[0] eq '-debug') {
 # If there is too much debug output to STDERR subversion doesn't like it, so,
 # if a lot of output is expected send it to a file instead.
 if ($debug > 1) {
-  if ($opSys eq 'MSWin32') {
-    open(STDERR, ">c:/svnlog.txt");
+  if ($^O eq 'MSWin32') {
+    open(STDERR, ">c:/svnlog.txt")
+      or die "$0: cannot open 'c:/svnlog.txt' for writing: $!\n";
   } else {
-    open(STDERR, ">/tmp/svnlog.txt");
+    open(STDERR, ">/tmp/svnlog.txt")
+      or die "$0: cannot open '/tmp/svnlog.txt' for writing: $!\n";
   }
 }
 
 # Fetch the command line arguments.
-my $repos = $ARGV[0];
-my $txn = $ARGV[1];
+unless (@ARGV > 1) {
+  die "usage: $0 [-d [-d [-d]]] repos txn [--revision]\n";
+}
+
+my $repos = shift;
+my $txn = shift;
+
 # Jeremy Bettis <jeremy@deadbeef.com> wrote the $flag code and has this to
 # say about it:
 #
 # The reason I did that was so that I could test the hook without actually
-# doing a commit.  Whenever I had a commit that succeded in making a bad file
+# doing a commit.  Whenever I had a commit that succeeded in making a bad file
 # or directory, or when a commit took too long I just did a sequence of
 # operations like this:
 #
 # svnlook youngest path
 # (it tells me that HEAD is 987 or whatever)
 # check-case-insensitive.pl -debug path 987 -r
-# and then the check-case-insensitiv.pl passes -r to svnlook instead of
+# and then the check-case-insensitive.pl passes -r to svnlook instead of
 # --transaction.
 #
 # Of course when it gets down to # Get the file tree at the previous revision,
 # then it doesn't work, but most of my problems were found before that point.
 my $flag = '--transaction';
-$flag = $ARGV[2] if ($#ARGV > 1);
+$flag = shift if @ARGV;
 
-my @added; # Each added path put here.
-my %tree;  # The file tree as a hash, index lower cased name, value actual name.
-my $cmd;   # Command being executed.
+# Each added path put here.
+my @added;
+
+# The file tree as a hash, index lower cased name, value actual name.
+my %tree;
+
+# Command being executed.
+my $cmd;
 
 # Get a list of added files.
 local *SVNLOOK;
-$cmd = $svnlook . ' changed "' . $repos . '" ' . $flag . ' ' . $txn;
+$cmd = "$svnlook changed \"$repos\" $flag $txn";
 print STDERR "$cmd\n" if ($debug);
-open(SVNLOOK, $openstr, $cmd) || die($cmd);
+open(SVNLOOK, $openstr, $cmd)
+  or die("$0: cannot open '$cmd' pipe for reading: $!\n");
 while (<SVNLOOK>) {
   chomp;
   if (/^A\s+(\S.*)/) {
@@ -126,7 +139,7 @@ if ($debug) {
   }
 }
 
-if ($#added < 0) {
+unless (@added) {
   print STDERR "No files added\n" if ($debug);
   # No added files so no problem.
   exit(0);
@@ -134,9 +147,10 @@ if ($#added < 0) {
 
 # Get the shortest directory name which has changed, this will be the path
 # into the repository to use to get the history.
-$cmd = $svnlook . ' dirs-changed "' . $repos . '" ' . $flag . ' ' . $txn;
+$cmd = "$svnlook \"$repos\" $flag $txn";
 print STDERR "$cmd\n" if ($debug);
-open(SVNLOOK, $openstr, $cmd) || die($cmd);
+open(SVNLOOK, $openstr, $cmd)
+  or die("$0: cannot open '$cmd' pipe for reading: $!\n");
 my $shortest=999999;
 my $changed;
 while (<SVNLOOK>) {
@@ -154,9 +168,10 @@ close SVNLOOK;
 $changed =~ s/\/$//;
 
 # Use the history of $changed path to find the revision of the previous commit.
-$cmd = $svnlook . ' history "' . $repos . '" "' . $changed . '/"';
+$cmd = "$svnlook history \"$repos\" \"$changed/\"";
 print STDERR "$cmd\n" if ($debug);
-open(SVNLOOK, $openstr, $cmd) || die($cmd);
+open(SVNLOOK, $openstr, $cmd)
+  or die("$0: cannot open '$cmd' pipe for reading: $!\n");
 my $lastrev;
 while (<SVNLOOK>) {
   chomp;
@@ -170,13 +185,14 @@ close SVNLOOK;
 # Get the file tree at the previous revision and turn the output into
 # complete paths for each file.
 my @path;
-$cmd = $svnlook . ' tree "' . $repos . '" "' . $changed . '/" --revision ' . $lastrev;
+$cmd = "$svnlook tree \"$repos\" \"$changed/\" --revision $lastrev";
 print STDERR "$cmd\n" if ($debug);
-open(SVNLOOK, $openstr, $cmd) || die($cmd);
+open(SVNLOOK, $openstr, $cmd)
+  or die("$0: cannot open '$cmd' pipe for reading: $!\n");
 while (<SVNLOOK>) {
   chomp;
   print STDERR "tree: '", $_, "'\n" if ($debug > 2);
-  next if (/^\/{1,2}$/); # Ignore the root node.  Two /'s at root of the repo.
+  next if (/^\/{1,2}$/); # Ignore the root node.  Two /'s at root of the repos.
   if (/^(\s+)(.*)\/$/) { # Is a directory.
     $#path = length($1)-2; # Number of spaces at start of line is nest level.
     push @path, $2;
@@ -220,4 +236,5 @@ if (defined($failmsg)) {
   print STDERR "\nFile name case conflict found:\n" . $failmsg . "\n";
   exit 1;
 }
+
 exit 0;
