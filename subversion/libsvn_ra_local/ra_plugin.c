@@ -428,7 +428,6 @@ do_switch (void *session_baton,
            svn_stringbuf_t *update_target,
            svn_boolean_t recurse,
            svn_stringbuf_t *switch_url,
-           svn_boolean_t anchor_target_split,
            const svn_delta_edit_fns_t *update_editor,
            void *update_baton)
 {
@@ -461,19 +460,8 @@ do_switch (void *session_baton,
   else
     revnum_to_update_to = update_revision;
 
-  /* We need to make sure the pipe-editor is "anchored" in the same
-     way that the wc's update editor is anchored.  The caller of this
-     routine -- svn_client_switch -- is the only thing that knows if
-     the wc path was split into anchor/target.  Hence the flag that
-     was passed in.  */
   pipe_anchor = svn_stringbuf_create_from_string (switch_fs_path, 
                                                   sbaton->pool);
-  if (anchor_target_split)
-    {
-      /* Don't anchor the 2nd half of the switch_url directly, but
-         instead anchor on its *parent*.  */
-      svn_path_remove_component (pipe_anchor);
-    }
   
   /* Wrap UPDATE_EDITOR with a custom "pipe" editor that pushes extra
      'entry' properties into the stream, whenever {open_root,

@@ -68,7 +68,7 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   svn_wc_entry_t *entry;
-  svn_stringbuf_t *anchor, *target, *URL;
+  svn_stringbuf_t *URL;
   svn_error_t *err;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
@@ -86,27 +86,28 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
       svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL, pool,
                        "Cannot specify _both_ revision and time.");
 
-  /* Use PATH to get the update's anchor and targets. */
-  SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
+  /* Unlike 'svn up', we do *not* split the local path into an
+     anchor/target pair.  We do this because we know that the target
+     isn't going to be deleted, because we're doing a switch.  */
 
-  /* Get full URL from the ANCHOR;  this is the URL we will open an RA
+  /* Get full URL from the PATH;  this is the URL we will open an RA
      session to. */
-  SVN_ERR (svn_wc_entry (&entry, anchor, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, pool));
   if (! entry)
     return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-       "svn_client_update: %s is not under revision control", anchor->data);
+      (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+       "svn_client_update: %s is not under revision control", path->data);
   if (! entry->url)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool,
-       "svn_client_update: entry '%s' has no URL", anchor->data);
+       "svn_client_update: entry '%s' has no URL", path->data);
   URL = svn_stringbuf_dup (entry->url, pool);
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later
      on. */
-  SVN_ERR (svn_wc_get_switch_editor (anchor,
-                                     target,
+  SVN_ERR (svn_wc_get_switch_editor (path,
+                                     NULL,
                                      revision,
                                      switch_url,
                                      recurse,
@@ -125,7 +126,7 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
   
   /* Open an RA session to this URL */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
                                         TRUE, TRUE, auth_baton, pool));
   
   /* If TM is given, convert the time into a revision number. */
@@ -139,10 +140,9 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
   SVN_ERR (ra_lib->do_switch (session,
                               &reporter, &report_baton,
                               revision,
-                              target,
+                              NULL,
                               recurse,
                               switch_url,
-                              target ? TRUE : FALSE,
                               switch_editor, switch_edit_baton));
 
   /* Drive the reporter structure, describing the revisions within
