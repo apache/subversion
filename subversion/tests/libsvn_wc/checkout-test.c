@@ -49,42 +49,36 @@
 
 
 
-#include <stdio.h>       /* for sprintf() */
+#include <stdio.h>
 #include <stdlib.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_file_io.h>
 #include "svn_types.h"
 #include "svn_delta.h"
-/* #include "svn_wc.h" */
+#include "svn_wc.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_hash.h"
 
 
 
-/* todo: prototype by hand until we're ready to include the real header. */
-svn_error_t *
-svn_wc_apply_delta (apr_file_t *src, svn_string_t *dst, apr_pool_t *pool);
-
-
-
 static svn_error_t *
-test_read_fn (void *baton, char *buffer, apr_off_t *len)
+test_read_fn (void *baton, char *buffer, apr_off_t *len, apr_pool_t *pool)
 {
   apr_file_t *src = (apr_file_t *) baton;
+  svn_error_t *err;
+  apr_status_t stat;
 
-  todo fooo working here;
+  stat = apr_full_read (src, buffer,
+                        (apr_size_t) *len,
+                        (apr_size_t *) len);
 
-      svn_error_t *err
-        = svn_create_error
-        (SVN_ERR_MALFORMED_XML, 0,
-         apr_psprintf (pool, "%s at line %d",
-                       XML_ErrorString (XML_GetErrorCode (parsimonious)),
-                       XML_GetCurrentLineNumber (parsimonious)),
-         NULL, pool);
-      XML_ParserFree (parsimonious);
-      return err;
+  if (stat)
+    return svn_create_error
+      (stat, 0, "error reading incoming delta stream", NULL, pool);
+  else
+    return 0;
 }
 
 
@@ -93,8 +87,8 @@ main (void)
 {
   apr_pool_t *pool = NULL;
   apr_file_t *src = NULL;     /* init to NULL very important! */
-  svn_error_t err;
-  apr_status_t stat;
+  svn_error_t *err = NULL;
+  svn_string_t *target = NULL;
 
   apr_initialize ();
   apr_create_pool (&pool, NULL);
@@ -113,7 +107,9 @@ main (void)
             APR_OS_DEFAULT,
             pool);
 
-  update (src, NULL, pool);
+  target = svn_string_create ("todo", pool);
+
+  err = svn_wc_apply_delta (src, test_read_fn, target, pool);
 
   apr_close (src);
 

@@ -1,5 +1,5 @@
 /*
- * checkout-test.c :  testing checkout
+ * wc_adm.c :  routines for managing files in SVN/.
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -49,70 +49,64 @@
 
 
 
-#include <stdio.h>
+#include <stdio.h>       /* for sprintf() */
 #include <stdlib.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_file_io.h>
 #include "svn_types.h"
-#include "svn_delta.h"
-#include "svn_wc.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_hash.h"
+#include "svn_wc.h"
 
 
 
-static svn_error_t *
-test_read_fn (void *baton, char *buffer, apr_off_t *len, apr_pool_t *pool)
+/* kff todo: not all of these really belong in wc_adm.  Some may get
+   broken out into other files later. */
+
+svn_error_t *
+svn_wc_rename (svn_string_t *src, svn_string_t *dst)
 {
-  apr_file_t *src = (apr_file_t *) baton;
-  svn_error_t *err;
-  apr_status_t stat;
-
-  stat = apr_full_read (src, buffer,
-                        (apr_size_t) *len,
-                        (apr_size_t *) len);
-
-  if (stat)
-    return svn_create_error
-      (stat, 0, "error reading incoming delta stream", NULL, pool);
-  else
-    return 0;
+  return 0;
 }
 
 
-int
-main (void)
+svn_error_t *
+svn_wc_copy (svn_string_t *src, svn_string_t *dst)
 {
-  apr_pool_t *pool = NULL;
-  apr_file_t *src = NULL;     /* init to NULL very important! */
-  svn_error_t *err = NULL;
-  svn_string_t *target = NULL;
+  return 0;
+}
 
-  apr_initialize ();
-  apr_create_pool (&pool, NULL);
 
-  /* On Tue, Aug 08, 2000 at 09:50:33PM -0500, Karl Fogel wrote:
-   * > Greg, I've got a stupid question for you:
-   * > 
-   * > How do I get an (apr_file_t *) that reads from stdin?  And one writing
-   * > to stdout?
-   * 
-   * Check out apr_put_os_file() in apr_portable.h
-   */
+svn_error_t *
+svn_wc_add (apr_array_header_t *paths)
+{
+  return 0;
+}
 
-  apr_open (&src, "checkout-1.delta",
-            (APR_READ | APR_CREATE),
-            APR_OS_DEFAULT,
-            pool);
 
-  target = svn_string_create ("todo", pool);
+svn_error_t *
+svn_wc_delete (apr_array_header_t *paths)
+{
+  return 0;
+}
 
-  err = svn_wc_apply_delta (src, test_read_fn, target, pool);
 
-  apr_close (src);
+svn_error_t *
+svn_wc_get_path_prop (svn_string_t **value,
+                      svn_string_t *propname,
+                      svn_string_t *path)
+{
+  return 0;
+}
 
+
+svn_error_t *
+svn_wc_get_dirent_prop (svn_string_t **value,
+                        svn_string_t *propname,
+                        svn_string_t *path)
+{
   return 0;
 }
 
@@ -120,8 +114,9 @@ main (void)
 
 
 
-/* -----------------------------------------------------------------
+/* 
  * local variables:
- * eval: (load-file "../../svn-dev.el")
+ * eval: (load-file "../svn-dev.el")
  * end:
  */
+

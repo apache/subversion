@@ -156,7 +156,8 @@ extern void svn_free_delta_window (svn_delta_window_t *window);
    process the data as we go.  */
 typedef svn_error_t *svn_delta_read_fn_t (void *baton,
                                           char *buffer,
-                                          apr_off_t *len);
+                                          apr_off_t *len,
+                                          apr_pool_t *pool);
 
 
 /* A function to consume a series of delta windows.  This function
@@ -231,7 +232,7 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*add_directory) (svn_string_t *name,
 				 void *walk_baton, void *parent_baton,
 				 svn_string_t *base_path,
-				 long int base_version,
+				 svn_vernum_t base_version,
 				 svn_pdelta_t *pdelta,
 				 void **child_baton);
 
@@ -244,7 +245,7 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*replace_directory) (svn_string_t *name,
 				     void *walk_baton, void *parent_baton,
 				     svn_string_t *base_path,
-				     long int base_version,
+				     svn_vernum_t base_version,
 				     svn_pdelta_t *pdelta,
 				     void **child_baton);
 
@@ -263,7 +264,7 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*add_file) (svn_string_t *name,
 			    void *walk_baton, void *parent_baton,
 			    svn_string_t *base_path,
-			    long int base_version,
+			    svn_vernum_t base_version,
 			    svn_pdelta_t *pdelta,
                             svn_delta_handler_t **handler,
 			    void **handler_baton);
@@ -274,7 +275,7 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*replace_file) (svn_string_t *name,
 				void *walk_baton, void *parent_baton,
 				svn_string_t *base_path,
-				long int base_version,
+				svn_vernum_t base_version,
 				svn_pdelta_t *pdelta,
                                 svn_delta_handler_t **handler,
                                 void **handler_baton);
