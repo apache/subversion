@@ -150,15 +150,17 @@ svn_error_t *svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
                                         const char *path,
                                         apr_pool_t *pool);
 
-/* Try to obtain @a *adm_access via @c svn_wc_adm_probe_retrieve(),
- * but if this fails because @a path does not have a baton in 
- * @a associated, then try @c svn_wc_adm_probe_open(), this time
- * passing @a write_lock and @a tree_lock.  If there is still no
- * access because @a path is not a versioned directory, then just set
- * @a *adm_access to null and return success.  But if it is because 
- * @a path is locked, then return the error SVN_ERR_WC_LOCKED, and the
- * effect on @a *adm_access is undefined.  (Or if the attempt fails
- * for any other reason, return the corresponding error, and the
+/** Try various ways to obtain an access baton for @a path.
+ *
+ * Try to obtain @a *adm_access via @c svn_wc_adm_probe_retrieve(),
+ * but if this fails because @a associated can't give a baton for
+ * @a path or @a path's parent, then try @c svn_wc_adm_probe_open(),
+ * this time passing @a write_lock and @a tree_lock.  If there is
+ * still no access because @a path is not a versioned directory, then
+ * just set @a *adm_access to null and return success.  But if it is
+ * because @a path is locked, then return the error SVN_ERR_WC_LOCKED,
+ * and the effect on @a *adm_access is undefined.  (Or if the attempt
+ * fails for any other reason, return the corresponding error, and the
  * effect on @a *adm_access is also undefined.)
  *
  * If @c svn_wc_adm_probe_open() succeeds, then add @a *adm_access to
