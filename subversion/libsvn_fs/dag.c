@@ -515,9 +515,6 @@ set_entry (dag_node_t *parent,
                           (SVN_FS__NR_DATA_KEY (parent_node_rev))->data,
                           (SVN_FS__NR_DATA_KEY (parent_node_rev))->len);
 
-  /* Empty string is allowable, but null is not. */
-  assert (rep_key != NULL);
-
   if (rep_key[0] == '\0')
     {
       /* Create a rep skel like this: (('fulltext' 'mutable') '') .  */
