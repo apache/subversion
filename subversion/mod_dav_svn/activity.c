@@ -38,14 +38,13 @@ const char *dav_svn_get_txn(const dav_svn_repos *repos,
 {
   apr_dbm_t *dbm;
   apr_status_t status;
-  svn_stringbuf_t *pathname;
+  const char *pathname;
   apr_datum_t key;
   apr_datum_t value;
   const char *txn_name;
 
-  pathname = svn_stringbuf_create(repos->fs_path, repos->pool);
-  svn_path_add_component_nts(pathname, ACTIVITY_DB);
-  status = apr_dbm_open(&dbm, pathname->data, APR_DBM_READONLY,
+  pathname = svn_path_join(repos->fs_path, ACTIVITY_DB, repos->pool);
+  status = apr_dbm_open(&dbm, pathname, APR_DBM_READONLY, 
                         APR_OS_DEFAULT, repos->pool);
   if (status != APR_SUCCESS)
     {
@@ -78,13 +77,12 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
 {
   apr_dbm_t *dbm;
   apr_status_t status;
-  svn_stringbuf_t *pathname;
+  const char *pathname;
   apr_datum_t key;
   apr_datum_t value;
 
-  pathname = svn_stringbuf_create(repos->fs_path, repos->pool);
-  svn_path_add_component_nts(pathname, ACTIVITY_DB);
-  status = apr_dbm_open(&dbm, pathname->data, APR_DBM_RWCREATE,
+  pathname = svn_path_join(repos->fs_path, ACTIVITY_DB, repos->pool);
+  status = apr_dbm_open(&dbm, pathname, APR_DBM_RWCREATE, 
                         APR_OS_DEFAULT, repos->pool);
   if (status != APR_SUCCESS)
     {
