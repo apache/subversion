@@ -307,12 +307,18 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 
 /* Starting at PATH, write out log entries indicating that a commit
    succeeded, using VERSION as the new version number.  run_log will
-   use these entries to complete the commit. */
+   use these log items to complete the commit. */
 /* todo: this, along with all other recursers, will want to use the
    svn_wc__compose_paths() convention eventually. */
 svn_error_t *svn_wc__log_commit (svn_string_t *path,
                                  svn_vernum_t version,
                                  apr_pool_t *pool);
+
+
+/* Recurse from path, cleaning up unfinished log business. */
+/* todo: this, along with all other recursers, will want to use the
+   svn_wc__compose_paths() convention eventually. */
+svn_error_t *svn_wc__cleanup (svn_string_t *path, apr_pool_t *pool);
 
 /* Process the instructions in the log file for PATH. */
 svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);

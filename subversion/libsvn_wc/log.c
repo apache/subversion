@@ -301,12 +301,51 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
 
 /*** Recursively do log things. ***/
 
+svn_error_t *
+svn_wc__cleanup (svn_string_t *path, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_hash_t *entries = NULL;
+  apr_hash_index_t *hi;
 
-/* Starting at PATH, write out log entries indicating that a commit
-   succeeded, using VERSION as the new version number.  run_log will
-   use these entries to complete the commit. */
-/* todo: this, along with all other recursers, will want to do 
-   svn_wc__compose_paths() someday. */
+  /* Clean up this dir. */
+  err = svn_wc__run_log (path, pool);
+  if (err)
+    return err;
+
+  /* Then find versioned subdirs and clean them up too. */
+  err = svn_wc__entries_read (&entries, path, pool);
+  if (err)
+    return err;
+
+  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t keylen;
+      void *val;
+      svn_wc__entry_t *entry;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      entry = val;
+
+      if (entry->kind == svn_dir_kind)
+        {
+          svn_string_t *subdir = svn_string_dup (path, pool);
+          svn_path_add_component (subdir,
+                                  svn_string_create ((char *) key, pool),
+                                  svn_path_local_style,
+                                  pool);
+
+          err = svn_wc__cleanup (subdir, pool);
+          if (err)
+            return err;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__log_commit (svn_string_t *path,
                     svn_vernum_t version,
