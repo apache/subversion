@@ -112,9 +112,6 @@ struct svn_fs_root_t
      afresh every time, since the root may have been cloned, or
      the transaction may have disappeared altogether.  */
   dag_node_t *root_dir;
-
-  /* Cache, mapping const char * PATH to const svn_fs_id_t NODE-REV-ID. */
-  apr_hash_t *node_id_cache;
 };
 
 
