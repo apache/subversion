@@ -216,7 +216,7 @@ authorize_simple_password (void **session_baton,
           /* 3. From the user directly, by prompting */
           char *answer;
           SVN_ERR (auth_obj->prompt_callback (&answer, 
-                                              "Password: ", 0, 
+                                              "Password: ", 1, 
                                               auth_obj->prompt_baton, pool));
           password = svn_stringbuf_create (answer, pool);
           need_to_store = TRUE;
