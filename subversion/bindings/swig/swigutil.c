@@ -125,7 +125,7 @@ const apr_array_header_t *svn_swig_strings_to_array(PyObject *source,
         return NULL;
     }
     targlen = PySequence_Length(source);
-    temp = apr_array_make(pool, targlen, sizeof(svn_stringbuf_t *));
+    temp = apr_array_make(pool, targlen, sizeof(const char *));
     while (targlen--) {
         PyObject *o = PySequence_GetItem(source, targlen);
         if (o == NULL)
@@ -135,10 +135,7 @@ const apr_array_header_t *svn_swig_strings_to_array(PyObject *source,
             PyErr_SetString(PyExc_TypeError, "not a sequence");
             return NULL;
         }
-        APR_ARRAY_IDX(temp, targlen, svn_stringbuf_t *) =
-            svn_stringbuf_ncreate(PyString_AS_STRING(o),
-                                  PyString_GET_SIZE(o),
-                                  pool);
+        APR_ARRAY_IDX(temp, targlen, const char *) = PyString_AS_STRING(o);
         Py_DECREF(o);
     }
     return temp;

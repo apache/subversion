@@ -95,23 +95,6 @@
 
 /* ----------------------------------------------------------------------- */
 
-/* ### this is all pending some fixes in swig... */
-%apply SWIGTYPE * {
-    const svn_fs_id_t *id,
-    const svn_fs_id_t *a,
-    const svn_fs_id_t *b,
-    const svn_fs_id_t *parent,
-    const svn_fs_id_t *child,
-    const svn_fs_id_t *id1,
-    const svn_fs_id_t *id2
-};
-%apply long *OUTPUT {
-    svn_revnum_t *new_rev,
-    svn_revnum_t *revision,
-    svn_revnum_t *rev_p,
-    svn_revnum_t *youngest_p
-};
-
 
 %include svn_fs.h
 

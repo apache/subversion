@@ -43,10 +43,6 @@
     const apr_array_header_t *paths
 };
 
-/* ### temporarily put this here rather than svn_types.i so that it
-   ### doesn't interfere with 'svn_fs_id_t *' params in svn_fs.h */
-%apply long *OUTPUT { svn_revnum_t * };
-
 /* ----------------------------------------------------------------------- */
 
 %include svn_repos.h

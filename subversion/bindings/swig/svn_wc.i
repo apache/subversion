@@ -23,9 +23,6 @@
 %import svn_string.i
 %import svn_delta.i
 
-/* ### temporarily put this here rather than svn_types.i so that it
-   ### doesn't interfere with 'svn_fs_id_t *' params in svn_fs.h */
-%apply long *OUTPUT { svn_revnum_t * };
 
 %include svn_wc.h
 %{

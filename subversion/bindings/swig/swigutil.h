@@ -70,7 +70,10 @@ PyObject *svn_swig_convert_hash(apr_hash_t *hash, swig_type_info *type);
 PyObject *svn_swig_c_strings_to_list(char **strings);
 
 /* helper function to convert a Python sequence of strings into an
-   apr_array_header_t* of svn_stringbuf_t* objects. */
+   'apr_array_header_t *' of 'const char *' objects.  Note that the
+   objects must remain alive -- the values are not copied. This is
+   appropriate for incoming arguments which are defined to last the
+   duration of the function's execution.  */
 const apr_array_header_t *svn_swig_strings_to_array(PyObject *source,
                                                     apr_pool_t *pool);
 
