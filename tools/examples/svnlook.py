@@ -54,7 +54,7 @@ class SVNLook:
     print author
 
   def cmd_changed(self):
-    raise NotImplementederror
+    self._print_tree(ChangedEditor, pass_root=1)
 
   def cmd_date(self):
     if self.txn_ptr:
@@ -77,15 +77,10 @@ class SVNLook:
     raise NotImplementedError
 
   def cmd_dirs_changed(self):
-    if self.txn_ptr:
-      base_rev = fs.txn_base_revision(self.txn_ptr)
-    else:
-      base_rev = self.rev - 1
-
-    self._print_tree(base_rev, DirsChangedEditor)
+    self._print_tree(DirsChangedEditor)
 
   def cmd_ids(self):
-    self._print_tree(0, Editor, show_ids=1)
+    self._print_tree(Editor, base_rev=0, pass_root=1)
 
   def cmd_info(self):
     self.cmd_author()
@@ -100,14 +95,22 @@ class SVNLook:
     print log
 
   def cmd_tree(self):
-    self._print_tree(0, Editor)
+    self._print_tree(Editor, base_rev=0)
 
   def _get_property(self, name):
     if self.txn_ptr:
       return fs.txn_prop(self.txn_ptr, name, self.pool)
     return fs.revision_prop(self.fs_ptr, self.rev, name, self.pool)
 
-  def _print_tree(self, base_rev, e_factory, show_ids=0):
+  def _print_tree(self, e_factory, base_rev=None, pass_root=0):
+    if base_rev is None:
+      # a specific base rev was not provided. use the transaction base,
+      # or the previous revision
+      if self.txn_ptr:
+        base_rev = fs.txn_base_revision(self.txn_ptr)
+      else:
+        base_rev = self.rev - 1
+
     # get the current root
     if self.txn_ptr:
       root = fs.txn_root(self.txn_ptr, self.pool)
@@ -117,8 +120,8 @@ class SVNLook:
     # the base of the comparison
     base_root = fs.revision_root(self.fs_ptr, base_rev, self.pool)
 
-    if show_ids:
-      editor = e_factory(root)
+    if pass_root:
+      editor = e_factory(root, base_root)
     else:
       editor = e_factory()
 
@@ -134,8 +137,10 @@ class SVNLook:
 
 
 class Editor(delta.Editor):
-  def __init__(self, root=None):
+  def __init__(self, root=None, base_root=None):
     self.root = root
+    # base_root ignored
+
     self.indent = ''
 
   def open_root(self, base_revision, dir_pool):
@@ -200,6 +205,62 @@ class DirsChangedEditor(delta.Editor):
       # the directory hasn't been printed yet. do it.
       print baton[1] + '/'
       baton[0] = 0
+
+
+class ChangedEditor(delta.Editor):
+  def __init__(self, root, base_root):
+    self.root = root
+    self.base_root = base_root
+
+  def open_root(self, base_revision, dir_pool):
+    return [ 1, '' ]
+
+  def delete_entry(self, path, revision, parent_baton, pool):
+    ### need more logic to detect 'replace'
+    if fs.is_dir(self.base_root, '/' + path, pool):
+      print 'D   ' + path + '/'
+    else:
+      print 'D   ' + path
+
+  def add_directory(self, path, parent_baton,
+                    copyfrom_path, copyfrom_revision, dir_pool):
+    print 'A   ' + path + '/'
+    return [ 0, path ]
+
+  def open_directory(self, path, parent_baton, base_revision, dir_pool):
+    return [ 1, path ]
+
+  def change_dir_prop(self, dir_baton, name, value, pool):
+    if dir_baton[0]:
+      # the directory hasn't been printed yet. do it.
+      print '_U  ' + baton[1] + '/'
+      dir_baton[0] = 0
+
+  def add_file(self, path, parent_baton,
+               copyfrom_path, copyfrom_revision, file_pool):
+    print 'A   ' + path
+    return [ '_', ' ', None ]
+
+  def open_file(self, path, parent_baton, base_revision, file_pool):
+    return [ '_', ' ', path ]
+
+  def apply_textdelta(self, file_baton):
+    file_baton[0] = 'U'
+
+    # no handler
+    return None
+
+  def change_file_prop(self, file_baton, name, value, pool):
+    file_baton[1] = 'U'
+
+  def close_file(self, file_baton):
+    text_mod, prop_mod, path = file_baton
+    # test the path. it will be None if we added this file.
+    if path:
+      status = text_mod + prop_mod
+      # was there some kind of change?
+      if status != '_ ':
+        print status + '  ' + path
 
 
 def _basename(path):
