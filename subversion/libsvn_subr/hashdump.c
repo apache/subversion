@@ -138,7 +138,7 @@ svn_unpack_bytestring (char **returndata, void *value)
 void *
 svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool)
 {
-  svn_string_t *valstring = apr_palloc (pool, sizeof(svn_string_t)); 
+  svn_string_t *valstring = apr_palloc (pool, sizeof (*valstring)); 
 
   valstring->len       = len;
   valstring->blocksize = len;
