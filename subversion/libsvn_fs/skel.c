@@ -167,13 +167,12 @@ list (char *data,
 
     /* Construct the return value.  */
     {
-      skel_t *s = apr_palloc (pool, sizeof (*s));
+      skel_t *s = apr_pcalloc (pool, sizeof (*s));
 
       s->is_atom = 0;
       s->data = list_start;
       s->len = data - list_start;
       s->children = children;
-      s->next = 0;
 
       return s;
     }
@@ -205,7 +204,7 @@ implicit_atom (char *data,
     ;
 
   /* Allocate the skel representing this string.  */
-  s = apr_palloc (pool, sizeof (*s));
+  s = apr_pcalloc (pool, sizeof (*s));
   s->is_atom = 1;
   s->data = start;
   s->len = data - start;
@@ -244,7 +243,7 @@ explicit_atom (char *data,
     return 0;
 
   /* Allocate the skel representing this string.  */
-  s = apr_palloc (pool, sizeof (skel_t));
+  s = apr_pcalloc (pool, sizeof (skel_t));
   s->is_atom = 1;
   s->data = data;
   s->len = size;
@@ -406,7 +405,7 @@ unparse (skel_t *skel, svn_string_t *str, apr_pool_t *pool)
 skel_t *
 svn_fs__str_atom (const char *str, apr_pool_t *pool)
 {
-  skel_t *skel = apr_palloc (pool, sizeof (*skel));
+  skel_t *skel = apr_pcalloc (pool, sizeof (*skel));
   skel->is_atom = 1;
   skel->data = (char *)str;     /* ### be nice to fix this... */
   skel->len = strlen (str);
@@ -420,7 +419,7 @@ svn_fs__mem_atom (char *addr,
                   apr_size_t len,
                   apr_pool_t *pool)
 {
-  skel_t *skel = apr_palloc (pool, sizeof (*skel));
+  skel_t *skel = apr_pcalloc (pool, sizeof (*skel));
   skel->is_atom = 1;
   skel->data = addr;
   skel->len = len;
@@ -538,7 +537,7 @@ svn_fs__list_length (skel_t *skel)
 skel_t *
 svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool)
 {
-  skel_t *copy = apr_palloc (pool, sizeof (*copy));
+  skel_t *copy = apr_pcalloc (pool, sizeof (*copy));
 
   if (skel->is_atom)
     {
@@ -549,7 +548,6 @@ svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool)
       copy->is_atom = 1;
       copy->data = s;
       copy->len = len;
-      copy->children = copy->next = 0;
     }
   else
     {
