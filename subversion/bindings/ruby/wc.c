@@ -661,7 +661,7 @@ svn_ruby_wc_to_statuses (apr_hash_t *statushash, apr_pool_t *pool)
 }
 
 static VALUE
-wc_statuses (VALUE class, VALUE aPath, VALUE descend, VALUE get_all)
+wc_statuses (VALUE class, VALUE aPath, VALUE descend, VALUE get_all, VALUE strict)
 {
   apr_hash_t *statushash;
   svn_stringbuf_t *path;
@@ -675,7 +675,8 @@ wc_statuses (VALUE class, VALUE aPath, VALUE descend, VALUE get_all)
   statushash = apr_hash_make (pool);
 
   err = svn_wc_statuses (statushash, path,
-                         RTEST (descend), RTEST (get_all), pool);
+                         RTEST (descend), RTEST (get_all),
+                         RTEST (strict), pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -801,6 +802,8 @@ void svn_ruby_init_wc (void)
   define_prop (cSvnWcEntry, "ATTR_URL",  SVN_WC_ENTRY_ATTR_URL);
   define_prop (cSvnWcEntry, "ATTR_REJFILE",  SVN_WC_ENTRY_ATTR_REJFILE);
   define_prop (cSvnWcEntry, "ATTR_PREJFILE",  SVN_WC_ENTRY_ATTR_PREJFILE);
+  define_prop (cSvnWcEntry, "ATTR_COPYFROM_URL", SVN_WC_ENTRY_ATTR_COPYFROM_URL);
+  define_prop (cSvnWcEntry, "ATTR_COPYFROM_REV", SVN_WC_ENTRY_ATTR_COPYFROM_REV);
   define_prop (cSvnWcEntry, "VALUE_ADD",  SVN_WC_ENTRY_VALUE_ADD);
   define_prop (cSvnWcEntry, "VALUE_DELETE",  SVN_WC_ENTRY_VALUE_DELETE);
   define_prop (cSvnWcEntry, "VALUE_REPLACE",  SVN_WC_ENTRY_VALUE_REPLACE);
@@ -819,7 +822,7 @@ void svn_ruby_init_wc (void)
   rb_define_method (cSvnWcEntry, "conflicted?", wc_entry_conflicted_p, 0);
   cSvnWcStatus = rb_define_class_under (svn_ruby_mSvn, "WcStatus", rb_cObject);
   rb_define_singleton_method (cSvnWcStatus, "new", wc_status, 1);
-  rb_define_singleton_method (cSvnWcStatus, "statuses", wc_statuses, 3);
+  rb_define_singleton_method (cSvnWcStatus, "statuses", wc_statuses, 4);
   rb_define_const (cSvnWcStatus, "NONE", INT2FIX (svn_wc_status_none));
   rb_define_const (cSvnWcStatus, "UNVERSIONED", INT2FIX (svn_wc_status_unversioned));
   rb_define_const (cSvnWcStatus, "NORMAL", INT2FIX (svn_wc_status_normal));
