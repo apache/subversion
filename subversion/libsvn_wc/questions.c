@@ -380,6 +380,7 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
       svn_stringbuf_t *tmp_dir, *tmp_vfile;
       apr_file_t *ignored;
       apr_status_t apr_err;
+      svn_error_t *err;
       
       svn_path_split (versioned_file, &tmp_dir, &tmp_vfile,
                       svn_path_local_style, pool);
@@ -409,13 +410,12 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
                                           0,
                                           pool));
       
-      SVN_ERR (contents_identical_p (&identical_p,
-                                     tmp_vfile,
-                                     base_file,
-                                     pool));
-      
+      err = contents_identical_p (&identical_p, tmp_vfile, base_file, pool);
       apr_err = apr_file_remove (tmp_vfile->data, pool);
-      if (apr_err)
+
+      if (err)
+        return err;
+      else if (apr_err)
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
            "svn_wc__versioned_file_modcheck: error removing %s.",
