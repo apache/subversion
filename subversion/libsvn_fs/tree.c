@@ -618,8 +618,7 @@ txn_body_node_prop (void *baton,
       skel_t *name = prop;
       skel_t *value = prop->next;
 
-      if (name->len == args->propname->len
-          && ! memcmp (name->data, args->propname->data, name->len))
+      if (svn_fs__atom_matches_string (name, args->propname))
         {
           *(args->value_p) = svn_string_ncreate (value->data, value->len,
                                                  trail->pool);
