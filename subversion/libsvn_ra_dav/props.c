@@ -433,7 +433,7 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
   if (value == NULL)
     {
       /* ### need an SVN_ERR here */
-      return svn_error_createf(APR_EGENERAL, 0, NULL, pool,
+      return svn_error_createf(SVN_ERR_RA_PROPS_NOT_FOUND, 0, NULL, pool,
                                "%s was not present on the resource.", name);
     }
 

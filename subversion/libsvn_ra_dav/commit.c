@@ -417,11 +417,23 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
 
   if (code != 201)
     {
-      /* ### need to be more sophisticated with reporting the failure */
-      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
-                               cc->ras->pool,
-                               "The CHECKOUT request failed (http #%d) (%s)",
-                               code, url_str->data);
+      if (code == 409)
+        {
+          return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
+                                   cc->ras->pool,
+                                   "Server returned a Conflict Error:\n "
+                                   "Your copy of '%s' " 
+                                   "is probably out-of-date.",
+                                   res->local_path->data);
+        }
+      /* ### other likely status codes we can look for? */
+      else
+        {
+          return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
+                                   cc->ras->pool,
+                                   "Failed CHECKOUT request (http #%d) (%s)",
+                                   code, url_str->data);
+        }
     }
   if (locn == NULL)
     {
