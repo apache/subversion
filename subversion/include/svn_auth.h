@@ -88,17 +88,19 @@ typedef struct
   
   /** Get an initial set of credentials.
    *
-   * Set @a *credentials to a set of valid credentials, or NULL if no
-   * credentials are available.  Set @a *iter_baton to context that
-   * allows a subsequent call to @c next_credentials, in case the
-   * first credentials fail to authenticate.  @a provider_baton is
-   * general context for the vtable, and @a parameters contains any
-   * run-time data that the provider may need.
+   * Set @a *credentials to a set of valid credentials within @a
+   * realmstring, or NULL if no credentials are available.  Set @a
+   * *iter_baton to context that allows a subsequent call to @c
+   * next_credentials, in case the first credentials fail to
+   * authenticate.  @a provider_baton is general context for the
+   * vtable, and @a parameters contains any run-time data that the
+   * provider may need.
    */
   svn_error_t * (*first_credentials) (void **credentials,
                                       void **iter_baton,
                                       void *provider_baton,
                                       apr_hash_t *parameters,
+                                      const char *realmstring,
                                       apr_pool_t *pool);
 
   /** Get a different set of credentials.
@@ -295,10 +297,11 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 /** Get an initial set of credentials.
  *
  * Ask @a auth_baton to set @a *credentials to a set of credentials
- * defined by @a cred_kind, or NULL if no credentials are available.
- * Otherwise, return an iteration state in @a *state, so that the
- * caller can call @c svn_auth_next_credentials, in case the first set
- * of credentials fails to authenticate.
+ * defined by @a cred_kind and valid within @a realmstring, or NULL if
+ * no credentials are available.  Otherwise, return an iteration state
+ * in @a *state, so that the caller can call @c
+ * svn_auth_next_credentials, in case the first set of credentials
+ * fails to authenticate.
  *
  * Use @a pool to allocate @a *state, and for temporary allocation.
  * Note that there is no guarantee about where @a *credentials will be
@@ -310,6 +313,7 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 svn_error_t * svn_auth_first_credentials(void **credentials,
                                          svn_auth_iterstate_t **state,
                                          const char *cred_kind,
+                                         const char *realmstring,
                                          svn_auth_baton_t *auth_baton,
                                          apr_pool_t *pool);
 

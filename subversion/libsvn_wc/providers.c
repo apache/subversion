@@ -205,6 +205,7 @@ simple_first_creds (void **credentials,
                     void **iter_baton,
                     void *provider_baton,
                     apr_hash_t *parameters,
+                    const char *realmstring,
                     apr_pool_t *pool)
 {
   provider_baton_t *pb = provider_baton;
@@ -279,6 +280,7 @@ username_first_creds (void **credentials,
                       void **iter_baton,
                       void *provider_baton,
                       apr_hash_t *parameters,
+                      const char *realmstring,
                       apr_pool_t *pool)
 {
   provider_baton_t *pb = provider_baton;

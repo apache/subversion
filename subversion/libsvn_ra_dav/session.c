@@ -70,12 +70,27 @@ static int request_auth(void *userdata, const char *realm, int attempt,
     return -1;
 
   if (attempt == 0)
-    err = svn_auth_first_credentials (&creds,
-                                      &(ras->auth_iterstate), 
-                                      SVN_AUTH_CRED_SIMPLE,
-                                      ras->callbacks->auth_baton,
-                                      ras->pool);
+    {
+      const char *realmstring;
+      const char *portstring = apr_psprintf (ras->pool,
+                                             "%d", ras->root.port);
+
+      /* <https://svn.collab.net:80>Subversion repository */
+      realmstring = apr_pstrcat(ras->pool, "<", ras->root.scheme, "://",
+                                ras->root.host, ":", portstring, "> ",
+                                realm, NULL);
+
+      err = svn_auth_first_credentials (&creds,
+                                        &(ras->auth_iterstate), 
+                                        SVN_AUTH_CRED_SIMPLE,
+                                        realmstring,
+                                        ras->callbacks->auth_baton,
+                                        ras->pool);
+    }
+
   else /* attempt > 0 */
+    /* ### TODO:  if the http realm changed this time around, we
+       should be calling first_creds(), not next_creds(). */
     err = svn_auth_next_credentials (&creds,
                                      ras->auth_iterstate,
                                      ras->pool);
@@ -116,6 +131,7 @@ server_ssl_callback(void *userdata,
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials(&creds, &state,
                                      SVN_AUTH_CRED_SERVER_SSL,
+                                     "none", /* ### fix? */
                                      ras->callbacks->auth_baton,
                                      pool);
   if (error || !creds)
@@ -144,6 +160,7 @@ client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials(&creds, &state,
                                      SVN_AUTH_CRED_CLIENT_PASS_SSL,
+                                     "none", /* ### fix? */
                                      ras->callbacks->auth_baton,
                                      pool);
   if (error || !creds)
@@ -175,6 +192,7 @@ client_ssl_callback(void *userdata, ne_session *sess,
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials(&creds, &state,
                                      SVN_AUTH_CRED_CLIENT_SSL,
+                                     "none", /* ### fix? */
                                      ras->callbacks->auth_baton,
                                      pool);
   if (error || !creds)

@@ -215,6 +215,7 @@ simple_prompt_first_creds (void **credentials,
                            void **iter_baton,
                            void *provider_baton,
                            apr_hash_t *parameters,
+                           const char *realmstring,
                            apr_pool_t *pool)
 {
   prompt_provider_baton_t *pb = provider_baton;
@@ -320,6 +321,7 @@ username_prompt_first_creds (void **credentials,
                              void **iter_baton,
                              void *provider_baton,
                              apr_hash_t *parameters,
+                             const char *realmstring,
                              apr_pool_t *pool)
 {
   prompt_provider_baton_t *pb = provider_baton;
@@ -422,6 +424,7 @@ server_ssl_file_first_credentials (void **credentials,
                                    void **iter_baton,
                                    void *provider_baton,
                                    apr_hash_t *parameters,
+                                   const char *realmstring,
                                    apr_pool_t *pool)
 {
   const char *temp_setting;
@@ -481,10 +484,11 @@ server_ssl_file_first_credentials (void **credentials,
    config */
 static svn_error_t *
 client_ssl_cert_file_first_credentials (void **credentials,
-                                       void **iter_baton,
-                                       void *provider_baton,
-                                       apr_hash_t *parameters,
-                                       apr_pool_t *pool)
+                                        void **iter_baton,
+                                        void *provider_baton,
+                                        apr_hash_t *parameters,
+                                        const char *realmstring,
+                                        apr_pool_t *pool)
 {
   svn_config_t *cfg = apr_hash_get (parameters, 
                                     SVN_AUTH_PARAM_CONFIG,
@@ -541,6 +545,7 @@ client_ssl_pw_file_first_credentials (void **credentials,
                                       void **iter_baton,
                                       void *provider_baton,
                                       apr_hash_t *parameters,
+                                      const char *realmstring,
                                       apr_pool_t *pool)
 {
   svn_config_t *cfg = apr_hash_get (parameters,
@@ -630,6 +635,7 @@ client_ssl_pw_prompt_first_cred (void **credentials,
                                  void **iter_baton,
                                  void *provider_baton,
                                  apr_hash_t *parameters,
+                                 const char *realmstring,
                                  apr_pool_t *pool)
 {
   cred_ssl_provider_baton *pb = provider_baton;
@@ -655,6 +661,7 @@ client_ssl_prompt_first_cred (void **credentials,
                               void **iter_baton,
                               void *provider_baton,
                               apr_hash_t *parameters,
+                              const char *realmstring,
                               apr_pool_t *pool)
 {
   cred_ssl_provider_baton *pb = provider_baton;
@@ -729,6 +736,7 @@ server_ssl_prompt_first_cred (void **credentials,
                               void **iter_baton,
                               void *provider_baton,
                               apr_hash_t *parameters,
+                              const char *realmstring,
                               apr_pool_t *pool)
 {
   cred_ssl_provider_baton *pb = provider_baton;
