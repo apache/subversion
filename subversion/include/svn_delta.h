@@ -459,9 +459,9 @@ typedef struct svn_delta_edit_fns_t
      directory. */
   svn_error_t *(*add_directory) (svn_string_t *name,
                                  void *parent_baton,
-				 svn_string_t *ancestor_path,
-				 svn_vernum_t ancestor_version,
-				 void **child_baton);
+                                 svn_string_t *ancestor_path,
+                                 svn_vernum_t ancestor_version,
+                                 void **child_baton);
 
   /* We are going to change the directory entry named NAME to a
      subdirectory.  The callback must store a value in *CHILD_BATON
@@ -471,9 +471,9 @@ typedef struct svn_delta_edit_fns_t
      relative to an empty directory.  */
   svn_error_t *(*replace_directory) (svn_string_t *name,
                                      void *parent_baton,
-				     svn_string_t *ancestor_path,
-				     svn_vernum_t ancestor_version,
-				     void **child_baton);
+                                     svn_string_t *ancestor_path,
+                                     svn_vernum_t ancestor_version,
+                                     void **child_baton);
 
   /* Change the value of a directory's property.
      - DIR_BATON specifies the directory whose property should change.
@@ -499,8 +499,8 @@ typedef struct svn_delta_edit_fns_t
      apply_propdelta.  */
   svn_error_t *(*add_file) (svn_string_t *name,
                             void *parent_baton,
-			    svn_string_t *ancestor_path,
-			    svn_vernum_t ancestor_version,
+                            svn_string_t *ancestor_path,
+                            svn_vernum_t ancestor_version,
                             void **file_baton);
 
   /* We are going to change the directory entry named NAME to a file.
@@ -509,8 +509,8 @@ typedef struct svn_delta_edit_fns_t
      apply_textdelta and/or apply_propdelta.  */
   svn_error_t *(*replace_file) (svn_string_t *name,
                                 void *parent_baton,
-				svn_string_t *ancestor_path,
-				svn_vernum_t ancestor_version,
+                                svn_string_t *ancestor_path,
+                                svn_vernum_t ancestor_version,
                                 void **file_baton);
 
   /* Apply a text delta, yielding the new version of a file.
