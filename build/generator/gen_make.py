@@ -180,7 +180,7 @@ class Generator(gen_base.GeneratorBase):
                      % (string.join(self.includes), includedir))
     for file in self.includes:
       self.ofile.write('\t$(INSTALL_INCLUDE) %s $(DESTDIR)%s\n'
-                       % (os.path.join('$(top_srcdir)', file),
+                       % (os.path.join('$(abs_srcdir)', file),
                           os.path.join(includedir, os.path.basename(file))))
 
     self.ofile.write('\n# handy shortcut targets\n')
@@ -228,9 +228,7 @@ class Generator(gen_base.GeneratorBase):
 
     for objname, sources in self.graph.get_deps(gen_base.DT_SWIG_C):
       deps = string.join(map(str, sources))
-      source = os.path.join('$(top_srcdir)', str(sources[0]))
-      if objname.lang_abbrev == 'java':
-        source = os.path.split(source)[1]
+      source = os.path.join('$(abs_srcdir)', str(sources[0]))
       self.ofile.write('%s: %s\n\t$(RUN_SWIG_%s) %s\n'
                        % (objname, deps, string.upper(objname.lang_abbrev),
                           source))
@@ -241,7 +239,7 @@ class Generator(gen_base.GeneratorBase):
       cmd = objname.compile_cmd
       if cmd:
         if not getattr(objname, 'source_generated', 0):
-          self.ofile.write('\t%s %s\n' % (cmd, os.path.join('$(top_srcdir)',
+          self.ofile.write('\t%s %s\n' % (cmd, os.path.join('$(abs_srcdir)',
                                                             str(sources[0]))))
         else:
           self.ofile.write('\t%s %s\n' % (cmd, sources[0]))

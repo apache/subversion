@@ -454,12 +454,6 @@ class TargetSWIG(TargetLib):
     self.lang = lang
     self.desc = self.desc + ' for ' + lang_full_name[lang]
     self.shared_dir = 1
-    if self.lang == 'java':
-      # SWIG-based classes implement pure Java interfaces.
-      if self.add_deps:
-        self.add_deps = self.add_deps + ' java-api'
-      else:
-        self.add_deps = 'java-api'
 
     ### hmm. this is Makefile-specific
     self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(lang_abbrev[lang])
