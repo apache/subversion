@@ -5,9 +5,6 @@ TODO for locking
 MUST HAVE
 ---------
 
-* svn update removes defunct locks
-  - Send lock tokens over ra_dav (sussman)
-
 * svn status -u shows lock info from repos.  (lundblad)
 
 * research future ra_dav shim removal plan:  will it work? (sussman)
@@ -18,16 +15,16 @@ MUST HAVE
    
 * autoversioning:
 
-    - fix issue 2161 (sussman)
+    - finish issue 2161:  PROPFIND depth 1 should show locked,
+      nonexistent paths.  (cmpilato)
+
     - research interoperability with popular dav clients (fitz)
 
-* test 4 new hook scripts.  do they actually work?
+* test 4 new hook scripts.  do they actually work? (fitz)
 
 
 NICE TO HAVE
 ------------
-
-* svn lock and unlock should continue with next target on certain errors
 
 * improve cmdline help messages
 
