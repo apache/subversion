@@ -1,6 +1,7 @@
-'''This is a pre-commit hook that checks whether the contents of PO files
+#!/usr/bin/env python
+"""This is a pre-commit hook that checks whether the contents of PO files
 committed to the repository are encoded in UTF-8.
-'''
+"""
 
 import codecs
 import string
