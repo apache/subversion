@@ -1082,7 +1082,7 @@ else
 }
 
 # Query the youngest revision in the repos.
-$youngest = `svnadmin youngest $repos_path`;
+$youngest = `svnlook youngest $repos_path`;
 chomp $youngest;
 
 # Do the backup.

@@ -4,7 +4,7 @@
 # particular concurrent read, write and read-write access by the 'svn'
 # client. It can also create working copy trees containing a large
 # number of files and directories. All repository access is via the
-# 'svnadmin' and 'svn' commands.
+# 'svnadmin', 'svnlook' and 'svn' commands.
 #
 # This script constructs a repository, and populates it with
 # files. Then it loops making changes to a subset of the files and
@@ -93,9 +93,9 @@ sub init_repo
       }
     else
       {
-	my $svnadmin_cmd = "svnadmin youngest $repo";
-	my $revision = readpipe $svnadmin_cmd;
-	die "$svnadmin_cmd: failed\n" if not $revision =~ m{^[0-9]};
+	my $svnlook_cmd = "svnlook youngest $repo";
+	my $revision = readpipe $svnlook_cmd;
+	die "$svnlook_cmd: failed\n" if not $revision =~ m{^[0-9]};
       }
     $repo = getcwd . "/$repo" if not $repo =~ m[^/];
     return $repo;

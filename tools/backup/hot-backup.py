@@ -27,8 +27,8 @@ import sys, os, shutil, string
 ######################################################################
 # Global Settings
 
-# Path to svnadmin utility
-svnadmin = "/usr/local/bin/svnadmin"
+# Path to svnlook utility
+svnlook = "/usr/local/bin/svnlook"
 
 # Path to db_archive program
 db_archive = "/usr/local/BerkeleyDB.4.0/bin/db_archive"
@@ -63,7 +63,7 @@ print "Beginning hot backup of '"+ repo_dir + "'."
 
 # Step 1:  get the youngest revision.
 
-infile, outfile, errfile = os.popen3(svnadmin + " youngest " + repo_dir)
+infile, outfile, errfile = os.popen3(svnlook + " youngest " + repo_dir)
 stdout_lines = outfile.readlines()
 stderr_lines = errfile.readlines()
 outfile.close()
