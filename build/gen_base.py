@@ -213,7 +213,7 @@ class MakefileGenerator(_GeneratorBase):
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = os.path.split(file)
           base, ext = os.path.splitext(fname)
-          name = string.replace(base, 'libmod_', '')
+          name = string.replace(base, 'mod_', '')
           self.ofile.write('\tcd %s ; $(INSTALL_MOD_SHARED) -n %s %s\n'
                            % (dirname, name, fname))
           if ext == '.la':
