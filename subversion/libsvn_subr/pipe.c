@@ -17,6 +17,7 @@
  * ====================================================================
  */
 
+#include "apr_lib.h"
 #include "svn_io.h"
 #include "svn_pipe.h"
 
@@ -183,42 +184,47 @@ svn_pipe_receive(svn_pipe_t *pipe,
                  apr_pool_t *pool)
 {
   unsigned int frame_len = 0;
-  unsigned int total = 0;
+  apr_size_t total;
   apr_status_t apr_err;
+  char *buf;
 
-  while( 1 )
+  svn_boolean_t got_frame = FALSE;
+
+  for (;;)
     {
       char c;
-      if (apr_file_getc(&c, pipe->read) != APR_SUCCESS)
-          return svn_error_create(apr_err, 0, 0, pool,
-                                  "pipe: could not read from peer");
+      apr_err = apr_file_getc(&c, pipe->read);
+      if (apr_err != APR_SUCCESS)
+        return svn_error_create(apr_err, 0, 0, pool,
+                                "pipe: could not read from peer");
       if (c == ':')
         break;
+
+      if (!apr_isdigit(c))
+        return svn_error_create(SVN_ERR_IO_PIPE_FRAME_ERROR, 0, 0, pool,
+                                "non-digit in frame length");
+
+      got_frame = TRUE;
       frame_len = (frame_len * 10) + (c - '0');
     }
 
+  if (!got_frame)
+      return svn_error_create(SVN_ERR_IO_PIPE_FRAME_ERROR, 0, 0, pool,
+                              "missing frame");
+
+  buf = apr_pcalloc(pool, frame_len);
+
+  apr_err = apr_file_read_full(pipe->read, buf, frame_len, &total);
+  if (apr_err != APR_SUCCESS && !APR_STATUS_IS_EOF(apr_err))
+    return svn_error_create(apr_err, 0, 0, pool,
+                            "read from pipe");
+
+  if (total != frame_len)
+    return svn_error_create(SVN_ERR_IO_PIPE_READ_ERROR, 0, 0, pool,
+                            "premature EOF");
+
+  *data = buf;
   *length = frame_len;
-  *data = apr_pcalloc(pool, frame_len);
-
-  while (total < frame_len)
-    {
-      char buf[BUFSIZ];
-      apr_size_t len = sizeof(buf);
-
-      apr_err = apr_file_read(pipe->read, buf, &len);
-      if (apr_err)
-        {
-          if (!APR_STATUS_IS_EOF(apr_err))
-            return svn_error_create(apr_err, 0, 0, pool,
-                                    "pipe: could not read from peer");
-          if ((total+len) < frame_len)
-            return svn_error_create(apr_err, 0, 0, pool,
-                                    "pipe: premature EOF in read");
-        }
-
-      memcpy(*data+total, buf, len);
-      total += len;
-    }
 
   return SVN_NO_ERROR;
 }
