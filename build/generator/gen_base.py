@@ -239,6 +239,7 @@ dep_types = [
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
   'DT_INCLUDE',  # filename includes (depends) on sources (all basenames)
   'DT_NONLIB',   # filename depends on object fnames, but isn't linked to them
+  'DT_PROJECT',  # visual studio projects
   ]
 
 # create some variables for these
@@ -541,8 +542,7 @@ class TargetSpecial(Target):
     self.debug = options.get('debug')
 
   def add_dependencies(self, src_patterns, graph):
-    # we have no dependencies since this is built externally
-    pass
+    graph.add(DT_PROJECT, 'notused', self)
 
 class TargetProject(TargetSpecial):
   def __init__(self, name, options, cfg, extmap):

@@ -242,9 +242,11 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     self.targets['depdelta'] = gen_base.TargetUtility('depdelta', options,
                                                       self.cfg, None)
 
-    install_targets = self.targets.values() \
+    self.targets['depsubr'].add_dependencies('', self.graph)
+    self.targets['depdelta'].add_dependencies('', self.graph)
+
+    install_targets = self.graph.get_all_sources(gen_base.DT_PROJECT)   \
                       + self.graph.get_all_sources(gen_base.DT_INSTALL)
-    install_targets = gen_base.unique(install_targets)
 
     # sort these for output stability, to watch out for regressions.
     install_targets.sort()
