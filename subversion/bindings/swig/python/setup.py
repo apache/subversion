@@ -17,12 +17,51 @@
 ######################################################################
 
 import os
+import sys
+import getopt
+
+
+
+def _do_usage():
+  print "Usage: setup.py [OPTIONS] build"
+  print "       setup.py [--with-prefix PREFIX] install"
+  print ""
+  print "Options:"
+  print "   -I dir    " + \
+        "directory to search for includes (multiple instances allowed)"
+  print "   -L dir    " + \
+        "directory to search for libraries (multiple instances allowed)"
+  sys.exit(0)
+
+# Default option values
+include_dirs = []
+library_dirs = []
+source_dir = '..'
+
+# No args?  Give usage.
+if len(sys.argv) < 2:
+  _do_usage()
+
+# Parse the command-line arguments, keeping what we want and letting
+# distutils have the rest.  This effectively guts all manor of
+# command-line option support from distutils, leaving us to specify
+# all the options that we allow (which is FAR less than the set of
+# distutils options).  If we find that people actually care, we can
+# revisit this.
+options, leftovers = getopt.getopt(sys.argv[1:], "I:L:", ["prefix="])
+for option in options:
+  if option[0] == '-I':
+    include_dirs.append(option[1])
+  if option[0] == '-L':
+    library_dirs.append(option[1])
+  if option[0] == '--prefix':
+    leftovers.append(option[0])
+    leftovers.append(option[1])
+sys.argv[1:] = leftovers
+
 from distutils import core
 from distutils.command import build_ext
 from distutils import dir_util
-
-INC_DIRS=['..', '../../../include', '../../../../apr/include']
-LIB_DIRS=['/usr/local/svn/lib']
 
 class build_swig(build_ext.build_ext):
   def initialize_options(self):
@@ -53,6 +92,7 @@ class build_swig(build_ext.build_ext):
 
     return new_sources
 
+
 core.setup(name="Subversion",
            version="0.0.0",
            description="bindings for Subversion libraries",
@@ -61,54 +101,54 @@ core.setup(name="Subversion",
 
            packages=['svn'],
 
-           include_dirs=INC_DIRS,
+           include_dirs=include_dirs,
 
            ext_package="svn",
            ext_modules=[
              core.Extension("_client",
-                            ["../svn_client.i"],
+                            [source_dir + "/svn_client.i"],
                             libraries=['svn_client-1', 'svn_swig_py-1',
                                        'swigpy'],
-                            library_dirs=LIB_DIRS,
+                            library_dirs=library_dirs
                             ),
              core.Extension("_delta",
-                            ["../svn_delta.i"],
+                            [source_dir + "/svn_delta.i"],
                             libraries=['svn_delta-1', 'svn_swig_py-1',
                                        'swigpy'],
-                            library_dirs=LIB_DIRS,
+                            library_dirs=library_dirs,
                             ),
              core.Extension("_fs",
-                            ["../svn_fs.i"],
+                            [source_dir + "/svn_fs.i"],
                             libraries=['svn_fs-1', 'svn_swig_py-1', 'swigpy'],
-                            library_dirs=LIB_DIRS,
+                            library_dirs=library_dirs,
                             ),
              core.Extension("_ra",
-                            ["../svn_ra.i"],
+                            [source_dir + "/svn_ra.i"],
                             libraries=['svn_ra-1', 'swigpy'],
-                            library_dirs=LIB_DIRS,
+                            library_dirs=library_dirs,
                             ),
              core.Extension("_repos",
-                            ["../svn_repos.i"],
+                            [source_dir + "/svn_repos.i"],
                             libraries=['svn_repos-1', 'svn_swig_py-1',
                                        'swigpy'],
-                            library_dirs=LIB_DIRS,
+                            library_dirs=library_dirs,
                             ),
              core.Extension("_wc",
-                            ["../svn_wc.i"],
+                            [source_dir + "/svn_wc.i"],
                             libraries=['svn_wc-1', 'svn_swig_py-1', 'swigpy'],
-                            library_dirs=LIB_DIRS,
+                            library_dirs=library_dirs,
                             ),
              core.Extension("_util",
-                            ["../util.i"],
+                            [source_dir + "/util.i"],
                             libraries=['svn_subr-1', 'swigpy', 'apr-0'],
-                            library_dirs=LIB_DIRS,
+                            library_dirs=library_dirs,
                             ),
 
              ### will 'auth' be its own, or bundled elsewhere?
              #core.Extension("_auth",
              #               ["../svn_auth.i"],
              #               libraries=['svn_subr-1', 'swigpy', 'apr-0'],
-             #               library_dirs=LIB_DIRS,
+             #               library_dirs=library_dirs,
              #               ),
              ],
 
