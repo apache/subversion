@@ -176,7 +176,8 @@
 9. Update the website.
 
    a. Edit the www/project_status.html file appropriately in /trunk *NOT*
-      in the release branch and commit.
+      in the release branch and commit. Remember edit a search term at the
+      end of release's issue link. 
 
       If you used 'svn switch' in 3b above, you can simply 'switch' back
       to /trunk using:
