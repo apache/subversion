@@ -145,7 +145,7 @@ Bindings changes that affect the build system:
                     to support.  And have proper requirements.
      Votes:
       +1: clkao (invalidated updated patch)
-      +1: breser
+      +1: breser, epg
       +1: david (r8368)
      
 Bindings changes that don't affect the build system:
@@ -164,7 +164,7 @@ Bindings changes that don't affect the build system:
      Votes:
       +1: breser (r8348, r8378), clkao (r8348, r8378, r8380), epg
 
-     * r8397
+     * r8397, r8400
      Fix declaration after statement bug.
      Votes:
       +1: epg
