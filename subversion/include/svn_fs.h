@@ -439,7 +439,13 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
 
    If the commit fails, TXN is still valid; you can make more
    operations to resolve the conflict, or call `svn_fs_abort_txn' to
-   abort the transaction.  */
+   abort the transaction.
+
+   NOTE:  Success or failure of the commit of TXN is determined by
+   examining the value of *NEW_REV upon this function's return.  If
+   the value is a valid revision number, the commit was successful,
+   even though a non-NULL function return value may indicate that
+   something else went wrong.  */
 svn_error_t *svn_fs_commit_txn (const char **conflict_p,
                                 svn_revnum_t *new_rev,
                                 svn_fs_txn_t *txn);

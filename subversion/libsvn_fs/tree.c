@@ -1808,6 +1808,9 @@ svn_fs_commit_txn (const char **conflict_p,
   svn_fs_t *fs = svn_fs__txn_fs (txn);
   apr_pool_t *pool = svn_fs__txn_pool (txn);
 
+  /* Initialize returned revision number to an invalid value. */
+  *new_rev = SVN_INVALID_REVNUM;
+
   while (1729)
     {
       struct get_root_args get_root_args;
@@ -1874,8 +1877,20 @@ svn_fs_commit_txn (const char **conflict_p,
         return err;
       else
         {
+          svn_fs_root_t *root;
+          svn_error_t *err2;
+
           *new_rev = commit_args.new_rev;
-          break;
+
+          /* Final step: after a successful commit of the transaction,
+             deltify the new revision. */
+          if ((! (err2 = svn_fs_revision_root (&root, fs, *new_rev, pool))))
+            err2 = svn_fs_deltify (root, "/", TRUE, pool);
+          
+          return (err2 
+                  ? svn_error_quick_wrap 
+                      (err2, "Commit succeeded, deltification failed")
+                  : SVN_NO_ERROR);
         }
     }
 
