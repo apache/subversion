@@ -1726,7 +1726,12 @@ svn_fs_merge (const char **conflict_p,
 
   /* ### kff todo: is there any compelling reason to get the nodes in
      one db transaction?  Right now we don't; txn_body_get_root() gets
-     one node at a time. */
+     one node at a time.  This will probably need to change:
+
+     Jim Blandy <jimb@zwingli.cygnus.com> writes:
+     > svn_fs_merge needs to be a single transaction, to protect it against
+     > people deleting parents of nodes it's working on, etc.
+  */
 
   /* Get the ancestor node. */
   get_root_args.root = ancestor_root;
