@@ -2,6 +2,8 @@
 
 # Make sure checkout-test binary exists
 
+TEST_DELTA=../../tests-common/xml/co1-inline.xml
+
 if [ ! -x ./checkout-test ]; then
     echo "Error:  can't find checkout-test executable"
     exit 1
@@ -19,6 +21,6 @@ done
 #    ./checkout-test checkout-${num}.delta ${num}/this/is/a/test/dir
 # done
 
-./checkout-test checkout-1.delta this
+./checkout-test ${TEST_DELTA} this
 
 # That's it.  Right now, we test by inspecting them by hand.
