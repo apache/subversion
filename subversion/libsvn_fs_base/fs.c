@@ -316,7 +316,7 @@ bdb_error_gatherer (const char *baton, char *msg)
     ec_baton->pending_errors = new_err;
 
   if (ec_baton->user_callback)
-    ec_baton->user_callback (NULL, msg);
+    ec_baton->user_callback (NULL, (char *) msg);
 }
 
 
