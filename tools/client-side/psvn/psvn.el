@@ -42,6 +42,7 @@
 ;; U     - svn-status-update-cmd            run 'svn update'
 ;; c     - svn-status-commit-file           run 'svn commit'
 ;; a     - svn-status-add-file              run 'svn add'
+;; +     - svn-status-make-directory        run 'svn mkdir'
 ;; M-c   - svn-status-cleanup               run 'svn cleanup'
 ;; s     - svn-status-show-process-buffer
 ;; e     - svn-status-toggle-edit-cmd-flag
@@ -102,7 +103,7 @@
 ;; * info                      implemented
 ;; * log                       implemented
 ;; * merge
-;; * mkdir
+;; * mkdir                     implemented
 ;; * move (mv, rename, ren)
 ;; * propdel (pdel)            implemented
 ;; * propedit (pedit, pe)      not needed
@@ -297,6 +298,9 @@
                 ((eq svn-process-cmd 'add)
                  (svn-status-update)
                  (message "svn add finished"))
+                ((eq svn-process-cmd 'mkdir)
+                 (svn-status-update)
+                 (message "svn mkdir finished"))
                 ((eq svn-process-cmd 'revert)
                  (svn-status-update)
                  (message "svn revert finished"))
@@ -410,6 +414,7 @@
   (define-key svn-status-mode-map [??] 'svn-status-toggle-hide-unknown)
   (define-key svn-status-mode-map [?_] 'svn-status-toggle-hide-unmodified)
   (define-key svn-status-mode-map [?a] 'svn-status-add-file)
+  (define-key svn-status-mode-map [?+] 'svn-status-make-directory)
   (define-key svn-status-mode-map [?c] 'svn-status-commit-file)
   (define-key svn-status-mode-map [(meta ?c)] 'svn-status-cleanup)
   (define-key svn-status-mode-map [?U] 'svn-status-update-cmd)
@@ -443,6 +448,7 @@
                     ["svn info" svn-status-info t]
                     ["svn diff" svn-status-show-svn-diff t]
                     ["svn add" svn-status-add-file t]
+                    ["svn mkdir..." svn-status-make-directory t]
                     ["svn revert" svn-status-revert-file t]
                     ["svn cleanup" svn-status-cleanup t]
                     ["Show Process Buffer" svn-status-show-process-buffer t]
@@ -488,6 +494,7 @@
   U     - svn-status-update-cmd            run 'svn update'
   c     - svn-status-commit-file           run 'svn commit'
   a     - svn-status-add-file              run 'svn add'
+  +     - svn-status-make-directory        run 'svn mkdir'
   M-c   - svn-status-cleanup               run 'svn cleanup'
   s     - svn-status-show-process-buffer
   e     - svn-status-toggle-edit-cmd-flag
@@ -877,6 +884,14 @@ Then move to that line."
   (message "adding: %S" (svn-status-marked-file-names))
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
   (svn-run-svn t t 'add "add" "--targets" svn-status-temp-arg-file))
+
+(defun svn-status-make-directory (dir)
+  ;; TODO: Allow entering a URI interactively.
+  ;; Currently, `read-file-name' corrupts it.
+  (interactive (list (read-file-name "Make directory: ")))
+  (unless (string-match "^[^:/]+://" dir) ; Is it a URI?
+    (setq dir (file-relative-name dir)))
+  (svn-run-svn t t 'mkdir "mkdir" "--" dir))
 
 (defun svn-status-revert-file ()
   (interactive)
