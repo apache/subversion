@@ -785,7 +785,7 @@ typedef struct svn_wc_entry_t
 
 
 /** How an entries file's owner dir is named in the entries file. */
-#define SVN_WC_ENTRY_THIS_DIR  "svn:this_dir"
+#define SVN_WC_ENTRY_THIS_DIR  ""
 
 
 /** Set @a *entry to an entry for @a path, allocated in the access baton 
