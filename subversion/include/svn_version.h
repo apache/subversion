@@ -80,7 +80,7 @@ extern "C" {
 
 
 /* Yet another stringification macro. */
-#define SVN_VER_STRINGIFY(X) GLOW_VER_REALLY_STRINGIFY(X)
+#define SVN_VER_STRINGIFY(X) SVN_VER_REALLY_STRINGIFY(X)
 #define SVN_VER_REALLY_STRINGIFY(X) #X
 
 
