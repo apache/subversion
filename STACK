@@ -32,18 +32,31 @@ General Problems (someone grab these):
    - svn_string.c::svn_string_createf(): follow the comments about
      refactoring to prevent double memory usage
 
-Ben & Karl todo:
-
-   - clean up the interface in libsvn_client.  make it more canonical.
-     (This may happen automatically as the Win32 and Gnome clients are
-      developed after-hours!)
-
 Ben todo:
 
    - finish svn_fs_is_different, make status command use it.
 
 
-Karl wc todo:
+Karl M3 stack:
+
+   - fs work with Mike
+   - conservative mime type detection
+   - DB_RUN_RECOVERY, about which Greg writes:
+
+     As much of that as you'd like to do :-) The bulk of the code
+     would go into libsvn_repos since ra_local needs to handle it,
+     too. We can talk implementation details on the dev list.
+
+     The main reason it was on my plate is to deal with interprocess
+     locking details. However, it should simply be a matter of putting
+     a known lock file (e.g. "recovery-lock") into the repos directory
+     and having code open it and use apr_file_(un)lock() on it (using
+     SHARED locks for readers and EXCLUSIVE locks for writers). We'd
+     keep the file open as long as possible, and use locks on either a
+     per-op basis or across groups of ops (we should discuss tradeoffs
+     on the list; I've got ideas but would like discussion).
+
+Karl post-M3:
 
    - Propagate changes down into libsvn_client.  Currently, the client
      usually takes a `targets' list and iterates over it, invoking
@@ -51,56 +64,12 @@ Karl wc todo:
      libsvn_client routine should get the target list directly and do
      the iteration internally, or even pass the list on down into
      libsvn_wc.
-   - make an is_textfile test, so at least we can create .alt files
-     instead of .rej for those that `patch' can't handle.
-   - write the log/lock recovery function.
+   - create .alt files instead of .rej for those that `patch' can't
+     handle.
    - with Ben, review locking protocol in wc adm directories for sanity.
    - check apr_open calls, do they assume failure implies null handle?
    - fix working copy identification/allergy code
    - make sure type-changing replacements work right
-   - do the generic entry/adm-path grabber abstraction, as talked
-     about with Ben, change everyone around to use it (chore, whoa).
-   - Reproduction recipe #1: Infinite loop bug.
-        1. checkout Greek tree
-        2. create and add A/D/moo
-        3. local mod A/mu
-        4. commit [loop happens in free_blocks, part of apr_pool_clear]
-   - Reproduction recipe #2: Malloc Minnesota bug.
-        1. Just import a big tree.
-   - Reproduction recipe #3: Pesky free bug.
-        1. 
-   - Reproduction recipe #4: Suprise surprise happy core dump!  Morning!
-        0. Do this under FreeBSD.
-        1. checkout Greek tree
-        2. propset foo bal alpha
-        3. svn delete rho
-        4. svn add A/D/H/szeta
-        5. commit
-   - Reproduction recipe #5: 
-        1. ?
-
-   - trivial subpool fix in fs-test.c:dir_deltas
-   - import verification
-   - test suite w/ Ben
-   - build apache, get svn working
-
-Karl fs todo:
-
-   Maybe do DB_RUN_RECOVERY stuff for Greg, who says:
-
-   As much of that as you'd like to do :-) The bulk of the code would
-   go into libsvn_repos since ra_local needs to handle it, too. We can
-   talk implementation details on the dev list.
-
-   The main reason it was on my plate is to deal with interprocess
-   locking details. However, it should simply be a matter of putting a
-   known lock file (e.g. "recovery-lock") into the repos directory and
-   having code open it and use apr_file_(un)lock() on it (using SHARED
-   locks for readers and EXCLUSIVE locks for writers). We'd keep the
-   file open as long as possible, and use locks on either a per-op
-   basis or across groups of ops (we should discuss tradeoffs on the
-   list; I've got ideas but would like discussion).
-
 
 Ben and Karl (longer term):
 
