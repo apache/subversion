@@ -100,6 +100,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "do not print differences for deleted files"},
     {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
                       "Use \"ARG\" as diff command"},
+    {"diff3-cmd",     svn_cl__merge_cmd_opt, 1,
+                      "Use \"ARG\" as merge command"},
 
     /* ### Perhaps the option should be named "--rev-prop" instead?
            Generally, we do include the hyphen; the only reason not to
@@ -299,7 +301,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  If omitted, a default value of '.' is assumed.\n\n",
     {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt} },
+     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
+     svn_cl__merge_cmd_opt } },
   
   { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"
@@ -477,7 +480,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  Note:  this is the way to move a working copy to a new branch.\n",
     { 'r', 'N', 'q', svn_cl__auth_username_opt,
       svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-      svn_cl__non_interactive_opt } },
+      svn_cl__non_interactive_opt, svn_cl__merge_cmd_opt } },
  
   { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
@@ -498,7 +501,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  while updates to the file's props are shown in the second column.\n",
     {'r', 'N', 'q', svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-     svn_cl__non_interactive_opt } },
+     svn_cl__non_interactive_opt, svn_cl__merge_cmd_opt } },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -747,6 +750,9 @@ main (int argc, const char * const *argv)
       case svn_cl__diff_cmd_opt:
         opt_state.diff_cmd = apr_pstrdup (pool, opt_arg);
 	break;
+      case svn_cl__merge_cmd_opt:
+        opt_state.merge_cmd = apr_pstrdup (pool, opt_arg);
+	break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -929,8 +935,12 @@ main (int argc, const char * const *argv)
   /* XXX: Only diff_cmd for now, overlay rest later and stop passing
      opt_state altogether? */
   if (opt_state.diff_cmd)
-    svn_config_set (cfg, "helpers", "diff-cmd", opt_state.diff_cmd);
- 
+    svn_config_set (cfg, SVN_CONFIG_SECTION_HELPERS,
+                    SVN_CONFIG_OPTION_DIFF_CMD, opt_state.diff_cmd);
+  if (opt_state.merge_cmd)
+    svn_config_set (cfg, SVN_CONFIG_SECTION_HELPERS,
+                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
+
   ctx.log_msg_func = svn_cl__get_log_message;
   ctx.log_msg_baton = svn_cl__make_log_msg_baton (&opt_state, NULL, 
                                                   ctx.config, pool);
