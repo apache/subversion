@@ -68,7 +68,9 @@
 #include <string.h>
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_error.h"
 #include "svn_delta.h"
+#include "apr_strings.h"
 #include "xmlparse.h"
 
 
@@ -81,12 +83,12 @@
 static void
 svn_fill_attributes (apr_pool_t *pool,
                      svn_delta_stackframe_t *frame,
-                     char **atts)
+                     const char **atts)
 {
   while (*atts)
     {
-      char *attr_name = *atts++;
-      char *attr_value = *atts++;
+      const char *attr_name = *atts++;
+      const char *attr_value = *atts++;
       
       if (strcmp (attr_name, "ancestor") == 0)
         {
@@ -95,7 +97,7 @@ svn_fill_attributes (apr_pool_t *pool,
         }
       else if (strcmp (attr_name, "ver") == 0)
         {
-          frame->ancestor_version = atoi (attr_value);
+          frame->ancestor_ver = atoi (attr_value);
         }
       else if (strcmp (attr_name, "new") == 0)
         {
@@ -116,18 +118,33 @@ svn_fill_attributes (apr_pool_t *pool,
 
 
 
-/* For code factorization: 
+/* Heh, by creating our "stackframe" structure, this routine has been
+   reduced to a trivial nothingness, like a lisp routine or something.
+   :) */
 
+/* Return the last frame of a delta stack. */
+static svn_delta_stackframe_t *
+svn_find_delta_bottom (svn_delta_stackframe_t *frame)
+{
+  if (frame->next == NULL)
+    return frame;
+  else
+    return svn_find_delta_bottom (frame);
+}
+
+
+
+
+/* 
    Go to bottom of frame D, and set the state of the content's
    text_delta or prop_delta flag. 
-
 */
 static void
 svn_twiddle_edit_content_flags (svn_delta_stackframe_t *d, 
                                 svn_boolean_t value,
                                 svn_boolean_t text_p)
 {
-  svn_delta_stackframe *bot_frame = svn_delta_find_bottom (d);
+  svn_delta_stackframe_t *bot_frame = svn_find_delta_bottom (d);
   
   /* ...just mark flag in edit_content structure (should be the
      last structure on our growing delta) */
@@ -141,39 +158,23 @@ svn_twiddle_edit_content_flags (svn_delta_stackframe_t *d,
 
 
 
-/* Heh, by creating our "stackframe" structure, this routine has been
-   reduced to a trivial nothingness, like a lisp routine or something.
-   :) */
-
-
-/* Return the last frame of a delta stack. */
-static svn_delta_stackframe_t *
-svn_find_delta_bottom (svn_delta_stackframe_t *frame)
-{
-  if (frame->next == NULL)
-    return frame;
-  else
-    return svn_find_delta_bottom (frame);
-}
-
-
 /* If we get malformed XML, return an informative error saying so. */
 static svn_error_t *
-svn_XML_typeerror (apr_pool_t *pool, char *name, svn_boolean_t destroy_p)
+svn_XML_typeerror (apr_pool_t *pool, const char *name, svn_boolean_t destroy_p)
 {
   if (destroy_p)
     {
       char *msg = 
-        ap_psprintf (pool, "Typecheck error in svn_starpend_delta: trying to remove frame type '%s', but current bottom of stackframe is different type!", name);
-      return svn_create_error (SVN_ERR_MALFORMED_XML, NULL,
+        apr_psprintf (pool, "Typecheck error in svn_starpend_delta: trying to remove frame type '%s', but current bottom of stackframe is different type!", name);
+      return svn_create_error (SVN_ERR_MALFORMED_XML, 0,
                                msg, NULL, pool);
     }
 
   else
     {
       char *msg = 
-        ap_psprintf (pool, "Typecheck error in svn_starpend_delta: trying to append frame type '%s', but current bottom of stackframe is wrong type!", name);
-      return svn_create_error (SVN_ERR_MALFORMED_XML, NULL,
+        apr_psprintf (pool, "Typecheck error in svn_starpend_delta: trying to append frame type '%s', but current bottom of stackframe is wrong type!", name);
+      return svn_create_error (SVN_ERR_MALFORMED_XML, 0,
                                msg, NULL, pool);
     }
 }
@@ -198,8 +199,8 @@ svn_XML_typeerror (apr_pool_t *pool, char *name, svn_boolean_t destroy_p)
 static svn_error_t *
 svn_starpend_delta (svn_delta_digger_t *digger,
                     svn_delta_stackframe_t *new_frame,
-                    char *tagname,
-                    svn_boolean_t destroy_p)
+                    const char *tagname,
+                    const svn_boolean_t destroy_p)
 {
   /* Get a grip on the bottommost and penultimate frames in our
      digger's stack. */
@@ -296,7 +297,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
         /* This is the very FIRST element of our tree delta! */
         my_digger->stack = new_frame;
       else  /* This is a nested tree-delta.  Hook it in. */
-        svn_starpend_delta (my_digger, new_frame, FALSE);
+        svn_starpend_delta (my_digger, new_frame, name, FALSE);
     }
 
   else if (strcmp (name, "text-delta") == 0)
@@ -304,7 +305,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
       /* Found a new text-delta element */
       /* No need to create a text-delta structure... */
 
-      svn_twiddle_edit_content_flags (my_digger->stack, TRUE)
+      svn_twiddle_edit_content_flags (my_digger->stack, TRUE, TRUE);
     }
 
   else if (strcmp (name, "prop-delta") == 0)
@@ -312,7 +313,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
       /* Found a new prop-delta element */
       /* No need to create a prop-delta structure... */
 
-      svn_twiddle_edit_content_flags (my_digger->stack, FALSE)
+      svn_twiddle_edit_content_flags (my_digger->stack, TRUE, FALSE);
     }
 
   else if (strcmp (name, "new") == 0)
@@ -330,7 +331,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
       svn_fill_attributes (my_digger->pool, new_frame, atts);
 
       /* Append this frame to the end of the stack. */
-      svn_starpend_delta (my_digger, new_frame, FALSE);
+      svn_starpend_delta (my_digger, new_frame, name, FALSE);
     }
 
   else if (strcmp (name, "replace"))
@@ -348,7 +349,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
       svn_fill_attributes (my_digger->pool, new_frame, atts);
 
       /* Append this frame to the end of the stack. */
-      svn_starpend_delta (my_digger, new_frame, FALSE);
+      svn_starpend_delta (my_digger, new_frame, name, FALSE);
     }
 
   else if (strcmp (name, "delete"))
@@ -366,7 +367,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
       svn_fill_attributes (my_digger->pool, new_frame, atts);
 
       /* Append this frame to the end of the stack. */
-      svn_starpend_delta (my_digger, new_frame, FALSE);
+      svn_starpend_delta (my_digger, new_frame, name, FALSE);
 
     }
 
@@ -383,7 +384,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
       svn_fill_attributes (my_digger->pool, new_frame, atts);
 
       /* Append this frame to the end of the stack. */
-      svn_starpend_delta (my_digger, new_frame, FALSE);
+      svn_starpend_delta (my_digger, new_frame, name, FALSE);
     }
 
   else if (strcmp (name, "dir"))
@@ -399,12 +400,12 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
       svn_fill_attributes (my_digger->pool, new_frame, atts);
 
       /* Append this frame to the end of the stack. */
-      svn_starpend_delta (my_digger, new_frame, FALSE);
+      svn_starpend_delta (my_digger, new_frame, name, FALSE);
 
       /* Call the "directory" callback in the digger struct; this
          allows the client to possibly create new subdirs on-the-fly,
          for example. */
-      (* (my_digger->dir_handler)) (my_digger, this_edit_content);
+      (* (my_digger->dir_handler)) (my_digger, new_frame);
     }
 
   else
@@ -412,7 +413,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
       svn_error_t *err;
       /* Found some unrecognized tag, so PUNT to the caller's
          default handler. */
-      err = (* (my_digger->unknown_elt_handler)) (my_digger, name, atts);
+      err = (* (my_digger->unknown_elt_handler)) (my_digger, name);
 
       /* TODO: check for error */
     }
@@ -451,7 +452,7 @@ svn_xml_handle_end (void *userData, const char *name)
       /* bottomost object of delta should be an edit_content_t,
          so we UNSET it's text_delta flag here. */
 
-      err =svn_twiddle_edit_content_flags (my_digger->stack, FALSE, TRUE);
+      svn_twiddle_edit_content_flags (my_digger->stack, FALSE, TRUE);
     }
 
   else if (strcmp (name, "prop-delta") == 0)
@@ -459,14 +460,14 @@ svn_xml_handle_end (void *userData, const char *name)
       /* bottomost object of delta should be an edit_content_t,
          so we UNSET it's prop_delta flag here. */
 
-      err = svn_twiddle_edit_content_flags (my_digger->stack, FALSE, FALSE);
+      svn_twiddle_edit_content_flags (my_digger->stack, FALSE, FALSE);
     }
 
   else  /* default */
     {
       /* Found some unrecognized tag, so PUNT to the caller's
          default handler. */
-      (* (my_digger->unknown_elt_handler)) (my_digger, name, atts);
+      (* (my_digger->unknown_elt_handler)) (my_digger, name);
     }
 }
 

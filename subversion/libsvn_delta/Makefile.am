@@ -14,7 +14,7 @@ libsvn_delta_la_SOURCES = delta_parse.c
 ## Build flags ---------
 
 ## These should be variables, no?  (from autoconf?)
-INCLUDES = -I../include -I../../apr/include
+INCLUDES = -I../include -I../../apr/include -I../../expat-lite
 
 
 ## Build *this* directory first, *then* the test subdirectory!

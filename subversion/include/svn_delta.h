@@ -325,7 +325,8 @@ typedef struct svn_delta_digger_t
 
   /* Caller uses delta context to determine if prop data or text data. */
   svn_error_t *(*data_handler) (struct svn_delta_digger_t *digger,
-                                svn_delta_stackframe_t *frame);
+                                const char *data,
+                                int len);
 
   /* Call handles dirs specially, because might want to create them. 
    * It gets the digger for context, but also the current edit_content
@@ -336,8 +337,7 @@ typedef struct svn_delta_digger_t
 
   /* Caller optionally decides what to do with unrecognized elements. */
   svn_error_t *(*unknown_elt_handler) (struct svn_delta_digger_t *digger,
-                                       const char *name,
-                                       const char **atts);
+                                       const char *name);
 
 } svn_delta_digger_t;
 
