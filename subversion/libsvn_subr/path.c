@@ -794,7 +794,7 @@ svn_path_is_uri_safe (const char *path)
   apr_size_t i;
 
   for (i = 0; path[i]; i++)
-    if (! uri_char_validity[((unsigned char)path[i])])
+    if ((path[i] != '%') && (! uri_char_validity[((unsigned char)path[i])]))
       return FALSE;
 
   return TRUE;
