@@ -30,6 +30,9 @@
     and I can create a repository fine, but I get errors trying to
     import or check out from it.  What's wrong?</a></li>
 <li><a href="#proxy">How do I access a repository through a proxy?</a></li>
+<li><a href="#globalrev">Why does the entire repository share the 
+    same revision number? I want each of my projects to have their
+    own revision numbers.  </a></li>
 <li><a href="#bikeshed">What's a 'bikeshed'?</a></li> 
 <li><a href="#more-information">I have other problems or questions
     about Subversion.  Where can I get more information?</a></li>
@@ -282,6 +285,29 @@ software.  For Squid, the config option is
 </pre>
 
 (Squid 2.4 and later already knows about PROPFIND.)
+</p>
+
+<!-- ----------------------------------------------------------- -->
+
+<h2><a name="globalrev">Why does the entire repository share the 
+    same revision number? I want each of my projects to have their
+    own revision numbers.</a></h2>
+<p>
+The global revision number attached to the repository as a whole is
+meaningless from a user's perspective. It's an internal mechanism that
+accomplishes the goal of the underlying schema design. It just so
+happens to be exposed so that the user's interface can sometimes be a
+little more convenient than always having to type obnoxiously long
+date/time strings.
+</p>
+
+<p>
+The revision number is only relevant to the repository, and user
+convenience. It has <b>no</b> impact on any other factor of what you
+store in the repository.  Repository revision number bumps aren't
+nearly useful enough to be an accurate indication of the real rate of
+change of a given code base.  There are other more complicated ways to
+get a much better picture of a code-base's rate of change.
 </p>
 
 <!-- ----------------------------------------------------------- -->
