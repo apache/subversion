@@ -3415,67 +3415,6 @@ write_final_changed_path_info (apr_off_t *offset_p,
   return SVN_NO_ERROR;
 }
 
-/* Update the current file to hold the correct next node and copy_ids
-   from transaction TXN_ID in filesystem FS.  The current revision is
-   set to REV.  Perform temporary allocations in POOL. */
-static svn_error_t *
-write_final_current (svn_fs_t *fs,
-                     const char *txn_id,
-                     svn_revnum_t rev,
-                     const char *start_node_id,
-                     const char *start_copy_id,
-                     apr_pool_t *pool)
-{
-  const char *txn_node_id, *txn_copy_id;
-  char new_node_id[MAX_KEY_SIZE + 2];
-  char new_copy_id[MAX_KEY_SIZE + 2];
-  char *buf;
-  apr_file_t *file;
-  
-  /* To find the next available ids, we add the id that used to be in
-     the current file, to the next ids from the transaction file. */
-  SVN_ERR (read_next_ids (&txn_node_id, &txn_copy_id, fs, txn_id, pool));
-
-  svn_fs_fs__add_keys (start_node_id, txn_node_id, new_node_id);
-  svn_fs_fs__add_keys (start_copy_id, txn_copy_id, new_copy_id);
-
-  /* Now we can just write out this line. */
-  buf = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT " %s %s\n", rev, new_node_id,
-                      new_copy_id);
-
-  SVN_ERR (svn_io_file_open (&file,
-                             svn_path_join (fs->path, SVN_FS_FS__CURRENT,
-                                            pool),
-                             APR_WRITE | APR_TRUNCATE,
-                             APR_OS_DEFAULT, pool));
-
-  SVN_ERR (svn_io_file_write_full (file, buf, strlen (buf), NULL, pool));
-
-  SVN_ERR (svn_io_file_close (file, pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* Obtain a write lock on the filesystem FS.  Temporary allocations
-   are from POOL. */
-static svn_error_t *
-get_write_lock (svn_fs_t *fs,
-                apr_pool_t *pool)
-{
-  const char *lock_filename;
-  svn_node_kind_t kind;
-  
-  lock_filename = svn_path_join (fs->path, SVN_FS_FS__LOCK_FILE, pool);
-
-  SVN_ERR (svn_io_check_path (lock_filename, &kind, pool));
-  if ((kind == svn_node_unknown) || (kind == svn_node_none))
-    SVN_ERR (svn_io_file_create (lock_filename, "", pool));
-  
-  SVN_ERR (svn_io_file_lock (lock_filename, TRUE, pool));
-  
-  return SVN_NO_ERROR;
-}
-
 /* Move a file into place from OLD_FILENAME in the transactions
    directory to its final location NEW_FILENAME in the repository.  On
    Unix, match the permissions of the new file to the permissions of
@@ -3509,6 +3448,69 @@ move_into_place (const char *old_filename, const char *new_filename,
   return err;
 }
 
+/* Update the current file to hold the correct next node and copy_ids
+   from transaction TXN_ID in filesystem FS.  The current revision is
+   set to REV.  Perform temporary allocations in POOL. */
+static svn_error_t *
+write_final_current (svn_fs_t *fs,
+                     const char *txn_id,
+                     svn_revnum_t rev,
+                     const char *start_node_id,
+                     const char *start_copy_id,
+                     apr_pool_t *pool)
+{
+  const char *txn_node_id, *txn_copy_id;
+  char new_node_id[MAX_KEY_SIZE + 2];
+  char new_copy_id[MAX_KEY_SIZE + 2];
+  char *buf;
+  const char *tmp_name, *name;
+  apr_file_t *file;
+  
+  /* To find the next available ids, we add the id that used to be in
+     the current file, to the next ids from the transaction file. */
+  SVN_ERR (read_next_ids (&txn_node_id, &txn_copy_id, fs, txn_id, pool));
+
+  svn_fs_fs__add_keys (start_node_id, txn_node_id, new_node_id);
+  svn_fs_fs__add_keys (start_copy_id, txn_copy_id, new_copy_id);
+
+  /* Now we can just write out this line. */
+  buf = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT " %s %s\n", rev, new_node_id,
+                      new_copy_id);
+
+  name = svn_path_join (fs->path, SVN_FS_FS__CURRENT, pool);
+
+  SVN_ERR (svn_io_open_unique_file (&file, &tmp_name, name, ".tmp", FALSE,
+                                    pool));
+
+  SVN_ERR (svn_io_file_write_full (file, buf, strlen (buf), NULL, pool));
+
+  SVN_ERR (svn_io_file_close (file, pool));
+
+  SVN_ERR (move_into_place (tmp_name, name, name, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Obtain a write lock on the filesystem FS.  Temporary allocations
+   are from POOL. */
+static svn_error_t *
+get_write_lock (svn_fs_t *fs,
+                apr_pool_t *pool)
+{
+  const char *lock_filename;
+  svn_node_kind_t kind;
+  
+  lock_filename = svn_path_join (fs->path, SVN_FS_FS__LOCK_FILE, pool);
+
+  SVN_ERR (svn_io_check_path (lock_filename, &kind, pool));
+  if ((kind == svn_node_unknown) || (kind == svn_node_none))
+    SVN_ERR (svn_io_file_create (lock_filename, "", pool));
+  
+  SVN_ERR (svn_io_file_lock (lock_filename, TRUE, pool));
+  
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__commit (svn_revnum_t *new_rev_p,
                    svn_fs_t *fs,
@@ -3530,6 +3532,15 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
 
   /* Get the current youngest revision. */
   SVN_ERR (svn_fs_fs__youngest_rev (&old_rev, fs, subpool));
+
+  /* Check to make sure this transaction is based off the most recent
+     revision. */
+  if (txn->base_rev != old_rev)
+    {
+      svn_pool_destroy (subpool);
+      return svn_error_create (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
+                               "Transaction out of date.");
+    }
 
   /* Get the next node_id and copy_id to use. */
   SVN_ERR (get_next_revision_ids (&start_node_id, &start_copy_id, fs,
