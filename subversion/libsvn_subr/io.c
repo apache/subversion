@@ -359,6 +359,125 @@ svn_io_append_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool
 }
 
 
+svn_error_t *
+svn_io_convert_eol (svn_stringbuf_t *src,
+                    svn_stringbuf_t *dst,
+                    const char *eol_str,
+                    svn_boolean_t repair,
+                    apr_pool_t *pool)
+{
+  apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
+  apr_status_t apr_err;
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_status_t read_err, write_err;
+  char buf[BUFSIZ];
+  /* char src_format[3] = { 0 }; */
+
+  abort(); /* don't use this function yet, it's not finished! */
+
+  /* Open source file. */
+  apr_err = apr_file_open (&s, src->data, APR_READ, APR_OS_DEFAULT, pool);
+  if (apr_err)
+    return svn_error_createf
+      (apr_err, 0, NULL, pool, 
+       "svn_io_convert_eol: error opening `%s'", src->data);
+  
+  /* Open dest file. */
+  apr_err = apr_file_open (&d, dst->data, APR_WRITE | APR_CREATE, 
+                           APR_OS_DEFAULT, pool);
+  if (apr_err)
+    {
+      apr_file_close (s); /* toss */
+      return svn_error_createf
+        (apr_err, 0, NULL, pool, 
+         "svn_io_convert_eol: error opening `%s'", dst->data);
+    }
+
+  /*** Any errors after this point require us to close the two files and
+       remove DST. */
+  
+  /* Copy bytes till the cows come home. */
+  read_err = 0;
+  while (!APR_STATUS_IS_EOF(read_err))
+    {
+      apr_size_t bytes_read = sizeof (buf);
+
+      /* Read a chunk of data. */
+      read_err = apr_file_read (s, buf, &bytes_read);
+      if (read_err && !APR_STATUS_IS_EOF(read_err))
+        {
+          err = svn_error_createf
+            (read_err, 0, NULL, pool, 
+             "svn_io_convert_eol: error reading `%s'", src->data);
+          goto cleanup;
+        }
+
+      /* Write the bytes to DST, converting newlines as we go. */
+      /* ### TODO:  Here's the real meat.  Things to keep in mind:
+
+         - EOL strings can be multi-character.  This means we run the
+           risk of an EOL string spanning chunks read from SRC
+
+         - Perhaps we need a function to simply figure out what SRC's
+           current EOL string is, heuristically, since it might have
+           been tainted by an unaware tool?  
+
+         - It's not enough to only replace instances of SRC's EOL
+           string with the EOL string requested.  We need to scan for
+           all known EOL strings, because if we find one that *isn't*
+           STR's EOL format, we have to decide whether to repair that
+           (by replacing it, too) or bail out (complaining that SRC is
+           inconsistent). 
+           
+         - Don't even *think* about removing the abort() at the top if
+           this function until you've written good tests for it! >:-(
+      */
+
+      /* Write 'em. */
+      write_err = apr_file_write_full (d, buf, bytes_read, NULL);
+      if (write_err)
+        {
+          err = svn_error_createf
+            (write_err, 0, NULL, pool, 
+             "svn_io_convert_eol: error writing `%s'", dst->data);
+          goto cleanup;
+        }
+
+      /* If we hit the end of the file, we need to close both files,
+         hopefully without error. */
+      if (read_err && APR_STATUS_IS_EOF(read_err))
+        {
+          apr_err = apr_file_close (s);
+          if (apr_err)
+            {
+              s = NULL;
+              err = svn_error_createf
+                (apr_err, 0, NULL, pool, 
+                 "svn_io_convert_eol: error closing `%s'", src->data);
+              goto cleanup;
+            }
+          
+          apr_err = apr_file_close (d);
+          if (apr_err)
+            {
+              d = NULL;
+              err = svn_error_createf
+                (apr_err, 0, NULL, pool, 
+                 "svn_io_convert_eol: error closing `%s'", dst->data);
+              goto cleanup;
+            }
+        }
+    }
+  return SVN_NO_ERROR;
+
+ cleanup:
+  if (s)
+    apr_file_close (s); /* toss */
+  if (d)
+    apr_file_close (d); /* toss */
+  apr_file_remove (dst->data, pool); /* toss */
+  return err;
+}
 
 
 svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
@@ -730,9 +849,9 @@ svn_string_from_file (svn_stringbuf_t **result,
 
 
 svn_error_t *
-svn_string_from_aprfile(svn_stringbuf_t **result,
-                        apr_file_t *file,
-                        apr_pool_t *pool)
+svn_string_from_aprfile (svn_stringbuf_t **result,
+                         apr_file_t *file,
+                         apr_pool_t *pool)
 {
   /* ### this function must be fixed to do an apr_stat() for SIZE,
      ### alloc the buffer, then read the file into the buffer. Using
@@ -744,19 +863,21 @@ svn_string_from_aprfile(svn_stringbuf_t **result,
   apr_status_t apr_err;
   svn_stringbuf_t *res = svn_stringbuf_create("", pool);
 
-  do {
-    apr_err = apr_file_read_full (file, buf, sizeof(buf), &len);
-    if (apr_err && !APR_STATUS_IS_EOF (apr_err))
-      {
-        const char * filename;
-        apr_file_name_get (&filename, file);
-        return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "svn_string_from_aprfile: failed to read '%s'",
-                                  filename);
-      }
-    
-    svn_stringbuf_appendbytes (res, buf, len);
-  } while (len != 0);
+  do 
+    {
+      apr_err = apr_file_read_full (file, buf, sizeof(buf), &len);
+      if (apr_err && !APR_STATUS_IS_EOF (apr_err))
+        {
+          const char * filename;
+          apr_file_name_get (&filename, file);
+          return svn_error_createf 
+            (apr_err, 0, NULL, pool,
+             "svn_string_from_aprfile: failed to read '%s'", filename);
+        }
+      
+      svn_stringbuf_appendbytes (res, buf, len);
+    } 
+  while (len != 0);
 
   *result = res;
   return SVN_NO_ERROR;

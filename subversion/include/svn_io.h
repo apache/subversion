@@ -143,7 +143,16 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
    If SRC is determined to have an inconsistent line ending style,
    then if REPAIR is FALSE, return SVN_ERR_IO_INCONSISTENT_EOL and
    remove DST, else if REPAIR is TRUE, repair DST by converting
-   newlines of all known formats to EOL_STR.  */
+   newlines of all known formats to EOL_STR.  
+
+   NOTE:  This function currently only notices the following line
+   ending strings:
+
+      \n
+      \r
+      \r\n
+      \n\r
+*/
 svn_error_t *svn_io_convert_eol (svn_stringbuf_t *src,
                                  svn_stringbuf_t *dst,
                                  const char *eol_str,
