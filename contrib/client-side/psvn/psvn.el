@@ -74,6 +74,7 @@
 ;; P I   - svn-status-property-ignore-file-extension
 ;; P C-i - svn-status-property-edit-svn-ignore
 ;; P k   - svn-status-property-set-keyword-list
+;; P y   - svn-status-property-set-eol-style
 ;; h     - svn-status-use-history
 ;; q     - svn-status-bury-buffer
 
@@ -612,6 +613,7 @@ A and B must be line-info's"
   (define-key svn-status-mode-property-map [?I] 'svn-status-property-ignore-file-extension)
   (define-key svn-status-mode-property-map [(control ?i)] 'svn-status-property-edit-svn-ignore)
   (define-key svn-status-mode-property-map [?k] 'svn-status-property-set-keyword-list)
+  (define-key svn-status-mode-property-map [?y] 'svn-status-property-set-eol-style)
   (define-key svn-status-mode-property-map [?p] 'svn-status-property-parse)
   (define-key svn-status-mode-property-map [return] 'svn-status-select-line)
   (define-key svn-status-mode-map [?P] svn-status-mode-property-map))
@@ -651,6 +653,7 @@ A and B must be line-info's"
      ["Edit svn:ignore Property" svn-status-property-edit-svn-ignore t]
      "---"
      ["Set svn:keywords List" svn-status-property-set-keyword-list t]
+     ["Set svn:eol-style" svn-status-property-set-eol-style t]
      )
     "---"
     ["Edit Next SVN Cmd Line" svn-status-toggle-edit-cmd-flag t]
@@ -722,6 +725,7 @@ A and B must be line-info's"
   P I   - svn-status-property-ignore-file-extension
   P C-i - svn-status-property-edit-svn-ignore
   P k   - svn-status-property-set-keyword-list
+  P y   - svn-status-property-set-eol-style
   h     - svn-status-use-history
   q     - svn-status-bury-buffer"
   (interactive)
@@ -1749,6 +1753,18 @@ When called with a prefix argument, it is possible to enter a new property."
           (setq new-prop-value (cdr new-prop-value)))))
     (svn-prop-edit-mode)))
 
+(defun svn-status-property-set-property (file-info-list prop-name prop-value)
+  "Set a property on a given file list."
+  (save-excursion
+    (set-buffer (get-buffer "*svn-property-edit*"))
+    (delete-region (point-min) (point-max))
+    (insert prop-value))
+  (setq svn-status-propedit-file-list (svn-status-marked-files))
+  (setq svn-status-propedit-property-name prop-name)
+  (svn-prop-edit-do-it nil)
+  (svn-status-update))
+  
+
 (defun svn-status-get-directory (line-info)
   (let* ((file-name (svn-status-line-info->filename line-info))
          (file-dir (file-name-directory file-name)))
@@ -1833,9 +1849,19 @@ When called with a prefix argument, it is possible to enter a new property."
 
 
 (defun svn-status-property-set-keyword-list ()
+  "Edit the svn:keywords property on the marked files."
   (interactive)
   ;;(message "Set svn:keywords for %S" (svn-status-marked-file-names))
   (svn-status-property-edit (svn-status-marked-files) "svn:keywords"))
+
+(defun svn-status-property-set-eol-style ()
+  "Edit the svn:eol-style property on the marked files."
+  (interactive)
+  (svn-status-property-set-property
+   (svn-status-marked-files) "svn:eol-style"
+   (completing-read "Set svn:eol-style for the marked files: "
+                    '("native" "CRLF" "LF" "CR") nil t)))
+
 
 ;; --------------------------------------------------------------------------------
 ;; svn-prop-edit-mode:
@@ -1905,10 +1931,10 @@ Commands:
   (set-buffer "*svn-status*")
   (svn-status-show-svn-diff-for-marked-files arg))
 
-(defun svn-prop-edit-svn-log ()
-  (interactive)
+(defun svn-prop-edit-svn-log (arg)
+  (interactive "P")
   (set-buffer "*svn-status*")
-  (svn-status-show-svn-log))
+  (svn-status-show-svn-log arg))
 
 (defun svn-prop-edit-svn-status ()
   (interactive)
