@@ -67,19 +67,20 @@ static svn_error_t *
 put_copy (svn_fs_t *fs,
           const copy_t *copy,
           const char *copy_id,
-          trail_t *trail)
+          trail_t *trail,
+          apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   skel_t *copy_skel;
   DBT key, value;
 
   /* Convert native type to skel. */
-  SVN_ERR (svn_fs_base__unparse_copy_skel (&copy_skel, copy, trail->pool));
+  SVN_ERR (svn_fs_base__unparse_copy_skel (&copy_skel, copy, pool));
 
   /* Only in the context of this function do we know that the DB call
      will not attempt to modify COPY_ID, so the cast belongs here.  */
   svn_fs_base__str_to_dbt (&key, copy_id);
-  svn_fs_base__skel_to_dbt (&value, copy_skel, trail->pool);
+  svn_fs_base__skel_to_dbt (&value, copy_skel, pool);
   svn_fs_base__trail_debug (trail, "copies", "put");
   SVN_ERR (BDB_WRAP (fs, "storing copy record",
                      bfd->copies->put (bfd->copies, trail->db_txn,
@@ -92,7 +93,8 @@ put_copy (svn_fs_t *fs,
 svn_error_t *
 svn_fs_bdb__reserve_copy_id (const char **id_p,
                              svn_fs_t *fs,
-                             trail_t *trail)
+                             trail_t *trail,
+                             apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT query, result;
@@ -109,10 +111,10 @@ svn_fs_bdb__reserve_copy_id (const char **id_p,
                      bfd->copies->get (bfd->copies, trail->db_txn, &query,
                                        svn_fs_base__result_dbt (&result),
                                        0)));
-  svn_fs_base__track_dbt (&result, trail->pool);
+  svn_fs_base__track_dbt (&result, pool);
 
   /* Set our return value. */
-  *id_p = apr_pstrmemdup (trail->pool, result.data, result.size);
+  *id_p = apr_pstrmemdup (pool, result.data, result.size);
 
   /* Bump to future key. */
   len = result.size;
@@ -135,21 +137,23 @@ svn_fs_bdb__create_copy (svn_fs_t *fs,
                          const char *src_txn_id,
                          const svn_fs_id_t *dst_noderev_id,
                          copy_kind_t kind,
-                         trail_t *trail)
+                         trail_t *trail,
+                         apr_pool_t *pool)
 {
   copy_t copy;
   copy.kind = kind;
   copy.src_path = src_path;
   copy.src_txn_id = src_txn_id;
   copy.dst_noderev_id = dst_noderev_id;
-  return put_copy (fs, &copy, copy_id, trail);
+  return put_copy (fs, &copy, copy_id, trail, pool);
 }
 
 
 svn_error_t *
 svn_fs_bdb__delete_copy (svn_fs_t *fs,
                          const char *copy_id,
-                         trail_t *trail)
+                         trail_t *trail,
+                         apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key;
@@ -168,7 +172,8 @@ svn_error_t *
 svn_fs_bdb__get_copy (copy_t **copy_p,
                       svn_fs_t *fs,
                       const char *copy_id,
-                      trail_t *trail)
+                      trail_t *trail,
+                      apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
@@ -183,19 +188,19 @@ svn_fs_bdb__get_copy (copy_t **copy_p,
                              svn_fs_base__str_to_dbt (&key, copy_id),
                              svn_fs_base__result_dbt (&value),
                              0);
-  svn_fs_base__track_dbt (&value, trail->pool);
+  svn_fs_base__track_dbt (&value, pool);
 
   if (db_err == DB_NOTFOUND)
     return svn_fs_base__err_no_such_copy (fs, copy_id);
   SVN_ERR (BDB_WRAP (fs, "reading copy", db_err));
 
   /* Unparse COPY skel */
-  skel = svn_fs_base__parse_skel (value.data, value.size, trail->pool);
+  skel = svn_fs_base__parse_skel (value.data, value.size, pool);
   if (! skel)
     return svn_fs_base__err_corrupt_copy (fs, copy_id);
 
   /* Convert skel to native type. */
-  SVN_ERR (svn_fs_base__parse_copy_skel (&copy, skel, trail->pool));
+  SVN_ERR (svn_fs_base__parse_copy_skel (&copy, skel, pool));
   *copy_p = copy;
   return SVN_NO_ERROR;
 }

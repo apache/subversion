@@ -38,11 +38,12 @@ int svn_fs_bdb__open_transactions_table (DB **transactions_p,
 
 /* Create a new transaction in FS as part of TRAIL, with an initial
    root and base root ID of ROOT_ID.  Set *TXN_NAME_P to the name of the
-   new transaction, allocated in TRAIL->pool.  */
+   new transaction, allocated in POOL.  */
 svn_error_t *svn_fs_bdb__create_txn (const char **txn_name_p,
                                      svn_fs_t *fs,
                                      const svn_fs_id_t *root_id,
-                                     trail_t *trail);
+                                     trail_t *trail,
+                                     apr_pool_t *pool);
 
 
 /* Remove the transaction whose name is TXN_NAME from the `transactions'
@@ -52,19 +53,21 @@ svn_error_t *svn_fs_bdb__create_txn (const char **txn_name_p,
    transaction that has already been committed.  */
 svn_error_t *svn_fs_bdb__delete_txn (svn_fs_t *fs,
                                      const char *txn_name,
-                                     trail_t *trail);
+                                     trail_t *trail,
+                                     apr_pool_t *pool);
 
 
 /* Retrieve the transaction *TXN_P for the Subversion transaction
    named TXN_NAME from the `transactions' table of FS, as part of
-   TRAIL.  Perform all allocations in TRAIL->pool.
+   TRAIL.  Perform all allocations in POOL.
 
    If there is no such transaction, SVN_ERR_FS_NO_SUCH_TRANSACTION is
    the error returned.  */
 svn_error_t *svn_fs_bdb__get_txn (transaction_t **txn_p,
                                   svn_fs_t *fs,
                                   const char *txn_name,
-                                  trail_t *trail);
+                                  trail_t *trail,
+                                  apr_pool_t *pool);
 
 
 /* Store the Suversion transaction TXN in FS with an ID of TXN_NAME as
@@ -72,16 +75,17 @@ svn_error_t *svn_fs_bdb__get_txn (transaction_t **txn_p,
 svn_error_t *svn_fs_bdb__put_txn (svn_fs_t *fs,
                                   const transaction_t *txn,
                                   const char *txn_name,
-                                  trail_t *trail);
+                                  trail_t *trail,
+                                  apr_pool_t *pool);
 
 
 /* Set *NAMES_P to an array of const char * IDs (unfinished
    transactions in FS) as part of TRAIL.  Allocate the array and the
-   names in POOL, and use TRAIL->pool for any temporary allocations.  */
+   names in POOL, and use POOL for any temporary allocations.  */
 svn_error_t *svn_fs_bdb__get_txn_list (apr_array_header_t **names_p,
                                        svn_fs_t *fs,
-                                       apr_pool_t *pool,
-                                       trail_t *trail);
+                                       trail_t *trail,
+                                       apr_pool_t *pool);
 
 
 #ifdef __cplusplus

@@ -56,7 +56,8 @@ svn_error_t *
 svn_fs_bdb__get_rev (revision_t **revision_p,
                      svn_fs_t *fs,
                      svn_revnum_t rev,
-                     trail_t *trail)
+                     trail_t *trail,
+                     apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
@@ -75,7 +76,7 @@ svn_fs_bdb__get_rev (revision_t **revision_p,
                                                       sizeof (recno)),
                                 svn_fs_base__result_dbt (&value),
                                 0);
-  svn_fs_base__track_dbt (&value, trail->pool);
+  svn_fs_base__track_dbt (&value, pool);
 
   /* If there's no such revision, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
@@ -85,12 +86,12 @@ svn_fs_bdb__get_rev (revision_t **revision_p,
   SVN_ERR (BDB_WRAP (fs, "reading filesystem revision", db_err));
 
   /* Parse REVISION skel.  */
-  skel = svn_fs_base__parse_skel (value.data, value.size, trail->pool);
+  skel = svn_fs_base__parse_skel (value.data, value.size, pool);
   if (! skel)
     return svn_fs_base__err_corrupt_fs_revision (fs, rev);
 
   /* Convert skel to native type. */
-  SVN_ERR (svn_fs_base__parse_revision_skel (&revision, skel, trail->pool));
+  SVN_ERR (svn_fs_base__parse_revision_skel (&revision, skel, pool));
 
   *revision_p = revision;
   return SVN_NO_ERROR;
@@ -105,7 +106,8 @@ svn_error_t *
 svn_fs_bdb__put_rev (svn_revnum_t *rev,
                      svn_fs_t *fs,
                      const revision_t *revision,
-                     trail_t *trail)
+                     trail_t *trail,
+                     apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
@@ -114,7 +116,7 @@ svn_fs_bdb__put_rev (svn_revnum_t *rev,
   DBT key, value;
 
   /* Convert native type to skel. */
-  SVN_ERR (svn_fs_base__unparse_revision_skel (&skel, revision, trail->pool));
+  SVN_ERR (svn_fs_base__unparse_revision_skel (&skel, revision, pool));
 
   if (SVN_IS_VALID_REVNUM (*rev))
     {
@@ -126,15 +128,14 @@ svn_fs_bdb__put_rev (svn_revnum_t *rev,
       db_err = bfd->revisions->put
         (bfd->revisions, trail->db_txn,
          svn_fs_base__set_dbt (&query, &recno, sizeof (recno)),
-         svn_fs_base__skel_to_dbt (&result, skel, trail->pool), 0);
+         svn_fs_base__skel_to_dbt (&result, skel, pool), 0);
       return BDB_WRAP (fs, "updating filesystem revision", db_err);
     }
 
   svn_fs_base__trail_debug (trail, "revisions", "put");
   db_err = bfd->revisions->put (bfd->revisions, trail->db_txn,
                                 svn_fs_base__recno_dbt(&key, &recno),
-                                svn_fs_base__skel_to_dbt (&value, skel,
-                                                     trail->pool),
+                                svn_fs_base__skel_to_dbt (&value, skel, pool),
                                 DB_APPEND);
   SVN_ERR (BDB_WRAP (fs, "storing filesystem revision", db_err));
 
@@ -153,7 +154,8 @@ svn_fs_bdb__put_rev (svn_revnum_t *rev,
 svn_error_t *
 svn_fs_bdb__youngest_rev (svn_revnum_t *youngest_p,
                           svn_fs_t *fs,
-                          trail_t *trail)
+                          trail_t *trail,
+                          apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
