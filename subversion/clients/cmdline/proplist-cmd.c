@@ -108,12 +108,19 @@ svn_cl__proplist (apr_getopt_t *os,
           int j;
           svn_error_t *err;
           svn_boolean_t is_url = svn_path_is_url (target);
+          const char *truepath;
+          svn_opt_revision_t peg_revision;
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-          err = svn_client_proplist (&props, target,
-                                     &(opt_state->start_revision),
-                                     opt_state->recursive, ctx, subpool);
+
+          /* Check for a peg revision. */
+          SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
+                                       subpool));
+          
+          err = svn_client_proplist2 (&props, truepath, &peg_revision,
+                                      &(opt_state->start_revision),
+                                      opt_state->recursive, ctx, subpool);
           if (err)
             {
               if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)

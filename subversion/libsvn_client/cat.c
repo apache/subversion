@@ -38,11 +38,12 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_cat (svn_stream_t *out,
-                const char *path_or_url,
-                const svn_opt_revision_t *revision,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+svn_client_cat2 (svn_stream_t *out,
+                 const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
 {
   svn_ra_plugin_t *ra_lib;
   void *session;
@@ -55,8 +56,8 @@ svn_client_cat (svn_stream_t *out,
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &rev,
-                                         &url, path_or_url, revision,
-                                         ctx, pool));
+                                         &url, path_or_url, peg_revision,
+                                         revision, ctx, pool));
 
   /* Make sure the object isn't a directory. */
   SVN_ERR (ra_lib->check_path (session, "", rev, &url_kind, pool));
@@ -138,4 +139,15 @@ svn_client_cat (svn_stream_t *out,
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_cat (svn_stream_t *out,
+                const char *path_or_url,
+                const svn_opt_revision_t *revision,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_cat2 (out, path_or_url, revision, revision,
+                          ctx, pool);
 }

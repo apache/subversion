@@ -143,12 +143,20 @@ svn_cl__propget (apr_getopt_t *os,
           apr_hash_index_t *hi;
           svn_boolean_t print_filenames = FALSE;
           svn_boolean_t is_url = svn_path_is_url (target);
+          const char *truepath;
+          svn_opt_revision_t peg_revision;
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-          SVN_ERR (svn_client_propget (&props, pname_utf8, target,
-                                       &(opt_state->start_revision),
-                                       opt_state->recursive, ctx, subpool));
+
+          /* Check for a peg revision. */
+          SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
+                                       subpool));
+          
+          SVN_ERR (svn_client_propget2 (&props, pname_utf8, truepath,
+                                        &peg_revision,
+                                        &(opt_state->start_revision),
+                                        opt_state->recursive, ctx, subpool));
           
           /* Any time there is more than one thing to print, or where
              the path associated with a printed thing is not obvious,

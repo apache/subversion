@@ -140,10 +140,17 @@ svn_cl__ls (apr_getopt_t *os,
     {
       apr_hash_t *dirents;
       const char *target = ((const char **) (targets->elts))[i];
+      const char *truepath;
+      svn_opt_revision_t peg_revision;
      
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-      SVN_ERR (svn_client_ls (&dirents, target, &(opt_state->start_revision),
-                              opt_state->recursive, ctx, subpool));
+
+      /* Get peg revisions. */
+      SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
+                                   pool));
+      SVN_ERR (svn_client_ls2 (&dirents, truepath, &peg_revision,
+                               &(opt_state->start_revision),
+                               opt_state->recursive, ctx, subpool));
 
       SVN_ERR (print_dirents (dirents, opt_state->verbose, ctx, subpool));
       svn_pool_clear (subpool);
