@@ -46,8 +46,9 @@ detect_changed (apr_hash_t *changed,
 {
   apr_hash_t *changes;
   apr_hash_index_t *hi;
+  svn_log_changed_path_t *item;
   apr_pool_t *subpool = svn_pool_create (pool);
-
+  
   SVN_ERR (svn_fs_paths_changed (&changes, root, subpool));
   for (hi = apr_hash_first (subpool, changes); hi; hi = apr_hash_next (hi))
     {
@@ -65,8 +66,7 @@ detect_changed (apr_hash_t *changed,
       switch (change->change_kind)
         {
         case svn_fs_path_change_reset:
-          action = '\0';
-          break;
+          continue;
 
         case svn_fs_path_change_add:
           action = 'A';
@@ -82,12 +82,28 @@ detect_changed (apr_hash_t *changed,
 
         case svn_fs_path_change_modify:
         default:
-          action = 'U';
+          action = 'M';
           break;
         }
 
-      apr_hash_set (changed, apr_pstrdup (pool, path), APR_HASH_KEY_STRING,
-                    (void *) ((int) action));
+      item = apr_pcalloc (pool, sizeof (*item));
+      item->action = action;
+      item->copyfrom_rev = SVN_INVALID_REVNUM;
+      if ((action == 'A') || (action == 'R'))
+        {
+          const char *copyfrom_path;
+          svn_revnum_t copyfrom_rev;
+
+          SVN_ERR (svn_fs_copied_from (&copyfrom_rev, &copyfrom_path,
+                                       root, path, subpool));
+          if (copyfrom_path && SVN_IS_VALID_REVNUM (copyfrom_rev))
+            {
+              item->copyfrom_path = apr_pstrdup (pool, copyfrom_path);
+              item->copyfrom_rev = copyfrom_rev;
+            }
+        }
+      apr_hash_set (changed, apr_pstrdup (pool, path), 
+                    APR_HASH_KEY_STRING, item);
     }
 
   svn_pool_destroy (subpool);

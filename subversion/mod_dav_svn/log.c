@@ -88,22 +88,62 @@ static svn_error_t * log_receiver(void *baton,
            hi = apr_hash_next(hi))
         {
           void *val;
-          char action;
+          svn_log_changed_path_t *log_item;
           
           apr_hash_this(hi, (void *) &path, NULL, &val);
-          action = (char) ((int) val);
+          log_item = val;
 
           /* ### todo: is there a D: namespace equivalent for
              `changed-path'?  Should use it if so. */
-          if (action == 'A')
-            send_xml(lrb, "<S:added-path>%s</S:added-path>" DEBUG_CR,
-                     apr_xml_quote_string(pool, path, 0));
-          else if (action == 'D')
-            send_xml(lrb, "<S:deleted-path>%s</S:deleted-path>" DEBUG_CR,
-                     apr_xml_quote_string(pool, path, 0));
-          else
-            send_xml(lrb, "<S:changed-path>%s</S:changed-path>" DEBUG_CR,
-                     apr_xml_quote_string(pool, path, 0));
+          switch (log_item->action)
+            {
+            case 'A':
+              if (log_item->copyfrom_path 
+                  && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
+                send_xml(lrb, 
+                         "<S:added-path"
+                         " copyfrom-path=\"%s\"" 
+                         " copyfrom-rev=\"%" SVN_REVNUM_T_FMT "\">"
+                         "%s</S:added-path>" DEBUG_CR,
+                         apr_xml_quote_string(pool, log_item->copyfrom_path, 
+                                              1)); /* escape quotes */
+                         log_item->copyfrom_rev,
+                         apr_xml_quote_string(pool, path, 0));
+              else
+                send_xml(lrb, "<S:added-path>%s</S:added-path>" DEBUG_CR,
+                         apr_xml_quote_string(pool, path, 0));
+              break;
+
+            case 'R':
+              if (log_item->copyfrom_path 
+                  && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
+                send_xml(lrb, 
+                         "<S:replaced-path"
+                         " copyfrom-path=\"%s\"" 
+                         " copyfrom-rev=\"%" SVN_REVNUM_T_FMT "\">"
+                         "%s</S:replaced-path>" DEBUG_CR,
+                         apr_xml_quote_string(pool, log_item->copyfrom_path, 
+                                              1)); /* escape quotes */
+                         log_item->copyfrom_rev,
+                         apr_xml_quote_string(pool, path, 0));
+              else
+                send_xml(lrb, "<S:replaced-path>%s</S:replaced-path>" DEBUG_CR,
+                         apr_xml_quote_string(pool, path, 0));
+              break;
+
+            case 'D':
+              send_xml(lrb, "<S:deleted-path>%s</S:deleted-path>" DEBUG_CR,
+                       apr_xml_quote_string(pool, path, 0));
+              break;
+
+            case 'M':
+              send_xml(lrb, "<S:modified-path>%s</S:modified-path>" DEBUG_CR,
+                       apr_xml_quote_string(pool, path, 0));
+              break;
+              
+            default:
+              break;
+            }
         }
     }
 
