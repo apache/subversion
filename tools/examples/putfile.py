@@ -15,13 +15,13 @@ def putfile(pool, fname, rpath, uname="", commitmsg=""):
   if rpath[-1] == "/":
      rpath = rpath[:-1]
 
-  repos_ptr = repos.svn_repos_open(rpath, pool)
-  fsob = repos.svn_repos_fs(repos_ptr)
+  repos_ptr = repos.open(rpath, pool)
+  fsob = repos.fs(repos_ptr)
 
   # open a transaction against HEAD
   rev = fs.youngest_rev(fsob, pool)
 
-  txn = repos.svn_repos_fs_begin_txn_for_commit(repos_ptr, rev, uname, commitmsg, pool)
+  txn = repos.fs_begin_txn_for_commit(repos_ptr, rev, uname, commitmsg, pool)
 
   root = fs.txn_root(txn, pool)
   rev_root = fs.revision_root(fsob, rev, pool)
@@ -44,7 +44,7 @@ def putfile(pool, fname, rpath, uname="", commitmsg=""):
                                 handler, baton,
                                 pool)
 
-  newrev = repos.svn_repos_fs_commit_txn(repos_ptr, txn, pool)
+  newrev = repos.fs_commit_txn(repos_ptr, txn, pool)
   print "revision: ", newrev
 
 def usage():

@@ -33,7 +33,7 @@ class SVNShell(Cmd):
       path = path[:-1]
     self.pool = pool
     self.taskpool = core.svn_pool_create(pool)
-    self.fs_ptr = repos.svn_repos_fs(repos.svn_repos_open(path, pool))
+    self.fs_ptr = repos.fs(repos.open(path, pool))
     self.is_rev = 1
     self.rev = fs.youngest_rev(self.fs_ptr, pool)
     self.txn = None

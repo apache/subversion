@@ -28,20 +28,20 @@ def run(files):
     if not os.path.isdir(dirpath):
       dirpath = os.path.dirname(dirpath)
   
-    adm_baton = svn.wc.svn_wc_adm_open(None, dirpath, False, True, pool)
+    adm_baton = svn.wc.adm_open(None, dirpath, False, True, pool)
 
     try:
-      entry = svn.wc.svn_wc_entry(fullpath, adm_baton, 0, pool)
+      entry = svn.wc.entry(fullpath, adm_baton, 0, pool)
 
-      if svn.wc.svn_wc_text_modified_p(fullpath, FORCE_COMPARISON,
-                                       adm_baton, pool):
+      if svn.wc.text_modified_p(fullpath, FORCE_COMPARISON,
+				adm_baton, pool):
         print "M      %s" % f
       else:
         print "       %s" % f
     except:
       print "?      %s" % f
 
-    svn.wc.svn_wc_adm_close(adm_baton)
+    svn.wc.adm_close(adm_baton)
 
   svn.util.svn_pool_destroy(pool)
   svn.util.apr_terminate()        
