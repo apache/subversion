@@ -43,10 +43,10 @@ To be fixed by someone:
 
 To be fixed by cmpilato:
 
-ch05:
-
-
-ch07:
+   - vendor branch section needs re-working.  again.  specifically,
+     note the "replacing 1.0 with 1.1 and 'missing files' stuff (files
+     not overwritten by a tarball explode wouldn't be missing, they'd
+     be untouched).
 
 --------------------------------------------------------------
 
