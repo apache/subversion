@@ -82,6 +82,7 @@ svn_client__can_delete (const char *path,
         }
 
       if ((statstruct->text_status != svn_wc_status_normal
+           && statstruct->text_status != svn_wc_status_deleted
            && statstruct->text_status != svn_wc_status_absent)
           ||
           (statstruct->prop_status != svn_wc_status_none
