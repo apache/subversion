@@ -755,9 +755,8 @@ unparse_implicit_length (const char **msg)
 	  str = svn_fs__unparse_skel (skel, pool);
 	  
 	  if (! (str
-		 && str->len == 2
-		 && str->data[0] == byte
-		 && skel_is_space (str->data[1])))
+		 && str->len == 1
+		 && str->data[0] == byte))
 	    return fail ("incorrectly unparsed single-byte "
 			 "implicit-length atom");
 	}
