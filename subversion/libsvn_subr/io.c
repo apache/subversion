@@ -903,7 +903,7 @@ svn_io_detect_mimetype (const char **mimetype,
 
   /* Read a block of data from FILE. */
   apr_err = apr_file_read (fh, block, &amt_read);
-  if (apr_err)
+  if (apr_err && (apr_err != APR_EOF))
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "svn_io_detect_mimetype: error reading '%s'",
                               file);
@@ -918,35 +918,36 @@ svn_io_detect_mimetype (const char **mimetype,
      or 0x20-0x7F, and that 100% of those bytes is not 0x00.
 
      If those criteria are not met, we're calling it binary. */
-  {
-    int i;
-    int binary_count = 0;
-
-    /* Run through the data we've read, counting the 'binary-ish'
-       bytes.  HINT: If we see a 0x00 byte, we'll set our count to its
-       max and stop reading the file. */
-    for (i = 0; i < amt_read; i++)
-      {
-        if (block[i] == 0)
-          {
-            binary_count = amt_read;
-            break;
-          }
-        if ((block[i] < 0x07)
-            || ((block[i] > 0x0D) && (block[i] < 0x20))
-            || (block[i] > 0x7F))
-          {
-            binary_count++;
-          }
-      }
-
-    if (((binary_count * 1000) / amt_read) > 850)
-      {
-        *mimetype = generic_binary;
-        return SVN_NO_ERROR;
-      }
-  }
-
+  if (amt_read > 0)
+    {
+      int i;
+      int binary_count = 0;
+      
+      /* Run through the data we've read, counting the 'binary-ish'
+         bytes.  HINT: If we see a 0x00 byte, we'll set our count to its
+         max and stop reading the file. */
+      for (i = 0; i < amt_read; i++)
+        {
+          if (block[i] == 0)
+            {
+              binary_count = amt_read;
+              break;
+            }
+          if ((block[i] < 0x07)
+              || ((block[i] > 0x0D) && (block[i] < 0x20))
+              || (block[i] > 0x7F))
+            {
+              binary_count++;
+            }
+        }
+      
+      if (((binary_count * 1000) / amt_read) > 850)
+        {
+          *mimetype = generic_binary;
+          return SVN_NO_ERROR;
+        }
+    }
+  
   return SVN_NO_ERROR;
 }
 
