@@ -20,6 +20,7 @@
 
 #include "svn_wc.h"
 #include "svn_error.h"
+#include "svn_string.h"
 #include "svn_xml.h"
 #include "wc.h"
 
@@ -615,15 +616,27 @@ log_do_modify_entry (struct log_runner *loggy,
 static svn_error_t *
 log_do_delete_entry (struct log_runner *loggy, const char *name)
 {
-  svn_error_t *err;
+  svn_wc_entry_t *entry;
+  svn_error_t *err = NULL;
   svn_string_t *sname = svn_string_create (name, loggy->pool);
+  svn_string_t *full_path = svn_string_dup (loggy->path, loggy->pool);
+  svn_string_t *this_dir = svn_string_create (SVN_WC_ENTRY_THIS_DIR,
+                                              loggy->pool);
+
+  /* Figure out if 'name' is a dir or a file */
+  svn_path_add_component (full_path, sname, svn_path_local_style);
+  svn_wc_entry (&entry, full_path, loggy->pool);
 
   /* Remove the object from revision control -- whether it's a
      single file or recursive directory removal.  Attempt
-     attempt to destroy working files too. */
-  err = svn_wc_remove_from_revision_control (loggy->path, sname,
-                                             TRUE, loggy->pool);
-  
+     attempt to destroy all working files & dirs too. */
+  if (entry->kind == svn_node_dir)
+    err = svn_wc_remove_from_revision_control (full_path, this_dir,
+                                               TRUE, loggy->pool);
+  else if (entry->kind == svn_node_file)
+    err = svn_wc_remove_from_revision_control (loggy->path, sname,
+                                               TRUE, loggy->pool);
+    
   /* It's possible that locally modified files were left behind during
      the removal.  That's okay;  just check for this special case. */
   if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
