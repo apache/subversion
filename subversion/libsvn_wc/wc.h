@@ -264,6 +264,39 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 svn_string_t *svn_wc__versions_init_contents (svn_vernum_t version,
                                               apr_pool_t *pool);
 
+
+/* For a given ENTRYNAME in PATH, set its version to VERSION in the
+   `versions' file.  Also set other XML attributes via varargs: name,
+   value, name, value, etc. -- where names are char *'s and values are
+   svn_string_t *'s.   Terminate list with NULL. 
+
+   If no such ENTRYNAME exists, create it.
+ */
+svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
+                                         apr_pool_t *pool,
+                                         const char *entryname,
+                                         svn_vernum_t version,
+                                         ...);
+
+
+/* For a given ENTRYNAME in PATH, read the `version's file and get its
+   version into VERSION.  Also get other XML attributes via varargs:
+   name, value, name, value, etc. -- where names are char *'s and
+   values are svn_string_t *'s.  Terminate list with NULL.  */
+svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
+                                         apr_pool_t *pool,
+                                         const char *entryname,
+                                         svn_vernum_t &version,
+                                         ...);
+
+
+/* Remove ENTRYNAME from PATH's `versions' file. */
+svn_error_t *svn_wc__remove_versions_entry (svn_string_t *path,
+                                            apr_pool_t *pool,
+                                            const char *entryname);
+
+
+
 
 /*** General utilities that may get moved upstairs at some point. */
 svn_error_t *svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool);
