@@ -107,10 +107,6 @@ write_string (void *baton, const char *data, apr_size_t *len)
 {
   struct write_string_baton *wb = baton;
 
-  printf ("*** window data: ");
-  fwrite (data, sizeof (*data), *len, stdout);
-  printf ("\n");
-
   SVN_ERR (svn_fs__string_append (wb->fs,
                                   &(wb->key),
                                   *len,

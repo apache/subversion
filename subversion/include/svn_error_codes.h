@@ -237,6 +237,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_FS_REP_CHANGED,
               "A representation vanished or changed between reads.")
 
+  SVN_ERRDEF (SVN_ERR_FS_REP_NOT_MUTABLE,
+              "Tried to change an immutable representation.")
+
   SVN_ERRDEF (SVN_ERR_TXN_OUT_OF_DATE,
               "Transaction is out of date")
 

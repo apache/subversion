@@ -220,8 +220,9 @@ svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
 
 
 
-/*** Reading data via representations. ***/
+/*** Reading and writing data via representations. ***/
 
+/** Reading. **/
 
 struct svn_fs__rep_read_baton_t
 {
@@ -378,6 +379,138 @@ svn_fs__rep_read_contents (void *baton, char *buf, apr_size_t *len)
                                 txn_body_read_rep,
                                 &args,
                                 rb->pool));
+  
+  return SVN_NO_ERROR;
+}
+
+
+/** Writing. **/
+
+
+struct svn_fs__rep_write_baton_t
+{
+  /* The FS in which we're writing. */
+  svn_fs_t *fs;
+
+  /* The representation skel whose contents we want to write. */
+  const char *rep_key;
+  
+  /* If present, do the write as part of this trail, and use trail's
+     pool.  Otherwise, see `pool' below.  */ 
+  trail_t *trail;
+
+  /* Used for temporary allocations, iff `trail' (above) is null.  */
+  apr_pool_t *pool;
+
+};
+
+
+svn_fs__rep_write_baton_t *
+svn_fs__rep_write_get_baton (svn_fs_t *fs,
+                             const char *rep_key,
+                             trail_t *trail,
+                             apr_pool_t *pool)
+{
+  struct svn_fs__rep_write_baton_t *b;
+
+  b = apr_pcalloc (pool, sizeof (*b));
+  b->fs = fs;
+  b->trail = trail;
+  b->pool = pool;
+  b->rep_key = rep_key;
+
+  return b;
+}
+
+
+
+/* Write LEN bytes from BUF into the string represented via REP_KEY
+   in FS, starting at OFFSET in that string, as part of TRAIL.
+
+   If the representation is not mutable, return the error
+   SVN_FS_REP_NOT_MUTABLE. */
+static svn_error_t *
+rep_write (svn_fs_t *fs,
+           const char *rep_key,
+           const char *buf,
+           apr_size_t len,
+           trail_t *trail)
+{
+  skel_t *rep;
+        
+  SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
+
+  if (! svn_fs__rep_is_mutable (rep))
+    svn_error_createf
+      (SVN_ERR_FS_REP_CHANGED, 0, NULL, trail->pool,
+       "rep_write: rep \"%s\" is not mutable", rep_key);
+
+  if (rep_is_fulltext (rep))
+    {
+      const char *string_key = apr_pstrndup (trail->pool,
+                                             rep->children->next->data,
+                                             rep->children->next->len);
+
+      SVN_ERR (svn_fs__string_append (fs, &string_key, len, buf, trail));
+    }
+  else
+    abort ();  /* We don't do deltification yet. */
+
+  return SVN_NO_ERROR;
+}
+
+
+struct write_rep_args
+{
+  svn_fs__rep_write_baton_t *wb;   /* Destination.       */
+  const char *buf;                 /* Data.              */
+  apr_size_t len;                  /* How much to write. */
+};
+
+
+/* BATON is of type `write_rep_args':
+   Append onto BATON->wb->rep_key's contents BATON->len bytes of
+   data from BATON->wb->buf, in BATON->rb->fs, as part of TRAIL.  
+
+   If the representation is not mutable, return the error
+   SVN_FS_REP_NOT_MUTABLE.  */
+static svn_error_t *
+txn_body_write_rep (void *baton, trail_t *trail)
+{
+  struct write_rep_args *args = baton;
+
+  SVN_ERR (rep_write (args->wb->fs,
+                      args->wb->rep_key,
+                      args->buf,
+                      args->len,
+                      trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__rep_write_contents (void *baton, const char *buf, apr_size_t *len)
+{
+  svn_fs__rep_write_baton_t *wb = baton;
+  struct write_rep_args args;
+
+  /* We toss LEN's indirectness because if not all the bytes are
+     written, it's an error, so we wouldn't be reporting anything back
+     through *LEN anyway. */
+
+  args.wb = wb;
+  args.buf = buf;
+  args.len = *len;
+
+  /* If we got a trail, use it; else make one. */
+  if (wb->trail)
+    SVN_ERR (txn_body_write_rep (&args, wb->trail));
+  else
+    SVN_ERR (svn_fs__retry_txn (wb->fs,
+                                txn_body_write_rep,
+                                &args,
+                                wb->pool));
   
   return SVN_NO_ERROR;
 }
