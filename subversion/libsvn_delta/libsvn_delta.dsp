@@ -95,10 +95,6 @@ SOURCE=.\default_editor.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\pipe_editors.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\svndiff.c
 # End Source File
 # Begin Source File
