@@ -179,6 +179,9 @@ Possible values are: commit, revert.")
       (require 'overlay)
     (require 'overlay nil t)))
 
+;; Use the normally used mode for files ending in .~HEAD~, .~BASE~, ...
+(add-to-list 'auto-mode-alist '("\\.~?\\(HEAD\\|BASE\\|PREV\\)~?\\'" ignore t))
+
 ;;; internal variables
 (defvar svn-process-cmd nil)
 (defvar svn-status-info nil)
@@ -593,15 +596,6 @@ A and B must be line-info's."
   "Strip the version info from a psvn revision file name."
   (string-match "\\(.+\\)\\.~.+~" name)
   (or (match-string-no-properties 1 name) name))
-
-(defun svn-revision-normal-mode ()
-  "Run normal-mode in a svn revision file."
-  (interactive)
-  (flet ((file-name-sans-versions
-          (name &optional keep-backup-version)
-          (svn-status-file-name-sans-versions name keep-backup-version)))
-    (normal-mode)))
-  
 
 (condition-case nil
     ;;(easy-menu-add-item nil '("tools") ["SVN Status" svn-status t] "PCL-CVS")
@@ -1375,7 +1369,7 @@ See `svn-status-marked-files' for what counts as selected."
       (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file))
     (save-excursion
       (set-buffer "*svn-process*")
-      (log-view-mode))))
+      (svn-log-view-mode))))
 
 (defun svn-status-info ()
   "Run `svn info' on all selected files.
@@ -1631,7 +1625,6 @@ Otherwise get only the actual file."
         (find-file file-name-with-revision)
         (setq buffer-read-only nil)
         (delete-region (point-min) (point-max))
-        (svn-revision-normal-mode)
         (svn-run-svn nil t 'cat (append (list "cat" "-r" revision) (list file-name)))
         ;;todo: error processing
         ;;svn: Filesystem has no item
@@ -2124,6 +2117,39 @@ If ARG then show diff between some other vesion of the selected files."
   (interactive)
   (set-buffer "*svn-log-edit*")
   (erase-buffer))
+
+
+;; --------------------------------------------------------------------------------
+;; svn-log-view-mode:
+;; --------------------------------------------------------------------------------
+
+(defvar svn-log-view-mode-map () "Keymap used in `svn-log-view-mode' buffers.")
+
+(when (not svn-log-view-mode-map)
+  (setq svn-log-view-mode-map (make-sparse-keymap))
+  (define-key svn-log-view-mode-map (kbd "=") 'svn-log-view-diff)
+  (define-key svn-log-view-mode-map (kbd "q") 'bury-buffer))
+(easy-menu-define svn-log-view-mode-menu svn-log-view-mode-map
+"'svn-log-view-mode' menu"
+                  '("SVN-LogView"
+                    ["Show Changeset" svn-log-view-diff t]))
+
+(defvar svn-log-view-font-lock-keywords
+  '(("^r.+" . font-lock-keyword-face)
+  "Keywords in svn-log-view-mode."))
+
+(define-derived-mode svn-log-view-mode log-view-mode "svn-log-view"
+  "Major Mode to show the output from svn log.
+Commands:
+\\{svn-log-view-mode-map}
+"
+  (use-local-map svn-log-view-mode-map)
+  (easy-menu-add svn-log-view-mode-menu)
+  (set (make-local-variable 'font-lock-defaults) '(svn-log-view-font-lock-keywords t)))
+
+(defun svn-log-view-diff ()
+  (interactive)
+  (message "Not yet implemented."))
 
 (provide 'psvn)
 
