@@ -261,11 +261,11 @@ def basic_merge(sbox):
   my_greek_tree[2][1] = 'This is the new line 1 in the backup copy of mu'
   for x in range(2,11):
     my_greek_tree[2][1] = my_greek_tree[2][1] + '\nThis is line ' + `x` + ' in mu'
-  my_greek_tree[2][1] = my_greek_tree[2][1] + ' Appended to line 10 of mu\n'  
+  my_greek_tree[2][1] = my_greek_tree[2][1] + ' Appended to line 10 of mu'  
   my_greek_tree[14][1] = 'This is the new line 1 in the backup copy of rho'
   for x in range(2,11):
     my_greek_tree[14][1] = my_greek_tree[14][1] + '\nThis is line ' + `x` + ' in rho'
-  my_greek_tree[14][1] = my_greek_tree[14][1] + ' Appended to line 10 of rho\n'
+  my_greek_tree[14][1] = my_greek_tree[14][1] + ' Appended to line 10 of rho'
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
 
   # Create expected status tree for the update.
@@ -356,23 +356,17 @@ def basic_conflict(sbox):
   my_greek_tree = svntest.main.copy_greek_tree()
   my_greek_tree[2][1] =  """<<<<<<< .mine
 This is the file 'mu'.
-Conflicting appended text for mu
-||||||| .r1
+Conflicting appended text for mu||||||| .r1
+This is the file 'mu'.=======
 This is the file 'mu'.
-=======
-This is the file 'mu'.
-Original appended text for mu
->>>>>>> .r2
+Original appended text for mu>>>>>>> .r2
 """
   my_greek_tree[14][1] = """<<<<<<< .mine
 This is the file 'rho'.
-Conflicting appended text for rho
-||||||| .r1
+Conflicting appended text for rho||||||| .r1
+This is the file 'rho'.=======
 This is the file 'rho'.
-=======
-This is the file 'rho'.
-Original appended text for rho
->>>>>>> .r2
+Original appended text for rho>>>>>>> .r2
 """
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
 
