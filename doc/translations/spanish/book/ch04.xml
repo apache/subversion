@@ -776,18 +776,20 @@ U   my-calc-branch/integer.c
       </sect3>
       
       <sect3 id="svn-ch-4-sect-3.2.2">
-        <title>Previewing Merges</title>
+        <title>Visualización previa de fusiones</title>
         
-        <para>Because merging only results in local modifications,
-          it's not usually a high-risk operation.  If you get the
-          merge wrong the first time, simply <command>svn
-          revert</command> the changes and try again.</para>
+        <para>Dado que el fusionado sólo genera modificaciones
+          locales, normalmente no es una operación de alto riesgo. Si
+          se equivoca en el fusionado la primera vez, simplemente
+          ejecute <command>svn revert</command> para ignorar los
+          cambios y pruebe de nuevo.</para>
         
-        <para>It's possible, however, that your working copy might
-          already have local modifications.  The changes applied by a
-          merge will be mixed with your pre-existing ones, and running
-          <command>svn revert</command> is no longer an option.  The
-          two sets of changes may be impossible to separate.</para>
+        <para>Es posible, no obstante, que su copia local ya
+          tenga algunas modificaciones. Los cambios aplicados por
+          una fusión se mezclarán con sus modificaciones locales,
+          por lo que ejecutar <command>svn revert</command> ya no
+          es una opción. Los dos conjuntos de cambios quizás sean
+          imposibles de separar.</para>
 
         <para>In cases like this, people take comfort in being able to
           predict or examine merges before they happen.  One simple
