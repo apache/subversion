@@ -516,8 +516,8 @@ def log_switched_file(sbox):
 
 #----------------------------------------------------------------------
 
-def relocate_deleted_and_missing(sbox):
-  "switch --relocate with deleted and missing entries"
+def relocate_deleted_missing_copied(sbox):
+  "relocate with deleted, missing and copied entries"
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -538,6 +538,20 @@ def relocate_deleted_and_missing(sbox):
 
   # Remove A/B/F to create a missing entry
   svntest.main.safe_rmtree(os.path.join(wc_dir, 'A', 'B', 'F'))
+
+  # Copy A/D/H to A/D/H2
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  H2_path = os.path.join(wc_dir, 'A', 'D', 'H2')
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+                                     H_path, H2_path)
+  expected_status.add({
+    'A/D/H2'       : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
+    'A/D/H2/chi'   : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
+    'A/D/H2/omega' : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
+    'A/D/H2/psi'   : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
+    })
+  expected_status.remove('A/B/F')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
                                          
   # Relocate
   repo_dir = sbox.repo_dir
@@ -555,11 +569,38 @@ def relocate_deleted_and_missing(sbox):
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/mu')
+  expected_disk.add({
+    'A/D/H2'       : Item(),
+    'A/D/H2/chi'   : Item("This is the file 'chi'."),
+    'A/D/H2/omega' : Item("This is the file 'omega'."),
+    'A/D/H2/psi'   : Item("This is the file 'psi'."),
+    })
+  expected_status.add({
+    'A/B/F'       : Item(status='  ', wc_rev='2', repos_rev=2),
+    })
   expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/D/H2', 'A/D/H2/chi', 'A/D/H2/omega', 'A/D/H2/psi',
+                        wc_rev='-')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status)  
+
+  # Commit to verify that copyfrom URLs have been relocated
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H2'       : Item(verb='Adding'),
+    'A/D/H2/chi'   : Item(verb='Adding'),
+    'A/D/H2/omega' : Item(verb='Adding'),
+    'A/D/H2/psi'   : Item(verb='Adding'),
+    })
+  expected_status.tweak('A/D/H2', 'A/D/H2/chi', 'A/D/H2/omega', 'A/D/H2/psi',
+                        status='  ', wc_rev='3', copied=None)
+  expected_status.tweak(repos_rev=3)
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output, expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
 
 #----------------------------------------------------------------------
 
@@ -763,7 +804,7 @@ test_list = [ None,
               update_switched_things,
               rev_update_switched_things,
               log_switched_file,
-              relocate_deleted_and_missing,
+              relocate_deleted_missing_copied,
               delete_subdir,
               XFail(file_dir_file),
               nonrecursive_switching,
