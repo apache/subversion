@@ -3,7 +3,7 @@ TOD for locking
 
 This is a summary of the current state of the locking implementation.
 
-* svn:needs-lock property
+* svn:needs-lock property (fitz)
 * svn info URL
 * svn update removes defunct locks svn status -u shows locking info from repo
   - Rev reporter in libsvn_repos (lundblad)
