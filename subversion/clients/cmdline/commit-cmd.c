@@ -202,25 +202,41 @@ message_from_editor(apr_pool_t *pool,
 "SVN: Current status of the target files and directories:\n"\
 "SVN: \n"
 
-  if(command)
+  if (command)
     {
       apr_finfo_t finfo_before;
       apr_finfo_t finfo_after;
-      apr_size_t size;
+      apr_size_t size, written;
 
       size = strlen (DEFAULT_MSG);
 
-      rc = apr_file_write (tempfile, DEFAULT_MSG, &size);
+      rc = apr_file_write_full (tempfile, DEFAULT_MSG, size, &written);
 
-      write_status_to_file(pool, tempfile, opt_state, targets);
+      write_status_to_file (pool, tempfile, opt_state, targets);
 
       apr_file_close (tempfile);
 
-      if((APR_SUCCESS != rc) || (strlen (DEFAULT_MSG) != size))
+      /* we didn't manage to write the complete file, we can't fulfill
+         what we're set out to do, get out */
+      /* ### FIXME: The documentation for apr_file_full_write()
+         doesn't explicitly promise that if size != written, then
+         there *must* be an error returned, so below we handle the two
+         cases separately.  But a glance at apr_file_full_write's 
+         implementation, on Unix at least, shows that it could
+         document that promise.  Maybe we should fix the doc in APR,
+         and just check rc below?  */
+      if (! APR_STATUS_IS_SUCCESS (rc))
         {
-          /* we didn't manage to write the complete file, we can't fulfill
-             what we're set out to do, get out */
-          return NULL; /* FIX! add a correct error code */
+          return svn_error_createf
+            (rc, 0, NULL, pool, "Trouble writing `%s'", fullfile);
+        }
+      else if (written != size)
+        {
+          /* ### FIXME: this error code may change when there is a
+             general need to revamp the client's error code system. */
+          return svn_error_createf
+            (SVN_ERR_INCOMPLETE_DATA,
+             0, NULL, pool, "Failed to completely write `%s'", fullfile);
         }
 
       /* Get information about the temporary file before the user has
