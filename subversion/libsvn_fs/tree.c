@@ -133,6 +133,56 @@ make_txn_root (svn_fs_t *fs,
 
 
 
+/* Constructing nice error messages for roots.  */
+
+/* Return a detailed `file not found' error message for PATH in ROOT.  */
+static svn_error_t *
+not_found (svn_fs_root_t *root, const char *path)
+{
+  svn_fs_t *fs = root->fs;
+
+  if (root->kind == transaction_root)
+    return
+      svn_error_createf
+      (SVN_ERR_FS_NOT_FOUND, 0, 0, fs->pool,
+       "file not found: filesystem `%s', transaction `%s', path `%s'",
+       fs->env_path, root->txn, path);
+  else if (root->kind == revision_root)
+    return
+      svn_error_createf
+      (SVN_ERR_FS_NOT_FOUND, 0, 0, fs->pool,
+       "file not found: filesystem `%s', revision `%ld', path `%s'",
+       fs->env_path, root->rev, path);
+  else
+    abort ();
+}
+
+
+/* Return a detailed `file already exists' message for PATH in ROOT.  */
+static svn_error_t *
+already_exists (svn_fs_root_t *root, const char *path)
+{
+  svn_fs_t *fs = root->fs;
+
+  if (root->kind == transaction_root)
+    return
+      svn_error_createf
+      (SVN_ERR_FS_ALREADY_EXISTS, 0, 0, fs->pool,
+       "file already exists: filesystem `%s', transaction `%s', path `%s'",
+       fs->env_path, root->txn, path);
+  else if (root->kind == revision_root)
+    return
+      svn_error_createf
+      (SVN_ERR_FS_ALREADY_EXISTS, 0, 0, fs->pool,
+       "file already exists: filesystem `%s', revision `%ld', path `%s'",
+       fs->env_path, root->rev, path);
+  else
+    abort ();
+}
+
+
+
+
 /* Getting dag nodes for roots.  */
 
 
@@ -289,8 +339,8 @@ free_parent_path (parent_path_t *parent_path)
 
 
 /* Return a null-terminated copy of the first component of PATH,
-   allocated in POOL.  PATH must not begin with a slash, and must not
-   be the empty string; return zero if PATH is malformed.
+   allocated in POOL.  If path is empty, or consists entirely of
+   slashes, return the empty string.
 
    If the component is followed by one or more slashes, we set *NEXT_P
    to point after the slashes.  If the component ends PATH, we set
@@ -310,10 +360,6 @@ next_entry_name (const char **next_p,
                  apr_pool_t *pool)
 {
   const char *end;
-
-  /* Absolute paths and empty paths are not allowed.  */
-  if (*path == '/' || *path == '\0')
-    return 0;
 
   /* Find the end of the current component.  */
   end = strchr (path, '/');
@@ -338,14 +384,35 @@ next_entry_name (const char **next_p,
 }
 
 
+/* Flags for open_path.  */
+typedef enum open_path_flags_t {
+
+  /* The last component of the PATH need not exist.  (All parent
+     directories must exist, as usual.)  If the last component doesn't
+     exist, simply leave the `node' member of the bottom parent_path
+     component zero.  */
+  open_path_last_optional = 1,
+
+} open_path_flags_t;
+
+
 /* Open the node identified by PATH in ROOT, as part of TRAIL.  Set
    *PARENT_PATH_P to a path from the node up to ROOT, allocated in
    TRAIL->pool.  The resulting *PARENT_PATH_P value is guaranteed to
-   contain at least one element, for the root directory.  */
+   contain at least one element, for the root directory.
+
+   If FLAGS & open_path_last_optional is zero, return an error if the
+   node PATH refers to does not exist.  If it is non-zero, require all
+   the parent directories to exist as normal, but if the final path
+   component doesn't exist, simply return a path whose bottom `node'
+   member is zero.  This option is useful for callers that create new
+   nodes --- we find the parent directory for them, and tell them
+   whether the entry exists already.  */
 static svn_error_t *
 open_path (parent_path_t **parent_path_p,
            svn_fs_root_t *root,
            const char *path,
+           int flags,
            trail_t *trail)
 {
   svn_fs_t *fs = root->fs;
@@ -363,31 +430,57 @@ open_path (parent_path_t **parent_path_p,
   SVN_ERR (root_node (&here, root, trail));
   parent_path = make_parent_path (here, 0, 0, pool);
 
+  /* Whenever we are at the top of this loop:
+     - HERE is our current directory,
+     - REST is the path we're going to find in HERE, and 
+     - PARENT_PATH includes HERE and all its parents.  */
   for (;;)
     {
       const char *next;
       char *entry;
       dag_node_t *child;
 
-      /* At the top of this loop, HERE is our current directory,
-         REST is the path we're going to find in HERE, and PARENT_PATH
-         includes HERE and all its parents.  */
+      /* Parse out the next entry from the path.  */
       entry = next_entry_name (&next, rest, pool);
-      if (! entry)
+
+      if (*entry == '\0')
+        /* Given the behavior of next_entry_name, this happens when
+           the path either starts or ends with a slash.  In either
+           case, we stay put: the current directory stays the same,
+           and we add nothing to the parent path.  */
+        child = here;
+      else
         {
-          free_parent_path (parent_path);
-          return svn_fs__err_path_syntax (fs, path);
+          /* If we found a directory entry, follow it.  */
+          svn_error_t *svn_err = svn_fs__dag_open (&child, here, entry, trail);
+
+          /* "file not found" requires special handling.  */
+          if (svn_err && svn_err->apr_err == SVN_ERR_FS_NOT_FOUND)
+            {
+              /* If this was the last path component, and the caller
+                 said it was optional, then don't return an error;
+                 just put a zero node pointer in the path.  */
+              if ((flags & open_path_last_optional)
+                  && (! next || *next == '\0'))
+                {
+                  parent_path = make_parent_path (0, entry, parent_path, pool);
+                  break;
+                }
+              else
+                /* Build a better error message than svn_fs__dag_open
+                   can provide, giving the root and full path name.  */
+                return not_found (root, path);
+            }
+
+          /* Other errors we return normally.  */
+          SVN_ERR (svn_err);
+
+          parent_path = make_parent_path (child, entry, parent_path, pool);
         }
-      
-      SVN_ERR (svn_fs__dag_open (&child, here, entry, trail));
-      parent_path = make_parent_path (child, entry, parent_path, pool);
       
       /* Are we finished traversing the path?  */
       if (! next)
-        {
-          *parent_path_p = parent_path;
-          return 0;
-        }
+        break;
 
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (! svn_fs__dag_is_directory (child))
@@ -396,17 +489,12 @@ open_path (parent_path_t **parent_path_p,
           return svn_fs__err_not_directory (fs, path);
         }
 
-      /* Was the path slash-terminated?  If so, then we're done, now
-         that we've verified that it's a directory.  */
-      if (! *next)
-        {
-          *parent_path_p = parent_path;
-          return 0;
-        }
-
       rest = next;
       here = child;
     }
+
+  *parent_path_p = parent_path;
+  return SVN_NO_ERROR;
 }
 
 
@@ -473,7 +561,7 @@ txn_body_node_prop (void *baton,
   parent_path_t *parent_path;
   skel_t *proplist, *prop;
 
-  SVN_ERR (open_path (&parent_path, args->root, args->path, trail));
+  SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
   SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
   free_parent_path (parent_path);
   
@@ -544,7 +632,7 @@ txn_body_change_node_prop (void *baton,
   parent_path_t *parent_path;
   skel_t *proplist, *prop;
 
-  SVN_ERR (open_path (&parent_path, args->root, args->path, trail));
+  SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
   SVN_ERR (make_path_mutable (args->root, parent_path, args->path, trail));
   SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
   
@@ -659,11 +747,11 @@ txn_body_delete (void *baton,
   const char *path = args->path;
   parent_path_t *parent_path;
 
-  SVN_ERR (open_path (&parent_path, root, path, trail));
+  SVN_ERR (open_path (&parent_path, root, path, 0, trail));
 
   /* We can't remove the root of the filesystem.  */
   if (! parent_path->parent)
-    return svn_error_create (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+    return svn_error_create (SVN_ERR_FS_ROOT_DIR, 0, NULL, trail->pool,
                              "the root directory cannot be deleted");
 
   /* Make the parent directory mutable.  */
@@ -719,6 +807,59 @@ svn_fs_copy (svn_fs_root_t *from_root,
              apr_pool_t *pool)
 {
   abort ();
+}
+
+
+
+/* Files.  */
+
+
+struct make_file_args
+{
+  svn_fs_root_t *root;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_make_file (void *baton,
+                    trail_t *trail)
+{
+  struct make_file_args *args = baton;
+  svn_fs_root_t *root = args->root;
+  const char *path = args->path;
+  parent_path_t *parent_path;
+  dag_node_t *child;
+  
+  SVN_ERR (open_path (&parent_path, root, path, open_path_last_optional,
+                      trail));
+
+  /* If there's already a file by that name, complain.
+     This also catches the case of trying to make a file named `/'.  */
+  if (parent_path->node)
+    return already_exists (root, path);
+
+  /* Create the file.  */
+  SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
+  SVN_ERR (svn_fs__dag_make_file (&child,
+                                  parent_path->parent->node, 
+                                  parent_path->entry,
+                                  trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_make_file (svn_fs_root_t *root,
+                  const char *path,
+                  apr_pool_t *pool)
+{
+  struct make_file_args args;
+
+  args.root = root;
+  args.path = path;
+  return svn_fs__retry_txn (root->fs, txn_body_make_file, &args, pool);
 }
 
 
