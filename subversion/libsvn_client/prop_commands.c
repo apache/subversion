@@ -167,6 +167,7 @@ svn_client_propset2 (const char *propname,
                      const char *target,
                      svn_boolean_t recurse,
                      svn_boolean_t force,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -204,7 +205,8 @@ svn_client_propset2 (const char *propname,
                               _("Bad property name: '%s'"), propname);
 
   SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target, TRUE,
-                                   recurse ? -1 : 0, NULL, NULL, pool));
+                                   recurse ? -1 : 0, ctx->cancel_func,
+                                   ctx->cancel_baton, pool));
   SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
   if (!node)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -224,7 +226,8 @@ svn_client_propset2 (const char *propname,
 
       SVN_ERR (svn_wc_walk_entries2 (target, adm_access,
                                      &walk_callbacks, &wb, FALSE,
-                                     NULL, NULL, pool));
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     pool));
     }
   else
     {
@@ -244,7 +247,12 @@ svn_client_propset (const char *propname,
                     svn_boolean_t recurse,
                     apr_pool_t *pool)
 {
-  return svn_client_propset2 (propname, propval, target, recurse, FALSE, pool);
+  svn_client_ctx_t *ctx;
+
+  SVN_ERR (svn_client_create_context (&ctx, pool));
+
+  return svn_client_propset2 (propname, propval, target, recurse, FALSE,
+                              ctx, pool);
 }
 
 
