@@ -911,7 +911,7 @@ svn_boolean_t svn_wc_is_entry_prop (const char *name);
  */
 svn_error_t *svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
                                      svn_stringbuf_t *target,
-                                     svn_diff_callbacks_t *diff_callbacks,
+                                     const svn_diff_callbacks_t *diff_callbacks,
                                      void *diff_cmd_baton,
                                      svn_boolean_t recurse,
                                      const svn_delta_edit_fns_t **editor,
@@ -931,7 +931,7 @@ svn_error_t *svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
  */
 svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
                           svn_stringbuf_t *target,
-                          svn_diff_callbacks_t *diff_callbacks,
+                          const svn_diff_callbacks_t *diff_callbacks,
                           void *diff_cmd_baton,
                           svn_boolean_t recurse,
                           apr_pool_t *pool);

@@ -160,7 +160,7 @@ diff_prop_changed (const char *path,
 }
 
 /* The main callback table for 'svn diff'.  */
-static svn_diff_callbacks_t 
+static const svn_diff_callbacks_t 
 diff_callbacks =
   {
     diff_file_changed,
@@ -303,7 +303,7 @@ merge_prop_changed (const char *path,
 }
 
 /* The main callback table for 'svn merge'.  */
-static svn_diff_callbacks_t 
+static const svn_diff_callbacks_t 
 merge_callbacks =
   {
     merge_file_changed,
@@ -351,7 +351,7 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
                svn_stringbuf_t *path2,
                const svn_client_revision_t *revision2,
                svn_boolean_t recurse,
-               svn_diff_callbacks_t *callbacks,
+               const svn_diff_callbacks_t *callbacks,
                void *callback_baton,
                apr_pool_t *pool)
 {

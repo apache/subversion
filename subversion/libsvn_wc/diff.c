@@ -58,7 +58,7 @@ struct edit_baton {
 
   /* The callbacks and callback argument that implement the file comparison
      functions */
-  svn_diff_callbacks_t *diff_callbacks;
+  const svn_diff_callbacks_t *diff_callbacks;
   void *diff_cmd_baton;
 
   /* Flags whether to diff recursively or not. If set the diff is
@@ -134,7 +134,7 @@ struct file_baton {
 static struct edit_baton *
 make_editor_baton (svn_stringbuf_t *anchor,
                    svn_stringbuf_t *target,
-                   svn_diff_callbacks_t *diff_callbacks,
+                   const svn_diff_callbacks_t *diff_callbacks,
                    void *diff_cmd_baton,
                    svn_boolean_t recurse,
                    apr_pool_t *pool)
@@ -819,7 +819,7 @@ close_edit (void *edit_baton)
 svn_error_t *
 svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
                         svn_stringbuf_t *target,
-                        svn_diff_callbacks_t *diff_callbacks,
+                        const svn_diff_callbacks_t *diff_callbacks,
                         void *diff_cmd_baton,
                         svn_boolean_t recurse,
                         const svn_delta_edit_fns_t **editor,
@@ -855,7 +855,7 @@ svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
 svn_error_t *
 svn_wc_diff (svn_stringbuf_t *anchor,
              svn_stringbuf_t *target,
-             svn_diff_callbacks_t *diff_callbacks,
+             const svn_diff_callbacks_t *diff_callbacks,
              void *diff_cmd_baton,
              svn_boolean_t recurse,
              apr_pool_t *pool)
