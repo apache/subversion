@@ -117,7 +117,7 @@ svn_repos__hooks_start_commit (svn_repos_t *repos,
   svn_node_kind_t kind;
   const char *hook = svn_repos_start_commit_hook (repos, pool);
 
-  if ((! svn_io_check_path (hook, &kind, pool)) 
+  if ((! svn_io_check_resolved_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
       const char *args[4];
@@ -144,7 +144,7 @@ svn_repos__hooks_pre_commit (svn_repos_t *repos,
   svn_node_kind_t kind;
   const char *hook = svn_repos_pre_commit_hook (repos, pool);
 
-  if ((! svn_io_check_path (hook, &kind, pool)) 
+  if ((! svn_io_check_resolved_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
       const char *args[4];
@@ -171,7 +171,7 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
   svn_node_kind_t kind;
   const char *hook = svn_repos_post_commit_hook (repos, pool);
 
-  if ((! svn_io_check_path (hook, &kind, pool)) 
+  if ((! svn_io_check_resolved_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
       const char *args[4];
@@ -202,7 +202,7 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
   svn_node_kind_t kind;
   const char *hook = svn_repos_pre_revprop_change_hook (repos, pool);
 
-  if ((! svn_io_check_path (hook, &kind, pool)) 
+  if ((! svn_io_check_resolved_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
       const char *args[6];
@@ -248,7 +248,7 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
   svn_node_kind_t kind;
   const char *hook = svn_repos_post_revprop_change_hook (repos, pool);
   
-  if ((! svn_io_check_path (hook, &kind, pool)) 
+  if ((! svn_io_check_resolved_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
       const char *args[6];
