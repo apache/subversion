@@ -164,6 +164,8 @@ sub status_update_commit
 				    Transaction[ ]is[ ]out[ ]of[ ]date
 				    |
 				    Merge[ ]conflict[ ]during[ ]commit
+				    |
+				    Baseline[ ]incorrect
 				   )
 				   $/x );
       }
