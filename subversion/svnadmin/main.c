@@ -110,8 +110,8 @@ usage (const char *progname, int exit_code)
      "  youngest  REPOS_PATH\n"
      "                Print the latest revision number."
      "\n"
-     "  rmtxn     REPOS_PATH TXN_NAME\n"
-     "                Delete the transaction named TXN_NAME."
+     "  rmtxns    REPOS_PATH TXN_NAME [...]\n"
+     "                Delete the transaction(s) named TXN_NAME."
      "\n"
      "  createtxn REPOS_PATH BASE_REV\n"
      "                Create a new transaction based on BASE_REV."
@@ -151,7 +151,7 @@ main (int argc, const char * const *argv)
     is_youngest = 0,
     is_lstxn = 0,
     is_lsrevs = 0,
-    is_rmtxn = 0,
+    is_rmtxns = 0,
     is_createtxn = 0,
     is_recover = 0;
   const char *path = NULL;
@@ -172,7 +172,7 @@ main (int argc, const char * const *argv)
          || (is_youngest = strcmp(argv[1], "youngest") == 0)
          || (is_lstxn = strcmp(argv[1], "lstxns") == 0)
          || (is_lsrevs = strcmp(argv[1], "lsrevs") == 0)
-         || (is_rmtxn = strcmp(argv[1], "rmtxn") == 0)
+         || (is_rmtxns = strcmp(argv[1], "rmtxns") == 0)
          || (is_createtxn = strcmp(argv[1], "createtxn") == 0)
          || (is_recover = strcmp(argv[1], "recover") == 0)))
     {
@@ -331,9 +331,10 @@ main (int argc, const char * const *argv)
           svn_pool_destroy (this_pool);
         }
     }
-  else if (is_rmtxn)
+  else if (is_rmtxns)
     {
       svn_fs_txn_t *txn;
+      int i;
 
       if (! argv[3])
         {
@@ -343,12 +344,16 @@ main (int argc, const char * const *argv)
 
       err = svn_repos_open (&fs, path, pool);
       if (err) goto error;
-      
-      err = svn_fs_open_txn (&txn, fs, argv[3], pool);
-      if (err) goto error;
 
-      err = svn_fs_abort_txn (txn);
-      if (err) goto error;
+      /* All the rest of the arguments are transaction names. */
+      for (i = 3; i < argc; i++)
+        {
+          err = svn_fs_open_txn (&txn, fs, argv[i], pool);
+          if (err) goto error;
+
+          err = svn_fs_abort_txn (txn);
+          if (err) goto error;
+        }
     }
   else if (is_createtxn)
     {
