@@ -126,15 +126,6 @@ Approved changes (further review is welcome, but not required):
       +1: lundblad, kfogel, maxb
       +0: nori
 
-  * r11685
-    Internationalization issues for the Windows Installer
-    Justification:
-      Keeping the installer in sync with actual 1.1.x Windows build.
-      The Apache Server will not run on some systems w/o this merge.
-    Votes:
-      +1: josander
-      +0: maxb
-
   * r11862, r11921, r12061 (part of issue #1997)
     Fix encoding bug in svnserve -h.
     Justification:
