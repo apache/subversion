@@ -1528,6 +1528,83 @@ def commit_symlink(sbox):
   else:
     return 1
 
+def commit_nonrecursive(sbox):
+  "commit named targets with -N (issue #1195)"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # These paths are relative to the top of the test's working copy.
+  file1_path = 'file1'
+  dir1_path  = 'dir1'
+  file2_path = os.path.join('dir1', 'file2')
+  file3_path = os.path.join('dir1', 'file3')
+  dir2_path  = os.path.join('dir1', 'dir2')
+  file4_path = os.path.join('dir1', 'dir2', 'file4')
+
+  # Create the new files and directories.
+  svntest.main.file_append(os.path.join(wc_dir, file1_path), 'this is file1')
+  os.mkdir(os.path.join(wc_dir, dir1_path))
+  svntest.main.file_append(os.path.join(wc_dir, file2_path), 'this is file2')
+  svntest.main.file_append(os.path.join(wc_dir, file3_path), 'this is file3')
+  os.mkdir(os.path.join(wc_dir, dir2_path))
+  svntest.main.file_append(os.path.join(wc_dir, file4_path), 'this is file4')
+
+  # Add them to version control.
+  out, err = svntest.main.run_svn(None, 'add', '-N',
+                                  os.path.join(wc_dir, file1_path),
+                                  os.path.join(wc_dir, dir1_path),
+                                  os.path.join(wc_dir, file2_path),
+                                  os.path.join(wc_dir, file3_path),
+                                  os.path.join(wc_dir, dir2_path),
+                                  os.path.join(wc_dir, file4_path))
+  if err:
+    raise svntest.Failure
+
+  # print "KFF:", wc_dir, file1_path, dir1_path, file2_path, \
+  #      file3_path, dir2_path, file4_path
+  # sys.exit(0)
+
+  # Commit.  We should see all 6 items (2 dirs, 4 files) get sent.
+  expected_output = svntest.wc.State(
+    wc_dir,
+    { file1_path                    : Item(verb='Adding'),
+      dir1_path                     : Item(verb='Adding'),
+      file2_path                    : Item(verb='Adding'),
+      file3_path                    : Item(verb='Adding'), }
+    )
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2) # post-commit revision
+  expected_status.add({
+    file1_path   : Item(status='  ', repos_rev=2, wc_rev=2),
+    dir1_path    : Item(status='  ', repos_rev=2, wc_rev=2),
+    file2_path   : Item(status='  ', repos_rev=2, wc_rev=2),
+    file3_path   : Item(status='  ', repos_rev=2, wc_rev=2),
+
+    # ### If you reverse commented and uncommented here, the test
+    # ### "passes" because of the bug:
+    dir2_path    : Item(status='  ', repos_rev=2, wc_rev=2),
+    file4_path   : Item(status='  ', repos_rev=2, wc_rev=2),
+    # dir2_path    : Item(status='A ', repos_rev=2, wc_rev=0),
+    # file4_path   : Item(status='A ', repos_rev=2, wc_rev=0),
+    })
+
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           expected_output,
+                                           expected_status,
+                                           None,
+                                           None, None,
+                                           None, None,
+                                           '-N',
+                                           os.path.join(wc_dir, file1_path),
+                                           os.path.join(wc_dir, dir1_path),
+                                           os.path.join(wc_dir, file2_path),
+                                           os.path.join(wc_dir, file3_path),
+                                           os.path.join(wc_dir, dir2_path),
+                                           os.path.join(wc_dir, file4_path)):
+    raise svntest.Failure
+  
+
 #----------------------------------------------------------------------
 # Regression for #1017: ra_dav was allowing the deletion of out-of-date
 # files or dirs, which majorly violates Subversion's semantics.
@@ -1659,6 +1736,7 @@ test_list = [ None,
               commit_with_lock,
               commit_current_dir,
               commit_multiple_wc,
+              XFail(commit_nonrecursive),
               XFail(failed_commit),
               Skip(commit_symlink, (os.name != 'posix')),
               commit_out_of_date_deletions,
