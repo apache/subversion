@@ -119,6 +119,11 @@ usage (const char *progname, int exit_code)
      "      If just LOWER_REV is given, that revision tree is printed.\n"
      "      If two revisions are given, that range is printed, inclusive.\n"
      "\n"
+     "  recover   REPOS_PATH\n"
+     "      Run the Berkeley DB recovery procedure on a repository.  Do\n"
+     "      this if you've been getting errors indicating that recovery\n"
+     "      ought to be run.\n"
+     "\n"
      "Printing a tree shows its structure, node ids, and file sizes.\n"
      "\n",
      progname);
@@ -142,7 +147,8 @@ main (int argc, const char * const *argv)
     is_lstxn = 0,
     is_lsrevs = 0,
     is_rmtxn = 0,
-    is_createtxn = 0;
+    is_createtxn = 0,
+    is_recover = 0;
   const char *path = NULL;
 
   /* ### this whole thing needs to be cleaned up once client/main.c
@@ -162,7 +168,8 @@ main (int argc, const char * const *argv)
          || (is_lstxn = strcmp(argv[1], "lstxns") == 0)
          || (is_lsrevs = strcmp(argv[1], "lsrevs") == 0)
          || (is_rmtxn = strcmp(argv[1], "rmtxn") == 0)
-         || (is_createtxn = strcmp(argv[1], "createtxn") == 0)))      
+         || (is_createtxn = strcmp(argv[1], "createtxn") == 0)
+         || (is_recover = strcmp(argv[1], "recover") == 0)))
     {
       usage (argv[0], 1);
       return EXIT_FAILURE;
@@ -354,6 +361,65 @@ main (int argc, const char * const *argv)
 
       err = svn_fs_close_txn (txn);
       if (err) goto error;
+    }
+  else if (is_recover)
+    {
+      apr_status_t apr_err;
+      const char *lockfile_path, *env_path;
+      apr_file_t *lockfile_handle = NULL;
+
+      /* Don't use svn_repos_open() here, because we don't want the
+         usual locking behavior. */
+      fs = svn_fs_new (pool);
+      err = svn_fs_open_berkeley (fs, path);
+      if (err) goto error;
+
+      /* Exclusively lock the repository.  This blocks on other locks,
+         including shared locks. */
+      lockfile_path = svn_fs_db_lockfile (fs, pool);
+      apr_err = apr_file_open (&lockfile_handle, lockfile_path,
+                               APR_READ, APR_OS_DEFAULT, pool);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        {
+          err = svn_error_createf
+            (apr_err, 0, NULL, pool,
+             "%s: error opening db lockfile `%s'", argv[0], lockfile_path);
+          goto error;
+        }
+
+      apr_err = apr_file_lock (lockfile_handle, APR_FLOCK_EXCLUSIVE);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        {
+          err = svn_error_createf
+            (apr_err, 0, NULL, pool,
+             "%s: exclusive lock on `%s' failed", argv[0], lockfile_path);
+          goto error;
+        }
+
+      /* Run recovery on the Berkeley environment, using FS to get the
+         path to said environment. */ 
+      env_path = svn_fs_db_env (fs, pool);
+      err = svn_fs_berkeley_recover (env_path, pool);
+      if (err) goto error;
+
+      /* Release the exclusive lock. */
+      apr_err = apr_file_unlock (lockfile_handle);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        {
+          err = svn_error_createf
+            (apr_err, 0, NULL, pool,
+             "%s: error unlocking `%s'", argv[0], lockfile_path);
+          goto error;
+        }
+
+      apr_err = apr_file_close (lockfile_handle);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        {
+          err = svn_error_createf
+            (apr_err, 0, NULL, pool,
+             "%s: error closing `%s'", argv[0], lockfile_path);
+          goto error;
+        }
     }
 
   err = svn_fs_close_fs(fs);

@@ -552,10 +552,15 @@ svn_error_t *svn_fs_change_txn_prop (svn_fs_txn_t *txn,
  **********************************************************************/
 
 /* Return the path to FS's repository, allocated in POOL.
-   Note:
-   The path is just whatever was passed to svn_fs_create_berkeley() or
+   Note: this is just what was passed to svn_fs_create_berkeley() or
    svn_fs_open_berkeley() -- might be absolute, might not.  */
 const char *svn_fs_repository (svn_fs_t *fs, apr_pool_t *pool);
+
+/* Return the path to FS's Berkeley DB environment, allocated in POOL.
+   Note: although most of these path-accessor functions will go away
+   or be moved to libsvn_repos when issue #428 is resolved, this one
+   should stay right here. */
+const char *svn_fs_db_env (svn_fs_t *fs, apr_pool_t *pool);
 
 /* Return the path to FS's configuration directory, allocated in POOL. */
 const char *svn_fs_conf_dir (svn_fs_t *fs, apr_pool_t *pool);

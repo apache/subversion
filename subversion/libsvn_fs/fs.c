@@ -329,6 +329,13 @@ svn_fs_repository (svn_fs_t *fs, apr_pool_t *pool)
 
 
 const char *
+svn_fs_db_env (svn_fs_t *fs, apr_pool_t *pool)
+{
+  return apr_pstrdup (pool, fs->env_path);
+}
+
+
+const char *
 svn_fs_conf_dir (svn_fs_t *fs, apr_pool_t *pool)
 {
   return apr_pstrdup (pool, fs->conf_path);
@@ -437,10 +444,10 @@ create_locks (svn_fs_t *fs, const char *path)
       "\n"
       "All accessors -- both readers and writers -- of the repository's\n"
       "Berkeley DB environment take out shared locks on this file, and\n"
-      "each accessor removes its lock when done.  If fs code ever sees\n"
-      "DB_RUN_RECOVERY, an exclusive lock is taken out, and the recovery\n"
-      "procedures are run knowing that no one else is accessing the DB\n"
-      "during the recovery.\n"
+      "each accessor removes its lock when done.  If and when the DB\n"
+      "recovery procedure is run, the recovery code takes out an\n"
+      "exclusive lock on this file, so we can be sure no one else is\n"
+      "using the DB during the recovery.\n"
       "\n"
       "You should never have to edit or remove this file.\n";
     
