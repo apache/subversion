@@ -140,18 +140,29 @@ typedef struct svn_ver_t
 /* a repository is a node table and a history */
 
 
-/* This is totally wrong right now; these should be filesystem-level
-   actions, not client-level actions.  */
+/* A list of all filesystem actions that users can perform, used when
+   discussion authorization checks.  */
 
 typedef enum 
 {
   latest,
   get_ver_prop,
   get_ver_proplist,
-  get_ver_propnames
-
-  
-
+  get_ver_propnames,
+  read,
+  get_node_prop,
+  get_dirent_prop,
+  get_node_proplist,
+  get_dirent_proplist,
+  get_node_propnames,
+  get_dirent_propnames,
+  submit,
+  write,
+  abandon,
+  get_delta,
+  get_diff
+  status,
+  update
 } svn_svr_action_t;
 
 

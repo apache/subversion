@@ -101,12 +101,13 @@ typedef struct svn_svr_plugin_t
   char (* authorization_hook) (svn_string_t *repos,
                                svn_user_t *user,
                                svn_svr_action_t action,
+                               unsigned long ver,
                                svn_string_t *path);
 
   /* This hook isn't fully fleshed out yet */
 
   (svn_delta_t *) (* conflict_resolve_hook) (svn_delta_t *rejected_delta,
-                                             int rejection_rationale);
+                                             svn_error_t *rationale);
 
 } svn_svr_plugin_t;
 
@@ -189,18 +190,18 @@ svn_ver_t * svn_svr_latest (svn_svr_policies_t *policy,
 svn_string_t * svn_svr_get_ver_prop (svn_svr_policies_t *policy,
                                      svn_string_t *repos, 
                                      svn_user_t *user, 
-                                     svn_ver_t *ver, 
+                                     unsigned long ver, 
                                      svn_string_t *propname);
 
 svn_proplist_t * svn_svr_get_ver_proplist (svn_svr_policies_t *policy,
                                            svn_string_t *repos, 
                                            svn_user_t *user, 
-                                           svn_ver_t *ver);
+                                           unsigned long ver);
 
 svn_proplist_t * svn_svr_get_ver_propnames (svn_svr_policies_t *policy,
                                             svn_string_t *repos, 
                                             svn_user_t *user, 
-                                            svn_ver_t *ver);
+                                            unsigned long ver);
  
 
 
@@ -209,44 +210,44 @@ svn_proplist_t * svn_svr_get_ver_propnames (svn_svr_policies_t *policy,
 svn_node_t * svn_svr_read (svn_svr_policies_t *policy,
                            svn_string_t *repos, 
                            svn_user_t *user, 
-                           svn_ver_t *ver, 
+                           unsigned long ver, 
                            svn_string_t *path);
 
 svn_string_t * svn_svn_svr_get_node_prop (svn_svr_policies_t *policy,
                                           svn_string_t *repos, 
                                           svn_user_t *user, 
-                                          svn_ver_t *ver, 
+                                          unsigned long ver, 
                                           svn_string_t *path, 
                                           svn_string_t *propname);
 
 svn_string_t * svn_svr_get_dirent_prop (svn_svr_policies_t *policy,
                                         svn_string_t *repos, 
                                         svn_user_t *user, 
-                                        svn_ver_t *ver, 
+                                        unsigned long ver, 
                                         svn_string_t *path, 
                                         svn_string_t *propname);
  
 svn_proplist_t * svn_svr_get_node_proplist (svn_svr_policies_t *policy,
                                             svn_string_t *repos, 
-                                            svn_ver_t *ver, 
+                                            unsigned long ver, 
                                             svn_string_t *path);
  
 svn_proplist_t * svn_svr_get_dirent_proplist (svn_svr_policies_t *policy,
                                               svn_string_t *repos, 
                                               svn_user_t *user, 
-                                              svn_ver_t *ver, 
+                                              unsigned long ver, 
                                               svn_string_t *path);
  
 svn_proplist_t * svn_svr_get_node_propnames (svn_svr_policies_t *policy,
                                              svn_string_t *repos, 
                                              svn_user_t *user, 
-                                             svn_ver_t *ver, 
+                                             unsigned long ver, 
                                              svn_string_t *path);
  
 svn_proplist_t * svn_svr_get_dirent_propnames (svn_svr_policies_t *policy,
                                                svn_string_t *repos, 
                                                svn_user_t *user, 
-                                               svn_ver_t *ver, 
+                                               unsigned long ver, 
                                                svn_string_t *path); 
 
 
@@ -258,16 +259,16 @@ svn_token_t svn_svr_submit (svn_svr_policies_t *policy,
                             svn_user_t *user, 
                             svn_skelta_t *skelta);
  
-svn_ver_t * svn_svr_write (svn_svr_policies_t *policy,
-                           svn_string_t *repos, 
-                           svn_user_t *user, 
-                           svn_delta_t *delta, 
-                           svn_token_t token);
+unsigned long * svn_svr_write (svn_svr_policies_t *policy,
+                               svn_string_t *repos, 
+                               svn_user_t *user, 
+                               svn_delta_t *delta, 
+                               svn_token_t token);
  
-int svn_svr_abandon (svn_svr_policies_t *policy,
-                     svn_string_t *repos, 
-                     svn_user_t *user, 
-                     svn_token_t token);   /* returns success or failure */ 
+svn_boolean_t svn_svr_abandon (svn_svr_policies_t *policy,
+                               svn_string_t *repos, 
+                               svn_user_t *user, 
+                               svn_token_t token);
 
 
 /* For difference queries */
@@ -275,17 +276,17 @@ int svn_svr_abandon (svn_svr_policies_t *policy,
 svn_delta_t * svn_svr_get_delta (svn_svr_policies_t *policy,
                                  svn_string_t *repos, 
                                  svn_user_t *user, 
-                                 svn_ver_t *ver1, 
+                                 unsigned long ver1, 
                                  svn_string_t *path1, 
-                                 svn_ver_t *ver2, 
+                                 unsigned long ver2, 
                                  svn_string_t *path2);
  
 svn_diff_t * svn_svr_get_diff (svn_svr_policies_t *policy,
                                svn_string_t *repos, 
                                svn_user_t *user, 
-                               svn_ver_t *ver1, 
+                               unsigned long ver1, 
                                svn_string_t *path1, 
-                               svn_ver_t *ver2, 
+                               unsigned long ver2, 
                                svn_string_t *path2); 
 
 
