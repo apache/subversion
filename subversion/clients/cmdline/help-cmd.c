@@ -112,13 +112,11 @@ print_version_info (apr_pool_t *pool)
   void *ra_baton;
   svn_stringbuf_t *descriptions;
   static const char info[] =
-    "Copyright (C) 2000-2001 CollabNet.  All rights reserved.\n"
-    "\n"
-    "Subversion is released under CollabNet's open source license,\n"
-    "which is available at http://subversion.tigris.org\n";
+    "Copyright (C) 2000-2001 CollabNet.\n"
+    "Subversion is open source software, see http://subversion.tigris.org/\n";
 
-  printf ("\nSubversion, version %s  (client)\n", SVN_VERSION);
-  printf ("      compiled %s, %s\n\n", __DATE__, __TIME__);
+  printf ("Subversion, version %s  (client)\n", SVN_VERSION);
+  printf ("   compiled %s, %s\n\n", __DATE__, __TIME__);
   printf ("%s\n", info);
 
   printf ("The following repository access (RA) modules are available:\n\n");
@@ -154,33 +152,18 @@ svn_cl__help (apr_getopt_t *os,
   if (os)
     targets = svn_cl__args_to_target_array (os, pool);
 
-  if (os && targets->nelts)
+  if (os && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
         svn_stringbuf_t *this = (((svn_stringbuf_t **) (targets)->elts))[i];
 	svn_cl__subcommand_help (this->data, pool);
       }
-  /* the help command was given with no subcommands */
-  else if (os && !targets->nelts)
-    {
-      /* the -h or --help option was given */
-      if (opt_state && opt_state->help)
-        print_generic_help (pool, stdout);
-      
-      /* help was given by itself */
-      else
-        svn_cl__subcommand_help ("help", pool);
-    }
-  else
-    {
-      /* the -v or --version option was given */
-      if (opt_state && opt_state->version) 
-          SVN_ERR (print_version_info (pool));        
-
-      /* an unknown option was given */
-      else
-        print_generic_help (pool, stderr);      
-    }
+  else if (opt_state && opt_state->version)  /* just -v or --version */
+    SVN_ERR (print_version_info (pool));        
+  else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
+    print_generic_help (pool, stdout);  
+  else                                       /* unknown option or cmd */
+    print_generic_help (pool, stderr);
 
   return SVN_NO_ERROR;
 }
