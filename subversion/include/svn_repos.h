@@ -966,9 +966,9 @@ svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
                                 const char *path,
                                 const char *token,
                                 const char *comment,
-                                long int timeout,
+                                int timeout,
                                 svn_revnum_t current_rev,
-                                svn_boolean_t force,
+                                svn_boolean_t steal_lock,
                                 apr_pool_t *pool);
 
 
@@ -988,7 +988,7 @@ svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
 svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
                                   const char *path,
                                   const char *token,
-                                  svn_boolean_t force,
+                                  svn_boolean_t break_lock,
                                   apr_pool_t *pool);
 
 
@@ -996,10 +996,12 @@ svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
 /** 
  * @since New in 1.2. 
  *
- * Like @c svn_fs_get_locks(), but use @a authz_read_func and @a
- * authz_read_baton to "screen" all returned locks.  That is: do not
- * return any locks on any paths that are unreadable in HEAD, just
- * silently omit them.
+ * Look up all the locks in and under @a path in @a repos, setting @a
+ * locks to a hash which maps @c const char * paths to the @c
+ * svn_lock_t locks associate with those paths.  Use @a
+ * authz_read_func and @a authz_read_baton to "screen" all returned
+ * locks.  That is: do not return any locks on any paths that are
+ * unreadable in HEAD, just silently omit them.
  */
 svn_error_t *svn_repos_fs_get_locks (apr_hash_t **locks,
                                      svn_repos_t *repos,

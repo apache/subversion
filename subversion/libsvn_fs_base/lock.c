@@ -68,8 +68,8 @@ struct lock_args
   const char *path;
   const char *token;
   const char *comment;
-  svn_boolean_t force;
-  long int timeout;
+  svn_boolean_t steal_lock;
+  int timeout;
   svn_revnum_t current_rev;
 };
 
@@ -163,14 +163,14 @@ txn_body_lock (void *baton, trail_t *trail)
                                          trail, trail->pool));
   if (existing_lock)
     {
-      if (! args->force)
+      if (! args->steal_lock)
         {
           /* Sorry, the path is already locked. */
           return svn_fs_base__err_path_locked (trail->fs, existing_lock);
         }
       else
         {
-          /* Force was passed, so fs_username is "stealing" the
+          /* ARGS->steal_lock is set, so fs_username is "stealing" the
              lock from lock->owner.  Destroy the existing lock. */
           SVN_ERR (delete_lock_and_token (existing_lock->token,
                                           existing_lock->path, trail));
@@ -189,7 +189,7 @@ txn_body_lock (void *baton, trail_t *trail)
   lock->comment = apr_pstrdup (trail->pool, args->comment);
   lock->creation_date = apr_time_now();
   if (args->timeout)
-    lock->expiration_date = lock->creation_date +
+    lock->expiration_date = lock->creation_date + 
       apr_time_from_sec(args->timeout);
   
   SVN_ERR (add_lock_and_token (lock, lock->token, args->path, trail));
@@ -206,9 +206,9 @@ svn_fs_base__lock (svn_lock_t **lock,
                    const char *path,
                    const char *token,
                    const char *comment,
-                   long int timeout,
+                   int timeout,
                    svn_revnum_t current_rev,
-                   svn_boolean_t force,
+                   svn_boolean_t steal_lock,
                    apr_pool_t *pool)
 {
   struct lock_args args;
@@ -219,7 +219,7 @@ svn_fs_base__lock (svn_lock_t **lock,
   args.path = svn_fs_base__canonicalize_abspath (path, pool);
   args.token = token;
   args.comment = comment;
-  args.force =  force;
+  args.steal_lock = steal_lock;
   args.timeout = timeout;
   args.current_rev = current_rev;
 
@@ -252,7 +252,7 @@ struct unlock_args
 {
   const char *path;
   const char *token;
-  svn_boolean_t force;
+  svn_boolean_t break_lock;
 };
 
 
@@ -268,7 +268,7 @@ txn_body_unlock (void *baton, trail_t *trail)
                                        trail, trail->pool));
 
   /* If not breaking the lock, we need to do some more checking. */
-  if (!args->force)
+  if (!args->break_lock)
     {
       /* Sanity check: The lock token must exist, and must match. */
       if (args->token == NULL)
@@ -301,7 +301,7 @@ svn_error_t *
 svn_fs_base__unlock (svn_fs_t *fs,
                      const char *path,
                      const char *token,
-                     svn_boolean_t force,
+                     svn_boolean_t break_lock,
                      apr_pool_t *pool)
 {
   struct unlock_args args;
@@ -310,7 +310,7 @@ svn_fs_base__unlock (svn_fs_t *fs,
 
   args.path = svn_fs_base__canonicalize_abspath (path, pool);
   args.token = token;
-  args.force = force;
+  args.break_lock = break_lock;
   return svn_fs_base__retry_txn (fs, txn_body_unlock, &args, pool);
 }
 

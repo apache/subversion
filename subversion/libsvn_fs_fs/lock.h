@@ -32,9 +32,9 @@ svn_error_t *svn_fs_fs__lock (svn_lock_t **lock,
                               const char *path,
                               const char *token,
                               const char *comment,
-                              long int timeout,
+                              int timeout,
                               svn_revnum_t current_rev,
-                              svn_boolean_t force,
+                              svn_boolean_t steal_lock,
                               apr_pool_t *pool);
 
 svn_error_t *svn_fs_fs__generate_lock_token (const char **token,
@@ -44,7 +44,7 @@ svn_error_t *svn_fs_fs__generate_lock_token (const char **token,
 svn_error_t *svn_fs_fs__unlock (svn_fs_t *fs,
                                 const char *path,
                                 const char *token,
-                                svn_boolean_t force,
+                                svn_boolean_t break_lock,
                                 apr_pool_t *pool);
 
 svn_error_t *svn_fs_fs__get_lock (svn_lock_t **lock,

@@ -414,9 +414,9 @@ svn_repos_fs_lock (svn_lock_t **lock,
                    const char *path,
                    const char *token,
                    const char *comment,
-                   long int timeout,
+                   int timeout,
                    svn_revnum_t current_rev,
-                   svn_boolean_t force,
+                   svn_boolean_t steal_lock,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -443,7 +443,7 @@ svn_repos_fs_lock (svn_lock_t **lock,
 
   /* Lock. */
   SVN_ERR (svn_fs_lock (lock, repos->fs, path, token, comment, timeout, 
-                        current_rev, force, pool));
+                        current_rev, steal_lock, pool));
 
   /* Run post-lock hook. */
   if ((err = svn_repos__hooks_post_lock (repos, paths, username, pool)))
@@ -459,7 +459,7 @@ svn_error_t *
 svn_repos_fs_unlock (svn_repos_t *repos,
                      const char *path,
                      const char *token,
-                     svn_boolean_t force,
+                     svn_boolean_t break_lock,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -475,7 +475,7 @@ svn_repos_fs_unlock (svn_repos_t *repos,
   if (access_ctx)
     SVN_ERR (svn_fs_access_get_username (&username, access_ctx));
 
-  if (! force && ! username)
+  if (! break_lock && ! username)
     return svn_error_createf 
       (SVN_ERR_FS_NO_USER, NULL,
        _("Cannot unlock path '%s', no authenticated username available"),
@@ -486,7 +486,7 @@ svn_repos_fs_unlock (svn_repos_t *repos,
   SVN_ERR (svn_repos__hooks_pre_unlock (repos, path, username, pool));
 
   /* Unlock. */
-  SVN_ERR (svn_fs_unlock (repos->fs, path, token, force, pool));
+  SVN_ERR (svn_fs_unlock (repos->fs, path, token, break_lock, pool));
 
   /* Run post-unlock hook. */
   if ((err = svn_repos__hooks_post_unlock (repos, paths, username, pool)))
