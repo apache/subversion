@@ -363,7 +363,7 @@ typedef struct svn_delta_walk_t
        `replace_directory', which return batons for subdirectories,
        as explained below.
 
-     In the case of `svn_XML_parse', these would be the WALK_BATON
+     In the case of `svn_xml_parse', these would be the WALK_BATON
      and DIR_BATON arguments.  Other producers will work differently.
 
      Most of the callbacks work in the obvious way:
@@ -551,7 +551,7 @@ typedef struct svn_delta_walk_t
    traversal.  DIR_BATON is a data passthrough for the root directory;
    the callbacks can establish new DIR_BATON values for
    subdirectories.  Use POOL for allocations.  */
-extern svn_error_t *svn_XML_parse (svn_delta_read_fn_t *source_fn,
+extern svn_error_t *svn_xml_parse (svn_delta_read_fn_t *source_fn,
                                    void *source_baton,
                                    const svn_delta_walk_t *walker,
                                    void *walk_baton,
