@@ -1992,13 +1992,6 @@ def pass3(ctx):
 
 
 def pass4(ctx):
-  # create the target repository
-  if not ctx.dry_run:
-    if ctx.create_repos:
-      os.system('%s create %s' % (ctx.svnadmin, ctx.target))
-  else:
-    t_fs = t_repos = None
-
   sym_tracker = SymbolicNameTracker()
 
   # A dictionary of Commit objects, keyed by digest.  Each object
@@ -2080,10 +2073,18 @@ def pass4(ctx):
 
 
 def pass5(ctx):
-  if (not ctx.dry_run) and (not ctx.dump_only):
-    print 'loading %s into %s' % (ctx.dumpfile, ctx.target)
-    os.system('%s load --ignore-uuid %s < %s'
-              % (ctx.svnadmin, ctx.target, ctx.dumpfile))
+  # on a dry or dump-only run, there is nothing really to do in pass 5
+  if ctx.dry_run or ctx.dump_only:
+    return
+
+  # create the target repository is so requested
+  if ctx.create_repos:
+    os.system('%s create %s' % (ctx.svnadmin, ctx.target))
+
+  # now, load the dumpfile into the repository
+  print 'loading %s into %s' % (ctx.dumpfile, ctx.target)
+  os.system('%s load --ignore-uuid %s < %s'
+            % (ctx.svnadmin, ctx.target, ctx.dumpfile))
 
 
 _passes = [
