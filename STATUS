@@ -50,6 +50,10 @@ already know about.)
       +0: jerenkrantz
       +1: rooneg
 
+   * r8057
+     Constructor for svn_client_ctx_t used in javahl bindings.
+     Justification: Implementation of above API change in javahl bindings.
+     Votes:
 
    * Issue #999
      Anchor/target split may use NULL for target.
@@ -104,12 +108,21 @@ already know about.)
       +1: jerenkrantz, rooneg
 
 
+   * r8031
+     Implementing API change of r8021 in javahl bindings. 
+     Justification: with 8021 and without 8031 javahl breaks. Local change.
+     Votes:
+
    * r8006
      Add prompting and retry count (at most 2) to SSL auth providers
      Justification: API, consistency with other auth provider behavior
      Votes:
       +1: jerenkrantz
 
+   * r8012
+     Implementing API change of r8006 in javahl bindings.
+     Justification: with 8006 and without 8012 javahl breaks. Local change.
+     Votes:
 
    * r8013
      Add may_save option to the auth prompt functions and credentials.
@@ -117,6 +130,11 @@ already know about.)
      Votes:
       +1: jerenkrantz
 
+   * r8015,r8020
+     Implementing API change of r8013 in javahl bindings. 
+     Justification: with 8013 and without 8015,8020 javahl breaks. Local change
+     Votes:
+     
 
    * r8065
      Update references to BDB version in documentation.
@@ -178,3 +196,14 @@ already know about.)
      Justification: Better external API documentation, ultra-low
      risk.
      Votes:
+
+   * r8022, r8024, r8038
+     Improved interface for blame in javahl bindings.
+     Justification: API stability; low risk because of bindings only change.
+     Votes:
+     
+   * r8039
+     javahl bindings did not know status external.
+     Justification: API stability; low risk because of bindings only change.
+     Votes:
+     
