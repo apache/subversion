@@ -447,14 +447,16 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 {
   int i;
   svn_boolean_t is_dir;
-  const char * str;
-  apr_size_t len;
   
   /* Zillions of pathnames to compute!  yeargh!  */
   const char *base_propfile_path, *local_propfile_path;
   const char *base_prop_tmp_path, *local_prop_tmp_path;
   const char *tmp_prop_base, *real_prop_base;
   const char *tmp_props, *real_props;
+
+  const char *access_path = svn_wc_adm_access_path (adm_access);
+  int access_len = strlen (access_path);
+  int slash = access_len ? 1 : 0;   /* "foo/.svn/..." versus ".svn/..." */
 
   const char *entryname;
   const char *full_path;
@@ -477,15 +479,14 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
     {
       /* We must be merging props on the directory PATH  */
       entryname = SVN_WC_ENTRY_THIS_DIR;
-      full_path = svn_wc_adm_access_path (adm_access);
+      full_path = access_path;
       is_dir = TRUE;
     }
   else
     {
       /* We must be merging props on the file PATH/NAME */
       entryname = name;
-      full_path = svn_path_join (svn_wc_adm_access_path (adm_access), name,
-                                 pool);
+      full_path = svn_path_join (access_path, name, pool);
       is_dir = FALSE;
     }
 
@@ -683,13 +684,8 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   /* Compute pathnames for the "mv" log entries.  Notice that these
      paths are RELATIVE pathnames (each beginning with ".svn/"), so
      that each .svn subdir remains separable when executing run_log().  */
-  str = strstr (local_prop_tmp_path, SVN_WC_ADM_DIR_NAME);
-  len = local_prop_tmp_path + strlen (local_prop_tmp_path) - str;
-  tmp_props = apr_pstrndup (pool, str, len);
-
-  str = strstr (local_propfile_path, SVN_WC_ADM_DIR_NAME);
-  len = local_propfile_path + strlen (local_propfile_path) - str;
-  real_props = apr_pstrndup (pool, str, len);
+  tmp_props = apr_pstrdup (pool, local_prop_tmp_path + access_len + slash);
+  real_props = apr_pstrdup (pool, local_propfile_path + access_len + slash);
   
   /* Write log entry to move working tmp copy to real working area. */
   svn_xml_make_open_tag (entry_accum,
@@ -717,13 +713,12 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
       SVN_ERR (svn_wc__prop_base_path (&base_prop_tmp_path, full_path, 1,
                                        pool));
       SVN_ERR (svn_wc__save_prop_file (base_prop_tmp_path, basehash, pool));
-      str = strstr (base_prop_tmp_path, SVN_WC_ADM_DIR_NAME);
-      len = (apr_size_t)(base_prop_tmp_path - str)
-        + strlen (base_prop_tmp_path);
-      tmp_prop_base = apr_pstrndup (pool, str, len);
-      str = strstr (base_propfile_path, SVN_WC_ADM_DIR_NAME);
-      len = base_propfile_path + strlen (base_propfile_path) - str;
-      real_prop_base = apr_pstrndup (pool, str, len);
+
+      tmp_prop_base = apr_pstrdup (pool,
+                                   base_prop_tmp_path + access_len + slash);
+      real_prop_base = apr_pstrdup (pool,
+                                    base_propfile_path + access_len + slash);
+
       svn_xml_make_open_tag (entry_accum,
                              pool,
                              svn_xml_self_closing,
@@ -772,7 +767,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
           const char *full_reject_path;
 
           full_reject_path
-            = svn_path_join (svn_wc_adm_access_path (adm_access),
+            = svn_path_join (access_path,
                              is_dir ? SVN_WC__THIS_DIR_PREJ : name,
                              pool);
 
