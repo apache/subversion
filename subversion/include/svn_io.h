@@ -226,6 +226,17 @@ svn_error_t *svn_string_from_file (svn_stringbuf_t **result,
 apr_status_t apr_dir_remove_recursively (const char *path, apr_pool_t *pool);
 
 
+/* Read all of the disk entries in directory PATH.  Return a DIRENTS
+   hash mapping dirent names (char *) to enumerated dirent filetypes
+   (apr_filetype_e).
+
+   Note:  the `.' and `..' directories normally returned by
+   apr_dir_read will NOT be returned in the hash. */
+svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
+                                 svn_stringbuf_t *path,
+                                 apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
