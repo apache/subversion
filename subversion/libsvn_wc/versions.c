@@ -59,28 +59,30 @@
 
 /* The administrative `versions' file tracks the version numbers of
 files within a particular subdirectory.  Subdirectories are *not*
-tracked, because the first "entry" in this file represents `.' -- and
-therefore each subdir keeps track of itself in its own versions-file.
+tracked, because subdirs record their own version information.
 
-Taken from libsvn_wc/README, the XML file format looks like:
-
-  <wc-versions xmlns="http://subversion.tigris.org/xmlns/blah">
-    <entry name="" version="5"/>     <!-- empty name means current dir -->
-    <entry name="foo.c" version="3"/>
-    <entry name="bar.c" version="7"/>
-    <entry name="baz.c" version="6"/>
-  </wc-versions>
+See the section on the `versions' file in libsvn_wc/README, for
+concrete information about the XML format.
 
 Note that if there exists a file in text-base that is not mentioned in
-the versions-file, it is assumed to have the same version as the
-parent directory.  (In the case above, version 5.)  The versionsfile
-only records *exceptions* to this rule.
+the `versions' file, it is assumed to have the same version as the
+parent directory.  The `versions' file always mentions files whose
+version is different from the dir's, and may (but is not required to)
+mention files that are at the same version as the dir.
+
+In practice, this parser tries to filter out non-exceptions as it
+goes, so the `versions' file is always left without redundancies.
 
 /*--------------------------------------------------------------- */
 
 /** xml callbacks **/
 
-
+/* For a given ENTRYNAME in PATH's versions file, set the entry's
+ * version to VERSION.  Also set other XML attributes via varargs:
+ * key, value, key, value, etc, terminated by a single NULL.  (The
+ * keys are char *'s and values are svn_string_t *'s.)
+ * 
+ * If no such ENTRYNAME exists, create it.
 /* Called whenever we find an <open> tag of some kind */
 static void
 xml_handle_start (void *userData, const char *name, const char **atts)
