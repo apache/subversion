@@ -60,14 +60,6 @@ Candidate changes:
     Votes:
       +1: breser
 
-  * r11294
-    Fix issue #2090. Don't send invalid XML over DAV.
-    Justification:
-      Makes it impossible to use, i.e. ISO-8859-1 non-svn: props over DAV.
-      Simple fix.
-    Votes:
-      +1: lundblad, bliss, sussman
-
   * r11296
     Fix 'svn export -rBASE' when the working copy has added files or
     directories that have been committed yet.
