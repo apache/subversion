@@ -601,18 +601,45 @@ svn_ra_dav__open (void **session_baton,
 
   if (is_ssl_session)
     {
-      const char *authorities_file;
-      authorities_file = svn_config_get_server_setting(
+      const char *authorities;
+      authorities = svn_config_get_server_setting(
             cfg, server_group,
-            SVN_CONFIG_OPTION_SSL_AUTHORITIES_FILE,
+            SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES,
             NULL);
       
-#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
-      if (authorities_file != NULL)
+      if (authorities != NULL)
         {
-          ne_ssl_load_ca(sess, authorities_file);
-          ne_ssl_load_ca(sess2, authorities_file);
+          char *files, *file, *last;
+          files = apr_pstrdup(pool, authorities);
+
+          while ((file = apr_strtok(files, ";", &last)) != NULL)
+            {
+              files = NULL;
+#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
+
+              if (ne_ssl_load_ca(sess, file) ||
+                  ne_ssl_load_ca(sess2, file))
+                {
+                  return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE,
+                                          NULL,
+                                          "unable to load CA certificate file");
+                }
+#else
+
+              ne_ssl_certificate *ca_cert = ne_ssl_cert_read(file);
+              if (ca_cert == NULL)
+                {
+                  return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                                          "unable to load certificate file");
+                }
+              ne_ssl_trust_cert(sess, ca_cert);
+              ne_ssl_trust_cert(sess2, ca_cert);
+
+#endif
+            }
         }
+
+#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
 
       /* When the CA certificate or server certificate has
          verification problems, neon will call our verify function before
@@ -628,20 +655,6 @@ svn_ra_dav__open (void **session_baton,
       ne_ssl_keypw_prompt(sess, client_ssl_keypw_callback, ras);
       ne_ssl_keypw_prompt(sess2, client_ssl_keypw_callback, ras);
 #else
-      /* FIXME: the server and client certificates need to be saved,
-         and later unloaded. */
-
-      if (authorities_file != NULL)
-        {
-          ne_ssl_certificate *ca_cert = ne_ssl_cert_read(authorities_file);
-          if (ca_cert == NULL)
-            {
-              return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                      "unable to load certificate file");
-            }
-          ne_ssl_trust_cert(sess, ca_cert);
-          ne_ssl_trust_cert(sess2, ca_cert);
-        }
       /* When the CA certificate or server certificate has
          verification problems, neon will call our verify function before
          outright rejection of the connection.*/
