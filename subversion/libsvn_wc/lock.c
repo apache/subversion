@@ -381,7 +381,8 @@ do_open (svn_wc_adm_access_t **adm_access,
   if (! under_construction)
     {
       lock->wc_format = wc_format;
-      SVN_ERR (maybe_upgrade_format (lock, pool));
+      if (write_lock)
+        SVN_ERR (maybe_upgrade_format (lock, pool));
     }
 
   if (tree_lock)
