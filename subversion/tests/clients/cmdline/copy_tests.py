@@ -187,6 +187,23 @@ def basic_copy_and_move_files(sbox):
 
   expected_status.remove('A/mu', 'iota')
 
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output,
+                                            expected_status,
+                                            None,
+                                            None, None,
+                                            None, None,
+                                            wc_dir):
+    return 1
+
+  # Issue 1091, alpha2 would now have the wrong checksum and so a
+  # subsequent commit would fail
+  svntest.main.file_append (alpha2_path, 'appended alpha2 text')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/alpha2' : Item(verb='Sending'),
+    })
+  expected_status.tweak('A/C/alpha2', wc_rev=3)
+  expected_status.tweak(repos_rev=3)
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 expected_output,
                                                 expected_status,
