@@ -725,7 +725,9 @@ $ svnlook tree path/to/repos --show-ids
           <varlistentry>
             <term><literal>dirs-changed</literal></term>
             <listitem>
-              <para>List the directories that changed in the tree.</para>
+              <para>List the directories in the tree that were
+                themselves changed, or whose file children were
+                changed.</para>
             </listitem>
           </varlistentry>
 

@@ -1252,7 +1252,8 @@ if __name__ == '__main__':
       Windows Explorer can browse what it calls "WebFolders" (which
       are just WebDAV-ready network locations) as if they were regular
       folders on the local machine.  Mac OS X also has this
-      capability, as does the Nautilus browser for GNOME.</para>
+      capability, as do the Nautilus and Konqueror browsers (under
+      GNOME and KDE, respectively).</para>
 
     <sidebar>
       <title>Browsing WebDAV locations using a standard file
