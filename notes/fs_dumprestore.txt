@@ -57,57 +57,58 @@ would be stored in our dump format.
 Refinement of proposal #2:  (after discussion with gstein)
 =========================
 
-Start with all RFC822-style headers at the top.  The final header will
-be a 'Content-length:', followed by the content.  Thus our record
+Each node starts with RFC822-style headers at the top.  The final
+header is a 'Content-length:', followed by the content, so record
 boundaries can be inferred.
 
-The content section will have two implicit parts: a property hash, and
-the fulltext.  The division between these two sections will be implied
-by the "END" tag at the end of the prophash.  In the case of a
-directory node or a revision, only the prophash will be present in the
-content.
+The content section has two implicit parts: a property hash, and the
+fulltext.  The division between these two sections is implied by the
+"PROPS-END\n" tag at the end of the prophash.  In the case of a
+directory node or a revision, only the prophash is present.
 
 -----------------------------------------------------------------
 
 SVN DUMPFILE VERSION 1 FORMAT
 
-  A single revision record is followed by a variable number of node
-  records that changed in the revision.  Fields in [braces] are optional.
+The format starts with the version number of the dump format
+("SVN-fs-dump-format-version: 1\n"), followed by a series of revision
+records.  Each revision record starts with information about the
+revision, followed by a variable number of node changes for that
+revision.  Fields in [braces] are optional, and unknown headers are
+always ignored, for backwards compatibility.
 
-Revision-number:  N
-[Content-checksum:  blob]
-Content-length: L
-
-...N bytes of property data, terminated by END.  If no props, then
-just the word END.
+Revision-number: N
+[Revision-content-checksum: blob]
+Revision-content-length: L
+   ...N bytes of property data.  Properties are stored in the same
+   human-readable hashdump format used by working copy property files,
+   except that they end with "PROPS-END\n" for better readability.
 
 Node-path: /absolute/path/to/node/in/filesystem
-Node-rev: N  (1)
-Node-kind:  file | dir
-[Node-action: add | delete | replace] (2)
-[Copied-from: X, path ]
-[Copy-source-checksum: blob] (3) 
-[Content-checksum:  blob]
-Content-length: Y
-
-... Y bytes of content data, divided into a 'props' and 'text'
-section.  The word "END" divides the two sections no matter what:  if
-there are no props, then the content begins with "END";  if there is
-no text, the content finishes with "END".
-
+Node-kind: file | dir
+[Node-action: add | delete | replace] (1)
+[Node-copied-from: X, path ]
+[Node-copy-source-checksum: blob] (2)
+[Node-content-checksum: blob]
+Node-content-length: Y
+   ... Y bytes of content data, divided into 'props' and 'text'
+   sections.  The properties come first; their total length (including
+   formatting) is included in Node-content-length.  The "PROPS-END\n"
+   line always terminates the property section; if there are no props,
+   "PROPS-END\n" still signifies the beginning of the node's text
+   content.
 
 
 Notes:
 
-(1) this value N better be the same N in the last revision record we
-    saw, otherwise something is wrong.
-
-(2) the absence of this field implies that we're *modifying* the path,
+(1) the absence of this field implies that we're *modifying* the path,
     that it must already exist in the previous revision.
 
-(3) this is a checksum of the source of the copy.  a loader process
+(2) this is a checksum of the source of the copy.  a loader process
     can use this checksum to determine that the copyfrom path/rev
     already present in a filesystem is really the *correct* one to use.
+
+
 
 -----------------------------------------------------------------
 EXAMPLE
@@ -127,7 +128,7 @@ K 3
 log
 V 17
 Added two files, changed a third.
-END
+PROPS-END
 
 Node-path: /bar/baz
 Node-rev: 1422
@@ -140,7 +141,7 @@ K 10
 svn:ignore
 V 4
 TAGS
-END
+PROPS-END
 
 Node-path: /bar/baz/bop
 Node-rev: 1422
@@ -157,7 +158,7 @@ K 14
 svn:executable
 V 2
 on
-END
+PROPS-END
 Here is the text of the newly added 'bop' file.
 Whee.
 
@@ -168,8 +169,6 @@ Node-action: added
 Content-checksum:  Ae73te7et
 Content-length: 105
 
-END
+PROPS-END
 Here is the fulltext of my change to an existing /bar/foo.c.
 Notice that this file has no properties.
-
-
