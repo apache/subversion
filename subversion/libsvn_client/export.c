@@ -49,16 +49,13 @@ copy_versioned_files (const char *from,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (pool);
-  apr_hash_t *dirents;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   svn_error_t *err;
 
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, from, FALSE, 
                                   FALSE, pool));
-  err = svn_wc_entry (&entry, from, adm_access, FALSE, subpool);
-  SVN_ERR (svn_wc_adm_close (adm_access));
+  err = svn_wc_entry (&entry, from, adm_access, FALSE, pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
@@ -70,15 +67,17 @@ copy_versioned_files (const char *from,
   /* We don't want to copy some random non-versioned directory. */
   if (entry)
     {
+      apr_pool_t *iterpool = svn_pool_create (pool);
+      apr_hash_t *dirents;
       apr_hash_index_t *hi;
       apr_finfo_t finfo;
 
-      SVN_ERR (svn_io_stat (&finfo, from, APR_FINFO_PROT, subpool));
+      SVN_ERR (svn_io_stat (&finfo, from, APR_FINFO_PROT, pool));
 
       /* Try to make the new directory.  If this fails because the
          directory already exists, check our FORCE flag to see if we
          care. */
-      err = svn_io_dir_make (to, finfo.protection, subpool);
+      err = svn_io_dir_make (to, finfo.protection, pool);
       if (err)
         {
           if (! APR_STATUS_IS_EEXIST (err->apr_err))
@@ -119,20 +118,20 @@ copy_versioned_files (const char *from,
                 }
               else
                 {
-                  const char *new_from = svn_path_join (from, key, subpool);
-                  const char *new_to = svn_path_join (to, key, subpool);
+                  const char *new_from = svn_path_join (from, key, iterpool);
+                  const char *new_to = svn_path_join (to, key, iterpool);
 
                   SVN_ERR (copy_versioned_files (new_from, new_to, revision,
-                                                 force, ctx, subpool));
+                                                 force, ctx, iterpool));
                 }
             }
           else if (*type == svn_node_file)
             {
-              const char *copy_from = svn_path_join (from, item, subpool);
-              const char *copy_to = svn_path_join (to, item, subpool);
+              const char *copy_from = svn_path_join (from, item, iterpool);
+              const char *copy_to = svn_path_join (to, item, iterpool);
 
               err = svn_wc_entry (&entry, copy_from, adm_access, FALSE,
-                                  subpool);
+                                  iterpool);
 
               if (err)
                 {
@@ -158,9 +157,9 @@ copy_versioned_files (const char *from,
                   if (revision->kind != svn_opt_revision_working)
                     {
                       SVN_ERR (svn_wc_get_pristine_copy_path 
-                               (copy_from, &base, subpool));
+                               (copy_from, &base, iterpool));
                       SVN_ERR (svn_wc_get_prop_diffs
-                               (NULL, &props, copy_from, adm_access, subpool));
+                               (NULL, &props, copy_from, adm_access, iterpool));
                     }
                   else
                     {
@@ -168,8 +167,8 @@ copy_versioned_files (const char *from,
 
                       base = copy_from;
                       SVN_ERR (svn_wc_prop_list (&props, copy_from,
-                                                 adm_access, subpool));
-                      SVN_ERR (svn_wc_status (&status, copy_from, adm_access, subpool));
+                                                 adm_access, iterpool));
+                      SVN_ERR (svn_wc_status (&status, copy_from, adm_access, iterpool));
                       if (status->text_status != svn_wc_status_normal)
                         local_mod = TRUE;
                     }
@@ -189,7 +188,7 @@ copy_versioned_files (const char *from,
 
                   if (local_mod)
                     /* Use the modified time from the working copy if the file */
-                    SVN_ERR (svn_io_file_affected_time (&time, copy_from, subpool));
+                    SVN_ERR (svn_io_file_affected_time (&time, copy_from, iterpool));
                   else
                     time = entry->cmt_date;
 
@@ -215,32 +214,32 @@ copy_versioned_files (const char *from,
 
                       SVN_ERR (svn_subst_build_keywords 
                                (&kw, keywords->data,
-                                apr_psprintf (pool, 
+                                apr_psprintf (iterpool, 
                                               fmt,
                                               entry->cmt_rev),
                                 entry->url,
                                 time,
                                 author,
-                                subpool));
+                                iterpool));
                     }
 
                   SVN_ERR (svn_subst_copy_and_translate (base, copy_to,
                                                          eol, FALSE,
                                                          &kw, TRUE,
-                                                         subpool));
+                                                         iterpool));
                   if (executable)
-                    SVN_ERR (svn_io_set_file_executable (copy_to, TRUE, FALSE, subpool));
+                    SVN_ERR (svn_io_set_file_executable (copy_to, TRUE, FALSE, iterpool));
                 
-                  SVN_ERR (svn_io_set_file_affected_time (time, copy_to, subpool));
+                  SVN_ERR (svn_io_set_file_affected_time (time, copy_to, iterpool));
                 }
             }
 
-          svn_pool_clear (subpool);
+          svn_pool_clear (iterpool);
         }
+      svn_pool_destroy (iterpool);
     }
 
-  svn_pool_destroy (subpool);
-
+  SVN_ERR (svn_wc_adm_close (adm_access));
   return SVN_NO_ERROR;
 }
 
