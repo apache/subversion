@@ -34,7 +34,7 @@ $Data =~ s/>[^<>]+?</></gs;
 
 # Remove line breaks inside elements and replace it with exactly one 
 # space.
-$Data =~ s/\s*\n\s*[^\$]/ /gs;
+$Data =~ s/\s*\n\s*[^\S\$]/ /gs;
 
 print("$Indent<!-- \@ENGLISH \x7B\x7B\x7B\n" .
       "$Orig$Indent\@ENGLISH }}} -->\n" .
