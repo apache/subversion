@@ -9,12 +9,12 @@ Status of 1.0.2:
 
 Candidate changes:
 
-  * r9150
+  * r9150, r9166
     Fix a SEGFAULT that occurs when trying to remotely delete the
     svn:author property from a revision.
     Justification: Maybe you missed the part where I said, "SEGFAULT" ?
     Votes:
-      +1: cmpilato
+      +1: cmpilato, naked
 
   * r9045
     Fix bug in the changes table change-folding code.
