@@ -70,22 +70,10 @@ svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
 /*** Detecting modification. ***/
 
 /* Set *MODIFIED_P to non-zero if FILENAME's text is modified
-   w.r.t. the base revision, else set *MODIFIED_P to zero.
-   FILENAME is a path to the file, not just a basename. 
-
-   If FILENAME does not exist, set *MODIFIED_P to zero.
-
-   If USE_TIMESTAMP is set, then set *MODIFIED_P to zero if FILENAME
-   has an entry timestamp the same as FILENAME's last modification
-   time; if the timestamps differ, or if USE_TIMESTAMP is not set,
-   then use other means to determine modifiedness.
-
-   IF FILENAME is not under revision control, return the error
-   SVN_ERR_WC_ENTRY_NOT_FOUND.
-*/
+   w.r.t. the base revision, else set MODIFIED_P to zero.
+   FILENAME is a path to the file, not just a basename. */
 svn_error_t *svn_wc_text_modified_p (svn_boolean_t *modified_p,
                                      svn_stringbuf_t *filename,
-                                     svn_boolean_t use_timestamp,
                                      apr_pool_t *pool);
 
 

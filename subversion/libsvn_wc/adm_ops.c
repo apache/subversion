@@ -856,7 +856,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
   if (entry->kind == svn_node_file)
     {
       SVN_ERR (svn_io_check_path (full_path, &kind, pool));
-      SVN_ERR (svn_wc_text_modified_p (&modified_p, full_path, 1, pool));
+      SVN_ERR (svn_wc_text_modified_p (&modified_p, full_path, pool));
       if ((modified_p) || (kind == svn_node_none))
         {
           /* If there are textual mods (or if the working file is
@@ -1187,7 +1187,7 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
         {
           /* Check for local mods. */
           svn_boolean_t text_modified_p;
-          SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path, 1,
+          SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path,
                                            subpool));
           if (text_modified_p)  /* don't kill local mods */
             {
