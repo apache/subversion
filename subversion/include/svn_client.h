@@ -1241,7 +1241,10 @@ svn_client_revprop_list (apr_hash_t **props,
 /** @} */
 
 
-/** Export the contents of either a subversion repository or a
+/**
+ * @since New in 1.1.
+ *
+ * Export the contents of either a subversion repository or a
  * subversion working copy into a 'clean' directory (meaning a
  * directory with no administrative directories).  If @a result_rev
  * is not @c NULL and the path being exported is a repository URL, set
