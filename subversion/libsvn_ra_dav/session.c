@@ -892,10 +892,12 @@ svn_ra_dav__init (const svn_version_t *loader_version,
   /* Simplified version check to make sure we can safely use the
      VTABLE parameter. The RA loader does a more exhaustive check. */
   if (loader_version->major != SVN_VER_MAJOR)
-    return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
-                              _("Unsupported RA loader version (%d) for "
-                                "ra_dav"),
-                              loader_version->major);
+    {
+      return svn_error_createf
+        (SVN_ERR_VERSION_MISMATCH, NULL,
+         _("Unsupported RA loader version (%d) for ra_dav"),
+         loader_version->major);
+    }
 
   *vtable = &dav_vtable;
 

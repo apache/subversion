@@ -93,10 +93,19 @@ static const struct ra_lib_defn {
 };
 
 /* Ensure that the RA library NAME is loaded.
+ *
  * If FUNC is non-NULL, set *FUNC to the address of the svn_ra_NAME__init
  * function of the library.
+ *
  * If COMPAT_FUNC is non-NULL, set *COMPAT_FUNC to the address of the
- * svn_ra_NAME_init compatibility init function of the library. */
+ * svn_ra_NAME_init compatibility init function of the library.
+ *
+ * ### todo: Any RA libraries implemented from this point forward
+ * ### don't really need an svn_ra_NAME_init compatibility function.
+ * ### Currently, load_ra_module() will error if no such function is
+ * ### found, but it might be more friendly to simply set *COMPAT_FUNC
+ * ### to null (assuming COMPAT_FUNC itself is non-null).
+ */
 static svn_error_t *
 load_ra_module (svn_ra__init_func_t *func,
                 svn_ra_init_func_t *compat_func,
@@ -214,9 +223,8 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
         {
           const svn_version_t *my_version = svn_ra_version();
           const svn_version_t *ra_version;
-          svn_ra__init_func_t initfunc;
+          svn_ra__init_func_t initfunc = defn->initfunc;
 
-          initfunc = defn->initfunc;
           if (! initfunc)
             SVN_ERR (load_ra_module (&initfunc, NULL, defn->ra_name,
                                      pool));
@@ -550,16 +558,19 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
         {
           const svn_version_t *my_version = svn_ra_version();
           const svn_version_t *ra_version;
-          svn_ra_init_func_t initfunc;
+          svn_ra_init_func_t compat_initfunc = defn->compat_initfunc;
 
-          initfunc = defn->compat_initfunc;
-          if (! initfunc)
-            SVN_ERR (load_ra_module (NULL, &initfunc, defn->ra_name,
-                                     load_pool));
-          if (! initfunc)
-            break;
+          if (! compat_initfunc)
+            {
+              SVN_ERR (load_ra_module
+                       (NULL, &compat_initfunc, defn->ra_name, load_pool));
+            }
+          if (! compat_initfunc)
+            {
+              break;
+            }
 
-          SVN_ERR (initfunc (SVN_RA_ABI_VERSION, load_pool, ht));
+          SVN_ERR (compat_initfunc (SVN_RA_ABI_VERSION, load_pool, ht));
 
           *library = apr_hash_get (ht, scheme, APR_HASH_KEY_STRING);
 

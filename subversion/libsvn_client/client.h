@@ -157,9 +157,9 @@ svn_client__repos_locations (const char **start_url,
    that it is the same node in both PEG_REVISION and REVISON.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
-   The resulting ra_session is stored in *RA_SESSION_P.  The actual
-   revision number of the object is stored in *REV_P and the final
-   resulting url is stored in *URL_P.
+   Store the resulting ra_session in *RA_SESSION_P.  Store the actual
+   revision number of the object in *REV_P, and the final resulting
+   url in *URL_P.
 
    Use authentication baton cached in CTX to authenticate against the
    repository.
@@ -205,7 +205,7 @@ typedef struct
 } svn_client__callback_baton_t;
 
 
-/* Open an RA session, returning it in RA_SESSION.
+/* Open an RA session, returning it in *RA_SESSION.
 
    The root of the session is specified by BASE_URL and BASE_DIR.
    BASE_ACCESS is an access baton for BASE_DIR administrative data.

@@ -631,7 +631,7 @@ slow_locations (const char **start_path, const char** end_path,
      the work of finding the actual locations for our resource.
      Notice that we always run on the youngest rev of the 3 inputs. */
   SVN_ERR (svn_ra_get_log (ra_session, targets, youngest, 1, 0,
-                            TRUE, FALSE, log_receiver, &lrb, pool));
+                           TRUE, FALSE, log_receiver, &lrb, pool));
 
   /* Check that we got the peg path. */
   if (! lrb.peg_path)
@@ -749,7 +749,7 @@ svn_client__repos_locations (const char **start_url,
     APR_ARRAY_PUSH (revs, svn_revnum_t) = end_revnum;
 
   if (! (err = svn_ra_get_locations (ra_session, &rev_locs, "", peg_revnum,
-                                      revs, subpool)))
+                                     revs, subpool)))
     {
       start_path = apr_hash_get (rev_locs, &start_revnum,
                                  sizeof (svn_revnum_t));

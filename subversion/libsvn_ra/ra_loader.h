@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -41,13 +41,13 @@ typedef struct svn_ra__vtable_t {
   const char *(*get_description) (void);
 
   /* Return a list of actual URI schemes supported by this implementation.
-   * The returned array is NULL terminated. */
+   * The returned array is NULL-terminated. */
   const char * const *(*get_schemes)(apr_pool_t *pool);
 
   /* Implementations of the public API functions. */
 
-  /* All fields in SESSION, except priv, are valid.  SESSION->priv
-   * may be set by this function. */
+  /* All fields in SESSION, except priv, have been initialized by the
+     time this is called.  SESSION->priv may be set by this function. */
   svn_error_t *(*open) (svn_ra_session_t *session,
                         const char *repos_URL,
                         const svn_ra_callbacks_t *callbacks,
@@ -202,14 +202,6 @@ svn_error_t *svn_ra_svn__init(const svn_version_t *loader_version,
                                 const svn_ra__vtable_t **vtable);
 svn_error_t *svn_ra_dav__init(const svn_version_t *loader_version,
                                 const svn_ra__vtable_t **vtable);
-
-/* Macro to create a compatibility wrapper for a RA library.
- * It creates an svn_ra_plugin_t named compat_plugin that implements the plugin
- * API in terms of the svn_ra__vtable_t VTBL.  NAME and DESCRIPTION
- * are the two first fields of the plugin struct.
- * NOTE: This has to be a macro, so that each RA library can duplicate this.
- * An RA library can't use symbols from libsvn_ra, since that would introduce
- * circular dependencies. */
 
 #ifdef __cplusplus
 }
