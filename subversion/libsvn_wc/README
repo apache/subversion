@@ -62,17 +62,15 @@ server to client.
 
 Since commits do not change the working copy, pre-commit checks need
 not do intelligent conflict checking and merging.  They are only
-concerned with whether entities in question are "up-to-date" -- that
-is, for the entities in question, have there been divergent changes
-between working copy and repository?  If so, then the working copy is
+concerned with whether things are "up-to-date" -- that is, for the
+entities in question, have there been divergent changes between
+working copy and repository?  If so, then the working copy is
 out-of-date.
 
-Updates, on the other hand, can affect the working copy.  (BEN SEZ:
-instead of "can affect the working copy", how about "are supposed to
-affect the working copy"?) Updates merge changes into the working copy
-where possible (not only textual changes, but even tree-structure
-changes), and describe conflicts as usefully as possible when merging
-is not an option.
+Updates, on the other hand, usually do affect the working copy.
+Updates merge changes into the working copy where possible (not only
+textual changes, but even tree-structure changes), and describe
+conflicts as usefully as possible when merging is not an option.
 
 To understand how the above happens, you need to know
 
@@ -118,9 +116,9 @@ or something equally ridiculous, it is rejected out of hand.
 
 Assuming the snapshot is consistent, the server checks whether each
 entity in it has changed in the repository, or will change due to a
-pending commit, since the given base version.  A direct change would
-make the pre-commit check fail definitely; an indirect change causes
-failure iff it mentions the same name as the change in the snapshot.
+pending commit, since the given base version.  A direct change always
+causes the pre-commit check to fail; an indirect change causes failure
+iff it mentions the same name as the change in the snapshot.
 
 (See the section "Conflict/Merge Tables" farther down for a formal
 accounting of these rules.)
@@ -420,9 +418,7 @@ Scenarios.
   the client updated from above foo/, then foo/ would be renamed to
   baz/ in the working copy.
 
-  --------------------------
-  Mirror image of Scenario 1
-  --------------------------
+  --- Mirror image of Scenario 1 ---
 
   Client renames foo/ to baz/ locally.  Meanwhile, in the repository,
   there has been a change to foo/bar.c.
@@ -436,19 +432,38 @@ Scenarios.
 
   Here's an interesting question: what happens if some third client,
   who is way behind the times and has *none* of the above commits, now
-  runs update inside foo/?  She should get the change to foo/bar.c,
-  even though that change is found as baz/bar.c in the repository.
+  runs update inside foo/?  Clearly, she should get the change to
+  foo/bar.c, even though that change is found as baz/bar.c in the
+  repository.  How does the repository implement this?
 
-  (This is not really a question about what should happen, but rather
-  about how the filesystem ensures that what should happen does...)
+  Well, 
 
 * Scenario 2:
 
+  Client has local changes to foo/bar.c; meanwhile, in the repository,
+  foo/ has been renamed to baz/, *and* bar.c renamed to qux.c.
+
+  If client tries to commit, it fails, by Table 3 (rename vs text
+  change).  Note that the dir rename was not the problem.
+
+  If client updates, it is mergeable, and either one or both renames
+  will happen depending on what was updated.  The local edits are
+  preserved in the rename.
+
+  --- Mirror image of Scenario 2 ---
   
-fooo
+  Client renames foo/ to baz/, and foo/bar.c to baz/qux.c.  Meanwhile,
+  in repository, foo/bar.c has changed.
 
+  If client commits, it will fail (direct changes to bar.c<>qux.c), so
+  client must update first.
 
+  If client updates, qux.c receives the changes that applied to bar.c
+  in the repository (by rename vs text change in Table 3).
 
+* Scenario 3:
+
+  
 
 From Jim's original scenario:
 
