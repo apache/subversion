@@ -190,6 +190,7 @@ main (int argc, const char * const *argv)
     {"locale",        svn_cl__locale_opt, 1},
     {"version",       svn_cl__version_opt, 0},
     {"verbose",       'v', 0},
+    {"show-updates",  'u', 0},
     /* Here begin authentication args, add more as needed: */
     {"username",      svn_cl__auth_username_opt, 1},
     {"password",      svn_cl__auth_password_opt, 1},    
@@ -259,6 +260,9 @@ main (int argc, const char * const *argv)
         break;
       case 'v':
         opt_state.verbose = TRUE;
+        break;
+      case 'u':
+        opt_state.update = TRUE;
         break;
       case 'h':
       case '?':

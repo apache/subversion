@@ -394,6 +394,33 @@ svn_path_decompose (const svn_stringbuf_t *path,
   return components;
 }
 
+
+svn_boolean_t
+svn_path_is_single_path_component (svn_stringbuf_t *path,
+                                   enum svn_path_style style)
+{
+  char dirsep = get_separator_from_style (style);
+
+  /* Can't be empty */
+  if (path->data == '\0')
+    return 0;
+
+  /* Can't be `.' or `..' */
+  if (path->data[0] == '.'
+      && (path->data[1] == '\0'
+          || (path->data[1] == '.' && path->data[2] == '\0')))
+    return 0;
+
+  /* slashes are bad, m'kay... */
+  if (strchr(path->data, dirsep) != NULL)
+    return 0;
+
+  /* it is valid */
+  return 1;
+}
+
+
+
 
 /* 
  * local variables:

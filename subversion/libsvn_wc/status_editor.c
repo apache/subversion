@@ -90,18 +90,16 @@ tweak_statushash (void *edit_baton,
      apr_hash_index_t *hi;
      char buf[200];
      
-     printf("Tweaking statushash:\n");
-     printf("    Editing path `%s'\n", path);
-     printf("Current statushash keys:\n");
+     printf("---Tweaking statushash:  editing path `%s'\n", path);
      
      for (hi = apr_hash_first (pool, statushash); 
-          hi; 
-          hi = apr_hash_next (hi))
+     hi; 
+     hi = apr_hash_next (hi))
      {
      const void *key;
      void *val;
      apr_size_t klen;
-     
+         
      apr_hash_this (hi, &key, &klen, &val);
      snprintf(buf, klen+1, (const char *)key);
      printf("    %s\n", buf);
@@ -110,6 +108,7 @@ tweak_statushash (void *edit_baton,
      }
   */
   
+  
   /* Recursion check: if PATH is a child of the root path, we should
      ignore it.  This is how we implement the '--nonrecursive' feature
      right now.
@@ -117,10 +116,20 @@ tweak_statushash (void *edit_baton,
      ### It seems it would be nice if dir_delta() could be told not to
      recurse, but that's a future feature, I guess.  For now, we just
      ignore any extra recursive info it hands us. */
-  remainder = svn_path_is_child (eb->path, svn_stringbuf_create (path, pool),
-                                 svn_path_local_style, eb->pool);
-  if (remainder)
-    return SVN_NO_ERROR;  /* no-op */
+  if (! eb->descend)
+    {
+      if (svn_stringbuf_isempty (eb->path))
+        remainder = svn_stringbuf_create (path, pool);
+      else
+        remainder = svn_path_is_child (eb->path,
+                                       svn_stringbuf_create (path, pool),
+                                       svn_path_local_style, eb->pool);
+
+      /* See if remainder contains a dirsep: */
+      if (! svn_path_is_single_path_component (remainder,
+                                               svn_path_local_style))
+        return SVN_NO_ERROR;  /* no-op */
+    }
     
   /* Is PATH already a hash-key? */
   statstruct = (svn_wc_status_t *) apr_hash_get (statushash, path,
@@ -128,10 +137,11 @@ tweak_statushash (void *edit_baton,
   /* If not, make it so. */
   if (! statstruct)
     {
+      svn_stringbuf_t *pathkey = svn_stringbuf_create (path, pool);
+
       /* Add a status structure just for PATH, using public API. */
-      SVN_ERR (svn_wc_status (&statstruct, svn_stringbuf_create (path, pool),
-                              pool));
-      apr_hash_set (statushash, path, APR_HASH_KEY_STRING, statstruct);
+      SVN_ERR (svn_wc_status (&statstruct, pathkey, pool));
+      apr_hash_set (statushash, pathkey->data, pathkey->len, statstruct);
     }
 
   /* Tweak the structure's repos fields. */
@@ -667,6 +677,7 @@ svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
   eb->pool            = subpool;
   eb->hashpool        = pool;
   eb->statushash      = statushash;
+  eb->descend         = descend;
 
   /* Anchor target analysis, to make this editor able to match
      hash-keys already in the hash.  (svn_wc_statuses is ignorant of

@@ -38,7 +38,6 @@ svn_cl__status (apr_getopt_t *os,
                 svn_cl__opt_state_t *opt_state,
                 apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_hash_t *statushash;
   apr_array_header_t *targets;
   int i;
@@ -56,20 +55,24 @@ svn_cl__status (apr_getopt_t *os,
     {
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
 
-      /* Recursion is the default, unless the nonrecursive option was
-         specified on the command-line. */
-      if (opt_state->nonrecursive)
-        err = svn_client_status (&statushash, target, auth_baton,
-                                 0, opt_state->verbose, pool);
-      else
-        err = svn_client_status (&statushash, target, auth_baton,
-                                 1, opt_state->verbose, pool);
+      /* Retrieve a hash of status structures with the information
+         requested by the user.
 
-      if (err)
-        return err;
+         svn_client_status directly understands the three commandline
+         switches (-n, -u, -v) : */
 
-      /* Pass the '-v' flag state to this routine. */
-      svn_cl__print_status_list (statushash, pool);
+      SVN_ERR (svn_client_status (&statushash, target, auth_baton,
+                                  opt_state->nonrecursive ? 0 : 1,
+                                  opt_state->verbose,
+                                  opt_state->update,
+                                  pool));
+
+      /* Now print the structures to the screen.
+         The flag we pass indicates whether to use the 'detailed'
+         output format or not. */
+      svn_cl__print_status_list (statushash, 
+                                 (opt_state->verbose | opt_state->update),
+                                 pool);
     }
 
   return SVN_NO_ERROR;
