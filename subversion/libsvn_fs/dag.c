@@ -160,8 +160,10 @@ cache_node_revision (dag_node_t *node,
                      svn_fs__node_revision_t *noderev,
                      trail_t *trail)
 {
-  /* ### For now, we will always throw away the node revision at trail
-     completion. */
+  /* ### todo: For now, we will always throw away the node revision at trail
+     completion.  We used to keep it around longer because we used to
+     be reading in the full file contents here, but that's no longer
+     the case.  */
 
 #if 0
   if (node_rev_is_mutable (noderev))
@@ -301,6 +303,43 @@ svn_fs__dag_get_predecessor_id (const svn_fs_id_t **id_p,
   
   SVN_ERR (get_node_revision (&noderev, node, trail));
   *id_p = noderev->predecessor_id;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__dag_walk_predecessors (dag_node_t *node,
+                               svn_fs__dag_pred_func_t callback,
+                               void *baton,
+                               trail_t *trail)
+{
+  svn_fs_t *fs = svn_fs__dag_get_fs (node);
+  dag_node_t *this_node;
+  int done = 0;
+
+  this_node = node;
+  while ((! done) && this_node)
+    {
+      svn_fs__node_revision_t *noderev;
+
+      /* Get the node revision for THIS_NODE so we can examine its
+         predecessor id.  */
+      SVN_ERR (get_node_revision (&noderev, this_node, trail));
+
+      /* If THIS_NODE has a predecessor, replace THIS_NODE with the
+         precessor, else set it to NULL.  */
+      if (noderev->predecessor_id)
+        SVN_ERR (svn_fs__dag_get_node (&this_node, fs, 
+                                       noderev->predecessor_id, trail));
+      else
+        this_node = NULL;
+
+      /* Now call the user-supplied callback with our predecessor
+         node. */
+      if (callback)
+        SVN_ERR (callback (baton, this_node, &done, trail));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -840,7 +879,7 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
       SVN_ERR (svn_fs__get_node_revision (&noderev, fs, base_root_id, trail));
 
       /* Store it. */
-      /* ### Does it even makes sense to have a different copy id for
+      /* ### todo: Does it even makes sense to have a different copy id for
          the root node?  That is, does this function need a copy_id
          passed in?  */
       noderev->predecessor_id = svn_fs__id_copy (base_root_id, trail->pool);
@@ -1634,17 +1673,44 @@ svn_fs__things_different (int *props_changed,
 }
 
 
+
+struct is_ancestor_baton
+{
+  const svn_fs_id_t *node1_id;
+  int is_ancestor;
+};
+
+
+static svn_error_t *
+is_ancestor_callback (void *baton,
+                      dag_node_t *node,
+                      int *done,
+                      trail_t *trail)
+{
+  struct is_ancestor_baton *b = baton;
+
+  /* If there is no NODE, then this is the last call, and we didn't
+     find an ancestor.  But if there is ... */
+  if (node)
+    {
+      /* ... compare NODE's ID with the ID we're looking for. */
+      if (svn_fs__id_eq (b->node1_id, svn_fs__dag_get_id (node)))
+        b->is_ancestor = 1;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs__dag_is_ancestor (int *is_ancestor,
                          dag_node_t *node1,
                          dag_node_t *node2,
                          trail_t *trail)
 {
+  struct is_ancestor_baton baton;
   const svn_fs_id_t 
     *id1 = svn_fs__dag_get_id (node1),
     *id2 = svn_fs__dag_get_id (node2);
-  svn_fs_t *fs = svn_fs__dag_get_fs (node2);
-  dag_node_t *this_node;
 
   /* Pessimism. */
   *is_ancestor = 0;
@@ -1653,33 +1719,17 @@ svn_fs__dag_is_ancestor (int *is_ancestor,
   if (! svn_fs_check_related (id1, id2))
     return SVN_NO_ERROR;
 
-  this_node = node2;
-  while (1729)
-    {
-      svn_fs__node_revision_t *noderev;
+  baton.is_ancestor = 0;
+  baton.node1_id = id1;
 
-      /* The plan here is walk through NODE2's list of ancestors until we
-         run out of ancestors, or we run into NODE1. */
-      SVN_ERR (get_node_revision (&noderev, this_node, trail));
-
-      /* No predecessor?  The search is over. */
-      if (! noderev->predecessor_id)
-        break;
-
-      /* If the predecessor ID is NODE1's ID, we have an ancestor. */
-      if (svn_fs__id_eq (noderev->predecessor_id, id1))
-        {
-          *is_ancestor = 1;
-          break;
-        }
-
-      /* Update THIS_NODE to point to the predecessor. */
-      SVN_ERR (svn_fs__dag_get_node (&this_node, fs, 
-                                     noderev->predecessor_id, trail));
-    }
+  SVN_ERR (svn_fs__dag_walk_predecessors (node2, is_ancestor_callback,
+                                          &baton, trail));
+  if (baton.is_ancestor)
+    *is_ancestor = 1;
 
   return SVN_NO_ERROR;
 }
+
 
 
 /* 

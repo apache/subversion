@@ -1088,7 +1088,7 @@ svn_fs_props_changed (int *changed_p,
 
 
 /* Merges and commits. */
- 
+
 struct get_root_args
 {
   svn_fs_root_t *root;
@@ -1892,7 +1892,8 @@ svn_fs_commit_txn (const char **conflict_p,
 
           /* Final step: after a successful commit of the transaction,
              deltify the new revision. */
-          if (! ((err2 = svn_fs_revision_root (&root, fs, *new_rev - 1, pool))))
+          if (! ((err2 = svn_fs_revision_root (&root, fs, 
+                                               *new_rev - 1, pool))))
             err2 = svn_fs_deltify (root, "/", TRUE, pool);
           
           return (err2 
@@ -2897,9 +2898,55 @@ svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
 }
 
 
-
 
-/* Determining the revisions in which a given path was changed. */
+/* Determining the revisions in which a given set of paths were changed. */
+
+struct revisions_changed_baton
+{
+  apr_array_header_t *revs;
+  int cross_copy_history;
+  dag_node_t *successor;
+};
+
+
+static svn_error_t *
+revisions_changed_callback (void *baton,
+                            dag_node_t *node,
+                            int *done,
+                            trail_t *trail)
+{
+  struct revisions_changed_baton *b = baton;
+
+  /* If there is no NODE, then this is the last call, so we need to
+     flush our B->SUCCESSOR cache. */
+  if (! node)
+    {
+      b->successor = NULL;
+    }
+  else
+    {
+      svn_revnum_t revision;
+
+      /* ### todo:  At this point, in the future, we will check
+         B->CROSS_COPY_HISTORY, then determine if we just crossed copy
+         history by comparing with our B->SUCCESSOR.  */
+
+      /* ... see what it's created revision is. */
+      SVN_ERR (svn_fs__dag_get_revision (&revision, node, trail));
+
+      /* If it's a valid revision, then add this to the BATON's array. */
+      if (SVN_IS_VALID_REVNUM (revision))
+        (*((svn_revnum_t *) apr_array_push (b->revs))) = revision;
+
+      /* ### todo:  And at this point, in the future, we will copy
+         NODE into B->SUCCESSOR and cache it so we can do the proper
+         copy history crossing detection mentioned above on the next
+         iteration of this callback. */
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 struct revisions_changed_args
 {
@@ -2909,58 +2956,64 @@ struct revisions_changed_args
   apr_pool_t *pool;
 };
 
+
 static svn_error_t *
 txn_body_revisions_changed (void *baton, trail_t *trail)
 {
   struct revisions_changed_args *args = baton;
-  apr_array_header_t *array;
+  struct revisions_changed_baton b;
   apr_pool_t *subpool = svn_pool_create(args->pool);
   svn_revnum_t prev_rev;
   int i;
 
-  /* Allocate an array for holding revision numbers. */
-  array = apr_array_make (subpool, 4, sizeof (svn_revnum_t));
+  /* Allocate an array for holding revision numbers, and put it into
+     our callback baton. */
+  b.revs = apr_array_make (subpool, 4, sizeof (svn_revnum_t));
+
+  /* Also, note in our baton that we do wish to cross copy history.
+     ### todo: someday this will be an option passed to this
+     function.  */
+  b.cross_copy_history = 1;
 
   /* Check the ID for each path */
   for (i = 0; i < args->ids->nelts; i++)
     {
       const svn_fs_id_t *tmp_id = APR_ARRAY_IDX (args->ids, i, svn_fs_id_t *);
+      dag_node_t *node;
+      svn_revnum_t revision;
 
-      /* Loop, from ID, through its predecessors, until it ceases to
-         exist.  */
-      do
-        {
-          svn_revnum_t revision;
-          dag_node_t *node;
+      /* Flush the SUCCESSOR member of the callback baton as we are
+         about to start working on a new node. */
+      b.successor = NULL;
+      
+      /* Get the NODE for TMP_ID.  */
+      SVN_ERR (svn_fs__dag_get_node (&node, args->fs, tmp_id, trail));
 
-          /* Get the dag node for this id. */
-          SVN_ERR (svn_fs__dag_get_node (&node, args->fs, tmp_id, trail));
+      /* Add NODE's created rev to the array in the baton. */
+      SVN_ERR (svn_fs__dag_get_revision (&revision, node, trail));
+      if (SVN_IS_VALID_REVNUM (revision))
+        (*((svn_revnum_t *) apr_array_push (b.revs))) = revision;
 
-          /* Now get the revision from the dag. */
-          SVN_ERR (svn_fs__dag_get_revision (&revision, node, trail));
-          (*((svn_revnum_t *) apr_array_push (array))) = revision;
-          
-          /* Now, set TMP_ID to this node's predecessor ID. */
-          SVN_ERR (svn_fs__dag_get_predecessor_id (&tmp_id, node, trail));
-        }
-      while (tmp_id);
+      /* Walk NODE's its predecessors, harvesting revisions changed. */
+      SVN_ERR (svn_fs__dag_walk_predecessors (node, revisions_changed_callback,
+                                              &b, trail));
     }
 
   /* Now sort the array */
-  qsort (array->elts, array->nelts, array->elt_size, 
+  qsort (b.revs->elts, b.revs->nelts, b.revs->elt_size, 
          svn_sort_compare_revisions);
 
   /* Now build the return array, removing duplicates along the way. */
   *(args->revs) = apr_array_make (args->pool, 4, sizeof (svn_revnum_t));
   prev_rev = SVN_INVALID_REVNUM;
-  for (i = 0; i < array->nelts; i++)
+  for (i = 0; i < b.revs->nelts; i++)
     {
-      if (APR_ARRAY_IDX (array, i, svn_revnum_t) != prev_rev)
+      if (APR_ARRAY_IDX (b.revs, i, svn_revnum_t) != prev_rev)
         {
           (*((svn_revnum_t *) apr_array_push (*(args->revs)))) =
-            APR_ARRAY_IDX (array, i, svn_revnum_t);
+            APR_ARRAY_IDX (b.revs, i, svn_revnum_t);
         }
-      prev_rev = APR_ARRAY_IDX (array, i, svn_revnum_t);
+      prev_rev = APR_ARRAY_IDX (b.revs, i, svn_revnum_t);
     }
 
   svn_pool_destroy (subpool);
@@ -2980,6 +3033,20 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
   svn_fs_id_t *tmp_id;
   const char *this_path;
   apr_pool_t *subpool = svn_pool_create (pool);
+
+  /* ### todo: This function should someday take a flag to state
+     whether the search for revisions changed should cross copy
+     history.  The flags will be added to ARGS and thereby passed into
+     txn_body_revisions_changed, where it will be copied into the
+     its revisions_changed_baton's "cross_copy_history" flag.  Then, the
+     "todo" comments in revisions_changed_callback() will have to be,
+     well, done, and *poof* suddenly `svn log' has the option of
+     following or stopping at copy history.  
+
+     Options. Power.  Greed.  Lust!
+    
+     Well, maybe not those last two...
+  */
 
   /* Populate the baton. */
   args.revs = revs;

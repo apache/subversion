@@ -110,6 +110,26 @@ svn_error_t *svn_fs__dag_get_predecessor_id (const svn_fs_id_t **id_p,
                                              trail_t *trail);
 
 
+/* Callback function type for svn_fs__dag_walk_predecessors() */
+typedef svn_error_t *(*svn_fs__dag_pred_func_t) (void *baton,
+                                                 dag_node_t *node,
+                                                 int *done,
+                                                 trail_t *trail);
+
+/* Walk over NODE's predecessor list, calling CALLBACK (with its
+   associated BATON) for each predecessor until the callback returns
+   an error (in which case, return that error) or until it sets its
+   DONE flag.  When the predecessor walk reaches a node with no
+   predecessor, it will call the CALLBACK one final time with a NULL
+   `node' argument to indicate that the predecessor walk is now
+   complete.
+
+   Do all this as part of TRAIL.  */
+svn_error_t *svn_fs__dag_walk_predecessors (dag_node_t *node,
+                                            svn_fs__dag_pred_func_t callback,
+                                            void *baton,
+                                            trail_t *trail);
+
 /* Return non-zero IFF NODE is currently mutable under Subversion
    transaction TXN_ID.  */
 int svn_fs__dag_check_mutable (dag_node_t *node,
@@ -422,7 +442,7 @@ svn_error_t *svn_fs__dag_copied_from (svn_revnum_t *rev_p,
                                       trail_t *trail);
 
 
-/* Tests */
+/* Comparison */
 
 /* Find out what is the same between two nodes.
  

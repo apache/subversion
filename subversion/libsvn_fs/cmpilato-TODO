@@ -48,38 +48,16 @@ This from Bill Tutt:
    
    Otherwise there is no possible successor.
 
+Need to actually solve this problem (at least enough to get the
+per-commit deltification working again).
+
+While it's perfectly fine to deltify a thing against its immediate
+successor, it could be more beneficial if deltified against the
+youngest successor of the thing.
+
 --
 
 Need to examine the copy_id choosing algorithm in open_path().
-
---
-
-"In which revisions did this node change?"  Given a node revision id,
-we'd like to know in what revisions this node has changed, and we'd
-like the option of filtering out changes that occurred before the last
-time this node was copied.
-
-Algorithm looks like this:
-
-   while (NODE-REV-ID):
-     get TXN_ID from node revision id.
-     lookup REVISION with TXN_ID.
-     add REVISION to return value.
-     if ((filtering) and (my COPY_ID != my predecessor's COPY_ID))
-       break;
-     NODE-REV-ID = node revision's predecessor id
-
-Let this serve as a reminder to re-implement txn_body_revisions_changed.
-
---
-
-Consider svn_fs__walk_predecessors (fs, id, func *, baton, trail)
-which walks the predecessor list of ID, calling FUNC with BATON before
-each traversal.  FUNC can return some custom error to the walker which
-can be detected as a non-fatal sentinel (so you only walk back as far
-as you need to).  Wonder how useful this would be...?  Could be great
-for the revisions_changed question (using some flag in BATON to tell
-FUNC to detect when a copy event has been "crossed").  Sleep on this.
 
 --
 
