@@ -591,7 +591,7 @@ delete_entry (const char *path,
 
   if (pb->edit_baton->notify_func)
     (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
-                                    pb->path,
+                                    svn_path_join (pb->path, base_name, pool),
                                     svn_wc_notify_delete,
                                     svn_node_unknown,
                                     NULL,

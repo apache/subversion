@@ -523,7 +523,7 @@ def receive_overlapping_same_change(sbox):
     return 1
 
   # Expected output tree for update of other_wc.
-  output_list = [ [other_iota_path, None, {}, {'status' : 'U ' }] ]
+  output_list = [ [other_iota_path, None, {}, {'status' : 'G ' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Expected disk tree for the update.

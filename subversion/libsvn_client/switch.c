@@ -229,19 +229,24 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
         }
 
       /* This the same code as the update-editor's close_file(). */
-      SVN_ERR (svn_wc_install_file (NULL, NULL,
-                                    path, revnum,
-                                    new_text_path,
-                                    proparray, TRUE, /* is full proplist */
-                                    switch_url, /* new url */
-                                    pool));     
-      if (notify_func != NULL)
-        (*notify_func) (notify_baton, path, svn_wc_notify_update,
-                        svn_node_file,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
+      {
+        svn_wc_notify_state_t content_state;
+        svn_wc_notify_state_t prop_state;
+        
+        SVN_ERR (svn_wc_install_file (&content_state, &prop_state,
+                                      path, revnum,
+                                      new_text_path,
+                                      proparray, TRUE, /* is full proplist */
+                                      switch_url, /* new url */
+                                      pool));     
+        if (notify_func != NULL)
+          (*notify_func) (notify_baton, path, svn_wc_notify_update,
+                          svn_node_file,
+                          NULL,
+                          content_state,
+                          prop_state,
+                          SVN_INVALID_REVNUM);
+      }
     }
   
   /* Sleep for one second to ensure timestamp integrity. */
