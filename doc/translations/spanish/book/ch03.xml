@@ -1132,14 +1132,16 @@ A                0         ?     ?        stuff/things/bloo.h
           y cuarta columna muestra la revisión en la cuál el objeto
           cambió por última vez, y quién lo cambió.</para>
 
-        <para>None of the above invocations to <command>svn
-          status</command> contact the repository, they work only
-          locally by comparing the metadata in the
-          <filename>.svn</filename> directory with the working copy.
-          Finally, there is the <option>--show-updates</option>
-          (<option>-u</option>) switch, which contacts the repository
-          and adds information about things that are
-          out-of-date:</para>
+        <para>Ningúna de las invocaciones anteriores a
+          <command>svn status</command> contactaban con el repositorio,
+          trabajan solo localmente comparando los metadatos en el
+          <!--TODO:metadata in the .svn...quedaría mejor "del directorio?-->
+          directorio <filename>.svn</filename> con la copia de trabajo
+          local. Finalmente está la opción<!--TODO:switch-->
+          <option>--show-updates</option> (<option>-u</option>), la cual
+          contacta con el repositorio y añade informacion acerca de las
+          cosas que están fuera-de-fecha:<!--TODO:out-of-date...
+          desactualizadas? anticuadas?--></para>
       
         <screen>
 $ svn status --show-updates --verbose
