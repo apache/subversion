@@ -183,7 +183,7 @@ svn_cl__stringlist_to_array(svn_stringbuf_t *buffer, apr_pool_t *pool)
                                              sizeof(svn_stringbuf_t *));
   if (buffer != NULL)
     {
-      int start = 0, end = 0;
+      apr_size_t start = 0, end = 0;
       svn_stringbuf_t *item;
       while (end < buffer->len)
         {
