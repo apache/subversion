@@ -441,8 +441,7 @@ replace_file (svn_string_t *name,
 
 
 static svn_error_t *
-output_svndiff_data (void *baton, const char *data, apr_size_t *len,
-                     apr_pool_t *pool)
+output_svndiff_data (void *baton, const char *data, apr_size_t *len)
 {
   struct file_baton *fb = (struct file_baton *) baton;
   struct edit_baton *eb = fb->edit_baton;

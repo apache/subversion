@@ -152,11 +152,7 @@ svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
    read or written.  Handlers are obliged to complete a read or write
    to the maximum extent possible; thus, a short read with no
    associated error implies the end of the input stream, and a short
-   write should never occur without an associated error.
-
-   The pool argument to the read and write functions can be used for
-   temporary allocations only.  It will probably be removed in the
-   future.  */
+   write should never occur without an associated error.  */
 
 typedef struct svn_stream_t svn_stream_t;
 
@@ -165,13 +161,11 @@ typedef struct svn_stream_t svn_stream_t;
 
 typedef svn_error_t *svn_read_fn_t (void *baton,
                                     char *buffer,
-                                    apr_size_t *len,
-                                    apr_pool_t *pool);
+                                    apr_size_t *len);
 
 typedef svn_error_t *svn_write_fn_t (void *baton,
                                      const char *data,
-                                     apr_size_t *len,
-                                     apr_pool_t *pool);
+                                     apr_size_t *len);
 
 typedef svn_error_t *svn_close_fn_t (void *baton);
 

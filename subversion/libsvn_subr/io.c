@@ -412,28 +412,16 @@ svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn)
 svn_error_t *
 svn_stream_read (svn_stream_t *stream, char *buffer, apr_size_t *len)
 {
-  apr_pool_t *subpool;
-  svn_error_t *err;
-
   assert (stream->read_fn != NULL);
-  subpool = svn_pool_create (stream->pool);
-  err = stream->read_fn (stream->baton, buffer, len, subpool);
-  apr_destroy_pool (subpool);
-  return err;
+  return stream->read_fn (stream->baton, buffer, len);
 }
 
 
 svn_error_t *
 svn_stream_write (svn_stream_t *stream, const char *data, apr_size_t *len)
 {
-  apr_pool_t *subpool;
-  svn_error_t *err;
-
   assert (stream->write_fn != NULL);
-  subpool = svn_pool_create (stream->pool);
-  err = stream->write_fn (stream->baton, data, len, subpool);
-  apr_destroy_pool (subpool);
-  return err;
+  return stream->write_fn (stream->baton, data, len);
 }
 
 
@@ -450,8 +438,7 @@ svn_stream_close (svn_stream_t *stream)
 /*** Generic readable empty stream ***/
 
 static svn_error_t *
-read_handler_empty (void *baton, char *buffer, apr_size_t *len,
-                    apr_pool_t *pool)
+read_handler_empty (void *baton, char *buffer, apr_size_t *len)
 {
   *len = 0;
   return SVN_NO_ERROR;
@@ -478,7 +465,7 @@ struct baton_apr {
 
 
 static svn_error_t *
-read_handler_apr (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
+read_handler_apr (void *baton, char *buffer, apr_size_t *len)
 {
   struct baton_apr *btn = baton;
   apr_status_t status;
@@ -492,8 +479,7 @@ read_handler_apr (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
 
 
 static svn_error_t *
-write_handler_apr (void *baton, const char *data, apr_size_t *len,
-                   apr_pool_t *pool)
+write_handler_apr (void *baton, const char *data, apr_size_t *len)
 {
   struct baton_apr *btn = baton;
   apr_status_t status;
@@ -533,8 +519,7 @@ struct baton_stdio {
 
 
 static svn_error_t *
-read_handler_stdio (void *baton, char *buffer, apr_size_t *len,
-                    apr_pool_t *pool)
+read_handler_stdio (void *baton, char *buffer, apr_size_t *len)
 {
   struct baton_stdio *btn = baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -549,8 +534,7 @@ read_handler_stdio (void *baton, char *buffer, apr_size_t *len,
 
 
 static svn_error_t *
-write_handler_stdio (void *baton, const char *data, apr_size_t *len,
-                     apr_pool_t *pool)
+write_handler_stdio (void *baton, const char *data, apr_size_t *len)
 {
   struct baton_stdio *btn = baton;
   svn_error_t *err = SVN_NO_ERROR;
