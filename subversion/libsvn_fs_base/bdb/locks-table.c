@@ -167,6 +167,7 @@ get_lock (svn_lock_t **lock_p,
           apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
+  *lock_p = NULL;
 
   /* Make sure the token points to an existing, non-expired lock, by
      doing a lookup in the `locks' table.  Use 'pool'. */
@@ -218,7 +219,7 @@ svn_fs_bdb__locks_get (svn_fs_t *fs,
   else
     {
       SVN_ERR (get_lock (&lock, fs, path, lock_token, trail, pool));
-      if (get_locks_func)
+      if (lock && get_locks_func)
         SVN_ERR (get_locks_func (get_locks_baton, lock, pool));
     }
 
@@ -266,7 +267,7 @@ svn_fs_bdb__locks_get (svn_fs_t *fs,
         }
 
       /* Lock is verified, return it in the hash. */
-      if (get_locks_func)
+      if (lock && get_locks_func)
         {
           err = get_locks_func (get_locks_baton, lock, subpool);
           if (err)
