@@ -117,7 +117,6 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   apr_pool_t *p = resource->info->pool;
   const dav_liveprop_spec *info;
   int global_ns;
-  dav_svn_authz_read_baton arb;
   svn_error_t *serr;
 
   /*
@@ -130,10 +129,6 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   */
   if (!resource->exists)
     return DAV_PROP_INSERT_NOTSUPP;
-
-  /* Build a baton for path-based authz function (dav_svn_authz_read) */
-  arb.r = resource->info->r;
-  arb.repos = resource->info->repos;
 
   /* ### we may want to respond to DAV_PROPID_resourcetype for PRIVATE
      ### resources. need to think on "proper" interaction with mod_dav */
@@ -188,6 +183,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       {        
         svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
         svn_string_t *last_author = NULL;
+        dav_svn_authz_read_baton arb;
+        svn_boolean_t allowed;
 
         /* ### for now, our global VCC has no such property. */
         if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
@@ -222,13 +219,32 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           {
             return DAV_PROP_INSERT_NOTSUPP;
           }
-        
-        /* Get the date property of the created revision. */
+
+        /* Check if we have access to this path and return NOTDEF if
+           we don't. */
+        arb.r = resource->info->r;
+        arb.repos = resource->info->repos;
+        serr = dav_svn_authz_read(&allowed,
+                                  resource->info->root.root,
+                                  resource->info->repos_path,
+                                  &arb, p);
+        if (serr)
+          {
+            /* ### what to do? */
+            svn_error_clear(serr);
+            value = "###error###";
+            break;
+          }
+        if (! allowed)
+          return DAV_PROP_INSERT_NOTDEF;
+
+        /* Get the date property of the created revision. The authz is
+           already performed, so we don't need to do it here too. */
         serr = svn_repos_fs_revision_prop(&last_author,
                                           resource->info->repos->repos,
                                           committed_rev,
                                           SVN_PROP_REVISION_AUTHOR,
-                                          dav_svn_authz_read, &arb, p);
+                                          NULL, NULL, p);
         if (serr != NULL)
           {
             /* ### what to do? */
@@ -667,12 +683,26 @@ int dav_svn_get_last_modified_time (const char **datestring,
   svn_error_t *serr;
   apr_time_t timeval_tmp;
   dav_svn_authz_read_baton arb;
-  
-  arb.r = resource->info->r;
-  arb.repos = resource->info->repos;
+  svn_boolean_t allowed;
 
   if ((datestring == NULL) && (timeval == NULL))
     return 0;
+
+  /* Check if we have access to this path and return NOTDEF if we
+     don't. */
+  arb.r = resource->info->r;
+  arb.repos = resource->info->repos;
+  serr = dav_svn_authz_read(&allowed,
+                            resource->info->root.root,
+                            resource->info->repos_path,
+                            &arb, pool);
+  if (serr)
+    {
+      svn_error_clear(serr);
+      return 1;
+    }
+  if (! allowed)
+    return 1;
 
   if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
     {
@@ -698,12 +728,13 @@ int dav_svn_get_last_modified_time (const char **datestring,
       return 1;
     }
 
-  /* Get the svn:date property of the CR */
+  /* Get the svn:date property of the CR.  The authz is already
+     performed, so we don't need to do it here too. */
   serr = svn_repos_fs_revision_prop(&committed_date,
                                     resource->info->repos->repos,
                                     committed_rev,
                                     SVN_PROP_REVISION_DATE,
-                                    dav_svn_authz_read, &arb,
+                                    NULL, NULL,
                                     pool);
   if (serr != NULL)
     {
