@@ -203,7 +203,7 @@ void svn_cl__init_feedback_vtable (apr_pool_t *top_pool);
    required by the definition of svn_client_auth_info_callback_t.) */
 svn_error_t *
 svn_cl__prompt_user (char **result,
-                     char *prompt,
+                     const char *prompt,
                      svn_boolean_t hide,
                      void *baton,
                      apr_pool_t *pool);

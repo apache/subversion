@@ -96,6 +96,9 @@ svn_error_t *svn_wc__set_up_new_dir (svn_stringbuf_t *path,
 #define SVN_WC__ADM_DIR_WCPROPS         "dir-wcprops"
 #define SVN_WC__ADM_LOG                 "log"
 #define SVN_WC__ADM_KILLME              "KILLME"
+#define SVN_WC__ADM_AUTH_DIR            "auth"
+#define SVN_WC__ADM_AUTH_USERNAME       "username"
+#define SVN_WC__ADM_AUTH_PASSWORD       "password"
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted

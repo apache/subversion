@@ -40,7 +40,7 @@ static svn_error_t * svn_ra_get_authenticator (void **authenticator,
                                                apr_uint64_t method,
                                                apr_pool_t *pool)
 {
-  /* ### need to write this.  see below. */
+  /* ### need to write this.  see below, and see svn_ra.h. */
 
   return SVN_NO_ERROR;
 }
@@ -49,9 +49,9 @@ static svn_error_t * svn_ra_get_authenticator (void **authenticator,
    multiple routines:   
  
          get_authenticator()
-         authenticator->set_username()
-         authenticator->set_password()
-         authenticator->authorize()
+         authenticator.set_username()
+         authenticator.set_password()
+         authenticator.authorize()
 */
 #if 0
 static svn_error_t * svn_ra_open (void **session_baton,
