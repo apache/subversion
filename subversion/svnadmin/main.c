@@ -57,7 +57,8 @@ typedef enum svnadmin_cmd_t
  */
 static svn_error_t *
 create_stdio_stream (svn_stream_t **stream,
-                     APR_DECLARE(apr_status_t) open_fn (apr_file_t **, apr_pool_t *),
+                     APR_DECLARE(apr_status_t) open_fn (apr_file_t **, 
+                                                        apr_pool_t *),
                      apr_pool_t *pool)
 {
   apr_file_t *stdio_file;
@@ -86,9 +87,9 @@ print_tree (svn_fs_root_t *root,
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  
-  SVN_ERR (svn_fs_dir_entries (&entries, root, path, pool));
+  apr_pool_t *subpool = svn_pool_create (pool);
 
+  SVN_ERR (svn_fs_dir_entries (&entries, root, path, pool));
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
@@ -104,34 +105,35 @@ print_tree (svn_fs_root_t *root,
       apr_hash_this (hi, &key, &keylen, &val);
       this_entry = val;
 
-      this_full_path = apr_psprintf (pool, "%s/%s", path, this_entry->name);
+      this_full_path = apr_psprintf (subpool, "%s/%s", path, this_entry->name);
 
       /* Indent. */
       for (i = 0; i < indentation; i++)
         printf (" ");
 
       SVN_ERR (svn_utf_cstring_from_utf8 (&native_name, this_entry->name,
-                                          pool));
+                                          subpool));
       printf ("%s", native_name);
       
-      SVN_ERR (svn_fs_node_id (&id, root, this_full_path, pool));
+      SVN_ERR (svn_fs_node_id (&id, root, this_full_path, subpool));
       id_str = svn_fs_unparse_id (id, pool);
 
-      SVN_ERR (svn_fs_is_dir (&is_dir, root, this_full_path, pool));
+      SVN_ERR (svn_fs_is_dir (&is_dir, root, this_full_path, subpool));
       if (is_dir)
         {
-
           printf ("/ <%s>\n", id_str->data);  /* trailing slash for dirs */
-          print_tree (root, this_full_path, indentation + 1, pool);
+          print_tree (root, this_full_path, indentation + 1, subpool);
         }
       else   /* assume it's a file */
         {
           apr_off_t len;
-          SVN_ERR (svn_fs_file_length (&len, root, this_full_path, pool));
+          SVN_ERR (svn_fs_file_length (&len, root, this_full_path, subpool));
           printf (" <%s> [%" APR_OFF_T_FMT "]\n", id_str->data, len);
         }
+      svn_pool_clear (subpool);
     }
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -376,6 +378,7 @@ main (int argc, const char * const *argv)
         apr_array_header_t *txns;
         const char *txn_name;
         svn_boolean_t show_extra = FALSE;
+        apr_pool_t *this_pool; /* only used if SHOW_EXTRA is TRUE */
         int i;
 
         if (argc >= 4) 
@@ -393,6 +396,9 @@ main (int argc, const char * const *argv)
         fs = svn_repos_fs (repos);
         INT_ERR (svn_fs_list_transactions(&txns, fs, pool));
         
+        if (show_extra)
+          this_pool = svn_pool_create (pool);
+
         /* Loop, printing revisions. */
         for (i = 0; i < txns->nelts; i++)
           {
@@ -403,9 +409,12 @@ main (int argc, const char * const *argv)
             svn_string_t *log;
 
             txn_name = APR_ARRAY_IDX (txns, i, const char *);
-            if (show_extra)
+            if (! show_extra)
               {
-                apr_pool_t *this_pool = svn_pool_create (pool);
+                printf ("%s\n", txn_name);
+              }
+            else
+              {
                 const svn_fs_id_t *root_id;
                 svn_string_t *id_str;
                 const char *txn_name_native, *datestamp_native;
@@ -451,16 +460,18 @@ main (int argc, const char * const *argv)
                 printf ("/ <%s>\n", id_str->data);
                 print_tree (this_root, "", 1, this_pool);
                 printf ("\n");
-                svn_pool_destroy (this_pool);
+                svn_pool_clear (this_pool);
               }
-            else
-              printf ("%s\n", txn_name);
           }
+
+        if (show_extra)
+          svn_pool_destroy (this_pool);
       }
       break;
 
     case svnadmin_cmd_lsrevs:
       {
+        apr_pool_t *this_pool = svn_pool_create (pool);
         svn_revnum_t
           lower = SVN_INVALID_REVNUM,
           upper = SVN_INVALID_REVNUM,
@@ -493,7 +504,6 @@ main (int argc, const char * const *argv)
             svn_string_t *datestamp;
             svn_string_t *author;
             svn_string_t *log;
-            apr_pool_t *this_pool = svn_pool_create (pool);
             const svn_fs_id_t *root_id;
             svn_string_t *id_str;
             const char *datestamp_native, *author_native, *log_native;
@@ -526,14 +536,15 @@ main (int argc, const char * const *argv)
             printf ("Log (%" APR_SIZE_T_FMT " bytes):\n%s\n",
                     log->len, log_native);
             printf ("==========================================\n");
-            INT_ERR (svn_fs_node_id (&root_id, this_root, "", pool));
-            id_str = svn_fs_unparse_id (root_id, pool);
+            INT_ERR (svn_fs_node_id (&root_id, this_root, "", this_pool));
+            id_str = svn_fs_unparse_id (root_id, this_pool);
             printf ("/ <%s>\n", id_str->data);
             print_tree (this_root, "", 1, this_pool);
             printf ("\n");
-            
-            svn_pool_destroy (this_pool);
+
+            svn_pool_clear (this_pool);
           }
+        svn_pool_destroy (this_pool);
       }
       break;
 
