@@ -1009,6 +1009,7 @@ fold_entry (apr_hash_t *entries,
 {
   apr_hash_index_t *hi;
   svn_wc_entry_t *entry = apr_hash_get (entries, name->data, name->len);
+  const char *remove_me;
   
   assert (name != NULL);
 
@@ -1087,12 +1088,8 @@ fold_entry (apr_hash_t *entries,
   normalize_entry (entry, pool);
 
   /* Remove any attributes named for removal. */
-  if (ap)
-    {
-      const char *remove_me;
-      while ((remove_me = va_arg (ap, const char *)) != NULL)
-        apr_hash_set (entry->attributes, remove_me, APR_HASH_KEY_STRING, NULL);
-    }
+  while ((remove_me = va_arg (ap, const char *)) != NULL)
+    apr_hash_set (entry->attributes, remove_me, APR_HASH_KEY_STRING, NULL);
 
   /* Make sure the entry exists in the entries hash.  Possibly it
      already did, in which case this could have been skipped, but what
