@@ -1653,15 +1653,17 @@ Committed revision 352.
       del tiempo.</para>
 
     <sect2 id="svn-ch-4-sect-7.1">
-      <title>Repository Layout</title>
+      <title>Estructura del repositorio</title>
       
-      <para>There are some standard, recommended ways to organize a
-        repository.  Most people create a <filename>trunk</filename>
-        directory to hold the <quote>main line</quote> of development,
-        a <filename>branches</filename> directory to contain branch
-        copies, and a <filename>tags</filename> directory to contain
-        tag copies.  If a repository holds only one project, then
-        often people create these top-level directories:</para>
+      <para>Hay maneras estándar recomendadas para organizar un
+        repositorio.  La mayoría de las personas crean un
+        directorio <filename>trunk</filename> que contendrá la
+        <quote>línea principal</quote> de desarrollo, un directorio
+        <filename>branches</filename> que contendrá copias de
+        las ramas, y un directorio <filename>tags</filename> que
+        contendrá copias de las etiquetas. Si un repositorio sólo
+        almacena un proyecto, entonces la gente a menudo crea estos
+        directorios en el directorio raíz:</para>
 
 <screen>
 /trunk
@@ -1669,10 +1671,10 @@ Committed revision 352.
 /tags
 </screen>
 
-      <para>If a repository contains multiple projects, admins
-        typically index their layout by project (see <xref
-        linkend="svn-ch-5-sect-6.1"/> to read more about
-        <quote>project roots</quote>):</para>
+      <para>Si un repositorio contiene múltiples proyectos, los
+        administradores normalmente indexan la estructura por
+        proyecto (vea <xref linkend="svn-ch-5-sect-6.1"/> para leer
+        más sobre <quote>raices de proyecto</quote>):</para>
 
 <screen>
 /paint/trunk
