@@ -433,16 +433,10 @@ read_rep_offsets (svn_fs__representation_t **rep_p,
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                              "Malformed text rep offset line in node-rev");
 
-  if (strcmp (str, SVN_FS_FS__THIS) == 0)
-    {
-      rep->revision = SVN_INVALID_REVNUM;
+
+  rep->revision = atoi (str);
+  if (rep->revision == SVN_INVALID_REVNUM)
       rep->txn_id = txn_id;
-    }
-  else
-    {
-      rep->revision = atoi (str);
-      rep->txn_id = NULL;
-    }
   
   str = apr_strtok (NULL, " ", &last_str);
   if (str == NULL)
@@ -682,14 +676,7 @@ representation_string (svn_fs__representation_t *rep,
 {
   const char *rev;
 
-  if (rep->revision == SVN_INVALID_REVNUM)
-    {
-      rev = SVN_FS_FS__THIS;
-    }
-  else
-    {
-      rev = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rep->revision);
-    }
+  rev = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rep->revision);
 
   return apr_psprintf (pool, "%s %" APR_OFF_T_FMT " %" APR_SIZE_T_FMT " %"
                        APR_SIZE_T_FMT " %s",
