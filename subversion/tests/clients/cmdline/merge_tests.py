@@ -978,7 +978,9 @@ def merge_similar_unrelated_trees(sbox):
     })
   # run_and_verify_merge doesn't support 'svn merge URL URL path'
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'merge', base1_url, base2_url, apply_path)
+                                     'merge',
+                                     '--ignore-ancestry',
+                                     base1_url, base2_url, apply_path)
 
   expected_status = wc.State(apply_path, {
     ''            : Item(status='  '),
