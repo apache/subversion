@@ -56,7 +56,7 @@ def basic_checkout(sbox):
   wc_dir = sbox.wc_dir
 
   # Checkout of a different URL into a working copy fails
-  A_url = os.path.join(svntest.main.current_repo_url, 'A')
+  A_url = svntest.main.current_repo_url + '/A'
   stdout_lines, stderr_lines = svntest.main.run_svn ("Obstructed update",
                                                      'co', A_url,
                                                      '--username',
@@ -735,7 +735,7 @@ def basic_switch(sbox):
 
   # Construct some paths for convenience
   iota_path = os.path.join(wc_dir, 'iota')
-  gamma_url = os.path.join(svntest.main.current_repo_url, 'A', 'D', 'gamma')
+  gamma_url = svntest.main.current_repo_url + '/A/D/gamma'
 
   # Create expected output tree
   expected_output = wc.State(wc_dir, {
@@ -767,7 +767,7 @@ def basic_switch(sbox):
   pi_path = os.path.join(ADH_path, 'pi')
   tau_path = os.path.join(ADH_path, 'tau')
   rho_path = os.path.join(ADH_path, 'rho')
-  ADG_url = os.path.join(svntest.main.current_repo_url, 'A', 'D', 'G')
+  ADG_url = svntest.main.current_repo_url + '/A/D/G'
 
   # Create expected output tree
   expected_output = wc.State(wc_dir, {
@@ -1047,8 +1047,8 @@ def basic_checkout_deleted(sbox):
                                         wc_dir)
 
   # Now try to checkout revision 1 of A/D.
-  url = os.path.join(svntest.main.test_area_url,
-                     svntest.main.current_repo_dir, 'A', 'D')
+  url = svntest.main.test_area_url + '/' + svntest.main.current_repo_dir + \
+        '/A/D'
   wc2 = os.path.join (sbox.wc_dir, 'new_D')
   svntest.actions.run_and_verify_svn("error checking out r1 of A/D",
                                      None, [], 'co', '-r', '1',

@@ -131,8 +131,8 @@ def externals_test_setup(sbox):
 
   # Set up the externals properties on A/B/ and A/D/.
   externals_desc = \
-           "exdir_G       " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
-           "exdir_H  -r 1 " + os.path.join(other_repo_url, "A/D/H") + "\n"
+           "exdir_G       " + other_repo_url + "/A/D/G" + "\n" + \
+           "exdir_H  -r 1 " + other_repo_url + "/A/D/H" + "\n"
 
   tmp_f = os.tempnam(wc_init_dir, 'tmp')
   svntest.main.file_append(tmp_f, externals_desc)
@@ -143,13 +143,13 @@ def externals_test_setup(sbox):
   os.remove(tmp_f)
 
   externals_desc = \
-           "exdir_A           " + os.path.join(other_repo_url, "A")     + \
-           "\n"                                                         + \
-           "exdir_A/G/        " + os.path.join(other_repo_url, "A/D/G/")+ \
-           "\n"                                                         + \
-           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
-           "\n"                                                         + \
-           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/E") + \
+           "exdir_A           " + other_repo_url + "/A"      + \
+           "\n"                                              + \
+           "exdir_A/G/        " + other_repo_url + "/A/D/G/" + \
+           "\n"                                              + \
+           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H"  + \
+           "\n"                                              + \
+           "x/y/z/blah        " + other_repo_url + "/A/B/E"  + \
            "\n"
 
   svntest.main.file_append(tmp_f, externals_desc)
@@ -306,15 +306,15 @@ def update_receive_new_external(sbox):
   # Add one new external item to the property on A/D.  The new item is
   # "exdir_E", deliberately added in the middle not at the end.
   new_externals_desc = \
-           "exdir_A           " + os.path.join(other_repo_url, "A")     + \
-           "\n"                                                         + \
-           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
-           "\n"                                                         + \
-           "exdir_E           " + os.path.join(other_repo_url, "A/B/E") + \
-           "\n"                                                         + \
-           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
-           "\n"                                                         + \
-           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/E") + \
+           "exdir_A           " + other_repo_url + "/A"     + \
+           "\n"                                             + \
+           "exdir_A/G         " + other_repo_url + "/A/D/G" + \
+           "\n"                                             + \
+           "exdir_E           " + other_repo_url + "/A/B/E" + \
+           "\n"                                             + \
+           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H" + \
+           "\n"                                             + \
+           "x/y/z/blah        " + other_repo_url + "/A/B/E" + \
            "\n"
 
   # Set and commit the property
@@ -378,11 +378,11 @@ def update_lose_external(sbox):
   #    A/D/exdir_A/H/...                     A/D/exdir_A/H/...
 
   new_externals_desc = \
-           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
-           "\n"                                                         + \
-           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
-           "\n"                                                         + \
-           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/E") + \
+           "exdir_A/G         " + other_repo_url + "/A/D/G" + \
+           "\n"                                             + \
+           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H" + \
+           "\n"                                             + \
+           "x/y/z/blah        " + other_repo_url + "/A/B/E" + \
            "\n"
 
   # Set and commit the property
@@ -464,13 +464,13 @@ def update_change_pristine_external(sbox):
   # URL.  Since no changes were made to the old checked-out external,
   # we should get a clean replace.
   new_externals_desc = \
-           "exdir_A           " + os.path.join(other_repo_url, "A")     + \
-           "\n"                                                         + \
-           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
-           "\n"                                                         + \
-           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
-           "\n"                                                         + \
-           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/F") + \
+           "exdir_A           " + other_repo_url + "/A"     + \
+           "\n"                                             + \
+           "exdir_A/G         " + other_repo_url + "/A/D/G" + \
+           "\n"                                             + \
+           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H" + \
+           "\n"                                             + \
+           "x/y/z/blah        " + other_repo_url + "/A/B/F" + \
            "\n"
 
   # Set and commit the property
@@ -534,13 +534,13 @@ def update_change_modified_external(sbox):
   # URL.  There are some local mods under the old checked-out external,
   # so the old dir should be saved under a new name.
   new_externals_desc = \
-           "exdir_A           " + os.path.join(other_repo_url, "A")     + \
-           "\n"                                                         + \
-           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
-           "\n"                                                         + \
-           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
-           "\n"                                                         + \
-           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/F") + \
+           "exdir_A           " + other_repo_url + "/A"     + \
+           "\n"                                             + \
+           "exdir_A/G         " + other_repo_url + "/A/D/G" + \
+           "\n"                                             + \
+           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H" + \
+           "\n"                                             + \
+           "x/y/z/blah        " + other_repo_url + "/A/B/F" + \
            "\n"
 
   # Set and commit the property
@@ -691,9 +691,9 @@ def modify_and_update_receive_new_external(sbox):
   # Add one more external item
   B_path = os.path.join(wc_dir, "A/B")
   externals_desc = \
-          "exdir_G       " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
-          "exdir_H  -r 1 " + os.path.join(other_repo_url, "A/D/H") + "\n" + \
-          "exdir_Z       " + os.path.join(other_repo_url, "A/D/H") + "\n"
+          "exdir_G       " + other_repo_url + "/A/D/G" + "\n" + \
+          "exdir_H  -r 1 " + other_repo_url + "/A/D/H" + "\n" + \
+          "exdir_Z       " + other_repo_url + "/A/D/H" + "\n"
 
   tmp_f = os.tempnam()
   svntest.main.file_append(tmp_f, externals_desc)

@@ -356,7 +356,7 @@ def textual_merges_galore(sbox):
   return svntest.actions.run_and_verify_merge(
     os.path.join(other_wc, 'A', 'D', 'G'),
     '2', '3',
-    os.path.join(svntest.main.current_repo_url, 'A', 'D', 'G'),
+    svntest.main.current_repo_url + '/A/D/G',
     expected_output,
     expected_disk,
     expected_status,
@@ -379,7 +379,7 @@ def add_with_history(sbox):
 
   C_path = os.path.join(wc_dir, 'A', 'C')
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-  F_url = os.path.join(svntest.main.current_repo_url, 'A', 'B', 'F')
+  F_url = svntest.main.current_repo_url + '/A/B/F'
 
   Q_path = os.path.join(F_path, 'Q')
   foo_path = os.path.join(F_path, 'foo')
@@ -519,7 +519,7 @@ def delete_file_and_dir(sbox):
   # Rev 2 copy B to B2
   B_path = os.path.join(wc_dir, 'A', 'B')
   B2_path = os.path.join(wc_dir, 'A', 'B2')
-  B_url = os.path.join(svntest.main.current_repo_url, 'A', 'B')
+  B_url = svntest.main.current_repo_url + '/A/B'
 
   outlines,errlines = svntest.main.run_svn(None, 'copy', B_path, B2_path)
   if errlines:
@@ -632,8 +632,8 @@ def simple_property_merges(sbox):
     return 1
 
   # Copy B to B2 as rev 3
-  B_url = os.path.join(svntest.main.current_repo_url, 'A', 'B')
-  B2_url = os.path.join(svntest.main.current_repo_url, 'A', 'B2')
+  B_url = svntest.main.current_repo_url + '/A/B'
+  B2_url = svntest.main.current_repo_url + '/A/B2'
 
   outlines,errlines = svntest.main.run_svn(None, 'copy', '-m', 'fumble',
                                            '--username', svntest.main.wc_author,
@@ -746,8 +746,8 @@ def simple_property_merges(sbox):
   outlines, errlines = svntest.main.run_svn(None, 'revert', '--recursive',
                                             wc_dir)
   
-  A_url = os.path.join(svntest.main.current_repo_url, 'A')
-  A2_url = os.path.join(svntest.main.current_repo_url, 'A2')
+  A_url = svntest.main.current_repo_url + '/A'
+  A2_url = svntest.main.current_repo_url + '/A2'
  
   # Copy to make revision 5
   outlines,errlines = svntest.main.run_svn(None, 'copy', '-m', 'fumble',
@@ -759,7 +759,7 @@ def simple_property_merges(sbox):
   
   outlines, errlines = svntest.main.run_svn(None, 'switch', A2_url, wc_dir)
   
-  A_url = os.path.join(svntest.main.current_repo_url, 'A', 'B', 'E', 'alpha')
+  A_url = svntest.main.current_repo_url + '/A/B/E/alpha'
   alpha_path = os.path.join(wc_dir, 'B', 'E', 'alpha')
   
   outlines, errlines = svntest.main.run_svn(None, 'merge',
@@ -803,7 +803,7 @@ def merge_catches_nonexistent_target(sbox):
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   Q_path = os.path.join(wc_dir, 'A', 'D', 'Q')
   newfile_path = os.path.join(Q_path, 'newfile')
-  Q_url = os.path.join(svntest.main.current_repo_url, 'A', 'D', 'Q')
+  Q_url = svntest.main.current_repo_url + '/A/D/Q'
 
   outlines,errlines = svntest.main.run_svn(None, 'cp', G_path, Q_path)
   if errlines:
@@ -856,7 +856,7 @@ def merge_one_file(sbox):
   rho_rel_path = os.path.join('A', 'D', 'G', 'rho')
   rho_path = os.path.join(wc_dir, rho_rel_path)
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  rho_url = os.path.join(svntest.main.current_repo_url, rho_rel_path)
+  rho_url = svntest.main.current_repo_url + '/A/D/G/rho'
   
   # Change rho for revision 2
   svntest.main.file_append(rho_path, '\nA new line in rho.\n')
@@ -1040,7 +1040,7 @@ def merge_with_implicit_target (sbox):
 
   # Try the merge without an explicit target; it should succeed.
   # Can't use run_and_verify_merge cuz it expects a directory argument.
-  mu_url = os.path.join(svntest.main.current_repo_url, 'A', 'mu')
+  mu_url = svntest.main.current_repo_url + '/A/mu'
   was_cwd = os.getcwd()
   try:
     os.chdir(os.path.join(other_wc, 'A'))
