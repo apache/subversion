@@ -1715,16 +1715,17 @@ Committed revision 352.
     </sect2>
     
     <sect2 id="svn-ch-4-sect-7.2">
-      <title>Data Lifetimes</title>
+      <title>Longevidad de los datos</title>
 
-      <para>Another nice feature of Subversion's model is that
-        branches and tags can have finite lifetimes, just like any
-        other versioned item.  For example, suppose you eventually
-        finish all your work on your personal branch of the
-        <filename>calc</filename> project.  After merging all of your
-        changes back into <filename>/calc/trunk</filename>, there's
-        no need for your private branch directory to stick around
-        anymore:</para>
+      <para>Otra buena característica del modelo de Subversion es
+        que las ramas y las etiquetas pueden tener vidas
+        infinitas, igual que cualquier otro elemento
+        versionado. Por ejemplo, suponga que finalmente
+        termina todo su trabajo en una rama personal del proyecto
+        <filename>calc</filename>. Tras fusionar todos sus cambios de
+        vuelta en <filename>/calc/trunk</filename>, ya no hace falta
+        que el directorio de su rama privada permanezca visible:<!--
+        TODO stick around != permanezca visible--></para>
 
 <screen>
 $ svn delete http://svn.example.com/repos/calc/branches/my-calc-branch \
@@ -1733,13 +1734,13 @@ $ svn delete http://svn.example.com/repos/calc/branches/my-calc-branch \
 Committed revision 375.
 </screen>
 
-      <para>And now your branch is gone.  Of course it's not really
-        gone: the directory is simply missing from the
-        <literal>HEAD</literal> revision, no longer distracting
-        anyone.  If you use <command>svn checkout</command>,
-        <command>svn switch</command>, or <command>svn list</command>
-        to examine an earlier revision, you'll still be able to see
-        your old branch.</para>
+      <para>Y desapareció su rama. Por supuesto no ha desaparecido
+        realmente: el directorio simplemente falta en la revisión
+        <literal>HEAD</literal>, y ya no distrae a nadie más. Si
+        usa <command>svn checkout</command>, <command>svn
+        switch</command>, o <command>svn list</command> para
+        examinar una revisión anterior, seguirá pudiendo ver su
+        antigua rama.</para>
 
       <para>If browsing your deleted directory isn't enough, you can
         always bring it back.  Resurrecting data is very easy in
