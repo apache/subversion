@@ -95,6 +95,10 @@ SOURCE=.\dbt.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\deltify.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\err.c
 # End Source File
 # Begin Source File

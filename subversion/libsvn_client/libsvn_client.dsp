@@ -147,6 +147,10 @@ SOURCE=.\status.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\switch.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\update.c
 # End Source File
 # End Group
