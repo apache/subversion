@@ -13,7 +13,10 @@ import sys
 import string
 import ConfigParser
 
-from svn import fs, util, delta, _repos
+import svn.fs
+import svn.util
+import svn.delta
+import svn.repos
 
 
 def main(pool, config_fname, repos_dir, rev):
@@ -23,16 +26,14 @@ def main(pool, config_fname, repos_dir, rev):
 
   editor = ChangeCollector(repos.root_prev)
 
-  e_ptr, e_baton = delta.make_editor(editor, pool)
-  wrap_editor, wrap_baton = delta.svn_delta_compat_wrap(e_ptr, e_baton, pool)
-
-  _repos.svn_repos_dir_delta(repos.root_prev, '', None, repos.root_this, '',
-                             wrap_editor, wrap_baton,
-                             0,  # text_deltas
-                             1,  # recurse
-                             0,  # entry_props
-                             1,  # use_copy_history
-                             pool)
+  e_ptr, e_baton = svn.delta.make_editor(editor, pool)
+  svn.repos.svn_repos_dir_delta(repos.root_prev, '', None, repos.root_this, '',
+                                e_ptr, e_baton,
+                                0,  # text_deltas
+                                1,  # recurse
+                                0,  # entry_props
+                                1,  # use_copy_history
+                                pool)
 
   ### pipe it to sendmail rather than stdout
   generate_content(sys.stdout, repos, editor, pool)
@@ -40,11 +41,11 @@ def main(pool, config_fname, repos_dir, rev):
 
 def generate_content(output, repos, editor, pool):
 
-  date = repos.get_rev_prop(util.SVN_PROP_REVISION_DATE)
+  date = repos.get_rev_prop(svn.util.SVN_PROP_REVISION_DATE)
   ### reformat the date
 
   output.write('Author: %s\nDate: %s\nNew Revision: %s\n\n'
-               % (repos.get_rev_prop(util.SVN_PROP_REVISION_AUTHOR),
+               % (repos.get_rev_prop(svn.util.SVN_PROP_REVISION_AUTHOR),
                   date,
                   repos.rev))
 
@@ -53,7 +54,7 @@ def generate_content(output, repos, editor, pool):
   generate_list(output, 'Modified', editor.changes)
 
   output.write('Log:\n%s\n'
-               % (repos.get_rev_prop(util.SVN_PROP_REVISION_LOG) or ''))
+               % (repos.get_rev_prop(svn.util.SVN_PROP_REVISION_LOG) or ''))
 
   # build a complete list of affected dirs/files
   paths = editor.adds.keys() + editor.deletes.keys() + editor.changes.keys()
@@ -133,8 +134,8 @@ class Repository:
     if not os.path.exists(db_path):
       db_path = repos_dir
 
-    self.fs_ptr = fs.new(pool)
-    fs.open_berkeley(self.fs_ptr, db_path)
+    self.fs_ptr = svn.fs.new(pool)
+    svn.fs.open_berkeley(self.fs_ptr, db_path)
 
     self.roots = { }
 
@@ -142,18 +143,18 @@ class Repository:
     self.root_this = self.get_root(rev)
 
   def get_rev_prop(self, propname):
-    return fs.revision_prop(self.fs_ptr, self.rev, propname, self.pool)
+    return svn.fs.revision_prop(self.fs_ptr, self.rev, propname, self.pool)
 
   def get_root(self, rev):
     try:
       return self.roots[rev]
     except KeyError:
       pass
-    root = self.roots[rev] = fs.revision_root(self.fs_ptr, rev, self.pool)
+    root = self.roots[rev] = svn.fs.revision_root(self.fs_ptr, rev, self.pool)
     return root
 
 
-class ChangeCollector(delta.Editor):
+class ChangeCollector(svn.delta.Editor):
   DIR = 'DIR'
   FILE = 'FILE'
 
@@ -169,7 +170,7 @@ class ChangeCollector(delta.Editor):
     return ('', '', base_revision)  # dir_baton
 
   def delete_entry(self, path, revision, parent_baton, pool):
-    if fs.is_dir(self.root_prev, '/' + path, pool):
+    if svn.fs.is_dir(self.root_prev, '/' + path, pool):
       item_type = ChangeCollector.DIR
     else:
       item_type = ChangeCollector.FILE
@@ -332,4 +333,4 @@ if __name__ == '__main__':
     raise MissingConfig(config_fname)
 
   ### run some validation on these params
-  util.run_app(main, config_fname, repos_dir, revision)
+  svn.util.run_app(main, config_fname, repos_dir, revision)
