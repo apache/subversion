@@ -3897,6 +3897,58 @@ sally
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
+          <refname>svnlook cat</refname>
+          <refpurpose>Print the contents of a file.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svnlook cat REPOS_PATH FILE_PATH</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+          <para>Print the contents of a file.</para>
+
+          </refsect1>
+
+        <refsect1>
+          <title>Switches</title>
+
+          <screen>
+--revision (-r)
+--transaction (-t)
+          </screen>
+        </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+
+          <para>This shows the contents of a file in transation
+            <literal>ax8</literal>, located at 
+            <filename>/trunk/README</filename>:</para>
+
+          <screen>
+$ svnlook cat -t ax8 /usr/local/svn/repos /trunk/README
+
+               Subversion, a version control system.
+               =====================================
+
+$LastChangedDate: 2003-07-17 10:45:25 -0500 (Thu, 17 Jul 2003) $
+
+Contents:
+
+     I. A FEW POINTERS
+    II. DOCUMENTATION
+   III. PARTICIPATING IN THE SUBVERSION COMMUNITY
+&hellip;
+          </screen>
+          
+        </refsect1>
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
           <refname>svnlook changed</refname>
           <refpurpose>Print the paths that were changed.</refpurpose>
         </refnamediv>
@@ -4176,6 +4228,60 @@ Rearrange lunch.
           <screen>
 $ svnlook log /tmp/repos/
 Rearrange lunch.
+          </screen>
+          
+        </refsect1>
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
+          <refname>svnlook proplist</refname>
+          <refpurpose>Print the names and values of versioned file and
+            directory properties.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svnlook proplist REPOS_PATH 
+            PATH_IN_REPOS</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+          <para>List the properties of a path in the repository.  With
+            -v, show the property values too.</para>
+
+          </refsect1>
+
+        <refsect1>
+          <title>Switches</title>
+
+          <screen>
+--revision (-r)
+--transaction (-t)
+--verbose (-v)
+          </screen>
+        </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+
+          <para>This shows the names of properties set on the file
+            <filename>/trunk/README</filename> in the HEAD revision:</para>
+
+          <screen>
+$ svnlook proplist /usr/local/svn/repos /trunk/README
+  original-author
+  svn:mime-type
+          </screen>
+
+          <para>This is the same command as in the previous example,
+            but this time showing the property values as well:</para>
+
+          <screen>
+$ svnlook proplist /usr/local/svn/repos /trunk/README
+  original-author : fitz
+  svn:mime-type : text/plain
           </screen>
           
         </refsect1>
