@@ -168,3 +168,10 @@ already know about.)
      Justification: API stability; low risk
      Votes:
       +1: jerenkrantz
+
+
+   * r8096
+     Return result_rev from svn_client_checkout properly.
+     Justification: Conform to docstring; correctness; low risk
+     Votes:
+      +1: jerenkrantz
