@@ -1286,6 +1286,14 @@ main (int argc, const char * const *argv)
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
+      else if (svn_path_is_url (repos_path))
+        {
+          fprintf (stderr,
+                   "'%s' is a url when it should be a path\n",
+                   repos_path);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
 
       /* Copy repos path into the OPT_STATE structure. */
       opt_state.repos_path = repos_path;      
