@@ -106,7 +106,7 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
      APR_UNSPEC, because it may give us back an IPV6 address even if we can't
      create IPV6 sockets.  */  
 
-#ifdef APR_HAVE_IPV6
+#if APR_HAVE_IPV6
   if (ipv6_supported)
     {
 #ifdef MAX_SECS_TO_LINGER
