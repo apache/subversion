@@ -76,8 +76,10 @@
    probably be changed significantly soon. */
 
 svn_error_t *
-svn_client_checkout (const svn_delta_edit_fns_t *passenger_editor,
-                     void *passenger_edit_baton,
+svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
+                     void *before_edit_baton,
+                     const svn_delta_edit_fns_t *after_editor,
+                     void *after_edit_baton,
                      svn_string_t *path,
                      svn_string_t *xml_src,
                      svn_string_t *ancestor_path,
@@ -86,8 +88,10 @@ svn_client_checkout (const svn_delta_edit_fns_t *passenger_editor,
 
 
 svn_error_t *
-svn_client_update (const svn_delta_edit_fns_t *passenger_editor,
-                   void *passenger_edit_baton,
+svn_client_update (const svn_delta_edit_fns_t *before_editor,
+                   void *before_edit_baton,
+                   const svn_delta_edit_fns_t *after_editor,
+                   void *after_edit_baton,
                    svn_string_t *path,
                    svn_string_t *xml_src,
                    svn_vernum_t ancestor_version,

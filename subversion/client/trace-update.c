@@ -70,9 +70,9 @@ struct dir_baton
 {
   struct edit_baton *edit_baton;
   struct dir_baton *parent_dir_baton;
+  svn_string_t *path;
   svn_boolean_t added;
   svn_boolean_t prop_changed;
-  svn_string_t *path;
 };
 
 

@@ -48,6 +48,7 @@
  */
 
 
+#include <assert.h>
 #include <apr_pools.h>
 #include "svn_delta.h"
 
@@ -502,7 +503,7 @@ static const svn_delta_edit_fns_t composed_editor =
 };
 
 
-svn_error_t *
+void
 svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
                            void **new_edit_baton,
                            const svn_delta_edit_fns_t *editor_1,
@@ -521,6 +522,47 @@ svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
 
   *new_edit_baton = eb;
   *new_editor = &composed_editor;
-  
-  return SVN_NO_ERROR;
 }
+
+
+void
+svn_delta_wrap_editor (const svn_delta_edit_fns_t **new_editor,
+                       void **new_edit_baton,
+                       const svn_delta_edit_fns_t *before_editor,
+                       void *before_edit_baton,
+                       const svn_delta_edit_fns_t *middle_editor,
+                       void *middle_edit_baton,
+                       const svn_delta_edit_fns_t *after_editor,
+                       void *after_edit_baton,
+                       apr_pool_t *pool)
+{
+  assert (middle_editor != NULL);
+
+  if (before_editor)
+    {
+      svn_delta_compose_editors (new_editor, new_edit_baton,
+                                 before_editor, before_edit_baton,
+                                 middle_editor, middle_edit_baton,
+                                 pool);
+      middle_editor = *new_editor;
+      middle_edit_baton = *new_edit_baton;
+    }
+
+  if (after_editor)
+    {
+      svn_delta_compose_editors (new_editor, new_edit_baton,
+                                 middle_editor, middle_edit_baton,
+                                 after_editor, after_edit_baton,
+                                 pool);
+    }
+}
+
+
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
