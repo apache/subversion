@@ -1,0 +1,15 @@
+These are scripts that might be useful run from repository hooks.
+Your Mileage May Vary.
+
+[note to self: as long as these are small and simple, perhaps they
+should just be put into repository custom/ dir when the repos is
+created?  Hmmm.]
+
+Contents:
+
+   1. commit-email.pl
+      Uses the `svnlook' program to send commit emails.  Invoke it
+      from `repository/hooks/post-commit'.  Read comment at top for
+      usage.
+
+   2. ?
