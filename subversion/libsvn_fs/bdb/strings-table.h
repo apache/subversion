@@ -41,9 +41,9 @@ extern "C" {
  * one if it doesn't exist.  Set *STRINGS_P to the new table.  
  * Return a Berkeley DB error code.
  */
-int svn_fs__open_strings_table (DB **strings_p,
-                                DB_ENV *env,
-                                int create);
+int svn_fs__bdb_open_strings_table (DB **strings_p,
+                                    DB_ENV *env,
+                                    int create);
 
 
 /* Read *LEN bytes into BUF from OFFSET in string KEY in FS, as part
@@ -61,12 +61,12 @@ int svn_fs__open_strings_table (DB **strings_p,
  * If string KEY does not exist, the error SVN_ERR_FS_NO_SUCH_STRING
  * is returned.
  */
-svn_error_t *svn_fs__string_read (svn_fs_t *fs,
-                                  const char *key,
-                                  char *buf,
-                                  apr_off_t offset,
-                                  apr_size_t *len,
-                                  trail_t *trail);
+svn_error_t *svn_fs__bdb_string_read (svn_fs_t *fs,
+                                      const char *key,
+                                      char *buf,
+                                      apr_off_t offset,
+                                      apr_size_t *len,
+                                      trail_t *trail);
 
 
 /* Set *SIZE to the size in bytes of string KEY in FS, as part of
@@ -74,10 +74,10 @@ svn_error_t *svn_fs__string_read (svn_fs_t *fs,
  *
  * If string KEY does not exist, return SVN_ERR_FS_NO_SUCH_STRING.
  */
-svn_error_t *svn_fs__string_size (apr_size_t *size,
-                                  svn_fs_t *fs,
-                                  const char *key,
-                                  trail_t *trail);
+svn_error_t *svn_fs__bdb_string_size (apr_size_t *size,
+                                      svn_fs_t *fs,
+                                      const char *key,
+                                      trail_t *trail);
 
 
 /* Append LEN bytes from BUF to string *KEY in FS, as part of TRAIL.
@@ -91,19 +91,19 @@ svn_error_t *svn_fs__string_size (apr_size_t *size,
  *
  * Note: to overwrite the old contents of a string, call
  * svn_fs__string_clear() and then svn_fs__string_append().  */
-svn_error_t *svn_fs__string_append (svn_fs_t *fs,
-                                    const char **key,
-                                    apr_size_t len,
-                                    const char *buf,
-                                    trail_t *trail);
+svn_error_t *svn_fs__bdb_string_append (svn_fs_t *fs,
+                                        const char **key,
+                                        apr_size_t len,
+                                        const char *buf,
+                                        trail_t *trail);
 
 
 /* Make string KEY in FS zero length, as part of TRAIL.
  * If the string does not exist, return SVN_ERR_FS_NO_SUCH_STRING.
  */
-svn_error_t *svn_fs__string_clear (svn_fs_t *fs,
-                                   const char *key,
-                                   trail_t *trail);
+svn_error_t *svn_fs__bdb_string_clear (svn_fs_t *fs,
+                                       const char *key,
+                                       trail_t *trail);
 
 
 /* Delete string KEY from FS, as part of TRAIL.
@@ -113,18 +113,18 @@ svn_error_t *svn_fs__string_clear (svn_fs_t *fs,
  * WARNING: Deleting a string renders unusable any representations
  * that refer to it.  Be careful.
  */ 
-svn_error_t *svn_fs__string_delete (svn_fs_t *fs,
-                                    const char *key,
-                                    trail_t *trail);
+svn_error_t *svn_fs__bdb_string_delete (svn_fs_t *fs,
+                                        const char *key,
+                                        trail_t *trail);
 
 
 /* Copy the contents of the string referred to by KEY in FS into a new
  * record, returning the new record's key in *NEW_KEY.  All
  * allocations (including *NEW_KEY) occur in TRAIL->pool.  */
-svn_error_t *svn_fs__string_copy (svn_fs_t *fs,
-                                  const char **new_key,
-                                  const char *key,
-                                  trail_t *trail);
+svn_error_t *svn_fs__bdb_string_copy (svn_fs_t *fs,
+                                      const char **new_key,
+                                      const char *key,
+                                      trail_t *trail);
 
 
 #ifdef __cplusplus

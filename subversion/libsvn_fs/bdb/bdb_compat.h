@@ -55,7 +55,7 @@ extern "C" {
    against, because the DB->open call is not binary compatible between
    BDB 4.0 and 4.1. This function returns DB_OLD_VERSION if the
    compile-time and run-time versions of BDB don't match. */
-int svn_bdb__check_version (void);
+int svn_fs__bdb_check_version (void);
 
 
 #ifdef __cplusplus

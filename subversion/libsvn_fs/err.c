@@ -20,63 +20,12 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
-#include <db.h>
+/* #include <db.h> */
 #include <apr_strings.h>
 
 #include "svn_fs.h"
 #include "fs.h"
 #include "err.h"
-
-/* Return a distinguished error for any db error code we want to detect
- * programatically; otherwise return a generic error.
- */
-static int
-db_err_to_apr_err (int db_err)
-{
-  if (db_err == DB_LOCK_DEADLOCK)
-    return SVN_ERR_FS_BERKELEY_DB_DEADLOCK;
-  else
-    return SVN_ERR_FS_BERKELEY_DB;
-}
-
-svn_error_t *
-svn_fs__dberr (int db_err)
-{
-  return svn_error_create (db_err_to_apr_err(db_err),
-                           0,
-                           db_strerror (db_err));
-}
-
-
-svn_error_t *
-svn_fs__dberrf (int db_err, const char *fmt, ...)
-{
-  va_list ap;
-  char *msg;
-  svn_error_t *err;
-
-  err = svn_error_create (db_err_to_apr_err(db_err), 0, "");
-
-  va_start (ap, fmt);
-  msg = apr_pvsprintf (err->pool, fmt, ap);
-  va_end (ap);
-  err->message = apr_psprintf (err->pool, "%s%s", msg, db_strerror (db_err));
-  return err;
-}
-
-
-svn_error_t *
-svn_fs__wrap_db (svn_fs_t *fs, const char *operation, int db_err)
-{
-  if (! db_err)
-    return SVN_NO_ERROR;
-  else
-    return svn_fs__dberrf (db_err,
-                           "Berkeley DB error while %s for "
-                           "filesystem %s:\n", operation,
-                           fs->path ? fs->path : "(none)");
-}
-
 
 svn_error_t *
 svn_fs__check_fs (svn_fs_t *fs)

@@ -21,6 +21,7 @@
 #include "svn_fs.h"
 #include "fs.h"
 #include "err.h"
+#include "bdb/bdb-err.h"
 #include "trail.h"
 
 
@@ -52,7 +53,7 @@ begin_trail (trail_t **trail_p,
   trail->pool = svn_pool_create (pool);
   trail->scratchpool = svn_pool_create (trail->pool);
   trail->undo = 0;
-  SVN_ERR (DB_WRAP (fs, "beginning Berkeley DB transaction",
+  SVN_ERR (BDB_WRAP (fs, "beginning Berkeley DB transaction",
                     fs->env->txn_begin (fs->env, 0, &trail->db_txn, 0)));
 
   *trail_p = trail;
@@ -72,7 +73,7 @@ abort_trail (trail_t *trail,
     if (undo->when & undo_on_failure)
       undo->func (undo->baton);
 
-  SVN_ERR (DB_WRAP (fs, "aborting Berkeley DB transaction",
+  SVN_ERR (BDB_WRAP (fs, "aborting Berkeley DB transaction",
                     trail->db_txn->abort (trail->db_txn)));
  
   svn_pool_destroy (trail->pool);
@@ -96,13 +97,13 @@ commit_trail (trail_t *trail,
   /* According to the example in the Berkeley DB manual, txn_commit
      doesn't return DB_LOCK_DEADLOCK --- all deadlocks are reported
      earlier.  */
-  SVN_ERR (DB_WRAP (fs, "committing Berkeley DB transaction",
+  SVN_ERR (BDB_WRAP (fs, "committing Berkeley DB transaction",
                     trail->db_txn->commit (trail->db_txn, 0)));
 
   /* Do a checkpoint here, if enough has gone on.
      The checkpoint parameters below are pretty arbitrary.  Perhaps
      there should be an svn_fs_berkeley_mumble function to set them.  */
-  SVN_ERR (DB_WRAP (fs, "checkpointing after Berkeley DB transaction",
+  SVN_ERR (BDB_WRAP (fs, "checkpointing after Berkeley DB transaction",
                     fs->env->txn_checkpoint (fs->env, 1024, 5, 0)));
 
   /* We don't destroy the pool; we assume it contains stuff which will

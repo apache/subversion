@@ -34,9 +34,9 @@ extern "C" {
 /* Open a `revisions' table in ENV.  If CREATE is non-zero, create one
    if it doesn't exist.  Set *REVS_P to the new table.  Return a
    Berkeley DB error code.  */
-int svn_fs__open_revisions_table (DB **revisions_p,
-                                  DB_ENV *env,
-                                  int create);
+int svn_fs__bdb_open_revisions_table (DB **revisions_p,
+                                      DB_ENV *env,
+                                      int create);
 
 
 
@@ -46,19 +46,19 @@ int svn_fs__open_revisions_table (DB **revisions_p,
 /* Set *REVISION_P to point to the revision structure for the
    filesystem revision REV in FS, as part of TRAIL.  Perform all
    allocations in TRAIL->pool.  */
-svn_error_t *svn_fs__get_rev (svn_fs__revision_t **revision_p,
-                              svn_fs_t *fs,
-                              svn_revnum_t rev,
-                              trail_t *trail);
+svn_error_t *svn_fs__bdb_get_rev (svn_fs__revision_t **revision_p,
+                                  svn_fs_t *fs,
+                                  svn_revnum_t rev,
+                                  trail_t *trail);
 
 /* Store REVISION in FS as revision *REV as part of TRAIL.  If *REV is
    an invalid revision number, create a brand new revision and return
    its revision number as *REV to the caller.  Do any necessary
    temporary allocation in TRAIL->pool.  */
-svn_error_t *svn_fs__put_rev (svn_revnum_t *rev,
-                              svn_fs_t *fs,
-                              const svn_fs__revision_t *revision,
-                              trail_t *trail);
+svn_error_t *svn_fs__bdb_put_rev (svn_revnum_t *rev,
+                                  svn_fs_t *fs,
+                                  const svn_fs__revision_t *revision,
+                                  trail_t *trail);
 
 
 /* Set *ROOT_ID_P to the ID of the root directory of revision REV in FS,
@@ -80,9 +80,9 @@ svn_error_t *svn_fs__rev_get_txn_id (const char **txn_id_p,
 
 /* Set *YOUNGEST_P to the youngest revision in filesystem FS,
    as part of TRAIL.  Use TRAIL->pool for all temporary allocation. */
-svn_error_t *svn_fs__youngest_rev (svn_revnum_t *youngest_p,
-                                   svn_fs_t *fs,
-                                   trail_t *trail);
+svn_error_t *svn_fs__bdb_youngest_rev (svn_revnum_t *youngest_p,
+                                       svn_fs_t *fs,
+                                       trail_t *trail);
 
 
 /* Set property NAME to VALUE on REV in FS, as part of TRAIL.  */

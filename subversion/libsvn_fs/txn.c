@@ -106,7 +106,7 @@ txn_body_begin_txn (void *baton,
   const char *txn_id;
 
   SVN_ERR (svn_fs__rev_get_root (&root_id, args->fs, args->rev, trail));
-  SVN_ERR (svn_fs__create_txn (&txn_id, args->fs, root_id, trail));
+  SVN_ERR (svn_fs__bdb_create_txn (&txn_id, args->fs, root_id, trail));
 
   *args->txn_p = make_txn (args->fs, txn_id, args->rev, trail->pool);
   return SVN_NO_ERROR;
@@ -222,7 +222,7 @@ txn_body_abort_txn (void *baton, trail_t *trail)
 
   /* Get the transaction by its id. */
   SVN_ERR (svn_fs_txn_name (&txn_id, txn, txn->pool));
-  SVN_ERR (svn_fs__get_txn (&fstxn, txn->fs, txn_id, trail));
+  SVN_ERR (svn_fs__bdb_get_txn (&fstxn, txn->fs, txn_id, trail));
 
   /* Delete the mutable portion of the tree hanging from the
      transaction. */
@@ -236,16 +236,16 @@ txn_body_abort_txn (void *baton, trail_t *trail)
       for (i = 0; i < fstxn->copies->nelts; i++)
         {
           const char *copy_id = APR_ARRAY_IDX (fstxn->copies, i, const char *);
-          SVN_ERR (svn_fs__delete_copy (txn->fs, copy_id, trail));
+          SVN_ERR (svn_fs__bdb_delete_copy (txn->fs, copy_id, trail));
         }
     }
 
   /* Remove any changes that were stored as part of this
      transactions. */
-  SVN_ERR (svn_fs__changes_delete (txn->fs, txn->id, trail));
+  SVN_ERR (svn_fs__bdb_changes_delete (txn->fs, txn->id, trail));
 
   /* Finally, delete the transaction itself. */
-  SVN_ERR (svn_fs__delete_txn (txn->fs, txn->id, trail));
+  SVN_ERR (svn_fs__bdb_delete_txn (txn->fs, txn->id, trail));
 
   return SVN_NO_ERROR;
 }
@@ -325,7 +325,7 @@ txn_body_list_transactions (void* baton,
                             trail_t *trail)
 {
   struct list_transactions_args *args = baton;
-  SVN_ERR (svn_fs__get_txn_list (args->names_p, args->fs, args->pool, trail));
+  SVN_ERR (svn_fs__bdb_get_txn_list (args->names_p, args->fs, args->pool, trail));
 
   return SVN_NO_ERROR;
 }

@@ -568,8 +568,8 @@ get_id_path (const char **path,
      appeared in.  Find the change whose node revision id is ID, and
      return the path associated with it.  If no such change exists,
      return the default value. */
-  SVN_ERR (svn_fs__changes_fetch (&changes, fs, 
-                                  svn_fs__id_txn_id (id), trail));
+  SVN_ERR (svn_fs__bdb_changes_fetch (&changes, fs, 
+                                      svn_fs__id_txn_id (id), trail));
   for (hi = apr_hash_first (trail->pool, changes); hi; hi = apr_hash_next (hi))
     {
       svn_fs_path_change_t *change;
@@ -643,7 +643,7 @@ choose_copy_id (copy_id_inherit_t *inherit_p,
      branch as its parent if the child itself is not a branch point,
      or if it is a branch point that we are accessing via its original
      copy destination path. */
-  SVN_ERR (svn_fs__get_copy (&copy, fs, child_copy_id, trail));
+  SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, child_copy_id, trail));
   if (svn_fs_compare_ids (copy->dst_noderev_id, child_id) == -1)
     return SVN_NO_ERROR;
 
@@ -713,7 +713,7 @@ make_path_mutable (svn_fs_root_t *root,
           break;
           
         case copy_id_inherit_new:
-          SVN_ERR (svn_fs__reserve_copy_id (&copy_id, fs, trail));
+          SVN_ERR (svn_fs__bdb_reserve_copy_id (&copy_id, fs, trail));
           break;
 
         case copy_id_inherit_self:
@@ -736,9 +736,9 @@ make_path_mutable (svn_fs_root_t *root,
       if (inherit == copy_id_inherit_new)
         {
           const svn_fs_id_t *new_node_id = svn_fs__dag_get_id (clone);
-          SVN_ERR (svn_fs__create_copy (copy_id, fs, copy_src_path, 
-                                        svn_fs__id_txn_id (node_id),
-                                        new_node_id, trail));
+          SVN_ERR (svn_fs__bdb_create_copy (copy_id, fs, copy_src_path, 
+                                            svn_fs__id_txn_id (node_id),
+                                            new_node_id, trail));
           SVN_ERR (svn_fs__add_txn_copy (fs, txn_id, copy_id, trail));
         }
     }
@@ -796,7 +796,7 @@ add_change (svn_fs_t *fs,
   change.kind = change_kind;
   change.text_mod = text_mod;
   change.prop_mod = prop_mod;
-  return svn_fs__changes_add (fs, txn_id, &change, trail);
+  return svn_fs__bdb_changes_add (fs, txn_id, &change, trail);
 }
 
 
@@ -1368,7 +1368,7 @@ deltify_if_mutable_under_txn_id (svn_fs_t *fs,
 
   /* Get the NODE and node revision for ID. */
   SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
-  SVN_ERR (svn_fs__get_node_revision (&noderev, fs, id, trail));
+  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, id, trail));
 
   /* If this is a directory, recurse on its entries. */
   if ((is_dir = svn_fs__dag_is_directory (node)))
@@ -1472,12 +1472,12 @@ update_ancestry (svn_fs_t *fs,
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "unexpected immutable node at \"%s\"", target_path);
-  SVN_ERR (svn_fs__get_node_revision (&noderev, fs, target_id, trail));
+  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, target_id, trail));
   noderev->predecessor_id = source_id;
   noderev->predecessor_count = source_pred_count;
   if (noderev->predecessor_count != -1)
     noderev->predecessor_count++;
-  return svn_fs__put_node_revision (fs, target_id, noderev, trail);
+  return svn_fs__bdb_put_node_revision (fs, target_id, noderev, trail);
 }
 
 
@@ -1495,7 +1495,7 @@ undelete_change (svn_fs_t *fs,
   path = svn_fs__canonicalize_abspath (path, trail->pool);
 
   /* First, get the changes associated with TXN_ID. */
-  SVN_ERR (svn_fs__changes_fetch (&changes, fs, txn_id, trail));
+  SVN_ERR (svn_fs__bdb_changes_fetch (&changes, fs, txn_id, trail));
   
   /* Now, do any of those changes apply to path and indicate deletion? */
   this_change = apr_hash_get (changes, path, APR_HASH_KEY_STRING);
@@ -1739,8 +1739,8 @@ merge (svn_stringbuf_t *conflict_p,
     svn_fs__node_revision_t *tgt_nr, *anc_nr;
 
     /* Get node revisions for our id's. */
-    SVN_ERR (svn_fs__get_node_revision (&tgt_nr, fs, target_id, trail));
-    SVN_ERR (svn_fs__get_node_revision (&anc_nr, fs, ancestor_id, trail));
+    SVN_ERR (svn_fs__bdb_get_node_revision (&tgt_nr, fs, target_id, trail));
+    SVN_ERR (svn_fs__bdb_get_node_revision (&anc_nr, fs, ancestor_id, trail));
         
     /* Now compare the prop-keys of the skels.  Note that just because
        the keys are different -doesn't- mean the proplists have
@@ -2196,7 +2196,7 @@ txn_body_commit (void *baton, trail_t *trail)
 
   /* Getting the youngest revision locks the revisions table until
      this trail is done. */
-  SVN_ERR (svn_fs__youngest_rev (&youngest_rev, fs, trail));
+  SVN_ERR (svn_fs__bdb_youngest_rev (&youngest_rev, fs, trail));
 
   /* If the root of the youngest revision is the same as txn's base,
      then no further merging is necessary and we can commit. */
@@ -3582,7 +3582,7 @@ txn_body_paths_changed (void *baton,
   else
     txn_id = svn_fs_txn_root_name (args->root, trail->pool);
 
-  return svn_fs__changes_fetch (&(args->changes), fs, txn_id, trail);
+  return svn_fs__bdb_changes_fetch (&(args->changes), fs, txn_id, trail);
 }
 
 

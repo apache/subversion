@@ -68,7 +68,7 @@ txn_body_undeltify (void *baton, trail_t *trail)
   struct undeltify_args *args = baton;
 
   /* Turn ID into a skel so we can get the rep keys. */
-  SVN_ERR (svn_fs__get_node_revision (&noderev, args->fs, args->id, trail));
+  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, args->fs, args->id, trail));
   
   /* Check that target exists.  If not, no big deal -- just do
      nothing. */

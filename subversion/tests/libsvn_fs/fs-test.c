@@ -1105,7 +1105,7 @@ txn_body_check_id (void *baton, trail_t *trail)
   svn_fs__node_revision_t *noderev;
   svn_error_t *err;
 
-  err = svn_fs__get_node_revision (&noderev, args->fs, args->id, trail);
+  err = svn_fs__bdb_get_node_revision (&noderev, args->fs, args->id, trail);
 
   if (err && (err->apr_err == SVN_ERR_FS_ID_NOT_FOUND))
     args->present = FALSE;

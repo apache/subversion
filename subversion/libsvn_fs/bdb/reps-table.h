@@ -34,7 +34,7 @@ extern "C" {
 /* Open a `representations' table in ENV.  If CREATE is non-zero,
    create one if it doesn't exist.  Set *REPS_P to the new table.
    Return a Berkeley DB error code.  */
-int svn_fs__open_reps_table (DB **reps_p, DB_ENV *env, int create);
+int svn_fs__bdb_open_reps_table (DB **reps_p, DB_ENV *env, int create);
 
 
 
@@ -45,33 +45,33 @@ int svn_fs__open_reps_table (DB **reps_p, DB_ENV *env, int create);
 
    If KEY is not a representation in FS, the error
    SVN_ERR_FS_NO_SUCH_REPRESENTATION is returned.  */
-svn_error_t *svn_fs__read_rep (svn_fs__representation_t **rep_p,
-                               svn_fs_t *fs,
-                               const char *key,
-                               trail_t *trail);
+svn_error_t *svn_fs__bdb_read_rep (svn_fs__representation_t **rep_p,
+                                   svn_fs_t *fs,
+                                   const char *key,
+                                   trail_t *trail);
 
 
 /* Store REP as the representation for KEY in FS, as part of
    TRAIL.  Do any necessary temporary allocation in TRAIL->pool.  */
-svn_error_t *svn_fs__write_rep (svn_fs_t *fs,
-                                const char *key,
-                                const svn_fs__representation_t *rep,
-                                trail_t *trail);
+svn_error_t *svn_fs__bdb_write_rep (svn_fs_t *fs,
+                                    const char *key,
+                                    const svn_fs__representation_t *rep,
+                                    trail_t *trail);
 
 
 /* Store REP as a new representation in FS, and the new rep's key in
    *KEY, as part of trail.  The new key is allocated in TRAIL->pool.  */
-svn_error_t *svn_fs__write_new_rep (const char **key,
-                                    svn_fs_t *fs,
-                                    const svn_fs__representation_t *rep,
-                                    trail_t *trail);
+svn_error_t *svn_fs__bdb_write_new_rep (const char **key,
+                                        svn_fs_t *fs,
+                                        const svn_fs__representation_t *rep,
+                                        trail_t *trail);
 
 /* Delete representation KEY from FS, as part of TRAIL.
    WARNING: This does not ensure that no one references this
    representation!  Callers should ensure that themselves.  */
-svn_error_t *svn_fs__delete_rep (svn_fs_t *fs,
-                                 const char *key,
-                                 trail_t *trail);
+svn_error_t *svn_fs__bdb_delete_rep (svn_fs_t *fs,
+                                     const char *key,
+                                     trail_t *trail);
 
 
 #ifdef __cplusplus

@@ -48,7 +48,7 @@ txn_body_write_new_rep (void *baton, trail_t *trail)
   struct rep_args *b = (struct rep_args *) baton;
   svn_fs__representation_t *rep;
   SVN_ERR (svn_fs__parse_representation_skel (&rep, b->skel, trail->pool));
-  return svn_fs__write_new_rep (&(b->key), b->fs, rep, trail);
+  return svn_fs__bdb_write_new_rep (&(b->key), b->fs, rep, trail);
 }
 
 
@@ -58,7 +58,7 @@ txn_body_write_rep (void *baton, trail_t *trail)
   struct rep_args *b = (struct rep_args *) baton;
   svn_fs__representation_t *rep;
   SVN_ERR (svn_fs__parse_representation_skel (&rep, b->skel, trail->pool));
-  return svn_fs__write_rep (b->fs, b->key, rep, trail);
+  return svn_fs__bdb_write_rep (b->fs, b->key, rep, trail);
 }
 
 
@@ -67,7 +67,7 @@ txn_body_read_rep (void *baton, trail_t *trail)
 {
   struct rep_args *b = (struct rep_args *) baton;
   svn_fs__representation_t *rep;
-  SVN_ERR (svn_fs__read_rep (&rep, b->fs, b->key, trail));
+  SVN_ERR (svn_fs__bdb_read_rep (&rep, b->fs, b->key, trail));
   return svn_fs__unparse_representation_skel (&(b->skel), rep, trail->pool);
 }
 
@@ -76,7 +76,7 @@ static svn_error_t *
 txn_body_delete_rep (void *baton, trail_t *trail)
 {
   struct rep_args *b = (struct rep_args *) baton;
-  return svn_fs__delete_rep (b->fs, b->key, trail);
+  return svn_fs__bdb_delete_rep (b->fs, b->key, trail);
 }
 
 
@@ -334,7 +334,7 @@ verify_expected_record (svn_fs_t *fs,
   apr_off_t offset = 0;
 
   /* Check the string size. */
-  SVN_ERR (svn_fs__string_size (&size, fs, key, trail));
+  SVN_ERR (svn_fs__bdb_string_size (&size, fs, key, trail));
   if (size != expected_len)
     return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
                               "record has unexpected size "
@@ -347,7 +347,7 @@ verify_expected_record (svn_fs_t *fs,
   while (1)
     {
       size = sizeof (buf);
-      SVN_ERR (svn_fs__string_read (fs, key, buf, offset, &size, trail));
+      SVN_ERR (svn_fs__bdb_string_read (fs, key, buf, offset, &size, trail));
       if (size == 0)
         break;
       svn_stringbuf_appendbytes (text, buf, size);
@@ -390,8 +390,8 @@ static svn_error_t *
 txn_body_string_append (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
-  return svn_fs__string_append (b->fs, &(b->key), b->len, 
-                                b->text, trail);
+  return svn_fs__bdb_string_append (b->fs, &(b->key), b->len, 
+                                    b->text, trail);
 }
 
 
@@ -399,7 +399,7 @@ static svn_error_t *
 txn_body_string_clear (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
-  return svn_fs__string_clear (b->fs, b->key, trail);
+  return svn_fs__bdb_string_clear (b->fs, b->key, trail);
 }
 
 
@@ -407,7 +407,7 @@ static svn_error_t *
 txn_body_string_delete (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
-  return svn_fs__string_delete (b->fs, b->key, trail);
+  return svn_fs__bdb_string_delete (b->fs, b->key, trail);
 }
 
 
@@ -415,7 +415,7 @@ static svn_error_t *
 txn_body_string_size (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
-  return svn_fs__string_size (&(b->len), b->fs, b->key, trail);
+  return svn_fs__bdb_string_size (&(b->len), b->fs, b->key, trail);
 }
 
 
@@ -423,8 +423,8 @@ static svn_error_t *
 txn_body_string_append_fail (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
-  SVN_ERR (svn_fs__string_append (b->fs, &(b->key), b->len, 
-                                  b->text, trail));
+  SVN_ERR (svn_fs__bdb_string_append (b->fs, &(b->key), b->len, 
+                                      b->text, trail));
   return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                            "la dee dah, la dee day...");
 }
@@ -433,7 +433,7 @@ static svn_error_t *
 txn_body_string_copy (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
-  return svn_fs__string_copy (b->fs, &(b->key), b->key, trail);
+  return svn_fs__bdb_string_copy (b->fs, &(b->key), b->key, trail);
 }
 
 

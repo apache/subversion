@@ -26,21 +26,22 @@
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../id.h"
+#include "bdb-err.h"
 #include "copies-table.h"
 #include "rev-table.h"
 
 
 int
-svn_fs__open_copies_table (DB **copies_p,
-                           DB_ENV *env,
-                           int create)
+svn_fs__bdb_open_copies_table (DB **copies_p,
+                               DB_ENV *env,
+                               int create)
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *copies;
 
-  DB_ERR (svn_bdb__check_version());
-  DB_ERR (db_create (&copies, env, 0));
-  DB_ERR (copies->open (SVN_BDB_OPEN_PARAMS(copies, NULL),
+  BDB_ERR (svn_fs__bdb_check_version());
+  BDB_ERR (db_create (&copies, env, 0));
+  BDB_ERR (copies->open (SVN_BDB_OPEN_PARAMS(copies, NULL),
                         "copies", 0, DB_BTREE,
                         open_flags | SVN_BDB_AUTO_COMMIT,
                         0666));
@@ -49,7 +50,7 @@ svn_fs__open_copies_table (DB **copies_p,
   if (create)
   {
     DBT key, value;
-    DB_ERR (copies->put (copies, 0,
+    BDB_ERR (copies->put (copies, 0,
                          svn_fs__str_to_dbt (&key, 
                                              (char *) svn_fs__next_key_key),
                          svn_fs__str_to_dbt (&value, (char *) "0"),
@@ -79,7 +80,7 @@ put_copy (svn_fs_t *fs,
      will not attempt to modify COPY_ID, so the cast belongs here.  */
   svn_fs__str_to_dbt (&key, (char *) copy_id);
   svn_fs__skel_to_dbt (&value, copy_skel, trail->pool);
-  SVN_ERR (DB_WRAP (fs, "storing copy record",
+  SVN_ERR (BDB_WRAP (fs, "storing copy record",
                     fs->copies->put (fs->copies, trail->db_txn,
                                      &key, &value, 0)));
 
@@ -88,9 +89,9 @@ put_copy (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__reserve_copy_id (const char **id_p,
-                         svn_fs_t *fs,
-                         trail_t *trail)
+svn_fs__bdb_reserve_copy_id (const char **id_p,
+                             svn_fs_t *fs,
+                             trail_t *trail)
 {
   DBT query, result;
   apr_size_t len;
@@ -101,7 +102,7 @@ svn_fs__reserve_copy_id (const char **id_p,
 
   /* Get the current value associated with the `next-id' key in the
      copies table.  */
-  SVN_ERR (DB_WRAP (fs, "allocating new copy ID (getting `next-key')",
+  SVN_ERR (BDB_WRAP (fs, "allocating new copy ID (getting `next-key')",
                     fs->copies->get (fs->copies, trail->db_txn,
                                      &query, svn_fs__result_dbt (&result), 
                                      0)));
@@ -119,18 +120,18 @@ svn_fs__reserve_copy_id (const char **id_p,
                             svn_fs__str_to_dbt (&result, (char *) next_key), 
                             0);
 
-  SVN_ERR (DB_WRAP (fs, "bumping next copy key", db_err));
+  SVN_ERR (BDB_WRAP (fs, "bumping next copy key", db_err));
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_fs__create_copy (const char *copy_id,
-                     svn_fs_t *fs,
-                     const char *src_path,
-                     const char *src_txn_id,
-                     const svn_fs_id_t *dst_noderev_id,
-                     trail_t *trail)
+svn_fs__bdb_create_copy (const char *copy_id,
+                         svn_fs_t *fs,
+                         const char *src_path,
+                         const char *src_txn_id,
+                         const svn_fs_id_t *dst_noderev_id,
+                         trail_t *trail)
 {
   svn_fs__copy_t copy;
   copy.src_path = src_path;
@@ -141,23 +142,23 @@ svn_fs__create_copy (const char *copy_id,
 
 
 svn_error_t *
-svn_fs__delete_copy (svn_fs_t *fs,
-                     const char *copy_id,
-                     trail_t *trail)
+svn_fs__bdb_delete_copy (svn_fs_t *fs,
+                         const char *copy_id,
+                         trail_t *trail)
 {
   DBT key;
 
   svn_fs__str_to_dbt (&key, (char *) copy_id);
-  return DB_WRAP (fs, "deleting entry from `copies' table",
+  return BDB_WRAP (fs, "deleting entry from `copies' table",
                   fs->copies->del (fs->copies, trail->db_txn, &key, 0));
 }
 
 
 svn_error_t *
-svn_fs__get_copy (svn_fs__copy_t **copy_p,
-                  svn_fs_t *fs,
-                  const char *copy_id,
-                  trail_t *trail)
+svn_fs__bdb_get_copy (svn_fs__copy_t **copy_p,
+                      svn_fs_t *fs,
+                      const char *copy_id,
+                      trail_t *trail)
 {
   DBT key, value;
   int db_err;
@@ -174,7 +175,7 @@ svn_fs__get_copy (svn_fs__copy_t **copy_p,
 
   if (db_err == DB_NOTFOUND)
     return svn_fs__err_no_such_copy (fs, copy_id);
-  SVN_ERR (DB_WRAP (fs, "reading copy", db_err));
+  SVN_ERR (BDB_WRAP (fs, "reading copy", db_err));
 
   /* Unparse COPY skel */
   skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
