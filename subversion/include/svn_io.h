@@ -213,6 +213,10 @@ svn_error_t *svn_stream_write (svn_stream_t *stream, const char *data,
 
 svn_error_t *svn_stream_close (svn_stream_t *stream);
 
+svn_error_t *svn_string_from_file (svn_string_t **result, 
+                                   const char *filename, 
+                                   apr_pool_t *pool);
+
 
 #endif /* SVN_IO_H */
 

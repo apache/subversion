@@ -563,7 +563,54 @@ svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool)
   return stream;
 }
 
+
+/* TODO write test for this, then refactor. */
+/* Read the contents of FILENAME into *RESULT. */
+svn_error_t *
+svn_string_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
+{
+  /* ### this function must be fixed to do an apr_stat() for SIZE,
+     ### alloc the buffer, then read the file into the buffer. Using
+     ### an svn_string_t means quadratic memory usage: start with
+     ### BUFSIZE, allocate 2*BUFSIZE, then alloc 4*BUFSIZE, etc.
+     ### The pools keep each of those allocs around. */
 
+  svn_string_t *res;
+  apr_status_t apr_err;
+  char buf[BUFSIZ];
+  apr_size_t len;
+  apr_file_t *f = NULL;
+
+  res = svn_string_create ("", pool);
+
+  apr_err = apr_file_open (&f, filename, APR_READ, APR_OS_DEFAULT, pool);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "read_from_file: failed to open '%s'",
+                              filename);
+      
+  do {
+    apr_err = apr_file_read_full (f, buf, sizeof(buf), &len);
+    if (apr_err && !APR_STATUS_IS_EOF (apr_err))
+      return svn_error_createf (apr_err, 0, NULL, pool,
+                                "read_from_file: failed to read '%s'",
+                                filename);
+    
+    svn_string_appendbytes (res, buf, len);
+  } while (len != 0);
+
+  apr_err = apr_file_close (f);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "read_from_file: failed to close '%s'",
+                              filename);
+  
+  *result = res;
+  return SVN_NO_ERROR;
+}
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
