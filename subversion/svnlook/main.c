@@ -640,7 +640,7 @@ generate_label (const char **label,
 
   if (svn_fs_is_revision_root (root))
     {
-      rev = svn_fs_root_revision (root);
+      rev = svn_fs_revision_root_revision (root);
       SVN_ERR (svn_fs_revision_prop (&date, fs, rev, 
                                      SVN_PROP_REVISION_DATE, pool));
     }

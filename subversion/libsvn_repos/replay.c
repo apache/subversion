@@ -98,37 +98,6 @@
 /*** Helper functions. ***/
 
 
-static svn_revnum_t 
-get_path_revision (svn_fs_root_t *root,
-                   const char *path,
-                   apr_pool_t *pool)
-{
-  svn_revnum_t revision;
-  svn_error_t *err;
-
-  /* Easy out -- if ROOT is a revision root, we can use the revision
-     that it's a root of. */
-  if (svn_fs_is_revision_root (root))
-    return svn_fs_root_revision (root);
-
-  /* Else, this must be a transaction root, so ask the filesystem in
-     what revision this path was created. */
-  if ((err = svn_fs_node_created_rev (&revision, root, path, pool)))
-    {
-      revision = SVN_INVALID_REVNUM;
-      svn_error_clear (err);
-    }
-
-  /* If we don't get back a valid revision, this path is mutable in
-     the transaction.  We should probably examing the node on which it
-     is based, doable by querying for the node-id of the path, and
-     thing examining that node-id's predecessor.  ### this predecessor
-     determination isn't exposed via the FS public API right now, so
-     for now, we'll just return the SVN_INVALID_REVNUM. */
-  return revision;
-}
-
-
 struct path_driver_cb_baton
 {
   const svn_delta_editor_t *editor;
@@ -179,10 +148,8 @@ path_driver_cb_func (void **dir_baton,
 
   /* Handle any deletions. */
   if (do_delete)
-    {
-      svn_revnum_t rev = get_path_revision (root, path, pool);
-      SVN_ERR (editor->delete_entry (path, rev, parent_baton, pool));
-    }
+    SVN_ERR (editor->delete_entry (path, SVN_INVALID_REVNUM, 
+                                   parent_baton, pool));
 
   /* Fetch the node kind if it makes sense to do so. */
   if (! do_delete || do_add)
@@ -220,25 +187,25 @@ path_driver_cb_func (void **dir_baton,
     }
   else if (! do_delete)
     {
-      svn_revnum_t rev = get_path_revision (root, path, pool);
-
       /* Do the right thing based on the path KIND (and the presence
          of a PARENT_BATON). */
       if (kind == svn_node_dir)
         {
           if (parent_baton)
             {
-              SVN_ERR (editor->open_directory (path, parent_baton, rev,
+              SVN_ERR (editor->open_directory (path, parent_baton, 
+                                               SVN_INVALID_REVNUM,
                                                pool, dir_baton));
             }
           else
             {
-              SVN_ERR (editor->open_root (edit_baton, rev, pool, dir_baton));
+              SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, 
+                                          pool, dir_baton));
             }
         }
       else
         {
-          SVN_ERR (editor->open_file (path, parent_baton, rev,
+          SVN_ERR (editor->open_file (path, parent_baton, SVN_INVALID_REVNUM,
                                       pool, &file_baton));
         }
     }
@@ -289,7 +256,6 @@ svn_repos_replay (svn_fs_root_t *root,
   apr_hash_index_t *hi;
   apr_array_header_t *paths;
   struct path_driver_cb_baton cb_baton;
-  svn_revnum_t revision;
 
   /* Fetch the paths changed under ROOT. */
   SVN_ERR (svn_fs_paths_changed (&fs_changes, root, pool));
@@ -327,13 +293,15 @@ svn_repos_replay (svn_fs_root_t *root,
     
   /* Determine the revision to use throughout the edit, and call
      EDITOR's set_target_revision() function.  */
-  revision = svn_fs_root_revision (root);
-  SVN_ERR (editor->set_target_revision (edit_baton, revision, pool));
-  if (svn_fs_is_txn_root (root))
-    revision = SVN_INVALID_REVNUM;
+  if (svn_fs_is_revision_root (root))
+    {
+      svn_revnum_t revision = svn_fs_revision_root_revision (root);
+      SVN_ERR (editor->set_target_revision (edit_baton, revision, pool));
+    }
 
   /* Call the path-based editor driver. */
-  SVN_ERR (svn_delta_path_driver (editor, edit_baton, revision, paths, 
+  SVN_ERR (svn_delta_path_driver (editor, edit_baton, 
+                                  SVN_INVALID_REVNUM, paths, 
                                   path_driver_cb_func, &cb_baton, pool));
   
   return SVN_NO_ERROR;

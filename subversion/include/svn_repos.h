@@ -336,6 +336,10 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
  * apply_textdelta() functions will not contain meaningful data, and
  * merely serve as indications that properties or textual contents
  * were changed. 
+ *
+ * NOTE: this editor driver passes SVN_INVALID_REVNUM for all
+ * revision parameters in the editor interface except the copyfrom
+ * parameter of the add_file() and add_directory() editor functions.
  */
 svn_error_t *
 svn_repos_replay (svn_fs_root_t *root,

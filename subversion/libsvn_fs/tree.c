@@ -155,21 +155,16 @@ make_revision_root (svn_fs_t *fs,
 
 /* Construct a root object referring to the root of the transaction
    named TXN in FS.  Create the new root in POOL.  */
-static svn_error_t *
-make_txn_root (svn_fs_root_t **root_p,
-               svn_fs_t *fs,
-               const char *txn_name,
+static svn_fs_root_t *
+make_txn_root (svn_fs_t *fs,
+               const char *txn,
                apr_pool_t *pool)
 {
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *root;
-  SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name, pool));
-  root = make_root (fs, pool);
+  svn_fs_root_t *root = make_root (fs, pool);
   root->kind = transaction_root;
-  root->txn = apr_pstrdup (root->pool, txn_name);
-  root->rev = svn_fs_txn_base_revision (txn);
-  *root_p = root;
-  return svn_fs_close_txn (txn);
+  root->txn = apr_pstrdup (root->pool, txn);
+
+  return root;
 }
 
 
@@ -273,9 +268,12 @@ svn_fs_txn_root_name (svn_fs_root_t *root,
 
 
 svn_revnum_t
-svn_fs_root_revision (svn_fs_root_t *root)
+svn_fs_revision_root_revision (svn_fs_root_t *root)
 {
-  return root->rev;
+  if (root->kind == revision_root)
+    return root->rev;
+  else
+    return SVN_INVALID_REVNUM;
 }
 
 
@@ -2744,7 +2742,7 @@ txn_body_copy (void *baton,
                                  to_parent_path->entry,
                                  from_parent_path->node,
                                  args->preserve_history,
-                                 svn_fs_root_revision (from_root),
+                                 svn_fs_revision_root_revision (from_root),
                                  from_path, txn_id, trail));
 
       /* Make a record of this modification in the changes table. */
@@ -3717,7 +3715,7 @@ txn_body_paths_changed (void *baton,
   /* Get the transaction ID from ROOT. */
   if (svn_fs_is_revision_root (args->root))
     SVN_ERR (svn_fs__rev_get_txn_id 
-             (&txn_id, fs, svn_fs_root_revision (args->root), trail));
+             (&txn_id, fs, svn_fs_revision_root_revision (args->root), trail));
   else
     txn_id = svn_fs_txn_root_name (args->root, trail->pool);
 
@@ -3757,11 +3755,18 @@ txn_body_txn_root (void *baton,
 {
   struct txn_root_args *args = baton;
   svn_fs_root_t **root_p = args->root_p;
+  svn_fs_txn_t *txn = args->txn;
+  svn_fs_t *fs = svn_fs_txn_fs (txn);
+  const char *svn_txn_id = svn_fs__txn_id (txn);
+  const svn_fs_id_t *root_id, *base_root_id;
   svn_fs_root_t *root;
 
-  /* Make the root (doubles as an existence check, too). */
-  SVN_ERR (make_txn_root (&root, svn_fs_txn_fs (args->txn), 
-                          svn_fs__txn_id (args->txn), trail->pool));
+  /* Verify that the transaction actually exists.  */
+  SVN_ERR (svn_fs__get_txn_ids (&root_id, &base_root_id, fs, 
+                                svn_txn_id, trail));
+
+  root = make_txn_root (fs, svn_txn_id, trail->pool);
+
   *root_p = root;
   return SVN_NO_ERROR;
 }
