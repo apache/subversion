@@ -1,0 +1,39 @@
+
+# Repository-specific security definitions for Subversion.
+
+########### Section 1:  Username mappings ##########################
+
+# subversion_username:  real_name:  username/auth_method/domain
+
+
+jimb : Jim Blandy :   jimb/unix/localhost,  
+                      jimb/smtp/jimb@red-bean.com, \
+                      jimb/kerberos/redhat.com, 
+                      jimb/DAV/red-bean.com
+       
+jim : Jim Beelzebub : jimb/kerberos/microsoft.com, \
+                      jimb/ssh/inferno.net
+       
+kfogel : Karl Fogel : kfogel/joist
+
+
+########### Section 2:  Role Definitions ############################
+
+# role_name: list of permitted actions
+
+visitor : checkout update
+hacker : checkout update commit
+core-programmer : checkout update commit add rm mv
+nitpicker : checkout update annotate
+admin : checkout update commit add rm mv import
+god : all
+
+
+########### Section 3:  Role mappings ################################
+
+# subversion_username : role1 path1 : role2 path2 : ....
+
+joe : visitor /trunk/gnome : nitpicker /trunk/foo
+kfogel : admin /trunk/subversion
+zeke : hacker /trunk/comp-tools : visitor /trunk/comp-tools/gdb
+
