@@ -78,13 +78,6 @@ section for approved changes.)
            Message-Id:  <200401082033.i08KXMv45357@newton.ch.collab.net>
 
 
-   * Set SVN_VER_MINOR to 36 in svn_version.h
-   Justification: We're about to release 0.36 from this branch.
-   Notes: patch too obvious to be worth filing an issue
-   Votes:
-    +1: kfogel
-
-
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
