@@ -58,8 +58,8 @@ del_lines_res = [
                  re.compile(r'\s+compiled\s+'),
 
                  # Also for 'svn --version':
-                 re.compile(r"^\* ra_(dav|local|svn) :"),
-                 re.compile(r"^  - handles '(https|file|svn)' schema"),
+                 re.compile(r"\* ra_(dav|local|svn) :"),
+                 re.compile(r"  - handles '(https?|file|svn)' schema"),
                 ]
 
 # This is a list of lines to search and replace text on.
@@ -81,7 +81,7 @@ def process_lines(lines):
     # Skip these lines from the output list.
     delete_line = 0
     for delete_re in del_lines_res:
-      if delete_re.search(line, 1):
+      if delete_re.match(line):
         delete_line = 1
         break
     if delete_line:
@@ -115,14 +115,26 @@ def run_one_test(sbox, basename, *varargs):
 
   if exp_stdout != actual_stdout:
     print "Standard output does not match."
-    print "Expected standard output:\n", exp_stdout, "\n"
-    print "Actual standard output:\n", actual_stdout, "\n"
+    print "Expected standard output:"
+    print "====="
+    map(sys.stdout.write, exp_stdout)
+    print "====="
+    print "Actual standard output:"
+    print "====="
+    map(sys.stdout.write, actual_stdout)
+    print "====="
     return 1
 
   if exp_stderr != actual_stderr:
     print "Standard error does not match."
-    print "Expected standard output:\n", exp_stderr, "\n"
-    print "Actual standard output:\n", actual_stderr, "\n"
+    print "Expected standard error:"
+    print "====="
+    map(sys.stdout.write, exp_stderr)
+    print "====="
+    print "Actual standard error:"
+    print "====="
+    map(sys.stdout.write, actual_stderr)
+    print "====="
     return 1
 
   return 0
