@@ -435,14 +435,15 @@ Changed paths:
 ------------------------------------------------------------------------
 </screen>
 
-      <para>Sally sees her own revision 344 change, but not the change
-      you made in revision 343.  As far as Subversion is concerned,
-      these two commits affected different files in different
-      repository locations.  However, Subversion
-      <emphasis>does</emphasis> show that the two files share a common
-      history.  Before the branch-copy was made in revision 341, they
-      used to be the same file.  That's why you and Sally both see
-      the changes made in revisions 303 and 98.</para>
+      <para>Sally ve su propio cambio de la revisión 344, pero no
+        el cambio realizado en la revisión 343. Desde el punto de
+        vista de Subversion, estos dos cambios afectaron ficheros
+        diferentes en distintos lugares del repositorio. No obstante,
+        Subversion <emphasis>muestra</emphasis> que ambos ficheros
+        comparten una historia común.  Antes de que la rama fuese
+        creada en la revisión 341, ambos eran el mismo fichero. Por
+        esta razón tanto usted como Sally ven los cambios realizados
+        en las revisiones 303 y 98.</para>
 
     </sect2>
 
