@@ -20,6 +20,7 @@
 
 #include <apr_general.h>
 #include <apr_lib.h>
+#include <assert.h>
 
 #include "svn_delta.h"
 #include "svn_error.h"
@@ -185,7 +186,6 @@ main (int argc, char **argv)
 
       for (count_AB = 0; count_AB < count_B; ++count_AB)
         {
-          svn_txdelta__compose_ctx_t context = { 0 };
           svn_error_t *err;
 
           err = svn_txdelta_next_window (&window_A, stream_A, wpool);
@@ -197,14 +197,15 @@ main (int argc, char **argv)
 
           /* Note: It's not possible that window_B is null, we already
              counted the number of windows in the second delta. */
-          window_AB =
-            svn_txdelta__compose_windows (window_A, window_B, &context, wpool);
-          if (!window_AB && context.use_second)
+          assert(window_A != NULL || window_B->src_ops == 0);
+          if (window_B->src_ops == 0)
             {
               window_AB = window_B;
-              window_AB->sview_offset = context.sview_offset;
-              window_AB->sview_len = context.sview_len;
+              window_AB->sview_len = 0;
             }
+          else
+            window_AB = svn_txdelta__compose_windows (window_A, window_B,
+                                                      wpool);
           len_AB += print_delta_window (window_AB, "AB", quiet, stdout);
           svn_pool_clear (wpool);
         }
