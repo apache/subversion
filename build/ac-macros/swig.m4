@@ -108,6 +108,8 @@ AC_DEFUN(SVN_FIND_SWIG,
       SWIG_LIBSWIG_DIR="$ac_cv_swig_swiglib_dir"
     fi
     
+    SWIG_PY_COMPILE="none"
+    SWIG_PY_LINK="none"
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes"; then
       AC_MSG_NOTICE([Configuring python swig binding])
       AC_CACHE_CHECK([if swig needs -L for its libraries],
@@ -194,6 +196,8 @@ AC_DEFUN(SVN_FIND_SWIG,
       fi
     fi
 
+    SWIG_RB_COMPILE="none"
+    SWIG_RB_LINK="none"
     if test "$RUBY" != "none" -a \
         "$SWIG_SUITABLE" = "yes" -a \
         "$SWIG_VERSION" -ge "103024"; then
