@@ -810,6 +810,12 @@ svn_path_is_uri_safe (const char *path)
   /* Skip to the first slash that's after the schema. */
   path = strchr (path, '/');
 
+  /* If there's no first slash, then there's only a host portion;
+     therefore there couldn't be any uri-unsafe characters after the
+     host... so return true. */
+  if (path == NULL)
+    return TRUE;
+
   for (i = 0; path[i]; i++)
     {
       /* Allow '%XX' (where each X is a hex digit) */
