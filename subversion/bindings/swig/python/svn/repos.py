@@ -1,6 +1,9 @@
 #
-# repos.py : various utilities for interacting with the _repos module
+# repos.py: public Python interface for repos components
 #
+# Subversion is a tool for revision control. 
+# See http://subversion.tigris.org for more information.
+#    
 ######################################################################
 #
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -12,7 +15,6 @@
 # newer version instead, at your option.
 #
 ######################################################################
-#
 
 ### hide these names?
 import string
