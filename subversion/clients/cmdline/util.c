@@ -135,7 +135,7 @@ svn_cl__parse_all_args (apr_array_header_t **args_p,
    If no "@" is found, set *TRUEPATH to PATH and *REV to kind 'unspecified'.
 */
 static svn_error_t *
-parse_path (svn_client_revision_t *rev,
+parse_path (svn_opt_revision_t *rev,
             const char **truepath,
             const char *path /* UTF-8! */,
             apr_pool_t *pool)
@@ -155,7 +155,9 @@ parse_path (svn_client_revision_t *rev,
           SVN_ERR (svn_utf_cstring_from_utf8 (&native_rev, path + i + 1,
                                               subpool));
 
-          if (svn_cl__parse_revision (os, native_rev, subpool))
+          if (svn_opt_parse_revision (&(os->start_revision),
+                                      &(os->end_revision),
+                                      native_rev, subpool))
             return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR,
                                       0, NULL, subpool,
                                       "Syntax error parsing revision \"%s\"",
@@ -172,7 +174,7 @@ parse_path (svn_client_revision_t *rev,
 
   /* Didn't find an @-sign. */
   *truepath = path;
-  rev->kind = svn_client_revision_unspecified;
+  rev->kind = svn_opt_revision_unspecified;
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -187,7 +189,7 @@ svn_cl__args_to_target_array (apr_array_header_t **targets_p,
                               apr_pool_t *pool)
 {
   int i;
-  svn_client_revision_t *firstrev = NULL, *secondrev = NULL;
+  svn_opt_revision_t *firstrev = NULL, *secondrev = NULL;
    apr_array_header_t *input_targets =
     apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (const char *));
   apr_array_header_t *output_targets =
@@ -289,12 +291,12 @@ svn_cl__args_to_target_array (apr_array_header_t **targets_p,
       for (i = 0; i < output_targets->nelts; i++)
         {
           const char *truepath;
-          svn_client_revision_t temprev; 
+          svn_opt_revision_t temprev; 
           const char *path = ((const char **) (output_targets->elts))[i];
 
           parse_path (&temprev, &truepath, path, pool);
 
-          if (temprev.kind != svn_client_revision_unspecified)
+          if (temprev.kind != svn_opt_revision_unspecified)
             {
               ((const char **) (output_targets->elts))[i] = truepath;
 

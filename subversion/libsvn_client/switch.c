@@ -52,7 +52,7 @@ svn_error_t *
 svn_client_switch (svn_client_auth_baton_t *auth_baton,
                    const char *path,
                    const char *switch_url,
-                   const svn_client_revision_t *revision,
+                   const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
@@ -113,7 +113,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
 
   /* Get revnum set to something meaningful, so we can fetch the
      switch editor. */
-  if (revision->kind == svn_client_revision_number)
+  if (revision->kind == svn_opt_revision_number)
     revnum = revision->value.number; /* do the trivial conversion manually */
   else
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */

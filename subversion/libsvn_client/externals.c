@@ -51,9 +51,9 @@ struct external_item
   const char *url;
 
   /* What revision to check out.  The only valid kinds for this are
-     svn_client_revision_number, svn_client_revision_date, and
-     svn_client_revision_head. */
-  svn_client_revision_t revision;
+     svn_opt_revision_number, svn_opt_revision_date, and
+     svn_opt_revision_head. */
+  svn_opt_revision_t revision;
 };
 
 
@@ -104,7 +104,7 @@ parse_externals_description (apr_hash_t **externals_p,
           /* No "-r REV" given. */
           item->target_dir = APR_ARRAY_IDX (line_parts, 0, const char *);
           item->url = APR_ARRAY_IDX (line_parts, 1, const char *);
-          item->revision.kind = svn_client_revision_head;
+          item->revision.kind = svn_opt_revision_head;
         }
       else if ((line_parts->nelts == 3) || (line_parts->nelts == 4))
         {
@@ -119,7 +119,7 @@ parse_externals_description (apr_hash_t **externals_p,
           const char *r_part_1 = NULL, *r_part_2 = NULL;
 
           item->target_dir = APR_ARRAY_IDX (line_parts, 0, const char *);
-          item->revision.kind = svn_client_revision_number;
+          item->revision.kind = svn_opt_revision_number;
 
           if (line_parts->nelts == 3)
             {

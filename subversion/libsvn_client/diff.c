@@ -287,7 +287,7 @@ struct merge_cmd_baton {
   svn_boolean_t force;
   const char *target;
   const char *path;
-  const svn_client_revision_t *revision;
+  const svn_opt_revision_t *revision;
   svn_client_auth_baton_t *auth_baton;
   apr_pool_t *pool;
 };
@@ -651,9 +651,9 @@ do_merge (svn_wc_notify_func_t notify_func,
           void *notify_baton,
           svn_client_auth_baton_t *auth_baton,
           const char *path1,
-          const svn_client_revision_t *revision1,
+          const svn_opt_revision_t *revision1,
           const char *path2,
-          const svn_client_revision_t *revision2,
+          const svn_opt_revision_t *revision2,
           const char *target_wcpath,
           svn_wc_adm_access_t *adm_access,
           svn_boolean_t recurse,
@@ -672,8 +672,8 @@ do_merge (svn_wc_notify_func_t notify_func,
   void *diff_edit_baton, *new_diff_edit_baton;
 
   /* Sanity check -- ensure that we have valid revisions to look at. */
-  if ((revision1->kind == svn_client_revision_unspecified)
-      || (revision2->kind == svn_client_revision_unspecified))
+  if ((revision1->kind == svn_opt_revision_unspecified)
+      || (revision2->kind == svn_opt_revision_unspecified))
     {
       return svn_error_create
         (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
@@ -750,9 +750,9 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
                       void *notify_baton,
                       svn_client_auth_baton_t *auth_baton,
                       const char *path1,
-                      const svn_client_revision_t *revision1,
+                      const svn_opt_revision_t *revision1,
                       const char *path2,
-                      const svn_client_revision_t *revision2,
+                      const svn_opt_revision_t *revision2,
                       const char *target_wcpath,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
@@ -919,9 +919,9 @@ static svn_error_t *
 do_diff (const apr_array_header_t *options,
          svn_client_auth_baton_t *auth_baton,
          const char *path1,
-         const svn_client_revision_t *revision1,
+         const svn_opt_revision_t *revision1,
          const char *path2,
-         const svn_client_revision_t *revision2,
+         const svn_opt_revision_t *revision2,
          svn_boolean_t recurse,
          const svn_wc_diff_callbacks_t *callbacks,
          void *callback_baton,
@@ -937,14 +937,14 @@ do_diff (const apr_array_header_t *options,
   void *diff_edit_baton;
 
   /* Sanity check -- ensure that we have valid revisions to look at. */
-  if ((revision1->kind == svn_client_revision_unspecified)
-      || (revision2->kind == svn_client_revision_unspecified))
+  if ((revision1->kind == svn_opt_revision_unspecified)
+      || (revision2->kind == svn_opt_revision_unspecified))
     return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
                              "do_diff: not all revisions are specified.");
 
   /* The simplest use-case.  No repository contact required. */
-  if ((revision1->kind == svn_client_revision_base)
-      && (revision2->kind == svn_client_revision_working))
+  if ((revision1->kind == svn_opt_revision_base)
+      && (revision2->kind == svn_opt_revision_working))
     {
       svn_wc_adm_access_t *adm_access;
       /* Sanity check -- path1 and path2 are the same working-copy path. */
@@ -968,9 +968,9 @@ do_diff (const apr_array_header_t *options,
     }
 
   /* Next use-case:  some repos-revision compared against wcpath@WORKING */
-  else if ((revision2->kind == svn_client_revision_working)
-           && (revision1->kind != svn_client_revision_working)
-           && (revision1->kind != svn_client_revision_base))
+  else if ((revision2->kind == svn_opt_revision_working)
+           && (revision1->kind != svn_opt_revision_working)
+           && (revision1->kind != svn_opt_revision_base))
     {
       const char *URL1;
       const char *url_anchor, *url_target;
@@ -1049,10 +1049,10 @@ do_diff (const apr_array_header_t *options,
   
   /* Last use-case:  comparing path1@rev1 and path2@rev2, where both revs
      require repository contact.  */
-  else if ((revision2->kind != svn_client_revision_working)
-           && (revision2->kind != svn_client_revision_base)
-           && (revision1->kind != svn_client_revision_working)
-           && (revision1->kind != svn_client_revision_base))
+  else if ((revision2->kind != svn_opt_revision_working)
+           && (revision2->kind != svn_opt_revision_base)
+           && (revision1->kind != svn_opt_revision_working)
+           && (revision1->kind != svn_opt_revision_base))
     {
       const svn_delta_editor_t *new_diff_editor;
       void *new_diff_edit_baton;
@@ -1255,9 +1255,9 @@ svn_error_t *
 svn_client_diff (const apr_array_header_t *options,
                  svn_client_auth_baton_t *auth_baton,
                  const char *path1,
-                 const svn_client_revision_t *revision1,
+                 const svn_opt_revision_t *revision1,
                  const char *path2,
-                 const svn_client_revision_t *revision2,
+                 const svn_opt_revision_t *revision2,
                  svn_boolean_t recurse,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
@@ -1285,9 +1285,9 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
                   void *notify_baton,
                   svn_client_auth_baton_t *auth_baton,
                   const char *path1,
-                  const svn_client_revision_t *revision1,
+                  const svn_opt_revision_t *revision1,
                   const char *path2,
-                  const svn_client_revision_t *revision2,
+                  const svn_opt_revision_t *revision2,
                   const char *target_wcpath,
                   svn_boolean_t recurse,
                   svn_boolean_t force,

@@ -30,6 +30,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
+#include "svn_opt.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,7 +43,7 @@ extern "C" {
    option. Options that have both long and short options should just
    use the short option letter as identifier.  */
 typedef enum {
-  svn_cl__xml_file_opt = 256,
+  svn_cl__xml_file_opt = SVN_OPT_FIRST_LONGOPT_ID,
   svn_cl__ancestor_path_opt,
   svn_cl__force_opt,
   svn_cl__msg_encoding_opt,
@@ -66,8 +67,8 @@ typedef struct svn_cl__opt_state_t
 {
   /* These get set as a result of revisions or dates being specified.
      When only one revision is given, it's start_revision, and
-     end_revision remains `svn_client_revision_unspecified'. */
-  svn_client_revision_t start_revision, end_revision;
+     end_revision remains `svn_opt_revision_unspecified'. */
+  svn_opt_revision_t start_revision, end_revision;
 
   /* Note: these next two flags only reflect switches given on the
      commandline.  For example, 'svn up' (with no options) will *not*
@@ -96,26 +97,8 @@ typedef struct svn_cl__opt_state_t
 } svn_cl__opt_state_t;
 
 
-/* All client command procedures conform to this prototype.  OPT_STATE
- * likewise should hold the result of processing the options.  OS is a
- * list of filenames and directories, a-la CVS (which really only
- * becomes useful if you pass it into svn_cl__args_to_target_array()
- * to convert OS to an APR arra of svn_stringbuf_t * targets).
- *
- * TARGETS is normalized by main before being passed to any command
- * (with the exception of svn_cl__help, which will oftentime be passed
- * an empty array of targets. That is, all duplicates are removed, and
- * all paths are made relative to the working copy root directory). */
-typedef svn_error_t *(svn_cl__cmd_proc_t) (apr_getopt_t *os,
-                                           svn_cl__opt_state_t *opt_state,
-                                           apr_pool_t *pool);
-
-
-
-
-
 /* Declare all the command procedures */
-svn_cl__cmd_proc_t
+svn_opt_subcommand_t
   svn_cl__add,
   svn_cl__checkout,
   svn_cl__cleanup,
@@ -144,9 +127,15 @@ svn_cl__cmd_proc_t
   svn_cl__update;
 
 
-/* Print a generic (non-command-specific) usage message. */
-void
-svn_cl__print_generic_help (apr_pool_t *pool, FILE *stream);
+/* See definition in main.c for documentation. */
+extern const svn_opt_subcommand_desc_t svn_cl__cmd_table[];
+
+/* See definition in main.c for documentation. */
+extern const apr_getopt_option_t svn_cl__options[];
+
+/* Header and footer text for svn_opt_print_generic_help. */
+extern const char svn_cl__help_header[];
+extern const char svn_cl__help_footer[];
 
 
 /* Print out commit information found in COMMIT_INFO to the console. */
@@ -155,13 +144,6 @@ svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
 
 
 /*** Miscellaneous utility commands ***/
-
-/* Look up CODE in OPTION_TABLE.   If any option in the table has this
-   enum code, return a pointer to the option.  Else return NULL. */
-const apr_getopt_option_t *
-svn_cl__get_option_from_enum (int code,
-                              const apr_getopt_option_t *option_table);
-
 
 void svn_cl__push_svn_string (apr_array_header_t *array,
                               const char *str,
@@ -213,39 +195,6 @@ svn_cl__parse_all_args (apr_array_header_t **args_p,
                         apr_getopt_t *os,
                         apr_pool_t *pool);
 
-
-/* Print the usage message for SUBCOMMAND. */
-void
-svn_cl__subcommand_help (const char *subcommand,
-                         apr_pool_t *pool);
-
-
-/* Set OPT_STATE->start_revision and/or OPT_STATE->end_revision
- * according to ARG, where ARG is "N" or "N:M", like so:
- * 
- *    - If ARG is "N", set OPT_STATE->start_revision's kind to
- *      svn_client_revision_number and its value to the number N; and
- *      leave OPT_STATE->end_revision untouched.
- *
- *    - If ARG is "N:M", set OPT_STATE->start_revision's and
- *      OPT_STATE->end_revision's kinds to svn_client_revision_number
- *      and values to N and M respectively.
- * 
- * N and/or M may be one of the special revision descriptors
- * recognized by revision_from_word().
- *
- * If ARG is invalid, return TRUE; else return FALSE.
- * It is invalid to omit a revision (as in, ":", "N:" or ":M").
- *
- * Note:
- *
- * It is typical, though not required, for OPT_STATE->start_revision
- * and OPT_STATE->end_revision to be svn_client_revision_unspecified
- * kind on entry.
- */
-svn_boolean_t svn_cl__parse_revision (svn_cl__opt_state_t *os,
-                                      const char *arg,
-                                      apr_pool_t *pool);
 
 
 /*** Command-line output functions -- printing to the user. ***/

@@ -33,11 +33,13 @@
 
 /*** Code. ***/
 
+/* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__import (apr_getopt_t *os,
-                svn_cl__opt_state_t *opt_state,
+                void *baton,
                 apr_pool_t *pool)
 {
+  svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
   const char *path;
   const char *url;
@@ -110,7 +112,7 @@ svn_cl__import (apr_getopt_t *os,
        "too many arguments to import command");
   
   /* Get revnum set to something meaningful, to cover the xml case. */
-  if (opt_state->start_revision.kind == svn_client_revision_number)
+  if (opt_state->start_revision.kind == svn_opt_revision_number)
     revnum = opt_state->start_revision.value.number;
   else
     revnum = SVN_INVALID_REVNUM; /* no matter, this is fine */

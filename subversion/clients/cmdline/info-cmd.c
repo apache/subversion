@@ -225,11 +225,13 @@ entry_walk_callbacks =
 
 
 
+/* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__info (apr_getopt_t *os,
-              svn_cl__opt_state_t *opt_state,
+              void *baton,
               apr_pool_t *pool)
 {
+  svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
   int i;
 

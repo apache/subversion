@@ -34,11 +34,13 @@
 
 /*** Code. ***/
 
+/* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__propset (apr_getopt_t *os,
-                 svn_cl__opt_state_t *opt_state,
+                 void *baton,
                  apr_pool_t *pool)
 {
+  svn_cl__opt_state_t *opt_state = baton;
   const char *pname, *pname_utf8;
   const svn_string_t *propval = NULL;
   apr_array_header_t *args, *targets;

@@ -71,7 +71,7 @@ get_dir_contents (apr_hash_t *dirents,
 svn_error_t *
 svn_client_ls (apr_hash_t **dirents,
                const char *url,
-               svn_client_revision_t *revision,
+               svn_opt_revision_t *revision,
                svn_client_auth_baton_t *auth_baton,
                svn_boolean_t recurse,               
                apr_pool_t *pool)

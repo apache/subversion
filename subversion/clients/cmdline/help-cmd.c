@@ -32,6 +32,22 @@
 
 /*** Code. ***/
 
+const char svn_cl__help_header[] =
+    "usage: svn <subcommand> [options] [args]\n"
+    "Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
+    "\n"
+    "Most subcommands take file and/or directory arguments, recursing\n"
+    "on the directories.  If no arguments are supplied to such a\n"
+    "command, it will recurse on the current directory (inclusive) by\n" 
+    "default.\n"
+    "\n"
+    "Available subcommands:\n";
+
+const char svn_cl__help_footer[] =
+    "Subversion is a tool for revision control.\n"
+    "For additional information, see http://subversion.tigris.org\n";
+
+
 static svn_error_t *
 print_version_info (svn_boolean_t quiet, apr_pool_t *pool)
 {
@@ -77,12 +93,19 @@ print_version_info (svn_boolean_t quiet, apr_pool_t *pool)
  * 
  * Unlike all the other command routines, ``help'' has its own
  * option processing.
+ *
+ * This implements the `svn_opt_subcommand_t' interface.
+ *
+ * ### todo: this should really be abstracted into svn_opt_help or
+ * something, since all the command line programs want to offer help
+ * in the same format... But one step at a time.
  */
 svn_error_t *
 svn_cl__help (apr_getopt_t *os,
-              svn_cl__opt_state_t *opt_state,
+              void *baton,
               apr_pool_t *pool)
 {
+  svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets = NULL;
   int i;
 
@@ -92,12 +115,20 @@ svn_cl__help (apr_getopt_t *os,
   if (targets && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_cl__subcommand_help (((const char **) (targets->elts))[i], pool);
+        svn_opt_subcommand_help (((const char **) (targets->elts))[i],
+                                 svn_cl__cmd_table,
+                                 svn_cl__options,
+                                 pool);
       }
   else if (opt_state && opt_state->version)  /* just --version */
     SVN_ERR (print_version_info (opt_state->quiet, pool));
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
-    svn_cl__print_generic_help (pool, stdout);  
+    svn_opt_print_generic_help (svn_cl__help_header,
+                                svn_cl__cmd_table,
+                                svn_cl__options,
+                                svn_cl__help_footer,
+                                pool,
+                                stdout);
   else                                       /* unknown option or cmd */
     fprintf (stderr, "Type `svn help' for help on Subversion usage.\n");
 

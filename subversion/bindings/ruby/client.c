@@ -59,23 +59,23 @@ cl_prompt (char **info,
   return SVN_NO_ERROR;
 }
 
-static svn_client_revision_t
+static svn_opt_revision_t
 parse_revision (VALUE revOrDate)
 {
-  svn_client_revision_t revision;
+  svn_opt_revision_t revision;
   if (rb_obj_is_kind_of (revOrDate, rb_cTime) == Qtrue)
     {
       time_t sec, usec;
       sec = NUM2LONG (rb_funcall (revOrDate, rb_intern ("tv_sec"), 0));
       usec = NUM2LONG (rb_funcall (revOrDate, rb_intern ("tv_usec"), 0));
-      revision.kind = svn_client_revision_date;
+      revision.kind = svn_opt_revision_date;
       revision.value.date = sec * APR_USEC_PER_SEC + usec;
     }
   else if (revOrDate == Qnil)
-    revision.kind = svn_client_revision_unspecified;
+    revision.kind = svn_opt_revision_unspecified;
   else
     {
-      revision.kind = svn_client_revision_number;
+      revision.kind = svn_opt_revision_number;
       revision.value.number = NUM2LONG (revOrDate);
     }
   return revision;
@@ -164,7 +164,7 @@ cl_checkout (int argc, VALUE *argv, VALUE self)
   void *after_edit_baton = NULL;
   svn_client_auth_baton_t *auth_baton;
   svn_stringbuf_t *URL, *path;
-  svn_client_revision_t revision;
+  svn_opt_revision_t revision;
   apr_time_t tm = 0;
   svn_stringbuf_t *xml_src;
   apr_pool_t *pool;
@@ -213,7 +213,7 @@ cl_update (int argc, VALUE *argv, VALUE self)
   void *after_edit_baton = NULL;
   svn_client_auth_baton_t *auth_baton;
   svn_stringbuf_t *path;
-  svn_client_revision_t revision;
+  svn_opt_revision_t revision;
   apr_time_t tm = 0;
   svn_stringbuf_t *xml_src;
   apr_pool_t *pool;
@@ -572,7 +572,7 @@ cl_log (int argc, VALUE *argv, VALUE self)
   apr_array_header_t *paths;
   svn_error_t *err;
   svn_ruby_log_receiver_baton_t baton;
-  svn_client_revision_t start, end;
+  svn_opt_revision_t start, end;
 
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
 
@@ -646,7 +646,7 @@ cl_copy (int argc, VALUE *argv, VALUE self)
   svn_client_commit_info_t *commit_info;
   svn_stringbuf_t *src_path, *dst_path, *message;
   svn_client_auth_baton_t *auth_baton;
-  svn_client_revision_t src_revision;
+  svn_opt_revision_t src_revision;
   const svn_delta_edit_fns_t *before_editor = NULL;
   void *before_edit_baton = NULL;
   const svn_delta_edit_fns_t *after_editor = NULL;
