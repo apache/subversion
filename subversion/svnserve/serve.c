@@ -701,8 +701,10 @@ static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
 
       /* The lock may have been defunct after the commit, so ignore such
          errors.
-         ### What is the best thing to do with other errors (see comment
-         ### libsvn_ra_local/ra_plugin.c. */
+
+         ### If we ever write a logging facility for svnserve, this
+             would be a good place to log an error before clearing
+             it. */
       svn_error_clear(svn_repos_fs_unlock(sb->repos, path, token,
                                           FALSE, pool));
     }

@@ -1540,15 +1540,18 @@ static dav_error *build_lock_hash(apr_hash_t **locks,
 
 
 /* Helper for dav_svn_merge().  Free every lock in LOCKS.  The locks
-   live in REPOS.  Use POOL for temporary work.*/
+   live in REPOS.  Log any errors for REQUEST.  Use POOL for temporary
+   work.*/
 static svn_error_t *release_locks(apr_hash_t *locks,
                                   svn_repos_t *repos,
+                                  request_rec *r,
                                   apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   const void *key;
   void *val;
   apr_pool_t *subpool = svn_pool_create(pool);
+  svn_error_t *err;
 
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
@@ -1558,7 +1561,13 @@ static svn_error_t *release_locks(apr_hash_t *locks,
       /* The lock may be stolen or broken sometime between
          svn_fs_commit_txn() and this post-commit cleanup.  So ignore
          any errors from this command; just free as many locks as we can. */
-      svn_error_clear (svn_repos_fs_unlock(repos, key, val, FALSE, subpool));
+      err = svn_repos_fs_unlock(repos, key, val, FALSE, subpool);
+
+      if (err) /* If we got an error, just log it and move along. */
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, err->apr_err, r,
+                        "%s", err->message);
+
+      svn_error_clear(err);
     }
 
   svn_pool_destroy(subpool);
@@ -1713,7 +1722,8 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
                                 SVN_DAV_OPTION_RELEASE_LOCKS)))
           && apr_hash_count(locks))
         {
-          serr = release_locks(locks, source->info->repos->repos, pool);
+          serr = release_locks(locks, source->info->repos->repos, 
+                               source->info->r, pool);
           if (serr != NULL)
             return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                        "Error releasing locks", pool);

@@ -447,11 +447,9 @@ deltify_etc (svn_revnum_t new_revision,
           apr_hash_this (hi, &rel_path, NULL, &val);
           token = val;
           abs_path = svn_path_join (db->fs_path, rel_path, iterpool);
-          /* We may get errors here if the lock was broken or stolen after
-             the commit succeeded.  This is fine and should be ignored.
-             ### What about the other errors? Collecting them all could mean
-             ### a lot of errors for the user. Should we just collect the first
-             ### error and continue? */
+          /* We may get errors here if the lock was broken or stolen
+             after the commit succeeded.  This is fine and should be
+             ignored. */
           svn_error_clear (svn_repos_fs_unlock (db->repos, abs_path, token,
                                                 FALSE, iterpool));
         }

@@ -21,20 +21,6 @@ These are in the format of
 * subversion/libsvn_wc/status.c:982
     /* ### lundblad TODO: Make sure lock info is added. */ (lundblad)
 
-* subversion/libsvn_ra_local/ra_plugin.c:445
-    ### What about the other errors? Collecting them all could mean
-    ### a lot of errors for the user. Should we just collect the first
-    ### error and continue? */
-* subversion/svnserve/serve.c:704
-    ### What is the best thing to do with other errors (see comment
-    ### libsvn_ra_local/ra_plugin.c. */
-      These need to be discussed--ra_local and svnserve are just
-      throwing these errors away ATM. Perhaps we could do the following:
-      - mod_dav_svn: log the error in the error_log
-      - svn_serve: place a TODO comment in the code that when logging 
-        is implemented, this should be logged as a warning
-      - ra_local: Throw a warning somehow?
-
 * subversion/libsvn_fs_fs/lock.c:523 
     /* ### TODO:  We need the write lock here, but some callers
        ### already has it.  Also, we need to reread the lock to
