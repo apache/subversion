@@ -31,7 +31,7 @@
       <para>RFC 2518 defines a set of concepts and accompanying
         extension methods to HTTP 1.1 that make the web into a more
         universal read/write medium.  The basic idea is that a
-        WebDAV-compliant web server can act like a generic fileserver;
+        WebDAV-compliant web server can act like a generic file server;
         clients can mount WebDAV <quote>shares</quote> that behave
         much like NFS or SMB shares.</para>
       
@@ -545,8 +545,8 @@
         <literal>PUT</literal> to a temporary location, a
         <literal>DELETE</literal> of original file, and a
         <literal>MOVE</literal> of the temporary resource to the
-        original file name.  That's three new Subversion
-        revisions per save!</para>
+        original filename.  That's three new Subversion revisions per
+        save!</para>
 
       <para>One more word of warning: OS X's WebDAV client can be
         overly sensitive to HTTP redirects.  If you're unable to mount

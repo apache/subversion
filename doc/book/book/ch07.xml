@@ -692,7 +692,7 @@ The following repository access (RA) modules are available:
           <literal>file:///path/to/repos</literal>.</para>
 
         <para>Also, be aware that Subversion's
-          <literal>file:</literal> URLs can not be used in a regular
+          <literal>file:</literal> URLs cannot be used in a regular
           web browser the way typical <literal>file:</literal> URLs
           can.  When you attempt to view a <literal>file:</literal>
           URL in a regular web browser, it reads and displays the
