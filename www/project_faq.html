@@ -71,6 +71,8 @@
 <li><a href="#windows-xp-server">Under Windows XP, the Subversion
     server sometimes seems to send out corrupted data.  Can this really be
     happening?</a></li>  
+<li><a href="#ethereal">What is the best method of doing a network
+    trace of the conversation between a Subversion client and server?</a></li>
 <p>
 
 <strong>References:</strong>
@@ -774,6 +776,35 @@ the Subversion dev list.  Here's one message from late in that thread:</p>
 
 <p>For now, our only advice is "Don't run a Subversion server from
 Windows XP."</p>
+
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="ethereal">What is the best method of doing a network
+    trace of the conversation between a Subversion client and
+    server?</a></h3>
+
+<p>Use <a href="http://ethereal.ntop.org/">Ethereal</a> to eavesdrop
+on the conversation:
+
+<!-- TODO: Make these instructions less specific to ra_dav. -->
+<ol>
+<li>Pull down the <i>Capture</i> menu, and choose <i>Start</i>.</li>
+<li>Type <code>port 80</code> for <i>Filter</i>, and turn off
+    promiscuous mode.</li>
+<li>Run your Subversion client.</li>
+<li>Hit <i>Stop</i> (probably in a little box).  Now you have a
+    capture.  It looks like a huge list of lines.</li>
+<li>Click on the <i>Protocol</i> column to sort.</li>
+<li>Then, click on the first relevant TCP line to select it.</li>
+<li>Right click, and choose <i>Follow TCP Stream</i>.  You'll be
+    presented with the request/response pairs of the Subversion
+    client's HTTP conversion.</li>
+</ol>
+
+The above instructions are specific to the graphical version of
+Ethereal, and may not apply to the commandline version (whose binary
+is usually named tethereal).</p>
 
 
 <![CDATA[=========================================================]]>
