@@ -191,7 +191,14 @@ svn_fs_parse_id (const char *data,
 
   /* Allocate the ID array.  Note that if pool is zero, apr_palloc
      just calls malloc, which meets our promised interface.  */
-  id = apr_palloc (pool, sizeof (*id) * (id_len + 1));
+  if (pool)
+    id = apr_palloc (pool, sizeof (*id) * (id_len + 1));
+  else
+    {
+      id = malloc (sizeof (*id) * (id_len + 1));
+      if (! id)
+        abort(); /* couldn't malloc */
+    }
 
   {
     int i = 0;
