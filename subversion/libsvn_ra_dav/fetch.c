@@ -1593,6 +1593,46 @@ static svn_error_t * reporter_set_path(void *report_baton,
 }
 
 
+static svn_error_t * reporter_link_path(void *report_baton,
+                                        const char *path,
+                                        const char *url,
+                                        svn_revnum_t revision)
+{
+  report_baton_t *rb = report_baton;
+  apr_status_t status;
+  const char *entry;
+  svn_stringbuf_t *qpath = NULL, *qlinkpath = NULL;
+  svn_string_t bc_relative;
+
+  /* Convert the copyfrom_* url/rev "public" pair into a Baseline
+     Collection (BC) URL that represents the revision -- and a
+     relative path under that BC.  */
+  SVN_ERR( svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative, NULL,
+                                         rb->ras->sess,
+                                         url, revision,
+                                         rb->ras->pool));
+  
+  
+  svn_xml_escape_nts (&qpath, path, rb->ras->pool);
+  svn_xml_escape_nts (&qlinkpath, bc_relative.data, rb->ras->pool);
+  entry = apr_psprintf(rb->ras->pool,
+                       "<S:entry rev=\"%ld\" linkpath=\"%s\">%s</S:entry>" 
+                       DEBUG_CR,
+                       revision, qlinkpath->data, qpath->data);
+
+  status = apr_file_write_full(rb->tmpfile, entry, strlen(entry), NULL);
+  if (status)
+    {
+      (void) apr_file_close(rb->tmpfile);
+      return svn_error_create(status, 0, NULL, rb->ras->pool,
+                              "Could not write an entry to the temporary "
+                              "report file.");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t * reporter_delete_path(void *report_baton,
                                           const char *path)
 {
@@ -1700,6 +1740,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
 static const svn_ra_reporter_t ra_dav_reporter = {
   reporter_set_path,
   reporter_delete_path,
+  reporter_link_path,
   reporter_finish_report,
   reporter_abort_report
 };

@@ -95,6 +95,16 @@ typedef struct svn_ra_reporter_t
   svn_error_t *(*delete_path) (void *report_baton,
                                const char *path);
     
+  /* Like set_path(), but differs in that PATH in the working copy
+     (relative to the root of the report driver) isn't a reflection of
+     PATH in the repository (relative to the URL specified when
+     opening the RA layer), but is instead a reflection of a different
+     repository URL at REVISION.  */
+  svn_error_t *(*link_path) (void *report_baton,
+                             const char *path,
+                             const char *url,
+                             svn_revnum_t revision);
+
   /* WC calls this when the state report is finished; any directories
      or files not explicitly `set' above are assumed to be at the
      baseline revision originally passed into do_update(). */

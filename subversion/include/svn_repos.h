@@ -156,11 +156,18 @@ svn_repos_begin_report (void **report_baton,
    The first call of this in a given report usually passes an empty
    PATH; that allows the reporter to set up the correct root revision
    (useful when creating a txn, for example).  */
-svn_error_t *
-svn_repos_set_path (void *report_baton,
-                    const char *path,
-                    svn_revnum_t revision);
+svn_error_t *svn_repos_set_path (void *report_baton,
+                                 const char *path,
+                                 svn_revnum_t revision);
 
+
+/* Given a REPORT_BATON constructed by svn_repos_begin_report(), this
+   routine will build REVISION:LINK_PATH into the current transaction
+   at PATH. */
+svn_error_t *svn_repos_link_path (void *report_baton,
+                                  const char *path,
+                                  const char *link_path,
+                                  svn_revnum_t revision);
 
 /* Given a REPORT_BATON constructed by svn_repos_begin_report(), this
    routine will remove PATH from the current fs transaction. 
