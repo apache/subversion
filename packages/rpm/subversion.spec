@@ -1,5 +1,5 @@
 %define apache_version 2.0.32-0.4
-%define neon_version 0.18.5
+%define neon_version 0.19.2
 %define apr_date 2002.02.15
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
@@ -60,6 +60,9 @@ The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
 %changelog
+* Fri Feb 22 2002 Blair Zajac <blair@orcaware.com> 0.10.0-1364
+- Updated to neon-0.19.2.
+
 * Mon Feb 11 2002 David Summers <david@summersoft.fay.ar.us> 0.8.0-1250
 - Back to using apr and apr-util separately from apache.
 
