@@ -1677,25 +1677,12 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
     /* got everything set up. read in delta windows and shove them into
        the handler, which pushes data into the output stream, which goes
        to the network. */
-    while (1)
-      {
-        svn_txdelta_window_t *window;
+    serr = svn_txdelta_send_txstream(txd_stream, handler, h_baton,
+                                     resource->pool);
+    if (serr != NULL)
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not deliver the txdelta stream");
 
-        serr = svn_txdelta_next_window(&window, txd_stream);
-        if (serr != NULL)
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "could not fetch delta window");
-
-        serr = (*handler)(window, h_baton);
-        if (serr != NULL)
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "could not apply delta window");
-
-        if (window == NULL)
-          break;
-
-        svn_txdelta_free_window(window);
-      }
 
     return NULL;
   }

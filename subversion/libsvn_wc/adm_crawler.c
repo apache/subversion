@@ -428,7 +428,6 @@ do_apply_textdelta (svn_stringbuf_t *filename,
   svn_txdelta_window_handler_t window_handler;
   void *window_handler_baton;
   svn_txdelta_stream_t *txdelta_stream;
-  svn_txdelta_window_t *txdelta_window;
   apr_file_t *localfile = NULL;
   apr_file_t *textbasefile = NULL;
   svn_stringbuf_t *local_tmp_path;
@@ -468,18 +467,11 @@ do_apply_textdelta (svn_stringbuf_t *filename,
                svn_stream_from_aprfile (localfile, pool),
                pool);
   
-  /* Grab a window from the stream, "push" it at the consumer routine,
-     then free it.  (When we run out of windows, TXDELTA_WINDOW will
-     be set to NULL, and then still passed to window_handler(),
-     thereby notifying window_handler that we're all done.)  */
-  do
-    {
-      SVN_ERR (svn_txdelta_next_window (&txdelta_window, txdelta_stream));
-      SVN_ERR ((* (window_handler)) (txdelta_window, window_handler_baton));
-      svn_txdelta_free_window (txdelta_window);
-
-    } while (txdelta_window);
-
+  /* Pull windows from the delta stream and feed to the consumer. */
+  SVN_ERR (svn_txdelta_send_txstream (txdelta_stream,
+                                      window_handler,
+                                      window_handler_baton,
+                                      pool));
 
   /* Free the stream */
   svn_txdelta_free (txdelta_stream);
