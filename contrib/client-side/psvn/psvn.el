@@ -1,7 +1,7 @@
 ;;; psvn.el --- Subversion interface for emacs
 ;; Copyright (C) 2002-2004 by Stefan Reichoer
 
-;; Author: Stefan Reichoer, <xsteve@nit.at>
+;; Author: Stefan Reichoer, <stefan@xsteve.at>
 ;; $Id$
 
 ;; psvn.el is free software; you can redistribute it and/or modify
@@ -85,7 +85,7 @@
 ;; Start the svn interface with M-x svn-status
 
 ;; The latest version of psvn.el can be found at:
-;;   http://xsteve.nit.at/prg/emacs/psvn.el
+;;   http://www.xsteve.at/prg/emacs/psvn.el
 ;; Or you can check it out from the subversion repository:
 ;;   svn co http://svn.collab.net/repos/svn/trunk/contrib/client-side/psvn psvn
 
@@ -516,8 +516,7 @@ The results are used to build the `svn-status-info' variable."
         (cond
          ((= (point-at-eol) (point-at-bol)) ;skip blank lines
           nil)
-         ((or (looking-at "Head revision:[ ]+\([0-9]+\)") ;svn version < 0.29
-              (looking-at "Status against revision:[ ]+\([0-9]+\)")); svn version >= 0.29
+         ((looking-at "Status against revision:[ ]+\\([0-9]+\\)")
           ;; the above message appears for the main listing plus once for each svn:externals entry
           (unless svn-status-head-revision
             (setq svn-status-head-revision (match-string 1))))
