@@ -42,6 +42,7 @@ typedef struct svn_ruby_txdelta_window_t
   /* When GC is happening, you can't get instance variable.  Record it
      here. */
   VALUE stream;
+  apr_pool_t *pool;
 } svn_ruby_txdelta_window_t;
 
 
@@ -150,7 +151,7 @@ closed_txdelta_error (void)
 static VALUE
 send_string (VALUE self, VALUE aStr)
 {
-  svn_stringbuf_t *string;
+  svn_string_t *string;
   apr_pool_t *pool;
   svn_error_t *err;
   svn_ruby_txdelta_t *delta;
@@ -161,7 +162,7 @@ send_string (VALUE self, VALUE aStr)
   Check_Type (aStr, T_STRING);
 
   pool = svn_pool_create (delta->pool);
-  string = svn_stringbuf_create (StringValuePtr (aStr), pool);
+  string = svn_string_create (StringValuePtr (aStr), pool);
 
   err = svn_txdelta_send_string (string, delta->handler, delta->handler_baton,
                                  pool);
@@ -238,15 +239,8 @@ mark_txdelta_window (void *p)
 static void
 free_txdelta_window (void *p)
 {
-  VALUE child;
   svn_ruby_txdelta_window_t *window = p;
-  svn_txdelta_free_window (window->window);
-  child = rb_iv_get (window->stream, "@childWindow");
-  rb_iv_set (window->stream, "@childWindow", LONG2NUM (NUM2LONG (child) - 1));
-  /* Probably the better way is to register pool clean up method to
-     close parent stream. */
-  if (rb_iv_get (window->stream, "@closeRequested") == Qtrue)
-    rb_funcall (window->stream, rb_intern ("close"), 0);
+  apr_pool_destroy (window->pool);
   free (window);
 }
 
@@ -264,9 +258,6 @@ static void
 free_txdelta_stream (void *p)
 {
   svn_ruby_txdelta_stream_t *stream = p;
-
-  if (!stream->closed)
-    svn_txdelta_free (stream->stream);
 
   apr_pool_destroy (stream->pool);
   free (stream);
@@ -297,8 +288,6 @@ txdelta_stream_new (VALUE class, VALUE source, VALUE target)
 static VALUE
 txdelta_stream_init (VALUE self)
 {
-  rb_iv_set (self, "@childWindow", INT2FIX (0));
-  rb_iv_set (self, "@closeRequested", Qfalse);
   return self;
 }
 
@@ -312,16 +301,8 @@ txdelta_stream_close (VALUE self)
   if (stream->closed)
     rb_raise (rb_eRuntimeError, "Already closed");
 
-  if (rb_iv_get (self, "@childWindow") == INT2FIX (0))
-    {
-      svn_txdelta_free (stream->stream);
-      stream->closed = TRUE;
-    }
-  else
-    {
-      rb_iv_set (self, "@closeRequested", Qtrue);
-    }
-  
+  stream->closed = TRUE;
+
   return Qnil;
 }
 
@@ -330,6 +311,7 @@ txdelta_stream_next_window (VALUE self)
 {
   svn_txdelta_window_t *window;
   svn_ruby_txdelta_stream_t *stream;
+  apr_pool_t *pool;
   svn_error_t *err;
 
   Data_Get_Struct (self, svn_ruby_txdelta_stream_t, stream);
@@ -337,7 +319,8 @@ txdelta_stream_next_window (VALUE self)
   if (stream->closed)
     rb_raise (rb_eRuntimeError, "Already closed");
 
-  err = svn_txdelta_next_window (&window, stream->stream);
+  pool = svn_pool_create (stream->pool);
+  err = svn_txdelta_next_window (&window, stream->stream, pool);
   if (err)
     svn_ruby_raise (err);
 
@@ -346,15 +329,13 @@ txdelta_stream_next_window (VALUE self)
   else
     {
       svn_ruby_txdelta_window_t *rb_window;
-      VALUE child;
       VALUE obj = Data_Make_Struct (cSvnTextDeltaWindow,
                                     svn_ruby_txdelta_window_t,
                                     mark_txdelta_window, free_txdelta_window,
                                     rb_window);
       rb_window->window = window;
       rb_window->stream = self;
-      child = rb_iv_get (self, "@childWindow");
-      rb_iv_set (self, "@childWindow", LONG2NUM (NUM2LONG (child) + 1));
+      rb_window->pool = pool;
       
       return obj;
     }
