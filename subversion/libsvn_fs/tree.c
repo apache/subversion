@@ -3871,6 +3871,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
   const svn_fs_id_t *node_id;
   struct revision_root_args rr_args;
   int paths_differ;
+  int reported = history->is_interesting;
 
   /* Initialize our return value. */
   *prev_history = NULL;
@@ -3879,6 +3880,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
      the chase, start from those locations. */
   if (history->path_hint && SVN_IS_VALID_REVNUM (history->rev_hint))
     {
+      reported = 0;
       if (! args->cross_copies)
         return SVN_NO_ERROR;
       path = history->path_hint;
@@ -3903,7 +3905,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
   paths_differ = strcmp (path, commit_path);
   if ((! paths_differ) && (revision == commit_rev))
     {
-      if (! history->is_interesting)
+      if (! reported)
         {
           /* ... and we've not already reported this history point,
              then go for it. */
