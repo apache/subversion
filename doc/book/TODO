@@ -21,6 +21,9 @@ To be fixed by someone:
 
   - svnadmin docs sorely need to be updated.  See Ch05 and Ch09.
 
+  - explain that while 'svn import' creates intermediate directories
+    for you, 'svn mkdir', 'svn move', and 'svn copy' will not.
+
 --------------------------------------------------------------
 
 To be fixed by cmpilato:
