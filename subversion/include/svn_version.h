@@ -88,7 +88,7 @@ extern "C" {
  * During the distribution process, we automatically replace this text
  * with "" to indicate a baselined version.
  */
-#define SVN_VER_NUMTAG     ""
+#define SVN_VER_NUMTAG     "+"
 
 
 /** Revision number: The repository revision number of this release.
