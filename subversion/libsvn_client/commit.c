@@ -426,10 +426,6 @@ send_to_repos (svn_client_commit_info_t **commit_info,
   const char *committed_date = NULL;
   const char *committed_author = NULL;
   
-  /* Note: if you ever make ccb.pool a subpool of pool, then change
-     the assignments to committed_date and committed_author near the
-     end of this function, as they'll need to allocate new storage. */
-  ccb.pool		= pool;
   ccb.prefix_path	= base_path;
   committed_targets	= apr_hash_make (pool);
 

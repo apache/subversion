@@ -234,7 +234,8 @@ static svn_error_t *get_delta_base(const char **delta_base,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR( (*get_wc_prop)(cb_baton, relpath, SVN_RA_DAV__LP_VSN_URL, &value) );
+  SVN_ERR( (*get_wc_prop)(cb_baton, relpath, SVN_RA_DAV__LP_VSN_URL,
+                          &value, pool) );
 
   *delta_base = value ? value->data : NULL;
   return SVN_NO_ERROR;

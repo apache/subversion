@@ -538,10 +538,8 @@ struct svn_wc_close_commit_baton
      comes in here.  It's the original path that the user specified to
      the `svn commit' command. */
   svn_stringbuf_t *prefix_path;
-
-  /* Pool to use for all logging, running of logs, etc. */
-  apr_pool_t *pool;
 };
+
 
 /* This is of type `svn_ra_close_commit_func_t'.
 
@@ -562,7 +560,8 @@ svn_error_t * svn_wc_process_committed (void *baton,
                                         svn_boolean_t recurse,
                                         svn_revnum_t new_revnum,
                                         const char *rev_date,
-                                        const char *rev_author);
+                                        const char *rev_author,
+                                        apr_pool_t *pool);
 
 
 
@@ -573,7 +572,7 @@ svn_error_t * svn_wc_process_committed (void *baton,
  * of the sort used by svn_wc__compose_paths(), as with all entries
  * recursers.
  */
-svn_error_t *svn_wc_close_commit (svn_stringbuf_t *path,
+svn_error_t *svn_wc_close_commit (void *baton,
                                   svn_revnum_t new_revision,
                                   apr_hash_t *targets,
                                   apr_pool_t *pool);
@@ -584,14 +583,16 @@ svn_error_t *svn_wc_close_commit (svn_stringbuf_t *path,
 svn_error_t *svn_wc_get_wc_prop (void *baton,
                                  const char *target,
                                  const char *name,
-                                 const svn_string_t **value);
+                                 const svn_string_t **value,
+                                 apr_pool_t *pool);
 
 /* This is a function of type svn_ra_set_wc_prop_t. Set property NAME
    to VALUE on TARGET.  */
 svn_error_t *svn_wc_set_wc_prop (void *baton,
                                  const char *target,
                                  const char *name,
-                                 const svn_string_t *value);
+                                 const svn_string_t *value,
+                                 apr_pool_t *pool);
 
 
 /* Crawl a working copy tree depth-first, describing all local mods to

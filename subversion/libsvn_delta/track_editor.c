@@ -18,6 +18,7 @@
 
 #include "svn_path.h"
 #include "svn_delta.h"
+#include "svn_pools.h"
 #include "svn_ra.h"
 #include "apr_tables.h"
 
@@ -292,6 +293,7 @@ close_edit (void *edit_baton)
 {
   apr_hash_index_t *hi;
   struct edit_baton *eb = edit_baton;
+  apr_pool_t *subpool = svn_pool_create (eb->pool);
 
   /* Bump all targets if the caller wants us to. */
   if ((! SVN_IS_VALID_REVNUM(eb->new_rev)) || (! eb->bump_func))
@@ -315,9 +317,13 @@ close_edit (void *edit_baton)
 
       SVN_ERR (eb->bump_func (eb->bump_baton, &path_str,
                               (r == svn_recursive) ? TRUE : FALSE,
-                              eb->new_rev, NULL, NULL));
+                              eb->new_rev, NULL, NULL,
+                              subpool));
+
+      svn_pool_clear (subpool);
     }
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 

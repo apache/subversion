@@ -323,6 +323,7 @@ process_committed (svn_stringbuf_t *path,
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
+      apr_pool_t *subpool = svn_pool_create (pool);
 
       /* Read PATH's entries;  this is the absolute path. */
       SVN_ERR (svn_wc_entries_read (&entries, path, pool));
@@ -353,12 +354,16 @@ process_committed (svn_stringbuf_t *path,
                                       ? TRUE : FALSE,
                                       new_revnum,
                                       rev_date, rev_author,
-                                      pool));
+                                      subpool));
 
           /* De-telescope the path. */
           svn_path_remove_component (path);
+          
+          svn_pool_clear (subpool);
         }
-    }
+
+      svn_pool_destroy (subpool); 
+   }
 
   return SVN_NO_ERROR;
 }
@@ -371,19 +376,19 @@ svn_wc_process_committed (void *baton,
                           svn_boolean_t recurse,
                           svn_revnum_t new_revnum,
                           const char *rev_date,
-                          const char *rev_author)
+                          const char *rev_author,
+                          apr_pool_t *pool)
 {
   struct svn_wc_close_commit_baton *bumper =
     (struct svn_wc_close_commit_baton *) baton;
 
   /* Construct the -full- path by using the baton */
-  svn_stringbuf_t *path = svn_stringbuf_dup (bumper->prefix_path, 
-                                             bumper->pool);
+  svn_stringbuf_t *path = svn_stringbuf_dup (bumper->prefix_path, pool);
   svn_path_add_component (path, target);
 
   /* Call the real function. */
   return process_committed (path, recurse, new_revnum,
-                            rev_date, rev_author, bumper->pool);
+                            rev_date, rev_author, pool);
 }
 
 
@@ -391,16 +396,18 @@ svn_wc_process_committed (void *baton,
 svn_error_t *svn_wc_get_wc_prop (void *baton,
                                  const char *target,
                                  const char *name,
-                                 const svn_string_t **value)
+                                 const svn_string_t **value,
+                                 apr_pool_t *pool)
 {
-  struct svn_wc_close_commit_baton *ccb = baton;
+  struct svn_wc_close_commit_baton *ccb =
+    (struct svn_wc_close_commit_baton *) baton;
 
-  /* Prepend the baton's prefix to the target. */
-  svn_stringbuf_t *path = svn_stringbuf_dup (ccb->prefix_path, ccb->pool);
+  /* Prepend the prefix to the target. */
+  svn_stringbuf_t *path = svn_stringbuf_dup (ccb->prefix_path, pool);
   svn_path_add_component_nts (path, target);
 
   /* And use our public interface to get the property value. */
-  SVN_ERR (svn_wc__wcprop_get (value, name, path->data, ccb->pool));
+  SVN_ERR (svn_wc__wcprop_get (value, name, path->data, pool));
 
   return SVN_NO_ERROR;
 }
@@ -409,16 +416,18 @@ svn_error_t *svn_wc_get_wc_prop (void *baton,
 svn_error_t *svn_wc_set_wc_prop (void *baton,
                                  const char *target,
                                  const char *name,
-                                 const svn_string_t *value)
+                                 const svn_string_t *value,
+                                 apr_pool_t *pool)
 {
-  struct svn_wc_close_commit_baton *ccb = baton;
+  struct svn_wc_close_commit_baton *ccb =
+    (struct svn_wc_close_commit_baton *) baton;
 
-  /* Prepend the baton's prefix to the target. */
-  svn_stringbuf_t *path = svn_stringbuf_dup (ccb->prefix_path, ccb->pool);
+  /* Prepend the prefix to the target. */
+  svn_stringbuf_t *path = svn_stringbuf_dup (ccb->prefix_path, pool);
   svn_path_add_component_nts (path, target);
 
   /* And use our public interface to get the property value. */
-  SVN_ERR (svn_wc__wcprop_set (name, value, path->data, ccb->pool));
+  SVN_ERR (svn_wc__wcprop_set (name, value, path->data, pool));
 
   return SVN_NO_ERROR;
 }

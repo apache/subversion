@@ -95,6 +95,8 @@ cleanup_commit (svn_revnum_t new_rev,
 
   if (cb->close_func)
     {
+      apr_pool_t *subpool = svn_pool_create (cb->pool);
+
       for (hi = apr_hash_first (cb->pool, cb->committed_targets);
            hi;
            hi = apr_hash_next (hi))
@@ -113,8 +115,12 @@ cleanup_commit (svn_revnum_t new_rev,
           
           SVN_ERR (cb->close_func (cb->close_baton, &path_str, 
                                    (r == svn_recursive) ? TRUE : FALSE,
-                                   new_rev, committed_date, committed_author));
+                                   new_rev, committed_date, committed_author,
+                                   subpool));
+          svn_pool_clear (subpool);
         }
+
+      svn_pool_destroy (subpool);
     }
 
   /* Store the new revision information in the baton. */
