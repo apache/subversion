@@ -14,6 +14,13 @@ MUST HAVE
 
 * scan the whole patch for TODO items introduced on the branch (all, please)
 
+* verify that attach_lock() implementations canonicalize the
+  lock->path before storing it.
+
+* write C tests which exercise the ability to lock non-existent paths,
+  especially ones that locks non-existent paths which would be
+  children of, or parents of, other locked non-existent paths.
+
 * fsfs backend schema (not logic, mind you) must support the notion of
   a directory lock, in prep for future support (cmpilato)
   
