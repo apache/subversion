@@ -23,6 +23,7 @@
 
 #include "svn_string.h"
 #include "svn_xml.h"
+#include "svn_path.h"
 
 #include "ra_dav.h"
 
