@@ -18,6 +18,12 @@
 
 
 /*** Includes. ***/
+
+
+#define APR_WANT_STDIO
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
+
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_path.h"
@@ -51,6 +57,7 @@ struct file_baton
   svn_boolean_t added;
   svn_boolean_t text_changed;
   svn_boolean_t prop_changed;
+  svn_boolean_t binary;
 };
 
 
@@ -74,11 +81,12 @@ static svn_error_t *
 delete_entry (svn_stringbuf_t *name, void *parent_baton)
 {
   struct dir_baton *d = parent_baton;
+  svn_stringbuf_t *printable_name = 
+    svn_stringbuf_dup (d->path, d->edit_baton->pool);
 
-  svn_stringbuf_t *printable_name = svn_stringbuf_dup (d->path, d->edit_baton->pool);
   svn_path_add_component (printable_name, name, svn_path_local_style);
 
-  printf ("Deleting %s\n", printable_name->data);
+  printf ("Deleting        %s\n", printable_name->data);
   return SVN_NO_ERROR;
 }
 
@@ -96,11 +104,12 @@ add_directory (svn_stringbuf_t *name,
 
   child_d->edit_baton = parent_d->edit_baton;
   child_d->parent_dir_baton = parent_d;
-  child_d->path = svn_stringbuf_dup (parent_d->path, child_d->edit_baton->pool);
+  child_d->path = svn_stringbuf_dup (parent_d->path, 
+                                     child_d->edit_baton->pool);
   svn_path_add_component (child_d->path, name, svn_path_local_style);
   child_d->added = TRUE;
 
-  printf ("Adding   %s\n", child_d->path->data);
+  printf ("Adding          %s\n", child_d->path->data);
   *child_baton = child_d;
 
   return SVN_NO_ERROR;
@@ -119,7 +128,8 @@ replace_directory (svn_stringbuf_t *name,
 
   child_d->edit_baton = parent_d->edit_baton;
   child_d->parent_dir_baton = parent_d;
-  child_d->path = svn_stringbuf_dup (parent_d->path, child_d->edit_baton->pool);
+  child_d->path = svn_stringbuf_dup (parent_d->path, 
+                                     child_d->edit_baton->pool);
   svn_path_add_component (child_d->path, name, svn_path_local_style);
 
   *child_baton = child_d;
@@ -137,7 +147,7 @@ close_directory (void *dir_baton)
   struct dir_baton *db = dir_baton;
 
   if (db->prop_changed)
-    printf ("Changing %s\n", db->path->data); 
+    printf ("Sending         %s\n", db->path->data); 
 
   return SVN_NO_ERROR;
 }
@@ -148,12 +158,13 @@ close_file (void *file_baton)
 {
   struct file_baton *fb = file_baton;
 
-
   if (fb->added)
-    printf ("Adding   %s\n", fb->path->data); 
+    printf ("Adding   %s  %s\n", 
+            fb->binary ? "(bin)" : "     ", 
+            fb->path->data);
   else
-    printf ("Changing %s\n", fb->path->data);
-
+    printf ("Sending         %s\n", fb->path->data);
+  
   return SVN_NO_ERROR;
 }
 
@@ -200,10 +211,11 @@ add_file (svn_stringbuf_t *name,
     = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_fb));
 
   child_fb->parent_dir_baton = parent_d;
-  child_fb->path = svn_stringbuf_dup (parent_d->path, parent_d->edit_baton->pool);
+  child_fb->path = svn_stringbuf_dup (parent_d->path, 
+                                      parent_d->edit_baton->pool);
   svn_path_add_component (child_fb->path, name, svn_path_local_style);
   child_fb->added = TRUE;
-
+  child_fb->binary = FALSE;
   *file_baton = child_fb;
 
   return SVN_NO_ERROR;
@@ -221,7 +233,8 @@ replace_file (svn_stringbuf_t *name,
     = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_fb));
 
   child_fb->parent_dir_baton = parent_d;
-  child_fb->path = svn_stringbuf_dup (parent_d->path, parent_d->edit_baton->pool);
+  child_fb->path = svn_stringbuf_dup (parent_d->path, 
+                                      parent_d->edit_baton->pool);
   svn_path_add_component (child_fb->path, name, svn_path_local_style);
 
   *file_baton = child_fb;
@@ -236,7 +249,15 @@ change_file_prop (void *file_baton,
                   svn_stringbuf_t *value)
 {
   struct file_baton *fb = file_baton;
+
   fb->prop_changed = TRUE;
+
+  /* If the mime-type property is being set to non-NULL, and something
+     that doesn't start with 'text/', call this a binary file. */
+  if ((! strcmp (name->data, SVN_PROP_MIME_TYPE))
+      && value && (strncmp (value->data, "text/", 5)))
+    fb->binary = TRUE;
+
   return SVN_NO_ERROR;
 }
 

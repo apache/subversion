@@ -19,7 +19,10 @@
 /*** Includes. ***/
 
 #include <stdio.h>
-#include <string.h>
+
+#define APR_WANT_STDIO
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
 
 #include "svn_pools.h"
 #include "cl.h"

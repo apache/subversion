@@ -106,8 +106,8 @@ def commit_props():
   svntest.main.run_svn('propset', 'red', 'rojo', H_path)
 
   # Create expected output tree.
-  output_list = [ [mu_path, None, {}, {'verb' : 'Changing'}],
-                  [ H_path, None, {}, {'verb' : 'Changing'}] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Sending'}],
+                  [ H_path, None, {}, {'verb' : 'Sending'}] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Created expected status tree.
@@ -151,8 +151,8 @@ def update_props():
   svntest.main.run_svn('propset', 'red', 'rojo', H_path)
 
   # Create expected output tree.
-  output_list = [ [mu_path, None, {}, {'verb' : 'Changing'}],
-                  [ H_path, None, {}, {'verb' : 'Changing'}] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Sending'}],
+                  [ H_path, None, {}, {'verb' : 'Sending'}] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Created expected status tree.
@@ -219,7 +219,7 @@ def downdate_props():
   svntest.main.run_svn('propset', 'cash-sound', 'cha-ching!', iota_path)
 
   # Create expected output tree.
-  output_list = [ [iota_path, None, {}, {'verb' : 'Changing'}] ]
+  output_list = [ [iota_path, None, {}, {'verb' : 'Sending'}] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Created expected status tree.

@@ -73,8 +73,8 @@ def basic_commit():
   svntest.main.file_append (rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {}, {'verb' : 'Changing' }],
-                  [rho_path, None, {}, {'verb' : 'Changing' }] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }],
+                  [rho_path, None, {}, {'verb' : 'Sending' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -111,7 +111,7 @@ def commit_one_file():
   svntest.main.file_append (rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci';  we're only committing rho.
-  output_list = [ [rho_path, None, {}, {'verb' : 'Changing' }] ]
+  output_list = [ [rho_path, None, {}, {'verb' : 'Sending' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -166,9 +166,9 @@ def commit_multiple_targets():
 
   # Created expected output tree for 'svn ci'.  We should see changes
   # only on these three targets, no others.  
-  output_list = [ [psi_path, None, {}, {'verb' : 'Changing' }],
-                  [lambda_path, None, {}, {'verb' : 'Changing' }],
-                  [pi_path, None, {}, {'verb' : 'Changing' }] ]
+  output_list = [ [psi_path, None, {}, {'verb' : 'Sending' }],
+                  [lambda_path, None, {}, {'verb' : 'Sending' }],
+                  [pi_path, None, {}, {'verb' : 'Sending' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -228,10 +228,10 @@ def commit_multiple_targets_2():
 
   # Created expected output tree for 'svn ci'.  We should see changes
   # only on these three targets, no others.  
-  output_list = [ [psi_path, None, {}, {'verb' : 'Changing' }],
-                  [lambda_path, None, {}, {'verb' : 'Changing' }],
-                  [omega_path, None, {}, {'verb' : 'Changing' }],
-                  [pi_path, None, {}, {'verb' : 'Changing' }] ]
+  output_list = [ [psi_path, None, {}, {'verb' : 'Sending' }],
+                  [lambda_path, None, {}, {'verb' : 'Sending' }],
+                  [omega_path, None, {}, {'verb' : 'Sending' }],
+                  [pi_path, None, {}, {'verb' : 'Sending' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -280,8 +280,8 @@ def basic_update():
   svntest.main.file_append (rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {}, {'verb' : 'Changing' }],
-                  [rho_path, None, {}, {'verb' : 'Changing' }] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }],
+                  [rho_path, None, {}, {'verb' : 'Sending' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -343,8 +343,8 @@ def basic_merge():
   svntest.main.file_append (rho_path, rho_text)  
 
   # Create expected output tree for initial commit
-  output_list = [ [mu_path, None, {}, {'verb' : 'Changing' }],
-                  [rho_path, None, {}, {'verb' : 'Changing' }] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }],
+                  [rho_path, None, {}, {'verb' : 'Sending' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree : rev 2 for rho and mu.
@@ -374,8 +374,8 @@ def basic_merge():
   svntest.main.file_append (rho_path, ' Appended to line 10 of rho')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {}, {'verb' : 'Changing' }],
-                  [rho_path, None, {}, {'verb' : 'Changing' }] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }],
+                  [rho_path, None, {}, {'verb' : 'Sending' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -497,8 +497,8 @@ def basic_conflict():
                              '\nConflicting appended text for rho')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {}, {'verb' : 'Changing' }],
-                  [rho_path, None, {}, {'verb' : 'Changing' }] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }],
+                  [rho_path, None, {}, {'verb' : 'Sending' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -758,7 +758,7 @@ def update_binary_file():
   theta_contents_r3 = theta_contents + "revision 3 text"
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [theta_path, None, {}, {'verb' : 'Changing' }] ]
+  output_list = [ [theta_path, None, {}, {'verb' : 'Sending' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree
