@@ -1542,31 +1542,34 @@ Committed revision 351.
         instantánea que desea, puede especificarla pasando <option>-r
         350</option> al comando <command>svn copy</command>.</para>
 
-      <para>But wait a moment: isn't this tag-creation procedure the
-        same procedure we used to create a branch?  Yes, in fact, it
-        is.  In Subversion, there's no difference between a tag and a
-        branch.  Both are just ordinary directories that are created
-        by copying.  Just as with branches, the only reason a copied
-        directory is a <quote>tag</quote> is because
-        <emphasis>humans</emphasis> have decided to treat it that way:
-        as long as nobody ever commits to the directory, it forever
-        remains a snapshot.  If people start committing to it, it
-        becomes a branch.</para>
+      <para>Pero espere un momento: ¿no es este procedimiento para
+        crear etiquetas el mismo que usamos para crear una rama? Si,
+        de hecho, así es. En Subversion no hay diferencia entre
+        una etiqueta y una rama.  Ambas son directorios ordinarios
+        que son creados a partir de una copia.  Igual que con
+        las ramas, la única razón por la que un directorio
+        copiado es una <quote>etiqueta</quote> es porque los
+        <emphasis>humanos</emphasis> han decidido tratarlo de ese
+        modo: mientras nadie envíe cambios usando ese directorio,
+        seguirá siendo siempre una instantánea. Si la gente comienza
+        a realizar cambios, se convierte en una rama.</para>
 
-      <para>If you are administering a repository, there are two
-        approaches you can take to managing tags.  The first approach
-        is <quote>hands off</quote>: as a matter of project policy,
-        decide where your tags will live, and make sure all users know
-        how to treat the directories they copy in there.  (That is,
-        make sure they know not to commit to them.)  The second
-        approach is more paranoid: you can use one of the
-        access-control scripts provided with Subversion to prevent
-        anyone from doing anything but creating new copies in the
-        tags-area (See <xref linkend="svn-ch-6"/>.)  The paranoid
-        approach, however, isn't usually necessary.  If a user
-        accidentally commits a change to a tag-directory, you can
-        simply undo the change as discussed in the previous section.
-        This is version control, after all.</para>
+      <para>Si está administrando un repositorio, hay dos formas de
+        de gestionar etiquetas. La primera es <quote>manos
+        fuera</quote>: según la política de su proyecto, decida
+        dónde pondrá sus etiquetas, y asegurese de que todos
+        los usuarios saben cómo tratar los directorios que copian
+        ahí. (En otras palabras, asegurese de que no cambian nada en
+        esos directorios.) La segunda forma es más paranóica: puede
+        usar uno de los scripts de control de acceso proporcionados
+        con Subversion para prevenir cualquier cosa que no sea
+        la creación de nuevas copias en el área de etiquetado
+        (Vea <xref linkend="svn-ch-6"/>.)  No obstante, el método
+        paranóico normalmente no es necesario. Si un usuario envía
+        un cambio accidentalmente al directorio de etiquetas,
+        puede simplemente deshacer el cambio tal y como discutimos
+        en la sección anterior. Después de todo, esto es control
+        de versiones.</para>
 
     </sect2>
     
