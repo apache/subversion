@@ -460,7 +460,8 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
       && (! ((dst->schedule == svn_wc_schedule_add)
              || (dst->schedule == svn_wc_schedule_replace))))
     {
-      dst->url = svn_path_join (src->url, dst->name, pool);
+      dst->url = svn_path_join (src->url, 
+                                svn_path_uri_encode (dst->name, pool), pool);
     }
 }
 
@@ -965,8 +966,6 @@ write_entry (svn_stringbuf_t **output,
         }
       else
         {
-          const char *this_path;
-
           /* If this is not the "this dir" entry, and the revision is
              the same as that of the "this dir" entry, don't write out
              the revision. */
@@ -979,9 +978,10 @@ write_entry (svn_stringbuf_t **output,
              don't write out the url */
           if (entry->url)
             {
-              this_path = svn_path_join (this_dir->url, name, pool);
-
-              if (strcmp (this_path, entry->url) == 0)
+              if (strcmp (entry->url,
+                          svn_path_join (this_dir->url, 
+                                         svn_path_uri_encode (name, pool), 
+                                         pool)) == 0)
                 apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL,
                               APR_HASH_KEY_STRING, NULL);
             }

@@ -597,12 +597,12 @@ add_directory (const char *path,
       /* If the copyfrom args are both invalid, inherit the URL from the
          parent, and make the revision equal to the global target
          revision. */
-      const char *new_URL;
       svn_wc_entry_t *parent_entry;
 
       SVN_ERR (svn_wc_entry (&parent_entry, pb->path, FALSE, db->pool));
-      new_URL = svn_path_join (parent_entry->url, db->name, db->pool);
-      copyfrom_path = new_URL;
+      copyfrom_path = svn_path_join (parent_entry->url, 
+                                     svn_path_uri_encode (db->name, db->pool),
+                                     db->pool);
       copyfrom_revision = pb->edit_baton->target_revision;      
     }
 
@@ -1782,24 +1782,15 @@ close_edit (void *edit_baton)
      this editor needs to make sure that *all* paths have had their
      revisions bumped to the new target revision. */
 
-  if (eb->is_checkout)
-    /* do nothing for checkout;  all urls and working revs are fine. */
-    ;
-
-  else  /* must be an update or switch */
+  /* Do nothing for checkout;  all urls and working revs are fine.
+     Updates and switches, though, have to be cleaned up.  */
+  if (! eb->is_checkout)
     {
-      const char *full_path;
-      
-      if (eb->target)
-        full_path = svn_path_join (eb->anchor, eb->target, eb->pool);
-      else
-        full_path = apr_pstrdup (eb->pool, eb->anchor);
-
       /* Make sure our update target now has the new working revision.
          Also, if this was an 'svn switch', then rewrite the target's
          url.  All of this tweaking might happen recursively! */
       SVN_ERR (svn_wc__do_update_cleanup
-               (full_path,
+               (svn_path_join_many (eb->pool, eb->anchor, eb->target, NULL),
                 eb->recurse,
                 eb->switch_url,
                 eb->target_revision,
@@ -2127,7 +2118,9 @@ check_wc_root (svn_boolean_t *wc_root,
 
   /* If PATH's parent in the WC is not its parent in the repository,
      PATH is a WC root. */
-  expected_url = svn_path_join (p_entry->url, base_name, pool);
+  expected_url = svn_path_join (p_entry->url, 
+                                svn_path_uri_encode (base_name, pool), 
+                                pool);
   if (entry->url && (strcmp (expected_url, entry->url) != 0))
     return SVN_NO_ERROR;
 
