@@ -135,16 +135,29 @@ def basic_copy_and_move_files(sbox):
   svntest.main.file_append (rho_path, 'new appended text for rho')
 
   # Copy rho to D -- local mods
-  svntest.main.run_svn(None, 'cp', rho_path, D_path)
+  outlines, errlines = svntest.main.run_svn(None, 'cp', rho_path, D_path)
+  if errlines:
+    print "cp rho D failed"
+    return 1
 
   # Copy alpha to C -- no local mods, and rename it to 'alpha2' also
-  svntest.main.run_svn(None, 'cp', alpha_path, alpha2_path)
+  outlines, errlines = svntest.main.run_svn(None, 'cp', alpha_path, alpha2_path)
+  if errlines:
+    print "cp alpha alpha2 failed"
+    return 1
 
   # Move mu to H -- local mods
-  svntest.main.run_svn(None, 'mv', '--force', mu_path, H_path)
+  outlines, errlines = svntest.main.run_svn(None, 'mv', '--force',
+                                            mu_path, H_path)
+  if errlines:
+    print "mv mu H failed"
+    return 1
 
   # Move iota to F -- no local mods
-  svntest.main.run_svn(None, 'mv', iota_path, F_path)
+  outlines, errlines = svntest.main.run_svn(None, 'mv', iota_path, F_path)
+  if errlines:
+    print "mv iota F failed"
+    return 1
 
   # Created expected output tree for 'svn ci':
   # We should see four adds, two deletes, and one change in total.
@@ -732,6 +745,42 @@ def copy_delete_commit(sbox):
     return 1
 
 
+#----------------------------------------------------------------------
+def mv_and_revert_directory(sbox):
+  "move and revert a directory"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Issue 931: move failed to lock the directory being deleted
+  outlines, errlines = svntest.main.run_svn(None, 'move',
+                                            wc_dir + '/A/B/E',
+                                            wc_dir + '/A/B/F')
+  if errlines:
+    print "failed to copy A/B/E to A/B/F"
+    return 1
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+    'A/B/F/E' : Item(status='A ', wc_rev='-', repos_rev='1', copied='+'),
+    'A/B/F/E/alpha' : Item(status='_ ', wc_rev='-', repos_rev='1', copied='+'),
+    'A/B/F/E/beta' : Item(status='_ ', wc_rev='-', repos_rev='1', copied='+'),
+    })
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # Issue 932: revert failed to lock the parent directory
+  outlines, errlines = svntest.main.run_svn(None, 'revert', '--recursive',
+                                            wc_dir + '/A/B/F/E')
+  if errlines:
+    print "failed to revert A/B/F/E"
+    return 1
+  expected_status.remove('A/B/F/E', 'A/B/F/E/alpha', 'A/B/F/E/beta')
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
 ########################################################################
 # Run the tests
 
@@ -747,6 +796,7 @@ test_list = [ None,
               copy_modify_commit,
               copy_files_with_properties,
               copy_delete_commit,
+              mv_and_revert_directory,
              ]
 
 if __name__ == '__main__':

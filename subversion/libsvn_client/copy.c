@@ -120,6 +120,10 @@ wc_to_wc_copy (const char *src_path,
          and destination overlap. */
       if (strcmp (src_parent, dst_parent) == 0)
         adm_access = src_access;
+      else if (src_kind == svn_node_dir
+               && svn_path_is_child (src_parent, dst_parent, pool))
+        SVN_ERR (svn_wc_adm_retrieve (&adm_access, src_access, dst_parent,
+                                      pool));
       else
         SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_parent, TRUE, FALSE,
                                   pool));

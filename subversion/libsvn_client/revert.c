@@ -41,9 +41,37 @@ svn_client_revert (const char *path,
                    void *notify_baton,
                    apr_pool_t *pool)
 {
-  svn_error_t *err = svn_wc_revert (path, NULL, recursive,
-                                    notify_func, notify_baton,
-                                    pool);
+  svn_wc_adm_access_t *adm_access;
+  svn_boolean_t wc_root;
+  svn_error_t *err;
+
+  /* We need to open the parent of PATH, if PATH is not a wc root, but we
+     don't know if path is a directory.  It gets a bit messy. */
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, TRUE, recursive,
+                                  pool));
+  SVN_ERR (svn_wc_is_wc_root (&wc_root, path, adm_access, pool));
+  if (! wc_root)
+    {
+      const svn_wc_entry_t *entry;
+      SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+
+      if (entry->kind == svn_node_dir)
+        {
+          svn_wc_adm_access_t *dir_access;
+          SVN_ERR (svn_wc_adm_close (adm_access));
+          SVN_ERR (svn_wc_adm_open (&adm_access, NULL,
+                                    svn_path_remove_component_nts (path, pool),
+                                    TRUE, FALSE, pool));
+          SVN_ERR (svn_wc_adm_open (&dir_access, adm_access, path,
+                                    TRUE, recursive, pool));
+        }
+    }
+
+  err = svn_wc_revert (path, adm_access, recursive,
+                       notify_func, notify_baton,
+                       pool);
+
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* Sleep for one second to ensure timestamp integrity. */
   apr_sleep (APR_USEC_PER_SEC * 1);
