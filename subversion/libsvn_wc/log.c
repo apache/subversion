@@ -134,12 +134,9 @@ set_version (svn_string_t *path,
              svn_vernum_t version,
              apr_pool_t *pool)
 {
-  /* This operation is idempotent, so just do it and don't worry. */
-  return svn_wc__set_versions_entry (path,
-                                     pool,
-                                     name,
-                                     version,
-                                     NULL);
+  /* This operation is idempotent, so just do it without worrying
+     whether it's been done before. */
+  return svn_wc__set_versions_entry (path, pool, name, version, NULL);
 }
 
 

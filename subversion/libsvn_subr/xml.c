@@ -57,6 +57,19 @@
 
 
 
+/*** XML escaping. ***/
+
+/* Return an xml-safe version of STRING. */
+static svn_string_t *
+escape_string (svn_string_t *string, apr_pool_t *pool)
+{
+  /* kff todo: do real quoting soon. */
+  return svn_string_dup (string, pool);
+}
+
+
+
+
 /*** Making a parser. ***/
 
 svn_xml_parser_t *
@@ -188,7 +201,7 @@ svn_error_t *
 svn_xml_write_header (apr_file_t *file, apr_pool_t *pool)
 {
   apr_status_t apr_err;
-  const char *header = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
+  const char header[] = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
 
   apr_err = apr_full_write (file, header, (sizeof (header) - 1), NULL);
   if (apr_err)
@@ -197,6 +210,123 @@ svn_xml_write_header (apr_file_t *file, apr_pool_t *pool)
   
   return SVN_NO_ERROR;
 }
+
+
+
+/*** Creating attribute hashes. ***/
+
+apr_hash_t *
+svn_xml_make_att_hash (const char **atts, apr_pool_t *pool)
+{
+  apr_hash_t *ht = apr_make_hash (pool);
+  const char *key;
+
+  if (atts)
+    for (key = *atts; key; key = *(++atts))
+      {
+        const char *val = *(++atts);
+        assert (key != NULL);
+        
+        /* kff todo: should we also insist that val be non-null here? 
+           Probably. */
+
+        apr_hash_set (ht, key, strlen (key),
+                      val ? svn_string_create (val, pool) : NULL);
+      }
+
+  return ht;
+}
+
+
+apr_hash_t *
+svn_xml_make_att_hash_overlaying (const char **atts,
+                                  va_list ap,
+                                  apr_pool_t *pool)
+{
+  apr_hash_t *ht = svn_xml_make_att_hash (atts, pool);
+  const char *key;
+
+  if (ap)
+    while ((key = va_arg (ap, char *)) != NULL)
+      {
+        svn_string_t *val = va_arg (ap, svn_string_t *);
+        apr_hash_set (ht, key, strlen (key), val);
+      }
+  
+  return ht;
+}
+
+
+
+/*** Writing out tags. ***/
+
+
+svn_error_t *
+svn_xml_write_tag_hash (apr_file_t *file,
+                        apr_pool_t *pool,
+                        const int tagtype,
+                        const char *tagname,
+                        apr_hash_t *attributes)
+{
+  apr_status_t status;
+  apr_size_t bytes_written;
+  svn_string_t *xmlstring;
+  apr_hash_index_t *hi;
+
+  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+
+  xmlstring = svn_string_create ("<", subpool);
+
+  if (tagtype == svn_xml__close_tag)
+    svn_string_appendcstr (xmlstring, "/", subpool);
+
+  svn_string_appendcstr (xmlstring, tagname, subpool);
+
+  for (hi = apr_hash_first (attributes); hi; hi = apr_hash_next (hi))
+    {
+      const char *key;
+      size_t keylen;
+      svn_string_t *val;
+      
+      apr_hash_this (hi, (const void **) &key, &keylen, (void **) &val);
+      assert (val != NULL);
+      
+      svn_string_appendcstr (xmlstring, "\n   ", subpool);
+      svn_string_appendcstr (xmlstring, key, subpool);
+      svn_string_appendcstr (xmlstring, "=\"", subpool);
+      svn_string_appendstr  (xmlstring, escape_string (val, subpool), subpool);
+      svn_string_appendcstr (xmlstring, "\"", subpool);
+    }
+
+  if (tagtype == svn_xml__self_close_tag)
+    svn_string_appendcstr (xmlstring, "/", subpool);
+
+  svn_string_appendcstr (xmlstring, ">\n", subpool);
+
+  /* Do the write */
+  status = apr_full_write (file, xmlstring->data, xmlstring->len,
+                           &bytes_written);
+  if (status)
+    return svn_error_create (status, 0, NULL, subpool,
+                             "svn_xml_write_tag:  file write error.");
+
+  apr_destroy_pool (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_xml_write_tag_v (apr_file_t *file,
+                     apr_pool_t *pool,
+                     const int tagtype,
+                     const char *tagname,
+                     va_list ap)
+{
+  apr_hash_t *ht = svn_xml_make_att_hash_overlaying (NULL, ap, pool);
+  return svn_xml_write_tag_hash (file, pool, tagtype, tagname, ht);
+}
+
 
 
 svn_error_t *
@@ -215,120 +345,6 @@ svn_xml_write_tag (apr_file_t *file,
 
   return err;
 }
-
-
-svn_error_t *
-svn_xml_write_tag_v (apr_file_t *file,
-                     apr_pool_t *pool,
-                     const int tagtype,
-                     const char *tagname,
-                     va_list ap)
-{
-  apr_status_t status;
-  apr_size_t bytes_written;
-  char *attribute, *value;
-  svn_string_t *xmlstring;
-
-  apr_pool_t *subpool = svn_pool_create (pool, NULL);
-
-  xmlstring = svn_string_create ("<", subpool);
-
-  if (tagtype == svn_xml__close_tag)
-    svn_string_appendcstr (xmlstring, "/", subpool);
-
-  svn_string_appendcstr (xmlstring, tagname, subpool);
-
-  while ((attribute = va_arg (ap, char *)) != NULL)
-    {
-      value = va_arg (ap, char *);
-      assert (value != NULL);
-      
-      /* kff todo: once values are svn_string_t's, implement the xml
-         quoting. */
-
-      svn_string_appendcstr (xmlstring, "\n   ", subpool);
-      svn_string_appendcstr (xmlstring, attribute, subpool);
-      svn_string_appendcstr (xmlstring, "=\"", subpool);
-      svn_string_appendcstr (xmlstring, value, subpool);
-      svn_string_appendcstr (xmlstring, "\"", subpool);
-    }
-
-  if (tagtype == svn_xml__self_close_tag)
-    svn_string_appendcstr (xmlstring, "/", subpool);
-
-  svn_string_appendcstr (xmlstring, ">\n", subpool);
-
-  /* Do the write */
-  status = apr_full_write (file, xmlstring->data, xmlstring->len,
-                           &bytes_written);
-  if (status)
-    return svn_error_create (status, 0, NULL, subpool,
-                             "svn_xml_write_tag:  file write error.");
-
-  apr_destroy_pool (subpool);
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Like svn_xml_write_tag, but takes a list of char* pairs */
-svn_error_t *
-svn_xml_write_tag_list (apr_file_t *file,
-                        apr_pool_t *pool,
-                        const int tagtype,
-                        const char *tagname,
-                        const char **atts)
-{
-  apr_status_t status;
-  apr_size_t bytes_written;
-  const char *attribute, *value;
-  svn_string_t *xmlstring;
-
-  apr_pool_t *subpool = svn_pool_create (pool, NULL);
-
-  xmlstring = svn_string_create ("<", subpool);
-
-  if (tagtype == svn_xml__close_tag)
-    svn_string_appendcstr (xmlstring, "/", subpool);
-
-  svn_string_appendcstr (xmlstring, tagname, subpool);
-
-  while (atts && (*atts))
-    {
-      attribute = atts[0];
-      value = atts[1];
-      assert (value != NULL);
-      
-      /* kff todo: once values are svn_string_t's, implement the xml
-         quoting. */
-
-      svn_string_appendcstr (xmlstring, "\n   ", subpool);
-      svn_string_appendcstr (xmlstring, attribute, subpool);
-      svn_string_appendcstr (xmlstring, "=\"", subpool);
-      svn_string_appendcstr (xmlstring, value, subpool);
-      svn_string_appendcstr (xmlstring, "\"", subpool);
-
-      atts += 2;
-    }
-
-  if (tagtype == svn_xml__self_close_tag)
-    svn_string_appendcstr (xmlstring, "/", subpool);
-
-  svn_string_appendcstr (xmlstring, ">\n", subpool);
-
-  /* Do the write */
-  status = apr_full_write (file, xmlstring->data, xmlstring->len,
-                           &bytes_written);
-  if (status)
-    return svn_error_create (status, 0, NULL, subpool,
-                             "svn_xml_write_tag:  file write error.");
-
-  apr_destroy_pool (subpool);
-
-  return SVN_NO_ERROR;
-}
-
 
 
 

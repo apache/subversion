@@ -131,6 +131,22 @@ void svn_xml_signal_bailout (svn_error_t *error,
 const char *svn_xml_get_attr_value (const char *name, const char **atts);
 
 
+/* Create a hash that corresponds to xml attribute list ATTS.
+ * The hash's keys will be char *'s, the values svn_string_t *'s.
+ *
+ * ATTS may be null, in which case you just get an empty hash back
+ * (this makes life more convenient for some callers).
+ */
+apr_hash_t *svn_xml_make_att_hash (const char **atts, apr_pool_t *pool);
+
+
+/* Like svn_xml_make_att_hash(), but overlay the hash with new values
+ * from va_list AP if any.  AP may be null, in which case this behaves
+ * exactly like svn_xml_make_att_hash().
+ */
+apr_hash_t *svn_xml_make_att_hash_overlaying (const char **atts,
+                                              va_list ap,
+                                              apr_pool_t *pool);
 
 
 
@@ -147,8 +163,8 @@ svn_error_t *svn_xml_write_header (apr_file_t *file, apr_pool_t *pool);
 
 
 /* Print an XML tag named TAGNAME into FILE.  Varargs are used to
-   specify a NULL-terminated list of alternating const char *attribute
-   and svn_string_t *value.  kff todo: implement that!
+   specify a NULL-terminated list of alternating const char *Key
+   and svn_string_t *Val.
 
    TAGTYPE must be one of 
 
@@ -173,12 +189,28 @@ svn_error_t *svn_xml_write_tag_v (apr_file_t *file,
                                   va_list ap);
 
 
-/* Like svn_xml_write_tag, but takes a list of char* pairs */
-svn_error_t *svn_xml_write_tag_list (apr_file_t *file,
+/* Like svn_xml_write_tag, but takes a hash table of attributes. 
+ *
+ * You might ask, why not just provide svn_xml_write_tag_atts()?
+ *
+ * The reason is that a hash table is the most natural interface to an
+ * attribute list; the fact that Expat uses char **atts instead is
+ * certainly a defensible implementation decision, but since we'd have
+ * to have special code to support such lists throughout Subversion
+ * anyway, we might as well write that code for the natural interface
+ * (hashes) and then convert in the few cases where conversion is
+ * needed.  Someday it might even be nice to change expat-lite to work
+ * with apr hashes.
+ *
+ * See conversion functions svn_xml_make_att_hash() and
+ * svn_xml_make_att_hash_overlaying().  Callers should use those to
+ * convert Expat attr lists into hashes when necessary.
+ */
+svn_error_t *svn_xml_write_tag_hash (apr_file_t *file,
                                      apr_pool_t *pool,
                                      const int tagtype,
                                      const char *tagname,
-                                     const char **atts);
+                                     apr_hash_t *attributes);
 
 
 
