@@ -493,15 +493,17 @@ X    Resource is external to this working copy (comes from another
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-9">
 
-    <title>Versioned Modules</title>
+    <title>Versionado de modulos</title>
 
-    <para>Unlike CVS, a Subversion working copy is aware that it has
-      checked out a module.  That means that if somebody changes the
-      definition of a module, then a call to <command>svn update</command>
-      will update the working copy appropriately.</para>
+    <para>A diferencia de CVS, una copia de trabajo de Subversion es
+      consciente que ha descargado un modulo. Eso significa que si
+      alguien cambia la definición de un módulo, entonces una llamada
+      a <command>svn update</command> actualizará la copia de trabajo
+      apropiadamente.</para>
 
-    <para>Subversion defines modules as a list of directories within a
-      directory property:  see <xref linkend="svn-ch-7-sect-3"/>.</para>
+    <para>Subversion define los módulos como una lista de directorios
+      dentro de una propiedad del directorio: vea
+      <xref linkend="svn-ch-7-sect-3"/>.</para>
 
   </sect1>
 
@@ -510,19 +512,24 @@ X    Resource is external to this working copy (comes from another
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-10">
 
-    <title>Authentication</title>
+    <title>Autentificación</title>
 
-    <para>With CVS's pserver, you are required to <quote>login</quote>
-      to the server before any read or write operation&mdash;you even
-      have to login for anonymous operations.  With a Subversion
-      repository using Apache HTTPD as the server, you don't provide
-      any authentication credentials at the outset&mdash;if an
-      operation that you perform requires authentication, the server
-      will challenge you for your credentials (whether those
-      credentials are username and password, a client certificate, or
-      even both).  So if your repository is world-readable, you will
-      not be required to authenticate at all for read
-      operations.</para>
+    <para>Con el servidor de CVS, usted está obligado<!--TODO:you are
+      required to login--> a <quote>loguearse</quote> al servidor
+      antes de cualquier operación de lectura o escritura&mdash;usted
+      incluso tiene que loguearse para operaciones anonimas. Con un
+      repositorio de Subversion usando Apache HTTPD como el servidor,
+      en principio usted no proporcionará ningún credencial de
+      autentificación<!--TODO:you don't provide any authentication
+      credentials at the outset-->&mdash;si una operación que usted
+      realiza requiere de autentificación, el servidor le desafiará
+      para sus credenciales<!--TODO:the server will challenge you for
+      your credentials--> (donde<!--TODO:wheter--> esos credenciales
+      son username y password, una certificación de cliente, o
+      incluso ambos). De este modo si su repositorio es world-readable
+      <!--TODO:como traducir esto?-->no le requerirán autentificarse
+      para las operaciones de lectura.<!--TODO:you will not be required
+      to authenticate at all for read operations--></para>
 
     <para>As with CVS, Subversion still caches your credentials on
       disk (in your <filename>~/.subversion/auth/</filename>
