@@ -1675,17 +1675,17 @@ def convert(ctx, start_pass=1):
 def usage(ctx):
   print 'USAGE: %s [-n] [-v] [-s svn-repos-path] [-p pass] cvs-repos-path' \
         % os.path.basename(sys.argv[0])
-  print '  -n               dry run. parse CVS repos, but do not construct SVN repos.'
-  print '  -v               verbose.'
-  print '  -s PATH          path for SVN repos.'
-  print '  -p NUM           start at pass NUM of %d.' % len(_passes)
+  print '  -n               dry run; parse CVS repos, but do not construct SVN repos'
+  print '  -v               verbose'
+  print '  -s PATH          path for SVN repos'
+  print '  -p NUM           start at pass NUM of %d' % len(_passes)
   print '  --create         create a new SVN repository'
   print '  --dumpfile=PATH  name of intermediate svn dumpfile'
   print '  --svnadmin=PATH  path to the svnadmin program'
   print '  --trunk=PATH     path for trunk (default: %s)' % ctx.trunk_base
   # print '  --branches=PATH  path for branches (default: %s)' % ctx.branches_base
   # print '  --tags=PATH      path for tags (default: %s)' % ctx.tags_base
-  print '  --no-prune         Don\'t prune empty directories.'
+  print '  --no-prune       don\'t prune empty directories'
   print '  --encoding=ENC   encoding of log messages in CVS repos (default: %s)' % ctx.encoding
   sys.exit(1)
 
