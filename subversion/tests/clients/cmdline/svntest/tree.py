@@ -294,13 +294,24 @@ def get_props(path):
   props = {}
   output, errput = main.run_svn(1, "proplist", path, "--verbose")
 
+  first_value = 0
   for line in output:
     if line.startswith('Properties on '):
       continue
-    name, value = line.split(' : ')
-    name = string.strip(name)
-    value = string.strip(value)
-    props[name] = value
+    # Not a misprint; "> 0" really is preferable to ">= 0" in this case.
+    if line.find(' : ') > 0:
+      name, value = line.split(' : ')
+      name = string.strip(name)
+      value = string.strip(value)
+      props[name] = value
+      first_value = 1
+    else:    # Multi-line property, so re-use the current name.
+      if first_value:
+        # Undo, as best we can, the strip(value) that was done before
+        # we knew this was a multiline property.
+        props[name] = props[name] + "\n"
+        first_value = 0
+      props[name] = props[name] + line
 
   return props
 
