@@ -30,7 +30,6 @@
 #define SVN_FS__REPOS_LOCK_DIR    "locks"   /* Lock files live here. */
 #define SVN_FS__REPOS_HOOK_DIR    "hooks"   /* Hook programs. */
 #define SVN_FS__REPOS_CONF_DIR    "conf"    /* Configuration files. */
-#define SVN_FS__REPOS_CUSTOM_DIR  "custom"  /* User space; svn stays out. */
 
 /* Things for which we keep lockfiles. */
 #define SVN_FS__REPOS_DB_LOCKFILE "db.lock"   /* The Berkeley database. */
