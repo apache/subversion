@@ -1010,7 +1010,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
       /* ### temporary hack for 0.17. if the server doesn't have the prop,
          ### then __get_one_prop returns an empty string. deal with it.  */
       if ((err && (err->apr_err == SVN_ERR_RA_DAV_PROPS_NOT_FOUND))
-          || *expected_checksum->data == '\0')
+          || (expected_checksum && (*expected_checksum->data == '\0')))
         {
           fwc.do_checksum = FALSE;
           svn_error_clear(err);
