@@ -55,7 +55,7 @@ static const char under_string[] =
 
 /* Utilities */
 
-/* Wrapper for @c apr_file_printf(), which see.  @a format is a utf8-encoded
+/* Wrapper for @c apr_file_printf(), which see.  FORMAT is a utf8-encoded
    string after it is formatted, so this function can convert it to
    native encoding before printing. */
 static svn_error_t *
@@ -166,10 +166,10 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 }
 
 
-/* Return SVN_ERR_UNSUPPORTED_FEATURE if @a url's schema does not
-   match the schema of the url for @a adm_access's path; return
+/* Return SVN_ERR_UNSUPPORTED_FEATURE if URL's schema does not
+   match the schema of the url for ADM_ACCESS's path; return
    SVN_ERR_BAD_URL if no schema can be found for one or both urls;
-   otherwise return SVN_NO_ERROR.  Use @a adm_access's pool for
+   otherwise return SVN_NO_ERROR.  Use @a ADM_ACCESS's pool for
    temporary allocation. */
 static svn_error_t *
 check_schema_match (svn_wc_adm_access_t *adm_access, const char *url)
@@ -259,7 +259,7 @@ struct diff_cmd_baton {
 /* Generate a label for the diff output for file PATH at revision REVNUM.
    If REVNUM is invalid then it is assumed to be the current working
    copy.  Assumes the paths are already in the desired style (local
-   vs internal). */
+   vs internal).  Allocate the label in POOL. */
 static const char *
 diff_label (const char *path,
             svn_revnum_t revnum,
@@ -274,6 +274,8 @@ diff_label (const char *path,
   return label;
 }
 
+/* A svn_wc_diff_callbacks2_t function.  Used for both file and directory
+   property diffs. */
 static svn_error_t *
 diff_props_changed (svn_wc_adm_access_t *adm_access,
                     svn_wc_notify_state_t *state,
@@ -299,9 +301,10 @@ diff_props_changed (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* The main workhorse, which invokes an external 'diff' program on the
-   two temporary files.   The path is the "true" label to use in the
-   diff output. */
+/* Show differences between TMPFILE1 and TMPFILE2. PATH, REV1, and REV2 are
+   used in the headers to indicate the file and revisions.  If either
+   MIMETYPE1 or MIMETYPE2 indicate binary content, don't show a diff,
+   but instread print a warning message. */
 static svn_error_t *
 diff_content_changed (const char *path,
                       const char *tmpfile1,
@@ -512,6 +515,7 @@ diff_content_changed (const char *path,
   return SVN_NO_ERROR;
 }
 
+/* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 diff_file_changed (svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *content_state,
@@ -540,9 +544,12 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
     *prop_state = svn_wc_notify_state_unknown;
   return SVN_NO_ERROR;
 }
-/* The because the repos-diff editor passes at least one empty file to
+
+/* Because the repos-diff editor passes at least one empty file to
    each of these next two functions, they can be dumb wrappers around
    the main workhorse routine. */
+
+/* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 diff_file_added (svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_state_t *content_state,
@@ -578,6 +585,7 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 diff_file_deleted_with_diff (svn_wc_adm_access_t *adm_access,
                              svn_wc_notify_state_t *state,
@@ -601,6 +609,7 @@ diff_file_deleted_with_diff (svn_wc_adm_access_t *adm_access,
                             apr_hash_make (diff_cmd_baton->pool), diff_baton);
 }
 
+/* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
                            svn_wc_notify_state_t *state,
@@ -625,7 +634,8 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* For now, let's have 'svn diff' send feedback to the top-level
+/* A svn_wc_diff_callbacks2_t function.
+   For now, let's have 'svn diff' send feedback to the top-level
    application, so that something reasonable about directories and
    propsets gets printed to stdout. */
 static svn_error_t *
@@ -642,6 +652,7 @@ diff_dir_added (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 diff_dir_deleted (svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *state,
@@ -681,6 +692,8 @@ struct merge_cmd_baton {
   apr_pool_t *pool;
 };
 
+/* A svn_wc_diff_callbacks2_t function.  Used for both file and directory
+   property merges. */
 static svn_error_t *
 merge_props_changed (svn_wc_adm_access_t *adm_access,
                      svn_wc_notify_state_t *state,
@@ -720,6 +733,7 @@ merge_props_changed (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 merge_file_changed (svn_wc_adm_access_t *adm_access,
                     svn_wc_notify_state_t *content_state,
@@ -859,7 +873,7 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-
+/* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 merge_file_added (svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *content_state,
@@ -1000,6 +1014,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 merge_file_deleted (svn_wc_adm_access_t *adm_access,
                     svn_wc_notify_state_t *state,
@@ -1075,6 +1090,7 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 merge_dir_added (svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_state_t *state,
@@ -1180,6 +1196,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 merge_dir_deleted (svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *state,
