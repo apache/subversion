@@ -194,6 +194,43 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
                                        const ne_propname *propname,
                                        apr_pool_t *pool);
 
+/* Get various Baseline-related information for a given "public" URL.
+
+   Given a Neon session SESS and a URL, return whether the URL is a
+   directory in IS_DIR. IS_DIR may be NULL if this flag is unneeded.
+
+   REVISION may be SVN_INVALID_REVNUM to indicate that the operation
+   should work against the latest (HEAD) revision, or whether it should
+   return information about that specific revision.
+
+   If BC_URL is not NULL, then it will be filled in with the URL for
+   the Baseline Collection for the specified revision, or the HEAD.
+
+   If BC_RELATIVE is not NULL, then it will be filled in with a
+   relative pathname for the baselined resource corresponding to the
+   revision of the resource specified by URL.
+
+   If LATEST_REV is not NULL, then it will be filled in with the revision
+   that this information corresponds to. Generally, this will be the same
+   as the REVISION parameter, unless we are working against the HEAD. In
+   that case, the HEAD revision number is returned.
+
+   Allocation for BC_URL->data, BC_RELATIVE->data, and temporary data,
+   will occur in POOL.
+
+   Note: a Baseline Collection is a complete tree for a specified Baseline.
+   DeltaV baselines correspond one-to-one to Subversion revisions. Thus,
+   the entire state of a revision can be found in a Baseline Collection.
+*/
+svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
+                                           svn_string_t *bc_url,
+                                           svn_string_t *bc_relative,
+                                           svn_revnum_t *latest_rev,
+                                           ne_session *sess,
+                                           const char *url,
+                                           svn_revnum_t revision,
+                                           apr_pool_t *pool);
+
 extern const ne_propname svn_ra_dav__vcc_prop;
 extern const ne_propname svn_ra_dav__checked_in_prop;
 

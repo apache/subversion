@@ -93,6 +93,26 @@ typedef struct {
 
 } prop_ctx_t;
 
+/* when we begin a checkout, we fetch these from the "public" resources to
+   steer us towards a Baseline Collection. we fetch the resourcetype to
+   verify that we're accessing a collection. */
+static const ne_propname starting_props[] =
+{
+  { "DAV:", "version-controlled-configuration" },
+  { SVN_PROP_PREFIX, "baseline-relative-path" },
+  { "DAV:", "resourcetype" },
+  { NULL }
+};
+
+/* when speaking to a Baseline to reach the Baseline Collection, fetch these
+   properties. */
+static const ne_propname baseline_props[] =
+{
+  { "DAV:", "baseline-collection" },
+  { "DAV:", "version-name" },
+  { NULL }
+};
+
 
 
 /* look up an element definition. may return NULL if the elem is not
@@ -418,6 +438,177 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
   sv->data = value;
   sv->len = strlen(value);
   *propval = sv;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
+                                           svn_string_t *bc_url,
+                                           svn_string_t *bc_relative,
+                                           svn_revnum_t *latest_rev,
+                                           ne_session *sess,
+                                           const char *url,
+                                           svn_revnum_t revision,
+                                           apr_pool_t *pool)
+{
+  svn_ra_dav_resource_t *rsrc;
+  const char *vcc;
+
+  /* ### we may be able to replace some/all of this code with an
+     ### expand-property REPORT when that is available on the server. */
+
+  /* -------------------------------------------------------------------
+     STEP 1
+
+     Fetch the following properties from the given URL:
+
+     *) DAV:version-controlled-configuration so that we can reach the
+        baseline information.
+
+     *) svn:baseline-relative-path so that we can find this resource
+        within a Baseline Collection.
+
+     *) DAV:resourcetype so that we can identify whether this resource
+        is a collection or not.
+  */
+
+  /* ### do we want to optimize the props we fetch, based on what the
+     ### user has requested? i.e. omit resourcetype when is_dir is NULL
+     ### and omit relpath when bc_relative is NULL. */
+  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, url,
+                                          NULL, starting_props, pool) );
+
+  if (is_dir != NULL)
+    *is_dir = rsrc->is_collection;
+
+  vcc = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
+  if (vcc == NULL)
+    {
+      /* ### better error reporting... */
+
+      /* ### need an SVN_ERR here */
+      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                              "The VCC property was not found on the "
+                              "resource.");
+    }
+
+  /* if they want the relative path (could be, they're just trying to find
+     the baseline collection), then return it */
+  if (bc_relative != NULL)
+    {
+      bc_relative->data = apr_hash_get(rsrc->propset,
+                                       SVN_RA_DAV__PROP_BASELINE_RELPATH,
+                                       APR_HASH_KEY_STRING);
+      if (bc_relative->data == NULL)
+        {
+          /* ### better error reporting... */
+
+          /* ### need an SVN_ERR here */
+          return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                                  "The relative-path property was not "
+                                  "found on the resource.");
+        }
+
+      bc_relative->len = strlen(bc_relative->data);
+    }
+
+  /* -------------------------------------------------------------------
+     STEP 2
+
+     We have the Version Controlled Configuration (BCC). From here, we
+     need to reach the Baseline for specified revision.
+
+     If the revision is SVN_INVALID_REVNUM, then we're talking about
+     the HEAD revision. We have one extra step to reach the Baseline:
+
+     *) Fetch the DAV:checked-in from the VCC; it points to the Baseline.
+
+     If we have a specific revision, then we use a Label header when
+     fetching props from the VCC. This will direct us to the Baseline
+     with that label (in this case, the label == the revision number).
+
+     From the Baseline, we fetch the followig properties:
+
+     *) DAV:baseline-collection, which is a complete tree of the Baseline
+        (in SVN terms, this tree is rooted at a specific revision)
+
+     *) DAV:version-name to get the revision of the Baseline that we are
+        querying. When asking about the HEAD, this tells us its revision.
+  */
+
+  if (revision == SVN_INVALID_REVNUM)
+    {
+      /* Fetch the latest revision */
+
+      const svn_string_t *baseline;
+
+      /* Get the Baseline from the DAV:checked-in value, then fetch its
+         DAV:baseline-collection property. */
+      /* ### should wrap this with info about rsrc==VCC */
+      SVN_ERR( svn_ra_dav__get_one_prop(&baseline, sess, vcc, NULL,
+                                        &svn_ra_dav__checked_in_prop, pool) );
+
+      /* ### do we want to optimize the props we fetch, based on what the
+         ### user asked for? i.e. omit version-name if latest_rev is NULL */
+      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, 
+                                              baseline->data, NULL,
+                                              baseline_props, pool) );
+    }
+  else
+    {
+      /* Fetch a specific revision */
+
+      char label[20];
+
+      /* ### send Label hdr, get DAV:baseline-collection [from the baseline] */
+
+      apr_snprintf(label, sizeof(label), "%ld", revision);
+
+      /* ### do we want to optimize the props we fetch, based on what the
+         ### user asked for? i.e. omit version-name if latest_rev is NULL */
+      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, vcc, label,
+                                              baseline_props, pool) );
+    }
+
+  /* rsrc now points at the Baseline. We will checkout from the
+     DAV:baseline-collection.  The revision we are checking out is in
+     DAV:version-name */
+
+  if (bc_url != NULL)
+    {
+      bc_url->data = apr_hash_get(rsrc->propset,
+                                  SVN_RA_DAV__PROP_BASELINE_COLLECTION,
+                                  APR_HASH_KEY_STRING);
+      if (bc_url->data == NULL)
+        {
+          /* ### better error reporting... */
+
+          /* ### need an SVN_ERR here */
+          return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                                  "DAV:baseline-collection was not present "
+                                  "on the baseline resource.");
+        }
+      bc_url->len = strlen(bc_url->data);
+    }
+
+  if (latest_rev != NULL)
+    {
+      const char *vsn_name;
+
+      vsn_name = apr_hash_get(rsrc->propset,
+                              SVN_RA_DAV__PROP_VERSION_NAME,
+                              APR_HASH_KEY_STRING);
+      if (vsn_name == NULL)
+        {
+          /* ### better error reporting... */
+
+          /* ### need an SVN_ERR here */
+          return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                                  "DAV:version-name was not present on the "
+                                  "baseline resource.");
+        }
+      *latest_rev = atol(vsn_name);
+    }
 
   return SVN_NO_ERROR;
 }
