@@ -64,16 +64,16 @@ extern "C" {
  */
 
 /*
- * [COMMIT-TEST] replace_root (wc)
+ * [COMMIT-TEST] open_root (wc)
  * base_revision: 1
  * 
- *    [COMMIT-TEST] replace_directory (wc/A)
+ *    [COMMIT-TEST] open_directory (wc/A)
  *    parent: wc
  *    base_revision: 1
  * 
  *       [COMMIT-TEST] delete_entry (wc/A/B)
  * 
- *       [COMMIT-TEST] replace_file (wc/A/mu)
+ *       [COMMIT-TEST] open_file (wc/A/mu)
  *       parent: wc/A
  *       base_revision: 1
  * 
@@ -90,7 +90,7 @@ extern "C" {
  *    copyfrom_path: 
  *    copyfrom_revision: 0
  * 
- *    [COMMIT-TEST] replace_file (wc/iota)
+ *    [COMMIT-TEST] open_file (wc/iota)
  *    parent: wc
  *    base_revision: 1
  * 
@@ -124,15 +124,15 @@ extern "C" {
  */
 
 /*
- * [COMMIT-TEST] replace_root (wc)
- *    [COMMIT-TEST] replace_directory (wc/A)
+ * [COMMIT-TEST] open_root (wc)
+ *    [COMMIT-TEST] open_directory (wc/A)
  *       [COMMIT-TEST] delete_entry (wc/A/B)
- *       [COMMIT-TEST] replace_file (wc/A/mu)
+ *       [COMMIT-TEST] open_file (wc/A/mu)
  *          [COMMIT-TEST] change_file_prop (wc/A/mu)
  *       [COMMIT-TEST] close_file (wc/A/mu)
  *    [COMMIT-TEST] close_directory (wc/A)
  *    [COMMIT-TEST] add_file (wc/zeta)
- *    [COMMIT-TEST] replace_file (wc/iota)
+ *    [COMMIT-TEST] open_file (wc/iota)
  * [COMMIT-TEST] close_directory (wc)
  *       [COMMIT-TEST] apply_textdelta (wc/iota)
  *    [COMMIT-TEST] close_file (wc/iota)

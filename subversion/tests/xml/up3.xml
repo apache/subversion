@@ -2,12 +2,12 @@
 <!-- try a property patch against our co1 file -->
 <delta-pkg>
   <tree-delta>
-    <replace name="iota">
+    <open name="iota">
       <file>
         <prop-delta>
           <set name="bat">razorfish</set>
         </prop-delta>
       </file>
-    </replace>
+    </open>
   </tree-delta>
 </delta-pkg>

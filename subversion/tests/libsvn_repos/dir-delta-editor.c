@@ -74,9 +74,9 @@ test_delete_entry (svn_stringbuf_t *filename, void *parent_baton)
 
 
 static svn_error_t *
-test_replace_root (void *edit_baton,
-                   svn_revnum_t base_revision,
-                   void **root_baton)
+test_open_root (void *edit_baton,
+                svn_revnum_t base_revision,
+                void **root_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *d = apr_pcalloc (eb->pool, sizeof (*d));
@@ -90,10 +90,10 @@ test_replace_root (void *edit_baton,
 
 
 static svn_error_t *
-test_replace_directory (svn_stringbuf_t *name,
-                        void *parent_baton,
-                        svn_revnum_t base_revision,
-                        void **child_baton)
+test_open_directory (svn_stringbuf_t *name,
+                     void *parent_baton,
+                     svn_revnum_t base_revision,
+                     void **child_baton)
 {
   struct dir_baton *pd = (struct dir_baton *) parent_baton;
   struct dir_baton *d = apr_pcalloc (pd->edit_baton->pool, sizeof (*d));
@@ -168,10 +168,10 @@ test_add_directory (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-test_replace_file (svn_stringbuf_t *name,
-                   void *parent_baton,
-                   svn_revnum_t base_revision,
-                   void **file_baton)
+test_open_file (svn_stringbuf_t *name,
+                void *parent_baton,
+                svn_revnum_t base_revision,
+                void **file_baton)
 {
   struct dir_baton *pd = (struct dir_baton *) parent_baton;
   struct file_baton *fb = apr_pcalloc (pd->edit_baton->pool, sizeof (*fb));
@@ -303,12 +303,12 @@ dir_delta_get_editor (const svn_delta_edit_fns_t **editor,
 
   /* Set up the editor. */
   my_editor = svn_delta_default_editor (pool);
-  my_editor->replace_root        = test_replace_root;
+  my_editor->open_root           = test_open_root;
   my_editor->delete_entry        = test_delete_entry;
   my_editor->add_directory       = test_add_directory;
-  my_editor->replace_directory   = test_replace_directory;
+  my_editor->open_directory      = test_open_directory;
   my_editor->add_file            = test_add_file;
-  my_editor->replace_file        = test_replace_file;
+  my_editor->open_file           = test_open_file;
   my_editor->apply_textdelta     = test_apply_textdelta;
   my_editor->change_file_prop    = test_change_file_prop;
   my_editor->change_dir_prop     = test_change_dir_prop;

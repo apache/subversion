@@ -83,7 +83,7 @@ typedef enum svn_delta__XML_t
   svn_delta__XML_treedelta,
   svn_delta__XML_add,
   svn_delta__XML_delete,
-  svn_delta__XML_replace,
+  svn_delta__XML_open,
   svn_delta__XML_file,
   svn_delta__XML_dir,
   svn_delta__XML_textdelta,
@@ -100,7 +100,7 @@ typedef enum svn_delta__XML_t
 #define SVN_DELTA__XML_TAG_DIR               "dir"
 #define SVN_DELTA__XML_TAG_FILE              "file"
 #define SVN_DELTA__XML_TAG_PROP_DELTA        "prop-delta"
-#define SVN_DELTA__XML_TAG_REPLACE           "replace"
+#define SVN_DELTA__XML_TAG_OPEN              "open"
 #define SVN_DELTA__XML_TAG_SET               "set"
 #define SVN_DELTA__XML_TAG_TEXT_DELTA        "text-delta"
 #define SVN_DELTA__XML_TAG_TEXT_DELTA_REF    "text-delta-ref"
@@ -229,7 +229,7 @@ typedef struct svn_xml__digger_t
   /* An writable generic stream to parse svndiff data, called whenever
      we receive binary data from expat.  Specifically, this is the
      _current_ handler that we're using for the data within the
-     _current_ file being added or replaced. */
+     _current_ file being added or opened. */
   svn_stream_t *svndiff_parser;
 
   /* A hashtable: text-delta-ref-IDs ==> file_batons.  

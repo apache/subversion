@@ -2,13 +2,13 @@
 <!-- try a property patch against our co1 file -->
 <delta-pkg>
   <tree-delta>
-    <replace name="A">
+    <open name="A">
       <dir>
         <prop-delta>
           <set name="ninja">hamster</set>
           <set name="wings">airplane</set>
         </prop-delta>
       </dir>
-    </replace>
+    </open>
   </tree-delta>
 </delta-pkg>

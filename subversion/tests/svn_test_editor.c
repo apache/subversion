@@ -237,9 +237,9 @@ test_set_target_revision (void *edit_baton,
 
 
 static svn_error_t *
-test_replace_root (void *edit_baton,
-                   svn_revnum_t base_revision,
-                   void **root_baton)
+test_open_root (void *edit_baton,
+                svn_revnum_t base_revision,
+                void **root_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *d = apr_pcalloc (eb->pool, sizeof (*d));
@@ -251,7 +251,7 @@ test_replace_root (void *edit_baton,
   *root_baton = d;
 
   str = svn_stringbuf_createf (eb->pool,
-                            "[%s] replace_root (%s)\n",
+                            "[%s] open_root (%s)\n",
                             eb->editor_name->data,
                             eb->root_path->data);
   SVN_ERR (print (eb, d->indent_level, str));
@@ -271,12 +271,12 @@ test_replace_root (void *edit_baton,
 
 
 static svn_error_t *
-add_or_replace_dir (svn_stringbuf_t *name,
-                    void *parent_baton,
-                    svn_stringbuf_t *base_path,
-                    svn_revnum_t base_revision,
-                    void **child_baton,
-                    const char *pivot_string)
+add_or_open_dir (svn_stringbuf_t *name,
+                 void *parent_baton,
+                 svn_stringbuf_t *base_path,
+                 svn_revnum_t base_revision,
+                 void **child_baton,
+                 const char *pivot_string)
 {
   struct dir_baton *pd = (struct dir_baton *) parent_baton;
   struct dir_baton *d = apr_pcalloc (pd->edit_baton->pool, sizeof (*d));
@@ -339,27 +339,27 @@ test_add_directory (svn_stringbuf_t *name,
                     svn_revnum_t copyfrom_revision,
                     void **child_baton)
 {
-  return add_or_replace_dir (name,
-                             parent_baton,
-                             copyfrom_path,
-                             copyfrom_revision,
-                             child_baton,
-                             "add");
+  return add_or_open_dir (name,
+                          parent_baton,
+                          copyfrom_path,
+                          copyfrom_revision,
+                          child_baton,
+                          "add");
 }
 
 
 static svn_error_t *
-test_replace_directory (svn_stringbuf_t *name,
-                        void *parent_baton,
-                        svn_revnum_t base_revision,
-                        void **child_baton)
+test_open_directory (svn_stringbuf_t *name,
+                     void *parent_baton,
+                     svn_revnum_t base_revision,
+                     void **child_baton)
 {
-  return add_or_replace_dir (name,
-                             parent_baton,
-                             NULL,
-                             base_revision,
-                             child_baton,
-                             "replace");
+  return add_or_open_dir (name,
+                          parent_baton,
+                          NULL,
+                          base_revision,
+                          child_baton,
+                          "open");
 }
 
 
@@ -445,12 +445,12 @@ test_apply_textdelta (void *file_baton,
 
 
 static svn_error_t *
-add_or_replace_file (svn_stringbuf_t *name,
-                     void *parent_baton,
-                     svn_stringbuf_t *base_path,
-                     svn_revnum_t base_revision,
-                     void **file_baton,
-                     const char *pivot_string)
+add_or_open_file (svn_stringbuf_t *name,
+                  void *parent_baton,
+                  svn_stringbuf_t *base_path,
+                  svn_revnum_t base_revision,
+                  void **file_baton,
+                  const char *pivot_string)
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
   struct file_baton *fb = apr_pcalloc (d->edit_baton->pool, sizeof (*fb));
@@ -458,7 +458,8 @@ add_or_replace_file (svn_stringbuf_t *name,
 
   /* Put the filename in file_baton */
   fb->dir_baton = d;
-  fb->path = (svn_stringbuf_t *) svn_stringbuf_dup (d->path, d->edit_baton->pool);
+  fb->path = (svn_stringbuf_t *) svn_stringbuf_dup (d->path,
+                                                    d->edit_baton->pool);
   svn_path_add_component (fb->path, name, d->edit_baton->style);
   fb->indent_level = (d->indent_level + 1);
   *file_baton = fb;
@@ -512,27 +513,27 @@ test_add_file (svn_stringbuf_t *name,
                svn_revnum_t copyfrom_revision,
                void **file_baton)
 {
-  return add_or_replace_file (name,
-                              parent_baton,
-                              copyfrom_path,
-                              copyfrom_revision,
-                              file_baton,
-                              "add");
+  return add_or_open_file (name,
+                           parent_baton,
+                           copyfrom_path,
+                           copyfrom_revision,
+                           file_baton,
+                           "add");
 }
 
 
 static svn_error_t *
-test_replace_file (svn_stringbuf_t *name,
-                   void *parent_baton,
-                   svn_revnum_t base_revision,
-                   void **file_baton)
+test_open_file (svn_stringbuf_t *name,
+                void *parent_baton,
+                svn_revnum_t base_revision,
+                void **file_baton)
 {
-  return add_or_replace_file (name,
-                              parent_baton,
-                              NULL,
-                              base_revision,
-                              file_baton,
-                              "replace");
+  return add_or_open_file (name,
+                           parent_baton,
+                           NULL,
+                           base_revision,
+                           file_baton,
+                           "open");
 }
 
 
@@ -624,13 +625,13 @@ svn_test_get_editor (const svn_delta_edit_fns_t **editor,
   /* Set up the editor. */
   my_editor = svn_delta_default_editor (pool);
   my_editor->set_target_revision = test_set_target_revision;
-  my_editor->replace_root        = test_replace_root;
+  my_editor->open_root           = test_open_root;
   my_editor->delete_entry        = test_delete_entry;
   my_editor->add_directory       = test_add_directory;
-  my_editor->replace_directory   = test_replace_directory;
+  my_editor->open_directory      = test_open_directory;
   my_editor->close_directory     = test_close_directory;
   my_editor->add_file            = test_add_file;
-  my_editor->replace_file        = test_replace_file;
+  my_editor->open_file           = test_open_file;
   my_editor->close_file          = test_close_file;
   my_editor->apply_textdelta     = test_apply_textdelta;
   my_editor->change_file_prop    = test_change_file_prop;

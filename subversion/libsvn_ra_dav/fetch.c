@@ -120,9 +120,13 @@ static const struct ne_xml_elm report_elements[] =
 {
   { SVN_XML_NAMESPACE, "update-report", ELEM_update_report, 0 },
   { SVN_XML_NAMESPACE, "target-revision", ELEM_target_revision, 0 },
-  { SVN_XML_NAMESPACE, "replace-directory", ELEM_replace_directory, 0 },
+  { SVN_XML_NAMESPACE, "open-directory", ELEM_open_directory, 0 },
+  /* ### Sat 24 Nov 2001: after all clients have upgraded, change the
+     "replace-" elements here to "open-" and upgrade the server.  -kff */  
+  { SVN_XML_NAMESPACE, "replace-directory", ELEM_open_directory, 0 },
   { SVN_XML_NAMESPACE, "add-directory", ELEM_add_directory, 0 },
-  { SVN_XML_NAMESPACE, "replace-file", ELEM_replace_file, 0 },
+  { SVN_XML_NAMESPACE, "open-file", ELEM_open_file, 0 },
+  { SVN_XML_NAMESPACE, "replace-file", ELEM_open_file, 0 },
   { SVN_XML_NAMESPACE, "add-file", ELEM_add_file, 0 },
   { SVN_XML_NAMESPACE, "delete-entry", ELEM_delete_entry, 0 },
   { SVN_XML_NAMESPACE, "fetch-props", ELEM_fetch_props, 0 },
@@ -511,8 +515,8 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
   /* In the checkout case, we don't really have a base revision, so
      pass SVN_IGNORED_REVNUM. */
-  SVN_ERR( (*editor->replace_root)(edit_baton, SVN_IGNORED_REVNUM,
-                                   &root_baton) );
+  SVN_ERR( (*editor->open_root)(edit_baton, SVN_IGNORED_REVNUM,
+                                &root_baton) );
 
   /* store the subdirs into an array for processing, rather than recursing */
   subdirs = apr_array_make(ras->pool, 5, sizeof(subdir_t *));
@@ -694,7 +698,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 ** ### docco...
 **
 ** DTD of the update report:
-** ### replace/add file/dir. first child is always checked-in/href (vsn_url).
+** ### open/add file/dir. first child is always checked-in/href (vsn_url).
 ** ### next are subdir elems, possibly fetch-file, then fetch-prop.
 */
 
@@ -719,15 +723,15 @@ static int validate_element(void *userdata,
 
     case ELEM_update_report:
       if (child == ELEM_target_revision
-          || child == ELEM_replace_directory)
+          || child == ELEM_open_directory)
         return NE_XML_VALID;
       else
         return NE_XML_INVALID;
 
-    case ELEM_replace_directory:
-      if (child == ELEM_replace_directory
+    case ELEM_open_directory:
+      if (child == ELEM_open_directory
           || child == ELEM_add_directory
-          || child == ELEM_replace_file
+          || child == ELEM_open_file
           || child == ELEM_add_file
           || child == ELEM_fetch_props
           || child == ELEM_remove_prop
@@ -745,7 +749,7 @@ static int validate_element(void *userdata,
       else
         return NE_XML_INVALID;
 
-    case ELEM_replace_file:
+    case ELEM_open_file:
       if (child == ELEM_checked_in
           || child == ELEM_fetch_file
           || child == ELEM_fetch_props
@@ -812,14 +816,14 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       CHKERR( (*rb->editor->set_target_revision)(rb->edit_baton, atol(att)) );
       break;
 
-    case ELEM_replace_directory:
+    case ELEM_open_directory:
       att = get_attr(atts, "rev");
       /* ### verify we got it. punt on error. */
       base = atol(att);
       if (rb->dirs->nelts == 0)
         {
-          err = (*rb->editor->replace_root)(rb->edit_baton, base,
-                                            &new_dir_baton);
+          err = (*rb->editor->open_root)(rb->edit_baton, base,
+                                         &new_dir_baton);
         }
       else
         {
@@ -827,9 +831,9 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
           /* ### verify we got it. punt on error. */
           svn_stringbuf_set(rb->namestr, name);
 
-          err = (*rb->editor->replace_directory)(rb->namestr,
-                                                 TOP_DIR(rb).baton, base,
-                                                 &new_dir_baton);
+          err = (*rb->editor->open_directory)(rb->namestr,
+                                              TOP_DIR(rb).baton, base,
+                                              &new_dir_baton);
         }
       if (err != NULL)
         goto error;
@@ -867,7 +871,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       TOP_DIR(rb).fetch_props = TRUE;
       break;
 
-    case ELEM_replace_file:
+    case ELEM_open_file:
       att = get_attr(atts, "rev");
       /* ### verify we got it. punt on error. */
       base = atol(att);
@@ -876,8 +880,8 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       /* ### verify we got it. punt on error. */
       svn_stringbuf_set(rb->namestr, name);
 
-      CHKERR( (*rb->editor->replace_file)(rb->namestr, TOP_DIR(rb).baton, base,
-                                          &rb->file_baton) );
+      CHKERR( (*rb->editor->open_file)(rb->namestr, TOP_DIR(rb).baton, base,
+                                       &rb->file_baton) );
 
       /* Property fetching is NOT implied in replacement. */
       rb->fetch_props = FALSE;
@@ -1036,7 +1040,7 @@ static int end_element(void *userdata,
 
       /*** FALLTHRU ***/
 
-    case ELEM_replace_directory:
+    case ELEM_open_directory:
       /* fetch node props as necessary. */
       CHKERR (add_node_props (rb));
 
@@ -1057,7 +1061,7 @@ static int end_element(void *userdata,
 
       /*** FALLTHRU ***/
 
-    case ELEM_replace_file:
+    case ELEM_open_file:
       /* fetch node props as necessary. */
       CHKERR (add_node_props (rb));
 

@@ -419,9 +419,9 @@ set_target_revision (void *edit_baton, svn_revnum_t target_revision)
 
 
 static svn_error_t *
-replace_root (void *edit_baton,
-              svn_revnum_t base_revision, /* This is ignored in co */
-              void **dir_baton)
+open_root (void *edit_baton,
+           svn_revnum_t base_revision, /* This is ignored in co */
+           void **dir_baton)
 {
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d;
@@ -456,7 +456,8 @@ delete_entry (svn_stringbuf_t *name, void *parent_baton)
   struct dir_baton *parent_dir_baton = parent_baton;
   apr_status_t apr_err;
   apr_file_t *log_fp = NULL;
-  svn_stringbuf_t *log_item = svn_stringbuf_create ("", parent_dir_baton->pool);
+  svn_stringbuf_t *log_item
+    = svn_stringbuf_create ("", parent_dir_baton->pool);
 
   err = svn_wc__lock (parent_dir_baton->path, 0, parent_dir_baton->pool);
   if (err)
@@ -478,7 +479,8 @@ delete_entry (svn_stringbuf_t *name, void *parent_baton)
                            name,
                            NULL);
 
-    apr_err = apr_file_write_full (log_fp, log_item->data, log_item->len, NULL);
+    apr_err = apr_file_write_full (log_fp,
+                                   log_item->data, log_item->len, NULL);
     if (apr_err)
       {
         apr_file_close (log_fp);
@@ -610,10 +612,10 @@ add_directory (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-replace_directory (svn_stringbuf_t *name,
-                   void *parent_baton,
-                   svn_revnum_t base_revision,
-                   void **child_baton)
+open_directory (svn_stringbuf_t *name,
+                void *parent_baton,
+                svn_revnum_t base_revision,
+                void **child_baton)
 {
   struct dir_baton *parent_dir_baton = parent_baton;
 
@@ -812,14 +814,14 @@ close_directory (void *dir_baton)
 
 
 
-/* Common code for add_file() and replace_file(). */
+/* Common code for add_file() and open_file(). */
 static svn_error_t *
-add_or_replace_file (svn_stringbuf_t *name,
-                     void *parent_baton,
-                     svn_stringbuf_t *ancestor_path,
-                     svn_revnum_t ancestor_revision,
-                     void **file_baton,
-                     svn_boolean_t adding)  /* 0 if replacing */
+add_or_open_file (svn_stringbuf_t *name,
+                  void *parent_baton,
+                  svn_stringbuf_t *ancestor_path,
+                  svn_revnum_t ancestor_revision,
+                  void **file_baton,
+                  svn_boolean_t adding)  /* 0 if replacing */
 {
   struct dir_baton *parent_dir_baton = parent_baton;
   struct file_baton *fb;
@@ -871,7 +873,7 @@ add_or_replace_file (svn_stringbuf_t *name,
   if ((! adding) && (! entry))
     return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL,
                               parent_dir_baton->pool,
-                              "trying to replace non-versioned file "
+                              "trying to open non-versioned file "
                               "%s in directory %s",
                               name->data, parent_dir_baton->path->data);
 
@@ -885,7 +887,7 @@ add_or_replace_file (svn_stringbuf_t *name,
   else if (! is_wc)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, parent_dir_baton->pool,
-       "add_or_replace_file: %s is not a working copy directory",
+       "add_or_open_file: %s is not a working copy directory",
        parent_dir_baton->path->data);
 
   /* Set up the file's baton. */
@@ -910,18 +912,18 @@ add_file (svn_stringbuf_t *name,
           svn_revnum_t copyfrom_revision,
           void **file_baton)
 {
-  return add_or_replace_file
+  return add_or_open_file
     (name, parent_baton, copyfrom_path, copyfrom_revision, file_baton, 1);
 }
 
 
 static svn_error_t *
-replace_file (svn_stringbuf_t *name,
+open_file (svn_stringbuf_t *name,
               void *parent_baton,
               svn_revnum_t base_revision,
               void **file_baton)
 {
-  return add_or_replace_file
+  return add_or_open_file
     (name, parent_baton, NULL, base_revision, file_baton, 0);
 }
 
@@ -1331,25 +1333,26 @@ close_file (void *file_baton)
                      portablized too.  Even if we know we're doing a
                      plaintext patch, not all patch programs support
                      these args. */
-                  svn_xml_make_open_tag (&entry_accum,
-                                         fb->pool,
-                                         svn_xml_self_closing,
-                                         SVN_WC__LOG_RUN_CMD,
-                                         SVN_WC__LOG_ATTR_NAME,
-                                         patch_cmd,
-                                         SVN_WC__LOG_ATTR_ARG_1,
-                                         svn_stringbuf_create ("-r", fb->pool),
-                                         SVN_WC__LOG_ATTR_ARG_2,
-                                         reject_filename,
-                                         SVN_WC__LOG_ATTR_ARG_3,
-                                         svn_stringbuf_create ("-B.#", fb->pool),
-                                         SVN_WC__LOG_ATTR_ARG_4,
-                                         svn_stringbuf_create ("--", fb->pool),
-                                         SVN_WC__LOG_ATTR_ARG_5,
-                                         fb->name,
-                                         SVN_WC__LOG_ATTR_INFILE,
-                                         received_diff_filename,
-                                         NULL);
+                  svn_xml_make_open_tag
+                    (&entry_accum,
+                     fb->pool,
+                     svn_xml_self_closing,
+                     SVN_WC__LOG_RUN_CMD,
+                     SVN_WC__LOG_ATTR_NAME,
+                     patch_cmd,
+                     SVN_WC__LOG_ATTR_ARG_1,
+                     svn_stringbuf_create ("-r", fb->pool),
+                     SVN_WC__LOG_ATTR_ARG_2,
+                     reject_filename,
+                     SVN_WC__LOG_ATTR_ARG_3,
+                     svn_stringbuf_create ("-B.#", fb->pool),
+                     SVN_WC__LOG_ATTR_ARG_4,
+                     svn_stringbuf_create ("--", fb->pool),
+                     SVN_WC__LOG_ATTR_ARG_5,
+                     fb->name,
+                     SVN_WC__LOG_ATTR_INFILE,
+                     received_diff_filename,
+                     NULL);
 
                   /* Remove the diff file that patch will have used. */
                   svn_xml_make_open_tag (&entry_accum,
@@ -1570,7 +1573,7 @@ close_edit (void *edit_baton)
   /* By definition, anybody "driving" this editor for update purposes
      at a *minimum* must have called set_target_revision() at the
      outset, and close_edit() at the end -- even if it turned out that
-     no changes ever had to be made, and replace_root() was never
+     no changes ever had to be made, and open_root() was never
      called.  That's fine.  But regardless, when the edit is over,
      this editor needs to make sure that *all* paths have had their
      revisions bumped to the new target revision. */
@@ -1634,14 +1637,14 @@ make_editor (svn_stringbuf_t *anchor,
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
-  tree_editor->replace_root = replace_root;
+  tree_editor->open_root = open_root;
   tree_editor->delete_entry = delete_entry;
   tree_editor->add_directory = add_directory;
-  tree_editor->replace_directory = replace_directory;
+  tree_editor->open_directory = open_directory;
   tree_editor->change_dir_prop = change_dir_prop;
   tree_editor->close_directory = close_directory;
   tree_editor->add_file = add_file;
-  tree_editor->replace_file = replace_file;
+  tree_editor->open_file = open_file;
   tree_editor->apply_textdelta = apply_textdelta;
   tree_editor->change_file_prop = change_file_prop;
   tree_editor->close_file = close_file;
@@ -1752,7 +1755,7 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
    with that now-rooted editor.  Given a path to be updated, this
    function should conditionally split that path into an "anchor" and
    a "target", where the "anchor" is the directory at which the update
-   editor is rooted (meaning, editor->replace_root() is called with
+   editor is rooted (meaning, editor->open_root() is called with
    this directory in mind), and the "target" is the actual intended
    subject of the update.
 

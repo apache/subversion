@@ -90,9 +90,9 @@ struct file_baton
 /*** the anonymous editor functions ***/
 
 static svn_error_t *
-replace_root (void *edit_baton,
-              svn_revnum_t base_revision,
-              void **root_baton)
+open_root (void *edit_baton,
+           svn_revnum_t base_revision,
+           void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
   struct dir_baton *rb = apr_pcalloc (eb->pool, sizeof (*rb));
@@ -144,10 +144,10 @@ add_directory (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-replace_directory (svn_stringbuf_t *name,
-                   void *parent_baton,
-                   svn_revnum_t base_revision,
-                   void **child_baton)
+open_directory (svn_stringbuf_t *name,
+                void *parent_baton,
+                svn_revnum_t base_revision,
+                void **child_baton)
 {
   struct dir_baton *parent_d = parent_baton;
   struct dir_baton *child_d
@@ -155,7 +155,8 @@ replace_directory (svn_stringbuf_t *name,
 
   child_d->edit_baton = parent_d->edit_baton;
   child_d->parent_dir_baton = parent_d;
-  child_d->path = svn_stringbuf_dup (parent_d->path, child_d->edit_baton->pool);
+  child_d->path = svn_stringbuf_dup (parent_d->path,
+                                     child_d->edit_baton->pool);
   svn_path_add_component (child_d->path, name, svn_path_local_style);
 
   *child_baton = child_d;
@@ -193,17 +194,18 @@ add_file (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-replace_file (svn_stringbuf_t *name,
-              void *parent_baton,
-              svn_revnum_t base_revision,
-              void **file_baton)
+open_file (svn_stringbuf_t *name,
+           void *parent_baton,
+           svn_revnum_t base_revision,
+           void **file_baton)
 {
   struct dir_baton *parent_d = parent_baton;
   struct file_baton *child_fb
     = apr_pcalloc (parent_d->edit_baton->pool, sizeof (*child_fb));
 
   child_fb->parent_dir_baton = parent_d;
-  child_fb->path = svn_stringbuf_dup (parent_d->path, parent_d->edit_baton->pool);
+  child_fb->path = svn_stringbuf_dup (parent_d->path,
+                                      parent_d->edit_baton->pool);
   svn_path_add_component (child_fb->path, name, svn_path_local_style);
 
   *file_baton = child_fb;
@@ -343,11 +345,11 @@ svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
         window_handler
      
   */
-  track_editor->replace_root = replace_root;
+  track_editor->open_root = open_root;
   track_editor->add_directory = add_directory;
-  track_editor->replace_directory = replace_directory;
+  track_editor->open_directory = open_directory;
   track_editor->add_file = add_file;
-  track_editor->replace_file = replace_file;
+  track_editor->open_file = open_file;
   track_editor->delete_entry = delete_entry;
   track_editor->change_dir_prop = change_dir_prop;
   track_editor->change_file_prop = change_file_prop;

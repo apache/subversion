@@ -157,12 +157,12 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
   /* ### todo:  What should happen below here?
 
      1.  Get a commit editor, anchored above SRC and DST
-     2.  replace-dir() down DST (inclusive, if DST is a directory)
+     2.  open-dir() down DST (inclusive, if DST is a directory)
      3.  add-file/dir(copyfrom=src,rev) either
          - basename(DST) if DST doesn't exist, or 
          - basename(SRC) if DST does exist as a dir
      4.  close up all those batons and stuffs
-     5.  if this is a move, replace-dir() back down to SRC's parent,
+     5.  if this is a move, open-dir() back down to SRC's parent,
          then delete_entry(basename(SRC)), and close up batons again.
   */
 

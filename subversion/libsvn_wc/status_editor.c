@@ -387,9 +387,9 @@ set_target_revision (void *edit_baton, svn_revnum_t target_revision)
 
 
 static svn_error_t *
-replace_root (void *edit_baton,
-              svn_revnum_t base_revision, /* This is ignored in co */
-              void **dir_baton)
+open_root (void *edit_baton,
+           svn_revnum_t base_revision, /* This is ignored in co */
+           void **dir_baton)
 {
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d;
@@ -455,10 +455,10 @@ add_directory (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-replace_directory (svn_stringbuf_t *name,
-                   void *parent_baton,
-                   svn_revnum_t base_revision,
-                   void **child_baton)
+open_directory (svn_stringbuf_t *name,
+                void *parent_baton,
+                svn_revnum_t base_revision,
+                void **child_baton)
 {
   struct dir_baton *parent_dir_baton = parent_baton;
 
@@ -526,14 +526,14 @@ close_directory (void *dir_baton)
 
 
 
-/* Common code for add_file() and replace_file(). */
+/* Common code for add_file() and open_file(). */
 static svn_error_t *
-add_or_replace_file (svn_stringbuf_t *name,
-                     void *parent_baton,
-                     svn_stringbuf_t *ancestor_path,
-                     svn_revnum_t ancestor_revision,
-                     void **file_baton,
-                     svn_boolean_t adding)  /* 0 if replacing */
+add_or_open_file (svn_stringbuf_t *name,
+                  void *parent_baton,
+                  svn_stringbuf_t *ancestor_path,
+                  svn_revnum_t ancestor_revision,
+                  void **file_baton,
+                  svn_boolean_t adding)  /* 0 if replacing */
 {
   struct file_baton *this_file_baton
     = make_file_baton (parent_baton, name);
@@ -559,18 +559,18 @@ add_file (svn_stringbuf_t *name,
   /* Mark parent dir as changed */  
   parent_dir_baton->text_changed = 1;
 
-  return add_or_replace_file
+  return add_or_open_file
     (name, parent_baton, copyfrom_path, copyfrom_revision, file_baton, 1);
 }
 
 
 static svn_error_t *
-replace_file (svn_stringbuf_t *name,
-              void *parent_baton,
-              svn_revnum_t base_revision,
-              void **file_baton)
+open_file (svn_stringbuf_t *name,
+           void *parent_baton,
+           svn_revnum_t base_revision,
+           void **file_baton)
 {
-  return add_or_replace_file
+  return add_or_open_file
     (name, parent_baton, NULL, base_revision, file_baton, 0);
 }
 
@@ -706,14 +706,14 @@ svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
-  tree_editor->replace_root = replace_root;
+  tree_editor->open_root = open_root;
   tree_editor->delete_entry = delete_entry;
   tree_editor->add_directory = add_directory;
-  tree_editor->replace_directory = replace_directory;
+  tree_editor->open_directory = open_directory;
   tree_editor->change_dir_prop = change_dir_prop;
   tree_editor->close_directory = close_directory;
   tree_editor->add_file = add_file;
-  tree_editor->replace_file = replace_file;
+  tree_editor->open_file = open_file;
   tree_editor->apply_textdelta = apply_textdelta;
   tree_editor->change_file_prop = change_file_prop;
   tree_editor->close_file = close_file;

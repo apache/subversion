@@ -1,30 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <delta-pkg>
   <tree-delta>
-    <replace name="iota">
+    <open name="iota">
       <file>
         <text-delta-ref id="iota"/>
       </file>
-    </replace>
-    <replace name="A">
+    </open>
+    <open name="A">
       <dir>
         <tree-delta>
-          <replace name="mu">
+          <open name="mu">
             <file>
               <text-delta-ref id="mu"/>
             </file>
-          </replace>
-          <replace name="B">
+          </open>
+          <open name="B">
             <dir>
               <tree-delta>
-                <replace name="E">
+                <open name="E">
                   <dir>
                     <tree-delta>
-                      <replace name="beta">
+                      <open name="beta">
                         <file>
                           <text-delta-ref id="beta"/>
                         </file>
-                      </replace>
+                      </open>
                       <add name="sigma">
                         <file>
                           <text-delta-ref id="sigma"/>
@@ -32,37 +32,37 @@
                       </add>
                     </tree-delta>
                   </dir>
-                </replace>
+                </open>
               </tree-delta>
             </dir>
-          </replace>
-          <replace name="D">
+          </open>
+          <open name="D">
             <dir>
               <tree-delta>
-                <replace name="G">
+                <open name="G">
                   <dir>
                     <tree-delta>
-                      <replace name="rho">
+                      <open name="rho">
                         <file>
                           <text-delta-ref id="rho"/>
                         </file>
-                      </replace>
+                      </open>
                     </tree-delta>
                   </dir>
-                </replace>
-                <replace name="H">
+                </open>
+                <open name="H">
                   <dir>
                     <tree-delta>
                       <delete name="psi"/>
                     </tree-delta>
                   </dir>
-                </replace>
+                </open>
               </tree-delta>
             </dir>
-          </replace>
+          </open>
         </tree-delta>
       </dir>
-    </replace>
+    </open>
   </tree-delta>
 <text-delta id="iota">Another update of 'iota'.</text-delta>
 <text-delta id="mu">Another update of 'mu'.</text-delta>

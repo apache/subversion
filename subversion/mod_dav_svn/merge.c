@@ -161,9 +161,9 @@ static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
    EDITOR FUNCTIONS
 */
 
-static svn_error_t *mr_replace_root(void *edit_baton,
-                                    svn_revnum_t base_revision,
-                                    void **root_baton)
+static svn_error_t *mr_open_root(void *edit_baton,
+                                 svn_revnum_t base_revision,
+                                 void **root_baton)
 {
   merge_response_ctx *mrc = edit_baton;
   apr_pool_t *pool;
@@ -216,10 +216,10 @@ static svn_error_t *mr_add_directory(svn_stringbuf_t *name,
   return NULL;
 }
 
-static svn_error_t *mr_replace_directory(svn_stringbuf_t *name,
-                                         void *parent_baton,
-                                         svn_revnum_t base_revision,
-                                         void **child_baton)
+static svn_error_t *mr_open_directory(svn_stringbuf_t *name,
+                                      void *parent_baton,
+                                      svn_revnum_t base_revision,
+                                      void **child_baton)
 {
   mr_baton *parent = parent_baton;
   mr_baton *subdir = make_child_baton(parent, name->data, TRUE);
@@ -279,10 +279,10 @@ static svn_error_t *mr_add_file(svn_stringbuf_t *name,
   return NULL;
 }
 
-static svn_error_t *mr_replace_file(svn_stringbuf_t *name,
-                                    void *parent_baton,
-                                    svn_revnum_t base_revision,
-                                    void **file_baton)
+static svn_error_t *mr_open_file(svn_stringbuf_t *name,
+                                 void *parent_baton,
+                                 svn_revnum_t base_revision,
+                                 void **file_baton)
 {
   mr_baton *parent = parent_baton;
   mr_baton *file = make_child_baton(parent, name->data, FALSE);
@@ -375,7 +375,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   /* Now we need to generate responses for all the resources which changed.
      This is done through a delta of the two roots.
 
-     Note that a directory is not marked when replace_dir is seen (since it
+     Note that a directory is not marked when open_dir is seen (since it
      typically is used just for changing members in that directory); instead,
      we want for a property change (the only reason the client would need to
      fetch a new directory).
@@ -391,14 +391,14 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
 
   /* set up the editor for the delta process */
   editor = svn_delta_default_editor(pool);
-  editor->replace_root = mr_replace_root;
+  editor->open_root = mr_open_root;
   editor->delete_entry = mr_delete_entry;
   editor->add_directory = mr_add_directory;
-  editor->replace_directory = mr_replace_directory;
+  editor->open_directory = mr_open_directory;
   editor->change_dir_prop = mr_change_dir_prop;
   editor->close_directory = mr_close_directory;
   editor->add_file = mr_add_file;
-  editor->replace_file = mr_replace_file;
+  editor->open_file = mr_open_file;
   editor->close_file = mr_close_file;
 
   /* set up the merge response context */

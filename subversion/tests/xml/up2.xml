@@ -2,7 +2,7 @@
 <!-- try a property patch against our co1 file -->
 <delta-pkg>
   <tree-delta>
-    <replace name="iota">
+    <open name="iota">
       <file>
         <prop-delta>
           <set name="ocean">atlantic</set>
@@ -10,6 +10,6 @@
           <set name="color">blue</set>
         </prop-delta>
       </file>
-    </replace>
+    </open>
   </tree-delta>
 </delta-pkg>

@@ -257,7 +257,7 @@ typedef struct svn_ra_plugin_t
 
   /* Begin a commit against `rev:path' using LOG_MSG as the log
      message.  `rev' is the argument that will be passed to
-     replace_root(), and `path' is built into the SESSION_BATON's URL.
+     open_root(), and `path' is built into the SESSION_BATON's URL.
      
      RA returns an *EDITOR and *EDIT_BATON capable of transmitting a
      commit to the repository, which is then driven by the client.
@@ -300,7 +300,7 @@ typedef struct svn_ra_plugin_t
 
      The client initially provides an UPDATE_EDITOR/BATON to the RA
      layer; this editor contains knowledge of where the change will
-     begin in the working copy (when replace_root() is called).
+     begin in the working copy (when open_root() is called).
 
      In return, the client receives a REPORTER/REPORT_BATON. The
      client then describes its working-copy revision numbers by making
@@ -330,7 +330,7 @@ typedef struct svn_ra_plugin_t
 
      The client initially provides an STATUS_EDITOR/BATON to the RA
      layer; this editor contains knowledge of where the change will
-     begin in the working copy (when replace_root() is called).
+     begin in the working copy (when open_root() is called).
 
      In return, the client receives a REPORTER/REPORT_BATON. The
      client then describes its working-copy revision numbers by making

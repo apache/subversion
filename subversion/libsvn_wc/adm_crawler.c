@@ -374,9 +374,9 @@ do_dir_replaces (void **newest_baton,
              root baton. */
           void *root_baton;
 
-          SVN_ERR (editor->replace_root (edit_baton,
-                                         stackptr->this_dir->revision, 
-                                         &root_baton));  
+          SVN_ERR (editor->open_root (edit_baton,
+                                      stackptr->this_dir->revision, 
+                                      &root_baton));  
           /* Store it */
           stackptr->baton = root_baton;
           break;
@@ -398,13 +398,13 @@ do_dir_replaces (void **newest_baton,
           stackptr = stackptr->next;
 
           /* We only want the last component of the path; that's what
-             the editor's replace_directory() expects from us. */
+             the editor's open_directory() expects from us. */
           dirname = svn_path_last_component (stackptr->path,
                                              svn_path_local_style, 
                                              stackptr->pool);
 
           /* Get a baton for this directory */
-          SVN_ERR (editor->replace_directory 
+          SVN_ERR (editor->open_directory 
                    (dirname, /* current dir */
                     stackptr->previous->baton, /* parent */
                     stackptr->this_dir->revision,
@@ -1262,10 +1262,10 @@ report_single_mod (const char *name,
           
           /* Replace a file, getting a new file baton */
           if (entry->kind == svn_node_file)
-            SVN_ERR (editor->replace_file (entry_name,
-                                           *dir_baton,
-                                           entry->revision,
-                                           &(tb->editor_baton)));
+            SVN_ERR (editor->open_file (entry_name,
+                                        *dir_baton,
+                                        entry->revision,
+                                        &(tb->editor_baton)));
           
           if (prop_modified_p)
             {

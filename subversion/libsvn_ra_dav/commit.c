@@ -543,9 +543,9 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   return NULL;
 }
 
-static svn_error_t * commit_replace_root(void *edit_baton,
-                                         svn_revnum_t base_revision, 
-                                         void **root_baton)
+static svn_error_t * commit_open_root(void *edit_baton,
+                                      svn_revnum_t base_revision, 
+                                      void **root_baton)
 {
   commit_ctx_t *cc = edit_baton;
   resource_baton_t *root;
@@ -684,10 +684,10 @@ static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
   return NULL;
 }
 
-static svn_error_t * commit_rep_dir(svn_stringbuf_t *name,
-                                    void *parent_baton,
-                                    svn_revnum_t base_revision,
-                                    void **child_baton)
+static svn_error_t * commit_open_dir(svn_stringbuf_t *name,
+                                     void *parent_baton,
+                                     svn_revnum_t base_revision,
+                                     void **child_baton)
 {
   resource_baton_t *parent = parent_baton;
   apr_pool_t *pool = parent->cc->ras->pool;
@@ -697,7 +697,7 @@ static svn_error_t * commit_rep_dir(svn_stringbuf_t *name,
   SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc, name->data, 0) );
 
   /*
-  ** Note: replace_dir simply means that a change has occurred somewhere
+  ** Note: open_dir simply means that a change has occurred somewhere
   **       within this directory. We have nothing to do, to prepare for
   **       those changes (each will be considered independently).
   **
@@ -817,10 +817,10 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
   return NULL;
 }
 
-static svn_error_t * commit_rep_file(svn_stringbuf_t *name,
-                                     void *parent_baton,
-                                     svn_revnum_t base_revision,
-                                     void **file_baton)
+static svn_error_t * commit_open_file(svn_stringbuf_t *name,
+                                      void *parent_baton,
+                                      svn_revnum_t base_revision,
+                                      void **file_baton)
 {
   resource_baton_t *parent = parent_baton;
   apr_pool_t *pool = parent->cc->ras->pool;
@@ -1140,14 +1140,14 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   ** that must be committed to the server.
   */
   commit_editor = svn_delta_default_editor(ras->pool);
-  commit_editor->replace_root = commit_replace_root;
+  commit_editor->open_root = commit_open_root;
   commit_editor->delete_entry = commit_delete_entry;
   commit_editor->add_directory = commit_add_dir;
-  commit_editor->replace_directory = commit_rep_dir;
+  commit_editor->open_directory = commit_open_dir;
   commit_editor->change_dir_prop = commit_change_dir_prop;
   commit_editor->close_directory = commit_close_dir;
   commit_editor->add_file = commit_add_file;
-  commit_editor->replace_file = commit_rep_file;
+  commit_editor->open_file = commit_open_file;
   commit_editor->apply_textdelta = commit_apply_txdelta;
   commit_editor->change_file_prop = commit_change_file_prop;
   commit_editor->close_file = commit_close_file;

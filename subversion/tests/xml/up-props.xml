@@ -3,22 +3,22 @@
 
   <tree-delta>
 
-    <replace name="iota">
+    <open name="iota">
       <file>
         <prop-delta>
           <set name="bat">razorfish</set>
         </prop-delta>
       </file>
-    </replace>
+    </open>
 
-    <replace name="A">
+    <open name="A">
       <dir>
         <prop-delta>
           <set name="ninja">hamster</set>
           <set name="wings">airplane</set>
         </prop-delta>
       </dir>
-    </replace>
+    </open>
 
   </tree-delta>
 

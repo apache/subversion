@@ -186,7 +186,7 @@ delete_entry (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-replace_root (void *edit_baton,
+open_root (void *edit_baton,
               svn_revnum_t base_revision,
               void **root_baton)
 {
@@ -205,7 +205,7 @@ replace_root (void *edit_baton,
 
 
 static svn_error_t *
-replace_directory (svn_stringbuf_t *name,
+open_directory (svn_stringbuf_t *name,
                    void *parent_baton,
                    svn_revnum_t base_revision,
                    void **child_baton)
@@ -256,7 +256,7 @@ add_directory (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-replace_file (svn_stringbuf_t *name,
+open_file (svn_stringbuf_t *name,
               void *parent_baton,
               svn_revnum_t base_revision,
               void **file_baton)
@@ -370,12 +370,12 @@ svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
 
   /* Set up the editor. */
   my_editor = svn_delta_default_editor (pool);
-  my_editor->replace_root        = replace_root;
+  my_editor->open_root           = open_root;
   my_editor->delete_entry        = delete_entry;
   my_editor->add_directory       = add_directory;
-  my_editor->replace_directory   = replace_directory;
+  my_editor->open_directory      = open_directory;
   my_editor->add_file            = add_file;
-  my_editor->replace_file        = replace_file;
+  my_editor->open_file           = open_file;
   my_editor->apply_textdelta     = apply_textdelta;
   my_editor->change_file_prop    = change_file_prop;
   my_editor->change_dir_prop     = change_dir_prop;
