@@ -105,14 +105,16 @@ typedef struct svn_diff_fns_t
                                             void *diff_baton,
                                             svn_diff_datasource_e datasource);
 
-  /** A function for ordering the tokens with the same interface as
-   * 'strcmp': If @a ltoken and @a rtoken are "equal", return 0.  If 
-   * @a ltoken is "less than" @a rtoken, return a number < 0.  If @a ltoken 
-   * is "greater than" @a rtoken, return a number > 0.
+  /** A function for ordering the tokens, resembling 'strcmp' in functionality.
+   * @a compare should contain the return value of the comparison:
+   * If @a ltoken and @a rtoken are "equal", return 0.  If @a ltoken is
+   * "less than" @a rtoken, return a number < 0.  If @a ltoken  is 
+   * "greater than" @a rtoken, return a number > 0.
    */
-  int (*token_compare)(void *diff_baton,
-                       void *ltoken,
-                       void *rtoken);
+  svn_error_t *(*token_compare)(void *diff_baton,
+                                void *ltoken,
+                                void *rtoken,
+                                int *compare);
 
   /** Free @a token from memory, the diff algorithm is done with it. */
   void (*token_discard)(void *diff_baton,

@@ -37,8 +37,10 @@
 
 typedef struct svn_diff__file_token_t
 {
-  apr_off_t   length;
-  const char *line;
+  struct svn_diff__file_token_t *next;
+  svn_diff_datasource_e datasource;
+  apr_off_t offset;
+  apr_off_t length;
 } svn_diff__file_token_t;
 
 
@@ -46,12 +48,15 @@ typedef struct svn_diff__file_baton_t
 {
   const char *path[4];
 
+  apr_file_t *file[4];
+  apr_off_t size[4];
+
+  int chunk[4];
   char *buffer[4];
   char *curp[4];
   char *endp[4];
 
-  svn_diff__file_token_t *token;
-  svn_boolean_t reuse_token;
+  svn_diff__file_token_t *tokens;
 
   apr_pool_t *pool;
 } svn_diff__file_baton_t;
@@ -78,6 +83,52 @@ svn_diff__file_datasource_to_index(svn_diff_datasource_e datasource)
 
   return -1;
 }
+
+/* Files are read in chunks of 128k.  There is no support for this number
+ * whatsoever.  If there is a number someone comes up with that has some
+ * argumentation, let's use that.
+ */
+#define CHUNK_SHIFT 17
+#define CHUNK_SIZE (1 << CHUNK_SHIFT)
+
+#define chunk_to_offset(chunk) ((chunk) << CHUNK_SHIFT)
+#define offset_to_chunk(offset) ((offset) >> CHUNK_SHIFT)
+#define offset_in_chunk(offset) ((offset) & (CHUNK_SIZE - 1))
+
+
+/* Read a chunk from a FILE into BUFFER, starting from OFFSET, going for
+ * *LENGTH.  The actual bytes read are stored in *LENGTH on return.
+ */
+static APR_INLINE
+svn_error_t *
+read_chunk(apr_file_t *file, const char *path,
+           char *buffer, apr_size_t length,
+           apr_off_t offset)
+{
+  apr_status_t apr_err;
+
+  /* XXX: The final offset may not be the one we asked for.
+   * XXX: Check.
+   */
+  apr_err = apr_file_seek(file, APR_SET, &offset);
+  if (apr_err != APR_SUCCESS)
+    {
+      return svn_error_createf(apr_err, NULL,
+               "Failed to set filepointer in file '%s'.",
+               path);
+    }
+
+  apr_err = apr_file_read_full(file, buffer, length, NULL);
+  if (apr_err != APR_SUCCESS)
+    {
+      return svn_error_createf(apr_err, NULL,
+               "Failed to read file '%s'.",
+               path);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Map or read a file at PATH. *BUFFER will point to the file
  * contents; if the file was mapped, *FILE and *MM will contain the
@@ -165,41 +216,64 @@ map_or_read_file(apr_file_t **file,
   return SVN_NO_ERROR;
 }
 
+
 static
 svn_error_t *
 svn_diff__file_datasource_open(void *baton,
                                svn_diff_datasource_e datasource)
 {
   svn_diff__file_baton_t *file_baton = baton;
-  apr_file_t *file;
-#if APR_HAS_MMAP
-  apr_mmap_t *mm;
-#endif /* APR_HAS_MMAP */
-  apr_off_t size;
   int idx;
+  apr_status_t apr_err;
+  apr_finfo_t finfo;
+  apr_size_t length;
+  char *curp;
+  char *endp;
 
   idx = svn_diff__file_datasource_to_index(datasource);
-  SVN_ERR(map_or_read_file(&file,
-                           MMAP_T_ARG(mm)
-                           &file_baton->buffer[idx], &size,
-                           file_baton->path[idx], file_baton->pool));
 
-  file_baton->curp[idx] = file_baton->buffer[idx];
-  file_baton->endp[idx] = file_baton->buffer[idx];
+  SVN_ERR(svn_io_file_open(&file_baton->file[idx], file_baton->path[idx],
+                           APR_READ, APR_OS_DEFAULT, file_baton->pool));
 
-  if (file_baton->endp[idx])
-    file_baton->endp[idx] += size;
+  apr_err = apr_file_info_get(&finfo, APR_FINFO_SIZE, file_baton->file[idx]);
+  if (apr_err != APR_SUCCESS)
+    {
+      return svn_error_createf(apr_err, NULL,
+               "Failed to get file info '%s'.",
+               file_baton->path[idx]);
+    }
+
+  file_baton->size[idx] = finfo.size;
+  length = finfo.size > CHUNK_SIZE ? CHUNK_SIZE : finfo.size;
+
+  if (length == 0)
+    return SVN_NO_ERROR;
+
+  endp = curp = apr_palloc(file_baton->pool, length);
+  endp += length;
+
+  file_baton->buffer[idx] = file_baton->curp[idx] = curp;
+  file_baton->endp[idx] = endp;
+
+  SVN_ERR(read_chunk(file_baton->file[idx], file_baton->path[idx],
+                     curp, length, 0));
 
   return SVN_NO_ERROR;
 }
+
 
 static
 svn_error_t *
 svn_diff__file_datasource_close(void *baton,
                                 svn_diff_datasource_e datasource)
 {
+  /* Do nothing.  The compare_token function needs previous datasources
+   * to stay available until all datasources are processed.
+   */
+
   return SVN_NO_ERROR;
 }
+
 
 static
 svn_error_t *
@@ -213,6 +287,9 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
   char *endp;
   char *curp;
   char *eol;
+  int last_chunk;
+  apr_size_t length;
+  apr_uint32_t h = 0;
 
   *token = NULL;
 
@@ -221,34 +298,64 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
   curp = file_baton->curp[idx];
   endp = file_baton->endp[idx];
 
-  if (curp == endp)
+  last_chunk = offset_to_chunk(file_baton->size[idx]);
+
+  if (curp == endp
+      && last_chunk == file_baton->chunk[idx])
     {
       return SVN_NO_ERROR;
     }
 
-  if (!file_baton->reuse_token)
+  /* Get a new token */
+  file_token = file_baton->tokens;
+  if (file_token)
+    {
+      file_baton->tokens = file_token->next;
+    }
+  else
     {
       file_token = apr_palloc(file_baton->pool, sizeof(*file_token));
-      file_baton->token = file_token;
-    }
-  else
-    {
-      file_token = file_baton->token;
-      file_baton->reuse_token = FALSE;
     }
 
+  file_token->datasource = datasource;
+  file_token->offset = chunk_to_offset(file_baton->chunk[idx])
+                       + (curp - file_baton->buffer[idx]);
   file_token->length = 0;
 
-  eol = memchr(curp, '\n', endp - curp);
-  if (!eol)
-    eol = endp;
-  else
-    eol++;
+  while (1)
+    {
+      /* XXX: '\n' doesn't really cut it.  We need to be able to detect
+       * XXX: '\n', '\r' and '\r\n'.
+       */
+      eol = memchr(curp, '\n', endp - curp);
+      if (eol)
+        {
+          eol++;
+          break;
+        }
 
-  file_token->line = curp;
-  file_token->length = eol - curp;
+      if (file_baton->chunk[idx] == last_chunk)
+        {
+          eol = endp;
+          break;
+        }
 
-  *hash = svn_diff__adler32(0, file_token->line, file_token->length);
+      length = endp - curp;
+      h = svn_diff__adler32(h, curp, length);
+
+      curp = endp = file_baton->buffer[idx];
+      file_baton->chunk[idx]++;
+      length = file_baton->chunk[idx] == last_chunk ? offset_in_chunk(file_baton->size[idx]) : CHUNK_SIZE;
+      endp += length;
+
+      SVN_ERR(read_chunk(file_baton->file[idx], file_baton->path[idx],
+                         curp, length, chunk_to_offset(file_baton->chunk[idx])));
+    }
+
+  length = eol - curp;
+  file_token->length += length;
+  *hash = svn_diff__adler32(h, curp, length);
+  *hash = 0;
 
   file_baton->curp[idx] = eol;
   *token = file_token;
@@ -256,23 +363,99 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
   return SVN_NO_ERROR;
 }
 
+#define COMPARE_CHUNK_SIZE 4096
+
 static
-int
+svn_error_t *
 svn_diff__file_token_compare(void *baton,
                              void *token1,
-                             void *token2)
+                             void *token2,
+                             int *compare)
 {
+  svn_diff__file_baton_t *file_baton = baton;
   svn_diff__file_token_t *file_token1 = token1;
   svn_diff__file_token_t *file_token2 = token2;
+  char buffer[2][COMPARE_CHUNK_SIZE];
+  char *bufp[2];
+  apr_off_t offset[2];
+  int idx[2];
+  apr_off_t length[2];
+  apr_off_t total_length;
+  apr_off_t len;
+  int i;
+  int chunk[2];
 
   if (file_token1->length < file_token2->length)
-    return -1;
+    {
+      *compare = -1;
+      return SVN_NO_ERROR;
+    }
 
   if (file_token1->length > file_token2->length)
-    return 1;
+    {
+      *compare = 1;
+      return SVN_NO_ERROR;
+    }
 
-  return memcmp(file_token1->line, file_token2->line, file_token1->length);
+  total_length = file_token1->length;
+  if (total_length == 0)
+    {
+      *compare = 0;
+      return SVN_NO_ERROR;
+    }
+
+  idx[0] = svn_diff__file_datasource_to_index(file_token1->datasource);
+  idx[1] = svn_diff__file_datasource_to_index(file_token2->datasource);
+  offset[0] = file_token1->offset;
+  offset[1] = file_token2->offset;
+  chunk[0] = file_baton->chunk[idx[0]];
+  chunk[1] = file_baton->chunk[idx[1]];
+
+  do
+    {
+      for (i = 0; i < 2; i++)
+        {
+          if (offset_to_chunk(offset[i]) == chunk[i])
+            {
+              /* If the start of the token is in memory, the entire token is
+               * in memory.
+               */
+              bufp[i] = file_baton->buffer[idx[i]];
+              bufp[i] += offset_in_chunk(offset[i]);
+
+              length[i] = total_length;
+            }
+          else
+            {
+              /* Read a chunk from disk into a buffer */
+              bufp[i] = buffer[i];
+              length[i] = COMPARE_CHUNK_SIZE;
+
+              SVN_ERR(read_chunk(file_baton->file[idx[i]],
+                                 file_baton->path[idx[i]],
+                                 bufp[i], length[i], offset[i]));
+            }
+        }
+
+      len = length[0] > length[1] ? length[1] : length[0];
+      offset[0] += len;
+      offset[1] += len;
+
+      /* Compare two chunks (that could be entire tokens if they both reside
+       * in memory).
+       */
+      *compare = memcmp(bufp[0], bufp[1], len);
+      if (*compare != 0)
+        return SVN_NO_ERROR;
+
+      total_length -= len;
+    }
+  while(total_length > 0);
+
+  *compare = 0;
+  return SVN_NO_ERROR;
 }
+
 
 static
 void
@@ -280,9 +463,12 @@ svn_diff__file_token_discard(void *baton,
                              void *token)
 {
   svn_diff__file_baton_t *file_baton = baton;
+  svn_diff__file_token_t *file_token = token;
 
-  file_baton->reuse_token = file_baton->token == token;
+  file_token->next = file_baton->tokens;
+  file_baton->tokens = file_token;
 }
+
 
 static
 void
@@ -290,9 +476,10 @@ svn_diff__file_token_discard_all(void *baton)
 {
   svn_diff__file_baton_t *file_baton = baton;
 
-  /* This will also close any open files and destroy mmap segments */
+  /* Discard all memory in use by the tokens, and close all open files. */
   svn_pool_clear(file_baton->pool);
 }
+
 
 static const svn_diff_fns_t svn_diff__file_vtable =
 {
