@@ -210,9 +210,9 @@ add_file (const char *path,
   svn_boolean_t is_special;
 
   /* add the file */
-  SVN_ERR (svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
-                       ctx->cancel_func, ctx->cancel_baton,
-                       NULL, NULL, pool));
+  SVN_ERR (svn_wc_add2 (path, adm_access, NULL, SVN_INVALID_REVNUM,
+                        ctx->cancel_func, ctx->cancel_baton,
+                        NULL, NULL, pool));
 
   /* Check to see if this is a special file. */
   SVN_ERR (svn_io_check_special_path (path, &kind, &is_special, pool));
@@ -251,13 +251,15 @@ add_file (const char *path,
     }
 
   /* Report the addition to the caller. */
-  if (ctx->notify_func != NULL)
-    (*ctx->notify_func) (ctx->notify_baton, path, svn_wc_notify_add,
-                         svn_node_file,
-                         mimetype,
-                         svn_wc_notify_state_unknown,
-                         svn_wc_notify_state_unknown,
-                         SVN_INVALID_REVNUM);
+  if (ctx->notify_func2 != NULL)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (path, svn_wc_notify_add,
+                                                      pool);
+      notify->kind = svn_node_file;
+      notify->mime_type = mimetype;
+      (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -281,10 +283,10 @@ add_dir_recursive (const char *dirname,
     SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
   /* Add this directory to revision control. */
-  err = svn_wc_add (dirname, adm_access,
-                    NULL, SVN_INVALID_REVNUM,
-                    ctx->cancel_func, ctx->cancel_baton,
-                    ctx->notify_func, ctx->notify_baton, pool);
+  err = svn_wc_add2 (dirname, adm_access,
+                     NULL, SVN_INVALID_REVNUM,
+                     ctx->cancel_func, ctx->cancel_baton,
+                     ctx->notify_func2, ctx->notify_baton2, pool);
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
     svn_error_clear (err);
   else if (err)
@@ -396,9 +398,9 @@ add (const char *path,
   else if (kind == svn_node_file)
     err = add_file (path, ctx, adm_access, pool);
   else
-    err = svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
-                      ctx->cancel_func, ctx->cancel_baton,
-                      ctx->notify_func, ctx->notify_baton, pool);
+    err = svn_wc_add2 (path, adm_access, NULL, SVN_INVALID_REVNUM,
+                       ctx->cancel_func, ctx->cancel_baton,
+                       ctx->notify_func2, ctx->notify_baton2, pool);
 
   /* Ignore SVN_ERR_ENTRY_EXISTS when FORCE is set.  */
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)

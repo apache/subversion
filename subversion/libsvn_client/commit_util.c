@@ -943,10 +943,11 @@ do_item_commit (void **dir_baton,
 
   /* If a feedback table was supplied by the application layer,
      describe what we're about to do to this item.  */
-  if (ctx->notify_func)
+  if (ctx->notify_func2)
     {
       /* Convert an absolute path into a relative one (if possible.) */
       const char *npath = NULL;
+      svn_wc_notify_t *notify;
 
       if (notify_path_prefix)
         {
@@ -964,60 +965,45 @@ do_item_commit (void **dir_baton,
           /* We don't print the "(bin)" notice for binary files when
              replacing, only when adding.  So we don't bother to get
              the mime-type here. */
-          (*ctx->notify_func) (ctx->notify_baton, npath,
-                               svn_wc_notify_commit_replaced,
-                               item->kind,
-                               NULL,
-                               svn_wc_notify_state_unknown,
-                               svn_wc_notify_state_unknown,
-                               SVN_INVALID_REVNUM);
+          notify = svn_wc_create_notify (npath, svn_wc_notify_commit_replaced,
+                                         pool);
         }
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
         {
-          (*ctx->notify_func) (ctx->notify_baton, npath,
-                               svn_wc_notify_commit_deleted,
-                               item->kind,
-                               NULL,
-                               svn_wc_notify_state_unknown,
-                               svn_wc_notify_state_unknown,
-                               SVN_INVALID_REVNUM);
+          notify = svn_wc_create_notify (npath, svn_wc_notify_commit_deleted,
+                                         pool);
         }
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         {
-          const svn_string_t *propval = NULL;
-
+          notify = svn_wc_create_notify (npath, svn_wc_notify_commit_added,
+                                         pool);
           if (item->kind == svn_node_file)
-            SVN_ERR (svn_wc_prop_get
-                     (&propval, SVN_PROP_MIME_TYPE, item->path, adm_access,
-                      pool));
-
-          (*ctx->notify_func) (ctx->notify_baton, npath,
-                               svn_wc_notify_commit_added,
-                               item->kind,
-                               propval ? propval->data : NULL,
-                               svn_wc_notify_state_unknown,
-                               svn_wc_notify_state_unknown,
-                               SVN_INVALID_REVNUM);
+            {
+              const svn_string_t *propval;
+              SVN_ERR (svn_wc_prop_get
+                       (&propval, SVN_PROP_MIME_TYPE, item->path, adm_access,
+                        pool));
+              if (propval)
+                notify->mime_type = propval->data;
+            }
         }
-
       else if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
                || (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS))
         {
-          svn_boolean_t tmod
-            = (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS);
-          svn_boolean_t pmod
-            = (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS);
-
-          (*ctx->notify_func) (ctx->notify_baton, npath,
-                               svn_wc_notify_commit_modified,
-                               item->kind,
-                               NULL,
-                               (tmod ? svn_wc_notify_state_changed
-                                     : svn_wc_notify_state_unchanged),
-                               (pmod ? svn_wc_notify_state_changed
-                                     : svn_wc_notify_state_unchanged),
-                               SVN_INVALID_REVNUM);
+          notify = svn_wc_create_notify (npath, svn_wc_notify_commit_modified,
+                                         pool);
+          if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
+            notify->content_state = svn_wc_notify_state_changed;
+          else
+            notify->content_state = svn_wc_notify_state_unchanged;
+          if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
+            notify->prop_state = svn_wc_notify_state_changed;
+          else
+            notify->prop_state = svn_wc_notify_state_unchanged;
         }
+
+      notify->kind = item->kind;
+      (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
     }
 
   /* If this item is supposed to be deleted, do so. */
@@ -1222,14 +1208,15 @@ svn_client__do_commit (const char *base_url,
       if (ctx->cancel_func)
         SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
-      if (ctx->notify_func)
-        (*ctx->notify_func) (ctx->notify_baton, item->path,
-                             svn_wc_notify_commit_postfix_txdelta, 
-                             svn_node_file,
-                             NULL,
-                             svn_wc_notify_state_unknown,
-                             svn_wc_notify_state_unknown,
-                             SVN_INVALID_REVNUM);
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify
+            = svn_wc_create_notify (item->path,
+                                    svn_wc_notify_commit_postfix_txdelta,
+                                    subpool);
+          notify->kind = svn_node_file;
+          (*ctx->notify_func2) (ctx->notify_baton2, notify, subpool);
+        }
 
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;

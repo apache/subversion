@@ -155,18 +155,18 @@ wc_to_wc_copy (const char *src_path,
      ### won't detect any outstanding locks. If the source is locked and
      ### requires cleanup should we abort the copy? */
 
-  err = svn_wc_copy (src_path, adm_access, base_name,
-                     ctx->cancel_func, ctx->cancel_baton,
-                     ctx->notify_func, ctx->notify_baton, pool);
+  err = svn_wc_copy2 (src_path, adm_access, base_name,
+                      ctx->cancel_func, ctx->cancel_baton,
+                      ctx->notify_func2, ctx->notify_baton2, pool);
   svn_sleep_for_timestamps ();
   SVN_ERR (err);
 
 
   if (is_move)
     {
-      SVN_ERR (svn_wc_delete (src_path, src_access,
-                              ctx->cancel_func, ctx->cancel_baton,
-                              ctx->notify_func, ctx->notify_baton, pool));
+      SVN_ERR (svn_wc_delete2 (src_path, src_access,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               ctx->notify_func2, ctx->notify_baton2, pool));
 
       if (adm_access != src_access)
         SVN_ERR (svn_wc_adm_close (adm_access));
@@ -925,9 +925,9 @@ repos_to_wc_copy (const char *src_url,
           /* Schedule dst_path for addition in parent, with copy history.
              (This function also recursively puts a 'copied' flag on every
              entry). */
-          SVN_ERR (svn_wc_add (dst_path, adm_access, src_url, src_revnum,
-                               ctx->cancel_func, ctx->cancel_baton, 
-                               ctx->notify_func, ctx->notify_baton, pool));
+          SVN_ERR (svn_wc_add2 (dst_path, adm_access, src_url, src_revnum,
+                                ctx->cancel_func, ctx->cancel_baton, 
+                                ctx->notify_func2, ctx->notify_baton2, pool));
         }
       else  /* different repositories */
         {
@@ -981,15 +981,14 @@ repos_to_wc_copy (const char *src_url,
          and baton, and we wouldn't have to make this call here.
          However, the situation is... complicated.  See issue #1552
          for the full story. */
-      if (!err && ctx->notify_func)
-        (*ctx->notify_func) (ctx->notify_baton,
-                             dst_path,
-                             svn_wc_notify_add,
-                             src_kind,
-                             NULL,
-                             svn_wc_notify_state_unknown,
-                             svn_wc_notify_state_unknown,
-                             SVN_INVALID_REVNUM);
+      if (!err && ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify = svn_wc_create_notify (dst_path,
+                                                          svn_wc_notify_add,
+                                                          pool);
+          notify->kind = src_kind;
+          (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+        }
 
       svn_sleep_for_timestamps ();
       SVN_ERR (err);
