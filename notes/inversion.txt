@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.21 $ of this document.)
+              ($Revision: 1.22 $ of this document.)
 
 * Introduction
 
@@ -589,6 +589,170 @@ README was added to the project's top level directory:
      
 There, wasn't that pretty?  I knew you would.          
 
+** Crash-proof repository mutation and locking
+
+One wants to make repository changes in a such way that the repository
+is in a "sane" (unambiguous and usable) state at every step.  At the
+same time, one wants to keep locking to a minimum: no operation should
+ever lock out readers, no read-only operation should ever lock out
+anyone, and write operations should lock out other writers for as
+little time as possible.
+
+Although these two issues are not directly related, they both affect
+the order in which things happen in the repository, so we'll address
+them together.
+
+Let's take the commit of foo:2 as an example:
+
+Step 1:  Create the new node for foo:2.
+
+            ________
+           |F       |
+           |        |
+           |        |
+           |________|
+
+Nothing is attached to this new node, therefore the repository is in a
+sane state.  If the server crashes at this moment, there will be no
+problem (except that a cleanup thread might, at its leisure, delete
+the unreachable node).
+
+The new node has the full contents of foo:2.
+
+Step 2:  Create the cross-link from foo:2 to foo:1.
+
+            ________                ________
+           |F       |              |F       |
+           |  (1)----------------->|        |
+           |        |              |        |
+           |________|              |________|
+
+
+Again, the repository doesn't yet know that the new node even exists.
+The cross-link is a pointer from foo:2 to foo:1, not the other way
+around, so foo:1 isn't even aware of the link.
+
+Both nodes have the full contents of their respective version; no
+diffs have been made yet.
+
+Step 3:  Make a lock.
+
+Now, there are two ways we can do locks: the naive way, and the right
+way.  The naive way is:
+
+  You make a lock on version 2.  If anyone else tries to commit
+  version 2 from now until your lock is removed, they'll get bounced
+  out with a message about a commit being in progress right now.
+  Conversely, if someone else has beaten you to the lock for version
+  2, then your lock fails, so delete any new nodes you created and
+  get out, telling the user there's a commit in progress.
+
+However, that loses the nice property (which CVS has) that
+simultaneous commits don't interfere with each other unless they
+involve the same files.  Actually, CVS locks by directory, but still,
+it's not as bad as locking the entire repository, even if only for a
+moment!
+
+We may be able to do CVS one better, by locking *exactly* the entities
+involved in the commit.  Here's how:
+
+  You don't lock any particular version, you just make a lock holding
+  the entities you're committing.  If anyone else tries to make a lock
+  that includes any of those entities, they'll be bounced out and told
+  to come back later.  Conversely, if any of the entities you're
+  trying to lock are already locked by someone else, then you get
+  bounced and told to come back later.
+
+For reasons I will go into below, it's not clear that the right way is
+better than the naive way.  The jury is still out on this one...
+
+Step 4:  Change the link from the parent node, to point to the new
+foo:2 node (which in turn points to foo:1).
+
+              \
+            ___\____                    
+           |D       |                   
+           |        |                   
+           | foo    |                   
+           |___\____|                   
+                \                       
+                 \                      
+               ___\____            ________
+              |F       |          |F       |
+              |        |          |        |
+              |  (1)------------->|        |
+              |        |          |        |
+              | full   |          | full   |
+              |contents|          |contents|
+              |________|          |________|
+
+
+The repository is still in a mostly sane state.  If the machine
+crashes now, there's this slightly weird situation in which a node for
+foo:2 is present in the tree, but myproj:2 doesn't exist yet.
+
+However, if you follow the three-step algorithm for retrieving FILE:N,
+you'll see that you still reach foo:1 just fine -- it's as though
+foo:2 isn't there.  Another way to look at it is that version 2 of the
+project does not exist yet, therefore you can't ask for it; if you ask
+for the head version, you'll get version 1.
+
+   [But I just thought of a problem: if someone else's simultaneous
+   commit finishes while you're at this stage, and then the machine
+   crashes, then there _will_ be a myproj:2, and it will include
+   *your* foo:2, even though your commit didn't complete.  This is one
+   reason naive locking might be better, but need to think about it
+   more...]
+
+Step 5: Replace foo:1's contents with a diff from foo:2.  This is
+optional, in that if you don't do it, the repository just uses more
+storage than it actually needs.  (Of course, there's a "diff-bit" on
+each node saying whether its contents are stored full-text or as a
+diff against the next youngest node that cross-links to this one.)
+
+              \
+            ___\____                    
+           |D       |                   
+           |        |                   
+           | foo    |                   
+           |___\____|                   
+                \                       
+                 \                      
+               ___\____            ________
+              |F       |          |F       |
+              |        |          |        |
+              |  (1)------------->|        |
+              |        |          |        |
+              | full   |          | diffy  |
+              |contents|          |contents|
+              |________|          |________|
+
+
+Step 6:  Instantiate version 2 in the version array.  
+
+            ____________________________
+           |___1_______2________3_______---->
+               |       |
+               |      /
+            ___|_____/
+           |D        |
+           |         |
+           |   A     |
+           |    \    |
+           |   B \   | 
+           |__/___\__|
+             /     \
+            |       \
+ 
+(Or, if you discover that someone else's commit finished faster than
+yours and version 2 already exists, then instantiate the next
+available version.  But what root node do you point to, if the interim
+commit created a new root node?  This is a the naive-vs-right locking
+question, must figure this out...)
+
+Step 7:  Remove your lock, the commit is complete.
+
+
 ** How renames work
 
 Exactly how you think they do.
@@ -666,13 +830,15 @@ more bandwidth than necessary).  Ivn accomplishes this either by
 keeping pristine copies locally, or using the rsync algorithm; which
 way we do it is an implementation detail that hasn't been decided yet.
 
-* Evaluating the Design
+* Evaluating and improving the design
 
-The design of Inversion is still in progress; there are known problems
-with the above design, and potential solutions.  However, I'm
-concentrating on other stuff until we the rest of the full-time
-Inversion people are on board to bounce ideas with.  The design will
-finalize within a couple of weeks of the core team being assembled.
+I'm pretty confident that the above design is the right way to go; the
+main question is how to implement repository storage.  I am no longer
+so certain that a full database will be necessary, though at least
+some sort of DBM storage may be useful.
+
+Also, the network protocol is still unmentioned; WebDAV is something
+to look at.
 
 ** Concerns
 
@@ -721,7 +887,7 @@ and has worked out pretty well in practice.
 
 Each scenario should be mentally played out for a given design,
 analyzing for performance and scalability issues (particularly in
-network traffic, storage, and db accesses).
+network traffic, storage sizze, and storage accesses).
 
 If you spot a weakness in a design, add a scenario here that
 highlights it: even if that particular design gets tossed, the
