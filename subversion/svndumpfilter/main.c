@@ -307,14 +307,18 @@ new_node_record (void **node_baton,
 
   node_path = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
                             APR_HASH_KEY_STRING);
+  copyfrom_path = apr_hash_get (headers,
+                                SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
+                                APR_HASH_KEY_STRING);
+
+  /* Ensure that paths start with a leading '/'. */
+  node_path = svn_path_join ("/", node_path, pool);
+  if (copyfrom_path)
+    copyfrom_path = svn_path_join ("/", copyfrom_path, pool);
 
   /* Shame, shame, shame ... this is NXOR. */
   nb->do_skip = (ary_prefix_match (pb->prefixes, node_path)
                  ? pb->do_exclude : (! pb->do_exclude));
-
-  copyfrom_path = apr_hash_get (headers,
-                                SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
-                                APR_HASH_KEY_STRING);
 
   /* See if this node was copied from dropped source.  If it was,
      we have to drop this node, too.  
@@ -1015,31 +1019,27 @@ main (int argc, const char * const *argv)
 
   if (subcommand->cmd_func != subcommand_help)
     {
-      if (os->ind < os->argc)
+      if (os->ind >= os->argc)
         {
-          opt_state.prefixes = apr_array_make (pool,
-                                               os->argc - os->ind,
-                                               sizeof (const char *));
-          for (i = os->ind ; i< os->argc; i++)
-            {
-              const char *prefix_utf8;
-              SVN_INT_ERR (svn_utf_cstring_to_utf8 (&prefix_utf8,
-                                                    os->argv[i],
-                                                    pool));
-              *(const char **)apr_array_push (opt_state.prefixes)
-                = svn_path_internal_style (prefix_utf8, pool);
-            }
-        }
-      else
-        {
-          fprintf (stderr,
-                   "\nError: no prefixes supplied.\n");
-          svn_opt_subcommand_help (subcommand->name,
-                                   cmd_table,
-                                   options_table,
-                                   pool);
+          fprintf (stderr, "\nError: no prefixes supplied.\n");
+          svn_opt_subcommand_help (subcommand->name, cmd_table,
+                                   options_table, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
+        }
+
+      opt_state.prefixes = apr_array_make (pool, os->argc - os->ind,
+                                           sizeof (const char *));
+      for (i = os->ind ; i< os->argc; i++)
+        {
+          const char *prefix;
+
+          /* Ensure that each prefix is UTF8-encoded, in internal
+             style, and absolute. */
+          SVN_INT_ERR (svn_utf_cstring_to_utf8 (&prefix, os->argv[i], pool));
+          prefix = svn_path_internal_style (prefix, pool);
+          prefix = svn_path_join ("/", prefix, pool);
+          APR_ARRAY_PUSH (opt_state.prefixes, const char *) = prefix;
         }
     }
 
