@@ -58,8 +58,8 @@ io_check_path (const char *path,
   apr_status_t apr_err;
   const char *path_apr;
 
-  if (path[0] == '\0')
-    path = ".";
+  /* Make path appropriate for error messages in advance. */
+  path = svn_path_local_style (path, pool);
 
   /* Not using svn_io_stat() here because we want to check the
      apr_err return explicitly. */

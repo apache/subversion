@@ -115,10 +115,7 @@ create_lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
 
   return svn_error_createf (SVN_ERR_WC_LOCKED, NULL,
                             "working copy locked: %s",
-                            /* ### do we have a utility function that
-                               converts the empty path to a
-                               non-canonical, but readable form? */
-                            (adm_access->path[0] ? adm_access->path : "."));
+                            svn_path_local_style (adm_access->path, pool));
 }
 
 
@@ -308,7 +305,7 @@ do_open (svn_wc_adm_access_t **adm_access,
       if (wc_format == 0 || wc_format > SVN_WC__VERSION)
         return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
                                   "'%s' is not a working copy",
-                                  path[0] ? path : ".");
+                                  svn_path_local_style (path, pool));
     }
 
   /* Need to create a new lock */
@@ -483,7 +480,7 @@ svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
         {
           return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
                                     "'%s' is not a working copy",
-                                    path[0] ? path : ".");
+                                    svn_path_local_style (path, pool));
         }
       else
         {

@@ -68,6 +68,11 @@ svn_path_local_style (const char *path, apr_pool_t *pool)
   path = svn_path_canonicalize (path, pool);
   /* FIXME: Should also remove trailing /.'s, if the style says so. */
 
+  /* Internally, Subversion represents the current directory with the
+     empty string.  But users like to see "." . */
+  if (path[0] == '\0')
+    return ".";
+
   if ('/' != SVN_PATH_LOCAL_SEPARATOR)
     {
       char *p = apr_pstrdup (pool, path);
