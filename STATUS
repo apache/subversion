@@ -53,11 +53,13 @@ Candidate changes:
       +0: breser (I haven't tested python bindings but it looks and builds ok)
           dlr
 
-  * r9104
-    svn log -v should use forward slash for changed paths on Windows.
+  * r9104, r9197
+    Do not turn /s in URLS to \s on Windows. 
     Justification: The paths are for URLS they should be copyable for use on
     repo URLS.
-    Votes:
+    Votes (on both):
+      +1: breser
+    Votes (on just 9104):
       +1: breser, sussman, kfogel
 
   * r9212, r9231
