@@ -79,18 +79,18 @@
         repository.</para>
 
       <para>Consider this scenario: suppose we have two co-workers,
-        Jane and Joe.  They each decide to edit the same repository
-        file at the same time.  If Joe saves his changes to the
+        Harry and Sally.  They each decide to edit the same repository
+        file at the same time.  If Harry saves his changes to the
         repository first, then it's possible that (a few moments
-        later) Jane could accidentally overwrite them with her own new
-        version of the file.  While Joe's version of the file won't be
-        lost forever (because the system remembers every change), any
-        changes Joe made <emphasis>won't</emphasis> be present in
-        Jane's newer version of the file, because she never saw Joe's
-        changes to begin with.  Joe's work is still effectively
-        lost&mdash;or at least missing from the latest version of the
-        file&mdash;and probably by accident.  This is definitely a
-        situation we want to avoid!</para>
+        later) Sally could accidentally overwrite them with her own
+        new version of the file.  While Harry's version of the file
+        won't be lost forever (because the system remembers every
+        change), any changes Harry made <emphasis>won't</emphasis> be
+        present in Sally's newer version of the file, because she
+        never saw Harry's changes to begin with.  Harry's work is
+        still effectively lost&mdash;or at least missing from the
+        latest version of the file&mdash;and probably by accident.
+        This is definitely a situation we want to avoid!</para>
 
       <figure id="svn-ch2-dia2">
         <title>The problem to avoid</title>
@@ -106,14 +106,14 @@
         <firstterm>lock-modify-unlock</firstterm> model to address
         this problem, which is a very simple solution.  In such a
         system, the repository allows only one person to change a file
-        at a time.  First Joe must "lock" the file before he can begin
+        at a time.  First Harry must "lock" the file before he can begin
         making changes to it.  Locking a file is a lot like borrowing
-        a book from the library; if Joe has locked a file, then Jane
+        a book from the library; if Harry has locked a file, then Sally
         cannot make any changes to it.  If she tries to lock the file,
         the repository will deny the request.  All she can do is read
-        the file, and wait for Joe to finish his changes and release
-        his lock.  After Joe unlocks the file, his turn is over, and
-        now Jane can take her turn by locking and editing.</para>
+        the file, and wait for Harry to finish his changes and release
+        his lock.  After Harry unlocks the file, his turn is over, and
+        now Sally can take her turn by locking and editing.</para>
       
       <figure id="svn-ch2-dia3">
         <title>The lock-modify-unlock solution</title>
@@ -128,18 +128,18 @@
         <listitem><para>
             <emphasis>Locking may cause administrative problems.</emphasis>
 
-            Sometimes Joe will lock a file and then forget about it.
-            Meanwhile, because Jane is still waiting to edit the file,
-            her hands are tied.  And then Joe goes on vacation.  Now
-            Jane has to get an administrator to release Joe's lock.
+            Sometimes Harry will lock a file and then forget about it.
+            Meanwhile, because Sally is still waiting to edit the file,
+            her hands are tied.  And then Harry goes on vacation.  Now
+            Sally has to get an administrator to release Harry's lock.
             The situation ends up causing a lot of unnecessary delay
             and wasted time.</para></listitem>
         
         <listitem><para>
             <emphasis>Locking may cause unnecessary serialization.</emphasis>
 
-            What if Joe is editing the beginning of a text file,
-            and Jane simply wants to edit the end of the same file?
+            What if Harry is editing the beginning of a text file,
+            and Sally simply wants to edit the end of the same file?
             These changes don't overlap at all.  They could easily
             edit the file simultaneously, and no great harm would
             come, assuming the changes were properly merged together.
@@ -149,14 +149,14 @@
         <listitem><para>
             <emphasis>Locking may create a false sense of security.</emphasis>
 
-            Pretend that Joe locks and edits file A, while
-            Jane simultaneously locks and edits file B.  But suppose
+            Pretend that Harry locks and edits file A, while
+            Sally simultaneously locks and edits file B.  But suppose
             that A and B depend on one another, and the changes made
             to each are semantically incompatible.  Suddenly A and B
             don't work together anymore. The locking system was
             powerless to prevent the problem&mdash;yet it somehow
-            provided a sense of false security.  It's easy for Joe and
-            Jane to imagine that by locking files, each is beginning a
+            provided a sense of false security.  It's easy for Harry and
+            Sally to imagine that by locking files, each is beginning a
             safe, insulated task, and thus inhibits them from
             discussing their incompatible changes early
             on.</para></listitem>
@@ -178,17 +178,17 @@
         ultimately a human being is responsible for making it happen
         correctly.</para>
       
-      <para>Here's an example.  Say that Joe and Jane each create
+      <para>Here's an example.  Say that Harry and Sally each create
         working copies of the same project, copied from the
         repository.  They work concurrently, and make changes to the
-        same file "A" within their copies.  Jane saves her changes to
-        the repository first.  When Joe attempts to save his changes
+        same file "A" within their copies.  Sally saves her changes to
+        the repository first.  When Harry attempts to save his changes
         later, the repository informs him that his file A is
         <firstterm>out-of-date</firstterm>.  In other words, that file
         A in the repository has somehow changed since he last copied
-        it.  So Joe asks his client to <firstterm>merge</firstterm>
+        it.  So Harry asks his client to <firstterm>merge</firstterm>
         any new changes from the repository into his working copy of
-        file A.  Chances are that Jane's changes don't overlap with
+        file A.  Chances are that Sally's changes don't overlap with
         his own; so once he has both sets of changes integrated, he
         saves his working copy back to the repository.</para>
 
@@ -202,18 +202,18 @@
         <graphic fileref="images/ch02dia5.png"/>
       </figure>
 
-      <para>But what if Jane's changes <emphasis>do</emphasis> overlap
-        with Joe's changes?  What then?  This situation is called a
+      <para>But what if Sally's changes <emphasis>do</emphasis> overlap
+        with Harry's changes?  What then?  This situation is called a
         <firstterm>conflict</firstterm>, and it's usually not much of
-        a problem.  When Joe asks his client to merge the latest
+        a problem.  When Harry asks his client to merge the latest
         repository changes into his working copy, his copy of file A
         is somehow flagged as being in a state of conflict: he'll be
         able to see both sets of conflicting changes, and manually
         choose between them.  Note that software can't automatically
         resolve conflicts; only humans are capable of understanding
-        and making the necessary intelligent choices.  Once Joe has
+        and making the necessary intelligent choices.  Once Harry has
         manually resolved the overlapping changes (perhaps by
-        discussing the conflict with Jane!), he can safely save the
+        discussing the conflict with Sally!), he can safely save the
         merged file back to the repository.</para>
 
       <para>The copy-modify-merge model may sound a bit chaotic, but
