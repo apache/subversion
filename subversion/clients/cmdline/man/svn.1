@@ -1,7 +1,7 @@
 .\" You can view this file with:
 .\" nroff -man [filename]
 .\"
-.TH svn 1 "22 Jan 2002" "svn 0.8" "Subversion Command Line Tool"
+.TH svn 1 "22 Jan 2002" "svn 0.9" "Subversion Command Line Tool"
 .SH NAME
 svn \- Subversion command line tool
 .SH SYNOPSIS
@@ -234,6 +234,10 @@ repository.
 (Alias: pdel)
 Remove property \fIpropname\fP on files and directories.
 .TP
+\fBpropedit\fP \fIpropname\fP [\fItargets\fP]
+(Alias: pedit, pe)
+Edit property \fIpropname\fP with $EDITOR on files and directories.
+.TP
 \fBpropget\fP \fIpropname\fP [\fItargets\fP]
 (Alias: pget, pg)
 Get the value of \fIpropname\fP on files and directories.
@@ -245,11 +249,11 @@ List all properties for given files and directories.
 \fBpropset\fP \fIpropname\fP [\fIvalue\fP | \fI--valfile file\fP ] [\fItargets\fP]
 (Alias: pset, ps)
 Set property \fIpropname\fP to \fIvalue\fP on files and directories.
-.TP
-\fBrdiff\fP \fIURL1 URL2\fP
-Exactly the same as diff, but takes 2 URLs and requires no working copy.
-
-\fBexample:\fP svn rdiff http://svn.tigris.org/one http://svn.tigris.org/two
+.\".TP
+.\"\fBrdiff\fP \fIURL1 URL2\fP
+.\"Exactly the same as diff, but takes 2 URLs and requires no working copy.
+.\"
+.\"\fBexample:\fP svn rdiff http://svn.tigris.org/one http://svn.tigris.org/two
 .TP
 \fBrevert\fP [\fIfile\fP\|.\|.\|.]
 Restore a pristine working copy version of file, undoing all local changes.
