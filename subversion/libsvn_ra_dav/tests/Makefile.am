@@ -9,7 +9,6 @@ INCLUDES = -I../../include -I../../../apr/include
 
 ## Libraries this binary depends upon:
 ra_dav_test_LDADD = ../libsvn_ra_dav.la                     \
-                    ../../libsvn_string/libsvn_string.la    \
                     ../../libsvn_wc/libsvn_wc.la            \
                     ../../libsvn_subr/libsvn_subr.la        \
                     ../../libsvn_delta/libsvn_delta.la      \

@@ -1,7 +1,8 @@
 ## Makefile.in is generated from this by automake.
 
-noinst_PROGRAMS = hashdump-test
+noinst_PROGRAMS = hashdump-test stringtest
 hashdump_test_SOURCES = hashdump-test.c
+stringtest_SOURCES = stringtest.c
 
 ## Flags needed when compiling:
 CFLAGS = @CFLAGS@ -pthread
@@ -10,8 +11,11 @@ INCLUDES = -I../../include -I../../../apr/include
 ## Libraries this binary depends upon:
 hashdump_test_LDADD = ../../tests-common/libsvn_tests_main.la   \
                       ../libsvn_subr.la                         \
-                      ../../libsvn_string/libsvn_string.la      \
                       ../../../apr/libapr.a
+
+stringtest_LDADD = ../../tests-common/libsvn_tests_main.la   \
+                   ../libsvn_subr.la                         \
+                   ../../../apr/libapr.a
 
 
 ## Make libtool be quiet
@@ -20,7 +24,7 @@ LIBTOOL = @LIBTOOL@ --silent
 ## Automatic tests run by `make check` -----------------------------
 
 ## A list of test-programs to run.  (Each program contains sub-tests.)
-SVN_TESTS = hashdump-test
+SVN_TESTS = stringtest hashdump-test 
 
 ## We're overriding automake's own `check' rule, because it's extremely
 ## inflexible;  we want better control over automated-test output. 
