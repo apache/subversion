@@ -77,6 +77,19 @@ class CollectData(rcsparse.Sink):
     self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
 
+    # CVS tag names must start with a letter, and contain only
+    # letters, digits, hyphens, and underscores.  It turned out to
+    # be surprisingly hard to find a reference for this on the
+    # Internet; I finally managed to track one down at:
+    #
+    # http://cvsbook.red-bean.com/cvsbook.html#Marking_A_Moment_In_Time__Tags_
+    #
+    # I'm not sure I trust that guy, though, so if anyone has better
+    # reference, please put it here.  -kfogel
+    #
+    # (### Maybe checking these should be rcsparse's job? ###)
+    self.symbolic_name_re = re.compile('^[a-zA-Z][a-zA-Z0-9_-]*$')
+
   def set_fname(self, fname):
     "Prepare to receive data for a new file."
     self.fname = fname
@@ -147,6 +160,11 @@ class CollectData(rcsparse.Sink):
     header, for example: '1.7', '1.7.0.2', or '1.1.1' or '1.1.1.1'.
     This function will determine what kind of symbolic name it is by
     inspection, and record it in the right places."""
+    if not self.symbolic_name_re.match(name):
+      sys.stderr.write("Error while parsing %s:\n"
+                       "   '%s' is not a valid tag or branch name.\n" \
+                       % (self.fname, name))
+      sys.exit(1)
     if branch_tag.match(revision):
       self.add_cvs_branch(revision, name)
     elif vendor_tag.match(revision):
@@ -300,7 +318,7 @@ def make_path(ctx, path, branch_name = None, tag_name = None):
     if path:
       return ctx.trunk_base + '/' + path
     else:
-      return ctx.trunk_base + '/' + path
+      return ctx.trunk_base
 
 
 def relative_name(cvsroot, fname):

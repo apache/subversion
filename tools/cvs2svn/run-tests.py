@@ -59,28 +59,39 @@ tmp_dir = 'tmp'
 #----------------------------------------------------------------------
 
 
-def run_program(program, *varargs):
+def run_program(program, error_re, *varargs):
   """Run PROGRAM with VARARGS, return stdout as a list of lines.
-  If there is any stderr, print it and then exit with error."""
+  If there is any stderr, print it and then exit with error, unless
+  ERROR_RE is not None, in which case it is a string regular
+  expression that must match some line of the error output; if it
+  matches, return None, else exit with error."""
   out, err = svntest.main.run_command(program, 1, 0, *varargs)
   if err:
+    if error_re:
+      for line in err:
+        if re.match(error_re, line):
+          return None
     print '\n%s said:\n' % program
-    for line in err: print '   ' + line,
+    for line in err:
+      print '   ' + line,
     print
     sys.exit(1)
   return out
 
 
-def run_cvs2svn(*varargs):
+def run_cvs2svn(error_re, *varargs):
   """Run cvs2svn with VARARGS, return stdout as a list of lines.
-  If there is any stderr, print it and then exit with error."""
-  return run_program(cvs2svn, *varargs)
+  If there is any stderr, print it and then exit with error, unless
+  ERROR_RE is not None, in which case it is a string regular
+  expression that must match some line of the error output; if it
+  matches, return None, else exit with error."""
+  return run_program(cvs2svn, error_re, *varargs)
 
 
 def run_svn(*varargs):
   """Run svn with VARARGS; return stdout as a list of lines.
   If stderr, print stderr lines and exit with error."""
-  return run_program(svn, *varargs)
+  return run_program(svn, None, *varargs)
 
 
 def repos_to_url(path_to_svn_repos):
@@ -201,10 +212,14 @@ def erase(path):
 # The log_dictionary comes from parse_log(svn_repos).
 already_converted = { }
 
-def ensure_conversion(name, no_prune=None):
+def ensure_conversion(name, error_re=None, no_prune=None):
   """Convert CVS repository NAME to Subversion, but only if it has not
   been converted before by this invocation of this script.  If it has
   been converted before, do nothing.
+
+  If ERROR_RE is a string, it is a regular expression expected to
+  match some error line from a failed conversion, in which case return
+  None if it fails as expected, otherwise exit with error.
 
   If NO_PRUNE is set, then pass the --no-prune option to cvs2svn.py
   when converting.
@@ -214,7 +229,7 @@ def ensure_conversion(name, no_prune=None):
   Subversion repository would be in './tmp/main-svnrepos', and a
   checked out head working copy in './tmp/main-wc'.
 
-  Return the Subversion repository path and wc path. """
+  If no error, return the Subversion repository path and wc path. """
 
   cvsrepos = os.path.abspath(os.path.join(test_data_dir, '%s-cvsrepos' % name))
 
@@ -235,10 +250,17 @@ def ensure_conversion(name, no_prune=None):
       erase(wc)
       
       if no_prune:
-        run_cvs2svn('--trunk-only', '--no-prune', '--create', '-s',
+        run_cvs2svn(error_re, '--trunk-only', '--no-prune', '--create', '-s',
                     svnrepos, cvsrepos)
       else:
-        run_cvs2svn('--trunk-only', '--create', '-s', svnrepos, cvsrepos)
+        run_cvs2svn(error_re, '--trunk-only', '--create', '-s',
+                    svnrepos, cvsrepos)
+
+      # If we were expecting an error with error_re, then we must have
+      # matched it, or this whole script would have exited.
+      if error_re:
+        return None
+
       run_svn('co', repos_to_url(svnrepos), wc)
       log_dict = parse_log(svnrepos)
     finally:
@@ -259,7 +281,7 @@ def ensure_conversion(name, no_prune=None):
 
 def show_usage():
   "cvs2svn with no arguments shows usage"
-  out = run_cvs2svn()
+  out = run_cvs2svn(None)
   if out[0].find('USAGE') < 0:
     print 'Basic cvs2svn invocation failed.'
     raise svntest.Failure
@@ -271,6 +293,11 @@ def attr_exec():
   st = os.stat(os.path.join(wc, 'trunk', 'single-files', 'attr-exec'))
   if not st[0] & stat.S_IXUSR:
     raise svntest.Failure
+
+
+def bogus_tag():
+  "fail early on encountering an invalid symbolic name"
+  ensure_conversion('bogus-tag', '.*is not a valid tag or branch name')
 
 
 def space_fname():
@@ -371,7 +398,7 @@ def double_delete():
   # handle a file in the root of the repository (there were some
   # bugs in cvs2svn's svn path construction for top-level files); and
   # the --no-prune option.
-  repos, wc, logs = ensure_conversion('double-delete', 1)
+  repos, wc, logs = ensure_conversion('double-delete', None, 1)
   
   path = '/trunk/twice-removed'
 
@@ -619,6 +646,7 @@ def split_branch():
 # list all tests here, starting with None:
 test_list = [ None,
               show_usage,
+              bogus_tag,
               attr_exec,
               space_fname,
               two_quick,
