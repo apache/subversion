@@ -101,17 +101,21 @@ Workplan
 
   6. Extend the read code from (3) to be able to read from unfinished
      transactions as well as from revision files.
+     (Status: Done.)
 
   7. Write FS code to create and modify unfinished transactions.
      It can store node-rev contents in plain text.
+     (Status: Done.)
 
   8. Write FS code to perform the auto-merge of an unfinished
      transaction and any revisions which have occurred since the
      transaction was created.
+     (Status: Done.)
 
   9. Write FS code to commit an unfinished transaction by marshalling
      its changed-directory data onto the end of the changed-file data
      and moving the resulting file into place.
+     (Status: Done.)
 
   10. Extend the tool from (2) to write out node-rev contents with
       base deltas, possibly using the code from (3) to determine the
