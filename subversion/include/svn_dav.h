@@ -49,6 +49,14 @@ extern "C" {
  */
 #define SVN_DAV_OPTIONS_HEADER "X-SVN-Options"
 
+/** This header is for client and server to verify that the data
+ * transmitted is the same as the data received, regardless of what
+ * transformations (svndiff deltification, gzipping, etc) the data may
+ * have gone through in between.  Normal WebDAV or DeltaV clients
+ * won't use it.
+ */
+#define SVN_DAV_FULLTEXT_MD5_HEADER "X-SVN-Fulltext-MD5"
+
 /** Specific options that can appear in the options-header: */
 #define SVN_DAV_OPTION_NO_MERGE_RESPONSE "no-merge-response"
 
