@@ -199,6 +199,9 @@ struct dav_resource_private {
   /* the value of any SVN_DAV_OPTIONS_HEADER that came in the request */
   const char *svn_client_options;
 
+  /* the revnum value from a possible SVN_DAV_VERSION_NAME_HEADER */
+  svn_revnum_t version_name;
+
   /* was this resource auto-checked-out? */
   svn_boolean_t auto_checked_out;
 

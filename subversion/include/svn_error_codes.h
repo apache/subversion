@@ -502,6 +502,10 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_RA_NOT_IMPLEMENTED,
               SVN_ERR_RA_CATEGORY_START + 3,
               "Repository access method not implemented")
+
+  SVN_ERRDEF (SVN_ERR_RA_OUT_OF_DATE,
+              SVN_ERR_RA_CATEGORY_START + 4,
+              "Item is out-of-date.")
        
   /* ra_dav errors */
 

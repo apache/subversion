@@ -1627,7 +1627,7 @@ test_list = [ None,
               commit_multiple_wc,
               XFail(failed_commit),
               Skip(commit_symlink, (os.name != 'posix')),
-              #commit_out_of_date_deletions,
+              commit_out_of_date_deletions,
              ]
 
 if __name__ == '__main__':

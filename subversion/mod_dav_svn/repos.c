@@ -1062,6 +1062,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   const char *repos_name;
   const char *relative;
   const char *repos_path;
+  const char *version_name;
   svn_error_t *serr;
   dav_error *err;
   int had_slash;
@@ -1115,6 +1116,11 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* Gather any options requested by an svn client. */
   comb->priv.svn_client_options = apr_table_get(r->headers_in,
                                                 SVN_DAV_OPTIONS_HEADER);
+
+  /* See if the client sent a custom 'version name' request header. */
+  version_name = apr_table_get(r->headers_in, SVN_DAV_VERSION_NAME_HEADER);
+  comb->priv.version_name 
+    = version_name ? SVN_STR_TO_REV(version_name): SVN_INVALID_REVNUM;
 
   /* "relative" is part of the "uri" string, so it has the proper
      lifetime to store here. */
@@ -2264,6 +2270,31 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
                              0, 0, 0, NULL, NULL);
       if (err)
         return err;
+    }
+
+  /* Sanity check: an svn client may have sent a custom request header
+     containing the revision of the item it thinks it's deleting.  In
+     this case, we enforce the svn-specific semantic that the item
+     must be up-to-date. */
+  if (SVN_IS_VALID_REVNUM(resource->info->version_name))
+    {
+      svn_revnum_t created_rev;
+      serr = svn_fs_node_created_rev (&created_rev,
+                                      resource->info->root.root,
+                                      resource->info->repos_path,
+                                      resource->pool);
+      if (serr)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Could not get created rev of resource.");
+
+      if (resource->info->version_name < created_rev)
+        {
+          serr = svn_error_createf (SVN_ERR_RA_OUT_OF_DATE, NULL,
+                                    "Item '%s' is out of date.", 
+                                    resource->info->repos_path);
+          return dav_svn_convert_err(serr, HTTP_CONFLICT,
+                                     "Can't DELETE out-of-date resource.");
+        }
     }
 
   if ((serr = svn_fs_delete_tree(resource->info->root.root,
