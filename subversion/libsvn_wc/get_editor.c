@@ -357,9 +357,6 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   struct handler_baton *hb = baton;
   struct file_baton *fb = hb->fb;
   svn_error_t *err = NULL, *err2 = NULL;
-  int fixme = 0;
-  if (fixme)
-    return svn_error_createf (1, 0, NULL, hb->pool, "forced error");
 
   /* Apply this window.  We may be done at that point.  */
   err = hb->apply_handler (window, hb->apply_baton);
