@@ -13,6 +13,9 @@ stringtest_LDADD = ../libsvn_string.la                              \
                    ../../../apr/libapr.a
 
 
+## Make libtool be quiet
+LIBTOOL = @LIBTOOL@ --silent
+
 ## Automatic tests run by `make check` -----------------------------
 
 ## A list of test-programs to run.  (Each program contains sub-tests.)
