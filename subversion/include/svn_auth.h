@@ -197,7 +197,7 @@ typedef struct
 typedef struct
 {
   svn_boolean_t trust_permanently;
-  int accepted_failures;
+  apr_uint32_t accepted_failures;
 } svn_auth_cred_ssl_server_trust_t;
 
 
@@ -273,17 +273,17 @@ typedef svn_error_t *
  * SSL server certificate auth provider, so the meaning of these bits
  * must not be changed without careful consideration.
  */
-#define SVN_AUTH_SSL_NOTYETVALID (1<<0)
-#define SVN_AUTH_SSL_EXPIRED     (1<<1)
-#define SVN_AUTH_SSL_CNMISMATCH  (1<<2)
-#define SVN_AUTH_SSL_UNKNOWNCA   (1<<3)
-#define SVN_AUTH_SSL_OTHER       (1<<30)
+#define SVN_AUTH_SSL_NOTYETVALID 0x00000001
+#define SVN_AUTH_SSL_EXPIRED     0x00000002
+#define SVN_AUTH_SSL_CNMISMATCH  0x00000004
+#define SVN_AUTH_SSL_UNKNOWNCA   0x00000008
+#define SVN_AUTH_SSL_OTHER       0x40000000
 
 typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t) (
   svn_auth_cred_ssl_server_trust_t **cred,
   void *baton,
   const char *realm,
-  int failures,
+  apr_uint32_t failures,
   const svn_auth_ssl_server_cert_info_t *cert_info,
   apr_pool_t *pool);
 

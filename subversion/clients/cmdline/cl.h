@@ -286,7 +286,7 @@ svn_cl__auth_ssl_server_trust_prompt (
   svn_auth_cred_ssl_server_trust_t **cred_p,
   void *baton,
   const char *realm,
-  int failures,
+  apr_uint32_t failures,
   const svn_auth_ssl_server_cert_info_t *cert_info,
   apr_pool_t *pool);
 
