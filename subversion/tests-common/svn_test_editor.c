@@ -88,7 +88,7 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
         {
         case svn_txdelta_new:
           {
-            char *startaddr = (window->new->data +
+            char *startaddr = (window->new_data->data +
                                 (window->ops[i].offset));
             svn_string_t *str = 
               svn_string_ncreate (startaddr,
@@ -134,7 +134,7 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
 
 
 static svn_error_t *
-test_delete (svn_string_t *filename, void *parent_baton)
+test_delete_item (svn_string_t *filename, void *parent_baton)
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
   const char *Aname = filename->data ? filename->data : "(unknown)";
@@ -409,7 +409,7 @@ svn_test_get_editor (const svn_delta_edit_fns_t **editor,
 
   my_editor = apr_pcalloc (pool, sizeof (*my_editor));
 
-  my_editor->delete             = test_delete;
+  my_editor->delete_item        = test_delete_item;
   my_editor->replace_root       = test_replace_root;
   my_editor->add_directory      = test_add_directory;
   my_editor->replace_directory  = test_replace_directory;

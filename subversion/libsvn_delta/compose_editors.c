@@ -79,21 +79,21 @@ replace_root (void *edit_baton, void **root_baton)
 
 
 static svn_error_t *
-delete (svn_string_t *name, void *parent_baton)
+delete_item (svn_string_t *name, void *parent_baton)
 {
   struct dir_baton *d = parent_baton;
   svn_error_t *err;
 
-  if (d->edit_baton->editor_1->delete)
+  if (d->edit_baton->editor_1->delete_item)
     {
-      err = (* (d->edit_baton->editor_1->delete)) (name, d->dir_baton_1);
+      err = (* (d->edit_baton->editor_1->delete_item)) (name, d->dir_baton_1);
       if (err)
         return err;
     }
   
-  if (d->edit_baton->editor_2->delete)
+  if (d->edit_baton->editor_2->delete_item)
     {
-      err = (* (d->edit_baton->editor_2->delete)) (name, d->dir_baton_2);
+      err = (* (d->edit_baton->editor_2->delete_item)) (name, d->dir_baton_2);
       if (err)
         return err;
     }
@@ -454,7 +454,7 @@ change_dir_prop (void *parent_baton,
 static const svn_delta_edit_fns_t composed_editor =
 {
   replace_root,
-  delete,
+  delete_item,
   add_directory,
   replace_directory,
   change_dir_prop,

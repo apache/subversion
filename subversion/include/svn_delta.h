@@ -128,7 +128,7 @@ typedef struct svn_txdelta_window_t {
   svn_txdelta_op_t *ops;
 
   /* New data, for use by any `svn_delta_new' instructions.  */
-  svn_string_t *new;
+  svn_string_t *new_data;
 
   /* The sub-pool that this window is living in, needed for
      svn_txdelta_free_window() */
@@ -296,9 +296,9 @@ typedef struct svn_delta_edit_fns_t
 
      Most of the callbacks work in the obvious way:
 
-         delete
-         add_file        add_directory    
-         replace_file    replace_directory
+         delete_item
+         add_file           add_directory    
+         replace_file       replace_directory
 
      Each of these takes a directory baton, indicating the directory
      in which the change takes place, and a NAME argument, giving the
@@ -351,8 +351,8 @@ typedef struct svn_delta_edit_fns_t
      may use the batons:
 
      1. The producer may call `replace_directory', `add_directory',
-        `replace_file', `add_file', or `delete' at most once on any
-        given directory entry.
+        `replace_file', `add_file', or `delete_item' at most once on
+        any given directory entry.
 
      2. The producer may not close a directory baton until it has
         closed all batons for its subdirectories.
@@ -407,8 +407,16 @@ typedef struct svn_delta_edit_fns_t
   /* Deleting things.  */
        
   /* Remove the directory entry named NAME.  */
-  svn_error_t *(*delete) (svn_string_t *name,
-                          void *parent_baton);
+  /* FIXME: this used to be just delete(), but was changed to avoid
+   * gratuitous incompatibility with C++, where `delete' is a reserved
+   * keyword.  Unfortunately, remove() is taken by the standard C
+   * library.  The compromise is delete_item(), but if anyone can
+   * think of a better name, tags-query-replace is your friend. :-)
+   * If you're reading this comment long after 22 Dec 2000, then
+   * apparently no one has thought of a better name, so it's probably
+   * time to remove the comment. */
+  svn_error_t *(*delete_item) (svn_string_t *name,
+                               void *parent_baton);
 
 
   /* Creating and modifying directories.  */

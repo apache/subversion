@@ -493,35 +493,42 @@ part appears after the tree delta is complete.  Here's an example:
 @node Serializing Deltas via the "Editor" Interface
 @section Serializing Deltas via the "Editor" Interface
 
-Static XML is a useful representation for import/export and for
-visualization of deltas, but we also need a standard way to express a
-delta as a @emph{series of operations}, to be performed on the source
-tree, resulting in the target tree.  This is useful for implementing
-tree diffing and patching, and as a protocol-independent communications
-API.
-
-In Subversion, deltas are serialized as calls into the vtable
-@code{svn_delta_edit_fns_t}.  This interface is the core of Subversion,
-and a thorough understanding of it will help make sense of the rest of
-Subversion's design.
+The static XML forms above are useful as an import/export format, and as
+a visualization aid, but we also need a way to express a delta as a
+@emph{series of operations}, to implement directory tree diffing and
+patching.  Subversion defines a standard set of such operations in the
+vtable @code{svn_delta_edit_fns_t}, a set of function prototypes which
+anyone may implement (see @file{svn_delta.h}).
 
 Each function in an instance of @code{svn_delta_edit_fns_t}
 (colloquially known as an @dfn{editor}) implements some distinct subtask
-of editing a directory tree.  If you compare the editor functions to the
-XML elements described previously, you'll notice a fairly strict
-correspondence: there's one function for replacing a directory, another
-function for replacing a file, one for adding a directory, another for
-adding a file, a function for deleting, and so on.
+of editing a directory tree.  In fact, if you compare the editor
+function prototypes to the XML elements described previously, you'll
+notice a fairly strict correspondence: there's one function for
+replacing a directory, another function for replacing a file, one for
+adding a directory, another for adding a file, a function for deleting,
+and so on.
 
-Whether the functions in a particular editor actually change a directory
-tree on disk depends on the implementation of that editor, of course.
-Some editors do directly manipulate trees, but others are used for
-communicating over the network, outputting XML, and so on.
+Although the editor interface was designed around the general idea of
+making changes to a directory tree, a specific implementation's behavior
+depends on its role.  For example, the versioning filesystem library
+offers an editor that creates new revisions, while the working copy
+library offers an editor that updates working copies.  And the network
+layer offers an editor that turns editing calls into wire protocol,
+which is then converted back into editing calls on the other side!  All
+of these different tasks can share a single interface, because they are
+all fundamentally about the same thing: expressing and applying
+differences between directory trees.
 
-Nonetheless, @code{svn_delta_edit_fns_t} can best be understood by
-watching one work on a real directory tree.  For example:
+Like the XML forms, a series of editor calls must follow certain nesting
+conventions; these conventions are implicit in the interface, in that
+some of the functions take arguments that can only be obtained from
+previous calls to other editor functions.
 
-KFF TODO: FOOO WORKING HERE.
+Editors can best be understood by watching one work on a real directory
+tree.  For example:
+
+@c kff todo: fooo working here.
 
 Suppose that the user has made a number of local changes to her working
 copy and wants to commit them to the repository.  Let's represent her
@@ -655,14 +662,18 @@ baton as well.
 The client isn't yet finished with @file{dir1}, however; it makes two
 more edits:
 
-  @code{editor->delete("dir3", dir1_baton);} @*
+  @code{editor->delete_item("dir3", dir1_baton);} @*
   @code{dir4_baton = editor->add_dir("dir4", "/dir1/dir2", dir1_baton);}
+
+@emph{(The function's name is @code{delete_item} rather than
+@code{delete} to avoid gratuitous incompatibility with C++, where
+@code{delete} is a reserved keyword.)}
 
 @item
 Within the directory @file{dir4} (whose ancestry is @file{/dir1/dir2}),
 the client removes a file:
 
-  @code{editor->delete("file3", dir4_baton);}
+  @code{editor->delete_item("file3", dir4_baton);}
 
 @item
 The client is now finished with both @file{dir4}, as well as its parent
