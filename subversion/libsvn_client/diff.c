@@ -124,12 +124,41 @@ struct diff_cmd_baton {
   apr_pool_t *pool;
   apr_file_t *outfile;
   apr_file_t *errfile;
+
+  /* These are the numeric representations of the revisions passed to
+     svn_client_diff, either may be SVN_INVALID_REVNUM.  We need these
+     because some of the svn_wc_diff_callbacks_t don't get revision
+     arguments.
+
+     ### Perhaps we should change the callback signatures and eliminate
+     ### these?
+  */
+  svn_revnum_t revnum1;
+  svn_revnum_t revnum2;
 };
 
 
+/* Generate a label for the diff output for file PATH at revision REVNUM.
+   If REVNUM is invalid then it is assumed to be the current working
+   copy. */
+static const char *
+diff_label (const char *path,
+            svn_revnum_t revnum,
+            apr_pool_t *pool)
+{
+  const char *label;
+  if (revnum != SVN_INVALID_REVNUM)
+    label = apr_psprintf (pool, "%s\t(revision %" SVN_REVNUM_T_FMT ")",
+                          path, revnum);
+  else
+    label = apr_psprintf (pool, "%s\t(working copy)", path);
+
+  return label;
+}
+
 /* The main workhorse, which invokes an external 'diff' program on the
    two temporary files.   The path is the "true" label to use in the
-   diff output, and the revnums are ignored. */
+   diff output. */
 static svn_error_t *
 diff_file_changed (svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *state,
@@ -146,7 +175,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
   apr_file_t *outfile = diff_cmd_baton->outfile;
   apr_file_t *errfile = diff_cmd_baton->errfile;
   apr_pool_t *subpool = svn_pool_create (diff_cmd_baton->pool);
-  const char *label = path;
+  const char *label1, *label2;
 
   /* Execute local diff command on these two paths, print to stdout. */
   nargs = diff_cmd_baton->options->nelts;
@@ -163,12 +192,13 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
     }
 
   /* Print out the diff header. */
-  SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n",
-                               label ? label : tmpfile1));
+  SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n", path));
   apr_file_printf (outfile, 
      "===================================================================\n");
 
-  SVN_ERR (svn_io_run_diff (".", args, nargs, path, 
+  label1 = diff_label (path, rev1, subpool);
+  label2 = diff_label (path, rev2, subpool);
+  SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
                             tmpfile1, tmpfile2, 
                             &exitcode, outfile, errfile, subpool));
 
@@ -197,8 +227,10 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
                  const char *tmpfile2,
                  void *diff_baton)
 {
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+
   return diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
-                            SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                            diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
                             diff_baton);
 }
 
@@ -209,8 +241,10 @@ diff_file_deleted (svn_wc_adm_access_t *adm_access,
                    const char *tmpfile2,
                    void *diff_baton)
 {
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+
   return diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
-                            SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                            diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
                             diff_baton);
 }
 
@@ -917,7 +951,7 @@ do_diff (const apr_array_header_t *options,
          const svn_opt_revision_t *revision2,
          svn_boolean_t recurse,
          const svn_wc_diff_callbacks_t *callbacks,
-         void *callback_baton,
+         struct diff_cmd_baton *callback_baton,
          apr_pool_t *pool)
 {
   svn_revnum_t start_revnum, end_revnum;
@@ -1013,6 +1047,7 @@ do_diff (const apr_array_header_t *options,
       /* Tell the RA layer we want a delta to change our txn to URL1 */
       SVN_ERR (svn_client__get_revision_number
                (&start_revnum, ra_lib, session, revision1, path1, pool));
+      callback_baton->revnum1 = start_revnum;
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
                                   start_revnum,
@@ -1079,10 +1114,12 @@ do_diff (const apr_array_header_t *options,
                (&start_revnum, ra_lib, session, revision1, 
                 path1_is_url ? NULL : path1, 
                 pool));
+      callback_baton->revnum1 = start_revnum;
       SVN_ERR (svn_client__get_revision_number
                (&end_revnum, ra_lib, session2, revision2,
                 path2_is_url ? NULL : path2, 
                 pool));
+      callback_baton->revnum2 = end_revnum;
 
       /* Now down to the -real- business.  We gotta figure out anchors
          and targets, whether things are urls or wcpaths.
@@ -1262,6 +1299,8 @@ svn_client_diff (const apr_array_header_t *options,
   diff_cmd_baton.pool = pool;
   diff_cmd_baton.outfile = outfile;
   diff_cmd_baton.errfile = errfile;
+  diff_cmd_baton.revnum1 = SVN_INVALID_REVNUM;
+  diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
 
   return do_diff (options,
                   auth_baton,

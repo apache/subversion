@@ -1376,7 +1376,8 @@ svn_error_t *
 svn_io_run_diff (const char *dir, 
                  const char *const *user_args,
                  const int num_user_args, 
-                 const char *label,
+                 const char *label1,
+                 const char *label2,
                  const char *from,
                  const char *to,
                  int *pexitcode, 
@@ -1400,7 +1401,9 @@ svn_io_run_diff (const char *dir,
   else
     nargs += 1; /* -u */
 
-  if (label != NULL)
+  if (label1 != NULL)
+    nargs += 2; /* the -L and the label itself */
+  if (label2 != NULL)
     nargs += 2; /* the -L and the label itself */
 
   args = apr_palloc (subpool, nargs * sizeof(char *));
@@ -1417,10 +1420,15 @@ svn_io_run_diff (const char *dir,
   else
     args[i++] = "-u"; /* assume -u if the user didn't give us any args */
 
-  if (label != NULL)
+  if (label1 != NULL)
     {
       args[i++] = "-L";
-      args[i++] = label;
+      args[i++] = label1;
+    }
+  if (label2 != NULL)
+    {
+      args[i++] = "-L";
+      args[i++] = label2;
     }
 
   args[i++] = from;

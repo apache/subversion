@@ -123,6 +123,9 @@ struct edit_baton {
   svn_wc_adm_access_t *anchor;
   const char *target;
 
+  /* Target revision */
+  svn_revnum_t revnum;
+
   /* The callbacks and callback argument that implement the file comparison
      functions */
   const svn_wc_diff_callbacks_t *callbacks;
@@ -444,7 +447,7 @@ file_diff (struct dir_baton *dir_baton,
              pristine_copy, 
              translated,
              entry->revision,
-             entry->revision,
+             SVN_INVALID_REVNUM,
              dir_baton->edit_baton->callback_baton);
           
           if (translated != path)
@@ -620,6 +623,9 @@ directory_elements_diff (struct dir_baton *dir_baton,
 static svn_error_t *
 set_target_revision (void *edit_baton, svn_revnum_t target_revision)
 {
+  struct edit_baton *eb = edit_baton;
+  eb->revnum = target_revision;
+
   return SVN_NO_ERROR;
 }
 
@@ -669,6 +675,7 @@ delete_entry (svn_stringbuf_t *name_s,
                 svn_wc__empty_file_path (path, pool),
                 path,
                 pb->edit_baton->callback_baton));
+      apr_hash_set (pb->compared, path, APR_HASH_KEY_STRING, (void*)TRUE);
       break;
 
     case svn_node_dir:
@@ -958,8 +965,8 @@ close_file (void *file_baton)
          b->path,
          temp_file_path,
          translated,
-         0,       /* non-existent revision */
-         entry ? entry->revision : SVN_INVALID_REVNUM,
+         b->edit_baton->revnum,
+         SVN_INVALID_REVNUM,
          b->edit_baton->callback_baton);
       
       if (translated != b->path)
