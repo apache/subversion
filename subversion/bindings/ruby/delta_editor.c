@@ -123,17 +123,19 @@ open_root (void *edit_baton,
 
 static svn_error_t *
 delete_entry (svn_stringbuf_t *name,
+	      svn_revnum_t revision,
               void *parent_baton)
 {
   VALUE self = (VALUE) parent_baton;
   int error;
-  VALUE args[3];
+  VALUE args[4];
 
   args[0] = self;
   args[1] = (VALUE) "deleteEntry";
   args[2] = rb_str_new (name->data, name->len);
+  args[3] = LONG2NUM (revision);
   
-  rb_protect (svn_ruby_protect_call1, (VALUE) args, &error);
+  rb_protect (svn_ruby_protect_call2, (VALUE) args, &error);
 
   if (error)
     {
@@ -527,7 +529,7 @@ em_open_root (VALUE self, VALUE aRevision)
 }
 
 static VALUE
-em_delete_entry (VALUE self, VALUE aName)
+em_delete_entry (VALUE self, VALUE aName, VALUE aRevision)
 {
   rb_notimplement ();
   return Qnil;
@@ -683,20 +685,22 @@ ce_open_root (VALUE self, VALUE aRevision)
 }
 
 static VALUE
-ce_delete_entry (VALUE self, VALUE aName)
+ce_delete_entry (VALUE self, VALUE aName, VALUE aRevision)
 {
   svn_ruby_commit_editor_t *ce;
   svn_error_t *err;
   apr_pool_t *pool;
 
   svn_stringbuf_t *name;
+  svn_revnum_t revision;
 
   Check_Type (aName, T_STRING);
   Data_Get_Struct (self, svn_ruby_commit_editor_t, ce);
+  revision = NUM2LONG (aRevision);
   pool = svn_pool_create (ce->pool);
   name = svn_stringbuf_create (StringValuePtr (aName), pool);
 
-  err = ce->editor->delete_entry (name, ce->dir_baton->baton);
+  err = ce->editor->delete_entry (name, revision, ce->dir_baton->baton);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -1053,7 +1057,7 @@ svn_ruby_init_delta_editor (void)
   rb_define_method (cSvnRubyEditor, "setTargetRevision",
                     em_set_target_revision, 1);
   rb_define_method (cSvnRubyEditor, "openRoot", em_open_root, 1);
-  rb_define_method (cSvnRubyEditor, "deleteEntry", em_delete_entry, 1);
+  rb_define_method (cSvnRubyEditor, "deleteEntry", em_delete_entry, 2);
   rb_define_method (cSvnRubyEditor, "addDirectory", em_add_directory, 3);
   rb_define_method (cSvnRubyEditor, "openDirectory",
                     em_open_directory, 2);
@@ -1071,7 +1075,7 @@ svn_ruby_init_delta_editor (void)
   rb_define_method (cSvnCommitEditor, "setTargetRevision",
                     ce_set_target_revision, 1);
   rb_define_method (cSvnCommitEditor, "openRoot", ce_open_root, 1);
-  rb_define_method (cSvnCommitEditor, "deleteEntry", ce_delete_entry, 1);
+  rb_define_method (cSvnCommitEditor, "deleteEntry", ce_delete_entry, 2);
   rb_define_method (cSvnCommitEditor, "addDirectory", ce_add_directory, -1);
   rb_define_method (cSvnCommitEditor, "openDirectory",
                     ce_open_directory, 2);
