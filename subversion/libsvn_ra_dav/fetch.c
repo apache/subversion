@@ -66,6 +66,10 @@ typedef struct {
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
 
+  /* if we're receiving an svndiff, this is a parser which places the
+     resulting windows into the above handler/baton. */
+  svn_stream_t *stream;
+
 } file_read_ctx_t;
 
 typedef struct {
@@ -501,9 +505,6 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
 {
   custom_get_ctx_t *cgc = userdata;
   file_read_ctx_t *frc = cgc->subctx;
-  svn_txdelta_window_t window = { 0 };
-  svn_txdelta_op_t op;
-  svn_stringbuf_t data;
 
   if (cgc->err)
     {
@@ -529,28 +530,88 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
       printf("Content-Type: %s/%s; charset=%s\n",
              cgc->ctype.type, cgc->ctype.subtype, cgc->ctype.charset);
 #endif
+
+#ifndef NEON_CTYPE_BUG
+      if (ne_version_minimum(0, 19))    /* if (api < 0.19) */
+        {
+          /* 0.18.x has a bug in the Content-Type parsing. work around it.
+             (subtype points to an empty string; one past is what we want
+             to look for) */
+#if 0
+          printf("subtype=%s\n", cgc->ctype.subtype+1);
+#endif
+          if (!strcmp(cgc->ctype.subtype+1, "nd.svn-svndiff"))
+            {
+              /* we are receiving an svndiff. set things up. */
+              frc->stream = svn_txdelta_parse_svndiff(frc->handler,
+                                                      frc->handler_baton,
+                                                      TRUE,
+                                                      frc->pool);
+            }
+        }
+      else
+        /* ### need to patch this code when Neon is fixed */
+        abort();
+#endif
+
       cgc->checked_type = 1;
     }
 
-  data.data		= (char *)buf;
-  data.len		= len;
-  data.blocksize	= len;
-  data.pool		= frc->pool;
+  if (frc->stream == NULL)
+    {
+      /* receiving plain text. construct a window for it. */
 
-  op.action_code = svn_txdelta_new;
-  op.offset = 0;
-  op.length = len;
+      svn_txdelta_window_t window = { 0 };
+      svn_txdelta_op_t op;
+      svn_stringbuf_t data;
 
-  window.tview_len = len;       /* result will be this long */
-  window.num_ops = 1;
-  window.ops_size = 1;          /* ### why is this here? */
-  window.ops = &op;
-  window.new_data = &data;
-  window.pool = frc->pool;
+      data.data		= (char *)buf;
+      data.len		= len;
+      data.blocksize	= len;
+      data.pool		= frc->pool;
 
-  /* We can't really do anything useful if we get an error here.  Pass
-     it off to someone who can. */
-  cgc->err = (*frc->handler)(&window, frc->handler_baton);
+      op.action_code = svn_txdelta_new;
+      op.offset = 0;
+      op.length = len;
+
+      window.tview_len = len;       /* result will be this long */
+      window.num_ops = 1;
+      window.ops_size = 1;          /* ### why is this here? */
+      window.ops = &op;
+      window.new_data = &data;
+      window.pool = frc->pool;
+
+      /* We can't really do anything useful if we get an error here.  Pass
+         it off to someone who can. */
+      cgc->err = (*frc->handler)(&window, frc->handler_baton);
+    }
+  else
+    {
+      /* receiving svndiff. feed it to the svndiff parser. */
+
+      apr_size_t written = len;
+
+      cgc->err = svn_stream_write(frc->stream, buf, &written);
+
+      /* ### the svndiff stream parser does not obey svn_stream semantics
+         ### in its write handler. it does not output the number of bytes
+         ### consumed by the handler. specifically, it may decrement the
+         ### number by 4 for the header, then never touch it again. that
+         ### makes it appear like an incomplete write.
+         ### disable this check for now. the svndiff parser actually does
+         ### consume all bytes, all the time.
+      */
+#if 0
+      if (written != len && cgc->err == NULL)
+        cgc->err = svn_error_createf(SVN_ERR_INCOMPLETE_DATA, 0, NULL,
+                                     frc->pool,
+                                     "unable to completely write the svndiff "
+                                     "data to the parser stream (wrote %lu "
+                                     "of %lu bytes)",
+                                     (unsigned long)written,
+                                     (unsigned long)len);
+#endif
+    }
 }
 
 static svn_error_t *simple_fetch_file(ne_session *sess,
