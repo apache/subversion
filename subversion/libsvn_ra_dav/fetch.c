@@ -916,11 +916,11 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
               apr_hash_this (h, &kkey, NULL, &vval);
               
               if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
-                          sizeof(SVN_DAV_PROP_NS_CUSTOM)) == 0)
+                          sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0)
                 entry->has_props = TRUE;
               
               else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
-                               sizeof(SVN_DAV_PROP_NS_SVN)) == 0)
+                               sizeof(SVN_DAV_PROP_NS_SVN) - 1) == 0)
                 entry->has_props = TRUE;
             }
           
