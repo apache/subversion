@@ -400,6 +400,20 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 
 
 /*-----------------------------------------------------------------*/
+
+#if APR_HAS_THREADS
+/* Cleanup function to reset the allocator mutex so that apr_alloctor_free
+   doesn't try to lock a destroyed mutex during pool cleanup.*/
+
+static apr_status_t
+allocator_reset_mutex (void *allocator)
+{
+  apr_allocator_mutex_set(allocator, NULL);
+  return APR_SUCCESS;
+}
+#endif /* APR_HAS_THREADS */
+
+
 /*
    Macros to make the preprocessor logic less confusing.
    We need to always have svn_pool_xxx aswell as
@@ -420,21 +434,53 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 #endif /* APR_POOL_DEBUG */
 
 
+/* The maximum amount of memory to keep in the freelist: 4MB */
+#define SVN_POOL_MAX_FREE (4096 * 1024)
+
 SVN_POOL_FUNC_DEFINE(apr_pool_t *, svn_pool_create)
 {
   apr_pool_t *ret_pool;
+  apr_allocator_t *allocator = NULL;
+  apr_status_t apr_err;
+
+  /* For the top level pool we want a seperate allocator */
+  if (pool == NULL)
+    {
+      apr_err = apr_allocator_create (&allocator);
+      if (apr_err)
+        abort_on_pool_failure (apr_err);
+
+      apr_allocator_set_max_free (allocator, SVN_POOL_MAX_FREE);
+    }
 
 #if !APR_POOL_DEBUG
-  apr_pool_create_ex (&ret_pool, pool, abort_on_pool_failure, NULL);
+  apr_pool_create_ex (&ret_pool, pool, abort_on_pool_failure, allocator);
 #else /* APR_POOL_DEBUG */
   apr_pool_create_ex_debug (&ret_pool, pool, abort_on_pool_failure,
-                            NULL, file_line);
+                            allocator, file_line);
 #endif /* APR_POOL_DEBUG */
 
   /* If there is no parent, then initialize ret_pool as the "top". */
   if (pool == NULL)
     {
-      apr_status_t apr_err = svn_error_init_pool (ret_pool);
+#if APR_HAS_THREADS
+      {
+        apr_thread_mutex_t *mutex;
+
+        apr_err = apr_thread_mutex_create (&mutex, APR_THREAD_MUTEX_DEFAULT,
+                                           ret_pool);
+        if (apr_err)
+          abort_on_pool_failure (apr_err);
+
+        apr_allocator_mutex_set (allocator, mutex);
+        apr_pool_cleanup_register (ret_pool, allocator,
+                                   allocator_reset_mutex, NULL);
+      }
+#endif /* APR_HAS_THREADS */
+
+      apr_allocator_owner_set (allocator, ret_pool);
+     
+      apr_err = svn_error_init_pool (ret_pool);
       if (apr_err)
         abort_on_pool_failure (apr_err);
     }
@@ -476,6 +522,21 @@ SVN_POOL_FUNC_DEFINE(void, svn_pool_clear)
 
   if (subpool_of_p_p)
     {
+#if APR_HAS_THREADS
+      /* At this point, the mutex we set on our own allocator will have
+	 been destroyed.  Better create a new one.
+       */
+      apr_allocator_t *allocator;
+      apr_thread_mutex_t *mutex;
+
+      allocator = apr_pool_allocator_get (pool);
+      apr_allocator_mutex_set (allocator, NULL);
+      (void) apr_thread_mutex_create (&mutex, APR_THREAD_MUTEX_DEFAULT, pool);
+      apr_allocator_mutex_set (allocator, mutex);
+      apr_pool_cleanup_register (pool, allocator,
+                                 allocator_reset_mutex, NULL);
+#endif /* APR_HAS_THREADS */
+	
       /* Here we have a problematic situation.  We cleared the pool P,
          which invalidated all its userdata.  The problem is that as
          far as we can tell, the error pool on this pool isn't a copy
