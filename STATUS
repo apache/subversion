@@ -108,3 +108,13 @@ Candidate changes:
     Justification:  severeal users have noticed this --dry-run bug already.
     Notes:  a one-line logic fix, plus new regression test.
       +1: sussman
+
+  * r8618, r8617
+    Fix segfault and improper cursor shutdown in mod_dav_svn.
+    Justification: severe lossage occurs if these bugs are encountered.
+      +1: cmpilato
+
+  * r8616
+    Improved warnings from svnlook and svnadmin.
+    Justification: greatly increased admin-friendliness.
+      +1: cmpilato
