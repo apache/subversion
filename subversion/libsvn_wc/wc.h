@@ -286,10 +286,6 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 
 /** Log actions. **/
 
-/* Merge property changes for SVN_WC__LOG_ATTR_NAME.  todo: not yet
-   done. */
-#define SVN_WC__LOG_REPLACE_PROP_BASE   "replace-prop-base"
-
 /* Set attributes on SVN_WC__LOG_ATTR_NAME's entry. */
 #define SVN_WC__LOG_MODIFY_ENTRY        "modify-entry"
 
