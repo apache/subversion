@@ -1831,7 +1831,7 @@ install_file (svn_wc_notify_state_t *content_state,
    */
   if (is_add)
     {
-      const char *rev_str;
+      const char *rev_str = NULL;
       
       assert (new_revision == 0);
 
