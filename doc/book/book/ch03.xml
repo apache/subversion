@@ -791,14 +791,13 @@ Updated to revision 2.
         
         <para>If you run <command>svn status</command> at the top of
           your working copy with no arguments, it will detect all file
-          and tree changes you've made.  This example is designed to
-          show all the different status codes that <command>svn
+          and tree changes you've made.  Below are examples of
+          the different status codes that <command>svn
           status</command> can return.  (Note that the text following
-          <literal>#</literal> in the following example is not
+          <literal>#</literal> is not
           actually printed by <command>svn status</command>.)</para>
       
         <screen>
-$ svn status
   L    abc.c               # svn has a lock in its .svn directory for abc.c
 M      bar.c               # the content in bar.c has local modifications
  M     baz.c               # baz.c has property but no content modifications
@@ -813,7 +812,6 @@ D      stuff/fish.c        # this file is scheduled for deletion
 A      stuff/loot/bloo.h   # this file is scheduled for addition
 C      stuff/loot/lump.c   # this file has conflicts from an update
     S  stuff/squawk        # this file or dir has been switched to a branch
-&hellip;
 </screen>
       
         <para>In this output format <command>svn status</command>
