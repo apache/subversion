@@ -88,6 +88,16 @@ const apr_getopt_option_t svn_cl__options[] =
                       "do no interactive prompting"},
     {"dry-run",       svn_cl__dry_run_opt, 0,
                       "try operation but make no changes"},
+
+    /* ### Perhaps the option should be named "--rev-prop" instead?
+           Generally, we do include the hyphen; the only reason not to
+           here is that in code and emails we almost always refer to
+           them as "revprops", like with "wcprops".  So this
+           inconsistency is justified in the name of consistency.  How
+           distressingly typical.  Thoughts? :-) */
+    {"revprop",       svn_cl__revprop_opt, 0,
+                      "operate on a revision property (use with -r)"},
+
     {0,               0, 0, 0}
   };
 
@@ -291,42 +301,42 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "propdel", svn_cl__propdel, {"pdel"},
     "Remove PROPNAME from files, dirs, or revisions.\n"
     "usage: 1. propdel [WC_TARGETS]\n"
-    "       2. propdel -r REV [URL]\n\n"
+    "       2. propdel --revprop -r REV [URL]\n\n"
     "First usage removes versioned props in working copy.\n"
     "Second usage removes unversioned remote prop on repos revision.\n\n",
-    {'q', 'R', 'r'} },
+    {'q', 'R', 'r', svn_cl__revprop_opt} },
   
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
     "Edit property PROPNAME with $EDITOR on targets.\n"
     "usage: 1. propedit PROPNAME TARGET1 [TARGET2 ...]\n"
-    "       2. propedit PROPNAME -r REV [URL]\n\n"
+    "       2. propedit PROPNAME --revprop -r REV [URL]\n\n"
     "First usage edits versioned props in working copy.\n"
     "Second usage edits unversioned remote prop on repos revision.\n\n",
-    {'r'} },
+    {'r', svn_cl__revprop_opt} },
   
   { "propget", svn_cl__propget, {"pget", "pg"},
     "Print value of PROPNAME on files, dirs, or revisions.\n"
     "usage: 1. propget PROPNAME [WC_TARGETS]\n"
-    "       2. propget PROPNAME -r REV [URL]\n\n"
+    "       2. propget PROPNAME --revprop -r REV [URL]\n\n"
     "First usage prints versioned prop in working copy.\n"
     "Second usage prints unversioned remote prop on repos revision.\n\n",
-    {'R', 'r'} },
+    {'R', 'r', svn_cl__revprop_opt} },
   
   { "proplist", svn_cl__proplist, {"plist", "pl"},
     "List all properties on files, dirs, or revisions.\n"
     "usage: 1. proplist [WC_TARGETS]\n"
-    "       2. proplist -r REV [URL]\n\n"
+    "       2. proplist --revprop -r REV [URL]\n\n"
     "First usage lists versioned props in working copy.\n"
     "Second usage lists unversioned remote props on repos revision.\n\n",
-    {'v', 'R', 'r'} },
+    {'v', 'R', 'r', svn_cl__revprop_opt} },
   
   { "propset", svn_cl__propset, {"pset", "ps"},
     "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n\n"
     "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] TARGET1 [TARGET2 ...]\n"
-    "       2. propset PROPNAME [PROPVAL | -F VALFILE] -r REV [URL]\n\n"
+    "       2. propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] [URL]\n\n"
     "First usage creates a versioned, local propchange in working copy.\n"
     "Second usage creates an unversioned, remote propchange on repos revision.\n\n"
-    "    Note: svn recognizes the following special verisoned properties\n"
+    "    Note: svn recognizes the following special versioned properties\n"
     "    but will store any arbitrary properties set:\n"
     "      svn:ignore     - A newline separated list of file patterns to ignore.\n"
     "      svn:keywords   - Keywords to be expanded.  Valid keywords are:\n"
@@ -352,7 +362,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "        revision flags, and an URL.  For example\n"
     "           foo            http://example.com/repos/zig\n"
     "           foo/bar -r1234 http://example.com/repos/zag\n",
-    {'F', 'q', 'r', svn_cl__targets_opt, 'R'} },
+    {'F', 'q', 'r', svn_cl__targets_opt, 'R', svn_cl__revprop_opt} },
   
   { "revert", svn_cl__revert, {0},
     "Restore pristine working copy file (undo all local edits)\n"
@@ -644,6 +654,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__dry_run_opt:
         opt_state.dry_run = TRUE;
+        break;
+      case svn_cl__revprop_opt:
+        opt_state.revprop = TRUE;
         break;
       case 'R':
         opt_state.recursive = TRUE;

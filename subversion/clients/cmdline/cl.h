@@ -56,7 +56,8 @@ typedef enum {
   svn_cl__no_ignore_opt,
   svn_cl__no_auth_cache_opt,
   svn_cl__non_interactive_opt,
-  svn_cl__dry_run_opt
+  svn_cl__dry_run_opt,
+  svn_cl__revprop_opt
 } svn_cl__longopt_t;
 
 
@@ -98,6 +99,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_ignore;       /* disregard default ignores & svn:ignore's */
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   svn_boolean_t dry_run;         /* try operation but make no changes */
+  svn_boolean_t revprop;         /* operate on a revision property */
 } svn_cl__opt_state_t;
 
 
@@ -181,6 +183,11 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
    be in UTF-8 format.  */
 svn_error_t *
 svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
+
+/* Return a SVN_ERR_CL_ARG_PARSING_ERROR error, with a message stating
+   that one must give an explicit revision when operating on a
+   revision property. */
+svn_error_t *svn_cl__revprop_no_rev_error (apr_pool_t *pool);
 
 /* Search for a text editor command in standard environment variables,
    and invoke it to edit CONTENTS (using a temporary file created in

@@ -58,37 +58,24 @@ svn_cl__propedit (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
 
-  /* The customary implicit dot rule has been prone to user error in
-   * propedit.  For example, Jon Trowbridge <trow@gnu.og> did
-   * 
-   *    $ svn propedit HACKING
-   *
-   * and then when he closed his editor, he was surprised to see
-   *
-   *    Set new value for property `HACKING' on `'
-   *
-   * ...meaning that the property named `HACKING' had been set on the
-   * current working directory, with the value taken from the editor.
-   * So this command doesn't do the implicit dot thing anymore; an
-   * explicit target is always required.
-   */
-  if (targets->nelts == 0)
-    {
-      return svn_error_create
-        (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL,
-         "explicit target argument required.\n");
-    }
-
-  /* Decide if we're making a local mod to a versioned working copy
-     prop, or making a permanent change to an unversioned repository
-     revision prop.  The existence of the '-r' flag is the key. */
-  if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
+  if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;
       const char *URL, *target;
       svn_client_auth_baton_t *auth_baton;
       svn_string_t *propval;
       const char *new_propval;
+
+      /* All property commands insist on a specific revision when
+         operating on a revprop. */
+      if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
+        return svn_cl__revprop_no_rev_error (pool);
+
+      /* Else some revision was specified, so proceed. */
+
+      /* Implicit "." is okay for revision properties; it just helps
+         us find the right repository. */
+      svn_opt_push_implicit_dot_target (targets, pool);
 
       auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
@@ -134,9 +121,37 @@ svn_cl__propedit (apr_getopt_t *os,
                   SVN_REVNUM_T_FMT"\n", pname, rev);
         }
     }
-
-  else
+  else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {
+      return svn_error_createf
+        (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
+         "Cannot specify revision for editing versioned property '%s'.",
+         pname);
+    }
+  else  /* operate on a normal, versioned property (not a revprop) */
+    {
+      /* The customary implicit dot rule has been prone to user error
+       * here.  For example, Jon Trowbridge <trow@gnu.og> did
+       * 
+       *    $ svn propedit HACKING
+       *
+       * and then when he closed his editor, he was surprised to see
+       *
+       *    Set new value for property `HACKING' on `'
+       *
+       * ...meaning that the property named `HACKING' had been set on
+       * the current working directory, with the value taken from the
+       * editor.  So we don't do the implicit dot thing anymore; an
+       * explicit target is always required when editing a versioned
+       * property.
+       */
+      if (targets->nelts == 0)
+        {
+          return svn_error_create
+            (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL,
+             "explicit target argument required.\n");
+        }
+
       /* For each target, edit the property PNAME. */
       for (i = 0; i < targets->nelts; i++)
         {

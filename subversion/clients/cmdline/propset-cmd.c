@@ -81,46 +81,22 @@ svn_cl__propset (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
 
-  /* The customary implicit dot rule has been prone to user error in
-   * propset.  People would do intuitive things like
-   * 
-   *    $ svn propset svn:executable script
-   *
-   * and then be surprised to get an error like:
-   *
-   *    svn: Illegal target for the requested operation
-   *    svn: Cannot set svn:executable on a directory ()
-   *
-   * So this command doesn't do the implicit dot thing anymore.  A
-   * target must always be explicitly provided to propset.  See
-   * http://subversion.tigris.org/issues/show_bug.cgi?id=924 for
-   * more.
-   */
-  if (targets->nelts == 0)
-    {
-      if (propval_came_from_cmdline)
-        {
-          return svn_error_createf
-            (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL,
-             "explicit target required ('%s' seen as prop value, not target)",
-             propval->data);
-        }
-      else
-        {
-          return svn_error_create
-            (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL,
-             "explicit target argument required.\n");
-        }
-    }
-
-  /* Decide if we're making a local mod to a versioned working copy
-     prop, or making a permanent change to an unversioned repository
-     revision prop.  The existence of the '-r' flag is the key. */
-  if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
+  if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;
       const char *URL, *target;
       svn_client_auth_baton_t *auth_baton;
+
+      /* All property commands insist on a specific revision when
+         operating on a revprop. */
+      if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
+        return svn_cl__revprop_no_rev_error (pool);
+
+      /* Else some revision was specified, so proceed. */
+
+      /* Implicit "." is okay for revision properties; it just helps
+         us find the right repository. */
+      svn_opt_push_implicit_dot_target (targets, pool);
 
       auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
@@ -149,9 +125,51 @@ svn_cl__propset (apr_getopt_t *os,
                   pname, rev);
         }      
     }
-  
-  else
+  else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {
+      return svn_error_createf
+        (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
+         "Cannot specify revision for setting versioned property '%s'.",
+         pname);
+    }
+  else  /* operate on a normal, versioned property (not a revprop) */
+    {
+      /* The customary implicit dot rule has been prone to user error
+       * here.  People would do intuitive things like
+       * 
+       *    $ svn propset svn:executable script
+       *
+       * and then be surprised to get an error like:
+       *
+       *    svn: Illegal target for the requested operation
+       *    svn: Cannot set svn:executable on a directory ()
+       *
+       * So we don't do the implicit dot thing anymore.  A * target
+       * must always be explicitly provided when setting a versioned
+       * property.  See 
+       *
+       *    http://subversion.tigris.org/issues/show_bug.cgi?id=924
+       *
+       * for more details.
+       */
+
+      if (targets->nelts == 0)
+        {
+          if (propval_came_from_cmdline)
+            {
+              return svn_error_createf
+                (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL,
+                 "explicit target required ('%s' interpreted as prop value)",
+                 propval->data);
+            }
+          else
+            {
+              return svn_error_create
+                (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL,
+                 "explicit target argument required.\n");
+            }
+        }
+
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
