@@ -232,6 +232,7 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
 {
   item_baton_t *child;
   update_ctx_t *uc = parent->uc;
+  const char *bc_url = NULL;
 
   child = make_child_baton(parent, path, pool);
   child->added = TRUE;
@@ -246,31 +247,66 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
       const char *qname = apr_xml_quote_string(pool, child->name, 1);
       const char *elt;
       const char *chk_attr = "";
-      
+      const char *real_path = get_real_fs_path(child, pool);
+
       if (! is_dir)
         {
+          /* files have checksums */
           unsigned char digest[MD5_DIGESTSIZE];
-          const char *real_path = get_real_fs_path(child, pool);
-
           SVN_ERR (svn_fs_file_md5_checksum
                    (digest, uc->rev_root, real_path, pool));
           
           child->text_checksum = svn_md5_digest_to_cstring(digest, pool);
         }
+      else
+        {
+          /* we send baseline-collection urls when we add a directory */
+          svn_revnum_t revision;
+          revision = dav_svn_get_safe_cr(child->uc->rev_root, real_path, pool);
+          bc_url = dav_svn_build_uri(child->uc->resource->info->repos,
+                                     DAV_SVN_BUILD_URI_BC,
+                                     revision, real_path,
+                                     0 /* add_href */, pool);
+
+          /* ugh, build_uri ignores the path and just builds the root
+             of the baseline collection.  we have to tack the
+             real_path on manually. */
+          if (real_path)
+            {
+              char *base = apr_pstrndup (pool, bc_url, strlen(bc_url)-1);
+              bc_url = apr_psprintf (pool, "%s%s", base, real_path);
+            }
+        }
+
 
       if (copyfrom_path == NULL)
         {
-          elt = apr_psprintf(pool, "<S:add-%s name=\"%s\"%s>" DEBUG_CR,
-                             DIR_OR_FILE(is_dir), qname, chk_attr);
+          if (bc_url)            
+            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
+                               "bc-url=\"%s\"%s>" DEBUG_CR,
+                               DIR_OR_FILE(is_dir), qname, bc_url, chk_attr);
+          else
+            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\"%s>" DEBUG_CR,
+                               DIR_OR_FILE(is_dir), qname, chk_attr);
         }
       else
         {
           const char *qcopy = apr_xml_quote_string(pool, copyfrom_path, 1);
-          elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                             "copyfrom-path=\"%s\" copyfrom-rev=\"%"
-                             SVN_REVNUM_T_FMT "\"%s>" DEBUG_CR,
-                             DIR_OR_FILE(is_dir),
-                             qname, qcopy, copyfrom_revision, chk_attr);
+
+          if (bc_url)
+            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
+                               "copyfrom-path=\"%s\" copyfrom-rev=\"%"
+                               SVN_REVNUM_T_FMT "\"%s>" DEBUG_CR,
+                               DIR_OR_FILE(is_dir),
+                               qname, qcopy, copyfrom_revision, chk_attr);
+          else
+            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
+                               "copyfrom-path=\"%s\" copyfrom-rev=\"%"
+                               SVN_REVNUM_T_FMT "\" "
+                               "bc-url=\"%s\"%s>" DEBUG_CR,
+                               DIR_OR_FILE(is_dir),
+                               qname, qcopy, copyfrom_revision,
+                               bc_url, chk_attr);
         }
 
       send_xml(child->uc, elt);
