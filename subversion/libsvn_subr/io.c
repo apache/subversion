@@ -1696,22 +1696,19 @@ svn_io_get_dirents (apr_hash_t **dirents,
 
 
 svn_error_t *
-svn_io_run_cmd (const char *path,
-                const char *cmd,
-                const char *const *args,
-                int *exitcode,
-                apr_exit_why_e *exitwhy,
-                svn_boolean_t inherit,
-                apr_file_t *infile,
-                apr_file_t *outfile,
-                apr_file_t *errfile,
-                apr_pool_t *pool)
+svn_io_start_cmd (apr_proc_t *cmd_proc,
+                  const char *path,
+                  const char *cmd,
+                  const char *const *args,
+                  svn_boolean_t inherit,
+                  apr_file_t *infile,
+                  apr_file_t *outfile,
+                  apr_file_t *errfile,
+                  apr_pool_t *pool)
 {
   apr_status_t apr_err;
-  apr_proc_t cmd_proc;
   apr_procattr_t *cmdproc_attr;
-  apr_exit_why_e exitwhy_val;
-  int exitcode_val, num_args;
+  int num_args;
   const char **args_native;
   const char *cmd_apr;
 
@@ -1785,16 +1782,30 @@ svn_io_run_cmd (const char *path,
 
 
   /* Start the cmd command. */ 
-  apr_err = apr_proc_create (&cmd_proc, cmd_apr, args_native, NULL,
+  apr_err = apr_proc_create (cmd_proc, cmd_apr, args_native, NULL,
                              cmdproc_attr, pool);
   if (apr_err)
     return svn_error_wrap_apr (apr_err, _("Can't start process '%s'"), cmd);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_wait_for_cmd (apr_proc_t *cmd_proc,
+                     const char *cmd,
+                     int *exitcode,
+                     apr_exit_why_e *exitwhy,
+                     apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  apr_exit_why_e exitwhy_val;
+  int exitcode_val;
 
   /* The Win32 apr_proc_wait doesn't set this... */
   exitwhy_val = APR_PROC_EXIT;
 
   /* Wait for the cmd command to finish. */
-  apr_err = apr_proc_wait (&cmd_proc, &exitcode_val, &exitwhy_val, APR_WAIT);
+  apr_err = apr_proc_wait (cmd_proc, &exitcode_val, &exitwhy_val, APR_WAIT);
   if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
     return svn_error_wrap_apr (apr_err, _("Error waiting for process '%s'"),
                                cmd);
@@ -1812,6 +1823,29 @@ svn_io_run_cmd (const char *path,
     return svn_error_createf
       (SVN_ERR_EXTERNAL_PROGRAM, NULL,
        _("Process '%s' returned error exitcode %d"), cmd, exitcode_val);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_run_cmd (const char *path,
+                const char *cmd,
+                const char *const *args,
+                int *exitcode,
+                apr_exit_why_e *exitwhy,
+                svn_boolean_t inherit,
+                apr_file_t *infile,
+                apr_file_t *outfile,
+                apr_file_t *errfile,
+                apr_pool_t *pool)
+{
+  apr_proc_t cmd_proc;
+
+  SVN_ERR (svn_io_start_cmd (&cmd_proc, path, cmd, args, inherit,
+                             infile, outfile, errfile, pool));
+
+  SVN_ERR (svn_io_wait_for_cmd (&cmd_proc, cmd, exitcode, exitwhy, pool));
 
   return SVN_NO_ERROR;
 }
