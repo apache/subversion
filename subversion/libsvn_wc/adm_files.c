@@ -316,7 +316,7 @@ prop_path_internal (const char **prop_path,
                     apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  int wc_format_version;
+  int wc_format_version = 0;
   const char *entry_name;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -324,7 +324,6 @@ prop_path_internal (const char **prop_path,
   /* kff todo: some factorization can be done on most callers of
      svn_wc_check_wc()? */
 
-  wc_format_version = FALSE;
   entry_name = NULL;
   if (kind == svn_node_dir)
     {
@@ -389,7 +388,7 @@ svn_wc__wcprop_path (const char **wcprop_path,
                      apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  int is_wc;
+  int wc_format_version = 0;
   const char *entry_name;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -397,14 +396,13 @@ svn_wc__wcprop_path (const char **wcprop_path,
   /* kff todo: some factorization can be done on most callers of
      svn_wc_check_wc()? */
 
-  is_wc = FALSE;
   entry_name = NULL;
   if (kind == svn_node_dir)
     {
-      SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
+      SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
     }
 
-  if (is_wc)  /* It's not only a dir, it's a working copy dir */
+  if (wc_format_version)  /* It's not only a dir, it's a working copy dir */
     {
       *wcprop_path = extend_with_adm_name (path,
                                            NULL,
@@ -417,19 +415,32 @@ svn_wc__wcprop_path (const char **wcprop_path,
     {
       svn_path_split (path, wcprop_path, &entry_name, pool);
  
-      SVN_ERR (svn_wc_check_wc (*wcprop_path, &is_wc, pool));
-      if (! is_wc)
+      SVN_ERR (svn_wc_check_wc (*wcprop_path, &wc_format_version, pool));
+      if (! wc_format_version)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            "wcprop_path: %s is not a working copy directory", *wcprop_path);
 
-      *wcprop_path = extend_with_adm_name (*wcprop_path,
-                                           NULL,
-                                           tmp,
-                                           pool,
-                                           SVN_WC__ADM_WCPROPS,
-                                           entry_name,
-                                           NULL);
+      if (wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION)
+        {
+          *wcprop_path = extend_with_adm_name (*wcprop_path,
+                                               NULL,
+                                               tmp,
+                                               pool,
+                                               SVN_WC__ADM_WCPROPS,
+                                               entry_name,
+                                               NULL);
+        }
+      else
+        {
+          *wcprop_path = extend_with_adm_name (*wcprop_path,
+                                               SVN_WC__WORK_EXT,
+                                               tmp,
+                                               pool,
+                                               SVN_WC__ADM_WCPROPS,
+                                               entry_name,
+                                               NULL);
+        }
     }
 
   return SVN_NO_ERROR;
