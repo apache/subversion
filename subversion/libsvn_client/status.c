@@ -144,7 +144,6 @@ svn_client_status (svn_revnum_t *youngest,
       const char *URL;
       svn_wc_adm_access_t *anchor_access;
       svn_node_kind_t kind;
-      svn_revnum_t revnum;
 
       /* Using pool cleanup to close it. This needs to be recursive so that
          auth data can be stored. */
@@ -193,10 +192,20 @@ svn_client_status (svn_revnum_t *youngest,
       else
         {
           svn_wc_adm_access_t *tgt_access;
-          
-          /* Get a revision number for our status operation. */
-          SVN_ERR (svn_client__get_revision_number
-                   (&revnum, ra_lib, session, revision, target, pool));
+          svn_revnum_t revnum;
+            
+          if (revision->kind == svn_opt_revision_head)
+            {
+              /* Cause the revision number to be omitted from the request,
+                 which implies HEAD. */
+              revnum = SVN_INVALID_REVNUM;
+            }
+          else
+            {
+              /* Get a revision number for our status operation. */
+              SVN_ERR (svn_client__get_revision_number
+                       (&revnum, ra_lib, session, revision, target, pool));
+            }
 
           /* Do the deed.  Let the RA layer drive the status editor. */
           SVN_ERR (ra_lib->do_status (session, &reporter, &report_baton,
