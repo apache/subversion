@@ -651,13 +651,13 @@ svn_fs__clean_logs(const char *live_path,
     return SVN_NO_ERROR;
 
   {  /* Process unused logs from live area */
-    int log;
+    int idx;
     apr_pool_t *sub_pool = svn_pool_create (pool);
 
     /* Process log files. */
-    for (log = 0; log < logfiles->nelts; log++)
+    for (idx = 0; idx < logfiles->nelts; idx++)
       {
-        const char *log_file = APR_ARRAY_IDX (logfiles, log, const char *);
+        const char *log_file = APR_ARRAY_IDX (logfiles, idx, const char *);
         const char *live_log_path;
         const char *backup_log_path;
 
@@ -721,7 +721,7 @@ svn_fs_hotcopy_berkeley (const char *src_path,
 
   {
     apr_array_header_t *logfiles;
-    int log;
+    int idx;
 
     SVN_ERR (svn_fs_berkeley_logfiles (&logfiles,
                                        src_path,
@@ -732,10 +732,10 @@ svn_fs_hotcopy_berkeley (const char *src_path,
       return SVN_NO_ERROR;
 
     /* Process log files. */
-    for (log = 0; log < logfiles->nelts; log++)
+    for (idx = 0; idx < logfiles->nelts; idx++)
       {
         SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, 
-                                       APR_ARRAY_IDX (logfiles, log,
+                                       APR_ARRAY_IDX (logfiles, idx,
                                                       const char *),
                                        pool));
       }
