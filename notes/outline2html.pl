@@ -26,9 +26,10 @@ else {
   $dest = "${base}${dest_ext}";  # otherwise use <FILE>.html
 }
 
-my $star_level = 0;     # outline heading level
-my $list_level = 0;     
-my $inside_pre = 0;     # set to 1 when inside <pre>...</pre> tags
+my $star_level = 0;          # outline heading level
+my $list_level = 0;          # depth in html lists (related to star_level)
+my $seen_first_heading = 0;  # Becomes 1 and stays 1 after first heading
+my $inside_pre = 0;          # set to 1 when inside <pre>...</pre> tags
 
 open (SOURCE, "$source") or die ("trouble reading $source ($!)");
 open (DEST, ">$dest") or die ("trouble writing $dest ($!)");
@@ -54,6 +55,8 @@ while (<SOURCE>)
   if ($num_stars) {
     # Strip leading stars from heading lines
     $_ =~ s/^\*+ //;
+    # Indicate that we're no longer in the preamble
+    $seen_first_heading = 1;
   }
 
   $_ = &escape_html ($_);
@@ -122,7 +125,10 @@ while (<SOURCE>)
       }
     }
 
-    if ($quoted_mail_line) {
+    if ((! $seen_first_heading) and (/^\s+/)) {
+      print DEST "<center>$_</center>\n";
+    }
+    elsif ($quoted_mail_line) {
       print DEST "<font color=red>$_</font><br>\n";
     }
     elsif ($_ =~ /[a-zA-Z0-9]/) {
