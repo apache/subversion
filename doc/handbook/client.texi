@@ -24,8 +24,7 @@ For a first conversational overview of the the client's CVS-like
 
 Most of the time, you will start using a Subversion repository by doing
 a @dfn{checkout} of your project. "Checking out" will provide you with a
-local copy of the HEAD of the Subversion repository
-that you checked out.
+local copy of the HEAD of the Subversion repository that you checked out.
 
 @example
 $ svn co http://svn.collab.net/repos/svn/trunk
@@ -38,8 +37,8 @@ A  trunk/IDEAS
 Checked out revision 2499.
 @end example
 
-Although the above example checks out the entire repository, you can
-just as easily checkout any subdirectory of a repository by specifying
+Although the above example checks out the trunk directory, you can just
+as easily checkout any deep subdirectory of a repository by specifying
 the subdirectory in the checkout URL:
 
 @example
@@ -51,7 +50,7 @@ A  handbook/license.texi
 A  handbook/repos_admin.texi
 A  handbook/client.texi
 Checked out revision 2499.
-pantheon: /tmp>
+$
 @end example
 
 Since Subversion uses copy-modify-merge instead of lock-modify-unlock,
@@ -61,17 +60,129 @@ delete the entire working copy and forget about it entirely--there's no
 need to notify the Subversion server unless you're ready to @dfn{check
 in} changes, a new file, or even a directory.
 
-See @code{svn help checkout} for command line options to checkout.
+See @command{svn help checkout} for command line options to checkout.
 
 
 @node Basic Work Cycle
 @section Basic Work Cycle
 
+Subversion has numerous features, options, bells and whistles, but on a
+day-to-day basis, odds are that you will only use a few of them. In this
+chapter we'll run through the most basic things that you might find
+yourself doing with Subversion in the course of a day's work.
+
+@subheading Update
+
+When working on a project with a team, you'll want to update to get any
+changes from other developers on the project.
+
+@example
+$ svn up
+U  ./foo.c
+U  ./bar.c
+Updated to revision 2.
+$
+@end example
+
+In this case someone else checked in modifications to both foo.c and
+bar.c since your last update, and Subversion has updated your working
+copy to include those changes.
+
+@subheading Status
+
+Now you're ready to get to work and make changes in your working
+copy. It's usually most convenient to commit at logical breaks in your
+work--a new feature added or a bug fixed. After making some changes in
+your working copy, see what files you've modified by running @command{svn status}
+
+@example
+$ svn status
+M      ./bar.c
+$
+@end example
+
+This means that bar.c is the only file that you've modified in your
+working copy. You can find out exactly what those changes are by running
+@command{svn diff} with no arguments, which prints out the changes (In unified diff format)
+
+@subheading Diff
+
+@example
+$ svn diff
+Index: ./bar.c
+===================================================================
+--- ./bar.c
++++ ./bar.c	Mon Jul 15 17:58:18 2002
+@@ -1,7 +1,12 @@
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <unistd.h>
++
++#include <stdio.h>
+ 
+ 
+ int main(void) @{
+-  printf("Sixty-four slices of American Cheese...\n");
++  printf("Sixty-five slices of American Cheese...\n");
+   return 0;
+ @}
+$ 
+@end example
+
+So now that you know what your changes are, and that they compile,
+update once again to make sure that you're up to date, and check the
+changes into the repository.
+
+@subheading Commit
+
+@example
+$ svn update
+At revision 2.  ## No changes from anyone else--great.
+$ svn commit -m "Added include lines and corrected # of cheese slices."
+Sending        bar.c
+Transmitting file data .
+Committed revision 3.
+$
+@end example
+
+That covers the most basic work cycle for using Subversion. See
+@command{svn help <commandname>} help on the update, status, diff, and
+commit commands.
+
 @node History
 @section History
 
+To find out information about the history of a file or directory, you
+use the @command{svn log} command. @command{svn log} will tell you who
+made changes to a file and at what revision, the time and date of that
+revision, and the log message that accompanied the commit.
+
+@example
+$ svn log
+------------------------------------------------------------------------
+rev 3:  fitz | Mon, 15 Jul 2002 18:03:46 -0500 | 1 line
+
+Added include lines and corrected # of cheese slices.
+------------------------------------------------------------------------
+rev 2:  someguy | Mon, 15 Jul 2002 17:47:57 -0500 | 1 line
+
+Added main() methods.
+------------------------------------------------------------------------
+rev 1:  fitz | Mon, 15 Jul 2002 17:40:08 -0500 | 2 lines
+
+
+Initial import
+------------------------------------------------------------------------
+@end example
+
+Note that the log messages are printed in reverse chronological order,
+and there are numerous options for controlling what output you get. See
+@command{svn help log} for command line options to log.
+
 @node Branches and Tags
 @section Branches and Tags
+
+Ben, this one's all yours. :)
 
 @node Properties
 @section Properties
