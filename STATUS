@@ -94,3 +94,11 @@ Candidate changes:
                    because the crash kills the whole Windows desktop.
     Votes:
       +1: bliss
+
+  * r10186
+    Allow COPY method on repositories with space in their name. (#1837)
+    Justification: Embarrassing bug;  a one-line fix to mod_auth_svn.
+                   (We weren't unescaping a URI).
+    Votes:
+      +1: sussman
+
