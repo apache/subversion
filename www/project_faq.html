@@ -1439,26 +1439,54 @@ svn cleanup working-copy
 <h3><a name="wc-out-of-date">I'm trying to commit, but Subversion says my
 working copy is out of date?</a></h3>
 
-<p>
-When you commit, Subversion bumps the revision numbers of all nodes the commit
-touches.  This means that in a single folder, the files and folders might
-be at different revisions, depending on when you last committed them.</p>
-<p>
-For certain operations (deletes and property modifications), if the repository
-has a more recent version of the node, the commit will be rejected, to prevent
-data loss.</p>
-<p>
-See
-<a href="http://svnbook.red-bean.com/svnbook/ch02s03.html#svn-ch-2-sect-3.4">
-The Limitations of Mixed Revisions</a> in the
-<a href="http://svnbook.red-bean.com/">Version Control with Subversion</a>
-for details.</p>
-<p>
-To prevent this error, simply update your working copy using:</p>
+<p>Three kinds of situation that can cause this:</p>
 
-<pre>
-svn update working-copy
-</pre>
+<ol>
+
+<li><p>Debris from a failed commit is littering your working copy.</p>
+
+    <p>You may have had a commit that went sour between the time the
+    new revision was added in the server and the time your client
+    performed its post-commit admin tasks (including refreshing your
+    local text-base copy).  This might happen for various reasons
+    including (rarely) problems in the database back end or (more
+    commonly) network dropouts at exactly the wrong time.</p>
+
+    <p>If this happens, it's possible that you have already committed
+    the very changes you are trying now to commit.  You can use 'svn
+    log -rHEAD' to see if your supposed-failed commit actually
+    succeeded.  If it did, run 'svn revert' to revert your local
+    changes, then run 'svn update' to your own changes back from the
+    server.  (Note that only 'svn update' brings your local copies
+    up-to-date; revert doesn't do that.)</p>
+</li>
+
+<li><p>Mixed revisions.<p>
+
+     <p>When Subversion commits, the client only bumps the revision
+     numbers of the nodes the commit touches, not all nodes in the
+     working copy.  This means that in a single working copy, the
+     files and subdirectories might be at different revisions,
+     depending on when you last committed them.  In certain operations
+     (for example, directory property modifications), if the
+     repository has a more recent version of the node, the commit will
+     be rejected, to prevent data loss.  See <a
+     href="http://svnbook.red-bean.com/svnbook/ch02s03.html#svn-ch-2-sect-3.4">
+     The Limitations of Mixed Revisions</a> in the <a
+     href="http://svnbook.red-bean.com/">Version Control with
+     Subversion</a> for details.</p>
+
+     <p>You can fix the problem by running 'svn update' in the working
+     copy.</p>
+</li>
+
+<li><p>You might be genuinely out of date&nbsp;&mdash;&nbsp;that is,
+    you're trying to commit a change to a file that has been changed
+    by someone else since you last updated your copy of that file.
+    Again, 'svn update' is the way to fix this.</p>
+</li>
+
+</ol>
 
 <![CDATA[-----------------------------------------------------------]]>
 
