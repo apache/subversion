@@ -1699,7 +1699,7 @@ void SVNClient::relocate(const char *from, const char *to, const char *path, boo
 }
 static svn_error_t *
 blame_receiver (void *baton,
-                apr_off_t line_no,
+                apr_int64_t line_no,
                 svn_revnum_t revision,
                 const char *author,
                 const char *date,
@@ -1770,7 +1770,7 @@ jbyteArray SVNClient::blame(const char *path, Revision &revisionStart, Revision 
 }
 static svn_error_t *
 blame_receiver2 (void *baton,
-                apr_off_t line_no,
+                apr_int64_t line_no,
                 svn_revnum_t revision,
                 const char *author,
                 const char *date,
