@@ -1742,12 +1742,12 @@ Committed revision 375.
         examinar una revisión anterior, seguirá pudiendo ver su
         antigua rama.</para>
 
-      <para>If browsing your deleted directory isn't enough, you can
-        always bring it back.  Resurrecting data is very easy in
-        Subversion.  If there's a deleted directory (or file) that
-        you'd like to bring back into <literal>HEAD</literal>, simply
-        use <command>svn copy -r</command> to copy it from the old
-        revision:</para>
+      <para>Si navegar por su directorio borrado no es suficiente,
+        siempre puede devolverle la vida. Resucitar datos es muy
+        fácil en Subversion. Si hay un directorio (o fichero) borrado
+        que querría volver a poner en <literal>HEAD</literal>,
+        simplemente cópielo con <command>svn copy -r</command>
+        de la revisión antigua:</para>
 
 <screen>
 $ svn copy -r 374 http://svn.example.com/repos/calc/branches/my-calc-branch \
@@ -1756,19 +1756,20 @@ $ svn copy -r 374 http://svn.example.com/repos/calc/branches/my-calc-branch \
 Committed revision 376.
 </screen>
 
-      <para>In our example, your personal branch had a relatively
-        short lifetime: you may have created it to fix a bug or
-        implement a new feature.  When your task is done, so is the
-        branch.  In software development, though, it's also common to
-        have two <quote>main</quote> branches running side-by-side for
-        very long periods.  For example, suppose it's time to release
-        a stable <filename>calc</filename> project to the public, and
-        you know it's going to take a couple of months to shake bugs
-        out of the software.  You don't want people to add new
-        features to the project, but you don't want to tell all
-        developers to stop programming either.  So instead, you create
-        a <quote>stable</quote> branch of the software that won't
-        change much:</para>
+      <para>En nuestro ejemplo, su rama personal tuvo un periodo
+        de actividad relativamente corto: puede haberla
+        creado para corregir un fallo o implementar una nueva
+        característica. Cuando su tarea está terminada, así lo está
+        su rama. No obstante, en el desarrollo de software también es
+        comun tener dos ramas <quote>principales</quote> que viven en
+        paralelo por largos periodos de tiempo. Por ejemplo, suponga
+        que es el momento de hacer público el proyecto estable
+        <filename>calc</filename>, y sabe que va a necesitar un par
+        de meses corregir posibles fallos del mismo. No quiere que
+        la gente añada nuevas características al proyecto, pero
+        tampoco quiere decirle a los desarrolladores que dejen de
+        programar. Así que crea una rama <quote>estable</quote>
+        del software que no cambiará mucho:</para>
 
 <screen>
 $ svn copy http://svn.example.com/repos/calc/trunk \
