@@ -194,7 +194,7 @@ import org.tigris.subversion.SubversionException;
    directory within the <directory> element.  However, it does allow
    text deltas to appear at the end.
 */
-public interface TreedeltaEditor {
+public interface TreeDeltaEditor {
     /**
       * Set the target revision for this edit to TARGET_REVISION.  This
       * call, if used, should precede all other editor calls.
