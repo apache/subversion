@@ -54,6 +54,9 @@
 /*** Includes. ***/
 
 #include <string.h>
+#include <apr_strings.h>
+#include <apr_getopt.h>
+#include <apr_tables.h>
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -62,98 +65,92 @@
 #include "svn_error.h"
 #include "cl.h"
 
-
 
 /*** Command dispatch. ***/
-static const svn_cl__cmd_opts_t add_opts = {
-  svn_cl__add_command,
-  "Add new files and directories to version control.\n\n"
-  "usage: add [TARGETSPEC]\n" };
 
-static const svn_cl__cmd_opts_t checkout_opts = {
-  svn_cl__checkout_command,
-  "Check out a working directory from a repository.\n\n"
-  "usage: checkout REPOSPATH\n" };
+/* Map names to command routine, etc. 
+ *
+ * Canonical name entries must come immediately before their aliases.
+ * For example, "add" must be the first of the add commands listed,
+ * followed immediately by its aliases "ad" and "new".
+ *
+ * Alias entries should have null or 0 for every field except `name'
+ * and `is_alias'.  The canonical entry will be used for everything
+ * else.
+ *
+ * The entire list must be terminated with a entry of nulls.
+ */
+static const svn_cl__cmd_desc_t cmd_table[] = 
+{
+  { "add",        FALSE,  svn_cl__add_command,      svn_cl__add,
+    "Add new files and directories to version control.\n\n"
+    "usage: add [TARGETS]\n" },
+  { "ad",         TRUE, 0, NULL, NULL },
+  { "new",        TRUE, 0, NULL, NULL },
 
-static const svn_cl__cmd_opts_t commit_opts = {
-  svn_cl__commit_command,
-  "Commit changes from your working copy to the repository.\n\n"
-  "usage: commit [TARGETSPEC]\n" };
+  { "checkout",   FALSE,  svn_cl__checkout_command, svn_cl__checkout,
+    "Check out a working directory from a repository.\n\n"
+    "usage: checkout REPOSPATH\n" },
+  { "co",         TRUE, 0, NULL, NULL },
 
-static const svn_cl__cmd_opts_t delete_opts = {
-  svn_cl__delete_command,
-  "Remove files and directories from version control.\n\n"
-  "usage: delete [TARGETSPEC]\n" };
+  { "commit",     FALSE,  svn_cl__commit_command,   svn_cl__commit,
+    "Commit changes from your working copy to the repository.\n\n"
+    "usage: commit [TARGETS]\n" },
+  { "ci",         TRUE, 0, NULL, NULL },
 
-static const svn_cl__cmd_opts_t proplist_opts = {
-  svn_cl__proplist_command,
-  "List all properties for given files and directories.\n\n"
-  "usage: proplist [TARGETSPEC]\n" };
+  { "delete",     FALSE,  svn_cl__delete_command,   svn_cl__delete,
+    "Remove files and directories from version control.\n\n"
+    "usage: delete [TARGETS]\n" },
+  { "del",        TRUE, 0, NULL, NULL },
+  { "remove",     TRUE, 0, NULL, NULL },
+  { "rm",         TRUE, 0, NULL, NULL },
 
-static const svn_cl__cmd_opts_t propget_opts = {
-  svn_cl__propget_command,
-  "Get the value of property PROPNAME on files and directories.\n\n"
-  "usage: propget PROPNAME [TARGETSPEC]\n" };
+  { "help",       FALSE,  svn_cl__help_command,   svn_cl__help,
+    "Display this usage message.\n\n"
+    "usage: help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n" },
+  { "?",          TRUE, 0, NULL, NULL },
+  { "h",          TRUE, 0, NULL, NULL },
+  /* We need to support "--help", "-?", and all that good stuff, of
+     course.  But those options, since unknown, will result in the
+     help message being printed out anyway, so there's no need to
+     support them explicitly. */
 
-static const svn_cl__cmd_opts_t propset_opts = {
-  svn_cl__propset_command,
-  "Set property PROPNAME to PROPVAL on the named files and directories.\n\n"
-  "usage: propset PROPNAME PROPVAL [TARGET1 [TARGET2] ...]\n" };
+  { "proplist",   FALSE,  svn_cl__proplist_command, svn_cl__proplist,
+    "List all properties for given files and directories.\n\n"
+    "usage: proplist [TARGETS]\n" },
+  { "plist",      TRUE, 0, NULL, NULL },
+  { "pl",         TRUE, 0, NULL, NULL },
 
-static const svn_cl__cmd_opts_t status_opts = {
-  svn_cl__status_command,
-  "Print the status of working copy files and directories.\n\n"
-  "usage: status [TARGETSPEC]\n" };
+  { "propget",    FALSE,  svn_cl__propget_command,  svn_cl__propget,
+    "Get the value of property PROPNAME on files and directories.\n\n"
+    "usage: propget PROPNAME [TARGETS]\n" },
+  { "pget",       TRUE,   svn_cl__propget_command,  svn_cl__propget, NULL },
+  { "pg",         TRUE,   svn_cl__propget_command,  svn_cl__propget, NULL },
 
-static const svn_cl__cmd_opts_t update_opts = {
-  svn_cl__update_command,
-  "Bring changes from the repository into the working copy.\n\n"
-  "usage: update [TARGETSPEC]\n" };
+  { "propset",    FALSE,  svn_cl__propset_command,  svn_cl__propset,
+    "Set property PROPNAME to PROPVAL on the named files and directories.\n\n"
+    "usage: propset PROPNAME PROPVAL [TARGET1 [TARGET2] ...]\n" },
+  { "pset",       TRUE, 0, NULL, NULL },
+  { "ps",         TRUE, 0, NULL, NULL },
 
+  { "status",     FALSE,  svn_cl__status_command,   svn_cl__status,
+    "Print the status of working copy files and directories.\n\n"
+    "usage: status [TARGETS]\n" },
+  { "stat",       TRUE, 0, NULL, NULL },
+  { "st",         TRUE, 0, NULL, NULL },
 
-/* Map names to command routine, option descriptor and
-   its "base" command.  */
-static const svn_cl__cmd_desc_t cmd_table[] = {
-  { "add",        FALSE,  svn_cl__add,      &add_opts },
-  { "ad",         TRUE,   svn_cl__add,      &add_opts },
-  { "new",        TRUE,   svn_cl__add,      &add_opts },
-
-  { "checkout",   FALSE,  svn_cl__checkout, &checkout_opts },
-  { "co",         TRUE,   svn_cl__checkout, &checkout_opts },
-
-  { "commit",     FALSE,  svn_cl__commit,   &commit_opts },
-  { "ci",         TRUE,   svn_cl__commit,   &commit_opts },
-
-  { "delete",     FALSE,  svn_cl__delete,   &delete_opts },
-  { "del",        TRUE,   svn_cl__delete,   &delete_opts },
-  { "remove",     TRUE,   svn_cl__delete,   &delete_opts },
-  { "rm",         TRUE,   svn_cl__delete,   &delete_opts },
-
-  { "help",       FALSE,  svn_cl__help,     NULL },
-
-  { "proplist",   FALSE,  svn_cl__proplist, &proplist_opts },
-  { "plist",      TRUE,   svn_cl__proplist, &proplist_opts },
-  { "pl",         TRUE,   svn_cl__proplist, &proplist_opts },
-
-  { "propget",    FALSE,  svn_cl__propget,  &propget_opts },
-  { "pget",       TRUE,   svn_cl__propget,  &propget_opts },
-  { "pg",         TRUE,   svn_cl__propget,  &propget_opts },
-
-  { "propset",    FALSE,  svn_cl__propset,  &propset_opts },
-  { "pset",       TRUE,   svn_cl__propset,  &propset_opts },
-  { "ps",         TRUE,   svn_cl__propset,  &propset_opts },
-
-  { "status",     FALSE,  svn_cl__status,   &status_opts },
-  { "stat",       TRUE,   svn_cl__status,   &status_opts },
-  { "st",         TRUE,   svn_cl__status,   &status_opts },
-
-  { "update",     FALSE,  svn_cl__update,   &update_opts },
-  { "up",         TRUE,   svn_cl__update,   &update_opts },
-
-  { NULL,         FALSE }
+  { "update",     FALSE,  svn_cl__update_command,   svn_cl__update,
+    "Bring changes from the repository into the working copy.\n\n"
+    "usage: update [TARGETS]\n" },
+  { "up",         TRUE, 0, NULL, NULL },
+  { NULL,         FALSE,  0, NULL, NULL }
 };
 
 
+/* Return the entry in cmd_table whose name matches CMD_NAME, or null
+ * if none.  CMD_NAME may be an alias, in which case the alias entry
+ * will be returned (so caller may need to canonicalize result).
+ */
 static const svn_cl__cmd_desc_t *
 get_cmd_table_entry (const char *cmd_name)
 {
@@ -163,224 +160,18 @@ get_cmd_table_entry (const char *cmd_name)
   if (cmd_name == NULL)
     return NULL;
 
-  /* Special case: treat `--help' and friends as though they were the
-     `help' command, so they work the same as the command. */
-  if ((strcmp (cmd_name, "--help") == 0)
-      || (strcmp (cmd_name, "-help") == 0)
-      || (strcmp (cmd_name, "-h") == 0)
-      || (strcmp (cmd_name, "-?") == 0))
-    {
-      cmd_name = "help";
-    }
-
-  /* Regardless of the option chosen, the user gets --help :-) */
-  if (cmd_name[0] == '-')
-    {
-      fputs ("svn error: the base `svn' command accepts no options\n",
-             stderr);
-      return NULL;
-    }
-
   for (i = 0; i < max; i++)
-    if (strcmp (cmd_name, cmd_table[i].cmd_name) == 0)
+    if (strcmp (cmd_name, cmd_table[i].name) == 0)
       return cmd_table + i;
 
   /* Else command not found. */
-
-  fprintf (stderr, "svn error: `%s' is an unknown command\n", cmd_name);
   return NULL;
 }
 
 
-
-/*** Option parsing. ***/
-static int
-parse_command_options (int argc,
-                       const char **argv,
-                       svn_cl__opt_state_t *p_opt_st,
-                       apr_pool_t *pool)
-{
-  static const char needs_arg[] =
-    "svn %s: \"--%s\" needs an argument\n";
-  static const char invalid_opt[] =
-    "svn %s error:  option `%s' invalid\n";
-
-  const char *cmdname = argv[1];
-  svn_cl__command_t cmd_code = p_opt_st->cmd_opts->cmd_code;
-  int i;
-
-  for (i = 2; i < argc; i++)
-    {
-      if (strcmp (argv[i], "--xml-file") == 0)
-        {
-          if (++i >= argc)
-            {
-              fprintf (stderr, needs_arg, cmdname, "xml-file");
-              exit (EXIT_FAILURE);
-            }
-          else
-            p_opt_st->xml_file = svn_string_create (argv[i], pool);
-        }
-      else if (strcmp (argv[i], "--target-dir") == 0)
-        {
-          if (++i >= argc)
-            {
-              fprintf (stderr, needs_arg, cmdname, "target-dir");
-              exit (EXIT_FAILURE);
-            }
-          else
-            p_opt_st->target = svn_string_create (argv[i], pool);
-        }
-      else if (strcmp (argv[i], "--ancestor-path") == 0)
-        {
-          if (++i >= argc)
-            {
-              fprintf (stderr, needs_arg, cmdname, "ancestor-path");
-              exit (EXIT_FAILURE);
-            }
-          else
-            p_opt_st->ancestor_path = svn_string_create (argv[i], pool);
-        }
-      else if (strcmp (argv[i], "--revision") == 0)
-        {
-          if (++i >= argc)
-            {
-              fprintf (stderr, needs_arg, cmdname, "revision");
-              exit (EXIT_FAILURE);
-            }
-          else
-            p_opt_st->revision = (svn_revnum_t) atoi (argv[i]);
-        }
-      else if (strcmp (argv[i], "--name") == 0)
-        {
-          if (++i >= argc)
-            {
-              fprintf (stderr, needs_arg, cmdname, "name");
-              exit (EXIT_FAILURE);
-            }
-          else
-            p_opt_st->name = svn_string_create (argv[i], pool);
-        }
-      else if (strcmp (argv[i], "--value") == 0)
-        {
-          if (++i >= argc)
-            {
-              fprintf (stderr, needs_arg, cmdname, "value");
-              exit (EXIT_FAILURE);
-            }
-          else
-            p_opt_st->value = svn_string_create (argv[i], pool);
-        }
-      else if (strcmp (argv[i], "--filename") == 0)
-        {
-          if (++i >= argc)
-            {
-              fprintf (stderr, needs_arg, cmdname, "filename");
-              exit (EXIT_FAILURE);
-            }
-          else
-            p_opt_st->filename = svn_string_create (argv[i], pool);
-        }
-      else if (strcmp (argv[i], "--force") == 0)
-        p_opt_st->force = 1;
-      else if (*(argv[i]) == '-')
-        {
-          fprintf (stderr, invalid_opt, cmdname, argv[i]);
-          exit (EXIT_FAILURE);
-        }
-      else
-        break;
-    }
-
-  /* Sanity checks: make sure we got what we needed. */
-  /* Any command may have an xml_file option.  Not really true, but true
-     in this framework.  In any event, the commands that do need it
-     are listed here. */
-  if (p_opt_st->xml_file == NULL)
-    switch (cmd_code)
-      {
-      case svn_cl__commit_command:
-      case svn_cl__checkout_command:
-      case svn_cl__update_command:
-        fprintf (stderr, "svn %s: need \"--xml-file FILE.XML\"\n", cmdname);
-        exit (EXIT_FAILURE);
-      default:
-      }
-
-  if (p_opt_st->force)
-    switch (cmd_code)
-      {
-      case svn_cl__delete_command:
-        break;
-
-      default:
-        fprintf (stderr, invalid_opt, cmdname, "--force");
-        exit (EXIT_FAILURE);
-      }
-
-  /* make sure we have a valid revision for these commands */
-  if (p_opt_st->revision == SVN_INVALID_REVNUM)
-    switch (cmd_code)
-      {
-      case svn_cl__commit_command:
-      case svn_cl__update_command:
-        fprintf (stderr, "svn %s: please use \"--revision VER\" "
-                 "to specify target revision\n", cmdname);
-        exit (EXIT_FAILURE);
-      default:
-      }
-
-  /* Check for the need for a default target */
-  if (p_opt_st->target == NULL)
-    switch (cmd_code)
-      {
-      case svn_cl__checkout_command:
-      case svn_cl__update_command:
-      case svn_cl__commit_command:
-      case svn_cl__status_command:
-      case svn_cl__proplist_command:
-      case svn_cl__propget_command:
-        p_opt_st->target = svn_string_create (".", pool);
-      default:
-      }
-
-  /* Check the need for a property name */
-  if (p_opt_st->name == NULL)
-    switch (cmd_code)
-      {
-      case svn_cl__propget_command:
-      case svn_cl__propset_command:
-        fprintf (stderr, "svn %s: need \"--name PROPERTY_NAME\"\n", cmdname);
-        exit (EXIT_FAILURE);
-      default:
-      }
-
-  /* Check the need for a property value OR filename */
-  if ((p_opt_st->value == NULL) && (p_opt_st->filename == NULL))
-    switch (cmd_code)
-      {
-      case svn_cl__propset_command:
-        fprintf
-          (stderr,
-           "svn %s: need one of \"--value\" or \"--filename\"\n", cmdname);
-        exit (EXIT_FAILURE);
-      default:
-      }
-
-
-  return i;
-}
-
-
-
-/*** Help. ***/
-
 /* Return the canonical command table entry for CMD (which may be the
- * entry for CMD itself, or some other entry if CMD is a short
- * synonym).  
- * 
- * CMD must be a valid command name; the behavior is
- * undefined if it is not.
+ * entry for CMD itself, or some other entry if CMD is an alias).
+ * If CMD is not found, return null.
  */
 static const svn_cl__cmd_desc_t *
 get_canonical_command (const char *cmd)
@@ -388,7 +179,7 @@ get_canonical_command (const char *cmd)
   const svn_cl__cmd_desc_t *cmd_desc = get_cmd_table_entry (cmd);
 
   if (cmd_desc == NULL)
-    return cmd_desc;
+    return NULL;
 
   while (cmd_desc->is_alias)
     cmd_desc--;
@@ -397,38 +188,61 @@ get_canonical_command (const char *cmd)
 }
 
 
-static void
-print_command_info (const char *cmd,
-                    svn_boolean_t help,
-                    apr_pool_t *pool)
+/* Get the command requested in OPT->argv[0]. */
+static const svn_cl__cmd_desc_t *
+get_command (apr_getopt_t *opt)
 {
-  const svn_cl__cmd_desc_t *canonical_cmd = get_canonical_command (cmd);
+  const char *arg = opt->argv[0];
 
-  /*  IF we get a NULL back, then an informative message has already
-      been printed.  */
-  if (canonical_cmd == NULL)
-    return;
+  /* Account for no args */
+  if (opt->argc < 1)
+    return NULL;
 
-  fputs (canonical_cmd->cmd_name, stdout);
-  if (canonical_cmd[1].is_alias)
-    {
-      const svn_cl__cmd_desc_t *p_alias = canonical_cmd + 1;
-      fputs (" (", stdout);
-      for (;;)
-        {
-          fputs ((p_alias++)->cmd_name, stdout);
-          if (! p_alias->is_alias)
-            break;
-          fputs (", ", stdout);
-        }
-      fputc (')', stdout);
-    }
-
-  if (help)
-    printf (": %s\n", canonical_cmd->cmd_opts->help);
+  return get_canonical_command (arg);
 }
 
 
+
+/*** Help. ***/
+
+/* Print the canonical command corresponding to CMD, all its aliases,
+   and if HELP is set, print the help string for the command too. */
+static void
+print_command_info (const char *cmd, svn_boolean_t help, apr_pool_t *pool)
+{
+  const svn_cl__cmd_desc_t *this_cmd = get_canonical_command (cmd);
+  const svn_cl__cmd_desc_t *canonical_cmd = this_cmd;
+  svn_boolean_t first_time;
+
+  /* Shouldn't happen, but who knows? */
+  if (this_cmd == NULL)
+    return;
+
+  /* Print the canonical command name. */
+  fputs (canonical_cmd->name, stdout);
+
+  /* Print the list of aliases. */
+  first_time = TRUE;
+  for (this_cmd++; (this_cmd->name && this_cmd->is_alias); this_cmd++)
+    {
+      if (first_time) {
+        printf (" (");
+        first_time = FALSE;
+      }
+      else
+        printf (", ");
+
+      printf ("%s", this_cmd->name);
+    }
+  if (! first_time)
+    printf (")");
+
+  if (help)
+    printf (": %s\n", canonical_cmd->help);
+}
+
+
+/* Print a generic (non-command-specific) usage message. */
 static void
 print_generic_help (apr_pool_t *pool)
 {
@@ -437,10 +251,10 @@ print_generic_help (apr_pool_t *pool)
     "usage: svn <subcommand> [options] [args]\n"
     "Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
     "\n"
-    "Many subcommands take a TARGETSPEC argument.  A TARGETSPEC is a list\n"
-    "of files and directories for Subversion to act on recursively.\n"
-    "If no explicit TARGETSPEC is given, Subversion recurses starting at\n"
-    "the current directory.\n"
+    "Most subcommands take file and/or directory arguments, recursing\n"
+    "on the directories.  If no arguments are supplied to such a\n"
+    "command, it will recurse on the current directory (inclusive) by\n" 
+    "default.\n"
     "\n"
     "Available subcommands:\n";
   int i;
@@ -450,30 +264,34 @@ print_generic_help (apr_pool_t *pool)
     if (! cmd_table[i].is_alias)
       {
         printf ("   ");
-        print_command_info (cmd_table[i].cmd_name, FALSE, pool);
+        print_command_info (cmd_table[i].name, FALSE, pool);
         printf ("\n");
       }
 }
 
 
-/*  Unlike all the other command routines, ``help'' has its own
-    option processing.  Of course, it does not accept any options :-),
-    just command line args.  */
+/* Print either generic help, or command-specific help for each
+ * command in ARGV.
+ * 
+ * Unlike all the other command routines, ``help'' has its own
+ * option processing.  Of course, it does not accept any options :-),
+ * just command line args.
+ */
 svn_error_t *
-svn_cl__help (int argc, const char **argv,
-              svn_cl__opt_state_t *p_opt_state,
+svn_cl__help (svn_cl__opt_state_t *opt_state,
+              apr_array_header_t *targets,
               apr_pool_t *pool)
 {
-  if (argc > 2)
-    {
-      int i;
-      for (i = 2; i < argc; i++)
-        print_command_info (argv[i], TRUE, pool);
-    }
+  int i;
+
+  if (targets->nelts)
+    for (i = 0; i < targets->nelts; i++)
+      {
+        svn_string_t *this = (((svn_string_t **) (targets)->elts))[i];
+        print_command_info (this->data, TRUE, pool);
+      }
   else
-    {
-      print_generic_help (pool);
-    }
+    print_generic_help (pool);
 
   return SVN_NO_ERROR;
 }
@@ -483,45 +301,167 @@ svn_cl__help (int argc, const char **argv,
 /*** Main. ***/
 
 int
-main (int argc, const char **argv)
+main (int argc, char **argv)
 {
-  const svn_cl__cmd_desc_t *p_cmd = get_cmd_table_entry (argv[1]);
+  apr_status_t apr_err;
+  svn_error_t *err;
   apr_pool_t *pool;
+  int opt_id;
+  const char *optarg;
+  apr_getopt_t *opt;
   svn_cl__opt_state_t opt_state;
+  const svn_cl__cmd_desc_t *subcommand;
+  apr_array_header_t *targets;  /* file/dir args from the command line */
 
-  if (p_cmd == NULL)
-    {
-      svn_cl__help (0, NULL, NULL, NULL);
-      return EXIT_FAILURE;
-    }
+  apr_getopt_long_t long_opts[] =
+  {
+    {"xml-file",      1, svn_cl__xml_file_opt},
+    {"target-dir",    1, svn_cl__target_dir_opt}, /* README: --destination */
+    {"ancestor-path", 1, svn_cl__ancestor_path_opt}, /* !doc'ed in README */
+    {"revision",      1, 'r'},
+    {"valfile",       1, svn_cl__valfile_opt},       /* !doc'ed in README */
+    {"force",         0, svn_cl__force_opt},
+    {"help",          0, 'h'},
+    {0,            0, 0}
+  };
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
   memset (&opt_state, 0, sizeof (opt_state));
-  opt_state.cmd_opts = p_cmd->cmd_opts;
+  opt_state.revision = SVN_INVALID_REVNUM;
 
-  /*  If the command descriptor has an option processing descriptor,
-      go do it.  Otherwise, the command routine promises to do the work */
-  if (p_cmd->cmd_opts != NULL)
+  targets = apr_make_array (pool, 0, sizeof (svn_string_t *));
+
+  apr_initopt (&opt, pool, argc - 1, argv + 1);
+
+  /* Get the subcommand. */
+  subcommand = get_command (opt);
+
+  if (! subcommand)
     {
-      int used_ct = parse_command_options (argc, argv, &opt_state, pool);
-      argc -= used_ct;
-      argv += used_ct;
+      fprintf (stderr, "unknown command: %s\n", opt->argv[0]);
+      subcommand = get_canonical_command ("help");
     }
 
-  {
-    svn_error_t *err = (*p_cmd->cmd_func) (argc, argv, &opt_state, pool);
-    if (err != SVN_NO_ERROR)
-      svn_handle_error (err, stdout, 0);
-  }
+  /* Parse options. */
+  while (1)
+    {
+      /* kff todo: add error checking, inline reading of valfiles. */
 
+      /* kff todo: apr_getopt_long() is about to change.  There may
+         also be some changes desirable here independent of
+         apr_getopt_long() changing. :-) */
+
+      apr_err = apr_getopt_long (opt, "r:h?", long_opts, &opt_id, &optarg);
+
+      if (APR_STATUS_IS_SUCCESS (apr_err))
+        {
+          switch (opt_id) {
+          case 'r':
+            opt_state.revision = (svn_revnum_t) atoi (optarg);
+            break;
+          case 'h':
+          case '?':
+            opt_state.help = TRUE;
+            break;
+          case svn_cl__xml_file_opt:
+            opt_state.xml_file = svn_string_create (optarg, pool);
+            break;
+          case svn_cl__target_dir_opt:
+            opt_state.target = svn_string_create (optarg, pool);
+            break;
+          case svn_cl__ancestor_path_opt:
+            opt_state.ancestor_path = svn_string_create (optarg, pool);
+            break;
+          case svn_cl__valfile_opt:
+            /* todo: just read in the value directly here? */
+            opt_state.valfile = svn_string_create (optarg, pool);
+            break;
+          case svn_cl__force_opt:
+            opt_state.force = TRUE;
+            break;
+          default:
+            break;  /* kff todo: ? */
+          }
+        }
+      else if (APR_STATUS_IS_EOF (apr_err))
+        {
+          /* Since arguments may be interleaved with options, we
+             handle arguments right here in the option parsing loop,
+             and manually bump opt->ind so apr_getopt_long() can
+             continue.  The arguments get put into an apr array, for
+             eventual hand-off to the subcommand, except for a few
+             subcommands which take non-standard arguments -- those
+             get handled specially. */
+
+          if (opt->ind < opt->argc)
+            {
+              char *this_arg = opt->argv[opt->ind];
+
+              if ((subcommand->cmd_code == svn_cl__propset_command)
+                  && (opt_state.name == NULL))
+                {
+                  opt_state.name = svn_string_create (this_arg, pool);
+                }
+              else if ((subcommand->cmd_code == svn_cl__propset_command)
+                       && (opt_state.value == NULL))
+                {
+                  opt_state.value = svn_string_create (this_arg, pool);
+                }
+              else if ((subcommand->cmd_code == svn_cl__propget_command)
+                       && (opt_state.name == NULL))
+                {
+                  opt_state.name = svn_string_create (this_arg, pool);
+                }
+              else  /* treat it as a regular file/dir arg */
+                {
+                  (*((svn_string_t **) apr_push_array (targets)))
+                    = svn_string_create (this_arg, pool);
+                }
+            }
+          else
+            break;
+
+          opt->ind++;
+        }
+      else
+        break;
+    }
+
+  /* Certain commands have an implied `.' as argument, if nothing else
+     is specified. */
+  if ((targets->nelts == 0) 
+      && (   (subcommand->cmd_code == svn_cl__commit_command)
+          || (subcommand->cmd_code == svn_cl__proplist_command)
+          || (subcommand->cmd_code == svn_cl__propget_command)
+          || (subcommand->cmd_code == svn_cl__status_command)
+          || (subcommand->cmd_code == svn_cl__update_command)))
+    {
+      (*((svn_string_t **) apr_push_array (targets)))
+        = svn_string_create (".", pool);
+    }
+  else
+    {
+      /* kff todo: need to remove redundancies from targets before
+         passing it to the cmd_func. */
+    }
+
+  /* Run the subcommand. */
+  err = (*subcommand->cmd_func) (&opt_state, targets, pool);
+  if (err)
+    svn_handle_error (err, stdout, 0);
+  
   apr_destroy_pool (pool);
-
+  
   return EXIT_SUCCESS;
 }
+
+
 
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end: 
  */
+
+

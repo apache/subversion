@@ -58,6 +58,16 @@
 #include "svn_wc.h"
 #include "svn_string.h"
 
+
+
+/* long options */
+typedef enum {
+  svn_cl__xml_file_opt = 256,
+  svn_cl__target_dir_opt,
+  svn_cl__ancestor_path_opt,
+  svn_cl__valfile_opt,
+  svn_cl__force_opt
+} svn_cl__longopt_t;
 
 
 /*** Command dispatch. ***/
@@ -65,7 +75,7 @@
 /*  These are all the command procedures we currently know about.
     The "null" entry is simply an enumerated invalid entry that makes
     initializations easier */
-typedef enum {
+enum svn_cl__command_id {
   svn_cl__null_command = 0,
   svn_cl__add_command,
   svn_cl__checkout_command,
@@ -77,29 +87,13 @@ typedef enum {
   svn_cl__propset_command,
   svn_cl__status_command,
   svn_cl__update_command
-} svn_cl__command_t;
-
-
-/*  Command option descriptor.  These are the data that are passed to
-    the option processing routine that will tell it which options are
-    acceptable or required.  */
-typedef struct svn_cl__cmd_opts_t
-{
-  /* Ultimately an option list of some sort.  For now, the smarts
-     are in the option processing routine. */
-  const svn_cl__command_t cmd_code;
-
-  /* A brief string describing this command, for usage messages. */
-  const char *help;
-
-} svn_cl__cmd_opts_t;
+};
 
 
 /* Hold results of option processing that are shared by multiple
    commands. */
 typedef struct svn_cl__opt_state_t
 {
-  const svn_cl__cmd_opts_t *cmd_opts;
   svn_revnum_t revision;
   svn_string_t *xml_file;
   svn_string_t *target;
@@ -107,24 +101,18 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t force;
   svn_string_t *name;
   svn_string_t *value;
-  svn_string_t *filename;
+  svn_string_t *valfile;
+  svn_boolean_t help;
 } svn_cl__opt_state_t;
-
-/* This "silly" macro will change when the above is changed to use an
-   association (hash) list or some other method of storing state. */
-#define GET_OPT_STATE(p,n)  ((p)->n)
 
 
 /* All client command procedures conform to this prototype.
- *
- * ARGC/ARGV specify only the post-option arguments.  kff todo: this
- * is not true yet, I think. 
- *
  * OPT_STATE likewise should hold the result of processing the options.
+ * TARGETS is an apr array of filenames and directories, a-la CVS.
+ * (kff todo: document TARGETS more formally.)
  */
-typedef svn_error_t *(svn_cl__cmd_proc_t) (int argc, 
-                                           const char **argv,
-                                           svn_cl__opt_state_t *opt_state,
+typedef svn_error_t *(svn_cl__cmd_proc_t) (svn_cl__opt_state_t *opt_state,
+                                           apr_array_header_t *targets,
                                            apr_pool_t *pool);
 
 
@@ -133,19 +121,21 @@ typedef struct svn_cl__cmd_desc_t
 {
   /* The name of this command.  Might be a full name, such as
      "commit", or a short name, such as "ci". */
-  const char *cmd_name;
+  const char *name;
 
-  /* If cmd_name is a short synonym, such as "ci", then is_alias
+  /* If name is a short synonym, such as "ci", then is_alias
      is set `TRUE'.  If it is the base command entry, then `FALSE'.
      The alias entries will always immediately follow the base entry. */
   svn_boolean_t is_alias;
 
-  /* The function this command invokes. */
+  /* A unique identifying number for this command.  0 if alias. */
+  enum svn_cl__command_id cmd_code;
+
+  /* The function this command invokes.  NULL if alias. */
   svn_cl__cmd_proc_t *cmd_func;
 
-  /* A pointer to something that describes the options supported by
-     this particular command.  */
-  const svn_cl__cmd_opts_t *cmd_opts;
+  /* A brief string describing this command, for usage messages. */
+  const char *help;
 
 } svn_cl__cmd_desc_t;
 

@@ -65,70 +65,86 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__propset (int argc, const char **argv, 
-                 svn_cl__opt_state_t *p_opt_state,
+svn_cl__propset (svn_cl__opt_state_t *opt_state,
+                 apr_array_header_t *targets,
                  apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
-  svn_string_t *name, *value;
-  svn_string_t *target;
-  svn_string_t *filename;
+  svn_error_t *err;
   char buf[BUFSIZ];
+  int i;
 
-  name     = GET_OPT_STATE(p_opt_state, name);
-  value    = GET_OPT_STATE(p_opt_state, value);
-  target   = GET_OPT_STATE(p_opt_state, target);
-  filename = GET_OPT_STATE(p_opt_state, filename);
-
-  if (filename)
+  /* kff todo: this may get moved into main, since reading values from
+     files is a generic operation that many commands may need to
+     support. */
+  if (opt_state->valfile)
     {
       /* Load the whole file into `value'.  
-
+         
          What?  Don't look at me like that.  
-
+         
          Don't forget that our entire property implementation happens
          "in-memory" right now.  And we're not just talking about
          single property name/value pairs; whole *lists* of pairs move
          from disk to memory and back. */
-      svn_error_t *error;
+      svn_error_t *err2;
       apr_status_t status;
       apr_size_t len = BUFSIZ;
       apr_file_t *the_file = NULL;
       
-      value = svn_string_create ("", pool);
+      /* kff todo: possibly blowing away a previous setting of
+         opt_state->value here.  But that redundancy should be checked
+         earlier (see other comment above) anyway. */
+      opt_state->value = svn_string_create ("", pool);
 
-      status = apr_open (&the_file, filename->data,
+      status = apr_open (&the_file, opt_state->valfile->data,
                          APR_READ, APR_OS_DEFAULT, pool);
       if (status)
         return svn_error_createf (status, 0, NULL, pool,
                                   "svn_cl__propset:  failed to open '%s'",
-                                  filename->data);
+                                  opt_state->valfile->data);
       
       do {
-        error = svn_io_file_reader (the_file, buf, &len, pool);
-        if (error) return error;
+        err2 = svn_io_file_reader (the_file, buf, &len, pool);
+        if (err2) return err2;
 
-        svn_string_appendbytes (value, buf, len);
+        svn_string_appendbytes (opt_state->value, buf, len);
 
       } while (len != 0);
     }
 
-  if (! strcmp (value->data, ""))
+
+  if (! strcmp (opt_state->value->data, ""))
     /* The user wants to delete the property. */
-    value = NULL;
+    opt_state->value = NULL;
 
-  err = svn_wc_prop_set (name, value, target, pool);
+  if (targets->nelts)
+    for (i = 0; i < targets->nelts; i++)
+      {
+        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+        err = svn_wc_prop_set (opt_state->name, opt_state->value, target,
+                               pool);
+        if (err)
+          return err;
 
-  if (! err) 
+        /* kff todo: prints may be temporary.  Ben? */
+        if (opt_state->value)
+          printf ("property `%s' set on %s.\n",
+                  opt_state->name->data, target->data);
+        else
+          printf ("property `%s' deleted from %s\n",
+                  opt_state->name->data, target->data);
+      }
+  else
     {
-      if (value)
-        printf ("Property `%s': set on %s.\n", name->data, target->data);
-      else
-        printf ("Property `%s': deleted from %s\n", name->data, target->data);
+      fprintf (stderr, "svn propset: arguments required\n");
+      err = svn_cl__help (opt_state, targets, pool);
+      if (err)
+        return err;
     }
 
-  return err;
+  return SVN_NO_ERROR;
 }
+
 
 
 /* 

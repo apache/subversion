@@ -65,17 +65,24 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__commit (int argc, const char **argv, 
-                svn_cl__opt_state_t *p_opt_state,
+svn_cl__commit (svn_cl__opt_state_t *opt_state,
+                apr_array_header_t *targets,
                 apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
-  err = svn_client_commit (GET_OPT_STATE(p_opt_state, target),
-                           GET_OPT_STATE(p_opt_state, xml_file),
-                           GET_OPT_STATE(p_opt_state, revision),
+  svn_error_t *err;
+
+  /* kff todo: someday, in the very extremely near future, we'll pass
+     TARGETS on down into svn_client_commit(). */
+  err = svn_client_commit (opt_state->target,
+                           opt_state->xml_file,
+                           opt_state->revision,
                            pool);
-  return err;
+  if (err)
+    return err;
+
+  return SVN_NO_ERROR;
 }
+
 
 
 /* 

@@ -37,22 +37,24 @@ cp -R -p ${TEST_DIR_1} ${TEST_DIR_2}
 
 ### Modify some existing files.
 echo "Modifying ${TEST_DIR_1}/A/D/G/pi."
+echo "" >> ${TEST_DIR_1}/A/D/G/pi
 echo "for commit rev2, second line in A/D/G/pi" >> ${TEST_DIR_1}/A/D/G/pi
 
 echo "Modifying ${TEST_DIR_1}/A/mu."
+echo "" >> ${TEST_DIR_1}/A/mu
 echo "for commit rev2, second line in A/mu" >> ${TEST_DIR_1}/A/mu
 
 ### Add.
 echo "Adding ${TEST_DIR_1}/newfile1."
 touch ${TEST_DIR_1}/newfile1
-echo "This is added file newfile1."
+echo "This is added file newfile1." >> ${TEST_DIR_1}/newfile1
 ${SVN_PROG} add ${TEST_DIR_1}/newfile1
 
 check_status 2
 
 echo "Adding ${TEST_DIR_1}/A/B/E/newfile2."
 touch ${TEST_DIR_1}/A/B/E/newfile2
-echo "This is added file newfile2."
+echo "This is added file newfile2." >> ${TEST_DIR_1}/A/B/E/newfile2
 ${SVN_PROG} add ${TEST_DIR_1}/A/B/E/newfile2
 
 check_status 3
@@ -63,9 +65,11 @@ ${SVN_PROG} delete --force ${TEST_DIR_1}/A/D/H/omega
 
 check_status 4
 
-# echo "Deleting added files A/B/E/newfile2, without --force."
-# ${SVN_PROG} delete ${TEST_DIR_1}/A/B/E/newfile2
+echo "Deleting added files A/B/E/newfile2, without --force."
+${SVN_PROG} delete ${TEST_DIR_1}/A/B/E/newfile2
  
+check_status 5
+
 ### Commit.
 echo "Committing changes in ${TEST_DIR_1}."
 (cd ${TEST_DIR_1};                                                   \
@@ -73,7 +77,7 @@ echo "Committing changes in ${TEST_DIR_1}."
                 --revision 2;                                        \
  )
 
-check_status 5
+check_status 6
 
 
 ### Update.
@@ -83,7 +87,7 @@ echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
                 --revision 2;                                         \
  )
 
-check_status 6
+check_status 7
 
 ### Modify some more files.
 echo "Modifying ${TEST_DIR_2}/A/D/G/pi."
@@ -107,13 +111,13 @@ echo "for commit rev2, ninth line in A/mu" >> ${TEST_DIR_2}/A/mu
 echo "for commit rev2, tenth line in A/mu" >> ${TEST_DIR_2}/A/mu
 
 ### Commit.
-echo "Committing changes, this time in ${TEST_DIR_2}."
+echo "Committing changes, this time from ${TEST_DIR_2}."
 (cd ${TEST_DIR_2};                                                   \
  ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-3.xml \
                 --revision 3;                                        \
  )
 
-check_status 7
+check_status 8
 
 
 ### Update.
@@ -123,7 +127,7 @@ echo "Updating ${TEST_DIR_1} from changes in ${TEST_DIR_2}."
                 --revision 3;                                        \
  )
 
-check_status 8
+check_status 9
 
 
 ### Diff the two trees.  The only differences should be in timestamps
@@ -162,7 +166,7 @@ echo "Committing changes for merge, from ${TEST_DIR_1}."
                 --revision 4;                                        \
  )
 
-check_status 9
+check_status 10
 
 
 ### Update.
@@ -172,6 +176,6 @@ echo "Updating ${TEST_DIR_2}, merging changes from ${TEST_DIR_1}."
                 --revision 4;                                        \
  )
 
-check_status 10
+check_status 11
 
 exit 0
