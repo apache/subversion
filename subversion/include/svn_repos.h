@@ -525,6 +525,15 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 #define SVN_REPOS_DUMPFILE_NODE_CONTENT_LENGTH       "Content-length"
 
 
+/* The different "actions" attached to nodes in the dumpfile. */
+enum svn_node_action
+{
+  svn_node_action_change,
+  svn_node_action_add,
+  svn_node_action_delete,
+  svn_node_action_replace
+};
+
 
 /* Dump the contents of the filesystem within already-open REPOS into
    writable STREAM.  Begin at revision START_REV, and dump every
@@ -573,11 +582,15 @@ typedef struct svn_repos_parse_fns_t
                                    apr_hash_t *headers,
                                    apr_pool_t *pool);
 
-  /* For a given BATON representing either a revision or a node, set a
-     property NAME to VALUE. */
-  svn_error_t *(*set_property) (void *baton,
-                                const char *name,
-                                const svn_string_t *value);
+  /* For a given REVISION_BATON, set a property NAME to VALUE. */
+  svn_error_t *(*set_revision_property) (void *revision_baton,
+                                         const char *name,
+                                         const svn_string_t *value);
+
+  /* For a given NODE_BATON, set a property NAME to VALUE. */
+  svn_error_t *(*set_node_property) (void *node_baton,
+                                     const char *name,
+                                     const svn_string_t *value);
 
   /* For a given NODE_BATON, receive a writable STREAM capable of
      receiving the node's fulltext.  After writing the fulltext, call
@@ -589,9 +602,14 @@ typedef struct svn_repos_parse_fns_t
   svn_error_t *(*set_fulltext) (svn_stream_t **stream,
                                 void *node_baton);
 
-  /* The parser has reached the end of the current revision or node
-     represented by BATON.  The baton may be freed.*/
-  svn_error_t *(*close_record) (void *baton);
+  /* The parser has reached the end of the current node represented by
+     NODE_BATON, it can be freed. */
+  svn_error_t *(*close_node) (void *node_baton);
+
+  /* The parser has reached the end of the current revision
+     represented by REVISION_BATON.  In other words, there are no more
+     changed nodes within the revision.  The baton can be freed. */
+  svn_error_t *(*close_revision) (void *revision_baton);
 
 } svn_repos_parser_fns_t;
 
@@ -615,9 +633,10 @@ typedef struct svn_repos_parse_fns_t
    This is enough knowledge to make it easy on vtable implementors,
    but still allow expansion of the format:  most headers are ignored.
 */
-svn_error_t *svn_repos_parse_dumpstream (svn_stream_t *stream,
-                                         svn_repos_parser_fns_t *parse_fns,
-                                         apr_pool_t *pool);
+svn_error_t *
+svn_repos_parse_dumpstream (svn_stream_t *stream,
+                            const svn_repos_parser_fns_t *parse_fns,
+                            apr_pool_t *pool);
 
 
 

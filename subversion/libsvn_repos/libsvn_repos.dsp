@@ -95,6 +95,10 @@ SOURCE=.\dump.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\load.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\hooks.c
 # End Source File
 # Begin Source File
