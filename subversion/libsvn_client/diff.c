@@ -826,8 +826,6 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
               || (mimetype2 && svn_mime_type_is_binary (mimetype2))))
         {
           svn_boolean_t same_contents;
-          /* ### someday, we should just be able to compare
-             identity-strings here.  */
           SVN_ERR (svn_io_files_contents_same_p (&same_contents,
                                                  older, mine, subpool));
           if (same_contents)
