@@ -70,7 +70,7 @@ svn_error_t *svn_fs__retry_txn (svn_fs_t *fs,
                                 apr_pool_t *pool);
 
 
-/* Record than a change to an in-memory structure took place as part
+/* Record that a change to an in-memory structure took place as part
    of TRAIL which can be undone by applying FUNC to BATON.  */
 void svn_fs__record_undo (trail_t *trail,
                           void (*func) (void *baton),
