@@ -163,6 +163,8 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#hook-environment">Why aren't my repository hooks working?
     They're supposed to invoke external programs, but the invocations
     never seem to happen.</a></li>
+<li><a href="#diff-cmd">Why does my --diff-cmd complain about '-u'?
+    I tried to override it with --extensions, but it's not working.</a></li>
 
 <h4>Developer questions:</h4>
 <li><a href="#ramdisk-tests">How do I run the regression tests in a
@@ -2064,6 +2066,33 @@ Subversion server runs as, which might be different from the
 environment the hooks get when you test them by hand.  In particular,
 $PATH on Unix, or %PATH% on Windows, may not have all the directories
 you expect.</p>
+
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="diff-cmd">Why does my --diff-cmd complain about '-u'?
+    I tried to override it with --extensions, but it's not working.</a></h3>
+
+<p>When using an external diff command, subversion builds a fairly
+complicated command line. First is the specified --diff-cmd. Next comes
+the specified --extensions (although empty --extensions are ignored), or
+'-u' if --extensions is unspecified (or specified as ''). Third and
+fourth, Subversion passes a '-L' and the first file's label (e.g.
+"project_issues.html    (revision 11209)"). Fifth and sixth are another
+'-L' and the second label. Seventh and eighth are the first and second
+file names (e.g. ".svn/text-base/project_issues.html.svn-base" and
+".svn/tmp/project_issues.html.tmp").</p>
+
+<p>If your preferred diff command does not support these arguments, you
+may need to create a small wrapper script to discard arguments and just
+use the last couple file paths.</p>
+
+<p>Warning: Beware that Subversion does not expect the external diff
+program to change the files it receives, and doing so may scramble the
+working copy.</p>
+
+<p>For further information, see issue
+<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2044">#2044</a>.</p>
 
 
 <![CDATA[=========================================================]]>
