@@ -464,6 +464,11 @@ svn_cl__get_log_message (const char **log_msg,
           else if (! *path)
             path = ".";
 
+          if (path && lmb->base_dir)
+            {
+              path = svn_path_is_child(lmb->base_dir, path, pool);
+            }
+
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
               && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
             text_mod = 'R';
