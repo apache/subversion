@@ -264,11 +264,11 @@ svn_error_t *svn_swig_pl_callback_thunk (perl_func_invoker_t caller_func,
     const char *fp = fmt;
     va_list ap;
     int count;
+    dSP ;
     I32 call_flags;
 
     call_flags = result ? G_SCALAR : (G_VOID & G_DISCARD);
 
-    dSP ;
     ENTER ;
     SAVETMPS ;
 
