@@ -1538,6 +1538,15 @@ svn_wc__tweak_entry (apr_hash_t *entries,
       && (entry->schedule != svn_wc_schedule_replace))
     entry->revision = new_rev;
 
+  /* As long as this function is only called as a helper to
+     svn_wc__do_update_cleanup, then it's okay to remove the 'deleted'
+     state on any entry.  The rationale is:  if the server didn't
+     overwrite the 'deleted' entry with something new during the
+     update, then it *must* have meant for the the entry to be
+     permanently gone in the parent dir's revision. */
+  if (entry->deleted)
+    entry = NULL;
+
   return SVN_NO_ERROR;
 }
 
