@@ -107,9 +107,9 @@ class CollectData(rcsparse.Sink):
     self.branch_names[revision] = name
 
   def get_branch_name(self, revision):
-    """Return the name of the branch whose branch number is REVISION.
-    REVISION is an RCS branch number with an odd number of components,
-    for example '1.7.2' (never '1.7.0.2')."""
+    """Return the name of the branch on which REVISION lies.
+    REVISION is a non-branch evision number with an even number of,
+    components, for example '1.7.2.1' (never '1.7.2' nor '1.7.0.2')."""
     brev = revision[:revision.rindex(".")]
     if not self.branch_names.has_key(brev):
       return None
@@ -257,8 +257,8 @@ class CollectData(rcsparse.Sink):
 
 def make_path(ctx, path, branch_name = None, tag_name = None):
   """Return the trunk path, branch path, or tag path for PATH.
-  CTX holds the name of the branches or tags directory, which is found
-  under PATH's first component.
+  CTX holds the name of the branches or tags directory, which is
+  prepended to PATH when constructing a branch or tag path.
 
   If PATH is empty or None, return the root trunk|branch|tag path.
 
@@ -1327,8 +1327,10 @@ class SymbolicNameTracker:
     self.tags_opening_revs_key or self.br_opening_revs_key, to
     indicate whether NAMES contains tag names or branch names.
     SVN_PATH does not start with '/'."""
+
+    # Guard against names == None
     if not names:
-      return  # early out
+      return
 
     for name in names:
       components = [name] + string.split(svn_path, '/')
@@ -1368,8 +1370,10 @@ class SymbolicNameTracker:
     CLOSING_KEY is self.tags_closing_revs_key or
     self.br_closing_revs_key, to indicate whether NAMES are tags or
     branches.  SVN_PATH does not start with '/'."""
+
+    # Guard against names == None
     if not names:
-      return  # early out
+      return
 
     for name in names:
       components = [name] + string.split(svn_path, '/')
@@ -1410,7 +1414,7 @@ class SymbolicNameTracker:
 
     where REV2 > REV1 and all scores are > 0.  OPENINGS and CLOSINGS
     are the values of self.tags_opening_revs_key and
-    self.tags_closing_revs_key, or self.br_tags_opening_revs_key and
+    self.tags_closing_revs_key, or self.br_opening_revs_key and
     self.br_closing_revs_key, from some file or directory node, or
     else None.
 
@@ -2019,9 +2023,8 @@ def pass4(ctx):
   # it's quite easy to have interleaved commits.
   commits = { }
 
-  # The number of separate commits processed in a given flush.  This
-  # is used only for printing statistics, it does not affect the
-  # results in the repository.
+  # The total number of separate commits processed.  This is used only for
+  # printing statistics, it does not affect the results in the repository.
   count = 0
 
   # Start the dumpfile object.
