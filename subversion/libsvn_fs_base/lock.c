@@ -59,6 +59,39 @@ generate_new_lock (svn_lock_t **lock_p,
 }
 
 
+/* Add LOCK and its associated LOCK_TOKEN (associated with PATH, whose
+   KIND is supplied), as part of TRAIL. */
+static svn_error_t *
+add_lock_and_token (svn_lock_t *lock,
+                    const char *lock_token,
+                    const char *path,
+                    svn_node_kind_t kind,
+                    trail_t *trail)
+{
+  SVN_ERR (svn_fs_bdb__lock_add (trail->fs, lock_token, lock, 
+                                 trail, trail->pool));
+  SVN_ERR (svn_fs_bdb__lock_token_add (trail->fs, path, kind, 
+                                       lock_token, trail, trail->pool));
+  return SVN_NO_ERROR;
+}
+
+
+/* Delete LOCK_TOKEN and its corresponding lock (associated with PATH,
+   whose KIND is supplied), as part of TRAIL. */
+static svn_error_t *
+delete_lock_and_token (const char *lock_token,
+                       const char *path,
+                       svn_node_kind_t kind,
+                       trail_t *trail)
+{
+  SVN_ERR (svn_fs_bdb__lock_delete (trail->fs, lock_token, 
+                                    trail, trail->pool));
+  SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs, path, kind, 
+                                          trail, trail->pool));
+  return SVN_NO_ERROR;
+}
+
+
 struct lock_args
 {
   svn_lock_t **lock_p;
@@ -139,22 +172,16 @@ txn_body_lock (void *baton, trail_t *trail)
         {
           /* Force was passed, so fs_username is "stealing" the
              lock from lock->owner.  Destroy the existing lock. */
-          SVN_ERR (svn_fs_bdb__lock_delete (trail->fs,
-                                            existing_lock->token, 
-                                            trail, trail->pool));
-          SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs,
-                                                  existing_lock->path,
-                                                  kind, trail, trail->pool));
+          SVN_ERR (delete_lock_and_token (existing_lock->token,
+                                          existing_lock->path, kind, trail));
         }          
     }
 
   /* Create a new lock, and add it to the tables. */    
   SVN_ERR (generate_new_lock (&new_lock, trail->fs, args->path, fs_username,
                               args->comment, args->timeout, trail->pool));
-  SVN_ERR (svn_fs_bdb__lock_add (trail->fs, new_lock->token,
-                                 new_lock, trail, trail->pool));
-  SVN_ERR (svn_fs_bdb__lock_token_add (trail->fs, args->path, kind,
-                                       new_lock->token, trail, trail->pool));
+  SVN_ERR (add_lock_and_token (new_lock, new_lock->token, 
+                               args->path, kind, trail));
   *(args->lock_p) = new_lock;
 
   return SVN_NO_ERROR;
@@ -260,21 +287,13 @@ txn_body_attach_lock (void *baton, trail_t *trail)
         {
           /* Force was passed, so fs_username is "stealing" the
              lock from lock->owner.  Destroy the existing lock. */
-          SVN_ERR (svn_fs_bdb__lock_delete (trail->fs,
-                                            existing_lock->token, 
-                                            trail, trail->pool));
-          SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs,
-                                                  existing_lock->path,
-                                                  kind, trail, trail->pool));
+          SVN_ERR (delete_lock_and_token (existing_lock->token,
+                                          existing_lock->path, kind, trail));
         }
     }
 
   /* Write the incoming lock into our tables. */
-  SVN_ERR (svn_fs_bdb__lock_add (trail->fs, lock->token, lock, 
-                                 trail, trail->pool));
-  SVN_ERR (svn_fs_bdb__lock_token_add (trail->fs, lock->path, kind,
-                                       lock->token, trail, trail->pool));
-
+  SVN_ERR (add_lock_and_token (lock, lock->token, lock->path, kind, trail));
   return SVN_NO_ERROR;
 }
 
@@ -366,10 +385,8 @@ txn_body_unlock (void *baton, trail_t *trail)
     }
 
   /* Remove a row from each of the locking tables. */
-  SVN_ERR (svn_fs_bdb__lock_delete (trail->fs, lock_token, 
-                                    trail, trail->pool));
-  return svn_fs_bdb__lock_token_delete (trail->fs, args->path, kind, 
-                                        trail, trail->pool);
+  SVN_ERR (delete_lock_and_token (lock_token, args->path, kind, trail));
+  return SVN_NO_ERROR;
 }
 
 
