@@ -82,7 +82,7 @@ static const int xml_char_validity[256] = {
   0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
 
-  /* 092 */
+  /* 192 */
   0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
@@ -94,9 +94,9 @@ svn_boolean_t
 svn_xml_is_xml_safe (const char *data, apr_size_t len)
 {
   const char *end = data + len;
-  const char *p = data;
+  const char *p;
 
-  while (end > p++)
+  for (p = data; p < end; p++)
     {
       if (! xml_char_validity[(int)*p])
         return FALSE;
