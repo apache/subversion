@@ -57,14 +57,13 @@ svn_client__update_internal (svn_revnum_t *result_rev,
   svn_error_t *err;
   svn_revnum_t revnum;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
-  svn_wc_adm_access_t *adm_access, *target_anchor;
+  svn_wc_adm_access_t *adm_access;
   svn_boolean_t use_commit_times;
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const char *diff3_cmd;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
-  svn_node_kind_t kind;
   svn_wc_adm_access_t *dir_access;
   svn_config_t *cfg = ctx->config ? apr_hash_get (ctx->config, 
                                                   SVN_CONFIG_CATEGORY_CONFIG,
@@ -74,7 +73,7 @@ svn_client__update_internal (svn_revnum_t *result_rev,
   assert (path);
 
   /* Use PATH to get the update's anchor and targets and get a write lock */
-  SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &target_anchor, &target, path,
+  SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &dir_access, &target, path,
                                    TRUE, recurse ? -1 : 0, pool));
   anchor = svn_wc_adm_access_path (adm_access);
 
@@ -138,12 +137,6 @@ svn_client__update_internal (svn_revnum_t *result_rev,
                               recurse,
                               update_editor, update_edit_baton, pool));
 
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
-  SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
-                                (kind == svn_node_dir ? path 
-                                 : svn_path_dirname (path, pool)),
-                                pool));
-  
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta. */
