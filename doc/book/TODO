@@ -36,6 +36,10 @@ ch05:
      fails, STDERR is marshalled back to the client.  (not true of
      post-commit, see issue 443).
 
+   - in the section about migrating a repository, it might be useful
+     to xref or mention 'svn switch --relocate'.  it's almost always
+     what happens after migration finishes.
+
 ch07:
 
    - explain additional limitations of svn:externals:

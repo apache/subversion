@@ -2103,6 +2103,11 @@ foo.c
 subdir/
 </screen>
 
+      <para>Note that after the import is finished, the original tree
+        is <emphasis>not</emphasis> converted into a working copy.  To
+        start working, you still need to <command>svn
+        checkout</command> a fresh working copy of the tree.</para>
+
     </sect2>
 
   </sect1>

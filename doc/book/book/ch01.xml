@@ -494,10 +494,15 @@ Committed revision 1.
 $ 
 </screen>
 
-    <para>Now the repository contains your tree of data.  At this
-      point, you create a <quote>working copy</quote> of the
-      <filename>trunk</filename> directory.  This is where your
-      actual work will happen:</para>
+    <para>Now the repository contains this tree of data.  Note that
+      the original <filename>/tmp/project</filename> directory is
+      unchanged; Subversion is unaware of it.  (In fact, you can even
+      delete that directory if you wish.)  In order to start
+      manipulating repository data, you need to create a new
+      <quote>working copy</quote> of the data, a sort of private
+      workspace.  Ask Subversion to <quote>check out</quote> a working
+      copy of the repository's <filename>trunk</filename>
+      directory:</para>
 
     <screen>
 $ svn checkout file:///path/to/repos/trunk project
