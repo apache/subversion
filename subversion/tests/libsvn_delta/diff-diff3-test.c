@@ -352,9 +352,6 @@ dump_core (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  if (! getenv ("SVN_DIFF_TEST_DUMP_CORE"))
-    return svn_error_create (SVN_ERR_TEST_FAILED, NULL, "not attempted");
-
   SVN_ERR (two_way_diff ("foo1", "bar1",
                          "",
                          "",
@@ -1011,6 +1008,26 @@ test_three_way_merge_no_overlap (const char **msg,
                             "Yy\n",
                             pool));
 
+  SVN_ERR (three_way_merge ("zig7", "zag7", "zog7",
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n",
+
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n"
+                            "Dd",
+
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n",
+
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n"
+                            "Dd",
+                            pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -1173,6 +1190,105 @@ test_three_way_merge_with_overlap (const char **msg,
 
 
 static svn_error_t *
+test_three_way_merge_with_conflict (const char **msg,
+                                    svn_boolean_t msg_only,
+                                    apr_pool_t *pool)
+{
+  *msg = "three way merge with conflicting overlapping changes";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (three_way_merge ("dig1", "dug1", "dag1",
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n",
+
+                            "",
+
+                            "",
+
+                            "",
+                            pool));
+
+  SVN_ERR (three_way_merge ("dig2", "dug2", "dag2",
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n",
+
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n"
+                            "Dd\n"
+                            "Ee\n"
+                            "Ff\n",
+
+                            "",
+
+                            "<<<<<<< dug2\n"
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n"
+                            "Dd\n"
+                            "Ee\n"
+                            "Ff\n"
+                            "=======\n"
+                            ">>>>>>> dag2\n",
+                            pool));
+
+  SVN_ERR (three_way_merge ("dig3", "dug3", "dag3",
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n",
+
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n"
+                            "Dd\n"
+                            "Ee\n"
+                            "Ff\n",
+
+                            "Aa\n"
+                            "Bb\n",
+
+                            "Aa\n"
+                            "Bb\n"
+                            "<<<<<<< dug3\n"
+                            "Cc\n"
+                            "Dd\n"
+                            "Ee\n"
+                            "Ff\n"
+                            "=======\n"
+                            ">>>>>>> dag3\n",
+                            pool));
+
+  SVN_ERR (three_way_merge ("dig4", "dug4", "dag4",
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n",
+
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n"
+                            "Dd",
+
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n"
+                            "Ee",
+
+                            "Aa\n"
+                            "Bb\n"
+                            "Cc\n"
+                            "<<<<<<< dug4\n"
+                            "Dd=======\n"
+                            "Ee>>>>>>> dag4\n",
+                            pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 random_trivial_merge (const char **msg,
                       svn_boolean_t msg_only,
                       apr_pool_t *pool)
@@ -1292,11 +1408,12 @@ random_three_way_merge (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_XFAIL (dump_core),
+    SVN_TEST_PASS (dump_core),
     SVN_TEST_PASS (test_two_way_unified),
     SVN_TEST_PASS (test_two_way_unified_suspect),
     SVN_TEST_PASS (test_three_way_merge_no_overlap),
     SVN_TEST_PASS (test_three_way_merge_with_overlap),
+    SVN_TEST_PASS (test_three_way_merge_with_conflict),
     SVN_TEST_PASS (random_trivial_merge),
     SVN_TEST_PASS (random_three_way_merge),
     SVN_TEST_NULL
