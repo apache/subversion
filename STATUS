@@ -174,5 +174,6 @@ Approved changes (further review is welcome, but not required):
     Justification:
       Without this fix it is impossible to merge some sets of revisions in one
       step.
+    Branch: 1.1.x-r12117
     Votes:
       +1: breser
