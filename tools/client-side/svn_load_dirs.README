@@ -1,11 +1,28 @@
+Introduction
+============
+
 This Perl script is designed to load a number of directories into
 Subversion.  This is useful if you have a number of .zip's or
 tar.{Z,gz,bz2}'s for a particular package and want to load them into
-Subversion.  This assumes that these packages were not previously in a
+Subversion.
+
+Command Line Options
+====================
+
+Run the script with no command line arguments to see all the command
+line options it takes.
+
+When Not To Use This Script
+===========================
+
+This script assumes that these packages were not previously in a
 source control system, in particular CVS, because then you would use
 another script to migrate the repository over, and in CVS' case, you
 would use cvs2svn.  This script will properly tag each release in the
 tags directory if you use the -t command line option.
+
+Automatically Setting Properties On New Files & Directories
+===========================================================
 
 The script also accepts a separate configuration file for applying
 properties to specific files and directories matching a regular
@@ -17,16 +34,20 @@ two or four columns:
 
 regular_expression  control  property_name  property_value
 
-The `regular_expression' is a Perl style regular expression.  The
-`control' must either be set to `break' or `cont'.  It is used to tell
-svn_load_dirs.pl if the following lines in the configuration file
-should be examined for a match or if all matching should stop.  If
-`control' is set to `break', then no more lines from the configuration
-file will be matched.  If `control' is set to `cont', which is short
-for continue, then more comparisons will be made.  Multiple properties
-can be set for one file or directory this way.  The last two,
-`property_name' and `property_value' are optional and are applied to
-matching files and directories.
+   The `regular_expression' is a Perl style regular expression.  It is
+   matched in a case-insensitive against filenames.
+
+   The `control' must either be set to `break' or `cont'.  It is used
+   to tell svn_load_dirs.pl if the following lines in the
+   configuration file should be examined for a match or if all
+   matching should stop.  If `control' is set to `break', then no more
+   lines from the configuration file will be matched.  If `control' is
+   set to `cont', which is short for continue, then more comparisons
+   will be made.  Multiple properties can be set for one file or
+   directory this way.
+
+   The last two, `property_name' and `property_value' are optional and
+   are applied to matching files and directories.
 
 If you have whitespace in any of the `regular_expression',
 `property_name' or `property_value' columns, you must surround the
@@ -61,6 +82,9 @@ The Windows Visual C++ and Visual Studio files (*.dsp, *.dsw, etc.)
 should retain their CRLF line endings on any operating system and any
 *.doc files are always treated as binary files, hence the
 `svn:mime-type' setting of `application/msword'.
+
+Example Import
+==============
 
 An example import follows:
 
