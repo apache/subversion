@@ -105,7 +105,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
 
       /* Open an RA session for the URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                            adm_access, NULL, TRUE, TRUE, TRUE, 
+                                            adm_access, NULL, TRUE, TRUE, 
                                             auth_baton, pool));
 
       /* ### todo: shouldn't svn_client__get_revision_number be able

@@ -257,7 +257,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data. */
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url, NULL, NULL,
-                                        NULL, FALSE, FALSE, TRUE, 
+                                        NULL, FALSE, FALSE, 
                                         auth_baton, pool));
 
   /* Pass null for the path, to ensure error if trying to get a
@@ -546,7 +546,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Open an RA session for the anchor URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, parent,
-                                        adm_access, NULL, TRUE, TRUE, TRUE, 
+                                        adm_access, NULL, TRUE, TRUE, 
                                         auth_baton, pool));
 
   /* Figure out the basename that will result from this operation. */
@@ -610,7 +610,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* Open an RA session to BASE_URL. */
   if ((cmt_err = svn_client__open_ra_session (&session, ra_lib, base_url, NULL,
                                               NULL, commit_items, TRUE, TRUE,
-                                              TRUE, auth_baton, pool)))
+                                              auth_baton, pool)))
     goto cleanup;
 
   /* Fetch RA commit editor. */
@@ -691,8 +691,7 @@ repos_to_wc_copy (const char *src_url,
      cannot go into the admin area. We do want to store the resulting
      auth data, though, once the WC is built. */
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, NULL, NULL,
-                                        NULL, TRUE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        NULL, TRUE, FALSE, auth_baton, pool));
       
   /* Pass null for the path, to ensure error if trying to get a
      revision based on the working copy. */
