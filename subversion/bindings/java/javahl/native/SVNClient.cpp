@@ -731,7 +731,7 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
     }
     Err = svn_client_commit2 (&commit_info,
                                           targets2,
-                                          !recurse, noUnlock, ctx, apr_pool);
+                                          recurse, noUnlock, ctx, apr_pool);
     if(Err != NULL)
          JNIUtil::handleSVNError(Err);
 
