@@ -32,8 +32,8 @@ svn_path_get_absolute(svn_string_t **pabsolute,
                       const svn_string_t *relative,
                       apr_pool_t *pool)
 {
+  char buffer[APR_PATH_MAX];
 #ifdef WIN32
-  char buffer[_MAX_PATH];
   if (_fullpath(buffer, relative->data, _MAX_PATH) != NULL)
     {
       *pabsolute = svn_string_create(buffer, pool);
@@ -47,7 +47,6 @@ svn_path_get_absolute(svn_string_t **pabsolute,
                                "path of %s", relative->data);
     }
 #else
-  char buffer[PATH_MAX];
   if (realpath(relative->data, buffer) != NULL)
     {
       *pabsolute = svn_string_create(buffer, pool);
