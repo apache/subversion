@@ -229,7 +229,7 @@
 
     <title>Subversion's Architecture</title>
 
-    <para>This diagram is one what might call a
+    <para>This diagram is what one might call a
       <quote>mile-high</quote> view of Subversion's design.</para>
     
     <figure id="svn-ch-1-dia1">
