@@ -267,8 +267,6 @@ class CollectData(rcsparse.Sink):
       # for this time and log message.
       self.resync.write('%08lx %s %08lx\n' % (old_ts, digest, timestamp))
 
-    branch_name = self.get_branch_name(revision)
-
     if self.default_branch:
       pass
       # default_branch_name = self.get_branch_name(self.default_branch)
@@ -276,7 +274,7 @@ class CollectData(rcsparse.Sink):
       # todo: kff fooo: issue #1510 working here
 
     write_revs_line(self.revs, timestamp, digest, op, revision, self.fname,
-                    branch_name, self.get_tags(revision),
+                    self.get_branch_name(revision), self.get_tags(revision),
                     self.get_branches(revision))
 
 
