@@ -193,9 +193,35 @@ def status_type_change(sbox):
   os.chdir(wc_dir)
   try:
 
+    # First replace a versioned dir with a file and a versioned file
+    # with a versioned dir.
     os.rename('iota', 'was_iota')
     os.rename('A', 'iota')
     os.rename('was_iota', 'A')
+
+    stat_output, err_output = svntest.main.run_svn(None, 'status')
+    if err_output or len(stat_output) != 2:
+      return 1
+    for line in stat_output:
+      if not re.match("~ +(iota|A)", line):
+        return 1
+
+    # Now change the file that is obstructing the versioned dir into an
+    # unversioned dir.
+    os.remove('A')
+    os.mkdir('A')
+
+    stat_output, err_output = svntest.main.run_svn(None, 'status')
+    if err_output or len(stat_output) != 2:
+      return 1
+    for line in stat_output:
+      if not re.match("~ +(iota|A)", line):
+        return 1
+
+    # Now change the versioned dir that is obstructing the file into an
+    # unversioned dir.
+    svntest.main.remove_wc('iota')
+    os.mkdir('iota')
 
     stat_output, err_output = svntest.main.run_svn(None, 'status')
     if err_output or len(stat_output) != 2:

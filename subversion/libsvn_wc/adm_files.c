@@ -335,11 +335,8 @@ prop_path_internal (const char **prop_path,
     }
   else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
     {
-      int wc_format;
-
-      SVN_ERR (svn_wc_adm_wc_format (adm_access, &wc_format));
+      int wc_format = svn_wc__adm_wc_format (adm_access);
       svn_path_split (path, prop_path, &entry_name, pool);
-
       if (wc_format <= SVN_WC__OLD_PROPNAMES_VERSION)
         {
           *prop_path = extend_with_adm_name
@@ -1070,8 +1067,7 @@ init_adm (const char *path,
   /* Lock it immediately.  Theoretically, no compliant wc library
      would ever consider this an adm area until a README file were
      present... but locking it is still appropriately paranoid. */
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, TRUE, FALSE, pool));
-
+  SVN_ERR (svn_wc__adm_pre_open (&adm_access, path, pool));
 
   /** Make subdirectories. ***/
 
