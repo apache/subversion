@@ -228,7 +228,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
 
  unhandled_form:
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-                          "dav_svn_parse_uri does not support that "
+                          "dav_svn_simple_parse_uri does not support that "
                           "URI form yet.");
 }
 
