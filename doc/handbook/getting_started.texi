@@ -4,10 +4,10 @@
 How to get started with Subversion.
 
 @menu
-* Introduction::       History and overview of features.
-* Design::             Overview of system design.
-* Installation::       How to obtain Subversion.
-* Basics::             Casual description and first-time walkthrough.
+* Introduction::                History and overview of features.
+* Design::                      Overview of system design.
+* Installation::                How to obtain Subversion.
+* Basics::                      Casual description and first-time walkthrough.
 @end menu
 
 
@@ -15,6 +15,12 @@ How to get started with Subversion.
 @node Introduction
 @section Introduction
 
+
+@menu
+* A Revision Control System::   
+* History::                     
+* Features::                    
+@end menu
 
 @node A Revision Control System
 @subsection A Revision Control System
@@ -164,6 +170,12 @@ the top of the diagram (initiated by the user) and flows "downward".
 @end example
 
 
+@menu
+* Filesystem::                  
+* Network Layer::               
+* Client Libraries::            
+@end menu
+
 @node Filesystem
 @subsection Filesystem
 
@@ -283,9 +295,21 @@ appendix which describes fundamental differences between CVS and SVN.
 @c ### (@xref{?}
 
 
+@menu
+* The Subversion Development Model::  
+* Quick Walkthrough::           
+@end menu
+
 @node The Subversion Development Model
 @subsection The Subversion Development Model
 
+
+@menu
+* Working Directories and Repositories::  
+* Transactions and Revision Numbers::  
+* How Working Directories Track the Repository::  
+* Subversion Does Not Lock Files::  
+@end menu
 
 @node Working Directories and Repositories
 @subsubsection Working Directories and Repositories
@@ -583,6 +607,11 @@ some hands-on examples.  The Subversion commands demoed here are just
 small examples of what Subversion can do;  see Chapter 2 for full
 explanations of each.
 
+
+@menu
+* Make a repository::           
+* Make some working copies::    
+@end menu
 
 @node Make a repository
 @subsubsection Make a repository
