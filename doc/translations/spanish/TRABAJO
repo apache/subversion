@@ -47,7 +47,6 @@ ch02.xml: beerfrick
 
 Ficheros en proceso de traducción:
 ----------------------------------
-ch03.xml: ruben
 ch04.xml: gradha
 ch05.xml: dbrouard
 
@@ -58,6 +57,7 @@ book.xml: gradha
 foreword.xml: gradha
 ch00.xml: gradha
 ch01.xml: ruben
+ch03.xml: ruben
 
 
 Ficheros revisados sin verificar el original:
