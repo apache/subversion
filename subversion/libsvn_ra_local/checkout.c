@@ -110,6 +110,8 @@ set_any_props (svn_fs_root_t *root,
    Note: we're conspicuously creating a subpool in POOL and freeing it
    at each level of subdir recursion; this is a safety measure that
    protects us when checking out outrageously large or deep trees.
+   Also, we have a per-iteration subpool which is clear after being
+   used for each directory entry.
 
    Note: we aren't driving EDITOR with "postfix" text deltas; that
    style only exists to recognize skeletal conflicts as early as
@@ -127,6 +129,7 @@ walk_tree (svn_fs_root_t *root,
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *iter_pool = svn_pool_create (subpool);
 
   SVN_ERR (svn_fs_dir_entries (&dirents, root, dir_path->data, subpool));
 
@@ -139,18 +142,18 @@ walk_tree (svn_fs_root_t *root,
       apr_size_t klen;
       svn_fs_dirent_t *dirent;
       svn_stringbuf_t *dirent_name;
-      svn_stringbuf_t *URL_path = svn_stringbuf_dup (URL, subpool);
-      svn_stringbuf_t *dirent_path = svn_stringbuf_dup (dir_path, subpool);
+      svn_stringbuf_t *URL_path = svn_stringbuf_dup (URL, iter_pool);
+      svn_stringbuf_t *dirent_path = svn_stringbuf_dup (dir_path, iter_pool);
 
       apr_hash_this (hi, &key, &klen, &val);
       dirent = (svn_fs_dirent_t *) val;
-      dirent_name = svn_stringbuf_create (dirent->name, subpool);
+      dirent_name = svn_stringbuf_create (dirent->name, iter_pool);
       svn_path_add_component (dirent_path, dirent_name, svn_path_repos_style);
       svn_path_add_component (URL_path, dirent_name, svn_path_url_style);
 
       /* What is dirent? */
-      SVN_ERR (svn_fs_is_dir (&is_dir, root, dirent_path->data, subpool));
-      SVN_ERR (svn_fs_is_file (&is_file, root, dirent_path->data, subpool));
+      SVN_ERR (svn_fs_is_dir (&is_dir, root, dirent_path->data, iter_pool));
+      SVN_ERR (svn_fs_is_file (&is_file, root, dirent_path->data, iter_pool));
 
       if (is_dir)
         {
@@ -165,10 +168,10 @@ walk_tree (svn_fs_root_t *root,
                                           SVN_INVALID_REVNUM, 
                                           &new_dir_baton));
           SVN_ERR (set_any_props (root, dirent_path, new_dir_baton,
-                                  editor, 1, subpool));
+                                  editor, 1, iter_pool));
           /* Recurse */
           SVN_ERR (walk_tree (root, dirent_path, new_dir_baton,
-                              editor, edit_baton, URL_path, subpool));
+                              editor, edit_baton, URL_path, iter_pool));
         }
         
       else if (is_file)
@@ -179,9 +182,9 @@ walk_tree (svn_fs_root_t *root,
                                      URL_path, SVN_INVALID_REVNUM, 
                                      &file_baton));          
           SVN_ERR (set_any_props (root, dirent_path, file_baton,
-                                  editor, 0, subpool));
+                                  editor, 0, iter_pool));
           SVN_ERR (send_file_contents (root, dirent_path, file_baton,
-                                       editor, subpool));
+                                       editor, iter_pool));
           SVN_ERR (editor->close_file (file_baton));
         }
 
@@ -190,11 +193,16 @@ walk_tree (svn_fs_root_t *root,
           /* It's not a file or dir.  What the heck?  Instead of
              returning an error, let's just ignore the thing. */ 
         }
+
+      /* Clear out our per-iteration pool. */
+      svn_pool_clear (iter_pool);
     }
 
   /* Close the dir and remove the subpool we used at this level. */
   SVN_ERR (editor->close_directory (dir_baton));
 
+  /* Destory our subpool (which also destroys its child, the
+     per-iteration pool. */
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
