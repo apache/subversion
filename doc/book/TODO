@@ -109,6 +109,14 @@ To be fixed by sussman:
     svn+ssh://.   Actually;  look at r7060.  Maybe it *does* do
     something now.
 
+  - ch04:  add use-case of resurrecting a deleted file.  (how do I
+    find out where the file was deleted?  how to use 'merge' to get it
+    back?  how to use 'copy' to get it back?)
+
+  - in httpd.conf setup, remind people not to put the svn <Location>
+    within an existing DocumentRoot, else the 301 error.
+
+
 
 --------------------------------------------------------------
 
