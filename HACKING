@@ -578,6 +578,14 @@ that was changed:
       that everything in it has changed, so your log entry may simply
       give the file name, and say "Rewritten".
 
+   *  If your change was only to one file, or was the same change to
+      multiple files, then there's no need to list their paths in the
+      log message (because "svn log" can show the changed paths for
+      that revision anyway).  Only when you need to describe how the
+      change affected different paths in different ways is it
+      desirable to organize the log message by path, as in the
+      examples above.
+
 In general, there is a tension between making entries easy to find by
 searching for identifiers, and wasting time or producing unreadable
 entries by being exhaustive.  Use your best judgement --- and be
