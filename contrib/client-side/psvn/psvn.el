@@ -406,8 +406,9 @@ for  example: '(\"revert\" \"file1\"\)"
                   (svn-status-show-process-buffer-internal t)
                   (pop-to-buffer "*svn-process*")
                   (switch-to-buffer (get-buffer-create "*svn-log*"))
-                  (delete-region (point-min) (point-max))
-                  (insert-buffer-substring "*svn-process*")
+                  (let ((buffer-read-only nil))
+                    (delete-region (point-min) (point-max))
+                    (insert-buffer-substring "*svn-process*"))
                   (svn-log-view-mode)
                   (goto-char (point-min))
                   (forward-line 3)
@@ -2090,7 +2091,7 @@ Commands:
 
 (defun svn-log-edit-svn-diff (arg)
   "Show the diff we are about to commit.
-If ARG then show diff between some other vesion of the selected files."
+If ARG then show diff between some other version of the selected files."
   (interactive "P")
   (set-buffer "*svn-status*")
   (svn-status-show-svn-diff-for-marked-files arg))
@@ -2167,15 +2168,16 @@ Commands:
     (re-search-backward "^r\\([0-9]+\\)")
     (match-string-no-properties 1)))
 
-(defun svn-log-view-diff ()
-  (interactive)
-  (let ((upper-rev (svn-log-revision-at-point))
-        (lower-rev (save-excursion
-                     (svn-log-view-next)
-                     (svn-log-revision-at-point))))
-    (when (string= upper-rev lower-rev)
-      (setq lower-rev (number-to-string (- (string-to-number lower-rev) 1))))
-    (svn-run-svn nil t 'diff "diff" (concat "-r" lower-rev ":" upper-rev))
+(defun svn-log-view-diff (arg)
+  "Show the changeset for a given log entry.
+When called with a prefix argument, ask the user for the revision."
+  (interactive "P")
+  (let* ((upper-rev (svn-log-revision-at-point))
+        (lower-rev (number-to-string (- (string-to-number upper-rev) 1)))
+        (rev-arg (concat lower-rev ":" upper-rev)))
+    (when arg
+      (setq rev-arg (read-string "Revision for changeset: " rev-arg)))
+    (svn-run-svn nil t 'diff "diff" (concat "-r" rev-arg))
     (svn-status-show-process-buffer-internal t)
     (save-excursion
       (set-buffer "*svn-process*")
