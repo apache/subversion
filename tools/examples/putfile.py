@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 # USAGE: putfile.py [-m commitmsg] [-u username] file repos-path 
 #
