@@ -660,8 +660,8 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
       svn_path_split (mine, &parent_path, NULL, merge_b->pool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
-      SVN_ERR (svn_client_delete (NULL, mine, parent_access, merge_b->force,
-                                  merge_b->ctx, subpool));
+      SVN_ERR (svn_client__delete (NULL, mine, parent_access, merge_b->force,
+                                   merge_b->ctx, subpool));
       break;
     case svn_node_dir:
       /* ### create a .drej conflict or something someday? */
@@ -776,8 +776,8 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
       svn_path_split (path, &parent_path, NULL, merge_b->pool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
-      SVN_ERR (svn_client_delete (NULL, path, parent_access, merge_b->force,
-                                  merge_b->ctx, subpool));
+      SVN_ERR (svn_client__delete (NULL, path, parent_access, merge_b->force,
+                                   merge_b->ctx, subpool));
       break;
     case svn_node_file:
       /* ### create a .drej conflict or something someday? */

@@ -239,6 +239,17 @@ svn_error_t * svn_client__add (const char *path,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool);
 
+/* The main logic of the public svn_client_delete;  the only difference
+   is that this function takes an access baton to be used in the working 
+   copy case.  (svn_client_delete just generates an access baton if 
+   necessary and calls this func.) */
+svn_error_t * svn_client__delete (svn_client_commit_info_t **commit_info,
+                                  const char *path,
+                                  svn_wc_adm_access_t *adm_access,
+                                  svn_boolean_t force,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool);
+
 /* ---------------------------------------------------------------- */
 
 /*** Checkout and update ***/
