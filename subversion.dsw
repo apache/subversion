@@ -255,21 +255,6 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libsvn_auth"=.\subversion\libsvn_auth\libsvn_auth.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-    Begin Project Dependency
-    Project_Dep_Name __config__
-    End Project Dependency
-}}}
-
-###############################################################################
-
 Project: "libsvn_delta"=.\subversion\libsvn_delta\libsvn_delta.dsp - Package Owner=<4>
 
 Package=<5>
@@ -474,9 +459,6 @@ Package=<4>
     Project_Dep_Name xml
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name libsvn_auth
-    End Project Dependency
-    Begin Project Dependency
     Project_Dep_Name libsvn_client
     End Project Dependency
     Begin Project Dependency
@@ -529,9 +511,6 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name xml
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libsvn_auth
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_client
@@ -595,9 +574,6 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name xml
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libsvn_auth
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_client
