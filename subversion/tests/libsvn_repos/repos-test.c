@@ -58,7 +58,7 @@ dir_deltas (const char **msg,
      directories and files, and their contents and properties, go.
      The general notion of the test plan will be to create pairs of
      trees (S, T), and an editor that edits a copy of tree S, run them
-     through svn_fs_dir_delta, and then verify that the edited copy of
+     through svn_repos_dir_delta, and then verify that the edited copy of
      S is identical to T when it is all said and done.  */
 
   /* Create a filesystem and repository. */
@@ -328,6 +328,7 @@ dir_deltas (const char **msg,
                                         svn_stringbuf_create ("", subpool),
                                         editor,
                                         edit_baton,
+                                        TRUE,
                                         subpool));
 
           /* Hopefully at this point our transaction has been modified

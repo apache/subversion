@@ -45,6 +45,7 @@ struct context {
   svn_fs_root_t *source_root;
   apr_hash_t *source_rev_diffs;
   svn_fs_root_t *target_root;
+  svn_boolean_t text_deltas;
   int target_is_rev;
 };
 
@@ -169,6 +170,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      svn_stringbuf_t *tgt_path,
                      const svn_delta_edit_fns_t *editor,
                      void *edit_baton,
+                     svn_boolean_t text_deltas,
                      apr_pool_t *pool)
 {
   void *root_baton;
@@ -230,6 +232,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   c.source_rev_diffs = src_revs;
   c.target_root = tgt_root;
   c.target_is_rev = svn_fs_is_revision_root (tgt_root);
+  c.text_deltas = text_deltas;
 
   /* Set the global target revision if the target is a revision. */
   if (c.target_is_rev)
@@ -526,15 +529,25 @@ send_text_delta (struct context *c,
   SVN_ERR (c->editor->apply_textdelta 
            (file_baton, &delta_handler, &delta_handler_baton));
 
-  /* Read windows from the delta stream, and apply them to the file.  */
-  do
+  
+  if (c->text_deltas)
     {
-      SVN_ERR (svn_txdelta_next_window (&window, delta_stream));
-      SVN_ERR (delta_handler (window, delta_handler_baton));
-      if (window)
-        svn_txdelta_free_window (window);
+      /* Read windows from the delta stream, and apply them to the file.  */
+      do
+        {
+          SVN_ERR (svn_txdelta_next_window (&window, delta_stream));
+          SVN_ERR (delta_handler (window, delta_handler_baton));
+          if (window)
+            svn_txdelta_free_window (window);
+        }
+      while (window);
     }
-  while (window);
+  else
+    {
+      /* The caller doesn't want text delta data.  Just send a single
+         NULL window. */
+      SVN_ERR (delta_handler (NULL, delta_handler_baton));
+    }
 
   return SVN_NO_ERROR;
 }

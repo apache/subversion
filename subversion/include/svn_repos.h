@@ -185,6 +185,9 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
    paths that have a base revision that differs from that of their
    parent directory.
 
+   If TEXT_DELTAS is FALSE, only a single NULL txdelta window will be
+   sent to the window handler returned by EDITOR->apply_textdelta().
+
    Before completing successfully, this function calls EDITOR's
    close_edit(), so the caller should expect its EDIT_BATON to be
    invalid after its use with this function.
@@ -203,6 +206,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      svn_stringbuf_t *tgt_path,
                      const svn_delta_edit_fns_t *editor,
                      void *edit_baton,
+                     svn_boolean_t text_deltas,
                      apr_pool_t *pool);
 
 

@@ -411,7 +411,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                              NULL,      /* ### should fix */
                              revs,
                              committed_root, rootpath,
-                             editor, &mrc, pool);
+                             editor, &mrc, TRUE, pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
