@@ -869,23 +869,19 @@ print_diff_tree (svn_fs_root_t *root,
               SVN_ERR (svn_diff_file_diff (&diff, orig_path, new_path, pool));
               if (svn_diff_contains_diffs (diff))
                 {
-                  apr_file_t *outhandle;
-                  apr_status_t apr_err;
+                  svn_stream_t *ostream;
                   const char *orig_label, *new_label;
 
-                  /* Get an apr_file_t representing stdout, which is where
-                     we'll have the diff program print to. */
-                  apr_err = apr_file_open_stdout (&outhandle, pool);
-                  if (apr_err)
-                    return svn_error_wrap_apr (apr_err, "Can't open stdout");
+                  SVN_ERR (svn_stream_for_stdout (&ostream, pool));
                   
                   SVN_ERR (generate_label (&orig_label, base_root, 
                                            base_path, pool));
                   SVN_ERR (generate_label (&new_label, root, path, pool));
-                  SVN_ERR (svn_diff_file_output_unified (outhandle, diff, 
+                  SVN_ERR (svn_diff_file_output_unified (ostream, diff, 
                                                          orig_path, new_path,
                                                          orig_label, new_label,
                                                          pool));
+                  SVN_ERR (svn_stream_close (ostream));
                 }
             }
         }

@@ -22,11 +22,12 @@
 
 #include "svn_pools.h"
 #include "svn_diff.h"
+#include "svn_io.h"
 
 
 static
 svn_error_t *
-do_diff4(apr_file_t *output_file,
+do_diff4(svn_stream_t *ostream,
          const char *original,
          const char *modified,
          const char *latest,
@@ -38,7 +39,7 @@ do_diff4(apr_file_t *output_file,
   SVN_ERR(svn_diff_file_diff4(&diff,
                               original, modified, latest, ancestor,
                               pool));
-  SVN_ERR(svn_diff_file_output_merge(output_file, diff,
+  SVN_ERR(svn_diff_file_output_merge(ostream, diff,
                                      original, modified, latest,
                                      NULL, NULL, NULL, NULL,
                                      FALSE,
@@ -51,20 +52,20 @@ do_diff4(apr_file_t *output_file,
 int main(int argc, char *argv[])
 {
   apr_pool_t *pool;
-  apr_file_t *output_file;
+  svn_stream_t *ostream;
   int rc = 0;
 
   apr_initialize();
 
   pool = svn_pool_create(NULL);
 
-  apr_file_open_stdout(&output_file, pool);
+  svn_stream_for_stdout(&ostream, pool);
 
   if (argc == 5)
     {
       svn_error_t *svn_err;
 
-      svn_err = do_diff4(output_file,
+      svn_err = do_diff4(ostream,
                          argv[2], argv[1], argv[3], argv[4],
                          pool);
       if (svn_err != NULL)
@@ -75,7 +76,8 @@ int main(int argc, char *argv[])
     }
   else
     {
-      apr_file_printf(output_file, "Usage: %s <mine> <older> <yours> <ancestor>\n", argv[0]);
+      svn_stream_printf(ostream, pool,
+                        "Usage: %s <mine> <older> <yours> <ancestor>\n", argv[0]);
       rc = 2;
     }
 

@@ -128,6 +128,9 @@ svn_wc_merge (const char *left,
           const char *target_marker;
           const char *left_marker;
           const char *right_marker;
+          svn_stream_t *ostream;
+
+          ostream = svn_stream_from_aprfile(result_f, pool);
 
           SVN_ERR (svn_diff_file_diff3 (&diff,
                                         tmp_left, tmp_target, tmp_right,
@@ -149,7 +152,7 @@ svn_wc_merge (const char *left,
           else
             right_marker = ">>>>>>> .new";
 
-          SVN_ERR (svn_diff_file_output_merge (result_f, diff,
+          SVN_ERR (svn_diff_file_output_merge (ostream, diff,
                                                tmp_left, tmp_target, tmp_right,
                                                left_marker,
                                                target_marker,
@@ -158,6 +161,7 @@ svn_wc_merge (const char *left,
                                                FALSE, /* display original */
                                                FALSE, /* resolve conflicts */
                                                pool));
+          SVN_ERR (svn_stream_close (ostream));
 
           contains_conflicts = svn_diff_contains_conflicts (diff);
         }
