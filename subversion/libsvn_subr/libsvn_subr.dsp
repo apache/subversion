@@ -115,6 +115,10 @@ SOURCE=.\io.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\opt.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\path.c
 # End Source File
 # Begin Source File
