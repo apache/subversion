@@ -985,8 +985,10 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 #ifdef SVN_DEBUG
   if (comb->res.type == DAV_RESOURCE_TYPE_UNKNOWN)
     {
+      /* Unknown URI. Return NULL to indicate "no resource" */
       DBG0("DESIGN FAILURE: should not be UNKNOWN at this point");
-      goto unknown_URI;
+      *resource = NULL;
+      return NULL;
     }
 #endif
 
@@ -1026,11 +1028,6 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                        "special resource area, but does not exist. This is "
                        "generally caused by a problem in the client "
                        "software.");
-
- unknown_URI:
-  /* Unknown URI. Return NULL to indicate "no resource" */
-  *resource = NULL;
-  return NULL;
 }
 
 static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
