@@ -19,12 +19,6 @@ Candidate changes:
     Votes:
       +3: brane. That should be enough :-)
 
-  * r10405:
-    Make sure to use BDB for BDB-specific operations.
-    Justification: Fixes embarassing crashes when built without BDB.
-    Votes:
-      +1: ghudson, brane, lundblad
-
   * r10386, r10388:
     Add IRI support and URI ato-escaping (issue #1910).
     Justification: Nice usability feature, which could go in if we restart
