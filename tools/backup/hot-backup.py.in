@@ -125,7 +125,7 @@ if young_list:
 ###         copied last.
 
 print "Backing up repository to '" + backup_subdir + "'..."
-err_code = os.spawnl(os.P_WAIT, svnadmin,  " hotcopy ", repo_dir, 
+err_code = os.spawnl(os.P_WAIT, svnadmin, "svnadmin", "hotcopy", repo_dir, 
                      backup_subdir, "--clean-logs")
 if(err_code != 0):
   print "Unable to backup the repository."
