@@ -37,7 +37,7 @@
 
 
 /* One external item.  This usually represents one line from an
-   svn:externals description. */
+   svn:externals description but with the path and URL canonicalized. */
 struct external_item
 {
   /* The name of the subdirectory into which this external should be
@@ -162,6 +162,9 @@ parse_externals_description (apr_hash_t **externals_p,
              "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n"
              "Invalid line: '%s'", parent_directory, line);
         }
+
+      item->target_dir = svn_path_canonicalize_nts (item->target_dir, pool);
+      item->url = svn_path_canonicalize_nts (item->url, pool);
 
       apr_hash_set (externals, item->target_dir, APR_HASH_KEY_STRING, item);
     }
