@@ -733,8 +733,8 @@ parse_date (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
   if (! revision_from_word (&(os->start_revision), left_date))
     {
       os->start_revision.kind = svn_client_revision_date;
-      apr_ansi_time_to_apr_time (&(os->start_revision.value.date),
-                                 svn_parse_date (left_date, NULL));
+      apr_time_ansi_put (&(os->start_revision.value.date),
+                         svn_parse_date (left_date, NULL));
       /* ### todo: check if apr_time_t is valid? */
     }
 
@@ -743,8 +743,8 @@ parse_date (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
       if (! revision_from_word (&(os->end_revision), right_date))
         {
           os->end_revision.kind = svn_client_revision_date;
-          apr_ansi_time_to_apr_time (&(os->end_revision.value.date),
-                                     svn_parse_date (right_date, NULL));
+          apr_time_ansi_put (&(os->end_revision.value.date),
+                             svn_parse_date (right_date, NULL));
           /* ### todo: check if apr_time_t is valid? */
         }
     }
