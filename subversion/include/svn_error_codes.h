@@ -643,6 +643,10 @@ SVN_ERROR_START
               SVN_ERR_MISC_CATEGORY_START + 12,
               "Error calling external program")
 
+  SVN_ERRDEF (SVN_ERR_SWIG_PY_EXCEPTION_SET,
+              SVN_ERR_MISC_CATEGORY_START + 13,
+              "Python exception has been set with the error")
+
   /* command-line client errors */
 
   SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,
