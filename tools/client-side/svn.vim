@@ -10,8 +10,7 @@
 "
 " Then add the following lines to ~/.vimrc
 "
-" au BufNewFile,BufRead  msg.*.tmp
-"         \ if getline(2) =~ '^SVN:' | setf svn | endif
+" au BufNewFile,BufRead  svncommit.*.tmp setf svn
 
 " For version 5.x: Clear all syntax items
 " For version 6.x: Quit when a syntax file was already loaded
@@ -21,10 +20,18 @@ elseif exists("b:current_syntax")
 	finish
 endif
 
-syn region svnLine start="^SVN:" end="$" contains=svnAdd,svnDel,svnMod
-syn match svnAdd   contained "   [A_][ A]   .*"
-syn match svnDel   contained "   [D_][ D]   .*"
-syn match svnMod   contained "   [M_][ M]   .*"
+syn cluster svnChange contains=svnAdd,svnDel,svnMod
+syn match svnLine /^--This line, and those below, will be ignored--$/ skipwhite skipnl skipempty nextgroup=@svnChange
+syn match svnAdd /^A    .*$/ contained skipwhite skipnl skipempty nextgroup=@svnChange 
+syn match svnDel /^D    .*$/ contained skipwhite skipnl skipempty nextgroup=@svnChange 
+syn match svnMod /^M    .*$/ contained skipwhite skipnl skipempty nextgroup=@svnChange 
+
+"The following is the old SVN template format markings
+"
+"syn region svnLine start="^SVN:" end="$" contains=svnAdd,svnDel,svnMod
+"syn match svnAdd   contained "   [A_][ A]   .*"
+"syn match svnDel   contained "   [D_][ D]   .*"
+"syn match svnMod   contained "   [M_][ M]   .*"
 
 " Define the default highlighting.
 " For version 5.7 and earlier: only when not done already
