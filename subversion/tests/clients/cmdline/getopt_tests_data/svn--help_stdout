@@ -8,7 +8,7 @@ default.
 
 Available subcommands:
    add
-   blame (annotate, ann)
+   blame (praise, annotate, ann)
    cat
    checkout (co)
    cleanup

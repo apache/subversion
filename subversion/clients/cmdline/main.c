@@ -152,9 +152,9 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {svn_cl__targets_opt, 'N', 'q', svn_cl__config_dir_opt,
      svn_cl__autoprops_opt, svn_cl__no_autoprops_opt} },
 
-  { "blame", svn_cl__blame, {"annotate", "ann"},
-    "Output the content of specified files or URLs with \n"
-    "revision and author information in-line.\n"
+  { "blame", svn_cl__blame, {"praise", "annotate", "ann"},
+    "Output the content of specified files or\n"
+    "URLs with revision and author information in-line.\n"
     "usage: blame TARGET...\n"
     "\n"
     "  Blame will follow copy history by default; use --strict to disable.\n",
