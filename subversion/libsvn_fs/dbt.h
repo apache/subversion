@@ -79,7 +79,7 @@ DBT *svn_fs__id_to_dbt (DBT *dbt, const svn_fs_id_t *id, apr_pool_t *pool);
 
 /* Set DBT to the unparsed form of SKEL; allocate memory from POOL.
    Return DBT.  */
-DBT *svn_fs__skel_to_dbt (DBT *dbt, const skel_t *skel, apr_pool_t *pool);
+DBT *svn_fs__skel_to_dbt (DBT *dbt, skel_t *skel, apr_pool_t *pool);
 
 
 /* Set DBT to the text of the null-terminated string STR.  DBT will

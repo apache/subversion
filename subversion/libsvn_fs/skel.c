@@ -58,18 +58,18 @@ static const enum char_type skel_char_type[256] = {
 };
 
 
-static skel_t *parse (const char *data, apr_size_t len,
+static skel_t *parse (char *data, apr_size_t len,
 		      apr_pool_t *pool);
-static skel_t *list (const char *data, apr_size_t len,
+static skel_t *list (char *data, apr_size_t len,
 		     apr_pool_t *pool);
-static skel_t *implicit_atom (const char *data, apr_size_t len,
+static skel_t *implicit_atom (char *data, apr_size_t len,
 			      apr_pool_t *pool);
-static skel_t *explicit_atom (const char *data, apr_size_t len,
+static skel_t *explicit_atom (char *data, apr_size_t len,
 			      apr_pool_t *pool);
 
 
 skel_t *
-svn_fs__parse_skel (const char *data,
+svn_fs__parse_skel (char *data,
 		    apr_size_t len,
 		    apr_pool_t *pool)
 {
@@ -79,7 +79,7 @@ svn_fs__parse_skel (const char *data,
 
 /* Parse any kind of skel object --- atom, or list.  */
 static skel_t *
-parse (const char *data,
+parse (char *data,
        apr_size_t len,
        apr_pool_t *pool)
 {
@@ -107,12 +107,12 @@ parse (const char *data,
 
 
 static skel_t *
-list (const char *data,
+list (char *data,
       apr_size_t len,
       apr_pool_t *pool)
 {
-  const char *end = data + len;
-  const char *list_start;
+  char *end = data + len;
+  char *list_start;
 
   /* Verify that the list starts with an opening paren.  At the
      moment, all callers have checked this already, but it's more
@@ -184,12 +184,12 @@ list (const char *data,
 /* Parse an atom with implicit length --- one that starts with a name
    character, terminated by whitespace or end-of-data.  */
 static skel_t *
-implicit_atom (const char *data,
+implicit_atom (char *data,
 	       apr_size_t len,
 	       apr_pool_t *pool)
 {
-  const char *start = data;
-  const char *end = data + len;
+  char *start = data;
+  char *end = data + len;
   skel_t *s;
 
   /* Verify that the atom starts with a name character.  At the
@@ -220,18 +220,18 @@ implicit_atom (const char *data,
 /* Parse an atom with explicit length --- one that starts with a byte
    length, as a decimal ASCII number.  */
 static skel_t *
-explicit_atom (const char *data,
+explicit_atom (char *data,
 	       apr_size_t len,
 	       apr_pool_t *pool)
 {
-  const char *end = data + len;
+  char *end = data + len;
   const char *next;
   apr_size_t size;
   skel_t *s;
 
   /* Parse the length.  */
   size = svn_fs__getsize (data, end - data, &next, end - data);
-  data = next;
+  data = (char *) next;
 
   /* Exit if we overflowed, or there wasn't a valid number there.  */
   if (! data)
@@ -259,13 +259,13 @@ explicit_atom (const char *data,
 
 /* Unparsing skeletons.  */
 
-static apr_size_t estimate_unparsed_size (const skel_t *, int);
-static svn_string_t *unparse (const skel_t *, svn_string_t *, int,
+static apr_size_t estimate_unparsed_size (skel_t *, int);
+static svn_string_t *unparse (skel_t *, svn_string_t *, int,
 			      apr_pool_t *);
 
 
 svn_string_t *
-svn_fs__unparse_skel (const skel_t *skel, apr_pool_t *pool)
+svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool)
 {
   svn_string_t *str;
   
@@ -284,7 +284,7 @@ svn_fs__unparse_skel (const skel_t *skel, apr_pool_t *pool)
    we're inside at the moment, to account for space used by
    indentation.  */
 static apr_size_t
-estimate_unparsed_size (const skel_t *skel, int depth)
+estimate_unparsed_size (skel_t *skel, int depth)
 {
   if (skel->is_atom)
     {
@@ -320,7 +320,7 @@ estimate_unparsed_size (const skel_t *skel, int depth)
 /* Return non-zero iff we should use the implicit-length form for SKEL.  
    Assume that SKEL is an atom.  */
 static int
-use_implicit (const skel_t *skel)
+use_implicit (skel_t *skel)
 {
   /* If it's null, or long, we should use explicit-length form.  */
   if (skel->len == 0
@@ -352,7 +352,7 @@ use_implicit (const skel_t *skel)
    DEPTH indicates how many lists we're inside; we use it for
    indentation.  Grow S with new space from POOL as necessary.  */
 static svn_string_t *
-unparse (const skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
+unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 {
   if (skel->is_atom)
     {
@@ -427,7 +427,7 @@ unparse (const skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 
 
 skel_t *
-svn_fs__str_atom (const char *str, apr_pool_t *pool)
+svn_fs__str_atom (char *str, apr_pool_t *pool)
 {
   skel_t *skel = apr_palloc (pool, sizeof (*skel));
   skel->is_atom = 1;
@@ -439,7 +439,7 @@ svn_fs__str_atom (const char *str, apr_pool_t *pool)
 
 
 skel_t *
-svn_fs__mem_atom (const char *addr, 
+svn_fs__mem_atom (char *addr, 
 		  apr_size_t len,
 		  apr_pool_t *pool)
 {
