@@ -1932,7 +1932,7 @@ test_list = [ None,
               commit_with_bad_log_message,
               from_wc_top_with_bad_editor,
               mods_in_schedule_delete,
-              tab_test,
+              Skip(tab_test, (os.name != 'posix')),
              ]
 
 if __name__ == '__main__':
