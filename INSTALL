@@ -222,7 +222,7 @@ I.    BUILD REQUIREMENTS
       a precompiled version of the Berkeley DB library is available for
       download at the Subversion web site:
 
-          http://subversion.tigris.org/servlets/ProjectDownloadList
+          http://subversion.tigris.org/servlets/ProjectDocumentList
 
 
       7.  Apache Web Server 2.0.48 or newer
@@ -357,7 +357,7 @@ II.   INSTALLATION
 
       Download the most recent distribution tarball from:
 
-          http://subversion.tigris.org/servlets/ProjectDownloadList
+          http://subversion.tigris.org/servlets/ProjectDocumentList
 
       Unpack it, and use the standard GNU procedure to compile:
 
@@ -604,7 +604,7 @@ II.   INSTALLATION
       in Section I.6. For your convenience, there is also a binary
       distribution on the Subversion downloads page
 
-          http://subversion.tigris.org/ProjectDownloadList
+          http://subversion.tigris.org/servlets/ProjectDocumentList
 
       The file there is named
 
