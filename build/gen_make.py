@@ -32,7 +32,6 @@ class MakefileGenerator(gen_base.GeneratorBase):
     # defined before their use in dependency lines.
     self.write_ra_modules()
 
-    errors = 0
     for target in self.target_names:
       target_ob = self.targets[target]
 
@@ -61,9 +60,6 @@ class MakefileGenerator(gen_base.GeneratorBase):
         if self.parser.get(target, 'testing') != 'skip':
           self.fs_test_progs.append(tpath)
 
-      s_errors = target_ob.find_sources(self.parser.get(target, 'sources'))
-      errors = errors or s_errors
-
       objects = [ ]
       for src in target_ob.sources:
         if src[-2:] == '.c':
@@ -71,8 +67,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
           objects.append(objname)
           self.file_deps.append((src, objname))
         else:
-          print 'ERROR: unknown file extension on', src
-          errors = 1
+          raise GenError('ERROR: unknown file extension on ' + src)
 
       retreat = gen_base._retreat_dots(path)
       libs = [ ]
@@ -88,12 +83,6 @@ class MakefileGenerator(gen_base.GeneratorBase):
         else:
           # something we don't know, so just include it directly
           libs.append(lib)
-
-      for man in string.split(self.parser.get(target, 'manpages')):
-        self.manpages.append(man)
-
-      for info in string.split(self.parser.get(target, 'infopages')):
-        self.infopages.append(info)
 
       targ_varname = string.replace(target, '-', '_')
       ldflags = self.parser.get(target, 'link-flags')
@@ -132,12 +121,9 @@ class MakefileGenerator(gen_base.GeneratorBase):
                              % (src[:-2], objext, src))
         self.ofile.write('\n')
 
-    for g_name, g_targets in self.install.items():
-      self.target_names = [ ]
-      for i in g_targets:
-        self.target_names.append(i.output)
-
-      self.ofile.write('%s: %s\n\n' % (g_name, string.join(self.target_names)))
+    # for each install group, write a rule to install its outputs
+    for itype, i_outputs in self.inst_outputs.items():
+      self.ofile.write('%s: %s\n\n' % (itype, string.join(i_outputs)))
 
     cfiles = [ ]
     for target in self.targets.values():
@@ -173,15 +159,11 @@ class MakefileGenerator(gen_base.GeneratorBase):
               la_tweaked[bt + '-a'] = None
         la_tweaked = la_tweaked.keys()
 
-        s_files, s_errors = gen_base._collect_paths(
-          self.parser.get('static-apache', 'paths'))
-        errors = errors or s_errors
-
         # Construct a .libs directory within the Apache area and populate it
         # with the appropriate files. Also drop the .la file in the target dir.
         self.ofile.write('\ninstall-mods-static: %s\n'
                          '\t$(MKDIR) $(DESTDIR)%s\n'
-                         % (string.join(la_tweaked + s_files),
+                         % (string.join(la_tweaked + self.apache_files),
                             os.path.join('$(APACHE_TARGET)', '.libs')))
         for file in la_tweaked:
           dirname, fname = os.path.split(file)
@@ -196,7 +178,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
                               os.path.join('$(APACHE_TARGET)', base + '.la')))
 
         # copy the other files to the target dir
-        for file in s_files:
+        for file in self.apache_files:
           self.ofile.write('\t$(INSTALL_MOD_STATIC) %s $(DESTDIR)%s\n'
                            % (file, os.path.join('$(APACHE_TARGET)',
                                                  os.path.basename(file))))
@@ -222,10 +204,6 @@ class MakefileGenerator(gen_base.GeneratorBase):
       #  t.write_dsp()
       #  pass
 
-    self.includes, i_errors = gen_base._collect_paths(
-      self.parser.get('options', 'includes'))
-    errors = errors or i_errors
-
     includedir = os.path.join('$(includedir)', 'subversion-%s' % self.version)
     self.ofile.write('install-include: %s\n'
                      '\t$(MKDIR) $(DESTDIR)%s\n'
@@ -241,39 +219,19 @@ class MakefileGenerator(gen_base.GeneratorBase):
         self.ofile.write('%s: %s\n' % (name, target.output))
     self.ofile.write('\n')
 
-    scripts, s_errors = gen_base._collect_paths(
-      self.parser.get('test-scripts', 'paths'))
-    errors = errors or s_errors
-
-    fs_scripts, fs_errors = gen_base._collect_paths(
-      self.parser.get('fs-test-scripts', 'paths'))
-    errors = errors or fs_errors
-
-    # get all the test scripts' directories
-    script_dirs = map(os.path.dirname, scripts + fs_scripts)
-
-    # remove duplicate directories
-    build_dirs = self.target_dirs.copy()
-    for d in script_dirs:
-      build_dirs[d] = None
-
-    self.ofile.write('BUILD_DIRS = %s\n\n' % string.join(build_dirs.keys()))
+    self.ofile.write('BUILD_DIRS = %s\n\n' % string.join(self.build_dirs))
 
     self.ofile.write('FS_TEST_DEPS = %s\n\n' %
-                     string.join(self.fs_test_deps + fs_scripts))
+                     string.join(self.fs_test_deps + self.fs_scripts))
     self.ofile.write('FS_TEST_PROGRAMS = %s\n\n' %
-                     string.join(self.fs_test_progs + fs_scripts))
+                     string.join(self.fs_test_progs + self.fs_scripts))
     self.ofile.write('TEST_DEPS = %s\n\n' %
-                     string.join(self.test_deps + scripts))
+                     string.join(self.test_deps + self.scripts))
     self.ofile.write('TEST_PROGRAMS = %s\n\n' %
-                     string.join(self.test_progs + scripts))
+                     string.join(self.test_progs + self.scripts))
 
     self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
     self.ofile.write('INFOPAGES = %s\n\n' % string.join(self.infopages))
-
-    if errors:
-      raise GenError("Makefile generation failed.")
-
 
   def write_depends(self):
     #
