@@ -1610,25 +1610,18 @@ Fetching external item into calc/third-party/skins
       repository, you could also use Subversion's externals
       definitions to effectively <quote>pin down</quote> specific
       versions of that information to some location in your own
-      working copy directory.</para>
+      working copy directory (see <xref linkend="svn-ch-6-sect-3" />).</para>
 
     <para>But sometimes you want to maintain custom modifications to
       third-party data in your own version control system.  Returning
       to the software development example, programmers might need to
       make modifications to that third-party library for their own
-      purposes.
-      <footnote>
-        <para>Is the concept of modifying someone else's source code
-          foreign&mdash;perhaps even shocking&mdash;to you?  Visit the
-          Free Software Foundation online (at <systemitem
-          class="url">http://www.fsf.org/</systemitem>).</para>
-      </footnote>
-      These modifications might include new functionality or bug
-      fixes, maintained internally only until they become part of an
-      official release of the third-party library.  Or the changes
-      might never be relayed back to the library maintainers, existing
-      solely as custom tweaks to make the library further suit the
-      needs of the software developers.</para>
+      purposes.  These modifications might include new functionality
+      or bug fixes, maintained internally only until they become part
+      of an official release of the third-party library.  Or the
+      changes might never be relayed back to the library maintainers,
+      existing solely as custom tweaks to make the library further
+      suit the needs of the software developers.</para>
 
     <para>Now you face an interesting situation.  Your project could
       house its custom modifications to the third-party data in some
@@ -1636,8 +1629,8 @@ Fetching external item into calc/third-party/skins
       alternate versions of files and directories.  But these quickly
       become maintainance headaches, requiring some mechanism by which
       to apply your custom changes to the third-party data, and
-      requiring you to regenerate your customizations with each
-      incremental version of the third-party data that you track.</para>
+      necessitating regeneration of those changes with each successive
+      version of the third-party data that you track.</para>
 
     <para>The solution to this problem is to use <firstterm>vendor
       branches</firstterm>.  A vendor branch is a directory tree in
@@ -1660,110 +1653,116 @@ Fetching external item into calc/third-party/skins
     <sect2 id="svn-ch-6-sect-4.1">
       <title>General Vendor Branch Management Procedure</title>
 
-      <para>The general procedure goes like this.  You create a top
-        level directory (we'll use <filename>/vendor</filename>) to
-        hold the vendor branches.  Then you import the third party
-        code into a subdirectory of <filename>/vendor</filename>, and
-        copy it into <filename>/trunk</filename> where you make your
-        local changes.  With each new release of the code you are
-        tracking you bring it into the vendor branch and merge the
-        changes into <filename>/trunk</filename>, resolving whatever
-        conflicts occur between your local changes and the upstream
+      <para>Managing vendor branches generally works like this.  You
+        create a top-level directory (such as
+        <filename>/vendor</filename>) to hold the vendor branches.
+        Then you import the third party code into a subdirectory of
+        that top-level directory.  You then copy that subdirectory
+        into your main development branch (for example,
+        <filename>/trunk</filename>) at the appropriate location.  You
+        always make your local changes in the main development branch.
+        With each new release of the code you are tracking you bring
+        it into the vendor branch and merge the changes into
+        <filename>/trunk</filename>, resolving whatever conflicts
+        occur between your local changes and the upstream
         changes.</para>
 
-      <para>Let's try and make this a bit clearer with an
-        example.</para>
+      <para>Perhaps an example will help to clarify this algorithm.
+        We'll use a scenario where your development team is creating a
+        calculator program that links against a third-party complex
+        number arithmetic library, libcomplex.  We'll begin with the
+        initial creation of the vendor branch, and the import of the
+        first vendor drop.</para>
 
-      <para>First, the initial import.</para>
-    
       <screen>
-$ svn mkdir http://svnhost/repos/vendor/foobar
-$ svn import http://svnhost/repos/vendor/foobar ~/foobar-1.0 current
+$ svn mkdir http://svn.example.com/repos/calc/vendor/libcomplex  \
+            -m 'creating vendor branch area'
+
+&hellip;
+$ svn import http://svn.example.com/repos/calc/vendor/libcomplex \
+             /path/to/libcomplex-1.0                             \
+             current                                             \
+             -m 'importing initial 1.0 vendor drop'
+&hellip;
 </screen>
     
-      <para>Now we've got the current version of the foobar project in
-        <filename>/vendor/foobar/current</filename>.  We make another
-        copy of it so we can always refer to that version, and then
-        copy it into the trunk so you can work on it.</para>
+      <para>We now have the current version of the libcomplex source
+        code in <filename>/vendor/libcomplex/current</filename>.  Now,
+        we tag that version (see <xref linkend="svn-ch-4-sect-6" />)
+        and then copy it into the main development branch so we can
+        make our customizations to it.</para>
     
       <screen>
-$ svn copy http://svnhost/repos/vendor/foobar/current    \
-           http://svnhost/repos/vendor/foobar/foobar-1.0 \
-           -m `tagging foobar-1.0'
-$ svn copy http://svnhost/repos/vendor/foobar/foobar-1.0 \
-           http://svnhost/repos/trunk/foobar             \
-           -m `bringing foobar-1.0 into trunk'
+$ svn copy http://svn.example.com/repos/calc/vendor/libcomplex/current  \
+           http://svn.example.com/repos/calc/vendor/libcomplex/1.0      \
+           -m 'tagging libcomplex-1.0'
+&hellip;
+$ svn copy http://svn.example.com/repos/vendor/libcomplex/1.0  \
+           http://svn.example.com/repos/calc/libcomplex        \
+           -m 'bringing libcomplex-1.0 into the main branch'
+&hellip;
 </screen>
 
-      <para>Now you just check out a copy of
-        <filename>/trunk/foobar</filename> and get to work!</para>
+      <para>We check out our project's main branch&mdash;which now
+        includes a copy of the first vendor drop&mdash;and we get to
+        work customizing the libcomplex code.  Before we know it, our
+        modified version of libcomplex is now completely integrated
+        into our calculator program.
+        <footnote>
+          <para>And entirely bug-free, of course!</para>
+        </footnote>
+      </para>
 
-      <para>Later on, the developers at FooBar Widgets, Inc release a
-        new version of their code, so you want to update the version
-        of the code you're using.  First, you check out the
-        <filename>/vendor/foobar/current</filename> directory, then
-        copy the new release over that working copy, handle any
-        renames, additions or removals manually, and then
-        commit.</para>
+      <para>A few weeks later, the developers of libcomplex release a
+        new version of their library&mdash;version 1.1&mdash;which
+        contains some features and functionality that we really want.
+        But we'd like to upgrade to this new version without losing
+        our customizations to the existing version.  As you might have
+        guessed, what we essentially would like to do is to replace
+        our current baseline version of libcomplex 1.0 with a copy of
+        libcomplex 1.1, and then re-apply the custom modifications we
+        previously made to that library to the new version.</para>
+      
+      <para>To perform this upgrade, we checkout a copy of our vendor
+        branch, and replace the <literal>current</literal> version
+        with the new libcomplex 1.1 source code.  After committing
+        this change, our <literal>current</literal> branch now
+        contains the new vendor drop.  We tag the new version, and
+        then merge the differences between the tag of the previous
+        version and the new current version into our main development
+        branch.</para>
 
       <screen>
-$ svn checkout http://svnhost/repos/vendor/foobar/current ~/current
-$ cd ~/foobar-1.1
-$ tar -cf - . | (cd ~/current ; tar -xf -)
-$ cd ~/current
-$ mv foobar.c main.c
-$ svn move main.c foobar.c
-$ svn delete dead.c
-$ svn add doc
-$ svn add doc/*
-$ svn commit -m `importing foobar 1.1 on vendor branch'
+$ cd working-copies/calc
+$ svn merge http://svn.example.com/repos/vendor/libcomplex/1.0      \
+            http://svn.example.com/repos/vendor/libcomplex/current  \
+            http://svn.example.com/repos/calc/libcomplex
+&hellip; # resolve all the conflicts between their changes and our changes
+$ svn commit -m 'merging libcomplex-1.1 into the main branch'
+&hellip;
 </screen>
 
-      <para>Whoa, that was complicated. Don't worry, most cases are
-        far simpler. </para>
+      <para>In the trivial use-case, the new version of our
+        third-party tool would look, from a files-and-directories
+        point of view, just like the previous version.  In other
+        words, none of the libcomplex source files would have been
+        deleted, renamed or moved to different locations&mdash;in
+        short, in a perfect world, our modifications would apply
+        cleanly to the new version of the library, with absolutely no
+        complications or conflicts.</para>
 
-      <para>What happened? foobar 1.0 had a file called
-        <filename>main.c</filename>.  This file was renamed to
-        <filename>foobar.c</filename> in 1.1.  So your working-copy
-        had the old <filename>main.c</filename> which Subversion knew
-        about, and the new <filename>foobar.c</filename> which
-        Subversion did not know about.  You rename
-        <filename>foobar.c</filename> to <filename>main.c</filename>
-        and <command>svn move</command> it back to the new name.  This
-        way, Subversion will know that <filename>foobar.c</filename>
-        is a descendant of <filename>main.c</filename>.
-        <filename>dead.c</filename> has been removed in 1.1, and they
-        have finally written some documentation, so you add
-        that.</para>
-
-      <para>Next you copy <filename>/vendor/foobar/current</filename>
-        to <filename>/vendor/foobar/foobar-1.1</filename> so you can
-        always refer back to version 1.1, like this.</para>
-
-      <screen>
-$ svn copy http://svnhost/repos/vendor/foobar/current    \
-           http://svnhost/repos/vendor/foobar/foobar-1.1 \
-           -m `tagging foobar-1.1'
-</screen>
-
-      <para>Now that you have a pristine copy of foobar 1.1 in
-        <filename>/vendor</filename>, you just have to merge their
-        changes into <filename>/trunk</filename> and you're done.
-        That looks like this.</para>
-
-      <screen>
-$ svn checkout http://svnhost/repos/trunk/foobar ~/foobar
-$ cd ~/foobar
-$ svn merge http://svnhost/repos/vendor/foobar/foobar-1.0 \
-            http://svnhost/repos/vendor/foobar/foobar-1.1
-$
-&hellip; # resolve all the conflicts between their changes and your changes
-$ svn commit -m `merging foobar 1.1 into trunk'
-</screen>
-    
-      <para>There, you're done.  You now have a copy of foobar 1.1
-        with all your local changes merged into it in your
-        tree.</para>
+     <para>But things aren't always that simple, and in fact it is
+       quite common for source files to get moved around between
+       releases of software.  This complicates the process of ensuring
+       that our modifications are still valid for the new version of
+       code, and can quickly degrade into a situation where we have to
+       manually recreate our customizations in the new version.  Once
+       Subversion knows about the history of a given source
+       file&mdash;including all its previous locations&mdash;the
+       process of merging in the new version of the library is pretty
+       simple.  But we are responsible for telling Subversion how the
+       source file layout changed from vendor drop to vendor
+       drop.</para>
 
     </sect2>
 
@@ -1771,192 +1770,126 @@ $ svn commit -m `merging foobar 1.1 into trunk'
     <sect2 id="svn-ch-6-sect-4.2">
       <title><command>svn-load-dirs.pl</command></title>
 
-      <para>Vendor branches that have more than several deletes,
-        additions and moves can use the
-        <command>svn_load_dirs.pl</command> script that comes with the
-        Subversion distribution.  This script automates the above
-        importing steps to make sure that mistakes are minimized.  You
-        still need to use the merge commands to merge the new versions
-        of foobar into your own local copy containing your local
-        modifications.</para>
+      <para>Vendor drops that contain more than a few deletes,
+        additions and moves complicate the process of upgrading to
+        each successive version of the third-party data.  So
+        Subversion supplies the <command>svn_load_dirs.pl</command>
+        script to assist with this process.  This script automates the
+        importing steps we mentioned in the general vendor branch
+        management procedure to make sure that mistakes are minimized.
+        You will still be responsible for using the merge commands to
+        merge the new versions of the third-party data into your main
+        development branch, but <command>svn_load_dirs.pl</command>
+        can help you more quickly and easily arrive at that
+        stage.</para>
 
-      <para>This script has the following enhancements over
-        <command>svn import</command>:</para>
+      <para>In short, <command>svn_load_dirs.pl</command> is an
+        enhancement to <command>svn import</command> that has several
+        important characteristics:</para>
 
       <itemizedlist>
         <listitem>
-          <para>Can be run at any point in time to bring an existing
+          <para>It can be run at any point in time to bring an existing
             directory in the repository to exactly match an external
-            directory.  This script runs all the <command>svn
-            add</command>, <command>svn delete</command> and
-            optionally any <command>svn move</command> commands as
-            necessary.</para>
+            directory, performing all the necessary adds and deletes,
+            and optionally performing moves, too.</para>
         </listitem>
         <listitem>
-          <para>Optionally tag the newly imported directory.</para>
+          <para>It takes care of complicated series of operations between
+            which Subversion requires a intermediate commit&mdash;such
+            as before renaming a file or directory twice.</para>
         </listitem>
         <listitem>
-          <para>Optionally add arbitrary properties to files and
+          <para>It will optionally tag the newly imported directory.</para>
+        </listitem>
+        <listitem>
+          <para>It will optionally add arbitrary properties to files and
             directories that match a regular expression.</para>
         </listitem>
       </itemizedlist>
 
-      <para>This script takes care of complications where Subversion
-        requires a commit before renaming a file or directory twice,
-        such as if you had a vendor branch that renamed
-        <filename>foobar-1.1/docs/doc.ps</filename> to
-        <filename>foobar-1.2/documents/doc-1.2.ps</filename>.  Here,
-        you would rename <filename>docs</filename> to
-        <filename>documents</filename>, perform a commit, then rename
-        <filename>doc.ps</filename> to
-        <filename>doc-1.2.ps</filename>.  You could not do the two
-        renames without the commit, because
-        <filename>doc.ps</filename> was already moved once from
-        <filename>docs/doc.ps</filename> to
-        <filename>documents/doc.ps</filename>.</para>
-
-      <para>This script always compares the directory being imported
-        to what currently exists in the Subversion repository and
-        takes the necessary steps to add, delete and rename files and
-        directories to make the Subversion repository match the
-        imported directory.  As such, it can be used on an empty
-        Subversion directory for the first import or for any following
-        imports to upgrade a vendor branch.</para>
-
-      <para>For the first foobar-1.0 release located in
-        <filename>~/foobar-1.0</filename>:</para>
-
-      <screen>
-$ svn_load_dirs.pl -t foobar-1.0                      \
-                   http://svnhost/repos/vendor/foobar \
-                   current                            \
-                   ~/foobar-1.0
-</screen>
-
       <para><command>svn_load_dirs.pl</command> takes three mandatory
-        arguments.  The first argument, <systemitem
-        class="url">http://svnhost/repos/vendor/foobar</systemitem>,
-        is the URL to the base Subversion directory to work in.  In
-        this case, we're working in the
-        <filename>vendor/foobar</filename> part of the Subversion
-        repository.  The next argument, <filename>current</filename>,
-        is relative to the first and is the directory where the
-        current import will take place, in this case <systemitem
-        class="url">http://svnhost/repos/vendor/foobar/current</systemitem>.
-        The last argument, <filename>~/foobar-1.0</filename>, is the
-        directory to import.  Finally, the optional
-        <option>-t</option> command line option is also relative to
-        <systemitem
-        class="url">http://svnhost/repos/vendor/foobar</systemitem>
-        and tells <command>svn_load_dirs.pl</command> to create a tag
-        of the imported directory in <systemitem
-        class="url">http://svnhost/repos/vendor/foobar/foobar-1.0</systemitem>.</para>
-
-      <para>The import of foobar-1.1 would be taken care of in the
-        same way:</para>
+        arguments.  The first argument is the URL to the base
+        Subversion directory to work in.  This argument is followed by
+        the URL&mdash;relative the first argument&mdash;into which the
+        current vendor drop will be imported.  Finally, the third
+        argument is the local directory to import.  Using our previous
+        example, a typical run of <command>svn_load_dirs.pl</command>
+        might look like:</para>
 
       <screen>
-$ svn_load_dirs.pl -t foobar-1.1                      \
-                   http://svnhost/repos/vendor/foobar \
-                   current                            \
-                   ~/foobar-1.1
+$ svn_load_dirs.pl http://svn.example.com/repos/calc/vendor/libcomplex \
+                   current                                             \
+                   /path/to/libcomplex-1.1
+&hellip;
 </screen>
 
-      <para>The script looks in your current <systemitem
-        class="url">http://svnhost/repos/vendor/foobar/current</systemitem>
-        directory and sees what changes need to take place for it to
-        match <filename>~/foobar-1.1</filename>.  The script is kind
-        enough to notice that there are files and directories that
-        exist in 1.0 and not in 1.1 and asks if you want to perform
-        any renames.  At this point, you can indicate that
-        <filename>main.c</filename> was renamed to
-        <filename>foobar.c</filename> and then indicate that no
-        further renames have taken place.</para>
+      <para>You can indicate that you'd like
+        <command>svn_load_dirs.pl</command> to tag the new vendor drop
+        by passing the <option>-t</option> command-line option and
+        specifying a tag name.  This tag is another URL relative to
+        the first program argument.</para>
 
-      <para>The script will then delete <filename>dead.c</filename>
-        and add <filename>doc</filename> and
-        <filename>doc/*</filename> to the Subversion repository and
-        finally create a tag foobar-1.1 in <systemitem
-        class="url">http://svnhost/repos/vendor/foobar/foobar-1.1</systemitem>.</para>
+      <screen>
+$ svn_load_dirs.pl -t libcomplex-1.1                                   \
+                   http://svn.example.com/repos/calc/vendor/libcomplex \
+                   current                                             \
+                   /path/to/libcomplex-1.1
+&hellip;
+</screen>
+
+      <para>When you run <command>svn_load_dirs.pl</command>, it
+        examines the contents of your existing <quote>current</quote>
+        vendor drop, and compares them with the proposed new vendor
+        drop.  In the trivial case, there will be no files that are in
+        one version and not the other, and the script will perform the
+        new import without incident.  If, however, there are
+        discrepencies in the file layouts between versions,
+        <command>svn_load_dirs.pl</command> will prompt you for how
+        you would like to resolve those differences.  For example, you
+        will have the opportunity to tell the script that you know
+        that the file <filename>math.c</filename> in version 1.0 of
+        libcomplex was renamed to <filename>arithmetic.c</filename> in
+        libcomplex 1.1.  Any discrepencies not explained by moves
+        are treated as regular additions and deletions.</para>
 
       <para>The script also accepts a separate configuration file for
-        applying properties to specific files and directories matching
-        a regular expression that are <emphasis>added</emphasis> to
-        the repository.  This script will not modify properties of
-        already existing files or directories in the repository.  This
-        configuration file is specified to
+        setting properties on files and directories matching a regular
+        expression that are <emphasis>added</emphasis> to the
+        repository.  This configuration file is specified to
         <command>svn_load_dirs.pl</command> using the
-        <option>-p</option> command line option.  The format of the
-        file is either two or four columns.</para>
-
-      <para><literal>regular_expression control property_name
-        property_value</literal></para>
-
-      <para>The <literal>regular_expression</literal> is a Perl style
-        regular expression.  The <literal>control</literal> column
-        must either be set to <literal>break</literal> or
-        <command>cont</command>.  It is used to tell
-        <command>svn_load_dirs.pl</command> if the following lines in
-        the configuration file should be examined for a match or if
-        all matching should stop.  If <literal>control</literal> is
-        set to <command>break</command>, then no more lines from the
-        configuration file will be matched.  If
-        <literal>control</literal> is set to <command>cont</command>,
-        which is short for continue, then more comparisons will be
-        made.  Multiple properties can be set for one file or
-        directory this way.  The last two columns,
-        <literal>property_name</literal> and
-        <literal>property_value</literal> are optional and are applied
-        to matching files and directories.</para>
-
-      <para>If you have whitespace in any of the
-        <literal>regular_expression</literal>,
-        <literal>property_name</literal> or
-        <literal>property_value</literal> columns, you must surround
-        the value with either a single or double quote.  You can
-        protect single or double quotes with a \ character.  The \
-        character is removed by this script <emphasis>only</emphasis>
-        for whitespace or quote characters, so you do not need to
-        protect any other characters, beyond what you would normally
-        protect for the regular expression.</para>
-
-      <para>This sample configuration file was used to load on a Unix
-        box a number of Zip files containing Windows files with
-        <literal>CRLF</literal> end of lines.</para>
+        <option>-p</option> command-line option.  Each line of the
+        configuration files is a whitespace-delimited set of two or
+        four values: a Perl-style regular expression to match the
+        added path against, a control keyword (either
+        <literal>break</literal> or <literal>cont</literal>), and then
+        optionally a property name and value.</para>
 
       <screen>
-\.doc$              break   svn:mime-type   application/msword
-\.ds(p|w)$          break   svn:eol-style   CRLF
-\.ilk$              break   svn:eol-style   CRLF
-\.ncb$              break   svn:eol-style   CRLF
-\.opt$              break   svn:eol-style   CRLF
-\.exe$              break   svn:mime-type   application/octet-stream
-dos2unix-eol\.sh$   break
+\.png$              break   svn:mime-type   image/png
+\.jpe?g$            break   svn:mime-type   image/jpeg
+\.m3u$              cont    svn:mime-type   audio/x-mpegurl
+\.m3u$              break   svn:eol-style   LF
 .*                  break   svn:eol-style   native
 </screen>
 
-      <para>In this example, all the files should be converted to the
-        native end of line style, which the last line of the
-        configuration handles.  The exception is
-        <command>dos2unix-eol.sh</command>, which contains embedded
-        <literal>CR</literal>'s used to find and replace Windows
-        <literal>CRLF</literal> end of line characters with Unix's
-        <literal>LF</literal> characters.  Since
-        <command>svn</command> and <command>svn_load_dirs.pl</command>
-        convert all <literal>CR</literal>, <literal>CRLF</literal> and
-        <literal>LF</literal>'s to the native end of line style when
-        <literal>svn:eol-style</literal> is set to
-        <literal>native</literal>, this file should be left untouched.
-        Hence, the <command>break</command> with no property
-        settings.</para>
+      <para>For each added path, the configured property changes whose
+        regular expression matches the path are applied in order,
+        unless the control specification is <literal>break</literal>
+        (which means that no more property changes should be applied
+        to that path).  If the control specification is
+        <literal>cont</literal>&mdash;an abbreviation for
+        <literal>continue</literal>&mdash;then matching will continue
+        with the next line of the configuration file.</para>
 
-      <para>The Windows Visual C++ and Visual Studio files
-        (<filename>*.dsp</filename>, <filename>*.dsw</filename>, etc.)
-        should retain their <literal>CRLF</literal> line endings on
-        any operating system and any <filename>*.doc</filename> files
-        are always treated as binary files, hence the
-        <literal>svn:mime-type</literal> setting of
-        <literal>application/msword</literal>.</para>
+      <para>Any whitespace in the regular expression, property name,
+        or property value must be surrounded by either single or
+        double quote characters.  You can escape quote characters that
+        are not used for wrapping whitespace by preceding them with a
+        backslash (<literal>\</literal>) character.  The backslash
+        escapes only quotes when parsing the configuration file, so do
+        not protect any other characters beyond what is necessary for
+        the regular expression.</para>
 
     </sect2>
   </sect1>
