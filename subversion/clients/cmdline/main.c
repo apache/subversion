@@ -20,6 +20,7 @@
 
 #include <string.h>
 #include <assert.h>
+#include <locale.h>
 
 #include <apr_strings.h>
 #include <apr_tables.h>
@@ -171,8 +172,23 @@ main (int argc, const char * const *argv)
     {"version",       'v', 0},
     {"filedata",      'F', 1},
     {"xml-file",      svn_cl__xml_file_opt, 1},
+    {"setlocale",     svn_cl__setlocale_opt, 1},
     {0,               0, 0}
   };
+
+  /* FIXME: This is a first step towards support for localization in
+     `svn'.  In real life, this call would be
+
+         setlocale (LC_ALL, "");
+
+     so that initial help or error messages are displayed in the
+     language defined by the environment.  Right now, though, we don't
+     even care if the call fails.
+
+     (Actually, this is a no-op; according to the C standard, "C" is
+     the default locale at program startup.) */
+  setlocale (LC_ALL, "C");
+
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
@@ -243,6 +259,27 @@ main (int argc, const char * const *argv)
       case svn_cl__recursive_opt:
         opt_state.recursive = TRUE;
         break;
+      case svn_cl__setlocale_opt:
+        /* The only locale name that ISO C defines is the "C" locale;
+           using any other argument is not portable. But that's O.K.,
+           because the main purpose of this option is:
+
+              a) support for wrapper programs which parse `svn's
+                 output, and should call `svn --setlocale=C' to get
+                 predictable results; and
+
+              b) for testing various translations without having to
+                 twiddle with the environment.
+        */
+        if (NULL == setlocale (LC_ALL, opt_arg))
+          {
+            err = svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR,
+                                     0, NULL, pool,
+                                     "The locale `%s' can not be set",
+                                     opt_arg);
+            svn_handle_error (err, stderr, FALSE);
+          }
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -304,6 +341,6 @@ main (int argc, const char * const *argv)
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: 
  */
