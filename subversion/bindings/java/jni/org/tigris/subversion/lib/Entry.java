@@ -36,28 +36,83 @@ public class Entry {
     public final static int NODEKIND_DIR = 2;
     public final static int NODEKIND_UNKNOWN = 3;
 
-    public final long revision;
-    public final String url;
-    public final int nodeKind;
-    public final int schedule;
-    public final int existence;
-    public final Date text_time;
-    public final Date prop_time;
-    public final Hashtable attributes;
+    private long revision = 0;
+    private String url = null;
+    private int nodekind = NODEKIND_NONE;
+    private int schedule = SCHEDULE_NORMAL;
+    private int existence = EXISTENCE_NORMAL;
+    private Date texttime = null;
+    private Date proptime = null;
+    private Hashtable attributes = new Hashtable();
 
-    public Entry( long _revision, String _url, int _nodeKind, 
-                  int _schedule, int _existence, Date _text_time, 
-                  Date _prop_time, Hashtable _attributes )
-	{
-	    url = _url;
-	    revision = _revision;
-	    nodeKind = _nodeKind;
-	    schedule = _schedule;
-	    existence = _existence;
-            text_time = _text_time;
-            prop_time = _prop_time;
+    public Entry()
+        {
+        }
+
+    public void setRevision(long _revision)
+        {
+            revision = _revision;
+        }
+    public long getRevision()
+        {
+            return revision;
+        }
+    public void setUrl(String _url)
+        {
+            url = _url;
+        }
+    public String getUrl()
+        {
+            return url;
+        }
+    public void setNodekind(int _nodekind)
+        {
+            nodekind = _nodekind;
+        }
+    public int getNodekind()
+        {
+            return nodekind;
+        }
+    public void setSchedule(int _schedule)
+        {
+            schedule = _schedule;
+        }
+    public int getSchedule()
+        {
+            return schedule;
+        }
+    public void setExistence(int _existence)
+        {
+            existence = _existence;
+        }
+    public int getExistence()
+        {
+            return existence;
+        }
+    public void setTexttime(Date _texttime)
+        {
+            texttime = _texttime;
+        }
+    public Date getTexttime()
+        {
+            return texttime;
+        }
+    public void setProptime(Date _proptime)
+        {
+            proptime = _proptime;
+        }
+    public Date getProptime()
+        {
+            return proptime;
+        }
+    public void setAttributes(Hashtable _attributes)
+        {
             attributes = _attributes;
-	}
+        }
+    public Hashtable getAttributes()
+        {
+            return attributes;
+        }
 }
 
 /* 
