@@ -89,7 +89,10 @@ AC_DEFUN(SVN_FIND_SWIG,
     # and the patch level is zero padded to three places.
     # e.g. 1.3.21 becomes 103021
     SWIG_VERSION="`echo \"$SWIG_VERSION_RAW\" | \
-                   sed -e 's/^\([[0-9]]\)\.\([[0-9]]\)\.\([[0-9]]*\).*/\10\20\3/'`"
+                  sed -e 's/[[^0-9\.]].*$//' \
+                      -e 's/\.\([[0-9]]\)$/.0\1/' \
+                      -e 's/\.\([[0-9]][[0-9]]\)$/.0\1/' \
+                      -e 's/\.\([[0-9]]\)\./0\1/; s/\.//g;'`"
     AC_MSG_RESULT([$SWIG_VERSION_RAW])
     AC_SUBST(SWIG_VERSION)
     # If you change the required swig version number, don't forget to update:
