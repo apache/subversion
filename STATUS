@@ -37,7 +37,7 @@ Candidate changes:
     Votes:
       +1: maxb, ghudson, lundblad
 
-  * r10616
+  * r10616, r10638
     Work around directory creation bug in APR shipped with httpd 2.0.50.
     Justification:
       Not a tiny patch, but most of the pieces are simple and
@@ -54,4 +54,3 @@ Candidate changes:
       with no following details, is produced. Trivial fix for serious UI wart.
     Votes:
       +1: maxb
-
