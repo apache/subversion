@@ -96,14 +96,39 @@ svn_auth_open (svn_auth_baton_t **auth_baton,
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
-svn_auth_register_provider (svn_auth_baton_t *baton,
+svn_auth_register_provider (svn_auth_baton_t *auth_baton,
                             int order,
                             const svn_auth_provider_t *vtable,
                             void *provider_baton,
                             apr_pool_t *pool)
 {
-  abort();
+  /* ### ignoring the order argument for now, because it would be
+     complex to implement, and I can't see why it's worth it yet.
+     can't the caller just register providers in order?  */
+  
+  provider_t *provider;
+  provider_set_t *table;
+  
+  /* Create the provider */
+  provider = apr_pcalloc (auth_baton->pool, sizeof(*provider));
+  provider->vtable = vtable;
+  provider->provider_baton = provider_baton;
+  
+  /* Add it to the appropriate table in the auth_baton */
+  table = apr_hash_get (auth_baton->tables,
+                        vtable->cred_kind, APR_HASH_KEY_STRING);
+  if (! table)
+    {
+      table = apr_pcalloc (auth_baton->pool, sizeof(*table));
+      apr_hash_set (auth_baton->tables, vtable->cred_kind, APR_HASH_KEY_STRING,
+                    table);
+    }  
+  *(provider_t **)apr_array_push (table->providers) = provider;
+  
+  /* ### hmmm, we never used the passed in pool.  maybe we don't need it? */
+
   return SVN_NO_ERROR;
 }
 
@@ -112,10 +137,64 @@ svn_error_t *
 svn_auth_first_credentials (void **credentials,
                             svn_auth_iterstate_t **state,
                             const char *cred_kind,
-                            svn_auth_baton_t *baton,
+                            svn_auth_baton_t *auth_baton,
                             apr_pool_t *pool)
 {
-  abort();
+  int i;
+  svn_error_t *err_chain;
+  provider_set_t *table;
+  provider_t *provider = NULL;
+  void *creds = NULL;
+  void *iter_baton = NULL;
+  svn_auth_iterstate_t *iterstate;
+
+  /* Get the appropriate table of providers for CRED_KIND. */
+  table = apr_hash_get (auth_baton->tables, cred_kind, APR_HASH_KEY_STRING);
+  if (! table)
+    return svn_error_createf (SVN_ERR_AUTH_NO_PROVIDER, NULL,
+                              "No provider registered for '%s' credentials.",
+                              cred_kind);
+
+  /* Find a provider that can give "first" credentials. */
+  for (i = 0; i < table->providers->nelts; i++)
+    {
+      svn_error_t *provider_err;
+
+      provider = APR_ARRAY_IDX(table->providers, i, provider_t *);
+      provider_err = provider->vtable->first_credentials 
+        (&creds, &iter_baton, provider->provider_baton, pool);
+
+      /* A provider is supposed to either return creds or error. */
+      if (provider_err)
+        {
+          if (! err_chain)
+            err_chain = provider_err;
+          else            
+            svn_error_compose (err_chain, provider_err);
+
+          continue;             /* try the next provider */
+        }
+
+      else if (creds)           /* a provider finally worked */
+        break;
+    }
+
+  if (! creds)                  
+    /* all providers failed, but at least we have a stack of errors
+       describing why each one did. */    
+    return svn_error_createf (SVN_ERR_AUTH_PROVIDERS_EXHAUSTED, err_chain,
+                              "%d provider(s) failed to provide initial "
+                              "'%s' credentials.", i, cred_kind);
+
+  /* Build an abstract iteration state. */
+  iterstate = apr_pcalloc (pool, sizeof(*iterstate));
+  iterstate->cred_kind = apr_pstrdup (pool, cred_kind);
+  iterstate->provider_idx = i;
+  iterstate->provider_iter_baton = iter_baton;
+
+  *credentials = creds;
+  *state = iterstate;
+
   return SVN_NO_ERROR;
 }
 
@@ -133,7 +212,7 @@ svn_auth_next_credentials (void **credentials,
 svn_error_t *
 svn_auth_save_credentials (const char *cred_kind,
                            void *credentials,
-                           svn_auth_baton_t *baton,
+                           svn_auth_baton_t *auth_baton,
                            apr_pool_t *pool)
 {
   abort();
