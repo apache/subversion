@@ -179,7 +179,6 @@ def keywords_from_birth(sbox):
   "commit new files with keywords active from birth"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   setup_working_copy (wc_dir)
@@ -315,7 +314,6 @@ def update_modified_with_translation(sbox):
   "update modified file with eol-style 'native'"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Replace contents of rho and set eol translation to 'native'
@@ -438,14 +436,13 @@ def eol_change_is_text_mod(sbox):
                                        'svn:eol-style', 'CRLF', foo_path)
 
   # check 1: did new contents get transmitted?
-  output, errput = svntest.main.run_svn(None, 'ci', '-m', 'log msg', foo_path)
-  if errput:
-    raise svntest.Failure
-  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
-  if output != ["Sending        " + foo_path + "\n",
-                "Transmitting file data .\n",
-                "Committed revision 3.\n"]:
-    raise svntest.Failure
+  expected_output = ["Sending        " + foo_path + "\n",
+                     "Transmitting file data .\n",
+                     "Committed revision 3.\n"]
+  # FIXME: see commend at _tweak_paths
+  expected_output = _tweak_paths(expected_output) 
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'ci', '-m', 'log msg', foo_path)
 
   # check 2: do the files have the right contents now?
   f = open(foo_path, 'rb')
@@ -547,9 +544,9 @@ def cat_keyword_expansion(sbox):
 
   # At one stage the keywords were expanded to values for the requested
   # revision, not to those committed revision
-  out, err = svntest.main.run_svn (None, 'cat', '-r', 'HEAD', mu_path)
-  if err or out[1] != "$Rev: 2 $":
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn (None, [ "This is the file 'mu'.\n",
+                                              "$Rev: 2 $" ], None,
+                                      'cat', '-r', 'HEAD', mu_path)
   
 
 ########################################################################

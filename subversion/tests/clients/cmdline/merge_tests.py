@@ -98,7 +98,6 @@ def textual_merges_galore(sbox):
   ## we're only interested in rho here.)
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
   #  url = os.path.join(svntest.main.test_area_url, sbox.repo_dir)
   
@@ -200,9 +199,8 @@ def textual_merges_galore(sbox):
   # We skip A/D/G/rho in this merge; it will be tested with a separate
   # merge command.  Temporarily put it back to revision 1, so this
   # merge succeeds cleanly.
-  out, err = svntest.main.run_svn(None, 'up', '-r', '1', other_rho_path)
-  if err:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '-r', '1', other_rho_path)
 
   # For A/D/G/tau, we append ten different lines, to conflict with the
   # ten lines appended in revision 3.
@@ -272,13 +270,16 @@ def textual_merges_galore(sbox):
   # whole expected_foo routine for these intermediate operations;
   # they're not what we're here to test, after all, so it's enough to
   # know that they worked.  Is this a bad practice? ###
-  out, err = svntest.main.run_svn(None, 'revert', other_rho_path)
+  out, err = svntest.actions.run_and_verify_svn(None, None, None,
+                                                'revert', other_rho_path)
   if (err):
     for line in err:
       print "Error reverting: ", line,
     raise svntest.Failure
 
-  out, err = svntest.main.run_svn(None, 'up', '-r', '2', other_rho_path)
+  out, err = svntest.actions.run_and_verify_svn(None, None, None,
+                                                'up', '-r', '2',
+                                                other_rho_path)
   if (err):
     for line in err:
       print "Error updating: ", line,
@@ -368,7 +369,6 @@ def add_with_history(sbox):
   "merge and add new files/dirs with history"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   C_path = os.path.join(wc_dir, 'A', 'C')
@@ -448,10 +448,8 @@ def add_with_history(sbox):
   #  print "merge failed"
   #  return 1
 
-  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r', '1:2', F_url,
-                                           C_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-r', '1:2', F_url, C_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
@@ -498,7 +496,6 @@ def delete_file_and_dir(sbox):
   "merge that deletes items"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Rev 2 copy B to B2
@@ -506,9 +503,8 @@ def delete_file_and_dir(sbox):
   B2_path = os.path.join(wc_dir, 'A', 'B2')
   B_url = svntest.main.current_repo_url + '/A/B'
 
-  outlines,errlines = svntest.main.run_svn(None, 'copy', B_path, B2_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', B_path, B2_path)
 
   expected_output = wc.State(wc_dir, {
     'A/B2'       : Item(verb='Adding'),
@@ -534,9 +530,8 @@ def delete_file_and_dir(sbox):
   # Rev 3 delete E and lambda from B
   E_path = os.path.join(B_path, 'E')
   lambda_path = os.path.join(B_path, 'lambda')
-  outlines, errlines = svntest.main.run_svn(None, 'delete', E_path, lambda_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'delete', E_path, lambda_path)
 
   expected_output = wc.State(wc_dir, {
     'A/B/E'       : Item(verb='Deleting'),
@@ -558,10 +553,9 @@ def delete_file_and_dir(sbox):
   # Local mods in B2
   B2_E_path = os.path.join(B2_path, 'E')
   B2_lambda_path = os.path.join(B2_path, 'lambda')
-  outlines, errlines = svntest.main.run_svn(None, 'propset', 'foo', 'foo_val',
-                                            B2_E_path, B2_lambda_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val',
+                                     B2_E_path, B2_lambda_path)
   expected_status.tweak(
     'A/B2/E', 'A/B2/lambda',  status=' M'
     )
@@ -570,30 +564,25 @@ def delete_file_and_dir(sbox):
   # Merge rev 3 into B2
 
   # dry-run without force fails to delete local mods
-  outlines, errlines = svntest.main.run_svn(1, 'merge', '-r', '2:3', B_url,
-                                            B2_path, '--dry-run')
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-r', '2:3', B_url,
+                                     B2_path, '--dry-run')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   # force dry-run to delete
-  outlines, errlines = svntest.main.run_svn(None, 'merge', '-r', '2:3', B_url,
-                                            B2_path, '--dry-run', '--force')
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-r', '2:3', B_url,
+                                     B2_path, '--dry-run', '--force')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # merge without force fails to delete local mods
-  outlines, errlines = svntest.main.run_svn(1, 'merge', '-r', '2:3', B_url,
-                                            B2_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-r', '2:3', B_url, B2_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # force merge to delete
-  outlines, errlines = svntest.main.run_svn(None, 'merge', '-r', '2:3', B_url,
-                                            B2_path, '--force')
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-r', '2:3', B_url,
+                                     B2_path, '--force')
   
   expected_status.tweak(
     'A/B2/E', 'A/B2/E/alpha', 'A/B2/E/beta', 'A/B2/lambda',  status='D '
@@ -608,20 +597,18 @@ def simple_property_merges(sbox):
   "some simple property merges"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Add a property to a file and a directory
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
-  outlines, errlines = svntest.main.run_svn(None, 'propset', 'foo', 'foo_val',
-                                            alpha_path)
-  if errlines:
-    return 1
-  outlines, errlines = svntest.main.run_svn(None, 'propset', 'foo', 'foo_val',
-                                            E_path)
-  if errlines:
-    raise svntest.Failure
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val',
+                                     alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val',
+                                     E_path)
 
   # Commit change as rev 2
   expected_output = svntest.wc.State(wc_dir, {
@@ -635,41 +622,28 @@ def simple_property_merges(sbox):
                                          expected_output, expected_status,
                                          None, None, None, None, None,
                                          wc_dir)
-  outlines, errlines = svntest.main.run_svn(None, 'up', wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Copy B to B2 as rev 3
   B_url = svntest.main.current_repo_url + '/A/B'
   B2_url = svntest.main.current_repo_url + '/A/B2'
 
-  outlines,errlines = svntest.main.run_svn(None, 'copy', '-m', 'fumble',
-                                           '--username', svntest.main.wc_author,
-                                           '--password', svntest.main.wc_passwd,
-                                           B_url, B2_url)
-  if errlines:
-    raise svntest.Failure
-  outlines, errlines = svntest.main.run_svn(None, 'up', wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', '-m', 'fumble',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     B_url, B2_url)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Modify a property and add a property for the file and directory
-  outlines, errlines = svntest.main.run_svn(None, 'propset', 'foo', 'mod_foo',
-                                            alpha_path)
-  if errlines:
-    raise svntest.Failure
-  outlines, errlines = svntest.main.run_svn(None, 'propset', 'bar', 'bar_val',
-                                            alpha_path)
-  if errlines:
-    raise svntest.Failure
-  outlines, errlines = svntest.main.run_svn(None, 'propset', 'foo', 'mod_foo',
-                                            E_path)
-  if errlines:
-    raise svntest.Failure
-  outlines, errlines = svntest.main.run_svn(None, 'propset', 'bar', 'bar_val',
-                                            E_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'mod_foo', alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'bar', 'bar_val', alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'mod_foo', E_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'bar', 'bar_val', E_path)
 
   # Commit change as rev 4
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
@@ -687,9 +661,7 @@ def simple_property_merges(sbox):
                                          expected_output, expected_status,
                                          None, None, None, None, None,
                                          wc_dir)
-  outlines, errlines = svntest.main.run_svn(None, 'up', wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   ### This test needs more work.  It's good enough to test issue 953,
   ### which is what caused me to write it, but it is not a thorough
@@ -704,29 +676,35 @@ def simple_property_merges(sbox):
                                       })
   expected_status.tweak(wc_rev=4)
   expected_status.tweak('A/B2/E', 'A/B2/E/alpha', status=' M')
-  dry_out, dry_err = svntest.main.run_svn(None, 'merge', '--dry-run',
-                                          '-r', '3:4', B_url, B2_path)
-  std_out, std_err = svntest.main.run_svn(None, 'merge',
-                                          '-r', '3:4', B_url, B2_path)
-  if dry_err or std_err or dry_out != std_out:
+  dry_out, dry_err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'merge', '--dry-run',
+                                                        '-r', '3:4',
+                                                        B_url, B2_path)
+  std_out, std_err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'merge',
+                                                        '-r', '3:4',
+                                                        B_url, B2_path)
+  if dry_out != std_out:
     raise svntest.Failure
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Revert merge
-  outlines, errlines = svntest.main.run_svn(None, 'revert', '--recursive',
-                                            wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '--recursive', wc_dir)
   expected_status.tweak('A/B2/E', 'A/B2/E/alpha', status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Merge B 2:1 into B2
   expected_status.tweak('A/B2/E', 'A/B2/E/alpha', status=' M')
-  dry_out, dry_err = svntest.main.run_svn(None, 'merge', '--dry-run',
-                                          '-r', '2:1', B_url, B2_path)
-  std_out, std_err = svntest.main.run_svn(None, 'merge',
-                                          '-r', '2:1', B_url, B2_path)
-  if dry_err or std_err or dry_out != std_out:
+  dry_out, dry_err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'merge', '--dry-run',
+                                                        '-r', '2:1',
+                                                        B_url, B2_path)
+  std_out, std_err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'merge',
+                                                        '-r', '2:1',
+                                                        B_url, B2_path)
+  if dry_out != std_out:
     raise svntest.Failure
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -736,11 +714,15 @@ def simple_property_merges(sbox):
                                       })
   expected_status.tweak(wc_rev=4)
   expected_status.tweak('A/B2/E', 'A/B2/E/alpha', status=' C')
-  dry_out, dry_err = svntest.main.run_svn(None, 'merge', '--dry-run',
-                                          '-r', '3:4', B_url, B2_path)
-  std_out, std_err = svntest.main.run_svn(None, 'merge',
-                                          '-r', '3:4', B_url, B2_path)
-  if dry_err or std_err or dry_out != std_out:
+  dry_out, dry_err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'merge', '--dry-run',
+                                                        '-r', '3:4',
+                                                        B_url, B2_path)
+  std_out, std_err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'merge',
+                                                        '-r', '3:4',
+                                                        B_url, B2_path)
+  if dry_out != std_out:
     raise svntest.Failure
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   
@@ -753,31 +735,28 @@ def simple_property_merges(sbox):
   A2_url = svntest.main.current_repo_url + '/A2'
  
   # Copy to make revision 5
-  outlines,errlines = svntest.main.run_svn(None, 'copy', '-m', 'fumble',
-                                           '--username', svntest.main.wc_author,
-                                           '--password', svntest.main.wc_passwd,
-                                           A_url, A2_url)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', '-m', 'fumble',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     A_url, A2_url)
   
-  outlines, errlines = svntest.main.run_svn(None, 'switch', A2_url, wc_dir)
+  svntest.main.run_svn(None, 'switch', A2_url, wc_dir)
   
   A_url = svntest.main.current_repo_url + '/A/B/E/alpha'
   alpha_path = os.path.join(wc_dir, 'B', 'E', 'alpha')
   
-  outlines, errlines = svntest.main.run_svn(None, 'merge',
-                                          '-r', '3:4', A_url, alpha_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge',
+                                     '-r', '3:4', A_url, alpha_path)
   
-  outlines,errlines = svntest.main.run_svn(None, 'pl', alpha_path)
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'pl', alpha_path)
   
-  if errlines:
-    raise svntest.Failure
 
   saw_foo = 0
   saw_bar = 0
-  for line in outlines:
+  for line in output:
     if re.match("\\s*foo\\s*$", line):
       saw_foo = 1
     if re.match("\\s*bar\\s*$", line):
@@ -794,7 +773,6 @@ def merge_catches_nonexistent_target(sbox):
   "merge should not die if a target file is absent"
   
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Copy G to a new directory, Q.  Create Q/newfile.  Commit a change
@@ -806,30 +784,23 @@ def merge_catches_nonexistent_target(sbox):
   newfile_path = os.path.join(Q_path, 'newfile')
   Q_url = svntest.main.current_repo_url + '/A/D/Q'
 
-  outlines,errlines = svntest.main.run_svn(None, 'cp', G_path, Q_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', G_path, Q_path)
   
   svntest.main.file_append(newfile_path, 'This is newfile.\n')
-  outlines,errlines = svntest.main.run_svn(None, 'add', newfile_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', newfile_path)
   
-  outlines,errlines = svntest.main.run_svn(None, 'ci', '-m', 'rev 2', Q_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'rev 2', Q_path)
 
   svntest.main.file_append(newfile_path, 'A change to newfile.\n')
-  outlines,errlines = svntest.main.run_svn(None, 'ci', '-m', 'rev 3', Q_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'rev 3', Q_path)
 
   saved_cwd = os.getcwd()
   try:
     os.chdir(G_path)
-    out, err = svntest.main.run_svn(0, 'merge', '-r', '2:3', Q_url)
-    if err:
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'merge', '-r', '2:3', Q_url)
   finally:
     os.chdir(saved_cwd)
 
@@ -839,7 +810,6 @@ def merge_tree_deleted_in_target(sbox):
   "merge on deleted directory in target"
   
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Copy B to a new directory, I. Modify B/E/alpha, Remove I/E. Now
@@ -851,29 +821,25 @@ def merge_tree_deleted_in_target(sbox):
   B_url = svntest.main.current_repo_url + '/A/B'
   I_url = svntest.main.current_repo_url + '/A/I'
 
-  outlines,errlines = svntest.main.run_svn(None, 'cp', B_url, I_url, '-m', 'rev 2')
-  if errlines:
-    raise svntest.Failure
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', B_url, I_url, '-m', 'rev 2')
 
   svntest.main.file_append(alpha_path, 'A change to alpha.\n')
   svntest.main.file_append(os.path.join(B_path, 'lambda'), 'A change to lambda.\n')
   
-  outlines,errlines = svntest.main.run_svn(None, 'ci', '-m', 'rev 3', B_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'rev 3', B_path)
 
   E_url = svntest.main.current_repo_url + '/A/I/E'
-  outlines,errlines = svntest.main.run_svn(None, 'rm', E_url, '-m', 'rev 4')
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', E_url, '-m', 'rev 4')
 
-  outlines,errlines = svntest.main.run_svn(None, 'up', os.path.join(wc_dir,'A'))
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', os.path.join(wc_dir,'A'))
 
-  outlines, errlines = svntest.main.run_svn(0, 'merge', '-r', '2:3', B_url, I_path)
-  if errlines:
-      raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-r', '2:3', B_url, I_path)
 
 #----------------------------------------------------------------------
 # This is a regression for issue #1176.
@@ -884,7 +850,6 @@ def merge_similar_unrelated_trees(sbox):
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=1249. ##
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Simple test.  Make three directories with the same content.
@@ -921,28 +886,22 @@ def merge_similar_unrelated_trees(sbox):
   os.rename(os.path.join(base2_path, 'A', 'B', 'beta'),
             os.path.join(base2_path, 'A', 'B', 'zeta'))
 
-  out, err = svntest.main.run_svn(None, 'add',
-                                  base1_path, base2_path, apply_path)
-  if err:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                  'add', base1_path, base2_path, apply_path)
 
-  out, err = svntest.main.run_svn(None, 'ci', '-m', 'rev 2', wc_dir)
-  if err:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'rev 2', wc_dir)
 
-  out, err = svntest.main.run_svn(None, 'merge',
-                                  base1_url, base2_url, apply_path)
-  if err:
-    raise svntest.Failure
-
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                  'merge', base1_url, base2_url, apply_path)
 
 #----------------------------------------------------------------------
 def merge_one_file(sbox):
   "merge one file (issue #1150)"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
+  
   rho_rel_path = os.path.join('A', 'D', 'G', 'rho')
   rho_path = os.path.join(wc_dir, rho_rel_path)
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
@@ -963,18 +922,16 @@ def merge_one_file(sbox):
                                          wc_dir)
   
   # Backdate rho to revision 1, so we can merge in the rev 2 changes.
-  out, err = svntest.main.run_svn(0, 'up', '-r', '1', rho_path)
-  if err:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '-r', '1', rho_path)
 
   # Try one merge with an explicit target; it should succeed.
   # ### Yes, it would be nice to use run_and_verify_merge(), but it
   # appears to be impossible to get the expected_foo trees working
   # right.  I think something is still assuming a directory target.
-  out, err = svntest.main.run_svn(0, 'merge', '-r', '1:2',
-                                  rho_url, rho_path)
-  if err:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-r', '1:2',
+                                     rho_url, rho_path)
 
   # Inspect rho, make sure it's right.
   rho_text = svntest.tree.get_text(rho_path)
@@ -983,18 +940,15 @@ def merge_one_file(sbox):
     raise svntest.Failure
 
   # Restore rho to pristine revision 1, for another merge.
-  out, err = svntest.main.run_svn(0, 'revert', rho_path)
-  if err:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', rho_path)
 
   # Cd into the directory and run merge with no targets.
   # It should still merge into rho.
   saved_cwd = os.getcwd()
   try:
     os.chdir(G_path)
-    out, err = svntest.main.run_svn(0, 'merge', '-r', '1:2', rho_url)
-    if err:
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'merge', '-r', '1:2', rho_url)
 
     # Inspect rho, make sure it's right.
     rho_text = svntest.tree.get_text('rho')
@@ -1012,7 +966,6 @@ def merge_with_implicit_target (sbox):
   "merging a file with no explicit target path"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
   
   # Change mu for revision 2
@@ -1055,20 +1008,16 @@ def merge_with_implicit_target (sbox):
     os.chdir(os.path.join(other_wc, 'A'))
 
     # merge using URL for sourcepath
-    out, err = svntest.main.run_svn(0, 'merge', '-r', '2:1',
-                                    mu_url)
-    if err:
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'merge', '-r', '2:1', mu_url)
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text):
       raise svntest.Failure
 
     # merge using filename for sourcepath
-    out, err = svntest.main.run_svn(0, 'merge', '-r', '1:2',
-                                    'mu')
-    if err:
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'merge', '-r', '1:2', 'mu')
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text):
@@ -1083,7 +1032,6 @@ def merge_with_prev (sbox):
   "merge operations using PREV revision"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
   
   # Change mu for revision 2
@@ -1134,9 +1082,8 @@ def merge_with_prev (sbox):
     os.chdir(os.path.join(other_wc, 'A'))
 
     # Try to revert the last change to mu via svn merge
-    out, err = svntest.main.run_svn(0, 'merge', '-r', 'HEAD:PREV', 'mu')
-    if err:
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'merge', '-r', 'HEAD:PREV', 'mu')
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text):
@@ -1149,16 +1096,13 @@ def merge_with_prev (sbox):
     os.chdir(another_wc)
 
     # ensure 'A' will be at revision 2
-    out, err = svntest.main.run_svn(0, 'up')
-    if err:
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None, None, [], 'up')
 
     # now try a revert on a directory, and verify that it removed the zot
     # file we had added previously
-    out, err = svntest.main.run_svn(0, 'merge', '-r', 'COMMITTED:PREV',
-                                    'A', 'A')
-    if err:
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'merge', '-r', 'COMMITTED:PREV',
+                                       'A', 'A')
 
     if (svntest.tree.get_text('A/zot') != None):
       raise svntest.Failure
@@ -1175,7 +1119,6 @@ def merge_binary_file (sbox):
   "merge change into unchanged binary file"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Add a binary file to the project
@@ -1255,6 +1198,7 @@ def merge_in_new_file_and_diff(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  
   trunk_url = svntest.main.current_repo_url + '/A/B/E';
 
   # Create a branch
@@ -1293,7 +1237,6 @@ def merge_skips_obstructions(sbox):
   "merge should skip over unversioned obstructions"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   C_path = os.path.join(wc_dir, 'A', 'C')
@@ -1336,44 +1279,33 @@ def merge_skips_obstructions(sbox):
 
   svntest.main.file_append(os.path.join(C_path, "foo"), "foo") # unversioned
 
-  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r', '1:2', F_url,
-                                           C_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-r', '1:2', F_url, C_path)
 
   # Revert the local mods, and this time make "Q" obstructed.  An
   # unversioned file called "Q" will obstruct the adding of the
   # directory of the same name.
 
-  outlines,errlines = svntest.main.run_svn(None, 'revert', '-R', wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '-R', wc_dir)
 
   os.unlink(os.path.join(C_path, "foo"))
   svntest.main.safe_rmtree(os.path.join(C_path, "Q"))
   svntest.main.file_append(os.path.join(C_path, "Q"), "foo") # unversioned
   
-  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r', '1:2', F_url,
-                                           C_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                           'merge', '-r', '1:2', F_url, C_path)
 
   # Revert the local mods, and commit the deletion of iota and A/D/G. (r3)
   os.unlink(os.path.join(C_path, "foo"))
-  outlines,errlines = svntest.main.run_svn(None, 'revert', '-R', wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
 
   iota_path = os.path.join(wc_dir, 'iota')
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  outlines,errlines = svntest.main.run_svn(None, 'rm', iota_path, G_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', iota_path, G_path)
 
-  outlines,errlines = svntest.main.run_svn(None, 'commit', '-m', 'msg',
-                                           wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'msg', wc_dir)
 
   # Now create unversioned iota and A/D/G, try running a merge -r2:3.
   # The merge process should skip over these targets, since they're
@@ -1381,33 +1313,25 @@ def merge_skips_obstructions(sbox):
   
   svntest.main.file_append(iota_path, "foo") # unversioned
   os.mkdir(G_path) # unversioned
-  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r', '2:3',
-                                           svntest.main.current_repo_url,
-                                           wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-r', '2:3',
+                                     svntest.main.current_repo_url, wc_dir)
   
   # Revert the local mods, and commit a change to A/B/lambda (r4), and then
   # commit the deletion of the same file. (r5)
   os.unlink(iota_path)
   svntest.main.safe_rmtree(G_path)
-  outlines,errlines = svntest.main.run_svn(None, 'revert', '-R', wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
 
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   svntest.main.file_append(lambda_path, "more text")
-  outlines,errlines = svntest.main.run_svn(None, 'commit', '-m', 'msg', wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'msg', wc_dir)
 
-  outlines,errlines = svntest.main.run_svn(None, 'rm', lambda_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', lambda_path)
 
-  outlines,errlines = svntest.main.run_svn(None, 'commit', '-m', 'msg', wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'msg', wc_dir)
 
   # lambda is gone, so create an unversioned lambda in its place.
   # Then attempt to merge -r3:4, which is a change to lambda.  The merge
@@ -1415,31 +1339,24 @@ def merge_skips_obstructions(sbox):
 
   svntest.main.file_append(lambda_path, "foo") # unversioned
 
-  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r', '3:4',
-                                           svntest.main.current_repo_url,
-                                           wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-r', '3:4',
+                                     svntest.main.current_repo_url, wc_dir)
 
   # OK, so let's commit the new lambda (r6), and then delete the
   # working file.  Then re-run the -r3:4 merge, and see how svn deals
   # with a file being under version control, but missing.
 
-  outlines,errlines = svntest.main.run_svn(None, 'add', lambda_path)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', lambda_path)
 
-  outlines,errlines = svntest.main.run_svn(None, 'commit', '-m', 'msg', wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'msg', wc_dir)
 
   os.unlink(lambda_path)
 
-  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r', '3:4',
-                                           svntest.main.current_repo_url,
-                                           wc_dir)
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-r', '3:4',
+                                     svntest.main.current_repo_url, wc_dir)
 
 
 ########################################################################

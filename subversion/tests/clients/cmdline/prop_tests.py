@@ -53,7 +53,6 @@ def make_local_props(sbox):
 
   # Bootstrap
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Add properties to one file and one directory
@@ -97,7 +96,6 @@ def commit_props(sbox):
 
   # Bootstrap
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Add a property to a file and a directory
@@ -135,7 +133,6 @@ def update_props(sbox):
 
   # Bootstrap
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy
@@ -199,7 +196,6 @@ def downdate_props(sbox):
 
   # Bootstrap
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   iota_path = os.path.join(wc_dir, 'iota') 
@@ -272,7 +268,6 @@ def remove_props(sbox):
 
   # Bootstrap
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Add a property to a file
@@ -324,7 +319,6 @@ def update_conflict_props(sbox):
 
   # Bootstrap
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Add a property to a file and a directory
@@ -394,7 +388,6 @@ def commit_replacement_props(sbox):
 
   # Bootstrap
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Add a property to two files
@@ -453,7 +446,6 @@ def revert_replacement_props(sbox):
 
   # Bootstrap
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Add a property to two files
@@ -521,8 +513,8 @@ def inappropriate_props(sbox):
 
   # Bootstrap
   sbox.build()
-
   wc_dir = sbox.wc_dir
+  
   A_path = os.path.join(wc_dir, 'A')
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   iota_path = os.path.join(wc_dir, 'iota')
@@ -622,7 +614,6 @@ def copy_inherits_special_props(sbox):
 
   # Bootstrap
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   orig_mime_type = 'image/fake_image'
@@ -709,8 +700,8 @@ def prop_value_conversions(sbox):
 
   # Bootstrap
   sbox.build()
-
   wc_dir = sbox.wc_dir
+  
   A_path = os.path.join(wc_dir, 'A')
   B_path = os.path.join(wc_dir, 'A', 'B')
   iota_path = os.path.join(wc_dir, 'iota')

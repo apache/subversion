@@ -102,7 +102,6 @@ def create_txn(sbox):
   "'svnadmin createtxn'"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
@@ -121,7 +120,6 @@ def remove_txn(sbox):
   "'svnadmin rmtxns'"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
@@ -149,6 +147,7 @@ def remove_txn(sbox):
 
 def dump_copied_dir(sbox):
   "'svnadmin dump' on copied directory"
+  
   sbox.build()
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
@@ -170,6 +169,7 @@ def dump_copied_dir(sbox):
 
 def dump_move_dir_modify_child(sbox):
   "'svnadmin dump' on modified child of copied dir"
+
   sbox.build()
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
@@ -181,32 +181,30 @@ def dump_move_dir_modify_child(sbox):
   svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', '-m', 'log msg')
 
   output, errput = svntest.main.run_svnadmin("dump", repo_dir)
-  if svntest.actions.compare_and_display_lines(
+  svntest.actions.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
     'STDERR', ["* Dumped revision 0.\n",
                "* Dumped revision 1.\n",
-               "* Dumped revision 2.\n"], errput):
-    raise svntest.Failure
+               "* Dumped revision 2.\n"], errput)
 
   output, errput = svntest.main.run_svnadmin("dump", "-r", "0:HEAD", repo_dir)
-  if svntest.actions.compare_and_display_lines(
+  svntest.actions.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
     'STDERR', ["* Dumped revision 0.\n",
                "* Dumped revision 1.\n",
-               "* Dumped revision 2.\n"], errput):
-    raise svntest.Failure
+               "* Dumped revision 2.\n"], errput)
 
 #----------------------------------------------------------------------
 
 def dump_quiet(sbox):
   "'svnadmin dump --quiet'"
+
   sbox.build()
 
   output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
-  if svntest.actions.compare_and_display_lines(
+  svntest.actions.compare_and_display_lines(
     "Output of 'svnadmin dump --quiet' is unexpected.",
-    'STDERR', [], errput):
-    raise svntest.Failure
+    'STDERR', [], errput)
 
 
 ########################################################################
