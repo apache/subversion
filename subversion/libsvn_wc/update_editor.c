@@ -1759,7 +1759,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
       svn_boolean_t tc, pc;
 
       /* Initialize the state of our returned value. */
-      *content_state = svn_wc_notify_state_unchanged;
+      *content_state = svn_wc_notify_state_unknown;
       
       /* ### There should be a more efficient way of finding out whether
          or not the file is modified|merged|conflicted.  If the
@@ -1785,8 +1785,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
           else
             *content_state = svn_wc_notify_state_modified;
         }
-      else if (is_locally_modified)
-        *content_state = svn_wc_notify_state_modified;
+      else
+        *content_state = svn_wc_notify_state_unchanged;
     }
 
   return SVN_NO_ERROR;
