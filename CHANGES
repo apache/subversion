@@ -1,3 +1,39 @@
+Version 0.35.0 (branching 12 December 2003, from revision r????)
+http://svn.collab.net/repos/svn/branches/0.35.0
+
+####################################################################
+##  NOTE  NOTE  NOTE  NOTE  NOTE  NOTE  NOTE NOTE NOTE NOTE NOTE  ##
+####################################################################
+##                                                                ##
+## As of this release, Subversion once again does deltification   ##
+## automatically.  This means that the deltification step most    ##
+## repositories introduced into their post-commit hooks as of     ##
+## release 0.33.0 should now be reverted.  Look for a line with   ##
+## "svnadmin deltify" in hooks/post-commit, and remove it.        ##
+##                                                                ##
+## (Leaving the line won't actually hurt anything, but it means   ##
+## unnecessary extra load on your repository with each commit,    ##
+## so we advise removing it.)                                     ##
+##                                                                ##
+####################################################################
+
+ User-visible changes:
+ * BDB logs now auto-pruned, use 'svnadmin --bdb-log-keep' to suppress (#1615)
+ * deltification is automatic again (issue #1601)
+ * 
+ * 
+
+ Developer-visible changes:
+ * 
+ * 
+ * 
+
+
+ Merged revisions after release branching:
+ * 
+ * 
+
+
 Version 0.34.0 (released 3 December 2003, from revision r7859)
 http://svn.collab.net/repos/svn/tags/0.34.0
 
