@@ -149,7 +149,6 @@ static int check_access(svn_config_t *cfg,
                         const char *repos_path, const char *user,
                         int required_access, apr_pool_t *pool)
 {
-    const char *dirpath;
     const char *base_name;
     struct parse_authz_line_baton baton = { 0 };
 
@@ -168,16 +167,15 @@ static int check_access(svn_config_t *cfg,
     svn_config_enumerate(cfg, repos_path,
                          parse_authz_line, &baton);
 
+    base_name = repos_path;
     while (!(baton.deny & required_access)
            && !(baton.allow & required_access)) {
-        svn_path_split(repos_path, &dirpath, &base_name, pool);
-
-        if (*base_name == '\0') {
+        if (base_name[0] == '/' && base_name[1] == '\0') {
             /* By default, deny access */
             return 0;
         }
 
-        repos_path = dirpath;
+        svn_path_split(repos_path, &repos_path, &base_name, pool);
         svn_config_enumerate(cfg, repos_path,
                              parse_authz_line, &baton);
     }
