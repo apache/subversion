@@ -18,6 +18,7 @@
 package org.tigris.subversion.javahl.tests;
 
 import junit.framework.TestSuite;
+import junit.framework.TestResult;
 import org.tigris.subversion.javahl.*;
 
 import java.io.File;
@@ -63,7 +64,11 @@ public class BasicTests extends SVNTests
      */
     public static void main(String[] args) {
         processArgs(args);
-        junit.textui.TestRunner.run(suite());
+        TestResult tr = junit.textui.TestRunner.run(suite());
+        if (tr.errorCount() != 0 || tr.failureCount() != 0) {
+            System.exit(1);
+        }
+        System.exit(0);
     }
 
     /**
