@@ -52,7 +52,7 @@ typedef struct svn_config_t svn_config_t;
 
 #define SVN_CONFIG_CATEGORY_SERVERS        "servers"
 #define SVN_CONFIG_SECTION_GROUPS               "groups"
-#define SVN_CONFIG_SECTION_DEFAULT              "default"
+#define SVN_CONFIG_SECTION_GLOBAL               "global"
 #define SVN_CONFIG_OPTION_HTTP_PROXY_HOST           "http-proxy-host"
 #define SVN_CONFIG_OPTION_HTTP_PROXY_PORT           "http-proxy-port"
 #define SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME       "http-proxy-username"

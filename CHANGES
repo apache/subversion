@@ -1,3 +1,11 @@
+Version 0.18.0 (released ?? Feb 2003, branches/0.18.0 @ revision ????)
+
+ User-visible changes:
+ * renamed the [default] section to [global] in the servers config file.
+
+ Developer-visible changes:
+
+
 Version 0.17.1 (released 22 Jan 2003, revision 4503)
 
  User-visible changes:
@@ -10,6 +18,7 @@ Version 0.17.1 (released 22 Jan 2003, revision 4503)
  * miscellaneous small code cleanups
  * bug fixes:  eol-style timestamp changes (#1086), valgrind mem bug,
    better checksum error reporting, 
+
 
 Version 0.17.0 (released 20 Jan 2003, branches/0.17 @ revision 4468)
 
