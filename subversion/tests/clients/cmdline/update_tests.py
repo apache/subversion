@@ -319,26 +319,31 @@ def update_missing(sbox):
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
 
-  os.remove(mu_path)
-  os.remove(rho_path)
+  ### FIXME run_and_verify_update doesn't appear to understand 'Restored'
+  ### feedback
+  #os.remove(mu_path)
+  #os.remove(rho_path)
+
+  ### FIXME I think directories work because they generate 'A'
+  ### feedback, is this the correct feedback?
   shutil.rmtree(E_path)
   shutil.rmtree(H_path)
 
   # Create expected output tree for an update of the missing items by name
   expected_output = svntest.wc.State(wc_dir, {
-    'A/mu' : Item(status='A '),
-    'A/D/G/rho' : Item(status='A '),
+    #'A/mu'        : Item(status='A '),
+    #'A/D/G/rho'   : Item(status='A '),
     'A/B/E' : Item(status='A '),
     'A/B/E/alpha' : Item(status='A '),
     'A/B/E/beta' : Item(status='A '),
-    'A/B/H' : Item(status='A '),
-    'A/B/H/chi' : Item(status='A '),
-    'A/B/H/omega' : Item(status='A '),
-    'A/B/H/psi' : Item(status='A '),
+    'A/D/H' : Item(status='A '),
+    'A/D/H/chi' : Item(status='A '),
+    'A/D/H/omega' : Item(status='A '),
+    'A/D/H/psi' : Item(status='A '),
     })
 
   # Create expected disk tree for the update.
-  expected_disk = svntest.main.greek_state
+  expected_disk = svntest.main.greek_state.copy()
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -804,7 +809,7 @@ test_list = [ None,
               update_to_revert_text_conflicts,
               update_delete_modified_files,
               update_after_add_rm_deleted,
-              # update_missing,
+              update_missing,
              ]
 
 if __name__ == '__main__':

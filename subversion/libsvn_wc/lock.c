@@ -299,6 +299,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
           svn_wc_adm_access_t *entry_access;
           const char *entry_path;
           svn_error_t *svn_err;
+          svn_node_kind_t kind;
 
           apr_hash_this (hi, NULL, NULL, &val);
           entry = val;
@@ -306,6 +307,12 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
               || ! strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
             continue;
           entry_path = svn_path_join (lock->path, entry->name, subpool);
+
+          /* If this is not physically a directory, it may have been
+             deleted say, then ignore it. */
+          SVN_ERR (svn_io_check_path (entry_path, &kind, pool));
+          if (kind != svn_node_dir)
+            continue;
 
           /* Don't use the subpool pool here, the lock needs to persist */
           svn_err = svn_wc_adm_open (&entry_access, lock, entry_path,

@@ -77,7 +77,9 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
    PATH will be locked.  All the access batons will become part of the set
    containing ADM_ACCESS.  This is an all-or-nothing option, if it is not
    possible to lock the entire tree then an error will be returned and
-   ADM_ACCESS will be invalid.
+   ADM_ACCESS will be invalid, with the exception that sudirectories of
+   PATH that are missing from the physical filesystem will not be locked
+   and will not cause an error.
 
    POOL will be used to allocate memory for the baton and any subsequently
    cached items.  If ADM_ACCESS has not been closed when the pool is
