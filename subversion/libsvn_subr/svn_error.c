@@ -48,7 +48,7 @@ make_error_internal (apr_status_t apr_err,
   if (pool)
     {
       apr_pool_t *error_pool;
-      apr_get_userdata ((void **) &error_pool, SVN_ERROR_POOL, pool);
+      apr_pool_userdata_get ((void **) &error_pool, SVN_ERROR_POOL, pool);
       if (error_pool)
         newpool = svn_pool_create (error_pool);
       else
@@ -101,10 +101,10 @@ svn_error__make_error_pool (apr_pool_t *parent, apr_pool_t **error_pool)
 
   /* Create a subpool to hold all error allocations. We use a subpool rather
      than the parent itself, so that we can clear the error pool. */
-  *error_pool = apr_make_sub_pool (parent, abort_on_pool_failure);
+  *error_pool = apr_pool_sub_make (parent, abort_on_pool_failure);
   
   /* Set the error pool on itself. */
-  apr_err = apr_set_userdata (*error_pool, SVN_ERROR_POOL, apr_null_cleanup,
+  apr_err = apr_pool_userdata_set (*error_pool, SVN_ERROR_POOL, apr_pool_cleanup_null,
                               *error_pool);
 
   return apr_err;
@@ -125,12 +125,12 @@ svn_error__get_error_pool (apr_pool_t *pool,
                            apr_pool_t **error_pool,
                            svn_boolean_t *rooted_here)
 {
-  apr_get_userdata ((void **) error_pool, SVN_ERROR_POOL, pool);
+  apr_pool_userdata_get ((void **) error_pool, SVN_ERROR_POOL, pool);
   if (*error_pool == NULL)
     abort_on_pool_failure (SVN_ERR_BAD_CONTAINING_POOL);
 
   if (rooted_here)
-    apr_get_userdata ((void *) rooted_here, SVN_ERROR_POOL_ROOTED_HERE, pool);
+    apr_pool_userdata_get ((void *) rooted_here, SVN_ERROR_POOL_ROOTED_HERE, pool);
 }
 
 
@@ -148,15 +148,15 @@ svn_error__set_error_pool (apr_pool_t *pool,
 {
   apr_status_t apr_err;
 
-  apr_err = apr_set_userdata (error_pool, SVN_ERROR_POOL,
-                              apr_null_cleanup, pool);
+  apr_err = apr_pool_userdata_set (error_pool, SVN_ERROR_POOL,
+                              apr_pool_cleanup_null, pool);
   if (apr_err)
     abort_on_pool_failure (apr_err);
 
   if (rooted_here)
     {
-      apr_err = apr_set_userdata ((void *) 1, SVN_ERROR_POOL_ROOTED_HERE,
-                                  apr_null_cleanup, pool);
+      apr_err = apr_pool_userdata_set ((void *) 1, SVN_ERROR_POOL_ROOTED_HERE,
+                                  apr_pool_cleanup_null, pool);
       if (apr_err)
         abort_on_pool_failure (apr_err);
     }
@@ -199,7 +199,7 @@ svn_pool_create (apr_pool_t *parent_pool)
 {
   apr_pool_t *ret_pool;
 
-  ret_pool = apr_make_sub_pool (parent_pool, abort_on_pool_failure);
+  ret_pool = apr_pool_sub_make (parent_pool, abort_on_pool_failure);
 
   /* If there is no parent, then initialize ret_pool as the "top". */
   if (parent_pool == NULL)
@@ -295,7 +295,7 @@ svn_error_quick_wrap (svn_error_t *child, const char *new_msg)
 void
 svn_error_free (svn_error_t *err)
 {
-  apr_destroy_pool (err->pool);
+  apr_pool_destroy (err->pool);
 }
 
 

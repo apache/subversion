@@ -116,43 +116,43 @@ svn_hash_write (apr_hash_t *hash,
 
       /* Output name length, then name. */
 
-      err = apr_full_write (destfile, "K ", 2, NULL);
+      err = apr_file_write_full (destfile, "K ", 2, NULL);
       if (err) return err;
 
       sprintf (buf, "%ld%n", (long int) keylen, &bytes_used);
-      err = apr_full_write (destfile, buf, bytes_used, NULL);
+      err = apr_file_write_full (destfile, buf, bytes_used, NULL);
       if (err) return err;
 
-      err = apr_full_write (destfile, "\n", 1, NULL);
+      err = apr_file_write_full (destfile, "\n", 1, NULL);
       if (err) return err;
 
-      err = apr_full_write (destfile, (char *) key, keylen, NULL);
+      err = apr_file_write_full (destfile, (char *) key, keylen, NULL);
       if (err) return err;
 
-      err = apr_full_write (destfile, "\n", 1, NULL);
+      err = apr_file_write_full (destfile, "\n", 1, NULL);
       if (err) return err;
 
       /* Output value length, then value. */
 
       vallen = (size_t) (*unpack_func) (&valstring, val); /* secret decoder! */
-      err = apr_full_write (destfile, "V ", 2, NULL);
+      err = apr_file_write_full (destfile, "V ", 2, NULL);
       if (err) return err;
 
       sprintf (buf, "%ld%n", (long int) vallen, &bytes_used);
-      err = apr_full_write (destfile, buf, bytes_used, NULL);
+      err = apr_file_write_full (destfile, buf, bytes_used, NULL);
       if (err) return err;
 
-      err = apr_full_write (destfile, "\n", 1, NULL);
+      err = apr_file_write_full (destfile, "\n", 1, NULL);
       if (err) return err;
 
-      err = apr_full_write (destfile, valstring, vallen, NULL);
+      err = apr_file_write_full (destfile, valstring, vallen, NULL);
       if (err) return err;
 
-      err = apr_full_write (destfile, "\n", 1, NULL);
+      err = apr_file_write_full (destfile, "\n", 1, NULL);
       if (err) return err;
     }
 
-  err = apr_full_write (destfile, "END\n", 4, NULL);
+  err = apr_file_write_full (destfile, "END\n", 4, NULL);
   if (err) return err;
 
   return SVN_NO_ERROR;
@@ -176,7 +176,7 @@ read_length_line (apr_file_t *file, char *buf, apr_size_t *limit)
 
   for (i = 0; i < *limit; i++)
   {
-    err = apr_getc (&c, file); 
+    err = apr_file_getc (&c, file); 
     if (err)
       return err;   /* Note: this status code could be APR_EOF, which
                        is totally fine.  The caller should be aware of
@@ -244,12 +244,12 @@ svn_hash_read (apr_hash_t *hash,
 
           /* Now read that much into a buffer, + 1 byte for null terminator */
           void *keybuf = apr_palloc (pool, keylen + 1);
-          err = apr_full_read (srcfile, keybuf, keylen, &num_read);
+          err = apr_file_read_file (srcfile, keybuf, keylen, &num_read);
           if (err) return err;
           ((char *) keybuf)[keylen] = '\0';
 
           /* Suck up extra newline after key data */
-          err = apr_getc (&c, srcfile);
+          err = apr_file_getc (&c, srcfile);
           if (err) return err;
           if (c != '\n') return SVN_ERR_MALFORMED_FILE;
 
@@ -265,12 +265,12 @@ svn_hash_read (apr_hash_t *hash,
 
               /* Again, 1 extra byte for the null termination. */
               void *valbuf = apr_palloc (pool, vallen + 1);
-              err = apr_full_read (srcfile, valbuf, vallen, &num_read);
+              err = apr_file_read_file (srcfile, valbuf, vallen, &num_read);
               if (err) return err;
               ((char *) valbuf)[vallen] = '\0';
 
               /* Suck up extra newline after val data */
-              err = apr_getc (&c, srcfile);
+              err = apr_file_getc (&c, srcfile);
               if (err) return err;
               if (c != '\n') return SVN_ERR_MALFORMED_FILE;
 

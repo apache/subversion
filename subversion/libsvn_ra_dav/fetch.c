@@ -182,7 +182,7 @@ end_resource (void *userdata, void *resource, const char *status_line,
         }
       else
         {
-          resource_t **subdir = apr_push_array(fc->subdirs);
+          resource_t **subdir = apr_array_push(fc->subdirs);
           *subdir = r;
 
           /* revise the URL to just be a PATH portion */
@@ -197,7 +197,7 @@ end_resource (void *userdata, void *resource, const char *status_line,
     }
   else
     {
-      resource_t **file = apr_push_array(fc->files);
+      resource_t **file = apr_array_push(fc->files);
       *file = r;
 
       printf("  ... found file: %s -> %s\n", r->url, r->vsn_url);
@@ -517,8 +517,8 @@ svn_error_t * svn_ra_dav__do_checkout (void *session_baton,
   fc.editor = editor;
   fc.edit_baton = edit_baton;
   fc.pool = ras->pool;
-  fc.subdirs = apr_make_array(ras->pool, 5, sizeof(resource_t *));
-  fc.files = apr_make_array(ras->pool, 10, sizeof(resource_t *));
+  fc.subdirs = apr_array_make(ras->pool, 5, sizeof(resource_t *));
+  fc.files = apr_array_make(ras->pool, 10, sizeof(resource_t *));
   fc.vsn_url_name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
 
   /* Build a directory resource for the root. We'll pop this off and fetch
@@ -529,7 +529,7 @@ svn_error_t * svn_ra_dav__do_checkout (void *session_baton,
   /* ### verify this the right place to start... */
   rsrc->url = ras->root.path;
 
-  prsrc = apr_push_array(fc.subdirs);
+  prsrc = apr_array_push(fc.subdirs);
   *prsrc = rsrc;
 
   /* ### */
@@ -591,7 +591,7 @@ svn_error_t * svn_ra_dav__do_checkout (void *session_baton,
          for this directory's baton. */
       rsrc = apr_pcalloc(ras->pool, sizeof(*rsrc));
       rsrc->parent_baton = this_baton;
-      prsrc = apr_push_array(fc.subdirs);
+      prsrc = apr_array_push(fc.subdirs);
       *prsrc = rsrc;
 
       idx = fc.subdirs->nelts - 1;

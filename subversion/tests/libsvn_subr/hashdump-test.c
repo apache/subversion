@@ -53,7 +53,7 @@ test1 (const char **msg)
   *msg = "write a hash to a file";
 
   /* Build a hash in memory, and fill it with test data. */
-  proplist = apr_make_hash (pool);
+  proplist = apr_hash_make (pool);
 
   key = svn_string_create ("color", pool);
   apr_hash_set (proplist, key->data, key->len,
@@ -75,13 +75,13 @@ test1 (const char **msg)
                svn_string_create ("This is the SECOND value.", pool));
 
   /* Dump the hash to a file. */
-  apr_open (&f, "hashdump.out",
+  apr_file_open (&f, "hashdump.out",
             (APR_WRITE | APR_CREATE),
             APR_OS_DEFAULT, pool);
 
   result = svn_hash_write (proplist, svn_unpack_bytestring, f);
 
-  apr_close (f);
+  apr_file_close (f);
 
   return ((int) result);
 }
@@ -97,13 +97,13 @@ test2 (const char **msg)
 
   *msg = "read a file into a hash";
 
-  new_proplist = apr_make_hash (pool);
+  new_proplist = apr_hash_make (pool);
 
-  apr_open (&f, "hashdump.out", APR_READ, APR_OS_DEFAULT, pool);
+  apr_file_open (&f, "hashdump.out", APR_READ, APR_OS_DEFAULT, pool);
 
   result = svn_hash_read (new_proplist, svn_pack_bytestring, f, pool);
 
-  apr_close (f);
+  apr_file_close (f);
 
   return ((int) result);
 }

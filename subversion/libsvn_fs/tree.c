@@ -513,7 +513,7 @@ check_node_mutable (svn_fs_node_t *node)
 void
 svn_fs_close_node (svn_fs_node_t *node)
 {
-  apr_destroy_pool (node->pool);
+  apr_pool_destroy (node->pool);
 }
 
 

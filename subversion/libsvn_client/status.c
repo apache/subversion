@@ -47,7 +47,7 @@ svn_client_status (apr_hash_t **statushash,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_hash_t *hash = apr_make_hash (pool);
+  apr_hash_t *hash = apr_hash_make (pool);
 
   err = svn_wc_statuses (hash, path, descend, pool);
   if (err) return err;

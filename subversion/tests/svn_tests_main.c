@@ -139,7 +139,7 @@ main (int argc, char *argv[])
         got_error = 1;
 
   /* Clean up APR */
-  apr_destroy_pool (pool);
+  apr_pool_destroy (pool);
   apr_terminate();
 
   return got_error;

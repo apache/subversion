@@ -177,7 +177,7 @@ svn_wc__make_adm_thing (svn_string_t *path,
 
   if (type == svn_node_file)
     {
-      apr_err = apr_open (&f, path->data,
+      apr_err = apr_file_open (&f, path->data,
                           (APR_WRITE | APR_CREATE | APR_EXCL),
                           APR_OS_DEFAULT,
                           pool);
@@ -187,14 +187,14 @@ svn_wc__make_adm_thing (svn_string_t *path,
       else
         {
           /* Creation succeeded, so close immediately. */
-          apr_err = apr_close (f);
+          apr_err = apr_file_close (f);
           if (apr_err)
             err = svn_error_create (apr_err, 0, NULL, pool, path->data);
         }
     }
   else if (type == svn_node_dir)
     {
-      apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
+      apr_err = apr_dir_make (path->data, APR_OS_DEFAULT, pool);
       if (apr_err)
         err = svn_error_create (apr_err, 0, NULL, pool, path->data);
     }
@@ -231,7 +231,7 @@ maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
     {
       /* SRC doesn't exist, create DST empty. */
       apr_file_t *f = NULL;
-      apr_err = apr_open (&f,
+      apr_err = apr_file_open (&f,
                           dst->data,
                           (APR_WRITE | APR_CREATE),
                           APR_OS_DEFAULT,
@@ -240,7 +240,7 @@ maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
         return svn_error_create (apr_err, 0, NULL, pool, dst->data);
       else
         {
-          apr_err = apr_close (f);
+          apr_err = apr_file_close (f);
           if (apr_err)
             return svn_error_create (apr_err, 0, NULL, pool, dst->data);
           else
@@ -285,7 +285,7 @@ sync_adm_file (svn_string_t *path,
   va_end (ap);
   
   /* Rename. */
-  apr_err = apr_rename_file (tmp_path->data, path->data, pool);
+  apr_err = apr_file_rename (tmp_path->data, path->data, pool);
 
   /* Unconditionally restore path. */
   chop_admin_name (path, components_added);
@@ -495,7 +495,7 @@ open_adm_file (apr_file_t **handle,
       va_end (ap);
     }
 
-  apr_err = apr_open (handle, path->data, flags, APR_OS_DEFAULT, pool);
+  apr_err = apr_file_open (handle, path->data, flags, APR_OS_DEFAULT, pool);
   if (apr_err)
     {
       /* Oddly enough, APR will set *HANDLE even if the open failed.
@@ -534,7 +534,7 @@ close_adm_file (apr_file_t *fp,
   components_added = v_extend_with_adm_name (path, sync, pool, ap);
   va_end (ap);
 
-  apr_err = apr_close (fp);
+  apr_err = apr_file_close (fp);
 
   /* Restore path to its original state no matter what. */
   chop_admin_name (path, components_added);
@@ -562,7 +562,7 @@ close_adm_file (apr_file_t *fp,
       va_end (ap);
       
       /* Rename. */
-      apr_err = apr_rename_file (tmp_path->data, path->data, pool);
+      apr_err = apr_file_rename (tmp_path->data, path->data, pool);
       
       /* Unconditionally restore path. */
       chop_admin_name (path, components_added);
@@ -641,7 +641,7 @@ svn_wc__remove_adm_file (svn_string_t *path, apr_pool_t *pool, ...)
   components_added = v_extend_with_adm_name (path, 0, pool, ap);
   va_end (ap);
 
-  apr_err = apr_remove_file (path->data, pool);
+  apr_err = apr_file_remove (path->data, pool);
   if (apr_err)
     err = svn_error_create (apr_err, 0, NULL, pool, path->data);
 
@@ -737,7 +737,7 @@ make_empty_adm (svn_string_t *path, apr_pool_t *pool)
 
   components_added = extend_with_adm_name (path, 0, pool, NULL);
 
-  apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
+  apr_err = apr_dir_make (path->data, APR_OS_DEFAULT, pool);
   if (apr_err)
     err = svn_error_create (apr_err, 0, NULL, pool, path->data);
     
@@ -764,7 +764,7 @@ init_adm_file (svn_string_t *path,
   if (err)
     return err;
 
-  apr_err = apr_full_write (f, contents->data, contents->len, &written);
+  apr_err = apr_file_write_full (f, contents->data, contents->len, &written);
 
   err = svn_wc__close_adm_file (f, path, thing, 1, pool);
   if (err)

@@ -321,7 +321,7 @@ do_apply_textdelta (svn_string_t *filename,
 
   /* Open a filehandle for tmp local file, and one for text-base if
      applicable. */
-  status = apr_open (&localfile, local_tmp_path->data,
+  status = apr_file_open (&localfile, local_tmp_path->data,
                      APR_READ, APR_OS_DEFAULT, pool);
   if (status)
     return
@@ -365,7 +365,7 @@ do_apply_textdelta (svn_string_t *filename,
   svn_txdelta_free (txdelta_stream);
 
   /* Close the two files */
-  status = apr_close (localfile);
+  status = apr_file_close (localfile);
   if (status)
     return svn_error_create (status, 0, NULL, pool,
                              "do_apply_textdelta: error closing local file");
@@ -433,8 +433,8 @@ do_prop_deltas (svn_string_t *path,
   int i;
   svn_string_t *prop_path, *prop_base_path, *tmp_prop_path;
   apr_array_header_t *local_propchanges;
-  apr_hash_t *localprops = apr_make_hash (pool);
-  apr_hash_t *baseprops = apr_make_hash (pool);
+  apr_hash_t *localprops = apr_hash_make (pool);
+  apr_hash_t *baseprops = apr_hash_make (pool);
   
   /* First, get the prop_path from the original path */
   err = svn_wc__prop_path (&prop_path, path, 0, pool);
@@ -950,7 +950,7 @@ report_local_mods (svn_string_t *path,
   pop_stack (stack);
 
   /* Free all memory used when processing this subdir. */
-  apr_destroy_pool (subpool);
+  apr_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -973,8 +973,8 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
   svn_error_t *err;
 
   struct stack_object *stack = NULL;
-  apr_hash_t *affected_targets = apr_make_hash (pool);
-  apr_hash_t *locks = apr_make_hash (pool);
+  apr_hash_t *affected_targets = apr_hash_make (pool);
+  apr_hash_t *locks = apr_hash_make (pool);
 
   /* Start the crawler! 
 

@@ -52,7 +52,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
   apr_hash_t *targets = NULL;
 
   /* Step 1: look for local mods and send 'em out. */
-  apr_err = apr_open (&dst, xml_dst->data,
+  apr_err = apr_file_open (&dst, xml_dst->data,
                       (APR_WRITE | APR_CREATE),
                       APR_OS_DEFAULT,
                       pool);
@@ -92,7 +92,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
   if (err)
     return err;
 
-  apr_err = apr_close (dst);
+  apr_err = apr_file_close (dst);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "error closing %s", xml_dst->data);

@@ -66,7 +66,7 @@ svn_wc_run_cmd_in_directory (svn_string_t *path,
   apr_procattr_t *cmdproc_attr;
 
   /* Create the process attributes. */
-  apr_err = apr_createprocattr_init (&cmdproc_attr, pool); 
+  apr_err = apr_procattr_create (&cmdproc_attr, pool); 
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf
       (apr_err, 0, NULL, pool,
@@ -74,7 +74,7 @@ svn_wc_run_cmd_in_directory (svn_string_t *path,
        cmd);
 
   /* Make sure we invoke cmd directly, not through a shell. */
-  apr_err = apr_setprocattr_cmdtype (cmdproc_attr, APR_PROGRAM);
+  apr_err = apr_procattr_cmdtype_set (cmdproc_attr, APR_PROGRAM);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf 
       (apr_err, 0, NULL, pool,
@@ -84,7 +84,7 @@ svn_wc_run_cmd_in_directory (svn_string_t *path,
   /* Set the process's working directory. */
   if (path)
     {
-      apr_err = apr_setprocattr_dir (cmdproc_attr, path->data);
+      apr_err = apr_procattr_dir_set (cmdproc_attr, path->data);
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
@@ -93,7 +93,7 @@ svn_wc_run_cmd_in_directory (svn_string_t *path,
     }
 
   /* Set io style. */
-  apr_err = apr_setprocattr_io (cmdproc_attr, APR_FULL_BLOCK, 
+  apr_err = apr_procattr_io_set (cmdproc_attr, APR_FULL_BLOCK, 
                                 APR_CHILD_BLOCK, APR_CHILD_BLOCK);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf
@@ -104,7 +104,7 @@ svn_wc_run_cmd_in_directory (svn_string_t *path,
   /* Use requested inputs and outputs. */
   if (infile)
     {
-      apr_err = apr_setprocattr_childin (cmdproc_attr, infile, NULL);
+      apr_err = apr_procattr_child_in_set (cmdproc_attr, infile, NULL);
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
@@ -113,7 +113,7 @@ svn_wc_run_cmd_in_directory (svn_string_t *path,
     }
   if (outfile)
     {
-      apr_err = apr_setprocattr_childout (cmdproc_attr, outfile, NULL);
+      apr_err = apr_procattr_child_out_set (cmdproc_attr, outfile, NULL);
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
@@ -122,7 +122,7 @@ svn_wc_run_cmd_in_directory (svn_string_t *path,
     }
   if (errfile)
     {
-      apr_err = apr_setprocattr_childerr (cmdproc_attr, errfile, NULL);
+      apr_err = apr_procattr_child_err_set (cmdproc_attr, errfile, NULL);
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
@@ -131,7 +131,7 @@ svn_wc_run_cmd_in_directory (svn_string_t *path,
     }
 
   /* Start the cmd command. */ 
-  apr_err = apr_create_process (&cmd_proc, cmd, args, NULL,
+  apr_err = apr_proc_create (&cmd_proc, cmd, args, NULL,
                                 cmdproc_attr, pool);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf 
@@ -140,7 +140,7 @@ svn_wc_run_cmd_in_directory (svn_string_t *path,
        cmd);
 
   /* Wait for the cmd command to finish. */
-  apr_err = apr_wait_proc (&cmd_proc, APR_WAIT);
+  apr_err = apr_proc_wait (&cmd_proc, APR_WAIT);
   if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
     return svn_error_createf
       (apr_err, 0, NULL, pool,
@@ -176,7 +176,7 @@ file_xfer_under_path (svn_string_t *path,
   case svn_wc__xfer_cp:
     return svn_io_copy_file (full_from_path, full_dest_path, pool);
   case svn_wc__xfer_mv:
-    status = apr_rename_file (full_from_path->data,
+    status = apr_file_rename (full_from_path->data,
                               full_dest_path->data, pool);
     if (status)
       return svn_error_createf (status, 0, NULL, pool,
@@ -279,7 +279,7 @@ remove_from_revision_control (struct log_runner *loggy, svn_string_t *name)
             return err;
           else if (! err)
             {
-              apr_err = apr_remove_file (file_full_path->data,
+              apr_err = apr_file_remove (file_full_path->data,
                                          loggy->pool);
               if (apr_err)
                 return svn_error_createf
@@ -291,7 +291,7 @@ remove_from_revision_control (struct log_runner *loggy, svn_string_t *name)
             }
         }
         
-        apr_err = apr_remove_file (text_base_path->data, loggy->pool);
+        apr_err = apr_file_remove (text_base_path->data, loggy->pool);
         if (apr_err)
           return svn_error_createf
             (apr_err, 0, NULL,
@@ -351,7 +351,7 @@ log_do_run_cmd (struct log_runner *loggy,
       svn_path_add_component_nts (infile_path, infile_name,
                                   svn_path_local_style);
       
-      apr_err = apr_open (&infile, infile_path->data, APR_READ,
+      apr_err = apr_file_open (&infile, infile_path->data, APR_READ,
                           APR_OS_DEFAULT, loggy->pool);
       if (apr_err)
         return svn_error_createf (apr_err, 0, NULL, loggy->pool,
@@ -367,7 +367,7 @@ log_do_run_cmd (struct log_runner *loggy,
       
       /* kff todo: always creates and overwrites, currently.
          Could append if file exists... ?  Consider. */
-      apr_err = apr_open (&outfile, outfile_path->data, 
+      apr_err = apr_file_open (&outfile, outfile_path->data, 
                           (APR_WRITE | APR_CREATE),
                           APR_OS_DEFAULT, loggy->pool);
       if (apr_err)
@@ -384,7 +384,7 @@ log_do_run_cmd (struct log_runner *loggy,
       
       /* kff todo: always creates and overwrites, currently.
          Could append if file exists... ?  Consider. */
-      apr_err = apr_open (&errfile, errfile_path->data, 
+      apr_err = apr_file_open (&errfile, errfile_path->data, 
                           (APR_WRITE | APR_CREATE),
                           APR_OS_DEFAULT, loggy->pool);
       if (apr_err)
@@ -441,10 +441,10 @@ log_do_rm (struct log_runner *loggy, const char *name)
   full_path = svn_string_dup (loggy->path, loggy->pool);
   svn_path_add_component_nts (full_path, name, svn_path_local_style);
 
-  apr_err = apr_remove_file (full_path->data, loggy->pool);
+  apr_err = apr_file_remove (full_path->data, loggy->pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                              "apr_remove_file couldn't remove %s", name);
+                              "apr_file_remove couldn't remove %s", name);
 
   return SVN_NO_ERROR;
 }
@@ -484,7 +484,7 @@ log_do_detect_conflict (struct log_runner *loggy,
     {
       /* the `patch' program created an empty .rej file.  clean it
          up. */
-      apr_err = apr_remove_file (full_path->data, loggy->pool);
+      apr_err = apr_file_remove (full_path->data, loggy->pool);
       if (apr_err)
         return svn_error_createf (apr_err, 0, NULL, loggy->pool,
                                   "log_do_detect_conflict: couldn't rm %s", 
@@ -749,7 +749,7 @@ conflict_if_rejfile (svn_string_t *parent_dir,
       
       if (finfo.size == 0)
         {
-          apr_err = apr_remove_file (rejfile_full_path->data, pool);
+          apr_err = apr_file_remove (rejfile_full_path->data, pool);
           if (apr_err)
             return svn_error_createf
               (apr_err, 0, NULL, pool,
@@ -773,7 +773,7 @@ conflict_if_rejfile (svn_string_t *parent_dir,
         }
       else  /* reject file size > 0 means the entry has conflicts. */
         {
-          apr_hash_t *att_overlay = apr_make_hash (pool);
+          apr_hash_t *att_overlay = apr_hash_make (pool);
 
           apr_hash_set (att_overlay,
                         rejfile_type, APR_HASH_KEY_STRING,
@@ -990,7 +990,7 @@ log_do_committed (struct log_runner *loggy,
                    same ? prop_path->data : tmp_prop_path->data);
 
               /* Make the tmp prop file the new pristine one. */
-              status = apr_rename_file (tmp_prop_path->data,
+              status = apr_file_rename (tmp_prop_path->data,
                                         prop_base_path->data,
                                         loggy->pool);
               if (status)
@@ -1142,10 +1142,10 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
   do {
     buf_len = sizeof (buf);
 
-    apr_err = apr_read (f, buf, &buf_len);
+    apr_err = apr_file_read (f, buf, &buf_len);
     if (apr_err && !APR_STATUS_IS_EOF(apr_err))
       {
-        apr_close (f);
+        apr_file_close (f);
         return svn_error_createf (apr_err, 0, NULL, pool,
                                  "error reading adm log file in %s",
                                   path->data);
@@ -1154,14 +1154,14 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
     err = svn_xml_parse (parser, buf, buf_len, 0);
     if (err)
       {
-        apr_close (f);
+        apr_file_close (f);
         return err;
       }
 
     if (APR_STATUS_IS_EOF(apr_err))
       {
         /* Not an error, just means we're done. */
-        apr_close (f);
+        apr_file_close (f);
         break;
       }
   } while (apr_err == APR_SUCCESS);
@@ -1384,10 +1384,10 @@ svn_wc__log_commit (svn_string_t *path,
                              svn_string_create (revstr, pool),
                              NULL);
       
-      apr_err = apr_full_write (log_fp, logtag->data, logtag->len, NULL);
+      apr_err = apr_file_write_full (log_fp, logtag->data, logtag->len, NULL);
       if (apr_err)
         {
-          apr_close (log_fp);
+          apr_file_close (log_fp);
           return svn_error_createf (apr_err, 0, NULL, pool,
                                     "svn_wc__log_commit: "
                                     "error writing %s's log file", 

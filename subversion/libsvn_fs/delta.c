@@ -109,7 +109,7 @@ svn_fs_dir_delta (svn_fs_dir_t *source,
   if (svn_err) goto error;
 
  error:
-  apr_destroy_pool (pool);
+  apr_pool_destroy (pool);
   return svn_err;
 }
 

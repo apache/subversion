@@ -125,7 +125,7 @@ svn_io_open_unique_file (apr_file_t **f,
       (*unique_name)->data[iterating_portion_idx + 3] = number_buf[3];
       (*unique_name)->data[iterating_portion_idx + 4] = number_buf[4];
 
-      apr_err = apr_open (f, (*unique_name)->data,
+      apr_err = apr_file_open (f, (*unique_name)->data,
                           (APR_WRITE | APR_CREATE | APR_EXCL),
                           APR_OS_DEFAULT, pool);
 
@@ -193,25 +193,25 @@ apr_transfer_file_contents (const char *src,
   char buf[BUFSIZ];
 
   /* Open source file. */
-  apr_err = apr_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
+  apr_err = apr_file_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err)
     return apr_err;
   
   /* Get its size. */
-  apr_err = apr_getfileinfo (&finfo, APR_FINFO_MIN, s);
+  apr_err = apr_file_info_get (&finfo, APR_FINFO_MIN, s);
   if (apr_err)
     {
-      apr_close (s);  /* toss any error */
+      apr_file_close (s);  /* toss any error */
       return apr_err;
     }
   else
     perms = finfo.protection;
 
   /* Open dest file. */
-  apr_err = apr_open (&d, dst, flags, perms, pool);
+  apr_err = apr_file_open (&d, dst, flags, perms, pool);
   if (apr_err)
     {
-      apr_close (s);  /* toss */
+      apr_file_close (s);  /* toss */
       return apr_err;
     }
   
@@ -222,33 +222,33 @@ apr_transfer_file_contents (const char *src,
       apr_size_t bytes_this_time = sizeof (buf);
 
       /* Read 'em. */
-      read_err = apr_read (s, buf, &bytes_this_time);
+      read_err = apr_file_read (s, buf, &bytes_this_time);
       if (read_err && !APR_STATUS_IS_EOF(read_err))
         {
-          apr_close (s);  /* toss */
-          apr_close (d);  /* toss */
+          apr_file_close (s);  /* toss */
+          apr_file_close (d);  /* toss */
           return read_err;
         }
 
       /* Write 'em. */
-      write_err = apr_full_write (d, buf, bytes_this_time, NULL);
+      write_err = apr_file_write_full (d, buf, bytes_this_time, NULL);
       if (write_err)
         {
-          apr_close (s);  /* toss */
-          apr_close (d);
+          apr_file_close (s);  /* toss */
+          apr_file_close (d);
           return write_err;
         }
 
       if (read_err && APR_STATUS_IS_EOF(read_err))
         {
-          apr_err = apr_close (s);
+          apr_err = apr_file_close (s);
           if (apr_err)
             {
-              apr_close (d);
+              apr_file_close (d);
               return apr_err;
             }
           
-          apr_err = apr_close (d);
+          apr_err = apr_file_close (d);
           if (apr_err)
             return apr_err;
         }
@@ -468,7 +468,7 @@ read_handler_apr (void *baton, char *buffer, apr_size_t *len)
   struct baton_apr *btn = baton;
   apr_status_t status;
 
-  status = apr_full_read (btn->file, buffer, *len, len);
+  status = apr_file_read_file (btn->file, buffer, *len, len);
   if (!APR_STATUS_IS_SUCCESS(status) && !APR_STATUS_IS_EOF(status))
     return svn_error_create (status, 0, NULL, btn->pool, "reading file");
   else
@@ -482,7 +482,7 @@ write_handler_apr (void *baton, const char *data, apr_size_t *len)
   struct baton_apr *btn = baton;
   apr_status_t status;
 
-  status = apr_full_write (btn->file, data, *len, len);
+  status = apr_file_write_full (btn->file, data, *len, len);
   if (!APR_STATUS_IS_SUCCESS(status))
     return svn_error_create (status, 0, NULL, btn->pool, "writing file");
   else

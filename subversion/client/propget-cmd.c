@@ -35,7 +35,7 @@ svn_cl__propget (svn_cl__opt_state_t *opt_state,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_hash_t *prop_hash = apr_make_hash (pool);
+  apr_hash_t *prop_hash = apr_hash_make (pool);
   int i;
 
   if (targets->nelts)

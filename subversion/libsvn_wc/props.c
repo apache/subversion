@@ -63,7 +63,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
 {
   apr_hash_index_t *hi;
   apr_array_header_t *ary
-    =  apr_make_array (pool, 1, sizeof(svn_prop_t *));
+    =  apr_array_make (pool, 1, sizeof(svn_prop_t *));
 
   /* Loop over baseprops and examine each key.  This will allow us to
      detect any `deletion' events or `set-modification' events.  */
@@ -88,7 +88,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
           p->name = svn_string_ncreate ((char *) key, klen, pool);
           p->value = NULL;
           
-          *((svn_prop_t **)apr_push_array (ary)) = p;
+          *((svn_prop_t **)apr_array_push (ary)) = p;
         }
       else if (! svn_string_compare (propval1, propval2))
         {
@@ -97,7 +97,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
           p->name = svn_string_ncreate ((char *) key, klen, pool);
           p->value = propval2;
           
-          *((svn_prop_t **)apr_push_array (ary)) = p;
+          *((svn_prop_t **)apr_array_push (ary)) = p;
         }
     }
 
@@ -124,7 +124,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
           p->name = svn_string_ncreate ((char *) key, klen, pool);
           p->value = propval2;
           
-          *((svn_prop_t **)apr_push_array (ary)) = p;
+          *((svn_prop_t **)apr_array_push (ary)) = p;
         }
     }
 
@@ -245,7 +245,7 @@ svn_wc__load_prop_file (svn_string_t *propfile_path,
       apr_status_t status;
       apr_file_t *propfile = NULL;
 
-      status = apr_open (&propfile, propfile_path->data,
+      status = apr_file_open (&propfile, propfile_path->data,
                          APR_READ, APR_OS_DEFAULT, pool);
       if (status)
         return svn_error_createf (status, 0, NULL, pool,
@@ -259,7 +259,7 @@ svn_wc__load_prop_file (svn_string_t *propfile_path,
                                   "load_prop_file:  can't parse `%s'",
                                   propfile_path->data);
 
-      status = apr_close (propfile);
+      status = apr_file_close (propfile);
       if (status)
         return svn_error_createf (status, 0, NULL, pool,
                                   "load_prop_file: can't close `%s'",
@@ -281,7 +281,7 @@ svn_wc__save_prop_file (svn_string_t *propfile_path,
   apr_status_t apr_err;
   apr_file_t *prop_tmp;
 
-  apr_err = apr_open (&prop_tmp, propfile_path->data,
+  apr_err = apr_file_open (&prop_tmp, propfile_path->data,
                       (APR_WRITE | APR_CREATE),
                       APR_OS_DEFAULT, pool);
   if (apr_err)
@@ -296,7 +296,7 @@ svn_wc__save_prop_file (svn_string_t *propfile_path,
                               "save_prop_file: can't write prop hash to `%s'",
                               propfile_path->data);
 
-  apr_err = apr_close (prop_tmp);
+  apr_err = apr_file_close (prop_tmp);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "save_prop_file: can't close `%s'",
@@ -322,11 +322,11 @@ append_prop_conflict (apr_file_t *fp,
   apr_size_t written;
   apr_status_t status;
 
-  status = apr_full_write (fp, conflict_description->data,
+  status = apr_file_write_full (fp, conflict_description->data,
                            conflict_description->len, &written);
   if (status)
     return svn_error_create (status, 0, NULL, pool,
-                             "append_prop_conflict: apr_full_write failed.");
+                             "append_prop_conflict: apr_file_write_full failed.");
   return SVN_NO_ERROR;
 }
 
@@ -432,8 +432,8 @@ svn_wc__do_property_merge (svn_string_t *path,
   if (err) return err;
 
   /* Load the base & working property files into hashes */
-  localhash = apr_make_hash (pool);
-  basehash = apr_make_hash (pool);
+  localhash = apr_hash_make (pool);
+  basehash = apr_hash_make (pool);
   
   err = svn_wc__load_prop_file (base_propfile_path,
                                 basehash, pool);
@@ -667,7 +667,7 @@ svn_wc__do_property_merge (svn_string_t *path,
       /* First, _close_ this temporary conflicts file.  We've been
          appending to it all along. */
       apr_status_t status;
-      status = apr_close (reject_tmp_fp);
+      status = apr_file_close (reject_tmp_fp);
       if (status)
         return svn_error_createf (status, 0, NULL, pool,
                                   "do_property_merge: can't close '%s'",
@@ -705,7 +705,7 @@ svn_wc__do_property_merge (svn_string_t *path,
                                          pool);
           if (err) return err;
 
-          status = apr_close (reject_fp);
+          status = apr_file_close (reject_fp);
           if (status)
             return svn_error_createf (status, 0, NULL, pool,
                                       "do_property_merge: can't close '%s'",
@@ -782,7 +782,7 @@ svn_wc_prop_list (apr_hash_t **props,
   enum svn_node_kind kind, pkind;
   svn_string_t *prop_path;
   
-  *props = apr_make_hash (pool);
+  *props = apr_hash_make (pool);
 
   /* Check validity of PATH */
   err = svn_io_check_path (path, &kind, pool);

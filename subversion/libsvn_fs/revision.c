@@ -119,7 +119,7 @@ svn_fs__revision_root (svn_fs_id_t **id_p,
   return 0;
 
  corrupt:
-  apr_destroy_pool (subpool);
+  apr_pool_destroy (subpool);
   return corrupt_revision (fs, v);
 }
 

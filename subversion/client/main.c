@@ -286,14 +286,14 @@ read_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
 
   res = svn_string_create ("", pool);
 
-  apr_err = apr_open (&f, filename, APR_READ, APR_OS_DEFAULT, pool);
+  apr_err = apr_file_open (&f, filename, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "read_from_file: failed to open '%s'",
                               filename);
       
   do {
-    apr_err = apr_full_read (f, buf, sizeof(buf), &len);
+    apr_err = apr_file_read_file (f, buf, sizeof(buf), &len);
     if (apr_err && !APR_STATUS_IS_EOF (apr_err))
       return svn_error_createf (apr_err, 0, NULL, pool,
                                 "read_from_file: failed to read '%s'",
@@ -302,7 +302,7 @@ read_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
     svn_string_appendbytes (res, buf, len);
   } while (len != 0);
 
-  apr_err = apr_close (f);
+  apr_err = apr_file_close (f);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "read_from_file: failed to close '%s'",
@@ -346,18 +346,18 @@ main (int argc, const char * const *argv)
   memset (&opt_state, 0, sizeof (opt_state));
   opt_state.revision = SVN_INVALID_REVNUM;
 
-  targets = apr_make_array (pool, 0, sizeof (svn_string_t *));
+  targets = apr_array_make (pool, 0, sizeof (svn_string_t *));
 
   /* No args?  Show usage. */
   if (argc <= 1)
     {
       svn_cl__help (NULL, targets, pool);
-      apr_destroy_pool (pool);
+      apr_pool_destroy (pool);
       return EXIT_FAILURE;
     }
 
   /* Else, parse options. */
-  apr_initopt (&os, pool, argc, argv);
+  apr_getopt_init (&os, pool, argc, argv);
   os->interleave = 1;
   while (1)
     {
@@ -368,7 +368,7 @@ main (int argc, const char * const *argv)
       else if (! APR_STATUS_IS_SUCCESS (apr_err))
         {
           svn_cl__help (NULL, targets, pool);
-          apr_destroy_pool (pool);
+          apr_pool_destroy (pool);
           return EXIT_FAILURE;
         }
 
@@ -419,7 +419,7 @@ main (int argc, const char * const *argv)
         {
           fprintf (stderr, "subcommand argument required\n");
           svn_cl__help (NULL, targets, pool);
-          apr_destroy_pool (pool);
+          apr_pool_destroy (pool);
           return EXIT_FAILURE;
         }
       else
@@ -430,7 +430,7 @@ main (int argc, const char * const *argv)
             {
               fprintf (stderr, "unknown command: %s\n", first_arg);
               svn_cl__help (NULL, targets, pool);
-              apr_destroy_pool (pool);
+              apr_pool_destroy (pool);
               return EXIT_FAILURE;
             }
         }
@@ -466,7 +466,7 @@ main (int argc, const char * const *argv)
         {
           fprintf (stderr, "property name argument required\n");
           svn_cl__help (NULL, targets, pool);
-          apr_destroy_pool (pool);
+          apr_pool_destroy (pool);
           return EXIT_FAILURE;
         }
       else
@@ -484,7 +484,7 @@ main (int argc, const char * const *argv)
         {
           fprintf (stderr, "property value argument required\n");
           svn_cl__help (NULL, targets, pool);
-          apr_destroy_pool (pool);
+          apr_pool_destroy (pool);
           return EXIT_FAILURE;
         }
       else
@@ -498,7 +498,7 @@ main (int argc, const char * const *argv)
   for (; os->ind < os->argc; os->ind++)
     {
       const char *this_arg = os->argv[os->ind];
-      (*((svn_string_t **) apr_push_array (targets)))
+      (*((svn_string_t **) apr_array_push (targets)))
         = svn_string_create (this_arg, pool);
     }
 
@@ -511,7 +511,7 @@ main (int argc, const char * const *argv)
           || (subcommand->cmd_code == svn_cl__status_command)
           || (subcommand->cmd_code == svn_cl__update_command)))
     {
-      (*((svn_string_t **) apr_push_array (targets)))
+      (*((svn_string_t **) apr_array_push (targets)))
         = svn_string_create (".", pool);
     }
   else
@@ -525,7 +525,7 @@ main (int argc, const char * const *argv)
   if (err)
     svn_handle_error (err, stdout, 0);
   
-  apr_destroy_pool (pool);
+  apr_pool_destroy (pool);
   return EXIT_SUCCESS;
 }
 

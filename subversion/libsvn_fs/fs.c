@@ -191,9 +191,9 @@ svn_fs_new (apr_pool_t *parent_pool)
 
   new->warning = default_warning_func;
 
-  apr_register_cleanup (new->pool, (void *) new,
+  apr_pool_cleanup_register (new->pool, (void *) new,
 			(apr_status_t (*) (void *)) cleanup_fs_apr,
-			apr_null_cleanup);
+			apr_pool_cleanup_null);
 
   return new;
 }
@@ -218,7 +218,7 @@ svn_fs_close_fs (svn_fs_t *fs)
      pool, so just freeing the pool should shut everything down
      nicely.  But do catch an error, if one occurs.  */
   fs->cleanup_error = &svn_err;
-  apr_destroy_pool (fs->pool); 
+  apr_pool_destroy (fs->pool); 
 
   return svn_err;
 }
@@ -260,7 +260,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   fs->env_path = apr_pstrdup (fs->pool, path);
 
   /* Create the directory for the new environment (if needed).  */
-  apr_err = apr_make_dir (path, APR_OS_DEFAULT, fs->pool);
+  apr_err = apr_dir_make (path, APR_OS_DEFAULT, fs->pool);
   if (apr_err != 0 && !APR_STATUS_IS_EEXIST(apr_err))
     return svn_error_createf (apr_err, 0, 0, fs->pool,
 			      "creating Berkeley DB environment dir `%s'",

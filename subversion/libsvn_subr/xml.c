@@ -107,7 +107,7 @@ svn_xml_free_parser (svn_xml_parser_t *svn_parser)
   XML_ParserFree (svn_parser->parser);        
 
   /* Free the subversion parser */
-  apr_destroy_pool (svn_parser->pool);
+  apr_pool_destroy (svn_parser->pool);
 }
 
 
@@ -238,7 +238,7 @@ amalgamate (const char **atts,
 apr_hash_t *
 svn_xml_ap_to_hash (va_list ap, apr_pool_t *pool)
 {
-  apr_hash_t *ht = apr_make_hash (pool);
+  apr_hash_t *ht = apr_hash_make (pool);
   const char *key;
   
   while ((key = va_arg (ap, char *)) != NULL)
@@ -254,7 +254,7 @@ svn_xml_ap_to_hash (va_list ap, apr_pool_t *pool)
 apr_hash_t *
 svn_xml_make_att_hash (const char **atts, apr_pool_t *pool)
 {
-  apr_hash_t *ht = apr_make_hash (pool);
+  apr_hash_t *ht = apr_hash_make (pool);
   amalgamate (atts, ht, 0, pool);  /* third arg irrelevant in this case */
   return ht;
 }
@@ -332,7 +332,7 @@ svn_xml_make_open_tag_v (svn_string_t **str,
   apr_hash_t *ht = svn_xml_ap_to_hash (ap, subpool);
 
   svn_xml_make_open_tag_hash (str, pool, style, tagname, ht);
-  apr_destroy_pool (subpool);
+  apr_pool_destroy (subpool);
 }
 
 

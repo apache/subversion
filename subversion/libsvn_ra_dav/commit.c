@@ -138,8 +138,8 @@ create_activity (commit_ctx_t *cc)
   SVN_ERR( svn_wc_prop_get(&activity_url, propname, path, cc->ras->pool) );
 
   /* the URL for our activity will be ACTIVITY_URL/UUID */
-  apr_get_uuid(&uuid);
-  apr_format_uuid(uuid_buf, &uuid);
+  apr_uuid_get(&uuid);
+  apr_uuid_format(uuid_buf, &uuid);
 
   svn_path_add_component(activity_url, &uuid_str, svn_path_url_style);
 
@@ -272,7 +272,7 @@ static void record_prop_change(apr_pool_t *pool,
                                const svn_string_t *value)
 {
   if (*prop_changes == NULL)
-    *prop_changes = apr_make_hash(pool);
+    *prop_changes = apr_hash_make(pool);
 
   /* ### need to copy name/value into POOL */
 
@@ -618,7 +618,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   /* ### store log_msg, close_func, set_func, close_baton */
 
   cc->ras = ras;
-  cc->resources = apr_make_hash(ras->pool);
+  cc->resources = apr_hash_make(ras->pool);
   cc->vsn_url_name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
   err = create_activity(cc);
   if (err)

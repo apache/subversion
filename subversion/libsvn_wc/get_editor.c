@@ -130,7 +130,7 @@ make_dir_baton (svn_string_t *name,
   d->parent_baton = parent_baton;
   d->ref_count    = 1;
   d->pool         = subpool;
-  d->propchanges  = apr_make_array (subpool, 1, sizeof(svn_prop_t *));
+  d->propchanges  = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
 
   if (name)
     d->name = svn_string_dup (name, subpool);
@@ -169,7 +169,7 @@ free_dir_baton (struct dir_baton *dir_baton)
      return err;
 
   /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
-  apr_destroy_pool (dir_baton->pool);
+  apr_pool_destroy (dir_baton->pool);
 
   /* We've declared this directory done, so decrement its parent's ref
      count too. */ 
@@ -259,7 +259,7 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_string_t *name)
   f->dir_baton  = parent_dir_baton;
   f->name       = name;
   f->path       = path;
-  f->propchanges = apr_make_array (subpool, 1, sizeof(svn_prop_t *));
+  f->propchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
 
   parent_dir_baton->ref_count++;
 
@@ -271,7 +271,7 @@ static svn_error_t *
 free_file_baton (struct file_baton *fb)
 {
   struct dir_baton *parent = fb->dir_baton;
-  apr_destroy_pool (fb->pool);
+  apr_pool_destroy (fb->pool);
   return decrement_ref_count (parent);
 }
 
@@ -302,7 +302,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   err2 = svn_wc__close_text_base (hb->dest, fb->path, 0, fb->pool);
   if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
     err = err2;
-  apr_destroy_pool (hb->pool);
+  apr_pool_destroy (hb->pool);
 
   if (err != SVN_NO_ERROR)
     {
@@ -310,8 +310,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
       apr_pool_t *pool = svn_pool_create (fb->pool);
       svn_string_t *tmppath = svn_wc__text_base_path (fb->path, TRUE, pool);
 
-      apr_remove_file (tmppath->data, pool);
-      apr_destroy_pool (pool);
+      apr_file_remove (tmppath->data, pool);
+      apr_pool_destroy (pool);
     }
   else
     {
@@ -430,10 +430,10 @@ delete_entry (svn_string_t *name, void *parent_baton)
                            name,
                            NULL);
 
-    apr_err = apr_full_write (log_fp, log_item->data, log_item->len, NULL);
+    apr_err = apr_file_write_full (log_fp, log_item->data, log_item->len, NULL);
     if (apr_err)
       {
-        apr_close (log_fp);
+        apr_file_close (log_fp);
         return svn_error_createf (apr_err, 0, NULL, parent_dir_baton->pool,
                                   "delete error writing %s's log file",
                                   parent_dir_baton->path->data);
@@ -557,7 +557,7 @@ change_dir_prop (void *dir_baton,
   propchange->value = local_value;
 
   /* Push the object to the file baton's array of propchanges */
-  receiver = (svn_prop_t **) apr_push_array (db->propchanges);
+  receiver = (svn_prop_t **) apr_array_push (db->propchanges);
   *receiver = propchange;
 
   /* Let close_dir() know that propchanges are waiting to be
@@ -660,11 +660,11 @@ close_directory (void *dir_baton)
 
       
       /* Write our accumulation of log entries into a log file */
-      apr_err = apr_full_write (log_fp, entry_accum->data,
+      apr_err = apr_file_write_full (log_fp, entry_accum->data,
                                 entry_accum->len, NULL);
       if (apr_err)
         {
-          apr_close (log_fp);
+          apr_file_close (log_fp);
           return svn_error_createf (apr_err, 0, NULL, db->pool,
                                     "close_dir: error writing %s's log file",
                                     db->path->data);
@@ -819,7 +819,7 @@ apply_textdelta (void *file_baton,
         {
           if (hb->source)
             svn_wc__close_text_base (hb->source, fb->path, 0, subpool);
-          apr_destroy_pool (subpool);
+          apr_pool_destroy (subpool);
           return err;
         }
       else if (err)
@@ -835,7 +835,7 @@ apply_textdelta (void *file_baton,
     {
       if (hb->dest)
         svn_wc__close_text_base (hb->dest, fb->path, 0, subpool);
-      apr_destroy_pool (subpool);
+      apr_pool_destroy (subpool);
       return err;
     }
   
@@ -883,7 +883,7 @@ change_file_prop (void *file_baton,
   propchange->value = local_value;
 
   /* Push the object to the file baton's array of propchanges */
-  receiver = (svn_prop_t **) apr_push_array (fb->propchanges);
+  receiver = (svn_prop_t **) apr_array_push (fb->propchanges);
   *receiver = propchange;
 
   /* Let close_file() know that propchanges are waiting to be
@@ -1007,21 +1007,21 @@ close_file (void *file_baton)
             return err;
           
           /* Create the process attributes. */
-          apr_err = apr_createprocattr_init (&diffproc_attr, fb->pool); 
+          apr_err = apr_procattr_create (&diffproc_attr, fb->pool); 
           if (! APR_STATUS_IS_SUCCESS (apr_err))
             return svn_error_create 
               (apr_err, 0, NULL, fb->pool,
                "close_file: error creating diff process attributes");
           
           /* Make sure we invoke diff directly, not through a shell. */
-          apr_err = apr_setprocattr_cmdtype (diffproc_attr, APR_PROGRAM);
+          apr_err = apr_procattr_cmdtype_set (diffproc_attr, APR_PROGRAM);
           if (! APR_STATUS_IS_SUCCESS (apr_err))
             return svn_error_create 
               (apr_err, 0, NULL, fb->pool,
                "close_file: error setting diff process cmdtype");
           
           /* Set io style. */
-          apr_err = apr_setprocattr_io (diffproc_attr, 0, 
+          apr_err = apr_procattr_io_set (diffproc_attr, 0, 
                                         APR_CHILD_BLOCK, APR_CHILD_BLOCK);
           if (! APR_STATUS_IS_SUCCESS (apr_err))
             return svn_error_create
@@ -1029,7 +1029,7 @@ close_file (void *file_baton)
                "close_file: error setting diff process io attributes");
           
           /* Tell it to send output to the diff file. */
-          apr_err = apr_setprocattr_childout (diffproc_attr,
+          apr_err = apr_procattr_child_out_set (diffproc_attr,
                                               received_diff_file,
                                               NULL);
           if (! APR_STATUS_IS_SUCCESS (apr_err))
@@ -1048,7 +1048,7 @@ close_file (void *file_baton)
           /* Start the diff command.  kff todo: path to diff program
              should be determined through various levels of fallback,
              of course, not hardcoded. */ 
-          apr_err = apr_create_process (&diff_proc,
+          apr_err = apr_proc_create (&diff_proc,
                                         SVN_CLIENT_DIFF,
                                         diff_args,
                                         NULL,
@@ -1060,7 +1060,7 @@ close_file (void *file_baton)
                "close_file: error starting diff process");
           
           /* Wait for the diff command to finish. */
-          apr_err = apr_wait_proc (&diff_proc, APR_WAIT);
+          apr_err = apr_proc_wait (&diff_proc, APR_WAIT);
           if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
             return svn_error_createf
               (apr_err, 0, NULL, fb->pool,
@@ -1110,7 +1110,7 @@ close_file (void *file_baton)
             return err;
           else
             {
-              apr_err = apr_close (reject_file);
+              apr_err = apr_file_close (reject_file);
               if (apr_err)
                 return svn_error_createf (apr_err, 0, NULL, fb->pool,
                                           "close_file: error closing %s",
@@ -1272,10 +1272,10 @@ close_file (void *file_baton)
     }
 
   /* Write our accumulation of log entries into a log file */
-  apr_err = apr_full_write (log_fp, entry_accum->data, entry_accum->len, NULL);
+  apr_err = apr_file_write_full (log_fp, entry_accum->data, entry_accum->len, NULL);
   if (apr_err)
     {
-      apr_close (log_fp);
+      apr_file_close (log_fp);
       return svn_error_createf (apr_err, 0, NULL, fb->pool,
                                 "close_file: error writing %s's log file",
                                 fb->path->data);
@@ -1315,7 +1315,7 @@ close_edit (void *edit_baton)
   struct edit_baton *eb = edit_baton;
   
   /* The edit is over, free its pool. */
-  apr_destroy_pool (eb->pool);
+  apr_pool_destroy (eb->pool);
   
   /* kff todo:  Wow.  Is there _anything_ else that needs to be done? */
   

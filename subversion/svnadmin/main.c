@@ -57,7 +57,7 @@ main (int argc, const char * const *argv)
       return EXIT_FAILURE;
     }
 
-  apr_destroy_pool (pool);
+  apr_pool_destroy (pool);
   apr_terminate();
 
   return EXIT_SUCCESS;
