@@ -72,7 +72,13 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
   assert (path);
   assert (switch_url && (switch_url[0] != '\0'));
 
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, TRUE, recurse,
+  /* ### Note: we don't pass the `recurse' flag as the tree_lock
+     argument to probe_open below, only because the ra layer is
+     planning to blindly invalidate all wcprops below path anyway, and
+     it needs a full tree lock to do so.  If someday the ra layer gets
+     smarter about this, then we can start passing `recurse' below
+     again.  See issue #1000 and related commits for details. */
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, TRUE, TRUE,
                                   pool));
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   

@@ -140,7 +140,7 @@ typedef struct {
   svn_stringbuf_t *href;
 
   const char *current_wcprop_path;
-
+  svn_boolean_t is_switch;
   svn_error_t *err;
 
 } report_baton_t;
@@ -1741,6 +1741,16 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
           /* pathbuf has to live for the whole edit! */
           pathbuf = svn_stringbuf_create("", rb->ras->pool);
 
+          /* During switch operations, we need to invalidate the
+             tree's version resource URLs in case something goes
+             wrong. */
+          if (rb->is_switch && rb->ras->callbacks->invalidate_wc_props)
+            {
+              CHKERR( rb->ras->callbacks->invalidate_wc_props
+                      (rb->ras->callback_baton,
+                       "", SVN_RA_DAV__LP_VSN_URL, rb->ras->pool) );
+            }
+
           subpool = svn_pool_create(rb->ras->pool);
           CHKERR( (*rb->editor->open_root)(rb->edit_baton, base,
                                            subpool, &new_dir_baton) );
@@ -2009,9 +2019,9 @@ static int end_element(void *userdata,
       /* fetch node props as necessary. */
       CHKERR( add_node_props(rb, TOP_DIR(rb).pool));
 
-      /* close the topmost directory, and pop it from the stack.
-         also, destroy the subpool used exclusive by this directory
-         and its children.  */
+      /* Close the directory on top of the stack, and pop it.  Also,
+         destroy the subpool used exclusive by this directory and its
+         children.  */
       CHKERR( (*rb->editor->close_directory)(TOP_DIR(rb).baton, 
                                              TOP_DIR(rb).pool) );
       svn_pool_destroy(TOP_DIR(rb).pool);
@@ -2075,12 +2085,12 @@ static int end_element(void *userdata,
           href_val.data = rb->href->data;
           href_val.len = rb->href->len;
 
-          if (rb->ras->callbacks->push_wc_prop != NULL)
-            CHKERR( rb->ras->callbacks->push_wc_prop(rb->ras->callback_baton,
-                                                     rb->current_wcprop_path,
-                                                     SVN_RA_DAV__LP_VSN_URL,
-                                                     &href_val,
-                                                     rb->ras->pool) );
+          if (rb->ras->callbacks->set_wc_prop != NULL)
+            CHKERR( rb->ras->callbacks->set_wc_prop(rb->ras->callback_baton,
+                                                    rb->current_wcprop_path,
+                                                    SVN_RA_DAV__LP_VSN_URL,
+                                                    &href_val,
+                                                    rb->ras->pool) );
         }
       /* else we're setting a wcprop in the context of an editor drive. */
       else if (rb->file_baton == NULL)
@@ -2334,6 +2344,7 @@ make_reporter (void *session_baton,
   rb->editor = editor;
   rb->edit_baton = edit_baton;
   rb->fetch_content = fetch_content;
+  rb->is_switch = dst_path ? TRUE : FALSE;
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use

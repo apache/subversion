@@ -57,8 +57,19 @@ typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *baton,
                                                    apr_pool_t *pool);
 
 /* This is a function type which allows the RA layer to store new
+   working copy properties during update-like operations.  See the
+   comments for svn_ra_get_wc_prop_func_t for BATON, PATH, and NAME.
+   The VALUE is the value that will be stored for the property; a null
+   VALUE means the property will be deleted.  */
+typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *baton,
+                                                   const char *path,
+                                                   const char *name,
+                                                   const svn_string_t *value,
+                                                   apr_pool_t *pool);
+
+/* This is a function type which allows the RA layer to store new
    working copy properties as part of a commit.  See the comments for
-   svn_ra_get_wc_prop_func_t to for BATON, PATH, and NAME.  The VALUE
+   svn_ra_get_wc_prop_func_t for BATON, PATH, and NAME.  The VALUE
    is the value that will be stored for the property; a null VALUE
    means the property will be deleted.
 
@@ -74,6 +85,18 @@ typedef svn_error_t *(*svn_ra_push_wc_prop_func_t) (void *baton,
                                                     const char *name,
                                                     const svn_string_t *value,
                                                     apr_pool_t *pool);
+
+/* This is a function type which allows the RA layer to invalidate
+   (i.e., remove) wcprops.  See the documentation for
+   svn_ra_get_wc_prop_func_t for BATON, PATH, and NAME.
+
+   Unlike svn_ra_push_wc_prop_func_t, this has immediate effect.  If
+   it returns success, the wcprops have been removed. */
+typedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t) (void *baton,
+                                                           const char *path,
+                                                           const char *name,
+                                                           apr_pool_t *pool);
+
 
 /* A function type for retrieving the youngest revision from a repos.   */
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t) 
@@ -250,8 +273,14 @@ typedef struct svn_ra_callbacks_t
      ### what is in the WC. we'll cross that bridge one day... */
   svn_ra_get_wc_prop_func_t get_wc_prop;
 
-  /* Set working copy properties. */
+  /* Immediately set new values for working copy properties. */
+  svn_ra_set_wc_prop_func_t set_wc_prop;
+
+  /* Schedule new values for working copy properties. */
   svn_ra_push_wc_prop_func_t push_wc_prop;
+
+  /* Invalidate working copy properties. */
+  svn_ra_invalidate_wc_props_func_t invalidate_wc_props;
 
 } svn_ra_callbacks_t;
 

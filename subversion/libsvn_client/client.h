@@ -132,7 +132,7 @@ typedef struct
         in the administrative area instead of in the working copy itself.
 
       - READ_ONLY_WC indicates that the RA layer should not attempt
-        modify the working copy directly.
+        modify the WC props directly.
 
    BASE_DIR may be NULL if the RA operation does not correspond to a
    working copy (in which case, DO_STORE and USE_ADMIN should both
