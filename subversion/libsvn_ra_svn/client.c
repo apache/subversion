@@ -1417,8 +1417,8 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create (pool);
 
-  /* ###TODO send all the locks over the wire at once.  This loop is
-        just a temporary shim. */
+  /* ### TODO for 1.3: Send all the locks over the wire at once.  This
+        loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
       svn_lock_t *lock;
@@ -1477,8 +1477,8 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create (pool);
 
-  /* ###TODO send all the lock tokens over the wire at once.  This
-        loop is just a temporary shim. */
+  /* ### TODO for 1.3: Send all the lock tokens over the wire at once.
+        This loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
       const void *key;
