@@ -101,9 +101,8 @@ test $? = 0 || {
     $CP "tests.log" "$LOG_FILE_PREFIX.log.$BUILD_TYPE.$RA_TYPE.$REV.failed" \
         >> $LOG_FILE 2>&1
 
-    echo >> $LOG_FILE
-    echo "tests.log:" >> $LOG_FILE
-    $CAT tests.log >> $LOG_FILE 2>&1
+    # Prepare the log file for the mailer
+    $CAT "tests.log" | $GZIP_C > "$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.log.gz"
     FAIL kill_svnserve
 }
 PASS
