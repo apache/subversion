@@ -495,7 +495,7 @@ sub read_from_process
   my ($status, @output) = &safe_read_from_pipe(@_);
   if ($status)
     {
-      return ("$0: @_ failed with this output:", @output);
+      return ("$0: `@_' failed with this output:", @output);
     }
   else
     {

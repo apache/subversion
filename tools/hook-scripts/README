@@ -9,7 +9,14 @@ Contents:
 
    1. commit-email.pl
       Uses the `svnlook' program to send commit emails.  Invoke it
-      from `repository/hooks/post-commit'.  Read comment at top for
-      usage.
+      from `repository/hooks/post-commit'.  Run the script with no
+      arguments for usage.
 
-   2. ?
+   2. commit-access-check.pl and commit-access-check.cfg
+      Uses the `svnlook' program to check if check if the user that
+      submitted the commit has appropriate rights to perform the
+      commit on all the modified files and directories using the
+      permissions specified in the configuration file.
+
+      The commit-access-check.cfg is a sample configuration file that
+      you should modify for your own use.
