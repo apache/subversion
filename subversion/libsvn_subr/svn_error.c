@@ -80,7 +80,7 @@ svn_create_error (ap_status_t err,
 void
 svn_handle_error (svn_error_t *err)
 {
-  printf ("\n***** svn_error: errno %d, %s\n", 
+  printf ("\nsvn_error: errno %d, %s\n", 
           err->err, err->description);
   printf ("      ");
   fflush (stdout);
