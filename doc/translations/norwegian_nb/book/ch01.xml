@@ -386,7 +386,7 @@
         <term>svnversion</term>
         <listitem>
           <para>Et program for &#229; rapportere tilstanden (i betydningen av 
-            revisjonener for de elementene som finnes) for en 
+            revisjoner for de elementene som finnes) for en 
             arbeidskopi.</para>
         </listitem>
       </varlistentry>
@@ -451,10 +451,11 @@
     <title>En rask start</title>
     
     <para>Noen personer har problemer med &#229; absorbere en ny teknologi 
-      ved &#229; lese dokumentasjon lagt ut etter et &#171;ovenfra og 
-      ned&#187;-prinsipp som i denne boken.
+      ved &#229; lese dokumentasjon lagt ut etter et <quote>ovenfra og 
+      ned</quote>-prinsipp som i denne boken.
       Denne seksjonen er en veldig kort introduksjon til Subversion., og 
-      er ment &#229; gi personer som l&#230;rer &#171;nedenfra og opp&#187; en sjanse.
+      er ment &#229; gi personer som l&#230;rer <quote>nedenfra og opp</quote> en 
+      sjanse.
       Hvis du er en av dem som liker &#229; l&#230;re gjennom eksperimentering, 
       vil den f&#248;lgende demonstrasjonen f&#229; deg opp &#229; kj&#248;re.
       Under gjennomgangen vil vi gi deg lenker til de relevante 
@@ -466,7 +467,7 @@
       videre.</para>
 
     <note>
-      <para>Det f&#248;lgende eksemplet forutsetter at du har 
+      <para>Det f&#248;lgende eksempelet forutsetter at du har 
         <command>svn</command>, kommandolinjeklienten, og 
         <command>svnadmin</command>, det administrative verkt&#248;yet, klar 
         til kj&#248;ring.
@@ -478,7 +479,7 @@
         typen <literal>file://</literal>.</para>
     </note>
 
-    <para>Subversion lagrer alle versjonerte data i et sentralt depot. 
+    <para>Subversion lagrer alle versjonerte data i et sentralt depot.
       For &#229; begynne, lag et nytt depot:</para>
 
     <screen>
@@ -497,8 +498,7 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
       Du vil ikke se dine versjonerte filer hvis du tar en kikk 
       innenfor.
       For mer informasjon om opprettelse og vedlikehold av depot, se 
-      <xref
-      linkend="svn-ch-5"/>.</para>
+      <xref linkend="svn-ch-5"/>.</para>
 
     <para>Deretter, lag et tre av filer og kataloger som skal importeres 
       inn i depotet.
@@ -576,7 +576,7 @@ Checked out revision 1.
     <para>For en full gjennomgang av tingene som du kan gj&#248;re med 
       arbeidskopien din, les <xref linkend="svn-ch-3"/>.</para>
 
-    <para>Ved dette punktet har du valget om &#229; gj&#248;re depotet ditt 
+    <para>Ved dette punktet har du valget &#229; gj&#248;re depotet ditt 
       tilgjengelig over et nettverk.
       Se <xref linkend="svn-ch-6"/> for &#229; l&#230;re om de forskjellige 
       tjenerprosessene tilgjengelig og hvordan du setter dem opp.</para>

@@ -8,7 +8,7 @@ there to the Subversion repository when they reach something close to a
 presentable state.
 
 The overall status of the translation is described in the file
-  http://svn.sunbase.org/repos/svnbook_nb/TRANSLATION-STATUS
+  http://svn.sunbase.org/repos/svnbook_nb/trunk/TRANSLATION-STATUS
 which is continuously updated.
 
 If you want to join the translation, please send a mail to 

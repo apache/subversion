@@ -72,7 +72,7 @@ $(BOOK_VERSION_SOURCE): book-version
 
 book-version:
 	@if $(SVNVERSION) . > /dev/null; then \
-	echo '<!ENTITY svn.version "Revisjon '`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE).tmp; \
+	echo '<!ENTITY svn.version "revisjon '`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE).tmp; \
 	else \
 	echo '<!ENTITY svn.version "">' > $(BOOK_VERSION_SOURCE).tmp; \
 	fi
