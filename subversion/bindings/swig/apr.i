@@ -183,7 +183,7 @@ typedef apr_int32_t time_t;
    apr_file_t ** is always an OUT param
 */
 
-%typemap(python, in, numinputs=0) apr_file_t ** (apr_file_t *temp)
+%typemap(in, numinputs=0) apr_file_t ** (apr_file_t *temp)
     "$1 = &temp;";
 
 %typemap(python,argout,fragment="t_output_helper") apr_file_t **
