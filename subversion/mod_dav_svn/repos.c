@@ -1618,7 +1618,9 @@ const char * dav_svn_getetag(const dav_resource *resource)
     }
   
   return apr_psprintf(resource->pool, "\"%" SVN_REVNUM_T_FMT "/%s\"",
-                      created_rev, resource->info->repos_path);
+                      created_rev,
+                      apr_xml_quote_string(resource->pool,
+                                           resource->info->repos_path, 1));
 }
 
 static dav_error * dav_svn_set_headers(request_rec *r,
