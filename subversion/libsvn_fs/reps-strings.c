@@ -407,11 +407,6 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     */
 
 
-    /* ### todo: this is the core of the naive algorithm, and is what
-       has to go when we have a true delta combiner. */
-    SVN_ERR (rep_read_range (wb->fs, wb->base_rep, sbuf,
-                             window->sview_offset, &slen, wb->trail));
-
     /* Now we can loop over the window ops, doing them.  I think this
        makes more sense than trying to use the functions in
        svn_delta.h.  We'd spend a lot of effort packing things up
@@ -420,6 +415,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     {
       const svn_txdelta_op_t *op;
       int i;
+      int src_read = 0;
       apr_size_t len_read = 0;
       apr_size_t copy_amt = 0;
       apr_size_t discard_amt = (wb->req_offset > wb->cur_offset) 
@@ -435,10 +431,29 @@ window_handler (svn_txdelta_window_t *window, void *baton)
             {
             case svn_txdelta_source:
               {
+                if (! src_read)
+                  {
+                    /* The first time we actually have a reference to
+                       our source data, we'll read all the source data
+                       that this window might use.  We may end up
+                       reading more than we need to based on the
+                       portion of this window our caller actually
+                       requested, but we'll at least only have the one
+                       database access in this window_handler() call.
+
+                       ### todo: this is the core of the naive
+                       algorithm, and is what has to go when we have a
+                       true delta combiner.  */
+                    SVN_ERR (rep_read_range (wb->fs, wb->base_rep, sbuf,
+                                             window->sview_offset, &slen, 
+                                             wb->trail));
+                    src_read = 1;
+                  }
                 memcpy (tbuf + len_read, sbuf + op->offset, op->length);
                 len_read += op->length;
               }
               break;
+
             case svn_txdelta_target:
               {
                 /* This could be done in bigger blocks, at the expense
@@ -448,6 +463,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
                   tbuf[len_read++] = tbuf[t];
               }
               break;
+
             case svn_txdelta_new:
               {
                 memcpy (tbuf + len_read,
@@ -456,6 +472,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
                 len_read += op->length;
               }
               break;
+
             default:
               return svn_error_createf
                 (SVN_ERR_FS_CORRUPT, 0, NULL, wb->pool,
