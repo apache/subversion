@@ -794,7 +794,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
   const char *att;
   svn_revnum_t base;
   const char *name;
-  svn_stringbuf_t *cpath;
+  svn_stringbuf_t *cpath = NULL;
   svn_revnum_t crev = SVN_INVALID_REVNUM;
   void *new_dir_baton;
   svn_error_t *err;
