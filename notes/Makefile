@@ -8,6 +8,7 @@ html: subversion.html subversion.txt
 
 subversion.html: subversion.txt
 	./outline2html.pl subversion.txt
+	mv -f subversion.html ../www/
 
 clean:
 	rm -f *~ subversion.html

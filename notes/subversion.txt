@@ -2,10 +2,7 @@
 
      Subversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.46 $ of this document.)
-
-
-
+              ($Revision: 1.47 $ of this document.)
 
 * Introduction
 
