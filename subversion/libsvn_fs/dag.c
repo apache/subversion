@@ -351,6 +351,16 @@ svn_fs__dag_check_mutable (svn_boolean_t *is_mutable,
 
 
 
+svn_error_t *svn_fs__dag_dir_entries (skel_t **entries_p,
+                                      dag_node_t *node,
+                                      trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+
+
 
 /* Examines directory PARENT's list of entries, searching for a entry
    named NAME.  If such an entry is found, ENTRY is populated with
