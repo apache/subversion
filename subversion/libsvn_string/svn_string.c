@@ -58,7 +58,7 @@
    calls this on the svn_string_t's *data field.  */
 
 void *
-my__realloc (char *data, size_t oldsize, size_t request, 
+my__realloc (char *data, const size_t oldsize, const size_t request, 
              ap_pool_t *pool)
 {
   void *new_area;
@@ -81,7 +81,7 @@ my__realloc (char *data, size_t oldsize, size_t request,
    requires a memory pool to allocate from.  */
 
 svn_string_t *
-svn_string_create (char *cstring, ap_pool_t *pool)
+svn_string_create (const char *cstring, ap_pool_t *pool)
 {
   svn_string_t *new_string;
   size_t l = strlen (cstring);
@@ -103,7 +103,8 @@ svn_string_create (char *cstring, ap_pool_t *pool)
    (NOT null-terminated!);  requires a memory pool to allocate from */
 
 svn_string_t *
-svn_string_ncreate (char *bytes, size_t size, ap_pool_t *pool)
+svn_string_ncreate (const char *bytes, const size_t size, 
+                    ap_pool_t *pool)
 {
   svn_string_t *new_string;
 
@@ -127,7 +128,7 @@ svn_string_ncreate (char *bytes, size_t size, ap_pool_t *pool)
 /* overwrite bytestring with a character */
 
 void 
-svn_string_fillchar (svn_string_t *str, unsigned char c)
+svn_string_fillchar (svn_string_t *str, const unsigned char c)
 {
   /* safety check */
   if (str->len > str->blocksize)
@@ -152,7 +153,7 @@ svn_string_setempty (svn_string_t *str)
 /* Ask if a bytestring is empty */
 
 svn_boolean_t
-svn_string_isempty (svn_string_t *str)
+svn_string_isempty (const svn_string_t *str)
 {
   if (str->len == 0)
     return TRUE;
@@ -164,8 +165,8 @@ svn_string_isempty (svn_string_t *str)
 /* append a number of bytes onto a bytestring */
 
 void
-svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count,
-                        ap_pool_t *pool)
+svn_string_appendbytes (svn_string_t *str, const char *bytes, 
+                        const size_t count, ap_pool_t *pool)
 {
   size_t total_len;
   void *start_address;
@@ -195,7 +196,7 @@ svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count,
 /* append one bytestring type onto another */
 
 void
-svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr,
+svn_string_appendstr (svn_string_t *targetstr, const svn_string_t *appendstr,
                       ap_pool_t *pool)
 {
   svn_string_appendbytes (targetstr, appendstr->data, 
@@ -207,7 +208,7 @@ svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr,
 /* duplicate a bytestring */
 
 svn_string_t *
-svn_string_dup (svn_string_t *original_string, ap_pool_t *pool)
+svn_string_dup (const svn_string_t *original_string, ap_pool_t *pool)
 {
   return (svn_string_ncreate (original_string->data,
                               original_string->len, pool));
@@ -219,7 +220,7 @@ svn_string_dup (svn_string_t *original_string, ap_pool_t *pool)
    byte-for-byte */
 
 svn_boolean_t
-svn_string_compare (svn_string_t *str1, svn_string_t *str2)
+svn_string_compare (const svn_string_t *str1, const svn_string_t *str2)
 {
   /* easy way out :)  */
   if (str1->len != str2->len)
@@ -239,7 +240,7 @@ svn_string_compare (svn_string_t *str1, svn_string_t *str2)
    contains ASCII.  */
 
 void
-svn_string_print (svn_string_t *str, FILE *stream)
+svn_string_print (const svn_string_t *str, FILE *stream)
 {
   if (str->len >= 0) 
     {
