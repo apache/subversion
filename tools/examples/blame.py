@@ -73,7 +73,7 @@ def getfile(pool, path, rev=None, home='.'):
                                                annotresult[x][1]))
 
 def usage():
-  print "USAGE: annotate.py [-r REV] [-h DBHOME] repos-path"
+  print "USAGE: blame.py [-r REV] [-h DBHOME] repos-path"
   sys.exit(1)
 
 def main():
