@@ -178,7 +178,7 @@
       browser.
 
 10. Post news item <http://subversion.tigris.org/servlets/ProjectNewsAdd>,
-    and send an announcement to dev and announce lists.
+    and send an announcement to dev@ and announce@ lists.
 
 11. If necessary, post newest versions of docs to web sites.
 
