@@ -287,8 +287,8 @@ svn_ra_local__change_rev_prop (void *session_baton,
 
   SVN_ERR (get_username (baton, pool));
 
-  SVN_ERR (svn_repos_fs_change_rev_prop (baton->repos, rev, baton->username,
-                                         name, value, pool));
+  SVN_ERR (svn_repos_fs_change_rev_prop2 (baton->repos, rev, baton->username,
+                                          name, value, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -329,7 +329,8 @@ svn_ra_local__rev_proplist (void *session_baton,
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  SVN_ERR (svn_fs_revision_proplist (props, baton->fs, rev, pool));
+  SVN_ERR (svn_repos_fs_revision_proplist (props, baton->repos, rev,
+                                           NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -345,7 +346,8 @@ svn_ra_local__rev_prop (void *session_baton,
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  SVN_ERR (svn_fs_revision_prop (value, baton->fs, rev, name, pool));
+  SVN_ERR (svn_repos_fs_revision_prop (value, baton->repos, rev, name,
+                                       NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
