@@ -131,10 +131,10 @@ class GeneratorBase:
     script_dirs = map(os.path.dirname, self.scripts + self.fs_scripts)
 
     # remove duplicate directories between targets and tests
-    build_dirs = self.target_dirs.copy()
-    for d in script_dirs:
-      build_dirs[d] = None
-    self.build_dirs = build_dirs.keys()
+    build_dirs = self.target_dirs.copy().keys()
+    build_dirs.extend(script_dirs)
+    build_dirs.extend(string.split(parser.get('swig-dirs', 'paths')))
+    self.build_dirs = build_dirs
 
   def find_sections(self, section_list):
     """Return a list of section objects from a string of section names."""
@@ -445,7 +445,7 @@ class TargetSWIG(TargetLib):
     sources = _collect_paths(self.sources, self.path)
     assert len(sources) == 1  ### simple assertions for now
 
-    # get path to .i file
+    # get path to SWIG .i file
     ipath = sources[0][0]
     iname = os.path.split(ipath)[1]
 
@@ -596,6 +596,7 @@ _predef_sections = [
   'static-apache',
   'test-scripts',
   'fs-test-scripts',
+  'swig-dirs',
   ]
 
 def _filter_sections(t):

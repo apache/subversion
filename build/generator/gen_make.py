@@ -72,7 +72,7 @@ class Generator(gen_base.GeneratorBase):
         '%s_OBJECTS = %s\n'
         '%s: $(%s_DEPS)\n'
         '\tcd %s && %s -o %s $(%s_OBJECTS) %s $(LIBS)\n\n'
-        % (targ_varname, string.join(objects + deps), target_ob.add_deps,
+        % (targ_varname, target_ob.add_deps, string.join(objects + deps),
 
            targ_varname, objnames,
 
@@ -204,9 +204,12 @@ class Generator(gen_base.GeneratorBase):
 
     for objname, sources in self.graph.get_deps(gen_base.DT_SWIG_C):
       deps = string.join(map(str, sources))
+      source = os.path.join('$(top_srcdir)', str(sources[0]))
+      if objname.lang_abbrev == 'java':
+        source = os.path.split(source)[1]
       self.ofile.write('%s: %s\n\t$(RUN_SWIG_%s) %s\n'
                        % (objname, deps, string.upper(objname.lang_abbrev),
-                          os.path.join('$(top_srcdir)', str(sources[0]))))
+                          source))
 
     for objname, sources in self.graph.get_deps(gen_base.DT_OBJECT):
       deps = string.join(map(str, sources))
