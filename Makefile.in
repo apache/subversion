@@ -313,7 +313,7 @@ swig-py-ext: swig-assert-available
 
 install-swig-py-ext: swig-assert-available
 	cd $(SWIG_BUILD_DIR)/python; \
-        $(PYTHON) $(PYTHON_DISTUTIL) install $(DISTUTIL_PARAM)
+        $(PYTHON) $(PYTHON_DISTUTIL) install $(DISTUTIL_PARAM) --prefix=$(DESTDIR)$(prefix)
 
 swig-py-ext-clean:
 	rm -rf $(SWIG_BUILD_DIR)/python/build
