@@ -57,7 +57,7 @@ Go to http://subversion.tigris.org/ and
       list receives automated commit emails.
 
    *  Print out and digest the Subversion design specification.
-      This document can be found in the "File sharing" area of the
+      This document can be found in the "Documents & files" area of the
       website in the Documentation/Design folder.  A PDF and an HTML
       version are available on the web.  The design spec will give you
       a theoretical overview of Subversion's design.
@@ -944,8 +944,8 @@ provisional basis.
 
 The criteria for commit access are that the person's patches adhere to
 the guidelines in this file, adhere to all the usual unquantifiable
-rules of coding (code should readable, robust, maintainable, etc), and
-that the person respects the "Hippocratic Principle": first, do no
+rules of coding (code should be readable, robust, maintainable, etc),
+and that the person respects the "Hippocratic Principle": first, do no
 harm.  In other words, what is significant is not the size or quantity
 of patches submitted, but the degree of care shown in avoiding bugs
 and minimizing unnecessary impact on the rest of the code.  Many full

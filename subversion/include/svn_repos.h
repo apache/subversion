@@ -188,7 +188,7 @@ const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos,
  * transform the reported hierarchy to revision @a revnum, preserving the
  * reported hierarchy.
  *
- * @a text_deltas instructs the driver of the @a editor to enable to disable
+ * @a text_deltas instructs the driver of the @a editor to enable
  * the generation of text deltas.
  *
  * @a recurse instructs the driver of the @a editor to send a recursive

@@ -827,7 +827,7 @@ svn_error_t *svn_wc_entry (const svn_wc_entry_t **entry,
  *
  * Important note: the @a entries hash is the entries cache in @a adm_access 
  * and so usually the hash itself, the keys and the values should be treated 
- * as read-only.  If any of these are modified then it is the callers
+ * as read-only.  If any of these are modified then it is the caller's
  * responsibility to ensure that the entries file on disk is updated.  Treat
  * the hash values as type (<tt>const svn_wc_entry_t *</tt>) if you wish to 
  * avoid accidental modification.  Modifying the schedule member is a
@@ -840,7 +840,7 @@ svn_error_t *svn_wc_entry (const svn_wc_entry_t **entry,
  * structures representing subdirs have only the `kind' and `state'
  * fields filled in.  If you want info on a subdir, you must use this
  * routine to open its @a path and read the @c SVN_WC_ENTRY_THIS_DIR 
- * structure, or call @c svn_wc_get_entry on its @a path.
+ * structure, or call @c svn_wc_entry on its @a path.
  */
 svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
                                   svn_wc_adm_access_t *adm_access,
