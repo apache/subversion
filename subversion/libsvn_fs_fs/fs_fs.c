@@ -2178,20 +2178,36 @@ svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
   svn_fs_txn_t *txn;
   svn_fs_id_t *root_id;
   char *txn_filename = svn_path_join_many (pool, fs->path,
-                                           SVN_FS_FS__TXNS_DIR, "XXXXXX",
+                                           SVN_FS_FS__TXNS_DIR,
+                                           apr_psprintf (pool, "%"
+                                                         SVN_REVNUM_T_FMT,
+                                                         rev),
                                            NULL);
-  char *txn_dirname;
+  const char *txn_dirname, *txn_tmpfile_orig;
+  char *txn_tmpfile;
+  int i;
 
   /* Create a temporary file so that we have a unique txn_id, then
      make a directory based on this name.  They will both be removed
      when the transaction is aborted or removed. */
-  if (apr_file_mktemp (&txn_file, txn_filename, APR_CREATE | APR_EXCL, pool)
-      != APR_SUCCESS)
-    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                             "Unable to create new transaction.");
+  SVN_ERR (svn_io_open_unique_file (&txn_file, &txn_tmpfile_orig, txn_filename,
+                                    "", FALSE, pool));
 
+  txn_tmpfile = apr_pstrdup (pool, txn_tmpfile_orig);
+
+  /* If the temporary file had a "." in it, we need to subsitute a "_"
+     in its place, since transaction IDs cannot have periods in
+     them. */
+  for (i = (strlen (txn_tmpfile) - 1); i >= 0; --i)
+    {
+      if (txn_tmpfile[i] == '.')
+        txn_tmpfile[i] = '_';
+      if (txn_tmpfile[i] == '/')
+        break;
+    }
+  
   /* Create the transaction directory based on this temporary file. */
-  txn_dirname = apr_pstrcat (pool, txn_filename, SVN_FS_FS__TXNS_EXT, NULL);
+  txn_dirname = apr_pstrcat (pool, txn_tmpfile, SVN_FS_FS__TXNS_EXT, NULL);
 
   SVN_ERR (svn_io_make_dir_recursively (txn_dirname, pool));
 
@@ -2203,7 +2219,7 @@ svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
   txn->base_rev = rev;
 
   /* Get the txn_id. */
-  svn_path_split (txn_filename, NULL, &txn->id, pool);
+  svn_path_split (txn_tmpfile, NULL, &txn->id, pool);
   *txn_p = txn;
   
   /* Create a new root node for this transaction. */
@@ -2465,8 +2481,9 @@ svn_fs_fs__purge_txn (svn_fs_t *fs,
                       const char *txn_id,
                       apr_pool_t *pool)
 {
-  const char *txn_name;
+  char *txn_name;
   svn_error_t *err;
+  int i;
   
   txn_name = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR, txn_id,
                                  NULL);
@@ -2489,6 +2506,15 @@ svn_fs_fs__purge_txn (svn_fs_t *fs,
     }
 
   /* Now try to remove the temporary file. */
+
+  /* First convert any _ characters in the name back into .'s. */
+  for (i = strlen (txn_name) - 1; i >= 0; --i)
+    {
+      if (txn_name[i] == '_')
+        txn_name[i] = '.';
+      if (txn_name[i] == '/')
+        break;
+    }
 
   err = svn_io_remove_file (txn_name, pool);
 
