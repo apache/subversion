@@ -395,7 +395,7 @@ II.   INSTALLATION
           db*.i386.rpm     (Version 4.0.14 or greater; version 4.2.52 is
                             preferred however)
           expat            (Comes with RedHat)
-          neon             (Version 0.24.4)
+          neon             (Version 0.24.5)
 
       After downloading, install it (as root user):
 
@@ -595,7 +595,7 @@ II.   INSTALLATION
       suite after you build the source.
 
       To build the client components, you'll need a copy of neon
-      0.24.4.  See section I.4 for details on where to get one and
+      0.24.5.  See section I.4 for details on where to get one and
       what to do with it when you get it.
 
       [NOTE: The neon library supports secure connections with OpenSSL
@@ -695,10 +695,10 @@ II.   INSTALLATION
           http://unxutils.sourceforge.net/
 
       C:\SVN> svn co http://svn.collab.net/repos/svn/trunk src
-      C:\SVN> gunzip neon-0.24.4.tar.gz
+      C:\SVN> gunzip neon-0.24.5.tar.gz
       C:\SVN> cd src
-      C:\SVN\src> tar -xvf ..\neon-0.24.4.tar
-      C:\SVN\src> ren neon-0.24.4 neon
+      C:\SVN\src> tar -xvf ..\neon-0.24.5.tar
+      C:\SVN\src> ren neon-0.24.5 neon
       C:\SVN\src> unzip ..\db-4.2.52-win32.zip
       C:\SVN\src> cd ..
       C:\SVN> unzip httpd_2.0.49-win32-src.zip

@@ -1,6 +1,6 @@
 %define apache_version 2.0.48-0.1
 %define apr_version 0.9.5
-%define neon_version 0.24.4
+%define neon_version 0.24.5
 %define swig_version 1.3.19
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
@@ -101,6 +101,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Mon Apr 19 2004 Blair Zajac <blair@orcaware.com> 1.0.2-9438
+- Require neon 0.24.5 to fix format string vulnerabilities in XML/207
+  response handling.  See
+  http://cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-2004-0179
+
 * Wed Mar 10 2004 David Summers <david@summersoft.fay.ar.us> 1.0.0-8983
 - Fedora-1 and WBEL-3 require db42-4.2.52 or greater.
 
