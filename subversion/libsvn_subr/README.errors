@@ -3,33 +3,27 @@ OK, here's how to use exceptions in Subversion (latest draft).
 
 1.  Exceptions are stored in svn_error_t structures:
 
-typedef struct svn_error_t
+typedef struct svn_error
 {
-  ap_status_t err;             /* native OS errno */
-  svn_boolean_t fatal;         /* does the creator think this a fatal error? */
-  char *message;               /* details from producer of error */
-  struct svn_error_t *child;   /* ptr to next error below this one */
+  ap_status_t apr_err;       /* APR error value, possibly SVN_ custom err */
+  int src_err;               /* native error code (e.g. errno, h_errno...) */
+  const char *message;       /* details from producer of error */
+  struct svn_error *child;   /* ptr to the error we "wrap" */
+  ap_pool_t *pool;           /* place to generate message strings from */
 
-  int canonical_errno;         /* "canonicalized" errno from APR */ 
-  char *description;           /* generic description from ap_strerror() */
-
-  ap_pool_t *pool;             /* place to generate message strings from */
-
-} svn_error_t;    
+} svn_error_t;
 
 
 
 2.  If you are the *original* creator of an error, you would do
     something like this:
 
-        return (svn_create_error (errno,
-                                  SVN_NON_FATAL,
+        return (svn_create_error ((ap_status_t) err,
+                                  NULL,
                                   "User not permitted to write file."
                                   NULL,
                                   my_pool));
 
-    This routine allocates the error structure from the pool and fills
-    in extra fields (like the canonicalized errno and description.)
 
     NOTICE the NULL field... indicating that this error has no child,
     i.e. it is the bottom-most error.  Don't forget to do this!
@@ -47,13 +41,14 @@ typedef struct svn_error_t
         if (error)
           return (error);
         
-    c) Throw the error upwards, wrapping it in a new error structure:
+    c) Throw the error upwards, wrapping it in a new error structure
+       by including it as the "child" argument:
 
         error = some_routine (foo);
         if (error)
           {
            svn_error_t *wrapper = svn_create_error (my_errno,
-                                                    SVN_NON_FATAL,
+                                                    NULL,
                                                     "Authorization failed.",
                                                     error,
                                                     error->pool);
@@ -62,8 +57,8 @@ typedef struct svn_error_t
 
 
         Of course, there's a convenience routine which creates a
-        wrapper error with the same fields as the child -- *except* it
-        includes your own new message:
+        wrapper error with the same fields as the child, except for your
+        custom message:
 
         error = some_routine (foo);
         if (error)

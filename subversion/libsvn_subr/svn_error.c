@@ -54,29 +54,13 @@
 /*
   svn_create_error() : for creating nested exception structures.
 
-  Input:  an error code,
+  Input:  an ap_status_t error code,
+          the "original" system error code, if applicable,
           a descriptive message,
           a "child" exception,
           a pool for alloc'ing
 
   Returns:  a new error structure (containing the old one).
-
-
-  Usage: 
-
-          1.  If this is a BOTTOM level error (i.e. the first one
-          thrown), you MUST set child to NULL and pass a real pool_t.
-          
-             my_err = svn_create_error (errno,
-                                        "Can't find repository",
-                                        NULL, my_pool);
-
-          2.  If this error WRAPS a previous error, include a non-NULL
-          child to wrap.  You can use the child's pool if you wish.
-
-             next_err = svn_create_error (errno,
-                                          "Filesystem access failed",
-                                          previous_err, previous_err->pool);
 
  */
 
