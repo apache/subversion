@@ -30,6 +30,7 @@
 #include "svn_config.h"
 #include "svn_time.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 #include "client.h"
 
 #include "svn_private_config.h"
@@ -183,6 +184,58 @@ svn_client__update_internal (svn_revnum_t *result_rev,
     *result_rev = revnum;
   
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_update2 (apr_array_header_t **result_revs,
+                    const apr_array_header_t *paths,
+                    const svn_opt_revision_t *revision,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  int i;
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  if (result_revs)
+    *result_revs = apr_array_make (pool, paths->nelts, sizeof (svn_revnum_t));
+
+  for (i = 0; i < paths->nelts; ++i)
+    {
+      svn_boolean_t sleep;
+      svn_revnum_t result_rev;
+      const char *path = APR_ARRAY_IDX (paths, i, const char *);
+
+      svn_pool_clear (subpool);
+
+      if (ctx->cancel_func && (err = ctx->cancel_func (ctx->cancel_baton)))
+        break;
+
+      err = svn_client__update_internal (&result_rev, path, revision,
+                                         recurse, &sleep, ctx, subpool);
+      if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+        return err;
+      else if (err)
+        {
+          svn_error_clear (err);
+          err = SVN_NO_ERROR;
+          result_rev = SVN_INVALID_REVNUM;
+          if (ctx->notify_func)
+            (*ctx->notify_func) (ctx->notify_baton, path,
+                                 svn_wc_notify_skip, svn_node_unknown,
+                                 NULL, svn_wc_notify_state_unknown,
+                                 svn_wc_notify_state_unknown,
+                                 SVN_INVALID_REVNUM);
+        }
+      if (result_revs)
+        APR_ARRAY_PUSH (*result_revs, svn_revnum_t) = result_rev;
+    }
+
+  svn_pool_destroy (subpool);
+  svn_sleep_for_timestamps ();
+
+  return err;
 }
 
 svn_error_t *
