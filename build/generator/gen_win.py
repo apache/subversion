@@ -39,6 +39,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     self.openssl_path = None
     self.junit_path = None
     self.vsnet_version = '7.00'
+    self.vsnet_proj_ver = '7.00'
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None }
 
@@ -84,10 +85,16 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       elif opt == '--vsnet-version':
         if val == '2002' or re.match('7(\.\d+)?', val):
           self.vsnet_version = '7.00'
+          self.vsnet_proj_ver = '7.00'
           sys.stderr.write('Generating for VS.NET 2002\n')
         elif val == '2003' or re.match('8(\.\d+)?', val):
           self.vsnet_version = '8.00'
+          self.vsnet_proj_ver = '7.10'
           sys.stderr.write('Generating for VS.NET 2003\n')
+        elif val == '2005' or re.match('9(\.\d+)?', val):
+          self.vsnet_version = '9.00'
+          self.vsnet_proj_ver = '8.00'
+          sys.stderr.write('Generating for VS.NET 2005\n')
         else:
           sys.stderr.write('WARNING: Unknown VS.NET version "%s",'
                            ' assumimg "%s"\n' % (val, self.vsnet_version))
