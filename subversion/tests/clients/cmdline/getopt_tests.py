@@ -31,7 +31,8 @@ import svntest
 #----------------------------------------------------------------------
 
 # This directory contains all the expected output from svn.
-getopt_output_dir = 'getopt_tests_data'
+getopt_output_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                 'getopt_tests_data')
 
 # Naming convention for golden files: take the svn command line as a
 # single string and apply the following sed transformations:
