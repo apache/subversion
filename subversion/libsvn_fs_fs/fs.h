@@ -124,6 +124,35 @@ typedef enum
 } svn_fs__copy_kind_t;
 
 
+/*** Representation ***/
+typedef struct
+{
+  /* MD5 checksum for the contents produced by this representation.
+     This checksum is for the contents the rep shows to consumers,
+     regardless of how the rep stores the data under the hood.  It is
+     independent of the storage (fulltext, delta, whatever). 
+
+     If all the bytes are 0, then for compatibility behave as though
+     this checksum matches the expected checksum. */
+  unsigned char checksum[APR_MD5_DIGESTSIZE];
+
+  /* Revision where this representation is located. */
+  svn_revnum_t revision;
+
+  /* Offset into the revision file where it is located. */
+  apr_off_t offset;
+
+  /* The size of the representation in bytes as seen in the revision
+     file. */
+  apr_size_t size;
+
+  /* The size of the fulltext of the representation. */
+  apr_size_t expanded_size;
+  
+
+} svn_fs__representation_t;
+
+
 /*** Node-Revision ***/
 typedef struct
 {
@@ -138,7 +167,8 @@ typedef struct
   const svn_fs_id_t *predecessor_id;
 
   /* If this node-rev is a copy, where was it copied from? */
-  const svn_fs_id_t *copyfrom;
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_rev;
 
   /* If this node-rev is a copy, how was it created? */
   svn_fs__copy_kind_t copykind;
@@ -151,20 +181,14 @@ typedef struct
      -1 if not known (for backward compatibility). */
   int predecessor_count;
 
-  /* representation key for this node's properties.  may be -1 if
+  /* representation key for this node's properties.  may be NULL if
      there are no properties.  */
-  svn_revnum_t prop_revision;
-  apr_off_t prop_offset;
-  apr_size_t prop_size;
-  apr_size_t prop_expanded_size;
+  svn_fs__representation_t *prop_rep;
 
-  /* representation key for this node's text data (files) or entries
-     list (dirs).  may be -1 if there are no contents.  */
-  svn_revnum_t data_revision;
-  apr_off_t data_offset;
-  apr_size_t data_size; /* size of svndiff data */
-  apr_size_t data_expanded_size; /* fulltext size of data */
-
+  /* representation for this node's data.  may be NULL if there is
+     no data. */
+  svn_fs__representation_t *data_rep;
+  
   /* representation key for this node's text-data-in-progess (files
      only).  NULL if no edits are currently in-progress.  This field
      is always NULL for kinds other than "file".  */
@@ -209,48 +233,6 @@ typedef struct
 
 } svn_fs__rep_delta_chunk_t;
 
-
-/*** Representation ***/
-typedef struct
-{
-  /* representation kind */
-  svn_fs__rep_kind_t kind;
-
-  /* transaction ID under which representation was created (used as a
-     mutability flag when compared with a current editing
-     transaction). */
-  const char *txn_id;
-
-  /* MD5 checksum for the contents produced by this representation.
-     This checksum is for the contents the rep shows to consumers,
-     regardless of how the rep stores the data under the hood.  It is
-     independent of the storage (fulltext, delta, whatever). 
-
-     If all the bytes are 0, then for compatibility behave as though
-     this checksum matches the expected checksum. */
-  unsigned char checksum[APR_MD5_DIGESTSIZE];
-
-  /* kind-specific stuff */
-  union 
-  {
-    /* fulltext stuff */
-    struct
-    {
-      /* string-key which holds the fulltext data */
-      const char *string_key;
-
-    } fulltext;
-
-    /* delta stuff */
-    struct
-    {
-      /* an array of svn_fs__rep_delta_chunk_t * chunks of delta
-         information */
-      apr_array_header_t *chunks;
-
-    } delta;
-  } contents;
-} svn_fs__representation_t;
 
 
 
