@@ -63,7 +63,6 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   const svn_ra_reporter_t *reporter;
   svn_stringbuf_t *anchor, *target, *URL;
   svn_wc_entry_t *entry;
-  svn_error_t *err;
 
   /* Use PATH to get the update's anchor and targets. */
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
@@ -89,14 +88,14 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  if ((err = svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool)))
+  if (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool) != NULL)
     return SVN_NO_ERROR;
 
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
                                          auth_baton, anchor, TRUE,
                                          TRUE, pool));
-  if ((err = ra_lib->open (&session, URL, ra_callbacks, cb_baton, pool)))
+  if (ra_lib->open (&session, URL, ra_callbacks, cb_baton, pool) != NULL)
     return SVN_NO_ERROR;
 
 
@@ -109,19 +108,18 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   if (ra_lib->do_status (session,
                          &reporter, &report_baton,
                          target,
-                         status_editor, edit_baton))
-    goto close;
+                         status_editor, edit_baton) == NULL)
+    {
+      /* Drive the reporter structure, describing the revisions within
+         PATH.  When we call reporter->finish_report, the
+         status_editor will be driven by svn_repos_dir_delta. */
+      SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton, 
+                                       FALSE, /* ignore unversioned stuff */
+                                       pool));
+    }
 
-  /* Drive the reporter structure, describing the revisions within
-     PATH.  When we call reporter->finish_report, the
-     status_editor will be driven by svn_repos_dir_delta. */
-  SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton, 
-                                   FALSE, /* don't notice unversioned stuff */
-                                   pool));
-
- close:
   /* We're done with the RA session. */
-  err = ra_lib->close (session);
+  (void) ra_lib->close (session);
 
   return SVN_NO_ERROR;
 }
