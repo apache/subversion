@@ -285,6 +285,26 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
     {
       svn_diff_t *diff;
 
+      /* We don't currently support any options (well, other than -u, since we 
+         default to unified diff output anyway), so if we received anything 
+         other than that it's an error. */
+      if (diff_cmd_baton->options && diff_cmd_baton->options->nelts)
+        {
+          int i;
+
+          for (i = 0; i < diff_cmd_baton->options->nelts; ++i)
+            {
+              const char *arg
+                = ((const char **)(diff_cmd_baton->options->elts))[i];
+
+              if (strcmp(arg, "-u") == 0)
+                continue;
+              else
+                return svn_error_createf(SVN_ERR_INVALID_DIFF_OPTION, NULL,
+                                         "'%s' is not supported", arg);
+            }
+        }
+
       SVN_ERR (svn_diff_file (&diff, tmpfile1, tmpfile2, subpool));
       if (svn_diff_contains_diffs (diff))
         {
