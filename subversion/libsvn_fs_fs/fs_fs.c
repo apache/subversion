@@ -3447,10 +3447,37 @@ move_into_place (const char *old_filename, const char *new_filename,
   err = svn_io_file_rename (old_filename, new_filename, pool);
   if (err && APR_STATUS_IS_EXDEV (err->apr_err))
     {
+      apr_file_t *file;
+
       /* Can't rename across devices; fall back to copying. */
       svn_error_clear (err);
-      err = svn_io_copy_file (old_filename, new_filename, TRUE, pool);
+      SVN_ERR (svn_io_copy_file (old_filename, new_filename, TRUE, pool));
+
+      /* Flush the target of the copy to disk. */
+      SVN_ERR (svn_io_file_open (&file, new_filename, APR_READ,
+                                 APR_OS_DEFAULT, pool));
+      SVN_ERR (svn_io_file_flush_to_disk (file, pool));
+      SVN_ERR (svn_io_file_close (file, pool));
     }
+
+#ifdef __linux__
+  {
+    /* Linux has the unusual feature that fsync() on a file is not
+       enough to ensure that a file's directory entries have been
+       flushed to disk; you have to fsync the directory as well.
+       On other operating systems, we'd only be asking for trouble
+       by trying to open and fsync a directory. */
+    const char *dirname;
+    apr_file_t *file;
+
+    dirname = svn_path_dirname (new_filename, pool);
+    SVN_ERR (svn_io_file_open (&file, dirname, APR_READ, APR_OS_DEFAULT,
+                               pool));
+    SVN_ERR (svn_io_file_flush_to_disk (file, pool));
+    SVN_ERR (svn_io_file_close (file, pool));
+  }
+#endif
+
   return err;
 }
 

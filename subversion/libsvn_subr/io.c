@@ -999,13 +999,13 @@ svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
           (apr_get_os_error (), "Can't flush file to disk.");
       
 #else
-      apr_size_t rv;
+      int rv;
       
       do {
         rv = fsync (filehand);
-      } while (rv == (apr_size_t)-1 && (errno == EAGAIN || errno == EINTR));
-      
-      if (rv == (apr_size_t)-1)
+      } while (rv == -1 && APR_STATUS_IS_EINTR (apr_get_os_error ()));
+
+      if (rv == -1)
         return svn_error_wrap_apr
           (apr_get_os_error (), "Can't flush file to disk.");
       
