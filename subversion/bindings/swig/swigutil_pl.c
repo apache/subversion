@@ -949,5 +949,5 @@ SV *svn_swig_pl_from_stream (svn_stream_t *stream)
     perl_callback_thunk (CALL_METHOD, "new", &ret, "sS",
 			 "SVN::Stream", stream, tinfo);
 
-    return ret;
+    return sv_2mortal (ret);
 }
