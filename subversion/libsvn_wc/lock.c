@@ -511,7 +511,7 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
     *adm_access = NULL;
   if (! *adm_access || *adm_access == &missing)
     return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
-                              "directory not locked (%s)",
+                              "directory '%s' not locked",
                               path);
   return SVN_NO_ERROR;
 }
