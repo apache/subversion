@@ -3,7 +3,7 @@
 Some ideas for the future.
 (Please use outline-mode format for this file.)
 
-* todo: move the ideas in doc/future.texi to here
+* todo: move the ideas in doc/programmer/design/future.texi to here
 
   Because plaintext/outline is less of a barrier to adding new ideas
   than texinfo format; this should be a pretty informal file.
