@@ -94,9 +94,10 @@ svn_error_t *svn_io_check_path (const char *path,
  * will open
  *
  *    tests/t1/A/D/G/pi.tmp
- *    tests/t1/A/D/G/pi.1.tmp
  *    tests/t1/A/D/G/pi.2.tmp
  *    tests/t1/A/D/G/pi.3.tmp
+ *    tests/t1/A/D/G/pi.4.tmp
+ *    tests/t1/A/D/G/pi.5.tmp
  *    ...
  *
  * @a *unique_name_p will never be exactly the same as @a path, even
