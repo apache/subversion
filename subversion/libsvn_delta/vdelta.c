@@ -82,7 +82,7 @@
 
 
 /* The window size. */
-apr_size_t svn_txdelta__window_size = 16384;
+apr_size_t svn_txdelta__window_size = 102400;
 
 /* Hash slot. */
 typedef struct hash_slot_t {
