@@ -102,13 +102,6 @@ the section for unapproved changes.)
       Votes:
        +1: bliss, ghudson, sussman
 
-    * Issue #1710
-      The auth provider next/save functions need the realmstring.
-      Justification: API change required to fix design flaw.
-      Notes:  this change needs to be committed to both trunk and 1.0.
-      Votes:
-       +1: bliss, ghudson, sussman
-
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 

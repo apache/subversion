@@ -148,7 +148,9 @@ ssl_client_cert_pw_prompt_first_cred (void **credentials_p,
 static svn_error_t *
 ssl_client_cert_pw_prompt_next_cred (void **credentials_p,
                                      void *iter_baton,
+                                     void *provider_baton,
                                      apr_hash_t *parameters,
+                                     const char *realmstring,
                                      apr_pool_t *pool)
 {
   ssl_client_cert_pw_prompt_iter_baton_t *ib = iter_baton;
