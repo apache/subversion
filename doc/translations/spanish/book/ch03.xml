@@ -1153,37 +1153,43 @@ A                0         ?     ?        stuff/things/bloo.h
 Status against revision:   46
 </screen>
            
-        <para>Notice the two asterisks: if you were to run
-          <command>svn update</command> at this point, you would
-          receive changes to <filename>README</filename>
-          and <filename>trout.c</filename>.  This tells you some very
-          useful information&mdash;you'll need to update and get the
-          server changes on <filename>README</filename> before you
-          commit, or the repository will reject your commit for being
-          out-of-date.  (More on this subject later.)</para>
+        <para>Observe los dos asteriscos: si usted ejecutara
+          <command>svn update</command> en este punto, usted podría
+          recivir cambios para <filename>README</filename> y
+          <filename>trout.c</filename>. Esto le dice cierta información
+          muy útilmdash;necesitará actualizar y coger los cambios del
+          servidor para <filename>README</filename> antes de enviar sus
+          cambios, o el repositorio rechazará su envio por estar
+          fuera-de-fecha.<!--TODO:out-of-date--> (Más de este tema más 
+          adelante.)</para>
 
       </sect3>
 
       <sect3 id="svn-ch-3-sect-4.3.2">
         <title><command>svn diff</command></title>
         
-        <para>Another way to examine your changes is with the
-          <command>svn diff</command> command.  You can find out
-          <emphasis>exactly</emphasis> how you've modified things by
-          running <command>svn diff</command> with no arguments, which
-          prints out file changes in unified diff
-          format:<footnote><para>Subversion uses its internal diff
-          engine, which produces unified diff format, by default.  If
-          you want diff output in a different format, specify an
-          external diff program using <option>--diff-cmd</option> and
-          pass any flags you'd like to it using the
-          <option>--extensions</option> switch.  For example, to see
-          local differences in file <filename>foo.c</filename> in
-          context output format while ignoring whitespace changes, you
-          might run <command>svn diff --diff-cmd /usr/bin/diff
+        <para>Otra manera de examinar sus cambios es con el comando
+          <command>svn diff</command>. Puede descubrir
+          <emphasis>exactamente</emphasis> cómo ha modificado cosas
+          ejecutando <command>svn diff</command> sin argumentos<!--TODO:with
+          no arguments-->, el cual imprime los cambios de los ficheros en
+          formato unificado del<!--TODO:in unified diff format -->
+          diff:<footnote><para>Subversion usa su motor
+          <!--TODO:engine--> interno de diff, el cual produce un formato 
+          unificado del diff, por defecto. Si quiere la salida del diff en 
+          un formato diferente, especifique un programa diff externo usando
+          <option>--diff-cmd</option> y pasando cualquier parámetro que
+          quiera usando la opción <option>--extensions</option>. Por
+          ejemplo, para ver diferencias locales en el fichero
+          <filename>foo.c</filename> en contexto con el formato de
+          salida mientras ignora cambios en espacios en blanco
+          <!--TODO:in context output format while ignoring whitespace
+          changes--> puede ejecutar
+          <command>svn diff --diff-cmd /usr/bin/diff
           --extensions '-bc' foo.c</command>.</para>
           </footnote></para>
-        
+
+
         <screen>
 $ svn diff
 Index: bar.c
@@ -1225,41 +1231,46 @@ Index: stuff/things/bloo.h
 +things about bloo.
 </screen>
         
-        <para>The <command>svn diff</command> command produces this
-          output by comparing your working files against the cached
-          <quote>pristine</quote> copies within the
-          <filename>.svn</filename> area.  Files scheduled for
-          addition are displayed as all added-text, and files
-          scheduled for deletion are displayed as all deleted
-          text.</para>
+        <para>El comando <command>svn diff</command> produce esta
+          salida comparando sus ficheros de copia de trabajo contra
+          la copia <quote>pristina</quote> almacenada en el área
+          <filename>.svn</filename>. Los ficheros programados para
+          la adición se visualizan como texto-añadido<!--TODO:are
+          displayed as all added-text-->, y los ficheros
+          programados para la eliminación  son visualizados como
+          texto eliminado<!--TODO:as all deleted text-->.</para>
 
-        <para>Output is displayed in <firstterm>unified diff
-          format</firstterm>.  That is, removed lines are prefaced
-          with a <literal>-</literal> and added lines are prefaced
-          with a <literal>+</literal>.  <command>svn diff</command>
-          also prints filename and offset information useful to the
-          <command>patch</command> program, so you can generate
-          <quote>patches</quote> by redirecting the diff output to a
-          file:</para>
+        <para>La salida es visualizada en <firstterm>formato unificado
+          del diff</firstterm>. Esto es, las lineas quitadas son
+          empezadas<!--TODO:prefaced--> con un <literal>-</literal> y
+          las lineas añadidas son empezadas con un <literal>+</literal>.
+          <command>svn diff</command> también imprime el nombre del
+          fichero e información util para el programa <!--TODO:
+          offset information useful--><command>patch</command>,
+          asi que puede generar <quote>parches</quote><!--TODO:patches-->
+          redireccionando la salida del diff a un fichero:</para>
+
 
         <screen>
 $ svn diff &gt; patchfile
 </screen>
 
-        <para>You could, for example, email the patchfile to another
-          developer for review or testing prior to commit.</para>
+        <para>Usted puede, por ejemplo, mandar por email<!--TODO:traducir
+          email?--> el fichero de parche<!--TODO:patchfile--> a otro
+          desarrollador para la <!--TODO:for review or testing-->
+          revisión o testeo antes de enviarlo.</para>
 
       </sect3>
 
       <sect3 id="svn-ch-3-sect-4.3.3">
         <title><command>svn revert</command></title>
 
-        <para>Now suppose you see the above diff output, and realize
-          that your changes to <filename>README</filename> are a
-          mistake; perhaps you accidentally typed that text into the
-          wrong file in your editor.</para>
+        <para>Ahora suponga que usted ve la salida del diff anterior, y
+          <!--TODO:realize--> se dá cuenta que sus cambios a
+          <filename>README</filename> son un error; quizás accidentalmente
+          tecleó ese texto en el fichero equivocado en su editor</para>
       
-        <para>This is a perfect opportunity to use <command>svn
+        <para>Esta es una oportunidad perfecta para usar <command>svn
           revert</command>.</para>
            
         <screen>
@@ -1267,13 +1278,14 @@ $ svn revert README
 Reverted 'README'
 </screen>
         
-        <para>Subversion reverts the file to its pre-modified state by
-          overwriting it with the cached <quote>pristine</quote> copy
-          from the <filename>.svn</filename> area.  But also note that
-          <command>svn revert</command> can undo
-          <emphasis>any</emphasis> scheduled operations&mdash;for
-          example, you might decide that you don't want to add a new
-          file after all:</para>
+        <para>Subversion <!--TODO:reverts-->invierte el fichero a un
+          estado pre-modificado reescribiendolo con la copia
+          <quote>pristina</quote> almacenada en el area
+          <filename>.svn</filename>. Pero también observer que
+          <command>svn revert</command> puede deshacer
+          <emphasis>cualquier</emphasis> operación programada&mdash;por
+          ejemplo, usted puede decidir que no quiere añadir un nuevo
+          fichero después de todo:</para>
 
         <screen>
 $ svn status foo
