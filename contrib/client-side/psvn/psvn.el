@@ -1439,9 +1439,11 @@ When called with a prefix argument run 'svn status -vu'."
 (defun svn-status-get-line-information ()
   "Find out about the file under point.
 The result may be parsed with the various `svn-status-line-info->...' functions."
-  (let ((overlay (car (overlays-at (point)))))
-    (when overlay
-      (overlay-get overlay 'svn-info))))
+  (let ((svn-info nil))
+    (dolist (overlay (overlays-at (point)))
+      (setq svn-info (or svn-info
+                         (overlay-get overlay 'svn-info))))
+    svn-info))
 
 (defun svn-status-get-file-list (use-marked-files)
   "Get either the marked files or the files, where the cursor is on."
