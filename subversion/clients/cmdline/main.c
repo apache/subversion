@@ -134,7 +134,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "  be used as the destination.\n",
     {'r', 'D', 'q', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__xml_file_opt }  },
+     svn_cl__xml_file_opt, svn_cl__force_opt }  },
 
   { "cleanup", svn_cl__cleanup, {0},
     "Recursively clean up the working copy, removing locks, resuming\n"
