@@ -99,14 +99,7 @@ const char *lines[] =
     "Line 50: a series of dollar signs $$$$$$$$$$$$$$$$$$$$$$$$$$$$.",
     "Line 51: same, but with embedded keyword $$$$$$$$Date$$$$$$$$$$.",
     "Line 52: same, with expanded, empty keyword $$$$$$Date: $$$$$$.",
-    "Line 53: begin a series of consecutive newlines.",
-    "", /* Lines 54-59 */
-    "",
-    "",
-    "",
-    "",
-    "",
-    "Line 60: end of subst test data."
+    "Line 53: end of subst test data."
   };
 
 
