@@ -1,0 +1,13 @@
+Index: subversion/libsvn_fs/fs.c
+===================================================================
+--- subversion/libsvn_fs/fs.c	(revision 5076)
++++ subversion/libsvn_fs/fs.c	(working copy)
+@@ -165,7 +165,7 @@
+ 
+   /* Checkpoint any changes.  */
+   {
+-    int db_err = env->txn_checkpoint (env, 0, 0, 0);
++    int db_err = env->txn_checkpoint (env, 8000, 60, 0);
+ 
+ #if SVN_BDB_HAS_DB_INCOMPLETE
+     while (db_err == DB_INCOMPLETE)
