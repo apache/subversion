@@ -46,12 +46,6 @@ wc_repository_diff (apr_getopt_t *os,
   svn_client_auth_baton_t *auth_baton;
   int i;
 
-  if (opt_state->start_revision != opt_state->end_revision)
-    {
-      return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-                                "diff only supports a single revision");
-    }
-
   options = svn_cl__stringlist_to_array(opt_state->extensions, pool);
 
   targets = svn_cl__args_to_target_array (os, pool);
@@ -67,15 +61,14 @@ wc_repository_diff (apr_getopt_t *os,
     {
       svn_stringbuf_t *target
         = ((svn_stringbuf_t **) (condensed_targets->elts))[i];
-      svn_stringbuf_t *parent_dir, *entry;
 
-      SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, &entry, pool));
-      
       SVN_ERR (svn_client_diff (target,
                                 options,
                                 auth_baton,
                                 opt_state->start_revision,
                                 opt_state->start_date,
+                                opt_state->end_revision,
+                                opt_state->end_date,
                                 opt_state->nonrecursive ? FALSE : TRUE,
                                 pool));
     }

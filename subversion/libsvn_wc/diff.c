@@ -586,9 +586,7 @@ temp_file_cleanup_handler (void *arg)
     = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
 
   /* Remove the temporary file. */
-  apr_file_remove (temp_file_path->data, b->pool);
-
-  return APR_SUCCESS;
+  return apr_file_remove (temp_file_path->data, b->pool);
 }
 
 /* An svn_delta_edit_fns_t editor function.  Do the work of applying the

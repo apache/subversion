@@ -433,22 +433,31 @@ svn_client_file_diff (svn_stringbuf_t *path,
                       apr_pool_t *pool);
 
 
-/* Given a PATH in the working copy, compare the working copy against a
- * revision in the repository. The repository revision can be specified as
- * REVISION, or as a time TM.
+/* Given a TARGET which is either a path in the working copy or an URL,
+ * compare it against the given repository version(s).
  *
- * If PATH is a directory and RECURSE is true, this will be a recursive
+ * START_REVISION/START_DATE and END_REVISION/END_DATE are the two
+ * repository versions, for each specify either the revision of the
+ * date. If the two revisions are the different the two repository versions
+ * are compared. If the two revisions are the same the working copy is
+ * compared against the repository.
+ *
+ * If TARGET is a directory and RECURSE is true, this will be a recursive
  * operation.
  *
  * DIFF_OPTIONS is used to pass additional command line options to the diff
  * processes invoked to compare files. DIFF_OPTIONS is an array of
  * svn_stringbuf_t * items.
+ *
+ * AUTH_BATON is used to communicate with the repository.
  */
-svn_error_t *svn_client_diff (svn_stringbuf_t *path,
+svn_error_t *svn_client_diff (svn_stringbuf_t *target,
                               const apr_array_header_t *diff_options,
                               svn_client_auth_baton_t *auth_baton,
-                              svn_revnum_t revision,
-                              apr_time_t tm,
+                              svn_revnum_t start_revision,
+                              apr_time_t start_date,
+                              svn_revnum_t end_revision,
+                              apr_time_t end_date,
                               svn_boolean_t recurse,
                               apr_pool_t *pool);
 

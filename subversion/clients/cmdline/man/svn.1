@@ -34,7 +34,7 @@ default, --verbose without argument defaults to verbose)
 Specify which date to operate on.
 .TP
 \fB-r\fP or \fB--revision\fP \fBREV\fP
-Specify repository revision to operate on. Separate multiple revisons with `,'.
+Specify repository revision to operate on. Separate multiple revisons with `:'.
 .TP
 \fB-v\fP or \fB--version\fP
 The subversion and svn version is printed.
@@ -172,10 +172,39 @@ the repository, and deleted from your working copy.
 
 \fBexample:\fP svn delete foo.c bar.h
 .TP
-\fBdiff\fP \fIfile\fP\|.\|.\|.
-Display local file changes as contextual diffs.
+\fBdiff\fP \fI[target...]\fP.
+Display file changes as contextual diffs. The target can be a
+directory, in which it operates recursively. The target can be an URL,
+although this is only useful if two revisions are also given.
+
+-r/--revision with a single revision causes comparison with the
+specified repository revision. With two revisions the comparison is
+between the two specified repository revisions. If this option is not
+given the comparison is between the working copy and its current
+repository revision.
+
+-n/--nonrecursive with a directory target will prevent recursive
+descent into subdirectories.
 
 \fBexample:\fP svn diff README
+
+Compares the working copy version of the file with current repository
+version.
+
+\fBexample:\fP svn diff -rHEAD README
+
+Compares the working copy with most recent repository version.
+
+\fBexample:\fP svn diff -r123:456 README
+
+Compares revisions 123 and 456 of the file in the repository.
+
+\fBexample:\fP
+  svn diff -r123:456 http://rep.com/repo/README
+
+Compare revisions 123 and 456 of the file in the repository without
+the need for a working copy.
+
 .TP
 \fBhelp\fP [\fIcommand\fP]
 (Alias: ?, h)
