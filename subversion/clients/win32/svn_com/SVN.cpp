@@ -53,7 +53,7 @@ CSVNWorkingCopy::check_wc(BSTR bstrDir, VARIANT_BOOL *pfIsValid)
 	if (pfIsValid == NULL)
 		return E_POINTER;
 
-	path = svn_string_create(W2A(bstrDir), g_pool);
+	path = svn_stringbuf_create(W2A(bstrDir), g_pool);
 
 	error = svn_wc_check_wc(path, &is_wc, g_pool);
 
@@ -283,7 +283,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, SAFEARRAY **ppsa)
 	SAFEARRAY *psa;
 	SAFEARRAYBOUND rgsBound;
 	IDispatch **paDisp;
-	apr_size_t klen;
+	apr_ssize_t klen;
 	int i;
 	apr_size_t count;
 	CHAR *pszKey;
@@ -291,7 +291,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, SAFEARRAY **ppsa)
 	svn_boolean_t fLockedSA = FALSE;
 
 	hash = apr_hash_make(g_pool);
-	path = svn_string_create(W2A(bstrPath), g_pool);
+	path = svn_stringbuf_create(W2A(bstrPath), g_pool);
 	error = svn_wc_statuses(hash, path, FALSE, g_pool);
 	if (error) {
 		hr = convert_err_to_hresult(error);
