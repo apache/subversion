@@ -464,60 +464,6 @@ apr_time_t svn_wc__string_to_time (svn_string_t *timestr);
 
 
 
-/*** Diffing and merging ***/
-
-/* Nota bene: here, diffing and merging is about discovering local changes
- * to a file and merging them back into an updated revision of that
- * file, not about txdeltas.
- */
-
-/* Get local changes to a working copy file.
- *
- * DIFF_FN stores its results in *RESULT, which will later be passed
- * to a matching patch function.  (Note that DIFF_FN will be invoked
- * on two filenames, a source and a target). 
- */
-svn_error_t *svn_wc__get_local_changes (svn_wc_diff_fn_t *diff_fn,
-                                        void **result,
-                                        svn_string_t *path,
-                                        apr_pool_t *pool);
-
-
-/* An implementation of the `svn_wc_diff_fn_t' interface.
- * Store the diff between SRC and TARGET in *RESULT.  (What gets
- * stored isn't necessarily the actual diff data -- it might be the
- * name of a tmp file containing the data, for example.)
- */
-svn_error_t *svn_wc__gnudiff_differ (void **result,
-                                     svn_string_t *src,
-                                     svn_string_t *target,
-                                     apr_pool_t *pool);
-
-
-/* Re-apply local changes to a working copy file that may have been
- * updated.
- *
- * PATCH_FN is a function, such as svn_wc__gnudiff_patcher, that can
- * use CHANGES to patch the file PATH (note that PATCH_FN will be
- * invoked on two filenames, a source and a target).
- */
-svn_error_t *svn_wc__merge_local_changes (svn_wc_patch_fn_t *patch_fn,
-                                          void *changes,
-                                          svn_string_t *path,
-                                          apr_pool_t *pool);
-
-
-
-/* An implementation of the `svn_wc_patch_fn_t' interface.
- * Patch SRC with DIFF to yield TARGET.
- */
-svn_error_t *svn_wc__gnudiff_patcher (void *diff,
-                                      svn_string_t *src,
-                                      svn_string_t *target,
-                                      apr_pool_t *pool);
-
-
-
 /*** Routines that deal with properties ***/
 
 /* Given two property hashes (working copy and `base'), deduce what

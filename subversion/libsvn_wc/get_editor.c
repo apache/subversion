@@ -932,7 +932,6 @@ close_file (void *file_baton)
   apr_file_t *log_fp = NULL;
   svn_error_t *err;
   apr_status_t apr_err;
-  void *local_changes;
   char *revision_str = NULL;
   svn_string_t *entry_accum;
 
@@ -1026,14 +1025,6 @@ close_file (void *file_baton)
             When all entries have been done, the operation is
             complete, so remove SVN/log.
   */
-
-  /* Save local mods. */
-  err = svn_wc__get_local_changes (svn_wc__gnudiff_differ,
-                                   &local_changes,
-                                   fb->path,
-                                   fb->pool);
-  if (err)
-    return err;
 
   /** Write out the appropriate log entries. 
       This is safe because the adm area is locked right now. **/ 
