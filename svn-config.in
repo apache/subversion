@@ -22,10 +22,10 @@ bindir="@bindir@"
 libdir="@libdir@"
 includedir="@includedir@"
 
-LIBS="@NEON_LIBS@ @SVN_APRUTIL_LIBS@ @SVN_APR_LIBS@ @SVN_DB_LIBS@ @LIBS@"
+LIBS="@NEON_LIBS@ @SVN_APRUTIL_EXPORT_LIBS@ @SVN_APR_EXPORT_LIBS@ @SVN_DB_LIBS@ @LIBS@"
 CFLAGS="@CFLAGS@"
 CPPFLAGS="@CPPFLAGS@"
-INCLUDES="@SVN_NEON_INCLUDES@ @SVN_DB_INCLUDES@"
+INCLUDES="@SVN_NEON_INCLUDES@ @SVN_DB_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@"
 LDFLAGS="@LDFLAGS@"
 
 SVN_SOURCE_DIR="@abs_srcdir@"
@@ -38,19 +38,23 @@ Usage: svn-config [OPTION]
 
 Known values for OPTION are:
   --prefix[=DIR]    change prefix to DIR
+  --cflags          print C compiler flags
+  --cppflags        print cpp flags
   --includes        print include information
   --ldflags         print linker flags
   --libs            print library information
   --srcdir          print SVN source directory
+  --link-ld         print link switch(es) for linking to SVN    [not impl]
+  --link-libtool    print the libtool inputs for linking to SVN [not impl]
   --help            print this help
 
 When linking with libtool, an application should do something like:
-  SVN_LIBS="\`svn-config --libs\`"
+  SVN_LIBS="\`svn-config --link-libtool --libs\`"
 or when linking directly:
-  SVN_LIBS="\`svn-config --libs\`"
+  SVN_LIBS="\`svn-config --link-ld --libs\`"
 
-An application should use the results of --includes, and --ldflags in
-their build process.
+An application should use the results of --cflags, --cppflags, --includes,
+and --ldflags in their build process.
 EOF
 }
 
@@ -91,6 +95,12 @@ while test $# -gt 0; do
     --prefix)
     echo $prefix
     exit 0
+    ;;
+    --cflags)
+    flags="$flags $CFLAGS"
+    ;;
+    --cppflags)
+    flags="$flags $CPPFLAGS"
     ;;
     --libs)
     flags="$flags $LIBS"

@@ -38,22 +38,26 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --ldflags failed])
   fi
 
-  LIBS="$LIBS `$apr_config --libs`"
-  if test $? -ne 0; then
-    AC_MSG_ERROR([apr-config --libs failed])
-  fi
-
-  SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES `$apr_config --includes`"
+  SVN_APR_INCLUDES="`$apr_config --includes`"
   if test $? -ne 0; then
     AC_MSG_ERROR([apr-config --includes failed])
   fi
 
-  SVN_APR_LIBS="`$apr_config --link-libtool`"
+  dnl When APR stores the dependent libs in the .la file, we don't need 
+  dnl --libs.
+  SVN_APR_LIBS="`$apr_config --link-libtool --libs`"
   if test $? -ne 0; then
-    AC_MSG_ERROR([apr-config --link-libtool failed])
+    AC_MSG_ERROR([apr-config --link-libtool --libs failed])
   fi
 
+  SVN_APR_EXPORT_LIBS="`$apr_config --link-ld --libs`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apr-config --link-ld --libs failed])
+  fi
+
+  AC_SUBST(SVN_APR_INCLUDES)
   AC_SUBST(SVN_APR_LIBS)
+  AC_SUBST(SVN_APR_EXPORT_LIBS)
 ])
 
 dnl SVN_DOWNLOAD_APR()
