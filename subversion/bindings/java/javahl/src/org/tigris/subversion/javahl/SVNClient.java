@@ -253,6 +253,8 @@ public class SVNClient implements SVNClientInterface
 
     public native byte[] blame(String path, Revision revisionStart, Revision revisionEnd) throws ClientException;
 
+    public native void blame(String path, Revision revisionStart, Revision revisionEnd, BlameCallback callback) throws ClientException;
+
     public static native void enableLogging(int logLevel, String logFilePath);
     public static native String version();
     public static native int versionMajor();

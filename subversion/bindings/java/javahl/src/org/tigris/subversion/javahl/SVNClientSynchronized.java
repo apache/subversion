@@ -474,4 +474,12 @@ public class SVNClientSynchronized implements SVNClientInterface
         }
     }
 
+    public void blame(String path, Revision revisionStart, Revision revisionEnd, BlameCallback callback) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.blame(path, revisionStart, revisionEnd, callback);
+        }
+    }
+
 }

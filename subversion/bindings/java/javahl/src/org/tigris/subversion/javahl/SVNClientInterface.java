@@ -246,4 +246,6 @@ public interface SVNClientInterface
     void relocate(String from, String to, String path, boolean recurse) throws ClientException;
 
     byte[] blame(String path, Revision revisionStart, Revision revisionEnd) throws ClientException;
+
+    void blame(String path, Revision revisionStart, Revision revisionEnd, BlameCallback callback) throws ClientException;
 }

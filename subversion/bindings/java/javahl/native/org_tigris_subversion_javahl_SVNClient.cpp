@@ -29,6 +29,7 @@
 #include "Notify.h"
 #include "Prompter.h"
 #include "Targets.h"
+#include "BlameCallback.h"
 #include "svn_version.h"
 #include "version.h"
 #include <iostream>
@@ -1181,15 +1182,48 @@ JNIEXPORT jbyteArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame
 	{
 		return NULL;
 	}	
-	Revision revisionStart(jrevisionStart);
+	Revision revisionStart(jrevisionStart, false, true);
 	if(JNIUtil::isExceptionThrown())
 	{
 		return NULL;
 	}	
-	Revision revisionEnd(jrevisionEnd);
+	Revision revisionEnd(jrevisionEnd, true);
 	if(JNIUtil::isExceptionThrown())
 	{
 		return NULL;
 	}	
 	return cl->blame(path, revisionStart, revisionEnd);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    blame
+ * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Lorg/tigris/subversion/javahl/Revision;Lorg/tigris/subversion/javahl/BlameCallback;)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_BlameCallback_2
+  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevisionStart, jobject jrevisionEnd, jobject jblameCallback)
+{
+	JNIEntry(SVNClient, blame);
+	SVNClient *cl = SVNClient::getCppObject(jthis);
+	if(cl == NULL)
+	{
+		JNIUtil::throwError("bad c++ this");
+		return;
+	}
+	JNIStringHolder path(jpath);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}	
+	Revision revisionStart(jrevisionStart, false, true);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}	
+	Revision revisionEnd(jrevisionEnd, true);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}	
+	BlameCallback callback(jblameCallback);
+	cl->blame(path, revisionStart, revisionEnd, &callback);
 }
