@@ -85,7 +85,8 @@
 ;; * add support for svn rename, svn delete
 ;; * Parse the following line correct:
 ;;  A  +            -       ?          ?    ./psvn.el -- show the + also
-;;
+;; * interactive svn-status should complete existing directories only;
+;;   unfortunately `read-directory-name' doesn't exist in Emacs 21.3
 
 ;; Overview over the implemented/not (yet) implemented svn sub-commands:
 ;; * add                       implemented
@@ -192,6 +193,9 @@
 (defun svn-status (dir &optional arg)
   (interactive (list (read-file-name "SVN status directory: "
                                      nil default-directory nil)))
+  (unless (file-directory-p dir)
+    (error "%s is not a directory" dir))
+  (setq dir (file-name-as-directory dir))
   (setq svn-status-directory-history (delete dir svn-status-directory-history))
   (add-to-list 'svn-status-directory-history dir)
   (unless (string= (buffer-name) "*svn-status*")
