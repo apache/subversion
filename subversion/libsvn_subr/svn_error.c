@@ -161,12 +161,13 @@ svn_error__set_error_pool (apr_pool_t *pool,
 static void
 svn_pool__inherit_error_pool (apr_pool_t *p)
 {
+  apr_pool_t *parent = apr_pool_get_parent (p);
   apr_pool_t *error_pool;
 
-  if (p->parent == NULL)
+  if (parent == NULL)
     abort_on_pool_failure (SVN_ERR_BAD_CONTAINING_POOL);
 
-  svn_error__get_error_pool (p->parent, &error_pool, NULL);
+  svn_error__get_error_pool (parent, &error_pool, NULL);
   svn_error__set_error_pool (p, error_pool, 0);
 }
 
@@ -193,44 +194,21 @@ svn_error_init_pool (apr_pool_t *top_pool)
 }
 
 
-apr_size_t
-svn_pool_get_size (apr_pool_t *p)
-{
-  apr_size_t num_bytes = 0;
-  
-  /* Do nothing if P is NULL */
-  if (p == NULL)
-    return 0;
-
-  num_bytes = apr_pool_num_bytes (p);
-  if (p->sub_pools)
-    {
-      apr_pool_t *this_pool = p->sub_pools;
-      num_bytes += svn_pool_get_size (this_pool);
-      while (this_pool->sub_next)
-        {
-          this_pool = this_pool->sub_next;
-          num_bytes += svn_pool_get_size (this_pool);
-        }
-    }
-  return num_bytes;
-}
-
-
 #ifdef SVN_POOL_DEBUG
 /* Find the oldest living ancestor of pool P (which could very well be
    P itself) */
 static apr_pool_t *
 find_oldest_pool_ancestor (apr_pool_t *p)
 {
-  apr_pool_t *ret_pool = p;
-
-  if (ret_pool != NULL)
+  while (1)
     {
-      while (ret_pool->parent)
-        ret_pool = ret_pool->parent;
+      apr_pool_t *parent = apr_pool_get_parent (p);
+
+      if (parent == NULL)       /* too far? */
+        return p;
+      p = parent;
     }
-  return ret_pool;
+  /* NOTREACHED */
 }
 #endif /* SVN_POOL_DEBUG */
 
@@ -283,22 +261,24 @@ svn_pool_clear_debug (apr_pool_t *p,
                       int line)
 #endif /* SVN_POOL_DEBUG */
 {
+  apr_pool_t *parent;
   apr_pool_t *error_pool;
   svn_boolean_t subpool_of_p_p;  /* That's "predicate" to you, bud. */
     
 #ifdef SVN_POOL_DEBUG
   {
-    apr_size_t num_bytes = svn_pool_get_size (p);
+    apr_size_t num_bytes = apr_pool_num_bytes (p, 1);
     apr_size_t global_num_bytes = 
-      svn_pool_get_size (find_oldest_pool_ancestor (p));
+      apr_pool_num_bytes (find_oldest_pool_ancestor (p), 1);
     
     fprintf (stderr, "Pool 0x%08X cleared at %s:%d (%d/%d bytes)\n", 
              (unsigned int)p, file, line, num_bytes, global_num_bytes);
   }
 #endif /* SVN_POOL_DEBUG */
 
-  if (p->parent)
-    svn_error__get_error_pool (p->parent, &error_pool, &subpool_of_p_p);
+  parent = apr_pool_get_parent (p);
+  if (parent)
+    svn_error__get_error_pool (parent, &error_pool, &subpool_of_p_p);
   else
     {
       error_pool = NULL;    /* Paranoia. */
@@ -334,9 +314,9 @@ svn_pool_destroy_debug (apr_pool_t *p,
 {
 #ifdef SVN_POOL_DEBUG
   {
-    apr_size_t num_bytes = svn_pool_get_size (p);
+    apr_size_t num_bytes = apr_pool_num_bytes (p, 1);
     apr_size_t global_num_bytes = 
-      svn_pool_get_size (find_oldest_pool_ancestor (p));
+      apr_pool_num_bytes (find_oldest_pool_ancestor (p), 1);
     
     fprintf (stderr, "Pool 0x%08X destroyed at %s:%d (%d/%d bytes)\n", 
              (unsigned int)p, file, line, num_bytes, global_num_bytes);
