@@ -17,7 +17,7 @@ http://svn.collab.net/repos/svn/branches/0.35.0
  * deltification is automatic again (issue #1601)
  * fix: svn diff -rX:Y wcpath' may lie (issue #1616)
  * fix: URI-decoding problem on 'svn import' (issue #1622)
- * automatic log file removal on repositorys (issue #1615)
+ * automatic log file removal on repositories (issue #1615)
  * many other enhancements, minor features, and bugfixes not listed here
 
 
