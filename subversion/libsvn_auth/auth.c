@@ -77,6 +77,7 @@ struct svn_auth_iterstate_t
 {
   provider_set_t *table;       /* the table being searched */
   int provider_idx;            /* the current provider (row) */
+  svn_boolean_t got_first;     /* did we get the provider's first creds? */
   void *provider_iter_baton;   /* the provider's own iteration context */
 
 };
@@ -183,6 +184,7 @@ svn_auth_first_credentials (void **credentials,
       iterstate = apr_pcalloc (pool, sizeof(*iterstate));
       iterstate->table = table;
       iterstate->provider_idx = i;
+      iterstate->got_first = TRUE;
       iterstate->provider_iter_baton = iter_baton;
       *state = iterstate;
     }
@@ -210,12 +212,24 @@ svn_auth_next_credentials (void **credentials,
       provider = APR_ARRAY_IDX(table->providers,
                                state->provider_idx,
                                provider_t *);
-      if (provider->vtable->next_credentials)
-        SVN_ERR (provider->vtable->next_credentials 
-                 (&creds, state->provider_iter_baton, pool));
+      if (! state->got_first)
+        {
+          SVN_ERR (provider->vtable->first_credentials 
+                   (&creds, &(state->provider_iter_baton),
+                    provider->provider_baton, pool));
+          state->got_first = TRUE;
+        }
+      else
+        {
+          if (provider->vtable->next_credentials)
+            SVN_ERR (provider->vtable->next_credentials 
+                     (&creds, state->provider_iter_baton, pool));
+        }
 
       if (creds != NULL)
         break;
+
+      state->got_first = FALSE;
     }
 
   *credentials = creds;
