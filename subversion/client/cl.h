@@ -20,6 +20,8 @@
 #define SVN_CL_H
 
 /*** Includes. ***/
+#include <apr_tables.h>
+
 #include "svn_wc.h"
 #include "svn_string.h"
 
@@ -65,8 +67,7 @@ typedef struct svn_cl__opt_state_t
   svn_string_t *target;
   svn_string_t *ancestor_path;
   svn_boolean_t force;
-  svn_string_t *name;
-  svn_string_t *value;
+  apr_array_header_t *args;
   svn_string_t *valfile;
   svn_boolean_t help;
 } svn_cl__opt_state_t;
@@ -94,11 +95,21 @@ typedef struct svn_cl__cmd_desc_t
      The alias entries will always immediately follow the base entry. */
   svn_boolean_t is_alias;
 
+
+  /* TODO Get rid of svn_cl__command_id so that you won't get back
+   * into the trap of main() having to know about specific
+   * commands. TODO -Fitz */
+
   /* A unique identifying number for this command.  0 if alias. */
   enum svn_cl__command_id cmd_code;
 
   /* The function this command invokes.  NULL if alias. */
   svn_cl__cmd_proc_t *cmd_func;
+
+  /* The number of non-filename arguments the command takes. (e.g. 2
+   * for propset, 1 for propget, 0 for most other commands). -1 means
+   * "just give me all of the arguments" */
+  int num_args;
 
   /* A brief string describing this command, for usage messages. */
   const char *help;
