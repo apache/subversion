@@ -199,7 +199,7 @@ get_password (char **password,
         *password = apr_pstrdup (pool, "");
       
       /* Store a copy of the password in the auth_baton too. */
-      ab->password = password;
+      ab->password = *password;
     }
   
   return SVN_NO_ERROR;

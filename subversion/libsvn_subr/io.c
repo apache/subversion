@@ -651,8 +651,6 @@ svn_io_is_file_executable(svn_boolean_t *executable,
   apr_status_t apr_err;
   apr_uid_t uid;
   apr_gid_t gid;
-  svn_boolean_t is_user;
-  svn_boolean_t is_group;
 
   *executable = FALSE;
   
