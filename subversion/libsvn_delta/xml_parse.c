@@ -1097,7 +1097,7 @@ xml_handle_end (void *userData, const char *name)
       if (digger->vcdiff_parser)
         {     
           /* (length = 0) implies that we're done parsing vcdiff stream.
-             Let the parser flush it's buffer, clean up, whatever it wants
+             Let the parser flush its buffer, clean up, whatever it wants
              to do. */
           err = svn_vcdiff_parse (digger->vcdiff_parser, NULL, 0);
           if (err)

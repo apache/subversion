@@ -68,14 +68,15 @@
 
 
 svn_error_t *
-svn_wc__ensure_wc_prepared (svn_string_t *path,
-                            svn_string_t *repository,
-                            svn_vernum_t version,
-                            apr_pool_t *pool)
+svn_wc__ensure_prepare_wc (svn_string_t *path,
+                           svn_string_t *repository,
+                           svn_vernum_t version,
+                           const char *initial_unwind,
+                           apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
 
-  err = svn_wc__ensure_adm (path, repository, version, pool);
+  err = svn_wc__ensure_adm (path, repository, version, initial_unwind, pool);
   if (err)
     return err;
 
@@ -85,10 +86,50 @@ svn_wc__ensure_wc_prepared (svn_string_t *path,
 
 
 
-svn_string_t *
-svn_wc__working_name (svn_string_t *path, apr_pool_t *pool)
+/*** The unwind stack. ***/
+
+svn_error_t *
+svn_wc__push_unwind (svn_string_t *path,
+                     const char *action,
+                     const char **atts,
+                     apr_pool_t *pool)
 {
-  return path;  /* todo: in progress */
+  /* kff todo */
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__pop_unwind (svn_string_t *path,
+                    const char *action,
+                    int default_to_done,
+                    int *empty_stack,
+                    apr_pool_t *pool)
+{
+  /* kff todo */
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__unwind_all (svn_string_t *path, apr_pool_t *pool)
+{
+  /* kff todo */
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__unwind_empty_p (svn_string_t *path, int *isempty, apr_pool_t *pool)
+{
+  /* kff todo */
+
+  *isempty = 1;
+
+  return SVN_NO_ERROR;
 }
 
 

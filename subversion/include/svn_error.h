@@ -79,13 +79,22 @@ typedef enum svn_errno_t {
   SVN_ERR_MALFORMED_XML,
 
   /* A working copy "descent" crawl came up empty */
-  SVN_ERR_UNFRUITFUL_DESCENT
+  SVN_ERR_UNFRUITFUL_DESCENT,
 
   /* There's no such xml tag attribute */
   SVN_ERR_XML_ATTRIB_NOT_FOUND,
 
   /* Can't do this update or checkout, because something was in the way. */
   SVN_ERR_OBSTRUCTED_UPDATE,
+
+  /* A mismatch popping the wc unwind stack. */
+  SVN_ERR_WC_UNWIND_MISMATCH,
+
+  /* Trying to pop an empty unwind stack. */
+  SVN_ERR_WC_UNWIND_EMPTY,
+
+  /* Trying to unlock when there's non-empty unwind stack. */
+  SVN_ERR_WC_UNWIND_NOT_EMPTY,
 
   /* A general filesystem error.  */
   SVN_ERR_FS_GENERAL,
@@ -96,7 +105,7 @@ typedef enum svn_errno_t {
 
   /* What happens if a non-blocking call to svn_wc__lock() encounters
      another lock. */
-  SVN_ERR_ENCOUNTERED_LOCK,
+  SVN_ERR_WC_LOCKED,
 
   /* a bad URL was passed to the repository access layer */
   SVN_ERR_ILLEGAL_URL,

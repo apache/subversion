@@ -102,7 +102,7 @@ svn_error_t *svn_wc_delete (apr_array_header_t *paths);
    ultimately translated into network requests.  */
 svn_error_t * svn_wc_crawl_local_mods (svn_string_t *root_directory,
                                        svn_xml_parser_t *xml_parser,
-                                       apr_pool_t *pool)
+                                       apr_pool_t *pool);
 
 
 

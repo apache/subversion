@@ -87,7 +87,7 @@ analogous to CVS/ sudirs:
        properties               /* Properties for this directory */
        delta-here               /* Uncommitted changes logged here */
        lock                     /* Optional, tells others this dir is busy */
-       pending                  /* Actions pending here (for rollback) */
+       unwind                   /* Actions to unwind here (for rollback) */
        tmp                      /* Local tmp space is preferable to /tmp */
        text-base/               /* Pristine repos versions of the files... */
             foo.c
@@ -231,7 +231,7 @@ analogous to CVS/ sudirs:
    race-condition protection, due to the way locking is called.  We'll
    see, though.
 
-`pending'
+`unwind'
 
    This file (XML format) holds a "stack" of adm actions that are
    about to be done.  After each action is done, its entry on the
@@ -249,7 +249,7 @@ analogous to CVS/ sudirs:
    existence it depends have been successfully created).
 
    Soon there will be a general explanation/algorithm for using the
-   pending stack; for now, this example gives the flavor:
+   unwind stack; for now, this example gives the flavor:
 
    To do a fresh checkout of `iota' in directory `.'
 
@@ -263,44 +263,44 @@ analogous to CVS/ sudirs:
       3. window_handler() is invoked N times, constructing
          ./SVN/tmp/text-base/iota
 
-      4. finish_file() is called.  First, it constructs a
-         ./SVN/tmp/pending file looking something like this: 
+      4. finish_file() is called.  First, it atomically pushes these
+         items onto the ./SVN/tmp/unwind stack:
 
             <mv src="SVN/tmp/iota" dst="SVN/text-base/iota">
             <mv src="SVN/tmp/SVN/versions" dst="SVN/versions">
             <merge src="SVN/text-base/iota" dst="iota">
 
-         Then it does the operations in the `pending' file (probably
-         by simply reading the pending file with the same routine
+         Then it does the operations in the `unwind' file (probably
+         by simply reading the unwind file with the same routine
          that would be used in a recovery!), removing each entry
          immediately on finishing that task (i.e., before moving on to
          the next entry).  Yes, it does this in a tmpy way. :-)
 
-         When all done, remove the `pending' file.
+         When all done, remove the `unwind' file.
 
          (kff todo: seems better to use "SVN/tmp/iota" in the first
-         pending line than "SVN/tmp/SVN/text-base/iota", but...
+         unwind line than "SVN/tmp/SVN/text-base/iota", but...
          thoughts?)
 
    To recover from a crash:
 
-      1. Look for a pending file.  
+      1. Look for an `unwind' file.  
 
            A. If none, just "rm -r tmp/*".
 
-           B. Else if `pending' is present, loop over it doing each
+           B. Else if `unwind' is present, loop over it doing each
               operation.  It is permissible for the `src' file of the
               first entry to not exist, since that means a crash
               occurred between doing the operation and writing out the
               tmp file.  Just toss that entry, then.
 
-              When done, remove the pending file.
+              When done, remove the `unwind' file.
 
    The recovery algorithm above is pretty general, actually.  The
-   algorithm for creating the pending file is also going to be pretty
+   algorithm for creating the unwind file is also going to be pretty
    simple; each code path as it goes keeps a growing stack of the
    unwind operations, and then at the end it dumps that stack to the
-   pending file, and then runs the common execute_pending_file()
+   unwind file, and then runs the common execute_unwind_file()
    routine.  Viola!  (Er, pardon my French.)
 
 
@@ -316,7 +316,7 @@ analogous to CVS/ sudirs:
    it), use tmp/SVN/thing.$PID -- notice that no SVN/ file ever has a
    .blah extension.  If it ends in .*, then it must be a tmp file.
 
-   See discussion of the `pending' file for more details.
+   See discussion of the `unwind' file for more details.
 
 `text-base/'
 

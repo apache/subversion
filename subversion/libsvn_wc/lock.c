@@ -72,12 +72,11 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
                                   svn_file_kind, pool);
     if (err)
       {
-        if (wait && (err->apr_err == APR_EEXIST))
+        if (err->apr_err == APR_EEXIST)
           {
             /* kff todo: hey, apr_sleep() is broken. */
             apr_sleep (1000);  /* micro-seconds */
             wait--;
-            continue;
           }
         else
           return err;
@@ -86,7 +85,9 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
       return SVN_NO_ERROR;
   } while (wait > 0);
 
-  return SVN_NO_ERROR;
+  /* If haven't returned by now, then must have encountered a lock. */
+
+  return svn_create_error (SVN_ERR_WC_LOCKED, 0, path->data, NULL, pool);
 }
 
 
