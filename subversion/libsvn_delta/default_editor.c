@@ -115,13 +115,13 @@ apply_text (void *file_baton,
             const char *result_checksum,
             svn_stream_t *base,
             svn_stream_t *target,
-            svn_delta_editor_t *editor, /* ### temporary, for issue #510 */
+            const svn_delta_editor_t *editor, /* ### temporary (issue #510) */
             apr_pool_t *pool)
 {
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
 
-  assert (target && editor);
+  assert (editor);
 
   SVN_ERR (editor->apply_textdelta (file_baton,
                                     base_checksum, result_checksum,
@@ -129,13 +129,20 @@ apply_text (void *file_baton,
                                     &handler, &handler_baton));
 
   if (! handler)
-    return SVN_NO_ERROR;
+    {
+      return SVN_NO_ERROR;
+    }
+  else if (! target)
+    {
+      return ((*handler) (NULL, handler_baton));  /* send the null window */
+    }
   else if (! base)
-    return svn_txdelta_send_stream (target, handler, handler_baton, pool);
+    {
+      return svn_txdelta_send_stream (target, handler, handler_baton, pool);
+    }
   else
     {
       svn_txdelta_stream_t *txdelta_stream;
-
       svn_txdelta (&txdelta_stream, base, target, pool);
       return svn_txdelta_send_txstream
         (txdelta_stream, handler, handler_baton, pool);

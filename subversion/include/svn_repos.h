@@ -294,8 +294,8 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
  * will be called with the @a tgt_root's revision number, else it will
  * not be called at all.
  *
- * If @a text_deltas is @c FALSE, send a single @c NULL txdelta window to 
- * the window handler returned by @a editor->apply_textdelta().
+ * If @a text_deltas is @c FALSE, pass a @c null target stream to
+ * @a editor->apply_text().
  *
  * If @a entry_props is @c TRUE, accompany each opened/added entry with
  * propchange editor calls that relay special "entry props" (this

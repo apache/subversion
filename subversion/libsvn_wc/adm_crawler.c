@@ -611,6 +611,8 @@ svn_wc_transmit_text_deltas (const char *path,
      file baton; the editor returns to us a window consumer routine
      and baton.  If there is no handler provided, just close the file
      and get outta here.  */
+
+  /* ### todo#510: convert to new apply_text interface. */
   SVN_ERR (editor->apply_textdelta
            (file_baton,
             base_digest_hex, svn_md5_digest_to_cstring (digest, pool),

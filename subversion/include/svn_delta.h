@@ -456,7 +456,7 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  *
  * The @c add_file and @c open_file callbacks each return a baton
  * for the file being created or changed.  This baton can then be
- * passed to @c apply_textdelta to change the file's contents, or
+ * passed to @c apply_text to change the file's contents, or
  * @c change_file_prop to change the file's properties.  When the
  * producer is finished making changes to a file, it should call
  * @c close_file, to let the consumer clean up and free the baton.
@@ -494,24 +494,20 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  * 5. When the producer calls @c open_file or @c add_file, either:
  * 
  *    (a) The producer must follow with the changes to the file
- *    (@c change_file_prop and/or @c apply_textdelta, as applicable)
+ *    (@c change_file_prop and/or @c apply_text, as applicable)
  *    followed by a @c close_file call, before issuing any other file
  *    or directory calls, or
  *
  *    (b) The producer must follow with a @c change_file_prop call if
  *    it is applicable, before issuing any other file or directory
  *    calls; later, after all directory batons including the root
- *    have been closed, the producer must issue @c apply_textdelta
+ *    have been closed, the producer must issue @c apply_text
  *    and @c close_file calls.
- *
- * 6. When the producer calls @c apply_textdelta, it must make all of
- *    the window handler calls (including the @c NULL window at the
- *    end) before issuing any other @c svn_delta_editor_t calls.
  *
  * So, the producer needs to use directory and file batons as if it
  * is doing a single depth-first traversal of the tree, with the
  * exception that the producer may keep file batons open in order to
- * make apply_textdelta calls at the end.
+ * make apply_text calls at the end.
  *
  *
  * <h3>Pool Usage</h3>
@@ -535,7 +531,7 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  * Note that close_directory can be called *before* a file in that
  * directory has been closed. That is, the directory's baton is
  * closed before the file's baton. The implication is that
- * @c apply_textdelta and @c close_file should not refer to a parent
+ * @c apply_text and @c close_file should not refer to a parent
  * directory baton UNLESS the editor has taken precautions to
  * allocate it in a pool of the appropriate lifetime (the @a dir_pool
  * passed to @c open_directory and @c add_directory definitely does not
@@ -658,7 +654,8 @@ typedef struct svn_delta_editor_t
    *
    * We are going to add a new file named @a path.  The callback can
    * store a baton for this new file in @a **file_baton; whatever value
-   * it stores there should be passed through to @c apply_textdelta.
+   * it stores there should be passed through to @c apply_text and/or
+   * @c change_file_prop.
    *
    * If @a copyfrom_path is non-@c NULL, this add has history (i.e., is a
    * copy), and the origin of the copy may be recorded as
@@ -666,7 +663,7 @@ typedef struct svn_delta_editor_t
    *
    * Allocations for the returned @a file_baton should be performed in
    * @a file_pool. It is also typical to save this pool for later usage
-   * by @c apply_textdelta and possibly @c close_file.
+   * by @c apply_text, @c change_file_prop, and possibly @c close_file.
    */
   svn_error_t *(*add_file) (const char *path,
                             void *parent_baton,
@@ -682,12 +679,12 @@ typedef struct svn_delta_editor_t
    *
    * The callback can store a baton for this new file in @a **file_baton;
    * whatever value it stores there should be passed through to
-   * apply_textdelta.  If a valid revnum, @a base_revision is the
-   * current revision of the file.
+   * @c apply_text and/or @c change_file_prop.  If a valid revnum, @a
+   * base_revision is the current revision of the file.
    *
    * Allocations for the returned @a file_baton should be performed in
    * @a file_pool. It is also typical to save this pool for later usage
-   * by @c apply_textdelta and possibly @c close_file.
+   * by @c apply_text, @c change_file_prop and possibly @c close_file.
    */
   svn_error_t *(*open_file) (const char *path,
                              void *parent_baton,
@@ -748,10 +745,15 @@ typedef struct svn_delta_editor_t
    * ancestor file on which it is based; it is the baton set by some
    * prior @c add_file or @c open_file callback.
    *
-   * @a target is a readable stream producing the new fulltext of the
-   * file.  If @a base is non-null, it is a readable stream producing
-   * the fulltext of the base file against which to diff target; this
-   * allows editors to generate svndiff deltas (for example, to
+   * If @a target is non-null, it is a readable stream producing the
+   * new fulltext of the file.  If @target is null, then no text is
+   * applied, and this function serves only to signify the presence of
+   * a text change.  Whether a particular editor allows @a target to
+   * be null is implementation-defined.
+   *
+   * If @a base is non-null, it is a readable stream producing
+   * the fulltext of the base file against which to diff @a target;
+   * this allows editors to generate svndiff deltas (for example, to
    * transmit across the wire).  @a base is always optional.
    *
    * @a base_checksum is the hex md5 digest for the base text against
@@ -788,7 +790,7 @@ typedef struct svn_delta_editor_t
                               const char *result_checksum,
                               svn_stream_t *base,
                               svn_stream_t *target,
-                              struct svn_delta_editor_t *editor,
+                              const struct svn_delta_editor_t *editor,
                               apr_pool_t *pool);
 
   /** Change the value of a file's property.

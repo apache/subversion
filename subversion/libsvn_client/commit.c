@@ -58,25 +58,14 @@ send_file_contents (const char *path,
                     apr_pool_t *pool)
 {
   svn_stream_t *contents;
-  svn_txdelta_window_handler_t handler;
-  void *handler_baton;
   apr_file_t *f = NULL;
   apr_status_t apr_err;
 
-  /* Get an apr file for PATH. */
   SVN_ERR (svn_io_file_open (&f, path, APR_READ, APR_OS_DEFAULT, pool));
-  
-  /* Get a readable stream of the file's contents. */
   contents = svn_stream_from_aprfile (f, pool);
+  SVN_ERR (editor->apply_text (file_baton, NULL, NULL, NULL, contents,
+                               editor, pool));
 
-  /* Get an editor func that wants to consume the delta stream. */
-  SVN_ERR (editor->apply_textdelta (file_baton, NULL, NULL, pool,
-                                    &handler, &handler_baton));
-
-  /* Send the file's contents to the delta-window handler. */
-  SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton, pool));
-
-  /* Close the file. */
   apr_err = apr_file_close (f);
   if (apr_err)
     return svn_error_createf

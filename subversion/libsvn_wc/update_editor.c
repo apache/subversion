@@ -1097,7 +1097,7 @@ add_or_open_file (const char *path,
      completely ignored!  Someday the editor-driver may expect us to
      support this optimization;  when that happens, this func needs to
      -copy- the specified existing wc file to this location.  From
-     there, the driver can apply_textdelta on it, etc. */
+     there, the driver can apply_text on it, etc. */
 
   svn_pool_destroy (subpool);
 
