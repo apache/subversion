@@ -259,7 +259,7 @@ add_directory (svn_string_t *name,
 
 struct replace_args
 {
-  fooo;
+  /* fooo; */
 };
 
 static svn_error_t *
@@ -286,7 +286,7 @@ replace_directory (svn_string_t *name,
   dirb->name = svn_string_dup (name, pb->edit_baton->pool);
 
   
-  fooo;
+  /* fooo; */
 
   *child_baton = dirb;
   return SVN_NO_ERROR;
