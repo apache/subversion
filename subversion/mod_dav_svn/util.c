@@ -184,6 +184,9 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
    */
   len1 = strlen(path);
   len2 = strlen(relative->info->repos->root_path);
+  if (len2 == 1 && relative->info->repos->root_path[0] == '/')
+    len2 = 0;
+
   if (len1 < len2
       || (len1 > len2 && path[len2] != '/')
       || memcmp(path, relative->info->repos->root_path, len2) != 0)
