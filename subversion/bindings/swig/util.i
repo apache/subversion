@@ -110,6 +110,9 @@
     $1 = malloc(temp);
     $2 = ($2_ltype)&temp;
 }
+%typemap(perl5, in) (char *buffer, apr_size_t *len) ($*2_type temp) {
+    /* ### FIXME-perl */
+}
 
 /* ### need to use freearg or somesuch to ensure the string is freed.
    ### watch out for 'return' anywhere in the binding code. */
@@ -117,6 +120,9 @@
 %typemap(python, argout, fragment="t_output_helper") (char *buffer, apr_size_t *len) {
     $result = t_output_helper($result, PyString_FromStringAndSize($1, *$2));
     free($1);
+}
+%typemap(perl5, argout) (char *buffer, apr_size_t *len) {
+    /* ### FIXME-perl */
 }
 
 /* -----------------------------------------------------------------------
@@ -132,11 +138,17 @@
     temp = PyString_GET_SIZE($input);
     $2 = ($2_ltype)&temp;
 }
+%typemap(perl5, in) (const char *data, apr_size_t *len) ($*2_type temp) {
+    /* ### FIXME-perl */
+}
 
 %typemap(python, argout, fragment="t_output_helper") (const char *data, apr_size_t *len) {
     $result = t_output_helper($result, PyInt_FromLong(*$2));
 }
 
+%typemap(perl5, argout, fragment="t_output_helper") (const char *data, apr_size_t *len) {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
 */
@@ -146,6 +158,9 @@
         PyErr_SetString(PyExc_ValueError, "Must pass in a valid file object");
         return NULL;
     }
+}
+%typemap(perl5, in) FILE * {
+    /* ### FIXME-perl */
 }
 
 /* -----------------------------------------------------------------------

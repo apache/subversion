@@ -49,6 +49,9 @@ typedef struct svn_string_t svn_string_t;
 
 %typemap(jni) char *                                         "jstring"
 
+%typemap(perl5,argout) RET_STRING {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    TYPE: svn_stringbuf_t
 */
@@ -64,8 +67,14 @@ typedef struct svn_string_t svn_string_t;
                                _global_pool);
 }
 
+%typemap(perl5,in) svn_stringbuf_t * {
+    /* ### FIXME-perl */
+}
 %typemap(python,out) svn_stringbuf_t * {
     $result = PyString_FromStringAndSize($1->data, $1->len);
+}
+%typemap(perl5,out) svn_stringbuf_t * {
+    /* ### FIXME-perl */
 }
 
 /* svn_stringbuf_t ** is always an output parameter */
@@ -93,15 +102,24 @@ typedef struct svn_string_t svn_string_t;
         $1 = &value;
     }
 }
+%typemap(perl5,in) const svn_string_t * (svn_string_t value) {
+    /* ### FIXME-perl */
+}
 
 /* when storing an svn_string_t* into a structure, we must allocate the
    svn_string_t structure on the heap. */
 %typemap(python,memberin) const svn_string_t * {
     $1 = svn_string_dup($input, _global_pool);
 }
+%typemap(perl5,memberin) const svn_string_t * {
+    /* ### FIXME-perl */
+}
 
 %typemap(python,out) svn_string_t * {
     $result = PyString_FromStringAndSize($1->data, $1->len);
+}
+%typemap(perl5,out) svn_string_t * {
+    /* ### FIXME-perl */
 }
 
 /* svn_string_t ** is always an output parameter */
@@ -134,6 +152,9 @@ typedef struct svn_string_t svn_string_t;
     $result = t_output_helper($result, s);
 }
 
+%typemap(perl5,argout) const char **OUTPUT {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    define a general INPUT param of an array of svn_stringbuf_t* items.
  */
@@ -143,6 +164,9 @@ typedef struct svn_string_t svn_string_t;
                                                              _global_pool);
     if ($1 == NULL)
         return NULL;
+}
+%typemap(perl5,in) const apr_array_header_t *STRINGLIST {
+    /* ### FIXME-perl */
 }
 
 %typemap(jni) const apr_array_header_t *STRINGLIST "jobjectArray"
