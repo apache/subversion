@@ -1180,11 +1180,127 @@ property for each
       Discuss other implementation details of ra_dav and mod_dav_svn.
     </p>
 
+    <h2><a name="rationale">Appendix A: Rationale</a></h2>
+    <p>
+      Several times, people have asked, "Why choose
+      HTTP/WebDAV/DeltaV? That seems awfully bloated and
+      ill-suited. Why didn't you design a custom, well-tuned protocol?
+      Or maybe use the CVS protocol?" Listed below are a number of
+      reasons for our choice of WebDAV as our network protocol.
+    </p>
+
+    <blockquote>
+      <small>
+	While this list could certainly be expanded with more reasons
+	(and to be fair, with a list of reasons why WebDAV was a poor
+	choice), it certainly demonstrates the basic reasons for our
+	choice.
+      </small>
+    </blockquote>
+
+    <blockquote>
+      <small>
+	Note: this list came from an email note, so the tone and point
+	of view might be a bit off. Further word-smithing is
+	welcome...
+      </small>
+    </blockquote>
+
+    <h3>Builtin web browsing of the repository</h3>
+    <blockquote>
+      For example, take a
+      look at:
+      <a href="http://svn.collab.net/repos/svn/trunk/HACKING">http://svn.collab.net/repos/svn/trunk/HACKING</a>
+      (that's the HEAD right there; we also have URLs for every
+      previous revision of every file)
+    </blockquote>
+
+    <h3>DAV-based browsing</h3>
+    <blockquote>
+      Use Web Folders or WebDrive or somesuch on
+      your Windows box (or Windows XP's native DAV mounts) to browse
+      the SVN repository with Windows Explorer. Mac OS X has builtin
+      DAV server mounting. Nautilus has DAV capabilities. Then you
+      have your Open Source tools such as cadaver, Goliath, etc.
+    </blockquote>
+
+    <h3>People can use existing libraries</h3>
+    <blockquote>
+      I couldn't even begin to count the number of HTTP tools and
+      libraries available. If we had designed our own protocol, then
+      we would have /none/ of those benefits. Heck, two HTTP library
+      implementors (Joe Orton of Neon, and Daniel Stenberg of CURL)
+      are regulars here. we wouldn't get that benefit. I've used
+      Python's httplib (and a davlib of my own) to do a lot of testing
+      of our server. No need to go and roll new protocol libraries.
+    </blockquote>
+
+    <h3>Existing tools</h3>
+    <blockquote>
+      One word: Ethereal :-) When we capture network traces, Ethereal
+      already knows about HTTP. It's quite nice, but I know there are
+      even better ones out there. But we also have other tools like
+      squid and other (caching) proxies (see the next item).
+    </blockquote>
+
+    <h3>Caching proxies</h3>
+    <blockquote>
+      Subversion will work great with caching proxies. There is no
+      longer a need for specialized tools like "cvsup". Just drop in a
+      caching proxy, and you've already got your distributed read-only
+      repository. That european dev team can just drop in the cache
+      between them and the US server and their checkouts/updates will
+      get cached for the benefit of the other team members. Commits
+      will flow through, back to the US-based server.
+    </blockquote>
+
+    <h3>Sophisticated and broad-choice authentication</h3>
+    <blockquote>
+      We don't have to reimplement an authentication scheme for a new
+      protocol. We can use all of the various schemes that have been
+      defined for HTTP. Ever look at the CVS protocol? Ever see the "I
+      Love You" or "I Hate You" lines? :-) That is all part of
+      creating a new authentication scheme. But we get to use SSL and
+      certificate-based auth if we want. Kerberos. NTLM. or even just
+      simple Basic or Digest. And our users can come from text files,
+      database, LDAP, or PAM. We don't have to reinvent the wheel cuz
+      it is all available for Apache already.
+    </blockquote>
+
+    <h3>Awesome network server</h3>
+    <blockquote>
+      We don't have to worry about how to portably set TCP_CORK for
+      optimal network packets. We don't have to worry about when
+      sendfile() makes sense, or if it is available. We don't have to
+      worry about dropped client connections, how to best use threads
+      and processes to scale, request management, monitoring, logging,
+      etc. Apache gives us all of that and a ton more. I *really*
+      would not want to do that through xinetd. I mean... setting
+      TCP_CORK on stdout? freaky :-)
+    </blockquote>
+
+    <h3>Well-defined on-wire compression</h3>
+    <blockquote>
+      We already have on-wire compression, similar to CVS's "-z#"
+      switch. And we didn't do anything. The client library and server
+      that we use just support it automatically for us, according to
+      RFC 2616.
+    </blockquote>
+
+    <h3>Future interoperability</h3>
+    <blockquote>
+      In the future, we'll be able to interoperate with a multitude of
+      IDEs and other WebDAV/DeltaV clients. As DeltaV becomes more
+      prevalent, IDEs could very well use it for source code
+      management, and we'll be right there without needing to write
+      some MS/SCC library to interface to the tool.
+    </blockquote>
+
     <hr>
     <address><a href="mailto:gstein@lyra.org">Greg Stein</a></address>
 <!-- Created: Thu Aug 10 19:14:20 PDT 2000 -->
 <!-- hhmts start -->
-Last modified: Thu Jan 10 11:53:17 PST 2002
+Last modified: Fri Jan 25 12:54:20 PST 2002
 <!-- hhmts end -->
   </body>
 </html>
