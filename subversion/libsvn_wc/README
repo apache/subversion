@@ -204,20 +204,21 @@ inside the file, delimited with conflict markers.  (Or for binary
 files, make both versions available under temporary names.)
 
 While Subversion can behave the same way for textual conflicts, the
-situation is more complex for trees.  There is often no way to reflect
-both sides of a tree conflict in the working copy without being more
-confusing than helpful.  How does one put "conflict markers" into a
-directory, especially when what was a directory might now be a file,
+situation is more complex for trees.  There is sometimes no way for a
+working copy to reflect both sides of a tree conflict without being
+more confusing than helpful.  How does one put "conflict markers" into
+a directory, especially when what was a directory might now be a file,
 or vice-versa?
 
 Therefore, while Subversion does everything it can to fold conflicts
-intelligently (at least as well as CVS does), in extreme cases it is
-acceptable for the Subversion client to punt, saying in effect "Your
-working copy is too out of whack; please move it aside, check out a
-fresh one, redo your changes in the fresh copy, and commit from that."
-(This response may apply to subtrees of the working copy, of course).
+intelligently (doing at least as well as CVS does), in extreme cases
+it is acceptable for the Subversion client to punt, saying in effect
+"Your working copy is too out of whack; please move it aside, check
+out a fresh one, redo your changes in the fresh copy, and commit from
+that."  (This response may also apply to subtrees of the working copy,
+of course).
 
-Usually it gives more detail than that, of course.  In addition to the
+Usually it offers more detail than that, too.  In addition to the
 overall out-of-whackness message, it can say "Directory foo was
 renamed to bar, conflicting with your new file bar; file blah was
 deleted, conflicting with your local change to file blah, ..." and so
@@ -246,13 +247,8 @@ happens when one change meets another on the same entity.
 
 In each cell
 
-   C   means    "Conflict, straight up and not foldable"
-
+   C   means    "Conflict"
    M   means    "Mergeable"
-
-   F   means    "Conflict for server, so pre-commit check would fail.
-                 Possibly a conflict for client, but might be foldable
-                 (either via straight merge, or folding conflict)"
 
 The principles involved are symmetrical, so the immediate origin of
 each change (working copy vs repository) doesn't matter.
@@ -263,7 +259,8 @@ It's tempting to think of a change as being either "from" the working
 copy or "in" the repository.  But the true source of a change is some
 committer -- each change represents some developer's intention toward
 a file or a tree, and a conflict is what happens when two intentions
-are incompatible (or at any rate are not automatically compatible).
+are incompatible (or their compatibility cannot be automatically
+determined).
 
 It doesn't matter in what order the intentions were discovered, i.e.,
 which has already made it into the repository versus which exists only
@@ -293,26 +290,26 @@ intersections in depth.
    tories]    |    self add         self remove        self rename
   ------------|------------------.---------------.-------------------.
               | C                .               .                   .
-        child | (Must be really  .       C       .     commit: M     .
-         add  | out-of-date for  .               .     update: M     .
+        child | (Must be really  .       C       .       M           .
+         add  | out-of-date for  .               .                   .
   i           | this to happen!) .               .                   .
   n           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
   d           |                  .               .                   .
   i     child |  C               .               .                   .
-  r    remove |                  .       C       .     commit: M     .
-  e           | (Same as above.) .               .     update: M     .
+  r    remove |                  .       C       .       M           .
+  e           | (Same as above.) .               .                   .
   c           |                  .               .                   .
   t           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
               |                  .               .                   .
   c     child |  C               .               .                   .
-  h    rename |                  .       C       .     commit: M     .
-  a           | (Same as above.) .               .     update: M     .
+  h    rename |                  .       C       .       M           .
+  a           | (Same as above.) .               .                   .
   n           |                  .               .                   .
   g           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
   e           |                  .               .                   .
-  s     child |  C               .       C       .                   .
-       modify |                  .               .     commit: M     .
-              | (Same as above.) .               .     update: M     .
+  s     child |  C               .               .                   .
+       modify |                  .       C       .       M           .
+              | (Same as above.) .               .                   .
               |                  .               .                   .
               |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
@@ -349,8 +346,8 @@ columns one and two).
   s         |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
             |              .                 . commit: C if    .             .
       child |  C if name   .  C if name      . name conflicts, .  commit: C  .
-     modify |  conflicts,  .  conflicts,     . else M          .  update: F  .
-            |  else M      .  else M         . update: M       .             .
+     modify |  conflicts,  .  conflicts,     . else M          .  update: M  .
+            |  else M      .  else M         . update: M       .    or C     .
             |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
 
@@ -360,10 +357,9 @@ the same intersections.  It did. :-) -kff]
 
 (BEN SEZ:  [grin])
 
-A note about Table 2: the "if name conflicts" clause means there's a
-conflict if the same child name is mentioned in both changes.  (It
-doesn't matter if it's oName or nName; if it appears anywhere on both
-sides, it's a conflict.)
+A note about Table 2: "if name conflicts" means "if the same child
+name is mentioned in both changes".  (It doesn't matter if it's oName
+or nName; if it appears anywhere on both sides, it's a conflict.)
 
 fooo todo: still verifying Table 3
 
@@ -374,9 +370,9 @@ fooo todo: still verifying Table 3
    any kind   |
    of entity] |   add          remove         rename         text change
   ------------|------------.-------------.---------------.-----------------.
-              | commit: C  .             .               .  commit: C      .
+              |            .             .               .  commit: C      .
       add     |            .             .               .                 .
-  d           | update: F  .     C       .     C         .  update: M      .
+  d           |    C       .     C       .     C         .  update: M      .
   i           |            .             .               .    or C         .
   r           |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
   e           |            . commit: C   .               .                 .
@@ -403,7 +399,7 @@ todo: Write some scenarios here, using the tables.
 
 
 
---------------------------- Footnotes -----------------------------------
+------------------------------ Notes -----------------------------------
 
 [1] Haven't thought carefully about whether this all works smoothly
 when directory *entries* are considered entities.  I think so, but am
