@@ -1,0 +1,34 @@
+This Software should compile and run under win32 and linux. The next step will be 
+the integration into the subversion build system.
+
+
+
+
+./autogen.sh
+./configure --with-jdk=<path to jdk> 
+
+	# For the various other parameters to configure please see the documentation of configure.
+	# Requires jdk 1.2 or newer. It must bei either in the path or passed with the --with-jdk switch.
+	# This version of svn-up has been built with svn-revision 6062. Other may work, but 
+	# we can not guarantee it.
+
+make
+
+compilation on make install
+
+# installation dir and other configuration parameters are documented in the configure command
+# default installation would be in /usr/local/bin and /usr/local/lib
+
+
+
+Windows:
+
+You need the bin directory of the JDK (>= 1.2) in your path.
+
+In subdirectory native there is a Visual Studio Project javahl.dsw
+It has been developed with Visual Studio Version 6
+
+Open this and start a build.
+
+This creates the svnjavahl.dll library in the debug/release subdirectory
+
