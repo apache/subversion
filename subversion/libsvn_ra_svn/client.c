@@ -1331,9 +1331,8 @@ static svn_error_t *ra_svn_lock(void *session_baton,
   svn_ra_svn_conn_t* conn = sess->conn;
   apr_array_header_t *list;
 
-  /* ### LUNDBLAD TODO:  marshall 'current_rev' parameter to server! */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "lock", "c(?c)b", path, comment,
-                               force));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "lock", "c(?c)b(?r)", path, comment,
+                               force, current_rev));
 
   /* Servers before 1.2 doesn't support locking.  Check this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),

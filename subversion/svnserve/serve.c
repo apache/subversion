@@ -1196,20 +1196,20 @@ static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *comment;
   const char *full_path;
   svn_boolean_t force;
+  svn_revnum_t current_rev;
   svn_lock_t *l;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)b", &path, &comment,
-                                 &force));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)b(?r)", &path, &comment,
+                                 &force, &current_rev));
 
   full_path = svn_path_join(b->fs_path, svn_path_canonicalize(path, pool),
                             pool);
 
   SVN_ERR(must_have_write_access(conn, pool, b, TRUE));
 
-  /* ### LUNDBLAD TO-DO:  use 'current_rev' parameter from ra_svn: */
-  SVN_CMD_ERR(svn_repos_fs_lock(&l, b->repos, full_path, comment, force, 0,
-                                SVN_INVALID_REVNUM, /* ### CHANGE ME */
-                                pool));
+  SVN_CMD_ERR(svn_repos_fs_lock(&l, b->repos, full_path, comment, force,
+                                0, /* No expiration time. */
+                                current_rev, pool));
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(!", "success"));
   SVN_ERR(write_lock(conn, pool, l));
