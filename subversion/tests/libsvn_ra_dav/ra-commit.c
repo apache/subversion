@@ -32,7 +32,6 @@ main (int argc, char **argv)
   svn_string_t *url;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
-  svn_revnum_t new_revision;
   const char *url_type;
   const svn_ra_plugin_t *plugin;
   apr_hash_t *targets;
@@ -78,10 +77,6 @@ main (int argc, char **argv)
     goto error;
 
   printf("Committing new version to working copy...\n");
-  new_revision = 1;
-  err = svn_wc_close_commit(root_dir, new_revision, targets, pool);
-  if (err)
-    goto error;
 
   printf("Completed. Wrapping up...\n");
   (*plugin->close)(session_baton);
