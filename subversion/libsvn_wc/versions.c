@@ -52,6 +52,7 @@
 #include <apr_strings.h>
 #include "wc.h"
 #include "svn_xml.h"
+#include "svn_error.h"
 
 
 /*------------------------------------------------------------------*/
@@ -151,55 +152,276 @@ svn_wc__versions_init (svn_string_t *path, apr_pool_t *pool)
  * 
  * If no such ENTRYNAME exists, create it.
  */
-/* Called whenever we find an <open> tag of some kind */
+
+
+/* The userdata that will go to our expat callbacks */
+typedef struct svn_wc__version_baton_t
+{
+  apr_pool_t *pool;
+  svn_xml_parser_t *parser;
+
+  svn_vernum_t default_version;  /* The version of `.' */
+
+  apr_file_t *infile;      /* The versions file we're reading from */
+  apr_file_t *outfile;     /* If this is NULL, then we're GETTING
+                              attributes; if this is non-NULL, then
+                              we're SETTING attributes by writing to
+                              this file.  */
+
+  const char *entryname;   /* The name of the entry we're looking for */
+  svn_vernum_t *version;   /* The version we will get or set */
+
+  va_list valist;          /* The attribute list we want to set or get */
+
+  
+
+
+} svn_wc__version_baton_t;
+
+
+
+/* Write out a new <entry ...> tag whose attributes are the _union_ of
+   those in ATTS and those specified in BATON->valist */
+static svn_error_t *
+set_entry_attributes (svn_wc__version_baton_t *baton,
+                      const char **atts)
+{
+  /* TODO:  Karl, please write. ;-) */
+
+  /* After constructing a **newatts list which is the union of the two
+     lists, pass it off to svn_xml_write_tag_list(), which,
+     incidentally, Karl, you also need to write.  :-) */
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Search through ATTS and fill in each attribute in BATON->valist.
+   It's assumed that the valist contains pairs of arguments in the
+   form:
+
+        {char *attribute_name, svn_string_t **attribute_value}
+
+   This function will _set_ the latter value by dereferencing the
+   double pointer.
+
+   Also, BATON->version will be set appropriately as well.
+
+ */
+static svn_error_t *
+get_entry_attributes (svn_wc__version_baton_t *baton,
+                      const char **atts)
+{
+  const char *val;
+
+  char *variable_attribute_name;
+  svn_string_t **variable_attribute_value;
+
+  /* Before we do anything, let's set baton->version */
+  val = svn_xml_get_attr_value ("version", atts);
+  (* (baton->version)) = (svn_vernum_t) atoi (val);
+
+  /* Now loop through our va_list and return values in every other one */
+  while ((variable_attribute_name = va_arg (baton->valist, char *)))
+    {
+      /* The caller wants us to fetch the value of
+         variable_attribute_name.  Let's do so.  */
+      val = svn_xml_get_attr_value (variable_attribute_name, atts);
+      
+      /* Grab the next varargs variable and SET it to the answer. */
+      variable_attribute_value = va_arg (baton->valist, svn_string_t **);
+
+      *variable_attribute_value = svn_string_create (val, baton->pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Called whenever we find an <open> tag of some kind. */
 static void
 xml_handle_start (void *userData, const char *name, const char **atts)
 {
-  /* There are only two kinds of tags to examine */
+  svn_error_t *err;
 
-  if (! strcmp (name, "wc-versions"))
+  /* Salvage our baton */
+  svn_wc__version_baton_t *baton = (svn_wc__version_baton_t *) userData;
+
+  /* There are only two kinds of tags to examine... */
+
+  if (! strcmp (name, SVN_WC__VERSIONS_START))
     {
+      /* We only care about this tag if we're writing to an outfile. */
+      if (baton->outfile)
+        {
+          /* Write it back out again. */
+          err = svn_xml_write_tag (baton->outfile,
+                                   baton->pool,
+                                   svn_xml__open_tag,
+                                   SVN_WC__VERSIONS_START,
+                                   "xmlns", SVN_XML_NAMESPACE,
+                                   NULL);
+          if (err)
+            {
+              svn_xml_signal_bailout (err, baton->parser);
+              return;
+            }
+        }
     }
 
-  else if (! strcmp (name, "entry"))
+  else if (! strcmp (name, SVN_WC__VERSIONS_ENTRY))
     {
+      /* Get the `name' attribute */
+      const char *nameval = svn_xml_get_attr_value ("name", atts);
+      
+      /* Is this the droid we're looking for? */
+      if (! strcmp (nameval, baton->entryname))
+        {
+          if (baton->outfile) 
+            {
+              err = set_entry_attributes (baton, atts);
+              if (err)
+                {
+                  svn_xml_signal_bailout (err, baton->parser);
+                  return;
+                }
+            }
+          else 
+            {
+              err = get_entry_attributes (baton, atts);
+              if (err)
+                {
+                  svn_xml_signal_bailout (err, baton->parser);
+                  return;
+                }
+            }          
+        }
+        
+      else  /* This isn't the droid we're looking for. */
+        {
+          /* However, if we're writing to an outfile, we need to write
+             it back out anyway.  */
+          if (baton->outfile)
+            {
+              /* Write it back out again. */
+              err = svn_xml_write_tag_list (baton->outfile, baton->pool,
+                                            svn_xml__self_close_tag,
+                                            SVN_WC__VERSIONS_ENTRY,
+                                            atts);
+              if (err)
+                {
+                  svn_xml_signal_bailout (err, baton->parser);
+                  return;
+                }
+            }
+        }
+ 
     }
 
   else
     {
-      /* just ignore unrecognized tags */
+      /* just ignore unrecognized xml tags */
     }
 
+  /* This is an expat callback;  return nothing. */
 }
 
 
-/* Called whenever we find a <close> tag of some kind */
-static void 
+
+
+/* Called whenever we find an </close> tag of some kind. */
+static void
 xml_handle_end (void *userData, const char *name)
 {
-  /* There are only two kinds of tags to examine */
+  svn_error_t *err;
 
-  if (! strcmp (name, "wc-versions"))
+  /* Salvage our baton */
+  svn_wc__version_baton_t *baton = (svn_wc__version_baton_t *) userData;
+
+  /* We don't care about closures of SVN_WC__VERSIONS_ENTRY, because
+     they're all self-closing anyway, and well, xml_handle_start is
+     writing them back out to disk already.  We only care about
+     </wc-versions> here. */
+
+  if (! strcmp (name, SVN_WC__VERSIONS_END))
     {
+      /* Copy this tag back out to the outfile, if we have one. */
+      if (baton->outfile)
+        {
+          /* Write it back out again. */
+          err = svn_xml_write_tag (baton->outfile, baton->pool,
+                                   svn_xml__close_tag,
+                                   SVN_WC__VERSIONS_END,
+                                   NULL);
+          if (err)
+            {
+              svn_xml_signal_bailout (err, baton->parser);
+              return;
+            }
+        }
     }
 
-  else if (! strcmp (name, "entry"))
-    {
-    }
-
-  else
-    {
-      /* just ignore unrecognized tags */
-    }
-
-
+  /* This is an expat callback;  return nothing. */
 }
+  
+
+
+/* Code chunk shared by svn_wc__[gs]et_versions_entry()
+   
+   Parses xml in BATON->infile using BATON as userdata. */
+static svn_error_t *
+do_parse (svn_wc__version_baton_t *baton)
+{
+  svn_error_t *err;
+  svn_xml_parser_t *svn_parser;
+  char buf[BUFSIZ];
+  apr_status_t status;
+  apr_size_t bytes_read;
+
+  /* Create a custom XML parser */
+  svn_parser = svn_xml_make_parser (baton,
+                                    xml_handle_start,
+                                    xml_handle_end,
+                                    NULL,
+                                    baton->pool);
+
+  baton->parser = svn_parser;  /* Don't forget to store the parser in
+                                  our userdata, so that callbacks can
+                                  call svn_xml_signal_bailout() */
+
+  /* Parse the xml in infile, and write new versions of it back out to
+     outfile. */
+  while (status != APR_EOF)
+    {
+      status = apr_full_read (baton->infile, buf, BUFSIZ, &bytes_read);
+      if (status && (status != APR_EOF))
+        return svn_error_create 
+          (status, 0, NULL, baton->pool,
+           "svn_wc__set_versions_entry: apr_full_read choked");
+
+      err = svn_xml_parse (svn_parser, buf, bytes_read, (status == APR_EOF));
+      if (err)
+        return svn_error_quick_wrap 
+          (err,
+           "svn_wc__set_versions_entry:  xml parser failed.");
+    }
+
+
+  /* Clean up xml parser */
+  svn_xml_free_parser (svn_parser);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 
 /*----------------------------------------------------------------------*/
 
 /** Public Interfaces **/
+
 
 
 /* For a given ENTRYNAME in PATH, set its version to VERSION in the
@@ -216,31 +438,112 @@ svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
                                          ...)
 {
   va_list argptr;
-
+  svn_error_t *err;
   apr_file_t *infile = NULL;
   apr_file_t *outfile = NULL;
 
-  /* Create a custom XML parser */
+  svn_wc__version_baton_t *version_baton 
+    = apr_pcalloc (pool, sizeof (svn_wc__version_baton_t));
 
+  /* Open current versions file for reading */
+  err = svn_wc__open_adm_file (&infile, path,
+                               SVN_WC__ADM_VERSIONS,
+                               APR_READ, pool);
+  if (err)
+    return err;
 
+  /* Open a new `tmp/versions' file for writing */
+  /* TODO: Karl... what makes these two file-open calls any different?
+     Won't they both result in opening the *same* `path/tmp/versions'
+     file?!? */
+  err = svn_wc__open_adm_file (&outfile, path,
+                               SVN_WC__ADM_VERSIONS,
+                               (APR_WRITE | APR_CREATE), pool);
+  if (err)
+    return err;
+
+  /* Fill in our userdata structure */
+  version_baton->infile    = infile;
+  version_baton->outfile   = outfile;
+  version_baton->entryname = entryname;
+  version_baton->version   = &version;
+  version_baton->valist    = argptr;
+
+  va_start (argptr, version);
+
+  err = do_parse (version_baton);
+  if (err)
+    return err;
+
+  va_end (argptr);
+
+  /* Close infile */
+  err = svn_wc__close_adm_file (infile, path,
+                                SVN_WC__ADM_VERSIONS, 0, pool);
+  if (err)
+    return err;
+  
+  /* Close the outfile and *sync* it, so it replaces the original
+     infile. */
+  err = svn_wc__close_adm_file (outfile, path,
+                                SVN_WC__ADM_VERSIONS, 1, pool);
+  if (err)
+    return err;
 
 
   return SVN_NO_ERROR;
 }
 
 
+
 /* For a given ENTRYNAME in PATH, read the `version's file and get its
    version into VERSION.  Also get other XML attributes via varargs:
    name, value, name, value, etc. -- where names are char *'s and
-   values are svn_string_t *'s.  Terminate list with NULL.  */
+   values are svn_string_t **'s.  Terminate list with NULL.  */
 svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
                                          apr_pool_t *pool,
                                          const char *entryname,
                                          svn_vernum_t *version,
                                          ...)
 {
+  va_list argptr;
+  svn_error_t *err;
+  apr_file_t *infile = NULL;
+
+  svn_wc__version_baton_t *version_baton 
+    = apr_pcalloc (pool, sizeof (svn_wc__version_baton_t));
+
+  /* Open current versions file for reading */
+  err = svn_wc__open_adm_file (&infile, path,
+                               SVN_WC__ADM_VERSIONS,
+                               APR_READ, pool);
+  if (err)
+    return err;
+
+  /* Fill in our userdata structure */
+  version_baton->infile    = infile;
+  version_baton->entryname = entryname;
+  version_baton->version   = version;
+  version_baton->valist    = argptr;
+
+  va_start (argptr, version);
+
+  err = do_parse (version_baton);
+  if (err)
+    return err;
+
+  va_end (argptr);
+
+  /* Close infile */
+  err = svn_wc__close_adm_file (infile, path,
+                                SVN_WC__ADM_VERSIONS, 0, pool);
+  if (err)
+    return err;
+  
   return SVN_NO_ERROR;
 }
+
+
 
 
 /* Remove ENTRYNAME from PATH's `versions' file. */
