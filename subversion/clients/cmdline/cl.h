@@ -226,7 +226,7 @@ svn_cl__edit_externally (const char **edited_contents,
    libsvn_client routine that needs to authenticate against a
    repository. */
 
-/* This implements the `svn_auth_prompt_t' interface.
+/* This implements the `svn_client_prompt_t' interface.
 
    Display PROMPT to the user, and read a reply back from stdin,
    allocated in POOL and returned in *RESULT.  If HIDE is set, the
@@ -245,13 +245,6 @@ svn_client_auth_baton_t *
 svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
                          apr_pool_t *pool);
 
-/* Helper for subcommands: given parsed OPT_STATE arguments from the
-   command-line, return a newly allocated auth_baton in POOL.  This
-   auth_baton will have the cmdline-client's 'prompt' provider
-   registered.  */
-svn_auth_baton_t *
-svn_cl__create_auth_baton (svn_cl__opt_state_t *opt_state,
-                           apr_pool_t *pool);
 
 
 /*** Notification functions to display results on the terminal. */

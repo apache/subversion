@@ -220,43 +220,6 @@ svn_error_t * svn_auth_save_credentials(svn_auth_iterstate_t *state,
 
 /** @} */
 
-
-/** General authentication providers */
-
-
-/** A callback function type defined by a top-level svn application.
- *
- * If libsvn_client is unable to retrieve certain authorization
- * information, it can use this callback; the application will then
- * directly query the user with @a prompt and return the answer in 
- * @c info, allocated in @a pool.  @a baton is provided at the same 
- * time as the callback, and @a hide indicates that the user's answer 
- * should not be displayed on the screen.
- */
-typedef svn_error_t *(*svn_auth_prompt_t)
-       (const char **info,
-        const char *prompt,
-        svn_boolean_t hide,
-        void *baton,
-        apr_pool_t *pool);
-
-
-/** Set @a *provider and @ *provider_baton to an authentication
-    provider of type @c svn_auth_cred_simple_t that gets information
-    by prompting the user with @a prompt_func and @a prompt_baton. If
-    either @a default_username or @a default_password is non-NULL,
-    return the default argument(s) when @c svn_auth_first_credentials
-    is called.  If @c first_credentials() fails, then re-prompt @a
-    retry_limit number of times (via @c next_credentials()). */
-void svn_auth_get_simple_prompt_provider (const svn_auth_provider_t **provider,
-                                          void **provider_baton,
-                                          svn_auth_prompt_t prompt_func,
-                                          void *prompt_baton,
-                                          int retry_limit,
-                                          const char *default_username,
-                                          const char *default_password,
-                                          apr_pool_t *pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

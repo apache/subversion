@@ -519,6 +519,7 @@ main (int argc, const char * const *argv)
   svn_boolean_t log_is_pathname = FALSE;
   apr_status_t apr_err;
   svn_cl__cmd_baton_t command_baton;
+  svn_auth_baton_t *ab;
   svn_auth_cred_simple_t *default_creds;
 
   /* C programs default to the "C" locale by default.  But because svn
@@ -882,9 +883,14 @@ main (int argc, const char * const *argv)
   command_baton.ctx = svn_client_ctx_create (pool);
 
   /* Build an authentication baton to give to libsvn_client. */
+  svn_auth_open (&ab, pool);
   svn_client_ctx_set_auth_baton (command_baton.ctx,
                                  svn_cl__make_auth_baton (&opt_state, pool),
-                                 svn_cl__create_auth_baton (&opt_state, pool));
+                                 ab);
+  
+  /* Add the prompt function and baton. */
+  svn_client_ctx_set_prompt_func (command_baton.ctx, 
+                                  svn_cl__prompt_user, NULL);
   
   /* Place any default --username or --password credentials into the cxt. */
   if (opt_state.auth_username || opt_state.auth_password)

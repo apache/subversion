@@ -1869,6 +1869,22 @@ svn_wc_set_auth_file (svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool);
 
 
+/** Store a simple credentials in the working copy.
+ *
+ * Try to save simple credentials @a creds in the working copy tree
+ * whose root is at @a base_dir.  Use @a base_access for access to the
+ * administrative area.  Use @a pool for all allocations.
+ * 
+ * If the function is successful, set @a *saved to @c TRUE.
+ */
+svn_error_t *
+svn_wc_save_simple_creds (svn_boolean_t *saved,
+                          const char *base_dir,
+                          svn_wc_adm_access_t *base_access,
+                          svn_auth_cred_simple_t *creds,
+                          apr_pool_t *pool);
+
+
 /** Set @a *provider and @ *provider_baton to an authentication
     provider of type @c svn_auth_cred_simple_t that gets/sets
     information from a working copy directory @a wc_dir.  If an access
