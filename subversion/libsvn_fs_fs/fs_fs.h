@@ -347,9 +347,16 @@ const char *svn_fs_fs__path_rev (svn_fs_t *fs,
                                  svn_revnum_t rev, 
                                  apr_pool_t *pool);
 
-/* Obtain a write lock on the filesystem FS.  Temporary allocations
-   are from POOL. */
-svn_error_t *svn_fs_fs__get_write_lock (svn_fs_t *fs,
-                                        apr_pool_t *pool);
+/* Obtain a write lock on the filesystem FS in a subpool of POOL, call
+   BODY with BATON and that subpool, destroy the subpool (releasing the write
+   lock) and return what BODY returned. */
+svn_error_t *
+svn_fs_fs__with_write_lock (svn_fs_t *fs,
+                            svn_error_t *(*body)(void *baton,
+                                                 apr_pool_t *pool),
+                            void *baton,
+                            apr_pool_t *pool);
+
+
 
 #endif
