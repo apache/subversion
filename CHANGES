@@ -11,6 +11,8 @@ Version 0.10
  * 'svnadmin lstxns' improvements, and new --long switch
  * commits show "Replacing" instead of "Deleting/Adding" (#571)
  * commits show progress on postfix txdeltas.
+ * WARNING:  existing repositories need to be upgraded;
+             read tools/enable-dupkeys.sh.
 
  Developer-visible changes:
  * reduced memory consumption
