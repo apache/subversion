@@ -94,7 +94,7 @@ extern void svn_fs_set_warning_func (svn_fs_t *fs,
 extern svn_error_t *svn_fs_newfs (svn_fs_t *fs, const char *path);
 
 /* Set *FS to point to a Subversion filesystem object representing the
-   Subverision filesystem stored in the Unix file or directory named
+   Subversion filesystem stored in the Unix file or directory named
    by PATH.  PATH must be an absolute filename, referring to a file or
    directory created by `svn_fs_newfs'.  Do all allocation for *FS in
    a subpool of POOL.  */
