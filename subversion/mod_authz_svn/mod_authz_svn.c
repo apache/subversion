@@ -261,7 +261,7 @@ static int auth_checker(request_rec *r)
         repos_path = svn_path_join("/", repos_path, r->pool);
 
     /* Retrieve/cache authorization file */
-    cache_key = apr_pstrcat(r->pool, "mod_authz_svn:", repos_path, NULL);
+    cache_key = apr_pstrcat(r->pool, "mod_authz_svn:", conf->access_file, NULL);
     apr_pool_userdata_get((void **)&access_conf, cache_key, r->connection->pool);
     if (access_conf == NULL) {
         svn_err = svn_config_read(&access_conf, conf->access_file, FALSE,
