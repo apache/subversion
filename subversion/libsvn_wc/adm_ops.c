@@ -1372,15 +1372,20 @@ svn_wc_remove_from_revision_control (const char *path,
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
       }
 
-      if (destroy_wf && text_modified_p)  /* don't kill local mods */
+      /* If we were asked to destory the working file, do so unless
+         it has local mods. */
+      if (destroy_wf)
         {
-          return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD,
-                                   0, NULL, subpool, "");
-        }
-      else
-        {
-          /* The working file is still present; remove it. */
-          SVN_ERR (remove_file_if_present (full_path, subpool));
+          if (text_modified_p)  /* don't kill local mods */
+            {
+              return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD,
+                                       0, NULL, subpool, "");
+            }
+          else
+            {
+              /* The working file is still present; remove it. */
+              SVN_ERR (remove_file_if_present (full_path, subpool));
+            }
         }
 
     }  /* done with file case */
