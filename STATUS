@@ -7,6 +7,11 @@ delay a release, etc.
 Status of 1.0.1:
 ================
 
+1.0.1 is currently scheduled for Tuesday, 9 March 2004.  A thought: it
+would be nice if all changes could be *committed* by the beginning of
+Friday, March 5th (er, UTC), so we have a period in which there's
+something stable to test.
+
 Candidate changes:
 
   * r8550
@@ -118,7 +123,7 @@ Candidate changes:
     Votes:
       +1: epg
 
-Binding canidate changes:
+Binding candidate changes:
 
   * r8829, r8834
     Fix bindings on Windows.
