@@ -44,3 +44,9 @@ All of these people are considered equally answerable for bugs.
             trunk to start out its new life with an API divergence.
             (http://www.contactor.se/~dast/svn/archive-2003-12/0736.shtml)
      Votes:
+
+   * r8003
+     Remove svnserve -u client and server code.
+     Justification: Fixes arguably privacy leak in client.
+     Notes: svnserve -u (believe usernames) was deprecated in 0.34.
+     Votes:
