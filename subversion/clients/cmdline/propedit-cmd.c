@@ -71,7 +71,6 @@ svn_cl__propedit (apr_getopt_t *os,
       svn_revnum_t rev;
       const char *URL, *target;
       svn_string_t *propval;
-      const char *new_propval;
       const char *temp_dir;
 
       /* All property commands insist on a specific revision when
@@ -107,27 +106,21 @@ svn_cl__propedit (apr_getopt_t *os,
       /* Run the editor on a temporary file which contains the
          original property value... */
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
-      SVN_ERR (svn_cl__edit_externally (&new_propval, NULL,
+      SVN_ERR (svn_cl__edit_externally (&propval, NULL,
                                         opt_state->editor_cmd, temp_dir,
-                                        propval->data, "svn-prop",
-                                        ctx->config, pool));
+                                        propval, "svn-prop",
+                                        ctx->config,
+                                        svn_prop_needs_translation (pname_utf8),
+                                        opt_state->encoding, pool));
       
       /* ...and re-set the property's value accordingly. */
-      if (new_propval)
+      if (propval)
         {
-          propval->data = new_propval;
-          propval->len = strlen (new_propval);
-
-          /* Possibly clean up the new propval before giving it to
-             svn_client_revprop_set. */
-          if (svn_prop_needs_translation (pname_utf8))
-            SVN_ERR (svn_subst_translate_string (&propval, propval,
-                                                 opt_state->encoding, pool));
-          else 
-            if (opt_state->encoding)
-              return svn_error_create 
-                (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                 _("Bad encoding option: prop value not stored as UTF8"));
+          if (! svn_prop_needs_translation (pname_utf8)
+              && opt_state->encoding)
+            return svn_error_create 
+              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+               _("Bad encoding option: prop value not stored as UTF8"));
           
           SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
                                            URL, &(opt_state->start_revision),
@@ -185,7 +178,6 @@ svn_cl__propedit (apr_getopt_t *os,
           apr_hash_t *props;
           const char *target = ((const char **) (targets->elts))[i];
           svn_string_t *propval;
-          const char *new_propval;
           const char *base_dir = target;
           const char *target_local;
           svn_wc_adm_access_t *adm_access;
@@ -230,33 +222,26 @@ svn_cl__propedit (apr_getopt_t *os,
           
           /* Run the editor on a temporary file which contains the
              original property value... */
-          SVN_ERR (svn_cl__edit_externally (&new_propval, NULL,
+          SVN_ERR (svn_cl__edit_externally (&propval, NULL,
                                             opt_state->editor_cmd,
                                             base_dir,
-                                            propval->data,
+                                            propval,
                                             "svn-prop",
                                             ctx->config,
+                                            svn_prop_needs_translation
+                                            (pname_utf8), opt_state->encoding,
                                             subpool));
           
           target_local = svn_path_local_style (target, subpool);
 
           /* ...and re-set the property's value accordingly. */
-          if (new_propval)
+          if (propval)
             {
-              propval->data = new_propval;
-              propval->len = strlen (new_propval);
-
-              /* Possibly clean up the new propval before giving it to
-                 svn_client_propset. */
-              if (svn_prop_needs_translation (pname_utf8))
-                SVN_ERR (svn_subst_translate_string (&propval, propval,
-                                                     opt_state->encoding,
-                                                     subpool));
-              else 
-                if (opt_state->encoding)
-                  return svn_error_create 
-                    (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                     _("Bad encoding option: prop value not stored as UTF8"));
+              if (! svn_prop_needs_translation (pname_utf8)
+                  && opt_state->encoding)
+                return svn_error_create 
+                  (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                   _("Bad encoding option: prop value not stored as UTF8"));
               
               SVN_ERR (svn_client_propset (pname_utf8, propval, target, 
                                            FALSE, subpool));
