@@ -74,14 +74,14 @@ Candidate changes:
       unsightly sticky bits around people's working copies and
       repositories.
     Votes:
-      +1: breser
+      +1: breser, ghudson
 
   * r10819, r10855
     Avoid repository corruption if executed with closed std{in,out,err}
     Justification:
       Simple fix for a nasty problem that has bitten at least one user.
     Votes:
-       +1: bliss, breser
+       +1: bliss, breser, ghudson
 
   * Issue #1862
     Fix the 'file not found' update error.
@@ -113,8 +113,8 @@ Candidate changes:
     Justification:
       Crashes bad.
     Notes:
-      (ghudson, lundblad, jpieper voted for this on 1.1.x, maybe they
-       want to vote for it here)
+      (lundblad and jpieper voted for this on 1.1.x, maybe they want to
+       vote for it here)
     Votes:
-      +1: breser
+      +1: breser, ghudson
 
