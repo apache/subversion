@@ -68,7 +68,9 @@ struct svn_txdelta_stream_t {
   /* Private data */
   apr_pool_t *pool;             /* Pool to allocate stream data from. */
   svn_boolean_t more;           /* TRUE if there are more data in the pool. */
-  apr_off_t pos;                /* Position in source file. */
+  apr_off_t pos;                /* Offset of next read in source file. */
+  char *sbuf;                   /* Source view data from the last window. */
+  apr_size_t sbuf_len;
 };
 
 
@@ -195,6 +197,8 @@ svn_txdelta (svn_txdelta_stream_t **stream,
   (*stream)->pool = subpool;
   (*stream)->more = TRUE;
   (*stream)->pos = 0;
+  (*stream)->sbuf = apr_palloc (subpool, svn_txdelta__window_size);
+  (*stream)->sbuf_len = 0;
   return SVN_NO_ERROR;
 }
 
@@ -208,7 +212,27 @@ svn_txdelta_free (svn_txdelta_stream_t *stream)
 
 
 
-/* Pull the next delta window from a stream. */
+/* Pull the next delta window from a stream.
+
+   Our current algorithm for picking source and target views is one
+   step up from the dumbest algorithm of "compare corresponding blocks
+   of each file."  A problem with that algorithm is that an insertion
+   or deletion of N bytes near the beginning of the file will result
+   in N bytes of non-overlap in each window from then on.  Our
+   algorithm lessens this problem by "padding" the source view with
+   half a target view's worth of data on each side.
+
+   For example, suppose the target view size is 16K.  The dumbest
+   algorithm would use bytes 0-16K for the first source view, 16-32K
+   for the second source view, etc..  Our algorithm uses 0-24K for the
+   first source view, 8-40K for the second source view, etc..
+   Obviously, we're chewing some extra memory by doubling the source
+   view size, but small (less than 8K) insertions or deletions won't
+   result in non-overlap in every window.
+
+   If we run out of source data before we run out of target data, we
+   reuse the final chunk of data for the remaining windows.  No grand
+   scheme at work there; that's just how the code worked out. */
 svn_error_t *
 svn_txdelta_next_window (svn_txdelta_window_t **window,
                          svn_txdelta_stream_t *stream)
@@ -221,18 +245,36 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
   else
     {
       svn_error_t *err = SVN_NO_ERROR;
-      apr_off_t source_offset = stream->pos;
       apr_size_t source_len = svn_txdelta__window_size;
       apr_size_t target_len = svn_txdelta__window_size;
+      apr_size_t source_total, copy_len;
       apr_pool_t *temp_pool = svn_pool_create (stream->pool, NULL);
-      char *buffer = apr_palloc (temp_pool, source_len + target_len);
+      char *buffer;
+
+      /* If there is no saved source data yet, read an extra half
+         window of data this time to get things started. */
+      if (stream->sbuf_len == 0)
+        source_len += svn_txdelta__window_size / 2;
+
+      /* Prepare the vdelta buffer and copy in the stashed source data. */
+      buffer = apr_palloc (temp_pool,
+                           stream->sbuf_len + source_len + target_len);
+      memcpy (buffer, stream->sbuf, stream->sbuf_len);
 
       /* Read the source and target streams. */
-      stream->source_fn (stream->source_baton, buffer,
+      stream->source_fn (stream->source_baton, buffer + stream->sbuf_len,
                          &source_len, NULL/*FIXME:*/);
-      stream->target_fn (stream->target_baton, buffer + source_len,
+      stream->target_fn (stream->target_baton,
+                         buffer + stream->sbuf_len + source_len,
                          &target_len, NULL/*FIXME:*/);
       stream->pos += source_len;
+
+      /* Stash the last window's worth of data from the source view. */
+      source_total = stream->sbuf_len + source_len;
+      copy_len = (source_total < svn_txdelta__window_size) ? source_total
+        : svn_txdelta__window_size;
+      memcpy (stream->sbuf, buffer + source_total - copy_len, copy_len);
+      stream->sbuf_len = copy_len;
 
       /* Forget everything if there's no target data. */
       *window = NULL;
@@ -247,11 +289,11 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
       err = svn_txdelta__init_window (window, stream);
       if (err == SVN_NO_ERROR)
         {
-          (*window)->sview_offset = source_offset;
-          (*window)->sview_len = source_len;
+          (*window)->sview_offset = stream->pos - source_total;
+          (*window)->sview_len = source_total;
           (*window)->tview_len = target_len;
           err = svn_txdelta__vdelta (*window, buffer,
-                                     source_len, target_len,
+                                     source_total, target_len,
                                      temp_pool);
         }
 
