@@ -59,26 +59,18 @@ get_username (char **username,
                                     FALSE, /* screen echo ok */
                                     ab->prompt_baton, pool));
       
-      /* Since we got new totally new info, it's okay to overwrite
-         any cached info in the working copy (later on). */
-      ab->overwrite = TRUE;
+      ab->got_new_auth_info = TRUE;
 
       /* Store a copy of the username in the auth_baton too. */
       ab->username = apr_pstrdup (pool, *username);
 
       return SVN_NO_ERROR;
     }
-
-
-  /* Does auth_baton already have the value, received from
-     the application (probably from argv[])? */
-  if (ab->username)
+  else if (ab->username)
     {
+      /* The auth_baton already has the value, probably from argv[]. */
       *username = apr_pstrdup (pool, ab->username);
-
-      /* Since we got new totally new info, it's okay to overwrite
-         any cached info in the working copy (later on). */
-      ab->overwrite = TRUE;
+      ab->got_new_auth_info = TRUE;
     }
 
   /* Else, try to get it from file cached in working copy. */
@@ -149,26 +141,18 @@ get_password (char **password,
                                     TRUE, /* don't echo to the screen */
                                     ab->prompt_baton, pool));
       
-      /* Since we got new totally new info, it's okay to overwrite
-         any cached info in the working copy (later on). */
-      ab->overwrite = TRUE;
+      ab->got_new_auth_info = TRUE;
 
       /* Store a copy of the password in the auth_baton too. */
       ab->password = apr_pstrdup (pool, *password);
 
       return SVN_NO_ERROR;
     }
-
-  
-  /* Does auth_baton already have the value, received from
-     the application (probably from argv[])? */
-  if (ab->password)
+  else if (ab->password)
     {
+      /* The auth_baton already has the value, probably from argv[]. */
       *password = apr_pstrdup (pool, ab->password);
-      
-      /* Since we got new totally new info, it's okay to overwrite
-         any cached info in the working copy (later on). */
-      ab->overwrite = TRUE;
+      ab->got_new_auth_info = TRUE;
     }
 
   /* Else, try to get it from file cached in working copy. */
@@ -190,9 +174,7 @@ get_password (char **password,
                                         TRUE, /* don't echo to the screen */
                                         ab->prompt_baton, pool));
 
-          /* Since we got new totally new info, it's okay to overwrite
-             any cached info in the working copy (later on). */
-          ab->overwrite = TRUE;
+          ab->got_new_auth_info = TRUE;
         }
       
       /* Store a copy of the password in the auth_baton too. */
@@ -241,15 +223,11 @@ store_auth_info (const char *filename,
 
 
 static svn_error_t *
-store_username (const char *username,
-                void *baton)
+maybe_store_username (const char *username, void *baton)
 {
   svn_client__callback_baton_t *cb = baton;
   
-  /* Sanity check:  only store auth info if the `overwrite' flag is
-     set.  This flag is set if the user was either prompted or
-     specified new info on the commandline. */
-  if (cb->auth_baton->overwrite)
+  if (cb->auth_baton->store_auth_info)
     return store_auth_info (SVN_CLIENT_AUTH_USERNAME, username,
                             cb->base_dir, cb->pool);
   else
@@ -258,21 +236,28 @@ store_username (const char *username,
 
 
 static svn_error_t *
-store_password (const char *password,
-                void *baton)
+maybe_store_password (const char *password, void *baton)
 {
   svn_client__callback_baton_t *cb = baton;
-  
-  /* Sanity check:  only store auth info if the `overwrite' flag is
-     set.  This flag is set if the user was either prompted or
-     specified new info on the commandline. */
-  if (cb->auth_baton->overwrite)
-    return store_auth_info (SVN_CLIENT_AUTH_PASSWORD, password,
-                            cb->base_dir, cb->pool);
-  else
-    return SVN_NO_ERROR;
-}
+      
+  if (cb->auth_baton->store_auth_info)
+    {
+      /* There's a separate config option for preventing passwords
+         from being stored, so check it. */
+      struct svn_config_t *cfg;
+      const char *val;
 
+      SVN_ERR (svn_config_read_config (&cfg, cb->pool));
+      svn_config_get (cfg, &val, "auth", "store_password", "yes");
+      
+      /* ### Oh, are we really case-sensitive? */
+      if (strcmp (val, "yes") == 0)
+        return store_auth_info (SVN_CLIENT_AUTH_PASSWORD, password,
+                                cb->base_dir, cb->pool);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 
 static svn_error_t *
@@ -281,20 +266,10 @@ store_user_and_pass (void *baton)
   svn_client__callback_baton_t *cb = baton;
   
   if (cb->auth_baton->username)
-    SVN_ERR (store_username (cb->auth_baton->username, baton));
+    SVN_ERR (maybe_store_username (cb->auth_baton->username, cb));
 
   if (cb->auth_baton->password)
-    {
-      /* Only store the password if configuration permits. */
-      struct svn_config_t *cfg;
-      const char *val;
-      
-      SVN_ERR (svn_config_read_config (&cfg, cb->pool));
-      svn_config_get (cfg, &val, "auth", "store_password", "yes");
-      
-      if (strcmp (val, "yes") == 0)
-        SVN_ERR (store_password (cb->auth_baton->password, baton));
-    }
+    SVN_ERR (maybe_store_password (cb->auth_baton->password, cb));
   
   return SVN_NO_ERROR;
 }
@@ -321,7 +296,7 @@ svn_error_t * svn_client__get_authenticator (void **authenticator,
 
         ua->get_username = get_username;
         if (cb->do_store)
-          ua->store_username = store_username;
+          ua->store_username = maybe_store_username;
         else
           ua->store_username = NULL;
 
