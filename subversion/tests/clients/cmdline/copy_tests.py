@@ -420,6 +420,55 @@ def resurrect_deleted_dir(sbox):
                                                expected_disk,
                                                expected_status)
 
+#----------------------------------------------------------------------
+
+# Test that we're enforcing proper' svn cp' overwrite behavior.  Note
+# that svn_fs_copy() will always overwrite its destination if an entry
+# by the same name already exists.  However, libsvn_client should be
+# doing existence checks to prevent directories from being
+# overwritten, and files can't be overwritten because the RA layers
+# are doing out-of-dateness checks during the commit.
+
+
+def no_copy_overwrites(sbox):
+  "svn cp URL URL cannot overwrite destination"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  fileURL1 =  svntest.main.current_repo_url + "/A/B/E/alpha"
+  fileURL2 =  svntest.main.current_repo_url + "/A/B/E/beta"
+  dirURL1  =  svntest.main.current_repo_url + "/A/D/G"
+  dirURL2  =  svntest.main.current_repo_url + "/A/D/H"
+
+  # Expect out-of-date failure if 'svn cp URL URL' tries to overwrite a file  
+  outlines, errlines = svntest.main.run_svn(1,
+                                            'cp', fileURL1, fileURL2,
+                                            '-m', 'fooogle')
+  if not errlines:
+    print "Whoa, I was able to overwrite a file!"
+    return 1
+
+  # Create A/D/H/G by running 'svn cp ...A/D/G .../A/D/H'
+  outlines, errlines = svntest.main.run_svn(None,
+                                            'cp', dirURL1, dirURL2,
+                                            '-m', 'fooogle')
+  if errlines:
+    print "Whoa, couldn't create A/D/H/G."
+    return 1
+
+  # Repeat the last command.  It should *fail* because A/D/H/G already exists.
+  outlines, errlines = svntest.main.run_svn(1,
+                                            'cp', dirURL1, dirURL2,
+                                            '-m', 'fooogle')
+  if not errlines:
+    print "Whoa, I was able to overwrite a directory!"
+    return 1
+
+  return 0
+
 
 ########################################################################
 # Run the tests
@@ -431,6 +480,7 @@ test_list = [ None,
               mv_unversioned_file,
               receive_copy_in_update,
               resurrect_deleted_dir,
+              no_copy_overwrites,
              ]
 
 if __name__ == '__main__':

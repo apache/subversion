@@ -223,17 +223,37 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Figure out the basename that will result from this operation. */
   SVN_ERR (ra_lib->check_path (&dst_kind, sess, dst_rel, youngest));
-  if (dst_kind == svn_node_none)
+  if ((dst_kind == svn_node_none)
+      || (dst_kind == svn_node_file))
     {
       svn_path_split_nts (dst_url, &unused, &base_name, pool);
       if (dst_pieces)
         dst_pieces->nelts--; /* hack - where's apr_array_pop()? */
     }
   else if (dst_kind == svn_node_dir)
-    svn_path_split_nts (src_url, &unused, &base_name, pool);
+    {
+      /* As a matter of client-side policy, we prevent overwriting any
+         pre-existing directory.  So we temporarily append src_url's
+         basename to dst_rel, and see if that already exists.  */
+      svn_node_kind_t some_kind;
+      const char *hypothetical_repos_path =
+        svn_path_join (dst_rel, svn_path_basename (src_url, pool), pool);
+
+      SVN_ERR (ra_lib->check_path (&some_kind, sess,
+                                   hypothetical_repos_path, youngest));
+      if (some_kind != svn_node_none)
+        return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
+                                  "fs path `%s' already exists.",
+                                  hypothetical_repos_path);
+
+      /* Normal case:  we'll put the src basename into the dst directory. */
+      svn_path_split_nts (src_url, &unused, &base_name, pool);
+    }
   else
-    return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
-                              "file `%s' already exists.", dst_url);
+    return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+                              "unrecognized node kind of %s.", dst_url);
+
+
 
   /* Fetch RA commit editor. */
   SVN_ERR (ra_lib->get_commit_editor (sess, &editor, &edit_baton,
