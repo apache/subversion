@@ -8,18 +8,24 @@ module SvnTestUtil
 
   def setup_basic
     @author = ENV["USER"] || "sample-user"
+    @password = "sample-password"
+    @realm = "sample realm"
     @pool = Svn::Core::Pool.new(nil)
     @repos_path = File.join("test", "repos")
     @repos_uri = "file://#{File.expand_path(@repos_path)}"
+    @repos_svnserve_uri = "svn://localhost#{File.expand_path(@repos_path)}"
     @wc_path = File.join("test", "wc")
     setup_repository(@repos_path)
     @repos = Svn::Repos.open(@repos_path, @pool)
     @fs = @repos.fs
     make_context("").checkout(@repos_uri, @wc_path)
+    add_authentication
+    setup_svnserve
   end
 
   def teardown_basic
     @pool.destroy
+    teardown_svnserve
     teardown_repository(@repos_path)
     FileUtils.rm_rf(@wc_path)
   end
@@ -37,6 +43,33 @@ module SvnTestUtil
     end
   end
 
+  def setup_svnserve
+    @svnserve_pid = fork {exec("svnserve", "-d", "--foreground")}
+  end
+
+  def teardown_svnserve
+    Process.kill(:TERM, @svnserve_pid) if @svnserve_pid
+  end
+  
+  def add_authentication
+    passwd_file = "passwd"
+    File.open(@repos.svnserve_conf, "w") do |conf|
+      conf.print <<-CONF
+[general]
+anon-access = none
+auth-access = write
+password-db = #{passwd_file}
+realm = #{@realm}
+      CONF
+    end
+    File.open(File.join(@repos.conf_dir, passwd_file), "w") do |f|
+      f.print <<-PASSWD
+[users]
+#{@author} = #{@password}
+      PASSWD
+    end
+  end
+  
   def youngest_rev
     @fs.youngest_rev
   end

@@ -153,6 +153,51 @@ class TestSvnClient < Test::Unit::TestCase
     assert_equal(src2, ctx.cat(path, rev2))
     assert_equal(src2, ctx.cat(path))
   end
+
+  def test_authentication
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    path = File.join(@wc_path, file)
+    svnserve_uri = "#{@repos_svnserve_uri}/#{file}"
+
+    File.open(path, "w") {|f| f.print(src)}
+
+    ctx = make_context(log)
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    ctx = Svn::Client::Context.new(@pool)
+    
+    assert_raises(Svn::Error::AUTHN_NO_PROVIDER) do
+      ctx.cat(svnserve_uri)
+    end
+    
+    ctx.add_simple_prompt_provider(0) do |cred, realm, may_save, pool|
+      cred.username = "wrong-#{@author}"
+      cred.password = @password
+      cred.may_save = false
+    end
+    assert_raises(Svn::Error::RA_NOT_AUTHORIZED) do
+      ctx.cat(svnserve_uri)
+    end
+    
+    ctx.add_simple_prompt_provider(0) do |cred, realm, may_save, pool|
+      cred.username = @author
+      cred.password = "wrong-#{@password}"
+      cred.may_save = false
+    end
+    assert_raises(Svn::Error::RA_NOT_AUTHORIZED) do
+      ctx.cat(svnserve_uri)
+    end
+    
+    ctx.add_simple_prompt_provider(0) do |cred, realm, may_save, pool|
+      cred.username = @author
+      cred.password = @password
+      cred.may_save = false
+    end
+    assert_equal(src, ctx.cat(svnserve_uri))
+  end
   
   def test_not_new
     assert_raise(NoMethodError) do
