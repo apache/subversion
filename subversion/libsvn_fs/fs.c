@@ -416,7 +416,7 @@ bdb_write_config  (svn_fs_t *fs)
      config hash key, a header, an inactive form and an active
      form. We always write the header; then, depending on the
      run-time configuration and the BDB version we're compiling
-     against, we write either the active or inactive form of teh
+     against, we write either the active or inactive form of the
      value. */
   static const struct
   {
