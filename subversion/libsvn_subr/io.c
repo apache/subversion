@@ -2037,7 +2037,7 @@ svn_io_read_version_file (int *version,
   apr_status_t apr_err;
 
   /* Read a line from PATH */
-  SVN_ERR (svn_io_file_open (&format_file, path, APR_READ, 
+  SVN_ERR (svn_io_file_open (&format_file, path, APR_READ | APR_BUFFERED, 
                              APR_OS_DEFAULT, pool));
   format_stream = svn_stream_from_aprfile (format_file, pool);
   SVN_ERR (svn_stream_readline (format_stream, &version_str, pool));
