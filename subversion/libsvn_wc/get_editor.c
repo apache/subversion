@@ -64,7 +64,7 @@ struct edit_baton
 
   /* These used only in checkouts. */
   svn_boolean_t is_checkout;
-  svn_stringbuf_t *ancestor_path;
+  svn_stringbuf_t *ancestor_url;
 
   apr_pool_t *pool;
 };
@@ -369,11 +369,11 @@ window_handler (svn_txdelta_window_t *window, void *baton)
  * after this call, else the directory must exist already.
  *
  * If the path already exists, but is not a working copy for
- * DIRECTORY, then an error will be returned. 
+ * ANCESTOR_URL, then an error will be returned. 
  */
 static svn_error_t *
 prep_directory (svn_stringbuf_t *path,
-                svn_stringbuf_t *ancestor_path,
+                svn_stringbuf_t *ancestor_url,
                 svn_revnum_t ancestor_revision,
                 svn_boolean_t force,
                 apr_pool_t *pool)
@@ -394,7 +394,7 @@ prep_directory (svn_stringbuf_t *path,
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
   err = svn_wc__ensure_wc (path,
-                           ancestor_path,
+                           ancestor_url,
                            ancestor_revision,
                            pool);
   if (err)
@@ -426,18 +426,18 @@ open_root (void *edit_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d;
   svn_error_t *err;
-  svn_stringbuf_t *ancestor_path;
+  svn_stringbuf_t *ancestor_url;
   svn_revnum_t ancestor_revision;
 
   *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->pool);
 
   if (eb->is_checkout)
     {
-      ancestor_path = eb->ancestor_path;
+      ancestor_url = eb->ancestor_url;
       ancestor_revision = eb->target_revision;
       
       err = prep_directory (d->path,
-                            ancestor_path,
+                            ancestor_url,
                             ancestor_revision,
                             1, /* force */
                             d->pool);
@@ -620,7 +620,7 @@ open_directory (svn_stringbuf_t *name,
   struct dir_baton *parent_dir_baton = parent_baton;
 
   /* kff todo: check that the dir exists locally, find it somewhere if
-     its not there?  Yes, all this and more...  And ancestor_path and
+     its not there?  Yes, all this and more...  And ancestor_url and
      ancestor_revision need to get used. */
 
   struct dir_baton *this_dir_baton
@@ -818,7 +818,7 @@ close_directory (void *dir_baton)
 static svn_error_t *
 add_or_open_file (svn_stringbuf_t *name,
                   void *parent_baton,
-                  svn_stringbuf_t *ancestor_path,
+                  svn_stringbuf_t *ancestor_url,
                   svn_revnum_t ancestor_revision,
                   void **file_baton,
                   svn_boolean_t adding)  /* 0 if replacing */
@@ -1612,7 +1612,7 @@ make_editor (svn_stringbuf_t *anchor,
              svn_stringbuf_t *target,
              svn_revnum_t target_revision,
              svn_boolean_t is_checkout,
-             svn_stringbuf_t *ancestor_path,
+             svn_stringbuf_t *ancestor_url,
              svn_boolean_t recurse,
              const svn_delta_edit_fns_t **editor,
              void **edit_baton,
@@ -1623,14 +1623,14 @@ make_editor (svn_stringbuf_t *anchor,
   svn_delta_edit_fns_t *tree_editor = svn_delta_default_editor (pool);
 
   if (is_checkout)
-    assert (ancestor_path != NULL);
+    assert (ancestor_url != NULL);
 
   /* Construct an edit baton. */
   eb = apr_palloc (subpool, sizeof (*eb));
   eb->pool            = subpool;
   eb->is_checkout     = is_checkout;
   eb->target_revision = target_revision;
-  eb->ancestor_path   = ancestor_path;
+  eb->ancestor_url    = ancestor_url;
   eb->anchor          = anchor;
   eb->target          = target;
   eb->recurse         = recurse;
@@ -1673,14 +1673,14 @@ svn_wc_get_update_editor (svn_stringbuf_t *anchor,
 
 svn_error_t *
 svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
-                            svn_stringbuf_t *ancestor_path,
+                            svn_stringbuf_t *ancestor_url,
                             svn_revnum_t target_revision,
                             svn_boolean_t recurse,
                             const svn_delta_edit_fns_t **editor,
                             void **edit_baton,
                             apr_pool_t *pool)
 {
-  return make_editor (dest, NULL, target_revision, TRUE, ancestor_path, recurse,
+  return make_editor (dest, NULL, target_revision, TRUE, ancestor_url, recurse,
                       editor, edit_baton, pool);
 }
 
