@@ -23,13 +23,7 @@
 #include "util.h"
 #include "error.h"
 
-typedef struct svn_ruby_log_receiver_baton_t
-{
-  VALUE proc;
-  apr_pool_t *pool;
-} svn_ruby_log_receiver_baton_t;
-
-static svn_error_t *
+svn_error_t *
 svn_ruby_log_receiver (void *baton,
                        apr_hash_t *changed_paths,
                        svn_revnum_t revision,
@@ -122,69 +116,4 @@ svn_ruby_get_log_args (int argc,
 
   /* GC protect */
   rb_iv_set (self, "@receiver", receiver);
-}
-
-VALUE
-svn_ruby_ra_get_log (int argc,
-                     VALUE *argv,
-                     VALUE self,
-                     svn_ra_plugin_t *plugin,
-                     void *session_baton,
-                     apr_pool_t *pool)
-{
-  VALUE aStart, aEnd, discover_changed_paths;
-  apr_array_header_t *paths;
-  svn_error_t *err;
-  svn_ruby_log_receiver_baton_t baton;
-  svn_revnum_t start, end;
-
-  svn_ruby_get_log_args (argc, argv, self, &paths, &aStart, &aEnd,
-                         &discover_changed_paths, &baton, pool);
- 
-  start = NUM2LONG (aStart);
-  end = NUM2LONG (aEnd);
-
-  err = plugin->get_log (session_baton,
-                         paths, start, end,
-                         RTEST (discover_changed_paths),
-                         svn_ruby_log_receiver,
-                         (void *)&baton);
-
-  apr_pool_destroy (baton.pool);
-  if (err)
-    svn_ruby_raise (err);
-
-  return Qnil;
-}
-
-VALUE
-svn_ruby_client_log (int argc,
-                     VALUE *argv,
-                     VALUE self,
-                     svn_client_auth_baton_t *auth_baton)
-{
-  VALUE aStart, aEnd, discover_changed_paths;
-  apr_array_header_t *paths;
-  svn_error_t *err;
-  svn_ruby_log_receiver_baton_t baton;
-  svn_client_revision_t start, end;
-
-  svn_ruby_get_log_args (argc, argv, self, &paths, &aStart, &aEnd,
-                         &discover_changed_paths, &baton, NULL);
-
-  start = svn_ruby_parse_revision (aStart);
-  end = svn_ruby_parse_revision (aEnd);
-
-  err = svn_client_log (auth_baton,
-                        paths, &start, &end,
-                        RTEST (discover_changed_paths),
-                        svn_ruby_log_receiver,
-                        (void *)&baton,
-                        baton.pool);
-
-  apr_pool_destroy (baton.pool);
-  if (err)
-    svn_ruby_raise (err);
-
-  return Qnil;
 }
