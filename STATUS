@@ -98,13 +98,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r11438
-    Fix a bug that caused 'svnversion --version .' to crash.
-    Justification:
-      Segfaults bad!
-    Votes:
-      +1: maxb, epg, rooneg
-
   * r11936
     Fixes a 'working copy not locked' error.
     Justification:
