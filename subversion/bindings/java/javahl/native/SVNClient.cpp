@@ -226,7 +226,7 @@ jobjectArray SVNClient::list(const char *url, Revision &revision,
 struct status_entry
 {
     const char *path;
-    svn_wc_status_t *status;
+    svn_wc_status2_t *status;
 };
 
 struct status_baton
@@ -240,7 +240,7 @@ struct status_baton
  * callback for svn_client_status (used by status and singleStatus)
  */
 void SVNClient::statusReceiver(void *baton, const char *path, 
-                               svn_wc_status_t *status)
+                               svn_wc_status2_t *status)
 {
     if(JNIUtil::isJavaExceptionThrown())
         return;
@@ -250,7 +250,7 @@ void SVNClient::statusReceiver(void *baton, const char *path,
     status_baton *statusBaton = (status_baton*)baton;
     status_entry statusEntry;
     statusEntry.path = apr_pstrdup(statusBaton->pool,path);
-    statusEntry.status = svn_wc_dup_status(status,statusBaton->pool);
+    statusEntry.status = svn_wc_dup_status2(status,statusBaton->pool);
     statusBaton->statusVect.push_back(statusEntry);
 }
 
@@ -370,12 +370,13 @@ jobject SVNClient::singleStatus(const char *path, bool onServer)
         return NULL;
     }
 
-    Err = svn_client_status (&youngest, intPath.c_str(), &rev, 
+    Err = svn_client_status2 (&youngest, intPath.c_str(), &rev, 
                              statusReceiver, &statusBaton,
-                             FALSE,
+                             FALSE, // DESCEND
                              TRUE,  // get_All
                              onServer ? TRUE : FALSE,     //update
                              FALSE,     //no_ignore,
+                             FALSE,     // ignore externals
                              ctx,
                              requestPool.pool());
     if(Err == NULL)
@@ -722,7 +723,7 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
     if(Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
-        return NULL;
+        return -1;
     }
     svn_client_ctx_t *ctx = getContext(message);
     if(ctx == NULL)
@@ -1786,7 +1787,7 @@ void *SVNClient::getCommitMessageBaton(const char *message)
     return NULL;
 }
 
-jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
+jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
 {
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE"/Status");
