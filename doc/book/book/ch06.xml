@@ -42,7 +42,8 @@
       repository and make it available to clients via WebDAV/DeltaV
       protocol, which is an extension of HTTP.  In the other corner is
       <command>svnserve</command>: a small, standalone server
-      program that speaks a custom protocol with clients.</para>
+      program that speaks a custom protocol with clients.  Table 6-1
+      presents a comparison of the two servers.</para>
 
     <para>Note that Subversion, as an open-source project, does not
       officially endorse any server as <quote>primary</quote> or
@@ -57,7 +58,7 @@
       whatever works best for you and your users.</para>
       
 
-    <table id="svn-ch-06-table-1">
+    <table id="svn-ch-6-table-1">
       <title>Network Server Comparison</title>
       <tgroup cols="3">
         <thead>
@@ -112,7 +113,7 @@
           </row>
 
           <row>
-            <entry>Web Viewing</entry>
+            <entry>Web viewing</entry>
             
             <entry>limited built-in support, or via 3rd-party tools
               such as ViewCVS</entry>
@@ -166,7 +167,7 @@
         protocol are hidden from the user; the client attempts to
         access a URL, and depending on the URL schema, a particular
         protocol is used to contact the server (see <xref
-        linkend="svn-ch-02-sidebar-1"/>).  Users can run <command>svn
+        linkend="svn-ch-2-sidebar-1"/>).  Users can run <command>svn
         --version</command> to see which URL schemas and protocols the
         client knows how to use.</para>
 
@@ -722,18 +723,19 @@ baz
         <literal>host.example.com</literal>, authenticating as user
         <literal>harry</literal>, then spawning a private
         <command>svnserve</command> process on the remote machine,
-        running as user 'harry'.  The <command>svnserve</command>
-        command is being invoked in tunnel mode (<option>-t</option>)
-        and all network protocol is being <quote>tunneled</quote> over
-        the encrypted connection by <command>ssh</command>, the
-        tunnel-agent.  <command>svnserve</command> is aware that it's
-        running as user 'harry', and if the client performs a commit,
+        running as user <literal>harry</literal>.  The
+        <command>svnserve</command> command is being invoked in tunnel
+        mode (<option>-t</option>) and all network protocol is being
+        <quote>tunneled</quote> over the encrypted connection by
+        <command>ssh</command>, the tunnel-agent.
+        <command>svnserve</command> is aware that it's running as user
+        <literal>harry</literal>, and if the client performs a commit,
         the authenticated username will be attributed as the author of
         the new revision.</para>
 
       <para>When running over a tunnel, authorization is primarily
         controlled by operating system permissions to the repository's
-        database files; it's very much the same as if harry were
+        database files; it's very much the same as if Harry were
         accessing the repository directly via a
         <literal>file:///</literal> URL.  If multiple system users are
         going to be accessing the repository directly, you may want to
@@ -1623,8 +1625,8 @@ harry = rw
 sally = r
 </screen>
 
-        <para>In this first example, user harry has full read and
-          write access on the
+        <para>In this first example, user <literal>harry</literal> has
+          full read and write access on the
           <filename>/branches/calc/bug-142</filename> directory in the
           <literal>calc</literal> repository, but user
           <literal>sally</literal> has read-only access.  Any other
@@ -1633,7 +1635,7 @@ sally = r
         <para>Of course, permissions <quote>inherit</quote> from
           parent to child directory.  That means that we can specify a
           subdirectory with a different access policy for
-          sally:</para>
+          Sally:</para>
 
         <screen>
 [calc:/branches/calc/bug-142]
@@ -1645,7 +1647,7 @@ sally = r
 sally = rw
 </screen>
 
-        <para>Now sally can write to the <filename>testing</filename>
+        <para>Now Sally can write to the <filename>testing</filename>
           subdirectory of the branch, but can still only read other
           parts.  Harry, meanwhile, continues to have complete
           read-write access to the whole branch.</para>
@@ -1663,7 +1665,7 @@ sally = r
 harry =
 </screen>
         
-        <para>In this example, harry has read-write access to the
+        <para>In this example, Harry has read-write access to the
           entire <filename>bug-142</filename> tree, but has absolutely no
           access at all to the <filename>secret</filename>
           subdirectory within it.</para>

@@ -1,49 +1,87 @@
 This is a -*- text -*- file.
 
-Here is a list of all the things that the Subversion Book DOESN'T yet cover.
 
 --------------------------------------------------------------
 
-Stuff that needs more discussion:
-
-  - 'svn diff/merge --ignore-ancestry'.  Demonstrate how this switch
-    can be used as an alternate strategy for vendor branching (instead
-    of using svn_load_dirs.pl): just import each new vendor release
-    unrelatedly, and apply the diffs to your vendor-branch working
-    copy.  (note: I at least briefly mention --ignore-ancestry and
-    --notice-ancestry in ch09 -Fitz)
+Put in best-practices doc:
 
   - (perhaps) suggest the use of environment variables to represent
     long repository URLs.  useful for lots of branching/tagging commands.
+    Maybe this can go into our existing best-practices doc?
 
-  - some folks want a glossary.  that's good, since we have a
-    glossary.xml anyway.  :-)  probably something we do at the last minute.
-    (I think O'Reilly does this)
 
 --------------------------------------------------------------
 To be fixed by someone:
 
-  - explain that while 'svn import' creates intermediate directories
-    for you, 'svn mkdir', 'svn move', and 'svn copy' will not.
+ - we seem to inconstisently assume repositories live either in
+   /usr/local/svn/ or /usr/local/repositories/ throughout the book.
+   We ought to consistify.
 
 --------------------------------------------------------------
 
 To be fixed by cmpilato:
 
---------------------------------------------------------------
+ch05:
 
-To be fixed by fitz:
+   - document that if either the start-commit or pre-commit hook
+     fails, STDERR is marshalled back to the client.  (not true of
+     post-commit, see issue 443).
 
-  - Be clear that PREV, BASE, and COMMITTED only refer to local paths,
-    not to URLs.
-  - Document svnadmin --deltify in Ch09.
 
 --------------------------------------------------------------
 
 To be fixed by sussman:
 
-* document 'svn log -v --stop-on-copy branchURL' as the easiest way to
-  discover when a branch was created.  This is a major FAQ.
+
+appC:
+
+   "Mapping Subversion to DeltaV": checkouts don't cause the client to
+   do repeated GET and PROPFIND requests.  The data is all embedded in
+   the REPORT response now.
 
 
+-----------------------------------------------
+
+The 1.1 Book Fork
+==================
+
+Once the book is on shelves (last week in June), we plan to fork the
+book between the 1.0.x and 1.1 branches.  Really, this means:
+
+  1. Documenting new 1.1 features and behaviors in /trunk/doc/book
+
+  2. Being very selective about backporting book changes to the 1.0.x
+     branch.  (Hitherto, we've always just blindly copied
+     /trunk/doc/book to 1.0.x before doing every 1.0.x release.)
+
+  3. Posting the 1.0.x and 1.1 versions of the book on the website.
+     (This probably isn't high priority, since only developers are
+     using 1.1 right now anyway.  But once 1.1 is released, this will
+     be important.)
+
+
+List of 1.1 features/changes
+============================
+
+  * new fsfs backend for repository.  make a comparison chart with
+    bdb, just like we did for apache/svnserve that shows tradeoffs.
+    also show new libraries in ch01 'big picture' diagram and ch08
+    library listing.
+
+  * updates no longer create fs transactions (does this need to be
+    documented?  does anyone care other than developers?)
+
+  * slightly tweaked 'svn diff' syntax allows things like
+    'svn diff -rX:Y URL@Z'.   Probably need to explain 'peg' objects,
+    so folks can understand how/when renames are followed by certain
+    commands.
+
+  * do we need to tell people how to activate localized client
+    output?  or is that just widespread knowledge?
+
+  * remove SVN_REVNUM_T_FMT from any example code.
+
+  * document new 'svnadmin dump --deltas' in ch05 and ch09.
+
+  * svn export --native-eol
 
