@@ -329,7 +329,7 @@ sync_adm_file (svn_stringbuf_t *path,
   /* Rename. */
   apr_err = apr_file_rename (tmp_path->data, path->data, pool);
   if (APR_STATUS_IS_SUCCESS (apr_err))
-    SVN_ERR (svn_io_set_file_read_only (path->data, pool));
+    SVN_ERR (svn_io_set_file_read_only (path->data, FALSE, pool));
 
   /* Unconditionally restore path. */
   chop_admin_name (path, components_added);
@@ -681,10 +681,13 @@ close_adm_file (apr_file_t *fp,
       v_extend_with_adm_name (tmp_path, extension, 1, pool, ap);
       va_end (ap);
       
+      /* Remove read-only flag on destination. */
+      SVN_ERR(svn_io_set_file_read_write (path->data, TRUE, pool));
+      
       /* Rename. */
       apr_err = apr_file_rename (tmp_path->data, path->data, pool);
       if (APR_STATUS_IS_SUCCESS(apr_err))
-        SVN_ERR (svn_io_set_file_read_only (path->data, pool));
+        SVN_ERR (svn_io_set_file_read_only (path->data, FALSE, pool));
       
       /* Unconditionally restore path. */
       chop_admin_name (path, components_added);
@@ -998,6 +1001,9 @@ svn_wc__remove_adm_file (svn_stringbuf_t *path, apr_pool_t *pool, ...)
   va_start (ap, pool);
   components_added = v_extend_with_adm_name (path, NULL, 0, pool, ap);
   va_end (ap);
+      
+  /* Remove read-only flag on path. */
+  SVN_ERR(svn_io_set_file_read_write (path->data, FALSE, pool));
 
   apr_err = apr_file_remove (path->data, pool);
   if (apr_err)

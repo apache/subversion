@@ -397,7 +397,7 @@ log_do_file_readonly (struct log_runner *loggy,
   full_path = svn_stringbuf_dup (loggy->path, loggy->pool);
   svn_path_add_component_nts (full_path, name);
 
-  SVN_ERR (svn_io_set_file_read_only (full_path->data, loggy->pool));
+  SVN_ERR (svn_io_set_file_read_only (full_path->data, FALSE, loggy->pool));
 
   return SVN_NO_ERROR;
 }
@@ -890,6 +890,7 @@ log_do_committed (struct log_runner *loggy,
                                           prop_base_path->data);
 
               SVN_ERR (svn_io_set_file_read_only (prop_base_path->data,
+                                                  FALSE,
                                                   loggy->pool));
             }
           

@@ -140,9 +140,18 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
                                  apr_pool_t *pool);
 
 /* Make a file as read-only as the operating system allows.
- * PATH is the path to the file.
- */
-svn_error_t *svn_io_set_file_read_only (const char *path, apr_pool_t *pool);
+   PATH is the path to the file. If IGNORE_ENOENT is TRUE,
+   don't fail if the target file doesn't exist. */
+svn_error_t *svn_io_set_file_read_only (const char *path,
+                                        svn_boolean_t ignore_enoent,
+                                        apr_pool_t *pool);
+
+/* Make a file as writable as the operating system allows.
+   PATH is the path to the file. If IGNORE_ENOENT is TRUE,
+   don't fail if the target file doesn't exist. */
+svn_error_t *svn_io_set_file_read_write (const char *path,
+                                         svn_boolean_t ignore_enoent,
+                                         apr_pool_t *pool);
 
 
 /* Read a line from FILE into BUF, but not exceeding *LIMIT bytes.

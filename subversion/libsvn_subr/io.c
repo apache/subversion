@@ -351,7 +351,9 @@ svn_io_file_affected_time (apr_time_t *apr_time,
 /*** Permissions and modes. ***/
 
 svn_error_t *
-svn_io_set_file_read_only (const char *path, apr_pool_t *pool)
+svn_io_set_file_read_only (const char *path,
+                           svn_boolean_t ignore_enoent,
+                           apr_pool_t *pool)
 {
   apr_status_t status;
   status = apr_file_attrs_set (path,
@@ -359,8 +361,27 @@ svn_io_set_file_read_only (const char *path, apr_pool_t *pool)
                                APR_FILE_ATTR_READONLY,
                                pool);
   if (status && status != APR_ENOTIMPL)
-    return svn_error_createf (status, 0, NULL, pool,
-                             "failed to set file '%s' read-only", path);
+    if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
+      return svn_error_createf (status, 0, NULL, pool,
+                               "failed to set file '%s' read-only", path);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_set_file_read_write (const char *path,
+                            svn_boolean_t ignore_enoent,
+                            apr_pool_t *pool)
+{
+  apr_status_t status;
+  status = apr_file_attrs_set (path,
+                               0,
+                               APR_FILE_ATTR_READONLY,
+                               pool);
+  if (status && status != APR_ENOTIMPL)
+    if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
+      return svn_error_createf (status, 0, NULL, pool,
+                               "failed to set file '%s' read-write", path);
 
   return SVN_NO_ERROR;
 }
