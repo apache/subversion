@@ -916,13 +916,13 @@ setup_copy (svn_client_commit_info_t **commit_info,
             const svn_opt_revision_t *src_revision,
             const char *dst_path,
             svn_wc_adm_access_t *optional_adm_access,
-            svn_client_auth_baton_t *auth_baton,
             svn_client_get_commit_log_t log_msg_func,
             void *log_msg_baton,
             svn_boolean_t is_move,
             svn_boolean_t force,
             svn_wc_notify_func_t notify_func,
             void *notify_baton,
+            svn_client_ctx_t *ctx,
             apr_pool_t *pool)
 {
   svn_boolean_t src_is_url, dst_is_url;
@@ -1023,21 +1023,37 @@ setup_copy (svn_client_commit_info_t **commit_info,
                             pool));
 
   else if ((! src_is_url) && (dst_is_url))
-    SVN_ERR (wc_to_repos_copy (commit_info, src_path, dst_path, 
-                               auth_baton, message, 
-                               notify_func, notify_baton,
-                               pool));
+    {
+      svn_client_auth_baton_t *auth_baton;
 
+      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
+
+      SVN_ERR (wc_to_repos_copy (commit_info, src_path, dst_path, 
+                                 auth_baton, message, 
+                                 notify_func, notify_baton,
+                                 pool));
+    }
   else if ((src_is_url) && (! dst_is_url))
-    SVN_ERR (repos_to_wc_copy (src_path, src_revision, 
-                               dst_path, optional_adm_access, auth_baton,
-                               notify_func, notify_baton,
-                               pool));
+    {
+      svn_client_auth_baton_t *auth_baton;
 
+      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
+
+      SVN_ERR (repos_to_wc_copy (src_path, src_revision, 
+                                 dst_path, optional_adm_access, auth_baton,
+                                 notify_func, notify_baton,
+                                 pool));
+    }
   else
-    SVN_ERR (repos_to_repos_copy (commit_info, src_path, src_revision,
-                                  dst_path, auth_baton, message, is_move,
-                                  pool));
+    {
+      svn_client_auth_baton_t *auth_baton;
+
+      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
+
+      SVN_ERR (repos_to_repos_copy (commit_info, src_path, src_revision,
+                                    dst_path, auth_baton, message, is_move,
+                                    pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1057,20 +1073,19 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_wc_adm_access_t *optional_adm_access,
-                 svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,
                  void *log_msg_baton,
                  svn_wc_notify_func_t notify_func,
                  void *notify_baton,
+                 svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info, 
                      src_path, src_revision, dst_path, optional_adm_access,
-                     auth_baton, 
                      log_msg_func, log_msg_baton,
                      FALSE /* is_move */,
                      TRUE /* force, set to avoid deletion check */,
-                     notify_func, notify_baton,
+                     notify_func, notify_baton, ctx,
                      pool);
 }
 
@@ -1081,18 +1096,18 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_boolean_t force,
-                 svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,
                  void *log_msg_baton,
                  svn_wc_notify_func_t notify_func,
                  void *notify_baton,
+                 svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info,
-                     src_path, src_revision, dst_path, NULL, auth_baton,
+                     src_path, src_revision, dst_path, NULL,
                      log_msg_func, log_msg_baton,
                      TRUE /* is_move */,
                      force,
-                     notify_func, notify_baton,
+                     notify_func, notify_baton, ctx,
                      pool);
 }

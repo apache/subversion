@@ -72,8 +72,8 @@ svn_error_t *
 svn_client_ls (apr_hash_t **dirents,
                const char *url,
                svn_opt_revision_t *revision,
-               svn_client_auth_baton_t *auth_baton,
                svn_boolean_t recurse,               
+               svn_client_ctx_t *ctx,
                apr_pool_t *pool)
 {
   svn_ra_plugin_t *ra_lib;  
@@ -81,10 +81,13 @@ svn_client_ls (apr_hash_t **dirents,
   svn_revnum_t rev;
   svn_node_kind_t url_kind;
   const char *auth_dir;
+  svn_client_auth_baton_t *auth_baton;
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
+
+  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
 
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
 

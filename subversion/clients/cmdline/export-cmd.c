@@ -43,6 +43,7 @@ svn_cl__export (apr_getopt_t *os,
   void *notify_baton = NULL;
   const char *from, *to;
   apr_array_header_t *targets;
+  svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -68,13 +69,16 @@ svn_cl__export (apr_getopt_t *os,
     svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, TRUE, FALSE,
 			  pool);
 
+  svn_client_ctx_set_auth_baton (ctx,
+                                 svn_cl__make_auth_baton (opt_state, pool));
+
   /* Do the export. */
   SVN_ERR (svn_client_export (from,
                               to,
                               &(opt_state->start_revision),
-                              svn_cl__make_auth_baton (opt_state, pool),
                               notify_func,
                               notify_baton,
+                              ctx,
                               pool));
   return SVN_NO_ERROR;
 }

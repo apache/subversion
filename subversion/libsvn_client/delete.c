@@ -101,11 +101,11 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    const char *path,
                    svn_wc_adm_access_t *optional_adm_access,
                    svn_boolean_t force, 
-                   svn_client_auth_baton_t *auth_baton,
                    svn_client_get_commit_log_t log_msg_func,
                    void *log_msg_baton,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -125,6 +125,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       const char *log_msg;
       svn_node_kind_t kind;
       const char *auth_dir;
+      svn_client_auth_baton_t *auth_baton;
 
       /* Create a new commit item and add it to the array. */
       if (log_msg_func)
@@ -154,6 +155,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor, pool));
+
+      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
 
       /* Open an RA session for the URL. Note that we don't have a local
          directory, nor a place to put temp files or store the auth

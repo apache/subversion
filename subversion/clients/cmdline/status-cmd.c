@@ -43,7 +43,7 @@ svn_cl__status (apr_getopt_t *os,
   apr_hash_t *statushash;
   apr_array_header_t *targets;
   int i;
-  svn_client_auth_baton_t *auth_baton;
+  svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
@@ -55,7 +55,8 @@ svn_cl__status (apr_getopt_t *os,
                                          FALSE, pool));
 
   /* Build an authentication object to give to libsvn_client. */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+  svn_client_ctx_set_auth_baton (ctx,
+                                 svn_cl__make_auth_baton (opt_state, pool));
 
   /* The notification callback. */
   svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE, pool);
@@ -73,13 +74,13 @@ svn_cl__status (apr_getopt_t *os,
          svn_client_status directly understands the three commandline
          switches (-n, -u, -[vV]) : */
 
-      SVN_ERR (svn_client_status (&statushash, &youngest, target, auth_baton,
+      SVN_ERR (svn_client_status (&statushash, &youngest, target,
                                   opt_state->nonrecursive ? FALSE : TRUE,
                                   opt_state->verbose,
                                   opt_state->update,
                                   opt_state->no_ignore,
                                   notify_func, notify_baton,
-                                  pool));
+                                  ctx, pool));
 
       /* Now print the structures to the screen.
          The flag we pass indicates whether to use the 'detailed'

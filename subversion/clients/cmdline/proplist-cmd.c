@@ -42,8 +42,8 @@ svn_cl__proplist (apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
-  svn_client_auth_baton_t *auth_baton;
   int i;
+  svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
 
   /* Suck up all remaining args in the target array. */
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -52,11 +52,11 @@ svn_cl__proplist (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
 
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
-
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
 
+  svn_client_ctx_set_auth_baton (ctx,
+                                 svn_cl__make_auth_baton (opt_state, pool));
 
   if (opt_state->revprop)  /* operate on revprops */
     {
@@ -85,7 +85,7 @@ svn_cl__proplist (apr_getopt_t *os,
       /* Let libsvn_client do the real work. */
       SVN_ERR (svn_client_revprop_list (&proplist, 
                                         URL, &(opt_state->start_revision),
-                                        auth_baton, &rev, pool));
+                                        &rev, ctx, pool));
       
       printf("Unversioned properties on revision %"SVN_REVNUM_T_FMT":\n",
              rev);
@@ -103,8 +103,7 @@ svn_cl__proplist (apr_getopt_t *os,
           
           SVN_ERR (svn_client_proplist (&props, target, 
                                         &(opt_state->start_revision),
-                                        auth_baton,
-                                        opt_state->recursive, pool));
+                                        opt_state->recursive, ctx, pool));
           
           for (j = 0; j < props->nelts; ++j)
             {

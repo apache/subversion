@@ -37,12 +37,12 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_update (svn_client_auth_baton_t *auth_baton,
-                   const char *path,
+svn_client_update (const char *path,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *update_editor;
@@ -98,10 +98,13 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
       svn_ra_plugin_t *ra_lib;
       svn_node_kind_t kind;
       svn_wc_adm_access_t *dir_access;
+      svn_client_auth_baton_t *auth_baton;
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
+
+      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
 
       /* Open an RA session for the URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
@@ -153,8 +156,8 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
   if (recurse)
     SVN_ERR (svn_client__handle_externals (traversal_info,
                                            notify_func, notify_baton,
-                                           auth_baton,
                                            TRUE, /* update unchanged ones */
+                                           ctx,
                                            pool));
 
   SVN_ERR (svn_wc_adm_close (adm_access));

@@ -145,13 +145,13 @@ svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_revnum_t *youngest,
                    const char *path,
-                   svn_client_auth_baton_t *auth_baton,
                    svn_boolean_t descend,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   apr_hash_t *hash = apr_hash_make (pool);
@@ -170,6 +170,10 @@ svn_client_status (apr_hash_t **statushash,
 
   if (update)    
     {
+      svn_client_auth_baton_t *auth_baton;
+
+      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
+
       /* Add "dry-run" update information to our existing structures.
          (Pass the DESCEND flag here, since we may want to ignore update
          info that is below PATH.)  */

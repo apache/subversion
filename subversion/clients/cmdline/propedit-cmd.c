@@ -63,7 +63,7 @@ svn_cl__propedit (apr_getopt_t *os,
     {
       svn_revnum_t rev;
       const char *URL, *target;
-      svn_client_auth_baton_t *auth_baton;
+      svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
       svn_string_t *propval;
       const char *new_propval;
 
@@ -78,7 +78,8 @@ svn_cl__propedit (apr_getopt_t *os,
          us find the right repository. */
       svn_opt_push_implicit_dot_target (targets, pool);
 
-      auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+      svn_client_ctx_set_auth_baton (ctx,
+                                     svn_cl__make_auth_baton (opt_state, pool));
 
       /* Either we have a URL target, or an implicit wc-path ('.')
          which needs to be converted to a URL. */
@@ -94,7 +95,7 @@ svn_cl__propedit (apr_getopt_t *os,
       /* Fetch the current property. */
       SVN_ERR (svn_client_revprop_get (pname_utf8, &propval,
                                        URL, &(opt_state->start_revision),
-                                       auth_baton, &rev, pool));
+                                       &rev, ctx, pool));
       if (! propval)
         propval = svn_string_create ("", pool);
       
@@ -123,7 +124,7 @@ svn_cl__propedit (apr_getopt_t *os,
           
           SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
                                            URL, &(opt_state->start_revision),
-                                           auth_baton, &rev, pool));
+                                           &rev, ctx, pool));
 
           printf ("Set new value for property `%s' on revision %"
                   SVN_REVNUM_T_FMT"\n", pname, rev);

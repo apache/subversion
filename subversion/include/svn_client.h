@@ -101,6 +101,28 @@ typedef struct svn_client_auth_baton_t
 } svn_client_auth_baton_t;
 
 
+/** A client context structure, which holds client specific callbacks, 
+ * batons, serves as a cache for configuration options, and other various 
+ * and sundry things.
+ */
+typedef struct svn_client_ctx_t svn_client_ctx_t;
+
+/** create a new, empty @c svn_client_ctx_t, allocated in @a pool. */
+svn_client_ctx_t *svn_client_ctx_create (apr_pool_t *pool);
+
+/** Set the cached authentication baton in @a ctx to @a auth_baton */
+void
+svn_client_ctx_set_auth_baton (svn_client_ctx_t *ctx,
+                               svn_client_auth_baton_t *auth_baton);
+
+/** Set @a *auth_baton to the cached authentication baton in @a ctx, or if 
+ * there is none set @a *auth_baton to @c NULL and return 
+ * @c SVN_ERR_CLIENT_CTX_NOT_FOUND.
+ */
+svn_error_t *
+svn_client_ctx_get_auth_baton (svn_client_ctx_t *ctx,
+                               svn_client_auth_baton_t **auth_baton);
+
 /** This is a structure which stores a filename and a hash of property
  * names and values.
  */
@@ -228,7 +250,7 @@ typedef svn_error_t *
  *
  * Checkout a working copy of @a url at @a revision, using @a path as 
  * the root directory of the newly checked out working copy, and 
- * authenticating with @a auth_baton.
+ * authenticating with the authentication baton cached in @a ctx.
  *
  * @a revision must be of kind @c svn_client_revision_number,
  * @c svn_client_revision_head, or @c svn_client_revision_date.  If
@@ -243,18 +265,18 @@ typedef svn_error_t *
 svn_error_t *
 svn_client_checkout (svn_wc_notify_func_t notify_func,
                      void *notify_baton,
-                     svn_client_auth_baton_t *auth_baton,
                      const char *URL,
                      const char *path,
                      const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 
 /** Update a working copy.
  *
  * Update working tree @a path to @a revision, authenticating with
- * @a auth_baton.
+ * the authentication baton cached in @a ctx.
  *
  * @a revision must be of kind @c svn_client_revision_number,
  * @c svn_client_revision_head, or @c svn_client_revision_date.  If @a 
@@ -268,19 +290,19 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
  * Use @a pool for any temporary allocation.
  */
 svn_error_t *
-svn_client_update (svn_client_auth_baton_t *auth_baton,
-                   const char *path,
+svn_client_update (const char *path,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 
 /** Switch a working copy to another URL.
  *
  * Switch working tree @a path to @a url at @a revision, authenticating 
- * with @a auth_baton.
+ * with the authentication baton cached in @a ctx.
  *
  * Summary of purpose: this is normally used to switch a working
  * directory over to another line of development, such as a branch or
@@ -299,13 +321,13 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
  * Use @a pool for any temporary allocation.
  */
 svn_error_t *
-svn_client_switch (svn_client_auth_baton_t *auth_baton,
-                   const char *path,
+svn_client_switch (const char *path,
                    const char *url,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 
@@ -334,16 +356,16 @@ svn_client_add (const char *path,
 
 /** Create a directory, either in a repository or a working copy.
  *
- * If @a path is a @a url, use the @a auth_baton and @a message to 
- * immediately attempt to commit the creation of the directory @a URL 
- * in the repository.  If the commit succeeds, allocate (in @a pool) 
+ * If @a path is a URL, use the authentication baton in @a ctx and 
+ * @a message to immediately attempt to commit the creation of the directory 
+ * @a path in the repository.  If the commit succeeds, allocate (in @a pool) 
  * and populate @a *commit_info.
  *
  * Else, create the directory on disk, and attempt to schedule it for
  * addition (using @c svn_client_add, whose docstring you should
  * read).
  *
- * @a LOG_MSG_FUNC/@a LOG_MSG_BATON are a callback/baton combo that this
+ * @a log_msg_func/@a log_msg_baton are a callback/baton combo that this
  * function can use to query for a commit log message when one is
  * needed.
  *
@@ -355,20 +377,20 @@ svn_client_add (const char *path,
 svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   const char *path,
-                  svn_client_auth_baton_t *auth_baton,
                   svn_client_get_commit_log_t log_msg_func,
                   void *log_msg_baton,
                   svn_wc_notify_func_t notify_func,
                   void *notify_baton,
+                  svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
                   
 
 /** Delete an item from a repository or working copy.
  *
- * If @a path is a @a url, use the @a auth_baton and @a message to 
- * immediately attempt to commit a deletion of the @a url from the 
- * repository.  If the commit succeeds, allocate (in @a pool) and 
- * populate @a *commit_info.
+ * If @a path is a @a url, use the authentication baton in @a ctx and 
+ * @a log_msg_func/@a log_msg_baton to immediately attempt to commit a 
+ * deletion of the @a url from the repository.  If the commit succeeds,
+ * allocate (in @a pool) and populate @a *commit_info.
  *
  * Else, schedule a working copy @a path for removal from the repository.
  * @a path's parent must be under revision control. This is just a
@@ -400,20 +422,20 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    const char *path,
                    svn_wc_adm_access_t *optional_adm_access,
                    svn_boolean_t force,
-                   svn_client_auth_baton_t *auth_baton,
                    svn_client_get_commit_log_t log_msg_func,
                    void *log_msg_baton,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 
 /** Import a file or directory into a repository.
  *
  * Import file or directory @a path into repository directory @a url at
- * head, authenticating with @a auth_baton, and using @a log_msg as the 
- * log message for the (implied) commit.  Set @a *commit_info to the 
- * results of the commit, allocated in @a pool.
+ * head, authenticating with the authentication baton cached in @a ctx, 
+ * and using @a log_msg as the log message for the (implied) commit.  
+ * Set @a *commit_info to the results of the commit, allocated in @a pool.
  *
  * @a new_entry is the new entry created in the repository directory
  * identified by @a url.  @a new_entry may be null (see below), but may 
@@ -453,22 +475,22 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
 svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 svn_wc_notify_func_t notify_func,
                                 void *notify_baton,
-                                svn_client_auth_baton_t *auth_baton,   
                                 const char *path,
                                 const char *url,
                                 const char *new_entry,
                                 svn_client_get_commit_log_t log_msg_func,
                                 void *log_msg_baton,
                                 svn_boolean_t nonrecursive,
+                                svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
 
 
 /** Commit a file or directory into a repository.
  *
  * Commit file or directory @a path into repository, authenticating with
- * @a auth_baton, using @a log_msg_func/@a log_msg_baton to obtain the log
- * message.  Set @a *commit_info to the results of the commit, allocated
- * in @a pool.
+ * the authentication baton cached in @a ctx, and using 
+ * @a log_msg_func/@a log_msg_baton to obtain the log message.  Set 
+ * @a *commit_info to the results of the commit, allocated in @a pool.
  *
  * @a targets is an array of <tt>const char *</tt> paths to commit.  They 
  * need not be canonicalized nor condensed; this function will take care of
@@ -493,11 +515,11 @@ svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
-                   svn_client_auth_baton_t *auth_baton,
                    const apr_array_header_t *targets,
                    svn_client_get_commit_log_t log_msg_func,
                    void *log_msg_baton,
                    svn_boolean_t nonrecursive,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 
@@ -540,13 +562,13 @@ svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_revnum_t *youngest,  /* only touched if `update' set */
                    const char *path,
-                   svn_client_auth_baton_t *auth_baton,
                    svn_boolean_t descend,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 
@@ -590,14 +612,14 @@ svn_client_status (apr_hash_t **statushash,
  * the repository, hence this special case.
  */
 svn_error_t *
-svn_client_log (svn_client_auth_baton_t *auth_baton,
-                const apr_array_header_t *targets,
+svn_client_log (const apr_array_header_t *targets,
                 const svn_opt_revision_t *start,
                 const svn_opt_revision_t *end,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_log_message_receiver_t receiver,
                 void *receiver_baton,
+                svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
 
@@ -626,10 +648,10 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
  * additional command line options to the diff processes invoked to compare
  * files.
  *
- * @a auth_baton is used to communicate with the repository.
+ * the authentication baton cached in @a ctx is used to communicate with 
+ * the repository.
  */
 svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
-                              svn_client_auth_baton_t *auth_baton,
                               const char *path1,
                               const svn_opt_revision_t *revision1,
                               const char *path2,
@@ -638,6 +660,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               svn_boolean_t no_diff_deleted,
                               apr_file_t *outfile,
                               apr_file_t *errfile,
+                              svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
 
 
@@ -670,12 +693,12 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  * If @a dry_run is @a true the merge is carried out, and full notfication
  * feedback is provided, but the working copy is not modified.
  *
- * @a auth_baton is used to communicate with the repository.
+ * the authentication baton cached in @a ctx is used to communicate with the 
+ * repository.
  */
 svn_error_t *
 svn_client_merge (svn_wc_notify_func_t notify_func,
                   void *notify_baton,
-                  svn_client_auth_baton_t *auth_baton,
                   const char *URL1,
                   const svn_opt_revision_t *revision1,
                   const char *URL2,
@@ -684,6 +707,7 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
                   svn_boolean_t recurse,
                   svn_boolean_t force,
                   svn_boolean_t dry_run,
+                  svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
 
@@ -749,10 +773,10 @@ svn_client_resolve (const char *path,
  * the parent of @a path, or it can be @c NULL. If it is @c NULL the lock for 
  * the parent will be acquired and released by the function.
  *
- * If either @a src_path or @a dst_path are URLs, use the @a auth_baton 
- * and @a message to immediately attempt to commit the copy action in the
- * repository.  If the commit succeeds, allocate (in @a pool) and
- * populate @a *commit_info.
+ * If either @a src_path or @a dst_path are URLs, use the authentication baton 
+ * in @a ctx and @a log_msg_func/@a log_msg_baton to immediately attempt to 
+ * commit the copy action in the repository.  If the commit succeeds, allocate 
+ * (in @a pool) and populate @a *commit_info.
  *
  * If neither @a src_path nor @a dst_path is a URL, then this is just a
  * variant of @c svn_client_add, where the @a dst_path items are scheduled
@@ -774,11 +798,11 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_wc_adm_access_t *optional_adm_access,
-                 svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,
                  void *log_msg_baton,
                  svn_wc_notify_func_t notify_func,
                  void *notify_baton,
+                 svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 
@@ -796,7 +820,8 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  *   - @a src_revision is used to choose the revision from which to copy 
  *     the @a src_path.
  *
- *   - @a auth_baton and @a message are used to commit the move.
+ *   - the authentication baton in @a ctx and @a log_msg_func/@a log_msg_baton 
+ *     are used to commit the move.
  *
  *   - The move operation will be immediately committed.  If the
  *     commit succeeds, allocate (in @a pool) and populate @a *commit_info.
@@ -805,7 +830,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  *
  *   - @a dst_path must also be a working copy path (existent or not).
  *
- *   - @a src_revision, @a auth and @a message are ignored.
+ *   - @a src_revision, and @a log_msg_func/@a log_msg_baton are ignored.
  *
  *   - This is a scheduling operation.  No changes will happen to the
  *     repository until a commit occurs.  This scheduling can be removed
@@ -834,11 +859,11 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_boolean_t force,
-                 svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,
                  void *log_msg_baton,
                  svn_wc_notify_func_t notify_func,
                  void *notify_baton,
+                 svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 
@@ -882,9 +907,10 @@ svn_client_propset (const char *propname,
 /** Set a revision property on a URL in a repository.
  *
  * Set @a propname to @a propval on revision @a revision in the repository
- * represented by @a url.  Use @a auth_baton for authentication, and @a pool
- * for all memory allocation.  Return the actual rev affected in @a *set_rev.
- * A @a propval of @c NULL will delete the property.
+ * represented by @a url.  Use the authentication baton in @a ctx for 
+ * authentication, and @a pool for all memory allocation.  Return the actual 
+ * rev affected in @a *set_rev.  A @a propval of @c NULL will delete the 
+ * property.
  *
  * If @a propname is an svn-controlled property (i.e. prefixed with
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
@@ -904,8 +930,8 @@ svn_client_revprop_set (const char *propname,
                         const svn_string_t *propval,
                         const char *URL,
                         const svn_opt_revision_t *revision,
-                        svn_client_auth_baton_t *auth_baton,
                         svn_revnum_t *set_rev,
+                        svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
                         
 /** Get properties from an entry in a working copy or repository.
@@ -923,8 +949,8 @@ svn_client_revprop_set (const char *propname,
  * If @a revision->kind is @c svn_opt_revision_unspecified, then: get
  * properties from the working copy if @a target is a working copy path,
  * or from the repository head if @a target is a url.  Else get the
- * properties as of @a revision.  Use @a auth_baton for authentication if
- * contacting the repository.
+ * properties as of @a revision.  Use the authentication baton in @a ctx 
+ * for authentication if contacting the repository.
  *
  * If @a target is a file or @a recurse is false, @a *props will have
  * at most one element.
@@ -937,16 +963,16 @@ svn_client_propget (apr_hash_t **props,
                     const char *propname,
                     const char *target,
                     const svn_opt_revision_t *revision,
-                    svn_client_auth_baton_t *auth_baton,
                     svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
 /** Get a revision property from a repository URL.
  *
  * Set @a *propname to the value of @a propval on revision @a revision 
- * in the repository represented by @a url.  Use @a auth_baton for 
- * authentication, and @a pool for all memory allocation.  Return the 
- * actual rev queried in @a *set_rev.
+ * in the repository represented by @a url.  Use the authentication baton 
+ * in @a ctx for authentication, and @a pool for all memory allocation.  
+ * Return the actual rev queried in @a *set_rev.
  *
  * Note that unlike its cousin @c svn_client_propget, this routine
  * doesn't affect the working copy at all; it's a pure network
@@ -959,8 +985,8 @@ svn_client_revprop_get (const char *propname,
                         svn_string_t **propval,
                         const char *URL,
                         const svn_opt_revision_t *revision,
-                        svn_client_auth_baton_t *auth_baton,
                         svn_revnum_t *set_rev,
+                        svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
 
 /** List the properties on an entry in a working copy or repository.
@@ -978,8 +1004,8 @@ svn_client_revprop_get (const char *propname,
  * If @a revision->kind is @c svn_opt_revision_unspecified, then get
  * properties from the working copy, if @a target is a working copy path,
  * or from the repository head if @a target is a url.  Else get the
- * properties as of @a revision.  Use @a auth_baton for authentication if
- * contacting the repository.
+ * properties as of @a revision.  Use the authentication baton cached in @a ctx 
+ * for authentication if contacting the repository.
  *
  * If @a recurse is false, or @a target is a file, @a *props will contain 
  * only a single element.  Otherwise, it will contain one element for each
@@ -989,16 +1015,16 @@ svn_error_t *
 svn_client_proplist (apr_array_header_t **props,
                      const char *target, 
                      const svn_opt_revision_t *revision,
-                     svn_client_auth_baton_t *auth_baton,
                      svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 /** List the revision properties on an entry in a repository.
  *
  * Set @a *props to a hash of the revision props attached to @a revision in
- * the repository represented by @a url.  Use @a auth_baton for
- * authentication, and @a pool for all memory allocation.  Return the
- * actual rev queried in @a *set_rev.
+ * the repository represented by @a url.  Use the authentication baton cached 
+ * in @a ctx for authentication, and @a pool for all memory allocation.  
+ * Return the actual rev queried in @a *set_rev.
  *
  * The allocated hash maps (<tt>const char *</tt>) property names to
  * (@c svn_string_t *) property values.
@@ -1011,8 +1037,8 @@ svn_error_t *
 svn_client_revprop_list (apr_hash_t **props,
                          const char *URL,
                          const svn_opt_revision_t *revision,
-                         svn_client_auth_baton_t *auth_baton,
                          svn_revnum_t *set_rev,
+                         svn_client_ctx_t *ctx,
                          apr_pool_t *pool);
 /** @} */
 
@@ -1032,12 +1058,11 @@ svn_client_revprop_list (apr_hash_t **props,
  * @a revision is the revision that should be exported, which is only used 
  * when exporting from a repository.
  *
- * @a auth_baton is an authentication baton that is only used when exporting 
- * from a repository.
- *
  * @a notify_func and @a notify_baton are the notification functions and 
  * baton which are passed to @c svn_client_checkout when exporting from a 
  * repository.
+ *
+ * @a ctx is a context used for authentication in the repository case.
  *
  * All allocations are done in @a pool.
  */ 
@@ -1045,9 +1070,9 @@ svn_error_t *
 svn_client_export (const char *from,
                    const char *to,
                    svn_opt_revision_t *revision,
-                   svn_client_auth_baton_t *auth_baton,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 
@@ -1063,7 +1088,8 @@ svn_client_export (const char *from,
  * The hash maps entrynames (<tt>const char *</tt>) to @c svn_dirent_t *'s.  
  * Do all allocation in @a pool.
  *
- * Use @a auth_baton to authenticate against the repository.
+ * Use authentication baton cached in @a ctx to authenticate against the 
+ * repository.
  *
  * If @a recurse is true (and the @a url is a directory) this will be a
  * recursive operation.
@@ -1072,8 +1098,8 @@ svn_error_t *
 svn_client_ls (apr_hash_t **dirents,
                const char *url,
                svn_opt_revision_t *revision,
-               svn_client_auth_baton_t *auth_baton,
                svn_boolean_t recurse,
+               svn_client_ctx_t *ctx,
                apr_pool_t *pool);
 
 
@@ -1082,7 +1108,8 @@ svn_client_ls (apr_hash_t **dirents,
  * Output the content of file identified by @a url and @a revision to
  * the stream @a out.
  *
- * Use @a auth_baton to authenticate against the repository.
+ * Use the authentication baton cached in @a ctx to authenticate against the 
+ * repository.
  *
  * Perform all allocations from @a pool.
  *
@@ -1092,7 +1119,7 @@ svn_error_t *
 svn_client_cat (svn_stream_t* out,
                 const char *url,
                 const svn_opt_revision_t *revision,
-                svn_client_auth_baton_t *auth_baton,
+                svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
 #ifdef __cplusplus

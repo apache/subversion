@@ -439,7 +439,7 @@ svn_cl__log (apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
-  svn_client_auth_baton_t *auth_baton;
+  svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
   struct log_receiver_baton lb;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -449,7 +449,8 @@ svn_cl__log (apr_getopt_t *os,
                                          FALSE, pool));
 
   /* Build an authentication object to give to libsvn_client. */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+  svn_client_ctx_set_auth_baton (ctx,
+                                 svn_cl__make_auth_baton (opt_state, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -505,14 +506,14 @@ svn_cl__log (apr_getopt_t *os,
           printf ("%s", sb->data);  
         }
       
-      SVN_ERR (svn_client_log (auth_baton,
-                               targets,
+      SVN_ERR (svn_client_log (targets,
                                &(opt_state->start_revision),
                                &(opt_state->end_revision),
                                opt_state->verbose,
                                opt_state->strict,
                                log_message_receiver_xml,
                                NULL,  /* no baton necessary */
+                               ctx,
                                pool));
       
       if (! opt_state->incremental)
@@ -536,14 +537,14 @@ svn_cl__log (apr_getopt_t *os,
        * is concerned, the result of 'svn log --quiet' is the same
        * either way.
        */
-      SVN_ERR (svn_client_log (auth_baton,
-                               targets,
+      SVN_ERR (svn_client_log (targets,
                                &(opt_state->start_revision),
                                &(opt_state->end_revision),
                                opt_state->verbose,
                                opt_state->strict,
                                log_message_receiver,
                                &lb,
+                               ctx,
                                pool));
 
       if (! opt_state->incremental)

@@ -520,13 +520,13 @@ svn_error_t *
 svn_client_import (svn_client_commit_info_t **commit_info,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
-                   svn_client_auth_baton_t *auth_baton,
                    const char *path,
                    const char *url,
                    const char *new_entry,
                    svn_client_get_commit_log_t log_msg_func,
                    void *log_msg_baton,
                    svn_boolean_t nonrecursive,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -588,10 +588,14 @@ svn_client_import (svn_client_commit_info_t **commit_info,
     {
       svn_node_kind_t kind;
       const char *base_dir = path;
+      svn_client_auth_baton_t *auth_baton;
 
       SVN_ERR (svn_io_check_path (path, &kind, pool));
       if (kind == svn_node_file)
         svn_path_split (path, &base_dir, NULL, pool);
+
+      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
+
       SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
                               &editor, &edit_baton, auth_baton, url, base_dir,
                               NULL, log_msg, NULL, &committed_rev,
@@ -737,11 +741,11 @@ svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
-                   svn_client_auth_baton_t *auth_baton,
                    const apr_array_header_t *targets,
                    svn_client_get_commit_log_t log_msg_func,
                    void *log_msg_baton,
                    svn_boolean_t nonrecursive,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *editor;
@@ -761,6 +765,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
+  svn_client_auth_baton_t *auth_baton;
   const char *display_dir = "";
   int i;
 
@@ -795,6 +800,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
   SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL, base_dir, TRUE, TRUE,
                             pool));
+
+  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
 
   /* One day we might support committing from multiple working copies, but
      we don't yet.  This check ensures that we don't silently commit a
