@@ -328,19 +328,19 @@
     &lt;directory&gt;
       &lt;tree-delta&gt;
         &lt;replace name='dir2'&gt;
-          &lt;directory ancestor='/dir1/dir3'&gt;
+          &lt;directory ancestor='/dir1/dir3'&gt;         (1)
             &lt;tree-delta&gt;
-              &lt;new name='file3'&gt;
+              &lt;new name='file3'&gt;                    (2)
                 &lt;file ancestor='/dir1/dir2/file3'/&gt;
               &lt;/new&gt;
             &lt;/tree-delta&gt;
           &lt;/directory&gt;
         &lt;/replace&gt;
-        &lt;delete name='dir3'/&gt;
-        &lt;new name='dir4'&gt;
+        &lt;delete name='dir3'/&gt;                       (3)
+        &lt;new name='dir4'&gt;                           (4)
           &lt;directory ancestor='/dir1/dir2'&gt;
             &lt;tree-delta&gt;
-              &lt;delete name='file3'/&gt;
+              &lt;delete name='file3'/&gt;                (5)
             &lt;/tree-delta&gt;
           &lt;/directory&gt;
         &lt;/new&gt;
@@ -351,21 +351,24 @@
 </pre>
 
     <p>
-      Walking through this delta, we map out the following WebDAV
-      requests:
+      Walking through this delta, we map out the WebDAV requests
+      listed below. The numbers in the above delta roughly correspond
+      to the numbered entries below. The correspondence is not exact
+      because a specific, resulting behavior is typically based on a
+      combination of a few elements in the delta.
     </p>
-    <ul>
+    <ol>
       <li>
 	The <code>&lt;directory ancestor="/dir1/dir3"&gt;</code>
 	specifies that we are overwriting <code>/dir1/dir2</code> with 
 	<code>/dir1/dir3</code>.
 	<p>
-	  <code>CHECKOUT&nbsp;/dir1/dir2</code><br>
+	  <code>CHECKOUT&nbsp;/dir1/dir2/</code><br>
 	  <i>(returns a working resource URL for the directory)</i>
 	</p>
 	<p>
-	  <code>COPY&nbsp;/dir1/dir3</code><br>
-	  <code>Destination:&nbsp;http://www.example.com/$svn/wr/...</code><br>
+	  <code>COPY&nbsp;/dir1/dir3/</code><br>
+	  <code>Destination:&nbsp;http://www.example.com/$svn/wr/.../</code><br>
 	  <code>Overwrite:&nbsp;T</code>
 	</p>
       </li>
@@ -381,10 +384,10 @@
 	</p>
       </li>
       <li>
-	<code>CHECKOUT&nbsp;/dir1/dir3</code><br>
+	<code>CHECKOUT&nbsp;/dir1/dir3/</code><br>
 	<i>(returns a working resource URL for the directory)</i>
 	<p>
-	  <code>DELETE&nbsp;/$svn/wr/...</code>
+	  <code>DELETE&nbsp;/$svn/wr/.../</code>
 	</p>
       </li>
       <li>
@@ -392,7 +395,7 @@
 	<code>/dir1</code> directory. Since we don't have
 	<code>/dir1</code> checked out yet, we do so:
 	<p>
-	  <code>CHECKOUT&nbsp;/dir1</code><br>
+	  <code>CHECKOUT&nbsp;/dir1/</code><br>
 	  <i>(returns a working resource URL for the directory)</i>
 	</p>
 	<p>
@@ -400,8 +403,8 @@
 	  resource:
 	</p>
 	<p>
-	  <code>COPY&nbsp;/dir1/dir2</code><br>
-	  <code>Destination:&nbsp;http://www.example.com/$svn/wr/.../dir4</code>
+	  <code>COPY&nbsp;/dir1/dir2/</code><br>
+	  <code>Destination:&nbsp;http://www.example.com/$svn/wr/.../dir4/</code>
 	</p>
       </li>
       <li>
@@ -412,7 +415,7 @@
 	  <code>DELETE:&nbsp;/$svn/wr/.../dir4/file3</code>
 	</p>
       </li>
-    </ul>
+    </ol>
 
     <hr width="80&#37;">
     <h2>URL Layout</h2>
@@ -616,18 +619,13 @@
     </p>
     <p>
       Updates are handled similarly, then followed by a sequence of
-      <code>GET</code> operations to fetch the new files. All
-      <code>GET</code> operations will include the <code>Accept</code>
-      HTTP header. The client will specify that
-      <code>text/vnd.svn-vcdiff</code> is an acceptable media type for
-      the response (with q=1). As a secondary accepted format, it will
-      accept <code>*/*</code> (with q=0.1).
+      <code>GET</code> operations to fetch the new files.
     </p>
     <p>
-      <small>
-	Note: it will also be interesting to implement the gzip
-	content-coding on both sides of the connection.
-      </small>
+      <code>GET</code> (and <code>PUT</code>) operations will transfer 
+      content in a "diff" format when possible. The mechanics of this
+      will follow the Internet Draft, titled
+      <a href="http://www.ietf.org/internet-drafts/draft-mogul-http-delta-05.txt">Delta Encoding in HTTP</a>.
     </p>
 
     <hr width="80&#37;">
@@ -821,7 +819,7 @@
     <address><a href="mailto:gstein@lyra.org">Greg Stein</a></address>
 <!-- Created: Thu Aug 10 19:14:20 PDT 2000 -->
 <!-- hhmts start -->
-Last modified: Tue Aug 15 02:34:15 PDT 2000
+Last modified: Tue Aug 15 19:28:00 PDT 2000
 <!-- hhmts end -->
   </body>
 </html>
