@@ -155,6 +155,10 @@ SVN_ERROR_START
               SVN_ERR_BAD_CATEGORY_START + 5,
               "Bogus revision number")
 
+  SVN_ERRDEF (SVN_ERR_BAD_VERSION_FILE_FORMAT,
+              SVN_ERR_BAD_CATEGORY_START + 6,
+              "Version file format not correct")
+
   /* xml errors */
 
   SVN_ERRDEF (SVN_ERR_XML_ATTRIB_NOT_FOUND,
