@@ -60,6 +60,79 @@ berkeley_error_handler (const char *errpfx,
 }
 
 
+/* Helper:  commit TXN, expecting either success or failure:
+ *
+ * If EXPECTED_CONFLICT is null, then the commit is expected to
+ * succeed.  If it does succeed, set *NEW_REV to the new revision;
+ * else return error.
+ *
+ * If EXPECTED_CONFLICT is non-null, it is either the empty string or
+ * the expected path of the conflict.  If it is the empty string, any
+ * conflict is acceptable.  If it is a non-empty string, the commit
+ * must fail due to conflict, and the conflict path must match
+ * EXPECTED_CONFLICT.  If they don't match, return error.
+ *
+ * If a conflict is expected but the commit succeeds anyway, return
+ * error.
+ */
+static svn_error_t *
+test_commit_txn (svn_revnum_t *new_rev,
+                 svn_fs_txn_t *txn,
+                 const char *expected_conflict,
+                 apr_pool_t *pool)
+{
+  const char *conflict;
+  svn_error_t *err;
+
+  err = svn_fs_commit_txn (&conflict, new_rev, txn);
+
+  if (err && (err->apr_err == SVN_ERR_FS_CONFLICT))
+    {
+      if (! expected_conflict)
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
+             "commit conflicted at `%s', but no conflict expected",
+             conflict ? conflict : "(missing conflict info!)");
+        }
+      else if (conflict == NULL)
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
+             "commit conflicted as expected, "
+             "but no conflict path was returned (`%s' expected)",
+             expected_conflict);
+        }
+      else if ((strcmp (expected_conflict, "") != 0)
+               && (strcmp (conflict, expected_conflict) != 0))
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
+             "commit conflicted at `%s', but expected conflict at `%s')",
+             conflict, expected_conflict);
+        }
+    }
+  else if (err)   /* commit failed, but not due to conflict */
+    {
+      return svn_error_quick_wrap 
+        (err, "commit failed due to something other than a conflict");
+    }
+  else            /* err == NULL, so commit succeeded */
+    {
+      if (expected_conflict)
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+             "commit succeeded that was expected to fail at `%s'",
+             expected_conflict);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Open an existing filesystem.  */
 static svn_error_t *
 open_berkeley_filesystem (const char **msg,
@@ -660,6 +733,7 @@ transaction_props (const char **msg,
   svn_fs_txn_t *txn;
   apr_hash_t *proplist;
   svn_string_t *value;
+  svn_revnum_t after_rev;
   int i;
 
   const char *initial_props[4][2] = { 
@@ -676,7 +750,7 @@ transaction_props (const char **msg,
     { "auto", "Red 2000 Chevrolet Blazer" }
     };
 
-  *msg = "set and get some transaction properties";
+  *msg = "set/get txn props, commit, validate new rev props";
 
   /* Open the fs */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -733,6 +807,53 @@ transaction_props (const char **msg,
     if (apr_hash_count (proplist) != 4 )
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "unexpected number of transaction properties were found");
+
+    /* Loop through our list of expected revision property name/value
+       pairs. */
+    for (i = 0; i < 4; i++)
+      {
+        /* For each expected property: */
+
+        /* Step 1.  Find it by name in the hash of all rev. props
+           returned to us by svn_fs_revision_proplist.  If it can't be
+           found, return an error. */
+        prop_value = apr_hash_get (proplist, 
+                                   final_props[i][0],
+                                   APR_HASH_KEY_STRING);
+        if (! prop_value)
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+             "unable to find expected transaction property");
+
+        /* Step 2.  Make sure the value associated with it is the same
+           as what was expected, else return an error. */
+        if (strcmp (prop_value->data, final_props[i][1]))
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+             "transaction property had an unexpected value");
+      }
+  }
+  
+  /* Commit (and close) the transaction. */
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  if (after_rev != 1)
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "committed transaction got wrong revision number");
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Obtain a list of all properties on the new revision, and make
+     sure it matches the expected values.  If you're wondering, the
+     expected values should be the exact same set of properties that
+     existed on the transaction just prior to its being committed. */
+  SVN_ERR (svn_fs_revision_proplist (&proplist, fs, after_rev, pool));
+  {
+    svn_string_t *prop_value;
+
+    if (apr_hash_count (proplist) != 4 )
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "unexpected number of revision properties were found");
 
     /* Loop through our list of expected revision property name/value
@@ -760,10 +881,6 @@ transaction_props (const char **msg,
              "revision property had an unexpected value");
       }
   }
-  
-  /* Cancel the transaction. */
-  SVN_ERR (svn_fs_abort_txn (txn));
-  SVN_ERR (svn_fs_close_txn (txn));
 
   /* Close the fs. */
   SVN_ERR (svn_fs_close_fs (fs));
@@ -1422,78 +1539,6 @@ merge_trees (const char **msg,
 
   /* ### kff todo: hmmm, and now merging_commit() does these tests.
      Is this function obsolete? */
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Commit TXN, expecting either success or failure:
- *
- * If EXPECTED_CONFLICT is null, then the commit is expected to
- * succeed.  If it does succeed, set *NEW_REV to the new revision;
- * else return error.
- *
- * If EXPECTED_CONFLICT is non-null, it is either the empty string or
- * the expected path of the conflict.  If it is the empty string, any
- * conflict is acceptable.  If it is a non-empty string, the commit
- * must fail due to conflict, and the conflict path must match
- * EXPECTED_CONFLICT.  If they don't match, return error.
- *
- * If a conflict is expected but the commit succeeds anyway, return
- * error.
- */
-static svn_error_t *
-test_commit_txn (svn_revnum_t *new_rev,
-                 svn_fs_txn_t *txn,
-                 const char *expected_conflict,
-                 apr_pool_t *pool)
-{
-  const char *conflict;
-  svn_error_t *err;
-
-  err = svn_fs_commit_txn (&conflict, new_rev, txn);
-
-  if (err && (err->apr_err == SVN_ERR_FS_CONFLICT))
-    {
-      if (! expected_conflict)
-        {
-          return svn_error_createf
-            (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
-             "commit conflicted at `%s', but no conflict expected",
-             conflict ? conflict : "(missing conflict info!)");
-        }
-      else if (conflict == NULL)
-        {
-          return svn_error_createf
-            (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
-             "commit conflicted as expected, "
-             "but no conflict path was returned (`%s' expected)",
-             expected_conflict);
-        }
-      else if ((strcmp (expected_conflict, "") != 0)
-               && (strcmp (conflict, expected_conflict) != 0))
-        {
-          return svn_error_createf
-            (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
-             "commit conflicted at `%s', but expected conflict at `%s')",
-             conflict, expected_conflict);
-        }
-    }
-  else if (err)   /* commit failed, but not due to conflict */
-    {
-      return svn_error_quick_wrap 
-        (err, "commit failed due to something other than a conflict");
-    }
-  else            /* err == NULL, so commit succeeded */
-    {
-      if (expected_conflict)
-        {
-          return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-             "commit succeeded that was expected to fail at `%s'",
-             expected_conflict);
-        }
-    }
 
   return SVN_NO_ERROR;
 }

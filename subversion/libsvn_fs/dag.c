@@ -1860,13 +1860,21 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
     /* Add rew revision entry to `revisions' table.  */
     skel_t *new_revision_skel;
     svn_string_t *id_string = svn_fs_unparse_id (root->id, trail->pool);
-
+    skel_t *txn_skel;
+    
     new_revision_skel = svn_fs__make_empty_list (trail->pool);
-    svn_fs__prepend (svn_fs__make_empty_list (trail->pool),
+
+    /* PROPLIST */
+    SVN_ERR (svn_fs__get_txn (&txn_skel, fs, svn_txn, trail));
+    svn_fs__prepend (txn_skel->children->next->next->next,
                      new_revision_skel);
+
+    /* ID */
     svn_fs__prepend (svn_fs__mem_atom (id_string->data,
                                        id_string->len, trail->pool),
                      new_revision_skel);
+
+    /* "revision" */
     svn_fs__prepend (svn_fs__str_atom ("revision", trail->pool),
                      new_revision_skel);
 
