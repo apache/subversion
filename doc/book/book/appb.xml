@@ -45,10 +45,10 @@
           lost. If your process accesses the repository directly
           (mod_dav_svn, svnlook, svnadmin, or if you access a
           <literal>file://</literal> URL), then it's using Berkeley DB to
-          access your data.  Berkeley DB is journaling system, meaning that it
-          logs everything it is about to do before it does so.  If
-          your process is interrupted (kill signal or segfault), then
-          a lockfile is left behind, along with a logfile describing
+          access your data.  Berkeley DB is a journaling system, meaning
+          that it logs everything it is about to do before it does so.  If
+          your process is interrupted (e.g. by a kill signal or segfault),
+          then a lockfile is left behind, along with a logfile describing
           unfinished business.  Any other process that attempts to
           access the database will just hang, waiting for the lockfile
           to disappear.  To awaken your repository, you need to ask
@@ -57,8 +57,8 @@
           consistent.</para>
 
         <para>Make sure you run this command as the user that owns and
-          manages the database, and not as root, else it will leave
-          root-owned files in the db directory which cannot be opened
+          manages the database, not as root, or else it will leave
+          root-owned files in the db directory.  These files cannot be opened
           by the non-root user that manages the database, which is
           typically either you or your Apache process.  Also be sure
           to have the correct umask set when you run recover, since
@@ -239,7 +239,7 @@ svn_error: &hellip; The specified activity does not exist.
         
         <para>Subversion uses a plugin system to allow access to
           repositories.  Currently there are three of these plugins:
-          ra_local allows access to a local repository, ra_dav which
+          ra_local allows access to a local repository, ra_dav
           allows access to a repository via WebDAV, and ra_svn allows
           local or remote access via the svnserve server.  When you
           attempt to perform an operation in subversion, the program

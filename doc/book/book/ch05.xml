@@ -1056,7 +1056,7 @@ Available subcommands:
         <para>Since Subversion stores everything in an opaque database
           system, attempting manual tweaks is unwise, if not quite
           difficult.  And once data has been stored in your
-          repository, Subversion generally doesn't really provide an
+          repository, Subversion generally doesn't provide an
           easy way to remove that data.
           <footnote>
             <para>That, by the way, is a <emphasis>feature</emphasis>,
@@ -1143,8 +1143,8 @@ Available subcommands:
           so on.  But sometimes after new revisions start flying in,
           you rethink your layout and would like to make some changes.
           A common change is the decision to move multiple projects
-          which are sharing a single repository into a single
-          repository for each project.</para>
+          which are sharing a single repository into separate
+          repositories for each project.</para>
 
         <para>Our imaginary repository contains three projects:
           <literal>calc</literal>, <literal>calendar</literal>, and
@@ -1195,7 +1195,7 @@ $
 </screen>
 
         <para>At this point, you have to make a decision.  Each of
-          your dumpfiles at this point will create a valid repository,
+          your dumpfiles will create a valid repository,
           but will preserve the paths exactly as they were in the
           original repository.  This means that even though you would
           have a repository solely for your <literal>calc</literal>
@@ -1296,11 +1296,11 @@ Node-path: spreadsheet/Makefile
 &hellip;
 </screen>
 
-        <para>If the paths lack leading slashes, you should not
+        <para>If the paths have leading slashes, you should
           include leading slashes in the paths you pass to
           <command>svndumpfilter include</command> and
-          <command>svndumpfilter exclude</command> (and if they do,
-          you should).  Further, if your dumpfile has an inconsistent
+          <command>svndumpfilter exclude</command> (and if they don't,
+          you shouldn't).  Further, if your dumpfile has an inconsistent
           usage of leading slashes for some reason,
           <footnote>
             <para>While <command>svnadmin dump</command> has a
@@ -1308,8 +1308,8 @@ Node-path: spreadsheet/Makefile
               them&mdash;other programs which generate dump data might
               not be so consistent.</para>
           </footnote>
-          you should probably normalize those paths to either all
-          have, or all lack, leading slashes.</para>
+          you should probably normalize those paths so they all
+          have, or lack, leading slashes.</para>
 
         <para>Also, copied paths can give you some trouble.
           Subversion supports copy operations in the repository, where

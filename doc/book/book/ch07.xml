@@ -99,7 +99,7 @@
         program have the final word on behavior.  On Unix-like
         platforms, the system-wide configuration area is expected to be
         the <filename>/etc/subversion</filename> directory; on Windows
-        machines, it again looks for a <filename>Subversion</filename>
+        machines, it looks for a <filename>Subversion</filename>
         directory inside the common Application Data location (again,
         as specified by the Windows Registry).  Unlike the per-user
         case, the <command>svn</command> program does not attempt to
@@ -378,8 +378,9 @@ collabnet = svn.collab.net
           <varlistentry>
             <term><literal>ssl-authority-files</literal></term>
             <listitem>
-              <para>A semi-colon delimited list of paths to files containing
-                certificates of the certificate authorities (or CAs) that
+              <para>This is a semicolon-delimited list of paths to files
+                containing certificates of the certificate authorities
+                (or CAs) that
                 are accepted by the Subversion client when accessing the
                 repository over HTTPS.</para>
             </listitem>
@@ -924,7 +925,7 @@ $
           Since the properties aren't versioned, you run the risk of
           losing information if you aren't careful with your edits.
           The repository administrator can setup methods to protect
-          against this lossage, but by default, modification of
+          against this loss, and by default, modification of
           unversioned properties is disabled.</para>
 
       </sidebar>
@@ -1226,8 +1227,8 @@ $ svn status calc
 
         <para>In this example, you have made some property
           modifications to <filename>button.c</filename>, but in your
-          working copy you also have some unversioned files, in this
-          case, the latest <filename>calculator</filename> program
+          working copy you also have some unversioned files:
+          the latest <filename>calculator</filename> program
           that you've compiled from your source code, a source file
           named <filename>data.c</filename>, and a set of debugging
           output log files.  Now, you know that your build system
