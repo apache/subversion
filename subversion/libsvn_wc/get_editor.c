@@ -587,7 +587,7 @@ add_or_replace_file (svn_string_t *name,
   else if ((! adding) && err)
     return svn_error_quick_wrap (err, "trying to replace non-versioned file");
   else if (adding && !err)
-    return svn_error_create (0, SVN_ERR_WC_ENTRY_EXISTS, NULL,
+    return svn_error_create (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL,
                              parent_dir_baton->pool,
                              "trying to add versioned file");
 
