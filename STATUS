@@ -69,7 +69,14 @@ Candidate changes:
     Justification:
       Tell our users the correct information. Doc change only.
     Votes:
-      +1: maxb
+      +1: maxb, jerenkrantz
+
+  * r12327
+    Fix race condition in dump loader computing the next revision.
+    Justification:
+      Loads into an active repository will be corrupted.
+    Votes:
+      +1: jerenkrantz
 
 
 Approved changes (further review is welcome, but not required):
