@@ -329,18 +329,18 @@ static svn_error_t * close_baton(void *baton, const char *method)
 
     PUTBACK;
 
-    call_method(method, G_SCALAR);
+    call_method(method, G_DISCARD);
 
     /* check result? */
 
     SvREFCNT_dec(ib->editor);
-    SvREFCNT_dec(ib->baton);
+    if (ib->baton)
+	SvREFCNT_dec(ib->baton);
 
 #ifdef SVN_DEBUG
     ib->editor = ib->baton = NULL;
 #endif
 
-    PUTBACK ;
     FREETMPS ;
     LEAVE ;
 
