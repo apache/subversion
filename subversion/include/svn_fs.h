@@ -962,7 +962,8 @@ svn_error_t *svn_fs_delete (svn_fs_root_t *root,
 
 /* Delete the node named PATH in ROOT.  If the node being deleted is a
    directory, its contents will be deleted recursively.  ROOT must be
-   the root of a transaction, not of a revision.
+   the root of a transaction, not of a revision.  Use POOL for
+   temporary allocation.
 
    This function may be more efficient than making the equivalent
    series of calls to svn_fs_delete, because it takes advantage of the
@@ -971,7 +972,9 @@ svn_error_t *svn_fs_delete (svn_fs_root_t *root,
    dumb algorithm would recurse into the subtree and end up cloning
    each non-empty directory it contains, only to delete it later.
 
-   Do any necessary temporary allocation in POOL.  */
+   If return SVN_ERR_FS_NO_SUCH_ENTRY, then the basename of PATH is
+   missing from its parent, that is, the final target of the deletion
+   is missing.  */
 svn_error_t *svn_fs_delete_tree (svn_fs_root_t *root,
                                  const char *path,
                                  apr_pool_t *pool);

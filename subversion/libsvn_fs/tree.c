@@ -1987,6 +1987,9 @@ struct delete_args
 };
 
 
+/* If this returns SVN_ERR_FS_NO_SUCH_ENTRY, it means that the
+   basename of PATH is missing from its parent, that is, the final
+   target of the deletion is missing.  */
 static svn_error_t *
 txn_body_delete (void *baton,
                  trail_t *trail)
