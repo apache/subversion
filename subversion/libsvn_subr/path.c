@@ -387,9 +387,13 @@ svn_path_split (const svn_stringbuf_t *path,
 }
 
 
+
 int
-svn_path_is_thisdir (const svn_stringbuf_t *path)
+svn_path_is_empty (const svn_stringbuf_t *path)
 {
+  if (path == NULL || svn_stringbuf_isempty (path))
+    return 1;
+
   if ((path->len == 1) && (path->data[0] == '.'))
     return 1;
 
@@ -398,15 +402,6 @@ svn_path_is_thisdir (const svn_stringbuf_t *path)
     return 1;
 
   return 0;
-}
-
-
-int
-svn_path_is_empty (const svn_stringbuf_t *path)
-{
-  return ((path == NULL)
-          || (svn_stringbuf_isempty (path))
-          || (svn_path_is_thisdir (path)));
 }
 
 
@@ -582,32 +577,6 @@ svn_path_decompose (const svn_stringbuf_t *path,
     }
 
   return components;
-}
-
-
-svn_boolean_t
-svn_path_is_single_path_component (svn_stringbuf_t *path)
-{
-  /* Can't be NULL */
-  if (! path)
-    return 0;
-
-  /* Can't be empty */
-  if (*path->data == '\0')
-    return 0;
-
-  /* Can't be `.' or `..' */
-  if (path->data[0] == '.'
-      && (path->data[1] == '\0'
-          || (path->data[1] == '.' && path->data[2] == '\0')))
-    return 0;
-
-  /* slashes are bad, m'kay... */
-  if (strchr (path->data, SVN_PATH_SEPARATOR) != NULL)
-    return 0;
-
-  /* it is valid */
-  return 1;
 }
 
 

@@ -119,10 +119,6 @@ void svn_path_remove_component (svn_stringbuf_t *path);
 
 
 
-/* Return TRUE iff PATH is a single component. */
-svn_boolean_t
-svn_path_is_single_path_component (svn_stringbuf_t *path);
-
 /* Divide PATH into *DIRPATH and *BASENAME, return them by reference,
  * in their own storage in POOL.
  *
@@ -140,9 +136,6 @@ void svn_path_split (const svn_stringbuf_t *path,
                      svn_stringbuf_t **basename,
                      apr_pool_t *pool);
 
-
-/* Return non-zero iff PATH represents the current directory */
-int svn_path_is_thisdir (const svn_stringbuf_t *path);
 
 /* Return non-zero iff PATH is empty or represents the current
    directory -- that is, if it is NULL or if prepending it as a
