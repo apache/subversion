@@ -58,6 +58,14 @@ Candidate changes:
      Votes:
        +1: jerenkrantz
 
+   * r12630
+     Dataloss bug in svndumpfilter - copyfrom information lost for files
+     copied-with-modifications.
+     Justification:
+       Dataloss!
+     Votes:
+       +1: maxb
+
 Approved changes (further review is welcome, but not required):
 
 Status of 1.1.4:
