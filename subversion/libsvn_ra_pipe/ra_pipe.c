@@ -350,25 +350,6 @@ svn_ra_pipe__do_status (void *session_baton,
 }
 
 static svn_error_t *
-svn_ra_pipe__do_merge (void *session_baton, 
-                       const svn_ra_reporter_t **reporter,
-                       void **report_baton,
-                       const char *start_path,
-                       svn_revnum_t start_revision,
-                       const char *end_path,
-                       svn_revnum_t end_revision,
-                       const char *merge_target,
-                       const svn_delta_edit_fns_t *setup_editor,
-                       void *setup_edit_baton,
-                       const svn_delta_edit_fns_t *finish_editor,
-                       void *finish_edit_baton)
-{
-  svn_ra_pipe__session_baton_t *sess = session_baton;
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
-                           sess->pool, "ra_pipe not implemented yet");
-}
-
-static svn_error_t *
 svn_ra_pipe__get_log (void *session_baton,
                       const apr_array_header_t *paths,
                       svn_revnum_t start,
@@ -521,7 +502,6 @@ static const svn_ra_plugin_t ra_pipe_plugin =
   svn_ra_pipe__do_update,
   svn_ra_pipe__do_switch,
   svn_ra_pipe__do_status,
-  svn_ra_pipe__do_merge,
   svn_ra_pipe__get_log,
   svn_ra_pipe__do_check_path,
 };
