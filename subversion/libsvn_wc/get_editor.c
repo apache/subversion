@@ -178,14 +178,16 @@ free_dir_baton (struct dir_baton *dir_baton)
   struct dir_baton *parent = dir_baton->parent_baton;
 
   /* Bump this dir to the new version. */
-  err = svn_wc__entry_merge (dir_baton->path,
-                             NULL,
-                             dir_baton->edit_baton->target_version,
-                             svn_dir_kind,
-                             dir_baton->pool,
-                             NULL);                                    
-  if (err)
-    return err;
+  err = svn_wc__entry_merge_sync (dir_baton->path,
+                                  NULL,
+                                  dir_baton->edit_baton->target_version,
+                                  svn_dir_kind,
+                                  0,
+                                  0,
+                                  dir_baton->pool,
+                                  NULL);
+   if (err)
+     return err;
 
   /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
   apr_destroy_pool (dir_baton->pool);
@@ -455,15 +457,17 @@ delete (svn_string_t *name, void *parent_baton)
 {
   struct dir_baton *parent_dir_baton = parent_baton;
   
-  return svn_wc__entry_merge (parent_dir_baton->path, 
-                              name,
-                              SVN_INVALID_VERNUM,
-                              0, /* kff todo: kind irrelevant, fix interface */
-                              parent_dir_baton->pool,
-                              SVN_WC__ENTRIES_ATTR_DELETE,
-                              svn_string_create ("true",
-                                                 parent_dir_baton->pool),
-                              NULL);
+  return svn_wc__entry_merge_sync (parent_dir_baton->path,
+                                   name,
+                                   SVN_INVALID_VERNUM,
+                                   svn_invalid_kind,
+                                   0,
+                                   0,
+                                   parent_dir_baton->pool,
+                                   SVN_WC__ENTRIES_ATTR_DELETE,
+                                   svn_string_create ("true",
+                                                      parent_dir_baton->pool),
+                                   NULL);
 }
 
 
@@ -485,12 +489,13 @@ add_directory (svn_string_t *name,
 
   /* Notify the parent that this child dir exists.  This can happen
      right away, there is no need to wait until the child is done. */
-  err = svn_wc__entry_merge (parent_dir_baton->path,
-                             this_dir_baton->name,
-                             SVN_INVALID_VERNUM,
-                             svn_dir_kind,
-                             parent_dir_baton->pool,
-                             NULL);
+  err = svn_wc__entry_merge_sync (parent_dir_baton->path,
+                                  this_dir_baton->name,
+                                  SVN_INVALID_VERNUM,
+                                  svn_dir_kind,
+                                  0,
+                                  0,
+                                  NULL);
   if (err)
     return err;
 
@@ -574,38 +579,31 @@ add_or_replace_file (svn_string_t *name,
   struct dir_baton *parent_dir_baton = parent_baton;
   struct file_baton *fb;
   svn_error_t *err;
+  apr_hash_t *entries = NULL;
+  svn_wc__entry_t *entry;
 
-  err = svn_wc__entry_get (parent_dir_baton->path,
-                           name,
-                           NULL,
-                           NULL,
-                           parent_dir_baton->pool,
-                           NULL);
+  err = svn_wc__entries_read (&entries,
+                              parent_dir_baton->path,
+                              parent_dir_baton->pool);
+  if (err)
+    return err;
 
-  if (adding)
-    {
-      /* When adding, the above operation should return an
-         SVN_ERR_WC_ENTRY_NOT_FOUND error, indicating that the file
-         isn't already under version control.  */
-      if (! err)
-        return svn_error_create (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL,
-                                 parent_dir_baton->pool,
-                                 "trying to add versioned file");
-      else if (err->apr_err != SVN_ERR_WC_ENTRY_NOT_FOUND)
-        return err;
-    }
-  else
-    {
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_WC_ENTRY_NOT_FOUND)
-            return
-              svn_error_quick_wrap
-              (err, "trying to replace non-versioned file");
-          else
-            return err;
-        }
-    }
+  entry = apr_hash_get (entries, name->data, name->len);
+
+  /* Sanity checks. */
+  if (adding && entry)
+    return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL,
+                              parent_dir_baton->pool,
+                              "trying to add versioned file "
+                              "%s in directory %s",
+                              name, parent_dir_baton->path);
+  else if ((! adding) && (! entry))
+    return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL,
+                              parent_dir_baton->pool,
+                              "trying to replace non-versioned file "
+                              "%s in directory %s",
+                              name, parent_dir_baton->path);
+
         
   /* Make sure we've got a working copy to put the file in. */
   /* kff todo: need stricter logic here */

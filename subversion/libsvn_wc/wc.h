@@ -302,7 +302,7 @@ svn_error_t *svn_wc__entries_init (svn_string_t *path,
                                    apr_pool_t *pool);
 
 
-#define BRAVE_NEW_INTERFACE 0  /* Temporary toggle for development. */
+#define BRAVE_NEW_INTERFACE 1  /* Temporary toggle for development. */
 #if BRAVE_NEW_INTERFACE
 
 /* A data structure representing an entry from the `entries' file. */
@@ -349,19 +349,38 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
    Varargs specify any other xml attributes, as alternating pairs of
    key (char *), value (svn_string_t *).  
 
+   An entry name of null means the dir's own entry, as usual.
+   
    An error SVN_ERR_WC_ENTRY_EXISTS is returned if the entry already
    exists. */
 svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
-                                apr_pool_t *pool,
                                 svn_string_t *name,
                                 svn_vernum_t version,
                                 enum svn_node_kind kind,
                                 int flags,
                                 apr_time_t timestamp,
+                                apr_pool_t *pool,
                                 ...);
 
+/* For PATH's entries file, create or modify an entry NAME, using the
+   explicit fields and, secondarily, varargs.
+   Varargs are alternating pairs of key (char *), value (svn_string_t *).
 
-/* Remove entry NAME from ENTRIES. */
+   An entry name of null means the dir's own entry, as usual.
+   
+   The entries file will be read, tweaked, and written back out.  This
+   is your one-stop shopping for changing the entries file. */
+svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
+                                       svn_string_t *name,
+                                       svn_vernum_t version,
+                                       enum svn_node_kind kind,
+                                       int flags,
+                                       apr_time_t timestamp,
+                                       apr_pool_t *pool,
+                                       ...);
+
+
+/* Remove entry NAME from ENTRIES, unconditionally. */
 void svn_wc__entry_remove (apr_hash_t *entries, svn_string_t *name);
 
 

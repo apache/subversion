@@ -49,9 +49,8 @@ main (int argc, char *argv[])
                              rootdir, 59, globalpool);
 
   /* Call the crawler */
-  err = svn_wc_crawl_local_mods (rootdir,
-                                 my_editor, my_edit_baton,
-                                 NULL, globalpool);
+  err = svn_wc_crawl_local_mods (rootdir, my_editor, my_edit_baton,
+                                 globalpool);
 
   /* Close the edit */
   err = my_editor->close_edit (my_edit_baton);
