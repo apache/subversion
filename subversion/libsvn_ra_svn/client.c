@@ -621,7 +621,7 @@ static svn_error_t *ra_svn_get_dir(void *sess, const char *path,
                                      &crev, &cdate, &cauthor));
       dirent = apr_palloc(pool, sizeof(*dirent));
       SVN_ERR(interpret_kind(kind, pool, &dirent->kind));
-      dirent->size = size;
+      dirent->size = size;/* FIXME: svn_filesize_t */
       dirent->has_props = has_props;
       dirent->created_rev = crev;
       SVN_ERR(svn_time_from_cstring(&dirent->time, cdate, pool));

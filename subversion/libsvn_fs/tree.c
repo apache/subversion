@@ -2922,7 +2922,7 @@ struct file_length_args
 {
   svn_fs_root_t *root;
   const char *path;
-  apr_size_t length;     /* OUT parameter */
+  svn_filesize_t length;       /* OUT parameter */
 };
 
 static svn_error_t *
@@ -2940,7 +2940,7 @@ txn_body_file_length (void *baton,
 }
 
 svn_error_t *
-svn_fs_file_length (apr_off_t *length_p,
+svn_fs_file_length (svn_filesize_t *length_p,
                     svn_fs_root_t *root,
                     const char *path,
                     apr_pool_t *pool)

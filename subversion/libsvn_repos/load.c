@@ -169,7 +169,7 @@ stream_malformed (void)
    Use POOL for all allocations.  */
 static svn_error_t *
 parse_property_block (svn_stream_t *stream,
-                      apr_size_t content_length,
+                      svn_filesize_t content_length,
                       const svn_repos_parser_fns_t *parse_fns,
                       void *record_baton,
                       svn_boolean_t is_node,
@@ -289,7 +289,7 @@ parse_property_block (svn_stream_t *stream,
    Use POOL for all allocations.  */
 static svn_error_t *
 parse_text_block (svn_stream_t *stream,
-                  apr_size_t content_length,
+                  svn_filesize_t content_length,
                   const svn_repos_parser_fns_t *parse_fns,
                   void *record_baton,
                   char *buffer,
@@ -318,7 +318,7 @@ parse_text_block (svn_stream_t *stream,
       if (content_length >= buflen)
         rlen = buflen;
       else
-        rlen = content_length;
+        rlen = (apr_size_t) content_length;
       
       num_to_read = rlen;
       SVN_ERR (svn_stream_read (stream, buffer, &rlen));
@@ -494,13 +494,8 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                   SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
                                   APR_HASH_KEY_STRING)))
         {
-          /* First, remove all node properties. */
-          if (found_node)
-            SVN_ERR (parse_fns->remove_node_props (node_baton));
-
-          /* Then add the "new" proplist to the node. */
-          SVN_ERR (parse_property_block (stream, 
-                                         (apr_size_t) atoi (valstr),
+          SVN_ERR (parse_property_block (stream,
+                                         apr_atoui64 (valstr),
                                          parse_fns,
                                          found_node ? node_baton : rev_baton,
                                          found_node,
@@ -513,7 +508,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                   APR_HASH_KEY_STRING)))
         {
           SVN_ERR (parse_text_block (stream, 
-                                     (apr_size_t) atoi (valstr),
+                                     apr_atoui64 (valstr),
                                      parse_fns,
                                      found_node ? node_baton : rev_baton,
                                      buffer, 

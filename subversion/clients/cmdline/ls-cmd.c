@@ -87,11 +87,12 @@ print_dirents (apr_hash_t *dirents,
           if (apr_err)
             timestr[0] = '\0';
 
-          printf ("%c %7"SVN_REVNUM_T_FMT" %8.8s %8ld %12s %s%s\n", 
+          printf ("%c %7"SVN_REVNUM_T_FMT" %8.8s "
+                  "%8"SVN_FILESIZE_T_FMT" %12s %s%s\n",
                   dirent->has_props ? 'P' : '_',
                   dirent->created_rev,
                   native_author ? native_author : "      ? ",
-                  (long int) dirent->size,
+                  dirent->size,
                   timestr,
                   native_entryname,
                   (dirent->kind == svn_node_dir) ? "/" : "");

@@ -117,7 +117,7 @@ svn_hash_write (apr_hash_t *hash,
       err = apr_file_write_full (destfile, "V ", 2, NULL);
       if (err) return err;
 
-      sprintf (buf, "%ld%n", (long int) value->len, &bytes_used);
+      sprintf (buf, "%" APR_SIZE_T_FMT "%n", value->len, &bytes_used);
       err = apr_file_write_full (destfile, buf, bytes_used, NULL);
       if (err) return err;
 

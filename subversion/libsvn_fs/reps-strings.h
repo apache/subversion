@@ -66,7 +66,7 @@ svn_error_t *svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
 /* Set *SIZE_P to the size of REP_KEY's contents in FS, as part of TRAIL.
    Note: this is the fulltext size, no matter how the contents are
    represented in storage.  */
-svn_error_t *svn_fs__rep_contents_size (apr_size_t *size_p,
+svn_error_t *svn_fs__rep_contents_size (svn_filesize_t *size_p,
                                         svn_fs_t *fs,
                                         const char *rep_key,
                                         trail_t *trail);

@@ -72,7 +72,7 @@ write_hash_to_stringbuf (apr_hash_t *hash,
 
       svn_stringbuf_appendbytes (*strbuf, "V ", 2);
 
-      sprintf (buf, "%ld%n", (long int) value->len, &bytes_used);
+      sprintf (buf, "%" APR_SIZE_T_FMT "%n", value->len, &bytes_used);
       svn_stringbuf_appendbytes (*strbuf, buf, bytes_used);
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
 
@@ -220,7 +220,7 @@ dump_node (struct edit_baton *eb,
 {
   svn_stringbuf_t *propstring;
   apr_hash_t *prophash;
-  apr_off_t textlen = 0, content_length = 0;
+  svn_filesize_t textlen = 0, content_length = 0;
   apr_size_t proplen = 0, len;
   svn_boolean_t must_dump_text = FALSE, must_dump_props = FALSE;
   const char *compare_path = path;
@@ -408,7 +408,7 @@ dump_node (struct edit_baton *eb,
       content_length += textlen;
       SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH 
-                                  ": %" APR_OFF_T_FMT "\n", textlen));
+                                  ": %" SVN_FILESIZE_T_FMT "\n", textlen));
 
       SVN_ERR (svn_fs_file_md5_checksum (md5_digest, eb->fs_root, path, pool));
       hex_digest = svn_md5_digest_to_cstring (md5_digest, pool);
@@ -424,7 +424,8 @@ dump_node (struct edit_baton *eb,
      parsers. */
   SVN_ERR (svn_stream_printf (eb->stream, pool,
                               SVN_REPOS_DUMPFILE_CONTENT_LENGTH 
-                              ": %" APR_OFF_T_FMT "\n\n", content_length));
+                              ": %" SVN_FILESIZE_T_FMT "\n\n",
+                              content_length));
 
   /* Dump property content if we're supposed to do so. */
   if (must_dump_props)
@@ -844,11 +845,13 @@ svn_repos_dump_fs (svn_repos_t *repos,
   /* Validate the revisions. */
   if (start_rev > end_rev)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
-                              "start_rev %ld is greater than end_rev %ld",
+                              "start_rev %" SVN_REVNUM_T_FMT
+                              " is greater than end_rev %" SVN_REVNUM_T_FMT,
                               start_rev, end_rev);
   if (end_rev > youngest)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
-                              "end_rev %ld is invalid (youngest rev is %ld)",
+                              "end_rev %" SVN_REVNUM_T_FMT " is invalid "
+                              "(youngest rev is %" SVN_REVNUM_T_FMT ")",
                               end_rev, youngest);
   if ((start_rev == 0) && incremental)
     incremental = FALSE; /* revision 0 looks the same regardless of

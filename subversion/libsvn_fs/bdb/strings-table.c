@@ -169,7 +169,7 @@ svn_error_t *
 svn_fs__bdb_string_read (svn_fs_t *fs,
                          const char *key,
                          char *buf,
-                         apr_off_t offset,
+                         svn_filesize_t offset,
                          apr_size_t *len,
                          trail_t *trail)
 {
@@ -365,7 +365,7 @@ svn_fs__bdb_string_clear (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__bdb_string_size (apr_size_t *size,
+svn_fs__bdb_string_size (svn_filesize_t *size,
                          svn_fs_t *fs,
                          const char *key,
                          trail_t *trail)
@@ -374,7 +374,7 @@ svn_fs__bdb_string_size (apr_size_t *size,
   DBT query;
   DBC *cursor;
   apr_size_t length;
-  apr_size_t total;
+  svn_filesize_t total;
 
   svn_fs__str_to_dbt (&query, (char *) key);
 
