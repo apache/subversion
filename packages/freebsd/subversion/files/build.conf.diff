@@ -1,0 +1,235 @@
+--- work/subversion-r1302/build.conf.orig	Fri Feb 15 15:54:41 2002
++++ work/subversion-r1302/build.conf	Wed Feb 20 18:25:37 2002
+@@ -63,7 +63,7 @@
+ type = exe
+ path = subversion/clients/cmdline
+ libs = libsvn_client libsvn_wc libsvn_ra libsvn_delta libsvn_subr
+-	$(SVN_APR_LIBS) libexpat
++	$(SVN_APR_LIBS) -lexpat
+ manpages = subversion/clients/cmdline/man/svn.1
+ infopages = doc/user/manual/svn-manual.info
+  doc/user/svn_for_cvs_users/svn_for_cvs_users.info 
+@@ -77,14 +77,14 @@
+ type = exe
+ path = subversion/svnadmin
+ install = fs-bin
+-libs = libsvn_repos libsvn_fs libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_repos libsvn_fs libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ 
+ # The subversion repository inspection tool
+ [svnlook]
+ type = exe
+ path = subversion/svnlook
+ install = fs-bin
+-libs = libsvn_repos libsvn_fs libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_repos libsvn_fs libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ 
+ # Library needed by all subversion clients
+ [libsvn_client]
+@@ -141,7 +141,7 @@
+ type = lib
+ install = base-lib
+ path = subversion/libsvn_subr
+-libs =  $(SVN_APR_LIBS) libexpat
++libs =  $(SVN_APR_LIBS) -lexpat
+ 
+ # Working copy management lib
+ [libsvn_wc]
+@@ -161,12 +161,12 @@
+ install = apache-mod
+ 
+ # Simple XML-parsing lib
+-[libexpat]
+-type = lib
+-install = base-lib
+-path = expat-lite
++#[libexpat]
++#type = lib
++#install = base-lib
++#path = expat-lite
+ # there are some .c files included by others, so *.c isn't appropriate
+-sources = hashtable.c xmlparse.c xmlrole.c xmltok.c
++#sources = hashtable.c xmlparse.c xmlrole.c xmltok.c
+ 
+ # ----------------------------------------------------------------------------
+ #
+@@ -209,7 +209,7 @@
+ sources = fs-test.c
+ install = fs-test
+ libs = libsvn_test libsvn_test_fs libsvn_fs libsvn_delta libsvn_subr
+-	$(SVN_APR_LIBS) libexpat
++	$(SVN_APR_LIBS) -lexpat
+ # run-fs-tests.sh will run this for us
+ testing = skip
+ 
+@@ -219,7 +219,7 @@
+ path = subversion/tests/libsvn_fs
+ sources = skel-test.c
+ install = fs-test
+-libs = libsvn_test libsvn_fs libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_test libsvn_fs libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ # run-fs-tests.sh will run this for us
+ testing = skip
+ 
+@@ -229,7 +229,7 @@
+ path = subversion/tests/libsvn_fs
+ sources = key-test.c
+ install = fs-test
+-libs = libsvn_test libsvn_fs libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_test libsvn_fs libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ # run-fs-tests.sh will run this for us
+ testing = skip
+ 
+@@ -240,7 +240,7 @@
+ sources = strings-reps-test.c
+ install = fs-test
+ libs = libsvn_test libsvn_test_fs libsvn_fs libsvn_delta libsvn_subr
+-       $(SVN_APR_LIBS) libexpat
++       $(SVN_APR_LIBS) -lexpat
+ # run-fs-tests.sh will run this for us
+ testing = skip
+ 
+@@ -250,7 +250,7 @@
+ path = subversion/tests/libsvn_repos
+ sources = md5args.c
+ install = test
+-libs = libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_subr $(SVN_APR_LIBS) -lexpat
+ # run-repos-tests.sh will run this for us
+ testing = skip
+ 
+@@ -261,7 +261,7 @@
+ sources = repos-test.c dir-delta-editor.c
+ install = fs-test
+ libs = libsvn_test libsvn_test_fs libsvn_repos libsvn_fs libsvn_delta
+-	libsvn_subr $(SVN_APR_LIBS) libexpat
++	libsvn_subr $(SVN_APR_LIBS) -lexpat
+ # run-repos-tests.sh will run this for us
+ testing = skip
+ 
+@@ -271,7 +271,7 @@
+ path = subversion/tests/libsvn_subr
+ sources = hashdump-test.c
+ install = test
+-libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ 
+ # test svn_stringbuf_t utilities
+ [stringtest]
+@@ -279,7 +279,7 @@
+ path = subversion/tests/libsvn_subr
+ sources = stringtest.c
+ install = test
+-libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ 
+ # test path library
+ [path-test]
+@@ -287,7 +287,7 @@
+ path = subversion/tests/libsvn_subr
+ sources = path-test.c
+ install = test
+-libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ 
+ # test eol conversion and keyword substitution routines
+ [translate-test]
+@@ -295,7 +295,7 @@
+ path = subversion/tests/libsvn_wc
+ sources = translate-test.c
+ install = test
+-libs = libsvn_test libsvn_delta libsvn_wc libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_test libsvn_delta libsvn_wc libsvn_subr $(SVN_APR_LIBS) -lexpat
+ 
+ # use random data to test delta processing
+ [random-test]
+@@ -303,7 +303,7 @@
+ path = subversion/tests/libsvn_delta
+ sources = random-test.c
+ install = test
+-libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ 
+ 
+ ### Tests that are simply broken (fix?)  ----------
+@@ -314,7 +314,7 @@
+ path = subversion/tests/libsvn_delta
+ sources = delta-combine-test.c
+ install = test
+-libs = libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ # disabled for now -- the delta combiner isn't written, and we
+ # don't really have any idea if the interface would be compatible 
+ # with this test, anyway.
+@@ -327,7 +327,7 @@
+ sources = ra-local-test.c
+ install = fs-test
+ libs = libsvn_test libsvn_ra libsvn_fs libsvn_delta libsvn_subr
+-	$(SVN_APR_LIBS) libexpat
++	$(SVN_APR_LIBS) -lexpat
+ # disabled for now, BROKEN.
+ testing = skip
+ 
+@@ -340,7 +340,7 @@
+ path = subversion/tests/libsvn_subr
+ sources = target-test.c
+ install = test
+-libs = libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_subr $(SVN_APR_LIBS) -lexpat
+ # target-test.sh will run this for us
+ testing = skip
+ 
+@@ -350,7 +350,7 @@
+ path = subversion/tests/libsvn_delta
+ sources = xml-output-test.c
+ install = test
+-libs = libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ # this is really redundant with our XML svn-test*.sh tests.
+ testing = skip
+ 
+@@ -360,7 +360,7 @@
+ path = subversion/tests/libsvn_wc
+ sources = checkout-test.c
+ install = test
+-libs = libsvn_wc libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_wc libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ # this is really redundant with our XML svn-test*.sh tests.
+ testing = skip
+ 
+@@ -370,7 +370,7 @@
+ path = subversion/tests/libsvn_wc
+ sources = commit-test.c
+ install = test
+-libs = libsvn_test libsvn_wc libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_test libsvn_wc libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ # this is really redundant with our XML svn-test*.sh tests.
+ testing = skip
+ 
+@@ -383,7 +383,7 @@
+ path = subversion/tests/libsvn_delta
+ sources = deltaparse-test.c
+ install = test
+-libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ testing = skip
+ 
+ 
+@@ -396,7 +396,7 @@
+ path = subversion/tests/libsvn_delta
+ sources = svndiff-test.c
+ install = test
+-libs = libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ testing = skip
+ 
+ # compare two files, print txdelta windows
+@@ -405,7 +405,7 @@
+ path = subversion/tests/libsvn_delta
+ sources = vdelta-test.c
+ install = test
+-libs = libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ testing = skip
+ 
+ 
