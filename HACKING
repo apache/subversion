@@ -36,6 +36,7 @@ TABLE OF CONTENTS
    * How to release a distribution tarball
    * Release numbering, compatibility, and deprecation
    * Stabilizing a release branch
+   * Localization (l10n)
 
 
 Participating in the community
@@ -1647,3 +1648,35 @@ have the same amount of expertise as the area maintainer.  This way
 one can review for general sanity, accurate comments, obvious
 mistakes, etc, without being forced to assert "Yes, I understand these
 changes in every detail and have tested them."
+
+
+Localization (l10n)
+===================
+
+Translation has been divided into two domains.  First there is the translation
+of server messages sent to connecting clients.  This issue has been punted for
+now.  Second there is the translation of the client and its libraries.
+
+The gettext package provides services required for providing translated
+messages.  The gettext package uses the xgettext tool to extract strings
+from the sources for translation.  It does so by extracting the arguments
+of the _() and N_() macros.  The former is used in context where function
+calls are allowed (typically anything except static initializers).  The latter
+is used whenever _() can't.  Strings marked with N_() need to be passed to
+gettext translation routines whenever referenced in the code.  For an example
+look at how the header and footer are handled in
+subversion/clients/cmdline/help-cmd.c.
+
+Whenever using direct calls to gettext routines (*gettext or *dgettext), keep
+in mind that most of Subversion code is library code.  Therefore the default
+domain is not necessarily Subversion's own domain.  In library code you should
+use the dgettext versions of the gettext functions.  The domain name is defined
+in the PACKAGE_NAME define.
+
+All required setup for localization is controlled by the ENABLE_NLS conditional
+in svn_private_config.h (for *nix) and svn_private_config.hw (for Windows).  Be
+sure to:
+
+#include "svn_private_config.h"
+
+as the last include in any file which requires localization.
