@@ -169,11 +169,11 @@ do_date (svnlook_ctxt_t *c, apr_pool_t *pool)
              ### todo: Right now, "svn dates" are not GMT, but the
              results of svn_time_from_string are.  This sucks. */
           apr_exploded_time_t extime;
-          apr_time_t time;
+          apr_time_t aprtime;
           apr_status_t apr_err;
               
-          time = svn_time_from_string (prop_value);
-          apr_err = apr_explode_time (&extime, time, 0);
+          aprtime = svn_time_from_string (prop_value);
+          apr_err = apr_explode_time (&extime, aprtime, 0);
           if (apr_err)
             return svn_error_create (apr_err, 0, NULL, pool,
                                      "do_date: error exploding time");
