@@ -4,7 +4,7 @@
 #include <svn_parse.h>
 #include <stdio.h>
 
-void
+int
 main ()
 {
   ap_hash_t *configdata;
@@ -27,5 +27,5 @@ main ()
 
   configdata = svn_parse (myfile, pool);
 
-  
+  return 0;
 }
