@@ -145,8 +145,7 @@ XML_validation_error (apr_pool_t *pool,
    FRAME and examining parents, so it is important that frame has
    _already_ been linked into the digger's stack. */
 static void
-maybe_derive_ancestry (svn_xml__digger_t *digger,
-                       svn_xml__stackframe_t *frame,
+maybe_derive_ancestry (svn_xml__stackframe_t *frame,
                        apr_pool_t *pool)
 {
   if ((frame->tag != svn_delta__XML_dir) 
@@ -219,16 +218,9 @@ maybe_derive_ancestry (svn_xml__digger_t *digger,
           p = p->previous;
         }
 
-      /* When we get here, it's either because we've found all the
-         ancestry information we need, OR, because we've run out of
-         "previous" ancestors to search.  If the latter reason is
-         true, use our "context" variables as answers. */
-     if (p == NULL)
-        {
-          frame->ancestor_version = digger->base_version;
-          frame->ancestor_path = svn_string_dup (digger->base_path, pool);
-        }
-
+      /* That's it.  We don't check that ancestry was actually found.
+         It's not this function's job to determine if an ancestor is
+         necessary, only to find and set one if available. */
     }
 }
 
@@ -406,7 +398,7 @@ do_stack_append (svn_xml__digger_t *digger,
   new_frame->previous = youngest_frame;
 
   /* Set up any unset ancestry information. */
-  maybe_derive_ancestry (digger, new_frame, pool);
+  maybe_derive_ancestry (new_frame, pool);
 
   return SVN_NO_ERROR;
 }
