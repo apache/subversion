@@ -784,7 +784,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
 
           /* ### FIXME: This will get the directory tree again! */
           err = svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
-                                  adm_access, merge_b->ctx, subpool);
+                                  adm_access, merge_b->ctx, merge_b->pool);
 
           merge_b->ctx->notify_func = notify_func;
 
@@ -808,7 +808,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
 
           /* ### FIXME: This will get the directory tree again! */
           err = svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
-                                 adm_access, merge_b->ctx, subpool);
+                                 adm_access, merge_b->ctx, merge_b->pool);
 
           merge_b->ctx->notify_func = notify_func;
 
