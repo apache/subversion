@@ -117,7 +117,7 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
  * DATA of size LEN.
  */
 apr_uint32_t
-svn_diff__adler32(apr_uint32_t checksum, void *data, apr_size_t len);
+svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_size_t len);
 
 
 #endif /* DIFF_H */

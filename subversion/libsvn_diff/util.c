@@ -54,9 +54,9 @@
  * of DATA sized LEN.
  */
 apr_uint32_t
-svn_diff__adler32(apr_uint32_t checksum, void *data, apr_size_t len)
+svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_size_t len)
 {
-  const unsigned char *input = data;
+  const unsigned char *input = (const unsigned char *)data;
   apr_uint32_t s1 = checksum & 0xFFFF;
   apr_uint32_t s2 = checksum >> 16;
   apr_uint32_t b;

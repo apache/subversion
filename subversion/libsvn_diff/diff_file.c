@@ -32,6 +32,7 @@
 #include "svn_string.h"
 #include "svn_io.h"
 #include "svn_pools.h"
+#include "diff.h"
 
 
 typedef struct svn_diff__file_token_t
