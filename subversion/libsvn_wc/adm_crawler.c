@@ -22,8 +22,10 @@
 #include "svn_types.h"
 #include "svn_wc.h"
 #include "svn_io.h"
+#include "svn_sorts.h"
 #include "svn_delta.h"
 
+#include <assert.h>
 
 
 /* The values stored in `affected_targets' hashes are of this type.
@@ -1219,8 +1221,20 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
      changes. */
   apr_hash_t *locked_dirs = apr_hash_make (pool);
 
+  /* Sanity check. */
+  assert(parent_dir != NULL);
+  assert(condensed_targets != NULL);
+
+  /* Sort the condensed targets so that targets which share "common
+     sub-parent" directories are all lumped together.  This guarantees
+     a depth-first drive of the editor. */
+  qsort (condensed_targets->elts,
+         condensed_targets->nelts,
+         condensed_targets->elt_size,
+         svn_sort_compare_strings_as_paths);
+
   /* No targets at all? */
-  if ((! condensed_targets) || (condensed_targets->nelts == 0))
+  if (condensed_targets->nelts == 0)
     {
       /* Do a single crawl from parent_dir, that's it.  Parent_dir
       will be automatically pushed to the empty stack, but not
@@ -1247,9 +1261,17 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
       /* The Main Loop -- over each commit target. */
       for (i = 0; i < condensed_targets->nelts; i++)
         {
-          svn_string_t *subparent;
-          svn_string_t *target =
+          svn_string_t *target, *subparent;
+          svn_string_t *relative_target =
             (((svn_string_t **) condensed_targets->elts)[i]);
+
+          /* The targets come in as paths relative to parent_dir.
+             Unfortunately, report_local_mods expects "real" paths
+             (i.e. either absolute, or relative to CWD.)  So we prepend
+             parent_dir to all the targets here. */
+          target = svn_string_dup (parent_dir, pool);
+          svn_path_add_component (target, relative_target,
+                                  svn_path_local_style);
           
           /* Temporary */
           printf ("Ultimate Parent Dir (on stack) is '%s'\n",
