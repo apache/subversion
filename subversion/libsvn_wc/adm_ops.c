@@ -633,7 +633,10 @@ svn_wc_delete (const char *path,
 {
   svn_wc_adm_access_t *dir_access;
   const svn_wc_entry_t *entry;
+  const char *parent, *base_name;
   svn_boolean_t was_schedule_add;
+  svn_node_kind_t was_kind;
+  svn_boolean_t was_deleted;
 
   /* ### do we really need to retrieve? */
   SVN_ERR (svn_wc_adm_probe_retrieve (&dir_access, adm_access, path, pool));
@@ -642,11 +645,27 @@ svn_wc_delete (const char *path,
   if (!entry)
     return erase_unversioned_from_wc (path, pool);
     
+  /* Note: Entries caching?  What happens to this entry when the entries
+     file is updated?  Lets play safe and copy the values */
   was_schedule_add = entry->schedule == svn_wc_schedule_add;
+  was_kind = entry->kind;
 
-  if (entry->kind == svn_node_dir)
+  svn_path_split_nts (path, &parent, &base_name, pool);
+
+  if (was_kind == svn_node_dir)
     {
-      if (was_schedule_add)
+      svn_wc_adm_access_t *parent_access;
+      apr_hash_t *entries;
+      const svn_wc_entry_t *entry_in_parent;
+
+      /* The deleted state is only avaliable in the entry in parent's
+         entries file */
+      SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, parent_access, TRUE, pool));
+      entry_in_parent = apr_hash_get (entries, base_name, APR_HASH_KEY_STRING);
+      was_deleted = entry_in_parent->deleted;
+      
+      if (was_schedule_add && !was_deleted)
         {
           /* Deleting a directory that has been added but not yet
              committed is easy, just remove the adminstrative dir. */
@@ -664,14 +683,12 @@ svn_wc_delete (const char *path,
         }
     }
   
-  if (!(entry->kind == svn_node_dir && was_schedule_add))
+  if (!(was_kind == svn_node_dir && was_schedule_add && !was_deleted))
     {
       /* We need to mark this entry for deletion in its parent's entries
          file, so we split off base_name from the parent path, then fold in
          the addition of a delete flag. */
-      const char *dir, *base_name;
       svn_wc_entry_t tmp_entry;
-      svn_path_split_nts (path, &dir, &base_name, pool);
       
       tmp_entry.schedule = svn_wc_schedule_delete;
       SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry,
@@ -692,7 +709,7 @@ svn_wc_delete (const char *path,
   if (was_schedule_add)
     SVN_ERR (erase_unversioned_from_wc (path, pool));
   else
-    SVN_ERR (erase_from_wc (path, adm_access, entry->kind, pool));
+    SVN_ERR (erase_from_wc (path, adm_access, was_kind, pool));
 
   return SVN_NO_ERROR;
 }
@@ -892,7 +909,7 @@ svn_wc_add (const char *path,
         }
       
       /* We want the locks to persist, so use the access baton's pool */
-      if (! orig_entry)
+      if (! orig_entry || orig_entry->deleted)
         SVN_ERR (svn_wc_adm_open (&adm_access, parent_access, path, TRUE, TRUE,
                                   svn_wc_adm_access_pool (parent_access)));
 
@@ -1266,7 +1283,7 @@ svn_wc_revert (const char *path,
       else if (entry->kind == svn_node_dir)
         {
           apr_hash_t *entries;
-          svn_wc_entry_t *parents_entry;
+          const svn_wc_entry_t *parents_entry;
           SVN_ERR (svn_wc_entries_read (&entries, parent_access, TRUE, pool));
           parents_entry = apr_hash_get (entries, basey, APR_HASH_KEY_STRING);
           if (parents_entry)
