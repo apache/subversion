@@ -40,8 +40,7 @@ AC_HELP_STRING([--with-apache=DIR],
 VERSION_OKAY
 #endif],
                 [AC_MSG_RESULT([recent enough])],
-                [AC_MSG_ERROR
-                 ([apache too old:  mmn must be at least $HTTPD_WANTED_MMN])])
+                [AC_MSG_ERROR([apache too old:  mmn must be at least $HTTPD_WANTED_MMN])])
 
                 if test ! -r $withval/srclib/apr/include/apr.h; then
                         AC_MSG_WARN(Apache 2.0.x is not configured)
@@ -93,8 +92,7 @@ if test -n "$APXS" -a "$APXS" != "no"; then
 VERSION_OKAY
 #endif],
         [AC_MSG_RESULT([recent enough])],
-        [AC_MSG_ERROR
-         ([apache too old:  mmn must be at least $HTTPD_WANTED_MMN])])
+        [AC_MSG_ERROR([apache too old:  mmn must be at least $HTTPD_WANTED_MMN])])
 
     elif test "$APXS_EXPLICIT" != ""; then
 	AC_MSG_ERROR(no - APXS refers to an old version of Apache
