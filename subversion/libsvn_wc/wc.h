@@ -290,12 +290,21 @@ svn_error_t *svn_wc__versions_init (svn_string_t *path, apr_pool_t *pool);
 
 
 /* For a given ENTRYNAME in PATH, set its version to VERSION in the
-   `versions' file.  Also set other XML attributes via varargs: name,
-   value, name, value, etc. -- where names are char *'s and values are
-   svn_string_t *'s.   Terminate list with NULL. 
+   `versions' file.  Also set other XML attributes via varargs: key,
+   value, key, value, etc. -- where names are char *'s and values are
+   svn_string_t *'s.   Terminate list with NULL.
 
-   If no such ENTRYNAME exists, create it.
- */
+   ENTRYNAME is a string to match the value of the "name" attribute of
+   some entry.  (This attribute is special attribute on versions
+   entries, because no two entries can have the same name.  No other
+   attribute of a versions entry is guaranteed to be unique.)
+
+   If no such ENTRYNAME exists, create it.  If ENTRYNAME is NULL, then
+   the entry for this dir will be set.
+
+   The versions file must not be open for writing by anyone else when
+   you call this, or badness will result.
+*/
 svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
                                          apr_pool_t *pool,
                                          const char *entryname,
@@ -303,10 +312,13 @@ svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
                                          ...);
 
 
-/* For a given ENTRYNAME in PATH, read the `version's file and get its
-   version into VERSION.  Also get other XML attributes via varargs:
-   name, value, name, value, etc. -- where names are char *'s and
-   values are svn_string_t *'s.  Terminate list with NULL.  */
+/* For a given ENTRYNAME in PATH's versions file, get its
+   version into *VERSION, and get other XML attributes via varargs:
+   key, *value, key, *value, etc. -- where names are char *'s and
+   values are svn_string_t **'s.  
+   
+   Caller should terminate the vararg list with NULL.  
+*/
 svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
                                          apr_pool_t *pool,
                                          const char *entryname,

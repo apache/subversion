@@ -88,12 +88,13 @@ svn_wc__versions_init (svn_string_t *path, apr_pool_t *pool)
   svn_error_t *err;
   apr_file_t *f = NULL;
 
+  /* Create the versions file, which must not exist prior to this. */
   err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_VERSIONS,
-                               (APR_WRITE | APR_CREATE), pool);
+                               (APR_WRITE | APR_CREATE | APR_EXCL), pool);
   if (err)
     return err;
 
-  /* Satisfy bureacracy. */
+  /* Write out the XML standard header to satisfy bureacracy. */
   err = svn_xml_write_header (f, pool);
   if (err)
     {
@@ -102,9 +103,12 @@ svn_wc__versions_init (svn_string_t *path, apr_pool_t *pool)
     }
 
   /* Open the file's top-level form. */
-  err = svn_xml_write_tag (f, pool, svn_xml__open_tag,
+  err = svn_xml_write_tag (f,
+                           pool,
+                           svn_xml__open_tag,
                            SVN_WC__VERSIONS_START,
-                           "xmlns", SVN_XML_NAMESPACE,
+                           "xmlns",
+                           svn_string_create (SVN_XML_NAMESPACE, pool),
                            NULL);
   if (err)
     {
@@ -112,20 +116,28 @@ svn_wc__versions_init (svn_string_t *path, apr_pool_t *pool)
       return err;
     }
 
-  /* Write the entry for this dir itself.  The dir's own entry has no
-     name attribute, only a version. */
-  err = svn_xml_write_tag (f, pool, svn_xml__self_close_tag,
-                           SVN_WC__VERSIONS_ENTRY,
-                           "version", apr_psprintf (pool, "%ld", 0),
-                           NULL);
-  if (err)
-    {
-      apr_close (f);
-      return err;
-    }
+  /* Add an entry for the dir itself -- name is absent, only the
+     version is present in the dir entry. */
+  {
+    char *verstr = apr_psprintf (pool, "%ld", 0);
+    err = svn_xml_write_tag (f, 
+                             pool,
+                             svn_xml__self_close_tag,
+                             SVN_WC__VERSIONS_ENTRY,
+                             "version",
+                             svn_string_create (verstr, pool),
+                             NULL);
+    if (err)
+      {
+        apr_close (f);
+        return err;
+      }
+  }
 
   /* Close the top-level form. */
-  err = svn_xml_write_tag (f, pool, svn_xml__open_tag,
+  err = svn_xml_write_tag (f,
+                           pool,
+                           svn_xml__close_tag,
                            SVN_WC__VERSIONS_END,
                            NULL);
   if (err)
@@ -134,6 +146,8 @@ svn_wc__versions_init (svn_string_t *path, apr_pool_t *pool)
       return err;
     }
 
+  /* Now we have a `versions' file with exactly one entry, an entry
+     for this dir.  Close the file and sync it up. */
   err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_VERSIONS, 1, pool);
   if (err)
     return err;
@@ -144,7 +158,7 @@ svn_wc__versions_init (svn_string_t *path, apr_pool_t *pool)
 
 /*--------------------------------------------------------------- */
 
-/** xml callbacks **/
+/*** xml callbacks ***/
 
 /* For a given ENTRYNAME in PATH's versions file, set the entry's
  * version to VERSION.  Also set other XML attributes via varargs:
@@ -161,129 +175,25 @@ typedef struct svn_wc__version_baton_t
   apr_pool_t *pool;
   svn_xml_parser_t *parser;
 
-  svn_vernum_t default_version;  /* The version of `.' */
+  svn_boolean_t found_it;  /* Gets set to true iff we see a matching entry. */
 
-  apr_file_t *infile;      /* The versions file we're reading from */
+  apr_file_t *infile;      /* The versions file we're reading from. */
   apr_file_t *outfile;     /* If this is NULL, then we're GETTING
                               attributes; if this is non-NULL, then
-                              we're SETTING attributes by writing to
-                              this file.  */
+                              we're SETTING attributes by writing a
+                              new file.  */
 
-  const char *entryname;   /* The name of the entry we're looking for */
-  svn_vernum_t *version;   /* The version we will get or set */
+  const char *entryname;   /* The name of the entry we're looking for. */
+  svn_vernum_t version;    /* The version we will get or set. */
 
-  va_list valist;          /* The attribute list we want to set or get */
+  va_list ap;              /* The attribute list we want to set or get. */
 
 } svn_wc__version_baton_t;
 
 
 
-/* Write out a new <entry ...> tag in BATON->outfile, an entry whose
-   attributes are the _union_ of those in ATTS and those specified in
-   BATON->valist */
-static svn_error_t *
-set_entry_attributes (svn_wc__version_baton_t *baton,
-                      const char **atts)
-{
-  svn_error_t *err;
-  const char **newatts;    /* What will become our final union of attributes */
-  const char **tempatts;   /* Temp variable for looping over att lists */
-  char *attribute;
-  svn_string_t *orig_value;
-  svn_string_t *dup_value;
-  int len = 0;             /* The length of newatts */
-  int count = 0;
-  apr_pool_t *subpool = svn_pool_create (baton->pool, NULL);
-
-  /* Figure out the length of atts */
-  tempatts = atts;
-  while (tempatts)
-    {
-      len++;
-      tempatts++;
-    }
-  assert (len % 2 == 0);  /* The length of atts should be even! */
-  
-  /* Allocate newatts with the same length */
-  newatts = apr_pcalloc (subpool, (sizeof(char *) * len));
-  
-  /* Now copy atts into newatts */
-  tempatts = atts;
-  while (tempatts && (*tempatts))
-    {
-      newatts[count] = apr_psprintf (subpool, "%s", tempatts[0]);
-      newatts[(count + 1)] = apr_psprintf (subpool, "%s", tempatts[1]);
-      atts += 2;
-      count += 2;
-    }
-
-  /* Loop through our va_list, modifiying newatts appropriately.  */
-  while ((attribute = va_arg (baton->valist, char *)))
-    {
-      int found_match = 0;
-
-      /* Get the value of our current vararg and duplicate it */
-      orig_value = va_arg (baton->valist, svn_string_t *);
-      dup_value = svn_string_dup (orig_value, subpool);
-
-      /* Does this attribute already exist in newatts? */
-      tempatts = newatts;
-      while (tempatts && (*tempatts))
-        {
-          if (! strcmp (tempatts[0], attribute)) 
-            {
-              /* Found a match... let's overwrite the value. */
-              tempatts[1] = dup_value->data;
-              
-              /* Don't forget, we also need to set the version number
-                 specified in our baton!  */
-              if (! strcmp (attribute, "version"))
-                tempatts[1] = apr_psprintf (subpool, "%ld",
-                                            (* (baton->version)) );
-
-              found_match = 1;
-              break;
-            }
-          tempatts += 2;
-        }
-
-      if (! found_match)
-        {
-          /* If no match, then we need to manually add attribute/value
-             pair to newatts, by re-allocing newatts. */
-          tempatts = newatts;
-          len += 2;
-          newatts = apr_pcalloc (subpool, (sizeof(char *) * len));
-          memcpy (newatts, tempatts, (sizeof(char *) * (len - 2)));
-
-          newatts[(len - 2)] = apr_psprintf (subpool, "%s", attribute);
-          newatts[(len - 1)] = dup_value->data;
-        }
-
-    } /* while (attribute = va_arg) */
-
-
-  /* Presumably, by this point, newatts is now a union of atts and the
-     valist, containing no redundancies.  Print it out! */
-  err = svn_xml_write_tag_list (baton->outfile, baton->pool,
-                                svn_xml__self_close_tag,
-                                SVN_WC__VERSIONS_ENTRY,
-                                newatts);
-  
-  if (err)
-    return err;
-  
-  /* Clean up all the memory we used for copying/constructing
-     attribute lists.  */
-  apr_destroy_pool (subpool);
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Search through ATTS and fill in each attribute in BATON->valist.
-   It's assumed that the valist contains pairs of arguments in the
+/* Search through ATTS and fill in each attribute in BATON->ap.
+   It's assumed that the ap contains pairs of arguments in the
    form:
 
         {char *attribute_name, svn_string_t **attribute_value}
@@ -291,92 +201,96 @@ set_entry_attributes (svn_wc__version_baton_t *baton,
    This function will _set_ the latter value by dereferencing the
    double pointer.
 
-   Also, BATON->version will be set appropriately as well.
+   Also, BATON->version will be set appropriately.
 
  */
-static svn_error_t *
-get_entry_attributes (svn_wc__version_baton_t *baton,
-                      const char **atts)
+static void
+get_entry_attributes (const char **atts,
+                      svn_vernum_t *version,
+                      va_list ap, 
+                      apr_pool_t *pool)
 {
-  const char *val;
-  char *variable_attribute_name;
-  svn_string_t **variable_attribute_value;
+  const char *name;
 
-  /* Before we do anything, return the `version' attribute by setting
-     baton->version correctly. */
-  val = svn_xml_get_attr_value ("version", atts);
-  (* (baton->version)) = (svn_vernum_t) atoi (val);
+  /* Handle version specially. */
+  *version = (svn_vernum_t) atoi (svn_xml_get_attr_value ("version", atts));
 
-  /* Now loop through our va_list and return values in every other one */
-  while ((variable_attribute_name = va_arg (baton->valist, char *)))
+  /* Now loop through the va_list setting values by reference. */
+  while ((name = va_arg (ap, char *)) != NULL)
     {
-      /* The caller wants us to fetch the value of
-         variable_attribute_name.  Let's do so.  */
-      val = svn_xml_get_attr_value (variable_attribute_name, atts);
-      
-      /* Grab the next varargs variable and SET it to the answer. */
-      variable_attribute_value = va_arg (baton->valist, svn_string_t **);
+      const char *val = svn_xml_get_attr_value (name, atts);
+      svn_string_t **receiver = va_arg (ap, svn_string_t **);
 
-      *variable_attribute_value = svn_string_create (val, baton->pool);
+      assert (receiver != NULL);
+      *receiver = (val ? svn_string_create (val, pool) : NULL);
     }
-
-  return SVN_NO_ERROR;
 }
-
 
 
 /* Called whenever we find an <open> tag of some kind. */
 static void
-xml_handle_start (void *userData, const char *tagname, const char **atts)
+handle_start_tag (void *userData, const char *tagname, const char **atts)
 {
+  svn_wc__version_baton_t *baton = (svn_wc__version_baton_t *) userData;
   svn_error_t *err;
 
-  /* Salvage our baton */
-  svn_wc__version_baton_t *baton = (svn_wc__version_baton_t *) userData;
+  /* We only care about the `entry' tag; all other tags, such as `xml'
+     and `wc-versions', are simply written back out verbatim. */
 
-  /* We only care about the `entry' tag; all other tags such as `xml'
-     and `wc-versions' will simply be written write back out,
-     verbatim.  */
-
-  if (! strcmp (tagname, SVN_WC__VERSIONS_ENTRY))
+  if ((strcmp (tagname, SVN_WC__VERSIONS_ENTRY)) == 0)
     {
-      /* Get the `name' attribute */
-      const char *nameval = svn_xml_get_attr_value ("name", atts);
+      const char *entry = svn_xml_get_attr_value ("name", atts);
       
-      /* Is this the droid we're looking for? */
-      if (! strcmp (nameval, baton->entryname))
+      /* Nulls count as a match, because null represents the dir itself. */
+      if (((entry == NULL) && (baton->entryname == NULL))
+          || ((entry != NULL) && ((strcmp (entry, baton->entryname)) == 0)))
         {
-          if (baton->outfile) 
+          baton->found_it = 1;
+
+          if (baton->outfile) /* we're writing out a changed tag */
             {
-              err = set_entry_attributes (baton, atts);
+              apr_hash_t *attr_hash
+                = svn_xml_make_att_hash_overlaying (atts,
+                                                    baton->ap,
+                                                    baton->pool);
+              char *verstr = apr_psprintf (baton->pool,
+                                           "%ld",
+                                           (long int) baton->version);
+
+              /* Version has to be stored specially. */
+              apr_hash_set (attr_hash,
+                            "version",
+                            strlen ("version"),
+                            svn_string_create (verstr, baton->pool));
+
+              err = svn_xml_write_tag_hash (baton->outfile,
+                                            baton->pool,
+                                            svn_xml__self_close_tag,
+                                            SVN_WC__VERSIONS_ENTRY,
+                                            attr_hash);
               if (err)
                 {
                   svn_xml_signal_bailout (err, baton->parser);
                   return;
                 }
             }
-          else 
-            {
-              err = get_entry_attributes (baton, atts);
-              if (err)
-                {
-                  svn_xml_signal_bailout (err, baton->parser);
-                  return;
-                }
-            }          
+          else  /* just reading attribute values, not writing a new tag */
+            get_entry_attributes (atts,
+                                  &(baton->version),
+                                  baton->ap,
+                                  baton->pool);
         }
-        
-      else  /* This isn't the droid we're looking for. */
+      else  /* An entry tag, but not the one we're looking for. */
         {
-          /* However, if we're writing to an outfile, we need to write
-             it back out anyway.  */
-          if (baton->outfile)
+          if (baton->outfile)  /* just write it back out unchanged. */
             {
-              /* Write it back out again. */
-              err = svn_xml_write_tag_list (baton->outfile, baton->pool,
-                                            svn_xml__self_close_tag,
-                                            SVN_WC__VERSIONS_ENTRY,
-                                            atts);
+              err = svn_xml_write_tag_hash 
+                (baton->outfile,
+                 baton->pool,
+                 svn_xml__self_close_tag,
+                 SVN_WC__VERSIONS_ENTRY,
+                 svn_xml_make_att_hash (atts, baton->pool));
+                                            
               if (err)
                 {
                   svn_xml_signal_bailout (err, baton->parser);
@@ -384,68 +298,72 @@ xml_handle_start (void *userData, const char *tagname, const char **atts)
                 }
             }
         } 
-    } 
-
-  else  /* This is some other non-`entry' tag.  Preserve it.  */
+    }
+  else  /* This is some tag other than `entry', preserve it unchanged.  */
     {
-      /* We only care about this tag if we're writing to an outfile. */
       if (baton->outfile)
         {
-          /* Write it back out again. */
-          err = svn_xml_write_tag_list (baton->outfile, baton->pool,
-                                        svn_xml__self_close_tag,
-                                        tagname,
-                                        atts);
+          err = svn_xml_write_tag_hash
+            (baton->outfile, 
+             baton->pool,
+             svn_xml__open_tag,
+             tagname,
+             svn_xml_make_att_hash (atts, baton->pool));
           if (err)
-            {
-              svn_xml_signal_bailout (err, baton->parser);
-              return;
-            }
+            svn_xml_signal_bailout (err, baton->parser);
         }
     }
-
-  /* This is an expat callback;  return nothing. */
 }
 
 
-
-
-/* Called whenever we find an </close> tag of some kind. */
+/* Called whenever we find a </close> tag of some kind. */
 static void
-xml_handle_end (void *userData, const char *tagname)
+handle_end_tag (void *userData, const char *tagname)
 {
+  svn_wc__version_baton_t *baton = (svn_wc__version_baton_t *) userData;
   svn_error_t *err;
 
-  /* Salvage our baton */
-  svn_wc__version_baton_t *baton = (svn_wc__version_baton_t *) userData;
-
-  /* We don't care about closures of SVN_WC__VERSIONS_ENTRY, because
-     they're all self-closing anyway, and well, xml_handle_start is
-     writing them back out to disk already.  We only care about
-     </wc-versions> here, because it's the *only* non-self-closing tag
-     we're gonig to run across in the versions file.  */
-
-  if (! strcmp (tagname, SVN_WC__VERSIONS_END))
+  if ((strcmp (tagname, SVN_WC__VERSIONS_END)) == 0)
     {
-      /* Copy this tag back out to the outfile, if we have one. */
       if (baton->outfile)
         {
-          /* Write it back out again. */
-          err = svn_xml_write_tag (baton->outfile, baton->pool,
+          /* If this entry didn't exist before, then add it now. */
+          if (! baton->found_it)
+            {
+              char *verstr
+                = apr_psprintf (baton->pool, "%ld", (long int) baton->version);
+              
+              err = svn_xml_write_tag (baton->outfile,
+                                       baton->pool,
+                                       svn_xml__self_close_tag,
+                                       SVN_WC__VERSIONS_ENTRY,
+                                       "name",
+                                       svn_string_create (baton->entryname,
+                                                          baton->pool),
+                                       "version",
+                                       svn_string_create (verstr, baton->pool),
+                                       "karl-is-just-testing-some-stuff",
+                                       svn_string_create ("please ignore",
+                                                          baton->pool),
+                                       NULL);
+              if (err)
+                {
+                  svn_xml_signal_bailout (err, baton->parser);
+                  return;
+                }
+            }
+
+          /* Now close off the file. */
+          err = svn_xml_write_tag (baton->outfile,
+                                   baton->pool,
                                    svn_xml__close_tag,
-                                   SVN_WC__VERSIONS_END,
+                                   tagname,
                                    NULL);
           if (err)
-            {
-              svn_xml_signal_bailout (err, baton->parser);
-              return;
-            }
+            svn_xml_signal_bailout (err, baton->parser);
         }
     }
-
-  /* This is an expat callback;  return nothing. */
 }
-  
 
 
 /* Code chunk shared by svn_wc__[gs]et_versions_entry()
@@ -462,8 +380,8 @@ do_parse (svn_wc__version_baton_t *baton)
 
   /* Create a custom XML parser */
   svn_parser = svn_xml_make_parser (baton,
-                                    xml_handle_start,
-                                    xml_handle_end,
+                                    handle_start_tag,
+                                    handle_end_tag,
                                     NULL,
                                     baton->pool);
 
@@ -497,20 +415,10 @@ do_parse (svn_wc__version_baton_t *baton)
 
 
 
-
 /*----------------------------------------------------------------------*/
 
-/** Public Interfaces **/
+/*** Getting and setting versions entries. ***/
 
-
-
-/* For a given ENTRYNAME in PATH, set its version to VERSION in the
-   `versions' file.  Also set other XML attributes via varargs: name,
-   value, name, value, etc. -- where names are char *'s and values are
-   svn_string_t *'s.   Terminate list with NULL. 
-
-   If no such ENTRYNAME exists, create it.
- */
 svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
                                          apr_pool_t *pool,
                                          const char *entryname,
@@ -522,7 +430,7 @@ svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
   apr_file_t *infile = NULL;
   apr_file_t *outfile = NULL;
 
-  svn_wc__version_baton_t *version_baton 
+  svn_wc__version_baton_t *baton 
     = apr_pcalloc (pool, sizeof (svn_wc__version_baton_t));
 
   /* Open current versions file for reading */
@@ -533,29 +441,25 @@ svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
     return err;
 
   /* Open a new `tmp/versions' file for writing */
-  /* TODO: Karl... what makes these two file-open calls any different?
-     Won't they both result in opening the *same* `path/tmp/versions'
-     file?!? */
   err = svn_wc__open_adm_file (&outfile, path,
                                SVN_WC__ADM_VERSIONS,
-                               (APR_WRITE | APR_CREATE), pool);
+                               (APR_WRITE | APR_CREATE | APR_EXCL), pool);
   if (err)
     return err;
 
   /* Fill in our userdata structure */
-  version_baton->infile    = infile;
-  version_baton->outfile   = outfile;
-  version_baton->entryname = entryname;
-  version_baton->version   = &version;
-  version_baton->valist    = argptr;
+  baton->pool      = pool;
+  baton->infile    = infile;
+  baton->outfile   = outfile;
+  baton->entryname = entryname;
+  baton->version   = version;
+  baton->ap        = argptr;
 
   va_start (argptr, version);
-
-  err = do_parse (version_baton);
+  err = do_parse (baton);
+  va_end (argptr);
   if (err)
     return err;
-
-  va_end (argptr);
 
   /* Close infile */
   err = svn_wc__close_adm_file (infile, path,
@@ -590,7 +494,7 @@ svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
   svn_error_t *err;
   apr_file_t *infile = NULL;
 
-  svn_wc__version_baton_t *version_baton 
+  svn_wc__version_baton_t *baton 
     = apr_pcalloc (pool, sizeof (svn_wc__version_baton_t));
 
   /* Open current versions file for reading */
@@ -601,18 +505,17 @@ svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
     return err;
 
   /* Fill in our userdata structure */
-  version_baton->infile    = infile;
-  version_baton->entryname = entryname;
-  version_baton->version   = version;
-  version_baton->valist    = argptr;
+  baton->pool      = pool;
+  baton->infile    = infile;
+  baton->entryname = entryname;
+  baton->version   = *version;
+  baton->ap        = argptr;
 
   va_start (argptr, version);
-
-  err = do_parse (version_baton);
+  err = do_parse (baton);
+  va_end (argptr);
   if (err)
     return err;
-
-  va_end (argptr);
 
   /* Close infile */
   err = svn_wc__close_adm_file (infile, path,
@@ -624,13 +527,12 @@ svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
 }
 
 
-
-
 /* Remove ENTRYNAME from PATH's `versions' file. */
 svn_error_t *svn_wc__remove_versions_entry (svn_string_t *path,
                                             apr_pool_t *pool,
                                             const char *entryname)
 {
+  /* kff todo: finish this. */
   return SVN_NO_ERROR;
 }
 
