@@ -8,6 +8,6 @@ if [ ! -x ./checkout-test ]; then
 fi
 
 # First get rid of any remnant of the last run.
-rm -rf A
+rm -rf this
 
 ./checkout-test checkout-1.delta this/is/a/test/dir

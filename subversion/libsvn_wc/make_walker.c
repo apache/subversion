@@ -92,7 +92,7 @@ maybe_prepend_dest (svn_string_t **name,
      svn_string_prepend_str(), obviating the need to pass by
      reference.  Do that soon. */
 
-  if (wb->dest_dir && (svn_path_isempty (parent)))
+  if (wb->dest_dir && (svn_path_isempty (parent, SVN_PATH_LOCAL_STYLE)))
     {
       svn_string_t *tmp = svn_string_dup (wb->dest_dir, wb->pool);
       svn_path_add_component (tmp, *name, SVN_PATH_LOCAL_STYLE, wb->pool);
@@ -105,9 +105,10 @@ maybe_prepend_dest (svn_string_t **name,
 static svn_error_t *
 delete (svn_string_t *name, void *walk_baton, void *parent_baton)
 {
-  maybe_prepend_dest (&name,
-                      (struct w_baton *) walk_baton,
-                      (svn_string_t *) parent_baton);
+  struct w_baton *wb = (struct w_baton *) walk_baton;
+  svn_string_t *path = (svn_string_t *) parent_baton;
+
+  maybe_prepend_dest (&name, wb, path);
 
   return 0;
 }
@@ -121,15 +122,20 @@ add_directory (svn_string_t *name,
                void **child_baton)
 {
   svn_error_t *err;
-  svn_string_t *path = (svn_string_t *) parent_baton;
   struct w_baton *wb = (struct w_baton *) walk_baton;
+  svn_string_t *path = (svn_string_t *) parent_baton;
 
+  /* kff todo: this apparently didn't work. */
   maybe_prepend_dest (&name, wb, path);
 
   svn_path_add_component (path, name, SVN_PATH_LOCAL_STYLE, wb->pool);
   printf ("%s/    (ancestor == %s, %d)\n",
           path->data, ancestor_path->data, (int) ancestor_version);
 
+  /* kff todo: fooo working here.
+     Setup has to be done carefully.  We have set up the directory
+     NAME, but also let PATH know about it iff PATH is a concerned
+     working copy. */
   err = svn_wc__set_up_new_dir (path,
                                 ancestor_path,
                                 ancestor_version,
@@ -150,9 +156,10 @@ replace_directory (svn_string_t *name,
                    svn_vernum_t ancestor_version,
                    void **child_baton)
 {
-  maybe_prepend_dest (&name,
-                      (struct w_baton *) walk_baton,
-                      (svn_string_t *) parent_baton);
+  struct w_baton *wb = (struct w_baton *) walk_baton;
+  svn_string_t *path = (svn_string_t *) parent_baton;
+
+  maybe_prepend_dest (&name, wb, path);
 
   return 0;
 }
@@ -219,8 +226,8 @@ add_file (svn_string_t *name,
           svn_string_t *ancestor_path,
           svn_vernum_t ancestor_version)
 {
-  svn_string_t *path = (svn_string_t *) parent_baton;
   struct w_baton *wb = (struct w_baton *) walk_baton;
+  svn_string_t *path = (svn_string_t *) parent_baton;
 
   /* kff todo: YO!  Need to make an adm subdir for orphan files, such
      as `iota' in checkout-1.delta. */

@@ -87,7 +87,8 @@ svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool)
       else if (apr_err)   /* Again, some error other than APR_ENOENT */
         {
           /* Back up one level and recursively ensure parents' existence. */
-          svn_string_t *last_component = svn_path_last_component (npath, pool);
+          svn_string_t *last_component
+            = svn_path_last_component (npath, SVN_PATH_LOCAL_STYLE, pool);
           svn_path_remove_component (npath, SVN_PATH_LOCAL_STYLE);
 
           if (svn_string_isempty (npath))
