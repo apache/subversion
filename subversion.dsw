@@ -3,6 +3,96 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
+Project: "__build__"=.\subversion.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name aprlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libexpat
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_test_editor
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_tests_main
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name subversion_client
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "__check__"=.\svn_check.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __build__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_delta_deltaparse
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_delta_random
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_delta_svndiff
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_delta_vdelta
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_delta_xml_output
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_fs_skel
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_subr_hashdump
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_subr_string
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_wc_checkout
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_wc_commit
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "__config__"=.\svn_config.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "aprlib"=.\apr\aprlib.dsp - Package Owner=<4>
 
 Package=<5>
@@ -35,6 +125,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -47,6 +140,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -59,6 +155,12 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name aprlib
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -71,6 +173,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -83,6 +188,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -95,6 +203,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -107,6 +218,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -119,6 +233,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
     Begin Project Dependency
     Project_Dep_Name aprlib
     End Project Dependency
@@ -149,6 +266,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -161,6 +281,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -173,6 +296,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -185,6 +311,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -197,6 +326,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -209,6 +341,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -221,6 +356,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -233,6 +371,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -245,6 +386,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -257,6 +401,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
 }}}
 
 ###############################################################################

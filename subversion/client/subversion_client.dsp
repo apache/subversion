@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /D "NDEBUG" /D "_WINDOWS_CONSOLE" /D "WIN32" /D "APR_DECLARE_EXPORT" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /I "..\.." /D "NDEBUG" /D "_WINDOWS_CONSOLE" /D "WIN32" /D "APR_DECLARE_EXPORT" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "NDEBUG"
 # ADD RSC /l 0x424 /d "NDEBUG"
@@ -67,7 +67,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /D "SVN_DEBUG" /D "_DEBUG" /D "_WINDOWS_CONSOLE" /D "WIN32" /D "APR_DECLARE_EXPORT" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /I "..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "_WINDOWS_CONSOLE" /D "WIN32" /D "APR_DECLARE_EXPORT" /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "_DEBUG"
 # ADD RSC /l 0x424 /d "_DEBUG"
@@ -90,7 +90,43 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
+SOURCE=".\add-cmd.c"
+# End Source File
+# Begin Source File
+
+SOURCE=".\checkout-cmd.c"
+# End Source File
+# Begin Source File
+
+SOURCE=".\commit-cmd.c"
+# End Source File
+# Begin Source File
+
+SOURCE=".\delete-cmd.c"
+# End Source File
+# Begin Source File
+
 SOURCE=.\main.c
+# End Source File
+# Begin Source File
+
+SOURCE=".\propget-cmd.c"
+# End Source File
+# Begin Source File
+
+SOURCE=".\proplist-cmd.c"
+# End Source File
+# Begin Source File
+
+SOURCE=.\props.c
+# End Source File
+# Begin Source File
+
+SOURCE=".\propset-cmd.c"
+# End Source File
+# Begin Source File
+
+SOURCE=".\status-cmd.c"
 # End Source File
 # Begin Source File
 
@@ -99,6 +135,10 @@ SOURCE=.\status.c
 # Begin Source File
 
 SOURCE=.\trace.c
+# End Source File
+# Begin Source File
+
+SOURCE=".\update-cmd.c"
 # End Source File
 # End Group
 # Begin Group "Header Files"
