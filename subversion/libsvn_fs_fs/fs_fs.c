@@ -1928,6 +1928,7 @@ read_change (change_t **change_p,
 
 
   /* Read the next line, the copyfrom line. */
+  len = sizeof (buf);
   SVN_ERR (svn_io_read_length_line (file, buf, &len, pool));
 
   if (len == 0)
