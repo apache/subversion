@@ -29,3 +29,25 @@ Karl working copy todo:
 
 Ben and Karl more later:
    - xml dtd, for both xml deltas and wc formats
+
+Greg:
+   - mod_dav_svn:
+      - repository hooks. defer mkcol/copy/move/delete.
+        !! walking the FS !!  ... needed for checkout
+
+      - liveprop hooks:
+	core: getcontentlength, creationdate, getetag,
+	      getlastmodified,
+	deltav: target
+
+      - vsn hooks: ???  REPORT and MKACTIVITY first
+      - deadprop hooks: stub at first
+
+   - mod_dav: no apparent changes until vsn comes in
+      - need: MKACTIVITY, MERGE
+      - need CHECKOUT, but most of it is there; just verify
+      - clean up walker concept
+
+   - libsvn_ra_dav:
+      - update editor
+      - commit editor
