@@ -53,7 +53,7 @@
 #define CHKERR(e)               \
 do {                            \
   if ((rb->err = (e)) != NULL)  \
-    return NE_XML_INVALID;      \
+    return SVN_RA_DAV__XML_INVALID;      \
 } while(0)
 
 typedef struct {
@@ -175,7 +175,7 @@ static const char report_head[] = "<S:update-report xmlns:S=\""
                                    "\">" DEBUG_CR;
 static const char report_tail[] = "</S:update-report>" DEBUG_CR;
 
-static const struct ne_xml_elm report_elements[] =
+static const svn_ra_dav__xml_elm_t report_elements[] =
 {
   { SVN_XML_NAMESPACE, "update-report", ELEM_update_report, 0 },
   { SVN_XML_NAMESPACE, "resource-walk", ELEM_resource_walk, 0 },
@@ -193,27 +193,27 @@ static const struct ne_xml_elm report_elements[] =
   { SVN_XML_NAMESPACE, "fetch-props", ELEM_fetch_props, 0 },
   { SVN_XML_NAMESPACE, "remove-prop", ELEM_remove_prop, 0 },
   { SVN_XML_NAMESPACE, "fetch-file", ELEM_fetch_file, 0 },
-  { SVN_XML_NAMESPACE, "prop", ELEM_prop, 0 },
+  { SVN_XML_NAMESPACE, "prop", ELEM_SVN_prop, 0 },
   { SVN_DAV_PROP_NS_DAV, "repository-uuid",
-    ELEM_repository_uuid, NE_XML_CDATA },
+    ELEM_repository_uuid, SVN_RA_DAV__XML_CDATA },
 
-  { SVN_DAV_PROP_NS_DAV, "md5-checksum", ELEM_md5_checksum, NE_XML_CDATA },
+  { SVN_DAV_PROP_NS_DAV, "md5-checksum", ELEM_md5_checksum, SVN_RA_DAV__XML_CDATA },
 
-  { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
-  { "DAV:", "creationdate", ELEM_creationdate, NE_XML_CDATA },
-  { "DAV:", "creator-displayname", ELEM_creator_displayname, NE_XML_CDATA },
+  { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "creator-displayname", ELEM_creator_displayname, SVN_RA_DAV__XML_CDATA },
 
   { "DAV:", "checked-in", ELEM_checked_in, 0 },
-  { "DAV:", "href", NE_ELM_href, NE_XML_CDATA },
+  { "DAV:", "href", ELEM_href, SVN_RA_DAV__XML_CDATA },
 
   { NULL }
 };
 
 /* Elements used in a dated-rev-report response */
-static const struct ne_xml_elm drev_report_elements[] =
+static const svn_ra_dav__xml_elm_t drev_report_elements[] =
 {
   { SVN_XML_NAMESPACE, "dated-rev-report", ELEM_dated_rev_report, 0 },
-  { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
+  { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
   { NULL }
 };
 
@@ -1001,22 +1001,22 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
 ** the end-element handler for DAV:version-name.
 */
 
-/* This implements the `ne_xml_validate_cb' prototype. */
-static int drev_validate_element(void *userdata, ne_xml_elmid parent,
-                                 ne_xml_elmid child)
+/* This implements the `svn_ra_dav__xml_validate_cb' prototype. */
+static int drev_validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
+                                 svn_ra_dav__xml_elmid child)
 {
-  return NE_XML_VALID;
+  return SVN_RA_DAV__XML_VALID;
 }
 
-/* This implements the `ne_xml_startelm_cb' prototype. */
-static int drev_start_element(void *userdata, const struct ne_xml_elm *elm,
+/* This implements the `svn_ra_dav__xml_startelm_cb' prototype. */
+static int drev_start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                               const char **atts)
 {
   return 0;
 }
 
-/* This implements the `ne_xml_endelm_cb' prototype. */
-static int drev_end_element(void *userdata, const struct ne_xml_elm *elm,
+/* This implements the `svn_ra_dav__xml_endelm_cb' prototype. */
+static int drev_end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                             const char *cdata)
 {
   if (elm->id == ELEM_version_name)
@@ -1224,10 +1224,10 @@ svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
 ** ### next are subdir elems, possibly fetch-file, then fetch-prop.
 */
 
-/* This implements the `ne_xml_validate_cb' prototype. */
+/* This implements the `svn_ra_dav__xml_validate_cb' prototype. */
 static int validate_element(void *userdata,
-                            ne_xml_elmid parent,
-                            ne_xml_elmid child)
+                            svn_ra_dav__xml_elmid parent,
+                            svn_ra_dav__xml_elmid child)
 {
   /* We're being very strict with the validity of XML elements here. If
      something exists that we don't know about, then we might not update
@@ -1237,31 +1237,31 @@ static int validate_element(void *userdata,
 
   switch (parent)
     {
-    case NE_ELM_root:
+    case ELEM_root:
       if (child == ELEM_update_report)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_INVALID;
+        return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_update_report:
       if (child == ELEM_target_revision
           || child == ELEM_open_directory
           || child == ELEM_resource_walk)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_INVALID;
+        return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_resource_walk:
       if (child == ELEM_resource)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_INVALID;
+        return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_resource:
       if (child == ELEM_checked_in)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_INVALID;
+        return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_open_directory:
       if (child == ELEM_open_directory
@@ -1271,62 +1271,62 @@ static int validate_element(void *userdata,
           || child == ELEM_fetch_props
           || child == ELEM_remove_prop
           || child == ELEM_delete_entry
-          || child == ELEM_prop
+          || child == ELEM_SVN_prop
           || child == ELEM_checked_in)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_INVALID;
+        return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_add_directory:
       if (child == ELEM_add_directory
           || child == ELEM_add_file
-          || child == ELEM_prop
+          || child == ELEM_SVN_prop
           || child == ELEM_checked_in)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_INVALID;
+        return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_open_file:
       if (child == ELEM_checked_in
           || child == ELEM_fetch_file
-          || child == ELEM_prop
+          || child == ELEM_SVN_prop
           || child == ELEM_fetch_props
           || child == ELEM_remove_prop)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_INVALID;
+        return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_add_file:
       if (child == ELEM_checked_in
-          || child == ELEM_prop)
-        return NE_XML_VALID;
+          || child == ELEM_SVN_prop)
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_INVALID;
+        return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_checked_in:
-      if (child == NE_ELM_href)
-        return NE_XML_VALID;
+      if (child == ELEM_href)
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_INVALID;
+        return SVN_RA_DAV__XML_INVALID;
 
-    case ELEM_prop:
+    case ELEM_SVN_prop:
       /*      if (child == ELEM_version_name
               || child == ELEM_creationdate
               || child == ELEM_creator_displayname
               || child == ELEM_md5_checksum
               || child == ELEM_repository_uuid
               || child == ELEM_remove_prop)
-              return NE_XML_VALID;
+              return SVN_RA_DAV__XML_VALID;
               else
-              return NE_XML_DECLINE;
+              return SVN_RA_DAV__XML_DECLINE;
       */
       /* ### TODO:  someday uncomment the block above, and make the
          else clause return NE_XML_IGNORE.  But first, neon needs to
          define that value.  :-) */
-      return NE_XML_VALID;
+      return SVN_RA_DAV__XML_VALID;
 
     default:
-      return NE_XML_DECLINE;
+      return SVN_RA_DAV__XML_DECLINE;
     }
 
   /* NOTREACHED */
@@ -1353,8 +1353,8 @@ static void push_dir(report_baton_t *rb,
   di->pool = pool;
 }
 
-/* This implements the `ne_xml_startelm_cb' prototype. */
-static int start_element(void *userdata, const struct ne_xml_elm *elm,
+/* This implements the `svn_ra_dav__xml_startelm_cb' prototype. */
+static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                          const char **atts)
 {
   report_baton_t *rb = userdata;
@@ -1729,9 +1729,9 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* This implements the `ne_xml_endelm_cb' prototype. */
+/* This implements the `svn_ra_dav__xml_endelm_cb' prototype. */
 static int end_element(void *userdata, 
-                       const struct ne_xml_elm *elm,
+                       const svn_ra_dav__xml_elm_t *elm,
                        const char *cdata)
 {
   report_baton_t *rb = userdata;
@@ -1813,7 +1813,7 @@ static int end_element(void *userdata,
       rb->file_pool = NULL;
       break;
 
-    case NE_ELM_href:
+    case ELEM_href:
       /* do nothing if we aren't fetching content. */
       if (!rb->fetch_content)
         break;

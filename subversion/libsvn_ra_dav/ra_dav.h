@@ -40,6 +40,31 @@
 extern "C" {
 #endif /* __cplusplus */
 
+
+
+/* Rename these types and constants to abstract from Neon */
+
+#define SVN_RA_DAV__XML_VALID   NE_XML_VALID
+#define SVN_RA_DAV__XML_INVALID NE_XML_INVALID
+#define SVN_RA_DAV__XML_DECLINE NE_XML_DECLINE
+#define SVN_RA_DAV__XML_CDATA   NE_XML_CDATA
+#define SVN_RA_DAV__XML_COLLECT NE_XML_COLLECT
+
+typedef ne_xml_elmid       svn_ra_dav__xml_elmid;
+typedef struct ne_xml_elm  svn_ra_dav__xml_elm_t;
+typedef ne_xml_validate_cb svn_ra_dav__xml_validate_cb;
+typedef ne_xml_startelm_cb svn_ra_dav__xml_startelm_cb;
+typedef ne_xml_endelm_cb   svn_ra_dav__xml_endelm_cb;
+
+/* Push an XML handler onto Neon's handler stack */
+void svn_ra_dav__xml_push_handler(ne_xml_parser *p,
+                                  const svn_ra_dav__xml_elm_t *elements,
+                                  svn_ra_dav__xml_validate_cb validate_cb,
+                                  svn_ra_dav__xml_startelm_cb startelm_cb,
+                                  svn_ra_dav__xml_endelm_cb endelm_cb,
+                                  void *userdata,
+                                  apr_pool_t *pool);
+
 
 typedef struct {
   apr_pool_t *pool;
@@ -430,10 +455,10 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            apr_file_t *body_file,
                            void set_parser (ne_xml_parser *parser,
                                             void *baton),
-                           const struct ne_xml_elm *elements, 
-                           ne_xml_validate_cb validate_cb,
-                           ne_xml_startelm_cb startelm_cb, 
-                           ne_xml_endelm_cb endelm_cb,
+                           const svn_ra_dav__xml_elm_t *elements, 
+                           svn_ra_dav__xml_validate_cb validate_cb,
+                           svn_ra_dav__xml_startelm_cb startelm_cb, 
+                           svn_ra_dav__xml_endelm_cb endelm_cb,
                            void *baton,
                            apr_hash_t *extra_headers,
                            int *status_code,
@@ -441,9 +466,38 @@ svn_ra_dav__parsed_request(ne_session *sess,
   
 
 /* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
+/*
+NE_ELM_unknown -1
+NE_ELM_root 0
+NE_ELM_UNUSED (100)
+NE_ELM_207_first (NE_ELM_UNUSED)
+NE_ELM_multistatus (NE_ELM_207_first)
+NE_ELM_response (NE_ELM_207_first + 1)
+NE_ELM_responsedescription (NE_ELM_207_first + 2)
+NE_ELM_href (NE_ELM_207_first + 3)
+NE_ELM_propstat (NE_ELM_207_first + 4)
+NE_ELM_prop (NE_ELM_207_first + 5)
+NE_ELM_status (NE_ELM_207_first + 6)
+NE_ELM_207_UNUSED (NE_ELM_UNUSED + 100)
+NE_ELM_PROPS_UNUSED (NE_ELM_207_UNUSED + 100)
+ */
 enum {
+  /* Redefine Neon elements */
+  ELEM_unknown = NE_ELM_unknown,
+  ELEM_root = NE_ELM_root,
+  ELEM_UNUSED = NE_ELM_UNUSED,
+  ELEM_207_first = NE_ELM_207_first,
+  ELEM_multistatus = NE_ELM_multistatus,
+  ELEM_response = NE_ELM_response,
+  ELEM_responsedescription = NE_ELM_responsedescription,
+  ELEM_href = NE_ELM_href,
+  ELEM_propstat = NE_ELM_propstat,
+  ELEM_prop = NE_ELM_prop, /* `prop' tag in the DAV namespace */
+  ELEM_status = NE_ELM_status,
+  ELEM_207_UNUSED = NE_ELM_207_UNUSED,
+  ELEM_PROPS_UNUSED = NE_ELM_PROPS_UNUSED,
   /* DAV elements */
-  ELEM_activity_coll_set = NE_ELM_207_UNUSED,
+  ELEM_activity_coll_set = ELEM_207_UNUSED,
   ELEM_baseline,
   ELEM_baseline_coll,
   ELEM_checked_in,
@@ -484,7 +538,7 @@ enum {
   ELEM_update_report,
   ELEM_resource_walk,
   ELEM_resource,
-  ELEM_prop,
+  ELEM_SVN_prop, /* `prop' tag in the Subversion namespace */
   ELEM_dated_rev_report,
   ELEM_name_version_name,
   ELEM_name_creationdate,
