@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<delta-pkg>
+<tree-delta>
+<replace
+   name="A">
+<dir
+   ver="1"
+   ancestor="anni/A">
+<tree-delta>
+<replace
+   name="D">
+<dir
+   ver="1"
+   ancestor="anni/A/D">
+<tree-delta>
+<replace
+   name="G">
+<dir
+   ver="1"
+   ancestor="anni/A/D/G">
+<tree-delta>
+<replace
+   name="pi">
+<file
+   ver="1"
+   ancestor="anni/A/D/G/pi">
+<text-delta-ref
+   id="1"/>
+</file>
+</replace>
+</tree-delta>
+</dir>
+</replace>
+</tree-delta>
+</dir>
+</replace>
+</tree-delta>
+</dir>
+</replace>
+</tree-delta>
+<text-delta
+   id="1">U1ZOAAAWLgMYFgCYY29uZmxpY3RpbmcgdGV4dCBmb3IgcGkK
+</text-delta>
+</delta-pkg>

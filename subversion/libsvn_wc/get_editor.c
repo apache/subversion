@@ -1203,12 +1203,15 @@ close_file (void *file_baton)
 
           /* Remove the reject file that patch will have used, IFF the
            reject file is empty (zero bytes) -- implying that there
-           was no conflict. */
+           was no conflict.  If the reject file is nonzero, then mark
+           the entry as conflicted!  */
           svn_xml_make_open_tag (&entry_accum,
                                  fb->pool,
                                  svn_xml_self_closing,
-                                 SVN_WC__LOG_RM_IF_EMPTY,
+                                 SVN_WC__LOG_DETECT_CONFLICT,
                                  SVN_WC__LOG_ATTR_NAME,
+                                 fb->name,
+                                 SVN_WC_ENTRY_ATTR_REJFILE,
                                  reject_filename,
                                  NULL);
 

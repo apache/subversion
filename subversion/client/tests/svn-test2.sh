@@ -16,7 +16,7 @@ check_status()
       exit $res
     fi
     # REMOVE ME;  for easy debugging step-throughs:
-    read foo
+    # read foo
 }
 
 # Remove the testing tree
@@ -85,10 +85,16 @@ ${SVN_PROG} update --xml-file ../../tests-common/xml/up-props.xml \
                    --revision 20 ${TEST_DIR_1}
 check_status 9
 
+### Update again.  This update should create conflicting text.
+echo "Updating with (conflicting) text.  (pipatch.xml)"
+${SVN_PROG} update --xml-file ../../tests-common/xml/pipatch.xml \
+                   --revision 21 ${TEST_DIR_1}
+check_status 10
+
 ### Examine status; we should see CONFLICTS present.
 echo "Status of directory:"
 ${SVN_PROG} status ${TEST_DIR_1}
-check_status 10
+check_status 11
 
 ### Try to commit;  the conflict should abort due to conflicts.
 echo "Attempting to commit while conflicts are present:"
@@ -96,30 +102,44 @@ ${SVN_PROG} commit --target-dir ${TEST_DIR_1} \
                    --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
                    --revision 22
 # (no check_status here, because we *expect* the commit to fail!)
-rm *.xml
+
 
 ### Clean up property-reject files.
 echo "Removing all .prej files..."
 rm -f ${TEST_DIR_1}/*.prej
 rm -f ${TEST_DIR_1}/A/*.prej
-check_status 11
+check_status 12
+
+
+### Try to commit again;  the conflict should abort due to text conflict.
+echo "Attempting to commit while conflicts are present:"
+${SVN_PROG} commit --target-dir ${TEST_DIR_1} \
+                   --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
+                   --revision 23
+# (no check_status here, because we *expect* the commit to fail!)
+
+
+### Clean up the standard textual reject files.
+echo "Remove all .rej files..."
+rm -f ${TEST_DIR_1}/A/D/G/*.rej
+check_status 13
 
 ### Examine status; there should only be local mods now, not conflicts.
 echo "Status of directory:"
 ${SVN_PROG} status ${TEST_DIR_1}
-check_status 12
+check_status 14
 
 ### Try to commit;  the conflict should now succeed.
 echo "Attempting to commit again, with conflicts removed."
 ${SVN_PROG} commit --target-dir ${TEST_DIR_1} \
                    --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
-                   --revision 22
-check_status 13
+                   --revision 24
+check_status 15
 
 ### Examine status; everything should be up-to-date.
 echo "Status of directory:"
 ${SVN_PROG} status ${TEST_DIR_1}
-check_status 14
+check_status 16
 
 
 exit 0

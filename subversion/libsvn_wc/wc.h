@@ -298,8 +298,10 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 /* Remove file SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_RM                  "rm"
 
-/* Remove file SVN_WC__LOG_ATTR_NAME. */
-#define SVN_WC__LOG_RM_IF_EMPTY         "rm-if-empty"
+/* If SVN_WC__LOG_ATTR_TEXT_REJFILE is 0 bytes, remove it.  Otherwise
+   mark SVN_WC__LOG_ATTR_NAME's entry as being in a state of
+   conflict. */
+#define SVN_WC__LOG_DETECT_CONFLICT         "detect-conflict"
 
 /* Append file from SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
 #define SVN_WC__LOG_APPEND              "append"

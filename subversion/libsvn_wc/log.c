@@ -452,11 +452,23 @@ log_do_rm (struct log_runner *loggy, const char *name)
 
 /* Remove file NAME in log's CWD iff it's zero bytes in size. */
 static svn_error_t *
-log_do_rm_if_empty (struct log_runner *loggy, const char *name)
+log_do_detect_conflict (struct log_runner *loggy,
+                        const char *name,
+                        const XML_Char **atts)                        
 {
+  svn_error_t *err;
   apr_status_t apr_err;
   apr_finfo_t finfo;
   svn_string_t *full_path;
+
+  const char *rejfile =
+    svn_xml_get_attr_value (SVN_WC_ENTRY_ATTR_REJFILE, atts);
+
+  if (! rejfile)
+    return 
+      svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                         "missing text-rejfile attr in %s", loggy->path->data);
+
 
   full_path = svn_string_dup (loggy->path, loggy->pool);
   svn_path_add_component_nts (full_path, name, svn_path_local_style);
@@ -469,11 +481,32 @@ log_do_rm_if_empty (struct log_runner *loggy, const char *name)
 
   if (finfo.size == 0)
     {
+      /* the `patch' program created an empty .rej file.  clean it
+         up. */
       apr_err = apr_remove_file (full_path->data, loggy->pool);
       if (apr_err)
         return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                                  "log_do_rm_if_empty: couldn't remove %s", 
+                                  "log_do_detect_conflict: couldn't rm %s", 
                                   name);
+    }
+
+  else 
+    {
+      /* size > 0, there must be an actual text conflict.   Mark the
+         entry as conflicted! */
+      apr_hash_t *atthash = svn_xml_make_att_hash (atts, loggy->pool);
+
+      err = svn_wc__entry_merge_sync (loggy->path,
+                                      svn_string_create (name, loggy->pool),
+                                      SVN_INVALID_REVNUM, /* ignore */
+                                      svn_node_none,      /* ignore */
+                                      SVN_WC_ENTRY_CONFLICTED,
+                                      0,                  /* ignore */
+                                      0,                  /* ignore */
+                                      loggy->pool,
+                                      atthash,  /* contains
+                                                   SVN_WC_ATTR_REJFILE */
+                                      NULL);
     }
 
   return SVN_NO_ERROR;
@@ -1031,8 +1064,8 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   else if (strcmp (eltname, SVN_WC__LOG_RM) == 0) {
     err = log_do_rm (loggy, name);
   }
-  else if (strcmp (eltname, SVN_WC__LOG_RM_IF_EMPTY) == 0) {
-    err = log_do_rm_if_empty (loggy, name);
+  else if (strcmp (eltname, SVN_WC__LOG_DETECT_CONFLICT) == 0) {
+    err = log_do_detect_conflict (loggy, name, atts);
   }
   else if (strcmp (eltname, SVN_WC__LOG_MV) == 0) {
     err = log_do_file_xfer (loggy, name, svn_wc__xfer_mv, atts);
