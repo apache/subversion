@@ -25,6 +25,7 @@ If you check out into TARGETDIR, that directory must exist and be
 empty.
 
 
+
 What the client will look like in real life:
 ============================================
 
@@ -33,19 +34,37 @@ so.  Subversion will differ where it provides a feature CVS doesn't,
 or doesn't provide something CVS does, or where people generally agree
 that the CVS way is not successful and shouldn't be imitated.
 
-The CVS custom of switching on a subcommand seems to work out pretty
-well, so we'll do the same thing.  But many people have mentioned that
-having separate global versus command-local option namespaces is
-confusing.  So Subversion has one option namespace, and all options
-come after the command.
 
-   svn [<command>] [<option|argument> ...]
+
+Behaviors
+=========
 
-(The command is marked as optional because there are a few cases where
-Subversion can do something meaningful without the command -- for
-example, "svn --help".)
+  The CVS custom of switching on a subcommand seems to work out pretty
+  well, so we'll do the same thing.  But many people have mentioned that
+  having separate global versus command-local option namespaces is
+  confusing.  So Subversion has one option namespace, and all options
+  come after the subcommand.
+  
+     svn [<subcommand>] [<option|argument> ...]
+  
+  (The subcommand is marked as optional because there are a few cases where
+  Subversion can do something meaningful without the command -- for
+  example, "svn --help".)
+  
+  
+  All files are assumed binary by default.  If the user explicitly
+  asks for it, she can get keyword substitution.  And, if she asks for
+  it, she can get line-end conversion.  These two filters are
+  completely independent of one another.
 
-Here are some options:
+* Keyword substitution (on/off)
+
+* end-of-line conversion (on/off)
+
+
+
+Global options
+==============
 
   -? -h -H --help  Help.
   -q               Quiet.  (CVS has two levels of this, but that's overkill?)
@@ -63,14 +82,26 @@ Here are some options:
   --no-rc          Suppress reading of .svnrc.
   --trace          Like "cvs -t"
   --               End of option processing (this is the standard, right?)
+                   (Yes, it is one of the standards) :)
+
   -R REPOSITORY    Use REPOSITORY.
                      /* Issue: -R may be unnecessary, if arguments
                         are URLs anyway.  See thoughts from Greg
                         Stein.  That would be nice, it would free up
                         another option letter. */
 
-And the commands will look a lot like CVS's, though there are some
+
+
+Subcommands and their Options
+=============================
+
+This is just a beginning.  We need to expand each command to describe
+exactly what it does and what options it honors.  
+
+The commands will look a lot like CVS's, though there are some
 newcomers:
+
+Summary: 
 
    checkout | co
    update   | up
@@ -90,19 +121,47 @@ newcomers:
    propset  | pset
    propget  | pget
 
-This is just a beginning.  We need to expand each command to describe
-exactly what it does and what options it honors.  Also, keyword
-substitution (a feature many people want) has not been touched above.
-Nor has turning line-end conversion on or off... by the way, a plea:
-let's please not mix that up with keyword substitution.  I think a
-good behavior for Subversion would be:
+   ===Karl: Why are some short commands 2 letters, some 3, and some 4?
+            Would it be better to make them all 2 letters? -Fitz
 
-   All files are assumed binary by default.  If the user explicitly
-   asks for it, she can get keyword substitution.  And, if she asks
-   for it, she can get line-end conversion.  These two filters are
-   completely independent of one another.
+*  checkout
 
-But Your Mileage May Vary.  Have at it!...
+*  update
+
+*  commit
+
+*  add
+
+*  rename
+
+*  delete
+
+*  copy
+
+*  branch  /* implemented via copy, though may want to be its own command */
+
+*  tag     /* implemented via copy, though may want to be its own command */
+
+*  status
+
+*  diff
+
+*  rdiff
+
+*  annotate
+
+*  import
+
+*  log
+
+*  propset
+
+*  propget
+
+
+
+Miscellaneous Notes and addenda
+===============================
 
 
 ----------------------------------------------------------------------
@@ -217,3 +276,4 @@ svn diff -r N1 -r N2 FILE:N3 ...
 svn log
 svn fix-log
 
+----------------------------------------------------------------------
