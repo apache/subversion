@@ -421,7 +421,7 @@ typedef struct svn_delta_edit_fns_t
      ANCESTOR_PATH and ANCESTOR_VERSION indicate the ancestor of the
      resulting object.
 
-     There are five restrictions on the order in which the producer
+     There are six restrictions on the order in which the producer
      may use the batons:
 
      1. The producer may call `replace_directory', `add_directory',
@@ -436,7 +436,11 @@ typedef struct svn_delta_edit_fns_t
         directory batons.  Put another way, the producer cannot have
         to sibling directory batons open at the same time.
 
-     4. When the producer calls `replace_file' or `add_file', either:
+     4. A producer must call `change_dir_prop' on a directory either
+        before opening any of the directory's subdirs or after closing
+        them, but not in the middle.
+
+     5. When the producer calls `replace_file' or `add_file', either:
 
         (a) The producer must follow with the changes to the file
         (`change_file_prop' and/or `apply_textdelta', as applicable)
@@ -449,7 +453,7 @@ typedef struct svn_delta_edit_fns_t
         have been closed, the producer must issue `apply_textdelta'
         and `close_file' calls.
 
-     5. When the producer calls `apply_textdelta', it must make all of
+     6. When the producer calls `apply_textdelta', it must make all of
         the window handler calls (including the NULL window at the
         end) before issuing any other edit_fns calls.
 
