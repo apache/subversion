@@ -111,7 +111,7 @@ if windows == 1:
   test_area_url = string.replace(test_area_url, '\\', '/')
 
 # Global variable indicating the FS type for repository creations.
-fs_type = "bdb"
+fs_type = None
 
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
@@ -320,11 +320,12 @@ def create_repos(path):
   if not(os.path.exists(path)):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
 
-  stdout, stderr = run_command(svnadmin_binary, 1, 0, "create", path,
-                               "--bdb-txn-nosync", "--fs-type="+fs_type)
+  opts = ("--bdb-txn-nosync",)
+  if fs_type is not None:
+    opts += ("--fs-type=" + fs_type,)
+  stdout, stderr = run_command(svnadmin_binary, 1, 0, "create", path, *opts)
 
-  # Skip tests if we can't create the repository (most likely, because
-  # Subversion was built without BDB and this is a default test run).
+  # Skip tests if we can't create the repository.
   for line in stderr:
     if line.find('Unknown FS type') != -1:
       raise Skip
