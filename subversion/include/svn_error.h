@@ -93,7 +93,13 @@ typedef enum svn_errno_t {
 
   /* What happens if a non-blocking call to svn_wc__lock() encounters
      another lock. */
-  SVN_ERR_ENCOUNTERED_LOCK
+  SVN_ERR_ENCOUNTERED_LOCK,
+
+  /* a bad URL was passed to the repository access layer */
+  SVN_ERR_ILLEGAL_URL,
+
+  /* the repository access layer could not initialize the socket layer */
+  SVN_ERR_SOCK_INIT
 
 } svn_errno_t;
 
