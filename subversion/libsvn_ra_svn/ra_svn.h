@@ -30,9 +30,6 @@ extern "C" {
 #include <apr_thread_proc.h>
 #include <svn_ra_svn.h>
 
-#include <openssl/ssl.h>
-#include <openssl/bio.h>
-
 /* Handler for blocked writes. */
 typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
                                                apr_pool_t *pool,
@@ -42,10 +39,8 @@ typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
 /* This structure is opaque to the server.  The client pokes at the
  * first few fields during setup and cleanup. */
 struct svn_ra_svn_conn_st {
-  apr_socket_t *sock;     /* NULL if using in_file/out_file */
-  apr_file_t *in_file;
-  apr_file_t *out_file;
-  apr_proc_t *proc;       /* Used by client.c when sock is NULL */
+  svn_stream_t *in_stream;
+  svn_stream_t *out_stream;
   char read_buf[4096];
   char *read_ptr;
   char *read_end;
@@ -57,10 +52,6 @@ struct svn_ra_svn_conn_st {
   void *block_baton;
   apr_hash_t *capabilities;
   apr_pool_t *pool;
-  svn_boolean_t use_ssl;  /* Set to true after a SSL handshake is done */
-  SSL *ssl;               /* The SSL to use for this connection.  */
-  BIO *internal_bio;      /* The Subversion/SSL side of a BIO pair. */
-  BIO *network_bio;       /* The network side of a BIO pair. */
 };
 
 /* Set a callback for blocked writes on conn.  This handler may
@@ -93,6 +84,15 @@ svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
 svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const char *user, const char *password,
                                      const char **message);
+
+/* Maps input/output stream interfaces onto a socket. */
+void svn_ra_svn__sock_streams(apr_socket_t *sock, svn_stream_t **in,
+                              svn_stream_t **out, apr_pool_t *pool);
+
+/* Maps input/output stream interfaces onto a pair of files. */
+void svn_ra_svn__file_streams(apr_file_t *in_file, apr_file_t *out_file,
+                              svn_stream_t **in, svn_stream_t **out,
+                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

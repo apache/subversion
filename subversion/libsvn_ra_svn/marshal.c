@@ -34,20 +34,12 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ra_svn.h"
+#include "svn_io.h"
 #include "svn_private_config.h"
 
 #include "ra_svn.h"
 
 #define svn_iswhitespace(c) ((c) == ' ' || (c) == '\n')
-
-/* --- SSL FORWARD DECLARATION --- */
-
-/* Defined below. */
-static svn_error_t *do_ssl_operation(svn_ra_svn_conn_t *conn, 
-                                     int (*hsfunc)(SSL *),
-                                     int (*rfunc)(SSL *, void *, int),
-                                     int (*wfunc)(SSL *, const void *, int),
-                                     char *buffer, int *size);
 
 /* --- CONNECTION INITIALIZATION --- */
 
@@ -59,9 +51,6 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   svn_ra_svn_conn_t *conn = apr_palloc(pool, sizeof(*conn));
 
   assert((sock && !in_file && !out_file) || (!sock && in_file && out_file));
-  conn->sock = sock;
-  conn->in_file = in_file;
-  conn->out_file = out_file;
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf;
   conn->write_pos = 0;
@@ -69,11 +58,13 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   conn->block_baton = NULL;
   conn->capabilities = apr_hash_make(pool);
   conn->pool = pool;
-  conn->use_ssl = FALSE;
-  conn->ssl = NULL;
-  conn->internal_bio = NULL;
-  conn->network_bio = NULL;
 
+  
+  if (sock != NULL)
+    svn_ra_svn__sock_streams(sock, &conn->in_stream, &conn->out_stream, pool);
+  else
+    svn_ra_svn__file_streams(in_file, out_file, &conn->in_stream,
+                             &conn->out_stream, pool);
   return conn;
 }
 
@@ -111,40 +102,13 @@ void svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
 
   conn->block_handler = handler;
   conn->block_baton = baton;
-  if (conn->sock)
-    apr_socket_timeout_set(conn->sock, interval);
-  else
-    apr_file_pipe_timeout_set(conn->out_file, interval);
+  svn_stream_timeout(conn->out_stream, interval);
 }
 
 svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool)
 {
-  apr_pollfd_t pfd;
-  int n;
-  svn_error_t *err;
-
-  if (conn->use_ssl)
-    {
-      /* Note thak SSL_pending may return number of bytes to read,
-       * even if the data is not application data. */
-      err = do_ssl_operation(conn, SSL_pending, NULL, NULL, NULL, &n);
-      return (err || n <= 0) ? FALSE : TRUE;
-    }
-
-  if (conn->sock)
-    {
-      pfd.desc_type = APR_POLL_SOCKET;
-      pfd.desc.s = conn->sock;
-    }
-  else
-    {
-      pfd.desc_type = APR_POLL_FILE;
-      pfd.desc.f = conn->in_file;
-    }
-  pfd.p = pool;
-  pfd.reqevents = APR_POLLIN;
-  return ((apr_poll(&pfd, 1, &n, 0) == APR_SUCCESS) && n);
+  return svn_stream_data_pending(conn->in_stream);
 }
 
 /* --- WRITE BUFFER MANAGEMENT --- */
@@ -163,49 +127,18 @@ static const char *writebuf_push(svn_ra_svn_conn_t *conn, const char *data,
   return data + copylen;
 }
 
-/* Write data to SSL. */
-static svn_error_t *writebuf_output_ssl(svn_ra_svn_conn_t *conn, 
-                                        apr_pool_t *pool, const char *data,
-                                        apr_size_t len)
-{
-  svn_error_t *err = SVN_NO_ERROR;
-  apr_pool_t *subpool = NULL;
-
-  if (len > 0)
-    SVN_ERR(do_ssl_operation(conn, NULL, NULL, SSL_write, (char *) data, &len));
-
-  subpool = svn_pool_create(pool);
-  if (conn->block_handler != NULL)
-    {
-      subpool = svn_pool_create(pool);
-      err = conn->block_handler(conn, subpool, conn->block_baton);
-      apr_pool_destroy(subpool);
-    }  
-
-  return err;
-}
-
 /* Write data to socket or output file as appropriate. */
 static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *data, apr_size_t len)
 {
   const char *end = data + len;
-  apr_status_t status;
   apr_size_t count;
   apr_pool_t *subpool = NULL;
-
-  if (conn->use_ssl)
-    return writebuf_output_ssl(conn, pool, data, len);
 
   while (data < end)
     {
       count = end - data;
-      if (conn->sock)
-        status = apr_socket_send(conn->sock, data, &count);
-      else
-        status = apr_file_write(conn->out_file, data, &count);
-      if (status)
-        return svn_error_wrap_apr(status, _("Can't write to connection"));
+      SVN_ERR(svn_stream_write(conn->out_stream, data, &count));
       if (count == 0)
         {
           if (!subpool)
@@ -279,46 +212,11 @@ static char *readbuf_drain(svn_ra_svn_conn_t *conn, char *data, char *end)
   return data + copylen;
 }
 
-/* Read data from SSL. */
-static svn_error_t *readbuf_input_ssl(svn_ra_svn_conn_t *conn, char *data,
-                                      apr_size_t *len)
-{
-  svn_error_t *err;
-
-  if (conn->block_handler)
-    apr_socket_timeout_set(conn->sock, -1);
-  err = do_ssl_operation(conn, NULL, SSL_read, NULL, data, len);
-  if (conn->block_handler)
-    apr_socket_timeout_set(conn->sock, -1);
-  if (err)
-    return err;
-  if (*len == 0)
-    return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
-                            _("Connection closed unexpectedly"));
-
-  return SVN_NO_ERROR;
-}
-
-/* Read data from socket or input file as appropriate. */
+/* Read data from from input stream. */
 static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
                                   apr_size_t *len)
 {
-  apr_status_t status;
-
-  if (conn->use_ssl)
-    return readbuf_input_ssl(conn, data, len);
-
-  /* Always block for reading. */
-  if (conn->sock && conn->block_handler)
-    apr_socket_timeout_set(conn->sock, -1);
-  if (conn->sock)
-    status = apr_socket_recv(conn->sock, data, len);
-  else
-    status = apr_file_read(conn->in_file, data, len);
-  if (conn->sock && conn->block_handler)
-    apr_socket_timeout_set(conn->sock, 0);
-  if (status && !APR_STATUS_IS_EOF(status))
-    return svn_error_wrap_apr(status, _("Can't read from connection"));
+  SVN_ERR(svn_stream_read(conn->in_stream, data, len));
   if (*len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
                             _("Connection closed unexpectedly"));
@@ -954,230 +852,4 @@ svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   return SVN_NO_ERROR;
-}
-
-
-/* --- SSL FUNCTIONS --- */
-
-/* The interface layer between network and BIO-pair. The BIO-pair buffers
- * the data to/from the TLS layer. Hence, at any time, there may be data
- * in the buffer that must be written to the network. This writing has
- * highest priority because the handshake might fail otherwise.
- * Only then a read_request can be satisfied.
- * Adapted from network_biopair_interop() in postfixtls patch by Lutz Jaenicke
- * at http://www.aet.tu-cottbus.de/personen/jaenicke/postfix_tls/ */
-static svn_error_t *network_biopair_interop(svn_ra_svn_conn_t *conn)
-{
-  int want_write;
-  int num_write;
-  int write_pos;
-  int from_bio;
-  int want_read;
-  int num_read;
-  int to_bio;
-  apr_status_t status;
-  #define NETLAYER_BUFFERSIZE 8192
-  char buffer[NETLAYER_BUFFERSIZE];
-
-  while ((want_write = BIO_ctrl_pending(conn->network_bio)) > 0) 
-    {
-      if (want_write > NETLAYER_BUFFERSIZE)
-          want_write = NETLAYER_BUFFERSIZE;
-        from_bio = BIO_read(conn->network_bio, buffer, want_write);
-        
-      /* Write the complete contents of the buffer. Since TLS performs
-       * underlying handshaking, we cannot afford to leave the buffer
-       * unflushed, as we could run into a deadlock trap (the peer
-       * waiting for a final byte and we already waiting for his reply
-       * in read position). */ 
-      write_pos = 0;
-      do {
-          num_write = from_bio - write_pos;
-          status = apr_socket_send(conn->sock, buffer + write_pos, &num_write);
-          if (status)
-            return svn_error_wrap_apr(status, _("Can't write to connection"));
-          write_pos += num_write;
-      } while (write_pos < from_bio);
-  }
-
-  while ((want_read = BIO_ctrl_get_read_request(conn->network_bio)) > 0) 
-    {
-      if (want_read > NETLAYER_BUFFERSIZE)
-          want_read = NETLAYER_BUFFERSIZE;
-      
-      num_read = want_read;
-      status = apr_socket_recv(conn->sock, buffer, &num_read);
-      if (status && !APR_STATUS_IS_EOF(status))
-        return svn_error_wrap_apr(status, _("Can't read from connection"));
-      if (num_read == 0)
-        return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
-                                _("Connection closed unexpectedly"));
-          
-      to_bio = BIO_write(conn->network_bio, buffer, num_read);
-      if (to_bio != num_read)
-        return svn_error_create(SVN_ERR_RA_SVN_SSL_ERROR, NULL,
-                        _("Failed to read from SSL socket layer"));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Function to perform the handshake for SSL_accept(), SSL_connect(),
- * and SSL_shutdown() and perform the SSL_read(), SSL_write() operations.
- * Call the underlying network_biopair_interop-layer to make sure the
- * write buffer is flushed after every operation (that did not fail with
- * a fatal error). 
- * The value of *count will be the result of the underlying SSL_operation(),
- * and for SSL_read/SSL_write this will be number of bytes read/written
- * if the operation was successfull.
- * 
- * Adapted from do_tls_operation() in postfixtls patch by Lutz Jaenicke
- * at http://www.aet.tu-cottbus.de/personen/jaenicke/postfix_tls/ */
-static svn_error_t *do_ssl_operation(svn_ra_svn_conn_t *conn, 
-                                     int (*hsfunc)(SSL *),
-                                     int (*rfunc)(SSL *, void *, int),
-                                     int (*wfunc)(SSL *, const void *, int),
-                                     char *buffer, int *count)
-{
-  int status;
-  int ssl_err;
-  int count_val;
-  int ret_status = -1;
-  svn_boolean_t done = FALSE;
-
-  count_val = (count == NULL) ? 0 : *count;
-
-  while (!done)
-    {
-      if (hsfunc)
-         status = hsfunc(conn->ssl);
-      else if (rfunc)
-        status = rfunc(conn->ssl, buffer, count_val);
-      else
-        status = wfunc(conn->ssl, (const char *)buffer, count_val);
-      ssl_err = SSL_get_error(conn->ssl, status);
-
-      switch (ssl_err)
-        {
-          case SSL_ERROR_NONE:          /* success */
-            ret_status = status;
-            done = TRUE;                /* no break, flush buffer before */
-                                        /* leaving */
-          case SSL_ERROR_WANT_WRITE:
-          case SSL_ERROR_WANT_READ:
-            SVN_ERR(network_biopair_interop(conn));
-            break;
-          case SSL_ERROR_ZERO_RETURN:   /* connection was closed cleanly */
-          case SSL_ERROR_SYSCALL:
-          case SSL_ERROR_SSL:
-          default:
-            ret_status = status;
-            done = TRUE;
-        };
-    };
-
-  if (count != NULL)
-    *count = ret_status;
-
-  if (ret_status > 0)
-    return SVN_NO_ERROR;
-  else
-    return svn_error_create(SVN_ERR_RA_SVN_SSL_ERROR, NULL,
-                            _("SSL network problem"));
-}
-
-/* Releases the resources allocated by SSL. */
-static apr_status_t cleanup_ssl(void *data)
-{
-  svn_ra_svn_conn_t *conn = (svn_ra_svn_conn_t *) data;
-
-  if (conn->ssl == NULL)
-    return APR_SUCCESS;;
-
-  /* The connection has been setup between client and server,
-   * so we tell the other side that we are finished. */
-  if (conn->use_ssl)
-    {
-      if (!do_ssl_operation(conn, SSL_shutdown, NULL, NULL, NULL, NULL))
-          do_ssl_operation(conn, SSL_shutdown, NULL, NULL, NULL, NULL);
-      conn->use_ssl = FALSE;
-    }
-
-  /* Implicitely frees conn->internal_bio. */
-  SSL_free(conn->ssl);
-  conn->ssl = NULL;
-  conn->internal_bio = NULL;
-
-  if (conn->network_bio)
-    {
-      BIO_free(conn->network_bio);
-      conn->network_bio = NULL;
-    }
-
-  return APR_SUCCESS;
-}
-
-/* Creates and initializes an SSL that is to be used for this connection.
- * Internally, a BIO pair will be used to transfer data to/from Subversion
- * and the network.
- *
- * Subversion  |   TLS-engine
- *    |        |
- *    +----------> SSL_operations()
- *             |     /\    ||
- *             |     ||    \/
- *             |   BIO-pair (internal_bio)
- *    +----------< BIO-pair (network_bio)
- *    |        |
- *  socket     |
- */
-svn_error_t *svn_ra_svn_ssl_init(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                 void *ssl_ctx)
-{
-  SSL_CTX *ssl_context = (SSL_CTX *) ssl_ctx;
-
-  /* Need to release SSL resources when the connection is destroyed.
-   * Assumes that the owning SSL_CTX is destroyed after cleanup
-   * of SSL. */
-  apr_pool_cleanup_register(pool, conn, cleanup_ssl, apr_pool_cleanup_null);
-
-  conn->ssl = SSL_new(ssl_context);
-  if (conn->ssl == NULL)
-    return svn_error_create(SVN_ERR_RA_SVN_SSL_INIT, NULL,
-                            "Could not create a SSL from the SSL context");
-
-  if (!BIO_new_bio_pair(&conn->internal_bio, 8192, &conn->network_bio, 8192))
-    return svn_error_create(SVN_ERR_RA_SVN_SSL_INIT, NULL,
-                            "Could not create a a new BIO pair");
-
-  SSL_set_bio(conn->ssl, conn->internal_bio, conn->internal_bio);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *svn_ra_svn_ssl_accept(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
-{
-  SVN_ERR(do_ssl_operation(conn, SSL_accept, NULL, NULL, NULL, NULL));
-
-  /* Now SSL has been setup, and can be used. */
-  conn->use_ssl = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *svn_ra_svn_ssl_connect(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
-{
-  SVN_ERR(do_ssl_operation(conn, SSL_connect, NULL, NULL, NULL, NULL));
-
-  /* Now SSL has been setup, and can be used. */
-  conn->use_ssl = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *svn_ra_svn_ssl_start(svn_ra_svn_conn_t *conn, void *ssl_baton,
-                                  apr_pool_t *pool)
-{
-  SVN_ERR(svn_ra_svn_ssl_init(conn, pool, ssl_baton));
-  return svn_ra_svn_ssl_accept(conn, pool);
 }

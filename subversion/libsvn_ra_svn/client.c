@@ -39,9 +39,7 @@
 #include "svn_md5.h"
 #include "svn_base64.h"
 
-#include "ra_svn.h"
-
-#include <openssl/x509v3.h>
+#include "ra_svn_ssl.h"
 
 typedef struct {
   svn_ra_svn_conn_t *conn;
@@ -51,7 +49,6 @@ typedef struct {
   const char *user;
   const char *hostname;
   const char *realm_prefix;
-  SSL_CTX *ssl_ctx;
 } ra_svn_session_baton_t;
 
 typedef struct {
@@ -273,228 +270,9 @@ static svn_error_t *read_success(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Format an ASN1 time to a string. */
-static svn_boolean_t asn1time_to_string(ASN1_TIME *tm, char *buffer, 
-                                        apr_size_t len)
-{
-  svn_boolean_t retval = FALSE;
-  if (len--)
-    {
-      BIO *mem = BIO_new(BIO_s_mem());
-      if (mem)
-        {
-          if (ASN1_TIME_print(mem, tm))
-            {
-              long data_len;
-              char *data;
-              data_len = BIO_get_mem_data(mem, &data);
-              if (data_len < len)
-                len = data_len;
-              memcpy(buffer, data, len);
-              buffer[len] = 0;
-              retval = TRUE;
-            }
-          BIO_free(mem);
-        }
-    }
-    return retval;
-}
-
-/* Compare peername against hostname. Allow wildcard in leftmost 
- * position in peername, and the comparision is case insensitive. */
-static svn_boolean_t match_hostname(const char *peername, 
-                                    const char *hostname, apr_pool_t *pool)
-{
-  char *str, *last_str;
-  char *hostname_copy;
-
-  if (apr_strnatcasecmp(peername, hostname) == 0)
-    return TRUE;
-
-  if (strlen(peername) < 3)
-    return FALSE;
-
-  if (peername[0] != '*' || peername[1] != '.')
-    return FALSE;
-
-  hostname_copy = apr_pstrdup(pool, hostname);
-  str = apr_strtok (hostname_copy, ".", &last_str);
-  if (str == NULL)
-    return FALSE;
-
-  return (apr_strnatcasecmp(&peername[2], str) == 0);
-}
-
-/* Verify that the certificates common name matches the hostname.
- * Adapted from verify_callback() in postfixtls patch by Lutz Jaenicke
- * at http://www.aet.tu-cottbus.de/personen/jaenicke/postfix_tls/ */
-static svn_boolean_t verify_hostname(ra_svn_session_baton_t *sess,
-                                     apr_pool_t *pool,
-                                     svn_auth_ssl_server_cert_info_t *cert_info)
-{
-  int i, r;
-  svn_boolean_t matched = FALSE;
-  svn_boolean_t dnsname_found = FALSE;
-  X509 *peer = SSL_get_peer_certificate(sess->conn->ssl);
-  STACK_OF(GENERAL_NAME) *gens;
-
-  /* Check out the name certified against the hostname expected.
-   * Standards are not always clear with respect to the handling of
-   * dNSNames. RFC3207 does not specify the handling. We therefore follow
-   * the strict rules in RFC2818 (HTTP over TLS), Section 3.1:
-   * The Subject Alternative Name/dNSName has precedence over CommonName
-   * (CN). If dNSName entries are provided, CN is not checked anymore. */
-  gens = X509_get_ext_d2i(peer, NID_subject_alt_name, 0, 0);
-  if (gens) 
-    {
-      for (i = 0, r = sk_GENERAL_NAME_num(gens); i < r; i++) 
-        {
-          const GENERAL_NAME *gn = sk_GENERAL_NAME_value(gens, i);
-          if (gn->type == GEN_DNS) 
-            {              
-              dnsname_found = TRUE;
-              matched = match_hostname(gn->d.ia5->data, sess->hostname, pool);
-              if (matched)
-                break;
-            }
-        }
-      sk_GENERAL_NAME_free(gens);
-      if (dnsname_found)
-        return matched;
-    }
-
-  return match_hostname(cert_info->hostname, sess->hostname, pool);
-}
-
-/* Fill in the server certificate information, as well as check for some
- * errors in the certificate. */
-static svn_error_t *fill_server_cert_info(ra_svn_session_baton_t *sess,
-                                     apr_pool_t *pool,
-                                     svn_auth_ssl_server_cert_info_t *cert_info,
-                                     apr_uint32_t *cert_failures)
-{
-  #define CERT_BUFFER_SIZE 256
-  const char hexcodes[] = "0123456789ABCDEF";
-  X509 *peer;
-  char buffer[CERT_BUFFER_SIZE];
-  unsigned char md[EVP_MAX_MD_SIZE];
-  char fingerprint[EVP_MAX_MD_SIZE * 3];
-  unsigned int md_size;
-  unsigned int i;
-  unsigned int cert_buffer_size;
-  unsigned char *cert_buffer, *cert_buffer_pointer;
-  svn_stringbuf_t *ascii_cert;
-  long verify_result;
-
-  cert_info->hostname = NULL;
-  cert_info->fingerprint = NULL;
-  cert_info->valid_from = NULL;
-  cert_info->valid_until = NULL;
-  cert_info->issuer_dname = NULL;
-  cert_info->ascii_cert = NULL;
-
-  *cert_failures = 0;
-
-  peer = SSL_get_peer_certificate(sess->conn->ssl);
-  if (peer == NULL)
-    return svn_error_create(SVN_ERR_RA_SVN_SSL_ERROR, NULL,
-                            _("Unable to obtain server certificate"));
-
-  
-  if (!X509_NAME_get_text_by_NID(X509_get_subject_name(peer),
-                                 NID_commonName, buffer, CERT_BUFFER_SIZE))
-    return svn_error_create(SVN_ERR_RA_SVN_SSL_ERROR, NULL,
-                            _("Could not obtain server certificate CN"));
-  cert_info->hostname = apr_pstrdup(pool, buffer);
-
-  if (!X509_NAME_get_text_by_NID(X509_get_issuer_name(peer),
-                                 NID_commonName, buffer, CERT_BUFFER_SIZE))
-    {
-      if (!X509_NAME_get_text_by_NID(X509_get_issuer_name(peer),
-                                     NID_organizationName, buffer, 
-                                     CERT_BUFFER_SIZE))
-        return svn_error_create(SVN_ERR_RA_SVN_SSL_ERROR, NULL,
-                                _("Could not obtain server certificate issuer "
-                                  "or organization"));
-
-    }
-  cert_info->issuer_dname = apr_pstrdup(pool, buffer);
-
-  /* Neon uses sha1 for calculating fingerprint, and not MD5. */
-  if (X509_digest(peer, EVP_sha1(), md, &md_size))
-    {
-      for (i=0; i<md_size; i++)
-        {
-          fingerprint[3*i] = hexcodes[(md[i] & 0xf0) >> 4];
-          fingerprint[(3*i)+1] = hexcodes[(md[i] & 0x0f)];
-          fingerprint[(3*i)+2] = ':';
-        }
-      if (md_size > 0)
-        fingerprint[(3*(md_size-1))+2] = '\0';
-      else
-        fingerprint[0] = '\0';
-      cert_info->fingerprint = apr_pstrdup(pool, fingerprint);
-    }
-  else
-    cert_info->fingerprint = apr_pstrdup(pool, "<unknown>");
-
-  cert_buffer_size = i2d_X509(peer, NULL);
-  if (cert_buffer_size > 0)
-    {
-      cert_buffer = apr_pcalloc(pool, cert_buffer_size);
-      cert_buffer_pointer = cert_buffer;
-      
-      /* cert_buffer_pointer is automatically incrementeded. */
-      i2d_X509(peer, &cert_buffer_pointer);
-
-      ascii_cert = svn_base64_from_buffer(cert_buffer, cert_buffer_size, pool);
-      cert_info->ascii_cert = apr_pstrdup(pool, ascii_cert->data);
-    }
-
-  /* Read the certificate validity dates, but keep the output format 
-   * same as in Neon. */
-  if (asn1time_to_string(X509_get_notBefore(peer), buffer, CERT_BUFFER_SIZE))
-    cert_info->valid_from = apr_pstrdup(pool, buffer);
-  else
-    cert_info->valid_from = apr_pstrdup(pool, "[invalid date]");
-
-  if (asn1time_to_string(X509_get_notAfter(peer), buffer, CERT_BUFFER_SIZE))
-    cert_info->valid_until = apr_pstrdup(pool, buffer);
-  else
-    cert_info->valid_until = apr_pstrdup(pool, "[invalid date]");
-
-  /* Now we start checking the certificate. Similarly as done in Neon.*/
-  if (X509_cmp_current_time(X509_get_notBefore(peer)) >= 0)
-    *cert_failures |= SVN_AUTH_SSL_NOTYETVALID;
-  else if (X509_cmp_current_time(X509_get_notAfter(peer)) <= 0)
-    *cert_failures |= SVN_AUTH_SSL_EXPIRED;
-
-  /* Only the last verification failure will be returned from 
-   * SSL_get_verify_result, even thugh there may be several errors. */
-  verify_result = SSL_get_verify_result(sess->conn->ssl);
-  switch (verify_result) 
-    {
-      case X509_V_OK:
-      case X509_V_ERR_CERT_NOT_YET_VALID:
-      case X509_V_ERR_CERT_HAS_EXPIRED:
-        break;
-      case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
-      case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
-      case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
-        *cert_failures |= SVN_AUTH_SSL_UNKNOWNCA;
-        break;
-      default:
-        *cert_failures |= SVN_AUTH_SSL_OTHER;
-    }
-   
-  if (!verify_hostname(sess, pool, cert_info))
-    *cert_failures |= SVN_AUTH_SSL_CNMISMATCH;
-
-  return SVN_NO_ERROR;
-}
-
 /* Authenticate the server certificate. */
 static svn_error_t *do_ssl_auth(ra_svn_session_baton_t *sess, 
+                                ssl_conn_t *ssl_conn,
                                 apr_pool_t *pool)
 {
   svn_auth_iterstate_t *state;
@@ -505,7 +283,9 @@ static svn_error_t *do_ssl_auth(ra_svn_session_baton_t *sess,
   svn_auth_ssl_server_cert_info_t *cert_info = 
     apr_palloc(pool, sizeof(*cert_info));
 
-  SVN_ERR(fill_server_cert_info(sess, pool, cert_info, cert_failures));
+  SVN_ERR(svn_ra_svn__fill_server_cert_info(ssl_conn, pool, 
+                                            sess->hostname,
+                                            cert_info, cert_failures));
 
   svn_auth_set_parameter(sess->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
@@ -817,49 +597,8 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
 
   /* Guard against dotfile output to stdout on the server. */
   *conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
-  (*conn)->proc = proc;
   SVN_ERR(svn_ra_svn_skip_leading_garbage(*conn, pool));
   return SVN_NO_ERROR;
-}
-
-/* Initializes the SSL context to be used by the client. */ 
-static svn_error_t *init_ssl_ctx(ra_svn_session_baton_t *sess, 
-                                 apr_hash_t *config, 
-                                 apr_pool_t *pool)
-{
-  /* List of ciphers that we allow for SSL connections. */
-  const char *cipher_list = "ALL:!LOW";
-
-  SSL_load_error_strings();
-  SSL_library_init();
-
-  /* TODO :  Seed the randum number generator (RNG)
-   * for those operating systems that does not have /dev/urandom.
-   */
-
-  sess->ssl_ctx = SSL_CTX_new(SSLv23_client_method());
-  if (sess->ssl_ctx == NULL)
-    return svn_error_create(SVN_ERR_RA_SVN_SSL_INIT, NULL,
-                            _("No SSL context created"));
-  
-  if (SSL_CTX_set_cipher_list(sess->ssl_ctx, cipher_list) != 1)
-    return svn_error_create(SVN_ERR_RA_SVN_SSL_INIT, NULL,
-                            _("Could not set cipher list for SSL"));
-
-  return SVN_NO_ERROR;
-}
-
-/* Frees the allocated SSL context.
- * Assumes that this is called after freeing of SSL
- * allocated by svn_ra_svn_create_conn. */
-static apr_status_t destroy_ssl_ctx(void *data)
-{
-  ra_svn_session_baton_t *sess = data;
-
-  if (sess->ssl_ctx != NULL)
-    SSL_CTX_free(sess->ssl_ctx);
-
-  return APR_SUCCESS;
 }
 
 static svn_error_t *ra_svn_open(void **baton, const char *url,
@@ -909,7 +648,6 @@ static svn_error_t *ra_svn_open(void **baton, const char *url,
   sess->user = user;
   sess->hostname = hostname;
   sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", hostname, port);
-  sess->ssl_ctx = NULL;
 
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
@@ -938,6 +676,9 @@ static svn_error_t *ra_svn_open(void **baton, const char *url,
       /* Setup the SSL if it's supported by the server. */
       if (svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_SSL))
         {
+          void *ssl_ctx;
+          ssl_conn_t *ssl_conn;
+
           if (tunnel) 
             return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                                     _("SSL is not implemented for tunnel"));
@@ -945,16 +686,11 @@ static svn_error_t *ra_svn_open(void **baton, const char *url,
           /* Flush write buffer before initiating SSL handshake. */
           svn_ra_svn_flush(sess->conn, pool);
 
-          /* Needs to cleanup SSL_CTX at destruction of the session.
-           * Note that SSL must be released before SSL_CTX. We cleanup
-           * SSL by registering a cleanup function in svn_ra_svn_ssl_init. */
-          apr_pool_cleanup_register(pool, sess, destroy_ssl_ctx, 
-                                    apr_pool_cleanup_null);
-
-          SVN_ERR(init_ssl_ctx(sess, config, pool));
-          SVN_ERR(svn_ra_svn_ssl_init(sess->conn, pool, sess->ssl_ctx));
-          SVN_ERR(svn_ra_svn_ssl_connect(sess->conn, pool));
-          SVN_ERR(do_ssl_auth(sess, pool));
+          SVN_ERR(svn_ra_svn__init_ssl_ctx(&ssl_ctx, pool));
+          SVN_ERR(svn_ra_svn__setup_ssl_conn(sess->conn, ssl_ctx,
+                                             &ssl_conn, pool));
+          SVN_ERR(svn_ra_svn__ssl_connect(ssl_conn, pool));
+          SVN_ERR(do_ssl_auth(sess, ssl_conn, pool));
         }
 
       SVN_ERR(handle_auth_request(sess, pool));
