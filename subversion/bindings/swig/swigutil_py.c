@@ -24,7 +24,6 @@
 
 #include "svn_string.h"
 #include "svn_delta.h"
-#include "svn_repos.h"
 
 #include "swigutil_py.h"
 
