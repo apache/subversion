@@ -32,3 +32,10 @@ Candidate changes:
       to put in 1.1.0 at this stage.
     Votes:
       +1: lundblad
+
+  * r11137
+    Fix the verbose log code for revisions with no changed paths.
+    Justification:
+      Shallow silly bug.
+    Votes:
+      +1: bliss
