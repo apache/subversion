@@ -134,6 +134,26 @@ svn_client_get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                        apr_pool_t *pool);
 
 
+/** Fetch an authentication provider which prompts the user for a
+ * username.
+ *
+ * Set @a *provider and @a *provider_baton to an authentication
+ * provider of type @c svn_auth_cred_username_t that gets information by
+ * prompting the user with @a prompt_func and @a prompt_baton.  If
+ * @c SVN_AUTH_PARAM_DEFAULT_USERNAME is defined as a runtime parameter
+ * in the @c auth_baton, then return the default argument when @c
+ * svn_auth_first_credentials is called.  If @c
+ * svn_auth_first_credentials fails, then re-prompt @a retry_limit
+ * number of times (via @c svn_auth_next_credentials). */
+void 
+svn_client_get_username_prompt_provider (const svn_auth_provider_t **provider,
+                                         void **provider_baton,
+                                         svn_client_prompt_t prompt_func,
+                                         void *prompt_baton,
+                                         int retry_limit,
+                                         apr_pool_t *pool);
+
+
 /** This is a structure which stores a filename and a hash of property
  * names and values.
  */
