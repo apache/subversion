@@ -640,7 +640,7 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
      for NULL batons. */
   if (! *adm_access)
     return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
-                              _("Working copy '%s' not locked"),
+                              _("Working copy '%s' is missing or not locked"),
                               svn_path_local_style (path, pool));
 
   return SVN_NO_ERROR;
