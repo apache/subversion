@@ -104,6 +104,10 @@ Karl fs todo:
 
 Ben and Karl (longer term):
 
+   - revision numbers in URLs?  Why are we depending on the implied
+     `HEAD'??  Ben points out that this solves the "Where does the
+     repos begin problem" too. :-)
+
    - xml dtd, for both xml deltas and wc formats
 
    - for milestone 3: TREE DELTAS.  Quake before them.  This problem

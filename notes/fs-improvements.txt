@@ -1,4 +1,4 @@
-Last updated: $Date: 2001-05-04 10:22:33 $
+Last updated: $Date: 2001-06-05 14:52:21 $
 
 [Note: much of this was thought up by Jim Blandy, or developed in
 conversation with him.  Please review, folks; I'm planning to start on
@@ -62,7 +62,7 @@ Before we go on, here's some background from `structure':
    ! If the header's KIND is "dir", then the node-revision skel
    ! represents a directory, and has the form:
    ! 
-   !     (HEADER PROPLIST (ENTRY ...))
+   !     (HEADER (ENTRY ...))
 
 Great, thank you `structure'.  Take it away, Eric the Orchestra
 Leader...
