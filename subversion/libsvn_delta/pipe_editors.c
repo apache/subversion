@@ -263,7 +263,7 @@ change_dir_prop (void *dir_baton,
 /*** Public interfaces. ***/
 
 void
-svn_delta_default_pipe_editor (const svn_delta_edit_fns_t **new_editor,
+svn_delta_default_pipe_editor (svn_delta_edit_fns_t **new_editor,
                                struct svn_pipe_edit_baton **new_edit_baton,
                                const svn_delta_edit_fns_t *editor_to_wrap,
                                void *edit_baton_to_wrap,

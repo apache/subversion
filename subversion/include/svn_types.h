@@ -155,6 +155,21 @@ enum svn_recurse_kind
 */
 #define SVN_PROP_ENTRY_PREFIX  SVN_PROP_PREFIX "entry:"
 
+/* Define specific entry-property names.  Normally, entry fields
+   are defined in svn_wc.h.  But the RA layers need to generate these
+   so-called 'properties', and we can't have RA depending on WC.  */
+#define SVN_ENTRY_ATTR_COMMITTED_REV      "committed-rev"
+#define SVN_ENTRY_ATTR_COMMITTED_DATE     "committed-date"
+#define SVN_ENTRY_ATTR_LAST_AUTHOR        "last-author"
+
+#define SVN_PROP_ENTRY_COMMITTED_REV     SVN_PROP_ENTRY_PREFIX \
+                                         SVN_ENTRY_ATTR_COMMITTED_REV
+#define SVN_PROP_ENTRY_COMMITTED_DATE    SVN_PROP_ENTRY_PREFIX \
+                                         SVN_ENTRY_ATTR_COMMITTED_DATE
+#define SVN_PROP_ENTRY_LAST_AUTHOR       SVN_PROP_ENTRY_PREFIX \
+                                         SVN_ENTRY_ATTR_LAST_AUTHOR
+
+
 
 /* When custom, user-defined properties are passed over the wire, they will
    have this prefix added to their name */

@@ -74,11 +74,6 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  struct svn_wc_close_commit_baton *cbaton =
-    apr_pcalloc (subpool, sizeof (*cbaton));
-  cbaton->pool = subpool;
-  cbaton->prefix_path = svn_stringbuf_create ("", subpool);
-
   SVN_ERR (svn_wc_entries_read (&entries, dir_path, subpool));
 
   /* Loop over this directory's entries: */
@@ -117,8 +112,12 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
           && (current_entry->revision != revision)
           && (current_entry->schedule != svn_wc_schedule_add)
           && (current_entry->schedule != svn_wc_schedule_replace))
-        SVN_ERR (svn_wc_set_revision (cbaton, full_entry_path, FALSE,
-                                      revision));
+        SVN_ERR (svn_wc__entry_modify (dir_path, current_entry_name,
+                                       SVN_WC__ENTRY_MODIFY_REVISION,
+                                       revision,
+                                       svn_node_none, svn_wc_schedule_normal,
+                                       FALSE, FALSE, 0, 0, NULL, NULL,
+                                       subpool, NULL));
       
       /* If entry is a dir (and not `.', and not scheduled for
          addition), then recurse into it. */
@@ -137,13 +136,23 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
 
 
 
-/* This function is the "real" meat of svn_wc_set_revision; it assumes
-   that PATH is absolute.  */
+/* Process an absolute PATH that has just been successfully committed.
+   
+   Specifically, its working revision will be set to NEW_REVNUM;  if
+   REV_DATE and REV_AUTHOR are both non-NULL, then three entry values
+   will be set (overwritten):  'committed-rev', 'committed-date',
+   'last-author'. 
+
+   If RECURSE is true (assuming PATH is a directory), this post-commit
+   processing will happen recursively down from PATH. 
+*/
 static svn_error_t *
-set_revision (svn_stringbuf_t *path,
-              svn_boolean_t recurse,
-              svn_revnum_t new_revnum,
-              apr_pool_t *pool)
+process_committed (svn_stringbuf_t *path,
+                   svn_boolean_t recurse,
+                   svn_revnum_t new_revnum,
+                   svn_string_t *rev_date,
+                   svn_string_t *rev_author,
+                   apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
@@ -207,23 +216,45 @@ set_revision (svn_stringbuf_t *path,
                 NULL));
     }
 
+
+  logtag = svn_stringbuf_create ("", pool);
+
+  /* Append a log command to set (overwrite) the 'committed-rev',
+     'committed-date', and 'last-author' attributes in the entry.
+
+     Note: it's important that this log command come *before* the
+     LOG_COMMITTED command, because log_do_committed() might actually
+     remove the entry! */
+  if (rev_date && rev_author)
+    svn_xml_make_open_tag (&logtag, pool, svn_xml_self_closing,
+                           SVN_WC__LOG_MODIFY_ENTRY,
+                           SVN_WC__LOG_ATTR_NAME, basename,
+                           SVN_ENTRY_ATTR_COMMITTED_REV,
+                           svn_stringbuf_create (revstr, pool),
+                           SVN_ENTRY_ATTR_COMMITTED_DATE,
+                           svn_stringbuf_create_from_string (rev_date, pool),
+                           SVN_ENTRY_ATTR_LAST_AUTHOR,
+                           svn_stringbuf_create_from_string (rev_author, pool),
+                           NULL);
+
+
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
      timestamp.)  */
-  logtag = svn_stringbuf_create ("", pool);
   svn_xml_make_open_tag (&logtag, pool, svn_xml_self_closing,
                          SVN_WC__LOG_COMMITTED,
                          SVN_WC__LOG_ATTR_NAME, basename,
                          SVN_WC__LOG_ATTR_REVISION, 
                          svn_stringbuf_create (revstr, pool),
                          NULL);
-      
+
+
   apr_err = apr_file_write_full (log_fp, logtag->data, logtag->len, NULL);
   if (apr_err)
     {
       apr_file_close (log_fp);
       return svn_error_createf (apr_err, 0, NULL, pool,
-                                "svn_wc_set_revision: "
+                                "process_committed: "
                                 "error writing %s's log file", 
                                 path->data);
     }
@@ -268,11 +299,12 @@ set_revision (svn_stringbuf_t *path,
           
           /* Recurse, but only allow further recursion if the child is
              a directory.  */
-          SVN_ERR (set_revision (path, 
-                                 (current_entry->kind == svn_node_dir)
-                                    ? TRUE : FALSE,
-                                 new_revnum,
-                                 pool));
+          SVN_ERR (process_committed (path, 
+                                      (current_entry->kind == svn_node_dir)
+                                      ? TRUE : FALSE,
+                                      new_revnum,
+                                      rev_date, rev_author,
+                                      pool));
 
           /* De-telescope the path. */
           svn_path_remove_component (path, svn_path_local_style);
@@ -285,10 +317,12 @@ set_revision (svn_stringbuf_t *path,
 
 /* Public API for above */
 svn_error_t *
-svn_wc_set_revision (void *baton,
-                     svn_stringbuf_t *target,
-                     svn_boolean_t recurse,
-                     svn_revnum_t new_revnum)
+svn_wc_process_committed (void *baton,
+                          svn_stringbuf_t *target,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          svn_string_t *rev_date,
+                          svn_string_t *rev_author)
 {
   struct svn_wc_close_commit_baton *bumper =
     (struct svn_wc_close_commit_baton *) baton;
@@ -299,7 +333,8 @@ svn_wc_set_revision (void *baton,
   svn_path_add_component (path, target, svn_path_local_style);
 
   /* Call the real function. */
-  return set_revision (path, recurse, new_revnum, bumper->pool);
+  return process_committed (path, recurse, new_revnum,
+                            rev_date, rev_author, bumper->pool);
 }
 
 

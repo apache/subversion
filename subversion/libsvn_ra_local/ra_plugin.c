@@ -42,6 +42,8 @@ static svn_error_t *
 cleanup_commit (svn_revnum_t new_rev, void *baton)
 {
   apr_hash_index_t *hi;
+  svn_string_t *date;
+  svn_string_t *author;
 
   /* Recover our hook baton: */
   svn_ra_local__commit_closer_t *closer = 
@@ -49,6 +51,12 @@ cleanup_commit (svn_revnum_t new_rev, void *baton)
 
   if (! closer->close_func)
     return SVN_NO_ERROR;
+  
+  /* Get the fs revision properties attached to NEW_REV. */
+  SVN_ERR (svn_fs_revision_prop (&date, closer->fs, new_rev,
+                                 SVN_PROP_REVISION_DATE, closer->pool));
+  SVN_ERR (svn_fs_revision_prop (&author, closer->fs, new_rev,
+                                 SVN_PROP_REVISION_AUTHOR, closer->pool));
 
   for (hi = apr_hash_first (closer->pool, closer->committed_targets);
        hi;
@@ -69,7 +77,7 @@ cleanup_commit (svn_revnum_t new_rev, void *baton)
 
       SVN_ERR (closer->close_func (closer->close_baton, &path_str, 
                                    (r == svn_recursive) ? TRUE : FALSE,
-                                   new_rev));
+                                   new_rev, date, author));
     }
 
   return SVN_NO_ERROR;
@@ -226,6 +234,7 @@ get_commit_editor (void *session_baton,
   closer->close_func = close_func;
   closer->set_func = set_func;
   closer->close_baton = close_baton;
+  closer->fs = sess_baton->fs;
   closer->committed_targets = apr_hash_make (sess_baton->pool);
                                          
   /* Get the repos commit-editor */     
@@ -304,6 +313,8 @@ do_update (void *session_baton,
            const svn_delta_edit_fns_t *update_editor,
            void *update_baton)
 {
+  svn_delta_edit_fns_t *pipe_editor;
+  struct svn_pipe_edit_baton *pipe_edit_baton;
   svn_revnum_t revnum_to_update_to;
   svn_ra_local__session_baton_t *sbaton = session_baton;
   
@@ -311,6 +322,16 @@ do_update (void *session_baton,
     SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
   else
     revnum_to_update_to = update_revision;
+
+  /* Wrap UPDATE_EDITOR with a custom "pipe" editor that pushes extra
+     'entry' properties into the stream, whenever {open_root,
+     open_file, open_dir, add_file, add_dir} are called.  */
+  SVN_ERR (svn_ra_local__get_update_pipe_editor (&pipe_editor,
+                                                 &pipe_edit_baton,
+                                                 update_editor,
+                                                 update_baton,
+                                                 sbaton,
+                                                 sbaton->pool));
 
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
@@ -322,7 +343,7 @@ do_update (void *session_baton,
                                  sbaton->repos, sbaton->fs_path,
                                  update_target, TRUE,
                                  recurse,
-                                 update_editor, update_baton,
+                                 pipe_editor, pipe_edit_baton,
                                  sbaton->pool);
 }
 

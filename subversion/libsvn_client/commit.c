@@ -468,13 +468,13 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
           /* If we're supposed to bump revisions to REVISION, then
              fetch tracking editor and compose it.  Committed targets
              will be stored in committed_targets, and bumped by
-             svn_wc_set_revision().  */
+             svn_wc_process_committed().  */
           SVN_ERR (svn_delta_get_commit_track_editor (&track_editor,
                                                       &track_edit_baton,
                                                       pool,
                                                       committed_targets,
                                                       revision,
-                                                      svn_wc_set_revision,
+                                                      svn_wc_process_committed,
                                                       &ccb));
                                                       
           svn_delta_compose_editors (&editor, &edit_baton,
@@ -513,7 +513,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                              ra_callbacks, cb_baton, pool));
 
       
-      /* Fetch RA commit editor, giving it svn_wc_set_revision(). */
+      /* Fetch RA commit editor, giving it svn_wc_process_committed(). */
       SVN_ERR (ra_lib->get_commit_editor
                (session,
                 &editor, &edit_baton,
@@ -523,7 +523,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                 /* wc prop setting routine */
                 is_import ? NULL : svn_wc_set_wc_prop,
                 /* revision bumping routine */
-                is_import ? NULL : svn_wc_set_revision,
+                is_import ? NULL : svn_wc_process_committed,
                 /* baton for the three funcs */
                 &ccb));
     }

@@ -80,11 +80,42 @@ set_any_props (svn_fs_root_t *root,
                int is_dir,
                apr_pool_t *pool)
 {
-  apr_hash_t *props;
   apr_hash_index_t *hi;
+  svn_revnum_t committed_rev;
+  svn_string_t *last_author, *committed_date;
+  char *revision_str = NULL;
+  apr_hash_t *props = NULL;
 
+  /* Get all user properties attached to PATH. */
   SVN_ERR (svn_fs_node_proplist (&props, root, path->data, pool));
 
+  /* Query the fs for three 'entry' props:  specifically, the
+     last-changed-rev of the file or dir ("created rev"), and the
+     associated date & author of said revision.  Add these three props
+     to the proplist hash, as a means of getting them into the working
+     copy's 'entries' file.  The working copy Update Editor will
+     recognize them. */
+  if ((props == NULL) || (apr_hash_count (props) == 0))
+    props = apr_hash_make (pool);
+  
+  SVN_ERR (svn_repos_get_committed_info (&committed_rev,
+                                         &committed_date,
+                                         &last_author,
+                                         root, path, pool));
+    
+  revision_str = apr_psprintf (pool, "%ld", committed_rev);
+  apr_hash_set (props, SVN_PROP_ENTRY_COMMITTED_REV, 
+                strlen(SVN_PROP_ENTRY_COMMITTED_REV),
+                svn_stringbuf_create (revision_str, pool));
+    
+  apr_hash_set (props, SVN_PROP_ENTRY_COMMITTED_DATE, 
+                strlen(SVN_PROP_ENTRY_COMMITTED_DATE), committed_date);
+    
+  apr_hash_set (props, SVN_PROP_ENTRY_LAST_AUTHOR, 
+                strlen(SVN_PROP_ENTRY_LAST_AUTHOR), last_author);
+  
+  
+  /* Loop over properties, send them through the editor. */
   for (hi = apr_hash_first (pool, props); hi; hi = apr_hash_next (hi))
     {
       const void *key;

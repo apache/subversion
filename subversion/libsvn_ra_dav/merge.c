@@ -174,12 +174,14 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
   path_str = svn_stringbuf_create (path, mc->pool);
   vsn_url_str = svn_stringbuf_create (vsn_url, mc->pool);
  
-      /* store the version URL */
+  /* store the version URL */
   SVN_ERR( (*mc->set_prop)(mc->close_baton, path_str,
                            mc->vsn_url_name, vsn_url_str) );
       
   /* bump the revision and commit the file */
-  return (*mc->close_commit)(mc->close_baton, path_str, FALSE, mc->rev);
+  /* ### todo:  send real values for the date & author! */
+  return (*mc->close_commit)(mc->close_baton, path_str, FALSE,
+                             mc->rev, NULL, NULL);
 }
 
 static svn_error_t * handle_resource(merge_ctx_t *mc)
@@ -602,8 +604,11 @@ svn_error_t * svn_ra_dav__merge_activity(
       svn_stringbuf_set(path_str,
                      APR_ARRAY_IDX(deleted_entries, i, const char *));
 
+      /* ### todo:  send real values of date & author below. or, is
+         this necessary, given that things are being deleted? */
       if (close_commit)
-        SVN_ERR( (*close_commit)(close_baton, path_str, FALSE, mc.rev) );
+        SVN_ERR( (*close_commit)(close_baton, path_str, FALSE,
+                                 mc.rev, NULL, NULL) );
     }
 
   return NULL;
