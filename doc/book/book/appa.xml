@@ -5,7 +5,7 @@
 
     <para>This appendix is a guide for CVS users new to Subversion.
       It's essentially a list of differences between the two systems
-      as <quote>viewed from 10,000 feet.</quote> For each section, we
+      as <quote>viewed from 10,000 feet</quote>. For each section, we
       provide backreferences to relevant chapters when
       possible.</para>
 
@@ -33,14 +33,14 @@
       filesystem.  Each commit results in an entirely new filesystem
       tree; in essence, the repository is an array of trees.  Each of
       these trees is labeled with a single revision number.  When
-      someone talks about <quote>revision 54,</quote> they're talking
+      someone talks about <quote>revision 54</quote>, they're talking
       about a particular tree (and indirectly, the way the filesystem
       looked after the 54th commit).</para>
 
     <para>Technically, it's not valid to talk about <quote>revision 5
       of <filename>foo.c</filename></quote>.  Instead, one would say
       <quote><filename>foo.c</filename> as it appears in revision
-      5.</quote> Also, be careful when making assumptions about the
+      5</quote>. Also, be careful when making assumptions about the
       evolution of a file.  In CVS, revisions 5 and 6 of
       <filename>foo.c</filename> are always different.  In Subversion,
       it's most likely that <filename>foo.c</filename> did
@@ -151,7 +151,7 @@
       <varlistentry>
         <term><command>svn status</command></term>
         <listitem>
-          <para>Shows you any local changes you've made. (see <xref
+          <para>Shows you any local changes you've made (see <xref
               linkend="svn-ch-3-sect-4.3.1"/>)</para>
         </listitem>
       </varlistentry>
@@ -159,7 +159,7 @@
       <varlistentry>
         <term><command>svn diff</command></term>
         <listitem>
-          <para>Shows you the details of your changes. (see <xref
+          <para>Shows you the details of your changes (see <xref
               linkend="svn-ch-3-sect-4.3.2"/>)</para>
         </listitem>
       </varlistentry>
@@ -167,7 +167,7 @@
       <varlistentry>
         <term><command>svn revert</command></term>
         <listitem>
-          <para>Removes your local changes. (see <xref
+          <para>Removes your local changes (see <xref
               linkend="svn-ch-3-sect-4.3.3"/>)</para>
         </listitem>
       </varlistentry>
@@ -398,7 +398,7 @@ X    Resource is external to this working copy (comes from another
       performs any kind of keyword or line-ending translation unless
       you explicitly ask it do so (see <xref
       linkend="svn-ch-6-sect-2.3.4"/> and <xref
-      linkend="svn-ch-6-sect-2.3.5"/> for more details.)  By default,
+      linkend="svn-ch-6-sect-2.3.5"/> for more details).  By default,
       Subversion treats all file data as literal byte strings, and
       files are always stored in the repository in an untranslated
       state.</para>
@@ -406,7 +406,7 @@ X    Resource is external to this working copy (comes from another
     <para>Second, Subversion maintains an internal notion of whether a
       file is <quote>text</quote> or <quote>binary</quote> data, but
       this notion is <emphasis>only</emphasis> extant in the working
-      copy.  During a <command>svn update</command>, Subversion will
+      copy.  During an <command>svn update</command>, Subversion will
       perform contextual merges on locally modified text files, but
       will not attempt to do so for binary files.</para>
 

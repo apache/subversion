@@ -79,7 +79,7 @@
         <listitem>
           <para>I just built the distribution binary, and when I try
             to check out Subversion, I get an error about an
-            <quote>Unrecognized URL scheme.</quote></para>
+            <quote>Unrecognized URL scheme</quote>.</para>
         </listitem>
 
         <listitem>
@@ -146,7 +146,7 @@ $ svnadmin recover /path/to/repos
             action, then one or more lockfiles are left behind, along
             with logfiles describing then unfinished
             actions. (<command>svn status</command> will show an
-            <literal>L</literal> next to locked directories).</para>
+            <literal>L</literal> next to locked directories.)</para>
 
           <para>Any other process that attempts to access the working
             copy will fail when it sees the locks. To awaken your

@@ -1830,7 +1830,7 @@ close LASTDUMPED;
         class="url">http://httpd.apache.org</systemitem>.  For
         example, a general reference for the configuration directives
         is located at <systemitem
-        class="url">http://httpd.apache.org/docs-2.0/mod/directives.html</systemitem>.)</para>
+        class="url">http://httpd.apache.org/docs-2.0/mod/directives.html</systemitem>.</para>
               
       <para>Also, as you make changes to your Apache setup, it is
         likely that somewhere along the way a mistake will be made.
