@@ -76,7 +76,7 @@ Committed revision 1.
     </screen>
 
     <para>The example above creates a new directory tree
-      <filename>trunk/myproj</filename> in the root of the repository's
+      <filename>trunk/someproject</filename> in the root of the repository's
       filesystem, and copies all the data from
       <filename>someproject</filename> into it.</para>
 
@@ -89,7 +89,7 @@ Committed revision 1.
         URL allows us to name the working copy we check out.</para>
 
       <screen>
-$ svn co file:///absolute/path/to/myrepos/trunk/someproject wc
+$ svn checkout file:///absolute/path/to/myrepos/trunk/someproject wc
 A  wc/foo
 A  wc/bar
 A  wc/baz
@@ -117,7 +117,7 @@ $ cp -R wc wc2
 $ cd wc
 $ echo "new text" &gt;&gt; bar     # change bar's text
 $ svn propset color green foo      # add a metadata property to foo
-$ svn rm baz                       # schedule baz directory for deletion
+$ svn delete baz                   # schedule baz directory for deletion
 $ touch newfile    
 $ svn add newfile                  # schedule newfile for addition
 </screen>
