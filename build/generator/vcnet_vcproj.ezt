@@ -51,7 +51,8 @@
 [end]				AdditionalLibraryDirectories="..\..\..\db4-win32\lib;[for configs.libdirs][configs.libdirs];[end]"
 				TargetMachine="1"
 				IgnoreDefaultLibraryNames="libc.lib"
-				GenerateDebugInformation="TRUE"
+[if-any def_file]				ModuleDefinitionFile="[def_file]"
+[end]				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(OutDir)\$(TargetName).pdb"[is configs.name "Debug"]
 				OptimizeReferences="0"[else]
 				OptimizeReferences="2"

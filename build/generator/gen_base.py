@@ -443,6 +443,7 @@ class TargetLib(TargetLinked):
 
     self.msvc_static = options.get('msvc-static') == 'yes' # is a static lib
     self.msvc_fake = options.get('msvc-fake') == 'yes' # has fake target
+    self.msvc_export = string.split(options.get('msvc-export', ''))
 
 class TargetApacheMod(TargetLib):
 
