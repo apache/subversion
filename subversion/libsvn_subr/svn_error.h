@@ -65,12 +65,14 @@
    Theoretically, this is the header file where we can define our own
    *custom* Subversion errno's, specifically between the ranges of
    APR_OS_START_USEERR and APR_OS_START_SYSERR (see apr_errno.h)
+
+   These values represent the "kind" of error structure that one might
+   receive from a Subversion routine.
 */
 
-#define SVN_ERR_NOT_AUTHORIZED                   (APR_OS_START_USEERR + 1)
-#define SVN_ERR_UNRECOGNIZED_SECTION             (APR_OS_START_USEERR + 2)
-#define SVN_ERR_MALFORMED_LINE                   (APR_OS_START_USEERR + 3)
-#define SVN_ERR_PLUGIN_LOAD_FAILURE              (APR_OS_START_USEERR + 4)
+#define SVN_WARNING                              (APR_OS_START_USEERR + 1)
+#define SVN_ERR_NOT_AUTHORIZED                   (APR_OS_START_USEERR + 2)
+#define SVN_ERR_PLUGIN_LOAD_FAILURE              (APR_OS_START_USEERR + 3)
 
 
 typedef struct svn_error

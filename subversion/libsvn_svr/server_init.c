@@ -139,6 +139,7 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
   void *key, *val;
   size_t keylen;
   svn_error_t *err, *latesterr;
+
   err = latesterr = NULL;
   
   /* Initialize the APR DSO mechanism*/
@@ -235,6 +236,8 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
 {
   ap_hash_t *configdata;
   svn_error_t *err;
+  svn_error_t *warning = NULL;
+  svn_error_t *latest_warning = NULL;
 
   /* Parse the file, get a hash-of-hashes back */
   err = svn_parse (&configdata, filename, policy->pool);
@@ -302,22 +305,27 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
 
         else
           {
-            svn_string_t *msg = 
-              svn_string_create 
-              ("svn_svr_load_policy(): warning: ignoring unknown section: ", 
-                                 pool);
-            svn_string_appendstr (msg, (svn_string_t *) key, pool);
-            svn_handle_error (svn_create_error 
-                              (SVN_ERR_UNRECOGNIZED_SECTION, NULL,
-                               svn_string_2cstring (msg, pool),
-                               NULL, pool), stderr);            
+            char *finalmsg = 
+              ap_psprintf 
+              (pool, 
+               "svn_parse(): warning: ignoring unknown section: %s",
+               svn_string_2cstring ((svn_string_t *) key, pool));
+            
+            /* Batch up a new warning */
+            warning = 
+              svn_create_error (SVN_WARNING, NULL, finalmsg, NULL, pool);
+            warning->child = latest_warning; /* wrap the batch */
+            latest_warning = warning;  /* new top of batch */
           }
       }    /* for (hash_index...)  */
        
   } /* closing of Uberhash walk-through */
   
 
-  return SVN_SUCCESS;
+  if (latest_warning)
+    return latest_warning;
+  else
+    return SVN_SUCCESS;
 }
 
 
