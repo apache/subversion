@@ -28,6 +28,9 @@ Karl working copy todo:
    - check apr_open calls, do they assume failure implies null handle?
    - fix working copy identification/allergy code
    - make sure type-changing replacements work right
+   - turn log.c:start_handler() into a dispatcher, like Ben described
+   - do the generic entry/adm-path grabber abstraction, as talked
+     about with Ben, change everyone around to use it (chore, whoa).
 
 Ben and Karl more later:
    - xml dtd, for both xml deltas and wc formats
