@@ -38,7 +38,7 @@ auth_file_path (const char *cred_kind,
   unsigned char digest[MD5_DIGESTSIZE];
       
   /* Construct the path to the directory containing the creds files,
-     e.g. "~/.subversion/auth/svn:simple".  The last component is
+     e.g. "~/.subversion/auth/svn.simple".  The last component is
      simply the cred_kind.  */
   svn_config__user_config_path (&authdir_path,
                                 SVN_CONFIG__AUTH_SUBDIR, pool);
