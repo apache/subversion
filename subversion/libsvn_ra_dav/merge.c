@@ -210,15 +210,6 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
     int printed;
 
     printed = apr_snprintf(revnum_str, 1024, "%" SVN_REVNUM_T_FMT, mc->rev);
-    if (printed == -1)
-      {
-        /* Something's very wrong here; snprintf claims there was not
-           enough room.  Let's see how svn_error_createf handles it :-). */
-        return svn_error_createf
-          (SVN_ERR_BAD_REVISION, 0, NULL, mc->pool,
-           "bump_resource: unable to format revision %" SVN_REVNUM_T_FMT,
-           mc->rev);
-      }
 
     valid_rev_str.data = (const char *)revnum_str;
     valid_rev_str.len = printed;
