@@ -83,7 +83,7 @@ AC_DEFUN(SVN_FIND_JDK,
     else
       JDK=none
       JDK_SUITABLE=no
-      AC_MSG_ERROR([JDK 1.4 is required. Try --with-jdk.])
+      AC_MSG_ERROR([JDK 1.2 is required. Try --with-jdk.])
     fi
   else
     JDK=$where
@@ -91,7 +91,7 @@ AC_DEFUN(SVN_FIND_JDK,
       JDK_SUITABLE=yes
     else
       AC_MSG_WARN([no JNI header files found.])
-      AC_MSG_ERROR([JDK 1.4 is required. Try --with-jdk.])
+      AC_MSG_ERROR([JDK 1.2 is required. Try --with-jdk.])
     fi
   fi
     if test "$JDK" != "none" -a "$JDK_SUITABLE" = "yes"; then

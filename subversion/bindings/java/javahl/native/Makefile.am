@@ -9,9 +9,10 @@ BUILT_SOURCES = org_tigris_subversion_javahl_SVNClient.h \
 		org_tigris_subversion_javahl_NodeKind.h \
 		org_tigris_subversion_javahl_Notify_Action.h \
 		org_tigris_subversion_javahl_Notify_Status.h \
+		org_tigris_subversion_javahl_PromptUserPassword2.h \
 		org_tigris_subversion_javahl_Revision.h \
 		org_tigris_subversion_javahl_Revision_Kind.h \
-		org_tigris_subversion_javahl_Status_Kind.h
+		org_tigris_subversion_javahl_Status_Kind.h 
 
 EXTRA_DIST = svnjavahl.dsw svnjavahl.dsp 
 
@@ -32,6 +33,9 @@ org_tigris_subversion_javahl_NodeKind.h: $(JNI_CLS_DIR)/NodeKind.class
 
 org_tigris_subversion_javahl_Notify_Action.h: $(JNI_CLS_DIR)/Notify$$Action.class 
 	$(JAVAH) $(JNI_PACKAGE).Notify\$$Action
+
+org_tigris_subversion_javahl_PromptUserPassword2.h: $(JNI_CLS_DIR)/PromptUserPassword2.class 
+	$(JAVAH) $(JNI_PACKAGE).PromptUserPassword2
 
 org_tigris_subversion_javahl_Notify_Status.h: $(JNI_CLS_DIR)/Notify$$Status.class 
 	$(JAVAH) $(JNI_PACKAGE).Notify\$$Status
