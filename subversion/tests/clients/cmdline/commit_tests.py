@@ -1079,7 +1079,7 @@ def commit_uri_unsafe(sbox):
               nasty_path, # not xml-safe
               ]
   for item in add_list:
-    svntest.main.run_svn(None, 'add', item)
+    svntest.main.run_svn(None, 'add', '--non-recursive', item)
 
   expected_output = svntest.wc.State(wc_dir, {
     '#hash#' : Item(verb='Adding'),

@@ -948,7 +948,7 @@ def update_receive_illegal_name(sbox):
                              'A', 'D', 'G', '.svn')
   outlines, errlines = svntest.main.run_svn(None, 'mkdir', '-m', 'log msg',
                                             illegal_url)
-  out, err = svntest.main.run_svn(None, 'up', wc_dir)
+  out, err = svntest.main.run_svn(1, 'up', wc_dir)
 
   if err:
     return 0
