@@ -22,9 +22,9 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   dnl    `required' --- the user specified that they did want to use
   dnl        Berkeley DB, so abort the configuration if we cannot find it.
   dnl    `try-link' --- See if APR-UTIL supplies the correct DB version;
-  dnl        if it doesn't, just do not build the server code.
+  dnl        if it doesn't, just do not build the bdb based filesystem.
   dnl    `skip' --- Do not look for Berkeley DB, and do not build the
-  dnl        server code.
+  dnl        bdb based filesystem.
   dnl
   dnl  Finding it is defined as doing a runtime check against the db
   dnl  that is supplied by APR-UTIL.
@@ -50,12 +50,12 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
                           search for Berkeley DB in a number of standard
                           places.
 
-                          The Subversion server requires Berkeley DB
-                          $db_version or newer.  If you specify
-                          `--without-berkeley-db', the server will not be
-                          built.  Otherwise, the configure script builds the
-                          server if and only if APR-UTIL is linked against
-                          a new enough version of Berkeley DB.],
+                          The Subversion Berkeley DB based filesystem library 
+                          requires Berkeley DB $db_version or newer.  If you
+                          specify `--without-berkeley-db', that library will
+                          not be built.  Otherwise, the configure script builds
+                          that library if and only if APR-UTIL is linked
+                          against a new enough version of Berkeley DB.],
   [
     if test "$withval" = "no"; then
       status=skip
