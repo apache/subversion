@@ -141,23 +141,29 @@ svn_client_status (apr_hash_t **statushash,
                    svn_client_auth_baton_t *auth_baton,
                    svn_boolean_t descend,
                    svn_boolean_t get_all,
+                   svn_boolean_t update,
                    apr_pool_t *pool)
 {
   apr_hash_t *hash = apr_hash_make (pool);
 
-  /* Ask the wc to give us a list of svn_wc_status_t structures. 
-     These structures will contain -local mods- only.  (If GET_ALL is
-     set, then every single entry will be returned.) */
-  SVN_ERR (svn_wc_statuses (hash, path, descend, get_all, pool));
-  
-  /* ### Right here is where we might parse an incoming switch about
-     whether to contact the network or not.  :-) */
+  /* Ask the wc to give us a list of svn_wc_status_t structures.
+     These structures contain nothing but information found in the
+     working copy.
 
-  /* Contact the repository, add -update info- to our structures.  
-     (The GET_ALL flag is irrelevant here, because this function only
-     augments an existing hash with items that need to be updated.) */
-  SVN_ERR (add_update_info_to_status_hash (hash, path,
-                                           auth_baton, descend, pool));
+     Pass the GET_ALL and DESCEND flags;  this working copy function
+     understands these flags too, and will return the correct set of
+     structures.  */
+  SVN_ERR (svn_wc_statuses (hash, path, descend, get_all, pool));
+
+
+  /* If the caller wants us to contact the repository also... */
+  if (update)    
+    /* Add "dry-run" update information to our existing structures.
+       (Pass the DESCEND flag here, since we may want to ignore update
+       info that is below PATH.)  */
+    SVN_ERR (add_update_info_to_status_hash (hash, path,
+                                             auth_baton, descend, pool));
+
 
   *statushash = hash;
 

@@ -101,48 +101,78 @@ generate_status_codes (char *str_status,
            locked ? 'L' : ' ');
 }
 
-void
-svn_cl__print_status (svn_stringbuf_t *path, svn_wc_status_t *status)
+
+/* Print a single status structure in the short format */
+static void 
+print_short_format (const char *path,
+                    svn_wc_status_t *status)
 {
-  svn_revnum_t entry_rev;
   char str_status[4];
 
-  /* Create either a one or two character status code */
+  if (! status)
+    return;
+
+  /* Create local-mod status code block. */
   generate_status_codes (str_status,
                          status->text_status,
                          status->prop_status,
                          status->entry->prop_time,
                          status->locked);
-  
-  /* Grab the entry revision once, safely. */
-  if (status->entry)
-    entry_rev = status->entry->revision;
-  else
-    entry_rev = SVN_INVALID_REVNUM;
 
-  /* Use it. */
-  if ((entry_rev == SVN_INVALID_REVNUM)
-      && (status->repos_rev == SVN_INVALID_REVNUM))
-    printf ("%s   ?       (  ?   )   %s\n",
-            str_status, path->data);
-  else if (entry_rev == SVN_INVALID_REVNUM)
-    printf ("%s   ?       (%6ld)   %s\n",
-            str_status, status->repos_rev, path->data);
-  else if (status->repos_rev == SVN_INVALID_REVNUM)
-    printf ("%s  %-6ld  (  ?   )  %s\n",
-            str_status, entry_rev, path->data);
-  else
-    printf ("%s  %-6ld  (%6ld)  %s\n",
-            str_status, entry_rev, status->repos_rev, path->data);
+  printf ("%s   %s\n", str_status, path);
 }
 
 
+/* Print a single status structure in the short format */
+static void 
+print_long_format (const char *path,
+                   svn_wc_status_t *status)
+{
+  char str_status[4];
+  char update_char;
+  svn_revnum_t local_rev;
+
+  if (! status)
+    return;
+
+  /* Create local-mod status code block. */
+  generate_status_codes (str_status,
+                         status->text_status,
+                         status->prop_status,
+                         status->entry->prop_time,
+                         status->locked);
+
+  /* Create update indicator. */
+  if ((status->repos_text_status != svn_wc_status_none)
+      || (status->repos_prop_status != svn_wc_status_none))
+    update_char = '*';
+  else
+    update_char = ' ';
+
+  /* Get local revision number */
+  if (status->entry)
+    local_rev = status->entry->revision;
+  else
+    local_rev = SVN_INVALID_REVNUM;
+
+  /* Print */
+  if (local_rev == SVN_INVALID_REVNUM)
+    printf ("%s    %c      ?       %s\n", str_status, update_char, path);
+  else
+    printf ("%s    %c    %6ld    %s\n", str_status, update_char,
+            local_rev, path);
+}
+
+
+/* Called by status-cmd.c */
 void
 svn_cl__print_status_list (apr_hash_t *statushash, 
+                           svn_boolean_t detailed,
                            apr_pool_t *pool)
 {
   int i;
   apr_array_header_t *statusarray;
+  svn_wc_status_t *status = NULL;
 
   /* Convert the unordered hash to an ordered, sorted array */
   statusarray = apr_hash_sorted_keys (statushash,
@@ -154,14 +184,26 @@ svn_cl__print_status_list (apr_hash_t *statushash,
     {
       svn_item_t *item;
       const char *path;
-      svn_wc_status_t *status;
       
       item = (((svn_item_t **)(statusarray)->elts)[i]);
       path = item->key;
       status = item->data;
 
-      svn_cl__print_status (svn_stringbuf_create (path, pool), status);
+      if (detailed)
+        print_long_format (path, status);
+      else
+        print_short_format (path, status);
     }
+
+  /* Addendum:  if we printed in detailed format, we *might* have a
+     head revision to print as well. */
+  if (detailed)
+    {
+      /* look at the last structure we printed */
+      if (status && (status->repos_rev != SVN_INVALID_REVNUM))
+        printf ("Head revision: %6ld\n", status->repos_rev);
+    }
+
 }
 
 

@@ -71,6 +71,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t quiet;
   svn_boolean_t version;
   svn_boolean_t verbose;
+  svn_boolean_t update;
   svn_boolean_t modified;
   apr_array_header_t *args;
   /* TODO fixme. This still doesn't handle binary data from a file! */
@@ -183,12 +184,11 @@ svn_cl__subcommand_help (const char *subcommand,
 
 /*** Command-line output functions -- printing to the user. ***/
 
-/* Print PATH's status line using STATUS. */
-void svn_cl__print_status (svn_stringbuf_t *path, svn_wc_status_t *status);
-
-/* Print a hash that maps names to status-structs to stdout for human
-   consumption. */
-void svn_cl__print_status_list (apr_hash_t *statushash, 
+/* Print a hash that maps (char *) names to (svn_wc_status_t *)
+   structs to stdout for human consumption.  Prints in abbreviated
+   format by default, or DETAILED format if flag is set.  */
+void svn_cl__print_status_list (apr_hash_t *statushash,
+                                svn_boolean_t detailed,
                                 apr_pool_t *pool);
 
 /* Print a hash that maps property names (char *) to property values

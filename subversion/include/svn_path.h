@@ -82,6 +82,12 @@ svn_stringbuf_t *svn_path_last_component (const svn_stringbuf_t *path,
                                        enum svn_path_style style,
                                        apr_pool_t *pool);
 
+
+/* Return TRUE iff PATH is a single component. */
+svn_boolean_t
+svn_path_is_single_path_component (svn_stringbuf_t *path,
+                                   enum svn_path_style style);
+
 /* Divide PATH into *DIRPATH and *BASENAME, return them by reference,
  * in their own storage in POOL.
  *

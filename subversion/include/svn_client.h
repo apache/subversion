@@ -299,19 +299,36 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    apr_pool_t *pool);
 
 
-/* Given PATH to a working copy directory or file, allocate and return
-   a STATUSHASH structure containing the stati of all entries.  If
-   DESCEND is non-zero, recurse fully, else do only immediate
-   children.  If GET_ALL is set, then all entries are retrieved;
-   otherwise only "interesting" (local mods or out-of-date) will be
-   fetched. (See svn_wc.h:svn_wc_statuses() for more verbiage on
-   this).  */
+/* Given PATH to a working copy directory (or single file), allocate
+   and return a hash STATUSHASH which maps (char *) paths to
+   (svn_wc_status_t *) structures.
+
+   This is a purely local operation; only information found in the
+   administrative `entries' files is used to initially build the
+   structures.
+
+      - If DESCEND is non-zero, recurse fully, else do only immediate
+        children.  This (inversely) corresponds to the "-n"
+        (--nonrecursive) flag in the commandline client app.
+
+      - If GET_ALL is set, then all entries are retrieved; otherwise
+        only "interesting" entries (local mods and/or out-of-date)
+        will be fetched.  This directly corresponds to the "-v"
+        (--verbose) flag in the commandline client app.
+
+      - If UPDATE is set, then the repository will be contacted, and
+        the collection of structures will be augmented with
+        information about out-of-dateness.  This directly corresponds
+        to the "-u" (--update) flag in the commandline client app.
+
+  */
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_stringbuf_t *path,
                    svn_client_auth_baton_t *auth_baton,
                    svn_boolean_t descend,
                    svn_boolean_t get_all,
+                   svn_boolean_t update,
                    apr_pool_t *pool);
 
 /* Given a PATH to a working copy file, return a path to a temporary
