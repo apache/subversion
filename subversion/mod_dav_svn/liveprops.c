@@ -65,12 +65,12 @@ static const dav_liveprop_spec dav_svn_props[] =
   /* ### don't worry about these for a bit */
 #if 0
   /* WebDAV properties */
-  SVN_RO_DAV_PROP(creationdate),
   SVN_RO_DAV_PROP(getcontentlanguage),  /* ### make this r/w? */
   SVN_RO_DAV_PROP(getcontentlength),
   SVN_RO_DAV_PROP(getcontenttype),      /* ### make this r/w? */
 #endif
   SVN_RO_DAV_PROP(getetag),
+  SVN_RO_DAV_PROP(creationdate),
 #if 0
   SVN_RO_DAV_PROP(getlastmodified),
 #endif
@@ -81,6 +81,7 @@ static const dav_liveprop_spec dav_svn_props[] =
   SVN_RO_DAV_PROP2(version_controlled_configuration,
                    version-controlled-configuration),
   SVN_RO_DAV_PROP2(version_name, version-name),
+  SVN_RO_DAV_PROP2(creator_displayname, creator-displayname),
 
   /* SVN properties */
   SVN_RO_SVN_PROP(baseline_relative_path, baseline-relative-path),
@@ -124,9 +125,70 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   switch (propid)
     {
     case DAV_PROPID_creationdate:
-      /* ### need a creation date */
-      return DAV_PROP_INSERT_NOTSUPP;
-      break;
+      {
+        svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
+        svn_string_t *committed_date = NULL;
+        
+        /* Get the CR field out of the node's skel.  Notice that the
+           root object might be an ID root -or- a revision root. */
+        serr = svn_fs_node_created_rev(&committed_rev,
+                                       resource->info->root.root,
+                                       DAV_SVN_REPOS_PATH(resource), p);
+        if (serr != NULL)
+          {
+            /* ### what to do? */
+            value = "###error###";
+            break;
+          }
+        
+        /* Get the date property of the created revision. */
+        serr = svn_fs_revision_prop(&committed_date,
+                                    resource->info->repos->fs,
+                                    committed_rev,
+                                    SVN_PROP_REVISION_DATE, p);
+        if (serr != NULL)
+          {
+            /* ### what to do? */
+            value = "###error###";
+            break;
+          }
+        
+        value = apr_xml_quote_string(p, committed_date->data, 1);
+        break;
+      }
+
+    case DAV_PROPID_creator_displayname:
+      {        
+        svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
+        svn_string_t *last_author = NULL;
+        
+        /* Get the CR field out of the node's skel.  Notice that the
+           root object might be an ID root -or- a revision root. */
+        serr = svn_fs_node_created_rev(&committed_rev,
+                                       resource->info->root.root,
+                                       DAV_SVN_REPOS_PATH(resource), p);
+        if (serr != NULL)
+          {
+            /* ### what to do? */
+            value = "###error###";
+            break;
+          }
+        
+        /* Get the date property of the created revision. */
+        serr = svn_fs_revision_prop(&last_author,
+                                    resource->info->repos->fs,
+                                    committed_rev,
+                                    SVN_PROP_REVISION_AUTHOR, p);
+        if (serr != NULL)
+          {
+            /* ### what to do? */
+            value = "###error###";
+            break;
+          }
+
+        value = apr_xml_quote_string(p, last_author->data, 1);
+        break;
+      }
 
     case DAV_PROPID_getcontentlanguage:
       /* ### need something here */
@@ -234,28 +296,34 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
     case DAV_PROPID_version_name:
       /* only defined for Version Resources and Baselines */
       /* ### whoops. also defined for VCRs. deal with it later. */
-      if (resource->type != DAV_RESOURCE_TYPE_VERSION)
+      if ((resource->type != DAV_RESOURCE_TYPE_VERSION)
+          && (! resource->versioned))
         return DAV_PROP_INSERT_NOTSUPP;
+
       if (resource->baselined)
         {
           /* just the revision number for baselines */
           value = apr_psprintf(p, "%ld", resource->info->root.rev);
         }
-      else if (resource->info->node_id != NULL)
-        {
-          svn_stringbuf_t *id = svn_fs_unparse_id(resource->info->node_id, p);
-
-          /* use ":ID" */
-          value = apr_psprintf(p, ":%s", id->data);
-        }
       else
         {
-          /* assert: repos_path != NULL */
-
-          /* use "REV:PATH" */
-          value = apr_psprintf(p, "%ld:%s",
-                               resource->info->root.rev,
-                               resource->info->repos_path);
+          svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
+          
+          /* Get the CR field out of the node's skel.  Notice that the
+             root object might be an ID root -or- a revision root. */
+          serr = svn_fs_node_created_rev(&committed_rev,
+                                         resource->info->root.root,
+                                         DAV_SVN_REPOS_PATH(resource), p);
+          if (serr != NULL)
+            {
+              /* ### what to do? */
+              value = "###error###";
+              break;
+            }
+          
+          /* Convert the revision into a quoted string */
+          s = apr_psprintf(p, "%ld", committed_rev);
+          value = apr_xml_quote_string(p, s, 1);
         }
       break;
 

@@ -158,6 +158,8 @@ svn_error_t *svn_ra_dav__do_check_path(
 #define SVN_RA_DAV__PROP_CHECKED_IN     "DAV:checked-in"
 #define SVN_RA_DAV__PROP_VCC            "DAV:version-controlled-configuration"
 #define SVN_RA_DAV__PROP_VERSION_NAME   "DAV:version-name"
+#define SVN_RA_DAV__PROP_CREATIONDATE   "DAV:creationdate"
+#define SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME "DAV:creator-displayname"
 
 #define SVN_RA_DAV__PROP_BASELINE_RELPATH \
     SVN_PROP_PREFIX "baseline-relative-path"
@@ -292,6 +294,7 @@ enum {
   ELEM_checked_in,
   ELEM_collection,
   ELEM_comment,
+  ELEM_creationdate,
   ELEM_creator_displayname,
   ELEM_ignored_set,
   ELEM_merge_response,
@@ -319,7 +322,11 @@ enum {
   ELEM_open_directory,
   ELEM_open_file,
   ELEM_target_revision,
-  ELEM_update_report
+  ELEM_update_report,
+  ELEM_prop,
+  ELEM_name_version_name,
+  ELEM_name_creationdate,
+  ELEM_name_creator_displayname
 };
 
 /* ### docco */

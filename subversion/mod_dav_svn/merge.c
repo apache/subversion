@@ -318,6 +318,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   svn_error_t *serr;
   const char *vcc;
   char revbuf[20];      /* long enough for %ld */
+  svn_string_t *creationdate, *creator_displayname;
   apr_hash_t *revs;
   svn_revnum_t *rev_ptr;
   svn_delta_edit_fns_t *editor;
@@ -350,6 +351,23 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   /* the version-name of the baseline is the revision number */
   sprintf(revbuf, "%ld", new_rev);
 
+  /* get the creationdate and creator-displayname of the new revision, too. */
+  serr = svn_fs_revision_prop(&creationdate, repos->fs, new_rev,
+                              SVN_PROP_REVISION_DATE, pool);
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "Could not get date of newest revision"); 
+    }
+  serr = svn_fs_revision_prop(&creator_displayname, repos->fs, new_rev,
+                              SVN_PROP_REVISION_AUTHOR, pool);
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "Could not get author of newest revision"); 
+    }
+
+
   (void) ap_fputstrs(output, bb,
                      DAV_XML_HEADER DEBUG_CR
                      "<D:merge-response xmlns:D=\"DAV:\">" DEBUG_CR
@@ -366,6 +384,10 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                         ### resource for the version-name. */
                      "<D:resourcetype><D:baseline/></D:resourcetype>" DEBUG_CR
                      "<D:version-name>", revbuf, "</D:version-name>" DEBUG_CR
+                     "<D:creationdate>", creationdate->data, 
+                                     "</D:creationdate>" DEBUG_CR
+                     "<D:creator-displayname>", creator_displayname->data,
+                                     "</D:creator-displayname>" DEBUG_CR
                      "</D:prop>" DEBUG_CR
                      "<D:status>HTTP/1.1 200 OK</D:status>" DEBUG_CR
                      "</D:propstat>" DEBUG_CR

@@ -52,6 +52,8 @@ static const struct ne_xml_elm merge_elements[] =
   { "DAV:", "collection", ELEM_collection, 0 },
   { "DAV:", "baseline", ELEM_baseline, 0 },
   { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
+  { "DAV:", "creationdate", ELEM_creationdate, NE_XML_CDATA },
+  { "DAV:", "creator-displayname", ELEM_creator_displayname, NE_XML_CDATA },
 
   { NULL }
 };
@@ -88,6 +90,8 @@ typedef struct {
 
   svn_stringbuf_t *vsn_name;	/* DAV:version-name for this resource */
   svn_stringbuf_t *vsn_url;	/* DAV:checked-in for this resource */
+  svn_stringbuf_t *committed_date; /* DAV:creationdate for this resource */
+  svn_stringbuf_t *last_author; /* DAV:creator-displayname for this resource */
 
   /* ### damned set_prop needs an svn_stringbuf_t for a constant */
   svn_stringbuf_t *vsn_url_name;
@@ -178,10 +182,11 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
   SVN_ERR( (*mc->set_prop)(mc->close_baton, path_str,
                            mc->vsn_url_name, vsn_url_str) );
       
-  /* bump the revision and commit the file */
-  /* ### todo:  send real values for the date & author! */
+  /* bump the revision/date/author and commit the file */
   return (*mc->close_commit)(mc->close_baton, path_str, FALSE,
-                             mc->rev, NULL, NULL);
+                             mc->rev,
+                             mc->committed_date->data,
+                             mc->last_author->data);
 }
 
 static svn_error_t * handle_resource(merge_ctx_t *mc)
@@ -359,6 +364,8 @@ static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid ch
       if (child == ELEM_checked_in
           || child == ELEM_resourcetype
           || child == ELEM_version_name
+          || child == ELEM_creationdate
+          || child == ELEM_creator_displayname
           /* other props */)
         return NE_XML_VALID;
       else
@@ -536,6 +543,14 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
       svn_stringbuf_set(mc->vsn_name, cdata);
       break;
 
+    case ELEM_creationdate:
+      svn_stringbuf_set(mc->committed_date, cdata);
+      break;
+
+    case ELEM_creator_displayname:
+      svn_stringbuf_set(mc->last_author, cdata);
+      break;
+
     default:
       /* one of: ELEM_updated_set, ELEM_merged_set, ELEM_ignored_set,
          NE_ELM_prop, ELEM_resourcetype, ELEM_collection, ELEM_baseline */
@@ -577,6 +592,9 @@ svn_error_t * svn_ra_dav__merge_activity(
   mc.href = MAKE_BUFFER(pool);
   mc.vsn_name = MAKE_BUFFER(pool);
   mc.vsn_url = MAKE_BUFFER(pool);
+  mc.committed_date = MAKE_BUFFER(pool);
+  mc.last_author = MAKE_BUFFER(pool);
+
 
   /* ### damn it */
   mc.vsn_url_name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, pool);
@@ -587,7 +605,8 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "<D:source><D:href>%s</D:href></D:source>"
                       "<D:no-auto-merge/><D:no-checkout/>"
                       "<D:prop>"
-                      "<D:checked-in/><D:version-name/><D:resourcetype/>"
+                      "<D:checked-in/>version-name/><D:resourcetype/>"
+                      "<D:creationdate/><D:creator-displayname/>"
                       "</D:prop>"
                       "</D:merge>", activity_url);
 

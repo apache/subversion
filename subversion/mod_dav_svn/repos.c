@@ -286,6 +286,7 @@ static int dav_svn_parse_baseline_coll_uri(dav_resource_combined *comb,
      ### need to figure out a way to label them as special. */
 
   comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
+  comb->res.versioned = TRUE;
   comb->priv.root.rev = revnum;
   comb->priv.repos_path = slash;
 
@@ -479,6 +480,7 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
       /* Anything under the root, but not under "$svn". These are all
          version-controlled resources. */
       comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
+      comb->res.versioned = TRUE;
 
       /* The location of these resources corresponds directly to the URI,
          and we keep the leading "/". */
