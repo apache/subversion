@@ -24,23 +24,6 @@
 #include "svn_hash.h"
 #include "svn_path.h"
 
-
-/* RFC822-style headers that exist in the dumpfile. */
-#define SVN_REPOS_DUMPFILE_MAGIC_HEADER            "SVN-fs-dump-format-version"
-#define SVN_REPOS_DUMPFILE_FORMAT_VERSION           1
-
-#define SVN_REPOS_DUMPFILE_REVISION_NUMBER           "Revision-number"
-#define SVN_REPOS_DUMPFILE_REVISION_CONTENT_CHECKSUM "Revision-content-md5"
-#define SVN_REPOS_DUMPFILE_REVISION_CONTENT_LENGTH   "Content-length"
-
-#define SVN_REPOS_DUMPFILE_NODE_PATH                 "Node-path"
-#define SVN_REPOS_DUMPFILE_NODE_KIND                 "Node-kind"
-#define SVN_REPOS_DUMPFILE_NODE_ACTION               "Node-action"
-#define SVN_REPOS_DUMPFILE_NODE_COPIED_FROM          "Node-copied-from"
-#define SVN_REPOS_DUMPFILE_NODE_COPY_SOURCE_CHECKSUM "Node-copy-source-checksum"
-#define SVN_REPOS_DUMPFILE_NODE_CONTENT_CHECKSUM     "Node-content-md5"
-#define SVN_REPOS_DUMPFILE_NODE_CONTENT_LENGTH       "Content-length"
-
 
 /*----------------------------------------------------------------------*/
 
@@ -153,7 +136,7 @@ make_dir_baton (const char *path,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *pb = parent_dir_baton;
   struct dir_baton *new_db = apr_pcalloc (pool, sizeof (*new_db));
-  const char *full_path = apr_pstrdup (pool, eb->path);
+  const char *full_path;
 
   /* A path relative to nothing?  I don't think so. */
   if (path && (! pb))
@@ -161,7 +144,9 @@ make_dir_baton (const char *path,
 
   /* Construct the full path of this node. */
   if (pb)
-    svn_path_join (full_path, path, pool);
+    full_path = svn_path_join (eb->path, path, pool);
+  else
+    full_path = apr_pstrdup (pool, eb->path);
 
   new_db->edit_baton = eb;
   new_db->parent_dir_baton = pb;

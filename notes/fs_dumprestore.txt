@@ -81,7 +81,7 @@ Revision-number: N
 [Revision-content-md5: blob]
 Content-length: L
 
-   ...N bytes of property data.  Properties are stored in the same
+   ...L bytes of property data.  Properties are stored in the same
    human-readable hashdump format used by working copy property files,
    except that they end with "PROPS-END\n" for better readability.
 
@@ -89,7 +89,7 @@ Node-path: /absolute/path/to/node/in/filesystem
 Node-kind: file | dir  (1)
 Node-action: change | add | delete | replace
 [Node-copied-from: X, path ]
-[Node-copy-source-checksum: blob] (2)
+[Node-copy-source-md5: blob] (2)
 [Node-content-md5: blob]
 Content-length: Y
 
