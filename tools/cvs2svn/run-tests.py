@@ -216,9 +216,6 @@ def ensure_conversion(name):
 
   if not already_converted.has_key(name):
 
-    svnrepos = '%s-svnrepos' % name   # relative to ./tmp/, not to ./
-    wc       = '%s-wc' % name         # relative to ./tmp/, not to ./
-
     if not os.path.isdir(tmp_dir):
       os.mkdir(tmp_dir)
 
@@ -226,6 +223,9 @@ def ensure_conversion(name):
     try:
       os.chdir(tmp_dir)
       
+      svnrepos = '%s-svnrepos' % name
+      wc       = '%s-wc' % name
+
       # Clean up from any previous invocations of this script.
       erase(svnrepos)
       erase(wc)
