@@ -1,4 +1,26 @@
-Version 0.14.5 [Alpha Interim 5] (released 30 Oct 2002, revision r3578)
+Version 0.15 (released 7 Nov 2002, revision 3685)
+
+ User-visible changes:
+ * New 'S' indicator in 'svn status' shows switched subdirs 
+ * New --dry-run option added for 'svn merge' (issue #953)
+ * Fix 'svn update .' to handle svn:externals correctly
+ * Memory usage of 'svn import' reduced (issue #860)
+ * Allow 'svn revert' on missing directories scheduled for deletion
+ * Assorted bug fixes in several exciting flavors
+ * Documentation improvements
+
+ Developer-visible changes:
+ * #911 (apr and apr-util version at build time)
+ * Fixed issues #851, #894, 
+ * Testing scripts accept --url=URL and BASE_URL=URL
+ * Issue #881 (--enable-all-static)
+ * Delta editors all converted to new-style, and editor composition is gone
+ * Improve libsvn_wc wcprop handling (issue #806)
+ * SWIG binding improvements
+ * Various pool usage improvements
+
+
+Version 0.14.5 [Alpha Interim 5] (released 30 Oct 2002, revision 3578)
 
  User-visible changes:
  * allow --incremental option for 'svn log' xml output
@@ -11,7 +33,7 @@ Version 0.14.5 [Alpha Interim 5] (released 30 Oct 2002, revision r3578)
  * gen-make.py now assumes 'build.conf'
 
 
-Version 0.14.4 [Alpha Interim 4] (released 29 Oct 2002, revision r3553)
+Version 0.14.4 [Alpha Interim 4] (released 29 Oct 2002, revision 3553)
 
  User-visible changes:
  * new working-copy entry-caching: speeds many ops up to 5x (#749)
