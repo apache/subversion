@@ -237,7 +237,7 @@ relegate_external (const char *path, apr_pool_t *pool)
                (&f, &new_path, path, ".OLD", FALSE, pool));
       apr_file_close (f);  /* toss error */
 
-      /* ### Sigh...  We must fall ever so slightly from grace.
+      /* Sigh...  We must fall ever so slightly from grace.
 
          Ideally, there would be no window, however brief, when we
          don't have a reservation on the new name.  Unfortunately,
@@ -296,21 +296,27 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
   /* We couldn't possibly be here if both values were null, right? */
   assert (old_item || new_item);
 
-  /* ### todo: Protect against recursive externals? :-) */
-
   /* There's one potential ugliness.  If a target subdir changed, but
-     its URL did not, then we only want to rename the subdir, and not
-     check out the URL again.  Thus, for subdir changes, we "sneak
-     around the back" and look in ib->new_desc, ib->old_desc to check
-     if anything else in this parent_dir has the same URL.
+     its URL did not, then ideally we'd just rename the subdir, rather
+     than remove the old subdir only to do a new checkout into the new
+     subdir.
 
-     Of course, if an external gets moved into another parent
-     directory entirely, then we lose -- we'll have to check it all
-     out again.  The only way to prevent this is to harvest a global
-     list based on urls/revs, and check the list every time we're
-     about to delete an external subdir; and when a deletion is really
-     part of a rename, then we'd do the rename right then.  This is
-     not worth the bookkeeping complexity, IMHO. */
+     We could solve this by "sneaking around the back" and looking in
+     ib->new_desc, ib->old_desc to check if anything else in this
+     parent_dir has the same URL.  Of course, if an external gets
+     moved into some other directory, then we'd lose anyway.  The only
+     way to fully handle this would be to harvest a global list based
+     on urls/revs, and consult the list every time we're about to
+     delete an external subdir: whenever a deletion is really part of
+     a rename, then we'd do the rename on the spot.
+
+     IMHO, renames aren't going to be frequent enough to make the
+     extra bookkeeping worthwhile.
+  */
+
+  /* Not protecting against recursive externals.  Detecting them in
+     the global case is hard, and it should be pretty obvious to a
+     user when it happens.  Worst case: your disk fills up :-). */
 
   if (! old_item)
     {
@@ -325,11 +331,12 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
         SVN_ERR (svn_io_make_dir_recursively (checkout_parent, ib->pool));
       }
 
-      /* ### todo: before checking out a new subdir, see if this is
-         really just a rename of an old one.  This can work in tandem
-         with the next case -- this case would do nothing, knowing
-         that the next case either already has, or soon will, rename
-         the external subdirectory. */
+      /* ### We could handle renames better.  Before checking out a
+         new subdir, we could somehow learn if it's really just a
+         rename of an old one.  It would work in tandem with the next
+         case -- this case would do nothing, knowing that the next
+         case either already has, or soon will, rename the external
+         subdirectory. */
 
       SVN_ERR (svn_client_checkout
                (ib->notify_func, ib->notify_baton,
@@ -343,10 +350,16 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
     }
   else if (! new_item)
     {
-      /* ### todo: before removing an old subdir, see if it wants to
-         just be renamed to a new one.  See above case. */
+      /* ### See comment in above case about handling renames better.
+         Here, before removing an old subdir, we would see if it wants
+         to just be renamed to a new one. */
+
       svn_error_t *err;
 
+      /* We don't use relegate_external() here, because we know that
+         nothing else in this externals description (at least) is
+         going to need this directory, and therefore it's better to
+         leave stuff where the user expects it. */
       err = svn_wc_remove_from_revision_control
         (svn_path_join (ib->parent_dir, old_item->target_dir, ib->pool),
          SVN_WC_ENTRY_THIS_DIR, TRUE, ib->pool);
@@ -355,8 +368,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
         return err;
 
       /* ### If there were multiple path components leading down to
-         that wc, they'll need to be removed to, iff there's nothing
-         else in them. */
+         that wc, we could try to remove them too. */
     }
   else if (! compare_external_items (new_item, old_item))
     {
