@@ -322,7 +322,7 @@ svn_error_t *svn_wc__entry_set (svn_string_t *path,
 /* For a given ENTRYNAME in PATH's entries file:
           get its version into *VERSION,
           get its file/dir kind into *KIND,
-          and return all other xml attributes in **HASH.
+          and return all other xml attributes as a hash in *HASH.
 
    If any of the return-by-reference arguments is NULL, that argument
    will simply not be used.
