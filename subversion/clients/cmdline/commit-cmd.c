@@ -110,11 +110,11 @@ print_status (apr_file_t *file,
 static svn_error_t *
 write_status_to_file(apr_pool_t *pool,
                      apr_file_t *file,
+                     svn_client_auth_baton_t *auth_baton,
                      svn_cl__opt_state_t *opt_state,
                      apr_array_header_t *targets)
 {
   apr_hash_t *statushash;
-  svn_client_auth_baton_t *auth_baton;
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
 
   int i;
@@ -151,6 +151,7 @@ write_status_to_file(apr_pool_t *pool,
 static svn_error_t *
 message_from_editor(apr_pool_t *pool,
                     apr_array_header_t *targets,
+                    svn_client_auth_baton_t *auth_baton,
                     svn_stringbuf_t *path,
                     svn_cl__opt_state_t *opt_state,
                     svn_stringbuf_t **messagep )
@@ -212,7 +213,7 @@ message_from_editor(apr_pool_t *pool,
 
       rc = apr_file_write_full (tempfile, DEFAULT_MSG, size, &written);
 
-      write_status_to_file (pool, tempfile, opt_state, targets);
+      write_status_to_file (pool, tempfile, auth_baton, opt_state, targets);
 
       apr_file_close (tempfile);
 
@@ -506,7 +507,8 @@ svn_cl__commit (apr_getopt_t *os,
          fire up our favourite editor to get one instead! */
 
       /* no message given, try getting one from $EDITOR */
-      message_from_editor (pool, targets, base_dir, opt_state, &messagep);
+      message_from_editor (pool, targets, auth_baton,
+                           base_dir, opt_state, &messagep);
 
       if(messagep)
         {
