@@ -30,7 +30,12 @@ def main():
         longest_len = this_len
     for key in keys:
       this_len = len(key)
-      value = str(marshal.loads(db[key]))
+      # We usually don't store raw values that happen to look like
+      # marshalled data, so this is reliable enough.
+      try:
+        value = str(marshal.loads(db[key]))
+      except:
+        value = db[key]
       print ' ' * (longest_len - this_len) + key + ' : ' + value
     print ''
 
