@@ -55,7 +55,6 @@ ssl_server_trust_file_first_credentials (void **credentials,
                                          const char *realmstring,
                                          apr_pool_t *pool)
 {
-  const char *temp_setting;
   ssl_server_trust_file_provider_baton_t *pb = provider_baton;
   int failures = (int) apr_hash_get (parameters,
                                      SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
@@ -64,12 +63,6 @@ ssl_server_trust_file_first_credentials (void **credentials,
     apr_hash_get (parameters,
                   SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                   APR_HASH_KEY_STRING);
-  svn_config_t *cfg = apr_hash_get (parameters,
-                                    SVN_AUTH_PARAM_CONFIG,
-                                    APR_HASH_KEY_STRING);
-  const char *server_group = apr_hash_get (parameters,
-                                           SVN_AUTH_PARAM_SERVER_GROUP,
-                                           APR_HASH_KEY_STRING);
   apr_hash_t *creds_hash = NULL;
   const char *config_dir;
   svn_error_t *error = SVN_NO_ERROR;
@@ -79,32 +72,6 @@ ssl_server_trust_file_first_credentials (void **credentials,
 
   /* Make sure the save_creds function can get the realmstring */
   pb->realmstring = apr_pstrdup (pool, realmstring);
-
-  /* Check for ignored cert dates */
-  if (failures & (SVN_AUTH_SSL_NOTYETVALID | SVN_AUTH_SSL_EXPIRED))
-    {
-      temp_setting = svn_config_get_server_setting
-        (cfg, server_group,
-         SVN_CONFIG_OPTION_SSL_IGNORE_INVALID_DATE,
-         "false");
-      if (strcasecmp (temp_setting, "true") == 0)
-        {
-          failures &= ~(SVN_AUTH_SSL_NOTYETVALID | SVN_AUTH_SSL_EXPIRED);
-        }
-    }
-
-  /* Check for overridden cert hostname */
-  if (failures & SVN_AUTH_SSL_CNMISMATCH)
-    {
-      temp_setting = svn_config_get_server_setting
-        (cfg, server_group,
-         SVN_CONFIG_OPTION_SSL_OVERRIDE_CERT_HSTNAME,
-         NULL);
-      if (temp_setting && strcasecmp (temp_setting, cert_info->hostname) == 0)
-        {
-          failures &= ~SVN_AUTH_SSL_CNMISMATCH;
-        }
-    }
 
   /* Check if this is a permanently accepted certificate */
   config_dir = apr_hash_get (parameters,
