@@ -103,16 +103,18 @@ typedef struct svn_svr_plugin_t
 
   /* AUTHORIZATION HOOK: 
 
-     An authorization function should return NULL (failure) or
-     non-NULL (success).  If successful, it should fill in the
-     "canonical" filesystem name in the user structure. 
-  */
+     An authorization hook returns a ptr to an error structure (if
+     authorization fails) which details the reason for failure.  If
+     authorization succeeds, return 0.
 
-  char (* authorization_hook) (svn_string_t *repos,
-                               svn_user_t *user,
-                               svn_svr_action_t action,
-                               unsigned long ver,
-                               svn_string_t *path);
+     If successful, it should fill in the
+     "canonical" filesystem name in the user structure.  */
+
+  (svn_error_t *) (* authorization_hook) (svn_string_t *repos,
+                                          svn_user_t *user,
+                                          svn_svr_action_t action,
+                                          unsigned long ver,
+                                          svn_string_t *path);
 
   /* CONFLICT RESOLUTION HOOK:
      
@@ -176,19 +178,41 @@ svn_svr_policies_t * svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool);
 /* Routine which each plugin's init() routine uses to register itself
    in the server's policy structure.  */
 
-void svn_svr_register_plugin (svn_svr_policies_t *policy,
-                              svn_string_t *dso_filename,
-                              svn_svr_plugin_t *new_plugin);
+svn_error_t * svn_svr_register_plugin (svn_svr_policies_t *policy,
+                                       svn_string_t *dso_filename,
+                                       svn_svr_plugin_t *new_plugin);
 
 
-/* Check global server policy to see if an action is authorized;
-   (this subsumes any authorization hooks coming from plugins.) */
+/* Three routines for checking authorization.
 
-svn_boolean_t svn_server_policy_authorize (svn_svr_policies_t *policy,
+   The first one checks global server policy.
+
+   The second one loops through each plugin's authorization hook.
+
+   The third one is a convenience routine, which calls the other two.
+*/
+
+svn_error_t * svn_server_policy_authorize (svn_svr_policies_t *policy,
                                            svn_string_t *repos,
                                            svn_user_t *user,
                                            svn_svr_action_t *action,
+                                           unsigned long ver,
                                            svn_string_t *path);
+
+svn_error_t * svn_svr_plugin_authorize (svn_svr_policies_t *policy, 
+                                        svn_string_t *repos, 
+                                        svn_user_t *user, 
+                                        svn_svr_action_t *action,
+                                        unsigned long ver,
+                                        svn_string_t *path);
+
+svn_error_t * svn_svr_authorize (svn_svr_policies_t *policy, 
+                                 svn_string_t *repos, 
+                                 svn_user_t *user, 
+                                 svn_svr_action_t *action,
+                                 unsigned long ver,
+                                 svn_string_t *path);
+
 
 /******************************************
 

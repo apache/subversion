@@ -92,73 +92,34 @@ svr__expand_repos_name (svn_svr_policy_t *policy,
 }
 
 
-/* svr__policy_authorize  :  NOT EXPORTED.
-
-   See if general server `policy' allows an action.
-
-   Input:  policy + {repos, user, action, ver, path} group
-
-   Returns:  TRUE (action is authorized by server policy)
-             FALSE (action is not allowed)
-
-       This routine is called first in svr__call_authorization_hooks().
- */
-
-svn_boolean_t
-svr__policy_authorize (svn_svr_policies_t *policy,
-                       svn_string_t *repos,
-                       svn_user_t *user,
-                       svn_svr_action_t *action,
-                       unsigned long ver,
-                       svn_string_t *path)
-{
-  /* TODO: loop through policy->global_restrictions array,
-     interpreting each restriction and checking authorization */
-
-  return TRUE;
-}
 
 
 /* 
-   svr__authorize :  NOT EXPORTED.
+   svr_plugin_authorize()
 
-   This routine is called by each "wrappered" filesystem call in this
-   library; it first checks global server policy for authorization
-   (see svr__policy_authorize()), and then loops through all
-   authorization plugins.
+   Loops through all authorization plugins, checking for success.
 
    Input:  policy + {repos, user, action, path} group
 
-   Returns: TRUE (action is authorized)
-             or FALSE (action is denied)
+   Returns:  ptr to error structure (if not authorized)
+             or 0 if authorized!
+            
 */
 
-svn_boolean_t
-svr__authorize (svn_svr_policies_t *policy, 
-                svn_string_t *repos, 
-                svn_user_t *user, 
-                svn_svr_action_t *action,
-                unsigned long ver,
-                svn_string_t *path)
+svn_error_t *
+svn_svr_plugin_authorize (svn_svr_policies_t *policy, 
+                          svn_string_t *repos, 
+                          svn_user_t *user, 
+                          svn_svr_action_t *action,
+                          unsigned long ver,
+                          svn_string_t *path)
 {
   int i;
+  svn_error_t *err;
   svn_svr_plugin_t *current_plugin;
-  char (* current_auth_hook) (svn_string_t *r, svn_user_t *u,
-                              svn_svr_action_t *a, unsigned long v,
-                              svr_string_t *p);
-
-  /* Start off assuming we're authorized! */
-  svn_boolean_t authorized = TRUE;  
-
-  /* First: see if our server policy allows the action.  This is a
-     kind of "uber" authorization hook that subsumes all authorization
-     plugins. */
-  authorized = svr__policy_authorize (policy, repos, user, action, ver, path);
-
-  if (! authorized)
-    {
-      return FALSE;
-    }
+  (svn_error_t *) (* current_auth_hook) (svn_string_t *r, svn_user_t *u,
+                                         svn_svr_action_t *a, unsigned long v,
+                                         svr_string_t *p);
 
   /* Next:  loop through our policy's array of plugins... */
   for (i = 0; i < (policy->plugins->nelts); i++)
@@ -174,12 +135,12 @@ svr__authorize (svn_svr_policies_t *policy,
         {
           /* Call the authorization routine, giving it a chance to
              kill our authorization assumption */
-          authorized = (*my_hook) (repos, user, action, ver, path);
+          err = (*my_hook) (repos, user, action, ver, path);
         }
 
-      if (! authorized)  /* bail out if we fail at any point in the loop */
+      if (err)  /* bail out if we fail at any point in the loop */
         {
-          return FALSE;
+          return err;
         }
     }
 
@@ -196,8 +157,80 @@ svr__authorize (svn_svr_policies_t *policy,
                                            policy->pool);
     }
   
-  return TRUE;  /* successfully authorized to perform the action! */
+  return 0;  /* successfully authorized to perform the action! */
 }
+
+
+/* svr__policy_authorize()
+
+   See if general server `policy' allows an action.
+
+   Input:  policy + {repos, user, action, ver, path} group
+
+   Returns:  error structure (if authorization fails)
+             0 (if authorization succeeds)
+
+ */
+
+svn_error_t *
+svn_svr_policy_authorize (svn_svr_policies_t *policy,
+                          svn_string_t *repos,
+                          svn_user_t *user,
+                          svn_svr_action_t *action,
+                          unsigned long ver,
+                          svn_string_t *path)
+{
+  /* BIG TODO: loop through policy->global_restrictions array,
+     interpreting each restriction and checking authorization */
+
+  return 0;
+}
+
+
+
+/* 
+   Convenience routine -- calls the other two authorization routines.
+
+   This routine is called by each "wrappered" filesystem call in this
+   library.
+
+
+   Input:  policy + {repos, user, action, ver, path} group
+
+   Returns:  error structure (if authorization fails)
+             0 (if authorization succeeds)
+
+*/
+
+svn_error_t *
+svn_svr_authorize (svn_svr_policies_t *policy,
+                   svn_string_t *repos,
+                   svn_user_t *user,
+                   svn_svr_action_t *action,
+                   unsigned long ver,
+                   svn_string_t *path)
+{
+  svn_error_t *err;
+  
+  err = svn_svr_policy_authorize (policy, repos, user, action, ver, path);
+
+  if (err)
+    {
+      return err;
+    }
+
+  err = svn_svr_plugin_authorize (policy, repos, user, action, ver, path);
+
+  if (err)
+    {
+      return err;
+    }
+
+  return 0;  /* successfully authorized! */
+}
+
+
+
 
 
 /*========================================================================

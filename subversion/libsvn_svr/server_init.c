@@ -228,7 +228,7 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
 /* Add a plugin structure to a server policy structure.
    Called by each plugin's init() routine. */
 
-void
+svn_error_t *
 svn_svr_register_plugin (svn_svr_policies_t *policy,
                          svn_svr_plugin_t *new_plugin)
 {
@@ -238,6 +238,7 @@ svn_svr_register_plugin (svn_svr_policies_t *policy,
   /* Store in policy->plugins hashtable : 
      KEY = new_plugin->name, val = new_plugin */
 
+  return 0;  /* success */
 }
 
 
