@@ -32,18 +32,55 @@ ch05:
 
 To be fixed by sussman:
 
-ch01:
 
-  - add short quickstart section from README??
+appC:
 
-ch02:
-
-
-ch04:
+   "Mapping Subversion to DeltaV": checkouts don't cause the client to
+   do repeated GET and PROPFIND requests.  The data is all embedded in
+   the REPORT response now.
 
 
-ch06:
+-----------------------------------------------
+
+The 1.1 Book Fork
+==================
+
+Once the book is on shelves (last week in June), we plan to fork the
+book between the 1.0.x and 1.1 branches.  Really, this means:
+
+  1. Documenting new 1.1 features and behaviors in /trunk/doc/book
+
+  2. Being very selective about backporting book changes to the 1.0.x
+     branch.  (Hitherto, we've always just blindly copied
+     /trunk/doc/book to 1.0.x before doing every 1.0.x release.)
+
+  3. Posting the 1.0.x and 1.1 versions of the book on the website.
+     (This probably isn't high priority, since only developers are
+     using 1.1 right now anyway.  But once 1.1 is released, this will
+     be important.)
 
 
-appA:
+List of 1.1 features/changes
+============================
+
+  * new fsfs backend for repository.  make a comparison chart with
+    bdb, just like we did for apache/svnserve that shows tradeoffs.
+    also show new libraries in ch01 'big picture' diagram and ch08
+    library listing.
+
+  * updates no longer create fs transactions (does this need to be
+    documented?  does anyone care other than developers?)
+
+  * slightly tweaked 'svn diff' syntax allows things like
+    'svn diff -rX:Y URL@Z'.   Probably need to explain 'peg' objects,
+    so folks can understand how/when renames are followed by certain
+    commands.
+
+  * do we need to tell people how to activate localized client
+    output?  or is that just widespread knowledge?
+
+  * remove SVN_REVNUM_T_FMT from any example code.
+
+  * document new 'svnadmin dump --deltas' in ch05 and ch09.
+
 
