@@ -177,7 +177,7 @@ def add_executable(sbox):
   def runTest(wc_dir, fileName, perm, executable):
     fileName = os.path.join(wc_dir, fileName)
     if executable:
-      expected = (["\n"], [])
+      expected = (["*\n"], [])
     else:
       expected = ([], [])
     f = open(fileName,"w")

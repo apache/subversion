@@ -165,6 +165,9 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 /** Set to either TRUE or FALSE if we want a file to be executable or not. */
 #define SVN_PROP_EXECUTABLE  SVN_PROP_PREFIX "executable"
 
+/** The value to force the executable property to when set */
+#define SVN_PROP_EXECUTABLE_VALUE "*"
+
 /** Describes external items to check out into this directory. 
  *
  * Describes external items to check out into this directory. 
