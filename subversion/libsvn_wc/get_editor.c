@@ -888,13 +888,23 @@ add_or_open_file (svn_stringbuf_t *name,
      conflict in the entry and proceed.  Similarly if it has changed
      kind.  see issuezilla task #398. */
 
-  /* ### it would be nice to get the dirents and entries *once* and stash
-     ### them in the directory baton. */
-  SVN_ERR (svn_io_get_dirents (&dirents, parent_dir_baton->path, subpool));
-  SVN_ERR (svn_wc_entries_read (&entries, parent_dir_baton->path, subpool));
+  fb = make_file_baton (parent_dir_baton, name, subpool);
 
-  /* ### hmm. couldn't we just use svn_wc_entry() rather than entries_read
-     ### and this hash lookup? */
+  SVN_ERR (svn_io_get_dirents (&dirents, parent_dir_baton->path, subpool));
+
+  /* ### It would be nice to get the dirents and entries *once* and stash
+     ### them in the directory baton.  But an important question is,
+     ### are we re-reading the entries each time because we need to be
+     ### sensitive to any work we've already done on the directory?
+     ### Are editor drives guaranteed not to mention the same name
+     ### twice in the same dir baton?  Don't know.  */
+
+  /* ### We could just call svn_wc_entry(&entry, fb->path, subpool)
+     here and save some code.  But since we've got the parent path and
+     basename here already, why have svn_wc_entry() go through the
+     effort of re-splitting fb->path?  So we read the entries manually
+     and look up name in the result. */
+  SVN_ERR (svn_wc_entries_read (&entries, parent_dir_baton->path, subpool));
   entry = apr_hash_get (entries, name->data, name->len);
   
   /* Sanity checks. */
@@ -940,17 +950,13 @@ add_or_open_file (svn_stringbuf_t *name,
        "add_or_open_file: %s is not a working copy directory",
        parent_dir_baton->path->data);
 
-  /* Set up the file's baton. */
-  fb = make_file_baton (parent_dir_baton, name, subpool);
-  *file_baton = fb;
-
-
   /* ### todo:  right now the incoming copyfrom* args are being
      completely ignored!  Someday the editor-driver may expect us to
      support this optimization;  when that happens, this func needs to
      -copy- the specified existing wc file to this location.  From
      there, the driver can apply_textdelta on it, etc. */
 
+  *file_baton = fb;
   return SVN_NO_ERROR;
 }
 
