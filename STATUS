@@ -91,13 +91,13 @@ Candidate changes:
     actually have an authenticated user associated with it.  Also, changes
     of author during a single commit is prevented.
     Votes:
-      +1: striker, dlr
+      +1: striker, dlr, gstein
 
   * r9099
     Issue 1794: recursive propset can corrupt the entries file
     Justification: very hard for the user to recover
     Votes:
-      +1: philip
+      +1: philip, gstein
 
   * r9168
     Check latest APR default install path in 'configure'
@@ -125,4 +125,4 @@ Candidate changes:
     Issue 1509: unable to share working copy.
     Notes: Backport attached to the issue with conflicts removed.
     Votes:
-      +1: striker
+      +1: striker, gstein
