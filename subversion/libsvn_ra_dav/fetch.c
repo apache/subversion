@@ -2641,12 +2641,14 @@ static svn_error_t * reporter_set_path(void *report_baton,
                                        const char *path,
                                        svn_revnum_t revision,
                                        svn_boolean_t start_empty,
+                                       const char *lock_token,
                                        apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
   const char *entry;
   svn_stringbuf_t *qpath = NULL;
 
+  /* ### sussman TODO: Pass lock token as extra attribute. */
   svn_xml_escape_cdata_cstring (&qpath, path, pool);
   if (start_empty)
     entry = apr_psprintf(pool,
@@ -2668,6 +2670,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
                                         const char *url,
                                         svn_revnum_t revision,
                                         svn_boolean_t start_empty,
+                                        const char *lock_token,
                                         apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
@@ -2686,6 +2689,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
   
   svn_xml_escape_cdata_cstring (&qpath, path, pool);
   svn_xml_escape_attr_cstring (&qlinkpath, bc_relative.data, pool);
+  /* ### sussman TODO: Pass lock token as extra attribute. */
   if (start_empty)
     entry = apr_psprintf(pool,
                          "<S:entry rev=\"%ld\""
@@ -2792,7 +2796,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   return SVN_NO_ERROR;
 }
 
-static const svn_ra_reporter_t ra_dav_reporter = {
+static const svn_ra_reporter2_t ra_dav_reporter = {
   reporter_set_path,
   reporter_delete_path,
   reporter_link_path,
@@ -2805,7 +2809,7 @@ static const svn_ra_reporter_t ra_dav_reporter = {
    working copy during updates or status checks. */
 static svn_error_t *
 make_reporter (svn_ra_session_t *session,
-               const svn_ra_reporter_t **reporter,
+               const svn_ra_reporter2_t **reporter,
                void **report_baton,
                svn_revnum_t revision,
                const char *target,
@@ -2937,7 +2941,7 @@ make_reporter (svn_ra_session_t *session,
 
 
 svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
-                                    const svn_ra_reporter_t **reporter,
+                                    const svn_ra_reporter2_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
                                     const char *update_target,
@@ -2963,7 +2967,7 @@ svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
 
 
 svn_error_t * svn_ra_dav__do_status(svn_ra_session_t *session,
-                                    const svn_ra_reporter_t **reporter,
+                                    const svn_ra_reporter2_t **reporter,
                                     void **report_baton,
                                     const char *status_target,
                                     svn_revnum_t revision,
@@ -2989,7 +2993,7 @@ svn_error_t * svn_ra_dav__do_status(svn_ra_session_t *session,
 
 
 svn_error_t * svn_ra_dav__do_switch(svn_ra_session_t *session,
-                                    const svn_ra_reporter_t **reporter,
+                                    const svn_ra_reporter2_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
                                     const char *update_target,
@@ -3017,7 +3021,7 @@ svn_error_t * svn_ra_dav__do_switch(svn_ra_session_t *session,
 
 
 svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
-                                  const svn_ra_reporter_t **reporter,
+                                  const svn_ra_reporter2_t **reporter,
                                   void **report_baton,
                                   svn_revnum_t revision,
                                   const char *diff_target,

@@ -59,7 +59,7 @@ svn_client_switch (svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *URL, *anchor, *target;
@@ -147,11 +147,11 @@ svn_client_switch (svn_revnum_t *result_rev,
      We pass NULL for traversal_info because this is a switch, not an
      update, and therefore we don't want to handle any externals
      except the ones directly affected by the switch. */ 
-  err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
-                                TRUE, recurse, use_commit_times,
-                                ctx->notify_func, ctx->notify_baton,
-                                NULL, /* no traversal info */
-                                pool);
+  err = svn_wc_crawl_revisions2 (path, dir_access, reporter, report_baton,
+                                 TRUE, recurse, use_commit_times,
+                                 ctx->notify_func, ctx->notify_baton,
+                                 NULL, /* no traversal info */
+                                 pool);
     
   /* We handle externals after the switch is complete, so that
      handling external items (and any errors therefrom) doesn't delay

@@ -119,7 +119,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
     {
       void *report_baton;
       svn_ra_session_t *ra_session;
-      const svn_ra_reporter_t *reporter;
+      const svn_ra_reporter2_t *reporter;
       const char *URL;
       svn_node_kind_t kind;
 
@@ -186,9 +186,9 @@ svn_client_status2 (svn_revnum_t *result_rev,
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
-          SVN_ERR (svn_wc_crawl_revisions (path, target_access, reporter, 
-                                           report_baton, FALSE, descend, 
-                                           FALSE, NULL, NULL, NULL, pool));
+          SVN_ERR (svn_wc_crawl_revisions2 (path, target_access, reporter, 
+                                            report_baton, FALSE, descend, 
+                                            FALSE, NULL, NULL, NULL, pool));
         }
     }
   else

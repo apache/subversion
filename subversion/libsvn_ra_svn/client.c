@@ -363,12 +363,13 @@ static svn_error_t *handle_auth_request(ra_svn_session_baton_t *sess,
 static svn_error_t *ra_svn_set_path(void *baton, const char *path,
                                     svn_revnum_t rev,
                                     svn_boolean_t start_empty,
+                                    const char *lock_token,
                                     apr_pool_t *pool)
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "crb", path, rev,
-                               start_empty));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "crb(?c)", path, rev,
+                               start_empty, lock_token));
   return SVN_NO_ERROR;
 }
 
@@ -385,12 +386,13 @@ static svn_error_t *ra_svn_link_path(void *baton, const char *path,
                                      const char *url,
                                      svn_revnum_t rev,
                                      svn_boolean_t start_empty,
+                                     const char *lock_token,
                                      apr_pool_t *pool)
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccrb", path, url,
-                               rev, start_empty));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccrb(?c)",
+                               path, url, rev, start_empty, lock_token));
   return SVN_NO_ERROR;
 }
 
@@ -416,7 +418,7 @@ static svn_error_t *ra_svn_abort_report(void *baton,
   return SVN_NO_ERROR;
 }
 
-static svn_ra_reporter_t ra_svn_reporter = {
+static svn_ra_reporter2_t ra_svn_reporter = {
   ra_svn_set_path,
   ra_svn_delete_path,
   ra_svn_link_path,
@@ -428,7 +430,7 @@ static void ra_svn_get_reporter(ra_svn_session_baton_t *sess_baton,
                                 apr_pool_t *pool,
                                 const svn_delta_editor_t *editor,
                                 void *edit_baton,
-                                const svn_ra_reporter_t **reporter,
+                                const svn_ra_reporter2_t **reporter,
                                 void **report_baton)
 {
   ra_svn_reporter_baton_t *b;
@@ -977,7 +979,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session, const char *path,
 
 
 static svn_error_t *ra_svn_update(svn_ra_session_t *session,
-                                  const svn_ra_reporter_t **reporter,
+                                  const svn_ra_reporter2_t **reporter,
                                   void **report_baton, svn_revnum_t rev,
                                   const char *target, svn_boolean_t recurse,
                                   const svn_delta_editor_t *update_editor,
@@ -999,7 +1001,7 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
 }
 
 static svn_error_t *ra_svn_switch(svn_ra_session_t *session,
-                                  const svn_ra_reporter_t **reporter,
+                                  const svn_ra_reporter2_t **reporter,
                                   void **report_baton, svn_revnum_t rev,
                                   const char *target, svn_boolean_t recurse,
                                   const char *switch_url,
@@ -1022,7 +1024,7 @@ static svn_error_t *ra_svn_switch(svn_ra_session_t *session,
 }
 
 static svn_error_t *ra_svn_status(svn_ra_session_t *session,
-                                  const svn_ra_reporter_t **reporter,
+                                  const svn_ra_reporter2_t **reporter,
                                   void **report_baton,
                                   const char *target, svn_revnum_t rev,
                                   svn_boolean_t recurse,
@@ -1045,7 +1047,7 @@ static svn_error_t *ra_svn_status(svn_ra_session_t *session,
 }
 
 static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
-                                const svn_ra_reporter_t **reporter,
+                                const svn_ra_reporter2_t **reporter,
                                 void **report_baton,
                                 svn_revnum_t rev, const char *target,
                                 svn_boolean_t recurse,

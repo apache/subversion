@@ -50,7 +50,7 @@ svn_client__update_internal (svn_revnum_t *result_rev,
 {
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *anchor, *target;
@@ -134,10 +134,10 @@ svn_client__update_internal (svn_revnum_t *result_rev,
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta. */
-  err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
-                                TRUE, recurse, use_commit_times,
-                                ctx->notify_func, ctx->notify_baton,
-                                traversal_info, pool);
+  err = svn_wc_crawl_revisions2 (path, dir_access, reporter, report_baton,
+                                 TRUE, recurse, use_commit_times,
+                                 ctx->notify_func, ctx->notify_baton,
+                                 traversal_info, pool);
       
   if (err)
     {

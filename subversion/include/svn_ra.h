@@ -143,7 +143,9 @@ typedef svn_error_t *(*svn_ra_file_rev_handler_t)
         apr_pool_t *pool);
 
 
-/** The update Reporter.
+/** @since New in 1.2.
+ *
+ * The update Reporter.
  *
  * A vtable structure which allows a working copy to describe a subset
  * (or possibly all) of its working-copy to an RA layer, for the
@@ -164,7 +166,7 @@ typedef svn_error_t *(*svn_ra_file_rev_handler_t)
  * it may be reported as having revision 0 or as having the parent
  * directory's revision.
  */
-typedef struct svn_ra_reporter_t
+typedef struct svn_ra_reporter2_t
 {
   /** Describe a working copy @a path as being at a particular @a revision.  
    *
@@ -174,12 +176,15 @@ typedef struct svn_ra_reporter_t
    * This will *override* any previous @c set_path() calls made on parent
    * paths.  @a path is relative to the URL specified in @c open().
    *
+   * If @a lock_token is non-NULL, it is the lock token for @a path in the WC.
+   * 
    * All temporary allocations are done in @a pool.
    */
   svn_error_t *(*set_path) (void *report_baton,
                             const char *path,
                             svn_revnum_t revision,
                             svn_boolean_t start_empty,
+                            const char *lock_token,
                             apr_pool_t *pool);
 
   /** Describing a working copy @a path as missing.
@@ -199,6 +204,8 @@ typedef struct svn_ra_reporter_t
    * If @a START_EMPTY is set and @a path is a directory,
    * the implementor should assume the directory has no entries or props.
    *
+   * If @a lock_token is non-NULL, it is the lock token for @a path in the WC.
+   * 
    * All temporary allocations are done in @a pool.
    */
   svn_error_t *(*link_path) (void *report_baton,
@@ -206,6 +213,7 @@ typedef struct svn_ra_reporter_t
                              const char *url,
                              svn_revnum_t revision,
                              svn_boolean_t start_empty,
+                             const char *lock_token,
                              apr_pool_t *pool);
 
   /** WC calls this when the state report is finished; any directories
@@ -221,8 +229,44 @@ typedef struct svn_ra_reporter_t
   svn_error_t *(*abort_report) (void *report_baton,
                                 apr_pool_t *pool);
 
-} svn_ra_reporter_t;
+} svn_ra_reporter2_t;
 
+/** @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_ra_reporter2_t, but without support for lock tokens.
+ */
+typedef struct svn_ra_reporter_t
+{
+  /** Similar to the correspoinding field in @c svn_ra_reporter2_t, but
+   * with @a lock_token always set to NULL. */
+  svn_error_t *(*set_path) (void *report_baton,
+                            const char *path,
+                            svn_revnum_t revision,
+                            svn_boolean_t start_empty,
+                            apr_pool_t *pool);
+
+  /** Same as the correspondning field in @c svn_ra_reporter2_t. */
+  svn_error_t *(*delete_path) (void *report_baton,
+                               const char *path,
+                               apr_pool_t *pool);
+    
+  /** Similar to the correspoinding field in @c svn_ra_reporter2_t, but
+   * with @a lock_token always set to NULL. */
+  svn_error_t *(*link_path) (void *report_baton,
+                             const char *path,
+                             const char *url,
+                             svn_revnum_t revision,
+                             svn_boolean_t start_empty,
+                             apr_pool_t *pool);
+
+  /** Same as the correspondning field in @c svn_ra_reporter2_t. */
+  svn_error_t *(*finish_report) (void *report_baton,
+                                 apr_pool_t *pool);
+
+  /** Same as the correspondning field in @c svn_ra_reporter2_t. */
+  svn_error_t *(*abort_report) (void *report_baton,
+                                apr_pool_t *pool);
+} svn_ra_reporter_t;
 
 
 /** A collection of callbacks implemented by libsvn_client which allows
@@ -525,7 +569,7 @@ svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
  * Use @a pool for memory allocation.
  */
 svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
-                               const svn_ra_reporter_t **reporter,
+                               const svn_ra_reporter2_t **reporter,
                                void **report_baton,
                                svn_revnum_t revision_to_update_to,
                                const char *update_target,
@@ -573,7 +617,7 @@ svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
  * Use @a pool for memory allocation.
  */
 svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
-                               const svn_ra_reporter_t **reporter,
+                               const svn_ra_reporter2_t **reporter,
                                void **report_baton,
                                svn_revnum_t revision_to_switch_to,
                                const char *switch_target,
@@ -618,7 +662,7 @@ svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
  * Use @a pool for memory allocation.
  */
 svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
-                               const svn_ra_reporter_t **reporter,
+                               const svn_ra_reporter2_t **reporter,
                                void **report_baton,
                                const char *status_target,
                                svn_revnum_t revision,
@@ -676,7 +720,7 @@ svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
  * Use @a pool for memory allocation.
  */
 svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
-                             const svn_ra_reporter_t **reporter,
+                             const svn_ra_reporter2_t **reporter,
                              void **report_baton,
                              svn_revnum_t revision,
                              const char *diff_target,

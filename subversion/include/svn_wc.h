@@ -1778,7 +1778,9 @@ svn_error_t *svn_wc_process_committed (const char *path,
 
 
 
-/** Do a depth-first crawl in a working copy, beginning at @a path.
+/** @since New in 1.2.
+ *
+ * Do a depth-first crawl in a working copy, beginning at @a path.
  *
  * Communicate the `state' of the working copy's revisions to
  * @a reporter/@a report_baton.  Obviously, if @a path is a file instead 
@@ -1804,6 +1806,23 @@ svn_error_t *svn_wc_process_committed (const char *path,
  * If @a traversal_info is non-null, then record pre-update traversal
  * state in it.  (Caller should obtain @a traversal_info from
  * @c svn_wc_init_traversal_info.)
+ */
+svn_error_t *
+svn_wc_crawl_revisions2 (const char *path,
+                         svn_wc_adm_access_t *adm_access,
+                         const svn_ra_reporter2_t *reporter,
+                         void *report_baton,
+                         svn_boolean_t restore_files,
+                         svn_boolean_t recurse,
+                         svn_boolean_t use_commit_times,
+                         svn_wc_notify_func_t notify_func,
+                         void *notify_baton,
+                         svn_wc_traversal_info_t *traversal_info,
+                         apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to svn_wc_crawl_revisions2, but taking an @c svn_ra_reporter_t.
  */
 svn_error_t *
 svn_wc_crawl_revisions (const char *path,
