@@ -38,6 +38,7 @@ struct thread_req_t {
   const char *root;
   svn_ra_svn_conn_t *conn;
   svn_boolean_t read_only;
+  svn_boolean_t believe_username;
   apr_pool_t *pool;
 
   /* Next struct in the queue. Used only in the request queue. */
@@ -135,7 +136,8 @@ static void *APR_THREAD_FUNC thread_main(apr_thread_t *tid, void *data)
 
       /* Serve the request. */
       svn_error_clear(serve(request->conn, request->root, FALSE,
-                            request->read_only, request->pool));
+                            request->read_only, request->believe_username,
+                            request->pool));
       svn_pool_destroy(request->pool);
     }
 }
@@ -179,8 +181,8 @@ static void create_thread(apr_pool_t *pool)
 
 /* Serve a request in a working thread. */
 void serve_thread(svn_ra_svn_conn_t *conn, const char *root,
-                  svn_boolean_t read_only, apr_pool_t *pool,
-                  apr_pool_t *connection_pool)
+                  svn_boolean_t read_only, svn_boolean_t believe_username,
+                  apr_pool_t *pool, apr_pool_t *connection_pool)
 {
   thread_req_t *request;
   svn_boolean_t make_new_thread;
@@ -189,6 +191,7 @@ void serve_thread(svn_ra_svn_conn_t *conn, const char *root,
   request->conn = conn;
   request->root = root;
   request->read_only = read_only;
+  request->believe_username = believe_username;
   request->pool = connection_pool;
   request->next = NULL;
 

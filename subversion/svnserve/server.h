@@ -29,12 +29,12 @@ extern "C" {
 
 svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
                    svn_boolean_t tunnel, svn_boolean_t read_only,
-                   apr_pool_t *pool);
+                   svn_boolean_t believe_username, apr_pool_t *pool);
 
 #ifdef APR_HAS_THREADS
 void serve_thread(svn_ra_svn_conn_t *conn, const char *root,
-                  svn_boolean_t read_only, apr_pool_t *pool,
-                  apr_pool_t *connection_pool);
+                  svn_boolean_t read_only, svn_boolean_t believe_username,
+                  apr_pool_t *pool, apr_pool_t *connection_pool);
 
 void init_threads(apr_pool_t *pool);
 #endif /* APR_HAS_THREADS */

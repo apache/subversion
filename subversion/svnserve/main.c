@@ -79,7 +79,8 @@ static void usage(const char *progname)
   if (!progname)
     progname = "svn-server";
   fprintf(stderr,
-          "Usage: %s [-X|-d|-t|-R" CONNECTION_USAGE "] [-r root]\n", progname);
+          "Usage: %s [-X|-d|-t|-R|-u" CONNECTION_USAGE "] [-r root]\n",
+          progname);
   exit(1);
 }
 
@@ -109,7 +110,7 @@ static apr_status_t redirect_stdout(void *arg)
 int main(int argc, const char *const *argv)
 {
   svn_boolean_t listen_once = FALSE, daemon_mode = FALSE, tunnel_mode = FALSE;
-  svn_boolean_t read_only = FALSE;
+  svn_boolean_t read_only = FALSE, believe_username = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
   apr_sockaddr_t *sa;
@@ -135,7 +136,7 @@ int main(int argc, const char *const *argv)
 
   while (1)
     {
-      status = apr_getopt(os, "dtXr:R" CONNECTION_OPT, &opt, &arg);
+      status = apr_getopt(os, "dtXr:Ru" CONNECTION_OPT, &opt, &arg);
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
@@ -167,6 +168,10 @@ int main(int argc, const char *const *argv)
         case 'T':
           handling_mode = connection_mode_thread;
           break;
+
+        case 'u':
+          believe_username = TRUE;
+          break;
         }
     }
   if (os->ind != argc)
@@ -179,7 +184,8 @@ int main(int argc, const char *const *argv)
       apr_file_open_stdin(&in_file, pool);
       apr_file_open_stdout(&out_file, pool);
       conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
-      svn_error_clear(serve(conn, root, tunnel_mode, read_only, pool));
+      svn_error_clear(serve(conn, root, tunnel_mode, read_only, 
+                            believe_username, pool));
       exit(0);
     }
 
@@ -255,7 +261,8 @@ int main(int argc, const char *const *argv)
 
       if (listen_once)
         {
-          err = serve(conn, root, FALSE, read_only, connection_pool);
+          err = serve(conn, root, FALSE, read_only, believe_username, 
+                      connection_pool);
 
           if (listen_once && err
               && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
@@ -274,7 +281,7 @@ int main(int argc, const char *const *argv)
           if (status == APR_INCHILD)
             {
               svn_error_clear(serve(conn, root, FALSE, read_only,
-                                    connection_pool));
+                                    believe_username, connection_pool));
               apr_socket_close(usock);
               exit(0);
             }
@@ -294,13 +301,15 @@ int main(int argc, const char *const *argv)
         case connection_mode_thread:
           /* Pass the request off to a worker thread. */
 #if APR_HAS_THREADS
-          serve_thread(conn, root, read_only, pool, connection_pool);
+          serve_thread(conn, root, read_only, believe_username,
+                       pool, connection_pool);
 #endif
           break;
 
         case connection_mode_single:
           /* Serve one connection at a time. */
-          svn_error_clear(serve(conn, root, FALSE, read_only, connection_pool));
+          svn_error_clear(serve(conn, root, FALSE, read_only,
+                                believe_username, connection_pool));
           svn_pool_destroy(connection_pool);
         }
     }
