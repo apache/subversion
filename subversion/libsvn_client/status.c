@@ -76,7 +76,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   SVN_ERR (svn_wc_entry (&entry, anchor, pool));
   if (! entry)
     return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
        "svn_client_update: %s is not under revision control", anchor->data);
   if (entry->existence == svn_wc_existence_deleted)
     return svn_error_createf
