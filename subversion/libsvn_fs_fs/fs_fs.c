@@ -1799,7 +1799,114 @@ svn_fs__fs_get_txn (svn_fs__transaction_t **txn_p,
 
   return SVN_NO_ERROR;
 }
-  
+
+/* Write out the currently available next node_id NODE_ID and copy_id
+   COPY_ID for transaction TXN_ID in filesystem FS.  Perform temporary
+   allocations in POOL. */
+static svn_error_t *
+write_next_ids (svn_fs_t *fs,
+                const char *txn_id,
+                const char *node_id,
+                const char *copy_id,
+                apr_pool_t *pool)
+{
+  const char *id_filename;
+  apr_file_t *file;
+  svn_stream_t *out_stream;
+
+  id_filename = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
+                                    apr_pstrcat (pool, txn_id,
+                                                 SVN_FS_FS__TXNS_EXT, NULL),
+                                    SVN_FS_FS__NEXT_IDS, NULL);
+
+  SVN_ERR (svn_io_file_open (&file, id_filename, APR_WRITE | APR_TRUNCATE,
+                             APR_OS_DEFAULT, pool));
+
+  out_stream = svn_stream_from_aprfile (file, pool);
+
+  SVN_ERR (svn_stream_printf (out_stream, pool, "%s %s\n", node_id, copy_id));
+
+  SVN_ERR (svn_stream_close (out_stream));
+
+  return SVN_NO_ERROR;
+}
+
+/* Find out what the next unique node-id and copy-id are for
+   transaction TXN_ID in filesystem FS.  Store the results in *NODE_ID
+   and *COPY_ID.  Perform all allocations in POOL. */
+static svn_error_t *
+read_next_ids (const char **node_id,
+               const char **copy_id,
+               svn_fs_t *fs,
+               const char *txn_id,
+               apr_pool_t *pool)
+{
+  apr_file_t *file;
+  const char *id_filename;
+  char buf[SVN_FS__MAX_KEY_SIZE*2+3];
+  apr_size_t limit;
+  char *str, *last_str;
+
+  id_filename = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
+                                    apr_pstrcat (pool, txn_id,
+                                                 SVN_FS_FS__TXNS_EXT, NULL),
+                                    SVN_FS_FS__NEXT_IDS, NULL);
+
+  SVN_ERR (svn_io_file_open (&file, id_filename, APR_READ, APR_OS_DEFAULT,
+                             pool));
+
+  limit = sizeof (buf);
+  SVN_ERR (svn_io_read_length_line (file, buf, &limit, pool));
+
+  SVN_ERR (svn_io_file_close (file, pool));
+
+  /* Parse this into two separate strings. */
+
+  str = apr_strtok (buf, " ", &last_str);
+  if (! str)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "next-id file corrupt");
+
+  *node_id = apr_pstrdup (pool, str);
+
+  str = apr_strtok (NULL, " ", &last_str);
+  if (! str)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "next-id file corrupt");
+
+  *copy_id = apr_pstrdup (pool, str);
+
+  return SVN_NO_ERROR;
+}
+
+/* Get a new and unique to this transaction node-id for transaction
+   TXN_ID in filesystem FS.  Store the new node-id in *NODE_ID_P.
+   Perform all allocations in POOL. */
+static svn_error_t *
+get_new_txn_node_id (const char **node_id_p,
+                     svn_fs_t *fs,
+                     const char *txn_id,
+                     apr_pool_t *pool)
+{
+  const char *cur_node_id, *cur_copy_id;
+  char *node_id;
+  apr_size_t len;
+
+  /* First read in the current next-ids file. */
+  SVN_ERR (read_next_ids (&cur_node_id, &cur_copy_id, fs, txn_id, pool));
+
+  node_id = apr_pcalloc (pool, strlen (cur_node_id) + 2);
+
+  len = strlen(cur_node_id);
+  svn_fs__next_key (cur_node_id, &len, node_id);
+
+  SVN_ERR (write_next_ids (fs, txn_id, node_id, cur_copy_id, pool));
+
+  *node_id_p = apr_pstrcat (pool, "_", cur_node_id, NULL);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs__fs_create_node (const svn_fs_id_t **id_p,
                         svn_fs_t *fs,
@@ -1808,7 +1915,21 @@ svn_fs__fs_create_node (const svn_fs_id_t **id_p,
                         const char *txn_id,
                         apr_pool_t *pool)
 {
-  abort ();
+  const char *node_id;
+  const svn_fs_id_t *id;
+
+  /* Get a new node-id for this node. */
+  SVN_ERR (get_new_txn_node_id (&node_id, fs, txn_id, pool));
+
+  id = svn_fs__create_id (node_id, copy_id,
+                          apr_pstrcat (pool, "t", txn_id, NULL),
+                          pool);
+
+  noderev->id = id;
+
+  SVN_ERR (svn_fs__fs_put_node_revision (fs, noderev->id, noderev, pool));
+
+  *id_p = id;
 
   return SVN_NO_ERROR;
 }
