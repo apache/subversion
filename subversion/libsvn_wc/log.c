@@ -474,7 +474,7 @@ log_do_detect_conflict (struct log_runner *loggy,
   full_path = svn_string_dup (loggy->path, loggy->pool);
   svn_path_add_component_nts (full_path, rejfile, svn_path_local_style);
 
-  apr_err = apr_stat (&finfo, full_path->data, APR_FINFO_NORM, loggy->pool);
+  apr_err = apr_stat (&finfo, full_path->data, APR_FINFO_MIN, loggy->pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, loggy->pool,
                               "log_do_detect_conflict: couldn't stat %s",
@@ -739,7 +739,7 @@ conflict_if_rejfile (svn_string_t *parent_dir,
       apr_status_t apr_err;
       apr_finfo_t finfo;
       apr_err = apr_stat (&finfo, rejfile_full_path->data,
-                          APR_FINFO_NORM, pool);
+                          APR_FINFO_MIN, pool);
       
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf
