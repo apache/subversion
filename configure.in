@@ -391,7 +391,7 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 dnl Final step:  create the Makefile ----------------------------
 
-AC_OUTPUT([Makefile])
+AC_OUTPUT([Makefile svn-config], [chmod +x svn-config])
 
 
 dnl Create all of the build directories
