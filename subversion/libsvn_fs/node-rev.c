@@ -55,7 +55,7 @@ make_nodes (svn_fs_t *fs, int create)
 
 /* Set *SKEL_P to point to the REPRESENTATION skel for the node ID in
    FS, as part of TRAIL.  Allocate the skel and the data it points
-   into in TRAIL->POOL.
+   into in TRAIL->pool.
 
    Beyond verifying that it's a syntactically valid skel, this doesn't
    validate the data returned at all.  */
@@ -90,7 +90,7 @@ get_representation_skel (skel_t **skel_p,
 
 /* Set the REPRESENTATION skel for node ID in filesystem FS to SKEL,
    as part of TRAIL.  Do any necessary temporary allocation in
-   TRAIL->POOL. */
+   TRAIL->pool. */
 static svn_error_t *
 put_representation_skel (svn_fs_t *fs,
                          const svn_fs_id_t *id, 
@@ -142,7 +142,7 @@ svn_fs__get_node_revision (skel_t **skel_p,
 
 
 /* Store SKEL as the NODE-REVISION skel for the node ID in FS, as part
-   of TRAIL.  Use TRAIL->POOL for any necessary temporary allocation.  */
+   of TRAIL.  Use TRAIL->pool for any necessary temporary allocation.  */
 svn_error_t *
 svn_fs__put_node_revision (svn_fs_t *fs,
                            const svn_fs_id_t *id,
@@ -176,7 +176,7 @@ svn_fs__put_node_revision (svn_fs_t *fs,
 /* Check FS's `nodes' table to find an unused node number, and set
    *ID_P to the ID of the first revision of an entirely new node in
    FS, as part of TRAIL.  Allocate the new ID, and do all temporary
-   allocation, in TRAIL->POOL.  */
+   allocation, in TRAIL->pool.  */
 static svn_error_t *
 new_node_id (svn_fs_id_t **id_p,
              svn_fs_t *fs,
@@ -319,7 +319,7 @@ last_key_before (DB *db,
 
 /* Set *SUCCESSOR_P to the ID of an immediate successor to node
    revision ID in FS that does not exist yet, as part of TRAIL.  Do
-   any needed temporary allocation in TRAIL->POOL.
+   any needed temporary allocation in TRAIL->pool.
 
    If ID is the youngest revision of its node, then the successor is
    simply ID with its rightmost revision number increased; otherwise,
