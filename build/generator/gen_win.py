@@ -42,10 +42,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       os.unlink(src)
 
   def parse_options(self, options):
-    self.apr_path = os.path.abspath('apr')
-    self.apr_util_path = os.path.abspath('apr-util')
-    self.apr_iconv_path = os.path.abspath('apr-iconv')
-    self.bdb_path = None
+    self.apr_path = 'apr'
+    self.apr_util_path = 'apr-util'
+    self.apr_iconv_path = 'apr-iconv'
+    self.bdb_path = 'db4-win32'
     self.httpd_path = None
     self.zlib_path = None
     self.openssl_path = None
@@ -62,23 +62,23 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     for opt, val in options:
       if opt == '--with-berkeley-db':
-        self.bdb_path = os.path.abspath(val)
+        self.bdb_path = val
       elif opt == '--with-apr':
-        self.apr_path = os.path.abspath(val)
+        self.apr_path = val
       elif opt == '--with-apr-util':
-        self.apr_util_path = os.path.abspath(val)
+        self.apr_util_path = val
       elif opt == '--with-apr-iconv':
-        self.apr_iconv_path = os.path.abspath(val)
+        self.apr_iconv_path = val
       elif opt == '--with-httpd':
-        self.httpd_path = os.path.abspath(val)
+        self.httpd_path = val
         del self.skip_sections['mod_dav_svn']
         del self.skip_sections['mod_authz_svn']
       elif opt == '--with-junit':
-        self.junit_path = os.path.abspath(val)
+        self.junit_path = val
       elif opt == '--with-zlib':
-        self.zlib_path = os.path.abspath(val)
+        self.zlib_path = val
       elif opt == '--with-openssl':
-        self.openssl_path = os.path.abspath(val)
+        self.openssl_path = val
       elif opt == '--enable-purify':
         self.instrument_purify_quantify = 1
         self.instrument_apr_pools = 1
@@ -111,7 +111,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     self.parse_options(options)
 
     # Find db-4.0.x or db-4.1.x
-    self.dblibname = None
     self._find_bdb()
 
     # Find the right Perl library name to link SWIG bindings with
@@ -135,9 +134,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         print 'Wrote %s' % svnissdeb
 
     # Generate the build_neon.bat file
-    data = {'expat_path': self.apr_util_path + '/xml/expat/lib',
-            'zlib_path': self.zlib_path,
-            'openssl_path': self.openssl_path}
+    data = {'expat_path': self.apr_util_path
+                          and (os.path.abspath(self.apr_util_path) 
+                               + '/xml/expat/lib'),
+            'zlib_path': self.zlib_path 
+                         and os.path.abspath(self.zlib_path),
+            'openssl_path': self.openssl_path 
+                            and os.path.abspath(self.openssl_path)}
     self.write_with_template(os.path.join('build', 'win32', 'build_neon.bat'),
                              'build_neon.ezt', data)
     
@@ -158,6 +161,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     #Make the project files directory if it doesn't exist
     #TODO win32 might not be the best path as win64 stuff will go here too
     self.projfilesdir=os.path.join("build","win32",subdir)
+    self.rootpath = ".." + "\\.." * string.count(self.projfilesdir, os.sep)
     if not os.path.exists(self.projfilesdir):
       os.makedirs(self.projfilesdir)
 
@@ -170,30 +174,19 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     #Here we could enable shared libraries
     self.shared = 0
 
-  def search_for(self, name, paths):
-    "Search for the existence of name in paths & return the first path it was found under"
-    for x in paths:
-      x = string.replace(x, "/", os.sep)
-      if os.path.exists(os.path.join(x, name)):
-        return x
-
-  def map_rootpath(self, list, rootpath):
-    "Return a list with rootpath prepended"
-
-    result = [ ]
-    for item in list:
-      ### On Unix, os.path.isabs won't do the right thing if "item"
-      ### contains backslashes or drive letters
-      if os.path.isabs(item):
-        result.append(item)
-      else:
-        result.append(rootpath + '\\' + item)
-    return result
-
-  def make_windirs(self, list):
-    "Return a list with all the current os slashes replaced with windows slashes"
-
-    return map(lambda x:string.replace(x, os.sep, '\\'), list)
+  def path(self, *paths):
+    """Convert build path to msvc path and prepend root"""
+    return msvc_path_join(self.rootpath, *map(msvc_path, paths))
+  
+  def apath(self, path, *paths):
+    """Convert build path to msvc path and prepend root if not absolute"""
+    ### On Unix, os.path.isabs won't do the right thing if "item"
+    ### contains backslashes or drive letters
+    if os.path.isabs(path):
+      return msvc_path_join(msvc_path(path), *map(msvc_path, paths))
+    else:
+      return msvc_path_join(self.rootpath, msvc_path(path),
+                            *map(msvc_path, paths))
 
   def get_install_targets(self):
     "Generate the list of targets"
@@ -226,7 +219,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     dep.msvc_fake = section.target
     return section.target
 
-  def get_configs(self, target, rootpath):
+  def get_configs(self, target):
     "Get the list of configurations for the project"
     configs = [ ]
     for cfg in self.configs:
@@ -234,44 +227,44 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         ProjectItem(name=cfg,
                     lower=string.lower(cfg),
                     defines=self.get_win_defines(target, cfg),
-                    libdirs=self.get_win_lib_dirs(target,rootpath, cfg),
+                    libdirs=self.get_win_lib_dirs(target, cfg),
                     libs=self.get_win_libs(target, cfg),
                     ))
     return configs
   
-  def get_proj_sources(self, quote_path, target, rootpath):
+  def get_proj_sources(self, quote_path, target):
     "Get the list of source files for each project"
     sources = [ ]
     if not isinstance(target, gen_base.TargetProject):
       cbuild = None
       ctarget = None
       for source, object, reldir in self.get_win_sources(target):
-        rsrc = string.replace(os.path.join(rootpath, str(source)), os.sep, '\\')
+        rsrc = self.path(str(source))
 
         if isinstance(target, gen_base.TargetJavaHeaders):
-          classes = os.path.join(rootpath, target.classes)
+          classes = self.path(target.classes)
           if self.junit_path is not None:
             classes = "%s;%s" % (classes, self.junit_path)
 
-          headers = os.path.join(rootpath, target.headers)
+          headers = self.path(target.headers)
           classname = target.package + "." + source.class_name
 
           cbuild = "javah -verbose -force -classpath %s -d %s %s" \
                    % (self.quote(classes), self.quote(headers), classname)
 
-          ctarget = os.path.join(rootpath, object.filename_win)
+          ctarget = self.path(object.filename_win)
 
         elif isinstance(target, gen_base.TargetJavaClasses):
-          classes = targetdir = os.path.join(rootpath, target.classes)
+          classes = targetdir = self.path(target.classes)
           if self.junit_path is not None:
             classes = "%s;%s" % (classes, self.junit_path)
 
-          sourcepath = os.path.join(rootpath, source.sourcepath)
+          sourcepath = self.path(source.sourcepath)
 
           cbuild = "javac -g -classpath %s -d %s -sourcepath %s $(InputPath)" \
                    % tuple(map(self.quote, (classes, targetdir, sourcepath)))
 
-          ctarget = os.path.join(rootpath, object.filename)
+          ctarget = self.path(object.filename)
 
         if quote_path and '-' in rsrc:
           rsrc = '"%s"' % rsrc
@@ -279,8 +272,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                    custom_build=cbuild, custom_target=ctarget))
 
     if isinstance(target, gen_base.TargetJavaClasses) and target.jar:
-      classdir = os.path.join(rootpath, target.classes)
-      jarfile = os.path.join(classdir, target.jar)
+      classdir = self.path(target.classes)
+      jarfile = msvc_path_join(classdir, target.jar)
       cbuild = "jar cf %s -C %s %s" \
                % (jarfile, classdir, string.join(target.packages))
       deps = map(lambda x: x.custom_target, sources)
@@ -292,10 +285,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if isinstance(obj, gen_base.SWIGObject):
           for cobj in self.graph.get_sources(gen_base.DT_OBJECT, obj):
             if isinstance(cobj, gen_base.SWIGObject):
-              csrc = rootpath + '\\' + string.replace(cobj.filename, '/', '\\')
+              csrc = self.path(cobj.filename)
 
               if isinstance(target, gen_base.TargetSWIGRuntime):
-                bsrc = rootpath + "\\build\\win32\\gen_swig_runtime.py"
+                bsrc = self.path("build/win32/gen_swig_runtime.py")
                 cbuild = "python $(InputPath) %s %s %s" \
                          % (target.lang, csrc, self.quote(self.swig_libdir))
                 sources.append(ProjectItem(path=bsrc, reldir=None,
@@ -307,20 +300,19 @@ class WinGeneratorBase(gen_base.GeneratorBase):
               # output path passed to swig has to use forward slashes,
               # otherwise the generated python files (for shadow
               # classes) will be saved to the wrong directory
-              cout = string.replace(os.path.join(rootpath, cobj.filename),
-                                    os.sep, '/')
+              cout = string.replace(csrc, '\\', '/')
 
               # included header files that the generated c file depends on
               user_deps = []
 
               for iobj in self.graph.get_sources(gen_base.DT_SWIG_C, cobj):
-                isrc = rootpath + '\\' + string.replace(str(iobj), '/', '\\')
+                isrc = self.path(str(iobj))
 
                 if not isinstance(iobj, gen_base.SWIGSource):
                   user_deps.append(isrc)
                   continue
 
-                includes = self.get_win_includes(target, rootpath)
+                includes = self.get_win_includes(target)
                 if target.lang == "perl":
                   modules = {
                     "perl_client" : "_Client",
@@ -342,13 +334,11 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                               "svn_ra.h",
                               "ra_reporter.hi"))
 
-                  pfile = "%s\\subversion\\bindings\\swig\\perl\\native" \
-                          "\\h2i.pl" % rootpath
+                  pfile = self.path("subversion/bindings/swig/perl/native/h2i.pl")
 
                   for objname, header, output in objects:
-                    ifile = "%s\\subversion\\include\\%s" % (rootpath, header)
-                    ofile = "%s\\subversion\\bindings\\swig\\%s" \
-                            % (rootpath, output)
+                    ifile = self.path("subversion/include", header)
+                    ofile = self.path("subversion/bindings/swig", output)
 
                     obuild = "perl %s %s %s > %s" % (pfile, ifile, objname, 
                                                      ofile)
@@ -366,7 +356,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                             includes)),
                             self.quote(csrc))
                 elif target.lang == 'java':
-                  outdir = "%s\\subversion\\bindings\\swig\\java\\org\\tigris\\subversion\\swig" % rootpath
+                  outdir = self.path("subversion/bindings/swig/java/org/tigris/subversion/swig")
                   cbuild = "swig %s -%s -package org.tigris.subversion.swig -outdir %s %s -o %s $(InputPath)" % \
                            (self.swig_options, target.lang, outdir,
                             string.join(map(lambda x: "-I%s" % self.quote(x),
@@ -384,13 +374,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                            custom_target=csrc,
                                            user_deps=user_deps))
 
-    def_file = self.get_def_file(target, rootpath)
+    def_file = self.get_def_file(target)
     if def_file is not None:
-      gsrc = "%s\\build\\generator\\extractor.py" % rootpath
+      gsrc = self.path("build/generator/extractor.py")
 
       deps = []
       for header in target.msvc_export:
-        deps.append("%s\\%s\\%s" % (rootpath, target.path, header))
+        deps.append(self.path(target.path, header))
 
       cbuild = "python $(InputPath) %s > %s" \
                % (string.join(deps), def_file)
@@ -426,21 +416,21 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
   def get_output_dir(self, target):
     if isinstance(target, gen_base.TargetJavaHeaders):
-      return "../" + target.headers
+      return msvc_path("../" + target.headers)
     elif isinstance(target, gen_base.TargetJavaClasses):
-      return "../" + target.classes
+      return msvc_path("../" + target.classes)
     else:
-      return target.path
+      return msvc_path(target.path)
 
   def get_intermediate_dir(self, target):
     if isinstance(target, gen_base.TargetSWIG):
-      return target.path + "\\" + target.name
+      return msvc_path_join(msvc_path(target.path), target.name)
     else:
       return self.get_output_dir(target)
 
-  def get_def_file(self, target, rootpath):
+  def get_def_file(self, target):
     if isinstance(target, gen_base.TargetLib) and target.msvc_export:
-      return "%s\\%s\\%s.def" % (rootpath, target.path, target.name)
+      return self.path(target.path, target.name + ".def")
     return None
 
   def gen_proj_names(self, install_targets):
@@ -478,7 +468,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     else:
       path = target.external_project
 
-    return "%s.%s" % (path, proj_ext)
+    return "%s.%s" % (gen_base.native_path(path), proj_ext)
 
   def adjust_win_depends(self, target, name):
     "Handle special dependencies if needed"
@@ -608,7 +598,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     # XXX: Check if db is present, and if so, let apr-util know
     # XXX: This is a hack until the apr build system is improved to
     # XXX: know these things for itself.
-    if self.dblibname:
+    if self.bdb_lib:
       fakedefines.append("APU_HAVE_DB=1")
 
     # check if they wanted nls
@@ -617,67 +607,63 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     return fakedefines
 
-  def get_win_includes(self, target, rootpath):
+  def get_win_includes(self, target):
     "Return the list of include directories for target"
 
     if isinstance(target, gen_base.TargetApacheMod):
-      fakeincludes = self.map_rootpath(["subversion/include",
-                                        self.dbincpath,
-                                        "subversion"],
-                                       rootpath)
+      fakeincludes = [ self.path("subversion/include"),
+                       self.apath(self.bdb_path, "include"),
+                       self.path("subversion") ]
       fakeincludes.extend([
-        self.apr_path + "/include",
-        self.apr_util_path + "/include",
-        self.apr_util_path + "/xml/expat/lib",
-        self.httpd_path + "/include"
+        self.apath(self.apr_path, "include"),
+        self.apath(self.apr_util_path, "include"),
+        self.apath(self.apr_util_path, "xml/expat/lib"),
+        self.apath(self.httpd_path, "include")
         ])
     elif isinstance(target, gen_base.TargetSWIG):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
                          gen_base.lang_utillib_suffix[target.lang])
-      fakeincludes = self.map_rootpath(["subversion/bindings/swig",
-                                        "subversion/include",
-                                        util_includes,
-                                        self.apr_path + "/include",
-                                        self.apr_util_path + "/include"],
-                                       rootpath)
+      fakeincludes = [ self.path("subversion/bindings/swig"),
+                       self.path("subversion/include"),
+                       self.path(util_includes),
+                       self.apath(self.apr_path, "include"),
+                       self.apath(self.apr_util_path, "include") ]
     else:
-      fakeincludes = self.map_rootpath(["subversion/include",
-                                        self.apr_path + "/include",
-                                        self.apr_util_path + "/include",
-                                        self.apr_util_path + "/xml/expat/lib",
-                                        "neon/src",
-                                        self.dbincpath,
-                                        "subversion"],
-                                       rootpath)
+      fakeincludes = [ self.path("subversion/include"),
+                       self.apath(self.apr_path, "include"),
+                       self.apath(self.apr_util_path, "include"),
+                       self.apath(self.apr_util_path, "xml/expat/lib"),
+                       self.path("neon/src"),
+                       self.apath(self.bdb_path, "include"),
+                       self.path("subversion") ]
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
             or isinstance(target, gen_base.TargetSWIGLib)):
       fakeincludes.append(self.swig_libdir)
 
-    return self.make_windirs(fakeincludes)
+    return fakeincludes
 
-  def get_win_lib_dirs(self, target, rootpath, cfg):
+  def get_win_lib_dirs(self, target, cfg):
     "Return the list of library directories for target"
 
     libcfg = string.replace(string.replace(cfg, "Debug", "LibD"),
                             "Release", "LibR")
 
-    fakelibdirs = self.map_rootpath([self.dblibpath], rootpath)
+    fakelibdirs = [ self.apath(self.bdb_path, "lib") ]
     if isinstance(target, gen_base.TargetApacheMod):
-      fakelibdirs.extend([
-        self.httpd_path + "/%s" % cfg,
-        ])
+      fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
-        fakelibdirs.extend([self.httpd_path + "/modules/dav/main/%s" % cfg])
+        fakelibdirs.append(self.apath(self.httpd_path, "modules/dav/main", 
+                                      cfg))
 
-    return self.make_windirs(fakelibdirs)
+    return fakelibdirs
 
   def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
 
-    dblib = self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib')
+    dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
 
     if not isinstance(target, gen_base.TargetLinked):
       return []
@@ -761,33 +747,16 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
   def _find_bdb(self):
     "Find the Berkley DB library and version"
-    #We translate all slashes to windows format later on
-    search = [("libdb42", "db4-win32/lib"),
-              ("libdb41", "db4-win32/lib"),
-              ("libdb40", "db4-win32/lib")]
-
-    if self.bdb_path:
-      search = [("libdb42", self.bdb_path + "/lib"),
-                ("libdb41", self.bdb_path + "/lib"),
-                ("libdb40", self.bdb_path + "/lib")] + search
-
-    for libname, path in search:
-      libpath = self.search_for(libname + ".lib", [path])
-      if libpath:
-        sys.stderr.write("Found %s.lib in %s\n" % (libname, libpath))
-        self.dblibname = libname
-        self.dblibpath = libpath
-
-    if not self.dblibname:
+    for lib in ("libdb42", "libdb41", "libdb40"):
+      path = os.path.join(self.bdb_path, "lib")
+      if os.path.exists(os.path.join(path, lib + ".lib")):
+        sys.stderr.write("Found %s.lib in %s\n" % (lib, path))
+        self.bdb_lib = lib
+        break
+    else:
       sys.stderr.write("DB not found; assuming db-4.2.x in db4-win32 "
                        "by default\n")
-      self.dblibname = "libdb42"
-      self.dblibpath = os.path.join("db4-win32","lib")
-
-    self.dbincpath = string.replace(self.dblibpath, "lib", "include")
-    self.dbbindll = "%s//%s.dll" % (string.replace(self.dblibpath,
-                                                   "lib", "bin"),
-                                    self.dblibname)
+      self.bdb_lib = "libdb42"
 
   def _find_perl(self):
     "Find the right perl library name to link swig bindings with"
@@ -882,3 +851,12 @@ class POFile:
     self.po = base + '.po'
     self.spo = base + '.spo'
     self.mo = base + '.mo'
+
+# MSVC paths always use backslashes regardless of current platform
+def msvc_path(path):
+  """Convert a build path to an msvc path"""
+  return string.replace(path, '/', '\\')
+
+def msvc_path_join(*path_parts):
+  """Join path components into an msvc path"""
+  return string.join(path_parts, '\\')

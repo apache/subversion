@@ -8,6 +8,8 @@ import string
 
 import gen_base
 
+from gen_base import build_path_join, build_path_strip, build_path_splitfile, \
+      build_path_basename, build_path_dirname, build_path_retreat
 
 class Generator(gen_base.GeneratorBase):
 
@@ -53,7 +55,7 @@ class Generator(gen_base.GeneratorBase):
       else:
         path = target_ob.path
 
-      retreat = gen_base._retreat_dots(path)
+      retreat = build_path_retreat(path)
 
       # get the source items (.o and .la) for the link unit
       objects = [ ]
@@ -71,7 +73,7 @@ class Generator(gen_base.GeneratorBase):
             deps.append(source.filename)
 
             # link against the library
-            libs.append(os.path.join(retreat, source.filename))
+            libs.append(build_path_join(retreat, source.filename))
         elif isinstance(source, gen_base.ObjectFile):
           # link in the object file
           objects.append(source.filename)
@@ -83,7 +85,7 @@ class Generator(gen_base.GeneratorBase):
           raise UnknownDependency
 
       targ_varname = string.replace(target, '-', '_')
-      objnames = string.join(gen_base._strip_path(path, objects))
+      objnames = string.join(build_path_strip(path, objects))
 
       if isinstance(target_ob, gen_base.TargetJava):
         self.ofile.write(
@@ -97,8 +99,8 @@ class Generator(gen_base.GeneratorBase):
              targ_varname))
         for dep in target_ob.deps:
           if isinstance(dep, gen_base.SourceFile):
-            self.ofile.write('%s ' % os.path.join('$(abs_srcdir)',
-                                                  dep.filename))
+            self.ofile.write('%s ' % build_path_join('$(abs_srcdir)',
+                                                     dep.filename))
           elif isinstance(dep, gen_base.HeaderFile):
             self.ofile.write('%s ' % dep.classname)
           else:
@@ -109,7 +111,7 @@ class Generator(gen_base.GeneratorBase):
         # JAR.
         if target_ob.jar:
           self.ofile.write('\n\t$(JAR) cf %s -C %s %s' %
-                           (os.path.join(target_ob.classes, target_ob.jar),
+                           (build_path_join(target_ob.classes, target_ob.jar),
                             target_ob.classes,
                             string.join(target_ob.packages, ' ')))
 
@@ -132,7 +134,8 @@ class Generator(gen_base.GeneratorBase):
 
              target_ob.filename, targ_varname,
 
-             path, target_ob.link_cmd, os.path.basename(target_ob.filename),
+             path, target_ob.link_cmd,
+             build_path_basename(target_ob.filename),
              (isinstance(target_ob, gen_base.TargetLib) and not
                target_ob.undefined_lib_symbols) and "-no-undefined" or "",
              targ_varname, string.join(gen_base.unique(libs)))
@@ -182,7 +185,7 @@ class Generator(gen_base.GeneratorBase):
         la_tweaked = { }
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
-          dirname, fname = os.path.split(file)
+          dirname, fname = build_path_splitfile(file)
           base, ext = os.path.splitext(fname)
           name = string.replace(base, 'mod_', '')
           self.ofile.write('\tcd %s ; '
@@ -206,24 +209,23 @@ class Generator(gen_base.GeneratorBase):
         self.ofile.write('\ninstall-mods-static: %s\n'
                          '\t$(MKDIR) $(DESTDIR)%s\n'
                          % (string.join(la_tweaked + self.apache_files),
-                            os.path.join('$(APACHE_TARGET)', '.libs')))
+                            build_path_join('$(APACHE_TARGET)', '.libs')))
         for file in la_tweaked:
-          dirname, fname = os.path.split(file)
+          dirname, fname = build_path_splitfile(file)
           base = os.path.splitext(fname)[0]
           self.ofile.write('\t$(INSTALL_MOD_STATIC) %s $(DESTDIR)%s\n'
                            '\t$(INSTALL_MOD_STATIC) %s $(DESTDIR)%s\n'
-                           % (os.path.join(dirname, '.libs', base + '.a'),
-                              os.path.join('$(APACHE_TARGET)',
-                                           '.libs',
-                                           base + '.a'),
+                           % (build_path_join(dirname, '.libs', base + '.a'),
+                              build_path_join('$(APACHE_TARGET)', '.libs',
+                                              base + '.a'),
                               file,
-                              os.path.join('$(APACHE_TARGET)', base + '.la')))
+                              build_path_join('$(APACHE_TARGET)', base + '.la')))
 
         # copy the other files to the target dir
         for file in self.apache_files:
           self.ofile.write('\t$(INSTALL_MOD_STATIC) %s $(DESTDIR)%s\n'
-                           % (file, os.path.join('$(APACHE_TARGET)',
-                                                 os.path.basename(file))))
+                           % (file, build_path_join('$(APACHE_TARGET)',
+                                                 build_path_basename(file))))
         self.ofile.write('\n')
 
       elif area != 'test' and area != 'bdb-test':
@@ -234,33 +236,34 @@ class Generator(gen_base.GeneratorBase):
                          % (area, string.join(files), area_var))
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
-          dirname, fname = os.path.split(file)
+          dirname, fname = build_path_splitfile(file)
           if area == 'locale':
             lang, objext = os.path.splitext(fname)
             self.ofile.write('\tcd %s ; $(INSTALL_%s) %s '
                              '$(DESTDIR)%s/%s/LC_MESSAGES/$(PACKAGE_NAME)%s\n'
                              % (dirname, upper_var, fname,
-                                os.path.join('$(%sdir)' % area_var), lang,
+                                build_path_join('$(%sdir)' % area_var), lang,
                                 objext))
           else:
             self.ofile.write('\tcd %s ; $(INSTALL_%s) %s $(DESTDIR)%s\n'
                              % (dirname, upper_var, fname,
-                                os.path.join('$(%sdir)' % area_var, fname)))
+                                build_path_join('$(%sdir)' % area_var, fname)))
         ### we should turn AREA into an object, then test it instead of this
         if area[:5] == 'swig-' and area[-4:] != '-lib' or \
            area[:7] == 'javahl-':
           self.ofile.write('\t$(INSTALL_EXTRA_%s)\n' % upper_var)
         self.ofile.write('\n')
 
-    includedir = os.path.join('$(includedir)',
-                              'subversion-%s' % self.cfg.version)
+    includedir = build_path_join('$(includedir)',
+                                 'subversion-%s' % self.cfg.version)
     self.ofile.write('install-include: %s\n'
                      '\t$(MKDIR) $(DESTDIR)%s\n'
                      % (string.join(self.includes), includedir))
     for file in self.includes:
       self.ofile.write('\t$(INSTALL_INCLUDE) %s $(DESTDIR)%s\n'
-                       % (os.path.join('$(abs_srcdir)', file),
-                          os.path.join(includedir, os.path.basename(file))))
+                       % (build_path_join('$(abs_srcdir)', file),
+                          build_path_join(includedir,
+                                          build_path_basename(file))))
 
     self.ofile.write('\n# handy shortcut targets\n')
     for target in install_sources:
@@ -275,7 +278,7 @@ class Generator(gen_base.GeneratorBase):
                                          gen_base.LT_TARGET_DIRS)
 
     # get all the test scripts' directories
-    script_dirs = map(os.path.dirname, self.scripts + self.bdb_scripts)
+    script_dirs = map(build_path_dirname, self.scripts + self.bdb_scripts)
 
     # remove duplicate directories between targets and tests
     build_dirs = gen_base.unique(target_dirs + script_dirs + self.swig_dirs)
@@ -312,7 +315,7 @@ class Generator(gen_base.GeneratorBase):
 
     for objname, sources in swig_c_deps:
       deps = string.join(map(str, sources))
-      source = os.path.join('$(abs_srcdir)', str(sources[0]))
+      source = build_path_join('$(abs_srcdir)', str(sources[0]))
       self.ofile.write('%s: %s\n\t$(RUN_SWIG_%s) %s\n'
                        % (objname, deps, string.upper(objname.lang_abbrev),
                           source))
@@ -326,8 +329,9 @@ class Generator(gen_base.GeneratorBase):
       cmd = objname.compile_cmd
       if cmd:
         if not getattr(objname, 'source_generated', 0):
-          self.ofile.write('\t%s %s\n' % (cmd, os.path.join('$(abs_srcdir)',
-                                                            str(sources[0]))))
+          self.ofile.write('\t%s %s\n'
+                           % (cmd, build_path_join('$(abs_srcdir)',
+                              str(sources[0]))))
         else:
           self.ofile.write('\t%s %s\n' % (cmd, sources[0]))
 
@@ -343,14 +347,14 @@ class Generator(gen_base.GeneratorBase):
         name = string.upper(target.name[7:])
 
         # construct a list of the other .la libs to link against
-        retreat = gen_base._retreat_dots(target.path)
+        retreat = build_path_retreat(target.path)
         deps = [ target.filename ]
-        link = [ os.path.join(retreat, target.filename) ]
+        link = [ build_path_join(retreat, target.filename) ]
         for source in self.graph.get_sources(gen_base.DT_LINK, target.name):
           if not isinstance(source, gen_base.TargetLib) or source.external_lib:
             continue
           deps.append(source.filename)
-          link.append(os.path.join(retreat, source.filename))
+          link.append(build_path_join(retreat, source.filename))
 
         self.ofile.write('%s_DEPS = %s\n'
                          '%s_LINK = %s\n\n' % (name, string.join(deps, ' '),
