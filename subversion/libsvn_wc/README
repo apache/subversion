@@ -86,7 +86,6 @@ analogous to CVS/ sudirs:
        ancestor                 /* Path to this dir in the repository */
        entries                  /* Various adm info for each directory entry */
        properties               /* Properties for this directory */
-       delta-here               /* Uncommitted changes logged here */
        lock                     /* Optional, tells others this dir is busy */
        log                      /* Ops log (for rollback/crash-recovery) */
        text-base/               /* Pristine repos versions of the files... */
@@ -170,60 +169,6 @@ analogous to CVS/ sudirs:
    hand its easy to parse it streamily, unlike hashdump format, which
    generally results in a complete data structure in memory before you
    can do anything at all.
-
-`delta-here'
-
-   Records adds, renames, and deletes involving this directory's
-   immediate children, using tree-delta syntax:
-
-      <new name="qux.c">
-        <file ancestor="/full/path/to/foo.c" version="17"/>
-      </new>
-      <delete name="foo.c"/>
-
-   (The "<tree-delta>" and "</tree-delta>" tags themselves are
-   omitted, for reasons that will become clear later.) 
-
-   When new changes are recorded, they have to be checked against
-   existing ones for consistency.  For example, imagine the following
-   sequence of operations:
-
-      svn rename foo.c qux.c
-      svn rename bar.c qux.c
-
-   After the first command, the tree-edits file might look like this:
-
-      <new name="qux.c">
-        <file ancestor="/full/path/to/foo.c" version="17"/>
-      </new>
-      <delete name="foo.c"/>
-
-   But after the second command, it should *not* look like this:
-   
-      <new name="qux.c">
-        <file ancestor="/full/path/to/foo.c" version="17"/>
-      </new>
-      <new name="qux.c">
-        <file ancestor="/full/path/to/bar.c" version="12"/>
-      </new>
-      <delete name="foo.c"/>
-      <delete name="bar.c"/>
-
-   because that would leave two entries for qux.c, with conflicting
-   ancestries.  Instead, the old qux.c entry should be *replaced* with
-   a new one, leaving:
-
-      <new name="qux.c">
-        <file ancestor="/full/path/to/bar.c" version="12"/>
-      </new>
-      <delete name="foo.c"/>
-      <delete name="bar.c"/>
-
-   (And remember that the parent directory, bar.c, and foo.c might all
-   have different versions.)
-
-   kff todo: explain the internal walk interface here, & how it
-   connects with the xml outputter.
 
 `lock'
 
