@@ -42,7 +42,10 @@ svn_pipe_open(svn_pipe_t **result,
               apr_pool_t *pool);
 
 /* Establish a pipe endpoint by attaching to INPUT and OUTPUT,
-   using POOL for all memory allocations.  Store the pipe in *RESULT. */
+   using POOL for all memory allocations.  Store the pipe in *RESULT.
+   This function is symmetrical to svn_pipe_open(); it is to be called
+   by the process *established* by svn_pipe_open() in order to initialize
+   its end of the pipe. */
 svn_error_t *
 svn_pipe_endpoint(svn_pipe_t **result,
                   apr_file_t *input,
