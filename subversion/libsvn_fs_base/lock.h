@@ -44,6 +44,10 @@ svn_error_t *svn_fs_base__attach_lock (svn_lock_t *lock,
                                        svn_revnum_t current_rev,
                                        apr_pool_t *pool);
 
+svn_error_t *svn_fs_base__generate_token (const char **token,
+                                          svn_fs_t *fs,
+                                          apr_pool_t *pool);
+
 svn_error_t *svn_fs_base__unlock (svn_fs_t *fs,
                                   const char *token,
                                   svn_boolean_t force,

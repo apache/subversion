@@ -276,10 +276,9 @@ dav_svn_create_lock(dav_lockdb *lockdb,
                     const dav_resource *resource,
                     dav_lock **lock)
 {
-  apr_uuid_t uuid;
+  svn_error_t *serr;
   dav_locktoken *token = apr_pcalloc(resource->pool, sizeof(*token));
   dav_lock *dlock = apr_pcalloc(resource->pool, sizeof(*dlock));
-  char *uuid_str = apr_pcalloc (resource->pool, APR_UUID_FORMATTED_LENGTH + 1);
   
   dlock->rectype = DAV_LOCKREC_DIRECT;
   dlock->is_locknull = resource->exists;
@@ -287,12 +286,13 @@ dav_svn_create_lock(dav_lockdb *lockdb,
   dlock->type = DAV_LOCKTYPE_UNKNOWN;
   dlock->depth = 0;
 
-  /* Generate a UUID. */
-  /* ### perhaps this should be a func in libsvn_fs.so, shared by
-     mod_dav_svn and both fs back-ends??  */
-  apr_uuid_get (&uuid);
-  apr_uuid_format (uuid_str, &uuid);
-  token->uuid_str = uuid_str;
+  serr = svn_fs_generate_token(&(token->uuid_str), 
+                               resource->info->repos->fs,
+                               resource->pool);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Failed to generate a lock token.",
+                               resource->pool);
   dlock->locktoken = token;
 
   /* allowing mod_dav to fill in dlock->timeout, owner, auth_user. */

@@ -34,24 +34,20 @@
 /* Helper func:  create a new svn_lock_t, everything allocated in pool. */
 static svn_error_t *
 generate_new_lock (svn_lock_t **lock_p,
+                   svn_fs_t *fs,
                    const char *path,
                    const char *owner,
                    const char *comment,
                    long int timeout,
                    apr_pool_t *pool)
 {
-  apr_uuid_t uuid;
-  char *uuid_str = apr_pcalloc (pool, APR_UUID_FORMATTED_LENGTH + 1);
   svn_lock_t *lock = apr_pcalloc (pool, sizeof (*lock));
+
+  SVN_ERR (svn_fs_base__generate_token (&(lock->token), fs, pool));
   
   lock->path = apr_pstrdup (pool, path);
   lock->owner = apr_pstrdup (pool, owner);
   lock->comment = apr_pstrdup (pool, comment);
-  
-  apr_uuid_get (&uuid);
-  apr_uuid_format (uuid_str, &uuid);
-  lock->token = uuid_str;
-
   lock->creation_date = apr_time_now();
 
   if (timeout)
@@ -150,7 +146,7 @@ txn_body_lock (void *baton, trail_t *trail)
     }
 
   /* Create a new lock, and add it to the tables. */    
-  SVN_ERR (generate_new_lock (&new_lock, args->path, fs_username,
+  SVN_ERR (generate_new_lock (&new_lock, trail->fs, args->path, fs_username,
                               args->comment, args->timeout, trail->pool));
   SVN_ERR (svn_fs_bdb__lock_add (trail->fs, new_lock->token,
                                  new_lock, trail));
@@ -288,6 +284,26 @@ svn_fs_base__attach_lock (svn_lock_t *lock,
   args.current_rev = current_rev;
 
   return svn_fs_base__retry_txn (fs, txn_body_attach_lock, &args, pool);
+}
+
+
+
+svn_error_t *
+svn_fs_base__generate_token (const char **token,
+                             svn_fs_t *fs,
+                             apr_pool_t *pool)
+{
+  apr_uuid_t uuid;
+  char *uuid_str = apr_pcalloc (pool, APR_UUID_FORMATTED_LENGTH + 1);
+
+  apr_uuid_get (&uuid);
+  apr_uuid_format (uuid_str, &uuid);
+
+  /* ### Notice that 'fs' is currently unused.  But perhaps someday,
+     we'll want to use the fs UUID + some incremented number?  */
+
+  *token = uuid_str;
+  return SVN_NO_ERROR;
 }
 
 

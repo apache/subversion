@@ -1524,11 +1524,10 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
  *
  * The caller is responsible for creating and initializing all fields
  * in @a lock before invoking this routine, including the generation
- * of a string representation of an apr_uuid_t in @a lock->token.  @a
- * lock->owner must be filled in with an authenticated username.  If
- * not, then the username associated with @a fs will be used to fill
- * it in.  If neither username is available, return
- * SVN_ERR_FS_NO_USER.
+ * of a lock-token (see @c svn_fs_generate_token).  @a lock->owner
+ * must be filled in with an authenticated username.  If not, then the
+ * username associated with @a fs will be used to fill it in.  If
+ * neither username is available, return SVN_ERR_FS_NO_USER.
  *
  * If path is already locked, then check to see whether @a lock->token
  * and @a lock->owner match the existing lock.  If not, return
@@ -1551,6 +1550,16 @@ svn_error_t *svn_fs_attach_lock (svn_lock_t *lock,
                                  svn_revnum_t current_rev,
                                  apr_pool_t *pool);
 
+
+/** Generate a unique lock-token using @a fs. Return in @a *token,
+ * allocated in @a pool.
+ *
+ * This can be used in to populate lock->token before calling @c
+ * svn_fs_attach_lock().
+ */
+svn_error_t *svn_fs_generate_token (const char **token,
+                                    svn_fs_t *fs,
+                                    apr_pool_t *pool);
 
 
 /**  Remove lock on the path represented by @a token in @a fs.
@@ -1608,6 +1617,7 @@ svn_error_t *svn_fs_get_locks (apr_hash_t **locks,
                                svn_fs_t *fs,
                                const char *path,
                                apr_pool_t *pool);
+
 
 
 #ifdef __cplusplus

@@ -3527,10 +3527,10 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   SVN_ERR (svn_fs_fs__txn_proplist (&txnprops, txn, subpool));
   if (txnprops)
     {
-      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_OUT_OF_DATENESS,
+      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
                         APR_HASH_KEY_STRING))
         SVN_ERR (svn_fs_fs__change_txn_prop 
-                 (txn, SVN_FS_PROP_TXN_CHECK_OUT_OF_DATENESS,
+                 (txn, SVN_FS_PROP_TXN_CHECK_OOD,
                   NULL, subpool));
       
       if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,

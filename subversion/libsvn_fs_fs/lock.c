@@ -274,23 +274,19 @@ delete_lock (svn_fs_t *fs,
 /* Helper func:  create a new svn_lock_t, everything allocated in pool. */
 static svn_error_t *
 generate_new_lock (svn_lock_t **lock_p,
+                   svn_fs_t *fs,
                    const char *path,
                    const char *owner,
                    long int timeout,
                    apr_pool_t *pool)
 {
-  apr_uuid_t uuid;
-  char *uuid_str = apr_pcalloc (pool, APR_UUID_FORMATTED_LENGTH + 1);
   svn_lock_t *lock = apr_pcalloc (pool, sizeof (*lock));
+
+  SVN_ERR (svn_fs_fs__generate_token (&(lock->token), fs, pool));
   
   lock->path = apr_pstrdup (pool, path);
-  
   lock->owner = apr_pstrdup (pool, owner);
-  
-  apr_uuid_get (&uuid);
-  apr_uuid_format (uuid_str, &uuid);
-  lock->token = uuid_str;
-
+  /* ### this function should take a 'comment' argument!  */
   lock->creation_date = apr_time_now();
 
   if (timeout)
@@ -520,7 +516,8 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
     }
 
   /* Create a new lock, and add it to the tables. */    
-  SVN_ERR (generate_new_lock (&new_lock, path, fs->access_ctx->username,
+  /* ### FITZ TODO:  pass 'comment' into generate_new_lock!! */
+  SVN_ERR (generate_new_lock (&new_lock, fs, path, fs->access_ctx->username,
                               timeout, pool));
   SVN_ERR (save_lock (fs, new_lock, pool));
   *lock_p = new_lock;
@@ -589,6 +586,27 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
 
   return SVN_NO_ERROR;
 }
+
+
+
+svn_error_t *
+svn_fs_fs__generate_token (const char **token,
+                           svn_fs_t *fs,
+                           apr_pool_t *pool)
+{
+  apr_uuid_t uuid;
+  char *uuid_str = apr_pcalloc (pool, APR_UUID_FORMATTED_LENGTH + 1);
+
+  apr_uuid_get (&uuid);
+  apr_uuid_format (uuid_str, &uuid);
+
+  /* ### Notice that 'fs' is currently unused.  But perhaps someday,
+     we'll want to use the fs UUID + some incremented number?  */
+
+  *token = uuid_str;
+  return SVN_NO_ERROR;
+}
+
 
 
 svn_error_t *
