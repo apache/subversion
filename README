@@ -57,7 +57,7 @@ IV.   QUICKSTART GUIDE
 
   A.  REPOSITORIES
 
-      1.  REPOSITORY ACCESS
+      1.  Repository Access
 
       The Subversion client has an abstract interface for accessing a
       repository.  Two "Repository Access" (RA) implementations
@@ -90,7 +90,7 @@ IV.   QUICKSTART GUIDE
       I.B above.)
 
 
-      2.  CREATING A REPOSITORY
+      2.  Creating a Repository
 
       A Subversion repository is an ordinary directory that mainly
       contains Berkeley DB .db files.  You can only create a
@@ -124,7 +124,7 @@ IV.   QUICKSTART GUIDE
           http://www.sleepycat.com/docs/ref/env/remote.html
 
 
-      3.  CREATING A SUBVERSION SERVER
+      3.  Creating a Subversion Server
 
       Subversion uses Apache 2.0 as its network server.  Apache's
       mod_dav speaks to a special mod_dav_svn module, which uses
