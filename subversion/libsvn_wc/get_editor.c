@@ -139,6 +139,8 @@ free_dir_baton (struct dir_baton *dir_baton)
 
   /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
   apr_destroy_pool (dir_baton->pool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -421,7 +423,7 @@ add_file (svn_string_t *name,
   parent_dir_baton->ref_count++;
   *file_baton = fb;
 
-  printf ("%s\n   ", fb->path);
+  printf ("%s\n   ", fb->path->data);
 
   return SVN_NO_ERROR;
 }
