@@ -545,6 +545,8 @@ bail_if_unresolved_conflict (svn_string_t *full_path,
 }
 
 
+/* ### not actually used for right now. remove when this func is used. */
+#if 0
 
 /* Given an array of starting PATHS (svn_string_t's), return the
    longest common path that they all contain.  Return NULL if so such
@@ -581,6 +583,7 @@ get_common_path (const apr_array_header_t *paths,
   return longest_common_path;
 }
 
+#endif
 
 
 /* A recursive working-copy "crawler", used for commits.
@@ -1002,7 +1005,6 @@ svn_wc_crawl_revisions (svn_string_t *root_directory,
   svn_error_t *err;
   svn_wc_entry_t *root_entry;
   svn_revnum_t master_revnum = SVN_INVALID_REVNUM;
-  struct stack_object *stack = NULL;
 
   /* The first thing we do is get the master_revnum from the
      working copy's ROOT_DIRECTORY.  This is the revnum that all
