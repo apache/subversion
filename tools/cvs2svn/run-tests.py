@@ -689,8 +689,20 @@ def mixed_commit():
 
 def split_branch():
   "branch created from both trunk and from another branch"
-  # See test-data/split-branch/README.
+  # See test-data/split-branch-cvsrepos/README.
+  #
+  # The conversion will fail if the bug is present, and
+  # ensure_conversion would raise svntest.Failure.
   repos, wc, logs = ensure_conversion('split-branch')
+  
+
+def resync_misgroups():
+  "resyncing should not put commit groups in the wrong order"
+  # See test-data/resync-misgroups-cvsrepos/README.
+  #
+  # The conversion will fail if the bug is present, and
+  # ensure_conversion would raise svntest.Failure.
+  repos, wc, logs = ensure_conversion('resync-misgroups')
   
 
 #----------------------------------------------------------------------
@@ -716,6 +728,7 @@ test_list = [ None,
               XFail(simple_branch_commits),
               XFail(mixed_commit),
               split_branch,
+              resync_misgroups,
              ]
 
 if __name__ == '__main__':

@@ -1,0 +1,50 @@
+head	1.2;
+access;
+symbols
+	libshout-2_0:1.2
+	libshout-2_0b3:1.2
+	libshout-2_0b2:1.2
+	libshout_2_0b1:1.2
+	libogg2-zerocopy:1.2.0.4
+	branch-beta2-rewrite:1.2.0.2;
+locks; strict;
+comment	@# @;
+
+
+1.2
+date	2001.09.10.03.04.11;	author jack;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2001.09.10.03.00.41;	author jack;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@.cvsignore is fun!
+@
+text
+@Makefile
+Makefile.in
+.deps
+.libs
+*.la
+*.lo
+@
+
+
+1.1
+log
+@Still more .cvsignore
+@
+text
+@d4 3
+@
+

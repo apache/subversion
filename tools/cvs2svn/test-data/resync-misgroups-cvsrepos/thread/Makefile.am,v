@@ -1,0 +1,122 @@
+head	1.4;
+access;
+symbols
+	libshout-2_0:1.4
+	libshout-2_0b3:1.4
+	libshout-2_0b2:1.3
+	libshout_2_0b1:1.3
+	libogg2-zerocopy:1.1.1.1.0.4
+	branch-beta2-rewrite:1.1.1.1.0.2
+	start:1.1.1.1
+	xiph:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.4
+date	2003.07.03.12.59.06;	author brendan;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2003.03.09.22.56.46;	author karl;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2003.03.08.00.46.58;	author karl;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2001.09.10.02.26.32;	author jack;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2001.09.10.02.26.32;	author jack;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.4
+log
+@Get everthing in make dist, and remove bitkeeper cruft
+@
+text
+@## Process this with automake to create Makefile.in
+
+AUTOMAKE_OPTIONS = foreign
+
+EXTRA_DIST = BUILDING COPYING README TODO
+
+noinst_LTLIBRARIES = libicethread.la
+noinst_HEADERS = thread.h
+
+libicethread_la_SOURCES = thread.c
+libicethread_la_CFLAGS = @@XIPH_CFLAGS@@
+
+INCLUDES = -I$(srcdir)/..
+
+debug:
+	$(MAKE) all CFLAGS="@@DEBUG@@"
+
+profile:
+	$(MAKE) all CFLAGS="@@PROFILE@@"
+
+@
+
+
+1.3
+log
+@reduce include file namespace clutter for libshout and the associated
+smaller libs.
+@
+text
+@d5 2
+a13 3
+
+# SCCS stuff (for BitKeeper)
+GET = true
+@
+
+
+1.2
+log
+@more on the XIPH_CFLAGS. For the smaller libs like thread etc put any
+passed flags into the compiling rules.  Also configure in libshout now
+sets up the XIPH_CFLAGS
+@
+text
+@d11 1
+a11 1
+INCLUDES = -I$(srcdir)/../avl -I$(srcdir)/../log
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d9 1
+d17 1
+a17 1
+        $(MAKE) all CFLAGS="@@DEBUG@@"
+d20 1
+a20 1
+        $(MAKE) all CFLAGS="@@PROFILE@@"
+@
+
+
+1.1.1.1
+log
+@move to cvs
+@
+text
+@@
