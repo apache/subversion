@@ -208,8 +208,8 @@ wc_prop_set (VALUE class, VALUE aName, VALUE aValue, VALUE aPath)
   Check_Type (aPath, T_STRING);
 
   pool = svn_pool_create (NULL);
-  value = svn_stringuf_ncreate (StringValuePtr (aValue),
-                                RSTRING (aValue)->len, pool);
+  value = svn_string_ncreate (StringValuePtr (aValue),
+                              RSTRING (aValue)->len, pool);
   err = svn_wc_prop_set (StringValuePtr (aName), value,
                          StringValuePtr (aPath), pool);
 
