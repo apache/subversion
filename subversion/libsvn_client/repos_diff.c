@@ -46,7 +46,7 @@ struct edit_baton {
 
   /* The callback and calback argument that implement the file comparison
      function */
-  const svn_wc_diff_callbacks_t *diff_callbacks;
+  const svn_wc_diff_callbacks2_t *diff_callbacks;
   void *diff_cmd_baton;
 
   /* RECURSE is TRUE if this is a recursive diff or merge, false otherwise */
@@ -70,6 +70,9 @@ struct edit_baton {
   /* A temporary empty file. Used for add/delete differences. This is
      cached here so that it can be reused, all empty files are the same. */
   const char *empty_file;
+
+  /* Empty hash used for adds. */
+  apr_hash_t *empty_hash;
 
   /* If the func is non-null, send notifications of actions. */
   svn_wc_notify_func_t notify_func;
@@ -535,6 +538,7 @@ delete_entry (const char *path,
                       b->path_start_revision,
                       b->path_end_revision,
                       mimetype1, mimetype2,
+                      b->pristine_props,
                       b->edit_baton->diff_cmd_baton));
             
             break;
@@ -654,6 +658,7 @@ add_file (const char *path,
   *file_baton = b;
 
   SVN_ERR (get_empty_file (b->edit_baton, &(b->path_start_revision)));
+  b->pristine_props = pb->edit_baton->empty_hash;
 
   return SVN_NO_ERROR;
 }
@@ -776,44 +781,33 @@ close_file (void *file_baton,
   else if (err)
     return err;
 
-  if (b->path_end_revision)
+  if (b->path_end_revision || b->propchanges->nelts > 0)
     {
       const char *mimetype1, *mimetype2;
       get_file_mime_types (&mimetype1, &mimetype2, b);
 
       if (b->added)
         SVN_ERR (eb->diff_callbacks->file_added
-                 (adm_access, &content_state,
+                 (adm_access, &content_state, &prop_state,
                   b->wcpath,
-                  b->path_start_revision,
+                  b->path_end_revision ? b->path_start_revision : NULL,
                   b->path_end_revision,
                   0,
                   b->edit_baton->target_revision,
                   mimetype1, mimetype2,
+                  b->propchanges, b->pristine_props,
                   b->edit_baton->diff_cmd_baton));
       else
         SVN_ERR (eb->diff_callbacks->file_changed
-                 (adm_access, &content_state,
+                 (adm_access, &content_state, &prop_state,
                   b->wcpath,
-                  b->path_start_revision,
+                  b->path_end_revision ? b->path_start_revision : NULL,
                   b->path_end_revision,
                   b->edit_baton->revision,
                   b->edit_baton->target_revision,
                   mimetype1, mimetype2,
+                  b->propchanges, b->pristine_props,
                   b->edit_baton->diff_cmd_baton));
-    }
-
-  /* Don't do the props_changed stuff if this is a dry_run and we don't
-     have an access baton, since in that case the file will already have
-     been recognised as added, in which case they cannot conflict. A
-     similar argument applies to directories in close_directory. */
-  if (b->propchanges->nelts > 0 && (! (eb->dry_run && b->added)))
-    {
-      SVN_ERR (eb->diff_callbacks->props_changed
-               (adm_access, &prop_state,
-                b->wcpath,
-                b->propchanges, b->pristine_props,
-                b->edit_baton->diff_cmd_baton));
     }
 
 
@@ -877,10 +871,11 @@ close_directory (void *dir_baton,
       else if (err)
         return err;
 
-      /* As for close_file, whether we do this depends on whether it's a
-         dry-run */
+      /* Don't do the props_changed stuff if this is a dry_run and we don't
+         have an access baton, since in that case the directory will already
+         have been recognised as added, in which case they cannot conflict. */
       if (! eb->dry_run || adm_access)
-        SVN_ERR (eb->diff_callbacks->props_changed
+        SVN_ERR (eb->diff_callbacks->dir_props_changed
                  (adm_access, &prop_state,
                   b->wcpath,
                   b->propchanges, b->pristine_props,
@@ -952,7 +947,7 @@ close_edit (void *edit_baton,
 svn_error_t *
 svn_client__get_diff_editor (const char *target,
                              svn_wc_adm_access_t *adm_access,
-                             const svn_wc_diff_callbacks_t *diff_callbacks,
+                             const svn_wc_diff_callbacks2_t *diff_callbacks,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
                              svn_boolean_t dry_run,
@@ -981,6 +976,7 @@ svn_client__get_diff_editor (const char *target,
   eb->ra_session = ra_session;
   eb->revision = revision;
   eb->empty_file = NULL;
+  eb->empty_hash = apr_hash_make (subpool);
   eb->pool = subpool;
   eb->notify_func = notify_func;
   eb->notify_baton = notify_baton;
