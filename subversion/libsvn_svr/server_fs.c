@@ -57,7 +57,6 @@
 ****************************************************************/
 
 
-#include <svn_types.h>   /* all of the basic data types */
 #include <svn_svr.h>     /* declarations for this library */
 #include <svn_fs.h>      /* the Subversion filesystem API */
 

@@ -58,6 +58,7 @@
 
 
 #include <stdlib.h>          /* defines size_t */
+#include <apr_pools.h>       /* APR memory pools for everyone. */
 
 
 /* a string of bytes  */

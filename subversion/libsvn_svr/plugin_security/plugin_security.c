@@ -1,8 +1,7 @@
 
 /* 
-   plugin_security.c:  a simple server-side plugin for Subversion
-                       which implements basic filesystem authorization.
-*/
+   plugin_security.c:  a server-side plugin for Subversion which
+                       implements basic filesystem authorization.  */
 
 /*
  *
@@ -58,21 +57,17 @@
    the user in question, and now simply wants to know if the user is
    permitted to perform an action on some data.
 
-  This plug-in consults the `svn_security' file.
+  This plug-in consults the `svn_security' file for authorization;
+  each repository has its own svn_security file describing ACLs.
 
-  (An alternate tigris plug-in would actually look up roles in a mySQL
-  database and return the same information.)
-
- */
+*/
 
 
 /* Note: remember to build plugins with -k PIC and in a way that
-   libltdl can use them! */
+   libapr can use them as DSO's! */
 
 
-#include <svn_types.h>   /* defines common Subversion data types */
-#include <svn_svr.h>     /* defines the server-side plug-in structure */
-
+#include <svn_svr.h>     /* describes server architecture */
 
 
 /*
@@ -97,6 +92,10 @@ svn_internal_authorization (svn_string_t *repos,
   /* this routine should consult the repository's `svn_security' file
      to make the authorization decision.  */
 
+  /* this routine should read the file by calling *directly* into
+     libsvn_fs, and not call svn_svr_read(); svn_svr_read() checks for
+     authorization, which would put us in an infinte loop! */
+
 }
 
 
@@ -104,19 +103,21 @@ svn_internal_authorization (svn_string_t *repos,
    register itself */
 
 void
-plugin_security_init (svn_svr_policies_t *policy)
+plugin_security_init (svn_svr_policies_t *policy, ap_pool_t *pool)
 {
-  /* create a plugin structure describing what we do */
+  /* first:  create a plugin_security object */
 
-  svn_svr_plugin_t plugin_security = 
-  { 
-    svn_internal_authorization,         /* authorization hook */
-    NULL                                /* conflict resolution hook */
-  };
+  svn_svr_plugin_t *newplugin = 
+    (svn_svr_plugin_t *) ap_palloc (pool, sizeof(svn_svr_plugin_t));
 
-  /* and register it in the server's policy lists */
+  /* fill in the fields of the plugin */
 
-  svn_svr_register_plugin (policy, &plugin_security);
+  newplugin->authorization_hook = svn_internal_authorization;
+  newplugin->conflict_resolve_hook = NULL;
+
+  /* finally, register the new plugin in the server's global policy */
+
+  svn_svr_register_plugin (policy, newplugin);
 }
 
 
