@@ -131,7 +131,13 @@ Candidate changes:
     Votes:
        +1: josander
        +0: dionisos
-  
+
+  * r8869
+    Bugfix: Handle "svn --version" without revision number.
+    Justification: Needed for automated setups and easing installer makes.
+    Votes:
+       +1: josander
+
   * r8856
     Fix compressed streams on LP64 arch.
     Justification: potential seg fault
