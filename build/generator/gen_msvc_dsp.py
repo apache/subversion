@@ -91,9 +91,9 @@ class Generator(gen_win.WinGeneratorBase):
     # Traverse the targets and generate the project files
     for target in install_targets:
       name = target.name
-      if isinstance(target, gen_base.TargetExternal):
+      if isinstance(target, gen_base.TargetLinked) and target.external_project:
         # Figure out where the external .dsp is located.
-        fname = target.msvc_project + '.dsp'
+        fname = target.external_project + '.dsp'
       else:
         fname = os.path.join(self.projfilesdir,
                              "%s_msvc.dsp" % target.proj_name)
