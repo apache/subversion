@@ -858,36 +858,43 @@ Updated to revision 2.
       <sect3 id="svn-ch-3-sect-4.3.1">
         <title><command>svn status</command></title>
         
-        <para>You'll probably use the <command>svn status</command>
-          command more than any other Subversion command.</para>
+        <para>Probablemente usará el comando <command>svn status</command>
+          más que cualquier otro comando de Subversion.</para>
         
         <sidebar>
-          <title>CVS Users: Hold That Update!</title>
-          
-          <para>You're probably used to using <command>cvs
-            update</command> to see what changes you've made to your
-            working copy.  <command>svn status</command> will give you
-            all the information you need regarding what has changed in
-            your working copy&mdash;without accessing the repository
-            or potentially incorporating new changes published by
-            other users.</para>
+          <title>Usuarios de CVS: ¡Lleve a cabo Esa Actualización!</title>
+            <!--TODO:CVS Users: Hold That Update!... según google
+            "¡Lleve a cabo Esa Actualización!"-->
+          <para>Probablemente esté acostumbrado a usar<!--TODO:You're
+            probably used to using--> <command>cvs update</command> para
+            ver qué cambios le ha hecho a su copia de trabajo local.
+            <command>svn status</command> le dará toda la información
+            que necesita sobre qué ha cambiado en su copia de trabajo
+            local&mdash;sin acceder al repositorio o incorporando
+            <!--TODO:potentially incorporating new changes-->nuevos cambios
+            potenciales publicados por otros usuarios.</para>
         
-          <para>In Subversion, <command>update</command> does just
-            that&mdash;it updates your working copy with any changes
-            committed to the repository since the last time you've
-            updated your working copy.  You'll have to break the habit
-            of using the <command>update</command> command to see what
-            local modifications you've made.</para>
+          <para>En Subversion, <command>update</command> hace justo
+            eso&mdash;actualiza su copia de trabajo local con cualquier
+            cambio enviado al repositorio desde la última vez que usted
+            <!--TODO:last time you've updated-->ha actualizado su copia
+            de trabajo. Tendrá que romper el hábito de usar el comando
+            <command>update</command> para ver qué modificaciones locales
+            ha hecho.</para>
 
         </sidebar>
         
-        <para>If you run <command>svn status</command> at the top of
-          your working copy with no arguments, it will detect all file
-          and tree changes you've made.  This example is designed to
-          show all the different status codes that <command>svn
-          status</command> can return.  (Note that the text following
-          <literal>#</literal> in the following example is not
-          actually printed by <command>svn status</command>.)</para>
+        <para>Si ejecuta <command>svn status</command> en lo alto<!--TODO:
+          at the top...poner que se refiere al directorio más alto?-->
+          de su copia de trabajo sin argumentos, detectará todos
+          los cambios de fichero y árbol que usted ha hecho. Este
+          ejemplo está diseñado para mostrar todos los códigos de
+          estado<!--TODO:status--> diferentes que <command>svn
+          status</command> puede devolver. (Observe que el texto que
+          sigue a <literal>#</literal> en el siguiente ejemplo no es
+          <!--TODO:printed...imprimido?-->impreso realmente por
+          <command>svn status</command>.)</para>
+
       
         <screen>
 $ svn status
@@ -908,11 +915,13 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
 &hellip;
 </screen>
       
-        <para>In this output format <command>svn status</command>
-          prints five columns of characters, followed by several
-          whitespace characters, followed by a file or directory name.
-          The first column tells the status of a file or directory
-          and/or its contents.  The codes printed here are:</para>
+        <para>En este formato de salida <command>svn status</command>
+          impresa <!--TODO:prints...o "imprime"?--> cinco columnas de
+          caracteres, seguidos por varios caracteres de espacio en
+          blanco<!--TODO:whitespace-->, seguido por un nombre de
+          fichero o directorio. La primera columna dice el estado
+          de un fichero o directorio y/o su contenido. Los códigos
+          impresos aqui son:</para>
 
 
         <variablelist>
