@@ -148,8 +148,8 @@ import_dir (const svn_delta_edit_fns_t *editor,
 
   apr_err = apr_dir_open (&dir, path->data, subpool);
   if (apr_err)
-    return svn_error_createf(apr_err, 0, NULL, subpool, 
-                             "unable to open directory %s", path->data);
+    return svn_error_createf (apr_err, 0, NULL, subpool, 
+                              "unable to open directory %s", path->data);
 
   for (apr_err = apr_dir_read (&this_entry, flags, dir);
        APR_STATUS_IS_SUCCESS (apr_err);
