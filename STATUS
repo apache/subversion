@@ -43,14 +43,6 @@ Candidate changes:
     Votes:
       +1: jerenkrantz, maxb
 
-  * r12026, r12027, r12044
-    Allow apr and apr-util 1.1 to compile.
-    Justification:
-      APR's compatibility rules means that Subversion will always compile
-      against any 1.x version of APR.
-    Votes:
-      +1: jerenkrantz, maxb, bliss
-
   * r12397
     Properly invoke ra_callbacks->open_tmp_file in Perl with pool.
     Justification:
