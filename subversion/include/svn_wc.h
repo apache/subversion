@@ -85,7 +85,11 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
    cached items.  If ADM_ACCESS has not been closed when the pool is
    cleared, it will be closed automatically at that point, and removed from
    its set.  A baton closed in this way will not remove physical locks from
-   the working copy if cleanup is required.  */
+   the working copy if cleanup is required.
+
+   The first baton in a set, with ASSOCIATED passed as NULL, must have the
+   longest lifetime of all the batons in the set.  This implies it must be
+   the root of the hierarchy. */
 svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                               svn_wc_adm_access_t *associated,
                               const char *path,
@@ -106,14 +110,13 @@ svn_error_t *svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
 
 
 /* Give up the access baton ADM_ACCESS, and its lock if any. This will
-   recursively close any batons in the same set that are subdirectories of
-   ADM_ACCESS.  Any physical locks will be removed from the working copy.
-   Lock removal is unconditional, there is no check to determine if cleanup
-   is required. */
+   recursively close any batons in the same set that are direct
+   subdirectories of ADM_ACCESS.  Any physical locks will be removed from
+   the working copy.  Lock removal is unconditional, there is no check to
+   determine if cleanup is required. */
 svn_error_t *svn_wc_adm_close (svn_wc_adm_access_t *adm_access);
 
-/* Return the (canonicalized) path used to open the access baton
-   ADM_ACCESS */
+/* Return the path used to open the access baton ADM_ACCESS */
 const char *svn_wc_adm_access_path (svn_wc_adm_access_t *adm_access);
 
 /* Return the pool used by access baton ADM_ACCESS */
@@ -732,7 +735,9 @@ svn_error_t *svn_wc_delete (const char *path,
 /* Put PATH under version control by adding an entry in its parent,
    and, if PATH is a directory, adding an administrative area.  The
    new entry and anything under it is scheduled for addition to the
-   repository.
+   repository.  PARENT_ACCESS should hold a write lock for the parent
+   directory of PATH.  If PATH is a directory then an access baton for
+   PATH will be added to the set containing PARENT_ACCESS.
 
    If PATH does not exist, return SVN_ERR_WC_PATH_NOT_FOUND.
 
@@ -772,7 +777,7 @@ svn_error_t *svn_wc_delete (const char *path,
    ### broken out into a separate function, but its all intertwined in
    ### the code right now.  Ben, thoughts?  Hard?  Easy?  Mauve? */
 svn_error_t *svn_wc_add (const char *path,
-                         svn_wc_adm_access_t *optional_adm_access,
+                         svn_wc_adm_access_t *parent_access,
                          const char *copyfrom_url,
                          svn_revnum_t copyfrom_rev,
                          svn_wc_notify_func_t notify_func,

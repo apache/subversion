@@ -25,7 +25,10 @@
 #include "adm_files.h"
 #include "svn_pools.h"
 
+#include <assert.h>
+
 
+
 struct svn_wc_adm_access_t
 {
    /* PATH to directory which contains the administrative area */
@@ -34,26 +37,11 @@ struct svn_wc_adm_access_t
    enum svn_wc__adm_access_type {
 
       /* SVN_WC__ADM_ACCESS_UNLOCKED indicates no lock is held allowing
-         read-only access without cacheing. */
+         read-only access */
       svn_wc__adm_access_unlocked,
 
-#if 0 /* How cacheing might work one day */
-
-      /* ### If read-only operations are allowed sufficient write access to
-         ### create read locks (did you follow that?) then entries cacheing
-         ### could apply to read-only operations as well.  This would
-         ### probably want to fall back to unlocked access if the
-         ### filesystem permissions prohibit writing to the administrative
-         ### area (consider running svn_wc_status on some other user's
-         ### working copy). */
-
-      /* SVN_WC__ADM_ACCESS_READ_LOCK indicates that read-only access and
-         cacheing are allowed. */
-      svn_wc__adm_access_read_lock,
-#endif
-
-      /* SVN_WC__ADM_ACCESS_WRITE_LOCK indicates that read-write access and
-         cacheing are allowed. */
+      /* SVN_WC__ADM_ACCESS_WRITE_LOCK indicates that a write lock is held
+         allowing read-write access */
       svn_wc__adm_access_write_lock,
 
       /* SVN_WC__ADM_ACCESS_CLOSED indicates that the baton has been
@@ -65,20 +53,11 @@ struct svn_wc_adm_access_t
    /* LOCK_EXISTS is set TRUE when the write lock exists */
    svn_boolean_t lock_exists;
 
-#if 0 /* How cacheing might work one day */
-
-   /* ENTRIES_MODIFED is set TRUE when the entries cached in ENTRIES have
-      been modified from the original values read from the file. */
-   svn_boolean_t entries_modified;
-
-   /* Once the 'entries' file has been read, ENTRIES will cache the
-      contents if this access baton has an appropriate lock. Otherwise
-      ENTRIES will be NULL. */
-   apr_hash_t *entries;
-#endif
+   /* SET_OWNER is TRUE if SET is allocated from this access baton */
+   svn_boolean_t set_owner;
 
    /* SET is a hash of svn_wc_adm_access_t* keyed on char* representing the
-      path to other directories that are also locked. */
+      path to directories that are open. */
    apr_hash_t *set;
 
    /* POOL is used to allocate cached items, they need to persist for the
@@ -184,6 +163,7 @@ adm_access_alloc (enum svn_wc__adm_access_type type,
   lock->type = type;
   lock->set = NULL;
   lock->lock_exists = FALSE;
+  lock->set_owner = FALSE;
   lock->path = apr_pstrdup (pool, path);
   lock->pool = pool;
 
@@ -197,6 +177,7 @@ adm_ensure_set (svn_wc_adm_access_t *adm_access)
 {
   if (! adm_access->set)
     {
+      adm_access->set_owner = TRUE;
       adm_access->set = apr_hash_make (adm_access->pool);
       apr_hash_set (adm_access->set, adm_access->path, APR_HASH_KEY_STRING,
                     adm_access);
@@ -244,8 +225,10 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
 {
   svn_wc_adm_access_t *lock;
 
-  if (associated && associated->set)
+  if (associated)
     {
+      adm_ensure_set (associated);
+
       lock = apr_hash_get (associated->set, path, APR_HASH_KEY_STRING);
       if (lock)
         /* Already locked.  The reason we don't return the existing baton
@@ -278,8 +261,6 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
       lock = adm_access_alloc (svn_wc__adm_access_unlocked, path, pool);
     }
 
-  if (associated)
-    adm_ensure_set (associated);
 
   if (tree_lock)
     {
@@ -385,7 +366,12 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
 /* Does the work of closing the access baton ADM_ACCESS.  Any physical
    locks are removed from the working copy if PRESERVE_LOCK is FALSE, or
    are left if PRESERVE_LOCK is TRUE.  Any associated access batons that
-   are direct descendents will also be closed. */
+   are direct descendents will also be closed.
+
+   ### FIXME: If the set has a "hole", say it contains locks for the
+   ### directories A, A/B, A/B/C/X but not A/B/C then closing A/B will not
+   ### reach A/B/C/X .
+ */
 static svn_error_t *
 do_close (svn_wc_adm_access_t *adm_access,
           svn_boolean_t preserve_lock)
@@ -445,7 +431,12 @@ do_close (svn_wc_adm_access_t *adm_access,
 
   /* Detach from set */
   if (adm_access->set)
-    apr_hash_set (adm_access->set, adm_access->path, APR_HASH_KEY_STRING, NULL);
+    {
+      apr_hash_set (adm_access->set, adm_access->path, APR_HASH_KEY_STRING,
+                    NULL);
+
+      assert (! adm_access->set_owner || apr_hash_count (adm_access->set) == 0);
+    }
 
   return SVN_NO_ERROR;
 }
