@@ -157,7 +157,11 @@ typedef struct svn_ra_plugin_t
      updated.  When finished, it calls REPORTER->finish_report().
 
      The RA layer then uses UPDATE_EDITOR to update each target in
-     TARGETS.  */
+     TARGETS.
+
+     Note: after the update completes (update_editor->close_edit()),
+     it is the responsibility of the *client* to bump WC revision
+     numbers appropriately.  */
   svn_error_t *(*do_update) (void *session_baton,
                              const svn_ra_reporter_t **reporter,
                              void **report_baton,
