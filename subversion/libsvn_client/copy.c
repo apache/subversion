@@ -1030,7 +1030,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
       if (!src_is_url)
         {
           if (src_revision->kind != svn_opt_revision_unspecified
-              && src_revision->kind != svn_opt_revision_head)
+              && src_revision->kind != svn_opt_revision_working)
             {
               /* We can convert the working copy path to a URL based on the
                  entries file. */
