@@ -43,6 +43,7 @@
 #include "JNIStringHolder.h"
 #include <vector>
 #include <iostream>
+#include <sstream>
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -2755,18 +2756,19 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
         }
     }
 
-    std::string value = ltoa(sb.min_rev, JNIUtil::getFormatBuffer(), 10);
+    std::ostringstream value;
+    value << sb.min_rev;std::string;
     if (sb.min_rev != sb.max_rev)
     {
-        value + ":";
-        value += ltoa(sb.max_rev, JNIUtil::getFormatBuffer(), 10);
+        value << ":";
+        value << sb.max_rev;
     }
     if (sb.modified)
-        value += "M";
+        value << "M";
     if (sb.switched)
-        value += "S";
+        value << "S";
 
-    return JNIUtil::makeJString(value.c_str());
+    return JNIUtil::makeJString(value.str().c_str());
 }
 
 jobjectArray SVNClient::revProperties(jobject jthis, const char *path, 
