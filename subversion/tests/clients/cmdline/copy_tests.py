@@ -36,7 +36,7 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Tests
 #
-#   Each test must return 0 on success or raise on failure.
+#   Each test must return on success or raise on failure.
 
 # (Taken from notes/copy-planz.txt:)
 #
@@ -45,8 +45,7 @@ Item = svntest.wc.StateItem
 #     A. svn cp wc_path1 wc_path2
 #
 #        This duplicates a path in the working copy, and schedules it
-#        for addition with history.  (This is partially implemented in
-#        0.6 already.)  
+#        for addition with history.
 #
 #     B. svn cp URL [-r rev]  wc_path
 #
@@ -1185,6 +1184,68 @@ def repos_to_wc_copy_eol_keywords(sbox):
   if not re.match('.*\$LastChangedRevision:\s*\d+\s*\$', line_contents[3]):
     raise svntest.Failure
 
+#-------------------------------------------------------------
+# Regression test for revision 7331, with commented-out parts for a further
+# similar bug.
+
+def revision_kinds_local_source(sbox):
+  "revision-kind keywords with non-URL source"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Make a file with different content in each revision and WC; BASE != HEAD.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'), })
+  svntest.main.file_append(mu_path, "New r2 text.")
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None,
+                                        None, None, None, None, None, wc_dir)
+  svntest.main.file_append(mu_path, "New r3 text.")
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None,
+                                        None, None, None, None, None, wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r2', mu_path)
+  svntest.main.file_append(mu_path, "Working copy.")
+
+  r1 = "This is the file 'mu'."
+  r2 = r1 + "New r2 text."
+  r3 = r2 + "New r3 text."
+  rWC = r2 + "Working copy."
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=rWC)
+
+  def cp_test(dst, from_rev, text, rev_arg=None):
+    dst_path = os.path.join(wc_dir, dst) 
+    if rev_arg is None:
+      svntest.actions.run_and_verify_svn(None, None, [], "copy",
+                                         mu_path, dst_path)
+    else:
+      svntest.actions.run_and_verify_svn(None, None, [], "copy", rev_arg,
+                                         mu_path, dst_path)
+    expected_disk.add({ dst: Item(contents=text) })
+
+    # Check that the copied-from revision == from_rev.
+    output, errput = svntest.main.run_svn(None, "info", dst_path)
+    for line in output:
+      if line.rstrip() == "Copied From Rev: " + str(from_rev):
+        break
+    else:
+      print dst, "should have been copied from revision", from_rev
+      raise svntest.Failure
+
+  # Test the various revision-kind keywords, and none.
+  cp_test('a0', 2, rWC)
+  cp_test('a1', 3, r3, '-rHEAD')
+  # XFAIL: cp_test('a2', 2, r2, '-rBASE')
+  # XFAIL: cp_test('a3', 2, r2, '-rCOMMITTED')
+  # XFAIL: cp_test('a4', 1, r1, '-rPREV')
+
+  # Check that the new files have the right contents
+  actual_disk = svntest.tree.build_tree_from_wc(wc_dir)
+  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+
 
 ########################################################################
 # Run the tests
@@ -1211,6 +1272,7 @@ test_list = [ None,
               resurrect_deleted_file,
               diff_repos_to_wc_copy,
               repos_to_wc_copy_eol_keywords,
+              revision_kinds_local_source,
              ]
 
 if __name__ == '__main__':
