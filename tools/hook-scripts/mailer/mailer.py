@@ -71,6 +71,15 @@ class OutputBase:
       subject = prefix + ' ' + self.subject
     else:
       subject = self.subject
+
+    try:
+      truncate_subject = int(
+          self.cfg.get('truncate-subject', group, params))
+    except ValueError:
+      truncate_subject = 0
+
+    if truncate_subject and len(subject) > truncate_subject:
+      subject = subject[:(truncate_subject - 3)] + "..."
     return subject
 
   def start(self, group, params):

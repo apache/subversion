@@ -189,6 +189,10 @@ suppress_deletes = yes
 ### DEPRECATED (if generate_diffs is not empty, this option is ignored)
 #suppress_adds = yes
 
+# Subject line length limit.  The generated subject line will be truncated
+# and terminated with "...", to remain within the specified maximum length.
+# Set to 0 to turn off.
+# truncate_subject = 200
 
 # --------------------------------------------------------------------------
 
