@@ -798,7 +798,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
  * Similar to svn_client_status2(), but with the @a ignore_externals
- * parameter always set to @c TRUE.
+ * parameter always set to @c FALSE.
  */
 svn_error_t *
 svn_client_status (svn_revnum_t *result_rev,
