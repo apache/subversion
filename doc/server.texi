@@ -1,36 +1,23 @@
 @node Server
 @chapter Server
 
-@c Ben is hacking on this.
+The term ``server'' is ambiguous, because it has at least two different
+meanings: it can refer to a powerful computer which offers services to
+users on a network, or it can refer to a CPU process designed to receive
+network requests.
 
-The @dfn{Subversion server} isn't a typical monolithic daemon process
-like sshd or ftpd; rather, it's a set of well-defined interface layers
-that is meant to be flexible and open to future innovations.
+In Subversion, however, the @dfn{server} is just a set of libraries that
+implement a set of @dfn{repositories} and make them available to other
+programs.  No networking is required.
 
-However, for the initial release of Subversion, please remember that
-it's @emph{Apache} that is the actual Subversion server process; all of
-the lower layers are simply shared libraries running in Apache's address
-space!
+Of course, for the initial release of Subversion, the ``server'' process
+will be Apache interacting with the Subversion server libraries.  The
+``server'' computer will be any machine running this Subversion-aware
+Apache process.  (@xref{Protocol}.)
 
-In a nutshell:
-
-@enumerate
-@item
-    Apache receives a Subversion-specific HTTP method request.
-@item
-    An custom Apache module handles the request, and makes calls into
-the "main" Subversion library.
-@item
-    The "main" library interacts with a filesystem of a particular
-repository and then returns a response.
-@item
-    The Apache module converts this response back into an HTTP response
-to be sent to the client.
-@end enumerate
-
-
-To build our concepts cleanly, we'll explore the server-side of
-Subversion from the bottom up.  (For full diagram, @xref{Architecture}.)
+To build our concepts cleanly, we'll explore this set of Subversion
+server-libraries from the bottom up.  (For full diagram,
+@xref{Architecture}.)
 
 @example
 
@@ -49,17 +36,39 @@ Subversion from the bottom up.  (For full diagram, @xref{Architecture}.)
 @end example
 
 @menu
-* Database::                  Putting the information on disk.
-* Filesystem::                The low-level Subversion Filesystem.
+* Database Layer::            Putting the information on disk.
+* Filesystem Layer::          The low-level Subversion Filesystem.
 * Locking::                   How read/write locks work in the Filesystem.
 * Main Library::              The highest-level server interface.
-* Apache::                    The actual server process.
 @end menu
 
 @c ----------------------------------------------------------------
 
-@node Database
-@section Database
+@node Database Layer
+@section Database Layer
+
+@subsection Overview
+
+@itemize
+@item
+  @b{Requires:}
+  @itemize
+  @item
+    An operating system capable of running a transactional database
+  @item
+    A reasonable amount of writable disk space
+  @end itemize
+@item
+  @b{Provides:}
+  @itemize
+  @item
+    the ability to efficiently store key/value pairs
+  @item
+    transactions
+  @end itemize
+@end itemize
+
+@subsection Transactions
 
 At the bottom of our design, we require a way of storing information on
 disk.  More specifically, we need @dfn{transactions}.
@@ -83,11 +92,11 @@ unit} of change.  Specifically,
 This inability to divide the set of changes is known as @dfn{atomicity},
 and is the critical concept behind transactions.
 
-Subversion's @dfn{database interface} (@dfn{svn_db.h}), therefore, is a
-simple API for reading and writing information to any sort of disk-based
-system that supports transactions.  The Subversion Filesystem
-(@xref{Filesystem}.)  is the only library that depends on this
-interface.
+@subsection API
+
+Subversion's @dfn{database interface}, therefore, is a simple API for
+reading and writing information to any sort of disk-based system that
+supports transactions.
 
 @c What's written below is just a simplification of a typical DBM API:
 
@@ -112,9 +121,11 @@ interface.
    abort the transaction in progress
 @end table
 
+@subsection Implementation
+
 For the initial release of Subversion, we will probably use the
-open-source Berkeley DBM library.  (For information, see
-@uref{http://www.sleepycat.com, Sleepycat Software}.)
+open-source Berkeley DBM library running on a variant of UNIX.  (For
+information, see @uref{http://www.sleepycat.com, Sleepycat Software}.)
 
 In the future, of course, contributors are free to write libraries that
 implement this same API on top of a more powerful SQL system.
@@ -125,6 +136,30 @@ implement this same API on top of a more powerful SQL system.
 @node Filesystem
 @section Filesystem
 
+@subsection Overview
+
+@itemize
+@item
+  @b{Requires:}
+  @itemize
+  @item
+    the Subversion database interface
+  @item
+    an operating system that supports interprocess communication (IPC)
+  @end itemize
+@item
+  @b{Provides:}
+  @itemize
+  @item
+    an abstract representation of a repository
+  @item
+    support for multiple concurrent accesses (via a lock manager)
+  @item
+    enforcement of user & group permissions (via ACLs)
+  @end itemize
+@end itemize
+
+
 The @dfn{Subversion Filesystem} (abbreviated: @dfn{svn_fs}) gives us an
 abstract way of thinking about the way files are stored and versioned in
 a repository -- independent of the actual means of storage.  
@@ -132,41 +167,19 @@ a repository -- independent of the actual means of storage.
 Like any typical UNIX-like filesystem, files are stored in a tree.
 However, while CVS uses the actual UNIX filesystem to hold a repository,
 the svn_fs implements files and directories as database objects
-(@xref{Database}.)  This not only gives us low-level transactions, but
-allows us to store @dfn{properties} ( or ``meta-data'') with each file,
-directory, directory entry, and even version number.  For example, here
-are some useful properties we can store:
+(@xref{Database Layer}.)  This not only gives us low-level transactions,
+but allows us to store @dfn{properties} ( or ``meta-data'') with each
+file, directory, directory entry, and even version number.  (For example,
+some useful properties might be {author, creation date, modification
+date, Access Control List (ACL), file type (text, binary), file
+encoding, ...}.)
 
-@itemize @bullet
-@item 
-  author
-@item 
-  creation date
-@item
-  modification date
-@item
-  Access Control List (ACL)
-@item
-  file type (text, binary, etc.)
-@item
-  file encoding (ASCII, Unicode, UTF-8, etc.)
-@end itemize
-
-The primary user of the svn_fs interface will be the "Main" Subversion
-library, explained later on in this document.  However, other server
-plug-in modules (such as a scripting language) can also benefit from
-access to the filesystem.
+@subsection Schema
 
 To begin, please be sure that you're already casually familiar with
 Subversion's ideas of files, directories, and version histories.  If
-not, @xref{Model}.
-
-@subsection Definitions
-
-For completeness, we can now offer a precise, technical description of
-these terms.  
-
-Here is the schema for the Subversion Filesystem:
+not, @xref{Model}.  For completeness, we can now offer a precise,
+technical description of these terms.
 
 @c This is taken from jimb's very first Subversion spec!
 @c Is there some standardized notation for describing schemas like this?
@@ -213,32 +226,31 @@ A @dfn{repository} consists of node table and a history.
 
 @end quotation
 
-Some definitions: we say that a node @var{n} is a @dfn{direct child} 
-of a directory @var{d} iff @var{d} contains a directory entry whose 
-node number is @var{n}. A node @var{n} is a @dfn{child} of a 
-directory @var{d} iff @var{n} is a direct child of @var{d}, or if 
-there exists some directory @var{e} which is a direct child of 
-@var{d}, and @var{n} is a child of @var{e}. Given this definition of 
-``direct child'' and ``child,'' the obvious definitions of ``direct 
-parent'' and ``parent'' hold.
+@c Some definitions: we say that a node @var{n} is a @dfn{direct child} 
+@c of a directory @var{d} iff @var{d} contains a directory entry whose 
+@c node number is @var{n}. A node @var{n} is a @dfn{child} of a 
+@c directory @var{d} iff @var{n} is a direct child of @var{d}, or if 
+@c there exists some directory @var{e} which is a direct child of 
+@c @var{d}, and @var{n} is a child of @var{e}. Given this definition of 
+@c ``direct child'' and ``child,'' the obvious definitions of ``direct 
+@c parent'' and ``parent'' hold.
+
+@c In these restrictions, let @var{r} be any repository.  When we refer,
+@c implicitly or explicitly, to a node table without further clarification,
+@c we mean @var{r}'s node table.  Thus, if we refer to ``a valid node
+@c number'' without specifying the node table in which it is valid, we mean
+@c ``a valid node number in @var{r}'s node table''.  Similarly for
+@c @var{r}'s history.
 
 Now that we've explained the form of the data, we make some restrictions
 on that form.
-
-In these restrictions, let @var{r} be any repository.  When we refer,
-implicitly or explicitly, to a node table without further clarification,
-we mean @var{r}'s node table.  Thus, if we refer to ``a valid node
-number'' without specifying the node table in which it is valid, we mean
-``a valid node number in @var{r}'s node table''.  Similarly for
-@var{r}'s history.
 
 @b{Every version has a root directory.}  Every version's node number is
 a valid node number, and the node it refers to is always a directory.
 We call this the version's @dfn{root directory}.
 
 @b{Version 0 always contains an empty root directory.}  This baseline
-makes it easy to build delta objects when checking out projects from the
-repository.
+makes it easy to check out whole projects from the repository.
 
 @b{Directories contain only valid links.}
 Every directory entry's @var{node} is a valid node number.
@@ -264,82 +276,142 @@ root directory.
 
 
 
-@subsection Basic Read Operations
+@subsection API
 
-Here are functions to retrieve information from the filesystem, designed
-to be fast and convenient for any process using svn_fs.
+@subsubsection Data Types
+
+The filesystem API routines require and return a number of data types
+specific to Subversion's model and schema.
+
+@dfn{bool} is a simple Boolean value, used to indicate success or
+failure.
+
+A @dfn{user} is a username (presumed to be previously authenticated by
+the network layer) which is attempting to perform a filesystem action.
+
+A @dfn{path} refers to an absolute path in the Subversion filesystem,
+e.g. @example{/trunk/gdb/i386.c}
+
+A @dfn{proplist} is a list of properties (key/value pairs).
+
+A @dfn{propname} is particular property key.
+
+A @dfn{propnamelist} is a list of all the keys in a proplist.
+
+A @dfn{file} is a string of bytes that contains both a ``text stream''
+and a ``property stream''.  The text stream contains the main contents
+of the file, while the property stream decodes into a proplist.
+
+A @dfn{directory entry} (@dfn{dirent}) points to a file or directory.
+
+A @dfn{directory} (@dfn{dir}) is a list of directory entries.
+
+A @dfn{filesystem object} (@dfn{fs_obj}) contains either a file or
+directory. 
+
+A @dfn{version} (abbreviated @dfn{ver}) refers to a global version
+number in a repository's history.
+
+A @dfn{diff} is a standard GNU diff, a textual context diff.
+
+A @dfn{delta} is a structure that describes a difference between two
+file trees.  For a detailed discussion, @xref{Deltas}.
+
+A @dfn{skelta} is a identical to a delta, but smaller.  It mentions only
+the files being changed, but does @emph{not} contain the actual diffs.
+This data type is for fast network negotiation (see the @code{submit ()}
+call below).
+
+A @dfn{token} is a token used to represent a write transaction in
+progress.
+
+
+@subsubsection Basic Reading
+
+There are two functions to retrieve information from the filesystem,
+designed to be fast and convenient for any process using svn_fs.
 
 @table @code
-@item latest ()
- returns the latest global version of the repository tree
-@item read (version, path)
- if path is a file, return full text (which includes property stream);@*
- if path is a directory, return list of directory entries.
-@item get_node_props (version, path)
- return a list of all props of a file or directory entry
-@item get_version_props (version)
- return a list of all props of a version
-@item read_node_prop (version, path, propname)
- read a particular property of a file or directory entry
-@item read_version_prop (version, propname)
- read a particular property of a version (such as a log)
+@item ver latest (user)
+ returns the latest global version of a repository's tree
+@item fs_obj read (user, version, path)
+ if path is a file, return full contents in fs_obj;@*
+ if path is a directory, return list of directory entries in fs_obj
 @end table
 
 
-@subsection Delta Generation
+@subsubsection Property Reading
 
-A @dfn{delta} object is a specific data structure in Subversion that
-efficiently describes the difference between two file trees.  Deltas are
-absolutely critical in the communication between Subversion clients and
-servers.  (For a full explanation, @xref{Protocol}.)
-
-A single basic routine is provided which asks the server to build and
-return a delta, based on the comparison of two subtrees within the
-repository's filesystem:
+There are a total of nine functions for retrieving information about the
+properties of a file, dirent, or dir.
 
 @table @code
-@item request_delta (versionX, pathA, versionY, pathB)
- return a delta object which converts subtree A:X into subtree B:Y
+@item char *get_node_prop(user, ver, path, propname)
+  return the value of @emph{propname} for a file or directory
+@item char *get_dirent_prop(user, ver, path, propname)
+  return the value of @emph{propname} for a directory entry
+@item char *get_ver_prop(user, ver, propname)
+  return the value of @emph{propname} for a version (such as the log message)
+@item proplist get_node_proplist(user, ver, path)
+  return all properties of a file or directory
+@item proplist get_dirent_proplist(user, ver, path)
+  return all properties of a directory entry
+@item proplist get_ver_proplist(user, ver)
+  return all properties of a version
+@item propnames get_node_propnames(user, ver, path)
+  return all property keys for a file or directory
+@item propnames get_node_propnames(user, ver, path)
+  return all property keys for a file or directory
+@item propnames get_dirent_propnames(user, ver, path)
+  return all property keys for a directory entry
+@item propnames get_ver_propnames(user, ver)
+  return all property keys for a version
+@end table
+
+
+@subsubsection Difference Queries
+
+@table @code
+@item delta get_delta (user, versionX, pathX, versionY, pathY)
+ return a delta object which converts subtree X into subtree Y
+@item diff get_diff (user, versionX, pathX, versionY, pathY)
+ return a diff between any two files in the repository
 @end table
 
 
 @subsection Basic Writing
 
-If a server needs to modify a repository's filesystem in any way (even
+If a program needs to modify a repository's filesystem in any way (even
 if just modifying properties), it must do three things:
 
 @enumerate
 @item
-  Build a delta object, representing a group of changes to a base
-  revision of a tree.  (This must be done either on the client side, or
-  using a separate delta library.)
+  Build a delta object, representing a group of changes against some
+  base revision of a tree.
 @item
   Request permission from the server to write the delta as a transaction.
 @item
   If permission is granted, apply the delta.
 @end enumerate
 
-Here the the routines to do this.
-
 @table @code
-@item submit (delta)
-  ask filesystem's lock manager for approval of delta; returns either a
-  transaction token or failure
-@item write (delta, token)
+@item token submit (user, skelta)
+  ask filesystem's lock manager for approval of skelta; returns either a
+  transaction token or failure.  A skelta is used to speed this
+  round-trip over the network.
+@item write (user, delta, token)
   actually write the delta into the filesystem
-@item abandon (token)
+@item abandon (user, token)
   tell lock manager that the delta will @emph{not} be written (despite
   previous approval)
 @end table
 
 A more detailed description of Subversion's write-locking mechanism is
-explained in the next section.
+explained in the next section (@xref{Locking}.)
 
 
-@c ----------------------------------------------------------------
-
-@node Locking
-@section Locking
+@c-----------------
+@subsection Locking
 
 The Subversion Filesystem has a locking mechanism built into it.
 
@@ -355,7 +427,7 @@ The locking system was designed to have these features:
     @emph{do} need to wait, the waiting is kept to an absolute minimum.
 @end enumerate
 
-@subsection Read Locks
+@subsubsection Read Locks
 
 Reading is easy; if a server process wants to execute a @code{read()}
 call into the filesystem, it goes right through.  The design of the
@@ -367,7 +439,7 @@ and because writers don't link to the version history until they're
 finished writing everything, there's no way for a reader to accidentally
 stumble upon an unfinished tree.
 
-@subsection Write Locks
+@subsubsection Write Locks
 
 Each Subversion filesystem has a process called a @dfn{lock manager}.
 The lock manager isn't always running;  when a server process wishes to
@@ -400,19 +472,19 @@ After the lock manager is up, the server process first sends it a
 @code{submit()} call containing the delta it would like to write.
 
 The lock manager contains a pool of "approved changes".  This pool is a
-set of deltas which have been okayed for concurrent application to the
+set of skeltas which have been okayed for concurrent application to the
 filesystem.  After receiving a delta from @code{submit()}, the lock
 manager determines if it is safe to apply the new delta at the same time
 as the other ones in progress.@footnote{This rule is actually quite
-simple:  a set of deltas may be concurrently written @emph{if and only
+simple:  a set of skeltas may be concurrently written @emph{if and only
 if} the order in which they are applied does not matter!}
 
-If the lock manager decides that the requested delta conflicts with
+If the lock manager decides that the requested skelta conflicts with
 other deltas being applied at that moment, it returns a failure to the
 server, and the server must wait and try again with another
 @code{submit()} request.
 
-If the lock manager decides that the requested delta does not conflict,
+If the lock manager decides that the requested skelta does not conflict,
 it returns a transaction token to the server.  The server then uses this
 token to execute a @code{write()} on the filesystem.
 
@@ -421,13 +493,21 @@ lock manager's concurrency pool, and the server closes its connection.
 
 When the lock manager has no more open server connections, it dies.
 
+@subsection Implementation
 
+For the initial release of Subversion, we will implement the filesystem
+library on UNIX-class operating systems.  The lock manager will be
+launched and will communicate with other processes via UNIX domain
+sockets. 
 
 
 @c ----------------------------------------------------------------
 
 @node Main Library
 @section Main Library
+
+A @dfn{repository} (@dfn{repos}) represents the name of a particular
+repository. 
 
 The Main Subversion Library (@dfn{svn_main}) provides a high-level
 server API to the Subversion client.
