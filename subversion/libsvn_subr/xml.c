@@ -285,7 +285,7 @@ svn_xml_ap_to_hash (va_list ap, apr_pool_t *pool)
   while ((key = va_arg (ap, char *)) != NULL)
     {
       svn_string_t *val = va_arg (ap, svn_string_t *);
-      apr_hash_set (ht, key, strlen (key), val);
+      apr_hash_set (ht, key, APR_HASH_KEY_STRING, val);
     }
 
   return ht;

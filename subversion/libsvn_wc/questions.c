@@ -126,9 +126,8 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   if (err) return err;
 
   timestr = (svn_string_t *) 
-    apr_hash_get (atthash, 
-                  SVN_WC__ENTRIES_ATTR_TIMESTAMP,
-                  strlen(SVN_WC__ENTRIES_ATTR_TIMESTAMP));
+    apr_hash_get (atthash,
+                  SVN_WC__ENTRIES_ATTR_TIMESTAMP, APR_HASH_KEY_STRING);
 
   if (! timestr)
     {

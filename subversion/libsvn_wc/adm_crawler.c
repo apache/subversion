@@ -200,15 +200,13 @@ set_entry_flags (svn_string_t *filename,
   /* Examine the hash for a "new" xml attribute.  If this attribute
      doesn't exists, then the hash value will be NULL.  */
   value = apr_hash_get (current_entry_hash,
-                        SVN_WC__ENTRIES_ATTR_ADD,
-                        strlen(SVN_WC__ENTRIES_ATTR_ADD));
+                        SVN_WC__ENTRIES_ATTR_ADD, APR_HASH_KEY_STRING);
   *new_p = value ? TRUE : FALSE;
 
   /* Examine the hash for a "delete" xml attribute in the same
      manner. */
   value = apr_hash_get (current_entry_hash,
-                        SVN_WC__ENTRIES_ATTR_DELETE,
-                        strlen(SVN_WC__ENTRIES_ATTR_DELETE));
+                        SVN_WC__ENTRIES_ATTR_DELETE, APR_HASH_KEY_STRING);
   *delete_p = value ? TRUE : FALSE;
 
   /* Call external routine to decide if this file has been locally
