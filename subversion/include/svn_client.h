@@ -22,6 +22,10 @@
  * Used By:   Client programs.
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef SVN_CLIENT_H
 #define SVN_CLIENT_H
 
@@ -89,8 +93,12 @@ svn_client_status (apr_hash_t **statushash,
 
 
 
-
 #endif  /* SVN_CLIENT_H */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 
 /* --------------------------------------------------------------
  * local variables:

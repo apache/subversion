@@ -14,6 +14,10 @@
 /* ==================================================================== */
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef SVN_FS_H
 #define SVN_FS_H
 
@@ -865,3 +869,14 @@ svn_error_t *svn_fs_file_delta (svn_txdelta_stream_t **stream_p,
 /* [[Yes, do tell.]] */
 
 #endif /* SVN_FS_H */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+
+/* ----------------------------------------------------------------
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

@@ -15,6 +15,10 @@
 
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef SVN_HASH_H
 #define SVN_HASH_H
 
@@ -98,9 +102,12 @@ apr_hash_sorted_keys (apr_hash_t *ht,
 
 #endif /* SVN_HASH_H */
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
-
-/* 
+
+/* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end:

@@ -16,6 +16,10 @@
 
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef SVN_DELTA_H
 #define SVN_DELTA_H
 
@@ -633,9 +637,12 @@ typedef struct svn_prop_t
 
 #endif  /* SVN_DELTA_H */
 
-
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
-/* 
+
+/* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end:

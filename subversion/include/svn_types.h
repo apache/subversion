@@ -18,6 +18,10 @@
    defined tin the design doc. */
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef SVN_TYPES_H
 #define SVN_TYPES_H
 
@@ -62,9 +66,12 @@ typedef int svn_boolean_t;
 
 #endif  /* SVN_TYPES_H */
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
-
-/* --------------------------------------------------------------
+
+/* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end:

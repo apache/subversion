@@ -13,6 +13,13 @@
  */
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+#ifndef SVN_WC_H
+#define SVN_WC_H
+
 
 /* ==================================================================== */
 
@@ -394,7 +401,12 @@ svn_error_t *svn_wc_prop_set (svn_string_t *name,
 
 #endif  /* SVN_WC_H */
 
-/* --------------------------------------------------------------
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+
+/* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end: 
