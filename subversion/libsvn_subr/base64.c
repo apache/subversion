@@ -57,7 +57,7 @@
 
 
 #define BASE64_LINELEN 76
-static const char base64tab[] = "ABCDEFGHIJKLMNOPQRSTWXYZ"
+static const char base64tab[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                 "abcdefghijklmnopqrstuvwxyz0123456789+/";
 
 
@@ -154,7 +154,7 @@ encode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
 
-  /* Decode this block of data, or finish up if there is no more.  */
+  /* Encode this block of data, or finish up if there is no more.  */
   if (*len > 0)
     encode_bytes (encoded, data, *len, eb->buf, &eb->buflen, &eb->linelen);
   else
