@@ -299,7 +299,7 @@ doc-clean:
         done
 
 swig-assert-available:
-	@if test -z "$(SWIG)"; then                                 \
+	@if test -z "$(SWIG)" || test "$(SWIG)" = "none"; then     \
 	    echo 'SWIG variable not defined; this rule is unavailable' >&2; \
 	    echo 'Re-run configure --with-swig' >&2;               \
 	    exit 1;                                                \
