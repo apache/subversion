@@ -40,12 +40,12 @@ It can be very helpful to have an editor smart enough to help adhere to
 these rules. For example, @command{vim} can do this on a per-project basis
 with @file{.vimrc} commands like the following:
 
-@verbatim
-autocmd BufRead,BufNewFile */rapidsvn/*.{cpp,h}
+@example
+autocmd BufRead,BufNewFile */rapidsvn/*.@{cpp,h@}
     setlocal ts=4 noexpandtab
 autocmd BufRead,BufNewFile */subversion/*.[ch]
-    setlocal sw=2 expandtab cinoptions=>2sn-s{s^-s:s
-@end verbatim
+    setlocal sw=2 expandtab cinoptions=>2sn-s@{s^-s:s
+@end example
 
 Check your favorite editor's documentation for more information.
 
