@@ -100,8 +100,8 @@ Candidate changes:
     Votes:
       +1: lundblad, brane
 
-  * r11262
-    Fix issue #2012.
+  * r11262, r11274
+    Fix issue #2012.  Allow URI-encoded drive letter and separator (: or |).
     Justification:
       Regression fix.
     Votes:
