@@ -11,8 +11,12 @@ import sys
 import getopt
 
 
+# for the generator modules
 sys.path.insert(0, os.path.join('build', 'generator'))
+
+# for getversion
 sys.path.insert(0, 'build')
+
 
 gen_modules = {
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
