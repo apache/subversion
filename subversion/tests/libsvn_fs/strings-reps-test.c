@@ -23,8 +23,8 @@
 #include "../../libsvn_fs/reps-table.h"
 
 
-/*-----------------------------------------------------------------*/
 
+/*-----------------------------------------------------------------*/
 /* Helper functions and batons for reps-table testing. */
 struct rep_args
 {
@@ -37,32 +37,32 @@ struct rep_args
 static svn_error_t *
 txn_body_write_new_rep (void *baton, trail_t *trail)
 {
-  struct rep_args *wb = (struct rep_args *) baton;
-  return svn_fs__write_new_rep (&(wb->key), wb->fs, wb->skel, trail);
+  struct rep_args *b = (struct rep_args *) baton;
+  return svn_fs__write_new_rep (&(b->key), b->fs, b->skel, trail);
 }
 
 
 static svn_error_t *
 txn_body_write_rep (void *baton, trail_t *trail)
 {
-  struct rep_args *wb = (struct rep_args *) baton;
-  return svn_fs__write_rep (wb->fs, wb->key, wb->skel, trail);
+  struct rep_args *b = (struct rep_args *) baton;
+  return svn_fs__write_rep (b->fs, b->key, b->skel, trail);
 }
 
 
 static svn_error_t *
 txn_body_read_rep (void *baton, trail_t *trail)
 {
-  struct rep_args *wb = (struct rep_args *) baton;
-  return svn_fs__read_rep (&(wb->skel), wb->fs, wb->key, trail);
+  struct rep_args *b = (struct rep_args *) baton;
+  return svn_fs__read_rep (&(b->skel), b->fs, b->key, trail);
 }
 
 
 static svn_error_t *
 txn_body_delete_rep (void *baton, trail_t *trail)
 {
-  struct rep_args *wb = (struct rep_args *) baton;
-  return svn_fs__delete_rep (wb->fs, wb->key, trail);
+  struct rep_args *b = (struct rep_args *) baton;
+  return svn_fs__delete_rep (b->fs, b->key, trail);
 }
 
 
@@ -281,6 +281,242 @@ delete_rep (const char **msg, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+/* ------------------------------------------------------------------- */
+/* Helper functions and batons for strings-table testing. */
+
+static svn_error_t *
+verify_expected_record (svn_fs_t *fs, 
+                        const char *key, 
+                        const char *expected_text,
+                        apr_size_t expected_len,
+                        trail_t *trail)
+{
+  apr_size_t size;
+  char buf[100];
+  svn_stringbuf_t *text;
+  apr_off_t offset = 0;
+
+  /* Check the string size. */
+  SVN_ERR (svn_fs__string_size (&size, fs, key, trail));
+  if (size != expected_len)
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
+                             "record has unexpected size");
+
+  /* Read the string back in 100-byte chunks. */
+  text = svn_stringbuf_create ("", trail->pool);
+  while (1)
+    {
+      size = 100;
+      SVN_ERR (svn_fs__string_read (fs, key, offset, &size, buf, trail));
+      svn_stringbuf_appendbytes (text, buf, size);
+      if (size < 100)
+        break;
+      offset += size;
+    }
+
+  /* Check the size and contents of the read data. */
+  if (text->len != expected_len)
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
+                             "record read returned unexpected size");
+  if (memcmp (expected_text, text->data, expected_len))
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
+                             "record read returned unexpected data");
+
+  return SVN_NO_ERROR;
+}
+
+
+struct string_args
+{
+  svn_fs_t *fs;
+  const char *key;
+  const char *text;
+  apr_size_t len;
+};
+
+
+static svn_error_t *
+txn_body_verify_string (void *baton, trail_t *trail)
+{
+  struct string_args *b = (struct string_args *) baton;
+  return verify_expected_record (b->fs, b->key, b->text, b->len, trail);
+}
+
+
+static svn_error_t *
+txn_body_string_append (void *baton, trail_t *trail)
+{
+  struct string_args *b = (struct string_args *) baton;
+  return svn_fs__string_append (b->fs, &(b->key), b->len, 
+                                b->text, trail);
+}
+
+
+static svn_error_t *
+txn_body_string_clear (void *baton, trail_t *trail)
+{
+  struct string_args *b = (struct string_args *) baton;
+  return svn_fs__string_clear (b->fs, b->key, trail);
+}
+
+
+static svn_error_t *
+txn_body_string_delete (void *baton, trail_t *trail)
+{
+  struct string_args *b = (struct string_args *) baton;
+  return svn_fs__string_delete (b->fs, b->key, trail);
+}
+
+
+static svn_error_t *
+txn_body_string_size (void *baton, trail_t *trail)
+{
+  struct string_args *b = (struct string_args *) baton;
+  return svn_fs__string_size (&(b->len), b->fs, b->key, trail);
+}
+
+
+static const char *bigstring1 = "\
+    Alice opened the door and found that it led into a small
+passage, not much larger than a rat-hole:  she knelt down and
+looked along the passage into the loveliest garden you ever saw.
+How she longed to get out of that dark hall, and wander about
+among those beds of bright flowers and those cool fountains, but
+she could not even get her head though the doorway; `and even if
+my head would go through,' thought poor Alice, `it would be of
+very little use without my shoulders.  Oh, how I wish
+I could shut up like a telescope!  I think I could, if I only
+know how to begin.'  For, you see, so many out-of-the-way things
+had happened lately, that Alice had begun to think that very few
+things indeed were really impossible.";
+
+static const char *bigstring2 = "\
+    There seemed to be no use in waiting by the little door, so she
+went back to the table, half hoping she might find another key on
+it, or at any rate a book of rules for shutting people up like
+telescopes:  this time she found a little bottle on it, (`which
+certainly was not here before,' said Alice,) and round the neck
+of the bottle was a paper label, with the words `DRINK ME'
+beautifully printed on it in large letters.";
+
+static const char *bigstring3 = "\
+    It was all very well to say `Drink me,' but the wise little
+Alice was not going to do THAT in a hurry.  `No, I'll look
+first,' she said, `and see whether it's marked \"poison\" or not';
+for she had read several nice little histories about children who
+had got burnt, and eaten up by wild beasts and other unpleasant
+things, all because they WOULD not remember the simple rules
+their friends had taught them:  such as, that a red-hot poker
+will burn you if you hold it too long; and that if you cut your
+finger VERY deeply with a knife, it usually bleeds; and she had
+never forgotten that, if you drink much from a bottle marked
+`poison,' it is almost certain to disagree with you, sooner or
+later.";
+
+static svn_error_t *
+test_strings (const char **msg, apr_pool_t *pool)
+{
+  struct string_args args;
+  svn_fs_t *fs;
+  svn_stringbuf_t *string;
+
+  *msg = "Test all the strings table functions!";
+
+  /* Create a new fs and repos */
+  SVN_ERR (svn_test__create_fs_and_repos
+           (&fs, "test-repo-test-strings", pool));
+
+  /* The plan (after each step below, verify the size and contents of
+     the string):
+
+     1.  Write a new string (string1).
+     2.  Append string2 to string.
+     3.  Clear string.
+     4.  Append string3 to string.
+     5.  Delete string (verify by size requested failure).
+     6.  Write a new string (string1), appending string2, string3, and 
+         string4.
+  */
+
+  /* 1. Write a new string (string1). */
+  args.fs = fs;
+  args.key = NULL;
+  args.text = bigstring1;
+  args.len = strlen (bigstring1);
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_string_append, &args, pool));
+
+  /* Make sure a key was returned. */
+  if (! args.key)
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                             "write of new string failed to return new key");
+
+  /* Verify record's size and contents. */
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_verify_string, &args, pool));
+
+  /* Append a second string to our first one. */
+  args.text = bigstring2;
+  args.len = strlen (bigstring2);
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_string_append, &args, pool));
+  
+  /* Verify record's size and contents. */
+  string = svn_stringbuf_create (bigstring1, pool);
+  svn_stringbuf_appendcstr (string, bigstring2);
+  args.text = string->data;
+  args.len = string->len;
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_verify_string, &args, pool));
+
+  /* Clear the record */
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_string_clear, &args, pool));
+
+  /* Verify record's size and contents. */
+  args.text = "";
+  args.len = 0;
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_verify_string, &args, pool));
+
+  /* Append a third string to our first one. */
+  args.text = bigstring3;
+  args.len = strlen (bigstring3);
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_string_append, &args, pool));
+
+  /* Verify record's size and contents. */
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_verify_string, &args, pool));
+
+  /* Delete our record...she's served us well. */
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_string_delete, &args, pool));
+
+  /* Now, we expect a size request on this record to fail with
+     SVN_ERR_FS_NO_SUCH_STRING. */
+  {
+    svn_error_t *err = svn_fs__retry_txn (args.fs,
+                                          txn_body_string_size, &args, pool);
+
+    if (! err)
+      return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                               "query unexpectedly successful");
+    if (err->apr_err != SVN_ERR_FS_NO_SUCH_STRING)
+      return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                               "query failed with unexpected error");
+  }
+
+  /* Close the filesystem. */
+  SVN_ERR (svn_fs_close_fs (fs));
+
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 
 
@@ -293,6 +529,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   write_rep,
   read_rep,
   delete_rep,
+  test_strings,
   0
 };
 

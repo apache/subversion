@@ -99,7 +99,7 @@ svn_error_t *svn_fs__string_clear (svn_fs_t *fs,
  * WARNING: Deleting a string renders unusable any representations
  * that refer to it.  Be careful.
  */ 
-svn_error_t *svn_fs__delete_string (svn_fs_t *fs,
+svn_error_t *svn_fs__string_delete (svn_fs_t *fs,
                                     const char *key,
                                     trail_t *trail);
 
