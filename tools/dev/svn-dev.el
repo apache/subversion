@@ -89,7 +89,9 @@ Inhibit backup files unless `vc-make-backup-files' is non-nil."
           (make-local-variable 'backup-inhibited)
           (setq backup-inhibited t)))))
 
-(add-hook 'find-file-hooks 'svn-find-file-hook)
+;; ### GJS: disabled. When visiting an APR header, this asked me about
+;; ###      creating the include/.svn directory. Feh.
+;; (add-hook 'find-file-hooks 'svn-find-file-hook)
 
 
 
