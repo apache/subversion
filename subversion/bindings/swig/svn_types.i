@@ -84,14 +84,12 @@
     $result = Py_None;
 }
 
-%typemap(java, out) svn_error_t * {
-    if ($1 != NULL) {
-        SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, $1->message);
-    }
-}
-%typemap(jni) svn_error_t * "int"
-%typemap(jtype) svn_error_t * "int"
-%typemap(jstype) svn_error_t * "int"
+%typemap(java, out) svn_error_t * %{
+    $result = ($1 != NULL) ? svn_swig_java_convert_error(jenv, $1) : NULL;
+%}
+%typemap(jni) svn_error_t * "jthrowable"
+%typemap(jtype) svn_error_t * "org.tigris.subversion.SubversionException"
+%typemap(jstype) svn_error_t * "org.tigris.subversion.SubversionException"
 %typemap(javain) svn_error_t * "@javainput"
 %typemap(javaout) svn_error_t * {
 	return $jnicall;
