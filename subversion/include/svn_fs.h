@@ -1107,10 +1107,11 @@ svn_error_t *svn_fs_file_md5_checksum (unsigned char digest[],
                                        apr_pool_t *pool);
 
 
-/** Set @a *contents to a readable generic stream will yield the contents
- * of the file @a path in @a root.  Allocate the stream in @a pool.  You can
- * only use @a *contents for as long as the underlying filesystem is
- * open.  If @a path is not a file, return @c SVN_ERR_FS_NOT_FILE.
+/** Set @a *contents to a readable generic stream that will yield the
+ * contents of the file @a path in @a root.  Allocate the stream in 
+ * @a pool.  You can only use @a *contents for as long as the underlying
+ * filesystem is open.  If @a path is not a file, return 
+ * @c SVN_ERR_FS_NOT_FILE.
  *
  * If @a root is the root of a transaction, it is possible that the
  * contents of the file @a path will change between calls to
