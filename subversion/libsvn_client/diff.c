@@ -730,8 +730,35 @@ do_single_file_merge (const svn_delta_editor_t *after_editor,
 }
      
 
+/* A Theoretical Note From Ben, regarding do_diff().
 
-/* This function handles single-files and directories both. */
+   This function is really svn_client_diff().  If you read the public
+   API description for svn_client_diff, it sounds quite Grand.  It
+   sounds really generalized and abstract and beautiful: that it will
+   diff any two paths, be they working-copy paths or URLs, at any two
+   revisions.
+
+   Now, the *reality* is that we have exactly three 'tools' for doing
+   diffing, and thus this routine is built around the use of the three
+   tools.  Here they are, for clarity:
+
+     - svn_wc_diff:  assumes both paths are the same wcpath.
+                     compares wcpath@BASE vs. wcpath@WORKING
+
+     - svn_wc_get_diff_editor:  compares some URL@REV vs. wcpath@WORKING
+
+     - svn_client__get_diff_editor:  compares some URL1@REV1 vs. URL2@REV2
+
+   So the truth of the matter is, if the caller's arguments can't be
+   pigeonholed into one of these three use-cases, we currently bail
+   with a friendly apology.
+
+   Perhaps someday a brave soul will truly make svn_client_diff
+   perfectly general.  For now, we live with the 90% case.  Certainly,
+   the commandline client only calls this function in legal ways.
+   When there are other users of svn_client.h, maybe this will become
+   a more pressing issue.
+ */
 static svn_error_t *
 do_diff (const apr_array_header_t *options,
          svn_client_auth_baton_t *auth_baton,
@@ -744,12 +771,11 @@ do_diff (const apr_array_header_t *options,
          void *callback_baton,
          apr_pool_t *pool)
 {
+  svn_error_t *err;
   svn_revnum_t start_revnum, end_revnum;
   svn_string_t path_str;
-  svn_boolean_t path_is_url;
   svn_stringbuf_t *anchor = NULL, *target = NULL;
   svn_wc_entry_t *entry;
-  svn_stringbuf_t *URL = path1;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   const svn_ra_reporter_t *reporter;
@@ -757,105 +783,211 @@ do_diff (const apr_array_header_t *options,
   const svn_delta_edit_fns_t *diff_editor;
   void *diff_edit_baton;
 
-  /* Determine if the target we have been given is a path or an URL.
-     If it is a working copy path, we'll need to extract the URL from
-     the entry for that path. */
-  path_str.data = path1->data;
-  path_str.len = path1->len;
-  if (! ((path_is_url = svn_path_is_url (&path_str))))
-    {
-      SVN_ERR (svn_wc_get_actual_target (path1, &anchor, &target, pool));
-      SVN_ERR (svn_wc_entry (&entry, anchor, pool));
-      URL = svn_stringbuf_create (entry->url->data, pool);
-    }
+  /* Sanity check -- ensure that we have valid revisions to look at. */
+  if ((revision1->kind == svn_client_revision_unspecified)
+      || (revision2->kind == svn_client_revision_unspecified))
+    return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
+                             "do_diff: not all revisions are specified.");
 
-  /* If we are diffing a working copy path, simply use this 'quick'
-     diff that does not contact the repository and simply uses the
-     text base. */
-  if ((! path_is_url)
-      && ((revision1->kind == svn_client_revision_committed)
-          || (revision1->kind == svn_client_revision_base))
+  /* The simplest use-case.  No repository contact required. */
+  if ((revision1->kind == svn_client_revision_base)
       && (revision2->kind == svn_client_revision_working))
     {
-      return svn_wc_diff (anchor, target, callbacks, callback_baton,
-                          recurse, pool);
+      /* Sanity check -- path1 and path2 are the same working-copy path. */
+      if (! svn_stringbuf_compare (path1, path2)) 
+        {
+          err = svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
+                                  "do_diff: paths aren't equal!");
+          goto polite_error;
+        }
+      path_str.data = path1->data;
+      path_str.len = path1->len;
+      if (svn_path_is_url (&path_str))
+        {
+          return svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
+                                   "do_diff: path isn't a working-copy path.");
+          goto polite_error;
+        }
+
+      SVN_ERR (svn_wc_get_actual_target (path1, &anchor, &target, pool));
+      SVN_ERR (svn_wc_entry (&entry, anchor, pool));
+      SVN_ERR (svn_wc_diff (anchor, target, callbacks, callback_baton,
+                            recurse, pool));
     }
 
-  /* Else we must contact the repository. */
-
-  /* Establish RA session */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
-
-  /* ### TODO: We have to pass null for the base_dir here, since the
-     working copy does not match the requested revision.  It might be
-     possible to have a special ra session for diff, where get_wc_prop
-     cooperates with the editor and returns values when the file is in the
-     wc, and null otherwise. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
-                                        NULL, FALSE, FALSE, TRUE, 
-                                        auth_baton, pool));
-
-  /* ### todo: later, when we take two (or N) targets and a more
-     sophisticated indication of their interaction with start and end,
-     these calls will need to be rearranged. */
-  SVN_ERR (svn_client__get_revision_number
-           (&start_revnum, ra_lib, session, revision1, path1->data, pool));
-  SVN_ERR (svn_client__get_revision_number
-           (&end_revnum, ra_lib, session, revision2, path2->data, pool));
-
-  /* ### todo: For the moment, we'll maintain the two distinct diff
-     editors, svn_wc vs svn_client, in order to get this change done
-     in a finite amount of time.  Next the two editors will be unified
-     into one "lazy" editor that uses local data whenever possible. */
-
-  if (revision2->kind == svn_client_revision_working)
+  /* Next use-case:  some repos-revision compared against wcpath@WORKING */
+  else if ((revision2->kind == svn_client_revision_working)
+           && (revision1->kind != svn_client_revision_working)
+           && (revision1->kind != svn_client_revision_base))
     {
-      /* The working copy is involved in this case. */
+      svn_stringbuf_t *URL1;
+      svn_stringbuf_t *url_anchor, *url_target;
+
+      /* Sanity check -- path2 better be a working-copy path. */
+      path_str.data = path2->data;
+      path_str.len = path2->len;
+      if (svn_path_is_url (&path_str))
+        {
+          return svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
+                                   "do_diff: path isn't a working-copy path.");
+          goto polite_error;
+        }
+
+      /* Extract a URL and revision from path1 (if not already a URL) */
+      SVN_ERR (convert_to_url (&URL1, path1, pool));
+
+      /* Trickiness:  possibly split up path2 into anchor/target.  If
+         we do so, then we must split URL1 as well.  We shouldn't go
+         assuming that URL1 is equal to path2's URL, as we used to. */
+      SVN_ERR (svn_wc_get_actual_target (path2, &anchor, &target, pool));
+      if (target)
+        svn_path_split (URL1, &url_anchor, &url_target, pool);
+      else
+        {
+          url_anchor = URL1;
+          url_target = NULL;
+        }
+
+      /* Establish RA session to URL1's anchor */
+      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton,
+                                      url_anchor->data, pool));
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url_anchor, 
+                                            NULL, NULL, FALSE, FALSE, TRUE, 
+                                            auth_baton, pool));
+      
+      /* Set up diff editor according to path2's anchor/target. */
       SVN_ERR (svn_wc_get_diff_editor (anchor, target,
                                        callbacks, callback_baton,
                                        recurse,
                                        &diff_editor, &diff_edit_baton,
                                        pool));
 
+      /* Tell the RA layer we want a delta to change our txn to URL1 */
+      SVN_ERR (svn_client__get_revision_number
+               (&start_revnum, ra_lib, session, revision1, path1->data, pool));
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
                                   start_revnum,
-                                  target,
-                                  recurse,
+                                  url_target,
+                                  recurse,                                  
                                   diff_editor, diff_edit_baton));
 
-      SVN_ERR (svn_wc_crawl_revisions (path1, reporter, report_baton,
+      /* Create a txn mirror of path2;  the diff editor will print
+         diffs in reverse.  :-)  */
+      SVN_ERR (svn_wc_crawl_revisions (path2, reporter, report_baton,
                                        FALSE, recurse,
                                        NULL, NULL, /* notification is N/A */
                                        pool));
     }
-  else   /* ### todo: there may be uncovered cases remaining */
+  
+  /* Last use-case:  comparing path1@rev1 and path2@rev2, where both revs
+     require repository contact.  */
+  else if ((revision2->kind != svn_client_revision_working)
+           && (revision2->kind != svn_client_revision_base)
+           && (revision1->kind != svn_client_revision_working)
+           && (revision1->kind != svn_client_revision_base))
     {
-      /* Pure repository comparison. */
       const svn_delta_editor_t *new_diff_editor;
       void *new_diff_edit_baton;
-      svn_stringbuf_t *URL2;
-      
-      /* Open a second session used to request individual file
-         contents. Although a session can be used for multiple requests, it
-         appears that they must be sequential. Since the first request, for
-         the diff, is still being processed the first session cannot be
-         reused. This applies to ra_dav, ra_local does not appears to have
-         this limitation. */
+      svn_string_t path1_s, path2_s;
+      svn_stringbuf_t *URL1, *URL2;
+      svn_stringbuf_t *anchor1, *target1, *anchor2, *target2;
+      svn_boolean_t path1_is_url, path2_is_url;
+      enum svn_node_kind path2_kind;
       void *session2;
 
-      /* ### TODO: Forcing the base_dir to null. It might be possible to
-         use a special ra session that cooperates with the editor to enable
-         get_wc_prop to return values when the file is in the wc */
-      SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL, NULL,
-                                            NULL, FALSE, FALSE, TRUE,
-                                            auth_baton, pool));
-
+      /* The paths could be *either* wcpaths or urls... */
+      SVN_ERR (convert_to_url (&URL1, path1, pool));
       SVN_ERR (convert_to_url (&URL2, path2, pool));
 
-      /* Get the true diff editor. */
-      SVN_ERR (svn_client__get_diff_editor (target,
+      path1_s.data = path1->data;
+      path1_s.len = path1->len;
+      path2_s.data = path2->data;
+      path2_s.len = path2->len;
+      path1_is_url = svn_path_is_url (&path1_s);
+      path2_is_url = svn_path_is_url (&path2_s);
+
+      /* Open temporary RA sessions to each URL. */
+      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1->data, pool));
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL1, NULL,
+                                            NULL, FALSE, FALSE, TRUE, 
+                                            auth_baton, pool));
+      SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL2, NULL,
+                                            NULL, FALSE, FALSE, TRUE, 
+                                            auth_baton, pool));
+
+      /* Do the right thing in resolving revisions;  if the caller
+         does something foolish like pass in URL@committed, then they
+         should rightfully get an error when we pass a NULL path below. */
+      SVN_ERR (svn_client__get_revision_number
+               (&start_revnum, ra_lib, session, revision1, 
+                path1_is_url ? NULL : path1->data, 
+                pool));
+      SVN_ERR (svn_client__get_revision_number
+               (&end_revnum, ra_lib, session2, revision2,
+                path2_is_url ? NULL : path2->data, 
+                pool));
+
+      /* Now down to the -real- business.  We gotta figure out anchors
+         and targets, whether things are urls or wcpaths.
+
+         Like we do in the 2nd use-case, we have path1 follow path2's
+         lead.  If path2 is split into anchor/target, then so must
+         path1 (URL1) be. */
+      if (path2_is_url)
+        {
+          SVN_ERR (ra_lib->check_path (&path2_kind, session2,
+                                       "", end_revnum));
+          switch (path2_kind)
+            {
+            case svn_node_file:
+              svn_path_split (path2, &anchor2, &target2, pool);
+              break;
+            case svn_node_dir:
+              anchor2 = path2;
+              target2 = NULL;
+              break;
+            default:
+              return svn_error_createf (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
+                                        "'%s' at rev %d wasn't found "
+                                        "in repository.", path2->data,
+                                        end_revnum);
+            }                   
+        }
+      else
+        {
+          SVN_ERR (svn_wc_get_actual_target (path2, &anchor2, &target2, pool));
+        }
+
+      if (target2)
+        {
+          svn_path_split (URL1, &anchor1, &target1, pool);          
+        }
+      else
+        {
+          anchor1 = URL1;
+          target1 = NULL;
+        }
+
+      SVN_ERR (ra_lib->close (session));
+      SVN_ERR (ra_lib->close (session2));
+      
+      /* The main session is opened to the anchor of URL1. */
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor1, NULL,
+                                            NULL, FALSE, FALSE, TRUE, 
+                                            auth_baton, pool));
+
+
+      /* Open a second session used to request individual file
+         contents from URL1's anchor.  */
+      SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, anchor1,
+                                            NULL, NULL, FALSE, FALSE, TRUE,
+                                            auth_baton, pool));      
+
+      /* Set up the repos_diff editor on path2's anchor.  */
+      SVN_ERR (svn_client__get_diff_editor (anchor2,
                                             callbacks,
                                             callback_baton,
                                             recurse,
@@ -869,24 +1001,35 @@ do_diff (const apr_array_header_t *options,
       svn_delta_compat_wrap (&diff_editor, &diff_edit_baton,
                              new_diff_editor, new_diff_edit_baton, pool);
 
+      /* We want to switch our txn into URL2 */
       SVN_ERR (ra_lib->do_switch (session,
                                   &reporter, &report_baton,
                                   end_revnum,
-                                  target,
+                                  target1,
                                   recurse,
                                   URL2,
                                   diff_editor, diff_edit_baton));      
 
       SVN_ERR (reporter->set_path (report_baton, "", start_revnum));
-
       SVN_ERR (reporter->finish_report (report_baton));
 
       SVN_ERR (ra_lib->close (session2));
+      SVN_ERR (ra_lib->close (session));      
     }
 
-  SVN_ERR (ra_lib->close (session));
-
+  else
+    {
+      /* can't pigeonhole our inputs into one of the three use-cases. */
+      err = NULL;
+      goto polite_error;
+    }
+    
   return SVN_NO_ERROR;
+    
+ polite_error:
+  return svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, err, pool,
+                           "Sorry, svn_client_diff was called in a way "
+                           "that is not yet supported.");
 }
 
 
