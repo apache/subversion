@@ -38,15 +38,6 @@
 #define SVNLOOK_DIFF_TMPDIR_BASE  "OLD"
 #define SVNLOOK_DIFF_TMPDIR_NEW   "NEW"
 
-#define INT_ERR(expr)                              \
-  do {                                             \
-    svn_error_t *svn_err__temp = (expr);           \
-    if (svn_err__temp) {                           \
-      svn_handle_error (svn_err__temp, stdout, 0); \
-      return (1); }                                \
-  } while (0)
-
-
 typedef enum svnlook_cmd_t
 {
   svnlook_cmd_default = 0,
@@ -921,6 +912,15 @@ do_usage (const char *progname, int exit_code)
 
 /*** Main. ***/
 
+#define INT_ERR(expr)                              \
+  do {                                             \
+    svn_error_t *svn_err__temp = (expr);           \
+    if (svn_err__temp) {                           \
+      svn_handle_error (svn_err__temp, stdout, 0); \
+      goto cleanup; }                              \
+  } while (0)
+
+
 int
 main (int argc, const char * const *argv)
 {
@@ -1075,9 +1075,12 @@ main (int argc, const char * const *argv)
       break;
     }
 
-  /* Cleanup after ourselves. */
-  if (! c.is_revision)
+ cleanup:  /* Cleanup after ourselves. */
+  if (c.txn && (! c.is_revision))
     svn_fs_close_txn (c.txn);
+
+  if (c.fs)
+    svn_fs_close_fs (c.fs);
 
   svn_pool_destroy (pool);
   apr_terminate ();
