@@ -274,7 +274,8 @@ log_message_receiver_xml (void *baton,
 {
   /* Collate whole log message into sb before printing. */
   svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
-  char *revstr, *msg_native_eol;  
+  char *revstr;
+  const char *msg_native_eol;  
 
   if (rev == 0)
     return SVN_NO_ERROR;
