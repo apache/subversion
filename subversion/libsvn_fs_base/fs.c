@@ -34,6 +34,9 @@
 #include "fs.h"
 #include "err.h"
 #include "dag.h"
+#include "revs-txns.h"
+#include "uuid.h"
+#include "tree.h"
 #include "svn_private_config.h"
 
 #include "bdb/bdb-err.h"
@@ -458,6 +461,24 @@ bdb_write_config  (svn_fs_t *fs)
 }
 
 
+
+/* Creating a new filesystem */
+
+static fs_vtable_t fs_vtable = {
+  svn_fs_base__youngest_rev,
+  svn_fs_base__revision_prop,
+  svn_fs_base__revision_proplist,
+  svn_fs_base__change_rev_prop,
+  svn_fs_base__get_uuid,
+  svn_fs_base__set_uuid,
+  svn_fs_base__revision_root,
+  svn_fs_base__begin_txn,
+  svn_fs_base__open_txn,
+  svn_fs_base__purge_txn,
+  svn_fs_base__list_transactions,
+  svn_fs_base__deltify
+};
+
 static svn_error_t *
 base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
@@ -470,6 +491,7 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                              apr_pool_cleanup_null);
 
   bfd = apr_palloc (fs->pool, sizeof (*bfd));
+  fs->vtable = &fs_vtable;
   fs->fsap_data = bfd;
 
   SVN_ERR (check_bdb_version (pool));
@@ -556,6 +578,7 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                              apr_pool_cleanup_null);
 
   bfd = apr_palloc (fs->pool, sizeof (*bfd));
+  fs->vtable = &fs_vtable;
   fs->fsap_data = bfd;
 
   SVN_ERR (check_bdb_version (pool));
@@ -619,6 +642,92 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   svn_error_clear (cleanup_fs (fs));
   return svn_err;
 }
+
+
+/* Running recovery on a Berkeley DB-based filesystem.  */
+
+
+static svn_error_t *
+base_bdb_recover (const char *path,
+                  apr_pool_t *pool)
+{
+  DB_ENV *env;
+  const char *path_native;
+
+  SVN_BDB_ERR (db_env_create (&env, 0));
+
+  /* Here's the comment copied from db_recover.c:
+   
+     Initialize the environment -- we don't actually do anything
+     else, that all that's needed to run recovery.
+   
+     Note that we specify a private environment, as we're about to
+     create a region, and we don't want to leave it around.  If we
+     leave the region around, the application that should create it
+     will simply join it instead, and will then be running with
+     incorrectly sized (and probably terribly small) caches.  */
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
+  SVN_BDB_ERR (env->open (env, path_native, (DB_RECOVER | DB_CREATE
+                                             | DB_INIT_LOCK | DB_INIT_LOG
+                                             | DB_INIT_MPOOL | DB_INIT_TXN
+                                             | DB_PRIVATE),
+                          0666));
+  SVN_BDB_ERR (env->close (env, 0));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Running the 'archive' command on a Berkeley DB-based filesystem.  */
+
+
+static svn_error_t *
+base_bdb_logfiles (apr_array_header_t **logfiles,
+                   const char *path,
+                   svn_boolean_t only_unused,
+                   apr_pool_t *pool)
+{
+  DB_ENV *env;
+  const char *path_native;
+  char **filelist;
+  char **filename;
+  u_int32_t flags = only_unused ? 0 : DB_ARCH_LOG;
+
+  *logfiles = apr_array_make (pool, 4, sizeof (const char *));
+
+  SVN_BDB_ERR (db_env_create (&env, 0));
+
+  /* Needed on Windows in case Subversion and Berkeley DB are using
+     different C runtime libraries  */
+  SVN_BDB_ERR (env->set_alloc (env, malloc, realloc, free));
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
+  SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
+                                             | DB_INIT_LOCK | DB_INIT_LOG
+                                             | DB_INIT_MPOOL | DB_INIT_TXN),
+                          0666));
+  SVN_BDB_ERR (env->log_archive (env, &filelist, flags));
+
+  if (filelist == NULL)
+    {
+      SVN_BDB_ERR (env->close (env, 0));
+      return SVN_NO_ERROR;
+    }
+
+  for (filename = filelist; *filename != NULL; ++filename)
+    {
+      APR_ARRAY_PUSH (*logfiles, const char *) = apr_pstrdup (pool, *filename);
+    }
+
+  free (filelist);
+  
+  SVN_BDB_ERR (env->close (env, 0));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* Copying a live Berkeley DB-base filesystem.  */
@@ -735,92 +844,6 @@ base_hotcopy (const char *src_path,
 
   return SVN_NO_ERROR;
 }
-
-
-/* Running recovery on a Berkeley DB-based filesystem.  */
-
-
-static svn_error_t *
-base_bdb_recover (const char *path,
-                  apr_pool_t *pool)
-{
-  DB_ENV *env;
-  const char *path_native;
-
-  SVN_BDB_ERR (db_env_create (&env, 0));
-
-  /* Here's the comment copied from db_recover.c:
-   
-     Initialize the environment -- we don't actually do anything
-     else, that all that's needed to run recovery.
-   
-     Note that we specify a private environment, as we're about to
-     create a region, and we don't want to leave it around.  If we
-     leave the region around, the application that should create it
-     will simply join it instead, and will then be running with
-     incorrectly sized (and probably terribly small) caches.  */
-
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (env->open (env, path_native, (DB_RECOVER | DB_CREATE
-                                             | DB_INIT_LOCK | DB_INIT_LOG
-                                             | DB_INIT_MPOOL | DB_INIT_TXN
-                                             | DB_PRIVATE),
-                          0666));
-  SVN_BDB_ERR (env->close (env, 0));
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Running the 'archive' command on a Berkeley DB-based filesystem.  */
-
-
-static svn_error_t *
-base_bdb_logfiles (apr_array_header_t **logfiles,
-                   const char *path,
-                   svn_boolean_t only_unused,
-                   apr_pool_t *pool)
-{
-  DB_ENV *env;
-  const char *path_native;
-  char **filelist;
-  char **filename;
-  u_int32_t flags = only_unused ? 0 : DB_ARCH_LOG;
-
-  *logfiles = apr_array_make (pool, 4, sizeof (const char *));
-
-  SVN_BDB_ERR (db_env_create (&env, 0));
-
-  /* Needed on Windows in case Subversion and Berkeley DB are using
-     different C runtime libraries  */
-  SVN_BDB_ERR (env->set_alloc (env, malloc, realloc, free));
-
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
-                                             | DB_INIT_LOCK | DB_INIT_LOG
-                                             | DB_INIT_MPOOL | DB_INIT_TXN),
-                          0666));
-  SVN_BDB_ERR (env->log_archive (env, &filelist, flags));
-
-  if (filelist == NULL)
-    {
-      SVN_BDB_ERR (env->close (env, 0));
-      return SVN_NO_ERROR;
-    }
-
-  for (filename = filelist; *filename != NULL; ++filename)
-    {
-      APR_ARRAY_PUSH (*logfiles, const char *) = apr_pstrdup (pool, *filename);
-    }
-
-  free (filelist);
-  
-  SVN_BDB_ERR (env->close (env, 0));
-
-  return SVN_NO_ERROR;
-}
-
 
 
 

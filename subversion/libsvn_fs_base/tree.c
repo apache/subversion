@@ -118,67 +118,12 @@ typedef struct
 } base_root_data_t;
 
 
-
-/* Creating root objects.  */
+static svn_fs_root_t *make_revision_root (svn_fs_t *fs, svn_revnum_t rev,
+                                          dag_node_t *root_dir,
+                                          apr_pool_t *pool);
 
-
-/* Construct a new root object in FS, allocated from POOL.  */
-static svn_fs_root_t *
-make_root (svn_fs_t *fs,
-           apr_pool_t *pool)
-{
-  /* We create a subpool for each root object to allow us to implement
-     svn_fs_close_root.  */
-  apr_pool_t *subpool = svn_pool_create (pool);
-  svn_fs_root_t *root = apr_pcalloc (subpool, sizeof (*root));
-  base_root_data_t *brd = apr_palloc(subpool, sizeof (*brd));
-
-  root->fs = fs;
-  root->pool = subpool;
-
-  /* Init the node ID cache. */
-  brd->node_cache = apr_hash_make (pool);
-  brd->node_cache_idx = 0;
-  root->fsap_data = brd;
-  /* XXX Set vtable */
-
-  return root;
-}
-
-
-/* Construct a root object referring to the root of REVISION in FS,
-   whose root directory is ROOT_DIR.  Create the new root in POOL.  */
-static svn_fs_root_t *
-make_revision_root (svn_fs_t *fs,
-                    svn_revnum_t rev,
-                    dag_node_t *root_dir,
-                    apr_pool_t *pool)
-{
-  svn_fs_root_t *root = make_root (fs, pool);
-  base_root_data_t *brd = root->fsap_data;
-
-  root->is_txn_root = FALSE;
-  root->rev = rev;
-  brd->root_dir = root_dir;
-
-  return root;
-}
-
-
-/* Construct a root object referring to the root of the transaction
-   named TXN in FS.  Create the new root in POOL.  */
-static svn_fs_root_t *
-make_txn_root (svn_fs_t *fs,
-               const char *txn,
-               apr_pool_t *pool)
-{
-  svn_fs_root_t *root = make_root (fs, pool);
-  root->is_txn_root = TRUE;
-  root->txn = apr_pstrdup (root->pool, txn);
-
-  return root;
-}
-
+static svn_fs_root_t *make_txn_root (svn_fs_t *fs, const char *txn,
+                                     apr_pool_t *pool);
 
 
 /*** Node Caching in the Roots. ***/
@@ -1428,6 +1373,82 @@ base_props_changed (svn_boolean_t *changed_p,
 
 
 
+/* Getting a directory's entries */
+
+
+struct dir_entries_args
+{
+  apr_hash_t **table_p;
+  svn_fs_root_t *root;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_dir_entries (void *baton,
+                      trail_t *trail)
+{
+  struct dir_entries_args *args = baton;
+  dag_node_t *node;
+  apr_hash_t *entries;
+
+  SVN_ERR (get_dag (&node, args->root, args->path, trail));
+
+  /* Get the entries for PARENT_PATH. */
+  SVN_ERR (svn_fs__dag_dir_entries (&entries, node, trail));
+
+  /* Potentially initialize the return value to an empty hash. */
+  *args->table_p = entries ? entries : apr_hash_make (trail->pool);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+base_dir_entries (apr_hash_t **table_p,
+                  svn_fs_root_t *root,
+                  const char *path,
+                  apr_pool_t *pool)
+{
+  struct dir_entries_args args;
+  apr_hash_t *table;
+  svn_fs_t *fs = root->fs;
+
+  args.table_p = &table;
+  args.root    = root;
+  args.path    = path;
+  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_dir_entries, &args, pool));
+
+  /* Add in the kind data. */
+  if (table)
+    {
+      apr_hash_index_t *hi;
+      apr_pool_t *subpool = svn_pool_create (pool);
+      for (hi = apr_hash_first (subpool, table); hi; hi = apr_hash_next (hi))
+        {
+          svn_fs_dirent_t *entry;
+          struct node_kind_args nk_args;
+          void *val;
+
+          /* KEY will be the entry name in ancestor (about which we
+             simple don't care), VAL the dirent. */
+          apr_hash_this (hi, NULL, NULL, &val);
+          entry = val;
+          nk_args.id = entry->id;
+          SVN_ERR (svn_fs__retry_txn (fs, txn_body_node_kind, &nk_args, pool));
+          entry->kind = nk_args.kind;
+        }
+    }
+  else
+    {
+      table = apr_hash_make (pool);
+    }
+
+  *table_p = table;
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Merges and commits. */
 
 
@@ -2461,12 +2482,12 @@ txn_body_commit (void *baton, trail_t *trail)
 
 
 /* Note:  it is acceptable for this function to call back into
-   public FS API interfaces because it does not itself use trails.  */
+   top-level FS interfaces because it does not itself use trails.  */
 svn_error_t *
-svn_fs_commit_txn (const char **conflict_p,
-                   svn_revnum_t *new_rev, 
-                   svn_fs_txn_t *txn,
-                   apr_pool_t *pool)
+svn_fs_base__commit_txn (const char **conflict_p,
+                         svn_revnum_t *new_rev, 
+                         svn_fs_txn_t *txn,
+                         apr_pool_t *pool)
 {
   /* How do commits work in Subversion?
    *
@@ -2702,80 +2723,7 @@ svn_fs_base__deltify (svn_fs_t *fs,
 
 
 
-/* Directories.  */
-
-
-struct dir_entries_args
-{
-  apr_hash_t **table_p;
-  svn_fs_root_t *root;
-  const char *path;
-};
-
-
-static svn_error_t *
-txn_body_dir_entries (void *baton,
-                      trail_t *trail)
-{
-  struct dir_entries_args *args = baton;
-  dag_node_t *node;
-  apr_hash_t *entries;
-
-  SVN_ERR (get_dag (&node, args->root, args->path, trail));
-
-  /* Get the entries for PARENT_PATH. */
-  SVN_ERR (svn_fs__dag_dir_entries (&entries, node, trail));
-
-  /* Potentially initialize the return value to an empty hash. */
-  *args->table_p = entries ? entries : apr_hash_make (trail->pool);
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-base_dir_entries (apr_hash_t **table_p,
-                  svn_fs_root_t *root,
-                  const char *path,
-                  apr_pool_t *pool)
-{
-  struct dir_entries_args args;
-  apr_hash_t *table;
-  svn_fs_t *fs = root->fs;
-
-  args.table_p = &table;
-  args.root    = root;
-  args.path    = path;
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_dir_entries, &args, pool));
-
-  /* Add in the kind data. */
-  if (table)
-    {
-      apr_hash_index_t *hi;
-      apr_pool_t *subpool = svn_pool_create (pool);
-      for (hi = apr_hash_first (subpool, table); hi; hi = apr_hash_next (hi))
-        {
-          svn_fs_dirent_t *entry;
-          struct node_kind_args nk_args;
-          void *val;
-
-          /* KEY will be the entry name in ancestor (about which we
-             simple don't care), VAL the dirent. */
-          apr_hash_this (hi, NULL, NULL, &val);
-          entry = val;
-          nk_args.id = entry->id;
-          SVN_ERR (svn_fs__retry_txn (fs, txn_body_node_kind, &nk_args, pool));
-          entry->kind = nk_args.kind;
-        }
-    }
-  else
-    {
-      table = apr_hash_make (pool);
-    }
-
-  *table_p = table;
-  return SVN_NO_ERROR;
-}
-
+/* Modifying directories */
 
 
 struct make_dir_args
@@ -3230,11 +3178,11 @@ txn_body_file_checksum (void *baton,
   return svn_fs__dag_file_checksum (args->digest, file, trail);
 }
 
-svn_error_t *
-svn_fs_file_md5_checksum (unsigned char digest[],
-                          svn_fs_root_t *root,
-                          const char *path,
-                          apr_pool_t *pool)
+static svn_error_t *
+base_file_md5_checksum (unsigned char digest[],
+                        svn_fs_root_t *root,
+                        const char *path,
+                        apr_pool_t *pool)
 {
   struct file_checksum_args args;
 
@@ -3844,31 +3792,12 @@ typedef struct
 } base_history_data_t;
 
 
-/* Return a new history object (marked as "interesting") for PATH and
-   REVISION, allocated in POOL, and with its members set to the values
-   of the parameters provided.  Note that PATH and PATH_HINT are not
-   duped into POOL -- it is the responsibility of the caller to ensure
-   that this happens. */
-static svn_fs_history_t *
-assemble_history (svn_fs_t *fs,
-                  const char *path,
-                  svn_revnum_t revision,
-                  svn_boolean_t is_interesting,
-                  const char *path_hint,
-                  svn_revnum_t rev_hint,
-                  apr_pool_t *pool)
-{
-  svn_fs_history_t *history = apr_pcalloc (pool, sizeof (*history));
-  base_history_data_t *bhd = apr_pcalloc (pool, sizeof (*bhd));
-  bhd->path = path;
-  bhd->revision = revision;
-  bhd->is_interesting = is_interesting;
-  bhd->path_hint = path_hint;
-  bhd->rev_hint = rev_hint;
-  bhd->fs = fs;
-  history->fsap_data = bhd;
-  return history;
-}
+static svn_fs_history_t *assemble_history (svn_fs_t *fs, const char *path,
+                                           svn_revnum_t revision,
+                                           svn_boolean_t is_interesting,
+                                           const char *path_hint,
+                                           svn_revnum_t rev_hint,
+                                           apr_pool_t *pool);
 
 
 static svn_error_t *
@@ -4191,4 +4120,129 @@ base_history_location (const char **path,
   *path = apr_pstrdup (pool, bhd->path);
   *revision = bhd->revision;
   return SVN_NO_ERROR;
+}
+
+
+static history_vtable_t history_vtable = {
+  base_history_prev,
+  base_history_location
+};
+
+
+/* Return a new history object (marked as "interesting") for PATH and
+   REVISION, allocated in POOL, and with its members set to the values
+   of the parameters provided.  Note that PATH and PATH_HINT are not
+   duped into POOL -- it is the responsibility of the caller to ensure
+   that this happens. */
+static svn_fs_history_t *
+assemble_history (svn_fs_t *fs,
+                  const char *path,
+                  svn_revnum_t revision,
+                  svn_boolean_t is_interesting,
+                  const char *path_hint,
+                  svn_revnum_t rev_hint,
+                  apr_pool_t *pool)
+{
+  svn_fs_history_t *history = apr_pcalloc (pool, sizeof (*history));
+  base_history_data_t *bhd = apr_pcalloc (pool, sizeof (*bhd));
+  bhd->path = path;
+  bhd->revision = revision;
+  bhd->is_interesting = is_interesting;
+  bhd->path_hint = path_hint;
+  bhd->rev_hint = rev_hint;
+  bhd->fs = fs;
+  history->vtable = &history_vtable;
+  history->fsap_data = bhd;
+  return history;
+}
+
+
+
+/* Creating root objects.  */
+
+
+static root_vtable_t root_vtable = {
+  base_paths_changed,
+  base_check_path,
+  base_node_history,
+  base_node_id,
+  base_node_created_rev,
+  base_node_created_path,
+  base_delete_node,
+  base_copied_from,
+  base_node_prop,
+  base_node_proplist,
+  base_change_node_prop,
+  base_props_changed,
+  base_dir_entries,
+  base_make_dir,
+  base_copy,
+  base_revision_link,
+  base_file_length,
+  base_file_md5_checksum,
+  base_file_contents,
+  base_make_file,
+  base_apply_textdelta,
+  base_apply_text,
+  base_contents_changed,
+  base_get_file_delta_stream,
+  base_merge
+};
+
+
+/* Construct a new root object in FS, allocated from POOL.  */
+static svn_fs_root_t *
+make_root (svn_fs_t *fs,
+           apr_pool_t *pool)
+{
+  /* We create a subpool for each root object to allow us to implement
+     svn_fs_close_root.  */
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_fs_root_t *root = apr_pcalloc (subpool, sizeof (*root));
+  base_root_data_t *brd = apr_palloc(subpool, sizeof (*brd));
+
+  root->fs = fs;
+  root->pool = subpool;
+
+  /* Init the node ID cache. */
+  brd->node_cache = apr_hash_make (pool);
+  brd->node_cache_idx = 0;
+  root->vtable = &root_vtable;
+  root->fsap_data = brd;
+
+  return root;
+}
+
+
+/* Construct a root object referring to the root of REVISION in FS,
+   whose root directory is ROOT_DIR.  Create the new root in POOL.  */
+static svn_fs_root_t *
+make_revision_root (svn_fs_t *fs,
+                    svn_revnum_t rev,
+                    dag_node_t *root_dir,
+                    apr_pool_t *pool)
+{
+  svn_fs_root_t *root = make_root (fs, pool);
+  base_root_data_t *brd = root->fsap_data;
+
+  root->is_txn_root = FALSE;
+  root->rev = rev;
+  brd->root_dir = root_dir;
+
+  return root;
+}
+
+
+/* Construct a root object referring to the root of the transaction
+   named TXN in FS.  Create the new root in POOL.  */
+static svn_fs_root_t *
+make_txn_root (svn_fs_t *fs,
+               const char *txn,
+               apr_pool_t *pool)
+{
+  svn_fs_root_t *root = make_root (fs, pool);
+  root->is_txn_root = TRUE;
+  root->txn = apr_pstrdup (root->pool, txn);
+
+  return root;
 }

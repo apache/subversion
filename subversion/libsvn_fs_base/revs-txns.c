@@ -553,6 +553,19 @@ svn_fs_base__change_txn_prop (svn_fs_txn_t *txn,
 }
 
 
+
+/* Creating a transaction */
+
+txn_vtable_t txn_vtable = {
+  svn_fs_base__commit_txn,
+  svn_fs_base__abort_txn,
+  svn_fs_base__txn_prop,
+  svn_fs_base__txn_proplist,
+  svn_fs_base__change_txn_prop,
+  svn_fs_base__txn_root
+};
+
+
 /* Allocate and return a new transaction object in POOL for FS whose
    transaction ID is ID.  ID is not copied.  */
 static svn_fs_txn_t *
@@ -566,8 +579,8 @@ make_txn (svn_fs_t *fs,
   txn->fs = fs;
   txn->id = id;
   txn->base_rev = base_rev;
+  txn->vtable = &txn_vtable;
   txn->fsap_data = NULL;
-  /* XXX Set vtable */
 
   return txn;
 }
