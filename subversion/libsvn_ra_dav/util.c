@@ -22,8 +22,11 @@
 #include <ne_uri.h>
 
 #include "svn_string.h"
+#include "svn_xml.h"
 
 #include "ra_dav.h"
+
+
 
 
 
@@ -78,6 +81,132 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
   
 }
 
+
+/** Error parsing **/
+
+
+/* Context baton for the error parser.  Obviously, it just builds an
+   ERR from POOL. */
+typedef struct {
+  
+  svn_error_t *err;
+  apr_pool_t *pool;
+  
+} parser_cxt_t;
+
+
+/* Custom function of type ne_accept_response. */
+static int ra_dav_error_accepter(void *userdata,
+                                 ne_request *req,
+                                 ne_status *st)
+{
+  /* Only accept the body-response if the HTTP status code is *not* 2XX. */
+  return (st->klass != 2);
+}
+
+
+static const struct ne_xml_elm error_elements[] =
+{
+  { "DAV:", "error", ELEM_error, 0 },
+  { "svn:", "error", ELEM_svn_error, 0 },
+  { "http://apache.org/dav/xmlns", "human-readable", 
+    ELEM_human_readable, NE_XML_CDATA },
+
+  /* ### our validator doesn't yet recognize the rich, specific
+         <D:some-condition-failed/> objects as defined by DeltaV.*/
+
+  { NULL }
+};
+
+
+static int validate_error_elements(void *userdata,
+                                   ne_xml_elmid parent,
+                                   ne_xml_elmid child)
+{
+  switch (parent)
+    {
+    case NE_ELM_root:
+      if (child == ELEM_error)
+        return NE_XML_VALID;
+      else
+        return NE_XML_INVALID;
+
+    case ELEM_error:
+      if (child == ELEM_svn_error
+          || child == ELEM_human_readable)
+        return NE_XML_VALID;
+      else
+        return NE_XML_DECLINE;  /* ignore if something else was in there */
+
+    default:
+      return NE_XML_DECLINE;
+    }
+
+  /* NOTREACHED */
+}
+
+
+static int start_err_element(void *userdata, const struct ne_xml_elm *elm,
+                             const char **atts)
+{
+  parser_cxt_t *pc = (parser_cxt_t *) userdata;
+
+  switch (elm->id)
+    {
+    case ELEM_svn_error:
+      {
+        /* allocate the svn_error_t.  Hopefully the value will be
+           overwritten by the <human-readable> tag, or even someday by
+           a <D:failed-precondition/> tag. */
+        pc->err = svn_error_create(APR_EGENERAL, 0, NULL, pc->pool,
+                                   "General svn error from server");
+        break;
+      }
+    case ELEM_human_readable:
+      {
+        /* get the errorcode attribute if present */
+        const char *errcode_str = 
+          svn_xml_get_attr_value("errcode", /* ### make constant in
+                                               some mod_dav header? */
+                                 atts);
+
+        if (errcode_str && pc->err) 
+          pc->err->apr_err = atoi(errcode_str);
+
+        break;
+      }
+
+    default:
+      break;
+    }
+
+  return 0;
+}
+
+static int end_err_element(void *userdata, const struct ne_xml_elm *elm,
+                           const char *cdata)
+{
+  parser_cxt_t *pc = (parser_cxt_t *) userdata;
+
+  switch (elm->id)
+    {
+    case ELEM_human_readable:
+      {
+        if (cdata && pc->err)
+          pc->err->message = apr_pstrdup(pc->pool, cdata);
+        break;
+      }
+
+    default:
+      break;
+    }
+
+  return 0;
+}
+
+
+
+
 svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                                         const char *method,
                                         const char *url,
@@ -91,11 +220,14 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                                         apr_pool_t *pool)
 {
   ne_request *req;
-  ne_xml_parser *parser;
+  ne_xml_parser *success_parser, *error_parser;
   int rv;
   int code;
   const char *msg;
   svn_error_t *err;
+  parser_cxt_t *pc = apr_pcalloc (pool, sizeof(*pc));
+
+  pc->pool = pool;
 
   /* create/prep the request */
   req = ne_request_create(ras->sess, method, url);
@@ -108,11 +240,25 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   /* ### use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req, "Content-Type", "text/xml");
 
-  /* create a parser to read the MERGE response body */
-  parser = ne_xml_create();
-  ne_xml_push_handler(parser, elements,
+  /* create a parser to read the normal response body */
+  success_parser = ne_xml_create();
+  ne_xml_push_handler(success_parser, elements,
                        validate_cb, startelm_cb, endelm_cb, baton);
-  ne_add_response_body_reader(req, ne_accept_2xx, ne_xml_parse_v, parser);
+
+  /* create a parser to read the <D:error> response body */
+  error_parser = ne_xml_create();
+  ne_xml_push_handler(error_parser, error_elements, validate_error_elements,
+                      start_err_element, end_err_element, pc); 
+
+  /* Register the "main" accepter and body-reader with the request --
+     the one to use when the HTTP status is 2XX */
+  ne_add_response_body_reader(req, ne_accept_2xx, 
+                              ne_xml_parse_v, success_parser);
+    
+  /* Register the "error" accepter and body-reader with the request --
+     the one to use when HTTP statsu is *not* 2XX */   
+  ne_add_response_body_reader(req, ra_dav_error_accepter,
+                              ne_xml_parse_v, error_parser);
 
   /* run the request and get the resulting status code. */
   rv = ne_request_dispatch(req);
@@ -150,17 +296,27 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
         }
     }
 
+
+  if (pc->err != NULL)
+    {
+      /* The HTTP status code wasn't 2XX, so the error-parser built an
+         error for us. */
+      err = pc->err;
+      goto error;
+    }
+
   if (code != 200)
     {
-      /* ### need an SVN_ERR here */
+      /* Bad status, but error-parser didn't build an error.  Return a
+         generic error instead.*/
       err = svn_error_createf(APR_EGENERAL, 0, NULL, pool,
                               "The %s status was %d, but expected 200.",
                               method, code);
       goto error;
     }
 
-  /* was there a parse error somewhere in the response? */
-  msg = ne_xml_get_error(parser);
+  /* was there an XML parse error somewhere? */
+  msg = ne_xml_get_error(success_parser);
   if (msg != NULL && *msg != '\0')
     {
       err = svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
@@ -171,12 +327,14 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
       goto error;
     }
   /* ### maybe hook this to a pool? */
-  ne_xml_destroy(parser);
+  ne_xml_destroy(success_parser);
+  ne_xml_destroy(error_parser);
 
   return NULL;
 
  error:
-  ne_xml_destroy(parser);
+  ne_xml_destroy(success_parser);
+  ne_xml_destroy(error_parser);
   return err;
 }
 

@@ -26,12 +26,21 @@
 #include "dav_svn.h"
 
 
+
 dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
                                 const char *message)
 {
     dav_error *derr;
 
-    derr = dav_new_error(serr->pool, status, serr->apr_err, serr->message);
+    /* ### someday mod_dav_svn will send back 'rich' error tags, much
+       finer grained than plain old svn_error_t's.  But for now, all
+       svn_error_t's are marshalled to the client via this single
+       generic error-tag. */
+    const char *ns = "svn:", *errtag = "error";
+
+    derr = dav_new_error_tag(serr->pool, status,
+                             serr->apr_err, serr->message,
+                             ns, errtag);
     if (message != NULL)
         derr = dav_push_error(serr->pool, status, serr->apr_err,
                               message, derr);
