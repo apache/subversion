@@ -24,11 +24,13 @@
 */
 
 #ifdef SWIGRUBY
+/* Inhibit incorrect class name warning. */
 #pragma SWIG nowarn=801
 #endif
 
 %include typemaps.i
 
+#if SVN_SWIG_VERSION <= 103024
 /* for SWIG bug */
 %typemap(ruby, argout, fragment="output_helper") long long *OUTPUT, long long &OUTPUT
 {
@@ -38,7 +40,7 @@
 {
   $result = output_helper($result, ULL2NUM(*$1));
 }
-
+#endif
 
 /* -----------------------------------------------------------------------
    This is default in SWIG 1.3.17 and is a really good idea

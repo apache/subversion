@@ -130,10 +130,11 @@
 
 %typemap(ruby,in) (svn_client_get_commit_log_t log_msg_func) 
 {
+  /* Assume that arg1 is svn_client_ctx_t. */
   if (arg1) {
     $1 = svn_swig_rb_get_commit_log_func;
     arg1->log_msg_baton = (void *)$input;
-    rb_ivar_set(self, rb_intern("log_msg_batton"), $input);
+    rb_ivar_set(self, rb_intern("log_msg_baton"), $input);
   }
 }
 
