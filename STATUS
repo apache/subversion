@@ -33,7 +33,7 @@ Candidate changes:
     Justification:  Allows malformed data into the repository.
     Notes:  sussman has actually tested these 5 merges, and they pass tests.
     Votes:
-      +1: sussman, philip
+      +1: sussman, philip, cmpilato
     Old votes: (for r8839,r8932,r8950,r8952)
       +1: philip, sussman, cmpilato
       +0: julianfoad
