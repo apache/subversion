@@ -152,7 +152,8 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
 }
 
 
-/* Remove file FNAME if it exists; just return success if it doesn't. */
+/* If FNAME is a regular file, remove it; if it doesn't exist at all,
+   return success.  Otherwise, return error. */
 static svn_error_t *
 remove_file (const char *fname, apr_pool_t *pool)
 {
@@ -176,57 +177,80 @@ remove_file (const char *fname, apr_pool_t *pool)
 }
 
 
-/* Verify that file FNAME contains the test data `lines' (with
- * keywords expanded according to REV, AUTHOR, DATE, and URL), and
- * uses EOL_STR as its eol marker consistently.  If the test data
- * itself appears to be wrong, return SVN_ERR_MALFORMED_FILE, or if
- * the eol marker is wrong return SVN_ERR_CORRUPT_EOL.  Otherwise,
- * return SVN_NO_ERROR.  Use pool for any temporary allocation.
+/* Set up, run, and verify the results of a substutition.
  *
- * Note that, as with svn_io_copy_and_translate(), if any of REV,
- * AUTHOR, DATE, and/or URL is null, then that keyword is not
- * expanded.
+ * Create a file TEST_NAME.src using global `lines' as the initial
+ * data, with SRC_EOL as the line separator, then convert it to file
+ * TEST_NAME.dst (using DST_EOL, REPAIR, REV, AUTHOR, DATE, and
+ * URL as svn_io_copy_and_translate() does), and verify that the
+ * conversion worked.  Null SRC_EOL means create a mixed eol src
+ * file.
+ *
+ * If the verification succeeds, remove both files and return
+ * SVN_NO_ERROR.
+ * 
+ * If the verification fails, leave the files for post-mortem.  If the
+ * failure is due to non-eol data being wrong, return
+ * SVN_ERR_MALFORMED_FILE, else if the problem is an incorrect eol
+ * marker, return SVN_ERR_CORRUPT_EOL.
+ *
+ * Use POOL for temporary allocation.
+ *
+ * Note: as with svn_io_copy_and_translate(), if any of DST_EOL, REV,
+ * AUTHOR, DATE, and/or URL is null, then that substitution is not
+ * performed.
  */
 static svn_error_t *
-verify_substitution (const char *fname,
-                     const char *eol_str,
-                     svn_revnum_t rev,
-                     const char *date,
-                     const char *author,
-                     const char *url,
-                     apr_pool_t *pool)
+substitute_and_verify (const char *test_name,
+                       const char *src_eol,
+                       const char *dst_eol,
+                       svn_boolean_t repair,
+                       const char *rev,
+                       const char *date,
+                       const char *author,
+                       const char *url,
+                       apr_pool_t *pool)
 {
   svn_stringbuf_t *contents;
   int idx = 0;
   int i;
   const char *expect[(sizeof (lines) / sizeof (*lines))];
-  const char *rev_str
-    = (SVN_IS_VALID_REVNUM (rev)) ? apr_psprintf (pool, "%ld", rev) : NULL;
+  const char *src_fname = apr_pstrcat (pool, test_name, ".src", NULL);
+  const char *dst_fname = apr_pstrcat (pool, test_name, ".dst", NULL);
+
+  /** Clean up from previous tests, set up src data, and convert. **/
+  SVN_ERR (remove_file (src_fname, pool));
+  SVN_ERR (remove_file (dst_fname, pool));
+  SVN_ERR (create_file (src_fname, src_eol, pool));
+  SVN_ERR (svn_io_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
+                                      rev, date, author, url, pool));
+
+  /** Verify that the conversion worked. **/
 
   for (i = 0; i < (sizeof (expect) / sizeof (*expect)); i++)
     expect[i] = lines[i];
 
   /* Certain lines contain keywords; expect their expansions. */
-  if (SVN_IS_VALID_REVNUM (rev))
+  if (rev)
     {
       expect[3 - 1] =
         apr_pstrcat (pool, "Line 3: ",
                      "Valid $LastChangedRevision: ",
-                     rev_str,
+                     rev,
                      " $, started unexpanded.",
                      NULL);
       expect[5 - 1] =
         apr_pstrcat (pool, "Line 5: ",
-                     "Valid $Rev: ", rev_str, " $, started unexpanded.",
+                     "Valid $Rev: ", rev, " $, started unexpanded.",
                      NULL);
       expect[26 - 1] =
         apr_pstrcat (pool, "Line 26: ",
-                     "Emptily expanded keyword $Rev: ", rev_str," $.",
+                     "Emptily expanded keyword $Rev: ", rev," $.",
                      NULL);
       expect[29 - 1] =
         apr_pstrcat (pool, "Line 29: ",
                      "Valid $LastChangedRevision: ",
-                     rev_str,
+                     rev,
                      " $, started expanded.",
                      NULL);
     }
@@ -317,24 +341,24 @@ verify_substitution (const char *fname,
     }
 
   /* Handle line 48 specially, as it contains two valid keywords. */
-  if ((SVN_IS_VALID_REVNUM (rev)) && author)
+  if (rev && author)
     {
       expect[48 - 1] =
         apr_pstrcat (pool, "Line 48: ",
                      "Two keywords back to back: "
                      "$Author: ", author, " $"
-                     "$Rev: ", rev_str, " $.",
+                     "$Rev: ", rev, " $.",
                      NULL);
     }
-  else if ((SVN_IS_VALID_REVNUM (rev)) && (! author))
+  else if (rev && (! author))
     {
       expect[48 - 1] =
         apr_pstrcat (pool, "Line 48: ",
                      "Two keywords back to back: "
-                     "$Author$$Rev: ", rev_str, " $.",
+                     "$Author$$Rev: ", rev, " $.",
                      NULL);
     }
-  else if ((! SVN_IS_VALID_REVNUM (rev)) && author)
+  else if ((! rev) && author)
     {
       expect[48 - 1] =
         apr_pstrcat (pool, "Line 48: ",
@@ -346,47 +370,41 @@ verify_substitution (const char *fname,
 
   /** Ready to verify. **/
 
-  SVN_ERR (svn_string_from_file (&contents, fname, pool));
+  SVN_ERR (svn_string_from_file (&contents, dst_fname, pool));
 
   for (i = 0; i < (sizeof (expect) / sizeof (*expect)); i++)
     {
       if (contents->len < idx)
         return svn_error_createf
           (SVN_ERR_MALFORMED_FILE, 0, NULL, pool, 
-           "%s has short contents: \"%s\"", fname, contents->data);
+           "%s has short contents: \"%s\"", dst_fname, contents->data);
 
       if (strncmp (contents->data + idx, expect[i], strlen (expect[i])) != 0)
         return svn_error_createf
           (SVN_ERR_MALFORMED_FILE, 0, NULL, pool, 
-           "%s has wrong contents: \"%s\"", fname, contents->data + idx);
+           "%s has wrong contents: \"%s\"", dst_fname, contents->data + idx);
 
-      /* else */
+      /* Else, the data is correct, at least up to the next eol. */
 
       idx += strlen (expect[i]);
 
-      if (strncmp (contents->data + idx, eol_str, strlen (eol_str)) != 0)
+      if (strncmp (contents->data + idx, dst_eol, strlen (dst_eol)) != 0)
         return svn_error_createf
           (SVN_ERR_IO_CORRUPT_EOL, 0, NULL, pool, 
-           "%s has wrong eol: \"%s\"", fname, contents->data + idx);
+           "%s has wrong eol: \"%s\"", dst_fname, contents->data + idx);
 
-      idx += strlen (eol_str);
+      idx += strlen (dst_eol);
     }
 
-  /* ### todo fooo working here:
-   *
-   * SVN_ERR (remove_file (fname, pool)); ...
-   * 
-   * The next step is to take src file too, and src_eol, do the
-   * expansion here, then remove both src and dst here.  This function
-   * will both set up and verify the test, so that the test functions
-   * themselves can become really small, just wrapper calls to this.
-   * That would save a lot of redundant code.
-   */
+  /* Clean up this test, since successful. */
+  SVN_ERR (remove_file (src_fname, pool));
+  SVN_ERR (remove_file (dst_fname, pool));
 
   return SVN_NO_ERROR;
 }
 
 
+
 /*** Tests ***/
 
 static svn_error_t *
@@ -394,22 +412,13 @@ crlf_to_crlf (const char **msg,
                 svn_boolean_t msg_only,
                 apr_pool_t *pool)
 {
-  const char *src = "crlf_to_crlf.src";
-  const char *dst = "crlf_to_crlf.dst";
-
   *msg = "convert CRLF to CRLF";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (remove_file (src, pool));
-  SVN_ERR (create_file (src, "\r\n", pool));
-  SVN_ERR (verify_substitution
-           (src, "\r\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
-  SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_substitution
-           (dst, "\r\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
+  SVN_ERR (substitute_and_verify
+           ("crlf_to_crlf", "\r\n", "\r\n", 0, NULL, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -420,22 +429,13 @@ lf_to_crlf (const char **msg,
               svn_boolean_t msg_only,
               apr_pool_t *pool)
 {
-  const char *src = "lf_to_crlf.src";
-  const char *dst = "lf_to_crlf.dst";
-
   *msg = "convert LF to CRLF";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (remove_file (src, pool));
-  SVN_ERR (create_file (src, "\n", pool));
-  SVN_ERR (verify_substitution
-           (src, "\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
-  SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_substitution
-           (dst, "\r\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
+  SVN_ERR (substitute_and_verify
+           ("lf_to_crlf", "\n", "\r\n", 0, NULL, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -446,22 +446,13 @@ cr_to_crlf (const char **msg,
               svn_boolean_t msg_only,
               apr_pool_t *pool)
 {
-  const char *src = "cr_to_crlf.src";
-  const char *dst = "cr_to_crlf.dst";
-
   *msg = "convert CR to CRLF";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (remove_file (src, pool));
-  SVN_ERR (create_file (src, "\r", pool));
-  SVN_ERR (verify_substitution
-           (src, "\r", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
-  SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_substitution
-           (dst, "\r\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
+  SVN_ERR (substitute_and_verify
+           ("cr_to_crlf", "\r", "\r\n", 0, NULL, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -472,20 +463,13 @@ mixed_to_crlf (const char **msg,
                      svn_boolean_t msg_only,
                      apr_pool_t *pool)
 {
-  const char *src = "mixed_to_crlf.src";
-  const char *dst = "mixed_to_crlf.dst";
-
   *msg = "convert mixed line endings to CRLF";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (remove_file (src, pool));
-  SVN_ERR (create_file (src, NULL, pool));
-  SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_substitution
-           (dst, "\r\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
+  SVN_ERR (substitute_and_verify
+           ("mixed_to_crlf", NULL, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -496,22 +480,13 @@ lf_to_lf (const char **msg,
             svn_boolean_t msg_only,
             apr_pool_t *pool)
 {
-  const char *src = "lf_to_lf.src";
-  const char *dst = "lf_to_lf.dst";
-
   *msg = "convert LF to LF";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (remove_file (src, pool));
-  SVN_ERR (create_file (src, "\n", pool));
-  SVN_ERR (verify_substitution
-           (src, "\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
-  SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_substitution
-           (dst, "\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
+  SVN_ERR (substitute_and_verify
+           ("lf_to_lf", "\n", "\n", 0, NULL, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -522,22 +497,13 @@ crlf_to_lf (const char **msg,
               svn_boolean_t msg_only,
               apr_pool_t *pool)
 {
-  const char *src = "crlf_to_lf.src";
-  const char *dst = "crlf_to_lf.dst";
-
   *msg = "convert CRLF to LF";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (remove_file (src, pool));
-  SVN_ERR (create_file (src, "\r\n", pool));
-  SVN_ERR (verify_substitution
-           (src, "\r\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
-  SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_substitution
-           (dst, "\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
+  SVN_ERR (substitute_and_verify
+           ("crlf_to_lf", "\r\n", "\n", 0, NULL, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -548,22 +514,13 @@ cr_to_lf (const char **msg,
             svn_boolean_t msg_only,
             apr_pool_t *pool)
 {
-  const char *src = "cr_to_lf.src";
-  const char *dst = "cr_to_lf.dst";
-
   *msg = "convert CR to LF";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (remove_file (src, pool));
-  SVN_ERR (create_file (src, "\r", pool));
-  SVN_ERR (verify_substitution
-           (src, "\r", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
-  SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_substitution
-           (dst, "\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
+  SVN_ERR (substitute_and_verify
+           ("cr_to_lf", "\r", "\n", 0, NULL, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -574,20 +531,13 @@ mixed_to_lf (const char **msg,
                    svn_boolean_t msg_only,
                    apr_pool_t *pool)
 {
-  const char *src = "mixed_to_lf.src";
-  const char *dst = "mixed_to_lf.dst";
-
   *msg = "convert mixed line endings to LF";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (remove_file (src, pool));
-  SVN_ERR (create_file (src, NULL, pool));
-  SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_substitution
-           (dst, "\n", SVN_INVALID_REVNUM, NULL, NULL, NULL, pool));
+  SVN_ERR (substitute_and_verify
+           ("cr_to_lf", NULL, "\n", 0, NULL, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -600,12 +550,12 @@ svn_error_t * (*test_funcs[]) (const char **msg,
                                svn_boolean_t msg_only,
                                apr_pool_t *pool) = {
   0,
-  /* Conversions resulting in crlf. */
+  /* Conversions resulting in crlf, no keywords involved. */
   crlf_to_crlf,
   lf_to_crlf,
   cr_to_crlf,
   mixed_to_crlf,
-  /* Conversions resulting in lf. */
+  /* Conversions resulting in lf, no keywords involved. */
   lf_to_lf,
   crlf_to_lf,
   cr_to_lf,
