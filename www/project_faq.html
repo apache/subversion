@@ -886,12 +886,12 @@ repository.
 <h3><a name="dumpload">What is this "dump/load cycle" people
     sometimes talk about when upgrading a Subversion server?</a></h3>
 
-<p>Subversion's repository database schema changes occasionally during
-development.  We try to keep such changes to a minimum, but Subversion
-<i>is</i> pre-1.0 software, and we want to ship 1.0 with the best
-schema we can.  If a schema change happens between Subversion releases
-X and Y, then repository administrators upgrading to Y must do the
-following: </p>
+<p>Subversion's repository database schema has changed occasionally
+during development. Old repositories, created with a pre-1.0
+development version of Subversion, may require the following operation
+when upgrading.  If a schema change happens between Subversion
+releases X and Y, then repository administrators upgrading to Y must
+do the following: </p>
 
 <p>
 <ol>
@@ -1097,12 +1097,13 @@ working copy is locked. Is my working copy corrupt?</a></h3>
 Your working copy is not corrupt, nor is your data lost.  Subversion's
 working copy is journaling system, meaning that it logs everything it
 is about to do before it does so.  If the svn client program is
-interrupted (Control-C, or segfault), then one or more lockfiles are
-left behind, along with logfiles describing unfinished business.
-(The`svn status' command will show an 'L' next to locked directories.)
-Any other process that attempts to access the working copy will fail
-when it sees the locks.  To awaken your working copy, you need to tell
-the svn client to finish the work.  Simply run:</p>
+interrupted violently (segfault or killed, not with Control-C), then
+one or more lockfiles are left behind, along with logfiles describing
+unfinished business.  (The`svn status' command will show an 'L' next
+to locked directories.)  Any other process that attempts to access the
+working copy will fail when it sees the locks.  To awaken your working
+copy, you need to tell the svn client to finish the work.  Simply
+run:</p>
 
 <pre>
 svn cleanup working-copy
