@@ -5139,6 +5139,7 @@ skip_deltas (const char **msg,
   SVN_ERR (svn_fs_make_file (txn_root, "f", subpool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "f", f->data, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+  SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
   svn_pool_clear (subpool);
 
   /* Now, commit changes to the file 128 times. */
@@ -5152,6 +5153,7 @@ skip_deltas (const char **msg,
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
       SVN_ERR (svn_test__set_file_contents (txn_root, "f", f->data, subpool));
       SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+      SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
       svn_pool_clear (subpool);
     }
 
