@@ -347,6 +347,13 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
   item_baton_t *b = baton;
   svn_stringbuf_t *qname;
 
+  /* for now, ignore entry props that come through.  ### this should
+     go away and we should just tunnel those props on through for the
+     client to deal with. */
+  if (! strncmp (name->data, SVN_PROP_ENTRY_PREFIX, 
+                 strlen (SVN_PROP_ENTRY_PREFIX)))
+    return SVN_NO_ERROR;
+                
   qname = svn_stringbuf_create (apr_xml_quote_string (b->pool, name->data, 1),
                                 b->pool);
   if (value)

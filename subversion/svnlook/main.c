@@ -144,7 +144,7 @@ generate_delta_tree (svn_repos_node_t **tree,
   
   /* Drive our editor. */
   SVN_ERR (svn_repos_dir_delta (base_root, "", NULL, src_revs, root, "",
-                                editor, edit_baton, FALSE, TRUE, FALSE,
+                                editor, edit_baton, FALSE, TRUE, FALSE, FALSE,
                                 edit_pool));
 
   /* Return the tree we just built. */
