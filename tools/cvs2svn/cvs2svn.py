@@ -77,18 +77,14 @@ class CollectData(rcsparse.Sink):
     self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
 
-    # CVS tag names must start with a letter, and contain only
-    # letters, digits, hyphens, and underscores.  It turned out to
-    # be surprisingly hard to find a reference for this on the
-    # Internet; I finally managed to track one down at:
-    #
-    # http://cvsbook.red-bean.com/cvsbook.html#Marking_A_Moment_In_Time__Tags_
-    #
-    # I'm not sure I trust that guy, though, so if anyone has better
-    # reference, please put it here.  -kfogel
-    #
-    # (### Maybe checking these should be rcsparse's job? ###)
     self.symbolic_name_re = re.compile('^[a-zA-Z][a-zA-Z0-9_-]*$')
+
+    # Officially, CVS symbolic names must use a fairly restricted set
+    # of characters.  Unofficially, we don't care if some repositories
+    # out there don't abide by this, as long as their tags start with
+    # a letter and don't include '/' or '\' (both of which are
+    # prohibited by official restrictions anyway).
+    self.symbolic_name_re = re.compile('^[a-zA-Z][^/\\\\]*$')
 
   def set_fname(self, fname):
     "Prepare to receive data for a new file."
