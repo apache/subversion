@@ -453,8 +453,6 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
  * For PATH's entries file, create or modify an entry NAME, using
  * explicit fields and, secondarily, the attributes in ATTS.
  * 
- * If NAME is null, it means the dir's own entry, as usual.
- * 
  * If REVISION is SVN_INVALID_REVNUM, then the entry's revision number
  * will not be changed, else it will be set to REVISION.
  * 
