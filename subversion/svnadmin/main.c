@@ -641,7 +641,7 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                    _("Waiting on repository lock; perhaps"
                                      " another process has it open?\n")));
       SVN_ERR (svn_cmdline_fflush (stdout));
-      SVN_ERR (svn_repos_recover (opt_state->repository_path, pool));
+      SVN_ERR (svn_repos_recover2 (opt_state->repository_path, FALSE, pool));
     }
   
   SVN_ERR (svn_cmdline_printf (pool, _("\nRecovery completed.\n")));
