@@ -39,6 +39,7 @@
     svn_fs_root_t **,
     svn_fs_txn_t **,
     void **,
+    svn_fs_history_t **,
     svn_fs_id_t **
 };
 
