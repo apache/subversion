@@ -28,9 +28,10 @@ struct status_baton
   svn_revnum_t max_rev;   /* highest revision found. */
   svn_boolean_t switched; /* is anything switched? */
   svn_boolean_t modified; /* is anything modified? */
+  svn_boolean_t committed; /* examine last committed revisions */
+  svn_boolean_t done;     /* note completion of our task. */
   const char *wc_path;    /* path whose URL we're looking for. */
   const char *wc_url;     /* URL for the path whose URL we're looking for. */
-  svn_boolean_t done;     /* note completion of our task. */
   apr_pool_t *pool;       /* pool in which to store alloc-needy things. */
 };
 
@@ -53,13 +54,15 @@ analyze_status (void *baton,
   /* Added files have a revision of no interest */
   if (status->text_status != svn_wc_status_added)
     {
-      if (sb->min_rev == SVN_INVALID_REVNUM 
-          || status->entry->revision < sb->min_rev)
-        sb->min_rev = status->entry->revision;
+      svn_revnum_t item_rev = (sb->committed
+                               ? status->entry->cmt_rev
+                               : status->entry->revision);
 
-      if (sb->max_rev == SVN_INVALID_REVNUM
-          || status->entry->revision > sb->max_rev)
-        sb->max_rev = status->entry->revision;
+      if (sb->min_rev == SVN_INVALID_REVNUM || item_rev < sb->min_rev)
+        sb->min_rev = item_rev;
+
+      if (sb->max_rev == SVN_INVALID_REVNUM || item_rev > sb->max_rev)
+        sb->max_rev = item_rev;
     }
 
   sb->switched |= status->switched;
@@ -106,21 +109,22 @@ cancel (void *baton)
 
 
 static void
-usage(void)
+usage(const apr_getopt_option_t *options)
 {
   fprintf(stderr, 
-          "usage: svnversion wc_path [trail_url]\n\n"
-          "  Produce a compact \"version number\" for the working copy\n"
-          "  path WC_PATH.  TRAIL_URL is the trailing portion of the trunk\n"
-          "  URL.  The version number is written to standard output.  For\n"
-          "  example:\n"
+          "usage: svnversion [options] wc_path [trail_url]\n\n"
+          "  Produce a compact \"version number\" for the working copy path\n"
+          "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
+          "  determine if WC_PATH itself is switched (detection of switches\n"
+          "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
+          "  is written to standard output.  For example:\n"
           "\n"
           "    $ svnversion . /repos/svn/trunk \n"
           "    4168\n"
           "\n"
           "  The version number will be a single number if the working\n"
           "  copy is single revision, unmodified, not switched and with\n"
-          "  an URL that matches the trunk URL argument.  If the working\n"
+          "  an URL that matches the TRAIL_URL argument.  If the working\n"
           "  copy is unusual the version number will be more complex:\n"
           "\n"
           "   4123:4168     mixed revision working copy\n"
@@ -130,7 +134,14 @@ usage(void)
           "\n"
           "  If invoked on a directory that is not a working copy, an\n"
           "  exported directory say, the program will output \"exported\".\n"
-          "\n");
+          "\n"
+          "options:\n");
+  while (options->description)
+    {
+      fprintf(stderr, "  -%c  %s\n",
+              options->optch, options->description);
+      ++options;
+    }
 }
 
 
@@ -142,7 +153,7 @@ usage(void)
  * svnversion and svn.
  */
 int
-main(int argc, char *argv[])
+main(int argc, const char *argv[])
 {
   const char *wc_path;
   apr_allocator_t *allocator;
@@ -152,13 +163,15 @@ main(int argc, char *argv[])
   svn_client_ctx_t ctx = { 0 };
   struct status_baton sb;
   svn_opt_revision_t rev;
+  svn_boolean_t no_newline = FALSE;
   svn_error_t *err;
-  
-  if (argc != 2 && argc != 3)
+  apr_getopt_t *os;
+  const apr_getopt_option_t options[] =
     {
-      usage();
-      return EXIT_FAILURE;
-    }
+      {"no-newline", 'n', 0, "do not output the trailing newline"},
+      {"committed",  'c', 0, "last changed rather than current revisions"},
+      {0,             0,  0,  0}
+    };
 
   /* Initialize the app. */
   if (svn_cmdline_init ("svnversion", stderr) != EXIT_SUCCESS)
@@ -175,9 +188,51 @@ main(int argc, char *argv[])
   pool = svn_pool_create_ex (NULL, allocator);
   apr_allocator_owner_set (allocator, pool);
 
-  ctx.config = apr_hash_make (pool);
+  sb.switched = FALSE;
+  sb.modified = FALSE;
+  sb.committed = FALSE;
+  sb.min_rev = SVN_INVALID_REVNUM;
+  sb.max_rev = SVN_INVALID_REVNUM;
+  sb.wc_path = NULL;
+  sb.wc_url = NULL;
+  sb.done = FALSE;
+  sb.pool = pool;
 
-  SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, argv[1], pool));
+  apr_getopt_init(&os, pool, argc, argv);
+  os->interleave = 1;
+  while (1)
+    {
+      int opt;
+      const char *arg;
+      apr_status_t status = apr_getopt_long(os, options, &opt, &arg);
+      if (APR_STATUS_IS_EOF(status))
+        break;
+      if (status != APR_SUCCESS)
+        {
+          usage(options);
+          return EXIT_FAILURE;
+        }
+      switch (opt)
+        {
+        case 'n':
+          no_newline = TRUE;
+          break;
+        case 'c':
+          sb.committed = TRUE;
+          break;
+        default:
+          usage(options);
+          return EXIT_FAILURE;
+        }
+    }
+
+  if (os->ind >= argc || os->ind < argc - 2)
+    {
+      usage(options);
+      return EXIT_FAILURE;
+    }
+
+  SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, os->argv[os->ind++], pool));
   wc_path = svn_path_internal_style (wc_path, pool);
   SVN_INT_ERR (svn_wc_check_wc (wc_path, &wc_format, pool));
   if (! wc_format)
@@ -198,15 +253,9 @@ main(int argc, char *argv[])
         }
     }
 
-  sb.switched = FALSE;
-  sb.modified = FALSE;
-  sb.min_rev = SVN_INVALID_REVNUM;
-  sb.max_rev = SVN_INVALID_REVNUM;
   sb.wc_path = wc_path;
-  sb.wc_url = NULL;
-  sb.done = FALSE;
-  sb.pool = pool;
   rev.kind = svn_opt_revision_unspecified;
+  ctx.config = apr_hash_make (pool);
 
   /* Setup the notification and cancellation callbacks, and their
      shared baton (which is also shared with the status function). */
@@ -222,13 +271,14 @@ main(int argc, char *argv[])
   else
     SVN_INT_ERR (err);
 
-  if ((! sb.switched ) && (argc == 3))
+  if ((! sb.switched ) && (os->ind < argc))
     {
       /* If the trailing part of the URL of the working copy directory
          does not match the given trailing URL then the whole working
          copy is switched. */
       const char *trail_url;
-      SVN_INT_ERR (svn_utf_cstring_to_utf8 (&trail_url, argv[2], pool));
+      SVN_INT_ERR (svn_utf_cstring_to_utf8 (&trail_url, os->argv[os->ind],
+                                            pool));
       if (! sb.wc_url)
         {
           sb.switched = TRUE;
@@ -249,7 +299,8 @@ main(int argc, char *argv[])
     fputs ("M", stdout);
   if (sb.switched)
     fputs ("S", stdout);
-  fputs ("\n", stdout);
+  if (! no_newline)
+    fputs ("\n", stdout);
 
   svn_pool_destroy (pool);
 
