@@ -14,3 +14,9 @@ Candidate changes:
     Justification: Small fix, work-stopping bug
     Votes:
       +1: ghudson
+
+  * r10251
+    Fix FSFS bug loading dump files.
+    Justification: Small fix, allow people to convert to fsfs.
+    Votes:
+      +1: breser
