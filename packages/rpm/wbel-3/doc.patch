@@ -1,0 +1,20 @@
+--- ./doc/book/Makefile	2003/09/23 23:01:23	1.1
++++ ./doc/book/Makefile	2003/09/23 23:03:26
+@@ -68,16 +68,7 @@
+ $(BOOK_VERSION_SOURCE): book-version
+ 
+ book-version:
+-	@if $(SVNVERSION) . > /dev/null; then \
+-	echo '<!ENTITY svn.version "Draft Revision '`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE).tmp; \
+-	else \
+-	echo '<!ENTITY svn.version "Draft">' > $(BOOK_VERSION_SOURCE).tmp; \
+-	fi
+-	@if cmp -s $(BOOK_VERSION_SOURCE) $(BOOK_VERSION_SOURCE).tmp; then \
+-	rm $(BOOK_VERSION_SOURCE).tmp; \
+-	else \
+-	mv $(BOOK_VERSION_SOURCE).tmp $(BOOK_VERSION_SOURCE); \
+-	fi
++	echo '<!ENTITY svn.version "Version '`cat book/package.version`'">' > $(BOOK_VERSION_SOURCE);
+ 
+ book-html: $(BOOK_HTML_TARGET)
+ 

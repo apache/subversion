@@ -532,7 +532,8 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
         {
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "Could not determine the proper "
-                                     "revision to access");
+                                     "revision to access",
+                                     pool);
         }
     }
 
@@ -543,7 +544,8 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "Could not open the root of the "
-                                 "repository");
+                                 "repository",
+                                 pool);
     }
 
   serr = svn_fs_check_path(&kind, comb->priv.root.root,
@@ -553,7 +555,8 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  apr_psprintf (pool, "Error checking kind of "
                                                "path '%s' in repository",
-                                               comb->priv.repos_path));
+                                               comb->priv.repos_path),
+                                 pool);
     }
 
   comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
@@ -565,6 +568,7 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
 static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
 {
   svn_error_t *serr;
+  apr_pool_t *pool = comb->res.pool;
 
   /* we are accessing the Version Resource by REV/PATH */
   
@@ -575,7 +579,7 @@ static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
     {
       serr = svn_fs_youngest_rev(&comb->priv.root.rev,
                                  comb->priv.repos->fs,
-                                 comb->res.pool);
+                                 pool);
       if (serr != NULL)
         {
           /* ### might not be a baseline */
@@ -583,7 +587,8 @@ static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "Could not fetch 'youngest' revision "
                                      "to enable accessing the latest "
-                                     "baseline resource.");
+                                     "baseline resource.",
+                                     pool);
         }
     }
   
@@ -596,11 +601,12 @@ static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
       serr = svn_fs_revision_root(&comb->priv.root.root, 
                                   comb->priv.repos->fs,
                                   comb->priv.root.rev,
-                                  comb->res.pool);
+                                  pool);
       if (serr != NULL)
         {
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not open a revision root.");
+                                     "Could not open a revision root.",
+                                     pool);
         }
     }
 
@@ -614,7 +620,7 @@ static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
                                     DAV_SVN_BUILD_URI_BASELINE,
                                     comb->priv.root.rev, NULL,
                                     0 /* add_href */,
-                                    comb->res.pool);
+                                    pool);
 
   return NULL;
 }
@@ -654,7 +660,8 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
                              "found.");
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "Could not open the SVN FS transaction "
-                                 "corresponding to the specified activity.");
+                                 "corresponding to the specified activity.",
+                                 pool);
     }
 
   if (comb->res.baselined)
@@ -672,8 +679,9 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not open the (transaction) root of the "
-                                 "repository");
+                                 "Could not open the (transaction) root of "
+                                 "the repository",
+                                 pool);
     }
 
   serr = svn_fs_check_path (&kind, comb->priv.root.root,
@@ -683,7 +691,8 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
       return dav_svn_convert_err
         (serr, HTTP_INTERNAL_SERVER_ERROR,
          apr_psprintf (pool, "Error checking kind of path '%s' in repository",
-                       comb->priv.repos_path));
+                       comb->priv.repos_path),
+         pool);
     }
 
   comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
@@ -1209,7 +1218,8 @@ static dav_error * dav_svn_get_resource(request_rec *r,
           /* Return a slightly less informative error to dav. */
           return dav_svn_convert_err (sanitized_error,
                                       HTTP_INTERNAL_SERVER_ERROR,
-                                      apr_psprintf(r->pool, new_msg));
+                                      apr_psprintf(r->pool, new_msg),
+                                      r->pool);
         }
 
       /* Cache the open repos for the next request on this connection */
@@ -1470,12 +1480,12 @@ dav_error * dav_svn_resource_kind (request_rec *r,
                                     resource->info->repos_path, r->pool);
 
           if (serr)
-            return 
-              dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   apr_psprintf(r->pool,
-                                                "Error checking kind of "
-                                                "path '%s' in repository",
-                                                resource->info->repos_path));
+            return dav_svn_convert_err
+              (serr, HTTP_INTERNAL_SERVER_ERROR,
+               apr_psprintf(r->pool, 
+                            "Error checking kind of path '%s' in repository", 
+                            resource->info->repos_path),
+               r->pool);
         }
     }
   
@@ -1493,22 +1503,22 @@ dav_error * dav_svn_resource_kind (request_rec *r,
                                        resource->info->repos->fs,
                                        base_rev, r->pool);
           if (serr)
-            return 
-              dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  apr_psprintf
-                                  (r->pool,
-                                   "Could not open root of revision %"
-                                   SVN_REVNUM_T_FMT, base_rev));
+            return dav_svn_convert_err
+              (serr, HTTP_INTERNAL_SERVER_ERROR,
+               apr_psprintf(r->pool,
+                            "Could not open root of revision %" 
+                            SVN_REVNUM_T_FMT, base_rev),
+               r->pool);
       
           serr = svn_fs_check_path (kind, base_rev_root,
                                     resource->info->repos_path, r->pool);
           if (serr)
-            return 
-              dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   apr_psprintf(r->pool,
-                                                "Error checking kind of "
-                                                "path '%s' in repository",
-                                                resource->info->repos_path));
+            return dav_svn_convert_err
+              (serr, HTTP_INTERNAL_SERVER_ERROR,
+               apr_psprintf(r->pool,
+                            "Error checking kind of path '%s' in repository",
+                            resource->info->repos_path),
+               r->pool);
         }
     }
 
@@ -1571,7 +1581,8 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
         {
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "Could not create file within the "
-                                     "repository.");
+                                     "repository.",
+                                     resource->pool);
         }
       serr = svn_fs_apply_textdelta(&(*stream)->delta_handler,
                                     &(*stream)->delta_baton,
@@ -1584,7 +1595,8 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not prepare to write the file");
+                                 "Could not prepare to write the file",
+                                 resource->pool);
     }
 
   /* if the incoming data is an SVNDIFF, then create a stream that
@@ -1610,6 +1622,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
 static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
 {
   svn_error_t *serr;
+  apr_pool_t *pool = stream->res->pool;
 
   if (stream->rstream != NULL)
     {
@@ -1617,7 +1630,8 @@ static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
       if (serr)
         return dav_svn_convert_err
           (serr, HTTP_INTERNAL_SERVER_ERROR,
-           "dav_svn_close_stream: error closing read stream");
+           "dav_svn_close_stream: error closing read stream",
+           pool);
     }
 
   /* if we have a write-stream, then closing it also takes care of the
@@ -1628,7 +1642,8 @@ static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
       if (serr)
         return dav_svn_convert_err
           (serr, HTTP_INTERNAL_SERVER_ERROR,
-           "dav_svn_close_stream: error closing write stream");
+           "dav_svn_close_stream: error closing write stream",
+           pool);
     }
   else if (stream->delta_handler != NULL)
     {
@@ -1636,7 +1651,8 @@ static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
       if (serr)
         return dav_svn_convert_err
           (serr, HTTP_INTERNAL_SERVER_ERROR,
-           "dav_svn_close_stream: error sending final (null) delta window");
+           "dav_svn_close_stream: error sending final (null) delta window",
+           pool);
     }
 
   return NULL;
@@ -1646,6 +1662,7 @@ static dav_error * dav_svn_write_stream(dav_stream *stream, const void *buf,
                                         apr_size_t bufsize)
 {
   svn_error_t *serr;
+  apr_pool_t *pool = stream->res->pool;
 
   if (stream->wstream != NULL)
     {
@@ -1676,7 +1693,8 @@ static dav_error * dav_svn_write_stream(dav_stream *stream, const void *buf,
   if (serr)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not write the file contents");
+                                 "could not write the file contents",
+                                 pool);
     }
   return NULL;
 }
@@ -1802,7 +1820,8 @@ static dav_error * dav_svn_set_headers(request_rec *r,
                               resource->pool);
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "could not fetch the resource's MIME type");
+                                   "could not fetch the resource's MIME type",
+                                   resource->pool);
 
       mimetype = value ? value->data : "text/plain";
 
@@ -1826,7 +1845,8 @@ static dav_error * dav_svn_set_headers(request_rec *r,
       if (serr != NULL)
         {
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "could not fetch the resource length");
+                                     "could not fetch the resource length",
+                                     resource->pool);
         }
       ap_set_content_length(r, (apr_off_t) length);
     }
@@ -1939,7 +1959,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                               resource->info->repos_path, resource->pool);
     if (serr != NULL)
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not fetch directory entries");
+                                 "could not fetch directory entries",
+                                 resource->pool);
 
     bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
@@ -2099,7 +2120,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                                       info.rev, resource->pool);
           if (serr != NULL)
             return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "could not open a root for the base");
+                                       "could not open a root for the base",
+                                       resource->pool);
 
           /* verify that it is a file */
           serr = svn_fs_is_file(&is_file, root, info.repos_path, 
@@ -2107,7 +2129,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           if (serr != NULL)
             return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                        "could not determine if the base "
-                                       "is really a file");
+                                       "is really a file",
+                                       resource->pool);
           if (!is_file)
             return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
                                  "the delta base does not refer to a file");
@@ -2120,7 +2143,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                                               resource->pool);
           if (serr != NULL)
             return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "could not prepare to read a delta");
+                                       "could not prepare to read a delta",
+                                       resource->pool);
 
           /* create a stream that svndiff data will be written to,
              which will copy it to the network */
@@ -2140,7 +2164,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                                            resource->pool);
           if (serr != NULL)
             return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "could not deliver the txdelta stream");
+                                       "could not deliver the txdelta stream",
+                                       resource->pool);
 
 
           return NULL;
@@ -2159,7 +2184,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       if (serr != NULL)
         {
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "could not prepare to read the file");
+                                     "could not prepare to read the file",
+                                     resource->pool);
         }
 
       /* ### one day in the future, we can create a custom bucket type
@@ -2174,7 +2200,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         if (serr != NULL)
           {
             return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "could not read the file contents");
+                                       "could not read the file contents",
+                                       resource->pool);
           }
         if (bufsize == 0)
           break;
@@ -2246,7 +2273,8 @@ static dav_error * dav_svn_create_collection(dav_resource *resource)
     {
       /* ### need a better error */
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not create the collection.");
+                                 "Could not create the collection.",
+                                 resource->pool);
     }
 
   /* Auto-versioning commit of the txn. */
@@ -2317,7 +2345,8 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
                       src->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Unable to make a filesystem copy.");
+                               "Unable to make a filesystem copy.",
+                               dst->pool);
 
   /* Auto-versioning commit of the txn. */
   if (dst->info->auto_checked_out)
@@ -2394,7 +2423,8 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
                                       resource->pool);
       if (serr)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Could not get created rev of resource");
+                                   "Could not get created rev of resource",
+                                   resource->pool);
 
       if (resource->info->version_name < created_rev)
         {
@@ -2402,7 +2432,8 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
                                     "Item '%s' is out of date", 
                                     resource->info->repos_path);
           return dav_svn_convert_err(serr, HTTP_CONFLICT,
-                                     "Can't DELETE out-of-date resource");
+                                     "Can't DELETE out-of-date resource",
+                                     resource->pool);
         }
     }
 
@@ -2412,7 +2443,8 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
     {
       /* ### need a better error */
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not delete the resource");
+                                 "Could not delete the resource",
+                                 resource->pool);
     }
 
   /* Auto-versioning commit of the txn. */
@@ -2469,14 +2501,16 @@ static dav_error * dav_svn_move_resource(dav_resource *src,
                       src->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Unable to make a filesystem copy.");
+                               "Unable to make a filesystem copy.",
+                               dst->pool);
 
   /* Notice: we're deleting the src repos path from the dst's txn_root. */
   if ((serr = svn_fs_delete(dst->info->root.root,
                             src->info->repos_path,
                             dst->pool)) != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Could not delete the src resource.");
+                               "Could not delete the src resource.",
+                               dst->pool);
 
   /* Commit:  this also changes the WR back into a VCR, in place. */
   err = dav_svn_checkin(dst, 0, NULL);
@@ -2558,7 +2592,8 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
                             ctx->info.repos_path, params->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "could not fetch collection members");
+                               "could not fetch collection members",
+                               params->pool);
 
   /* iterate over the children in this collection */
   for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
@@ -2760,7 +2795,8 @@ dav_error * dav_svn_working_to_regular_resource(dav_resource *resource)
       serr = svn_fs_youngest_rev(&priv->root.rev, repos->fs, resource->pool);
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Could not determine youngest rev.");
+                                   "Could not determine youngest rev.",
+                                   resource->pool);
       
       /* create public URL */
       path = apr_psprintf(resource->pool, "%s", priv->repos_path);
@@ -2780,7 +2816,8 @@ dav_error * dav_svn_working_to_regular_resource(dav_resource *resource)
                               priv->root.rev, resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Could not open revision root.");
+                               "Could not open revision root.",
+                               resource->pool);
      
   return NULL;
 }

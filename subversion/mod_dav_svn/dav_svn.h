@@ -297,10 +297,18 @@ const char *dav_svn_get_repo_name(request_rec *r);
 /* Return the URI of an XSL transform stylesheet */
 const char *dav_svn_get_xslt_uri(request_rec *r);
 
-/* convert an svn_error_t into a dav_error, possibly pushing a message. use
-   the provided HTTP status for the DAV errors */
-dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
-                                const char *message);
+/* Convert an svn_error_t into a dav_error, pushing another error based on
+   MESSAGE if MESSAGE is not NULL.  Use the provided HTTP status for the
+   DAV errors.  Allocate new DAV errors from POOL.
+
+   NOTE: this function destroys (cleanly, of course) SERR after it has
+   copied/converted its data to the new DAV error.
+
+   NOTE: MESSAGE needs to hang around for the lifetime of the error since
+   the current implementation doesn't copy it!  Lots of callers pass static
+   string constant. */
+dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
+                                const char *message, apr_pool_t *pool);
 
 /* activity functions for looking up, storing, and deleting
    ACTIVITY->TXN mappings */

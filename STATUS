@@ -20,12 +20,6 @@ Candidate changes:
     Votes:
        +1: sussman
 
-  * r8490,r8794,r8514
-    Make dav_svn_convert_err() consume its svn_error_t * input.
-    Justification:  Fixes svn_error_t leaks.
-    Votes:
-      +1: cmpilato, kfogel, jszakmeister
-
   * r8846
     Add an example wrapper to help svn+ssh users using setgid svnserve.
     Votes:
@@ -45,53 +39,3 @@ Candidate changes:
       -0: kfogel  (Reviewed the change; it's not *so* trivial, and I'm
                    not sure an optimization like this belongs in a
                    patch release.)
-
-  * r8959
-    Correct a switch bug that caused the wrong URL to be left in the working
-    copy when the switch was interrupted.
-    Justification: simple fix; very annoying when WC gets messed up.
-    Votes:
-       +1: julianfoad, philip, cmpilato
-
-  * r8962
-    Followup to r8842 ('svn st -v' shows unwanted status of externals).
-    Justification:  we've already merged 8842, this is a followup fix.
-    The consequence of this bug is that 'svn st' might not descend into
-    externals in particular cases.
-    Votes:
-      +1: cmpilato, kfogel, sussman
-
-  * r8966
-    Use cpio to generate tarballs.
-    Justification: Tarballs built with GNU tar will not extract on platforms
-    without GNU tar due to filename length.
-    Votes:
-      +1: jerenkrantz, kfogel, breser
-      +0: dlr
-
-  * r8969
-    Do not copy doc/book/book/images into sandbox.
-    Justification: Don't waste space in the tarball by having duplictate
-    images. 
-    Votes:
-      +1: kfogel, cmpilato, sussman, breser
-
-  * Issue #1775
-    Allow reverting a replaced file with no properties.
-    Justification: Results in a somewhat wedged working copy.  Fix is 
-    straightforward, we just look at the results of the test for the existence
-    of the file that we were already running. 
-    Notes: Attachment 312 is a backported version of this fix.  Which was
-    applied to trunk in r8981. 
-    Votes:
-      +1: sussman, cmpilato, kfogel, breser
-
-  * r8985
-    Added fedora-1 and wbel-3 RPM package directories.
-    Justification: New RPMs now require db42 (rather than db4) so that users
-       won't get confused on how to install db packages that need to coexist
-       with existing db packages; lots of confused users out there, see the
-       users mailing list.
-    Votes:
-      +1: david
-      +0: kfogel
