@@ -17,7 +17,8 @@ See the 1.1 release notes for a more verbose overview of the changes since
      - new 'peg' syntax for diff/merge:  'svn diff -r X:Y TARGET@REV'
      - now able to compare working copy with URL: 'svn diff --old WC --new URL'
  * new framework for localized error/info/help messages, initial translations:
-     - German, Spanish, Polish, Swedish, Norwegian Bokmål
+     - German, Spanish, Polish, Swedish, Norwegian Bokmål,
+       Traditional Chinese, Japanese, Brazilian Portuguese.
  * speed improvements:
      - faster 'svn up' on complex working copies -- no more repos txns (r8840)
      - faster 'svn status' -- fewer stat() calls (r9182)
@@ -78,6 +79,7 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: overzealous out-of-dateness checks in 'svn cp wc URL' (issue 1994)
  * fixed: don't URI-encode path in mod_dav_svn XML listings (r10461)
  * fixed: 'svn info' should refuse URL targets (r10760)
+ * fixed: incomplete-directory handling bug (r10956)
  * fixed: allow cancellation between files during recursive dir add (r10894)
  * general improvement and normalization of error messages
  * many improvements to contributed tools:  mailer.py, psvn.el, etc.
