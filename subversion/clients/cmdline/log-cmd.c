@@ -86,9 +86,6 @@ struct log_receiver_baton
 
   /* Don't print log message body nor its line count. */
   svn_boolean_t omit_log_message;
-
-  /* Output stream */
-  svn_stream_t *out;
 };
 
 
@@ -185,9 +182,6 @@ log_message_receiver (void *baton,
                       apr_pool_t *pool)
 {
   struct log_receiver_baton *lb = baton;
-  const char *author_stdout, *date_stdout;
-  const char *msg_stdout = NULL;     /* Silence a gcc uninitialized warning */
-  svn_error_t *err;
 
   /* Number of lines in the msg. */
   int lines;
@@ -197,9 +191,9 @@ log_message_receiver (void *baton,
 
   if (rev == 0)
     {
-      return svn_stream_printf (lb->out, pool,
-                                _("No commit for revision 0.%s"),
-                                APR_EOL_STR);
+      return svn_cmdline_printf (pool,
+                                 _("No commit for revision 0.%s"),
+                                 APR_EOL_STR);
     }
 
   /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=807
@@ -208,27 +202,16 @@ log_message_receiver (void *baton,
   if (author == NULL)
     author = _("(no author)");
 
-  err = svn_cmdline_cstring_from_utf8 (&author_stdout, author, pool);
-  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
-    {
-      author_stdout = svn_cmdline_cstring_from_utf8_fuzzy (author, pool);
-      svn_error_clear (err);
-    }
-  else if (err)
-    return err;
-
   if (date && date[0])
     {
       /* Convert date to a format for humans. */
       apr_time_t time_temp;
-      const char *date_utf8;
       
       SVN_ERR (svn_time_from_cstring (&time_temp, date, pool));
-      date_utf8 = svn_time_to_human_cstring(time_temp, pool);
-      SVN_ERR (svn_cmdline_cstring_from_utf8 (&date_stdout, date_utf8, pool));
+      date = svn_time_to_human_cstring(time_temp, pool);
     }
   else
-    date_stdout = _("(no date)");
+    date = _("(no date)");
   
   if (! lb->omit_log_message)
     {
@@ -236,29 +219,29 @@ log_message_receiver (void *baton,
         msg = "";
 
       {
-        /* Convert log message from UTF8/LF to native locale and eol-style. */
+        /* Convert log message from LF to native eol-style. */
         svn_string_t *logmsg = svn_string_create (msg, pool);
-        SVN_ERR (svn_subst_detranslate_string (&logmsg, logmsg, TRUE, pool));
-        msg_stdout = logmsg->data;
+        SVN_ERR (svn_subst_detranslate_string (&logmsg, logmsg, FALSE, pool));
+        msg = logmsg->data;
       }
     }
 
-  SVN_ERR (svn_stream_printf (lb->out, pool, SEP_STRING));
+  SVN_ERR (svn_cmdline_printf (pool, "%s", SEP_STRING));
 
-  SVN_ERR (svn_stream_printf (lb->out, pool,
-                              "r%ld | %s | %s",
-                              rev, author_stdout, date_stdout));
+  SVN_ERR (svn_cmdline_printf (pool,
+                               "r%ld | %s | %s",
+                               rev, author, date));
 
   if (! lb->omit_log_message)
     {
-      lines = num_lines (msg_stdout);
+      lines = num_lines (msg);
       /*### FIXME: how do we translate this without ngettext?! */
-      SVN_ERR (svn_stream_printf (lb->out, pool,
-                                  " | %d line%s", lines,
-                                  (lines > 1) ? "s" : ""));
+      SVN_ERR (svn_cmdline_printf (pool,
+                                   " | %d line%s", lines,
+                                   (lines > 1) ? "s" : ""));
     }
 
-  SVN_ERR (svn_stream_printf (lb->out, pool, APR_EOL_STR));
+  SVN_ERR (svn_cmdline_printf (pool, APR_EOL_STR));
 
   if (changed_paths)
     {
@@ -269,13 +252,13 @@ log_message_receiver (void *baton,
       sorted_paths = svn_sort__hash (changed_paths,
                                      svn_sort_compare_items_as_paths, pool);
 
-      SVN_ERR (svn_stream_printf (lb->out, pool,
-                                  _("Changed paths:%s"), APR_EOL_STR));
+      SVN_ERR (svn_cmdline_printf (pool,
+                                   _("Changed paths:%s"), APR_EOL_STR));
       for (i = 0; i < sorted_paths->nelts; i++)
         {
           svn_sort__item_t *item = &(APR_ARRAY_IDX (sorted_paths, i,
                                                     svn_sort__item_t));
-          const char *path_stdout, *path = item->key;
+          const char *path = item->key;
           svn_log_changed_path_t *log_item 
             = apr_hash_get (changed_paths, item->key, item->klen);
           const char *copy_data = "";
@@ -283,26 +266,22 @@ log_message_receiver (void *baton,
           if (log_item->copyfrom_path 
               && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
             {
-              SVN_ERR (svn_cmdline_cstring_from_utf8
-                       (&path_stdout, log_item->copyfrom_path, pool));
               copy_data 
                 = apr_psprintf (pool, 
                                 _(" (from %s:%ld)"),
-                                path_stdout,
+                                log_item->copyfrom_path,
                                 log_item->copyfrom_rev);
             }
-          SVN_ERR (svn_cmdline_cstring_from_utf8 (&path_stdout, path, pool));
-          SVN_ERR (svn_stream_printf (lb->out, pool, "   %c %s%s" APR_EOL_STR,
-                                      log_item->action, path_stdout,
-                                      copy_data));
+          SVN_ERR (svn_cmdline_printf (pool, "   %c %s%s" APR_EOL_STR,
+                                       log_item->action, path,
+                                       copy_data));
         }
     }
 
   if (! lb->omit_log_message)
     {
       /* A blank line always precedes the log message. */
-      SVN_ERR (svn_stream_printf (lb->out, pool, APR_EOL_STR "%s" APR_EOL_STR,
-                                  msg_stdout));
+      SVN_ERR (svn_cmdline_printf (pool, APR_EOL_STR "%s" APR_EOL_STR, msg));
     }
 
   return SVN_NO_ERROR;
@@ -461,7 +440,7 @@ log_message_receiver_xml (void *baton,
   /* </logentry> */
   svn_xml_make_close_tag (&sb, pool, "logentry");
 
-  SVN_ERR (svn_stream_printf (lb->out, pool, "%s", sb->data));
+  SVN_ERR (svn_cmdline_printf (pool, "%s", sb->data));
 
   return SVN_NO_ERROR;
 }
@@ -522,7 +501,6 @@ svn_cl__log (apr_getopt_t *os,
   lb.cancel_func = ctx->cancel_func;
   lb.cancel_baton = ctx->cancel_baton;
   lb.omit_log_message = opt_state->quiet;
-  SVN_ERR (svn_stream_for_stdout (&lb.out, pool));
 
   if (! opt_state->quiet)
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
@@ -543,7 +521,7 @@ svn_cl__log (apr_getopt_t *os,
           /* "<log>" */
           svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "log", NULL);
 
-          SVN_ERR (svn_stream_printf (lb.out, pool, "%s", sb->data));
+          SVN_ERR (svn_cmdline_printf (pool, "%s", sb->data));
         }
       
       SVN_ERR (svn_client_log (targets,
@@ -563,7 +541,7 @@ svn_cl__log (apr_getopt_t *os,
           /* "</log>" */
           svn_xml_make_close_tag (&sb, pool, "log");
 
-          SVN_ERR (svn_stream_printf (lb.out, pool, "%s", sb->data));
+          SVN_ERR (svn_cmdline_printf (pool, "%s", sb->data));
         }
     }
   else  /* default output format */
@@ -586,7 +564,7 @@ svn_cl__log (apr_getopt_t *os,
                                pool));
 
       if (! opt_state->incremental)
-        SVN_ERR (svn_stream_printf (lb.out, pool, SEP_STRING));
+        SVN_ERR (svn_cmdline_printf (pool, SEP_STRING));
     }
 
   return SVN_NO_ERROR;

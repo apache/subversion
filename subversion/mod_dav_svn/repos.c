@@ -2072,6 +2072,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
     for (i = 0; i < sorted->nelts; ++i)
       {
+        //###FIXME: we need a subpool here?!
         const svn_sort__item_t *item = &APR_ARRAY_IDX(sorted, i,
                                                       const svn_sort__item_t);
         const svn_fs_dirent_t *entry = item->value;
@@ -2641,6 +2642,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
                                params->pool);
 
   /* iterate over the children in this collection */
+  //###FIXME: how about using params_subpool here?!
   for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
     {
       const void *key;

@@ -52,10 +52,14 @@ blame_receiver (void *baton,
   apr_time_t atime;
   const char *time_utf8;
   const char *time_stdout;
+  const char *author_stdout;
   const char *rev_str = SVN_IS_VALID_REVNUM (revision) 
                         ? apr_psprintf (pool, "%6ld", revision)
                         : "     -";
-  
+
+  if (author)
+    SVN_ERR (svn_cmdline_cstring_from_utf8 (&author_stdout, author, pool));
+
   if (opt_state->verbose)
     {
       if (date)
@@ -71,13 +75,13 @@ blame_receiver (void *baton,
              line contents will be misaligned. */
           time_stdout = "                                           -";
       return svn_stream_printf (out, pool, "%s %10s %s %s\n", rev_str, 
-                                author ? author : "         -", 
+                                author ? author_stdout : "         -", 
                                 time_stdout , line);
     }
   else
     {
       return svn_stream_printf (out, pool, "%s %10s %s\n", rev_str, 
-                                author ? author : "         -", line);
+                                author ? author_stdout : "         -", line);
     }
 }
  
