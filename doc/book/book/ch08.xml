@@ -1803,28 +1803,30 @@ Made a change.
         <refentry>
           <refnamediv>
             <refname>svn merge</refname>
-            <refpurpose>Apply the differences between two URLs to a working copy path.</refpurpose>
+            <refpurpose>Apply the differences between two sources to a working copy path.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
-            <programlisting>svn merge URL1[@N] URL2[@M] [PATH]</programlisting>
-            <programlisting>merge -r N:M TARGET [PATH]</programlisting>
+            <programlisting>svn merge sourceURL1[@N] sourceURL2[@M] [WCPATH]</programlisting>
+            <programlisting>merge -r N:M SOURCE [PATH]</programlisting>
           </refsect1>
           <refsect1>
             <title>Description</title>
 
-            <para>In the first form, URL1 and URL2 are URLs specified
+            <para>In the first form, the source URLs are specified
               at revisions N and M.  These are the two sources to be
               compared.  The revisions default to HEAD if omitted.</para>
 
-            <para>In the second form TARGET can be a URL, or it can be
-              a working copy path, in which case the corresponding URL
-              is used.  This URL, at revisions N and M, defines the
-              two sources to be compared.</para>
+            <para>In the second form, SOURCE can be a URL or working
+              copy item, in which case the corresponding URL is used.
+              This URL, at revisions N and M, defines the two sources
+              to be compared.</para>
 
-            <para>PATH is the working copy path that will receive the
-              changes.  If omitted, a default value of '.' is
-              assumed.</para>
+            <para>WCPATH is the working copy path that will receive
+              the changes. If WCPATH is omitted, a default value of
+              '.' is assumed, unless the sources have identical
+              basenames that match a file within '.': in which case,
+              the differences will be applied to that file.</para>
           </refsect1>
           <refsect1>
             <title>Alternate names</title>
@@ -1881,6 +1883,14 @@ U  myproj/thhgttg.txt
 ...
             </screen>
             
+          <para>To merge changes to a single file:</para>
+
+          <screen>
++$ cd myproj
++$ svn merge -r 30:31 thhgttg.txt 
++U  thhgttg.txt
+          </screen>
+
           </refsect1>
         </refentry>
 

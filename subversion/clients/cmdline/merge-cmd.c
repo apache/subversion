@@ -126,6 +126,25 @@ svn_cl__merge (apr_getopt_t *os,
         targetpath = "";
     }
 
+  /* If no targetpath was specified, see if we can infer it from the
+     sourcepaths. */
+  if (! strcmp (targetpath, ""))
+    {
+      char *sp1_basename, *sp2_basename;
+      sp1_basename = svn_path_basename (sourcepath1, pool);
+      sp2_basename = svn_path_basename (sourcepath2, pool);
+
+      if (! strcmp (sp1_basename, sp2_basename))
+        {
+          svn_node_kind_t kind;
+          SVN_ERR (svn_io_check_path (sp1_basename, &kind, pool));
+          if (kind == svn_node_file) 
+            {
+              targetpath = sp1_basename;
+            }
+        }
+    }
+
   if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
     opt_state->start_revision.kind = svn_opt_revision_head;
   if (opt_state->end_revision.kind == svn_opt_revision_unspecified)

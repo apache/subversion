@@ -573,8 +573,29 @@ done
       help</command>.  For example, <command>svn merge</command>
       requires a working-copy path as a target, i.e. a place where it
       should apply the tree-changes.  If the target isn't specified,
-      it assumes you want the changes applied to the current working
-      directory.  If you want changes applied somewhere else, you'll
+      it assumes you are trying to perform one of the following common
+      operations:</para>
+
+    <orderedlist>
+      <listitem> <para>You want to merge directory changes into your
+      current working directory.</para>
+      </listitem>
+      <listitem>
+        <para>You want to merge the changes in a specific file into
+          a file by the same name which exists in your current working 
+          directory.</para>
+      </listitem>
+    </orderedlist>
+
+    <para>If you are merging a directory and haven't specified a
+      target path, <command>svn merge</command> assumes the first case
+      above and tries to apply the changes into your current
+      directory.  If you are merging a file, and that file (or a file
+      by the same name) exists in your current working directory,
+      <command>svn merge</command> assumes the second case and tries
+      to apply the changes to a local file with the same name.</para>
+
+    <para>If you want changes applied somewhere else, you'll
       need to say so:</para>
 
 <screen>
