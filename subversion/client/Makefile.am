@@ -5,7 +5,7 @@ svn_SOURCES = main.c status.c props.c                  \
               add-cmd.c commit-cmd.c checkout-cmd.c    \
               proplist-cmd.c delete-cmd.c status-cmd.c \
               update-cmd.c propget-cmd.c propset-cmd.c \
-              diff.c diff-cmd.c help-cmd.c             \
+              diff.c diff-cmd.c help-cmd.c util.c      \
               trace-update.c trace-commit.c cl.h
 
 ## Flags needed when compiling:
