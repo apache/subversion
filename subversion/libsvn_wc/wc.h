@@ -38,7 +38,12 @@
 /** File comparisons **/
 
 /* Set *SAME to non-zero if file1 and file2 have the same contents,
-   else set it to zero. */
+   else set it to zero. 
+
+   Note: This probably belongs in the svn_io library, however, it
+   shares some private helper functions with other wc-specific
+   routines.  Moving it to svn_io would not be impossible, merely
+   non-trivial.  So far, it hasn't been worth it. */
 svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
                                             svn_stringbuf_t *file1,
                                             svn_stringbuf_t *file2,
@@ -744,22 +749,21 @@ enum svn_wc__eol_style
   svn_wc__eol_style_fixed,   /* Translation is set to one of LF, CR, CRLF */
 };
 
-/* Query the SVN_PROP_EOL_STYLE property on a file at PATH.  Set
-   *STYLE to one of the three values (none, native, or fixed), and set
-   *EOL to a line ending that the caller might need.  
+/* Query the SVN_PROP_EOL_STYLE property on a file at PATH, and set
+   *STYLE to PATH's eol style (one of the three values: none, native,
+   or fixed), and set *EOL to
 
-   Specifically:
+      - NULL if *STYLE is svn_wc__eol_style_none, or
 
-      - if the style is 'none', set *EOL to NULL.
+      - a null-terminated C string containing the native eol marker
+        for this platform, if *STYLE is svn_wc__eol_style_native, or
 
-      - if the style is 'native', set *EOL to the native line-ending
-        convention of the client's platform.
+      - a null-terminated C string containing the eol marker indicated
+        by the property value, if *STYLE is svn_wc__eol_style_fixed.
 
-      - if the style is 'fixed', set *EOL to the EOL specified in the
-        property value.
+   If non-null, *EOL is a static string, not allocated in POOL.
 
-   If set, *EOL will point to a static string.  (No need to allocate
-   it in a pool.)
+   Use POOL for temporary allocation.
 */
 svn_error_t *svn_wc__get_eol_style (enum svn_wc__eol_style *style,
                                     const char **eol,
