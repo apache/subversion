@@ -76,8 +76,8 @@ typedef struct
   
   /* Set *CREDENTIALS to a set of valid credentials, or NULL if none
      available.  Set *ITER_BATON to context that allows a subsequent
-     call to next_credentials(), in case the first set of credentials
-     fail to authenticate.  PROVIDER_BATON is general context for the
+     call to next_credentials(), in case the first credentials fail to
+     authenticate.  PROVIDER_BATON is general context for the
      vtable. */
   svn_error_t * (*first_credentials) (void **credentials,
                                       void **iter_baton,
