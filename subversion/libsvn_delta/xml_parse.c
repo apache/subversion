@@ -70,6 +70,7 @@
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_delta.h"
+#include "svn_xml.h"
 #include "apr_strings.h"
 #include "xmlparse.h"
 #include "delta.h"
