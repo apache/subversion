@@ -26,10 +26,28 @@
 
 struct dag_node_t
 {
+  /* The filesystem this dag node came from. */
   svn_fs_t *fs;
+
+  /* The identifier for this dag node in FS. */
   svn_fs_id_t *id;
+
+  /* If this node is part of a committed revision, IS_MUTABLE is
+     false; else if part of a transaction, IS_MUTABLE can be true. */
+  svn_boolean_t is_mutable;
+
+  /* File?  Dir?  Mollusk? */
+  enum svn_node_kind kind;
+
+  /* The immutable dag node from which this node was cloned. */
+  /* kff todo: still pondering this one, but I think it will be
+     useful. */
+  dag_node_t *ancestor;
+
+  /* Not yet sure exactly what gets allocated in this pool.  If I
+     don't get sure soon, it'll go away.  Probably this node and
+     subnodes. */
   apr_pool_t *pool;
-  svn_fs_node_t *node;
 };
 
 

@@ -49,8 +49,8 @@ struct dir_baton
   struct dir_baton *parent;
   svn_string_t *name;  /* just this entry, not full path */
 
-  /* Current directory */
-  svn_fs_node_t *node;
+  /* This directory. */
+  dag_node_t *node;
 
   /* Revision number of this directory */
   svn_revnum_t base_rev;
@@ -62,6 +62,9 @@ struct file_baton
   struct dir_baton *parent;
   svn_string_t *name;  /* just this entry, not full path */
 
+  /* This file. */
+  dag_node_t *node;
+
   /* Revision number of this file */
   svn_revnum_t base_rev;
 };
@@ -70,24 +73,32 @@ struct file_baton
 static svn_error_t *
 begin_edit (void *edit_baton, void **root_baton)
 {
-  struct edit_baton *eb = edit_baton;
-  struct dir_baton *db = apr_pcalloc (eb->pool, sizeof (*db));
-  svn_error_t *err;
+  /* kff todo: figure out breaking into subpools soon */
 
-  db->edit_baton = edit_baton;
-  db->parent = NULL;
-  db->name = svn_string_create ("", eb->pool);
-  db->base_rev = eb->base_rev; /* This is about to be obsoleted */
+  struct edit_baton *eb = edit_baton;
+  struct dir_baton *dirb = apr_pcalloc (eb->pool, sizeof (*dirb));
+  svn_error_t *err;
+  trail_t *trail = apr_pcalloc (eb->pool, sizeof (*trail));
+
+  dirb->edit_baton = edit_baton;
+  dirb->parent = NULL;
+  dirb->name = svn_string_create ("", eb->pool);
+  dirb->base_rev = eb->base_rev;
+
+  /* Any trail setup necessary?  I think that all happens in
+     svn_fs__dag_revision_root() and/or dag_clone_root().. */
 
   /* Begin a transaction. */
   err = svn_fs_begin_txn (&(eb->txn), eb->fs, eb->base_rev, eb->pool);
   if (err) return err;
   
-  /* Get the root directory of the transaction */
-  err = svn_fs_open_txn_root (&(db->node), eb->txn, eb->pool);
+  /* Get the root directory of the revision, immutable for now, but
+     that may change, watch this space, sign our guestbook... */
+  err = svn_fs__dag_revision_root (&(dirb->node), eb->fs,
+                                   dirb->base_rev, trail);
   if (err) return err;
 
-  *root_baton = db;
+  *root_baton = dirb;
   return SVN_NO_ERROR;
 }
 
@@ -107,13 +118,13 @@ add_directory (svn_string_t *name,
                void **child_baton)
 {
   struct dir_baton *pb = parent_baton;
-  struct dir_baton *db = apr_pcalloc (pb->edit_baton->pool, sizeof (*db));
+  struct dir_baton *dirb = apr_pcalloc (pb->edit_baton->pool, sizeof (*dirb));
   
-  db->parent = pb;
-  db->edit_baton = pb->edit_baton;
-  db->name = svn_string_dup (name, pb->edit_baton->pool);
+  dirb->parent = pb;
+  dirb->edit_baton = pb->edit_baton;
+  dirb->name = svn_string_dup (name, pb->edit_baton->pool);
 
-  *child_baton = db;
+  *child_baton = dirb;
   return SVN_NO_ERROR;
 }
 
@@ -126,13 +137,13 @@ replace_directory (svn_string_t *name,
                    void **child_baton)
 {
   struct dir_baton *pb = parent_baton;
-  struct dir_baton *db = apr_pcalloc (pb->edit_baton->pool, sizeof (*db));
+  struct dir_baton *dirb = apr_pcalloc (pb->edit_baton->pool, sizeof (*dirb));
   
-  db->parent = pb;
-  db->edit_baton = pb->edit_baton;
-  db->name = svn_string_dup (name, pb->edit_baton->pool);
+  dirb->parent = pb;
+  dirb->edit_baton = pb->edit_baton;
+  dirb->name = svn_string_dup (name, pb->edit_baton->pool);
 
-  *child_baton = db;
+  *child_baton = dirb;
   return SVN_NO_ERROR;
 }
 
