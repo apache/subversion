@@ -36,11 +36,13 @@
 ;; =     - svn-status-show-svn-diff         run 'svn diff'
 ;; l     - svn-status-show-svn-log          run 'svn log'
 ;; i     - svn-status-info                  run 'svn info'
-;; r     - svn-status-revert-file           run 'svn revert'
+;; r     - svn-status-revert                run 'svn revert'
 ;; U     - svn-status-update-cmd            run 'svn update'
 ;; c     - svn-status-commit-file           run 'svn commit'
 ;; a     - svn-status-add-file              run 'svn add'
 ;; +     - svn-status-make-directory        run 'svn mkdir'
+;; R     - svn-status-mv                    run 'svn mv'
+;; C-d   - svn-status-rm                    run 'svn rm'
 ;; M-c   - svn-status-cleanup               run 'svn cleanup'
 ;; b     - svn-status-blame                 run 'svn blame'
 ;; RET   - svn-status-find-file-or-examine-directory
@@ -57,9 +59,9 @@
 ;; DEL   - svn-status-unset-user-mark-backwards
 ;; * !   - svn-status-unset-all-usermarks
 ;; .     - svn-status-goto-root-or-return
-;; I     - svn-status-parse-info
 ;; f     - svn-status-find-file
 ;; o     - svn-status-find-file-other-window
+;; I     - svn-status-parse-info
 ;; P l   - svn-status-property-list
 ;; P s   - svn-status-property-set
 ;; P d   - svn-status-property-delete
@@ -94,12 +96,12 @@
 ;; Overview over the implemented/not (yet) implemented svn sub-commands:
 ;; * add                       implemented
 ;; * blame                     implemented
-;; * cat
+;; * cat                       implemented
 ;; * checkout (co)
 ;; * cleanup                   implemented
 ;; * commit (ci)               implemented
 ;; * copy (cp)
-;; * delete (del, remove, rm)
+;; * delete (del, remove, rm)  implemented
 ;; * diff (di)                 implemented
 ;; * export
 ;; * help (?, h)
@@ -109,7 +111,7 @@
 ;; * log                       implemented
 ;; * merge
 ;; * mkdir                     implemented
-;; * move (mv, rename, ren)
+;; * move (mv, rename, ren)    implemented
 ;; * propdel (pdel)            implemented
 ;; * propedit (pedit, pe)      not needed
 ;; * propget (pget, pg)        used
@@ -413,6 +415,9 @@ for  example: '(\"revert\" \"file1\"\)"
                  ((eq svn-process-cmd 'mv)
                   (svn-status-update)
                   (message "svn mv finished"))
+                 ((eq svn-process-cmd 'rm)
+                  (svn-status-update)
+                  (message "svn rm finished"))
                  ((eq svn-process-cmd 'cleanup)
                   ;;(svn-status-show-process-buffer-internal t)
                   (message "svn cleanup finished"))
@@ -521,8 +526,8 @@ for  example: '(\"revert\" \"file1\"\)"
 (defun svn-status-sort-predicate (a b)
   "Return t if A should appear before B in the *svn-status* buffer.
 A and B must be line-info's"
-  (string-lessp (svn-status-line-info->full-path a)
-                (svn-status-line-info->full-path b)))
+  (string-lessp (concat (svn-status-line-info->full-path a) "/")
+                (concat (svn-status-line-info->full-path b) "/")))
 
 (defun svn-status-remove-control-M ()
   "Remove ^M at end of line in the whole buffer."
@@ -567,10 +572,11 @@ A and B must be line-info's"
   (define-key svn-status-mode-map [?a] 'svn-status-add-file)
   (define-key svn-status-mode-map [?+] 'svn-status-make-directory)
   (define-key svn-status-mode-map (kbd "R") 'svn-status-mv)
+  (define-key svn-status-mode-map "\C-d" 'svn-status-rm)
   (define-key svn-status-mode-map [?c] 'svn-status-commit-file)
   (define-key svn-status-mode-map [(meta ?c)] 'svn-status-cleanup)
   (define-key svn-status-mode-map [?U] 'svn-status-update-cmd)
-  (define-key svn-status-mode-map [?r] 'svn-status-revert-file)
+  (define-key svn-status-mode-map [?r] 'svn-status-revert)
   (define-key svn-status-mode-map [?l] 'svn-status-show-svn-log)
   (define-key svn-status-mode-map [?i] 'svn-status-info)
   (define-key svn-status-mode-map [?b] 'svn-status-blame)
@@ -621,7 +627,7 @@ A and B must be line-info's"
     ["svn mv..." svn-status-mv t]
     ["Up Directory" svn-status-examine-parent t]
     ["Elide Directory" svn-status-toggle-elide t]
-    ["svn revert" svn-status-revert-file t]
+    ["svn revert" svn-status-revert t]
     ["svn cleanup" svn-status-cleanup t]
     ["Show Process Buffer" svn-status-show-process-buffer t]
     ("Property"
@@ -663,12 +669,13 @@ A and B must be line-info's"
   =     - svn-status-show-svn-diff         run 'svn diff'
   l     - svn-status-show-svn-log          run 'svn log'
   i     - svn-status-info                  run 'svn info'
-  r     - svn-status-revert-file           run 'svn revert'
+  r     - svn-status-revert                run 'svn revert'
   U     - svn-status-update-cmd            run 'svn update'
   c     - svn-status-commit-file           run 'svn commit'
   a     - svn-status-add-file              run 'svn add'
   +     - svn-status-make-directory        run 'svn mkdir'
   R     - svn-status-mv                    run 'svn mv'
+  C-d   - svn-status-rm                    run 'svn rm'
   M-c   - svn-status-cleanup               run 'svn cleanup'
   b     - svn-status-blame                 run 'svn blame'
   RET   - svn-status-find-file-or-examine-directory
@@ -1014,9 +1021,10 @@ This hides the repository information again."
   "Run 'svn status -v'.
 When called with a prefix argument run 'svn status -vu'"
   (interactive "P")
-  (save-excursion
-    (set-buffer "*svn-process*")
-    (setq svn-status-update-previous-process-output (buffer-substring (point-min) (point-max))))
+  (unless (interactive-p)
+    (save-excursion
+      (set-buffer "*svn-process*")
+      (setq svn-status-update-previous-process-output (buffer-substring (point-min) (point-max)))))
   (svn-status default-directory arg))
 
 (defun svn-status-get-line-information ()
@@ -1357,21 +1365,36 @@ itself) before running mv.
             (message "Not moving %s" original-name)))))
     (svn-status-update)))
 
-(defun svn-status-revert-file ()
+(defun svn-status-revert ()
+  "Run `svn revert' on all selected files.
+See `svn-status-marked-files' for what counts as selected."
   (interactive)
   (let* ((marked-files (svn-status-marked-files))
          (num-of-files (length marked-files)))
-    ;; do we actually need the `if' below?
-    (if (= 0 num-of-files)
-        (message "No file selected for reverting!")
-      (when (yes-or-no-p (if (= 1 num-of-files)
-                             (format "Revert %s? " (svn-status-line-info->filename
-                                                    (car marked-files)))
-                           (format "Revert %d files? " num-of-files)))
-        (message "reverting: %S" (svn-status-marked-file-names))
-        (svn-status-create-arg-file svn-status-temp-arg-file ""
-                                    (svn-status-marked-files) "")
-        (svn-run-svn t t 'revert "revert" "--targets" svn-status-temp-arg-file)))))
+    (when (yes-or-no-p
+           (if (= 1 num-of-files)
+               (format "Revert %s? " (svn-status-line-info->filename (car marked-files)))
+             (format "Revert %d files? " num-of-files)))
+      (message "reverting: %S" (svn-status-marked-file-names))
+      (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
+      (svn-run-svn t t 'revert "revert" "--targets" svn-status-temp-arg-file))))
+
+(defun svn-status-rm (force)
+  "Run `svn rm' on all selected files.
+See `svn-status-marked-files' for what counts as selected.
+When called with a prefix argument add the command line switch --force."
+  (interactive "P")
+  (let* ((marked-files (svn-status-marked-files))
+         (num-of-files (length marked-files)))
+    (when (yes-or-no-p
+           (if (= 1 num-of-files)
+               (format "%sRemove %s? " (if force "Force " "") (svn-status-line-info->filename (car marked-files)))
+             (format "%sRemove %d files? " (if force "Force " "") num-of-files)))
+      (message "removing: %S" (svn-status-marked-file-names))
+      (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
+      (if force
+          (svn-run-svn t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
+        (svn-run-svn t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
 
 (defun svn-status-update-cmd ()
   (interactive)
