@@ -108,33 +108,6 @@ check_existence (svn_string_t *path,
 
 
 
-/* kff todo: this little path manipulation library will want to live
-   somewhere else eventually, and handle more than just Unix-style
-   paths. */
-
-#define SVN_DIR_SEPARATOR '/'
-
-static void
-path_add_component (svn_string_t *path, 
-                    svn_string_t *component,
-                    apr_pool_t *pool)
-{
-  char dirsep = SVN_DIR_SEPARATOR;
-  if (! svn_string_isempty (path))
-    svn_string_appendbytes (path, &dirsep, 1, pool);
-  svn_string_appendstr (path, component, pool);
-}
-
-
-static void
-path_remove_component (svn_string_t *path)
-{
-  if (! svn_string_chop_back_to_char (path, SVN_DIR_SEPARATOR))
-    svn_string_setempty (path);
-}
-
-
-
 struct w_baton
 {
   svn_string_t *top_dir;
@@ -177,7 +150,7 @@ add_directory (svn_string_t *name,
   svn_string_t *path = (svn_string_t *) parent_baton;
   struct w_baton *wb = (struct w_baton *) walk_baton;
 
-  path_add_component (path, name, wb->pool);
+  svn_wc__path_add_component (path, name, wb->pool);
   printf ("%s/\n", path->data);
 
   err = svn_wc__set_up_new_dir (path,
@@ -209,7 +182,7 @@ finish_directory (void *child_baton)
 {
   svn_string_t *path = (svn_string_t *) child_baton;
 
-  path_remove_component (path);
+  svn_wc__path_remove_component (path);
 
   return 0;
 }
@@ -268,7 +241,7 @@ add_file (svn_string_t *name,
   svn_string_t *path = (svn_string_t *) parent_baton;
   struct w_baton *wb = (struct w_baton *) walk_baton;
 
-  path_add_component (path, name, wb->pool);
+  svn_wc__path_add_component (path, name, wb->pool);
 
   printf ("%s\n   ", path->data);
 
@@ -295,7 +268,7 @@ finish_file (void *child_baton)
 
   printf ("\n");
   /* Lop off the filename, so baton is the parent directory again. */
-  path_remove_component (fname);
+  svn_wc__path_remove_component (fname);
   return 0;
 }
 
