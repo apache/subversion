@@ -522,7 +522,8 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
  *
  * @a targets is an array of <tt>const char *</tt> paths to commit.  They 
  * need not be canonicalized nor condensed; this function will take care of
- * that.
+ * that.  If @a targets has zero elements, then do nothing and return
+ * immediately without error.
  *
  * If @a notify_func is non-null, then call @a ctx->notify_func with 
  * @a ctx->notify_baton as the commit progresses, with any of the following 

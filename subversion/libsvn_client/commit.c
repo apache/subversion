@@ -752,6 +752,10 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   /* Condense the target list. */
   SVN_ERR (svn_path_condense_targets (&base_dir, &rel_targets, targets, pool));
 
+  /* No targets means nothing to commit, so just return. */
+  if (! base_dir)
+    return SVN_NO_ERROR;
+
   /* If we calculated only a base_dir and no relative targets, this
      must mean that we are being asked to commit a single directory.
      In order to do this properly, we need to anchor our commit up one
