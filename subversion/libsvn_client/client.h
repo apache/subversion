@@ -195,9 +195,8 @@ typedef struct
      during working copy commits. */
   apr_array_header_t *commit_items;
 
-  /* A hash of svn_config_t's, keyed off file name (i.e. the contents of 
-     ~/.subversion/config end up keyed off of 'config'). */
-  apr_hash_t *config;
+  /* A client context. */
+  svn_client_ctx_t *ctx;
 
   /* The pool to use for session-related items. */
   apr_pool_t *pool;

@@ -1157,13 +1157,19 @@ typedef struct svn_wc_entry_callbacks_t
 } svn_wc_entry_callbacks_t;
 
 
-/** A generic entry-walker.
+/**
+ * @since New in 1.2.
+ *
+ * A generic entry-walker.
  *
  * Do a recursive depth-first entry-walk beginning on @a path, which can
  * be a file or dir.  Call callbacks in @a walk_callbacks, passing
  * @a walk_baton to each.  Use @a pool for looping, recursion, and to
  * allocate all entries returned.  @a adm_access must be an access baton
  * for @a path.
+ *
+ * If @a cancel_func is non-null, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
  *
  * Like our other entries interfaces, entries that are in a 'deleted'
  * or 'absent' state (and not scheduled for re-addition) are not
@@ -1177,6 +1183,21 @@ typedef struct svn_wc_entry_callbacks_t
  * subsequently as the '.' entry within itself.  The two calls can be
  * distinguished by looking for @c SVN_WC_ENTRY_THIS_DIR in the 'name'
  * field of the entry.
+ */
+svn_error_t *svn_wc_walk_entries2 (const char *path,
+                                   svn_wc_adm_access_t *adm_access,
+                                   const svn_wc_entry_callbacks_t 
+                                                      *walk_callbacks,
+                                   void *walk_baton,
+                                   svn_boolean_t show_hidden,
+                                   svn_cancel_func_t cancel_func,
+                                   void *cancel_baton,
+                                   apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ *
+ * Similar to svn_wc_walk_entries2(), but without cancellation support.
  */
 svn_error_t *svn_wc_walk_entries (const char *path,
                                   svn_wc_adm_access_t *adm_access,

@@ -1721,13 +1721,15 @@ svn_wc__tweak_entry (apr_hash_t *entries,
 /*** Generic Entry Walker */
 
 
-/* A recursive entry-walker, helper for svn_wc_walk_entries */
+/* A recursive entry-walker, helper for svn_wc_walk_entries2 */
 static svn_error_t *
 walker_helper (const char *dirpath,
                svn_wc_adm_access_t *adm_access,
                const svn_wc_entry_callbacks_t *walk_callbacks,
                void *walk_baton,
                svn_boolean_t show_hidden,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -1756,6 +1758,10 @@ walker_helper (const char *dirpath,
       const svn_wc_entry_t *current_entry; 
       const char *entrypath;
 
+      /* See if someone wants to cancel this operation. */
+      if (cancel_func)
+        SVN_ERR (cancel_func (cancel_baton));
+
       apr_hash_this (hi, &key, &klen, &val);
       current_entry = val;
 
@@ -1773,7 +1779,8 @@ walker_helper (const char *dirpath,
                                         subpool));
           SVN_ERR (walker_helper (entrypath, entry_access,
                                   walk_callbacks, walk_baton,
-                                  show_hidden, subpool));
+                                  show_hidden, cancel_func, cancel_baton,
+                                  subpool));
         }
 
       svn_pool_clear (subpool);
@@ -1793,6 +1800,21 @@ svn_wc_walk_entries (const char *path,
                      svn_boolean_t show_hidden,
                      apr_pool_t *pool)
 {
+  return svn_wc_walk_entries2 (path, adm_access, walk_callbacks,
+                               walk_baton, show_hidden, NULL, NULL,
+                               pool);
+}
+
+svn_error_t *
+svn_wc_walk_entries2 (const char *path,
+                      svn_wc_adm_access_t *adm_access,
+                      const svn_wc_entry_callbacks_t *walk_callbacks,
+                      void *walk_baton,
+                      svn_boolean_t show_hidden,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *pool)
+{
   const svn_wc_entry_t *entry;
   
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, show_hidden, pool));
@@ -1807,7 +1829,7 @@ svn_wc_walk_entries (const char *path,
 
   else if (entry->kind == svn_node_dir)
     return walker_helper (path, adm_access, walk_callbacks, walk_baton,
-                          show_hidden, pool);
+                          show_hidden, cancel_func, cancel_baton, pool);
 
   else
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,

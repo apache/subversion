@@ -222,8 +222,9 @@ svn_client_propset2 (const char *propname,
       wb.propval = propval;
       wb.force = force;
 
-      SVN_ERR (svn_wc_walk_entries (target, adm_access,
-                                    &walk_callbacks, &wb, FALSE, pool));
+      SVN_ERR (svn_wc_walk_entries2 (target, adm_access,
+                                     &walk_callbacks, &wb, FALSE,
+                                     NULL, NULL, pool));
     }
   else
     {
@@ -615,8 +616,10 @@ svn_client_propget2 (apr_hash_t **props,
           wb.propname = propname;
           wb.pristine = pristine;
 
-          SVN_ERR (svn_wc_walk_entries (target, adm_access,
-                                        &walk_callbacks, &wb, FALSE, pool));
+          SVN_ERR (svn_wc_walk_entries2 (target, adm_access,
+                                         &walk_callbacks, &wb, FALSE,
+                                         ctx->cancel_func, ctx->cancel_baton,
+                                         pool));
         }
       else
         {
@@ -968,8 +971,10 @@ svn_client_proplist2 (apr_array_header_t **props,
           wb.props = *props;
           wb.pristine = pristine;
 
-          SVN_ERR (svn_wc_walk_entries (target, adm_access,
-                                        &walk_callbacks, &wb, FALSE, pool));
+          SVN_ERR (svn_wc_walk_entries2 (target, adm_access,
+                                         &walk_callbacks, &wb, FALSE,
+                                         ctx->cancel_func, ctx->cancel_baton,
+                                         pool));
         }
       else 
         SVN_ERR (add_to_proplist (*props, target, adm_access, pristine, pool));
