@@ -46,6 +46,9 @@ generate_status_codes (char *str_status,
   switch (text_status)
     {
     case svn_wc_status_none:
+      text_statuschar = '?';
+      break;
+    case svn_wc_status_normal:
       text_statuschar = '_';
       break;
     case svn_wc_status_added:
@@ -68,23 +71,33 @@ generate_status_codes (char *str_status,
       break;
     case svn_wc_status_conflicted:
       text_statuschar = 'C';
+
       break;
     default:
       text_statuschar = '?';
       break;
     }
 
-  /* If a properties exist, show an underscore.  If not, show a
-     space. */
-  if (prop_time)
-    prop_statuschar = '_';
-  else
-    prop_statuschar = ' ';
-
-  /* Addendum:  if properties are modified, merged, or conflicted,
-     show that instead. */
   switch (prop_status)
     {
+    case svn_wc_status_none:
+      prop_statuschar = ' ';
+      break;
+    case svn_wc_status_normal:
+      prop_statuschar = '_';
+      break;
+    case svn_wc_status_added:
+      prop_statuschar = 'A';
+      break;
+    case svn_wc_status_absent:
+      prop_statuschar = '!';
+      break;
+    case svn_wc_status_deleted:
+      prop_statuschar = 'D';
+      break;
+    case svn_wc_status_replaced:
+      prop_statuschar = 'R';
+      break;
     case svn_wc_status_modified:
       prop_statuschar = 'M';
       break;
@@ -95,9 +108,10 @@ generate_status_codes (char *str_status,
       prop_statuschar = 'C';
       break;
     default:
+      prop_statuschar = '?';
       break;
     }
-  
+
   sprintf (str_status, "%c%c%c", 
            text_statuschar, 
            prop_statuschar,

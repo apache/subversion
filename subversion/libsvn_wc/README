@@ -161,8 +161,7 @@ analogous to CVS/ sudirs:
          timestamp represents the last time the working file was known
          to be exactly equal to the revision it claims to be.
          `prop-time' is a separate timestamp for the file's
-         properties.  The existence of `prop-time' is a direct
-         indicator of whether a file has properties at all. 
+         properties, with the same relative meaning.
 
          In the ideal world, when a file is updated to be perfectly in
          sync with some repository revision, both the `text-time' and

@@ -245,10 +245,11 @@ svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
 
 enum svn_wc_status_kind
 {
-    svn_wc_status_none = 1,   /* foo.c not under version control */
-    svn_wc_status_added,      /* "svn add foo.c", but not yet "svn ci foo.c" */
-    svn_wc_status_absent,     /* just "rm foo.c", not "svn rm foo.c" */
-    svn_wc_status_deleted,    /* "svn rm foo.c", but not yet "svn ci foo.c" */
+    svn_wc_status_none = 1,   /* component does not exist (e.g. properties) */
+    svn_wc_status_normal,     /* component exists, but uninteresting. */
+    svn_wc_status_added,      /* component is scheduled for additon */
+    svn_wc_status_absent,     /* component under v.c., but is missing */
+    svn_wc_status_deleted,    /* component scheduled for deletion */
     svn_wc_status_replaced,   /* foo.c was deleted and then re-added */
     svn_wc_status_modified,   /* foo.c's text or props have been modified */
     svn_wc_status_merged,     /* local mods received repos mods */

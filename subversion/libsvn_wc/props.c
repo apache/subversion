@@ -276,8 +276,7 @@ svn_wc__load_prop_file (svn_stringbuf_t *propfile_path,
 
 
 /* Given a HASH full of property name/values, write them to a file
-   located at PROPFILE_PATH.  If HASH is empty, then any file at this
-   location will be removed.  */
+   located at PROPFILE_PATH.  */
 svn_error_t *
 svn_wc__save_prop_file (svn_stringbuf_t *propfile_path,
                         apr_hash_t *hash,

@@ -451,13 +451,41 @@ empty_props_p (svn_boolean_t *empty_p,
                                   path_to_prop_file->data);
 
       /* If we remove props from a propfile, eventually the file will
-         contain nothing but "END" */
-      if (finfo.size <= 4)  
+         contain nothing but "END\n" */
+      if (finfo.size == 4)  
         *empty_p = TRUE;
 
       else
         *empty_p = FALSE;
+
+      /* ### really, if the size is < 4, then something is corrupt.
+         If the size is between 4 and 16, then something is corrupt,
+         because 16 is the -smallest- the file can possibly be if it
+         contained only one property.  someday we should check for
+         this. */
+
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Simple wrapper around previous helper func, and inversed. */
+svn_error_t *
+svn_wc__has_props (svn_boolean_t *has_props,
+                   svn_stringbuf_t *path,
+                   apr_pool_t *pool)
+{
+  svn_boolean_t is_empty;
+  svn_stringbuf_t *prop_path;
+
+  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
+  SVN_ERR (empty_props_p (&is_empty, prop_path, pool));
+
+  if (is_empty)
+    *has_props = FALSE;
+  else
+    *has_props = TRUE;
 
   return SVN_NO_ERROR;
 }
