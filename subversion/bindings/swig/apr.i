@@ -140,10 +140,6 @@ typedef apr_int32_t time_t;
     svn_swig_java_add_to_map(jenv, *$1, $input);
 }
 
-%typemap(java,out) apr_hash_t **PROPHASH {
-    svn_swig_java_add_to_map(jenv, *$1, $input);
-}
-
 %typemap(java,argout) apr_hash_t **PROPHASH {
     svn_swig_java_add_to_map(jenv, *$1, $input);
 }
@@ -160,10 +156,6 @@ typedef apr_int32_t time_t;
 %typemap(javaout) apr_array_header_t * {
     return $jnicall;
   }
-
-%typemap(java, out) apr_array_header_t * {
-    svn_swig_java_add_to_list(jenv, $1, $input);
-}
 
 %typemap(java, argout) apr_array_header_t * {
     svn_swig_java_add_to_list(jenv, $1, $input);
