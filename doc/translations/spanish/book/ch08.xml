@@ -1714,46 +1714,50 @@ A  build.conf
 &hellip;
 </screen>
 
-      <para>The above command will checkout the bleeding-edge, latest
-        version of the Subversion source code into a subdirectory
-        named <filename>subversion</filename> in your current working
-        directory.  Obviously, you can adjust that last argument as
-        you see fit.  Regardless of what you call the new working copy
-        directory, though, after this operation completes, you will
-        now have the Subversion source code.  Of course, you will
-        still need to fetch a few helper libraries (apr, apr-util,
-        etc.)&mdash;see the <filename>INSTALL</filename> file in the
-        top level of the working copy for details.</para>
+      <para>El comando anterior obtendrá la ultima y más reciente
+        versión del código de Subversion en un subdirectorio
+        llamado <filename>subversion</filename> en su directorio
+        actual. Obviamente, puede ajustar ese último parámetro
+        como desee. Ignorando cómo llame al directorio de la copia
+        local, una vez esta operación haya terminado, dispondrá
+        del código fuente de Subversion. Por supuesto, todavía
+        tendrá que obtener las librerías de apoyo (apr, apr-util,
+        etc.)&mdash;vea el fichero <filename>INSTALL</filename> en el
+        directorio raíz de su copia local para más detalles.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-6.3">
-      <title>Become Familiar with Community Policies</title>
+      <title>Familiaricese con las reglas de la comunidad</title>
       
-      <para>Now that you have a working copy containing the latest
-        Subversion source code, you will most certainly want to take a
-        cruise through the <filename>HACKING</filename> file in that
-        working copy's top-level directory.  The
-        <filename>HACKING</filename> file contains general
-        instructions for contributing to Subversion, including how to
-        properly format your source code for consistency with the rest
-        of the codebase, how to describe your proposed changes with an
-        effective change log message, how to test your changes, and so
-        on.  Commit privileges on the Subversion source repository are
-        earned&mdash;a government by meritocracy.
+      <para>Ahora que tiene una copia local con la última versión del código fuente
+        de Subversion, seguramente querrá leer el fichero
+        <filename>HACKING</filename> en el directorio raíz de esa
+        copia local. El fichero <filename>HACKING</filename> contiene
+        instrucciones generales para contribuir con Subversion,
+        incluyendo cómo formatear correctamente su código fuente para
+        mantener la consistencia con el resto del código existente,
+        cómo describir sus cambios propuestos con un mensaje de
+        cambios efectivo, cómo verificar sus cambios, y demás. Los
+        privilegios para hacer cambios en el repositorio del código
+        fuente de Subversion se ganan&mdash;un gobierno basado en
+        la meritocracia.
         <footnote>
-          <para>While this may superficially appear as some sort of
-            elitism, this <quote>earn your commit privileges</quote>
-            notion is about efficiency&mdash;whether it costs more in
-            time and effort to review and apply someone else's changes
-            that are likely to be safe and useful, versus the
-            potential costs of undoing changes that are
-            dangerous.</para>
+          <para>Aunque esto pueda parecer superficialmente como una
+            forma de elitismo, esta noción de <quote>ganarse
+            su privilegio de escritura</quote> es una cuestión
+            de eficiencia&mdash;es calcular si cuesta más
+            tiempo y esfuerzo revisar y aplicar los cambios
+            de otra persona que pueden ser seguros y útiles,
+            versus el coste potencial de deshacer cambios que son
+            peligrosos.<!--TODO seguro que mi profesora me pegaría
+            por este estilo... mirar original--></para>
         </footnote>
-        The HACKING file is an invaluable resource when it comes to 
-        making sure that your proposed changes earn the praises they
-        deserve without being rejected on technicalities.</para>
+        El fichero <filename>HACKING</filename> es un recurso de
+        valor incalculable cuando llega la hora de asegurarse que
+        sus cambios propuestos se ganan las alabanzas que merecen
+        sin ser rechazados por detalles técnicos.</para>
 
     </sect2>
 
