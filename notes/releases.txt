@@ -3,9 +3,9 @@
 
 1. Create a release branch from the "golden" revision number:
 
-   svn cp -rHEAD -m"Create release X.YY.Z branch" \
+   svn cp -rHEAD -m"Create release X.Y.Z branch" \
       http://svn.collab.net/repos/svn/trunk \
-      http://svn.collab.net/repos/svn/branches/X.YY.Z
+      http://svn.collab.net/repos/svn/branches/X.Y.Z
 
    (Note that only the release manager commits to the branch;
     everyone else continues working on trunk, and the release
@@ -15,8 +15,8 @@
 
    a) Begin a new section at the top of the file with:
 
-      Version X.YY.Z (released XX Month 200X, from revision XXXX)
-      http://svn.collab.net/repos/svn/tags/X.YY.Z
+      Version X.Y.Z (released XX Month 200X, from revision XXXX)
+      http://svn.collab.net/repos/svn/tags/X.Y.Z
 
    b) Bump the version numbers in svn_version.h and CHANGES.
    
@@ -24,7 +24,7 @@
 
 3. Create a working copy (wc) from the release branch:
 
-   $ svn co http://svn.collab.net/repos/svn/branches/X.YY.Z
+   $ svn co http://svn.collab.net/repos/svn/branches/X.Y.Z
 
 4. The branch stabilizing week
 
@@ -98,10 +98,10 @@
 
 7. Run './dist.sh [ARGS ...]'    (see dist.sh for details about ARGS)
    Watch dist.sh's output to make sure everything goes smoothly; when
-   it's done, you'll have 'subversion-X.YY.Z.tar.gz' in the cwd.
+   it's done, you'll have 'subversion-X.Y.Z.tar.gz' in the cwd.
 
 8. Test the tarball:
-     a) tar zxvf subversion-X.YY.Z.tar.gz;  cd subversion-X.YY.Z
+     a) tar zxvf subversion-X.Y.Z.tar.gz;  cd subversion-X.Y.Z
      b) ./configure
 
          See INSTALL, section III.B for detailed instructions
@@ -167,19 +167,19 @@
     d. Click on the 'Add a file' link (top, main frame, under 'File Sharing')
     e. Fill in the following fields:
 
-      Name: subversion-X.YY.Z.tar.gz (replace X.YY.Z with the release number)
+      Name: subversion-X.Y.Z.tar.gz (replace X.Y.Z with the release number)
       Status: Stable
-      Description: Subversion release X.YY.Z (MD5: <md5sum of tarball>)
+      Description: Subversion release X.Y.Z (MD5: <md5sum of tarball>)
       Contents: (Link, then enter
-          http://svn.collab.net/tarballs/subversion-X.YY.Z.tar.gz)
+          http://subversion.tigris.org/tarballs/subversion-X.Y.Z.tar.gz)
 
     f. Click Submit
 
 10. Move branch into the tags directory in the repository.
 
-      svn mv http://svn.collab.net/repos/svn/branches/X.YY.Z \
-           http://svn.collab.net/repos/svn/tags/X.YY.Z \
-           -m"Moved Release X.YY.Z branch to tags/."
+      svn mv -m "Moved Release X.Y.Z branch to tags/."     \
+          http://svn.collab.net/repos/svn/branches/X.Y.Z   \
+          http://svn.collab.net/repos/svn/tags/X.Y.Z
 
     Now that the release is public, no more changes can happen on that
     branch.  If we discover problems with the release, then we make a
