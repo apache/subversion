@@ -62,30 +62,6 @@ svn_wc_get_default_ignores (apr_array_header_t **patterns,
   return SVN_NO_ERROR;
 }
 
-/* Helper routine: add to *PATTERNS patterns from the value of
-   the SVN_PROP_IGNORE property set on DIRPATH.  If there is no such
-   property, or the property contains no patterns, do nothing.
-   Otherwise, add to *PATTERNS a list of (const char *) patterns to
-   match. */
-static svn_error_t *
-add_ignore_patterns (svn_wc_adm_access_t *adm_access,
-                     apr_array_header_t *patterns,
-                     apr_pool_t *pool)
-{
-  const svn_string_t *value;
-
-  /* Try to load the SVN_PROP_IGNORE property. */
-  SVN_ERR (svn_wc_prop_get (&value, SVN_PROP_IGNORE,
-                            svn_wc_adm_access_path (adm_access), adm_access,
-                            pool));
-
-  if (value != NULL)
-    svn_cstring_split_append (patterns, value->data, "\n\r", FALSE, pool);
-
-  return SVN_NO_ERROR;
-}                  
-
-
                         
 /* Fill in *STATUS for PATH, whose entry data is in ENTRY.  Allocate
    *STATUS in POOL. 
@@ -399,6 +375,7 @@ collect_ignore_patterns (apr_array_header_t *patterns,
                          apr_pool_t *pool)
 {
   int i;
+  const svn_string_t *value;
 
   /* Copy default ignores into the local PATTERNS array. */
   for (i = 0; i < ignores->nelts; i++)
@@ -408,7 +385,11 @@ collect_ignore_patterns (apr_array_header_t *patterns,
     }
 
   /* Then add any svn:ignore globs to the PATTERNS array. */
-  SVN_ERR (add_ignore_patterns (adm_access, patterns, pool));
+  SVN_ERR (svn_wc_prop_get (&value, SVN_PROP_IGNORE,
+                            svn_wc_adm_access_path (adm_access), adm_access,
+                            pool));
+  if (value != NULL)
+    svn_cstring_split_append (patterns, value->data, "\n\r", FALSE, pool);
 
   return SVN_NO_ERROR;   
 } 
