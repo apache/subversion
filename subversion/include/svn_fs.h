@@ -1573,7 +1573,8 @@ svn_error_t *svn_fs_generate_token (const char **token,
  * If @a token points to a lock, but the username of @a fs's access
  * context doesn't match the lock's owner, return @c
  * SVN_ERR_FS_LOCK_OWNER_MISMATCH.  If @a force is true, however, don't
- * return error;  allow the lock to be "broken" in any case.
+ * return error;  allow the lock to be "broken" in any case.  In the latter
+ * case, @a token shall be @c NULL.
  *
  * Use @a pool for temporary allocations.
  */

@@ -329,36 +329,39 @@ txn_body_unlock (void *baton, trail_t *trail)
 {
   struct unlock_args *args = baton;
   svn_node_kind_t kind = svn_node_none;
+  const char *lock_token;
   svn_lock_t *lock;
 
-  /* Sanity check:  we don't want to pass a NULL key to BDB lookup. */
-  if (! args->token)
-    return svn_fs_base__err_bad_lock_token (trail->fs, "null");
+  SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail));
 
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
-  SVN_ERR (svn_fs_bdb__lock_get (&lock, trail->fs, args->token, trail));
+  SVN_ERR (svn_fs_bdb__lock_token_get (&lock_token, trail->fs, args->path,
+                                       kind, trail));
 
-  /* Sanity check:  the incoming path should match lock->path. */
-  if (strcmp(args->path, lock->path) != 0)
-    return svn_fs_base__err_no_such_lock (trail->fs, args->path);
+  /* If not breaking the lock, we need to do some more checking. */
+  if (!args->force)
+    {
+      /* Sanity check: The lock tokens must match. */
+      if (strcmp (lock_token, args->token) != 0)
+        return svn_fs_base__err_no_such_lock (trail->fs, args->path);
 
-  /* If not breaking the lock, there better be a username attached to
-     the fs. */
-  if (!args->force
-      && (!trail->fs->access_ctx || !trail->fs->access_ctx->username))
-    return svn_fs_base__err_no_user (trail->fs);
+      SVN_ERR (svn_fs_bdb__lock_get (&lock, trail->fs, lock_token, trail));
 
-  /* And that username better be the same as the lock's owner. */
-  if (!args->force
-      && strcmp(trail->fs->access_ctx->username, lock->owner) != 0)
-    return svn_fs_base__err_lock_owner_mismatch (trail->fs,
-             trail->fs->access_ctx->username,
-             lock->owner);
+      /* There better be a username attached to the fs. */
+      if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
+        return svn_fs_base__err_no_user (trail->fs);
+
+      /* And that username better be the same as the lock's owner. */
+      if (strcmp(trail->fs->access_ctx->username, lock->owner) != 0)
+        return svn_fs_base__err_lock_owner_mismatch
+          (trail->fs,
+           trail->fs->access_ctx->username,
+           lock->owner);
+    }
 
   /* Remove a row from each of the locking tables. */
-  SVN_ERR (svn_fs_bdb__lock_delete (trail->fs, lock->token, trail));
-  SVN_ERR (svn_fs_base__get_path_kind (&kind, lock->path, trail));
-  return svn_fs_bdb__lock_token_delete (trail->fs, lock->path, kind, trail);
+  SVN_ERR (svn_fs_bdb__lock_delete (trail->fs, lock_token, trail));
+  return svn_fs_bdb__lock_token_delete (trail->fs, args->path, kind, trail);
 }
 
 

@@ -661,6 +661,9 @@ get_lock_from_path (svn_lock_t **lock_p,
   if (lock->expiration_date 
       && (apr_time_now() > lock->expiration_date))
     {
+      /* ### fitx TODO: We need the write lock here, but some callers already
+         ### has it.  Also, we need to reread the lock to avoid a race.  We
+         ### don't want the write lock grabbed just to get a lock. */
       SVN_ERR (delete_lock (fs, lock, pool));
       *lock_p = NULL;
       return svn_fs_fs__err_lock_expired (fs, lock->token); 
@@ -958,31 +961,31 @@ svn_fs_fs__unlock (svn_fs_t *fs,
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_lock_t *existing_lock;
 
-  /* Sanity check:  we don't want to lookup a NULL path. */
-  if (! token)
-    return svn_fs_fs__err_bad_lock_token (fs, "null");
-  
+  SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
+
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or
      SVN_ERR_FS_LOCK_EXPIRED. */
-  SVN_ERR (get_lock_from_path_helper(fs, &existing_lock, path, pool));
+  SVN_ERR (get_lock_from_path(&existing_lock, fs, path, pool));
   
-  /* Sanity check:  the incoming path should match existing_lock->path. */
-  if (strcmp(path, existing_lock->path) != 0)
-    return svn_fs_fs__err_no_such_lock (fs, existing_lock->path);
+  /* Unless breaking the lock, we do some checks. */
+  if (!force)
+    {
+      /* Sanity check:  the incoming token should match existing_lock->token.
+       */
+      if (strcmp(token, existing_lock->token) != 0)
+        return svn_fs_fs__err_no_such_lock (fs, existing_lock->path);
 
-  /* Unless breaking the lock, there better be a username attached to the
-     fs. */
-  if (!force && (!fs->access_ctx || !fs->access_ctx->username))
-    return svn_fs_fs__err_no_user (fs);
+      /* There better be a username attached to the fs. */
+      if (!fs->access_ctx || !fs->access_ctx->username)
+        return svn_fs_fs__err_no_user (fs);
 
-  /* And that username better be the same as the lock's owner. */
-  if (!force
-      && strcmp(fs->access_ctx->username, existing_lock->owner) != 0)
-    return svn_fs_fs__err_lock_owner_mismatch (fs,
-                                               fs->access_ctx->username,
-                                               existing_lock->owner);
-  
-  SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
+      /* And that username better be the same as the lock's owner. */
+      if (strcmp(fs->access_ctx->username, existing_lock->owner) != 0)
+        return svn_fs_fs__err_lock_owner_mismatch (fs,
+                                                   fs->access_ctx->username,
+                                                   existing_lock->owner);
+    }  
+
   /* Remove lock and lock token files. */
   SVN_ERR (delete_lock (fs, existing_lock, pool));
 

@@ -133,7 +133,7 @@ svn_client_unlock (const char *path, svn_boolean_t force,
   svn_lock_t *lock;
   svn_ra_session_t *ra_session;
 
-  /* ### Support unlock on URL with --force? */
+  /* ### TODO Support unlock on URL with --force. */
   if (svn_path_is_url (path))
     return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                               _("Unlocking non-local target '%s' not "
@@ -157,6 +157,11 @@ svn_client_unlock (const char *path, svn_boolean_t force,
                                   path);
       lock_token = entry->lock_token;
     }
+  else
+    {
+      /* If breaking a lock, we shouldn't pass any lock token. */
+      lock_token = NULL;
+    }
 
   /* Open an RA session. */
   SVN_ERR (svn_client__open_ra_session (&ra_session, entry->url,
@@ -164,22 +169,8 @@ svn_client_unlock (const char *path, svn_boolean_t force,
                                         adm_access, NULL, FALSE, FALSE,
                                         ctx, pool));
 
-  /* If force, get the lock token from the repository. */
-  if (force)
-    {
-      SVN_ERR (svn_ra_get_lock (ra_session, &lock, "", pool));
-      if (lock)
-        lock_token = lock->token;
-      else
-        /* ### TODO: Return error. */
-        lock_token = NULL;
-    }
-
   /* Unlock the path. */
-  /* We don't have a lock token if force is specified, but the path wasn't
-     locked in the repository. */
-  if (lock_token)
-    SVN_ERR (svn_ra_unlock (ra_session, "", lock_token, force, pool));
+  SVN_ERR (svn_ra_unlock (ra_session, "", lock_token, force, pool));
 
   /* Remove any lock token from the WC. */
   SVN_ERR (svn_wc_remove_lock (path, adm_access, pool));

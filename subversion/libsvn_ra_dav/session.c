@@ -1093,6 +1093,8 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
   ne_hook_create_request(ras->sess, create_request_hook, lrb);
   ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
 
+  /* ### sussman TODO: if force, token is NULL; fetch it first. */
+
   /* Make a neon lock structure containing token and full URL to unlock. */
   nlock = ne_lock_create();
   nlock->token = ne_strdup(token);

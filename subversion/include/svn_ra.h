@@ -861,7 +861,7 @@ svn_error_t *svn_ra_lock (svn_ra_session_t *session,
  * If @a token points to a lock, but the RA username doesn't match
  * the lock's owner, return error.  If @a force is true, however,
  * don't return error; allow the lock to be "broken" by the
- * RA user.
+ * RA user.  In the latter case, @a token shall be @c NULL.
  *
  * Use @a pool for temporary allocations.
  */

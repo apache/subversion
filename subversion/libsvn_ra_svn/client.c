@@ -1382,7 +1382,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
   ra_svn_session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t* conn = sess->conn;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "unlock", "ccb",
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "unlock", "c(?c)b",
                                path, token, force));
 
   /* Servers before 1.2 doesn't support locking.  Check this here. */
