@@ -36,6 +36,7 @@
 static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 #endif /* SVN_DEBUG */
 
+#include "svn_private_config.h"
 
 
 /*** Helpers for creating errors ***/
@@ -346,7 +347,7 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
   for (defn = error_table; defn->errdesc != NULL; ++defn)
     if (defn->errcode == (svn_errno_t)statcode)
       {
-        apr_cpystrn (buf, defn->errdesc, bufsize);
+        apr_cpystrn (buf, dgettext (PACKAGE_NAME, defn->errdesc), bufsize);
         return buf;
       }
 
