@@ -65,7 +65,7 @@ section for approved changes.)
             like it modifies the whole file, because it fixed the line
             endings in the repository.  See r8127 log msg for details.
      Votes:
-      +1: kfogel
+      +1: kfogel, jszakmeister
 
    * Issue #408
      Date parser rewrite.
@@ -103,23 +103,6 @@ section for approved changes.)
       -0: gstein, sussman
 
      
-   * r8154
-     Fix a small bug in the FS history harvesting code.  
-     Notes:  The codespeak repository is sufficient complex enough
-             (history-wise) to trigger this bug (seen by the inability
-             to run 'svn blame' on certain files in the repository).
-
-     Votes:
-      +1: cmpilato, jerenkrantz
-
-
-   * r8167
-     Fix a doc bug in svn_client.h.
-     Justification: Obvious doc string typo, no risk.
-     Votes:
-      +1: kfogel, jerenkrantz
-
-
    * Issue #1689
      Clean up structure definitions.
      Justification: Negligible risk, API cleanliness and stability.
@@ -369,6 +352,23 @@ the section for unapproved changes.)
      Votes:
       +1: bliss, mbk, ghudson, rooneg, jszakmeister, epg
       -0: gstein
+
+
+   * r8154
+     Fix a small bug in the FS history harvesting code.  
+     Notes:  The codespeak repository is sufficient complex enough
+             (history-wise) to trigger this bug (seen by the inability
+             to run 'svn blame' on certain files in the repository).
+
+     Votes:
+      +1: cmpilato, jerenkrantz, jszakmeister
+
+
+   * r8167
+     Fix a doc bug in svn_client.h.
+     Justification: Obvious doc string typo, no risk.
+     Votes:
+      +1: kfogel, jerenkrantz, jszakmeister
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
