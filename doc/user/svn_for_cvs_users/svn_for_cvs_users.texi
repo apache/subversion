@@ -1,6 +1,47 @@
 
-                         SVN for CVS Users
-                         ==================
+@c Subversion for CVS Users
+
+@setfilename svn_for_cvs_users.info
+@settitle Subversion for CVS Users
+@setchapternewpage odd
+@paragraphindent 0
+
+@c Browser defaults lose.  Let's go for black text on white background.
+@ifhtml
+@html
+<body bgcolor="#FFFFFF" fgcolor="#000000">
+@end html
+@end ifhtml
+
+@titlepage
+@title @titlefont{Subversion for CVS Users}
+@author Subversion Development Project @url{http://subversion.tigris.org}
+@end titlepage
+
+
+
+@ifinfo
+A Subversion quick-start guide for CVS users.
+@end ifinfo
+
+
+@menu
+* Introduction::
+* Revision numbers are different now::
+* More "disconnected" operations::
+* Distinction between 'status' and 'update'::
+* Properties::
+* Directory versioning::
+* Conflicts::
+* Binary files::
+* Branches and tags::
+* Real docs::
+@end menu
+
+@c -----------------------------------------------------
+
+@node Introduction
+@section Introduction
 
 This document is meant to be a quick-start guide for CVS users new to
 Subversion.  It's not a substitute for real documentation and manuals;
@@ -14,7 +55,8 @@ begin with.
 
 
 
--- Revision numbers mean something different now.
+@node Revision numbers are different now
+@section Revision numbers are different now
 
 In CVS, revision numbers are per-file.  This is because CVS uses RCS
 as a backend;  each file has a corresponding RCS file in the
@@ -36,7 +78,8 @@ it's most likely that foo.c did *not* change between revisions 5 and
 6.
 
 
--- More "disconnected" operations
+@node More "disconnected" operations
+@section More "disconnected" operations
 
 In recent years, disk space has become outrageously cheap and
 abundant, but network bandwidth has not.  Therefore, the Subversion
@@ -46,11 +89,16 @@ The .svn/ administrative directory serves the same purpose as the CVS/
 one, except that it also stores "pristine" copies of files.  This
 allows you to do many things off-line:
 
-   * 'svn status' will show you local modifications (see below)
-   * 'svn diff' will show you the specifics of your modifications
-   * 'svn ci' sends differences to the repository, making more
-              efficient use of the network than CVS does.
-   * 'svn revert' will remove your modifications
+@itemize @bullet
+@item 'svn status'
+   shows you local modifications (see below)
+@item 'svn diff'
+   shows you the details of your modifications
+@item 'svn ci'
+   sends differences to the repository (CVS only sends fulltexts!)
+@item 'svn revert'
+   removes your modifications
+@end itemize
 
 This last subcommand is new; it will not only remove local mods, but
 it will un-schedule operations such as adds and deletes.  It's the
@@ -59,7 +107,8 @@ work, but it blurs the purpose of updating.  And, while we're on this
 subject...
 
 
--- Distinction between 'status' and 'update'
+@node Distinction between 'status' and 'update'
+@section Distinction between 'status' and 'update'
 
 In Subversion, we've tried to erase a lot of the confusion between the
 'status' and 'update' subcommands.
@@ -75,33 +124,44 @@ changes that you may not be ready to deal with!
 With Subversion, we've tried to remove this muddle by making the
 output of 'svn status' easy to read for humans and parsers.  Also,
 'svn update' only prints information about files that are updated,
-*not* local modifications.
+@emph{not} local modifications.
 
 Here's a quick guide to 'svn status'.  We encourage all new Subversion
 users to use it early and often:
 
-  * svn status:  prints all files that have local modifications;
-                 the network is not accessed by default.
-
-     * -u switch:  add out-of-dateness information from repository 
-     * -v switch:  show all entries under version control
-     * -n switch:  nonrecursive
+@itemize @bullet
+@item 'svn status'
+   prints all files that have local modifications; the network is not
+   accessed by default.
+@itemize @bullet
+@item -u switch
+   add out-of-dateness information from repository 
+@item -v switch
+   show @emph{all} entries under version control
+@item -n switch
+    nonrecursive
+@end itemize
+@end itemize
 
 The status command has two output formats.  In the default "short"
 format, local mods look like this:
 
+@example
     % svn status
     M     ./foo.c
     M     ./bar/baz.c
+@end example
 
 If you specify either the -u or -v switch, a "long" format is used:
 
+@example
     % svn status
     M             1047    ./foo.c
     _      *      1045    ./faces.html
     _      *         -    ./bloo.png
     M             1050    ./bar/baz.c
     Head revision:   1066
+@end example
 
 In this case, two new columns appear.  The first column potentially
 contains an asterisk, which means that the file or directory is
@@ -113,6 +173,7 @@ that it doesn't yet exist in the working copy.)
 
 Lastly, here's a quick summary of status codes that you may see:
 
+@example
    A    Add
    D    Delete
    R    Replace  (delete, then re-add)
@@ -120,25 +181,27 @@ Lastly, here's a quick summary of status codes that you may see:
    U    Updated
    G    merGed
    C    Conflict
+@end example
 
 Subversion has combined the CVS 'P' and 'U' codes into just 'U'.  When
 a merge or conflict occurs, Subversion simply prints 'G' or 'C',
 rather than a whole sentence about it.
 
 
--- Properties
+@node Properties
+@section Properties
 
-A new feature of Subversion is that you can attach arbitrary metadata
-to files and directories.  We refer to this data as "properties", and
+A new feature of Subversion is that you can attach arbitrary metadata to
+files and directories.  We refer to this data as @dfn{properties}, and
 they can be thought of as collections of name/value pairs (hashtables)
 attached to each item in your working copy.
   
 To set or get a property name, use the 'svn propset' and 'svn propget'
 subcommands.  To list all properties on an object, use 'svn proplist'.
 
-Properties are *versioned* just like file contents.  This means that
-new properties can be merged into your working files, and can
-sometimes come into conflict too.  (See the 'Conflict' section below.)
+Properties are @emph{versioned}, just like file contents.  This means
+that new properties can be merged into your working files, and can
+sometimes come into conflict too.
 
 Certain property names are standardized and used by Subversion to
 track important data; these property names all begin with an "svn:"
@@ -151,10 +214,12 @@ editable by users;  just be sure you know what they do.
 Finally, we should point out that the 'svn status' and 'svn update'
 commands have ways of telling you about properties:
 
+@example
      __
      _M
      _U
      UU
+@end example
 
 The letter codes printed by these subcommands actually have two parts:
 file-contents and properties.  The first example indicates that the
@@ -166,22 +231,26 @@ telling you that a file's properties were patched (but not its text).
 The fourth example means that both components were patched.
 
 
--- Directory versioning
+@node Directory versioning
+@section Directory versioning
 
 Subversion tracks tree structures, not just file contents.  It's one
 of the biggest reasons Subversion was written to replace CVS.
 
 Here's what this means to you:
 
-   * the 'svn add' and 'svn rm' commands work on directories now, just
+@itemize @bullet
+@item
+     the 'svn add' and 'svn rm' commands work on directories now, just
      as they work on files.  However, these commands do *not* cause
      any kind of immediate change in the repository.  Instead, the
      working directory is recursively "scheduled" for addition or
      deletion.  No repository changes happen until you commit.
-
-   * Directories aren't dumb containers anymore;  they have revision
+@item
+     Directories aren't dumb containers anymore;  they have revision
      numbers like files.  (Or more properly, it's correct to talk
      about "directory foo/ in revision 5".)
+@end itemize
 
 Let's talk more about that last point.  Directory versioning is a Hard
 Problem.  Because we want to allow mixed-revision working copies,
@@ -198,26 +267,25 @@ haven't yet received, because we haven't updated yet.
 Subversion deals with this problem by quietly tracking committed adds
 and deletes in the .svn/ area.  When you eventually run 'svn update',
 all accounts are settled with the repository, and the directory's new
-revision number is set correctly.  <b> Therefore, only after an update
-is it *truly* safe to say that you have a "perfect" revision of a
-directory. </b>  Most of the time, your working copy will contain
-"imperfect" directory revisions.
+revision number is set correctly.  @b{Therefore, only after an update is
+it truly safe to say that you have a "perfect" revision of a directory.}
+Most of the time, your working copy will contain "imperfect" directory
+revisions.
 
-Similarly, a problem arises if you attempt to commit property changes
-on a directory.  Normally, the commit would bump the working
-directory's local revision number.  But again, that would be a lie,
-because there may be adds or deletes that the directory doesn't yet
-have, because no update has happened.  <b> Therefore, you cannot
-commit property-changes on a directory unless the directory is
-up-to-date. </b>
+Similarly, a problem arises if you attempt to commit property changes on
+a directory.  Normally, the commit would bump the working directory's
+local revision number.  But again, that would be a lie, because there
+may be adds or deletes that the directory doesn't yet have, because no
+update has happened.  @b{Therefore, you are not allowed to commit
+property-changes on a directory unless the directory is up-to-date.}
 
-Go ahead and enjoy directory versioning;  just file away those two
-emphasized warnings somewhere in the back of your mind.  Somewhere
-down the line, they may help you understand what's happening in your
-working copy.
+Go ahead and enjoy directory versioning; just file away those two
+warnings somewhere in the back of your mind.  Somewhere down the line,
+they may help you understand what's happening in your working copy.
 
 
--- Conflicts
+@node Conflicts
+@section Conflicts
 
 CVS marks conflicts with in-line "conflict markers", and prints a 'C'
 during an update.  Historically, this has caused problems.  Many users
@@ -228,13 +296,18 @@ present, and then accidentally commit garbaged files.
 Subversion solves this problem by making conflicts more tangible.  If
 a conflict happens during an update, three things happen:
 
-   * a 'C' is printed during the update
-   * a reject file ('.rej') is created that contains the conflicting text
-   * the file is marked as conflicted in .svn/entries
+@itemize @bullet
+@item
+   a 'C' is printed during the update
+@item
+   a reject file ('.rej') is created that contains the conflicting text
+@item
+   the file is marked as conflicted in .svn/entries
+@end itemize
 
-At this point, Subversion will *not* allow you to commit the file
-until you hand-remove the associated .rej file.  So it's safe to
-forget about the conflict; 'svn ci' will remind you later on.  :-)
+At this point, Subversion will @emph{not} allow you to commit the file
+until you hand-remove the associated .rej file.  So it's potentially
+safe to forget about the conflict; 'svn ci' will remind you later on.
 
 If you get a conflict, you can hand-merge the conflicted text and then
 remove the .rej file.  Or, if you simply want toss all of your local
@@ -246,7 +319,8 @@ conflict.  If this happens, a description of the conflict will be
 dumped into '.prej' file instead.
 
 
--- Binariness
+@node Binary files
+@section Binary files
 
 CVS users have to mark binary files with '-kb' flags, to prevent data
 from being munged (due to keyword expansion and line-ending
@@ -271,7 +345,9 @@ side-by-side in your working copy; the one containing your local
 modifications is renamed with an ".orig" extension.
 
 
--- Branches and Tags
+
+@node Branches and tags
+@section Branches and tags
 
 Sit down and prepare yourself for this last topic.  It may take a
 minute to bend your mind around this idea.
@@ -289,14 +365,14 @@ in the filesystem; at most, they're simply unlinked from the head tree
 are nothing more than directory entries that point to existing nodes.
 And this is the basis of tags and branches.
 
-Suppose we have a have a repository whose head tree is revision 82.
-In this repository is a subdirectory 'mooIRC' that contains a software
+Suppose we have a have a repository whose head tree is revision 82.  In
+this repository is a subdirectory 'mooIRC' that contains a software
 project that is ready to be tagged.  How do we tag it?  Very simple:
 make a cheap copy of this directory.  In other words, create a new
 directory entry (somewhere else in the filesystem) that points to this
-*specfic* revision of the directory 'mooIRC'.  Of course, you can name
-that new directory entry whatever you want -- probably a tag-name like
-'mooIRC-beta'.
+@emph{specfic} revision of the directory 'mooIRC'.  Of course, you can
+name that new directory entry whatever you want -- probably a tag-name
+like 'mooIRC-beta'.
 
 Now, as long as you never touch the contents of the directory
 'mooIRC-beta', it will forever point to a directory that looks the way
@@ -313,12 +389,13 @@ branches of the project.
 It's very important to note that the Subversion filesystem is not
 aware of "tags" or "branches".  It's only aware of directories, and
 all directories are equal.  The tag and branch concepts are purely
-*human* meanings attached to particular directories.
+@emph{human} meanings attached to particular directories.
 
 For this reason, it's up to users (and the Subversion repository
 administrator) to choose sane policies that help elucidate these
 labels.  For example, here's a good way to lay out your repository:
 
+@example
    /
    /projectA
    /projectA/trunk/
@@ -328,8 +405,22 @@ labels.  For example, here's a good way to lay out your repository:
    /projectB/trunk/
    /projectB/branches/
    /projectB/tags/
+@end example
 
 Each time /projectA/trunk reaches a taggable state, make a copy of the
 directory somewhere in /projectA/tags/, and set the copy to
 read-only.  Use the same procedure to create a branch in
 /projectA/branches/.  
+
+
+@node Real docs
+@section Real docs
+
+Better, more detailed documentation exists than this paper.  Go to the
+Subversion website (@url{http://subversion.tigris.org}) and look in the
+"docs" section.  (Or look in the 'doc/' directory of the Subversion
+source tree.)
+
+Specifically, a user manual is in progress, and a design specification
+exists for programmers.
+
