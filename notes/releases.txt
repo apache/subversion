@@ -45,6 +45,7 @@
 
 9. Update www/project_status.html on trunk.  Commit.
 
-10. Post news item, send announcement to dev and announce lists.
+10. Post news item <http://subversion.tigris.org/servlets/ProjectNewsAdd>,
+    and send an announcement to dev and announce lists.
 
 11. If necessary, post newest versions of docs to web sites.
