@@ -2,6 +2,7 @@ Version X.X.X (unreleased)
 
  User-visible changes:
  * 'svn diff' can now compare two arbitrary URLs (issue 674)
+ * 'svn diff' now displays property changes
 
  Developer-visible changes:
  * updates can deal with disjoint urls.

@@ -104,9 +104,11 @@ struct file_baton {
   const char *path;
 
   /* The path and APR file handle to the temporary file that contains the
-     first repository version */
+     first repository version.  Also, the pristine-property list of
+     this file. */
   svn_stringbuf_t *path_start_revision;
   apr_file_t *file_start_revision;
+  apr_hash_t *pristine_props;
 
   /* The path and APR file handle to the temporary file that contains the
      second repository version.  These fields are set when processing
@@ -256,7 +258,8 @@ get_file_from_ra (struct file_baton *b)
   SVN_ERR (b->edit_baton->ra_lib->get_file (b->edit_baton->ra_session,
                                             b->path,
                                             b->edit_baton->revision,
-                                            fstream, NULL, NULL));
+                                            fstream, NULL,
+                                            &(b->pristine_props)));
 
   status = apr_file_close (file);
   if (status)
@@ -588,7 +591,7 @@ close_file (void *file_baton)
     {
       SVN_ERR (eb->diff_callbacks->props_changed
                (b->path,
-                b->propchanges,
+                b->propchanges, b->pristine_props,
                 b->edit_baton->diff_cmd_baton));
     }
 
@@ -605,9 +608,12 @@ close_directory (void *dir_baton)
 
   if (b->propchanges->nelts > 0)
     {
+      /* ### HACK.  We have no way of finding the original proplist
+         that these property diffs are *against*.  We need an
+         RA->get_dir() or something!  */
       SVN_ERR (eb->diff_callbacks->props_changed
                (b->path,
-                b->propchanges,
+                b->propchanges, apr_hash_make(b->pool),
                 b->edit_baton->diff_cmd_baton));
     }
 

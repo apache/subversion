@@ -1373,18 +1373,20 @@ svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
   SVN_ERR (svn_wc__load_prop_file (prop_path->data, localprops, pool));
   SVN_ERR (svn_wc__load_prop_file (prop_base_path->data, baseprops, pool));
 
-  /* At this point, if either of the propfiles are non-existent, then
-     the corresponding hash is simply empty. */
-
-  SVN_ERR (svn_wc_get_local_propchanges (&local_propchanges,
-                                         localprops,
-                                         baseprops,
-                                         pool));
-
   if (original_props != NULL)
     *original_props = baseprops;
 
-  *propchanges = local_propchanges;
+  /* At this point, if either of the propfiles are non-existent, then
+     the corresponding hash is simply empty. */
+  
+  if (propchanges != NULL)
+    {
+      SVN_ERR (svn_wc_get_local_propchanges (&local_propchanges,
+                                             localprops,
+                                             baseprops,
+                                             pool));      
+      *propchanges = local_propchanges;
+    }
 
   return SVN_NO_ERROR;
 }

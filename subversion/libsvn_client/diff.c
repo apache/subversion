@@ -40,6 +40,51 @@
 
 /*-----------------------------------------------------------------*/
 
+/* Utilities */
+
+/* A helper func that writes out verbal descriptions of property diffs
+   to FILE.   Of course, the apr_file_t will probably be the 'outfile'
+   passed to svn_client_diff, which is probably stdout. */
+static svn_error_t *
+display_prop_diffs (const apr_array_header_t *propchanges,
+                    apr_hash_t *original_props,
+                    const char *path,
+                    apr_file_t *file,
+                    apr_pool_t *pool)
+{
+  int i;
+
+  apr_file_printf (file, "\nProperty changes on: %s\n", path);
+  apr_file_printf (file, 
+     "___________________________________________________________________\n");
+
+  for (i = 0; i < propchanges->nelts; i++)
+    {
+      const svn_prop_t *propchange
+        = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+
+      const svn_stringbuf_t *original_value =
+        apr_hash_get (original_props, propchange->name, APR_HASH_KEY_STRING);
+      
+      apr_file_printf (file, "Name: %s\n", propchange->name);
+
+      if (original_value != NULL)
+        apr_file_printf (file, "   - %s\n", original_value->data);
+
+      if (propchange->value != NULL)
+        apr_file_printf (file, "   + %s\n", propchange->value->data);
+    }
+
+  apr_file_printf (file, "\n");
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+/*-----------------------------------------------------------------*/
+
 /*** Callbacks for 'svn diff', invoked by the repos-diff editor. ***/
 
 
@@ -152,9 +197,24 @@ diff_dir_deleted (const char *path,
 static svn_error_t *
 diff_props_changed (const char *path,
                     const apr_array_header_t *propchanges,
+                    apr_hash_t *original_props,
                     void *diff_baton)
 {
-  /* ### todo:  send feedback to app. */
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  apr_array_header_t *entry_props, *wc_props, *regular_props;
+  apr_pool_t *subpool = svn_pool_create (diff_cmd_baton->pool);
+
+  SVN_ERR (svn_categorize_props (propchanges,
+                                 &entry_props, &wc_props, &regular_props,
+                                 subpool));
+
+  SVN_ERR (display_prop_diffs (regular_props,
+                               original_props,
+                               path,
+                               diff_cmd_baton->outfile,
+                               subpool));
+
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -389,6 +449,7 @@ merge_dir_deleted (const char *path,
 static svn_error_t *
 merge_props_changed (const char *path,
                      const apr_array_header_t *propchanges,
+                     apr_hash_t *original_props,
                      void *baton)
 {
   apr_array_header_t *entry_props, *wc_props, *regular_props;

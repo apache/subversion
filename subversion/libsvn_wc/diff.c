@@ -89,6 +89,11 @@ struct dir_baton {
      hierarchy to be compared. */
   struct dir_baton *dir_baton;
 
+  /* The original property hash, and the list of incoming propchanges. */
+  apr_hash_t *baseprops;
+  apr_array_header_t *propchanges;
+  svn_boolean_t fetched_baseprops; /* did we get the working props yet? */
+
   /* The overall crawler editor baton. */
   struct edit_baton *edit_baton;
 
@@ -113,6 +118,11 @@ struct file_baton {
     to ORIGINAL_FILE. */
   apr_file_t *original_file;
   apr_file_t *temp_file;
+
+  /* The original property hash, and the list of incoming propchanges. */
+  apr_hash_t *baseprops;
+  apr_array_header_t *propchanges;
+  svn_boolean_t fetched_baseprops; /* did we get the working props yet? */
 
   /* APPLY_HANDLER/APPLY_BATON represent the delta applcation baton. */
   svn_txdelta_window_handler_t apply_handler;
@@ -176,6 +186,8 @@ make_dir_baton (const svn_stringbuf_t *name,
   dir_baton->edit_baton = edit_baton;
   dir_baton->added = added;
   dir_baton->pool = subpool;
+  dir_baton->baseprops = apr_hash_make (dir_baton->pool);
+  dir_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
   dir_baton->compared = apr_hash_make (dir_baton->pool);
 
@@ -215,6 +227,8 @@ make_file_baton (const svn_stringbuf_t *name,
   file_baton->edit_baton = parent_baton->edit_baton;
   file_baton->added = added;
   file_baton->pool = subpool;
+  file_baton->baseprops = apr_hash_make (file_baton->pool);
+  file_baton->propchanges  = apr_array_make (subpool, 1, sizeof (svn_prop_t));
 
   /* The path is allocated in the directory's pool since it will be put
      into the directory's list of already diff'd entries, and must continue
@@ -303,6 +317,21 @@ file_diff (struct dir_baton *dir_baton,
                 empty_file->data,
                 path->data,
                 dir_baton->edit_baton->diff_cmd_baton));
+
+      SVN_ERR (svn_wc_props_modified_p (&modified, path, dir_baton->pool));
+      if (modified)
+        {
+          apr_array_header_t *propchanges;
+          apr_hash_t *baseprops;
+
+          SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path->data,
+                                          dir_baton->pool));
+
+          SVN_ERR (dir_baton->edit_baton->diff_callbacks->props_changed
+                   (path->data,
+                    propchanges, baseprops,
+                    dir_baton->edit_baton->diff_cmd_baton));
+        }
       break;
 
     default:
@@ -337,6 +366,21 @@ file_diff (struct dir_baton *dir_baton,
           if (err)
             return err;
         }
+
+      SVN_ERR (svn_wc_props_modified_p (&modified, path, dir_baton->pool));
+      if (modified)
+        {
+          apr_array_header_t *propchanges;
+          apr_hash_t *baseprops;
+
+          SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path->data,
+                                          dir_baton->pool));
+
+          SVN_ERR (dir_baton->edit_baton->diff_callbacks->props_changed
+                   (path->data,
+                    propchanges, baseprops,
+                    dir_baton->edit_baton->diff_cmd_baton));
+        }
     }
 
   return SVN_NO_ERROR;
@@ -357,6 +401,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_boolean_t in_anchor_not_target;
+  svn_boolean_t modified;
 
   /* This directory should have been been unchanged or replaced, not added,
      since an added directory can only contain added files and these will
@@ -389,7 +434,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
       apr_hash_this (hi, &key, NULL, &val);
       name = key;
       entry = val;
-
+      
       /* Skip entry for the directory itself. */
       if (strcmp (key, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
@@ -424,6 +469,23 @@ directory_elements_diff (struct dir_baton *dir_baton,
                  deleted. We need to show deletion diffs for these
                  files. If it was a file we need to show a deletion diff
                  for that file. */
+            }
+
+            /* Check for property mods on this directory. */
+          SVN_ERR (svn_wc_props_modified_p (&modified, path,
+                                            dir_baton->pool));
+          if (modified)
+            {
+              apr_array_header_t *propchanges;
+              apr_hash_t *baseprops;
+
+              SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops,
+                                              path->data, dir_baton->pool));
+              
+              SVN_ERR (dir_baton->edit_baton->diff_callbacks->props_changed
+                       (path->data,
+                        propchanges, baseprops,
+                        dir_baton->edit_baton->diff_cmd_baton));
             }
 
           /* Check the subdir if in the anchor (the subdir is the target), or
@@ -776,6 +838,13 @@ close_file (void *file_baton)
 
       if (err1 || err2)
         return err1 ? err1 : err2;
+      
+      if (b->propchanges->nelts > 0)
+        SVN_ERR (b->edit_baton->diff_callbacks->props_changed
+                 (b->path->data,
+                  b->propchanges,
+                  b->baseprops,
+                  b->edit_baton->diff_cmd_baton));
     }
 
   /* Add this file to the parent directory's list of elements that have
@@ -787,6 +856,69 @@ close_file (void *file_baton)
 
   return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *
+change_file_prop (void *file_baton,
+                  svn_stringbuf_t *name,
+                  svn_stringbuf_t *value)
+{
+  struct file_baton *b = file_baton;
+  svn_prop_t *propchange;
+
+  propchange = apr_array_push (b->propchanges);
+  propchange->name = apr_pstrdup (b->pool, name->data);
+  propchange->value = value ? svn_string_create (value->data, b->pool) : NULL;
+  
+  /* Read the baseprops if you haven't already. */
+  if (! b->fetched_baseprops)
+    {
+      /* the 'base' props to compare against, in this case, are
+         actually the working props.  that's what we do with texts,
+         anyway, in the 'svn diff -rN foo' case.  */
+
+      /* also notice we're ignoring error here;  there's a chance that
+         this path might not exist in the working copy, in which case
+         the baseprops remains an empty hash. */
+      svn_wc_prop_list (&(b->baseprops), b->path->data, b->pool);
+      b->fetched_baseprops = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* An svn_delta_edit_fns_t editor function.
+ */
+static svn_error_t *
+change_dir_prop (void *dir_baton,
+                 svn_stringbuf_t *name,
+                 svn_stringbuf_t *value)
+{
+  struct dir_baton *db = dir_baton;
+  svn_prop_t *propchange;
+
+  propchange = apr_array_push (db->propchanges);
+  propchange->name = apr_pstrdup (db->pool, name->data);
+  propchange->value = value ? svn_string_create(value->data, db->pool) : NULL;
+
+  /* Read the baseprops if you haven't already. */
+  if (! db->fetched_baseprops)
+    {
+      /* the 'base' props to compare against, in this case, are
+         actually the working props.  that's what we do with texts,
+         anyway, in the 'svn diff -rN foo' case.  */
+
+      /* also notice we're ignoring error here;  there's a chance that
+         this path might not exist in the working copy, in which case
+         the baseprops remains an empty hash. */
+      svn_wc_prop_list (&(db->baseprops), db->path->data, db->pool);
+      db->fetched_baseprops = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* An svn_delta_edit_fns_t editor function.
  */
@@ -844,6 +976,8 @@ svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
   tree_editor->add_file = add_file;
   tree_editor->open_file = open_file;
   tree_editor->apply_textdelta = apply_textdelta;
+  tree_editor->change_file_prop = change_file_prop;
+  tree_editor->change_dir_prop = change_dir_prop;
   tree_editor->close_file = close_file;
   tree_editor->close_edit = close_edit;
 
