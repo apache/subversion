@@ -16,7 +16,7 @@ LIB_DEPENDS=	db4:${PORTSDIR}/databases/db4 \
 		expat.2:${PORTSDIR}/textproc/expat2 \
 		apr:${PORTSDIR}/devel/apr-devel
 RUN_DEPENDS=	gdiff3:${PORTSDIR}/textproc/diffutils
-BUILD_DEPENDS=	gdiff3:${PORTSDIR}/textproc/diffutils \
+BUILD_DEPENDS=	gdiff3:${PORTSDIR}/textproc/diffutils
 
 MAN1=		svn.1
 
