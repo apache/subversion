@@ -77,15 +77,6 @@ section for approved changes.)
       Votes:
        +0: ghudson
 
-    * r8390
-      Make 'svn merge' notice ancestry by default.
-      Justification:  ignoring copies can produce garbage local mods,
-                      and you might never notice.
-      Notes:  see huge list discussion about this change:
-              http://www.contactor.se/~dast/svn/archive-2004-01/0481.shtml
-      Votes:
-       +1: sussman, epg
-
     * r8394
       Add capability to build Subversion Perl bindings RPM.
       Justification: Additional capability.
@@ -170,6 +161,16 @@ the section for unapproved changes.)
       Justification: obvious run-time bug, trivial fix
       Votes:
        +1: philip, ghudson, jszakmeister
+
+
+    * r8390
+      Make 'svn merge' notice ancestry by default.
+      Justification:  ignoring copies can produce garbage local mods,
+                      and you might never notice.
+      Notes:  see huge list discussion about this change:
+              http://www.contactor.se/~dast/svn/archive-2004-01/0481.shtml
+      Votes:
+       +1: sussman, epg, cmpilato
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
