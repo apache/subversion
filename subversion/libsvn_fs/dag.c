@@ -238,6 +238,18 @@ set_node_revision (dag_node_t *node,
 
 
 svn_error_t *
+svn_fs__dag_check_mutable (svn_boolean_t *is_mutable, 
+                           dag_node_t *node, 
+                           trail_t *trail)
+{
+  skel_t *node_rev;
+  SVN_ERR (get_node_revision (&node_rev, node, trail));
+  *is_mutable = has_mutable_flag (node_rev);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs__dag_get_node (dag_node_t **node,
                       svn_fs_t *fs,
                       svn_fs_id_t *id,
@@ -350,20 +362,6 @@ const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node)
 svn_fs_t *svn_fs__dag_get_fs (dag_node_t *node)
 {
   return node->fs;
-}
-
-
-
-
-svn_error_t *
-svn_fs__dag_check_mutable (svn_boolean_t *is_mutable, 
-                           dag_node_t *node, 
-                           trail_t *trail)
-{
-  skel_t *node_rev;
-  SVN_ERR (get_node_revision (&node_rev, node, trail));
-  *is_mutable = has_mutable_flag (node_rev);
-  return SVN_NO_ERROR;
 }
 
 
@@ -1984,6 +1982,140 @@ svn_fs__dag_merge (const char **conflict_p,
         (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
          "conflict at \"%s\"", target_path);
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Committing ***/
+
+/* If NODE is mutable, make it immutable, as part of TRAIL.  Else do
+   nothing.  Callers beware: if NODE is a directory, this does _not_
+   check that all the directory's children are immutable.  */
+static svn_error_t *
+make_node_immutable (dag_node_t *node, trail_t *trail)
+{
+  skel_t *node_rev;
+  skel_t *header;
+  skel_t *flag, *prev;
+
+  /* Go get a fresh NODE-REVISION for this node. */
+  SVN_ERR (get_node_revision (&node_rev, node, trail));
+
+  /* This copy will be wasted if no mutable flag is found.
+     Nevertheless, we copy unconditionally, since most callers are
+     probably checking mutability themselves first anyway, and we
+     might as well only walk over the header once here. */
+  node_rev = svn_fs__copy_skel (node_rev, trail->pool);
+
+  /* The node HEADER is the first element of a node-revision skel,
+     itself a list. */
+  header = node_rev->children;
+  
+  /* The FLAG is the 3rd element of the header. */
+  for (flag = header->children->next->next, prev = NULL;
+       flag;
+       flag = flag->next)
+    {
+      if ((! flag->is_atom)
+          && svn_fs__matches_atom (flag->children, "mutable"))
+        {
+          /* We found it.  */
+          if (prev)
+            prev->next = flag->next;
+          else
+            header->children->next->next = 0;
+
+          SVN_ERR (set_node_revision (node, node_rev, trail));
+          return SVN_NO_ERROR;
+        }
+      prev = flag;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* If NODE is mutable, make it immutable (after recursively
+   stabilizing all of its children, if NODE is a directory), and call
+   svn_fs__stable_node(NODE).
+   If NODE is immutable, then do nothing.  */
+static svn_error_t *
+stabilize_node (dag_node_t *node, trail_t *trail)
+{
+  svn_boolean_t is_mutable;
+
+  SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
+
+  if (is_mutable)
+    {
+      if (svn_fs__dag_is_directory (node))
+        {
+          skel_t *entries;
+          skel_t *entry;
+          
+          SVN_ERR (svn_fs__dag_dir_entries_skel (&entries, node, trail));
+          
+          /* Each entry looks like (NAME ID).  */
+          for (entry = entries->children; entry; entry = entry->next)
+            {
+              dag_node_t *child;
+              skel_t *id_skel = entry->children->next;
+              svn_fs_id_t *id
+                = svn_fs_parse_id (id_skel->data, id_skel->len, trail->pool);
+              
+              SVN_ERR (svn_fs__dag_get_node (&child, node->fs, id, trail));
+              SVN_ERR (stabilize_node (child, trail));
+            }
+        }
+      else if (svn_fs__dag_is_file (node)
+               || svn_fs__dag_is_copy (node))
+        ;
+      else
+        abort ();
+      
+      SVN_ERR (make_node_immutable (node, trail));
+      SVN_ERR (svn_fs__stable_node (node->fs, node->id, trail));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
+                        svn_fs_t *fs,
+                        const char *svn_txn,
+                        trail_t *trail)
+{
+  dag_node_t *root;
+
+  SVN_ERR (svn_fs__dag_txn_root (&root, fs, svn_txn, trail));
+  SVN_ERR (stabilize_node (root, trail));
+
+  {
+    /* Add rew revision entry to `revisions' table.  */
+    skel_t *new_revision_skel;
+    svn_string_t *id_string = svn_fs_unparse_id (root->id, trail->pool);
+
+    new_revision_skel = svn_fs__make_empty_list (trail->pool);
+    svn_fs__prepend (svn_fs__make_empty_list (trail->pool),
+                     new_revision_skel);
+    svn_fs__prepend (svn_fs__mem_atom (id_string->data,
+                                       id_string->len, trail->pool),
+                     new_revision_skel);
+    svn_fs__prepend (svn_fs__str_atom ((char *) "revision", trail->pool),
+                     new_revision_skel);
+
+    /* ### kff todo: later, when we have properties on txns, get the
+       log msg property and store it in the revision skel. */
+
+    SVN_ERR (svn_fs__put_rev (new_rev, fs, new_revision_skel, trail));
+  }
+
+  /* Delete transaction from `transactions' table.  */
+  SVN_ERR (svn_fs__delete_txn (fs, svn_txn, trail));
 
   return SVN_NO_ERROR;
 }

@@ -355,10 +355,15 @@ close_edit (void *edit_baton)
   struct edit_baton *eb = edit_baton;
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
   svn_error_t *err;
+  const char *conflict;
 
-  err = svn_fs_commit_txn (&new_revision, eb->txn);
+  err = svn_fs_commit_txn (&conflict, &new_revision, eb->txn);
+
   if (err)
     {
+      /* ### todo: we should check whether it really was a conflict,
+         and return the conflict info if so? */
+
       /* If the commit failed, it's *probably* due to an out-of-date
          conflict.  Now, the filesystem gives us the ability to
          continue diddling the transaction and try again; but let's

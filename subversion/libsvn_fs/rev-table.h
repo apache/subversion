@@ -63,6 +63,14 @@ svn_error_t *svn_fs__rev_get_root (svn_fs_id_t **root_id_p,
                                    trail_t *trail);
 
 
+/* Set *YOUNGEST_P to the youngest revision in filesystem FS,
+   as part of TRAIL.  Use TRAIL->pool for all temporary allocation. */
+svn_error_t *svn_fs__youngest_rev (svn_revnum_t *youngest_p,
+                                   svn_fs_t *fs,
+                                   trail_t *trail);
+
+
+
 #endif /* SVN_LIBSVN_FS_REV_TABLE_H */
 
 

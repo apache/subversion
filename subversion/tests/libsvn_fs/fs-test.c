@@ -1724,6 +1724,7 @@ fetch_youngest_rev (const char **msg)
   svn_fs_root_t *txn_root;
   svn_revnum_t new_rev;
   svn_revnum_t youngest_rev, new_youngest_rev;
+  const char *conflict;
 
   *msg = "fetch the youngest revision from a filesystem";
 
@@ -1741,7 +1742,7 @@ fetch_youngest_rev (const char **msg)
   SVN_ERR (greek_tree_under_root (txn_root));
 
   /* Commit it. */
-  SVN_ERR (svn_fs_commit_txn (&new_rev, txn));
+  SVN_ERR (svn_fs_commit_txn (&conflict, &new_rev, txn));
 
   SVN_ERR (svn_fs_youngest_rev (&new_youngest_rev, fs, pool));
 
@@ -1767,30 +1768,46 @@ commit_transaction (const char **msg)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  svn_fs_root_t *revision_root;
-  svn_revnum_t new_rev;
+  svn_fs_root_t *txn_root, *revision_root;
+  svn_revnum_t before_rev, after_rev;
+  const char *conflict;
 
-  *msg = "committing (INCOMPLETE TEST)";
+  *msg = "committing";
+
+  /* Prepare a filesystem. */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-commit-txn"));
+
+  /* Save the current youngest revision. */
+  SVN_ERR (svn_fs_youngest_rev (&before_rev, fs, pool));
 
   /* Prepare a txn to receive the greek tree. */
-  SVN_ERR (create_fs_and_repos (&fs, "test-repo-commit-txn"));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+
+  /* Paranoidly check that the current youngest rev is unchanged. */
+  SVN_ERR (svn_fs_youngest_rev (&after_rev, fs, pool));
+  if (after_rev != before_rev)
+    return svn_error_create
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "youngest revision changed unexpectedly");
 
   /* Create the greek tree. */
   SVN_ERR (greek_tree_under_root (txn_root));
 
   /* Commit it. */
-  SVN_ERR (svn_fs_commit_txn (&new_rev, txn));
+  SVN_ERR (svn_fs_commit_txn (&conflict, &after_rev, txn));
 
-#if 0
+  /* Make sure it's a different revision than before. */
+  if (after_rev == before_rev)
+    return svn_error_create
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "youngest revision failed to change");
+
   /* Get root of the revision */
-  SVN_ERR (svn_fs_revision_root (&revision_root, fs, new_rev, pool));
+  SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool));
 
   /* Check the tree. */
   SVN_ERR (check_greek_tree_under_root (revision_root));
-#endif /* 0 */
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
