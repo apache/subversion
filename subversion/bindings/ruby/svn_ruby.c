@@ -15,12 +15,12 @@
 #include <ruby.h>
 
 #include "svn_ruby.h"
-void Init_Svn (void);
+void Init_svn (void);
 
 VALUE svn_ruby_mSvn;
 
 void
-Init_Svn (void)
+Init_svn (void)
 {
   svn_ruby_init_apr ();
 
