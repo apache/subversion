@@ -153,7 +153,7 @@ num_into_string (char *buf, int num, int base)
 
     i = (num % base);
 
-    /* Ascii numerology. */
+    /* Ascii numerology -- skip across the gap between digits and letters. */
     if (i > 9)
       i += ('A' - ('9' + 1));
 
