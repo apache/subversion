@@ -9,13 +9,20 @@
 #   If REPOS-PATH is not specified then the default is "branches/VERSION".
 #   For example, the command line:
 #
-#      ./dist.sh 0.24.2 6284
+#      ./dist.sh -v 0.24.2 -r 6284
 #
 #   from the top-level of a branches/0.24.2 working copy will create
 #   the 0.24.2 release tarball. Make sure you have apr, apr-util,
 #   and neon subdirectories and that the working copy is configured
 #   before running this script in the top-level directory.
 #
+
+# A quick and dirty usage message
+USAGE="USAGE: ./dist.sh -v VERSION -r REVISION \
+[-rs REVISION-SVN ] [-pr REPOS-PATH]
+ EXAMPLES: ./dist.sh -v 0.36.0 -r 8278
+           ./dist.sh -v 0.36.0 -r 8278 -pr trunk
+           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0"
 
 # Let's check and set all the arguments
 ARG_PREV=""
@@ -41,8 +48,7 @@ do
         ARG_PREV=$ARG
         ;;
       *)
-        echo -n " USAGE: ./dist.sh -v VERSION -r REVISION"
-        echo    " [-rs REVISION-SVN ] [-pr REPOS-PATH]"
+        echo " $USAGE"
         exit 1
         ;;
     esac
@@ -54,8 +60,7 @@ if [ -z "$REVISION_SVN" ]; then
 fi
 
 if [ -z "$VERSION" ] || [ -z "$REVISION" ] ; then
-  echo -n " USAGE: ./dist.sh -v VERSION -r REVISION"
-  echo    " [-rs REVISION-SVN ] [-pr REPOS-PATH]"
+  echo " $USAGE"
   exit 1
 fi
 
@@ -88,8 +93,8 @@ echo "Distribution will be named: $DISTNAME"
 echo "  relase branch's revision: $REVISION"
 echo "     executable's revision: $REVISION_SVN"
 echo "     constructed from path: /$REPOS_PATH"
-echo "Building new design docs in docs/ ..."
 
+echo "Building new design docs in docs/ ..."
 make doc-design
 
 rm -rf "$DIST_SANDBOX"
@@ -166,13 +171,19 @@ rm -f "$vsn_file.unq"
 
 echo "Rolling $DISTNAME.tar.gz ..."
 (cd "$DIST_SANDBOX" && tar zcpf "$DISTNAME.tar.gz" "$DISTNAME")
+#Note: Don't use tar cpjf for bzip2, not every tar supports it
+echo "Rolling $DISTNAME.tar.bz2 ..."
+(cd "$DIST_SANDBOX" && tar cp --bzip2 -f "$DISTNAME.tar.bz2" "$DISTNAME")
 
-echo "Copying tarball out, removing sandbox..."
+echo "Copying tarballs out, removing sandbox..."
 cp "$DISTPATH.tar.gz" .
+cp "$DISTPATH.tar.bz2" .
+
 rm -rf "$DIST_SANDBOX"
 
 echo ""
 echo "Done:"
 ls -l "$DISTNAME.tar.gz"
+ls -l "$DISTNAME.tar.bz2"
 echo ""
 
