@@ -53,6 +53,8 @@ struct handle_external_item_change_baton
   svn_boolean_t update_unchanged;
   svn_boolean_t *timestamp_sleep;
 
+  /* A scratchwork pool -- do not put anything in here that needs to
+     outlive the hash diffing callback! */
   apr_pool_t *pool;
 };
 
@@ -383,6 +385,10 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
         }
     }
 
+  /* Clear IB->pool -- we only use it for scratchwork (and this will
+     close any RA sessions still open in this pool). */
+  svn_pool_clear (ib->pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -434,10 +440,14 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
   ib.ctx               = cb->ctx;
   ib.update_unchanged  = cb->update_unchanged;
   ib.timestamp_sleep   = cb->timestamp_sleep;
-  ib.pool              = cb->pool;
+  ib.pool              = svn_pool_create (cb->pool);
 
   SVN_ERR (svn_hash_diff (old_desc, new_desc,
                           handle_external_item_change, &ib, cb->pool));
+
+  /* Now destroy the subpool we pass to the hash differ.  This will
+     close any remaining RA sessions used by the hash diff callback. */
+  svn_pool_destroy (ib.pool);
 
   return SVN_NO_ERROR;
 }
@@ -499,6 +509,7 @@ svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
       void *val;
       const char *path;
       const char *propval;
+      apr_pool_t *iterpool;
 
       /* Clear the subpool. */
       svn_pool_clear (subpool);
@@ -512,6 +523,9 @@ svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
       SVN_ERR (svn_wc_parse_externals_description (&exts, path, 
                                                    propval, subpool));
 
+      /* Make a sub-pool of SUBPOOL. */
+      iterpool = svn_pool_create (subpool);
+
       /* Loop over the subdir hash. */
       for (hi2 = apr_hash_first (subpool, exts); 
            hi2; 
@@ -522,13 +536,15 @@ svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
           svn_wc_external_item_t *external;
           svn_node_kind_t kind;
 
+          svn_pool_clear (iterpool);
+
           apr_hash_this (hi2, &key, NULL, &val);
           external = val;
-          fullpath = svn_path_join (path, key, subpool);
+          fullpath = svn_path_join (path, key, iterpool);
 
           /* If the external target directory doesn't exist on disk,
              just skip it. */
-          SVN_ERR (svn_io_check_path (fullpath, &kind, subpool));
+          SVN_ERR (svn_io_check_path (fullpath, &kind, iterpool));
           if (kind != svn_node_dir)
             continue;
 
@@ -548,10 +564,12 @@ svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
                                       &(external->revision),
                                       status_func, status_baton, 
                                       TRUE, get_all, update, no_ignore, 
-                                      ctx, pool));
+                                      ctx, iterpool));
         }
     } 
   
+  /* Destroy SUBPOOL and (implicitly) ITERPOOL. */
   apr_pool_destroy (subpool);
+
   return SVN_NO_ERROR;
 }
