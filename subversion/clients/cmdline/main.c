@@ -68,13 +68,14 @@ const apr_getopt_option_t svn_cl__options[] =
     {"recursive",     'R', 0, "descend recursively"},
     {"non-recursive", 'N', 0, "operate on single directory only"},
     {"revision",      'r', 1,
-                  "revision X or X:Y range.  X or Y can be one of:\n"
-     "                             NUMBER       revision number\n"
-     "                             \"{\" DATE \"}\" revision at start of the date\n"
-     "                             \"HEAD\"       latest in repository\n"
-     "                             \"BASE\"       base revision of item's working copy\n"
-     "                             \"COMMITTED\"  last commit at or before BASE\n"
-     "                             \"PREV\"       revision just before COMMITTED"
+                  "ARG (some commands also take ARG1:ARG2 range)\n"
+     "                             A revision argument can be one of:\n"
+     "                                NUMBER       revision number\n"
+     "                                \"{\" DATE \"}\" revision at start of the date\n"
+     "                                \"HEAD\"       latest in repository\n"
+     "                                \"BASE\"       base rev of item's working copy\n"
+     "                                \"COMMITTED\"  last commit at or before BASE\n"
+     "                                \"PREV\"       revision just before COMMITTED"
      /* spacing corresponds to svn_opt_format_option */
     },
     {"file",          'F', 1, "read data from file ARG"},

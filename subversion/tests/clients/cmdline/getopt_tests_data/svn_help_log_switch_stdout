@@ -23,13 +23,14 @@ usage: 1. log [PATH]
     svn log http://www.example.com/repo/project foo.c bar.c
 
 Valid options:
-  -r [--revision] arg      : revision X or X:Y range.  X or Y can be one of:
-                             NUMBER       revision number
-                             "{" DATE "}" revision at start of the date
-                             "HEAD"       latest in repository
-                             "BASE"       base revision of item's working copy
-                             "COMMITTED"  last commit at or before BASE
-                             "PREV"       revision just before COMMITTED
+  -r [--revision] arg      : ARG (some commands also take ARG1:ARG2 range)
+                             A revision argument can be one of:
+                                NUMBER       revision number
+                                "{" DATE "}" revision at start of the date
+                                "HEAD"       latest in repository
+                                "BASE"       base rev of item's working copy
+                                "COMMITTED"  last commit at or before BASE
+                                "PREV"       revision just before COMMITTED
   -q [--quiet]             : print as little as possible
   -v [--verbose]           : print extra information
   --targets arg            : pass contents of file ARG as additional args
@@ -53,13 +54,14 @@ usage: 1. switch URL [PATH]
   2. Reconnect the working copy when the repository URL has changed.
 
 Valid options:
-  -r [--revision] arg      : revision X or X:Y range.  X or Y can be one of:
-                             NUMBER       revision number
-                             "{" DATE "}" revision at start of the date
-                             "HEAD"       latest in repository
-                             "BASE"       base revision of item's working copy
-                             "COMMITTED"  last commit at or before BASE
-                             "PREV"       revision just before COMMITTED
+  -r [--revision] arg      : ARG (some commands also take ARG1:ARG2 range)
+                             A revision argument can be one of:
+                                NUMBER       revision number
+                                "{" DATE "}" revision at start of the date
+                                "HEAD"       latest in repository
+                                "BASE"       base rev of item's working copy
+                                "COMMITTED"  last commit at or before BASE
+                                "PREV"       revision just before COMMITTED
   -N [--non-recursive]     : operate on single directory only
   -q [--quiet]             : print as little as possible
   --diff3-cmd arg          : use ARG as merge command
