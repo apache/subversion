@@ -97,39 +97,6 @@ get_creds (const char **username,
 }
 
 
-
-/*** Simple Auth (username/password) Provider ***/
-
-static svn_error_t *
-simple_first_creds (void **credentials,
-                    void **iter_baton,
-                    void *provider_baton,
-                    apr_hash_t *parameters,
-                    apr_pool_t *pool)
-{
-  provider_baton_t *pb = provider_baton;
-  const char *username, *password;
-  svn_boolean_t got_creds;
-
-  SVN_ERR (get_creds (&username, &password, &got_creds, pb, parameters, pool));
-
-  if (got_creds)
-    {
-      svn_auth_cred_simple_t *creds = apr_pcalloc (pool, sizeof(*creds));
-      creds->username = username;
-      creds->password = password;
-      *credentials = creds;
-    }
-  else
-    {
-      *credentials = NULL;
-    }
-
-  *iter_baton = NULL;
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 save_creds (svn_boolean_t *saved,
             const char *base_dir,
@@ -185,6 +152,39 @@ save_creds (svn_boolean_t *saved,
   if (! base_access)
     SVN_ERR (svn_wc_adm_close (adm_access));
   
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Simple Auth (username/password) Provider ***/
+
+static svn_error_t *
+simple_first_creds (void **credentials,
+                    void **iter_baton,
+                    void *provider_baton,
+                    apr_hash_t *parameters,
+                    apr_pool_t *pool)
+{
+  provider_baton_t *pb = provider_baton;
+  const char *username, *password;
+  svn_boolean_t got_creds;
+
+  SVN_ERR (get_creds (&username, &password, &got_creds, pb, parameters, pool));
+
+  if (got_creds)
+    {
+      svn_auth_cred_simple_t *creds = apr_pcalloc (pool, sizeof(*creds));
+      creds->username = username;
+      creds->password = password;
+      *credentials = creds;
+    }
+  else
+    {
+      *credentials = NULL;
+    }
+
+  *iter_baton = NULL;
   return SVN_NO_ERROR;
 }
 
