@@ -25,6 +25,11 @@
 #include "config_impl.h"
 #include "svn_io.h"
 #include "svn_types.h"
+#include "svn_path.h"
+
+#ifdef SVN_WIN32
+#include <shlobj.h>
+#endif /* SVN_WIN32 */
 
 
 /* File parsing context */
@@ -255,20 +260,27 @@ svn_config__sys_config_path (const char **path_p,
                              const char *fname,
                              apr_pool_t *pool)
 {
-#ifdef SVN_WIN32
+  /* ### This never actually returns error in practice.  Perhaps the
+     prototype should change? */
 
-  /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=579
-     for more on how this will be done. */
   *path_p = NULL;
+
+  /* Note that even if fname is null, svn_path_join_many will DTRT. */
+
+#ifdef SVN_WIN32
+ {
+   char folder[MAX_PATH] = { };
+   
+   SHGetFolderPath (NULL, CSIDL_COMMON_APPDATA, NULL, SHGFP_TYPE_CURRENT,
+                    (LPTSTR) folder);
+   
+   *path_p = svn_path_join_many (pool, folder,
+                                 SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+ }
 
 #else  /* ! SVN_WIN32 */
 
-  /* No reason to use svn's path lib here; we know what the separator
-     is in this case. */
-  if (fname)
-    *path_p = apr_psprintf (pool, "%s/%s", SVN_CONFIG__SYS_DIRECTORY, fname);
-  else
-    *path_p = SVN_CONFIG__SYS_DIRECTORY;
+ *path_p = svn_path_join_many (pool, SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
 
 #endif /* SVN_WIN32 */
 
@@ -281,46 +293,53 @@ svn_config__user_config_path (const char **path_p,
                               const char *fname,
                               apr_pool_t *pool)
 {
-  apr_status_t apr_err;
-  apr_uid_t uid;
-  apr_gid_t gid;
-  char *username;
-  char *homedir;
-  
-  /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=579
-     for details on how to make this function meaningful under Win32.
-     Most likely strategy is to divide it into Win32 and non-Win32
-     sections, as with svn_config__user_config_path() above. */
+  /* ### This never actually returns error in practice.  Perhaps the
+     prototype should change? */
 
-  /* This code requires APR_HAS_USER to be defined.  Does anyone not
-     define it?  Apparently even Win32 does, though functions about
-     users may or may not return useful results there. */
-  
   *path_p = NULL;
   
-  apr_err = apr_current_userid (&uid, &gid, pool);
-  if (apr_err)
-    return SVN_NO_ERROR;
-  
-  apr_err = apr_get_username (&username, uid, pool);
-  if (apr_err)
-    return SVN_NO_ERROR;
-  
-  apr_err = apr_get_home_directory (&homedir, username, pool);
-  if (apr_err)
-    return SVN_NO_ERROR;
-  
-  /* ### Any compelling reason to use svn's path lib here? */
-  if (fname)
-    {
-      *path_p = apr_psprintf
-        (pool, "%s/%s/%s", homedir, SVN_CONFIG__USR_DIRECTORY, fname);
-    }
-  else
-    {
-      *path_p = apr_psprintf
-        (pool, "%s/%s", homedir, SVN_CONFIG__USR_DIRECTORY);
-    }
+  /* Note that even if fname is null, svn_path_join_many will DTRT. */
+
+#ifdef SVN_WIN32
+  {
+    char sp_folder[MAX_PATH] = { };
+    
+    /* Or we could do:
+       SHGetSpecialFolderPath (NULL, (LPTSTR) sp_folder, CSIDL_APPDATA, TRUE);
+    */
+    SHGetFolderPath (NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT,
+                     (LPTSTR) sp_folder);
+
+    if (*sp_folder)
+      *path_p = svn_path_join_many (pool, sp_folder,
+                                    SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+  }
+
+#else  /* ! SVN_WIN32 */
+  {
+    apr_status_t apr_err;
+    apr_uid_t uid;
+    apr_gid_t gid;
+    char *username;
+    char *homedir;
+
+    apr_err = apr_current_userid (&uid, &gid, pool);
+    if (apr_err)
+      return SVN_NO_ERROR;
+    
+    apr_err = apr_get_username (&username, uid, pool);
+    if (apr_err)
+      return SVN_NO_ERROR;
+    
+    apr_err = apr_get_home_directory (&homedir, username, pool);
+    if (apr_err)
+      return SVN_NO_ERROR;
+    
+    *path_p = svn_path_join_many (pool, homedir,
+                                  SVN_CONFIG__USR_DIRECTORY, fname, NULL);
+    
+  }
+#endif /* SVN_WIN32 */
 
   return SVN_NO_ERROR;
 }
@@ -451,7 +470,7 @@ svn_config_ensure (apr_pool_t *pool)
   apr_status_t apr_err;
   svn_error_t *err;
 
-  /* Ensure that the config directory exists.  */
+  /* Ensure that the user-specific config directory exists.  */
   SVN_ERR (svn_config__user_config_path (&path, NULL, pool));
 
   if (! path)

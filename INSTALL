@@ -555,6 +555,11 @@ II.   INSTALLATION
 
           See Section I.11 for more details.
 
+      If you are installing under Win9x, NT4, or WinME, and svn.exe
+      doesn't run, try installing shfolder.dll from here:
+
+      http://download.microsoft.com/download/platformsdk/Redist/5.50.4027.300/W9XNT4/EN-US/shfinst.EXE
+
       If you want to build the (local) server components, you'll also
       need a copy of Berkeley DB, version 4.0.14 or newer.  Details are
       in Section I.6. For your convenience, there is also a binary
@@ -592,7 +597,6 @@ II.   INSTALLATION
 
       [NOTE: There have been rumours that Subversion on Win32 can be built
           using the latest cygwin. ymmv.]
-
 
 
 III.  BUILDING A SUBVERSION SERVER
