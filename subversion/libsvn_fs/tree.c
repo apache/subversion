@@ -316,7 +316,7 @@ svn_fs_revision_root_revision (svn_fs_root_t *root)
   if (root->kind == revision_root)
     return root->rev;
   else
-    return -1;
+    return SVN_INVALID_REVNUM;
 }
 
 
