@@ -7,6 +7,7 @@
 %define make_ra_local_check 1
 %define make_ra_svn_check 1
 %define make_ra_dav_check 1
+%define make_cvs2svn_check 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -96,6 +97,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Jul 19 2003 David Summers <david@summersoft.fay.ar.us> 0.25.0-6515
+- Added cvs2svn regression tests.
+
 * Sat Jul 19 2003 David Summers <david@summersoft.fay.ar.us> 0.25.0-6514
 - PORTING file no longer exists.
 - Thanks to Ralph Loader <suckfish@ihug.co.nz> for the following changes:
@@ -352,6 +356,14 @@ sleep 1
 make check BASE_URL='http://localhost:15835'
 killall httpd
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
+%endif
+
+%if %{make_cvs2svn_check}
+(
+echo "*** Running regression tests on cvs2svn ***"
+cd tools/cvs2svn
+./run-tests.py
+)
 %endif
 
 %install
