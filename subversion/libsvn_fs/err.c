@@ -90,14 +90,6 @@ corrupt_id (const char *fmt, const svn_fs_id_t *id, svn_fs_t *fs)
 }
 
 
-static svn_error_t *
-corrupt_rev (const char *fmt, svn_revnum_t rev, svn_fs_t *fs)
-{
-  return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-                            fmt, (unsigned long) rev, fs->path);
-}
-
-
 svn_error_t *
 svn_fs__err_corrupt_node_revision (svn_fs_t *fs, const svn_fs_id_t *id)
 {
@@ -110,9 +102,10 @@ svn_fs__err_corrupt_node_revision (svn_fs_t *fs, const svn_fs_id_t *id)
 svn_error_t *
 svn_fs__err_corrupt_fs_revision (svn_fs_t *fs, svn_revnum_t rev)
 {
-  return
-    corrupt_rev ("corrupt filesystem revision `%lu' in filesystem `%s'",
-                 rev, fs);
+  return svn_error_createf
+    (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+     "corrupt filesystem revision `%lu' in filesystem `%s'",
+     (unsigned long) rev, fs->path);
 }
 
 
@@ -154,9 +147,10 @@ svn_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
 svn_error_t *
 svn_fs__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev)
 {
-  return
-    corrupt_rev ("reference to non-existent revision `%lu' in filesystem `%s'",
-                 rev, fs);
+  return svn_error_createf
+    (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0, fs->pool,
+     "reference to non-existent revision `%lu' in filesystem `%s'",
+     (unsigned long) rev, fs->path);
 }
 
 
