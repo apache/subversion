@@ -132,6 +132,8 @@ typedef struct {
 
   vsn_url_helper vuh;
 
+  svn_error_t *err;
+
 } report_baton_t;
 
 #ifdef SVN_DEBUG
@@ -959,8 +961,9 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
   return 0;
 
  error:
-  /* ### log the error */
-  /* ### return a better value than this */
+  rb->err = err;
+
+  /* stop the parsing */
   return 1;
 }
 
@@ -1033,8 +1036,9 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
   return 0;
 
  error:
-  /* ### log the error */
-  /* ### return a better value than this */
+  rb->err = err;
+
+  /* stop the parsing */
   return 1;
 }
 
@@ -1104,6 +1108,8 @@ static svn_error_t * reporter_finish_report(void *report_baton)
 
   if (err != NULL)
     return err;
+  if (rb->err != NULL)
+    return rb->err;
 
   /* we got the whole HTTP response thing done. now wrap up the update
      process with a close_edit call. */
