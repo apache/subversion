@@ -490,7 +490,6 @@ svn_txdelta_send_string (svn_stringbuf_t *string,
 {
   svn_txdelta_window_t window = { 0 };
   svn_txdelta_op_t op;
-  svn_error_t *err;
 
   /* Build a single `new' op */
   op.action_code = svn_txdelta_new;

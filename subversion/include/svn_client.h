@@ -208,6 +208,36 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    apr_pool_t *pool);
 
 
+
+/* Perform an update of PATH (part of a working copy), providing pre-
+   and post-checkout hook editors and batons (BEFORE_EDITOR,
+   BEFORE_EDIT_BATON / AFTER_EDITOR, AFTER_EDIT_BATON).  These editors
+   are purely optional and exist only for extensibility; pass four
+   NULLs here if you don't need them.
+
+   SWITCH_URL is the new URL that the working copy will be 'switched' to.
+
+   An invalid REVISION will cause the PATH to be updated to the
+   "latest" revision of SWITCH_URL, while a valid REVISION will update
+   to a specific revision of SWITCH_URL.  Alternatively, a time TM can
+   be used to implicitly select a revision.  TM cannot be used at the
+   same time as REVISION.
+
+   This operation will use the provided memory POOL. */
+svn_error_t *
+svn_client_switch (const svn_delta_edit_fns_t *before_editor,
+                   void *before_edit_baton,
+                   const svn_delta_edit_fns_t *after_editor,
+                   void *after_edit_baton,
+                   svn_client_auth_baton_t *auth_baton,
+                   svn_stringbuf_t *path,
+                   svn_stringbuf_t *switch_url,
+                   svn_revnum_t revision,
+                   apr_time_t tm,
+                   svn_boolean_t recurse,
+                   apr_pool_t *pool);
+
+
 /* Schedule a working copy PATH for addition to the repository.
    PATH's parent must be under revision control already, but PATH is
    not.  If RECURSIVE is set, then assuming PATH is a directory, all

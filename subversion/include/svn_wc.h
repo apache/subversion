@@ -667,6 +667,29 @@ svn_error_t *svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
                                          apr_pool_t *pool);
 
 
+/* Another variant of svn_wc_get_update_editor(): 
+ *
+ * Set *EDITOR and *EDIT_BATON to an editor and baton for "switching"
+ * a working copy to a new SWITCH_URL.  (Right now, this URL must be
+ * within the same repository that the working copy already comes
+ * from.)
+ * 
+ * ANCHOR is the local path to the working copy which will be used as
+ * the root of our editor.  TARGET is the entry in ANCHOR that will
+ * actually be updated, or NULL if all of ANCHOR should be updated.
+ *
+ * TARGET_REVISION is the repository revision that results from this set
+ * of changes.
+ */
+svn_error_t *svn_wc_get_switch_editor (svn_stringbuf_t *anchor,
+                                       svn_stringbuf_t *target,
+                                       svn_revnum_t target_revision,
+                                       svn_stringbuf_t *switch_url,
+                                       svn_boolean_t recurse,
+                                       const svn_delta_edit_fns_t **editor,
+                                       void **edit_baton,
+                                       apr_pool_t *pool);
+
 
 /* A word about the implementation of working copy property storage:
  *
