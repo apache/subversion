@@ -1392,11 +1392,16 @@ typedef struct file_content_baton_t
   /* The FS from which we're reading. */
   svn_fs_t *fs;
 
-  /* The representation skel for the file's contents.  This is cached
-     for efficiency -- we don't fetch the rep via its key every time
-     we read.  So if the underlying rep changes, we're just going to
-     blunder along ignorantly.  This is permissible, though; see the
-     doc string for svn_fs_file_contents(). */
+  /* The representation skel for the file's contents.  If this is
+     null, the file has never had any contents, so all reads fetch 0
+     bytes.
+
+     We cache the entire rep skel, rather than the key, for
+     efficiency.  This way we don't have to fetch the rep from the db
+     every time we want to read a little bit more of the file.  So if
+     the underlying rep changes, we're just going to blunder along
+     ignorantly.  This is permissible, though; see the doc string for
+     svn_fs_file_contents().  */
   skel_t *rep;
   
   /* How many bytes have been read already. */
@@ -1423,13 +1428,17 @@ txn_body_read_file_contents (void *baton, trail_t *trail)
 {
   struct read_file_contents_args *args = baton;
 
-  SVN_ERR (svn_fs__rep_read_range (args->fb->fs,
-                                   args->fb->rep,
-                                   args->buf,
-                                   args->fb->offset,
-                                   args->len,
-                                   trail));
-  args->fb->offset += *(args->len);
+  if (args->fb->rep)
+    {
+      SVN_ERR (svn_fs__rep_read_range (args->fb->fs,
+                                       args->fb->rep,
+                                       args->buf,
+                                       args->fb->offset,
+                                       args->len,
+                                       trail));
+      args->fb->offset += *(args->len);
+    }
+  /* Else do nothing. */
 
   return SVN_NO_ERROR;
 }
@@ -1485,11 +1494,17 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
     const char *rep_key;
     skel_t *rep_skel;
     
-    rep_key = apr_pstrndup (trail->pool,
-                            node_rev->children->next->next->data,
-                            node_rev->children->next->next->len);
-    SVN_ERR (svn_fs__read_rep (&rep_skel, file->fs, rep_key, trail));
-    baton->rep = rep_skel;
+    if (node_rev->children->next->next->len != 0)
+      {
+        rep_key = apr_pstrndup (trail->pool,
+                                node_rev->children->next->next->data,
+                                node_rev->children->next->next->len);
+        
+        SVN_ERR (svn_fs__read_rep (&rep_skel, file->fs, rep_key, trail));
+        baton->rep = rep_skel;
+      }
+    else
+      baton->rep = NULL;
   }
 
   /* Create a stream object in trail->pool, and make it use our read
