@@ -40,6 +40,8 @@ svn_cl__cat (apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
   svn_client_auth_baton_t *auth_baton;
+  apr_file_t *std_out;
+  apr_status_t status;
 
   if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
     return svn_error_createf (SVN_ERR_CLIENT_REVISION_RANGE, NULL,
@@ -58,10 +60,17 @@ svn_cl__cat (apr_getopt_t *os,
   /* Build an authentication baton to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
+  /* Grab an APR stdout I/O. */
+  status = apr_file_open_stdout (&std_out, pool);
+  if (!APR_STATUS_IS_SUCCESS (status))
+    {
+      return svn_error_create (status, NULL, "");
+    }
+
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
-      svn_stream_t *out = svn_stream_from_stdio (stdout, pool);
+      svn_stream_t *out = svn_stream_from_aprfile (std_out, pool);
       const char *URL;
 
       SVN_ERR (svn_cl__get_url_from_target (&URL, target, pool));
