@@ -40,6 +40,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#ifdef _MSC_VER
+#define strtoll(str, endptr, base) atoi(str)
+#endif
+
 
 /* If this file is being included outside of a wrapper file, then need to
    create stubs for some of the SWIG types. */

@@ -136,6 +136,9 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
                Path to swig.exe
                (for example, C:\Program Files\SWIG-1.3.21)
 
+               For Perl, path to perl.exe
+               (for example, C:\Program Files\Perl\bin)
+
            Library Directories:
 
                For Python, path to python##.lib
@@ -194,9 +197,47 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
       This can make the modules load faster for users without write access
       to the site-packages directory.
 
-      For Perl, ???
-      For Java, ???
+      For Perl, the bindings have be copied into a more complicated directory
+      structure inside the perl library directory. Running the commands below
+      from the subversion source directory will copy the files to the right
+      places:
 
+        set PERL_LIBS="C:\Program Files\Perl\site\lib"
+
+        md %PERL_LIBS%\SVN %PERL_LIBS%\auto\SVN
+        copy subversion\bindings\swig\perl\native\*.pm %PERL_LIBS%\SVN
+
+        md %PERL_LIBS%\auto\SVN\_Client
+        copy Release\subversion\bindings\swig\perl\_Client.dll %PERL_LIBS%\auto\SVN\_Client
+        copy Release\subversion\bindings\swig\perl\_Client.pdb %PERL_LIBS%\auto\SVN\_Client
+
+        md %PERL_LIBS%\auto\SVN\_Core
+        copy Release\subversion\bindings\swig\perl\_Core.dll %PERL_LIBS%\auto\SVN\_Core
+        copy Release\subversion\bindings\swig\perl\_Core.pdb %PERL_LIBS%\auto\SVN\_Core
+        copy Release\subversion\bindings\swig\perl\swigpl.dll %PERL_LIBS%\auto\SVN\_Core
+        copy Release\subversion\bindings\swig\perl\swigpl.pdb %PERL_LIBS%\auto\SVN\_Core
+
+        md %PERL_LIBS%\auto\SVN\_Delta
+        copy Release\subversion\bindings\swig\perl\_Delta.dll %PERL_LIBS%\auto\SVN\_Delta
+        copy Release\subversion\bindings\swig\perl\_Delta.pdb %PERL_LIBS%\auto\SVN\_Delta
+
+        md %PERL_LIBS%\auto\SVN\_Fs
+        copy Release\subversion\bindings\swig\perl\_Fs.dll %PERL_LIBS%\auto\SVN\_Fs
+        copy Release\subversion\bindings\swig\perl\_Fs.pdb %PERL_LIBS%\auto\SVN\_Fs
+
+        md %PERL_LIBS%\auto\SVN\_Ra
+        copy Release\subversion\bindings\swig\perl\_Ra.dll %PERL_LIBS%\auto\SVN\_Ra
+        copy Release\subversion\bindings\swig\perl\_Ra.pdb %PERL_LIBS%\auto\SVN\_Ra
+
+        md %PERL_LIBS%\auto\SVN\_Repos
+        copy Release\subversion\bindings\swig\perl\_Repos.dll %PERL_LIBS%\auto\SVN\_Repos
+        copy Release\subversion\bindings\swig\perl\_Repos.pdb %PERL_LIBS%\auto\SVN\_Repos
+
+        md %PERL_LIBS%\auto\SVN\_Wc
+        copy Release\subversion\bindings\swig\perl\_Wc.dll %PERL_LIBS%\auto\SVN\_Wc
+        copy Release\subversion\bindings\swig\perl\_Wc.pdb %PERL_LIBS%\auto\SVN\_Wc
+
+      For Java, ???
 
 TESTING AND USING SWIG BINDINGS
 

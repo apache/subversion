@@ -138,6 +138,12 @@ class Generator(gen_base.GeneratorBase):
 
     # for each install group, write a rule to install its outputs
     for itype, i_targets in install_deps:
+
+      # perl bindings do their own thing, "swig-pl" target is
+      # already specified in Makefile.in
+      if itype == "swig-pl":
+        continue
+
       outputs = [ ]
       for t in i_targets:
         if not isinstance(t, gen_base.TargetI18N) \
@@ -160,6 +166,12 @@ class Generator(gen_base.GeneratorBase):
     self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
     for area, inst_targets in install_deps:
+
+      # perl bindings do their own thing, "install-swig-pl" target is
+      # already specified in Makefile.in
+      if area == "swig-pl":
+        continue
+
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(self.graph, area)
 

@@ -329,11 +329,56 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                   continue
 
                 includes = self.get_win_includes(target, rootpath)
-                cbuild = "swig -noruntime -%s %s -o %s $(InputPath)" % \
-                         (target.lang,
-                          string.join(map(lambda x: "-I%s" % self.quote(x),
-                                          includes)),
-                          self.quote(csrc))
+                if target.lang == "perl":
+                  modules = {
+                    "perl_client" : "_Client",
+                    "perl_core" : "_Core",
+                    "perl_delta" : "_Delta",
+                    "perl_fs" : "_Fs",
+                    "perl_ra" : "_Ra",
+                    "perl_repos" : "_Repos",
+                    "perl_wc" : "_Wc",
+                  }
+
+                  objects = (("svn_delta_editor_t",
+                              "svn_delta.h",
+                              "delta_editor.hi"),
+                             ("svn_ra_plugin_t",
+                              "svn_ra.h",
+                              "ra_plugin.hi"),
+                             ("svn_ra_reporter_t",
+                              "svn_ra.h",
+                              "ra_reporter.hi"))
+
+                  pfile = "%s\\subversion\\bindings\\swig\\perl\\native" \
+                          "\\h2i.pl" % rootpath
+
+                  for objname, header, output in objects:
+                    ifile = "%s\\subversion\\include\\%s" % (rootpath, header)
+                    ofile = "%s\\subversion\\bindings\\swig\\%s" \
+                            % (rootpath, output)
+
+                    obuild = "perl %s %s %s > %s" % (pfile, ifile, objname, 
+                                                     ofile)
+
+                    sources.append(ProjectItem(path=ifile, reldir=None,
+                                               custom_build=obuild,
+                                               custom_target=ofile,
+                                               user_deps=()))
+
+                    user_deps.append(ofile)
+
+                  cbuild = "swig -noruntime -%s -nopm -module SVN::%s %s -o %s $(InputPath)" % \
+                           (target.lang, modules[target.name],
+                            string.join(map(lambda x: "-I%s" % self.quote(x),
+                                            includes)),
+                            self.quote(csrc))
+                else:
+                  cbuild = "swig -noruntime -%s %s -o %s $(InputPath)" % \
+                           (target.lang,
+                            string.join(map(lambda x: "-I%s" % self.quote(x),
+                                            includes)),
+                            self.quote(csrc))
 
                 sources.append(ProjectItem(path=isrc, reldir=None,
                                            custom_build=cbuild,

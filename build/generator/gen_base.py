@@ -529,7 +529,10 @@ class TargetSWIG(TargetLib):
 
     self.name = self.lang + libname
     self.path = os.path.join(self.path, self.lang)
-    self.filename = os.path.join(self.path, libfile)
+    if self.lang == "perl":
+      self.filename = os.path.join(self.path, libfile[0]+string.capitalize(libfile[1:]))
+    else:
+      self.filename = os.path.join(self.path, libfile)
 
     ifile = SWIGSource(ipath)
     cfile = SWIGObject(os.path.join(self.path, cname), self.lang)
