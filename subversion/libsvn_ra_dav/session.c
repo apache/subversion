@@ -1135,7 +1135,6 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
   svn_ra_dav__session_t *ras = session->priv;
   int rv;
   const char *url;
-  struct lock_request_baton *lrb;
   struct ne_lock *nlock;
 
   /* Make a neon lock structure containing token and full URL to unlock. */
@@ -1169,41 +1168,40 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
       nlock->token = ne_strdup(token);
     }
 
-  /* ### TODO Use setup_neon_request_hook. */
-  /* Build context for neon callbacks and then register them. */
-  lrb = apr_pcalloc(pool, sizeof(*lrb));
-  lrb->force = force;
-  lrb->pool = pool;
-  ne_hook_create_request(ras->sess, create_request_hook, lrb);
-  ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
+  /* Clear out the lrb... */
+  memset((ras->lrb), 0, sizeof(ras->lrb));
+
+  /* ...and load it up again. */
+  ras->lrb->pool = pool;
+  ras->lrb->force = force;
 
   /* Issue UNLOCK request. */
   rv = ne_unlock(ras->sess, nlock);
 
   /* Did we get a <D:error> response? */
-  if (lrb->err)
+  if (ras->lrb->err)
     {
       ne_lock_destroy(nlock);
-      if (lrb->error_parser)
-        ne_xml_destroy(lrb->error_parser);
+      if (ras->lrb->error_parser)
+        ne_xml_destroy(ras->lrb->error_parser);
 
-      return lrb->err;
+      return ras->lrb->err;
     }
 
   /* Did we get some other sort of neon error? */
   if (rv)
     {
       ne_lock_destroy(nlock);
-      if (lrb->error_parser)
-        ne_xml_destroy(lrb->error_parser);
+      if (ras->lrb->error_parser)
+        ne_xml_destroy(ras->lrb->error_parser);
       return svn_ra_dav__convert_error(ras->sess,
                                        _("Unlock request failed"), rv, pool);
     }  
 
   /* Free neon things. */
   ne_lock_destroy(nlock);
-  if (lrb->error_parser)
-    ne_xml_destroy(lrb->error_parser);
+  if (ras->lrb->error_parser)
+    ne_xml_destroy(ras->lrb->error_parser);
 
   return SVN_NO_ERROR;
 }
@@ -1219,6 +1217,8 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
 {
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create (pool);
+
+  setup_neon_request_hook(session->priv, pool);
 
   /* ### TODO for 1.3: Send all the lock tokens over the wire at once.
         This loop is just a temporary shim. */
