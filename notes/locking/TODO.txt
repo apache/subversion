@@ -12,9 +12,6 @@ These are in the format of
       OTHER COMMENTS
 
 
-* subversion/libsvn_fs_base/tree.c:2580
-    ### WHEW!  We have no reliable way to determine the node kind (cmpilato)
-
 * subversion/libsvn_wc/entries.c:1734
     /* ### Rest of lock fields. */
 
@@ -42,12 +39,6 @@ These are in the format of
         is implemented, this should be logged as a warning
       - ra_local: Throw a warning somehow?
 
-* subversion/clients/cmdline/lock-cmd.c:66
-    /* ### Should we do this in a loop like for the commit message? */ (lundblad)
-
-* subversion/libsvn_fs_fs/fs_fs.c:3708
-    ### WHEW!  We have no reliable way to determine the node kind (cmpilato)
-
 * subversion/libsvn_fs_fs/lock.c:523 
     /* ### TODO:  We need the write lock here, but some callers
        ### already has it.  Also, we need to reread the lock to
@@ -64,12 +55,14 @@ These are in the format of
     /* TODO Shouldn't this find its way into libsvn_subr? */ (fitz)
       (Yes, it should.  It can be improved later.)
 
-
+* svn_err_is_(un)lock_error should be converted to macros.
 
 NICE TO HAVE
 ------------
 
 * improve cmdline help messages
+
+* put quotes around user names as well as around lock names when we error.
 
 * possibly teach mailer.py to send lock/unlock mails (fitz)
 
@@ -81,6 +74,9 @@ NICE TO HAVE
 
 * get neon 0.25 released, so the control-c bug can go away
   (chat with jorton about neon 0.25/svn 1.2 coordination?)
+
+* subversion/clients/cmdline/lock-cmd.c:66
+    /* ### Should we do this in a loop like for the commit message? */ (lundblad)
 
 -----------------------------------------------
 

@@ -2577,9 +2577,9 @@ verify_locks (const char *txn_name,
          directory.  For paths being added or removed, we need to hold
          the locks for that path and any children of that path.
 
-         ### WHEW!  We have no reliable way to determine the node kind
-         of deleted items, but fortunately we are going to do a
-         recursive check on deleted paths regardless of their kind.  */
+         WHEW!  We have no reliable way to determine the node kind of
+         deleted items, but fortunately we are going to do a recursive
+         check on deleted paths regardless of their kind.  */
       if (change->change_kind == svn_fs_path_change_modify)
         recurse = FALSE;
       SVN_ERR (svn_fs_base__allow_locked_operation (path, recurse,
