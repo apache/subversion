@@ -60,21 +60,12 @@
 #include <stdlib.h>          /* defines size_t */
 #include <apr_pools.h>       /* APR memory pools for everyone. */
 #include <apr_hash.h>        /* proplists are hashtables */
+#include <svn_string.h>      /* explicit-length byte strings  */
 
 
 /* useful macro, suggested by Greg Stein */
 #define AP_ARRAY_GET_ITEM(ary,i,type) (((type *)(ary)->elts)[i])
 
-
-
-/* a string of bytes  */
-
-typedef struct svn_string_t
-{
-  char *data;                /* pointer to the bytestring */
-  size_t len;                /* length of bytestring */
-  size_t blocksize;          /* total size of buffer allocated */
-} svn_string_t;
 
 
 /* a file is a proplist and a string */
