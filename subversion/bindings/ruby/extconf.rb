@@ -14,6 +14,17 @@ require 'mkmf'	# Here's the ruby module that does the grunt work
 
 dir_config('svn')
 
+$objs = [
+  'client.o',
+  'error.o',
+  'log.o',
+  'stream.o',
+  'svn_ruby.o',
+  'txdelta.o',
+  'types.o',
+  'util.o',
+]
+
 $CFLAGS << ' -I. '
 
 $LDFLAGS << `apr-config --ldflags`.chop
