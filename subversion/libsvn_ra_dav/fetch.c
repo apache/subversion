@@ -1092,6 +1092,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
 {
   svn_ra_session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
+  svn_error_t *err;
   apr_hash_t *prop_changes = NULL;
   apr_array_header_t *prop_deletes = NULL;
   static const ne_propname wanted_props[] =
@@ -1140,8 +1141,16 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
       (*((const char **) apr_array_push(prop_deletes))) = name;
     }
 
-  return svn_ra_dav__do_proppatch(ras, baseline->url, prop_changes,
-                                  prop_deletes, pool);
+  err = svn_ra_dav__do_proppatch(ras, baseline->url, prop_changes,
+                                 prop_deletes, pool);
+  if (err)
+    return 
+      svn_error_create
+      (SVN_ERR_RA_DAV_REQUEST_FAILED, err,
+       "It's possible that the repository's pre-revprop-change hook\n"
+       "either failed or is non-existent.");
+
+  return SVN_NO_ERROR;
 }
 
 

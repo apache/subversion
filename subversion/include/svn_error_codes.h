@@ -559,6 +559,10 @@ SVN_ERROR_START
               SVN_ERR_RA_DAV_CATEGORY_START + 7,
               "HTTP Path Not Found")
 
+  SVN_ERRDEF (SVN_ERR_RA_DAV_PROPPATCH_FAILED,
+              SVN_ERR_RA_DAV_CATEGORY_START + 8,
+              "Failed to excute WebDAV PROPPATCH.")
+
 
   /* ra_local errors */
   
