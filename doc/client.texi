@@ -1,22 +1,99 @@
 @node Client
 @chapter Client
 
-The Subversion client is built on two libraries: one handles local
-working copy management, the other communicates with the server.  The
-initial client is a Unix-style command-line tool (like standard CVS),
-but there is no reason why that has to be the only client.  The
-libraries are there to separate Subversion-specific functionality from
+The Subversion client is built on three libraries.  The first two are
+low-level: one for local working copy management, the other for
+communicating with the server.  The third library provides high-level
+wrappers around these low-level operations, to implement basic client
+operations such as @code{commit} and @code{update}.
+
+The initial client is a Unix-style command-line tool (like standard
+CVS), but there is no reason why that has to be the only client.  The
+libraries exist to separate Subversion-specific functionality from
 user-interface decisions; a GUI client can use the libraries as easily
 as a command-line client can.
 
-This chapter describes the two libraries, and the layout of working
+This chapter describes the libraries, and the physical layout of working
 copies.
 
 @menu
 * The working copy management library
 * The repository access library
-* How working copies are arranged
+* The high-level client operation library
+* The layout of working copies
 @end menu
+
+fooo
+---------------------------------------------------------------------------
+
+wc:
+
+   skelta make_skelta (path1, ...)
+   delta fill_skelta (skelta)
+   delta make_delta (path1, ...)    /* just wrapper around above two? */
+   bool apply_delta (delta)
+   bool add (path)
+   bool delete (path)
+   bool rename (old_path, new_path)
+   
+   [ all the prop calls, sans version ones ]
+
+
+repos:
+
+   ver latest (repos)
+   token submit_delta (repos, delta)    /* can take a skelta or a delta */
+   version write_delta (repos, delta, token)
+   skelta get_status (repos, skelta)
+   delta get_update (repos, skelta)   /* or implement this in a `read'y way? */
+   bool abandon (repos, token)
+
+   get_delta (repos, ver1, path1, ver2, path2)    /* ??? necessary ??? */
+   get_diff (repos, ver1, path1, [ver2, path2, ...])
+   node read (repos, ver, path)
+   
+   get_node_prop(ver, path, propname)
+    return the value of @emph{propname} for a file or directory
+   get_dirent_prop(ver, path, propname)
+    return the value of @emph{propname} for a directory entry
+   get_ver_prop(ver, propname)
+    return the value of @emph{propname} for a version (e.g., log message)
+   get_node_proplist(ver, path)
+    return all properties (keys and values) of a file or directory
+   get_dirent_proplist(ver, path)
+    return all properties (keys and values) of a directory entry
+   get_ver_proplist(ver)
+    return all properties (keys and values) of a version
+   get_node_propnames(ver, path)
+    return all property keys for a file or directory
+   get_node_propnames(ver, path)
+    return all property keys for a file or directory
+   get_dirent_propnames(ver, path)
+    return all property keys for a directory entry
+   get_ver_propnames(ver)
+    return all property keys for a version
+
+client:
+
+   add
+   annotate
+   checkout
+   commit
+   diff
+   import
+   log
+   rename
+   remove
+   branch
+   tag
+   status
+   update
+
+---------------------------------------------------------------------------
+fooo
+
+
+
 
 @c -----------------------------------------------------------------------
 @node The working copy management library
@@ -128,8 +205,8 @@ server's interface is...
 TODO: mention the combo ops from the yellow sheet...
 
 @c -----------------------------------------------------------------------
-@node How working copies are arranged
-@subsection How working copies are arranged
+@node The layout of working copies
+@subsection The layout of working copies
 
 As with CVS, Subversion working copies are simply directory trees with
 special administrative subdirectories, in this case named "SVN" instead
