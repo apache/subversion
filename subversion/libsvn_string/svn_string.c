@@ -59,7 +59,7 @@
 
 void *
 my__realloc (char *data, size_t oldsize, size_t request, 
-             struct ap_pool_t *pool)
+             ap_pool_t *pool)
 {
   void *new_area;
 
@@ -81,7 +81,7 @@ my__realloc (char *data, size_t oldsize, size_t request,
    requires a memory pool to allocate from.  */
 
 svn_string_t *
-svn_string_create (char *cstring, struct ap_pool_t *pool)
+svn_string_create (char *cstring, ap_pool_t *pool)
 {
   svn_string_t *new_string;
   
@@ -100,7 +100,7 @@ svn_string_create (char *cstring, struct ap_pool_t *pool)
    (NOT null-terminated!);  requires a memory pool to allocate from */
 
 svn_string_t *
-svn_string_ncreate (char *bytes, size_t size, struct ap_pool_t *pool)
+svn_string_ncreate (char *bytes, size_t size, ap_pool_t *pool)
 {
   svn_string_t *new_string;
 
@@ -112,15 +112,6 @@ svn_string_ncreate (char *bytes, size_t size, struct ap_pool_t *pool)
   svn_string_appendbytes (new_string, bytes, size, pool);
 
   return new_string;
-}
-
-
-/* free a bytestring structure */
-
-void svn_string_free (svn_string_t *str)
-{
-  free (str->data);
-  free (str);
 }
 
 
@@ -191,7 +182,7 @@ svn_string_isempty (svn_string_t *str)
 
 void
 svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count,
-                        struct ap_pool_t *pool)
+                        ap_pool_t *pool)
 {
   size_t total_len;
   void *start_address;
@@ -222,7 +213,7 @@ svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count,
 
 void
 svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr,
-                      struct ap_pool_t *pool)
+                      ap_pool_t *pool)
 {
   svn_string_appendbytes (targetstr, appendstr->data, 
                           appendstr->len, pool);
@@ -233,7 +224,7 @@ svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr,
 /* duplicate a bytestring */
 
 svn_string_t *
-svn_string_dup (svn_string_t *original_string, struct ap_pool_t *pool)
+svn_string_dup (svn_string_t *original_string, ap_pool_t *pool)
 {
   return (svn_string_ncreate (original_string->data,
                               original_string->len, pool));

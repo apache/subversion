@@ -1,5 +1,6 @@
 /*
  * svn_string.h :  byte-string routines for Subversion
+ *                 (using apr's memory pools)
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -60,13 +61,9 @@
    containing a generic string of bytes (NON-null-terminated) */
 
 svn_string_t * svn_string_create (char *cstring, 
-                                  struct ap_pool_t *pool);
+                                  ap_pool_t *pool);
 svn_string_t * svn_string_ncreate (char *bytes, size_t size, 
-                                   struct ap_pool_t *pool);
-
-/* Free a string structure (includes freeing its internal string) */
-
-void svn_string_free (svn_string_t *str);
+                                   ap_pool_t *pool);
 
 /* Set a bytestring to NULL */
 
@@ -85,14 +82,14 @@ svn_boolean_t svn_string_isempty (svn_string_t *str);
    svn_string_t.  reallocs() if necessary. */
 
 void svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count,
-                             struct ap_pool_t *pool);
+                             ap_pool_t *pool);
 void svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr,
-                           struct ap_pool_t *pool);
+                           ap_pool_t *pool);
 
 /* Duplicate a bytestring;  returns freshly malloc'd copy.  */
 
 svn_string_t * svn_string_dup (svn_string_t *original_string,
-                               struct ap_pool_t *pool);
+                               ap_pool_t *pool);
 
 
 /* compare if two bytestrings' data fields are identical,
