@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-07-26 21:06+0200\n"
-"PO-Revision-Date: 2004-08-03 10:06+0200\n"
+"PO-Revision-Date: 2004-08-10 10:52+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -61,11 +61,11 @@ msgstr "Użyj opcji --force aby obejść to ograniczenie"
 
 #: clients/cmdline/diff-cmd.c:67
 msgid "Can't open stdout"
-msgstr "Błąd otwierania standardowego wyjścia"
+msgstr "Błąd otwarcia standardowego wyjścia"
 
 #: clients/cmdline/diff-cmd.c:69
 msgid "Can't open stderr"
-msgstr "Błąd otwierania wyjścia błędu"
+msgstr "Błąd otwarcia wyjścia błędu"
 
 #: clients/cmdline/diff-cmd.c:172
 msgid "Target lists to diff may not contain both working copy paths and URLs"
@@ -77,7 +77,7 @@ msgid ""
 "overwrite"
 msgstr ""
 "Docelowy katalog już istnieje, usuń go lub podaj opcję --force by\n"
-"został nadmazany"
+"został nadpisany"
 
 #: clients/cmdline/help-cmd.c:35
 msgid ""
