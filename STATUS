@@ -93,18 +93,6 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r12489
-    Fix a confusing error message.  Issue #2174
-    Justification:
-      Users have no clue what to do about it not being locked and usually 
-      if it's "not locked" it's a programmer error.  User errors will be
-      probably that the dir is missing...
-    Notes: This is under 1.1.4 so we don't include it in 1.1.3 which will
-      be done to fix some small issues with 1.1.2.  Don't want to break
-      translations.
-    Votes:
-      +1: breser, lundblad, maxb
-
   * r12904
     Fix some assertions that were killing Apache children due to non-
     canonicalized paths entering the system via JavaSVN's custom REPORT
@@ -114,13 +102,6 @@ Candidate changes:
       to the amassing of locks, which lead (ultimately) to downtime.
     Votes:
       +1: cmpilato
-
-  * r12983, r12986
-    Treat a sharing violation as cause for retrying file ops on Windows.
-    Justification:
-      Better chance of client survival in the toxic environment of Win32.
-    Votes:
-      +1: brane, cmpilato, maxb
 
   * r12551, r12717, r12722
     SWIG 1.3.24 compatibility
@@ -139,3 +120,23 @@ Candidate changes:
 
 
 Approved changes (further review is welcome, but not required):
+
+  * r12489
+    Fix a confusing error message.  Issue #2174
+    Justification:
+      Users have no clue what to do about it not being locked and usually 
+      if it's "not locked" it's a programmer error.  User errors will be
+      probably that the dir is missing...
+    Notes: This is under 1.1.4 so we don't include it in 1.1.3 which will
+      be done to fix some small issues with 1.1.2.  Don't want to break
+      translations.
+    Votes:
+      +1: breser, lundblad, maxb
+
+  * r12983, r12986
+    Treat a sharing violation as cause for retrying file ops on Windows.
+    Justification:
+      Better chance of client survival in the toxic environment of Win32.
+    Votes:
+      +1: brane, cmpilato, maxb
+
