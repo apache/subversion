@@ -94,7 +94,7 @@ def create_config(config_dir, enable_flag):
   fd.write('*.jpg = jpgfile=ja\n')
   fd.write('fubar* = tarfile=si\n')
   fd.write('foobar.lha = lhafile=da;lzhfile=niet\n')
-  fd.write('spacetest = a b c = d e f ; g h i = j k l ; m n o = ; = p \n')
+  fd.write('spacetest = abc = def ; ghi = ; = j \n')
   fd.write('* = auto=oui\n')
   fd.write('\n')
   fd.close()
@@ -222,11 +222,10 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
     check_prop('lhafile', filename, ['da'])
     check_prop('lzhfile', filename, ['niet'])
     filename = os.path.join(files_wc_dir, 'spacetest' )
-    check_proplist(filename,['a b c', 'g h i', 'm n o', 'auto'])
+    check_proplist(filename,['abc', 'ghi', 'auto'])
     check_prop('auto', filename, ['oui'])
-    check_prop('a b c', filename, ['d e f'])
-    check_prop('g h i', filename, ['j k l'])
-    check_prop('m n o', filename, [])
+    check_prop('abc', filename, ['def'])
+    check_prop('ghi', filename, [])
   else:
     for filename in filenames:
       check_proplist(os.path.join(files_wc_dir, filename), [])
