@@ -40,6 +40,7 @@ Blanket commit access:
       dionisos   Erik Huelsmann <e.huelsmann@gmx.net>
         breser   Ben Reser <ben@reser.org>
            djh   D.J. Heap <dj@shadyvale.net>
+          maxb   Max Bowsher <maxb@ukf.net>
 
 Commit access for specific areas:
 
@@ -71,7 +72,6 @@ Commit access for specific areas:
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
       lonestar   Martin MAURER <martin.maurer@email.de>      (svnshow)
-          maxb   Max Bowsher <maxb@ukf.net>                  (cvs2svn)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
 
 Committers who have asked to be listed as dormant:
