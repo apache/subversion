@@ -72,3 +72,18 @@ Candidate changes:
       Bindings only, important fixes for long-life ra sessions.
     Votes:
       +1: clkao
+
+  * r10353
+    Fix encoding of get_repos_url result.
+    Justification: Also fixes a bug in svnserve with encoded
+     characters in paths.  See
+     http://www.contactor.se/~dast/svn/archive-2004-07/1334.shtml
+     for a description of the bug.
+    Note: This change is sufficiently big in scope and raw size to
+     warrant restarting the soak period.  It would be possible to
+     construct a more minimal change for the release branch, but that
+     work hasn't been done, and it's not worth it if we're going to
+     restart the 1.1 soak anyway.  But don't merge until we've come to
+     a decision on whether to restart the 1.1 soak.
+    Votes:
+      +1: ghudson
