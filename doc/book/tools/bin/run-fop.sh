@@ -1,8 +1,8 @@
 #!/bin/sh
 
-# find-fop: Attempt to run fop (or fop.sh), fail articulately otherwise.
+# run-fop: Attempt to run fop (or fop.sh), fail articulately otherwise.
 #
-# Usage:    find-fop.sh BOOK_TOP [FOP_ARGS...]
+# Usage:    run-fop.sh BOOK_TOP [FOP_ARGS...]
 #
 # This script is meant to be invoked by subversion/doc/book/Makefile.
 # The first argument is the top of the book directory, that is,
@@ -12,7 +12,7 @@
 BOOK_TOP=${1}
 
 if [ "${BOOK_TOP}X" = X ]; then
-  echo "usage:  find-fop.sh BOOK_TOP [FOP_ARGS...]"
+  echo "usage:  run-fop.sh BOOK_TOP [FOP_ARGS...]"
   exit 1
 fi
 

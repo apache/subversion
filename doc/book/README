@@ -112,7 +112,7 @@ II. COMPILING THE DOCS
            $ mv fop-0.20.4 fop
 
      That should be enough.  The Makefile will actually invoke
-     tools/bin/find-fop.sh.  That script attempts to find FOP already
+     tools/bin/run-fop.sh.  That script attempts to find FOP already
      installed on your system, but falls back to the FOP unpacked into
      tools/fop/ if there's no other FOP available.
 
