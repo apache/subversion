@@ -136,8 +136,9 @@ svn_client_add (const char *path,
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, TRUE, pool));
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
-  if ((kind == svn_node_dir) && (recursive))
-    err = add_dir_recursive (path, adm_access, notify_func, notify_baton, pool);
+  if ((kind == svn_node_dir) && recursive)
+    err = add_dir_recursive (path, adm_access,
+                             notify_func, notify_baton, pool);
   else
     err = svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
                       notify_func, notify_baton, pool);
@@ -145,10 +146,6 @@ svn_client_add (const char *path,
   err2 = svn_wc_adm_close (adm_access);
   if (! err && err2)
     err = err2;
-
-  if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS))
-    return svn_error_quick_wrap
-      (err, "cannot add because entry already exists.");
 
   return err;
 }
