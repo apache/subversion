@@ -40,6 +40,7 @@ svn_cl__import (apr_getopt_t *os,
   svn_string_t *path;
   svn_string_t *url;
   svn_string_t *new_entry;
+  svn_string_t *printpath;
 
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
@@ -96,20 +97,17 @@ svn_cl__import (apr_getopt_t *os,
   else
     path = ((svn_string_t **) (targets->elts))[1];
 
+  /* Because we're working outside the context of a working copy, we
+     don't want the trace_editor to print out the 'local' paths like
+     it normally does.  This leads to very confusing output.  Instead,
+     for consistency, it will print those paths being added in the
+     repository, completely ignoring the local source.  */
+  printpath = svn_string_create ("", pool);
+
   /* Optionally get the dest entry name. */
   if (targets->nelts < 3)
-    {
-      /* If no entry name is supplied, try to derive it from the local
-         path. */
-      if (svn_path_is_empty (path, svn_path_local_style))
-        return svn_error_create
-          (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
-           "unable to determine repository entry name from local path");
-      else
-        new_entry = svn_path_last_component (path,
-                                             svn_path_local_style,
-                                             pool);
-    }
+    new_entry = NULL;  /* tells import() to create many entries at top
+                          level. */
   else if (targets->nelts == 3)
     new_entry = ((svn_string_t **) (targets->elts))[2];
   else
@@ -119,7 +117,7 @@ svn_cl__import (apr_getopt_t *os,
   
   SVN_ERR (svn_cl__get_trace_commit_editor (&trace_editor,
                                             &trace_edit_baton,
-                                            path,
+                                            printpath,
                                             pool));
 
   SVN_ERR (svn_client_import (NULL, NULL,
