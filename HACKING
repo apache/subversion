@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-08-10 19:46:41 $
+              Last updated:  $Date: 2001-08-16 19:45:37 $
 
 
 TABLE OF CONTENTS
@@ -126,6 +126,7 @@ normally used in configuration and building.  You have to regenerate
 them inside your working copy first, then configure, and then build.
 So, first run
 
+   $ chmod +x autogen.sh   ## needed until Subversion versions file mode bits
    $ ./autogen.sh
 
 which does everything necessary to prepare for the configuration step.
