@@ -50,9 +50,8 @@ svn_client_delete (svn_stringbuf_t *path,
   if (svn_path_is_url (&str))
     {
       /* This is a remote removal.  */
-      void *ra_baton, *session, *cb_baton;
+      void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
-      svn_ra_callbacks_t *ra_callbacks;
       svn_stringbuf_t *anchor, *target;
       const svn_delta_edit_fns_t *editor;
       void *edit_baton;
@@ -64,11 +63,10 @@ svn_client_delete (svn_stringbuf_t *path,
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor->data, pool));
 
-      /* Get the client callbacks for auth stuffs. */
-      SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
-                                             auth_baton, anchor, TRUE,
-                                             TRUE, pool));
-      SVN_ERR (ra_lib->open (&session, anchor, ra_callbacks, cb_baton, pool));
+      /* Open an RA session for the URL. Note that we don't have a local
+         directory, nor a place to put temp files or store the auth data. */
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, NULL,
+                                            FALSE, FALSE, auth_baton, pool));
 
       /* Fetch RA commit editor */
       SVN_ERR (ra_lib->get_commit_editor

@@ -426,9 +426,8 @@ send_to_repos (svn_revnum_t *committed_rev,
   const svn_delta_edit_fns_t *test_editor;
   void *test_edit_baton;
 #endif /* 0 */
-  void *ra_baton, *session, *cb_baton;
+  void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
-  svn_ra_callbacks_t *ra_callbacks;
   svn_boolean_t is_import;
   struct svn_wc_close_commit_baton ccb;
   apr_hash_t *committed_targets;
@@ -531,13 +530,9 @@ send_to_repos (svn_revnum_t *committed_rev,
       /* Open an RA session to URL. */
       /* (Notice that in the case of import, we do NOT want the RA
          layer to attempt to store auth info in the wc.) */
-      SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
-                                             auth_baton, base_dir, 
-                                             is_import ? FALSE : TRUE,
-                                             is_import ? FALSE : TRUE,
-                                             pool));
-      SVN_ERR (ra_lib->open (&session, url,
-                             ra_callbacks, cb_baton, pool));
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, base_dir,
+                                            !is_import, !is_import,
+                                            auth_baton, pool));
 
       
       /* Fetch RA commit editor, giving it svn_wc_process_committed(). */

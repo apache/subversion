@@ -156,12 +156,12 @@ svn_client_diff (svn_stringbuf_t *path,
 {
   svn_string_t path_str;
   svn_boolean_t path_is_url;
+  svn_boolean_t use_admin;
   svn_stringbuf_t *anchor, *target;
   svn_wc_entry_t *entry;
   svn_stringbuf_t *URL;
-  void *ra_baton, *session, *cb_baton;
+  void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
-  svn_ra_callbacks_t *ra_callbacks;
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   const svn_delta_edit_fns_t *diff_editor;
@@ -183,6 +183,10 @@ svn_client_diff (svn_stringbuf_t *path,
   path_str.data = path->data;
   path_str.len = path->len;
   path_is_url = svn_path_is_url (&path_str);
+
+  /* if the path is not a URL, then we can use the SVN admin area for
+     temporary files. */
+  use_admin = !path_is_url;
 
   if (path_is_url)
     {
@@ -217,13 +221,9 @@ svn_client_diff (svn_stringbuf_t *path,
   /* Establish the RA session */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
-  SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
-                                         auth_baton,
-                                         anchor,
-                                         TRUE,
-                                         path_is_url ? FALSE : TRUE,
-                                         pool));
-  SVN_ERR (ra_lib->open (&session, URL, ra_callbacks, cb_baton, pool));
+
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
+                                        TRUE, use_admin, auth_baton, pool));
 
   if (start_date)
     SVN_ERR (ra_lib->get_dated_revision (session, &start_revision, start_date));
@@ -264,7 +264,9 @@ svn_client_diff (svn_stringbuf_t *path,
          reused. This applies to ra_dav, ra_local does not appears to have
          this limitation. */
       void *session2;
-      SVN_ERR (ra_lib->open (&session2, URL, ra_callbacks, cb_baton, pool));
+      SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL, anchor,
+                                            TRUE, use_admin,
+                                            auth_baton, pool));
 
       SVN_ERR (svn_client__get_diff_editor (target,
                                             svn_client__diff_cmd,

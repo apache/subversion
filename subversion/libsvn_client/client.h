@@ -60,6 +60,51 @@ svn_error_t *svn_client__get_ra_callbacks (svn_ra_callbacks_t **callbacks,
                                            apr_pool_t *pool);
 
 
+/* This is the baton that we pass to RA->open(), and is associated with
+   the callback table we provide to RA. */
+typedef struct
+{
+  /* This is provided by the calling application for handling authentication
+     information for this session. */
+  void *auth_baton;
+
+  /* Holds the directory that corresponds to the REPOS_URL at RA->open()
+     time. When callbacks specify a relative path, they are joined with
+     this base directory. */
+  svn_string_t base_dir;
+
+} svn_client__callback_baton_t;
+
+
+/* Open an RA session, returning the session baton in SESSION_BATON. The
+   RA library to use is specified by RA_LIB.
+
+   The root of the session is specified by REPOS_URL and BASE_DIR.
+
+   Additional control parameters:
+
+      - DO_STORE indicates whether the RA layer should attempt to
+        store authentication info.
+
+      - USE_ADMIN indicates that the RA layer should create tempfiles
+        in the administrative area instead of in the working copy itself.
+
+   BASE_DIR may be NULL if the RA operation does not correspond to a
+   working copy (in which case, DO_STORE and USE_ADMIN should both
+   be FALSE).
+
+   The calling application's authentication baton is provided in AUTH_BATON,
+   and allocations related to this session are performed in POOL.
+*/
+svn_error_t * svn_client__open_ra_session (void **session_baton,
+                                           const svn_ra_plugin_t *ra_lib,
+                                           svn_stringbuf_t *repos_URL,
+                                           svn_stringbuf_t *base_dir,
+                                           svn_boolean_t do_store,
+                                           svn_boolean_t use_admin,
+                                           void *auth_baton,
+                                           apr_pool_t *pool);
+
 
 /* ---------------------------------------------------------------- */
 

@@ -65,8 +65,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
                                 apr_pool_t *pool)
 {
   svn_ra_plugin_t *ra_lib;  
-  svn_ra_callbacks_t *ra_callbacks;
-  void *ra_baton, *cb_baton, *session, *edit_baton, *report_baton;
+  void *ra_baton, *session, *edit_baton, *report_baton;
   svn_delta_edit_fns_t *status_editor;
   const svn_ra_reporter_t *reporter;
   svn_stringbuf_t *anchor, *target, *URL;
@@ -96,10 +95,9 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
     return SVN_NO_ERROR;
 
   /* Open a repository session to the URL. */
-  SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
-                                         auth_baton, anchor, TRUE,
-                                         TRUE, pool));
-  if (ra_lib->open (&session, URL, ra_callbacks, cb_baton, pool) != NULL)
+  /* ### if we're supposed to talk to the repos, then it better be there */
+  if (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
+                                   TRUE, TRUE, auth_baton, pool) != NULL)
     return SVN_NO_ERROR;
 
 

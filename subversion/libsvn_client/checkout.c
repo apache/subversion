@@ -82,20 +82,18 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
   /* if using an RA layer */
   if (! xml_src)
     {
-      void *ra_baton, *session, *cb_baton;
+      void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
-      svn_ra_callbacks_t *ra_callbacks;
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
-      /* Open an RA session to URL. */
-      SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
-                                             auth_baton, path, TRUE,
-                                             FALSE, pool));
-      SVN_ERR (ra_lib->open (&session, URL,
-                             ra_callbacks, cb_baton, pool));
+      /* Open an RA session to URL. Note that we do not have an admin area
+         for storing temp files. We do, however, want to store auth data
+         after the checkout builds the WC. */
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
+                                            TRUE, FALSE, auth_baton, pool));
 
       /* Decide which revision to get: */
 
