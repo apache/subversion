@@ -81,18 +81,6 @@ apr_hash_sorted_keys (apr_hash_t *ht,
                       apr_pool_t *pool);
 #endif /* apr_hash_sorted_keys */
 
-/* kff todo: two things:  
- *
- *    1. Maybe comparison_func() should be its own typedef.
- *    2. Maybe it should take a baton.  
- *
- * But right now we don't need these changes, so not sweating it.
- */
-
-void
-svn_sort_array_header (apr_array_header_t *ary,
-                       int (*comparison_func) (const void *a, const void *b));
-
 
 #endif /* SVN_SORTS_H */
 
