@@ -161,6 +161,17 @@ struct entries_accumulator
 };
 
 
+static svn_wc__entry_t *
+alloc_entry (apr_pool_t *pool)
+{
+  svn_wc__entry_t *entry = apr_pcalloc (pool, sizeof (*entry));
+  entry->version    = SVN_INVALID_VERNUM;
+  entry->kind       = svn_invalid_kind;
+  entry->attributes = apr_make_hash (pool);
+  return entry;
+}
+
+
 /* Called whenever we find an <open> tag of some kind. */
 static void
 handle_start_tag (void *userData, const char *tagname, const char **atts)
@@ -171,9 +182,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
      and `wc-entries', are ignored. */
   if ((strcmp (tagname, SVN_WC__ENTRIES_ENTRY)) == 0)
     {
-      svn_wc__entry_t *entry
-        = apr_pcalloc (accum->pool, sizeof (*entry));
-
+      svn_wc__entry_t *entry = alloc_entry (accum->pool);
       entry->attributes = svn_xml_make_att_hash (atts, accum->pool);
 
       /* Find the name and set up the entry under that name. */
@@ -268,13 +277,16 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
 
 
 /* Use entry SRC to fill in blank portions of entry DST.  SRC itself
-   may not have any blanks, of course.
+   may not have any blanks, of course, and it may not be the current
+   dir entry itself (i.e., ".").
    Typically, SRC is a parent directory's own entry, and DST is some
    child in that directory. */
 static void
 take_from_entry (svn_wc__entry_t *src, svn_wc__entry_t *dst, apr_pool_t *pool)
 {
-  if (dst->version == SVN_INVALID_VERNUM)
+  /* Inherits parent's version if don't have a version of one's own,
+     unless this is a subdirectory. */
+  if ((dst->version == SVN_INVALID_VERNUM) && (dst->kind != svn_dir_kind))
     dst->version = src->version;
   
   if (! dst->ancestor)
@@ -553,19 +565,13 @@ stuff_entry_v (apr_hash_t *entries,
   assert (name != NULL);
 
   if (! entry)
-    {
-      entry = apr_pcalloc (pool, sizeof (*entry));
-      entry->version = SVN_INVALID_VERNUM;
-      entry->kind = svn_invalid_kind;
-    }
+    entry = alloc_entry (pool);
 
   /* Set up the explicit attributes. */
   if (version != SVN_INVALID_VERNUM)
     entry->version = version;
   if (kind != svn_invalid_kind)
     entry->kind = kind;
-  if (! entry->attributes)
-    entry->attributes = apr_make_hash (pool);
   if (timestamp)
     entry->timestamp = timestamp;
   entry->flags |= flags;
