@@ -60,22 +60,44 @@ For example,
   PASS: frobtest 2: frobnicating fragile data
   [sussman@newton:~] 
 
-How to write a new sub-test
----------------------------
 
-Write a new self-contained routine in an existing test-program; make
-sure the routine returns 0 or 1.  Then add this routine and its
-description to the global arrays "test_funcs[]" and "descriptions[]".
-That's all there is to it!
+How to write new tests
+----------------------
 
+All test programs use a standard `main' function.  You write .c files
+that contain only test functions --- you should not define your own
+`main' function.
 
-How to write an entirely new test program
------------------------------------------
+Instead, your code should define an externally visible array
+`test_funcs', like this:
 
-All test programs use a standardized main() routine.  Just link in
-`subversion/tests-common/svn_tests_main.o', and make sure your program
-includes "test_funcs[]" and "descriptions[]".  After the program
-works, add it to the SVN_TEST_PROGRAMS variable in some Makefile.am.
+    /* The test table.  */
+
+    int (*test_funcs[]) (const char **msg) = {
+      test_a,
+      test_b,
+      test_c,
+      0
+    };
+
+In this example, `test_a', `test_b', and `test_c' are the names of
+test functions.  The zero must come after all your test functions; the
+standard `main' function searches for it to find the end of the array.
+
+Each test function has the following type:
+
+	int f (const char **NAME);
+
+When called, a test function should set *NAME to its name, and perform
+a test.  If the test passes, the function should return zero;
+otherwise, it should return one.
+
+Once you've got a .c file with a bunch of tests and a `test_funcs'
+array, you should link it against the `libsvn_tests_main.la' libtool
+library, in this directory, `subversion/tests-common'.  That library
+provides a `main' function which will check the command-line
+arguments, pick the appropriate tests to run from your `test_funcs'
+array, and print the results in the standard way.
 
 
 When to write new tests
