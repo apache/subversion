@@ -282,7 +282,7 @@ svn_svr_get_ver_prop (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
+                                          
                                           policy->pool));
       return FALSE;
     }
