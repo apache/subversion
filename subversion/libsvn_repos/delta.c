@@ -49,7 +49,7 @@ struct context {
   const char *edit_base_path;
   svn_fs_root_t *source_root;
   svn_fs_root_t *target_root;
-  svn_repos_authz_read_func_t authz_read_func;
+  svn_repos_authz_func_t authz_read_func;
   void *authz_read_baton;
   svn_boolean_t text_deltas;
   svn_boolean_t recurse;
@@ -162,7 +162,7 @@ static svn_error_t *delta_dirs (struct context *c,
 static svn_error_t *
 authz_root_check (svn_fs_root_t *root,
                   const char *path,
-                  svn_repos_authz_read_func_t authz_read_func,
+                  svn_repos_authz_func_t authz_read_func,
                   void *authz_read_baton,
                   apr_pool_t *pool)
 {
@@ -201,7 +201,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      const char *tgt_fullpath,
                      const svn_delta_editor_t *editor,
                      void *edit_baton,
-                     svn_repos_authz_read_func_t authz_read_func,
+                     svn_repos_authz_func_t authz_read_func,
                      void *authz_read_baton,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,

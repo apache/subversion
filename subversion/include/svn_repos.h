@@ -38,23 +38,31 @@ extern "C" {
 /* ---------------------------------------------------------------*/
 
 
-/** Callback type for checking read authorization on paths produced by
- * (at least) svn_repos_dir_delta() and svn_repos_replay().
+/** Callback type for checking authorization on paths produced by (at
+ * least) svn_repos_dir_delta().
  *
- * Set @a *allowed to TRUE to indicate that @a path in @a root is
- * readable, or to FALSE to indicate unreadable (presumably according
- * to authorization state stored in @a baton).
- *
+ * Set @a *allowed to TRUE to indicate that some operation is
+ * authorized for @a path in @a root, or set it to FALSE to indicate
+ * unauthorized (presumably according to state stored in @a baton).
+ * 
  * Do not assume @a pool has any lifetime beyond this call.
  *
- * Note: If someday we want more sophisticated authorization states,
- * @a allowed can become an enum type.
+ * The exact operation being authorized depends on the callback
+ * implementation.  For read authorization, for example, the caller
+ * would implement an instance that does read checking, and pass it as
+ * a parameter named [perhaps] 'authz_read_func'.  The receiver of
+ * that parameter might also take another parameter named
+ * 'authz_write_func', which although sharing this type, would be a
+ * different implementation.
+ *
+ * Note: If someday we want more sophisticated authorization states
+ * than just yes/no, @a allowed can become an enum type.
  */
-typedef svn_error_t *(*svn_repos_authz_read_func_t) (svn_boolean_t *allowed,
-                                                     svn_fs_root_t *root,
-                                                     const char *path,
-                                                     void *baton,
-                                                     apr_pool_t *pool);
+typedef svn_error_t *(*svn_repos_authz_func_t) (svn_boolean_t *allowed,
+                                                svn_fs_root_t *root,
+                                                const char *path,
+                                                void *baton,
+                                                apr_pool_t *pool);
 
 
 
@@ -256,7 +264,7 @@ svn_repos_begin_report (void **report_baton,
                         svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
-                        svn_repos_authz_read_func_t authz_read_func,
+                        svn_repos_authz_func_t authz_read_func,
                         void *authz_read_baton,
                         apr_pool_t *pool);
 
@@ -395,7 +403,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      const char *tgt_path,
                      const svn_delta_editor_t *editor,
                      void *edit_baton,
-                     svn_repos_authz_read_func_t authz_read_func,
+                     svn_repos_authz_func_t authz_read_func,
                      void *authz_read_baton,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
@@ -417,7 +425,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
  * revision parameters in the editor interface except the copyfrom
  * parameter of the add_file() and add_directory() editor functions.
  *
- * ### TODO: This ought to take an svn_repos_authz_read_func_t too.
+ * ### TODO: This ought to take an svn_repos_authz_func_t too.
  * The only reason it doesn't yet is the difficulty of implementing
  * that correctly, plus lack of strong present need -- it's currently
  * only used in creating a DAV MERGE response, in 'svnadmin dump', and
