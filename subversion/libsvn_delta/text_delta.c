@@ -225,11 +225,6 @@ svn_txdelta (svn_txdelta_stream_t **stream,
 
   /* Initialize MD5 digest calculation. */
   apr_md5_init (&((*stream)->context));
-
-  /* ### Need to initalise this as the value gets used later in
-     use_implicit(). I don't know what the initial value should be,
-     zero appears to work. */
-  memset ((*stream)->digest, 0, MD5_DIGESTSIZE);
 }
 
 
@@ -260,69 +255,55 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
                          svn_txdelta_stream_t *stream,
                          apr_pool_t *pool)
 {
-  if (!stream->more)
+  svn_error_t *err;
+  apr_size_t source_len = SVN_STREAM_CHUNK_SIZE;
+  apr_size_t target_len = SVN_STREAM_CHUNK_SIZE;
+  svn_txdelta__ops_baton_t build_baton = { 0 };
+  
+  /* Read the source stream. */
+  err = svn_stream_read (stream->source, stream->buf, &source_len);
+  
+  /* Read the target stream. */
+  if (err == SVN_NO_ERROR)
+    err = svn_stream_read (stream->target, stream->buf + source_len,
+                           &target_len);
+  if (err != SVN_NO_ERROR)
+    return err;
+  stream->pos += source_len;
+  
+  /* ### The apr_md5 functions always return APR_SUCCESS.  At one
+     point, we proposed to APR folks that the interfaces change to
+     return void, but for some people that was apparently not a good
+     idea, and we didn't bother pressing the matter.  In the meantime,
+     we just ignore their return values below. */
+  if (target_len == 0)
     {
-      apr_status_t apr_err;
-
-      apr_err = apr_md5_final (stream->digest, &(stream->context));
-      if (apr_err)
-        return svn_error_create 
-          (apr_err, NULL,
-           "svn_txdelta_next_window: MD5 finalization failed");
-
+      /* No target data?  We're done; return the final window. */
+      apr_md5_final (stream->digest, &(stream->context));
       *window = NULL;
+      stream->more = FALSE;
       return SVN_NO_ERROR;
     }
   else
     {
-      svn_error_t *err;
-      apr_size_t source_len = SVN_STREAM_CHUNK_SIZE;
-      apr_size_t target_len = SVN_STREAM_CHUNK_SIZE;
-      svn_txdelta__ops_baton_t build_baton = { 0 };
-
-      /* Read the source stream. */
-      err = svn_stream_read (stream->source, stream->buf, &source_len);
-
-      /* Update the MD5 accumulator with the freshly-read data in
-         stream.
-
-         ### todo: Currently, apr_md5_update() always returns
-         APR_SUCCESS.  As such, we are proposing to the APR folks that
-         its interface change to be a void function.  In the meantime,
-         we'll simply ignore the return value. */
-      apr_md5_update (&(stream->context), stream->buf, source_len);
-
-      /* Read the target stream. */
-      if (err == SVN_NO_ERROR)
-        err = svn_stream_read (stream->target, stream->buf + source_len,
-                               &target_len);
-      if (err != SVN_NO_ERROR)
-        return err;
-      stream->pos += source_len;
-
-      /* Forget everything if there's no target data. */
-      if (target_len == 0)
-        {
-          *window = NULL;
-          stream->more = FALSE;
-          return SVN_NO_ERROR;
-        }
-
-      /* Compute the delta operations. */
-      build_baton.new_data = svn_stringbuf_create ("", pool);
-      svn_txdelta__vdelta (&build_baton, stream->buf,
-                           source_len, target_len,
-                           pool);
-
-      /* Create the delta window. */
-      *window = svn_txdelta__make_window (&build_baton, pool);
-      (*window)->sview_offset = stream->pos - source_len;
-      (*window)->sview_len = source_len;
-      (*window)->tview_len = target_len;
-
-      /* That's it. */
-      return SVN_NO_ERROR;
+      apr_md5_update (&(stream->context), stream->buf + source_len,
+                      target_len);
     }
+  
+  /* Compute the delta operations. */
+  build_baton.new_data = svn_stringbuf_create ("", pool);
+  svn_txdelta__vdelta (&build_baton, stream->buf,
+                       source_len, target_len,
+                       pool);
+  
+  /* Create the delta window. */
+  *window = svn_txdelta__make_window (&build_baton, pool);
+  (*window)->sview_offset = stream->pos - source_len;
+  (*window)->sview_len = source_len;
+  (*window)->tview_len = target_len;
+  
+  /* That's it. */
+  return SVN_NO_ERROR;
 }
 
 
