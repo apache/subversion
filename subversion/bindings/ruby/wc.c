@@ -790,25 +790,6 @@ void svn_ruby_init_wc (void)
                    INT2NUM (svn_wc_schedule_delete));
   rb_define_const (cSvnWcEntry, "SCHEDULE_REPLACE",
                    INT2NUM (svn_wc_schedule_replace));
-  define_prop (cSvnWcEntry, "ATTR_NAME",  SVN_WC_ENTRY_ATTR_NAME);
-  define_prop (cSvnWcEntry, "ATTR_REVISION",  SVN_WC_ENTRY_ATTR_REVISION);
-  define_prop (cSvnWcEntry, "ATTR_KIND",  SVN_WC_ENTRY_ATTR_KIND);
-  define_prop (cSvnWcEntry, "ATTR_TEXT_TIME",  SVN_WC_ENTRY_ATTR_TEXT_TIME);
-  define_prop (cSvnWcEntry, "ATTR_PROP_TIME",  SVN_WC_ENTRY_ATTR_PROP_TIME);
-  define_prop (cSvnWcEntry, "ATTR_CHECKSUM",  SVN_WC_ENTRY_ATTR_CHECKSUM);
-  define_prop (cSvnWcEntry, "ATTR_SCHEDULE",  SVN_WC_ENTRY_ATTR_SCHEDULE);
-  define_prop (cSvnWcEntry, "ATTR_CONFLICTED",  SVN_WC_ENTRY_ATTR_CONFLICTED);
-  define_prop (cSvnWcEntry, "ATTR_COPIED",  SVN_WC_ENTRY_ATTR_COPIED);
-  define_prop (cSvnWcEntry, "ATTR_URL",  SVN_WC_ENTRY_ATTR_URL);
-  define_prop (cSvnWcEntry, "ATTR_REJFILE",  SVN_WC_ENTRY_ATTR_REJFILE);
-  define_prop (cSvnWcEntry, "ATTR_PREJFILE",  SVN_WC_ENTRY_ATTR_PREJFILE);
-  define_prop (cSvnWcEntry, "ATTR_COPYFROM_URL", SVN_WC_ENTRY_ATTR_COPYFROM_URL);
-  define_prop (cSvnWcEntry, "ATTR_COPYFROM_REV", SVN_WC_ENTRY_ATTR_COPYFROM_REV);
-  define_prop (cSvnWcEntry, "VALUE_ADD",  SVN_WC_ENTRY_VALUE_ADD);
-  define_prop (cSvnWcEntry, "VALUE_DELETE",  SVN_WC_ENTRY_VALUE_DELETE);
-  define_prop (cSvnWcEntry, "VALUE_REPLACE",  SVN_WC_ENTRY_VALUE_REPLACE);
-  define_prop (cSvnWcEntry, "VALUE_ADDED",  SVN_WC_ENTRY_VALUE_ADDED);
-  define_prop (cSvnWcEntry, "VALUE_DELETED",  SVN_WC_ENTRY_VALUE_DELETED);
   define_prop (cSvnWcEntry, "THIS_DIR",  SVN_WC_ENTRY_THIS_DIR);
   rb_define_method (cSvnWcEntry, "revision", wc_entry_revision, 0);
   rb_define_method (cSvnWcEntry, "url", wc_entry_url, 0);

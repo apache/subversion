@@ -787,7 +787,7 @@ close_directory (void *dir_baton)
                              SVN_WC__LOG_ATTR_NAME,
                              svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR,
                                                    db->pool),
-                             SVN_WC_ENTRY_ATTR_REVISION,
+                             SVN_WC__ENTRY_ATTR_REVISION,
                              svn_stringbuf_create (revision_str, db->pool),
                              NULL);
 
@@ -807,7 +807,7 @@ close_directory (void *dir_baton)
                                SVN_WC__LOG_ATTR_NAME,
                                svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR,
                                                      db->pool),
-                               SVN_WC_ENTRY_ATTR_PROP_TIME,
+                               SVN_WC__ENTRY_ATTR_PROP_TIME,
                                /* use wfile time */
                                svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
                                                      db->pool),
@@ -1437,10 +1437,10 @@ svn_wc_install_file (const char *file_path,
                          SVN_WC__LOG_MODIFY_ENTRY,
                          SVN_WC__LOG_ATTR_NAME,
                          basename,
-                         SVN_WC_ENTRY_ATTR_KIND,
+                         SVN_WC__ENTRY_ATTR_KIND,
                          svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_FILE_STR, 
                                                pool),
-                         SVN_WC_ENTRY_ATTR_REVISION,
+                         SVN_WC__ENTRY_ATTR_REVISION,
                          svn_stringbuf_create (revision_str, pool),
                          NULL);
 
@@ -1459,7 +1459,7 @@ svn_wc_install_file (const char *file_path,
                                SVN_WC__LOG_MODIFY_ENTRY,
                                SVN_WC__LOG_ATTR_NAME,
                                basename,
-                               SVN_WC_ENTRY_ATTR_TEXT_TIME,
+                               SVN_WC__ENTRY_ATTR_TEXT_TIME,
                                /* use wfile time */
                                svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
                                                      pool),
@@ -1484,7 +1484,7 @@ svn_wc_install_file (const char *file_path,
                                SVN_WC__LOG_MODIFY_ENTRY,
                                SVN_WC__LOG_ATTR_NAME,
                                basename,
-                               SVN_WC_ENTRY_ATTR_PROP_TIME,
+                               SVN_WC__ENTRY_ATTR_PROP_TIME,
                                /* use wfile time */
                                svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
                                                      pool),
@@ -1501,7 +1501,7 @@ svn_wc_install_file (const char *file_path,
                              SVN_WC__LOG_MODIFY_ENTRY,
                              SVN_WC__LOG_ATTR_NAME,
                              basename,
-                             SVN_WC_ENTRY_ATTR_URL,
+                             SVN_WC__ENTRY_ATTR_URL,
                              svn_stringbuf_create (new_URL, pool),
                              NULL);
     }

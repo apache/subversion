@@ -177,30 +177,6 @@ typedef struct svn_wc_entry_t
 } svn_wc_entry_t;
 
 
-#define SVN_WC_ENTRY_ATTR_NAME          "name"
-#define SVN_WC_ENTRY_ATTR_REVISION      "revision"
-#define SVN_WC_ENTRY_ATTR_KIND          "kind"
-#define SVN_WC_ENTRY_ATTR_TEXT_TIME     "text-time"
-#define SVN_WC_ENTRY_ATTR_PROP_TIME     "prop-time"
-#define SVN_WC_ENTRY_ATTR_CHECKSUM      "checksum"
-#define SVN_WC_ENTRY_ATTR_SCHEDULE      "schedule"
-#define SVN_WC_ENTRY_ATTR_CONFLICTED    "conflicted"
-#define SVN_WC_ENTRY_ATTR_COPIED        "copied"
-#define SVN_WC_ENTRY_ATTR_URL           "url"
-#define SVN_WC_ENTRY_ATTR_CONFLICT_OLD  "conflict-old" /* saved old file */
-#define SVN_WC_ENTRY_ATTR_CONFLICT_NEW  "conflict-new" /* saved new file */
-#define SVN_WC_ENTRY_ATTR_CONFLICT_WRK  "conflict-wrk" /* saved working file */
-#define SVN_WC_ENTRY_ATTR_PREJFILE      "prop-reject-file"
-#define SVN_WC_ENTRY_ATTR_COPYFROM_URL  "copyfrom-url"
-#define SVN_WC_ENTRY_ATTR_COPYFROM_REV  "copyfrom-rev"
-
-/* Attribute values */
-#define SVN_WC_ENTRY_VALUE_ADD        "add"
-#define SVN_WC_ENTRY_VALUE_DELETE     "delete"
-#define SVN_WC_ENTRY_VALUE_REPLACE    "replace"
-#define SVN_WC_ENTRY_VALUE_ADDED      "added"
-#define SVN_WC_ENTRY_VALUE_DELETED    "deleted"
-
 /* How an entries file's owner dir is named in the entries file. */
 #define SVN_WC_ENTRY_THIS_DIR  "svn:this_dir"
 

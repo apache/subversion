@@ -801,7 +801,7 @@ derive_copyfrom_url (svn_stringbuf_t **copyfrom_url,
     {
       root_copyfrom_url = 
         (svn_stringbuf_t *) apr_hash_get (stackptr->this_dir->attributes,
-                                          SVN_WC_ENTRY_ATTR_COPYFROM_URL,
+                                          SVN_WC__ENTRY_ATTR_COPYFROM_URL,
                                           APR_HASH_KEY_STRING);      
       if (root_copyfrom_url != NULL)
         /* found the nearest copy history, so move on. */
@@ -1029,11 +1029,11 @@ report_single_mod (const char *name,
       /* If the entry itself has 'copyfrom' args, find them now. */
       copyfrom_url = 
         (svn_stringbuf_t *) apr_hash_get (entry->attributes,
-                                          SVN_WC_ENTRY_ATTR_COPYFROM_URL,
+                                          SVN_WC__ENTRY_ATTR_COPYFROM_URL,
                                           APR_HASH_KEY_STRING);      
       copyfrom_rev_str = 
         (svn_stringbuf_t *) apr_hash_get (entry->attributes,
-                                          SVN_WC_ENTRY_ATTR_COPYFROM_REV,
+                                          SVN_WC__ENTRY_ATTR_COPYFROM_REV,
                                           APR_HASH_KEY_STRING);
       if (copyfrom_rev_str)
         copyfrom_rev = SVN_STR_TO_REV (copyfrom_rev_str->data);
@@ -1384,7 +1384,7 @@ crawl_dir (svn_stringbuf_t *path,
   if ((this_dir_entry->schedule == svn_wc_schedule_add)
       || (this_dir_entry->schedule == svn_wc_schedule_replace))
     if ((apr_hash_get (this_dir_entry->attributes,
-                       SVN_WC_ENTRY_ATTR_COPYFROM_URL,
+                       SVN_WC__ENTRY_ATTR_COPYFROM_URL,
                        APR_HASH_KEY_STRING)) == NULL)
       adds_only = TRUE;
 
@@ -2073,9 +2073,9 @@ crawl_as_copy (svn_stringbuf_t *parent,
     svn_stringbuf_t *revstr = 
       svn_stringbuf_createf (pool, "%ld", p_entry->revision);
     
-    apr_hash_set (p_entry->attributes, SVN_WC_ENTRY_ATTR_COPYFROM_URL,
+    apr_hash_set (p_entry->attributes, SVN_WC__ENTRY_ATTR_COPYFROM_URL,
                   APR_HASH_KEY_STRING, p_entry->url);
-    apr_hash_set (p_entry->attributes, SVN_WC_ENTRY_ATTR_COPYFROM_REV,
+    apr_hash_set (p_entry->attributes, SVN_WC__ENTRY_ATTR_COPYFROM_REV,
                   APR_HASH_KEY_STRING, revstr);
   }
 

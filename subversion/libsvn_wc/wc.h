@@ -522,6 +522,25 @@ svn_error_t *svn_wc__run_log (svn_stringbuf_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_ATTR_FILE_STR   "file"
 #define SVN_WC__ENTRIES_ATTR_DIR_STR    "dir"
 
+/* The names of the XML attributes for storing entries' information */
+#define SVN_WC__ENTRY_ATTR_NAME         "name"
+#define SVN_WC__ENTRY_ATTR_REVISION     "revision"
+#define SVN_WC__ENTRY_ATTR_KIND         "kind"
+#define SVN_WC__ENTRY_ATTR_TEXT_TIME    "text-time"
+#define SVN_WC__ENTRY_ATTR_PROP_TIME    "prop-time"
+#define SVN_WC__ENTRY_ATTR_CHECKSUM     "checksum"
+#define SVN_WC__ENTRY_ATTR_SCHEDULE     "schedule"
+#define SVN_WC__ENTRY_ATTR_CONFLICTED   "conflicted"
+#define SVN_WC__ENTRY_ATTR_COPIED       "copied"
+#define SVN_WC__ENTRY_ATTR_URL          "url"
+#define SVN_WC__ENTRY_ATTR_CONFLICT_OLD "conflict-old" /* saved old file */
+#define SVN_WC__ENTRY_ATTR_CONFLICT_NEW "conflict-new" /* saved new file */
+#define SVN_WC__ENTRY_ATTR_CONFLICT_WRK "conflict-wrk" /* saved working file */
+#define SVN_WC__ENTRY_ATTR_PREJFILE     "prop-reject-file"
+#define SVN_WC__ENTRY_ATTR_COPYFROM_URL "copyfrom-url"
+#define SVN_WC__ENTRY_ATTR_COPYFROM_REV "copyfrom-rev"
+
+
 /* Initialize an entries file based on URL, in th adm area for
    PATH.  The adm area must not already have an entries file. */
 svn_error_t *svn_wc__entries_init (svn_stringbuf_t *path,

@@ -479,7 +479,7 @@ log_do_modify_entry (struct log_runner *loggy,
      and prop_time for each of the three scenarios.  */
 
   /* TEXT_TIME: */
-  valuestr = apr_hash_get (ah, SVN_WC_ENTRY_ATTR_TEXT_TIME, 
+  valuestr = apr_hash_get (ah, SVN_WC__ENTRY_ATTR_TEXT_TIME, 
                            APR_HASH_KEY_STRING);
 
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
@@ -507,7 +507,7 @@ log_do_modify_entry (struct log_runner *loggy,
     }
 
   /* PROP_TIME: */
-  valuestr = apr_hash_get (ah, SVN_WC_ENTRY_ATTR_PROP_TIME, 
+  valuestr = apr_hash_get (ah, SVN_WC__ENTRY_ATTR_PROP_TIME, 
                            APR_HASH_KEY_STRING);
 
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
@@ -892,12 +892,12 @@ log_do_committed (struct log_runner *loggy,
              NULL, NULL,
              loggy->pool,
              /* Remove all these attributes: */
-             SVN_WC_ENTRY_ATTR_CONFLICT_OLD,   /* ### should we remove */
-             SVN_WC_ENTRY_ATTR_CONFLICT_NEW,   /*     these files from */
-             SVN_WC_ENTRY_ATTR_CONFLICT_WRK,   /*     disk as well?    */
-             SVN_WC_ENTRY_ATTR_PREJFILE,
-             SVN_WC_ENTRY_ATTR_COPYFROM_URL,
-             SVN_WC_ENTRY_ATTR_COPYFROM_REV,
+             SVN_WC__ENTRY_ATTR_CONFLICT_OLD,   /* ### should we remove */
+             SVN_WC__ENTRY_ATTR_CONFLICT_NEW,   /*     these files from */
+             SVN_WC__ENTRY_ATTR_CONFLICT_WRK,   /*     disk as well?    */
+             SVN_WC__ENTRY_ATTR_PREJFILE,
+             SVN_WC__ENTRY_ATTR_COPYFROM_URL,
+             SVN_WC__ENTRY_ATTR_COPYFROM_REV,
              NULL);
           if (err)
             return svn_error_createf
@@ -941,8 +941,8 @@ log_do_committed (struct log_runner *loggy,
                      0,
                      NULL, NULL,
                      loggy->pool,
-                     SVN_WC_ENTRY_ATTR_COPYFROM_URL,
-                     SVN_WC_ENTRY_ATTR_COPYFROM_REV,
+                     SVN_WC__ENTRY_ATTR_COPYFROM_URL,
+                     SVN_WC__ENTRY_ATTR_COPYFROM_REV,
                      NULL);
                   if (err)
                     return svn_error_createf

@@ -362,7 +362,7 @@ svn_wc__get_existing_prop_reject_file (const svn_string_t **reject_file,
   atts = the_entry->attributes;
 
   /* ### be nice if these attributes weren't stringbuf... */
-  filebuf = apr_hash_get (atts, SVN_WC_ENTRY_ATTR_PREJFILE,
+  filebuf = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_PREJFILE,
                           APR_HASH_KEY_STRING);
 
   *reject_file = svn_string_create_from_buf (filebuf, pool);
@@ -749,9 +749,9 @@ svn_wc__merge_prop_diffs (const char *path,
                              SVN_WC__LOG_MODIFY_ENTRY,
                              SVN_WC__LOG_ATTR_NAME,
                              entryname_buf,
-                             SVN_WC_ENTRY_ATTR_CONFLICTED,
+                             SVN_WC__ENTRY_ATTR_CONFLICTED,
                              svn_stringbuf_create ("true", pool),
-                             SVN_WC_ENTRY_ATTR_PREJFILE,
+                             SVN_WC__ENTRY_ATTR_PREJFILE,
                              reject_pathbuf,
                              NULL);      
 
@@ -1045,7 +1045,7 @@ svn_wc_prop_set (const char *name,
                                          NULL,
                                          NULL,
                                          pool,
-                                         SVN_WC_ENTRY_ATTR_TEXT_TIME,
+                                         SVN_WC__ENTRY_ATTR_TEXT_TIME,
                                          NULL));
         }
     }
@@ -1231,7 +1231,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
         value = (svn_stringbuf_t *)
           apr_hash_get (entry->attributes, 
                         SVN_ENTRY_ATTR_COMMITTED_REV,
-                        strlen(SVN_ENTRY_ATTR_COMMITTED_REV));
+                        APR_HASH_KEY_STRING);
 
       if (! value)
         /* We found a recognized keyword, so it needs to be expanded
@@ -1248,7 +1248,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
         value = (svn_stringbuf_t *)
           apr_hash_get (entry->attributes, 
                         SVN_ENTRY_ATTR_COMMITTED_DATE,
-                        strlen(SVN_ENTRY_ATTR_COMMITTED_DATE));
+                        APR_HASH_KEY_STRING);
       
       if (! value)
         keywords->date = svn_string_create ("", pool);
@@ -1262,7 +1262,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
         value = (svn_stringbuf_t *)
           apr_hash_get (entry->attributes, 
                         SVN_ENTRY_ATTR_LAST_AUTHOR,
-                        strlen(SVN_ENTRY_ATTR_LAST_AUTHOR));
+                        APR_HASH_KEY_STRING);
       
       if (! value)
         keywords->author = svn_string_create ("", pool);
