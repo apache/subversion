@@ -1,4 +1,4 @@
-/* editor.c --- a tree editor for commiting changes to a filesystem.
+/* commit-editor.c --- editor for commiting changes to a filesystem.
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -19,8 +19,8 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
-#include "dag.h"
-#include "err.h"
+#include "svn_repos.h"
+
 
 
 /*** Editor batons. ***/
@@ -35,7 +35,7 @@ struct edit_baton
   svn_string_t *log_msg;
 
   /* Hook to run when when the commit is done. */
-  svn_fs_commit_hook_t *hook;
+  svn_repos_commit_hook_t *hook;
   void *hook_baton;
 
   /* The already-open svn filesystem to commit to. */
@@ -514,20 +514,18 @@ close_edit (void *edit_baton)
 /*** Public interface. ***/
 
 svn_error_t *
-svn_fs_get_editor (svn_delta_edit_fns_t **editor,
-                   void **edit_baton,
-                   svn_fs_t *fs,
-                   svn_string_t *base_path,
-                   svn_string_t *log_msg,
-                   svn_fs_commit_hook_t *hook,
-                   void *hook_baton,
-                   apr_pool_t *pool)
+svn_repos_get_editor (svn_delta_edit_fns_t **editor,
+                      void **edit_baton,
+                      svn_fs_t *fs,
+                      svn_string_t *base_path,
+                      svn_string_t *log_msg,
+                      svn_repos_commit_hook_t *hook,
+                      void *hook_baton,
+                      apr_pool_t *pool)
 {
   svn_delta_edit_fns_t *e = svn_delta_default_editor (pool);
   apr_pool_t *subpool = svn_pool_create (pool);
   struct edit_baton *eb = apr_pcalloc (subpool, sizeof (*eb));
-
-  SVN_ERR (svn_fs__check_fs (fs));
 
   /* Set up the editor. */
   e->replace_root      = replace_root;

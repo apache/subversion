@@ -14,7 +14,7 @@
 
 #include "ra_local.h"
 #include "svn_ra.h"
-
+#include "svn_repos.h"
 
 /*----------------------------------------------------------------*/
 
@@ -27,7 +27,7 @@
    Loop over all committed target paths within BATON, calling the
    clients' close_func() with NEW_REV. */
 
-/* (This is a routine of type svn_fs_commit_hook_t) */
+/* (This is a routine of type svn_repos_commit_hook_t) */
 static svn_error_t *
 cleanup_commit (svn_revnum_t new_rev, void *baton)
 {
@@ -167,14 +167,14 @@ get_commit_editor (void *session_baton,
   closer->target_array = apr_array_make (sess_baton->pool, 1,
                                          sizeof(svn_string_t *));
                                          
-  /* Get the filesystem commit-editor */     
-  SVN_ERR (svn_fs_get_editor (&commit_editor, &commit_editor_baton,
-                              sess_baton->fs, 
-                              sess_baton->fs_path,
-                              log_msg,
-                              cleanup_commit, closer, /* fs will call
-                                                         this when done.*/
-                              sess_baton->pool));
+  /* Get the repos commit-editor */     
+  SVN_ERR (svn_repos_get_editor (&commit_editor, &commit_editor_baton,
+                                 sess_baton->fs, 
+                                 sess_baton->fs_path,
+                                 log_msg,
+                                 cleanup_commit, closer, /* fs will call
+                                                            this when done.*/
+                                 sess_baton->pool));
 
   /* Get the commit `tracking' editor, telling it to store committed
      targets inside our `closer' object, and NOT to bump revisions.

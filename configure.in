@@ -124,7 +124,7 @@ SVN_FS_WANT_DB_PATCH=9
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH)
 if test "$svn_lib_berkeley_db" = "yes"; then
-  FS_BASED_DIRS="libsvn_fs libsvn_ra_local svnadmin"
+  FS_BASED_DIRS="libsvn_fs libsvn_repos libsvn_ra_local svnadmin"
   FS_BASED_TESTS="libsvn_fs libsvn_ra_local"
 fi
 AC_SUBST(FS_BASED_DIRS)
@@ -215,7 +215,7 @@ if test "$enable_shared" = "no"; then
   if test "$svn_lib_berkeley_db" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
         [Defined if libsvn_client should link against libsvn_ra_local])
-    LIBSVN_CLIENT_DEPS="$LIBSVN_CLIENT_DEPS $SVN_LIBSVN_RA_LOCAL_LIBS $SVN_LIBSVN_FS_LIBS"
+    LIBSVN_CLIENT_DEPS="$LIBSVN_CLIENT_DEPS $SVN_LIBSVN_RA_LOCAL_LIBS $SVN_LIBSVN_FS_LIBS $SVN_LIBSVN_REPOS_LIBS"
   fi
 
 fi
@@ -240,6 +240,7 @@ AC_OUTPUT([Makefile                                           \
            subversion/client/Makefile                         \
            subversion/client/tests/Makefile                   \
            subversion/libsvn_fs/Makefile                      \
+           subversion/libsvn_repos/Makefile                   \
            subversion/libsvn_ra/Makefile                      \
            subversion/libsvn_ra_dav/Makefile                  \
            subversion/libsvn_ra_local/Makefile                \
