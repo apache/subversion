@@ -585,7 +585,6 @@ svn_error_t *svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool);
    update.) */
 svn_error_t *svn_wc__ensure_uniform_revision (svn_stringbuf_t *path,
                                               svn_revnum_t revision,
-                                              svn_boolean_t recurse,
                                               apr_pool_t *pool);
 
 

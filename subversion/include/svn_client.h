@@ -153,7 +153,6 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      svn_stringbuf_t *URL,
                      svn_stringbuf_t *path,
                      svn_revnum_t revision,
-                     svn_boolean_t recurse,
                      apr_time_t tm,
                      svn_stringbuf_t *xml_src,
                      apr_pool_t *pool);
@@ -189,7 +188,6 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    svn_stringbuf_t *xml_src,
                    svn_revnum_t revision,
                    apr_time_t tm,
-                   svn_boolean_t recurse,
                    apr_pool_t *pool);
 
 
