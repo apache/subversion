@@ -38,6 +38,20 @@ dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
        svn_error_t's are marshalled to the client via the single
        generic <svn:error/> tag nestled within a <D:error> block. */
 
+    /* Even though the caller passed in some HTTP status code, we
+       should look at the actual subversion error code and use the
+       -best- HTTP mapping we can. */
+    switch (serr->apr_err)
+      {
+      case SVN_ERR_FS_NOT_FOUND:
+        status = HTTP_NOT_FOUND;
+        break;
+      case SVN_ERR_UNSUPPORTED_FEATURE:
+        status = HTTP_NOT_IMPLEMENTED;
+        break;
+        /* add other mappings here */
+      }
+
     derr = dav_new_error_tag(serr->pool, status,
                              serr->apr_err, serr->message,
                              SVN_DAV_ERROR_NAMESPACE,
