@@ -401,6 +401,7 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
 {
   apr_array_header_t *ci = commit_items; /* convenience */
   svn_stringbuf_t *url;
+  svn_client_commit_item_t *item;
   int i;
   
   assert (ci && ci->nelts);
@@ -409,48 +410,33 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
   qsort (ci->elts, ci->nelts, 
          ci->elt_size, svn_client__sort_commit_item_urls);
 
-  /* Find a common BASE_URL that these ci share. */
-  url = (((svn_client_commit_item_t **) ci->elts)[0])->url;
-  *base_url = svn_stringbuf_dup (url, pool);
-
-  /* ### BIG OL' TODO:  
-
-     We seriously need to know the canonical repository URL, methinks.
-     For one, we could get rid of that stupid hack COMMITTABLES key
-     name (see client.h), but more importantly, for a commit of a
-     single item, we sometimes need to anchor our commit editor on the
-     parent of that thing.  For example, to commit a single file, we
-     must call ed->open_root() on its parent, then open_file() on the
-     file itself.  To commit, say, a single directory deletion, we
-     need to call ed->open_root() on the parent of the dir, then
-     delete_entry() on the dir itself.  While we don't have to do this
-     for, say, the commit of a single directory's property changes, it
-     doesn't hurt to just do this all the time.
-
-     However, this is one exception to the "doesn't hurt to just do
-     this all the time" rule, and that is when we're talking about the
-     root URL of a repository.  We can't open the parent of the root
-     URL (!), and in general there shouldn't be any working copy
-     operation that would necessitate this anyway.  If we knew the
-     canonical repos URL though, a single comparison of that versus
-     the single thing we're committing would tell us whether or not it
-     was okay to open the parent directory of the thing. */
-
-  /* If there is only one commit candidate, we'll call its parent
-     directory URL the BASE_URL. */
-  if (ci->nelts == 1)
-    svn_path_remove_component (*base_url);
-  else
+  /* Loop through the URLs, finding the longest usable ancestor common
+     to all of them.  */
+  for (i = 0; i < ci->nelts; i++)
     {
-      /* Loop through the remainder of the URLs (this only happens if
-         there was more than one commit candidate), finding the common
-         ancestor between it and our current best pick for a
-         *BASE_URL.  That will be our our new best pick. */
-      for (i = 1; i < ci->nelts; i++)
-        {
-          url = (((svn_client_commit_item_t **) ci->elts)[i])->url;
-          *base_url = svn_path_get_longest_ancestor (*base_url, url, pool); 
-        }
+      item = (((svn_client_commit_item_t **) ci->elts)[i]);
+      url = item->url;
+
+      /* In the first iteration, our BASE_URL is just are only
+         encountered commit URL to date.  After that, we find the
+         longest ancestor between the current BASE_URL and the current
+         commit URL.  */
+      if (i == 0)
+        *base_url = svn_stringbuf_dup (url, pool);
+      else
+        *base_url = svn_path_get_longest_ancestor (*base_url, url, pool); 
+
+      /* If our BASE_URL is itself a to-be-committed item, and it is
+         anything other than an already-versioned directory with
+         property mods, we'll call its parent directory URL the
+         BASE_URL.  Why?  Because we can't have a file URL as our base
+         -- period -- and all other directory operations (removal,
+         addition, etc.) require that we open that directory's parent
+         dir first.  */
+      if (((*base_url)->len == url->len)
+          && (! ((item->entry->kind == svn_node_dir)
+                 && item->state_flags == SVN_CLIENT_COMMIT_ITEM_PROP_MODS)))
+        svn_path_remove_component (*base_url);
     }
   
   /* Now that we've settled on a *BASE_URL, go hack that base off
@@ -804,7 +790,7 @@ svn_client__do_commit (apr_array_header_t *commit_items,
     }
 
   /* Close down any remaining open directory batons. */
-  while (stack_ptr--)
+  while (stack_ptr)
     {
       SVN_ERR (pop_stack (db_stack, &stack_ptr, editor));
     }
