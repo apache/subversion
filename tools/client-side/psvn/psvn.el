@@ -445,27 +445,27 @@
                     ["svn add" svn-status-add-file t]
                     ["svn revert" svn-status-revert-file t]
                     ["svn cleanup" svn-status-cleanup t]
-                    ["Show process buffer" svn-status-show-process-buffer t]
+                    ["Show Process Buffer" svn-status-show-process-buffer t]
                     ("Property"
                      ["svn proplist" svn-status-property-list t]
-                     ["set multiple properties" svn-status-property-set t]
-                     ["edit one property" svn-status-property-edit-one-entry t]
-                     ["svn propdel" svn-status-property-delete t]
+                     ["Set Multiple Properties..." svn-status-property-set t]
+                     ["Edit One Property..." svn-status-property-edit-one-entry t]
+                     ["svn propdel..." svn-status-property-delete t]
                      "---"
-                     ["svn:ignore file" svn-status-property-ignore-file t]
-                     ["svn:ignore file extension" svn-status-property-ignore-file-extension t]
-                     ["edit svn:ignore file" svn-status-property-edit-svn-ignore t]
+                     ["svn:ignore File..." svn-status-property-ignore-file t]
+                     ["svn:ignore File Extension..." svn-status-property-ignore-file-extension t]
+                     ["Edit svn:ignore Property" svn-status-property-edit-svn-ignore t]
                      "---"
-                     ["set svn:keyword list" svn-status-property-set-keyword-list t]
+                     ["Set svn:keywords List" svn-status-property-set-keyword-list t]
                      )
                     "---"
-                    ["edit next svn cmd line" svn-status-toggle-edit-cmd-flag t]
-                    ["work directory history" svn-status-use-history t]
-                    ["mark" svn-status-set-user-mark t]
-                    ["unmark" svn-status-unset-user-mark t]
-                    ["hide unknown" svn-status-toggle-hide-unknown
+                    ["Edit Next Svn Cmd Line" svn-status-toggle-edit-cmd-flag t]
+                    ["Work Directory History..." svn-status-use-history t]
+                    ["Mark" svn-status-set-user-mark t]
+                    ["Unmark" svn-status-unset-user-mark t]
+                    ["Hide Unknown" svn-status-toggle-hide-unknown
                      :style toggle :selected svn-status-hide-unknown]
-                    ["hide unmodified" svn-status-toggle-hide-unmodified
+                    ["Hide Unmodified" svn-status-toggle-hide-unmodified
                      :style toggle :selected svn-status-hide-unmodified]
                     ))
 
@@ -1150,10 +1150,10 @@ Then move to that line."
 (easy-menu-define svn-prop-edit-mode-menu svn-prop-edit-mode-map
 "'svn-prop-edit-mode' menu"
                   '("Svn-PropEdit"
-                    ["commit" svn-prop-edit-done t]
-                    ["show diff" svn-prop-edit-svn-diff t]
-                    ["show status" svn-prop-edit-svn-status t]
-                    ["abort" svn-prop-edit-abort t]))
+                    ["Commit" svn-prop-edit-done t]
+                    ["Show Diff" svn-prop-edit-svn-diff t]
+                    ["Show Status" svn-prop-edit-svn-status t]
+                    ["Abort" svn-prop-edit-abort t]))
 
 (defun svn-prop-edit-mode ()
   (interactive)
@@ -1212,10 +1212,10 @@ Then move to that line."
 (easy-menu-define svn-log-edit-mode-menu svn-log-edit-mode-map
 "'svn-log-edit-mode' menu"
                   '("Svn-Log"
-                    ["commit" svn-log-edit-done t]
-                    ["show diff" svn-log-edit-svn-diff t]
-                    ["show status" svn-log-edit-svn-status t]
-                    ["abort" svn-log-edit-abort t]))
+                    ["Commit" svn-log-edit-done t]
+                    ["Show Diff" svn-log-edit-svn-diff t]
+                    ["Show Status" svn-log-edit-svn-status t]
+                    ["Abort" svn-log-edit-abort t]))
 
 (defun svn-log-edit-mode ()
   (interactive)
