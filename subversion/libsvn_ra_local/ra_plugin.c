@@ -475,6 +475,8 @@ svn_ra_local__get_commit_editor2 (void *session_baton,
   db->repos = sess->repos;
   if (! keep_locks)
     db->lock_tokens = lock_tokens;
+  else
+    db->lock_tokens = NULL;
   db->pool = pool;
   db->callback = callback;
   db->callback_baton = callback_baton;
