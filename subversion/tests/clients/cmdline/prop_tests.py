@@ -348,6 +348,7 @@ def update_conflict_props(sbox):
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', props={'cash-sound' : 'beep!'})
+  expected_disk.tweak('A', props={'foo' : 'baz'})
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)

@@ -37,11 +37,11 @@ def get_standard_state(wc_dir):
   state = svntest.actions.get_virginal_state(wc_dir, 1)
 
   state.tweak('', status='_M')
-  state.tweak('A/B/lambda', 'A/D', status='M ')
+  state.tweak('A/B/lambda', status='M ')
   state.tweak('A/B/E', 'A/D/H/chi', status='R ')
   state.tweak('A/B/E/alpha', 'A/B/E/beta', 'A/C', 'A/D/gamma',
               'A/D/G/rho', status='D ')
-  state.tweak('A/D/G/pi', status='_M')
+  state.tweak('A/D', 'A/D/G/pi', status='_M')
   state.tweak('A/D/H/omega', status='MM')
 
   # New things
