@@ -257,8 +257,8 @@ typedef struct
   svn_fs_path_change_kind_t kind;
 
   /* Text or property mods? */
-  int text_mod;
-  int prop_mod;
+  svn_boolean_t text_mod;
+  svn_boolean_t prop_mod;
 
 } svn_fs__change_t;
 

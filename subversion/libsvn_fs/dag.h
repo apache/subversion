@@ -124,7 +124,7 @@ svn_error_t *svn_fs__dag_get_predecessor_count (int *count,
 /* Callback function type for svn_fs__dag_walk_predecessors() */
 typedef svn_error_t *(*svn_fs__dag_pred_func_t) (void *baton,
                                                  dag_node_t *node,
-                                                 int *done,
+                                                 svn_boolean_t *done,
                                                  trail_t *trail);
 
 /* Walk over NODE's predecessor list, calling CALLBACK (with its
@@ -143,15 +143,15 @@ svn_error_t *svn_fs__dag_walk_predecessors (dag_node_t *node,
 
 /* Return non-zero IFF NODE is currently mutable under Subversion
    transaction TXN_ID.  */
-int svn_fs__dag_check_mutable (dag_node_t *node,
-                               const char *txn_id);
+svn_boolean_t svn_fs__dag_check_mutable (dag_node_t *node,
+                                         const char *txn_id);
 
 /* Return the node kind of NODE. */
 svn_node_kind_t svn_fs__dag_node_kind (dag_node_t *node);
 
 /* Return true iff NODE is a file/directory. */
-int svn_fs__dag_is_file (dag_node_t *node);
-int svn_fs__dag_is_directory (dag_node_t *node);
+svn_boolean_t svn_fs__dag_is_file (dag_node_t *node);
+svn_boolean_t svn_fs__dag_is_directory (dag_node_t *node);
 
 
 /* Set *PROPLIST_P to a PROPLIST hash representing the entire property
@@ -505,7 +505,7 @@ svn_error_t *svn_fs__dag_copied_from (svn_revnum_t *rev_p,
    future.  */
 svn_error_t *svn_fs__dag_deltify (dag_node_t *target,
                                   dag_node_t *source,
-                                  int props_only,
+                                  svn_boolean_t props_only,
                                   trail_t *trail);
 
 
@@ -527,8 +527,8 @@ svn_error_t *svn_fs__dag_deltify (dag_node_t *target,
    may leave us with a slight chance of a false positive, though I
    don't really see how that would happen in practice.  Nevertheless,
    it should probably be fixed.  */
-svn_error_t *svn_fs__things_different (int *props_changed,
-                                       int *contents_changed,
+svn_error_t *svn_fs__things_different (svn_boolean_t *props_changed,
+                                       svn_boolean_t *contents_changed,
                                        dag_node_t *node1,
                                        dag_node_t *node2,
                                        trail_t *trail);
@@ -536,7 +536,7 @@ svn_error_t *svn_fs__things_different (int *props_changed,
 
 /* Set *IS_ANCESTOR to non-zero IFF NODE1 is an ancestor of NODE2.
    Perform this test under TRAIL.  */
-svn_error_t *svn_fs__dag_is_ancestor (int *is_ancestor,
+svn_error_t *svn_fs__dag_is_ancestor (svn_boolean_t *is_ancestor,
                                       dag_node_t *node1,
                                       dag_node_t *node2,
                                       trail_t *trail);
@@ -544,7 +544,7 @@ svn_error_t *svn_fs__dag_is_ancestor (int *is_ancestor,
 
 /* Set *IS_PARENT to non-zero IFF NODE1 is the parent of NODE2.
    Perform this test under TRAIL.  */
-svn_error_t *svn_fs__dag_is_parent (int *is_ancestor,
+svn_error_t *svn_fs__dag_is_parent (svn_boolean_t *is_ancestor,
                                     dag_node_t *node1,
                                     dag_node_t *node2,
                                     trail_t *trail);

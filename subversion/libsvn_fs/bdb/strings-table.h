@@ -43,7 +43,7 @@ extern "C" {
  */
 int svn_fs__bdb_open_strings_table (DB **strings_p,
                                     DB_ENV *env,
-                                    int create);
+                                    svn_boolean_t create);
 
 
 /* Read *LEN bytes into BUF from OFFSET in string KEY in FS, as part

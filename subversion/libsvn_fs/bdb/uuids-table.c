@@ -34,7 +34,7 @@
 int
 svn_fs__bdb_open_uuids_table (DB **uuids_p,
                               DB_ENV *env,
-                              int create)
+                              svn_boolean_t create)
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *uuids;
@@ -51,10 +51,10 @@ svn_fs__bdb_open_uuids_table (DB **uuids_p,
   
   /* This is a temporary compatibility check; it creates the
      UUIDs table if one does not already exist. */
-  if (error == ENOENT && create == 0)
+  if (error == ENOENT && (! create))
     {
       BDB_ERR (uuids->close (uuids, 0));
-      return svn_fs__bdb_open_uuids_table (uuids_p, env, 1);
+      return svn_fs__bdb_open_uuids_table (uuids_p, env, TRUE);
     }
 
   BDB_ERR (error);    

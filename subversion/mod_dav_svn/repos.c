@@ -1994,7 +1994,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         const svn_fs_dirent_t *entry = item->value;
         const char *name = item->key;
         const char *href = name;
-        int is_dir = (entry->kind == svn_node_dir);
+        svn_boolean_t is_dir = (entry->kind == svn_node_dir);
 
         /* append a trailing slash onto the name for directories. we NEED
            this for the href portion so that the relative reference will
@@ -2059,7 +2059,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
     {
       dav_svn_uri_info info;
       svn_fs_root_t *root;
-      int is_file;
+      svn_boolean_t is_file;
       svn_txdelta_stream_t *txd_stream;
       svn_stream_t *o_stream;
       svn_txdelta_window_handler_t handler;

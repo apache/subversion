@@ -35,7 +35,7 @@ extern "C" {
    Return a Berkeley DB error code.  */
 int svn_fs__bdb_open_nodes_table (DB **nodes_p,
                                   DB_ENV *env,
-                                  int create);
+                                  svn_boolean_t create);
 
 
 /* Check FS's `nodes' table to find an unused node number, and set

@@ -33,7 +33,7 @@ extern "C" {
    Return a Berkeley DB error code.  */
 int svn_fs__bdb_open_transactions_table (DB **transactions_p,
                                          DB_ENV *env,
-                                         int create);
+                                         svn_boolean_t create);
 
 
 /* Create a new transaction in FS as part of TRAIL, with an initial

@@ -262,8 +262,8 @@ int svn_fs_compare_ids (const svn_fs_id_t *a, const svn_fs_id_t *b);
  * slightly faster to run if the equality case is not interesting to
  * you.
  */
-int svn_fs_check_related (const svn_fs_id_t *id1,
-                          const svn_fs_id_t *id2);
+svn_boolean_t svn_fs_check_related (const svn_fs_id_t *id1,
+                                    const svn_fs_id_t *id2);
 
 
 /** Parse the @a len bytes at @a data as a node revision @a id.  Return zero 
@@ -565,11 +565,11 @@ void svn_fs_close_root (svn_fs_root_t *root);
 svn_fs_t *svn_fs_root_fs (svn_fs_root_t *root);
 
 
-/** Return true iff @a root is a transaction root.  */
-int svn_fs_is_txn_root (svn_fs_root_t *root);
+/** Return @c TRUE iff @a root is a transaction root.  */
+svn_boolean_t svn_fs_is_txn_root (svn_fs_root_t *root);
 
-/** Return true iff @a root is a revision root.  */
-int svn_fs_is_revision_root (svn_fs_root_t *root);
+/** Return @c TRUE iff @a root is a revision root.  */
+svn_boolean_t svn_fs_is_revision_root (svn_fs_root_t *root);
 
 
 /** If @a root is the root of a transaction, return a pointer to the name
@@ -646,10 +646,10 @@ typedef struct svn_fs_path_change_t
   svn_fs_path_change_kind_t change_kind;
 
   /** were there text mods? */
-  int text_mod;
+  svn_boolean_t text_mod;
 
   /** were there property mods? */
-  int prop_mod;
+  svn_boolean_t prop_mod;
 
 } svn_fs_path_change_t;
 
@@ -722,7 +722,7 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
  * younger than X will not be included for @a path.  */
 svn_error_t *svn_fs_history_prev (svn_fs_history_t **prev_history_p,
                                   svn_fs_history_t *history,
-                                  int cross_copies,
+                                  svn_boolean_t cross_copies,
                                   apr_pool_t *pool);
 
 
@@ -736,19 +736,19 @@ svn_error_t *svn_fs_history_location (const char **path,
                                       apr_pool_t *pool);
                                       
 
-/** Set @a *is_dir to non-zero iff @a path in @a root is a directory.
+/** Set @a *is_dir to @c TRUE iff @a path in @a root is a directory.
  * Do any necessary temporary allocation in @a pool.
  */
-svn_error_t *svn_fs_is_dir (int *is_dir,
+svn_error_t *svn_fs_is_dir (svn_boolean_t *is_dir,
                             svn_fs_root_t *root,
                             const char *path,
                             apr_pool_t *pool);
 
 
-/** Set @a *is_file to non-zero iff @a path in @a root is a file.
+/** Set @a *is_file to @c TRUE iff @a path in @a root is a file.
  * Do any necessary temporary allocation in @a pool.
  */
-svn_error_t *svn_fs_is_file (int *is_file,
+svn_error_t *svn_fs_is_file (svn_boolean_t *is_file,
                              svn_fs_root_t *root,
                              const char *path,
                              apr_pool_t *pool);
@@ -835,7 +835,7 @@ svn_error_t *svn_fs_change_node_prop (svn_fs_root_t *root,
  * same.  Both paths must exist under their respective roots, and both
  * roots must be in the same filesystem.
  */
-svn_error_t *svn_fs_props_changed (int *changed_p,
+svn_error_t *svn_fs_props_changed (svn_boolean_t *changed_p,
                                    svn_fs_root_t *root1,
                                    const char *path1,
                                    svn_fs_root_t *root2,
@@ -947,7 +947,7 @@ svn_error_t *svn_fs_merge (const char **conflict_p,
  * But right now it's not worth doing byte-for-byte comparisons.  This
  * problem will go away when we have deltified storage.)
  */
-svn_error_t *svn_fs_is_different (int *is_different,
+svn_error_t *svn_fs_is_different (svn_boolean_t *is_different,
                                   svn_fs_root_t *root1,
                                   const char *path1,
                                   svn_fs_root_t *root2,
@@ -1241,7 +1241,7 @@ svn_error_t *svn_fs_apply_text (svn_stream_t **contents_p,
  * same.  Both paths must exist under their respective roots, and both
  * roots must be in the same filesystem. 
  */
-svn_error_t *svn_fs_contents_changed (int *changed_p,
+svn_error_t *svn_fs_contents_changed (svn_boolean_t *changed_p,
                                       svn_fs_root_t *root1,
                                       const char *path1,
                                       svn_fs_root_t *root2,

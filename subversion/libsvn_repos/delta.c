@@ -458,7 +458,7 @@ delta_proplists (struct context *c,
 
   if (source_path)
     {
-      int changed;
+      svn_boolean_t changed;
 
       /* Is this deltification worth our time? */
       SVN_ERR (svn_fs_props_changed (&changed, c->target_root, target_path,
@@ -547,7 +547,7 @@ delta_files (struct context *c,
              apr_pool_t *pool)
 {
   apr_pool_t *subpool;
-  int changed = 1;
+  svn_boolean_t changed = TRUE;
 
   /* Sanity-check our input. */
   assert (target_path);

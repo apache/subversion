@@ -179,7 +179,7 @@ do_retry (svn_fs_t *fs,
     {
       trail_t *trail;
       svn_error_t *svn_err, *err;
-      int deadlocked = 0;
+      svn_boolean_t deadlocked = FALSE;
       
       SVN_ERR (begin_trail (&trail, fs, use_txn, pool));
 
@@ -200,7 +200,7 @@ do_retry (svn_fs_t *fs,
       /* Search for a deadlock error on the stack. */
       for (err = svn_err; err; err = err->child)
         if (err->apr_err == SVN_ERR_FS_BERKELEY_DB_DEADLOCK)
-          deadlocked = 1;
+          deadlocked = TRUE;
 
       /* Is this a real error, or do we just need to retry?  */
       if (! deadlocked)

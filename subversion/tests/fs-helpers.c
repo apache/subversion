@@ -269,7 +269,7 @@ validate_tree_entry (svn_fs_root_t *root,
 {
   svn_stream_t *rstream;
   svn_stringbuf_t *rstring;
-  int is_dir;
+  svn_boolean_t is_dir;
 
   /* Verify that this is the expected type of node */
   SVN_ERR (svn_fs_is_dir (&is_dir, root, path, pool));

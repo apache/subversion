@@ -509,14 +509,14 @@ svn_fs_root_fs (svn_fs_root_t *root)
 }
 
 
-int
+svn_boolean_t
 svn_fs_is_txn_root (svn_fs_root_t *root)
 {
   return root->kind == transaction_root;
 }
 
 
-int
+svn_boolean_t
 svn_fs_is_revision_root (svn_fs_root_t *root)
 {
   return root->kind == revision_root;
@@ -1060,8 +1060,8 @@ add_change (svn_fs_t *fs,
             const char *path,
             const svn_fs_id_t *noderev_id,
             svn_fs_path_change_kind_t change_kind,
-            int text_mod,
-            int prop_mod,
+            svn_boolean_t text_mod,
+            svn_boolean_t prop_mod,
             trail_t *trail)
 {
   svn_fs__change_t change;
@@ -1265,7 +1265,7 @@ svn_fs_check_path (svn_node_kind_t *kind_p,
 
 
 svn_error_t *
-svn_fs_is_dir (int *is_dir,
+svn_fs_is_dir (svn_boolean_t *is_dir,
                svn_fs_root_t *root,
                const char *path,
                apr_pool_t *pool)
@@ -1278,7 +1278,7 @@ svn_fs_is_dir (int *is_dir,
 
 
 svn_error_t *
-svn_fs_is_file (int *is_file,
+svn_fs_is_file (svn_boolean_t *is_file,
                 svn_fs_root_t *root,
                 const char *path,
                 apr_pool_t *pool)
@@ -1292,7 +1292,7 @@ svn_fs_is_file (int *is_file,
 
 struct is_different_args
 {
-  int is_different;
+  svn_boolean_t is_different;
   svn_fs_root_t *root1;
   const char *path1;
   svn_fs_root_t *root2;
@@ -1306,10 +1306,10 @@ txn_body_is_different (void *baton, trail_t *trail)
   struct is_different_args *args = baton;
   dag_node_t *node1, *node2;
   svn_node_kind_t kind;
-  int props_differ, contents_differ;
+  svn_boolean_t props_differ, contents_differ;
 
   /* Assume the paths *are* different. */
-  args->is_different = 1;
+  args->is_different = TRUE;
 
   /* Get the node revisions for these paths. */
   SVN_ERR (get_dag (&node1, args->root1, args->path1, trail));
@@ -1319,7 +1319,7 @@ txn_body_is_different (void *baton, trail_t *trail)
   if (svn_fs_compare_ids (svn_fs__dag_get_id (node1), 
                           svn_fs__dag_get_id (node2)) == 0)
     {
-      args->is_different = 0;
+      args->is_different = FALSE;
       return SVN_NO_ERROR;
     }
 
@@ -1340,7 +1340,7 @@ txn_body_is_different (void *baton, trail_t *trail)
 
   if (! (props_differ || contents_differ))
     {
-      args->is_different = 0;
+      args->is_different = FALSE;
       return SVN_NO_ERROR;
     }
       
@@ -1351,7 +1351,7 @@ txn_body_is_different (void *baton, trail_t *trail)
 /* Note:  it is acceptable for this function to call back into
    public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
-svn_fs_is_different (int *is_different,
+svn_fs_is_different (svn_boolean_t *is_different,
                      svn_fs_root_t *root1,
                      const char *path1,
                      svn_fs_root_t *root2,
@@ -1535,7 +1535,7 @@ svn_fs_change_node_prop (svn_fs_root_t *root,
 
 struct things_changed_args
 {
-  int *changed_p;
+  svn_boolean_t *changed_p;
   svn_fs_root_t *root1;
   svn_fs_root_t *root2;
   const char *path1;
@@ -1559,7 +1559,7 @@ txn_body_props_changed (void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_props_changed (int *changed_p,
+svn_fs_props_changed (svn_boolean_t *changed_p,
                       svn_fs_root_t *root1,
                       const char *path1,
                       svn_fs_root_t *root2,
@@ -1616,7 +1616,7 @@ struct txn_deltify_args
      ### Didn't we try removing this horrid little optimization once?
      ### What was the result?  I would have thought that skip deltas
      ### mean directory undeltification is cheap enough now. */
-  int is_dir;
+  svn_boolean_t is_dir;
 };
 
 
@@ -1699,7 +1699,7 @@ deltify_mutable (svn_fs_t *fs,
 {
   const svn_fs_id_t *id;
   apr_hash_t *entries = NULL;
-  int is_dir;
+  svn_boolean_t is_dir;
   struct txn_deltify_args td_args;
 
   /* Get the ID for PATH under ROOT. */
@@ -1862,7 +1862,7 @@ txn_body_get_root (void *baton, trail_t *trail)
 /* Set *IS_ANCESTOR to non-zero iff ID1 is an ancestor of ID2 in FS,
    as part of TRAIL. */
 static svn_error_t *
-id_check_ancestor (int *is_ancestor,
+id_check_ancestor (svn_boolean_t *is_ancestor,
                    svn_fs_t *fs, 
                    const svn_fs_id_t *id1, 
                    const svn_fs_id_t *id2,
@@ -2213,20 +2213,19 @@ merge (svn_stringbuf_t *conflict_p,
           /* If source entry has changed since ancestor entry... */
           if (! svn_fs__id_eq (a_entry->id, s_entry->id))
             {
-              int a_ancestorof_t = 0, t_ancestorof_s = 0;
-              int s_ancestorof_t = 0;
-              int a_is_t = 0;
+              svn_boolean_t a_ancestorof_t = FALSE, t_ancestorof_s = FALSE;
+              svn_boolean_t s_ancestorof_t = FALSE;
+              svn_boolean_t a_is_t = FALSE;
               int logic_case = 0;
 
               /*** The id_check_ancestor calls are rather expensive,
                    so reproduce the logic below up here so we only ask
                    the questions that need to be asked.  This would be
                    a heckuva lot easier if id_check_ancestor could
-                   return an int instead of an svn_error_t *, but
-                   that's just life, I suppose.  
+                   return an svn_boolean_t instead of an svn_error_t *, 
+                   but that's just life, I suppose.
 
-                   This could very well be the ugliest code in
-                   Subversion. */
+                   This could very well be the ugliest code in Subversion. */
 
               a_is_t = svn_fs__id_eq (a_entry->id, t_entry->id);
               if (a_is_t)
@@ -2443,7 +2442,7 @@ merge (svn_stringbuf_t *conflict_p,
       const void *key;
       void *val;
       apr_ssize_t klen;
-      int s_ancestorof_t = 0;
+      svn_boolean_t s_ancestorof_t = FALSE;
 
       apr_hash_this (hi, &key, &klen, &val);
       s_entry = val;
@@ -2451,10 +2450,10 @@ merge (svn_stringbuf_t *conflict_p,
 
       /* The id_check_ancestor calls are rather expensive, so
          reproduce the logic below up here so we only ask the
-         questions that need to be asked.  This would be a
-         heckuva lot easier if id_check_ancestor could return
-         an int instead of an svn_error_t *, but that's just
-         life, I suppose.  */
+         questions that need to be asked.  This would be a heckuva lot
+         easier if id_check_ancestor could return an svn_boolean_t
+         instead of an svn_error_t *, but that's just life, I
+         suppose.  */
       if (t_entry)
         {
           SVN_ERR (id_check_ancestor (&s_ancestorof_t, fs, s_entry->id,
@@ -3213,7 +3212,7 @@ svn_fs_copy (svn_fs_root_t *from_root,
   args.from_path         = from_path;
   args.to_root           = to_root;
   args.to_path           = to_path;
-  args.preserve_history  = 1;
+  args.preserve_history  = TRUE;
 
   return svn_fs__retry_txn (to_root->fs, txn_body_copy, &args, pool);
 }
@@ -3234,7 +3233,7 @@ svn_fs_revision_link (svn_fs_root_t *from_root,
   args.from_path         = path;
   args.to_root           = to_root;
   args.to_path           = path;
-  args.preserve_history  = 0;
+  args.preserve_history  = FALSE;
 
   return svn_fs__retry_txn (to_root->fs, txn_body_copy, &args, pool);
 }
@@ -3879,7 +3878,7 @@ txn_body_contents_changed (void *baton, trail_t *trail)
 /* Note:  it is acceptable for this function to call back into
    public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
-svn_fs_contents_changed (int *changed_p,
+svn_fs_contents_changed (svn_boolean_t *changed_p,
                          svn_fs_root_t *root1,
                          const char *path1,
                          svn_fs_root_t *root2,
@@ -3896,7 +3895,7 @@ svn_fs_contents_changed (int *changed_p,
   
   /* Check that both paths are files. */
   {
-    int is_file;
+    svn_boolean_t is_file;
 
     SVN_ERR (svn_fs_is_file (&is_file, root1, path1, pool));
     if (! is_file)
@@ -4016,7 +4015,7 @@ struct svn_fs_history_t
   svn_revnum_t rev_hint;
 
   /* FALSE until the first call to svn_fs_history_prev(). */
-  int is_interesting;
+  svn_boolean_t is_interesting;
 };
 
 
@@ -4029,7 +4028,7 @@ static svn_fs_history_t *
 assemble_history (svn_fs_t *fs,
                   const char *path,
                   svn_revnum_t revision,
-                  int is_interesting,
+                  svn_boolean_t is_interesting,
                   const char *path_hint,
                   svn_revnum_t rev_hint,
                   apr_pool_t *pool)
@@ -4093,7 +4092,7 @@ struct history_prev_args
 {
   svn_fs_history_t **prev_history_p;
   svn_fs_history_t *history;
-  int cross_copies;
+  svn_boolean_t cross_copies;
   apr_pool_t *pool;
 };
 
@@ -4114,7 +4113,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
   const svn_fs_id_t *node_id;
   const char *end_copy_id = NULL;
   struct revision_root_args rr_args;
-  int reported = history->is_interesting;
+  svn_boolean_t reported = history->is_interesting;
 
   /* Initialize our return value. */
   *prev_history = NULL;
@@ -4125,7 +4124,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
      otherwise, we're all done here.  */
   if (history->path_hint && SVN_IS_VALID_REVNUM (history->rev_hint))
     {
-      reported = 0;
+      reported = FALSE;
       if (! args->cross_copies)
         return SVN_NO_ERROR;
       path = history->path_hint;
@@ -4285,7 +4284,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
 
 svn_error_t *svn_fs_history_prev (svn_fs_history_t **prev_history_p,
                                   svn_fs_history_t *history,
-                                  int cross_copies,
+                                  svn_boolean_t cross_copies,
                                   apr_pool_t *pool)
 {
   svn_fs_history_t *prev_history = NULL;

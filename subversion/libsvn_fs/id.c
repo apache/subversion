@@ -79,20 +79,20 @@ svn_fs__id_copy (const svn_fs_id_t *id, apr_pool_t *pool)
 
 /* Comparing node ID's.  */
 
-int
+svn_boolean_t
 svn_fs__id_eq (const svn_fs_id_t *a, 
                const svn_fs_id_t *b)
 {
   if (a != b)
     {  
       if ((a->node_id != b->node_id) && (strcmp (a->node_id, b->node_id)))
-        return 0;
+        return FALSE;
       if ((a->copy_id != b->copy_id) && (strcmp (a->copy_id, b->copy_id)))
-        return 0;
+        return FALSE;
       if ((a->txn_id != b->txn_id) && (strcmp (a->txn_id, b->txn_id)))
-        return 0;
+        return FALSE;
     }
-  return 1;
+  return TRUE;
 }
 
 
@@ -158,15 +158,15 @@ svn_fs_unparse_id (const svn_fs_id_t *id,
 
 /*** Related-ness checking */
 
-int
+svn_boolean_t
 svn_fs_check_related (const svn_fs_id_t *id1,
                       const svn_fs_id_t *id2)
 {
   if (id1 == id2)
-    return 1;
+    return TRUE;
   if (id1->node_id == id2->node_id)
-    return 1;
-  return (! strcmp (id1->node_id, id2->node_id));
+    return TRUE;
+  return (strcmp (id1->node_id, id2->node_id) == 0) ? TRUE : FALSE;
 }
 
 

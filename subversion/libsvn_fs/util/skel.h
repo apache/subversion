@@ -85,7 +85,7 @@ struct skel_t {
 
      If the string is a list, DATA and LEN delimit the entire body of
      the list.  */
-  int is_atom;
+  svn_boolean_t is_atom;
 
   const char *data;
   apr_size_t len;
@@ -144,22 +144,23 @@ svn_stringbuf_t *svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool);
 
 
 /* Return true iff SKEL is an atom whose data is the same as STR.  */
-int svn_fs__matches_atom (skel_t *skel, const char *str);
+svn_boolean_t svn_fs__matches_atom (skel_t *skel, const char *str);
 
 
 /* Return true iff SKEL is an atom whose data is the same as STR.  */
-int svn_fs__atom_matches_string (skel_t *skel, const svn_string_t *str);
+svn_boolean_t svn_fs__atom_matches_string (skel_t *skel, 
+                                           const svn_string_t *str);
 
 
 /* Return the length of the list skel SKEL.  Atoms have a length of -1.  */
 int svn_fs__list_length (skel_t *skel);
 
 
-/* Return 1 if SKEL1 and SKEL2 are the same in structure and contents,
+/* Return TRUE if SKEL1 and SKEL2 are the same in structure and contents,
    or 0 if they are not.  This is like a lisp `equal' not `eq': atoms
    are equal if their lengths and contents are the same, lists are
    equal if they have the same number and order of equal elements. */
-int svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2);
+svn_boolean_t svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2);
 
 
 /* Make a copy of SKEL and its data in POOL.  */

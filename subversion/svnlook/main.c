@@ -982,7 +982,7 @@ static svn_error_t *
 print_tree (svn_fs_root_t *root,
             const char *path /* UTF-8! */,
             const svn_fs_id_t *id,
-            int is_dir,
+            svn_boolean_t is_dir,
             int indentation,
             svn_boolean_t show_ids,
             apr_pool_t *pool)
@@ -1435,7 +1435,7 @@ do_tree (svnlook_ctxt_t *c,
 {
   svn_fs_root_t *root;
   const svn_fs_id_t *id;
-  int is_dir;
+  svn_boolean_t is_dir;
 
   SVN_ERR (get_root (&root, c, pool));
   SVN_ERR (svn_fs_node_id (&id, root, path, pool));
