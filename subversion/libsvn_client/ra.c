@@ -61,6 +61,31 @@ open_tmp_file (apr_file_t **fp,
 }
 
 
+static svn_error_t *
+get_wc_prop(void *baton,
+            const char *relpath,
+            const char *name,
+            const svn_string_t **value)
+{
+  svn_client__callback_baton_t *cb = baton;
+  struct svn_wc_close_commit_baton ccb;
+
+  /* if we don't have a base directory, then there are no properties */
+  if (cb->base_dir == NULL)
+    {
+      *value = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* ### this should go away, and svn_wc_get_wc_prop should just take this
+     ### stuff as parameters */
+  ccb.prefix_path = cb->base_dir;
+  ccb.pool = cb->pool;
+
+  return svn_wc_get_wc_prop(&ccb, relpath, name, value);
+}
+
+
 svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            const svn_ra_plugin_t *ra_lib,
                                            svn_stringbuf_t *repos_URL,
@@ -75,6 +100,7 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
 
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
   cbtable->get_authenticator = svn_client__get_authenticator;
+  cbtable->get_wc_prop = get_wc_prop;
 
   cb->auth_baton = auth_baton;
   cb->base_dir = base_dir;

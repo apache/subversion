@@ -38,17 +38,39 @@ extern "C" {
 /* Misc. declarations */
 
 
-/* A function type which allows the RA layer to fetch WC properties
-   during a commit.  */
-typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *close_baton,
-                                                   const char *path,
+/* ### it would be nice to omit the callbacks in the get_commit_editor
+   ### vtable; move them all into the callback table. that would allow
+   ### us to lose this type, and we could talk more specifically about
+   ### the parameters */
+
+/* This is a function type which allows the RA layer to fetch working
+   copy (WC) properties.
+
+   The BATON is provided along with the function pointer and should
+   be passed back in. This will be the CALLBACK_BATON or the CLOSE_BATON
+   as appropriate.
+
+   PATH is relative to the "root" of the session, defined by the REPOS_URL
+   passed to the RA->open() vtable call.
+
+   NAME is the name of the property to fetch. If the property is present,
+   then it is returned in VALUE. Otherwise, *VALUE is set to NULL.
+*/
+typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *baton,
+                                                   const char *relpath,
                                                    const char *name,
                                                    const svn_string_t **value);
 
-/* A function type which allows the RA layer to store WC properties
-   after a commit.  */
-typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *close_baton,
-                                                   const char *path,
+/* This is a function type which allows the RA layer to store working
+   copy (WC) properties.
+
+   See the comments for svn_ra_get_wc_prop_func_t to for BATON, PATH, and
+   NAME.
+
+   The VALUE is the value that will be stored for the property.
+*/
+typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *baton,
+                                                   const char *relpath,
                                                    const char *name,
                                                    const svn_string_t *value);
 
@@ -68,7 +90,7 @@ typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *close_baton,
    which calls this routine on each PATH that was committed, allowing
    the client to bump revision numbers, possibly recursively.  */
 typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *close_baton,
-                                                    svn_stringbuf_t *path,
+                                                    svn_stringbuf_t *relpath,
                                                     svn_boolean_t recurse,
                                                     svn_revnum_t new_rev,
                                                     const char *rev_date,
@@ -209,9 +231,19 @@ typedef struct svn_ra_callbacks_t
                                      void *callback_baton,
                                      apr_pool_t *pool);
 
+  /* Retrieve a "working copy" property for an item relative to the
+     "root" of the session (defined by REPOS_URL to the open() vtable
+     function call).
+
+     The baton passed to the get_wcprop callback is the CALLBACK_BATON.
+
+     If it quite legal to set this field to NULL if the RA user cannot
+     support WC properties, or they are not defined/applicable for the
+     current session. */
+  svn_ra_get_wc_prop_func_t get_wc_prop;
+
 } svn_ra_callbacks_t;
 
-/* ### will svn_ra_callbacks_t need its own baton?  probably .*/
 
 
 /*----------------------------------------------------------------------*/
@@ -248,7 +280,7 @@ typedef struct svn_ra_plugin_t
      use POOL for memory allocation. */
   svn_error_t *(*open) (void **session_baton,
                         svn_stringbuf_t *repos_URL,
-                        svn_ra_callbacks_t *callbacks,
+                        const svn_ra_callbacks_t *callbacks,
                         void *callback_baton,
                         apr_pool_t *pool);
 
