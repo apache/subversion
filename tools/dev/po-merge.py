@@ -102,14 +102,16 @@ def main(argv):
             outfile.write('\n'.join(comments) + '\n')
         else:
             string_count += 1
-            if msgstr == '""' and source.get(msgid, '""') != '""':
+            # Do not update the header, and only update if the source
+            # has a non-empty translation.
+            if msgid != '""' and source.get(msgid, ['""', []])[0] != '""':
                 other = split_comments(comments)[1]
-                source_msgstr, source_flags = source[msgid]
-                source_comments = other + source_flags
-                if source_msgstr != msgstr or source_comments != comments:
+                new_msgstr, new_flags = source[msgid]
+                new_comments = other + new_flags
+                if new_msgstr != msgstr or new_comments != comments:
                     update_count += 1
-                    msgstr = source_msgstr
-                    comments = source_comments
+                    msgstr = new_msgstr
+                    comments = new_comments
             outfile.write('\n'.join(comments) + '\n')
             outfile.write('msgid ' + msgid + '\n')
             outfile.write('msgstr ' + msgstr + '\n')
