@@ -513,16 +513,18 @@ make_new_directory (const char *repos_path,
      
       <screen>
 $ svn --version
-svn, version 0.25.0 (dev build)
-   compiled Jul 18 2003, 16:25:59
- 
-Copyright (C) 2000-2003 CollabNet.
+svn, version 1.0.1 (r9023)
+   compiled Mar 17 2004, 09:31:13
+
+Copyright (C) 2000-2004 CollabNet.
 Subversion is open source software, see http://subversion.tigris.org/
- 
+This product includes software developed by CollabNet (http://www.Collab.Net/).
+
 The following repository access (RA) modules are available:
- 
+
 * ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
   - handles 'http' schema
+  - handles 'https' schema
 * ra_local : Module for accessing a repository on local disk.
   - handles 'file' schema
 * ra_svn : Module for accessing a repository using the svn network protocol.
@@ -1539,8 +1541,8 @@ crawl_dir (apr_array_header_t *files,
         distribution (if such is available for your platform), or
         downloading the latest source tarball and building your own
         Subversion client.  If you build from source, make sure to
-        read the INSTALL file in the top level of the source tree for
-        instructions.</para>
+        read the <filename>INSTALL</filename> file in the top level of
+        the source tree for instructions.</para>
 
       <para>After you have a working Subversion client, you are now
         poised to checkout a working copy of the Subversion source
@@ -1572,8 +1574,8 @@ A  build.conf
         directory, though, after this operation completes, you will
         now have the Subversion source code.  Of course, you will
         still need to fetch a few helper libraries (apr, apr-util,
-        etc.)&mdash;see the INSTALL file in the top level of the
-        working copy for details.</para>
+        etc.)&mdash;see the <filename>INSTALL</filename> file in the
+        top level of the working copy for details.</para>
 
     </sect2>
 
@@ -1583,8 +1585,9 @@ A  build.conf
       
       <para>Now that you have a working copy containing the latest
         Subversion source code, you will most certainly want to take a
-        cruise through the HACKING file in that working copy's
-        top-level directory.  The HACKING file contains general
+        cruise through the <filename>HACKING</filename> file in that
+        working copy's top-level directory.  The
+        <filename>HACKING</filename> file contains general
         instructions for contributing to Subversion, including how to
         properly format your source code for consistency with the rest
         of the codebase, how to describe your proposed changes with an
@@ -1650,9 +1653,9 @@ A  build.conf
         allows you to specify that a given test is expected to fail
         (called an <literal>XFAIL</literal>), and so long as
         Subversion fails in the way that was expected, a test result
-        of XFAIL itself is considered a success.  Ultimately, the
-        better the test suite, the less time wasted on diagnosing
-        potentially obscure regression bugs.</para>
+        of <literal>XFAIL</literal> itself is considered a success.
+        Ultimately, the better the test suite, the less time wasted on
+        diagnosing potentially obscure regression bugs.</para>
 
     </sect2>
 
