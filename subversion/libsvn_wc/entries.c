@@ -525,6 +525,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
      don't need a sanity check for that here.) */
   if ((entry->deleted || entry->absent)
       && (entry->schedule != svn_wc_schedule_add)
+      && (entry->schedule != svn_wc_schedule_replace)
       && (! accum->show_hidden))
     ;
   else
