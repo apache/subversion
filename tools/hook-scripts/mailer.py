@@ -156,7 +156,8 @@ class MailedOutput:
 
   def start(self, group, params):
     self.to_addr = self.cfg.get('to_addr', group, params)
-    self.from_addr = self.cfg.get('from_addr', group, params)
+    self.from_addr = self.cfg.get('from_addr', group, params) or \
+                     self.repos.author or 'no_author'
     self.reply_to = self.cfg.get('reply_to', group, params)
 
   def mail_headers(self, group, params):
