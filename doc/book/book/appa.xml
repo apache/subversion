@@ -181,12 +181,12 @@ M     ./foo.c
 M     ./bar/baz.c
     </screen>
 
-    <para>If you specify either the <option>-u</option> or
-      <option>-v</option> switch, a <quote>long</quote> format is
+    <para>If you specify the <option>--verbose</option>
+      (<option>-v</option>) switch, a <quote>long</quote> format is
       used:</para>
 
     <screen>
-% svn status
+% svn status -v
 M             1047    ./foo.c
 _      *      1045    ./faces.html
 _      *         -    ./bloo.png
@@ -202,6 +202,13 @@ Head revision:   1066
       and that <filename>bloo.png</filename> is a newly added file in
       the repository.  (The <command>-</command> next to bloo.png
       means that it doesn't yet exist in the working copy.)</para>
+
+    <!-- ###TODO describe -u here as well as -uv. -u and -v use
+    different "long" formats and need to be documented
+    separately. Moreover, as you can combine -u and -v, it needs to be
+    explained what each of them does. As -u is much more important
+    than -v, and the example following that paragraph *is* about -u,
+    not -v, my patch concentrated on that. -->
 
     <para>Lastly, here's a quick summary of status codes that you may
     see:</para>
