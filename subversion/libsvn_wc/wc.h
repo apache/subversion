@@ -312,10 +312,10 @@ svn_error_t *svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool);
    you call this, or badness will result.  
 */
 svn_error_t *svn_wc__entry_set (svn_string_t *path,
-                                apr_pool_t *pool,
-                                const char *entryname, /* Ben, svn_string_t? */
+                                svn_string_t *entryname,
                                 svn_vernum_t version,
-                                /* int kind */
+                                int kind,
+                                apr_pool_t *pool,
                                 ...);
 
 
@@ -325,17 +325,17 @@ svn_error_t *svn_wc__entry_set (svn_string_t *path,
           and return all other xml attributes in **HASH.
 */
 svn_error_t *svn_wc__entry_get (svn_string_t *path,
-                                apr_pool_t *pool,
                                 svn_string_t *entryname, 
                                 svn_vernum_t *version,
                                 int *kind,
+                                apr_pool_t *pool,
                                 apr_hash_t **hash);
 
 
 /* Remove ENTRYNAME from PATH's `entries' file. */
 svn_error_t *svn_wc__entry_remove (svn_string_t *path,
-                                   apr_pool_t *pool,
-                                   svn_string_t *entryname);
+                                   svn_string_t *entryname,
+                                   apr_pool_t *pool);
 
 
 #if 0  /* Ben, have at it. */
