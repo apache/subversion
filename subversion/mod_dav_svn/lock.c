@@ -40,6 +40,7 @@ struct dav_lockdb_private
   /* These represent 'custom' request hearders only sent by svn clients: */
   svn_boolean_t lock_steal;
   svn_boolean_t lock_break;
+  svn_boolean_t keep_locks;
   svn_revnum_t working_revnum;
 
   /* The original request, so we can set 'custom' output headers. */
@@ -372,6 +373,8 @@ dav_svn_open_lockdb(request_rec *r,
         info->lock_break = TRUE;
       if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_LOCK_STEAL))
         info->lock_steal = TRUE;
+      if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_KEEP_LOCKS))
+        info->keep_locks = TRUE;
     }
 
   /* 'svn lock' wants to make svn_fs_lock() do an out-of-dateness check. */
@@ -846,6 +849,13 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
   /* Sanity check:  if the resource has no associated path in the fs,
      then there's nothing to do.  */
   if (! resource->info->repos_path)
+    return 0;
+
+  /* Another easy out: if an svn client sent a 'keep_locks' header
+     (typically in a DELETE request, as part of 'svn commit
+     --no-unlock'), then ignore dav_method_delete()'s attempt to
+     unconditionally remove the lock.  */
+  if (info->keep_locks)
     return 0;
 
   /* If the resource's fs path is unreadable, we don't allow a lock to
