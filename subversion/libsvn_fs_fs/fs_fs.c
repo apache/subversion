@@ -778,8 +778,8 @@ svn_fs_fs__put_node_revision (svn_fs_t *fs,
                              _("Attempted to write to non-transaction"));
 
   SVN_ERR (svn_io_file_open (&noderev_file, path_txn_node_rev (fs, id, pool),
-                             APR_WRITE | APR_CREATE | APR_TRUNCATE,
-                             APR_OS_DEFAULT, pool));
+                             APR_WRITE | APR_CREATE | APR_TRUNCATE
+                             | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   SVN_ERR (write_noderev_txn (noderev_file, noderev, pool));
 
@@ -2327,8 +2327,8 @@ svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
   /* Write the next-ids file. */
   SVN_ERR (svn_io_file_open (&next_ids_file,
                              path_txn_next_ids (fs, txn->id, pool),
-                             APR_WRITE | APR_CREATE | APR_TRUNCATE,
-                             APR_OS_DEFAULT, pool));
+                             APR_WRITE | APR_CREATE | APR_TRUNCATE
+                             | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   next_ids_stream = svn_stream_from_aprfile (next_ids_file, pool);
 
@@ -2351,7 +2351,8 @@ get_txn_proplist (apr_hash_t *proplist,
 
   /* Open the transaction properties file. */
   SVN_ERR (svn_io_file_open (&txn_prop_file, path_txn_props (fs, txn_id, pool),
-                             APR_READ | APR_CREATE, APR_OS_DEFAULT, pool));
+                             APR_READ | APR_CREATE | APR_BUFFERED,
+                             APR_OS_DEFAULT, pool));
 
   /* Read in the property list. */
   SVN_ERR (svn_hash_read (proplist, txn_prop_file, pool));
@@ -2378,8 +2379,8 @@ svn_fs_fs__change_txn_prop (svn_fs_txn_t *txn,
   /* Open the transaction properties file. */
   SVN_ERR (svn_io_file_open (&txn_prop_file,
                              path_txn_props (txn->fs, txn->id, pool),
-                             APR_WRITE | APR_CREATE | APR_TRUNCATE,
-                             APR_OS_DEFAULT, pool));
+                             APR_WRITE | APR_CREATE | APR_TRUNCATE
+                             | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   SVN_ERR (svn_hash_write (txn_prop, txn_prop_file, pool));
 
@@ -2431,13 +2432,15 @@ write_next_ids (svn_fs_t *fs,
   svn_stream_t *out_stream;
 
   SVN_ERR (svn_io_file_open (&file, path_txn_next_ids (fs, txn_id, pool),
-                             APR_WRITE | APR_TRUNCATE, APR_OS_DEFAULT, pool));
+                             APR_WRITE | APR_TRUNCATE | APR_BUFFERED,
+                             APR_OS_DEFAULT, pool));
 
   out_stream = svn_stream_from_aprfile (file, pool);
 
   SVN_ERR (svn_stream_printf (out_stream, pool, "%s %s\n", node_id, copy_id));
 
   SVN_ERR (svn_stream_close (out_stream));
+  SVN_ERR (svn_io_file_close (file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2629,8 +2632,8 @@ svn_fs_fs__set_entry (svn_fs_t *fs,
   else
     {
       /* The directory rep is already mutable, so just open it for append. */
-      SVN_ERR (svn_io_file_open (&file, filename, APR_WRITE | APR_APPEND,
-                                 APR_OS_DEFAULT, pool));
+      SVN_ERR (svn_io_file_open (&file, filename, APR_WRITE | APR_APPEND
+                                 | APR_BUFFERED, APR_OS_DEFAULT, pool));
       out = svn_stream_from_aprfile (file, pool);
     }
 
@@ -2744,8 +2747,8 @@ svn_fs_fs__add_change (svn_fs_t *fs,
   svn_fs_path_change_t *change = apr_pcalloc (pool, sizeof (*change));
 
   SVN_ERR (svn_io_file_open (&file, path_txn_changes (fs, txn_id, pool),
-                             APR_APPEND | APR_WRITE | APR_CREATE,
-                             APR_OS_DEFAULT, pool));
+                             APR_APPEND | APR_WRITE | APR_CREATE
+                             | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   if (copyfrom_rev != SVN_INVALID_REVNUM)
     copyfrom = apr_psprintf (pool, "%ld %s", copyfrom_rev, copyfrom_path);
@@ -2900,7 +2903,8 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
   /* Open the prototype rev file and seek to its end. */
   txn_id = svn_fs_fs__id_txn_id (noderev->id);
   SVN_ERR (svn_io_file_open (&file, path_txn_proto_rev (fs, txn_id, b->pool),
-                             APR_WRITE | APR_CREATE, APR_OS_DEFAULT, b->pool));
+                             APR_WRITE | APR_CREATE | APR_BUFFERED,
+                             APR_OS_DEFAULT, b->pool));
   offset = 0;
   SVN_ERR (svn_io_file_seek (file, APR_END, &offset, 0));
 
@@ -3501,7 +3505,7 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   /* Get a write handle on the proto revision file. */
   proto_filename = path_txn_proto_rev (fs, txn->id, subpool);
   SVN_ERR (svn_io_file_open (&proto_file, proto_filename,
-                             APR_WRITE | APR_APPEND,
+                             APR_WRITE | APR_APPEND | APR_BUFFERED,
                              APR_OS_DEFAULT, subpool));
 
   offset = 0;
@@ -3639,8 +3643,8 @@ svn_fs_fs__set_uuid (svn_fs_t *fs,
   apr_file_t *uuid_file;
 
   SVN_ERR (svn_io_file_open (&uuid_file, path_uuid (fs, pool),
-                             APR_WRITE | APR_CREATE | APR_TRUNCATE,
-                             APR_OS_DEFAULT, pool));
+                             APR_WRITE | APR_CREATE | APR_TRUNCATE
+                             | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   SVN_ERR (svn_io_file_write_full (uuid_file, uuid, strlen (uuid), NULL,
                                    pool));
