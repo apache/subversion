@@ -50,8 +50,12 @@ typedef struct svn_string_t svn_string_t;
 %typemap(jni) char *                                         "jstring"
 
 %typemap(perl5,argout) RET_STRING {
-    $result = sv_newmortal();
-    sv_setpvn ($result, (*$1)->data, (*$1)->len);
+    if (*$1) {
+	$result = sv_newmortal();
+	sv_setpvn ($result, (*$1)->data, (*$1)->len);
+    }
+    else
+	$result = &PL_sv_undef;
     argvi++;
 }
 /* -----------------------------------------------------------------------
