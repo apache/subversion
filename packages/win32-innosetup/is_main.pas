@@ -45,6 +45,23 @@ const
     STATUS_DISABLED = 1;
     STATUS_ENABLED = 2;
 
+// ***************************************************************************
+// UninsHs stuff
+function ComponentList(Default: string):string;
+begin
+    Result := WizardSelectedComponents(False);
+end;
+
+function SkipCurPage(CurPage: Integer): Boolean;
+begin
+    if Pos('/SP-', UpperCase(GetCmdTail)) > 0 then
+        case CurPage of
+          wpWelcome, wpLicense, wpPassword, wpInfoBefore, wpUserInfo,
+          wpSelectDir, wpSelectProgramGroup, wpInfoAfter:
+            Result := True;
+        end;
+end;
+
 // ****************************************************************************
 // Name:    ApachePathParent
 // Purpose: Returns the path of Apache parent folder.
@@ -195,17 +212,19 @@ procedure ApacheConfFileEdit(aHttpdConf: TArrayOfString;
                              iPosModDavSvn, iStatusModDavSvn,
                              iPosModAuthzSvn, iStatusModAuthzSvn: Integer);
 var
-    sConfFileName: String;
+    sConfFileName, sTimeString: String;
     sLoadModDav, sLoadModDavSvn, sLoadModAuthzSvn: String;
+
 begin
-    sConfFileName:= g_sApachePathConf + '\httpd.conf';
+    sConfFileName := g_sApachePathConf + '\httpd.conf';
+    sTimeString := GetDateTimeString('yyyy/mm/dd hh:mm:ss', '-', ':');
 
     sLoadModDav := 'LoadModule dav_module modules/mod_dav.so';
     sLoadModDavSvn := 'LoadModule dav_svn_module modules/mod_dav_svn.so';
     sLoadModAuthzSvn := 'LoadModule authz_svn_module modules/mod_authz_svn.so';
 
     //Backup the current httpd.conf
-    FileCopy (sConfFileName, sConfFileName + '-svn-' + GetDateString + '.bak', False)
+    FileCopy (sConfFileName, sConfFileName + '-svn-' + sTimeString + '.bak', False);
 
     // Add the modules if they're not there
     if (iStatusModDav = STATUS_NONE) then
