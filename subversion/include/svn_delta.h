@@ -384,7 +384,9 @@ typedef struct
      COPYFROM_PATH and COPYFROM_REVISION.  If COPYFROM_PATH is
      non-NULL, then COPYFROM_PATH and COPYFROM_REVISION indicate where
      the file or directory should be copied from (to create the file
-     or directory being added).
+     or directory being added).  If COPYFROM_PATH is NULL, then
+     COPYFROM_REVISION must be SVN_INVALID_REVNUM; it is invalid to
+     pass a mix of valid and invalid copyfrom arguments.
 
 
      FUNCTION CALL ORDERING

@@ -853,14 +853,14 @@ do_item_commit (const char *url,
         {
           SVN_ERR (editor->add_file 
                    (url_decoded, parent_baton, copyfrom_url, 
-                    item->revision,
+                    (copyfrom_url) ? item->revision : SVN_INVALID_REVNUM,
                     file_pool, &file_baton));
         }
       else
         {
           SVN_ERR (push_stack 
                    (url_decoded, db_stack, stack_ptr, editor, copyfrom_url, 
-                    item->revision,
+                    (copyfrom_url) ? item->revision : SVN_INVALID_REVNUM,
                     TRUE, pool));
           dir_baton = ((void **) db_stack->elts)[*stack_ptr - 1];
         }
