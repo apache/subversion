@@ -660,7 +660,7 @@ Updated to revision 2.
               <literal>HEAD</literal> of the repository.  You can get
               back anything you delete by checking out (or updating
               your working copy) a revision earlier than the one in
-              which you deleted it.</para> </footnote></para>
+              which you deleted it.</para></footnote></para>
           </listitem>
         </varlistentry>
 
@@ -1296,7 +1296,7 @@ Updated to revision 46.
             <varlistentry>
               <term><filename>filename.mine</filename></term>
               <listitem>
-                <para> This is your file as it existed in your working
+                <para>This is your file as it existed in your working
                   copy before you updated your working copy&mdash;that
                   is, without conflict markers.  This file has your
                   latest changes in it and nothing else.</para>
@@ -1352,7 +1352,6 @@ sandwich.txt.mine
 sandwich.txt.r1
 sandwich.txt.r2
 </screen>
-      <!-- ###TODO What happens if the revnum is gt 99999?-->
       
       <para>At this point, Subversion will <emphasis>not</emphasis>
         allow you to commit the file <filename>sandwich.txt</filename>
@@ -1665,7 +1664,7 @@ svn: Out of date: 'rules.txt' in transaction 'g'
       <variablelist>
 
         <varlistentry>
-          <term><command>svn log </command></term>
+          <term><command>svn log</command></term>
           <listitem>
             <para>Shows you broad information: log messages attached
               to revisions, and which paths changed in each
@@ -1674,7 +1673,7 @@ svn: Out of date: 'rules.txt' in transaction 'g'
         </varlistentry>
 
         <varlistentry>
-          <term><command>svn diff </command></term>
+          <term><command>svn diff</command></term>
           <listitem>
             <para>Shows you the specific details of how a file changed
               over time.</para>
@@ -1682,7 +1681,7 @@ svn: Out of date: 'rules.txt' in transaction 'g'
         </varlistentry>
 
         <varlistentry>
-          <term><command>svn cat </command></term>
+          <term><command>svn cat</command></term>
           <listitem>
             <para>This is used to retrieve any file as it existed in a
               particular revision number and display it on your
@@ -1691,7 +1690,7 @@ svn: Out of date: 'rules.txt' in transaction 'g'
         </varlistentry>
 
         <varlistentry>
-          <term><command>svn list </command></term>
+          <term><command>svn list</command></term>
           <listitem>
             <para>Displays the files in a directory for any given
               revision.</para>
