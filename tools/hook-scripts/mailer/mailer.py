@@ -7,8 +7,8 @@
 # $LastChangedBy$
 # $LastChangedRevision$
 #
-# USAGE: ./mailer.py commit     REPOS-DIR REVISION [CONFIG-FILE]
-#        ./mailer.py propchange REPOS-DIR REVISION AUTHOR PROPNAME [CONFIG-FILE]
+# USAGE: mailer.py commit     REPOS-DIR REVISION [CONFIG-FILE]
+#        mailer.py propchange REPOS-DIR REVISION AUTHOR PROPNAME [CONFIG-FILE]
 #
 #   Using CONFIG-FILE, deliver an email describing the changes between
 #   REV and REV-1 for the repository REPOS.
@@ -37,10 +37,11 @@ def main(pool, cmd, config_fname, repos_dir, rev, author, propname):
   repos = Repository(repos_dir, rev, pool)
 
   if cmd == 'commit':
-    author = repos.author or 'no_author'
     cfg = Config(config_fname, repos, { 'author' : author })
     messenger = Commit(pool, cfg, repos)
   elif cmd == 'propchange':
+    # Override the repos revision author with the author of the propchange
+    repos.author = author
     cfg = Config(config_fname, repos, { 'author' : author })
     messenger = PropChange(pool, cfg, repos, author, propname)
   else:
@@ -57,7 +58,8 @@ class MailedOutput:
 
   def start(self, group, params):
     self.to_addr = self.cfg.get('to_addr', group, params)
-    self.from_addr = self.cfg.get('from_addr', group, params) or 'no_author'
+    self.from_addr = self.cfg.get('from_addr', group, params) \
+                     or self.repos.author or 'no_author'
     self.reply_to = self.cfg.get('reply_to', group, params)
 
   def mail_headers(self, group, params):
