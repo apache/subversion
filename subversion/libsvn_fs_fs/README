@@ -2,10 +2,10 @@ This directory contains work-in-progress materials for a new FS back
 end to be implemented on top of a native filesystem.
 
 At the time of this writing, nothing in this directory hooks into the
-build system; not only is there no working code yet, but there isn't
-support in Subversion for pluggable FS back ends yet.  (That work will
-occur on a branch; after it is complete and merged into the trunk,
-there will be something for code in this directory to plug into.)
+build system, because there isn't support in Subversion for pluggable
+FS back ends yet.  (That work will occur on a branch; after it is
+complete and merged into the trunk, there will be something for code
+in this directory to plug into.)
 
 Goals
 -----
@@ -71,6 +71,9 @@ long time to finalize.)
 Workplan
 --------
 
+This workplan is complete.  Remaining work items include FS
+abstraction, cleanup, and performance improvements.
+
   1. Develop a straw-man revision file format.  It's not critically
      important to get it right on the first try, but it should be
      something that we think can efficiently support the libsvn_fs
@@ -124,9 +127,11 @@ Workplan
 
   11. Extend the read code from (3) to handle delta bases using the
       delta combiner.
+      (Status: Done.)
 
   12. Extend the write code from (7) and (9) to generate deltas with
       bases.
+      (Status: Done.)
 
 Not every step depends on the previous step, so not everything has to
 proceed in order.
@@ -152,6 +157,7 @@ have to redo the window handling code (which is short), and can still
 invoke the same core vdelta engine code.
 
 Issue #2: Avoiding long delays with no feedback during commit
+(Status: Solution A implemented, for now.)
 
 As we've seen with deltification in the BDB implementation, it isn't
 okay to do lots of work in one step of a commit.  Fundamentally,
