@@ -16,7 +16,7 @@ _svn()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	cmds='add cat checkout co cleanup commit ci copy cp delete del \
+	cmds='add blame cat checkout co cleanup commit ci copy cp delete del \
 	      remove rm diff di export import info ? h help list ls log merge \
 	      mkdir move mv rename ren propdel pdel propedit pedit pe propget \
 	      pget pg proplist plist pl propset pset ps revert resolved \
@@ -57,6 +57,9 @@ _svn()
 		;;
 	add)
 		cmdOpts="--auto-props --no-auto-props --targets $nOpts $qOpts"
+		;;
+	blame)
+		cmdOpts="$rOpts $pOpts --strict"
 		;;
 	cat)
 		cmdOpts="$rOpts $pOpts"
