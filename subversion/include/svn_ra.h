@@ -295,7 +295,7 @@ typedef struct svn_ra_plugin_t
   /* The proper name of the ra library, (e.g. "ra_dav" or "ra_local") */
   const char *name;         
   
-  /* Short doc string printed out by `svn -v` */
+  /* Short doc string printed out by `svn --version` */
   const char *description;
 
   /* The vtable hooks */
