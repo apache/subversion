@@ -1617,11 +1617,19 @@ class SymbolicNameTracker:
     # they were commits on that branch and therefore cvs2svn must have
     # created it already (see the fill_branch call in Commit.commit).
     # So either way, the source paths exist by the time we need them.
+    #
+    ### It wouldn't be so awfully hard to determine whether a name is
+    ### just a branch or just a tag, which would allow for more
+    ### intuitive messages below.
+    print "Finishing branches:"
     for name in parent.keys():
       if name[0] != '/':
+        print "finishing '%s' as branch" % name
         self.fill_branch(dumper, ctx, name, [1])
+    print "Finishing tags:"
     for name in parent.keys():
       if name[0] != '/':
+        print "finishing '%s' as tag" % name
         self.fill_tag(dumper, ctx, name, [1])
 
 
