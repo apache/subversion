@@ -41,23 +41,21 @@ svn_cl__status (svn_cl__opt_state_t *opt_state,
   /* Add "." if user passed 0 arguments */
   push_implicit_dot_target(targets, pool);
 
-  /* FIXME: reformat block to remove extra spaces */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
 
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+      /* kff todo: eventually, the hard-coded 1 as the DESCEND
+         parameter below should be replaced with a pass-thru DESCEND
+         received from caller, which in turn would set it according
+         to a command-line argument telling svn whether to recurse
+         fully or just do immediate children. */
+      err = svn_client_status (&statushash, target, 1, pool);
+      if (err)
+        return err;
 
-        /* kff todo: eventually, the hard-coded 1 as the DESCEND
-           parameter below should be replaced with a pass-thru DESCEND
-           received from caller, which in turn would set it according
-           to a command-line argument telling svn whether to recurse
-           fully or just do immediate children. */
-        err = svn_client_status (&statushash, target, 1, pool);
-        if (err)
-          return err;
-
-        svn_cl__print_status_list (statushash, pool);
-      }
+      svn_cl__print_status_list (statushash, pool);
+    }
 
   return SVN_NO_ERROR;
 }
