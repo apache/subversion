@@ -29,19 +29,6 @@
 #include "ra_dav.h"
 
 
-enum {
-  /* DAV elements */
-  ELEM_baseline_coll = DAV_ELM_207_UNUSED,
-  ELEM_checked_in,
-  ELEM_collection,
-  ELEM_resourcetype,
-  ELEM_vcc,
-  ELEM_version_name,
-
-  /* SVN elements */
-  ELEM_baseline_relpath
-};
-
 typedef struct {
   hip_xml_elmid id;
   const char *name;

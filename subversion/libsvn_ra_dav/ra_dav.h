@@ -22,7 +22,7 @@
 
 #include <http_request.h>
 #include <uri.h>
-#include <dav_207.h>            /* for dav_propname */
+#include <dav_207.h>            /* for dav_propname, DAV_ELM_207_UNUSED */
 
 #include "svn_types.h"
 #include "svn_string.h"
@@ -139,6 +139,32 @@ svn_error_t * svn_ra_dav__get_activity_url(svn_string_t **activity_url,
                                            svn_ra_session_t *ras,
                                            const char *url,
                                            apr_pool_t *pool);
+
+/* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
+enum {
+  /* DAV elements */
+  ELEM_activity_coll_set = DAV_ELM_207_UNUSED,
+  ELEM_baseline_coll,
+  ELEM_checked_in,
+  ELEM_collection,
+  ELEM_ignored_set,
+  ELEM_merge_response,
+  ELEM_merged_set,
+  ELEM_options_response,
+  ELEM_resourcetype,
+  ELEM_updated_set,
+  ELEM_vcc,
+  ELEM_version_name,
+
+  /* SVN elements */
+  ELEM_baseline_relpath
+};
+
+/* ### docco */
+svn_error_t * svn_ra_dav__merge_activity(svn_ra_session_t *ras,
+                                         const char *repos_url,
+                                         const char *activity_url,
+                                         apr_pool_t *pool);
 
 #endif  /* RA_DAV_H */
 

@@ -4,7 +4,7 @@
 lib_LTLIBRARIES = libsvn_ra_dav.la
 
 libsvn_ra_dav_la_SOURCES = session.c fetch.c commit.c ra_dav.h props.c \
-			   options.c
+			   options.c merge.c
 
 ### this is a hack, but we can't pass libneon.la (et al) to libtool when
 ### shared libs are being built. libtool barfs on us. we need to upgrade
