@@ -135,7 +135,7 @@ close_directory (void *dir_baton)
 {
   svn_error_t *err;
   struct dir_baton *d = dir_baton;
-  char statchar_buf[3] = "- ";
+  char statchar_buf[3] = "_ ";
 
   if (d->prop_changed)
     {
@@ -180,7 +180,7 @@ close_file (void *file_baton)
 {
   svn_error_t *err;
   struct file_baton *fb = file_baton;
-  char statchar_buf[3] = "- ";
+  char statchar_buf[3] = "_ ";
 
   if (fb->added)
     {

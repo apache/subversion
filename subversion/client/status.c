@@ -44,7 +44,7 @@ generate_status_codes (char *str_status,
   switch (text_status)
     {
     case svn_wc_status_none:
-      text_statuschar = '-';
+      text_statuschar = '_';
       break;
     case svn_wc_status_added:
       text_statuschar = 'A';
