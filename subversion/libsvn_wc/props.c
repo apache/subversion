@@ -1428,3 +1428,134 @@ svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
 
   return SVN_NO_ERROR;
 }
+
+
+
+/** Externals **/
+
+svn_error_t *
+svn_wc_parse_externals_description (apr_hash_t **externals_p,
+                                    const char *parent_directory,
+                                    const char *desc,
+                                    apr_pool_t *pool)
+{
+  apr_hash_t *externals = apr_hash_make (pool);
+  apr_array_header_t *lines = svn_cstring_split (desc, "\n\r", TRUE, pool);
+  int i;
+  
+  for (i = 0; i < lines->nelts; i++)
+    {
+      const char *line = APR_ARRAY_IDX (lines, i, const char *);
+      apr_array_header_t *line_parts;
+      svn_wc_external_item_t *item;
+
+      if ((! line) || (line[0] == '#'))
+        continue;
+
+      /* else proceed */
+
+      line_parts = svn_cstring_split (line, " \t", TRUE, pool);
+
+      item = apr_palloc (pool, sizeof (*item));
+
+      if (line_parts->nelts < 2)
+        goto parse_error;
+
+      else if (line_parts->nelts == 2)
+        {
+          /* No "-r REV" given. */
+          item->target_dir = APR_ARRAY_IDX (line_parts, 0, const char *);
+          item->url = APR_ARRAY_IDX (line_parts, 1, const char *);
+          item->revision.kind = svn_opt_revision_head;
+        }
+      else if ((line_parts->nelts == 3) || (line_parts->nelts == 4))
+        {
+          /* We're dealing with one of these two forms:
+           * 
+           *    TARGET_DIR  -rN  URL
+           *    TARGET_DIR  -r N  URL
+           * 
+           * Handle either way.
+           */
+
+          const char *r_part_1 = NULL, *r_part_2 = NULL;
+
+          item->target_dir = APR_ARRAY_IDX (line_parts, 0, const char *);
+          item->revision.kind = svn_opt_revision_number;
+
+          if (line_parts->nelts == 3)
+            {
+              r_part_1 = APR_ARRAY_IDX (line_parts, 1, const char *);
+              item->url = APR_ARRAY_IDX (line_parts, 2, const char *);
+            }
+          else  /* nelts == 4 */
+            {
+              r_part_1 = APR_ARRAY_IDX (line_parts, 1, const char *);
+              r_part_2 = APR_ARRAY_IDX (line_parts, 2, const char *);
+              item->url = APR_ARRAY_IDX (line_parts, 3, const char *);
+            }
+
+          if ((! r_part_1) || (r_part_1[0] != '-') || (r_part_1[1] != 'r'))
+            goto parse_error;
+
+          if (! r_part_2)  /* "-rN" */
+            {
+              if (strlen (r_part_1) < 3)
+                goto parse_error;
+              else
+                item->revision.value.number = SVN_STR_TO_REV (r_part_1 + 2);
+            }
+          else             /* "-r N" */
+            {
+              if (strlen (r_part_2) < 1)
+                goto parse_error;
+              else
+                item->revision.value.number = SVN_STR_TO_REV (r_part_2);
+            }
+        }
+      else    /* too many items on line */
+        goto parse_error;
+
+      if (0)
+        {
+        parse_error:
+          return svn_error_createf
+            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+             "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n"
+             "Invalid line: '%s'", parent_directory, line);
+        }
+
+      /* Make sure we don't have a reference to "../" in the tgt dir.
+       *
+       * ### Ideally, we'd prevent this at propset time, not when the
+       * client receives the external.  But that's a much larger
+       * change.  For now, the important thing is to make sure such
+       * references error and are not used, since they are a security
+       * risk (they could clobber things outside the working copy).
+       */
+      {
+        apr_ssize_t target_dir_len = strlen (item->target_dir);
+
+        if ((target_dir_len > 3)
+            && ((strncmp (item->target_dir, "../", 3) == 0)
+                || (strstr (item->target_dir, "/../") != NULL)
+                || (strncmp ((item->target_dir + target_dir_len - 3),
+                             "/..", 3) == 0)))
+        return svn_error_createf
+          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+           "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n"
+           "Invalid line: '%s'\n"
+           "Target dir '%s' references '..', which is not allowed.",
+           parent_directory, line, item->target_dir);
+      }
+
+      item->target_dir = svn_path_canonicalize (item->target_dir, pool);
+      item->url = svn_path_canonicalize (item->url, pool);
+
+      apr_hash_set (externals, item->target_dir, APR_HASH_KEY_STRING, item);
+    }
+
+  *externals_p = externals;
+
+  return SVN_NO_ERROR;
+}

@@ -42,6 +42,7 @@
 #include "svn_string.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_opt.h"
 #include "svn_ra.h"    /* for svn_ra_reporter_t type */
 
 #ifdef __cplusplus
@@ -243,6 +244,50 @@ svn_wc_traversal_info_t *svn_wc_init_traversal_info (apr_pool_t *pool);
 void svn_wc_edited_externals (apr_hash_t **externals_old,
                               apr_hash_t **externals_new,
                               svn_wc_traversal_info_t *traversal_info);
+
+
+/** One external item.  This usually represents one line from an
+ * svn:externals description but with the path and URL
+ * canonicalized.
+ */
+typedef struct svn_wc_external_item_t
+{
+  /** The name of the subdirectory into which this external should be
+      checked out.  This is relative to the parent directory that
+      holds this external item.  (Note that these structs are often
+      stored in hash tables with the target dirs as keys, so this
+      field will often be redundant.) */
+  const char *target_dir;
+
+  /** Where to check out from. */
+  const char *url;
+
+  /** What revision to check out.  The only valid kinds for this are
+      svn_opt_revision_number, svn_opt_revision_date, and
+      svn_opt_revision_head. */
+  svn_opt_revision_t revision;
+
+} svn_wc_external_item_t;
+
+
+/** Set @a *externals_p to a hash table whose keys are subdirectory
+ * names and values are @a svn_wc_external_item_t * objects,
+ * based on @a desc.
+ *
+ * The format of @a desc is the same as for values of the directory
+ * property @c SVN_PROP_EXTERNALS, which see.
+ *
+ * Allocate the table, keys, and values in @a pool.
+ *
+ * If the format of @a desc is invalid, don't touch @a *externals_p and
+ * return @c SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.
+ *
+ * Use @a parent_directory only in constructing error strings.
+ */
+svn_error_t *svn_wc_parse_externals_description (apr_hash_t **externals_p,
+                                                 const char *parent_directory,
+                                                 const char *desc,
+                                                 apr_pool_t *pool);
 
 
 

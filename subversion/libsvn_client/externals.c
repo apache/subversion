@@ -36,173 +36,10 @@
 
 
 
-/* One external item.  This usually represents one line from an
-   svn:externals description but with the path and URL canonicalized. */
-struct external_item
-{
-  /* The name of the subdirectory into which this external should be
-     checked out.  This is relative to the parent directory that holds
-     this external item.  (Note that these structs are often stored in
-     hash tables with the target dirs as keys, so this field will
-     often be redundant.) */
-  const char *target_dir;
-
-  /* Where to check out from. */
-  const char *url;
-
-  /* What revision to check out.  The only valid kinds for this are
-     svn_opt_revision_number, svn_opt_revision_date, and
-     svn_opt_revision_head. */
-  svn_opt_revision_t revision;
-};
-
-
-/* Set *EXTERNALS_P to a hash table whose keys are target subdir
- * names, and values are `struct external_item *' objects,
- * based on DESC.
- *
- * The format of EXTERNALS is the same as for values of the directory
- * property SVN_PROP_EXTERNALS, which see.
- *
- * Allocate the table, keys, and values in POOL.
- *
- * If the format of DESC is invalid, don't touch *EXTERNALS_P and
- * return SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.
- *
- * Use PARENT_DIRECTORY only in constructing error strings.
- */
-static svn_error_t *
-parse_externals_description (apr_hash_t **externals_p,
-                             const char *parent_directory,
-                             const char *desc,
-                             apr_pool_t *pool)
-{
-  apr_hash_t *externals = apr_hash_make (pool);
-  apr_array_header_t *lines = svn_cstring_split (desc, "\n\r", TRUE, pool);
-  int i;
-  
-  for (i = 0; i < lines->nelts; i++)
-    {
-      const char *line = APR_ARRAY_IDX (lines, i, const char *);
-      apr_array_header_t *line_parts;
-      struct external_item *item;
-
-      if ((! line) || (line[0] == '#'))
-        continue;
-
-      /* else proceed */
-
-      line_parts = svn_cstring_split (line, " \t", TRUE, pool);
-
-      item = apr_palloc (pool, sizeof (*item));
-
-      if (line_parts->nelts < 2)
-        goto parse_error;
-
-      else if (line_parts->nelts == 2)
-        {
-          /* No "-r REV" given. */
-          item->target_dir = APR_ARRAY_IDX (line_parts, 0, const char *);
-          item->url = APR_ARRAY_IDX (line_parts, 1, const char *);
-          item->revision.kind = svn_opt_revision_head;
-        }
-      else if ((line_parts->nelts == 3) || (line_parts->nelts == 4))
-        {
-          /* We're dealing with one of these two forms:
-           * 
-           *    TARGET_DIR  -rN  URL
-           *    TARGET_DIR  -r N  URL
-           * 
-           * Handle either way.
-           */
-
-          const char *r_part_1 = NULL, *r_part_2 = NULL;
-
-          item->target_dir = APR_ARRAY_IDX (line_parts, 0, const char *);
-          item->revision.kind = svn_opt_revision_number;
-
-          if (line_parts->nelts == 3)
-            {
-              r_part_1 = APR_ARRAY_IDX (line_parts, 1, const char *);
-              item->url = APR_ARRAY_IDX (line_parts, 2, const char *);
-            }
-          else  /* nelts == 4 */
-            {
-              r_part_1 = APR_ARRAY_IDX (line_parts, 1, const char *);
-              r_part_2 = APR_ARRAY_IDX (line_parts, 2, const char *);
-              item->url = APR_ARRAY_IDX (line_parts, 3, const char *);
-            }
-
-          if ((! r_part_1) || (r_part_1[0] != '-') || (r_part_1[1] != 'r'))
-            goto parse_error;
-
-          if (! r_part_2)  /* "-rN" */
-            {
-              if (strlen (r_part_1) < 3)
-                goto parse_error;
-              else
-                item->revision.value.number = SVN_STR_TO_REV (r_part_1 + 2);
-            }
-          else             /* "-r N" */
-            {
-              if (strlen (r_part_2) < 1)
-                goto parse_error;
-              else
-                item->revision.value.number = SVN_STR_TO_REV (r_part_2);
-            }
-        }
-      else    /* too many items on line */
-        goto parse_error;
-
-      if (0)
-        {
-        parse_error:
-          return svn_error_createf
-            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
-             "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n"
-             "Invalid line: '%s'", parent_directory, line);
-        }
-
-      /* Make sure we don't have a reference to "../" in the tgt dir.
-       *
-       * ### Ideally, we'd prevent this at propset time, not when the
-       * client receives the external.  But that's a much larger
-       * change.  For now, the important thing is to make sure such
-       * references error and are not used, since they are a security
-       * risk (they could clobber things outside the working copy).
-       */
-      {
-        apr_ssize_t target_dir_len = strlen (item->target_dir);
-
-        if ((target_dir_len > 3)
-            && ((strncmp (item->target_dir, "../", 3) == 0)
-                || (strstr (item->target_dir, "/../") != NULL)
-                || (strncmp ((item->target_dir + target_dir_len - 3),
-                             "/..", 3) == 0)))
-        return svn_error_createf
-          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
-           "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n"
-           "Invalid line: '%s'\n"
-           "Target dir '%s' references '..', which is not allowed.",
-           parent_directory, line, item->target_dir);
-      }
-
-      item->target_dir = svn_path_canonicalize (item->target_dir, pool);
-      item->url = svn_path_canonicalize (item->url, pool);
-
-      apr_hash_set (externals, item->target_dir, APR_HASH_KEY_STRING, item);
-    }
-
-  *externals_p = externals;
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Closure for handle_external_item_change. */
 struct handle_external_item_change_baton
 {
-  /* As returned by parse_externals_description(). */
+  /* As returned by svn_wc_parse_externals_description(). */
   apr_hash_t *new_desc;
   apr_hash_t *old_desc;
 
@@ -230,8 +67,8 @@ struct handle_external_item_change_baton
    we could get away with an "update -r" on the external, instead of
    a re-checkout. */
 static svn_boolean_t
-compare_external_items (struct external_item *new_item,
-                        struct external_item *old_item)
+compare_external_items (svn_wc_external_item_t *new_item,
+                        svn_wc_external_item_t *old_item)
 {
   if ((strcmp (new_item->target_dir, old_item->target_dir) != 0)
       || (strcmp (new_item->url, old_item->url) != 0)
@@ -328,7 +165,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                              void *baton)
 {
   struct handle_external_item_change_baton *ib = baton;
-  struct external_item *old_item, *new_item;
+  svn_wc_external_item_t *old_item, *new_item;
   const char *path = svn_path_join (ib->parent_dir,
                                     (const char *) key, ib->pool);
 
@@ -558,14 +395,14 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
   apr_hash_t *old_desc, *new_desc;
 
   if ((old_desc_text = apr_hash_get (cb->externals_old, key, klen)))
-    SVN_ERR (parse_externals_description (&old_desc, (const char *) key,
-                                          old_desc_text, cb->pool));
+    SVN_ERR (svn_wc_parse_externals_description (&old_desc, (const char *) key,
+                                                 old_desc_text, cb->pool));
   else
     old_desc = NULL;
 
   if ((new_desc_text = apr_hash_get (cb->externals_new, key, klen)))
-    SVN_ERR (parse_externals_description (&new_desc, (const char *) key,
-                                          new_desc_text, cb->pool));
+    SVN_ERR (svn_wc_parse_externals_description (&new_desc, (const char *) key,
+                                                 new_desc_text, cb->pool));
   else
     new_desc = NULL;
 
@@ -610,10 +447,15 @@ svn_client__handle_externals (svn_wc_traversal_info_t *traversal_info,
 }
 
 
-svn_error_t*
-svn_client__recognize_externals (apr_hash_t *status_hash,
-                                 svn_wc_traversal_info_t *traversal_info,
-                                 apr_pool_t *pool)
+svn_error_t *
+svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
+                                svn_wc_status_func_t status_func,
+                                void *status_baton,
+                                svn_boolean_t get_all,
+                                svn_boolean_t update,
+                                svn_boolean_t no_ignore,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool)
 {
   apr_hash_t *externals_old, *externals_new;
   apr_hash_index_t *hi;
@@ -645,41 +487,21 @@ svn_client__recognize_externals (apr_hash_t *status_hash,
 
       /* Parse the svn:externals property value.  This results in a
          hash mapping subdirectories to externals structures. */
-      SVN_ERR (parse_externals_description (&exts, path, propval, subpool));
+      SVN_ERR (svn_wc_parse_externals_description (&exts, path, 
+                                                   propval, subpool));
 
       /* Loop over the subdir hash. */
       for (hi2 = apr_hash_first (subpool, exts); 
            hi2; 
            hi2 = apr_hash_next (hi2))
         {
-          struct external_item *external_item;
-          svn_wc_status_t *status;
-          apr_ssize_t keylen;
-          apr_array_header_t *subdir_pieces;
-          const char *extpath = path;
-          int i;
-
-          apr_hash_this (hi2, &key, NULL, &val);
-          external_item = val;
-          subdir_pieces = svn_path_decompose (key, subpool);
-       
-          /* Here's where we do the real thing we came here to do.
-             For now, we'll just remove any status hash items that are
-             unrecognized but which represent externals subdirs.  */
-          for (i = 0; i < subdir_pieces->nelts; i++)
-            {
-              extpath = svn_path_join (extpath,
-                                       APR_ARRAY_IDX (subdir_pieces, i,
-                                                      const char *),
-                                       subpool);
-              keylen = strlen (extpath);
-              status = apr_hash_get (status_hash, extpath, keylen);
-              if (status && status->text_status == svn_wc_status_unversioned)
-                {
-                  status->text_status = svn_wc_status_external;
-                  apr_hash_set (status_hash, extpath, keylen, status);
-                }
-            }
+          svn_revnum_t youngest;
+          apr_hash_this (hi2, &key, NULL, NULL);
+          SVN_ERR (svn_client_status (&youngest, 
+                                      svn_path_join (path, key, pool), 
+                                      status_func, status_baton, 
+                                      TRUE, get_all, update, no_ignore, 
+                                      ctx, pool));
         }
     } 
   

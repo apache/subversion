@@ -534,17 +534,18 @@ svn_error_t *svn_client__handle_externals
     svn_client_ctx_t *ctx,
     apr_pool_t *pool);
 
-/* Fixup the STATUS_HASH in light of the existence of local
-   directories that are unversioned, but which exist because of the
-   procession that svn:externals properties (as defined in
-   TRAVERSAL_INFO) perform.  Such status items will be modified from
-   svn_wc_status_unversioned to svn_wc_status_external.
 
-   Use POOL for all scratchwork. */
-svn_error_t *svn_client__recognize_externals
-   (apr_hash_t *status_hash,
-    svn_wc_traversal_info_t *traversal_info,
-    apr_pool_t *pool);
+/* Perform status operations on each external in TRAVERSAL_INFO.  All
+   other options are the same as those passed to svn_client_status(). */
+svn_error_t*
+svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
+                                svn_wc_status_func_t status_func,
+                                void *status_baton,
+                                svn_boolean_t get_all,
+                                svn_boolean_t update,
+                                svn_boolean_t no_ignore,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
 
 
 #ifdef __cplusplus

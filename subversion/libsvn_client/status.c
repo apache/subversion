@@ -215,16 +215,21 @@ svn_client_status (svn_revnum_t *youngest,
       SVN_ERR (editor->close_edit (edit_baton, pool));
     }
 
-#ifdef STREAMY_STATUS_IN_PROGRESS
+  /* Close the access baton here, as svn_client__recognize_externals()
+     calls back into this function (and thus will be re-opening the
+     working copy. */
+  SVN_ERR (svn_wc_adm_close (adm_access));
+
   /* If there are svn:externals set, we don't want those to show up as
      unversioned or unrecognized, so patchup the hash.  If callers wants
      all the statuses, we will change unversioned status items that
      are interesting to an svn:externals property to
      svn_wc_status_unversioned, otherwise we'll just remove the status
      item altogether. */
-  SVN_ERR (svn_client__recognize_externals (hash, traversal_info, pool));
-#endif
+  if (0 && descend) /* ### disable for now */
+    SVN_ERR (svn_client__do_external_status (traversal_info, status_func,
+                                             status_baton, get_all, update,
+                                             no_ignore, ctx, pool));
 
-  SVN_ERR (svn_wc_adm_close (adm_access));
   return SVN_NO_ERROR;
 }
