@@ -1,5 +1,6 @@
 require "my-assertions"
 
+require "svn/core"
 require "svn/util"
 
 class SvnUtilTest < Test::Unit::TestCase
