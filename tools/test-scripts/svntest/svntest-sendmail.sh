@@ -66,7 +66,7 @@ Content-Type: multipart/mixed; boundary="------------NextPart"
 
 This is a multi-part message in MIME format.
 --------------NextPart
-Content-Type: text/plain; charset=ascii
+Content-Type: text/plain; charset=us-ascii
 Content-Transfer-Encoding: 8bit
 
 EOF
