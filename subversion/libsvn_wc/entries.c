@@ -233,9 +233,9 @@ svn_wc__entry_get_ancestry (svn_string_t *path,
 
 
 
-/* Search through ATTS and fill in DESIRED_ATTRS appropriately.
-   DESIRED_ATTRS is a hash whose keys are char *'s and values are
-   svn_string_t **'s, which will be set to point to new strings
+/* Search through ATTS and fill in ATTR_HASH appropriately.
+   ATTR_HASH is a hash whose keys are char *'s and values will be
+   svn_string_t *'s, which will be set to point to new strings
    representing the values discovered in ATTS.
 
    Certain arguments will also be converted and set directly: VERSION
@@ -245,10 +245,9 @@ static void
 get_entry_attributes (const char **atts,
                       svn_vernum_t *version,
                       enum svn_node_kind *kind,
-                      apr_hash_t *desired_attrs,
+                      apr_hash_t *attr_hash,
                       apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
   const char *found_version, *found_kind;
 
   /* Handle version specially. */
@@ -270,20 +269,7 @@ get_entry_attributes (const char **atts,
       /* someday there will be symlink kind, etc, here */
     }
 
-  /* Now loop through the other requested attributes, setting by reference. */
-  for (hi = apr_hash_first (desired_attrs); hi; hi = apr_hash_next (hi))
-    {
-      const char *key;
-      size_t keylen;
-      const char *val; 
-      svn_string_t **receiver;
-      
-      apr_hash_this (hi, (const void **) &key, &keylen, (void **) &receiver);
-      assert (receiver != NULL);
-
-      val = svn_xml_get_attr_value (key, atts);
-      *receiver = (val ? svn_string_create (val, pool) : NULL);
-    }
+  svn_xml_hash_atts_overlaying (atts, attr_hash, pool);
 }
 
 
