@@ -71,8 +71,8 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2005-01-13 10:09+0100\n"
-"Last-Translator: subversion developers <dev@subversion.tigris.org>\n"
+"PO-Revision-Date: 2005-01-15 11:29+0100\n"
+"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -4106,12 +4106,12 @@ msgstr "Übertragen erfolgreich, aber die 'post-commit' Aktion schlug fehl"
 #: libsvn_repos/fs-wrap.c:155
 #, c-format
 msgid "Storage of non-regular property '%s' is disallowed through the repository interface, and could indicate a bug in your client"
-msgstr ""
+msgstr "Das Speichern der speziellen Eigenschaft '%s' wird vom PA verhindert, und könnte auf einen Bug in Ihrem Client hindeuten"
 
 #: libsvn_repos/fs-wrap.c:294
 #, c-format
 msgid "Write denied:  not authorized to read all of revision %ld."
-msgstr "Schreiben abgelehnt: Keine Berechtigung alles von Revision %ld einzulesen."
+msgstr "Schreiben abgelehnt: Keine Berechtigung, alles von Revision %ld einzulesen."
 
 #: libsvn_repos/hooks.c:65
 #, c-format
@@ -6626,8 +6626,31 @@ msgid ""
 msgstr ""
 "Aufruf: svnversion [OPTIONEN] AK_PFAD [ANGEH_URL]\n"
 "\n"
-"  Erzeuge eine kompakte 'Versionsnummer' für den AK_PFAD der Arbeitskopie.\n"
-"  ANGEH_URL \n"
+"  Erzeuge eine kompakte 'Versionsnummer' für den Pfad AK_PFAD der\n"
+"  Arbeitskopie.  ANGEH_URL ist der angehängte Teil der URL, welcher\n"
+"  benutzt wird, um festzustellen, ob AK_PFAD selbst umgestellt wird\n"
+"  (Die Erkennung von Umstellungen selbst innerhalb von AK_PFAD hängt\n"
+"  nicht von ANGEH_URL ab). Die Versionsnummer selbst wird auf die\n"
+"  Standardausgabe ausgegeben. Ein Beispiel:\n"
+"\n"
+"    $ svnversion . /repos/svn/trunk \n"
+"    4168\n"
+"\n"
+"  Die Versionsnummer ist eine einzelne Nummer, falls die Arbeitskopie\n"
+"  eine einzelne Revision besitzt, die nicht modifiziert, nicht umgeschaltet\n"
+"  ist und eine URL, welche mit ANGEH_URL übereinstimmt.  Falls die\n"
+"  Arbeitskopie ungewöhnlich ist, ist die Versionsnummer komplexer:\n"
+"\n"
+"   4123:4168     Arbeitskopie aus verschiedenen Revisionen\n"
+"   4168M         geänderte Arbeitskopie\n"
+"   4123S         umgestellte Arbeitskopie\n"
+"   4123:4168MS   geänderte, umgestellte Arbeitskopie aus verschiedenen\n"
+"                 Revisionen\n"
+"\n"
+"  Das Programm gibt 'exportiert' aus, falls es in einem Verzeichnis, das\n"
+"  keine Arbeitskopie ist, ausgeführt wird.\n"
+"\n"
+"Gültige Optionen:\n"
 
 #: svnversion/main.c:198
 msgid "do not output the trailing newline"
@@ -6635,7 +6658,7 @@ msgstr "gibt den anhängenden Zeilenumbruch nicht aus"
 
 #: svnversion/main.c:199
 msgid "last changed rather than current revisions"
-msgstr "eher letzte geänderte, als aktuelle Revisionen"
+msgstr "gibt letzte geänderte statt aktueller Revisionen aus"
 
 #: svnversion/main.c:286
 #, c-format
