@@ -5,7 +5,7 @@
 
 @quotation
 @emph{The three cardinal virtues of a master technologist are: laziness,
-impatience, and hubris." -- Author Unknown}
+impatience, and hubris." -- Larry Wall}
 @end quotation
 
 
@@ -214,8 +214,8 @@ way to keep directory revisions accurate.
 @section User impact
 
 
-Really, the Subversion client seems to have two difficult -- almost
-contadictory -- goals.  
+Really, the Subversion client seems to have two difficult---almost
+contradictory---goals.  
 
 First, it needs to make the user experience friendly, which generally
 means being a bit "sloppy" about deciding what a user can or cannot do.

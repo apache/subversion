@@ -137,7 +137,7 @@ add @file{fonts} to the repository first, and then add its new contents:
 $ svn commit fonts
 Adding   ./fonts
 Adding   ./fonts/font1.ttf
-Adding   ./fonts/font1.ttf
+Adding   ./fonts/font2.ttf
 Commit succeeded.
 @end example
 
