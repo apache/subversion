@@ -735,14 +735,14 @@ def simple_property_merges(sbox):
   
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', A2_url, wc_dir)
   
-  A_url = svntest.main.current_repo_url + '/A/B/E/alpha'
+  alpha_url = svntest.main.current_repo_url + '/A/B/E/alpha'
   alpha_path = os.path.join(wc_dir, 'B', 'E', 'alpha')
 
   # Cannot use run_and_verify_merge with a file target
   svntest.actions.run_and_verify_svn(None,
                                      [' U ' + alpha_path + '\n'], [],
                                      'merge',
-                                     '-r', '3:4', A_url, alpha_path)
+                                     '-r', '3:4', alpha_url, alpha_path)
   
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'pl', alpha_path)
