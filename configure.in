@@ -336,7 +336,7 @@ AC_HELP_STRING([--enable-maintainer-mode],
       if test "$GCC" = "yes"; then
         dnl SVN_DEBUG enables specific features for developer builds
         dnl AP_DEBUG enables specific (Apache) features for developer builds
-        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow -DSVN_DEBUG -DAP_DEBUG";
+        CFLAGS="$CFLAGS -std=c89 -Wpointer-arith -Wwrite-strings -Wshadow -DSVN_DEBUG -DAP_DEBUG";
       fi
     fi
 ])
