@@ -23,11 +23,6 @@ To be fixed by someone:
 
 To be fixed by cmpilato:
 
-  - convert any Perl examples to Python ones.  and stick with the
-    Python coding conventions when doing so.  and do error checking.
-    and then chuckle about how the examples are still shorter and
-    easier to read than they were before.
-
   - define a 'project root', recommend 'standard' repos layout beneath
     such roots.
 
@@ -45,25 +40,6 @@ To be fixed by cmpilato:
     people have asked this in irc.  what sort of things does an
     application *have* to set up in the cxt_t in order to call an
     svn_client_foo() function?
-
-  - I think we need to add a *bit* more background on "how berkeley
-    db" works.  It's not clear to most readers 1) what the db logfiles
-    are, 2) that they need to be pruned regularly (if not using 4.2),
-    3) that they grow *even* if you only do checkouts and updates.
-    Ben wrote an email about this which should probably be assimilated
-    into ch05:
-
-      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=38769
-
-    While it's not our job to turn the readers into BDB experts, I
-    think this level of information is the exact right level of BDB
-    knowledge that users/admins need to use svn well.
-
-  - document 'svnadmin hotcopy' in the 'Repository Backup' section of
-    ch05.  it's mentioned briefly elsewhere in ch05, but this section
-    should talk about it explicitly, probably instead of mentioning
-    the hot-backup.py script.  ('svnadmin hotcopy' is preferred to
-    hot-backup.py now, isn't it?)
 
   - Please point out and explain why BerkeleyDB environments aren't
     portable.  You can't just move it from Unix to Win32.
