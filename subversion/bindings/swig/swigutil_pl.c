@@ -913,6 +913,11 @@ svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj)
     IO *io;
     int simple_type = 1;
 
+    if (obj == &PL_sv_undef) {
+        *stream = NULL;
+        return SVN_NO_ERROR;
+    }
+
     if (obj && sv_isobject(obj)) {
         if (sv_derived_from (obj, "SVN::Stream"))
 	    perl_callback_thunk (CALL_METHOD, "svn_stream", &obj, "O", obj);
