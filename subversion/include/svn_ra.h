@@ -94,7 +94,7 @@ typedef struct svn_ra_plugin_t
      commit_editor->close_edit() returns too.  */
   svn_error_t *(*svn_ra_do_update) (void *session_baton,
                                     svn_delta_edit_fns_t **commit_editor,
-                                    void **commit__baton,
+                                    void **commit_baton,
                                     svn_delta_edit_fns_t *update_editor,
                                     void *update_baton,
                                     svn_string_t *URL);
