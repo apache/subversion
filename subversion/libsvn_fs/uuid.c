@@ -46,14 +46,26 @@ svn_fs_get_uuid (svn_fs_t *fs,
                  const char **uuid,
                  apr_pool_t *pool)
 {
-  struct get_uuid_args args;
-
   SVN_ERR (svn_fs__check_fs (fs));
 
-  args.fs = fs;
-  args.idx = 1;
-  args.uuid = uuid;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_uuid, &args, pool));
+  /* Check for a cached UUID first.  Failing that, we hit the
+     database. */
+  if (fs->uuid)
+    {
+      *uuid = apr_pstrdup (pool, fs->uuid);
+    }
+  else
+    {
+      struct get_uuid_args args;
+      args.fs = fs;
+      args.idx = 1;
+      args.uuid = uuid;
+      SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_uuid, &args, pool));
+
+      /* Toss what we find into the cache. */
+      if (*uuid)
+        fs->uuid = apr_pstrdup (fs->pool, *uuid);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -70,10 +82,7 @@ static svn_error_t *
 txn_body_set_uuid (void *baton, trail_t *trail)
 {
   struct set_uuid_args *args = baton;
-
-  SVN_ERR (svn_fs__bdb_set_uuid (args->fs, args->idx, args->uuid, trail));
-
-  return SVN_NO_ERROR;
+  return svn_fs__bdb_set_uuid (args->fs, args->idx, args->uuid, trail);
 }
 
 
@@ -90,6 +99,10 @@ svn_fs_set_uuid (svn_fs_t *fs,
   args.idx = 1;
   args.uuid = uuid;
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_set_uuid, &args, pool));
+
+  /* Toss our value into the cache. */
+  if (uuid)
+    fs->uuid = apr_pstrdup (fs->pool, uuid);
 
   return SVN_NO_ERROR;
 }

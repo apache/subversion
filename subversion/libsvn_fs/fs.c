@@ -286,16 +286,12 @@ svn_fs_t *
 svn_fs_new (apr_hash_t *fs_config, apr_pool_t *parent_pool)
 {
   svn_fs_t *new_fs;
+  apr_pool_t *pool = svn_pool_create (parent_pool);
 
   /* Allocate a new filesystem object in its own pool, which is a
      subpool of POOL.  */
-  {
-    apr_pool_t *pool = svn_pool_create (parent_pool);
-
-    new_fs = apr_pcalloc (pool, sizeof (svn_fs_t));
-    new_fs->pool = pool;
-  }
-
+  new_fs = apr_pcalloc (pool, sizeof (svn_fs_t));
+  new_fs->pool = pool;
   new_fs->warning = default_warning_func;
   new_fs->config = fs_config;
 
