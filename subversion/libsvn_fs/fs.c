@@ -119,6 +119,10 @@ cleanup_fs (svn_fs_t *fs)
 {
   int db_err;
 
+  /* Close the databases.  */
+  SVN_ERR (cleanup_fs_db (fs, &fs->versions, "versions"));
+  SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
+
   /* Checkpoint any changes.  */
   db_err = txn_checkpoint (fs->env, 0, 0, 0);
   while (db_err == DB_INCOMPLETE)
@@ -128,10 +132,6 @@ cleanup_fs (svn_fs_t *fs)
     }
   SVN_ERR (DB_WRAP (fs, "checkpointing environment", db_err));
       
-  /* Close the databases.  */
-  SVN_ERR (cleanup_fs_db (fs, &fs->versions, "versions"));
-  SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
-
   /* Finally, close the environment.  */
   if (fs->env)
     SVN_ERR (DB_WRAP (fs, "closing environment",
