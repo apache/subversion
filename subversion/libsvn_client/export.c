@@ -137,6 +137,49 @@ copy_versioned_files (const char *from,
   return SVN_NO_ERROR;
 }
 
+
+/* Abstraction of open_root.
+ *
+ * Create PATH if it does not exist and is not obstructed, and invoke
+ * NOTIFY_FUNC with NOTIFY_BATON on PATH.
+ *
+ * If PATH exists but is a file, then error with SVN_ERR_WC_NOT_DIRECTORY.
+ *
+ * If PATH is a already a directory, then error with
+ * SVN_ERR_WC_OBSTRUCTED_UPDATE, unless FORCE, in which case just
+ * export into PATH with no error.
+ */
+static svn_error_t *
+open_root_internal (const char *path,
+                    svn_boolean_t force,
+                    svn_wc_notify_func_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_none)
+    SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
+  else if (kind == svn_node_file)
+    return svn_error_create (SVN_ERR_WC_NOT_DIRECTORY, NULL, path);
+  else if ((kind != svn_node_dir) || (! force))
+    return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL, path);
+
+  if (notify_func)
+    (*notify_func) (notify_baton,
+                    path,
+                    svn_wc_notify_update_add,
+                    svn_node_dir,
+                    NULL,
+                    svn_wc_notify_state_unknown,
+                    svn_wc_notify_state_unknown,
+                    SVN_INVALID_REVNUM);
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_client_export (const char *from,
                    const char *to,
@@ -188,6 +231,24 @@ svn_client_export (const char *from,
                                    pool));
 
       SVN_ERR (reporter->finish_report (report_baton));               
+
+      /* Special case: Due to our sly export/checkout method of
+       * updating an empty directory, no target will have been created
+       * if the exported item is itself an empty directory
+       * (export_editor->open_root never gets called, because there
+       * are no "changes" to make to the empty dir we reported to the
+       * repository).
+       *
+       * So we just create the empty dir manually; but we do it via
+       * open_root_internal(), in order to get proper notification.
+       */
+      {
+        svn_node_kind_t kind;
+        SVN_ERR (svn_io_check_path (to, &kind, pool));
+        if (kind == svn_node_none)
+          SVN_ERR (open_root_internal
+                   (to, force, ctx->notify_func, ctx->notify_baton, pool));
+      }
     }
   else
     {
@@ -263,27 +324,9 @@ open_root (void *edit_baton,
            void **root_baton)
 {
   struct edit_baton *eb = edit_baton;  
-  svn_node_kind_t kind;
-  
-  SVN_ERR (svn_io_check_path (eb->root_path, &kind, pool));
-  if ( kind == svn_node_none )
-      SVN_ERR (svn_io_dir_make (eb->root_path, APR_OS_DEFAULT, pool));
-  else if (kind == svn_node_file)
-      return svn_error_create (SVN_ERR_WC_NOT_DIRECTORY,
-                               NULL, eb->root_path);
-  else if ( (! (kind == svn_node_dir && eb->force)) || kind != svn_node_dir)
-      return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE,
-                               NULL, eb->root_path);
 
-  if (eb->notify_func)
-    (*eb->notify_func) (eb->notify_baton,
-                        eb->root_path,
-                        svn_wc_notify_update_add,
-                        svn_node_dir,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
+  SVN_ERR (open_root_internal (eb->root_path, eb->force,
+                               eb->notify_func, eb->notify_baton, pool));
 
   *root_baton = eb;
   return SVN_NO_ERROR;
