@@ -127,9 +127,15 @@ xml_escape_cdata (svn_stringbuf_t **outstr,
       /* Find a character which needs to be quoted and append bytes up
          to that point.  Strictly speaking, '>' only needs to be
          quoted if it follows "]]", but it's easier to quote it all
-         the time.  */
+         the time.  
+
+         So, why are we escaping '\r' here?  Well, according to the
+         XML spec, '\r\n' gets converted to '\n' during XML parsing.
+         Also, any '\r' not followed by '\n' is converted to '\n'.  By
+         golly, if we say we want to escape a '\r', we want to make
+         sure it remains a '\r'!  */
       q = p;
-      while (q < end && *q != '&' && *q != '<' && *q != '>')
+      while (q < end && *q != '&' && *q != '<' && *q != '>' && *q != '\r')
         q++;
       svn_stringbuf_appendbytes (*outstr, p, q - p);
 
@@ -144,6 +150,8 @@ xml_escape_cdata (svn_stringbuf_t **outstr,
         svn_stringbuf_appendcstr (*outstr, "&lt;");
       else if (*q == '>')
         svn_stringbuf_appendcstr (*outstr, "&gt;");
+      else if (*q == '\r')
+        svn_stringbuf_appendcstr (*outstr, "&#13;");
 
       p = q + 1;
     }
