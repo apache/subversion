@@ -20,7 +20,7 @@
 #include <assert.h>
 #include <string.h>
 #include "svn_pools.h"
-#include "svn_private_config.h"
+
 
 svn_error_t *
 svn_ra_local__split_URL (svn_repos_t **repos,
@@ -68,9 +68,9 @@ svn_ra_local__split_URL (svn_repos_t **repos,
 
 
   /* Duplicate the URL, starting at the top of the path */
-#ifndef SVN_WIN32
+#ifndef WIN32
   repos_root = apr_pstrdup (pool, path);
-#else  /* SVN_WIN32 */
+#else  /* WIN32 */
   /* On Windows, we'll typically have to skip the leading / if the
      path starts with a drive letter.  Like most Web browsers, We
      support two variants of this schema:
@@ -97,7 +97,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
    else
      repos_root = apr_pstrdup (pool, path);
  }
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 
   /* Search for a repository in the full path. */
   repos_root = svn_repos_find_root_path(repos_root, pool);

@@ -24,9 +24,6 @@
 #ifndef CONFIG_HW
 #define CONFIG_HW
 
-/* Signal that we're compiling Win32. Some bits might need this. */
-#define SVN_WIN32 1
-
 /* The version of Berkely DB we want */
 #define SVN_FS_WANT_DB_MAJOR	4
 #define SVN_FS_WANT_DB_MINOR	0

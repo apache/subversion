@@ -26,7 +26,6 @@
 
 #include "svn_cmdline.h"
 #include "utf_impl.h"
-#include "svn_private_config.h" /* for SVN_WIN32 */
 
 
 #define SVN_UTF_CONTOU_XLATE_HANDLE "svn-utf-contou-xlate-handle"
@@ -44,7 +43,7 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
 {
   apr_status_t status;
 
-#ifdef SVN_WIN32
+#ifdef WIN32
   /* Initialize the input and output encodings. */
   {
     static char input_encoding_buffer[16];
@@ -58,7 +57,7 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
                  "CP%u", (unsigned) GetConsoleOutputCP());
     output_encoding = output_encoding_buffer;
   }
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 
   /* C programs default to the "C" locale. But because svn is supposed
      to be i18n-aware, it should inherit the default locale of its

@@ -69,7 +69,7 @@ svn_error_t *svn_config__parse_file (svn_config_t *cfg,
 #define SVN_CONFIG__DEFAULT_SECTION "DEFAULT"
 
 
-#ifdef SVN_WIN32
+#ifdef WIN32
 /* Get the common or user-specific AppData folder */
 svn_error_t *svn_config__win_config_path (const char **folder,
                                           int system_path,
@@ -99,17 +99,17 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKCU       \
                                SVN_REGISTRY_PATH
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 
 /* System-wide and configuration subdirectory names.
    NOTE: Don't use these directly; call svn_config__sys_config_path()
    or svn_config__user_config_path() instead. */
-#ifdef SVN_WIN32
+#ifdef WIN32
 #  define SVN_CONFIG__SUBDIRECTORY    "Subversion"
-#else  /* ! SVN_WIN32 */
+#else  /* ! WIN32 */
 #  define SVN_CONFIG__SYS_DIRECTORY   "/etc/subversion"
 #  define SVN_CONFIG__USR_DIRECTORY   ".subversion"
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 
 /* The description/instructions file in the config directory. */
 #define SVN_CONFIG__USR_README_FILE    "README.txt"

@@ -30,7 +30,7 @@
 #include "svn_auth.h"
 #include "svn_md5.h"
 #include "svn_hash.h"
-#include "svn_private_config.h"
+
 
 
 /* File parsing context */
@@ -266,7 +266,7 @@ svn_config__sys_config_path (const char **path_p,
 
   /* Note that even if fname is null, svn_path_join_many will DTRT. */
 
-#ifdef SVN_WIN32
+#ifdef WIN32
   {
     const char *folder;
     SVN_ERR (svn_config__win_config_path (&folder, TRUE, pool));
@@ -274,11 +274,11 @@ svn_config__sys_config_path (const char **path_p,
                                   SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
-#else  /* ! SVN_WIN32 */
+#else  /* ! WIN32 */
 
  *path_p = svn_path_join_many (pool, SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
 
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 
   return SVN_NO_ERROR;
 }
@@ -303,7 +303,7 @@ svn_config__user_config_path (const char *config_dir,
       return SVN_NO_ERROR;
     }
   
-#ifdef SVN_WIN32
+#ifdef WIN32
   {
     const char *folder;
     SVN_ERR (svn_config__win_config_path (&folder, FALSE, pool));
@@ -311,7 +311,7 @@ svn_config__user_config_path (const char *config_dir,
                                   SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
-#else  /* ! SVN_WIN32 */
+#else  /* ! WIN32 */
   {
     apr_status_t apr_err;
     apr_uid_t uid;
@@ -336,7 +336,7 @@ svn_config__user_config_path (const char *config_dir,
                                   SVN_CONFIG__USR_DIRECTORY, fname, NULL);
     
   }
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 
   return SVN_NO_ERROR;
 }

@@ -20,7 +20,7 @@
 
 #include "svn_private_config.h"
 
-#ifdef SVN_WIN32
+#ifdef WIN32
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -277,4 +277,4 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
   return svn_err;
 }
 
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */

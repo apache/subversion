@@ -27,9 +27,9 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
-#include "svn_private_config.h" /* for SVN_WIN32 */
 #include "svn_repos.h"
 #include "repos.h"
+#include "svn_private_config.h"
 
 /* In the code below, "hook" is sometimes used indiscriminately to
    mean either hook or sentinel.  */
@@ -128,7 +128,7 @@ static const char*
 check_hook_cmd (const char *hook, apr_pool_t *pool)
 {
   static const char* const check_extns[] = {
-#ifdef SVN_WIN32
+#ifdef WIN32
   /* For WIN32 we need to check with an added extension(s). */
     ".exe", ".cmd", ".bat",  /* ### Any other extensions? */
 #else
