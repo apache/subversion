@@ -76,7 +76,9 @@ struct file_baton
 
 
 
-/*** Editor helpers. ***/
+/*** Editor functions and their helpers. ***/
+
+/* Helper for replace_root. */
 static svn_error_t *
 clone_root (void *dir_baton, trail_t *trail)
 {
@@ -94,11 +96,8 @@ clone_root (void *dir_baton, trail_t *trail)
 }
 
 
-
-/*** Editor functions. ***/
-
 static svn_error_t *
-replace_root (void *edit_baton, void **root_baton)
+replace_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
 {
   /* kff todo: figure out breaking into subpools soon */
   struct edit_baton *eb = edit_baton;
@@ -145,11 +144,34 @@ replace_root (void *edit_baton, void **root_baton)
   if (err)
     return err;
 
-  /* kff todo: If there's an error anywhere below, this transaction
-     will have to be cleaned up, including removing its nodes from the
-     nodes table. */
+  /* kff todo: If there was any error, this transaction will have to
+     be cleaned up, including removing its nodes from the nodes
+     table. */
 
   *root_baton = dirb;
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper for delete_node and delete_entry. */
+struct deletion_baton
+{
+  struct dir_baton *parent;
+  svn_string_t *name;
+};
+
+
+/* Helper for delete_entry. */
+static svn_error_t *
+delete_name_in_node (void *del_baton, trail_t *trail)
+{
+  struct deletion_baton *delb = del_baton;
+  svn_error_t *err;
+
+  err = svn_fs__dag_delete (delb->parent->node, delb->name->data, trail);
+  if (err)
+    return err;
+
   return SVN_NO_ERROR;
 }
 
@@ -157,6 +179,45 @@ replace_root (void *edit_baton, void **root_baton)
 static svn_error_t *
 delete_entry (svn_string_t *name, void *parent_baton)
 {
+  struct dir_baton *dirb = parent_baton;
+  struct edit_baton *eb = dirb->edit_baton;
+  svn_error_t *err;
+  struct deletion_baton delb;
+  
+  delb.parent = dirb;
+  delb.name   = name;
+  
+  err = svn_fs__retry_txn (eb->fs, delete_name_in_node, &delb, eb->pool);
+  if (err)
+    return err;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper for addition of files and directories. */
+struct addition_baton
+{
+  struct dir_baton *parent;   /* parent in which we're adding */
+  svn_string_t *name;         /* the name of what we're adding */
+  dag_node_t *new_node;       /* what we added */
+};
+
+
+/* Helper for add_directory. */
+static svn_error_t *
+add_dir_in_node (void *add_baton, trail_t *trail)
+{
+  struct addition_baton *add_b = add_baton;
+  svn_error_t *err;
+  
+  err = svn_fs__dag_make_dir (&(add_b->new_node),
+                              add_b->parent->node,
+                              add_b->name->data,
+                              trail);
+  if (err)
+    return err;
+
   return SVN_NO_ERROR;
 }
 
@@ -168,14 +229,26 @@ add_directory (svn_string_t *name,
                long int ancestor_revision,
                void **child_baton)
 {
+  svn_error_t *err;
   struct dir_baton *pb = parent_baton;
-  struct dir_baton *dirb = apr_pcalloc (pb->edit_baton->pool, sizeof (*dirb));
+  struct dir_baton *new_dirb
+    = apr_pcalloc (pb->edit_baton->pool, sizeof (*new_dirb));
+  struct addition_baton add_b;
   
-  dirb->parent = pb;
-  dirb->edit_baton = pb->edit_baton;
-  dirb->name = svn_string_dup (name, pb->edit_baton->pool);
+  add_b.parent = pb;
+  add_b.name = name;
+  
+  err = svn_fs__retry_txn (pb->edit_baton->fs,
+                           add_dir_in_node, &add_b, pb->edit_baton->pool);
+  if (err)
+    return err;
 
-  *child_baton = dirb;
+  new_dirb->edit_baton = pb->edit_baton;
+  new_dirb->parent = pb;
+  new_dirb->name = svn_string_dup (name, pb->edit_baton->pool);
+  new_dirb->node = add_b.new_node;
+
+  *child_baton = new_dirb;
   return SVN_NO_ERROR;
 }
 
@@ -183,8 +256,7 @@ add_directory (svn_string_t *name,
 static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
-                   svn_string_t *ancestor_path,
-                   long int ancestor_revision,
+                   svn_revnum_t base_revision,
                    void **child_baton)
 {
   struct dir_baton *pb = parent_baton;
@@ -231,6 +303,24 @@ apply_textdelta (void *file_baton,
 }
 
 
+/* Helper for add_file. */
+static svn_error_t *
+add_file_in_node (void *add_baton, trail_t *trail)
+{
+  struct addition_baton *add_b = add_baton;
+  svn_error_t *err;
+
+  err = svn_fs__dag_make_file (&(add_b->new_node),
+                               add_b->parent->node,
+                               add_b->name->data,
+                               trail);
+  if (err)
+    return err;
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
@@ -238,13 +328,25 @@ add_file (svn_string_t *name,
           long int ancestor_revision,
           void **file_baton)
 {
+  svn_error_t *err;
   struct dir_baton *pb = parent_baton;
-  struct file_baton *fb = apr_pcalloc (pb->edit_baton->pool, sizeof (*fb));
+  struct file_baton *new_fb
+    = apr_pcalloc (pb->edit_baton->pool, sizeof (*new_fb));
+  struct addition_baton add_b;
 
-  fb->parent = pb;
-  fb->name = svn_string_dup (name, pb->edit_baton->pool);
+  add_b.parent = pb;
+  add_b.name = name;
 
-  *file_baton = fb;
+  err = svn_fs__retry_txn (pb->edit_baton->fs,
+                           add_file_in_node, &add_b, pb->edit_baton->pool);
+  if (err)
+    return err;
+
+  new_fb->parent = pb;
+  new_fb->name = svn_string_dup (name, pb->edit_baton->pool);
+  new_fb->node = add_b.new_node;
+
+  *file_baton = new_fb;
   return SVN_NO_ERROR;
 }
 
@@ -252,8 +354,7 @@ add_file (svn_string_t *name,
 static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
-              svn_string_t *ancestor_path,
-              long int ancestor_revision,
+              svn_revnum_t base_revision,
               void **file_baton)
 {
   struct dir_baton *pb = parent_baton;
