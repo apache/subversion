@@ -231,6 +231,7 @@ extern const dav_hooks_vsn dav_svn_hooks_vsn;
 
 /* for the repository referred to by this request, where is the SVN FS? */
 const char *dav_svn_get_fs_path(request_rec *r);
+const char *dav_svn_get_fs_parent_path(request_rec *r);
 
 /* SPECIAL URI
 
