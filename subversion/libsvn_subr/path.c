@@ -257,7 +257,92 @@ svn_path_get_longest_ancestor (const svn_string_t *path1,
 }
 
 
+/* Test if PATH2 is a child of PATH1.
 
+   If not, return NULL.
+   If so, return the "remainder" path.  (The substring which, when
+   appended to PATH1, yields PATH2.) */
+svn_string_t *
+svn_path_is_child (const svn_string_t *path1,
+                   const svn_string_t *path2,
+                   apr_pool_t *pool)
+{
+  int i = 0;
+
+  /* If either path is empty, return NULL. */
+  if ((! path1) || (! path2)
+      || (svn_string_isempty (path1)) || (svn_string_isempty (path2)))
+    return NULL;
+  
+  /* If path2 isn't longer than path1, return NULL.  */
+  if (path2->len <= path1->len)
+    return NULL;
+
+  while (path1->data[i] == path2->data[i])
+    {
+      if ((i == path1->len))
+        break;
+      i++;
+    }
+  
+  return svn_string_ncreate (path2->data + i, (path2->len - i), pool);
+}
+
+
+/* helper for svn_path_decompose, because apr arrays are so darn ugly. */
+static void
+store_component (apr_array_header_t *array,
+                 char *bytes,
+                 apr_size_t len,
+                 apr_pool_t *pool)
+{
+  svn_string_t **receiver;
+  
+  svn_string_t *component = svn_string_ncreate (bytes, len, pool);
+
+  receiver = (svn_string_t **) apr_array_push (array);
+  *receiver = component;
+}
+
+
+apr_array_header_t *
+svn_path_decompose (const svn_string_t *path,
+                    enum svn_path_style style,
+                    apr_pool_t *pool)
+{
+  int i, oldi;
+
+  apr_array_header_t *components = 
+    apr_array_make (pool, 1, sizeof(svn_string_t *));
+
+  char dirsep = get_separator_from_style (style);
+  i = oldi = 0;
+
+  if (svn_path_is_empty (path, style))
+    return components;
+
+  /* If PATH is absolute, store the '/' as the first component. */
+  if (path->data[i] == dirsep)
+    {
+      store_component (components, path->data + i, 1, pool);
+      i++;
+      oldi++;
+    }
+
+  while (i < path->len)
+    {
+      if (path->data[i] == dirsep)
+        {
+          store_component (components, path->data + oldi, i - oldi, pool);
+          i++;
+          oldi = i;  /* skipping past the dirsep */
+          continue;
+        }
+      i++;
+    }
+
+  return components;
+}
 
 
 /* 

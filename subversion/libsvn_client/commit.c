@@ -553,6 +553,34 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
   return SVN_NO_ERROR;
 }
 
+ifdef #0
+
+  /* This all needs to happen in libsvn_client */
+  {
+    apr_array_header_t *condensed_targets = 
+      apr_array_make (pool, 0, sizeof(svn_string_t *));
+    
+    /* Canonicalize the targets: remove redundancies and find the common
+       parent dir. */
+    SVN_ERR (svn_path_condense_targets (&parent_dir,
+                                        &condensed_targets,
+                                        targets, pool));
+    
+    /* Sort the condensed targets alphabetically.  This is *very*
+       important, since it will cause targets that share common
+       "sub-parents" to be grouped together.  This is how we guarantee a
+       depth-first drive of the editor.  */
+    
+    /* ####### TODO.  Also re-append parent_dir to all the condensed
+       targets.  The paths that we store in stack frames need to be
+       full ones, not relative to parent_dir.  */
+
+    /* Temporary */
+    printf ("Starting descent from parent '%s'\n", parent_dir->data);
+    /* ## TODO:  print sorted list as a sanity check. */
+  }
+
+#endif
 
 
 /* 
