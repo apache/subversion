@@ -91,6 +91,30 @@ put_copy (svn_fs_t *fs,
 
 
 svn_error_t *
+svn_fs__bdb_next_copy_id (const char **id_p,
+                          svn_fs_t *fs,
+                          trail_t *trail)
+{
+  DBT query, result;
+
+  svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
+
+  /* Get the current value associated with the `next-id' key in the
+     copies table.  */
+  SVN_ERR (BDB_WRAP (fs, "reading `copies' table (getting `next-key')",
+                    fs->copies->get (fs->copies, trail->db_txn,
+                                     &query, svn_fs__result_dbt (&result), 
+                                     0)));
+  svn_fs__track_dbt (&result, trail->pool);
+
+  /* Set our return value. */
+  *id_p = apr_pstrmemdup (trail->pool, result.data, result.size);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs__bdb_reserve_copy_id (const char **id_p,
                              svn_fs_t *fs,
                              trail_t *trail)
@@ -100,22 +124,11 @@ svn_fs__bdb_reserve_copy_id (const char **id_p,
   char next_key[SVN_FS__MAX_KEY_SIZE];
   int db_err;
 
-  svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
-
-  /* Get the current value associated with the `next-id' key in the
-     copies table.  */
-  SVN_ERR (BDB_WRAP (fs, "allocating new copy ID (getting `next-key')",
-                    fs->copies->get (fs->copies, trail->db_txn,
-                                     &query, svn_fs__result_dbt (&result), 
-                                     0)));
-  svn_fs__track_dbt (&result, trail->pool);
-
-  /* Set our return value. */
-  *id_p = apr_pstrmemdup (trail->pool, result.data, result.size);
+  SVN_ERR (svn_fs__bdb_next_copy_id (id_p, fs, trail));
 
   /* Bump to future key. */
-  len = result.size;
-  svn_fs__next_key (result.data, &len, next_key);
+  len = strlen (*id_p);
+  svn_fs__next_key (*id_p, &len, next_key);
   db_err = fs->copies->put (fs->copies, trail->db_txn,
                             svn_fs__str_to_dbt (&query, 
                                                 (char *) svn_fs__next_key_key),
@@ -190,120 +203,3 @@ svn_fs__bdb_get_copy (svn_fs__copy_t **copy_p,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_fs__bdb_walk_copies_reverse (svn_fs__bdb_copy_cb_func_t callback,
-                                 void *baton,
-                                 svn_fs_t *fs,
-                                 const char *start_id,
-                                 const char *end_id,
-                                 trail_t *trail)
-{
-  apr_size_t const next_id_key_len = strlen (svn_fs__next_key_key);
-  apr_pool_t *subpool = svn_pool_create (trail->pool);
-  svn_fs__copy_t *copy;
-  const char *cur_id;
-  DBC *cursor;
-  DBT key, value;
-  int db_err, db_c_err;
-  int track_key = 0;
-  int done = 0;
-
-  /* Create a database cursor to list the copy names. */
-  SVN_ERR (BDB_WRAP (fs, "reading copy list (opening cursor)",
-                     fs->copies->cursor (fs->copies, trail->db_txn, 
-                                         &cursor, 0)));
-
-  /* If an END_ID was specified, we seek right to it.  Else, we just
-     get the last row. */
-  if (end_id)
-    {
-      /* END_ID must be > START_ID. */
-      assert (svn_fs__key_compare (start_id, end_id) > 0);
-      svn_fs__str_to_dbt (&key, (char *)end_id);
-      db_err = cursor->c_get (cursor, &key, 
-                              svn_fs__result_dbt (&value), DB_SET);
-      cur_id = end_id;
-    }
-  else
-    {
-      db_err = cursor->c_get (cursor, svn_fs__result_dbt (&key),
-                              svn_fs__result_dbt (&value), DB_LAST);
-      track_key = 1;
-      cur_id = apr_pstrmemdup (trail->pool, key.data, key.size);
-    }
-
-  /* Read backwards through the copies table, stopping on errors or
-     when we reach our START_ID. */
-  for (/* noinit */;
-       (db_err == 0) && (strcmp (cur_id, start_id) != 0);
-       db_err = cursor->c_get (cursor,
-                               svn_fs__result_dbt (&key),
-                               svn_fs__result_dbt (&value),
-                               DB_PREV))
-    {
-      skel_t *copy_skel;
-      const char *copy_id;
-      svn_error_t *err;
-
-      /* Clear the per-iteration subpool */
-      svn_pool_clear (subpool);
-
-      /* Track the memory alloc'd for fetching the key and value here
-         so that when the containing pool is cleared, this memory is
-         freed.  The first time through this loop is an exception
-         though -- in that loop, we only want to track the value
-         because we created our own key.  */
-      if (track_key)
-        svn_fs__track_dbt (&key, subpool);
-      svn_fs__track_dbt (&value, subpool);
-      track_key = 1;
-
-      /* Ignore the "next-id" key. */
-      if (key.size == next_id_key_len
-          && 0 == memcmp (key.data, svn_fs__next_key_key, next_id_key_len))
-        continue;
-
-      /* Get the COPY_ID, and parse COPY skel. */
-      copy_id = apr_pstrmemdup (subpool, key.data, key.size);
-      copy_skel = svn_fs__parse_skel (value.data, value.size, subpool);
-      if (! copy_skel)
-        {
-          cursor->c_close (cursor);
-          return svn_fs__err_corrupt_copy (fs, copy_id);
-        }
-
-      /* Convert skel to native type. */
-      if ((err = svn_fs__parse_copy_skel (&copy, copy_skel, subpool)))
-        {
-          cursor->c_close (cursor);
-          return err;
-        }
-
-      /* Call our callback function with this COPY. */
-      if ((err = callback (baton, copy_id, copy, &done, subpool)))
-        {
-          cursor->c_close (cursor);
-          return err;
-        }
-
-      /* If the callback tells us to stop, we do. */
-      if (done)
-        break;
-    }
-
-  /* Check for errors, but close the cursor first. */
-  db_c_err = cursor->c_close (cursor);
-  if (db_err != DB_NOTFOUND)
-    {
-      SVN_ERR (BDB_WRAP (fs, "reading copy list (listing keys)",
-                         db_err));
-    }
-  SVN_ERR (BDB_WRAP (fs, "reading copy list (closing cursor)",
-                     db_c_err));
-
-  /* Destroy the per-iteration subpool */
-  svn_pool_destroy (subpool);
-
-  return SVN_NO_ERROR;
-}

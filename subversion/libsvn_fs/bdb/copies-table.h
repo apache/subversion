@@ -34,6 +34,12 @@ int svn_fs__bdb_open_copies_table (DB **copies_p,
                                    DB_ENV *env,
                                    int create);
 
+/* Fetch the id that the copies table in FS will use for its next copy
+   slot.  Return the id in *COPY_ID_P, allocated in TRAIL->pool.  */
+svn_error_t *svn_fs__bdb_next_copy_id (const char **copy_id_p,
+                                       svn_fs_t *fs,
+                                       trail_t *trail);
+
 /* Reserve a slot in the `copies' table in FS for a new copy operation
    as part of TRAIL.  Return the slot's id in *COPY_ID_P, allocated in
    TRAIL->pool.  */
@@ -73,29 +79,6 @@ svn_error_t *svn_fs__bdb_get_copy (svn_fs__copy_t **copy_p,
                                    const char *copy_id,
                                    trail_t *trail);
 
-
-/* Callback type for svn_fs__bdb_walk_copies_reverse().  COPY_ID and
-   COPY are the key and associated data of the current `copies' table
-   row.  Implementers of this callback may set *DONE to non-zero to
-   stop the walk in a non-fatal way.  */
-typedef svn_error_t *(*svn_fs__bdb_copy_cb_func_t) (void *baton,
-                                                    const char *copy_id,
-                                                    svn_fs__copy_t *copy,
-                                                    int *done,
-                                                    apr_pool_t *pool);
-
-/* Walk the `copies' table of FS in reverse, starting with the key
-   END_ID, and ending with START_ID, and calling CALLBACK with BATON.
-   Do all of this as part of TRAIL.  If END_ID is NULL, the walk will
-   begin at the last row of the copies table.  Only rows with
-   interesting copy information will be passed to the callback.  */
-svn_error_t *
-svn_fs__bdb_walk_copies_reverse (svn_fs__bdb_copy_cb_func_t callback,
-                                 void *baton,
-                                 svn_fs_t *fs,
-                                 const char *start_id,
-                                 const char *end_id,
-                                 trail_t *trail);
 
 
 #ifdef __cplusplus

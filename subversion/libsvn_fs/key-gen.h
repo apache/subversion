@@ -90,6 +90,13 @@ extern const char svn_fs__next_key_key[];
  */
 void svn_fs__next_key (const char *this, apr_size_t *len, char *next);
 
+/* Generate the previous key before a given alphanumeric key.
+ *
+ * Parameters, expectations, and requirements are the same as
+ * svn_fs__next_key().  Note also that "0" has no previous key.
+ */
+void svn_fs__prev_key (const char *this, apr_size_t *len, char *prev);
+
 
 /* Compare two strings A and B as base-36 alphanumeric keys.
  *
