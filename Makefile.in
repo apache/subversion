@@ -202,13 +202,13 @@ dist:
 	$(MAKEINFO) -I `dirname $<` -o $@ $< 
 
 .texi.dvi:
-	wd=`pwd` ; cd `dirname $@` ; $(TEXI2DVI) -I `dirname $$wd/$<` $$wd/$<
+	wd=`pwd` ; cd `dirname $@` ; $(TEXI2DVI) $$wd/$<
 
 .texi.txt:
 	$(MAKEINFO) -I `dirname $<` --no-headers -o $@ $<
 
 .texi.html:
-	$(MAKEINFO) -I `dirname $<` --no-headers --html -o $@ $<
+	$(MAKEINFO) -I `dirname $<` --no-split --html -o $@ $<
 
 .dvi.ps:
 	$(DVIPS) $< -o $@
