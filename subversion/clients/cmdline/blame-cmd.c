@@ -125,6 +125,7 @@ svn_cl__blame (apr_getopt_t *os,
       svn_error_t *err;
       const char *target = ((const char **) (targets->elts))[i];
       svn_pool_clear (subpool);
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       err = svn_client_blame (target,
                               &opt_state->start_revision,
                               &opt_state->end_revision,
@@ -144,7 +145,6 @@ svn_cl__blame (apr_getopt_t *os,
               return err;
             }
         }
-      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
     }
   svn_pool_destroy (subpool);
 

@@ -114,6 +114,8 @@ svn_cl__checkout (apr_getopt_t *os,
     {
       const char *target_dir;
 
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
+
       /* Validate the REPOS_URL */
       repos_url = ((const char **) (targets->elts))[i];
       if (! svn_path_is_url (repos_url))
@@ -144,7 +146,6 @@ svn_cl__checkout (apr_getopt_t *os,
                                     &(opt_state->start_revision),
                                     opt_state->nonrecursive ? FALSE : TRUE,
                                     ctx, subpool));
-      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       svn_pool_clear (subpool);
     }
   svn_pool_destroy (subpool);

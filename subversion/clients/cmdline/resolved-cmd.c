@@ -66,6 +66,7 @@ svn_cl__resolved (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));    
       err = svn_client_resolved (target,
                                  opt_state->recursive,
                                  ctx,
@@ -76,7 +77,6 @@ svn_cl__resolved (apr_getopt_t *os,
           svn_error_clear (err);
         }
 
-      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));    
       svn_pool_clear (subpool);
     }
   

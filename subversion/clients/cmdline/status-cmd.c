@@ -93,6 +93,8 @@ svn_cl__status (apr_getopt_t *os,
     {
       const char *target = ((const char **) (targets->elts))[i];
 
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
+
       /* Retrieve a hash of status structures with the information
          requested by the user. */
 
@@ -107,7 +109,6 @@ svn_cl__status (apr_getopt_t *os,
                                   opt_state->no_ignore,
                                   ctx, subpool));
 
-      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       svn_pool_clear (subpool);
     }
 

@@ -116,6 +116,7 @@ svn_cl__propdel (apr_getopt_t *os,
           const char *target = ((const char **) (targets->elts))[i];
 
           svn_pool_clear (subpool);
+          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
           SVN_ERR (svn_client_propset (pname_utf8, NULL, target,
                                        opt_state->recursive, subpool));
           if (! opt_state->quiet) 
@@ -130,7 +131,6 @@ svn_cl__propdel (apr_getopt_t *os,
                       opt_state->recursive ? " (recursively) " : " ",
                       target_stdout);
             }
-          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
         }
       svn_pool_destroy (subpool);
     }
