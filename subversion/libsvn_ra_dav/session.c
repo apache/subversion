@@ -490,7 +490,7 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__get_dated_revision,
   svn_ra_dav__get_commit_editor,
   svn_ra_dav__get_file,
-  NULL,
+  svn_ra_dav__get_dir,
   svn_ra_dav__do_checkout,
   svn_ra_dav__do_update,
   svn_ra_dav__do_switch,

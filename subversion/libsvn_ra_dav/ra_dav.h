@@ -88,6 +88,14 @@ svn_error_t * svn_ra_dav__get_file(
   svn_revnum_t *fetched_rev,
   apr_hash_t **props);
 
+svn_error_t *svn_ra_dav__get_dir(
+  void *session_baton,
+  const char *path,
+  svn_revnum_t revision,
+  apr_hash_t **dirents,
+  svn_revnum_t *fetched_rev,
+  apr_hash_t **props);
+
 svn_error_t * svn_ra_dav__abort_commit(
  void *session_baton,
  void *edit_baton);
@@ -189,6 +197,7 @@ svn_error_t *svn_ra_dav__do_check_path(
 #define SVN_RA_DAV__PROP_VERSION_NAME   "DAV:version-name"
 #define SVN_RA_DAV__PROP_CREATIONDATE   "DAV:creationdate"
 #define SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME "DAV:creator-displayname"
+#define SVN_RA_DAV__PROP_GETCONTENTLENGTH "DAV:getcontentlength"
 
 #define SVN_RA_DAV__PROP_BASELINE_RELPATH \
     SVN_PROP_PREFIX "baseline-relative-path"
@@ -339,6 +348,7 @@ enum {
   ELEM_options_response,
   ELEM_remove_prop,
   ELEM_resourcetype,
+  ELEM_get_content_length,
   ELEM_updated_set,
   ELEM_vcc,
   ELEM_version_name,

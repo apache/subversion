@@ -57,6 +57,7 @@ static const elem_defn elem_definitions[] =
   { ELEM_checked_in, SVN_RA_DAV__PROP_CHECKED_IN, 0 },
   { ELEM_vcc, SVN_RA_DAV__PROP_VCC, 0 },
   { ELEM_version_name, SVN_RA_DAV__PROP_VERSION_NAME, 1 },
+  { ELEM_get_content_length, SVN_RA_DAV__PROP_GETCONTENTLENGTH, 1 },
 
   /* SVN elements */
   { ELEM_baseline_relpath, SVN_RA_DAV__PROP_BASELINE_RELPATH, 1 },
@@ -74,6 +75,7 @@ static const struct ne_xml_elm neon_descriptions[] =
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "version-controlled-configuration", ELEM_vcc, 0 },
   { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
+  { "DAV:", "getcontentlength", ELEM_get_content_length, NE_XML_CDATA },
 
   /* SVN elements */
   { SVN_PROP_PREFIX, "baseline-relative-path", ELEM_baseline_relpath,
@@ -202,6 +204,7 @@ static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid ch
           case ELEM_resourcetype:
           case ELEM_vcc:
           case ELEM_version_name:
+          case ELEM_get_content_length:
             return NE_XML_VALID;
 
           default:
