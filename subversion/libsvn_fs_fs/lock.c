@@ -449,7 +449,7 @@ delete_lock (svn_fs_t *fs,
           lock = NULL;
         }
 
-      if (! (this_lock || this_children))
+      if (! (this_lock || apr_hash_count (this_children) != 0))
         {
           /* Special case:  no goodz, no file.  And remember to nix
              the entry for it in its parent. */
