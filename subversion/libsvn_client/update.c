@@ -30,6 +30,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_io.h"
+#include "svn_time.h"
 #include "client.h"
 
 
@@ -37,11 +38,12 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_update (const char *path,
-                   const svn_opt_revision_t *revision,
-                   svn_boolean_t recurse,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+svn_client__update_internal (const char *path,
+                             const svn_opt_revision_t *revision,
+                             svn_boolean_t recurse,
+                             svn_boolean_t timestamp_sleep,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool)
 {
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
@@ -137,7 +139,8 @@ svn_client_update (const char *path,
                                     traversal_info, pool);
       
       /* Sleep to ensure timestamp integrity. */
-      svn_sleep_for_timestamps ();
+      if (timestamp_sleep)
+        svn_sleep_for_timestamps ();
 
       if (err)
         return err;
@@ -158,4 +161,14 @@ svn_client_update (const char *path,
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_update (const char *path,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t recurse,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client__update_internal (path, revision, recurse, TRUE, ctx, pool);
 }
