@@ -3890,6 +3890,10 @@ msgstr "リポジトリ '%s' を開けませんでした"
 msgid "Prop diffs element not a list"
 msgstr "prop diffs 要素がリストではありません"
 
+#: libsvn_ra_svn/client.c:639
+msgid "Impossibly long repository root from server"
+msgstr "サーバから送られてきたリポジトリのルートが長すぎます"
+
 #: libsvn_ra_svn/client.c:1120
 msgid "get-locations not implemented"
 msgstr "get-locations は実装されていません"
