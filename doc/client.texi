@@ -184,7 +184,7 @@ library.
 @table @code
 
 @item skelta wc_make_skelta (path1, ...)
-
+@c todo: no, varargs doesn't work, think about this
 Returns a skelta -- a delta object describing the changes to
 @emph{paths} but not including the actual content of the changes (i.e.,
 the vdeltas).  In other words, this is how you get a list of all local
@@ -214,11 +214,12 @@ and pdiffs, and placing them into the skelta.
 (Note to self: probably okay for this to modify its argument.)
 
 @item delta wc_make_delta (path1, ...)
-
+@c todo: no, varargs doesn't work, think about this
 Equivalent to 
 
 @example
    wc_fill_skelta (make_skelta (path1, ...))
+@c todo: no, varargs doesn't work, think about this
 @end example
 
 @item bool wc_apply_delta (delta)
@@ -275,97 +276,79 @@ This library performs operations involving communication with the
 repository.  The prefix @code{ra_} is used for everything in this
 library.
 
+@subsection Reading History
+
 @table @code
+@item ver_t ra_latest (repos, user)
+ Report the latest version number for @emph{repos}.
+@item prop_t ra_get_ver_prop (repos, user, ver, propname)
+ Return the value of @emph{propname} on @emph{ver}.
+@item proplist_t ra_get_ver_proplist (repos, user, ver)
+ Return all properties (names and values) of @emph{ver}.
+ @c todo: say this somewhere: proplist_t is probably a hash table.
+@item proplist_t *ra_get_ver_propnames (repos, user, ver)
+ Return all property keys for a @emph{ver}.
+@end table
 
-@item version ra_latest (repos, path)
+@subsection Reading Nodes
 
-Report the latest ra_version in the repository for @emph{path}.
+@table @code
+@item node_t ra_read (repos, user, ver, path)
+ Return a node from the repository.
+ If @emph{path} is a file, returns full contents of the file.@*
+ If @emph{path} is a directory, returns a list of dir_entries.
+ @c todo: explain nodes, explain lazy reading
+@item str_t ra_get_node_prop (repos, user, ver, path, propname)
+ Return value of @emph{propname} for @emph{path} in @emph{repos}.
+@item str_t ra_get_dirent_prop (repos, user, ver, path, propname)
+ Return value of @emph{propname} for the directory entry @emph{path} in
+ @emph{repos}.
+ @c todo: explain dir_ents.
+@item proplist_t ra_get_node_proplist (repos, ver, path)
+ Return all properties (names and values) of @emph{path} in @emph{repos}.
+@item proplist_t ra_get_dirent_proplist (repos, user, ver, path)
+ Return all properties (names and values) of directory entry @emph{path}
+ in @emph{repos}.
+@item str_t *ra_get_node_propnames (repos, user, ver, path)
+ Return all property names for @emph{path} in @emph{repos}.
+@item str_t *ra_get_dirent_propnames (repos, user, ver, path)
+ Return all property names for directory entry @emph{path} in @emph{repos}
+@end table
 
-@item token ra_submit_delta (repos, skelta)
+@subsection Difference Queries
 
-Submit @emph{skelta} for approval (see @pxref{Locking}).
-Either a skelta or a full delta can be passed.
+@table @code
+@item skelta ra_get_status (repos, user, skelta)
+ Return status (up-to-date or not) for the files mentioned in @emph{skelta}.
+@item delta ra_get_update (repos, user, skelta)
+ Return changes for files mentioned in @emph{skelta}.  Like
+ @code{ra_get_status}, but returns filled delta instead of a skelta.
+@item delta ra_get_delta (repos, user, ver1, path1, ver2, path2)
+ Return delta between two trees in @emph{repos}.@*
+ (Note: it's not yet clear that this function is strictly necessary.  It
+ is included for completeness' sake, but I think we can implement
+ everything without it.)
+@item diff ra_get_diff (repos, user, ver1, path1, ver2, path2)
+ @c todo: skelta vs file diff list problem, talk w/ Jim 
+ Return a text diff between versions in the repository.
+ (This must be done server side, the client doesn't have enough
+ information to make the diff.)
+@end table
 
-@item ver ra_write_delta (repos, delta, token)
+@subsection Writing
 
-Write previously-approved @emph{delta} into the version history.
-Must be a full delta, of course; a skelta would be insufficient.
-
-@item skelta ra_get_status (repos, skelta)
-
-Find out the status (up-to-date or not) for the files mentioned in
-@emph{skelta}.
-
-@item delta ra_get_update (repos, skelta)
-
-Get changes for files mentioned in @emph{skelta}.
-
-@item bool ra_abandon (repos, token)
-
-Abandon the transaction identified by token (for example, a user might
-interrupt the client between calls to submit_delta() and write_delta(),
-and the server would want to know the commit has been abandoned so it
-can clear out its pool of approved changes).
-
-@item delta ra_get_delta (repos, ver1, path1, ver2, path2)
-
-Return the delta between the two trees.
-
-(Note: it's not yet clear that this function is strictly necessary.  It
-is included for completeness' sake, but I think we can implement
-everything without it.)
-
-@item diff ra_get_diff (repos, ver1, path1, ver2, path2, 
-                     [ver3, path3, ver4, path4, ...])
-
-Return a text diff between versions in the repository.
-(This must be done server side, the client doesn't have enough
-information to make the diff.)
-
-@item node ra_read (repos, ver, path)
-
-Return a file or directory from the repository.
-@c todo: explain lazy reading
-
-@item str_t ra_get_node_prop (path, propname)
-
-Return local value of @emph{propname} for the file or directory
-@emph{path}.
-
-@item str_t ra_get_dirent_prop (path, propname)
-
-Return local value of @emph{propname} for the directory entry @emph{path}.
-
-@item prop_t ra_get_ver_prop (ver, propname)
-
-Return the value of @emph{propname} for a version (e.g., log message).
-
-@item proplist_t ra_get_node_proplist (path)
-
-Return all properties (names and values) of file or directory
-@emph{path}, in a hash table.
-
-@item proplist_t ra_get_dirent_proplist (path)
-
-Return all properties (names and values) of directory entry @emph{path},
-in a hash table.
-
-@item prolist_t ra_get_ver_proplist (ver)
-
-Return all properties (keys and values) of a version.
-
-@item str_t *ra_get_node_propnames (path)
-
-Return all property names for file or directory @emph{path}.
-
-@item str_t *ra_get_dirent_propnames (path)
-
-Return all property names for a directory entry.
-
-@item str_t *ra_get_ver_propnames (ver)
-
-Return all property keys for a version.
-
+@table @code
+@item token ra_submit_delta (repos, user, skelta)
+ Submit @emph{skelta} for approval (see @pxref{Locking}).
+ Either a skelta or a full delta can be passed.
+@item ver ra_write_delta (repos, user, delta, token)
+ Write previously-approved @emph{delta} into the version history.
+ Must be a full delta, of course; a skelta would be insufficient.
+@item bool ra_abandon (repos, user, token)
+ Abandon the transaction identified by token (for example, a user might
+ interrupt the client between calls to submit_delta() and write_delta(),
+ and the server would want to know the commit has been abandoned so it
+ can clear out its pool of approved changes).
 @end table
 
 @c -----------------------------------------------------------------------
