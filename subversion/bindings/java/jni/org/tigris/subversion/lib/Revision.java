@@ -11,8 +11,6 @@ package org.tigris.subversion.lib;
  * newer version instead, at your option.
  * ====================================================================
  *
- * @author: Alexander.Mueller@littleblue.de
- * @version: 0.0
  */
 
 public class Revision {
