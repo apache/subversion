@@ -28,24 +28,6 @@ Candidate changes:
     Votes:
       +1: dionisos
 
-  * r11483, r12072, r12157, r12158, r12180 (Issue #2091)
-    Unitialized variable on Win98.
-    Justification:
-      It was causing random failures for our Win98 users.  The fix
-      also correctly sets the locale path now, making locale stuff
-      work as well.
-    Notes: Change looks good to me.  I can't in good conscience +1
-      it only because I don't have the environment to test nor the
-      docs to review the MultiByteToWideChar() call.  -kfogel
-
-      Sorry for all the revs, but I got some excellent feedback
-      from Max Bowsher and others.  The extra revs incorporate
-      all of that.  -jszakmeister
-    Votes:
-      +1: jszakmeister, dionisos
-    Votes without r12072, r12157, r12158, or 12180:
-      +0: kfogel, lundblad
-
   * r11050
     Add install dependencies for libsvn_fs and libsvn_fs_base.
     Justification:
@@ -119,4 +101,22 @@ Approved changes (further review is welcome, but not required):
       http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=275545
     Votes:
       +1: breser, kfogel, jerenkrantz
+
+  * r11483, r12072, r12157, r12158, r12180 (Issue #2091)
+    Unitialized variable on Win98.
+    Justification:
+      It was causing random failures for our Win98 users.  The fix
+      also correctly sets the locale path now, making locale stuff
+      work as well.
+    Notes: Change looks good to me.  I can't in good conscience +1
+      it only because I don't have the environment to test nor the
+      docs to review the MultiByteToWideChar() call.  -kfogel
+
+      Sorry for all the revs, but I got some excellent feedback
+      from Max Bowsher and others.  The extra revs incorporate
+      all of that.  -jszakmeister
+    Votes:
+      +1: jszakmeister, dionisos, maxb
+    Votes without r12072, r12157, r12158, or 12180:
+      +0: kfogel, lundblad
 
