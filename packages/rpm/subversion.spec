@@ -1,6 +1,6 @@
-%define apache_version 2.0.32-0.4
+%define apache_version 2.0.34-0.1
 %define neon_version 0.19.2
-%define apr_date 2002.02.15
+#%define apr_date 2002.03.06
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -13,15 +13,15 @@ Patch0: expat.patch
 Patch1: install.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
-Requires: apr >= 0.%{apr_date}
-Requires: apr-util >= 0.%{apr_date}
+Requires: apache-libapr >= %{apache_version}
+Requires: apache-libapr-utils >= %{apache_version}
 Requires: db >= 4.0.14
 Requires: expat
 Requires: neon = %{neon_version}
 Requires: /sbin/install-info
 BuildPreReq: apache-devel >= %{apache_version}
-BuildPreReq: apr-devel >= 0.%{apr_date}
-BuildPreReq: apr-util-devel >= 0.%{apr_date}
+BuildPreReq: apache-libapr-devel >= %{apache_version}
+BuildPreReq: apache-libapr-utils-devel >= %{apache_version}
 BuildPreReq: autoconf >= 2.52
 BuildPreReq: db-devel >= 4.0.14
 BuildPreReq: expat-devel
@@ -50,8 +50,8 @@ for developers interacing with the subversion package.
 %package server
 Group: Utilities/System
 Summary: Apache server module for Subversion server.
-Requires: apr >= 0.%{apr_date}
-Requires: apr-util >= 0.%{apr_date}
+Requires: apache-libapr >= 0.%{apache_version}
+Requires: apache-libapr-utils >= 0.%{apache_version}
 Requires: perl
 Requires: subversion = %{version}-%{release}
 BuildPreReq: apache-devel >= %{apache_version}
@@ -60,6 +60,9 @@ The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
 %changelog
+* Wed Mar 06 2002 David Summers <david@summersoft.fay.ar.us> 0.9.0-1447
+- Back to apache-libapr* stuff, hopefully to stay.
+
 * Sun Feb 24 2002 David Summers <david@summersoft.fay.ar.us> 0.9.0-1373
 - Fixed expat.patch to not have to make so many changes by writing a small
   shell script that changes libexpat to -lexpat.
