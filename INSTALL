@@ -810,7 +810,15 @@ III.  BUILDING A SUBVERSION SERVER
       directives.  Full details on setting up apache can be found at:
       http://httpd.apache.org/docs-2.0/
 
-      Add this to the *bottom* of /usr/local/apache2/conf/httpd.conf:
+      First, your httpd.conf needs to load the mod_dav_svn module.
+      Subversion's 'make install' target should automatically add this
+      line for you.  But if apache gives you an error like "Unknown
+      DAV provider: svn", then you may want to verify that this line
+      exists in your httpd.conf:
+  
+         LoadModule dav_svn_module     modules/mod_dav_svn.so
+
+      Next, add this to the *bottom* of your httpd.conf:
 
       <Location /svn/repos>
           DAV svn
