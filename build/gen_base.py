@@ -153,10 +153,8 @@ class MakefileGenerator(_GeneratorBase):
           target_ob.deps.append(tlib)
           deps.append(tlib.output)
 
-          # link in the library by simply referring to the .la file
-          libs.append(os.path.join(retreat,
-                                   tlib.path,
-                                   '%s-%s.la' % (lib, self.version)))
+          # link in the library with a relative link to the output file
+          libs.append(os.path.join(retreat, tlib.output))
         else:
           # something we don't know, so just include it directly
           libs.append(lib)
@@ -339,10 +337,14 @@ class MakefileGenerator(_GeneratorBase):
 
       # construct a list of the other .la libs to link against
       retreat = _retreat_dots(mod.path)
+      deps = [ mod.output ]
       link = [ os.path.join(retreat, mod.output) ]
       for dep in mod.deps:
+        deps.append(dep.output)
         link.append(os.path.join(retreat, dep.output))
-      self.ofile.write('%s_LINK = %s\n\n' % (name, string.join(link, ' ')))
+      self.ofile.write('%s_DEPS = %s\n'
+                       '%s_LINK = %s\n\n' % (name, string.join(deps, ' '),
+                                             name, string.join(link, ' ')))
 
     self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
     self.ofile.write('INFOPAGES = %s\n\n' % string.join(self.infopages))
