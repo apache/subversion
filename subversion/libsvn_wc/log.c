@@ -977,6 +977,7 @@ log_do_committed (struct log_runner *loggy,
   entry->kind = is_this_dir ? svn_node_dir : svn_node_file;
   entry->schedule = svn_wc_schedule_normal;
   entry->copied = FALSE;
+  entry->deleted = FALSE;
   entry->text_time = text_time;
   entry->prop_time = prop_time;
   entry->conflict_old = NULL;
@@ -989,6 +990,7 @@ log_do_committed (struct log_runner *loggy,
                                    (SVN_WC__ENTRY_MODIFY_REVISION 
                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE 
                                     | SVN_WC__ENTRY_MODIFY_COPIED
+                                    | SVN_WC__ENTRY_MODIFY_DELETED
                                     | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
                                     | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
                                     | SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
