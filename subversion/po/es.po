@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-07-09 15:24-0300\n"
-"PO-Revision-Date: 2004-07-09 12:42-0300\n"
+"POT-Creation-Date: 2004-07-10 02:15-0300\n"
+"PO-Revision-Date: 2004-07-10 02:16-0300\n"
 "Last-Translator: Nicolás Lichtmaier <nick@reloco.com.ar>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -64,7 +64,7 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"uso: svn <subcomando> [opciones] [args]\n"
+"uso: svn <subcomando> [opciones] [pars]\n"
 "Tipee \"svn help <subcomando>\" para ayuda en un subcomando específico.\n"
 "\n"
 "La mayoría de los subcomandos reciben parámetros de tipo archivo y/o\n"
@@ -116,7 +116,7 @@ msgstr "Nombre: %s\n"
 #: clients/cmdline/info-cmd.c:70
 #, c-format
 msgid "URL: %s\n"
-msgstr ""
+msgstr "URL: %s\n"
 
 #: clients/cmdline/info-cmd.c:73
 #, c-format
@@ -205,22 +205,22 @@ msgstr "Suma de verificación: %s\n"
 #: clients/cmdline/info-cmd.c:168
 #, c-format
 msgid "Conflict Previous Base File: %s\n"
-msgstr ""
+msgstr "Archivo base previo del conflicto: %s\n"
 
 #: clients/cmdline/info-cmd.c:174
 #, c-format
 msgid "Conflict Previous Working File: %s\n"
-msgstr ""
+msgstr "Archivo de la copia de trabajo previo del conflicto: %s\n"
 
 #: clients/cmdline/info-cmd.c:178
 #, c-format
 msgid "Conflict Current Base File: %s\n"
-msgstr ""
+msgstr "Archivo base del conflicto: %s\n"
 
 #: clients/cmdline/info-cmd.c:183
 #, c-format
 msgid "Conflict Properties File: %s\n"
-msgstr ""
+msgstr "Archivo de propiedades del conflicto: %s\n"
 
 #: clients/cmdline/info-cmd.c:257
 #, c-format
@@ -279,7 +279,7 @@ msgstr "mostrar ayuda de un subcomando"
 
 #: clients/cmdline/main.c:69
 msgid "specify commit message ARG"
-msgstr "especificar ARG como mensaje de commit"
+msgstr "especificar PAR como mensaje de commit"
 
 #: clients/cmdline/main.c:70
 msgid "print as little as possible"
@@ -307,18 +307,31 @@ msgid ""
 "BASE\n"
 "                                \"PREV\"       revision just before COMMITTED"
 msgstr ""
+"PAR (algunos comandos también aceptan\n"
+"                             un rango PAR1:PAR2)\n"
+"                             Una revisión puede ser:\n"
+"                               NÚMERO        número de la revisión\n"
+"                               \"{\" FECHA \"}\" revisión al comienzo de la "
+"fecha\n"
+"                               \"HEAD\"        lo último del repositorio\n"
+"                               \"BASE\"        rev base del ítem de la c. de "
+"trab.\n"
+"                               \"COMMITTED\"   último commit en o antes de "
+"BASE\n"
+"                               \"PREV\"        revisión justo antes de "
+"COMMITED"
 
 #: clients/cmdline/main.c:88
 msgid "read data from file ARG"
-msgstr "leer datos del archivo ARG"
+msgstr "leer datos del archivo PAR"
 
 #: clients/cmdline/main.c:90
 msgid "give output suitable for concatenation"
-msgstr ""
+msgstr "proveer salida apta de ser unida a otras salidas"
 
 #: clients/cmdline/main.c:92
 msgid "treat value as being in charset encoding ARG"
-msgstr "el valor está en la codificación de caracteres ARG"
+msgstr "el valor está en la codificación de caracteres PAR"
 
 #: clients/cmdline/main.c:93
 msgid "print client version info"
@@ -334,19 +347,21 @@ msgstr "mostrar información de actualización"
 
 #: clients/cmdline/main.c:97
 msgid "specify a username ARG"
-msgstr "especificar ARG como nombre de usuario"
+msgstr "especificar PAR como nombre de usuario"
 
 #: clients/cmdline/main.c:99
 msgid "specify a password ARG"
-msgstr "especificar ARG como clave"
+msgstr "especificar PAR como clave"
 
 #: clients/cmdline/main.c:100
 msgid "pass ARG as bundled options to GNU diff"
-msgstr "pasar ARG como opciones a GNU diff"
+msgstr "pasar PAR como opciones a GNU diff"
 
 #: clients/cmdline/main.c:102
 msgid "pass contents of file ARG as additional args"
-msgstr "pasar el contenido del archivo ARG como parámetros adicionales"
+msgstr ""
+"pasar el contenido del archivo PAR\n"
+"                             como parámetros adicionales"
 
 #: clients/cmdline/main.c:103
 msgid "output in XML"
@@ -392,23 +407,23 @@ msgstr "no tomar en cuenta ancestros al calcular las combinaciones"
 
 #: clients/cmdline/main.c:122
 msgid "use ARG as diff command"
-msgstr "usar ARG como comando para mostrar diferencias"
+msgstr "usar PAR como comando para mostrar diferencias"
 
 #: clients/cmdline/main.c:124
 msgid "use ARG as merge command"
-msgstr "usar ARG como comando para combinar"
+msgstr "usar PAR como comando para combinar"
 
 #: clients/cmdline/main.c:126
 msgid "use ARG as external editor"
-msgstr "usar ARG como el editor externo"
+msgstr "usar PAR como el editor externo"
 
 #: clients/cmdline/main.c:128
 msgid "use ARG as the older target"
-msgstr "usar ARG como el objetivo más viejo"
+msgstr "usar PAR como el objetivo más viejo"
 
 #: clients/cmdline/main.c:130
 msgid "use ARG as the newer target"
-msgstr "usar ARG como el objetivo más nuevo"
+msgstr "usar PAR como el objetivo más nuevo"
 
 #: clients/cmdline/main.c:132
 msgid "operate on a revision property (use with -r)"
@@ -420,7 +435,7 @@ msgstr "reubicar via reescritura de URL"
 
 #: clients/cmdline/main.c:136 svnadmin/main.c:241
 msgid "read user configuration files from directory ARG"
-msgstr "leer configuración del usuario del directorio ARG"
+msgstr "leer configuración del usuario del directorio PAR"
 
 #: clients/cmdline/main.c:138
 msgid "enable automatic properties"
@@ -437,6 +452,11 @@ msgid ""
 "style\n"
 "                             property.  ARG may be one of 'LF', 'CR', 'CRLF'"
 msgstr ""
+"usar un marcador de fin de línea diferente al\n"
+"                             estándar del sistema para archivos con svn:eol-"
+"style\n"
+"                             como 'native'.  PAR puede ser uno de 'LF', "
+"'CR', 'CRLF'"
 
 #: clients/cmdline/main.c:171
 msgid ""
@@ -609,6 +629,12 @@ msgid ""
 "  If PATH is omitted '.' is assumed.  Parent directories are created\n"
 "  as necessary in the repository.\n"
 msgstr ""
+"Hace commit de un archivo o un árbol de archivos no versionado a un URL.\n"
+"usi: import [RUTA] URL\n"
+"\n"
+"  Hace un commit recursivo de RUTA a URL.\n"
+"  Si se omite la ruta se asume '.'.  Los directorios padre serán creados\n"
+"  en el repositorio cuando sea necesario.\n"
 
 #: clients/cmdline/main.c:329
 msgid ""
@@ -824,8 +850,8 @@ msgstr ""
 "\n"
 "  Nota:  Este subcomando no resuelve semánticamente los conflictos, ni\n"
 "  quita los demarcadores de éstos.  Simplemente elimina los archivos\n"
-"  auxiliares relacionados y permite que la RUTA intervenga de nuevo en\n"
-"  un commit.\n"
+"  auxiliares relacionados y permite que la RUTA pueda intervenir de\n"
+"  nuevo en un commit.\n"
 
 #: clients/cmdline/main.c:552
 msgid ""
@@ -2021,8 +2047,8 @@ msgid "Bad property name"
 msgstr "Nombre de propiedad inaceptable"
 
 #: include/svn_error_codes.h:770
-msgid "Two versioned resources are unrelated."
-msgstr "Los dos recursos versionados no están relacionados."
+msgid "Two versioned resources are unrelated"
+msgstr "Dos recursos versionados no están relacionados"
 
 #: include/svn_error_codes.h:777
 msgid "A problem occurred; see later errors for details"
@@ -2208,7 +2234,7 @@ msgstr "No se puede limpiar '%s': no es un directorio"
 msgid "New entry name required when importing a file"
 msgstr "Se requiere un nuevo nombre de entrada para importar un archivo"
 
-#: libsvn_client/commit.c:485 libsvn_wc/props.c:736 libsvn_wc/questions.c:65
+#: libsvn_client/commit.c:485 libsvn_wc/props.c:736 libsvn_wc/questions.c:63
 #, c-format
 msgid "'%s' does not exist"
 msgstr "'%s' no existe"
@@ -2300,7 +2326,7 @@ msgstr ""
 #: libsvn_client/status.c:169 libsvn_client/switch.c:114
 #: libsvn_client/update.c:85 libsvn_wc/adm_ops.c:2095 libsvn_wc/copy.c:304
 #: libsvn_wc/entries.c:1374 libsvn_wc/entries.c:1793 libsvn_wc/props.c:282
-#: libsvn_wc/questions.c:173
+#: libsvn_wc/questions.c:171
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' no está bajo control de versiones"
@@ -2822,7 +2848,7 @@ msgstr ""
 msgid "Malformed copyfrom line in node-rev"
 msgstr ""
 
-#: libsvn_fs_fs/fs_fs.c:779
+#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2865
 msgid "Attempted to write to non-transaction"
 msgstr "Intento de escribir en lo que no era una transacción"
 
@@ -2847,8 +2873,8 @@ msgid "Final line in revision file longer than 64 characters"
 msgstr "La línea final en un archivo de revisión tiene más de 64 caracteres"
 
 #: libsvn_fs_fs/fs_fs.c:963
-msgid "Final line in revision file missing space."
-msgstr "Le falta un espacio a la línea final en un archivo de revisión."
+msgid "Final line in revision file missing space"
+msgstr "Le falta un espacio a la línea final en un archivo de revisión"
 
 #: libsvn_fs_fs/fs_fs.c:990 libsvn_repos/log.c:163 libsvn_repos/log.c:167
 #, c-format
@@ -2856,21 +2882,21 @@ msgid "No such revision %ld"
 msgstr "No hay una revisión %ld"
 
 #: libsvn_fs_fs/fs_fs.c:1108
-msgid "Malformed svndiff data in representation."
-msgstr "Datos svndiff malformados en la representación."
+msgid "Malformed svndiff data in representation"
+msgstr "Datos svndiff malformados en la representación"
 
 #: libsvn_fs_fs/fs_fs.c:1210 libsvn_fs_fs/fs_fs.c:1230
 #: libsvn_fs_fs/fs_fs.c:1243
-msgid "Reading one svndiff window read beyond the end of the representation."
+msgid "Reading one svndiff window read beyond the end of the representation"
 msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:1334
-msgid "svndiff data requested non-existent source."
-msgstr "datos svndiff pidieron una fuente que no existe."
+msgid "svndiff data requested non-existent source"
+msgstr "datos svndiff pidieron una fuente que no existe"
 
 #: libsvn_fs_fs/fs_fs.c:1340
-msgid "svndiff requested position beyond end of stream."
-msgstr "la posición pedida por svndiff va más allá del final del flujo."
+msgid "svndiff requested position beyond end of stream"
+msgstr "la posición pedida por svndiff va más allá del final del flujo"
 
 #: libsvn_fs_fs/fs_fs.c:1362
 msgid "svndiff window length is corrupt"
@@ -2882,9 +2908,8 @@ msgid "Directory entry corrupt"
 msgstr "Entrada corrupta de directorio"
 
 #: libsvn_fs_fs/fs_fs.c:1684
-#, fuzzy
 msgid "Missing required node revision ID"
-msgstr "Falta la especificación de la revisión"
+msgstr "Falta el id de revisión del nodo"
 
 #: libsvn_fs_fs/fs_fs.c:1694
 msgid "Invalid change ordering: new node revision ID without delete"
@@ -2921,12 +2946,8 @@ msgid "next-id file corrupt"
 msgstr "archivo next-id corrupto"
 
 #: libsvn_fs_fs/fs_fs.c:2573
-msgid "Invalid change type."
-msgstr "Tipo de cambio inválido."
-
-#: libsvn_fs_fs/fs_fs.c:2865
-msgid "Attempted to write to non-transaction."
-msgstr ""
+msgid "Invalid change type"
+msgstr "Tipo de cambio inválido"
 
 #: libsvn_fs_fs/fs_fs.c:2884
 msgid "Can't set text contents of a directory"
@@ -2934,8 +2955,8 @@ msgstr "No se puede asignar contenido de tipo 'texto' a un directorio"
 
 #: libsvn_fs_fs/fs_fs.c:2974 libsvn_fs_fs/fs_fs.c:2979
 #: libsvn_fs_fs/fs_fs.c:2986
-msgid "Corrupt current file."
-msgstr "Archivo actual corrupto."
+msgid "Corrupt current file"
+msgstr "Archivo actual corrupto"
 
 #: libsvn_fs_fs/fs_fs.c:3274
 #, c-format
@@ -3074,7 +3095,7 @@ msgstr ""
 #, c-format
 msgid ""
 "Protocol error: the MERGE response for the '%s' resource did not return all "
-"of the properties that we asked for (and need to complete the commit)."
+"of the properties that we asked for (and need to complete the commit)"
 msgstr ""
 
 #: libsvn_ra_dav/merge.c:259
@@ -3180,13 +3201,13 @@ msgid "Impossibly long relative URL"
 msgstr "URL relativo imposiblemente largo"
 
 #: libsvn_ra_dav/session.c:821
-msgid "The UUID property was not found on the resource or any of its parents."
+msgid "The UUID property was not found on the resource or any of its parents"
 msgstr ""
-"La propiedad UUID no se encontró en el recurso ni en ninguno de sus padres."
+"La propiedad UUID no se encontró en el recurso ni en ninguno de sus padres"
 
 #: libsvn_ra_dav/session.c:829
-msgid "Please upgrade the server to 0.19 or later."
-msgstr "Por favor actualice el servidor a la versión 0.19 o posterior."
+msgid "Please upgrade the server to 0.19 or later"
+msgstr "Por favor actualice el servidor a la versión 0.19 o posterior"
 
 #: libsvn_ra_dav/session.c:840
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
@@ -3194,8 +3215,8 @@ msgstr "Módulo para acceder a un repositorio via el protocolo WebDAV (DeltaV)."
 
 #: libsvn_ra_dav/session.c:870
 #, c-format
-msgid "Unsupported RA plugin ABI version (%d) for ra_dav."
-msgstr "Aplique RA binariamente incompatible (versión %d) para ra_dav."
+msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
+msgstr "Aplique RA binariamente incompatible (versión %d) para ra_dav"
 
 #: libsvn_ra_dav/util.c:273
 msgid "authorization failed"
@@ -3235,6 +3256,50 @@ msgstr "El requerimiento %s devolvió una respuesta con XML inválido: %s (%s)"
 msgid "%s request failed on '%s'"
 msgstr "requerimiento %s falló en '%s'"
 
+#: libsvn_ra_local/ra_plugin.c:96 libsvn_ra_local/ra_plugin.c:462
+#, c-format
+msgid ""
+"'%s'\n"
+"is not the same repository as\n"
+"'%s'"
+msgstr ""
+"'%s'\n"
+"no es el mismo repositorio que\n"
+"'%s'"
+
+#: libsvn_ra_local/ra_plugin.c:224
+msgid "Unable to open an ra_local session to URL"
+msgstr "No se pudo abrir una sesión ra_local con el URL"
+
+#: libsvn_ra_local/ra_plugin.c:918
+msgid "Module for accessing a repository on local disk."
+msgstr "Módulo para acceder a un repositorio en el disco local."
+
+#: libsvn_ra_local/ra_plugin.c:953
+#, c-format
+msgid "Unsupported RA plugin ABI version (%d) for ra_local"
+msgstr "Aplique RA binariamente incompatible (versión %d) para ra_local."
+
+#: libsvn_ra_local/split_url.c:47
+#, c-format
+msgid "Local URL '%s' does not contain 'file://' prefix"
+msgstr "El URL local '%s' no contiene el prefijo 'file://'"
+
+#: libsvn_ra_local/split_url.c:58
+#, c-format
+msgid "Local URL '%s' contains only a hostname, no path"
+msgstr "El URLL '%s' contiene sólo un nombre de máquina, sin una ruta"
+
+#: libsvn_ra_local/split_url.c:65
+#, c-format
+msgid "Local URL '%s' contains unsupported hostname"
+msgstr "El URL local '%s' contiene un nombre de máquina no soportado"
+
+#: libsvn_ra_local/split_url.c:105 libsvn_ra_local/split_url.c:112
+#, c-format
+msgid "Unable to open repository '%s'"
+msgstr "No se pudo abrir el repositorio '%s'"
+
 #: libsvn_ra_svn/client.c:194
 msgid "Prop diffs element not a list"
 msgstr ""
@@ -3256,8 +3321,8 @@ msgid "Text delta chunk not a string"
 msgstr ""
 
 #: libsvn_ra_svn/client.c:1247
-msgid "The get-file-revs command didn't return any revisions."
-msgstr "El comando get-file-revs no devolvió ninguna revisión."
+msgid "The get-file-revs command didn't return any revisions"
+msgstr "El comando get-file-revs no devolvió ninguna revisión"
 
 #: libsvn_repos/dump.c:425
 #, c-format
@@ -3334,7 +3399,7 @@ msgstr "Revisión final inválida %ld"
 
 #: libsvn_subr/error.c:294
 msgid "Can't recode error string from APR"
-msgstr ""
+msgstr "No se pudo recodificar el mensaje de error de APR"
 
 #: libsvn_subr/opt.c:148
 msgid ""
@@ -3343,6 +3408,10 @@ msgid ""
 msgstr ""
 "\n"
 "Opciones válidas:\n"
+
+#: libsvn_subr/opt.c:238
+msgid " arg"
+msgstr " par"
 
 #: libsvn_subr/opt.c:262
 #, c-format
@@ -3370,7 +3439,7 @@ msgstr ""
 #: libsvn_subr/opt.c:592
 #, c-format
 msgid "URL '%s' contains a '..' element"
-msgstr ""
+msgstr "El URL '%s' contiene un elemento '..'"
 
 #: libsvn_subr/opt.c:621
 #, fuzzy, c-format
@@ -3410,7 +3479,7 @@ msgstr "Tipee '%s help' para ver el modo de uso.\n"
 #: libsvn_subr/validate.c:51
 #, c-format
 msgid "MIME type '%s' has empty media type"
-msgstr ""
+msgstr "El tipo MIME '%s' tiene el tipo de medio vacío"
 
 #: libsvn_subr/validate.c:56
 #, c-format
@@ -3455,7 +3524,7 @@ msgstr "Mal indicador de tipo"
 
 #: libsvn_wc/adm_files.c:408
 msgid "APR_APPEND not supported for adm files"
-msgstr ""
+msgstr "No se soporta APR_APPEND para archivos administrativos"
 
 #: libsvn_wc/adm_files.c:451
 msgid ""
@@ -4015,7 +4084,7 @@ msgstr ""
 "Propiedad %s inválida en '%s': el objetivo involucra '.' o '..' o es una "
 "ruta absoluta"
 
-#: libsvn_wc/questions.c:106
+#: libsvn_wc/questions.c:104
 #, c-format
 msgid ""
 "Working copy format of '%s' is too old (%d); please check out your working "
@@ -4024,7 +4093,7 @@ msgstr ""
 "El formato de la copia de trabajo de '%s' es demasiado viejo (%d); por favor "
 "actualice su copia de trabajo nuevamente"
 
-#: libsvn_wc/questions.c:114
+#: libsvn_wc/questions.c:112
 #, c-format
 msgid ""
 "This client is too old to work with working copy '%s'; please get a newer "
@@ -4033,7 +4102,7 @@ msgstr ""
 "Este cliente es demasiado viejo para funcionar con la copia de trabajo '%s'; "
 "por favor consiga uno nuevo"
 
-#: libsvn_wc/questions.c:350
+#: libsvn_wc/questions.c:348
 #, c-format
 msgid ""
 "Checksum mismatch indicates corrupt text base: '%s'\n"
@@ -4135,8 +4204,8 @@ msgstr "Falló el mover"
 
 #: libsvn_wc/update_editor.c:2736
 #, c-format
-msgid "'%s' has no ancestry information."
-msgstr "'%s' no tiene información de ancestros."
+msgid "'%s' has no ancestry information"
+msgstr "'%s' no tiene información de ancestros"
 
 #: libsvn_wc/util.c:84
 msgid "Unable to make any directories"
@@ -4161,7 +4230,7 @@ msgstr "mostrar información de la versión"
 
 #: svnadmin/main.c:208
 msgid "specify revision number ARG (or X:Y range)"
-msgstr "especificar ARG como número de revisión (o rango X:Y)"
+msgstr "especificar PAR como número de revisión (o rango X:Y)"
 
 #: svnadmin/main.c:211
 msgid "dump incrementally"
@@ -4438,17 +4507,17 @@ msgstr ""
 "el subcomando '%s' no acepta la opción '%s'\n"
 "Tipee 'svnadmin help %s' para ver modo de uso.\n"
 
-#: svndumpfilter/main.c:643
+#: svndumpfilter/main.c:641
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
 msgstr "Se hizo commit de la revisión %ld como %ld.\n"
 
-#: svndumpfilter/main.c:651
+#: svndumpfilter/main.c:649
 #, c-format
 msgid "Revision %ld skipped.\n"
 msgstr "Revisión %ld omitida.\n"
 
-#: svndumpfilter/main.c:894
+#: svndumpfilter/main.c:892
 #, c-format
 msgid ""
 "Dropped %d revision(s).\n"
@@ -4457,26 +4526,26 @@ msgstr ""
 "%d revisión/es descartadas.\n"
 "\n"
 
-#: svndumpfilter/main.c:900
+#: svndumpfilter/main.c:898
 msgid "Revisions renumbered as follows:\n"
 msgstr "Revisiones renumeradas como sigue:\n"
 
-#: svndumpfilter/main.c:928
+#: svndumpfilter/main.c:926
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (descartada)\n"
 
-#: svndumpfilter/main.c:932
+#: svndumpfilter/main.c:930
 #, c-format
 msgid "   %ld => %ld\n"
 msgstr "   %ld => %ld\n"
 
-#: svndumpfilter/main.c:943
+#: svndumpfilter/main.c:941
 #, c-format
 msgid "Dropped %d node(s):\n"
 msgstr "%d nodo/s descartado/s:\n"
 
-#: svndumpfilter/main.c:1151
+#: svndumpfilter/main.c:1149
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -4484,7 +4553,7 @@ msgstr ""
 "\n"
 "Error: no se especificaron prefijos.\n"
 
-#: svndumpfilter/main.c:1194
+#: svndumpfilter/main.c:1192
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -4495,11 +4564,11 @@ msgstr ""
 
 #: svnlook/main.c:98
 msgid "specify revision number ARG"
-msgstr "especificar ARG como número de revisión"
+msgstr "especificar PAR como número de revisión"
 
 #: svnlook/main.c:101
 msgid "specify transaction name ARG"
-msgstr "especificar ARG como nombre de transacción"
+msgstr "especificar PAR como nombre de transacción"
 
 #: svnlook/main.c:104
 msgid "be verbose"
@@ -4742,11 +4811,12 @@ msgstr ""
 
 #: svnlook/main.c:1730
 msgid "Missing propname and repository path arguments"
-msgstr ""
+msgstr "Faltan los parámetros nombre de propiedad y ruta del repositorio"
 
 #: svnlook/main.c:1736
 msgid "Missing propname or repository path argument"
 msgstr ""
+"Faltan el parámetro nombre de propiedad o el parámetro ruta del repositorio"
 
 #: svnlook/main.c:1888
 msgid "Invalid revision number supplied"
