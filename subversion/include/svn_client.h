@@ -302,13 +302,16 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
 /* Given PATH to a working copy directory or file, allocate and return
    a STATUSHASH structure containing the stati of all entries.  If
    DESCEND is non-zero, recurse fully, else do only immediate
-   children.  (See svn_wc.h:svn_wc_statuses() for more verbiage on
-   this). */
+   children.  If GET_ALL is set, then all entries are retrieved;
+   otherwise only "interesting" (local mods or out-of-date) will be
+   fetched. (See svn_wc.h:svn_wc_statuses() for more verbiage on
+   this).  */
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_stringbuf_t *path,
-                   svn_boolean_t descend,
                    svn_client_auth_baton_t *auth_baton,
+                   svn_boolean_t descend,
+                   svn_boolean_t get_all,
                    apr_pool_t *pool);
 
 /* Given a PATH to a working copy file, return a path to a temporary

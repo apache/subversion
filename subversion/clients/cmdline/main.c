@@ -185,11 +185,11 @@ main (int argc, const char * const *argv)
     {"nonrecursive",  'n', 0},
     {"revision",      'r', 1},
     {"date",          'D', 1},
-    {"version",       'v', 0},
     {"filedata",      'F', 1},
-    {"modified",      'M', 0},
     {"xml-file",      svn_cl__xml_file_opt, 1},
     {"locale",        svn_cl__locale_opt, 1},
+    {"version",       svn_cl__version_opt, 0},
+    {"verbose",       'v', 0},
     /* Here begin authentication args, add more as needed: */
     {"username",      svn_cl__auth_username_opt, 1},
     {"password",      svn_cl__auth_password_opt, 1},    
@@ -258,7 +258,8 @@ main (int argc, const char * const *argv)
                                    svn_parse_date ((char *) opt_arg, NULL));
         break;
       case 'v':
-        opt_state.version = TRUE;
+        opt_state.verbose = TRUE;
+        break;
       case 'h':
       case '?':
         opt_state.help = TRUE;
@@ -288,6 +289,10 @@ main (int argc, const char * const *argv)
         break;
       case 'n':
         opt_state.nonrecursive = TRUE;
+        break;
+      case svn_cl__version_opt:
+        opt_state.version = TRUE;
+        opt_state.help = TRUE;
         break;
       case svn_cl__auth_username_opt:
         opt_state.auth_username = svn_stringbuf_create (opt_arg, pool);

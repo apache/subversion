@@ -139,7 +139,6 @@ svn_cl__print_status (svn_stringbuf_t *path, svn_wc_status_t *status)
 
 void
 svn_cl__print_status_list (apr_hash_t *statushash, 
-                           svn_boolean_t print_modified_only,
                            apr_pool_t *pool)
 {
   int i;
@@ -161,23 +160,7 @@ svn_cl__print_status_list (apr_hash_t *statushash,
       path = item->key;
       status = item->data;
 
-      if (print_modified_only)
-        {
-          /* In this context, `modified' includes merged and
-             conflicted states too.  As of this writing, `merged' is
-             not a persistent state -- that is, we show "G" once
-             during update, and "M" in status lists thereafter -- but
-             it may one day be persistent, and it does us absolutely
-             no harm to check for it here.  If the `merged' flag isn't
-             set, it will have no effect; and if for whatever reason
-             it is set, then we clearly ought to count the file as
-             modified. */
-          if ((status->text_status != svn_wc_status_none)
-              || (status->prop_status != svn_wc_status_none))
-            svn_cl__print_status (svn_stringbuf_create (path, pool), status);
-        }
-      else
-        svn_cl__print_status (svn_stringbuf_create (path, pool), status);
+      svn_cl__print_status (svn_stringbuf_create (path, pool), status);
     }
 }
 

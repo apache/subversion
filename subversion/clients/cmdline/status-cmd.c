@@ -59,15 +59,17 @@ svn_cl__status (apr_getopt_t *os,
       /* Recursion is the default, unless the nonrecursive option was
          specified on the command-line. */
       if (opt_state->nonrecursive)
-        err = svn_client_status (&statushash, target, 0, auth_baton, pool);
+        err = svn_client_status (&statushash, target, auth_baton,
+                                 0, opt_state->verbose, pool);
       else
-        err = svn_client_status (&statushash, target, 1, auth_baton, pool);
+        err = svn_client_status (&statushash, target, auth_baton,
+                                 1, opt_state->verbose, pool);
 
       if (err)
         return err;
 
-      /* Pass the '-M' flag state to this routine. */
-      svn_cl__print_status_list (statushash, opt_state->modified, pool);
+      /* Pass the '-v' flag state to this routine. */
+      svn_cl__print_status_list (statushash, pool);
     }
 
   return SVN_NO_ERROR;

@@ -299,6 +299,9 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  *
  * Assuming PATH is a directory, then:
  * 
+ * If GET_ALL is zero, then only locally-modified entries will be
+ * returned.  If non-zero, then all entries will be returned.
+ *
  * If DESCEND is zero, statushash will contain paths for PATH and
  * its non-directory entries (subdirectories should be subjects of
  * separate status calls).  
@@ -313,6 +316,7 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_stringbuf_t *path,
                               svn_boolean_t descend,
+                              svn_boolean_t get_all,
                               apr_pool_t *pool);
 
 
