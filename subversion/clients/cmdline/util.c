@@ -613,3 +613,24 @@ svn_cl__get_log_message (const char **log_msg,
 }
 
 
+/* ### The way our error wrapping currently works, the error returned
+ * from here will look as though it originates in this source file,
+ * instead of in the caller's source file.  This can be a bit
+ * misleading, until one starts debugging.  Ideally, there'd be a way
+ * to wrap an error while preserving its FILE/LINE info.
+ */
+svn_error_t *
+svn_cl__may_need_force (svn_error_t *err)
+{
+  if (err
+      && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE ||
+          err->apr_err == SVN_ERR_CLIENT_MODIFIED))
+    {
+      /* Should this svn_error_compose a new error number? Probably not,
+         the error hasn't changed. */
+      err = svn_error_quick_wrap
+        (err, _("Use --force to override this restriction") );
+    }
+
+  return err;
+}
