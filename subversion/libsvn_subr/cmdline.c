@@ -20,6 +20,13 @@
 #include <stdlib.h>             /* for atexit() */
 #include <locale.h>             /* for setlocale() */
 
+#ifndef WIN32
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#endif
+
 #include <apr_errno.h>          /* for apr_strerror */
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
 #include <apr_strings.h>        /* for apr_snprintf */
@@ -52,6 +59,24 @@ int
 svn_cmdline_init (const char *progname, FILE *error_stream)
 {
   apr_status_t status;
+
+#ifndef WIN32
+  {
+    struct stat st;
+
+    /* The following makes sure that file descriptors 0 (stdin), 1
+       (stdout) and 2 (stderr) will not be "reused", because if
+       e.g. file descriptor 2 would be reused when opening a file, a
+       write to stderr would write to that file and most likely
+       corrupt it. */
+    if (fstat (0, &st) == -1)
+      open ("/dev/null", O_RDONLY);
+    if (fstat (1, &st) == -1)
+      open ("/dev/null", O_WRONLY);
+    if (fstat (2, &st) == -1)
+      open ("/dev/null", O_WRONLY);
+  }
+#endif
 
 #ifdef WIN32
   /* Initialize the input and output encodings. */
