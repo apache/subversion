@@ -12,12 +12,14 @@ import os
 import sys
 import string
 import ConfigParser
+import time
 
 import svn.fs
 import svn.util
 import svn.delta
 import svn.repos
 
+SEPARATOR = '=' * 78
 
 def main(pool, config_fname, repos_dir, rev):
   cfg = Config(config_fname)
@@ -36,13 +38,14 @@ def main(pool, config_fname, repos_dir, rev):
                                 pool)
 
   ### pipe it to sendmail rather than stdout
-  generate_content(sys.stdout, repos, editor, pool)
+  generate_content(sys.stdout, cfg, repos, editor, pool)
 
 
-def generate_content(output, repos, editor, pool):
+def generate_content(output, cfg, repos, editor, pool):
 
-  date = repos.get_rev_prop(svn.util.SVN_PROP_REVISION_DATE)
-  ### reformat the date
+  svndate = repos.get_rev_prop(svn.util.SVN_PROP_REVISION_DATE)
+  ### pick a different date format?
+  date = time.ctime(svn.util.secs_from_timestr(svndate, pool))
 
   output.write('Author: %s\nDate: %s\nNew Revision: %s\n\n'
                % (repos.get_rev_prop(svn.util.SVN_PROP_REVISION_AUTHOR),
@@ -73,7 +76,7 @@ def generate_content(output, repos, editor, pool):
       src = dst = path
       change = editor.changes[path]
 
-    generate_diff(output, repos, src, dst, change, pool)
+    generate_diff(output, cfg, repos, date, src, dst, change, pool)
 
   ### print diffs. watch for binary files.
 
@@ -92,34 +95,60 @@ def generate_list(output, header, fnames):
         output.write('   %s\n' % fname)
 
 
-def generate_diff(output, repos, src, dst, change, pool):
-  if 0 and copy_info and copy_info[0]:
-    assert (not src) and dst  # it was ADDED
-
-    copyfrom_path = copy_info[0]
-    if copyfrom_path[0] == '/':
-      # remove the leading slash for consistency with other paths
-      copyfrom_path = copyfrom_path[1:]
-
-    output.write('Copied: %s (from rev %d, %s)\n'
-                 % (dst, copy_info[1], copy_info[0]))
+def generate_diff(output, cfg, repos, date, src, dst, change, pool):
+  if change.item_type == ChangeCollector.DIR:
+    ### do we want to display anything for a directory? probably... if
+    ### the thing has properties, then heck ya.
+    return
 
   if not dst:
-    output.write('deleted: %s\n' % src)
-    return
-  if not src:
+    output.write('Deleted: %s\n' % src)
+    diff = svn.fs.FileDiff(repos.root_prev, src, None, None, pool)
+
+    label1 = '%s\t%s' % (src, date)
+    label2 = '(empty file)'
+  elif not src:
     if change.base_path:
       # this was copied. note that we strip the leading slash from the
       # base (copyfrom) path.
       output.write('Copied: %s (from rev %d, %s)\n'
                    % (dst, change.base_rev, change.base_path[1:]))
+      diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
+                             change.base_path[1:],
+                             repos.root_this, dst,
+                             pool)
+      label1 = change.base_path[1:] + '\t(original)'
+      label2 = '%s\t%s' % (dst, date)
     else:
       output.write('Added: %s\n' % dst)
-    return
+      diff = svn.fs.FileDiff(None, None, repos.root_this, dst, pool)
+      label1 = '(empty file)'
+      label2 = '%s\t%s' % (dst, date)
+  else:
+    output.write('\nModified: %s\n' % change.base_path[1:])
+    diff = svn.fs.FileDiff(repos.get_root(change.base_rev), src,
+                           repos.root_this, change.base_path[1:],
+                           pool)
+    label1 = change.base_path[1:] + '\t(original)'
+    label2 = '%s\t%s' % (src, date)
 
-  output.write('diff: %s@%d <- %s@%d  (%s; propmod=%d)\n'
-               % (src, repos.rev, change.base_path[1:], change.base_rev,
-                  change.item_type, change.prop_changes))
+  output.write(SEPARATOR + '\n')
+
+  ### do something with change.prop_changes
+
+  src_fname, dst_fname = diff.get_files()
+
+  pipe = os.popen(cfg.general.diff % {
+    'label_from' : label1,
+    'label_to' : label2,
+    'from' : src_fname,
+    'to' : dst_fname,
+    })
+  while 1:
+    chunk = pipe.read(100000)
+    if not chunk:
+      break
+    output.write(chunk)
 
 
 class Repository:
