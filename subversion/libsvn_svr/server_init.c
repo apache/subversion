@@ -49,21 +49,34 @@
 
 
 #include <svn_svr.h>
+#include <svn_parse.h>
+#include <apr_hash.h>
 
 
-/* Makes the server library re-load `/etc/svn.conf'.  Network layers
-   *must* call this routine when first loaded!  
+/* This routine does any necessary server setup, so it must be called first!
 
-   Returns a pointer to a server policy structure; this pointer must
-   be passed to *all* server routines!  */
+   Input:  a hash of hashes, containing all server-policy data.
+    
+   Returns: a pointer to a server policy structure.
+
+   --> The hash of hashes can be created either manually, or by running
+       svn_parse (filename), e.g.
+        
+                my_filename = svn_string_create ("/etc/svn.conf");
+                my_policy = svn_svr_init (svr_parse (my_filename, p), p);
+
+   --> The returned policy structure is a global context that must be
+   passed to all server routines... don't lose it!
+
+*/
 
 svn_svr_policies_t *
-svn_svr_init (svn_string_t *config_file, ap_pool_t *pool)
+svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
 {
   ap_status_t result;
 
-  /* First, allocate a `policies' structure, and allocate all of its
-     internal lists */
+  /* First, allocate a `policies' structure and all of its internal
+     lists */
 
   svn_svr_policies_t *my_policies = 
     (svn_svr_policies_t *) ap_palloc (pool, sizeof(svn_svr_policies_t));
@@ -90,15 +103,15 @@ svn_svr_init (svn_string_t *config_file, ap_pool_t *pool)
     }
 
 
-  /* PARSE config_file and... */
+  /* Now walk through our configdata "uber-hash" and .... */
 
-  /* builds a list of repository aliases, */
+  /* store any repository aliases, */
 
-  /* builds a list of general security policies, */
+  /* store any  general security policies, */
 
   /* use apr's DSO routines to load all server plugins, 
      and call pluginname_init (&my_policies) in each one;
-     the result is a list of plugins inside my_policies
+     (the result is a list of plugins inside my_policies)
   */
 
 
