@@ -186,8 +186,8 @@ svn_cl__propset (apr_getopt_t *os,
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-          SVN_ERR (svn_client_propset (pname_utf8, propval, target,
-                                       opt_state->recursive, subpool));
+          SVN_CL__TRY (svn_client_propset (pname_utf8, propval, target,
+                                           opt_state->recursive, subpool));
 
           if (! opt_state->quiet) 
             {
