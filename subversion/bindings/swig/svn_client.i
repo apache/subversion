@@ -322,6 +322,7 @@
   argvi++;
 }
 
+#ifdef SWIGRUBY
 %runtime %{
   #include <apr.h>
   #include <apr_pools.h>
@@ -346,6 +347,7 @@
     return __svn_client_config_pool;
   }
 %}
+#endif
 
 %typemap(ruby, argout) apr_hash_t *config {
   if ($1)

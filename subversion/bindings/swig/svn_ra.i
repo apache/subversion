@@ -115,7 +115,6 @@
 #include "swigutil_rb.h"
 #endif
 %}
-%include svn_ra.h
 
 %include svn_ra.h
 

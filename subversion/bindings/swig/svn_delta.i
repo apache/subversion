@@ -89,7 +89,6 @@ void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
 #include "swigutil_rb.h"
 #endif
 %}
-%include svn_delta.h
 
 %include svn_delta.h
 
