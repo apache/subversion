@@ -51,7 +51,6 @@ def determine_output(cfg, repos, changes):
     subject = mail_subject(cfg, repos, changes)
     return PipeOutput(cfg, subject)
 
-  ### selecting SMTP will be more than this, but this'll do for now
   if cfg.is_set('general.smtp_hostname'):
     subject = mail_subject(cfg, repos, changes)
     return SMTPOutput(cfg, subject)
@@ -120,6 +119,10 @@ class StandardOutput:
     self.write = sys.stdout.write
 
   def run_diff(self, cmd):
+    # flush our output to keep the parent/child output in sync
+    sys.stdout.flush()
+    sys.stderr.flush()
+
     # we can simply fork and exec the diff, letting it generate all the
     # output to our stdout (and stderr, if necessary).
     pid = os.fork()
@@ -230,15 +233,13 @@ def generate_content(output, cfg, repos, changes, pool):
   for path, change in changelist:
     generate_diff(output, cfg, repos, date, change, pool)
 
-  ### print diffs. watch for binary files.
-
 
 def _select_adds(change):
   return change.added
 def _select_deletes(change):
-  return not change.path
+  return change.path is None
 def _select_modifies(change):
-  return not change.added and change.path
+  return not change.added and change.path is not None
 
 
 def generate_list(output, header, changelist, selection):
@@ -249,35 +250,53 @@ def generate_list(output, header, changelist, selection):
   if items:
     output.write('%s:\n' % header)
     for fname, change in items:
-      ### should print prop_changes?, copy_info, and binary? here
-      ### hmm. don't have binary right now.
       if change.item_type == ChangeCollector.DIR:
-        output.write('   %s/\n' % fname)
+        is_dir = '/'
       else:
-        output.write('   %s\n' % fname)
+        is_dir = ''
+      if change.prop_changes:
+        if change.text_changed:
+          props = '   (text, props changed)'
+        else:
+          props = '   (props changed)'
+      else:
+        props = ''
+      output.write('   %s%s%s\n' % (fname, is_dir, props))
+      if change.added and change.base_path:
+        if is_dir:
+          text = ''
+        elif change.text_changed:
+          text = ', changed'
+        else:
+          text = ' unchanged'
+        output.write('      - copied%s from rev %d, %s%s\n'
+                     % (text, change.base_rev, change.base_path[1:], is_dir))
 
 
 def generate_diff(output, cfg, repos, date, change, pool):
 
   if change.item_type == ChangeCollector.DIR:
-    if change.path and change.base_path:
-      output.write('\nCopied: %s (from rev %d, %s)\n'
-                   % (change.path, change.base_rev, change.base_path[1:]))
-    ### do we want to display anything for a directory? probably... if
-    ### the thing has properties, then heck ya.
+    # all changes were printed in the summary. nothing to do.
     return
 
   if not change.path:
-    output.write('Deleted: %s\n' % change.base_path)
+    output.write('\nDeleted: %s\n' % change.base_path)
     diff = svn.fs.FileDiff(repos.root_prev, change.base_path, None, None, pool)
 
     label1 = '%s\t%s' % (change.base_path, date)
     label2 = '(empty file)'
+    singular = True
   elif change.added:
     if change.base_path:
-      # this was copied. note that we strip the leading slash from the
-      # base (copyfrom) path.
-      output.write('Copied: %s (from rev %d, %s)\n'
+      # this file was copied.
+
+      # copies with no changes are reported in the header, so we can just
+      # skip them here.
+      if not change.text_changed:
+        return
+
+      # note that we strip the leading slash from the base (copyfrom) path
+      output.write('\nCopied: %s (from rev %d, %s)\n'
                    % (change.path, change.base_rev, change.base_path[1:]))
       diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
                              change.base_path[1:],
@@ -285,11 +304,16 @@ def generate_diff(output, cfg, repos, date, change, pool):
                              pool)
       label1 = change.base_path[1:] + '\t(original)'
       label2 = '%s\t%s' % (change.path, date)
+      singular = False
     else:
-      output.write('Added: %s\n' % change.path)
+      output.write('\nAdded: %s\n' % change.path)
       diff = svn.fs.FileDiff(None, None, repos.root_this, change.path, pool)
       label1 = '(empty file)'
       label2 = '%s\t%s' % (change.path, date)
+      singular = True
+  elif not change.text_changed:
+    # don't bother to show an empty diff. prolly just a prop change.
+    return
   else:
     output.write('\nModified: %s\n' % change.path)
     diff = svn.fs.FileDiff(repos.get_root(change.base_rev), change.base_path[1:],
@@ -297,8 +321,16 @@ def generate_diff(output, cfg, repos, date, change, pool):
                            pool)
     label1 = change.base_path[1:] + '\t(original)'
     label2 = '%s\t%s' % (change.path, date)
+    singular = False
 
   output.write(SEPARATOR + '\n')
+
+  if diff.either_binary():
+    if singular:
+      output.write('Binary file. No diff available.\n')
+    else:
+      output.write('Binary files. No diff available.\n')
+    return
 
   ### do something with change.prop_changes
 
@@ -365,6 +397,7 @@ class ChangeCollector(svn.delta.Editor):
     # base_path is the specified path. revision is the parent's.
     self.changes[path] = _change(item_type,
                                  False,
+                                 False,
                                  path,            # base_path
                                  parent_baton[2], # base_rev
                                  None,            # (new) path
@@ -374,6 +407,7 @@ class ChangeCollector(svn.delta.Editor):
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool):
     self.changes[path] = _change(ChangeCollector.DIR,
+                                 False,
                                  False,
                                  copyfrom_path,     # base_path
                                  copyfrom_revision, # base_rev
@@ -397,6 +431,7 @@ class ChangeCollector(svn.delta.Editor):
       # can't be added or deleted, so this must be CHANGED
       self.changes[dir_path] = _change(ChangeCollector.DIR,
                                        True,
+                                       False,
                                        dir_baton[1], # base_path
                                        dir_baton[2], # base_rev
                                        dir_path,     # path
@@ -406,6 +441,7 @@ class ChangeCollector(svn.delta.Editor):
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
     self.changes[path] = _change(ChangeCollector.FILE,
+                                 False,
                                  False,
                                  copyfrom_path,     # base_path
                                  copyfrom_revision, # base_rev
@@ -423,11 +459,14 @@ class ChangeCollector(svn.delta.Editor):
 
   def apply_textdelta(self, file_baton):
     file_path = file_baton[0]
-    if not self.changes.has_key(file_path):
+    if self.changes.has_key(file_path):
+      self.changes[file_path].text_changed = True
+    else:
       # an add would have inserted a change record already, and it can't
       # be a delete with a text delta, so this must be a normal change.
       self.changes[file_path] = _change(ChangeCollector.FILE,
                                         False,
+                                        True,
                                         file_baton[1], # base_path
                                         file_baton[2], # base_rev
                                         file_path,     # path
@@ -446,6 +485,7 @@ class ChangeCollector(svn.delta.Editor):
       # be a delete with a prop change, so this must be a normal change.
       self.changes[file_path] = _change(ChangeCollector.FILE,
                                         True,
+                                        False,
                                         file_baton[1], # base_path
                                         file_baton[2], # base_rev
                                         file_path,     # path
@@ -454,14 +494,16 @@ class ChangeCollector(svn.delta.Editor):
 
 
 class _change:
-  __slots__ = [ 'item_type', 'prop_changes',
+  __slots__ = [ 'item_type', 'prop_changes', 'text_changed',
                 'base_path', 'base_rev', 'path',
                 'added',
                 ]
   def __init__(self,
-               item_type, prop_changes, base_path, base_rev, path, added):
+               item_type, prop_changes, text_changed, base_path, base_rev,
+               path, added):
     self.item_type = item_type
     self.prop_changes = prop_changes
+    self.text_changed = text_changed
     self.base_path = base_path
     self.base_rev = base_rev
     self.path = path
@@ -589,4 +631,6 @@ if __name__ == '__main__':
 #     o how to construct a ViewCVS URL for the diff
 #     o optional, non-mail log file
 #     o flag to disable generation of add/delete diffs
+#     o look up authors (username -> email; for the From: header) in a
+#       file(s) or DBM
 #
