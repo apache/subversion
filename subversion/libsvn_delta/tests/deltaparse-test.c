@@ -195,9 +195,6 @@ my_read_func (void *baton, char *buffer, apr_off_t *len, apr_pool_t *pool)
 }
 
 
-
-
-
 int main()
 {
   svn_delta_walk_t my_walker;
