@@ -558,8 +558,6 @@ set_error_hash (apr_hash_t *ht,
 static apr_hash_t *
 initialize_svn_error_descriptions (apr_pool_t *pool)
 {
-  apr_status_t *e;
-  apr_size_t es = sizeof(apr_status_t);
   apr_hash_t *ht = apr_hash_make (pool);
 
   /* Here we go. */
