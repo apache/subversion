@@ -147,17 +147,17 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
   int base_arg = 0;
 
   total_len = strlen (base);
-  if (base[total_len - 1] == '/')
+  if (total_len == 0)
+    {
+      /* if the base is empty, then skip it */
+      base_arg = 1;
+    }
+  else if (base[total_len - 1] == '/')
     {
       if (total_len == 1)
         base_is_root = 1;
       else
         --total_len;
-    }
-  else if (total_len == 0)
-    {
-      /* if the base is empty, then skip it */
-      base_arg = 1;
     }
   saved_lengths[0] = total_len;
 
