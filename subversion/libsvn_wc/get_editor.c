@@ -1772,37 +1772,33 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
    too, specifically for the case where a single directory is being
    committed (we have to anchor at that directory's parent in case the
    directory itself needs to be modified) */
+
 svn_error_t *
-svn_wc_get_actual_target (svn_stringbuf_t *path,
-                          svn_stringbuf_t **anchor,
-                          svn_stringbuf_t **target,
-                          apr_pool_t *pool)
+svn_wc_is_wc_root (svn_boolean_t *wc_root,
+                   svn_stringbuf_t *path,
+                   apr_pool_t *pool)
 {
   svn_stringbuf_t *parent, *basename, *expected_url;
   svn_wc_entry_t *p_entry, *entry;
   svn_error_t *err;
+
+  /* Go ahead and initialize our return value to the most common
+     (code-wise) values. */
+  *wc_root = TRUE;
 
   /* Get our ancestry (this doubles as a sanity check).  */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "svn_wc_get_actual_target: %s is not a versioned resource", path->data);
+       "svn_wc_is_wc_root: %s is not a versioned resource", path->data);
 
-  /* Go ahead and initialize our return values to the most common
-     (code-wise) values. */
-  *anchor = svn_stringbuf_dup (path, pool);
-  *target = NULL;
-
-
-  /*** Case I: If PATH is the current working directory, do not lop
-       off a basename.  Trivial.  */
+  /* If PATH is the current working directory, we have no choice but
+     to consider it a WC root (we can't examine its parent at all) */
   if (svn_path_is_empty (path, svn_path_local_style))
     return SVN_NO_ERROR;
 
-
-  /*** Case II: If we cannot get an entry for PATH's parent, then PATH
-       is a "WC root".  Do not lop off a basename. */
+  /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
   svn_path_split (path, &parent, &basename, svn_path_local_style, pool);
   if (svn_path_is_empty (parent, svn_path_local_style))
     svn_stringbuf_set (parent, ".");
@@ -1815,25 +1811,45 @@ svn_wc_get_actual_target (svn_stringbuf_t *path,
   if (! p_entry->ancestor)
     return svn_error_createf 
       (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY, 0, NULL, pool,
-       "svn_wc_get_actual_target: %s has no ancestry information.", 
+       "svn_wc_is_wc_root: %s has no ancestry information.", 
        parent->data);
 
-
-  /*** Case III: PATH's parent in the WC is not its parent in the
-       repository, and PATH itself is not missing from the disk,
-       making PATH a WC root.  Do not lop off a basename. */
+  /* If PATH's parent in the WC is not its parent in the repository,
+     PATH is a WC root. */
   expected_url = svn_stringbuf_dup (p_entry->ancestor, pool);
   svn_path_add_component (expected_url, basename, svn_path_url_style);
   if (entry->ancestor 
       && (! svn_stringbuf_compare (expected_url, entry->ancestor)))
     return SVN_NO_ERROR;
 
+  /* If we have not determined that PATH is a WC root by now, it must
+     not be! */
+  *wc_root = FALSE;
+  return SVN_NO_ERROR;
+}
 
-  /*** Cases IV-???: Split PATH into an anchor and target.  */
-  *anchor = parent;
-  if (svn_path_is_empty (parent, svn_path_local_style))
-    svn_stringbuf_set (*anchor, ".");
-  *target = basename;
+
+svn_error_t *
+svn_wc_get_actual_target (svn_stringbuf_t *path,
+                          svn_stringbuf_t **anchor,
+                          svn_stringbuf_t **target,
+                          apr_pool_t *pool)
+{
+  svn_boolean_t wc_root;
+
+  /* If PATH is a WC root, do not lop off a basename. */
+  SVN_ERR (svn_wc_is_wc_root (&wc_root, path, pool));
+  if (wc_root)
+    {
+      *anchor = svn_stringbuf_dup (path, pool);
+      *target = NULL;
+    }
+  else
+    {
+      svn_path_split (path, anchor, target, svn_path_local_style, pool);
+      if (svn_path_is_empty (*anchor, svn_path_local_style))
+        svn_stringbuf_set (*anchor, ".");
+    }
 
   return SVN_NO_ERROR;
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #  schedule_tests.py:  testing working copy scheduling
-#                      (adds, deletes)
+#                      (adds, deletes, reversion)
 #
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.
@@ -37,18 +37,23 @@ def sandbox(x):
 # Tests
 #
 #   Each test must return 0 on success or non-zero on failure.
-
+#
+#   NOTE: Tests in this section should be written in triplets.  First
+#   compose a test which make schedule changes and local mods, and
+#   verifies that status output is as expected.  Secondly, compose a
+#   test which calls the first test (to do all the dirty work), then
+#   test reversion of those changes.  Finally, compose a third test
+#   which, again, calls the first test to "set the stage", and then
+#   commit those changes.
+#
 #----------------------------------------------------------------------
 
-### BIG FAT TODO: I think all these tests should verify that
-### committing after the changes have been made is all good.
+#######################################################################
+#  Helper code for tests - The real work behind Stage I testing.
+#
 
-def add_files():
-  "add some files"
-
-  # Bootstrap
-  sbox = sandbox(add_files)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+def add_files_core(sbox, wc_dir):
+  "helper for add_files()"
 
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
@@ -85,15 +90,10 @@ def add_files():
 
   return svntest.actions.run_and_verify_status(wc_dir, expected_output_tree)
 
-
 #----------------------------------------------------------------------
 
-def add_directories():
-  "add some directories"
-
-  # Bootstrap
-  sbox = sandbox(add_directories)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+def add_directories_core(sbox, wc_dir):
+  "helper for add_directories()"
 
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
@@ -130,15 +130,10 @@ def add_directories():
 
   return svntest.actions.run_and_verify_status(wc_dir, expected_output_tree)
 
-
 #----------------------------------------------------------------------
 
-def nested_adds():
-  "add some nested files and directories"
-
-  # Bootstrap
-  sbox = sandbox(nested_adds)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+def nested_adds_core(sbox, wc_dir):
+  "helper for nested_adds()"
 
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
@@ -234,12 +229,8 @@ def nested_adds():
 
 #----------------------------------------------------------------------
 
-def delete_files():
-  "delete some files"
-
-  # Bootstrap
-  sbox = sandbox(delete_files)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+def delete_files_core(sbox, wc_dir):
+  "helper for delete_files()"
 
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
@@ -263,12 +254,8 @@ def delete_files():
 
 #----------------------------------------------------------------------
 
-def delete_dirs():
-  "delete some directories"
-
-  # Bootstrap
-  sbox = sandbox(delete_dirs)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+def delete_dirs_core(sbox, wc_dir):
+  "helper for delete_dirs()"
 
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
@@ -300,12 +287,8 @@ def delete_dirs():
 
 #----------------------------------------------------------------------
 
-def update_ignores_added():
-  "updates ignore files scheduled for addition"
-
-  # Bootstrap
-  sbox = sandbox(update_ignores_added)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+def update_ignores_added_core(sbox, wc_dir):
+  "helper for update_ignores_added()"
 
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
@@ -340,9 +323,246 @@ def update_ignores_added():
                                                expected_output_tree,
                                                expected_disk_tree,
                                                expected_status_tree)
+  
+#######################################################################
+#  Stage I - Schedules and modifications, verified with `svn status'
+#
 
+def add_files():
+  "schedule: add some files"
 
+  # Bootstrap
+  sbox = sandbox(add_files)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
 
+  return add_files_core(sbox, wc_dir)
+
+#----------------------------------------------------------------------
+
+def add_directories():
+  "schedule: add some directories"
+
+  # Bootstrap
+  sbox = sandbox(add_directories)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  return add_directories_core(sbox, wc_dir)
+
+#----------------------------------------------------------------------
+
+def nested_adds():
+  "schedule: add some nested files and directories"
+
+  # Bootstrap
+  sbox = sandbox(nested_adds)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  return nested_adds_core(sbox, wc_dir)
+
+#----------------------------------------------------------------------
+
+def delete_files():
+  "schedule: delete some files"
+
+  # Bootstrap
+  sbox = sandbox(delete_files)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  return delete_files_core(sbox, wc_dir)
+
+#----------------------------------------------------------------------
+
+def delete_dirs():
+  "schedule: delete some directories"
+
+  # Bootstrap
+  sbox = sandbox(delete_dirs)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  return delete_dirs_core(sbox, wc_dir)
+
+#----------------------------------------------------------------------
+
+def update_ignores_added():
+  "schedule: updates ignore files scheduled for addition"
+
+  # Bootstrap
+  sbox = sandbox(update_ignores_added)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  return update_ignores_added_core(sbox, wc_dir)
+
+#######################################################################
+#  Stage II - Reversion of changes made in Stage I
+#
+
+def revert_add_files():
+  "revert: add some files"
+
+  # Bootstrap
+  sbox = sandbox(revert_add_files)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if add_files_core(sbox, wc_dir):
+    return 1
+
+  return 0
+
+#----------------------------------------------------------------------
+
+def revert_add_directories():
+  "revert: add some directories"
+
+  # Bootstrap
+  sbox = sandbox(revert_add_directories)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if add_directories_core(sbox, wc_dir):
+    return 1
+
+  return 0
+
+#----------------------------------------------------------------------
+
+def revert_nested_adds():
+  "revert: add some nested files and directories"
+
+  # Bootstrap
+  sbox = sandbox(revert_nested_adds)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if nested_adds_core(sbox, wc_dir):
+    return 1
+
+  return 0
+
+#----------------------------------------------------------------------
+
+def revert_delete_files():
+  "revert: delete some files"
+
+  # Bootstrap
+  sbox = sandbox(revert_delete_files)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if delete_files_core(sbox, wc_dir):
+    return 1
+
+  return 0
+
+#----------------------------------------------------------------------
+
+def revert_delete_dirs():
+  "revert: delete some directories"
+
+  # Bootstrap
+  sbox = sandbox(revert_delete_dirs)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if delete_dirs_core(sbox, wc_dir):
+    return 1
+
+  return 0
+
+#----------------------------------------------------------------------
+
+def revert_update_ignores_added():
+  "revert: updates ignore files scheduled for addition"
+
+  # Bootstrap
+  sbox = sandbox(revert_update_ignores_added)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if update_ignores_added_core(sbox, wc_dir):
+    return 1
+
+  return 0
+
+#######################################################################
+#  Stage III - Commit of modifications made in Stage 1
+#
+
+def commit_add_files():
+  "commit: add some files"
+
+  # Bootstrap
+  sbox = sandbox(commit_add_files)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if add_files_core(sbox, wc_dir):
+    return 1
+
+  return 0
+
+#----------------------------------------------------------------------
+
+def commit_add_directories():
+  "commit: add some directories"
+
+  # Bootstrap
+  sbox = sandbox(commit_add_directories)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if add_directories_core(sbox, wc_dir):
+    return 1
+
+  return 0
+
+#----------------------------------------------------------------------
+
+def commit_nested_adds():
+  "commit: add some nested files and directories"
+
+  # Bootstrap
+  sbox = sandbox(commit_nested_adds)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if nested_adds_core(sbox, wc_dir):
+    return 1
+
+  return 0
+
+#----------------------------------------------------------------------
+
+def commit_delete_files():
+  "commit: delete some files"
+
+  # Bootstrap
+  sbox = sandbox(commit_delete_files)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if delete_files_core(sbox, wc_dir):
+    return 1
+
+  return 0
+
+#----------------------------------------------------------------------
+
+def commit_delete_dirs():
+  "commit: delete some directories"
+
+  # Bootstrap
+  sbox = sandbox(commit_delete_dirs)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if delete_dirs_core(sbox, wc_dir):
+    return 1
+
+  return 0
+
+#----------------------------------------------------------------------
+
+def commit_update_ignores_added():
+  "commit: updates ignore files scheduled for addition"
+
+  # Bootstrap
+  sbox = sandbox(commit_update_ignores_added)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if update_ignores_added_core(sbox, wc_dir):
+    return 1
+
+  return 0
 
 ########################################################################
 # Run the tests
@@ -355,7 +575,19 @@ test_list = [ None,
               nested_adds,
               delete_files,
               delete_dirs,
-              update_ignores_added
+              update_ignores_added,
+              # revert_add_files,
+              # revert_add_directories,
+              # revert_nested_adds,
+              # revert_delete_files,
+              # revert_delete_dirs,
+              # revert_update_ignores_added,
+              # commit_add_files,
+              # commit_add_directories,
+              # commit_nested_adds,
+              # commit_delete_files,
+              # commit_delete_dirs,
+              # commit_update_ignores_added,
              ]
 
 if __name__ == '__main__':

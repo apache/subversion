@@ -804,8 +804,9 @@ svn_wc_revert (svn_stringbuf_t *path,
                apr_pool_t *pool)
 {
   enum svn_node_kind kind;
-  svn_stringbuf_t *p_dir, *basename;
+  svn_stringbuf_t *p_dir = NULL, *basename = NULL;
   svn_wc_entry_t *entry;
+  svn_boolean_t wc_root;
 
   /* Safeguard 1:  is this a versioned resource? */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
@@ -831,10 +832,16 @@ svn_wc_revert (svn_stringbuf_t *path,
        "Cannot revert '%s' -- unsupported node kind in working copy", 
        path->data);
 
-  /* Split the basename from the parent path. */
-  svn_path_split (path, &p_dir, &basename, svn_path_local_style, pool);
-  if (svn_path_is_empty (p_dir, svn_path_local_style))
-    p_dir = svn_stringbuf_create (".", pool);
+  /* Determine if PATH is a WC root.  If PATH is a file, it should
+     definitely NOT be a WC root. */
+  SVN_ERR (svn_wc_is_wc_root (&wc_root, path, pool));
+  if (! wc_root)
+    {
+      /* Split the basename from the parent path. */
+      svn_path_split (path, &p_dir, &basename, svn_path_local_style, pool);
+      if (svn_path_is_empty (p_dir, svn_path_local_style))
+        p_dir = svn_stringbuf_create (".", pool);
+    }
 
   /*** Reverting added items. ***/
   if (entry->schedule == svn_wc_schedule_add)
@@ -874,20 +881,23 @@ svn_wc_revert (svn_stringbuf_t *path,
         SVN_ERR (revert_admin_things (p_dir, basename, entry->kind, pool));
 
       /* Reset the schedule to normal. */
-      SVN_ERR (svn_wc__entry_modify
-               (p_dir,
-                basename,
-                SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE,
-                SVN_INVALID_REVNUM,
-                svn_node_none,
-                svn_wc_schedule_normal,
-                svn_wc_existence_normal,
-                TRUE,
-                0,
-                0,
-                NULL,
-                pool,
-                NULL));
+      if (! wc_root)
+        {
+          SVN_ERR (svn_wc__entry_modify
+                   (p_dir,
+                    basename,
+                    SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE,
+                    SVN_INVALID_REVNUM,
+                    svn_node_none,
+                    svn_wc_schedule_normal,
+                    svn_wc_existence_normal,
+                    TRUE,
+                    0,
+                    0,
+                    NULL,
+                    pool,
+                    NULL));
+        }
 
       /* For directories only. */
       if (entry->kind == svn_node_dir) 

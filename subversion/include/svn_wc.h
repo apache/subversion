@@ -516,6 +516,18 @@ svn_error_t *svn_wc_get_update_editor (svn_stringbuf_t *anchor,
 
 
 /*
+ * Set *WC_ROOT to TRUE if PATH represents a "working copy root",
+ * FALSE otherwise.  Use POOL for any intermediate allocations.
+ *
+ * NOTE: Due to the way in which "WC-root-ness" is calculated, passing
+ * a PATH of `.' to this function will always return TRUE.
+ */
+svn_error_t *svn_wc_is_wc_root (svn_boolean_t *wc_root,
+                                svn_stringbuf_t *path,
+                                apr_pool_t *pool);
+
+
+/*
  * Conditionally split PATH into an ANCHOR and TARGET for the purpose
  * of updating and committing.
  *
@@ -525,7 +537,8 @@ svn_error_t *svn_wc_get_update_editor (svn_stringbuf_t *anchor,
  * TARGET is the actual subject (relative to the ANCHOR) of the
  * update/commit, or NULL if the ANCHOR itself is the subject.
  *
- * Do all necessary allocations in POOL.  */
+ * Do all necessary allocations in POOL.  
+ */
 svn_error_t *svn_wc_get_actual_target (svn_stringbuf_t *path,
                                        svn_stringbuf_t **anchor,
                                        svn_stringbuf_t **target,
