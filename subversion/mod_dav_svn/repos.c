@@ -385,19 +385,34 @@ static const struct special_defn
   int (*parse)(dav_resource_combined *comb, const char *path,
                const char *label, int use_checked_in);
 
+  /* The number of subcompenents after the !svn/xxx/... before we
+     reach the actual path within the repository. */
+  int numcomponents;
+
+  /* Boolean:  are the subcomponents followed by a repos path? */
+  int has_repos_path;
+
   /* The private resource type for the /$svn/xxx/ collection. */
   enum dav_svn_private_restype restype;
 
 } special_subdirs[] =
 {
-  { "ver", dav_svn_parse_version_uri, DAV_SVN_RESTYPE_VER_COLLECTION },
-  { "his", dav_svn_parse_history_uri, DAV_SVN_RESTYPE_HIS_COLLECTION },
-  { "wrk", dav_svn_parse_working_uri, DAV_SVN_RESTYPE_WRK_COLLECTION },
-  { "act", dav_svn_parse_activity_uri, DAV_SVN_RESTYPE_ACT_COLLECTION },
-  { "vcc", dav_svn_parse_vcc_uri, DAV_SVN_RESTYPE_VCC_COLLECTION },
-  { "bc", dav_svn_parse_baseline_coll_uri, DAV_SVN_RESTYPE_BC_COLLECTION },
-  { "bln", dav_svn_parse_baseline_uri, DAV_SVN_RESTYPE_BLN_COLLECTION },
-  { "wbl", dav_svn_parse_wrk_baseline_uri, DAV_SVN_RESTYPE_WBL_COLLECTION },
+  { "ver", dav_svn_parse_version_uri,
+    1, TRUE, DAV_SVN_RESTYPE_VER_COLLECTION },
+  { "his", dav_svn_parse_history_uri,
+    0, FALSE, DAV_SVN_RESTYPE_HIS_COLLECTION },
+  { "wrk", dav_svn_parse_working_uri,
+    1, TRUE,  DAV_SVN_RESTYPE_WRK_COLLECTION },
+  { "act", dav_svn_parse_activity_uri,
+    1, FALSE, DAV_SVN_RESTYPE_ACT_COLLECTION },
+  { "vcc", dav_svn_parse_vcc_uri,
+    1, FALSE, DAV_SVN_RESTYPE_VCC_COLLECTION },
+  { "bc", dav_svn_parse_baseline_coll_uri,
+    1, TRUE, DAV_SVN_RESTYPE_BC_COLLECTION },
+  { "bln", dav_svn_parse_baseline_uri,
+    1, FALSE, DAV_SVN_RESTYPE_BLN_COLLECTION },
+  { "wbl", dav_svn_parse_wrk_baseline_uri,
+    2, FALSE, DAV_SVN_RESTYPE_WBL_COLLECTION },
 
   { NULL } /* sentinel */
 };
@@ -437,7 +452,7 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
     {
       if (ch == '\0')
         {
-          /* URI was "/root/$svn". It exists, but has restricted usage. */
+          /* URI was "/root/!svn". It exists, but has restricted usage. */
           comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
           comb->priv.restype = DAV_SVN_RESTYPE_ROOT_COLLECTION;
         }
@@ -445,7 +460,7 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
         {
           const struct special_defn *defn;
 
-          /* skip past the "$svn/" prefix */
+          /* skip past the "!svn/" prefix */
           uri += len2 + 1;
           len1 -= len2 + 1;
 
@@ -457,7 +472,7 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
                 {
                   if (uri[len3] == '\0')
                     {
-                      /* URI was "/root/$svn/XXX". The location exists, but
+                      /* URI was "/root/!svn/XXX". The location exists, but
                          has restricted usage. */
                       comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
 
@@ -473,7 +488,7 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
                     }
                   else
                     {
-                      /* e.g. "/root/$svn/activity" (we just know "act") */
+                      /* e.g. "/root/!svn/activity" (we just know "act") */
                       return TRUE;
                     }
 
@@ -488,7 +503,7 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
     }
   else
     {
-      /* Anything under the root, but not under "$svn". These are all
+      /* Anything under the root, but not under "!svn". These are all
          version-controlled resources. */
       comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
       comb->res.versioned = TRUE;
@@ -791,7 +806,6 @@ static dav_resource *dav_svn_create_private_resource(
   comb->priv.uri_path = path;
   comb->priv.repos = base->info->repos;
   comb->priv.root.rev = SVN_INVALID_REVNUM;
-
   return &comb->res;
 }
 
@@ -811,28 +825,21 @@ static void log_warning(apr_pool_t *pool, void *baton, const char *fmt, ...)
   (void) pool;
 }
 
-static dav_error * dav_svn_get_resource(request_rec *r,
-                                        const char *root_path,
-                                        const char *label,
-                                        int use_checked_in,
-                                        dav_resource **resource)
-{
-  const char *fs_path;
-  const char *repo_name;
-  const char *xslt_uri;
-  const char *fs_parent_path;
-  dav_resource_combined *comb;
-  dav_svn_repos *repos;
-  apr_size_t len1;
-  char *uri;
-  const char *relative;
-  svn_error_t *serr;
-  dav_error *err;
-  int had_slash;
 
-  /* this is usually the first entry into mod_dav_svn, so let's initialize
-     the error pool, as a subpool of the request pool. */
-  (void) svn_error_init_pool(r->pool);
+dav_error * dav_svn_split_uri (request_rec *r,
+                               const char *root_path,
+                               const char **cleaned_uri,
+                               int *trailing_slash,
+                               const char **repos_name,
+                               const char **relative_path,
+                               const char **repos_path)
+{
+  apr_size_t len1;
+  int had_slash;
+  const char *fs_path;
+  const char *fs_parent_path;
+  const char *relative;
+  char *uri;
 
   /* one of these is NULL, the other non-NULL. */
   fs_path = dav_svn_get_fs_path(r);
@@ -848,50 +855,32 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                            "directive is required to specify the location "
                            "of this resource's repository.");
     }
-  
-  repo_name = dav_svn_get_repo_name(r);
-  xslt_uri = dav_svn_get_xslt_uri(r);
-
-  comb = apr_pcalloc(r->pool, sizeof(*comb));
-  comb->res.info = &comb->priv;
-  comb->res.hooks = &dav_svn_hooks_repos;
-  comb->res.pool = r->pool;
-
-  /* ### ugly hack to carry over Content-Type data to the open_stream, which
-     ### does not have access to the request headers. */
-  {
-    const char *ct = apr_table_get(r->headers_in, "content-type");
-
-    comb->priv.is_svndiff =
-      ct != NULL
-      && strcmp(ct, SVN_SVNDIFF_MIME_TYPE) == 0;
-  }
-
-  /* ### and another hack for computing diffs to send to the client */
-  comb->priv.delta_base = apr_table_get(r->headers_in,
-                                        SVN_DAV_DELTA_BASE_HEADER);
 
   /* make a copy so that we can do some work on it */
   uri = apr_pstrdup(r->pool, r->uri);
 
-  /* remove duplicate slashes */
+  /* remove duplicate slashes, and make sure URI has no trailing '/' */
   ap_no2slash(uri);
-
-  /* make sure the URI does not have a trailing "/" */
   len1 = strlen(uri);
   had_slash = (len1 > 0 && uri[len1 - 1] == '/');
   if (len1 > 1 && had_slash)
     uri[len1 - 1] = '\0';
+  
+  if (had_slash)
+    *trailing_slash = TRUE;
+  else
+    *trailing_slash = FALSE;
 
-  comb->res.uri = uri;
+  /* return the first item.  */
+  *cleaned_uri = apr_pstrdup(r->pool, uri);
 
   /* The URL space defined by the SVN provider is always a virtual
      space. Construct the path relative to the configured Location
      (root_path). So... the relative location is simply the URL used,
      skipping the root_path.
-
+     
      Note: mod_dav has canonialized root_path. It will not have a trailing
-           slash (unless it is "/").
+     slash (unless it is "/").
 
      Note: given a URI of /something and a root of /some, then it is
            impossible to be here (and end up with "thing"). This is simply
@@ -916,10 +905,22 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* ### need a better name... it isn't "relative" because of the leading
      ### slash. something about SVN-private-path */
 
-  /* Normal case:  the SVNPath command was used to specify a
-     particular repository.  Don't change {relative, root_path, fs_path}. */
+  /* Depending on whether SVNPath or SVNParentPath was used, we need
+     to compute 'relative' and 'repos_name' differently.  */
 
-  if (fs_parent_path != NULL)
+  /* Normal case:  the SVNPath command was used to specify a
+     particular repository.  */
+  if (fs_path != NULL)
+    {
+      /* the repos_name is the last component of root_path. */
+      *repos_name = svn_path_basename(root_path, r->pool); 
+
+      /* 'relative' is already correct for SVNPath; the root_path
+         already contains the name of the repository, so relative is
+         everything beyond that.  */      
+    }
+
+  else
     {
       /* SVNParentPath was used instead: assume the first component of
          'relative' is the name of a repository. */
@@ -952,10 +953,201 @@ static dav_error * dav_svn_get_resource(request_rec *r,
           relative = magic_end;
         }
 
-      root_path = svn_path_join (root_path, magic_component, r->pool);
-      fs_path = svn_path_join (fs_parent_path, magic_component, r->pool);
+      /* return answer */
+      *repos_name = magic_component;
     }
 
+  /* We can return 'relative' at this point too. */
+  *relative_path = apr_pstrdup(r->pool, relative);
+
+  /* Code to remove the !svn junk from the front of the relative path,
+     mainly stolen from dav_svn_parse_uri().  This code assumes that
+     the 'relative' string being parsed doesn't start with '/'. */
+  relative++;
+
+  {
+    const char *special_uri = dav_svn_get_special_uri(r);
+    apr_size_t len2;
+    char ch;
+
+    len1 = strlen(relative);
+    len2 = strlen(special_uri);
+    if (len1 > len2
+        && ((ch = relative[len2]) == '/' || ch == '\0')
+        && memcmp(relative, special_uri, len2) == 0)
+      {
+        if (ch == '\0')
+          {
+            /* relative is just "!svn", which is malformed. */
+            return dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                 SVN_ERR_APMOD_MALFORMED_URI,
+                                 "Nothing follows the svn special_uri.");
+          }
+        else
+          {
+            const struct special_defn *defn;
+            
+            /* skip past the "!svn/" prefix */
+            relative += len2 + 1;
+            len1 -= len2 + 1;
+            
+            for (defn = special_subdirs ; defn->name != NULL; ++defn)
+              {
+                apr_size_t len3 = strlen(defn->name);
+                
+                if (len1 >= len3 && memcmp(relative, defn->name, len3) == 0)
+                  {
+                    /* Found a matching special dir. */
+
+                    if (relative[len3] == '\0')
+                      {
+                        /* relative is "!svn/xxx"  */
+                        if (defn->numcomponents == 0)
+                          *repos_path = NULL;
+                        else
+                          return 
+                            dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                          SVN_ERR_APMOD_MALFORMED_URI,
+                                          "Missing info after special_uri.");
+                      }
+                    else if (relative[len3] == '/')
+                      {                      
+                        /* Skip past defn->numcomponents components,
+                           return everything beyond that.*/
+                        int j;
+                        const char *end, *start = relative + len3 + 1;
+                        
+                        for (j = 0; j < defn->numcomponents; j++)
+                          {
+                            end = ap_strchr_c(start, '/');
+                            if (! end)
+                              break;
+                            start = end + 1;
+                          }
+
+                        if (! end)
+                          {
+                            /* Did we break from the loop prematurely? */
+                            if (j != (defn->numcomponents - 1))
+                              return 
+                                dav_new_error(r->pool,
+                                              HTTP_INTERNAL_SERVER_ERROR,
+                                              SVN_ERR_APMOD_MALFORMED_URI,
+                                              "Not enough components"
+                                              " after special_uri.");
+                            
+                            if (! defn->has_repos_path)
+                              /* It's okay to not have found a slash. */
+                              *repos_path = NULL;
+                            else
+                              *repos_path = "/";
+                          }
+                        else
+                          {
+                            /* Found a slash after the special components. */
+                            *repos_path = apr_pstrdup(r->pool, start);
+                          }
+                      }
+                    else
+                      {
+                        return
+                          dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                        SVN_ERR_APMOD_MALFORMED_URI,
+                                        "Unknown data after special_uri.");
+                      }
+                    
+                  break;
+                  }
+              }
+            
+            if (defn->name == NULL)
+              dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                            SVN_ERR_APMOD_MALFORMED_URI,
+                            "Couldn't match subdir after special_uri.");
+          }
+      }
+    else
+      {
+        /* There's no "!svn/" at all, so the relative path is already
+           a valid path within the repository.  */
+        *repos_path = apr_pstrdup(r->pool, relative);
+      }    
+  }
+
+  return NULL;
+}
+
+
+
+static dav_error * dav_svn_get_resource(request_rec *r,
+                                        const char *root_path,
+                                        const char *label,
+                                        int use_checked_in,
+                                        dav_resource **resource)
+{
+  const char *fs_path;
+  const char *repo_name;
+  const char *xslt_uri;
+  const char *fs_parent_path;
+  dav_resource_combined *comb;
+  dav_svn_repos *repos;
+  const char *cleaned_uri;
+  const char *repos_name;
+  const char *relative;
+  const char *repos_path;
+  svn_error_t *serr;
+  dav_error *err;
+  int had_slash;
+
+  /* this is usually the first entry into mod_dav_svn, so let's initialize
+     the error pool, as a subpool of the request pool. */
+  (void) svn_error_init_pool(r->pool);
+  
+  repo_name = dav_svn_get_repo_name(r);
+  xslt_uri = dav_svn_get_xslt_uri(r);
+
+  /* This does all the work of interpreting/splitting the request uri. */
+  err = dav_svn_split_uri (r, root_path,
+                           &cleaned_uri, &had_slash, 
+                           &repos_name, &relative, &repos_path);
+  if (err)
+    return err;
+
+  /* The path that we will eventually try to open as an svn
+     repository.  Normally defined by the SVNPath directive. */
+  fs_path = dav_svn_get_fs_path(r);
+
+  /* If the SVNParentPath directive was used instead... */
+  fs_parent_path = dav_svn_get_fs_parent_path(r);
+  if (fs_parent_path != NULL)
+    {      
+      /* ...then the path to the repository is actually one implicit
+         component longer... */
+      root_path = svn_path_join (root_path, repos_name, r->pool);
+      /* ...and we need to specify exactly what repository to open. */
+      fs_path = svn_path_join (fs_parent_path, repos_name, r->pool);
+    }
+
+  /* Start building and filling a 'combination' object. */
+  comb = apr_pcalloc(r->pool, sizeof(*comb));
+  comb->res.info = &comb->priv;
+  comb->res.hooks = &dav_svn_hooks_repos;
+  comb->res.pool = r->pool;
+  comb->res.uri = cleaned_uri;
+
+  /* ### ugly hack to carry over Content-Type data to the open_stream, which
+     ### does not have access to the request headers. */
+  {
+    const char *ct = apr_table_get(r->headers_in, "content-type");
+
+    comb->priv.is_svndiff =
+      ct != NULL
+      && strcmp(ct, SVN_SVNDIFF_MIME_TYPE) == 0;
+  }
+
+  /* ### and another hack for computing diffs to send to the client */
+  comb->priv.delta_base = apr_table_get(r->headers_in,
+                                        SVN_DAV_DELTA_BASE_HEADER);
 
   /* "relative" is part of the "uri" string, so it has the proper
      lifetime to store here. */
