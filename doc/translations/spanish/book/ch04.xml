@@ -363,18 +363,18 @@ Checked out revision 341.
 
 <screen>
 $ pwd
-/home/user/my-calc-branch
+/home/usuario/my-calc-branch
 
 $ svn log --verbose integer.c
 ------------------------------------------------------------------------
-r343 | user | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+r343 | usuario | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 Changed paths:
    M /calc/branches/my-calc-branch/integer.c
 
 * integer.c:  frozzled the wazjub.
 
 ------------------------------------------------------------------------
-r341 | user | 2002-11-03 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+r341 | usuario | 2002-11-03 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 Changed paths:
    A /calc/branches/my-calc-branch (from /calc/trunk:340)
 
@@ -1009,7 +1009,7 @@ $ svn log --verbose --stop-on-copy \
           http://svn.example.com/repos/calc/branches/my-calc-branch
 &hellip;
 ------------------------------------------------------------------------
-r341 | user | 2002-11-03 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+r341 | usuario | 2002-11-03 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 Changed paths:
    A /calc/branches/my-calc-branch (from /calc/trunk:340)
 
@@ -1076,7 +1076,7 @@ $ cd calc/trunk
 $ svn log
 &hellip;
 ------------------------------------------------------------------------
-r406 | user | 2004-02-08 11:17:26 -0600 (Sun, 08 Feb 2004) | 1 line
+r406 | usuario | 2004-02-08 11:17:26 -0600 (Sun, 08 Feb 2004) | 1 line
 
 Merged my-calc-branch changes r341:405 into the trunk.
 ------------------------------------------------------------------------
@@ -1258,7 +1258,7 @@ $ cd parent-dir
 $ svn log --verbose
 &hellip;
 ------------------------------------------------------------------------
-r808 | joe | 2003-12-26 14:29:40 -0600 (Fri, 26 Dec 2003) | 3 lines
+r808 | jose | 2003-12-26 14:29:40 -0600 (Fri, 26 Dec 2003) | 3 lines
 Changed paths:
    D /calc/trunk/real.c
    M /calc/trunk/integer.c
