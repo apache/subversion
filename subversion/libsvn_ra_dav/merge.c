@@ -524,7 +524,7 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "<D:source><D:href>%s</D:href></D:source>"
                       "<D:no-auto-merge/><D:no-checkout/>"
                       "<D:prop>"
-                      "<D:checked-in><D:version-name/><D:resourcetype/>"
+                      "<D:checked-in/><D:version-name/><D:resourcetype/>"
                       "</D:prop>"
                       "</D:merge>", activity_url);
   http_set_request_body_buffer(req, body);
