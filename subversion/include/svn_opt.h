@@ -216,16 +216,14 @@ typedef struct svn_opt_revision_t
  * Set @a *start_revision and/or @a *end_revision according to @a arg, 
  * where @a arg is "N" or "N:M", like so:
  * 
- *    - If @a arg is "N", set @a *start_revision's kind to
- *      @c svn_opt_revision_number and its value to the number N; and
+ *    - If @a arg is "N", set @a *start_revision to represent N, and
  *      leave @a *end_revision untouched.
  *
- *    - If @a arg is "N:M", set @a *start_revision's and @a *end_revision's
- *      kinds to @c svn_opt_revision_number and values to N and M
- *      respectively. 
+ *    - If @a arg is "N:M", set @a *start_revision and @a *end_revision
+ *      to represent N and M respectively. 
  * 
  * N and/or M may be one of the special revision descriptors
- * recognized by @c revision_from_word().
+ * recognized by @c revision_from_word(), or a date in curly braces.
  *
  * If @a arg is invalid, return -1; else return 0.
  * It is invalid to omit a revision (as in, ":", "N:" or ":M").
@@ -234,6 +232,8 @@ typedef struct svn_opt_revision_t
  *
  * It is typical, though not required, for @a *start_revision and
  * @a *end_revision to be @c svn_opt_revision_unspecified kind on entry.
+ *
+ * Use @a pool for temporary allocations.
  */
 int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
                             svn_opt_revision_t *end_revision,
