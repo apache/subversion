@@ -502,6 +502,36 @@ ra_get_dated_revision (VALUE self, VALUE aDate)
   return LONG2NUM (revision);
 }
 
+struct close_commit_baton_t
+{
+  VALUE proc;
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+ra_close_commit (void *close_baton,
+		 svn_stringbuf_t *path,
+		 svn_boolean_t recurse,
+		 svn_revnum_t new_rev)
+{
+  struct close_commit_baton_t *bt = close_baton;
+  int error;
+  VALUE args[5];
+
+  args[0] = bt->proc;
+  args[1] = (VALUE) "call";
+  args[2] = rb_str_new (path->data, path->len);
+  args[3] = recurse ? Qtrue : Qfalse;
+  args[4] = LONG2NUM (new_rev);
+
+  rb_protect (svn_ruby_protect_call3, (VALUE) args, &error);
+
+  if (error)
+    return svn_ruby_error ("close commit function", bt->pool);
+
+  return SVN_NO_ERROR;
+}
+
 static VALUE
 ra_get_commit_editor (int argc, VALUE *argv, VALUE self)
 {
@@ -513,6 +543,8 @@ ra_get_commit_editor (int argc, VALUE *argv, VALUE self)
   svn_error_t *err;
   svn_ruby_ra_t *ra;
   VALUE logMessage, getFunc, setFunc, closeFunc;
+  svn_ra_close_commit_func_t close_func = NULL;
+  struct close_commit_baton_t *cb = NULL;
 
   Data_Get_Struct (self, svn_ruby_ra_t, ra);
 
@@ -520,9 +552,9 @@ ra_get_commit_editor (int argc, VALUE *argv, VALUE self)
     rb_raise (rb_eRuntimeError, "not opened");
 
   rb_scan_args (argc, argv, "04", &logMessage, &getFunc, &setFunc, &closeFunc);
-  if (getFunc != Qnil || setFunc != Qnil || closeFunc != Qnil)
+  if (getFunc != Qnil || setFunc != Qnil)
     rb_raise (rb_eNotImpError,
-              "getFunc, setFunc and closeFunc are not yet implemented");
+              "getFunc, setFunc are not yet implemented");
   if (logMessage != Qnil)
     Check_Type (logMessage, T_STRING);
 
@@ -533,10 +565,18 @@ ra_get_commit_editor (int argc, VALUE *argv, VALUE self)
   else
     log_msg = svn_stringbuf_create ("", pool);
 
-  /* #### four NULLs below are hack. */
+  if (closeFunc != Qnil)
+    {
+      close_func = ra_close_commit;
+      cb = apr_palloc (pool, sizeof (*cb));
+      cb->proc = closeFunc;
+      cb->pool = pool;
+    }
+  /* #### NULLs below are hack. */
   err = ra->plugin->get_commit_editor (ra->session_baton,
                                        &editor, &edit_baton,
-                                       log_msg, NULL, NULL, NULL, NULL);
+                                       log_msg, NULL, NULL,
+                                       close_func, (void *)cb);
   return svn_ruby_commit_editor_new (editor, edit_baton, pool);
 }
 
