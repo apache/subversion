@@ -58,6 +58,7 @@
 #include <http_config.h>
 #include <mod_dav.h>
 
+#include "config.h"
 #include "dav_svn.h"
 
 
@@ -70,6 +71,12 @@ typedef struct {
 /* Note: the "dav_svn" prefix is mandatory */
 extern module MODULE_VAR_EXPORT dav_svn_module;
 
+
+static void dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
+                         server_rec *s)
+{
+    ap_add_version_component(p, "SVN/" SVN_VERSION);
+}
 
 static void *dav_svn_create_server_config(apr_pool_t *p, server_rec *s)
 {
@@ -104,6 +111,8 @@ static const dav_provider dav_svn_provider =
 
 static void register_hooks(void)
 {
+    ap_hook_post_config(dav_svn_init, NULL, NULL, AP_HOOK_MIDDLE);
+
     /* our provider */
     dav_register_provider(NULL /* ### pconf */, "svn", &dav_svn_provider);
 
