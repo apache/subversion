@@ -1,0 +1,17 @@
+<colophon id="svn-colophon">
+  <title>Colophon</title>
+
+  <simplesect>
+
+    <para>Etc.</para>
+
+  </simplesect>
+
+</colophon>
+
+<!--
+local variables: 
+eval: (load-file "../tools/svnbook.el")
+sgml-parent-document: ("book.xml" "colophon")
+end:
+-->

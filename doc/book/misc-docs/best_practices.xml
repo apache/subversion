@@ -1,0 +1,329 @@
+<chapter id="misc-docs-best_practices">
+  <title>Best Practices</title>
+
+<simplesect>
+
+    <para>Tips to use Subversion more effectively.</para>
+
+    <para>In this chapter, we'll focus on how to avoid some pitfalls
+      of version control systems in general and Subversion
+      specifically.</para>
+
+  </simplesect>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="misc-docs-best_practices-sect-1">
+    <title>Source Code Formatting</title>
+
+    <para>Subversion diffs and merges text files work on a
+      line-by-line basis. They don't understand the syntax of
+      programming languages or even know when you've just reflowed
+      text to a different line width.</para>
+
+    <para>Given this design, it's important to avoid unnecessary
+      reformatting. It creates unnecessary conflicts when merging
+      branches, updating working copies, and applying patches. It also
+      can drown you in noise when viewing differences between
+      revisions.</para>
+
+    <para>You can avoid these problems by following clearly-defined
+      formatting rules.  The Subversion project's own HACKING document
+      (<systemitem
+      class="url">http://svn.collab.net/repos/svn/trunk/HACKING</systemitem>)
+      and the Code Conventions for the Java Programming Language
+      (<systemitem
+      class="url">http://java.sun.com/docs/codeconv/html/CodeConvTOC.doc.html</systemitem>),
+      are good examples.</para>
+    
+    <para>Tabs are particularly important. Some projects, like
+      Subversion, do not use tabs at all in the source tree. Others
+      always use them and define a particular tab size.</para>
+
+    <para>It can be very helpful to have an editor smart enough to
+      help adhere to these rules. For example, <command>vim</command>
+      can do this on a per-project basis with
+      <filename>.vimrc</filename> commands like the following:</para>
+
+    <screen>
+autocmd BufRead,BufNewFile */rapidsvn/*.{cpp,h}
+    setlocal ts=4 noexpandtab
+autocmd BufRead,BufNewFile */subversion/*.[ch]
+    setlocal sw=2 expandtab cinoptions=>2sn-s{s^-s:s
+    </screen>
+
+    <para>Check your favorite editor's documentation for more
+      information.</para>
+
+    <sect2 id="misc-docs-best_practices-sect-1.1">
+      <title>When You Have To Reformat</title>
+      
+      <para>In the real world, we're not always so perfect. Formatting
+        preferences may change over time, or we may just make
+        mistakes. There are things you can do to minimize the problems
+        of reformatting.</para>
+      
+      <para>These are good guidelines to follow:</para>
+      
+      <itemizedlist>
+        
+        <listitem>
+          <para>If you're making a sweeping reformatting change, do it
+            in a single commit with no semantic changes. Give precise
+            directions on duplicating formatting changes.</para>
+        </listitem>
+        
+        <listitem>
+          <para>If you've made semantic changes to some area of code and
+            see inconsistent formatting in the immediate context, it's
+            okay to reformat.  Causing conflicts is not as great a
+            concern because your semantic changes are likely to do that
+            anyway.</para>
+        </listitem>
+        
+      </itemizedlist>
+      
+      <para>Here's an example of a sweeping reformat:</para>
+      
+      <screen>
+$ svn co file:///repo/path/trunk indent_wc
+$ indent -gnu indent_wc/src/*.[ch]
+$ svn commit -m 'Ran indent -gnu src/*.[ch]' indent_wc
+        </screen>
+      
+      <para>This follows all rules: there were no semantic changes mixed
+        in (no files were changed other than through
+        <command>indent</command>). The <command>indent</command>
+        commandline was given, so the changes can be very easily
+        duplicated. All the reformatting was done in a single
+        revision.</para>
+      
+      <para>Let's say these changes occurred to the trunk at revision
+        26. The head revision is now 42. You created a branch at
+        revision 13 and now want to merge it back into the
+        trunk. Ordinarily you'd do this:</para>
+      
+      <screen>
+$ svn co file://repo/path/trunk merge_wc
+$ svn merge -r 13:head file://repo/path/branches/mybranch merge_wc
+&hellip; # resolve conflicts
+$ svn commit -m 'Merged branch'
+      </screen>
+      
+      <para>But with the reformatting changes, there will be many, many
+        conflicts. If you follow these rules, you can merge more
+        easily:</para>
+      
+      <screen>
+$ svn co -r 25 file://repo/path/trunk merge_wc
+$ svn merge -r 13:head file://repo/path/branches/mybranch merge_wc
+&hellip; # resolve conflicts
+$ indent -gnu src/*.[ch]
+$ svn up
+&hellip; # resolve conflicts
+$ svn commit -m 'Merged branch'
+      </screen>
+      
+      <para>In English, the procedure is:</para>
+      
+      <itemizedlist>
+        
+        <listitem>
+          <para> Check out a pre-reformatting trunk working copy.</para>
+        </listitem>
+        
+        <listitem>
+          <para> Merge all branch changes. Fix conflicts.</para>
+        </listitem>
+        
+        <listitem>
+          <para> Reformat in the same manner.</para>
+        </listitem>
+
+        <listitem>
+          <para> Update to the head revision. Fix conflicts.</para>
+        </listitem>
+        
+        <listitem>
+          <para> Check in the merged working copy.</para>
+        </listitem>
+        
+      </itemizedlist>
+      
+    </sect2>
+    
+    <sect2 id="misc-docs-best_practices-sect-1.2">
+      <title>Ignoring Whitespace Differences</title>
+      
+      <para>When viewing differences between revisions, you can
+        customize <command>svn diff</command> output to hide whitespace
+        changes. The <option>-x</option> argument passes arguments
+        through to GNU diff. Here are some useful arguments:</para>
+      
+      <table id="misc-docs-best_practices-table-1">
+        <title></title>
+        <tgroup cols="2">
+          <thead>
+            <row>
+              <entry>Option</entry>
+              <entry>Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            
+            <row>
+              <entry><option>-b</option></entry> 
+              <entry>Ignore differences in whitespace only.</entry>
+            </row>
+            
+            <row>
+              <entry><option>-B</option></entry>
+              <entry>Ignore added/removed blank lines.</entry>
+            </row>
+            
+            <row>
+              <entry><option>-i</option></entry>
+              <entry>Ignore changes in case.</entry>
+            </row>
+            
+            <row>
+              <entry><option>-t</option></entry>
+              <entry>Expand tabs to spaces to preserve
+                alignment.</entry>
+            </row>
+            
+            <row>
+              <entry><option>-T</option></entry>
+              <entry>Output a tab rather than a space at the beginning
+                of each line to start on a tab stop.</entry>
+            </row>
+            
+          </tbody>
+        </tgroup>
+      </table>
+      
+      <para>The commit emails always show whitespace-only changes.
+        <filename>commit-email.pl</filename> uses <command>svnlook diff</command> to get
+        differences, which doesn't support the <option>-x</option>
+        option.</para>
+      
+    </sect2>
+
+    <sect2 id="misc-docs-best_practices-sect-1.3">
+      <title>Line Endings</title>
+      
+      <para>Different platforms (Unix, Windows, MacOS) have different
+        conventions for marking the line endings of text files. Simple
+        editors may rewrite line endings, causing problems with diff and
+        merge. This is a subset of the formatting problems.</para>
+      
+      <para>Subversion has built-in support for normalizing line
+        endings. To enable it, set the <command>svn:eol-style</command>
+        property to ``native''. See Properties in the Subversion
+        book. for more information</para>
+
+    </sect2>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="misc-docs-best_practices-sect-2">
+    <title>When you commit</title>
+
+    <para>It pays to take some time before you commit to review your
+      changes and create an appropriate log message. You are
+      publishing the newly changed project anew every time you
+      commit. This is true in two senses:</para>
+
+    <itemizedlist>
+
+      <listitem>
+        <para> When you commit, you are potentially destabilizing the
+          head revision.  Many projects have a policy that the head
+          revision is <quote>stable</quote>&mdash;it should always
+          parse/compile, it should always pass unit tests, etc. If you
+          don't get something right, you may be inconveniencing an
+          arbitrary number of people until someone commits a fix.</para>
+      </listitem>
+
+      <listitem>
+        <para> You can not easily remove revisions. (There is no
+          equivalent to <command>cvs admin -o</command>.) If you might
+          not want something to be in the repository, make sure it is
+          not included in your commit.  Check for sensitive
+          information, autogenerated files, and unnecessary large
+          files.</para>
+      </listitem>
+
+    </itemizedlist>
+
+    <para>If you later don't like your log message, it is possible to
+      change it. The <command>svnadmin setlog</command> command will
+      do this locally. You can set up the script <systemitem
+      class="url">http://svn.collab.net/repos/svn/trunk/tools/cgi/tweak-log.cgi,tweak-log.cgi</systemitem>
+      to allow the same thing remotely. All the same, creating a good
+      log message beforehand helps clarify your thoughts and avoid
+      committing a mistake.</para>
+
+    <para>You should run a <command>svn diff</command> before each
+      commit and ask yourself:</para>
+
+    <itemizedlist>
+
+      <listitem>
+        <para> do these changes belong together? It's best that each
+          revision is a single logical change. It's very easy to
+          forget that you've started another change.
+        </para>
+      </listitem>
+
+      <listitem>
+        <para> do I have a log entry for these changes?
+        </para>
+      </listitem>
+
+    </itemizedlist>
+
+    <para>Defining a log entry policy is also helpful --- the
+      Subversion HACKING document <systemitem
+      class="url">http://svn.collab.net/repos/svn/trunk/HACKING</systemitem>
+      is a good model. If you always embed filenames, function names,
+      etc. then you can easily search through the logs with
+      search-svnlog.pl <systemitem
+      class="url">http://svn.collab.net/repos/svn/trunk/tools/client-side/search-svnlog.pl</systemitem>.</para>
+
+    <para>You may want to write the log entry as you go. It's common
+      to create a file <filename>changes</filename> with your log
+      entry in progress. When you commit, use <command>svn ci -F
+      changes</command>.</para>
+
+    <para>If you do not write log entries as you go, you can generate
+      an initial log entry file using the output of <command>svn
+      status</command> which contains a list of all modified files and
+      directories and write a comment for each one.</para>
+
+    <sect2 id="misc-docs-best_practices-sect-2.1">
+      <title>Binary Files</title>
+      
+      <para>Subversion does not have any way to merge or view
+        differences of binary files, so it's critical that these have
+        accurate log messages. Since you can't review your changes
+        with <command>svn diff</command> immediately before
+        committing, it's a particularly good idea to write the log
+        entry as you go.</para>
+
+    </sect2>
+
+  </sect1>
+
+</chapter>
+
+<!--
+local variables: 
+eval: (load-file "../tools/svnbook.el")
+sgml-parent-document: ("misc-docs.xml" "chapter")
+end:
+-->

@@ -1,0 +1,522 @@
+<chapter id="svn-ch-6">
+<title>Advanced Topics</title>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-6-sect-1">
+    <title>Run-time Configuration Area</title>
+    
+    <para>When you first run the <command>svn</command> command-line
+      client, it creates a per-user <firstterm>configuration
+      area</firstterm>.  On Unix-like systems, a
+      <filename>.subversion/</filename> directory is created in the
+      user's home directory.  On Win32 systems, a
+      <filename>Subversion</filename> folder is created wherever its
+      appropriate to do so (typically somewhere within
+      <filename>Documents and Settings\username</filename>, although
+      it depends on the system.)</para>
+
+    <sect2 id="svn-ch-6-sect-1.1">
+      <title>Proxies</title>
+      
+      <para>At the time of writing, the configuration area only
+        contains one item: a <filename>proxies</filename> file.  By
+        setting values in this file, your Subversion client can
+        operate through an http proxy.  (Read the file itself for
+        details; it should be self-documenting.)</para><!-- ###TODO
+      This is already inaccurate. -Fitz :) -->
+      
+    </sect2>
+
+    <sect2 id="svn-ch-6-sect-1.2">
+      <title>Config</title>
+
+      <para>Soon&mdash;very soon&mdash;a <filename>config</filename>
+        file will exist in this area for defining general user
+        preferences.  For example, the preferred
+        <command>$EDITOR</command> to use, options to pass through to
+        <command>svn diff</command>, preferences for date/time
+        formats, and so on.  </para> <!-- ###TODO This is already
+        inaccurate. See issue 668 -Fitz :) -->
+
+    </sect2>
+
+    <sect2 id="svn-ch-6-sect-1.3">
+      <title>Multiple config areas</title>
+      
+      <para>On Unix, an administrator can create <quote>global</quote>
+        Subversion preferences by creating and populating an
+        <filename>/etc/subversion/</filename> area.  The per-user
+        <filename>~/.subversion/</filename> configuration will still
+        override these defaults, however.</para>
+
+      <para>On Win32, an administrator has the option of creating
+        three other locations: a global
+        <filename>Subversion</filename> folder in the <quote>All
+        Users</quote> area, a collection of global registry settings,
+        or a collection of per-user registry settings.  The registry
+        settings are set in:</para>
+
+      <screen>
+HKCU\Software\Tigris.org\Subversion\Proxies
+HKCU\Software\Tigris.org\Subversion\Config
+etc.
+      </screen>
+
+      <para>To clarify, here is the order Subversion searches for
+        run-time settings on Win32.  Each subsequent location
+        overrides the previous one:</para>
+
+      <itemizedlist>
+
+        <listitem>
+          <para>global registry</para>
+        </listitem>
+
+        <listitem>
+          <para>global <filename>Subversion</filename> folder
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>user registry
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>user <filename>Subversion</filename> folder
+          </para>
+        </listitem>
+
+      </itemizedlist>
+
+    </sect2>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-6-sect-2">
+    <title>Properties</title>
+
+    <!-- ###TODO This is the way this chapter was laid out in the
+    outline. This pull from the handbook doesn't really follow that,
+    so we need to decide what to do here.
+    
+         1. General use (pset, pget, plist, pdel, pedit)
+         2. EOL translation
+         3. Keyword substitution
+         4. Other special keywords (executable, mime-type, ignore) -->
+
+    <para>Subversion allows you to attach arbitrary
+      <quote>metadata</quote> to files and directories.  We refer to
+      this data as <firstterm>properties</firstterm>, and they can be
+      thought of as collections of name/value pairs (hash-tables)
+      attached to each item in your working copy.</para>
+  
+    <para>To set or get a property on a file or directory, use the
+      <command>svn propset</command> and <command>svn
+      propget</command> commands.  To list all properties attached to
+      an item, use <command>svn proplist</command>.  To delete a
+      property, use <command>svn propdel</command>.</para>
+
+    <screen>
+$ svn propset color green foo.c
+property `color' set on 'foo.c'
+
+$ svn propget color foo.c
+green
+
+$ svn propset height "5 feet" foo.c
+property `height' set on 'foo.c'
+
+ svn proplist foo.c
+Properties on 'foo.c':
+  height
+  color
+
+$ svn proplist foo.c --verbose
+Properties on 'foo.c':
+  height : 5 feet
+  color : green
+
+$ svn propdel color foo.c
+property `color' deleted from 'foo.c'
+    </screen>
+
+    <para>Properties are <emphasis>versioned</emphasis>, just like
+      file contents.  This means that new properties can be merged
+      into your working files, and can sometimes come into conflict
+      too.  Property values need not be text, either.  For example,
+      you could attach a binary property-value by using the
+      <option>-F</option> switch:</para>
+
+<screen>
+$ svn propset x-face -F joeface.jpg foo.c
+property `x-face' set on 'foo.c'
+</screen>
+
+    <para>Subversion also provides a great convenience method for
+      editing existing properties: <command>svn
+      propedit</command>. When you invoke it, Subversion will open the
+      value of the property in question in your favorite editor (or at
+      least the editor that you've defined as
+      <command>$EDITOR</command> in your shell), and you can edit the
+      value just as you would edit any text file. This is
+      exceptionally convenient for properties that are a
+      newline-separated array of values. (More about this
+      later).</para>
+
+    <para>Property changes are still considered <quote>local
+      modifications</quote>, and aren't permanent until you commit.
+      Like textual changes, property changes can be seen by
+      <command>svn diff</command>, <command>svn status</command>, and
+      reverted altogether with <command>svn revert</command>:</para>
+
+    <screen>
+$ svn diff
+Property changes on: foo.c
+___________________________________________________________________
+Name: color
+   + green
+
+$ svn status
+_M   foo.c
+    </screen>
+
+    <para>Notice that a 2nd column has appeared in the status output;
+      the leading underscore indicates that you've not made any
+      textual changes, but the <literal>M</literal> means you've
+      modified the properties.  <command>svn status</command> tries to
+      hide the 2nd <quote>property</quote> column when an item has no
+      properties at all; this was a design choice, to ease new users
+      into the concept.  When properties are created, edited, or
+      updated on an item, that 2nd column appears forever
+      after.</para>
+
+    <para>Also: don't worry about the non-standard way that Subversion
+      currently displays property differences.  You can still run
+      <command>svn diff</command> and redirect the output to create a
+      usable patch file.  The <command>patch</command> program will
+      ignore property patches; as a rule, it ignores any noise it
+      can't understand.  (In future versions of Subversion, though, we
+      may start using a new patch format that describes property
+      changes and file copies/renames.)</para><!-- ###TODO Do we want
+      to mention "we may do this" kind of stuff? -Fitz -->
+
+    <sect2 id="svn-ch-6-sect-2.1">
+      
+     <title>Special properties</title>
+
+      <para>Subversion has no particular policy regarding properties;
+        they can be used for any purpose.  The only restriction is
+        that Subversion has reserved the <literal>svn:</literal> name
+        prefix for itself.  A number of special <quote>magic</quote>
+        properties begin with this prefix.  We'll cover these features
+        here.</para>
+      
+      <sect3 id="svn-ch-6-sect-2.1.1">
+        <title><literal>svn:executable</literal></title>
+        
+        <para>This is a file-only property, and can be set to any
+          value.  Its mere existence causes a file's permissions to be
+          executable.</para>
+
+      </sect3>
+
+      <sect3 id="svn-ch-6-sect-2.1.2">
+        <title><literal>svn:mime-type</literal></title>
+        
+        <para>At the present time, Subversion examines the
+          <literal>svn:mime-type</literal> property to decide if a
+          file is text or binary.  If the file has no
+          <literal>svn:mime-type</literal> property, or if the
+          property's value matches <literal>text/*</literal>, then
+          Subversion assumes it is a text file.  If the file has the
+          <literal>svn:mime-type</literal> property set to anything
+          other than <literal>text/*</literal>, it assumes the file is
+          binary.</para>
+
+        <para>If Subversion believes that the file is binary, it will
+          not attempt to perform contextual merges during updates.
+          Instead, Subversion creates two files side-by-side in your
+          working copy; the one containing your local modifications is
+          renamed with a <filename>.orig</filename> extension.</para>
+
+        <para>Subversion also helps users by running a
+          binary-detection algorithm in the <command>svn
+          import</command> and <command>svn add</command> subcommands.
+          These subcommands try to make a good guess at a file's
+          binary-ness, and then (possibly) set a
+          <literal>svn:mime-type</literal> property of
+          <literal>application/octet-stream</literal> on the file
+          being added.  (If Subversion guesses wrong, you can always
+          remove or hand-edit the property.)</para>
+
+        <para>Finally, if the <literal>svn:mime-type</literal>
+          property is set, then mod_dav_svn will use it to fill in the
+          <literal>Content-type:</literal> header when responding to
+          an http GET request.  This makes files display more nicely
+          when perusing a repository with a web browser.</para>
+
+      </sect3>
+
+      <sect3 id="svn-ch-6-sect-2.1.3">
+        <title><literal>svn:ignore</literal></title>
+
+        <para>If you attach this property to a directory, it causes
+          certain file patterns within the directory to be ignored by
+          <command>svn status</command>.  For example, suppose I don't
+          want to see object files or backup files in my status
+          listing:</para>
+
+        <screen>
+$ svn status
+M  ./foo.c
+?  ./foo.o
+?  ./foo.c~
+        </screen>
+
+        <para>Using <command>svn propedit</command>, I would set the
+          value of <literal>svn:ignore</literal> to a
+          newline-delimited list of patterns:</para>
+
+        <screen>
+$ svn propget svn:ignore .
+*.o
+*~
+        </screen>
+
+      </sect3>
+
+      <sect3 id="svn-ch-6-sect-2.1.4">
+        <title><literal>svn:keywords</literal></title>
+
+        <para>Subversion has the ability to substitute useful strings
+          into special <firstterm>keywords</firstterm> within text
+          files.  For example, if I placed this text into a
+          file:</para>
+
+        <screen>
+Here is the latest report from the front lines.
+$LastChangedDate$
+Cumulus clouds are appearing more frequently as summer approaches.
+        </screen>
+        
+        <para>Subversion is able substitute the
+          <literal>$LastChangedDate$</literal> string with the actual
+          date in which this file last changed.  The keyword string is
+          not removed in the replacement, just the specific
+          information is placed after the keyword string:</para>
+
+        <screen>
+Here is the latest report from the front lines.
+$LastChangedDate: 2002-07-22 21:42:37 -0700 (Mon, 22 Jul 2002) $
+Cumulus clouds are appearing more frequently as summer approaches.
+        </screen>
+
+        <variablelist>
+          <title>Subversion substitutes five keywords</title>
+
+          <varlistentry>
+            <term>LastChangedDate</term>
+            <listitem>
+              <para>The last time this file changed.  Can also be
+                abbreviated as <literal>Date</literal>.  The keyword
+                substitution of <literal>$LastChangedDate$</literal>
+                will look something like <literal>$LastChangedDate:
+                2002-07-22 21:42:37 -0700 (Mon, 22 Jul 2002)
+                $</literal>.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term>LastChangedRevision</term>
+            <listitem>
+              <para>The last revision in which this file changed.  Can
+                be abbreviated as <literal>Rev</literal>.  The keyword
+                substitution of
+                <literal>$LastChangedRevision</literal> will look
+                something like <literal>$LastChangedRevision: 144
+                $</literal>.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term>LastChangedBy</term>
+            <listitem>
+              <para>The last user to change this file.  Can be
+                abbreviated as <literal>Author</literal>.  The keyword
+                substitution of <literal>$LastChangedBy$</literal>
+                will look something like <literal>$LastChangedBy: joe
+                $</literal>.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term>HeadURL</term>
+            <listitem>
+              <para>A full URL to the latest version of the file in
+                the repository.  Can be abbreviated as
+                <literal>URL</literal>.  The keyword substitution of
+                <literal>$HeadURL$</literal> will look something like
+                <literal>$HeadURL:
+                http://svn.collab.net/repos/trunk/README
+                $</literal>.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term>Id</term>
+            <listitem>
+              <para>A compressed summary of the other keywords, for
+                example: <literal>$Id: bar 148 2002-07-28 21:30:43 epg
+                $</literal>.  This means the file
+                <literal>bar</literal> was last changed in revision
+                148 by committer <literal>epg</literal>, at 2002-07-28
+                21:30:43.</para>
+            </listitem>
+          </varlistentry>
+
+        </variablelist>
+        
+        <para>To activate a keyword, or set of keywords, you merely
+          need to set the <literal>svn:keywords</literal> property to
+          a list of keywords you want replaced.  Keywords not listed
+          in <literal>svn:keywords</literal> will not be
+          replaced.</para>
+
+        <screen>
+$ svn propset svn:keywords "Date Author" foo.c
+property `svn:keywords' set on 'foo.c'
+        </screen>
+        
+        <para>And when you commit this property change, you'll
+          discover that all occurrences of <literal>$Date$</literal>,
+          <literal>$LastChangedDate$</literal>,
+          <literal>$Author$</literal>, and
+          <literal>$LastChangedBy$</literal> will have substituted
+          values within <filename>foo.c</filename>.</para>
+
+      </sect3>
+
+      <sect3 id="svn-ch-6-sect-2.1.5">
+        <title><literal>svn:eol-style</literal></title>
+
+        <para>By default, Subversion doesn't pay any attention to line
+          endings.  If a text file has either LF, CR, or CRLF endings,
+          then those are the line endings that will exist on the file
+          in both the repository and working copy.</para>
+        
+        <para>But if developers are working on different platforms,
+          line endings can sometimes become troublesome.  For example,
+          if a Win32 developer and Unix developer took turns modifying
+          a file, its line endings might flip-flop back and forth from
+          revision to revision in the repository.  This makes
+          examining or merging differences very difficult, as
+          <emphasis>every</emphasis> line appears to be changed in
+          each version of the file.</para>
+
+        <para>The solution here is to set the
+          <literal>svn:eol-style</literal> property to ``native''.
+          This makes the file always appear with the
+          <quote>native</quote> line endings of each developer's
+          operating system.  Note, however, that the file will always
+          contain LF endings in the repository.  This prevents the
+          line-ending <quote>churn</quote> from revision to
+          revision.</para>
+
+        <para>Alternately, you can force files to always retain a
+          fixed, specific line ending: set a file's
+          <literal>svn:eol-style</literal> property to one of
+          <literal>LF</literal>, <literal>CR</literal> or
+          <literal>CRLF</literal>.  A Win32 <filename>.dsp</filename>
+          file, for example, which is used by Microsoft development
+          tools, should always have CRLF endings.</para>
+
+      </sect3>
+
+      <sect3 id="svn-ch-6-sect-2.1.6">
+        <title><literal>svn:externals</literal></title>
+
+        <para>See <xref linkend="svn-ch-6-sect-3"/>.</para>
+
+      </sect3>
+
+    </sect2>
+
+  </sect1>
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-6-sect-3">
+    <title>Modules</title>
+    
+    <para>Sometimes it's useful to construct a working copy that is
+      made out of a number of different checkouts.  For example, you
+      may want different sub-directories to come from different
+      locations in a repository.</para>
+
+    <para>On the one hand, you could begin by checking out a working
+      copy, and then run <command>svn switch</command> on various
+      subdirectories.  But this is a bit of work.  Wouldn't it be nice
+      to define&mdash;in a single place&mdash;exactly how you want the
+      final working copy to be?</para>
+
+    <para>This is known as a <firstterm>module</firstterm>.  You can
+      define a module by attaching another special
+      <quote>magic</quote> <literal>svn:</literal> property to a
+      directory: the <literal>svn:externals</literal> property.</para>
+
+    <para>The value of this property is a list of subdirectories and
+      their corresponding URLs:</para>
+
+    <screen>
+$ svn propget svn:externals projectdir
+subdir1/foo       http://url.for.external.source/foo
+subdir1/bar       http://blah.blah.blah/repositories/theirproj
+subdir1/bar/baz   http://blorg.blorg.blorg/basement/code
+    </screen>
+
+    <para>Assuming that this property is attached to the directory
+      <filename>projectdir</filename>, then when we check it out,
+      we'll get everything else defined by the property.</para>
+
+    <screen>
+$ svn checkout http://foo.com/repos/projectdir
+A  projectdir/blah.c
+A  projectdir/gloo.c
+A  projectdir/trout.h
+Checked out revision 128.
+
+Fetching external item into projectdir/subdir1/foo
+A  projectdir/subdir1/foo/rho.txt
+A  projectdir/subdir1/foo/pi.txt
+A  projectdir/subdir1/foo/tau.doc
+Checked out revision 128.
+&hellip;
+    </screen>
+
+    <para>By tweaking the value of the
+      <literal>svn:externals</literal> property, the definition of the
+      module can change over time, and subsequent calls to
+      <command>svn update</command> will update working copies
+      appropriately.</para>
+
+    <!-- ###TODO Anything else to add here?  I'm suspicious that this
+    feature doesn't work as I expect just yet; when I run 'svn up' at the
+    top of the wc, nothing happens in the external directory at all,
+    because (I guess) it's not linked to the parent. -Ben -->
+    
+  </sect1>
+
+</chapter>
+
+<!--
+local variables: 
+eval: (load-file "../tools/svnbook.el")
+sgml-parent-document: ("book.xml" "chapter")
+end:
+-->

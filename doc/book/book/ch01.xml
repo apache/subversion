@@ -1,0 +1,210 @@
+<chapter id="svn-ch-1">
+
+  <title>Introduction</title>
+
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-1">
+
+    <title>Revision Control (and what svn can do for you)</title>
+
+    <para>### TODO write me</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-2">
+
+    <title>Target audience</title>
+
+    <para>The intended audience of this book is anyone who has used a
+      revision control system before, although perhaps not Subversion
+      or CVS.  It assumes that the reader is computer-literate, and
+      reasonably comfortable at a Unix command-line.</para>
+
+    <para>People familiar with CVS may want to skip some of the introductory
+      sections that describe Subversion's concurrent versioning model.
+      Also, there is a quick guide for CVS users attached as an appendix
+      <xref linkend="svn-ap-a"/></para>
+    
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 3 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-3">
+
+    <title>History</title>
+
+    <sect2 id="svn-ch-1-sect-3.1">
+
+      <title>History of Revision Control</title>
+      
+      <para>Subversion is a free/open-source <firstterm>revision
+          control system</firstterm>.  That is, Subversion manages
+        files over time.  The files are placed into a central
+        <firstterm>repository</firstterm>.  The repository is much
+        like an ordinary file server, except that it remembers every
+        change ever made to your files.  This allows you to recover
+        older versions of your files, or browse the history of how
+        your files changed.  Many people think of a revision control
+        system as a sort of ``time machine.''</para>
+      
+      <para>Some revision control systems are also <firstterm>software
+          configuration management</firstterm> (SCM) systems.  These
+        systems are specifically tailored to manage trees of source
+        code, and have many features that are specific to software
+        development (such as natively understanding programming
+        languages).  Subversion, however, is not one of these
+        systems; it is a general system that can be used to manage
+        <emphasis>any</emphasis> sort of collection of files,
+        including source code.</para>
+      
+    </sect2>
+    
+    <sect2 id="svn-ch-1-sect-3.2">
+      
+      <title>History of Subversion</title>
+      
+      <para>Subversion aims to be the successor to the
+        <firstterm>Concurrent Versions System</firstterm> (CVS). You
+        can find more information about CVS at <systemitem
+          class="url">http://www.cvshome.org/</systemitem>.</para>
+      
+      <para>At the time of writing, CVS is the standard Free revision
+        control system used by the open-source community.  It has a
+        hard-earned, well-deserved reputation as stable and useful
+        software, and has a design that makes it perfect for
+        open-source development.  However, it also has a number of
+        problems that are difficult to fix.</para>
+      
+      <para>Subversion's original designers settled on a few simple
+        goals.  First, it was decided that Subversion should be a
+        functional replacement for CVS.  That is, it should do
+        everything that CVS does, preserving the same development
+        model while fixing the most obvious flaws.  Secondly, with
+        existing CVS users as the first target audience, Subversion
+        should be written such that any CVS user should be able to
+        start using it with little effort.</para>
+      
+      <para>Collabnet <systemitem
+          class="url">http://www.collab.net/</systemitem> provided the
+        initial funding in 2000 to begin development work, and the
+        effort has now blossomed into a large, open-source project
+        backed by a community of free software developers.</para>
+
+    </sect2>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-4">
+
+    <title>Feature list (why svn is so nice)</title>
+
+    <para>What sort of things does Subversion do better than CVS?  Here's a short
+      list to whet your appetite:</para>
+
+    <variablelist>
+
+      <varlistentry>
+        <term>Advanced network layer</term>
+        <listitem>
+          <para>The Subversion network server is Apache, and client
+            and server speak WebDAV protocol to one another.  ###TODO
+            Xref to Designe
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Faster network access</term>
+        <listitem>
+          <para>A binary diffing algorithm is used to store
+            and transmit deltas in both directions, regardless of whether a file
+            is of text or binary type.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Meta-data</term>
+        <listitem>
+          <para>Each file or directory has an invisible hash table
+            attached.  You can invent and store any arbitrary key/value pairs you
+            wish: owner, perms, icons, app-creator, mime-type, personal notes,
+            etc.  This is a general-purpose feature for users.  Properties are
+            versioned over time, just like file contents.</para>
+        </listitem>
+      </varlistentry>
+      
+      <varlistentry>
+        <term>Hackability</term>
+        <listitem>
+          <para>Subversion has no historical baggage; it is primarily
+            a collection of shared C libraries with well-defined APIs.  This makes
+            Subversion extremely maintainable and usable by other applications and
+            languages.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Directory versioning</term>
+        <listitem>
+          <para>The Subversion repository doesn't use RCS files like
+            CVS; instead, it implements a <quote>virtual</quote>
+            versioned filesystem that tracks changes to directory/file
+            heirarchies over time.  Files <emphasis>and</emphasis>
+            directories are versioned.  At last, there are real
+            client-side <command>move</command> and
+            <command>copy</command> commands.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Atomic commits</term>
+        <listitem>
+          <para>A commit either goes into the repository
+            completely, or not all.</para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-5">
+
+    <title>How to get svn binaries</title>
+
+    <para>### TODO Write this.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 6 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-6">
+
+    <title>How to get this book and send patches for it.</title>
+
+    <para>### TODO Write this.</para>
+
+  </sect1>
+
+</chapter>
+
+<!--
+local variables: 
+eval: (load-file "../tools/svnbook.el")
+sgml-parent-document: ("book.xml" "chapter")
+end:
+-->

@@ -1,0 +1,139 @@
+Also, we have two options regarding CVS users: place "side" boxes
+throughout the text, explaining how things are different, whenever
+necessary.  An alternative is to place all of the information into one
+appendix, and have our side-boxes simply point to relevant sections.
+That's what I'm assuming for now, because I think we all liked that
+better.
+
+I. Introduction
+
+   A.  Explanation of revision control (and what svn can do for you)
+   B.  Target audience
+   C.  History of svn
+   D.  Feature list (why svn is so nice)
+   E.  How to get svn binaries
+   F.  How to get this book and send patches for it.
+
+
+II. Basic Concepts
+
+   (This is the conversational introduction-by-example, explaining the
+    copy-modify-merge model, working copy vs. repository,
+    transactions, revision numbers, etc.  Jimb wrote the original
+    text, and it's evolved some, but I'm absolutely in love with it.)
+
+
+III. Guided Tour
+
+    (Full walkthrough of the most common commands you would use on a
+       typical day with Subversion, probably in this order:)
+
+      1.  svn help
+      2.  cross-ref to 'how to import'
+      3.  initial checkout
+      4.  basic workcycle:
+           a. svn update
+           b. make changes:  edit directly, svn add, rm, cp, mv
+           c. examine changes:  svn status, info, diff, revert
+           d. resolve conflicts:  svn up, resolve
+           e. svn commit
+      5.  examining history:  svn log, diff
+
+
+IV. Branching and Merging
+
+   (Detailed discussion of how branches and tags work via "copies".
+    Use lots of examples:  introduce {copy, mkdir, merge, switch}.)
+
+   Opening explanation of what branches are, how they're used.
+   (Ben has a great explanation for this.)
+
+   A. Branching with svn cp.  (Use 'svn co' to work with the branch.) 
+
+   C. Moving changes with svn merge
+
+   D. Rolling back a change with svn merge
+
+   E. Vendor branches
+
+   F. Removing a Branch or Tag with svn rm
+
+   G. "Advanced shortcut": switching to a Branch with svn switch.
+       Show clever use-cases in here too. (Ben has some examples.)
+
+
+V.  Setting Up a Repository
+
+   A.  Server setup
+
+      1. creating a repository
+      2. examining a repository (svnlook, shell)
+      3. networking a repository (apache setup, auth options)
+      4. maintaining a repository (svnadmin, svnadmin recover, backup options)
+      5. repository hooks
+      6. migrating a repository (dump/load)
+
+   B.  Adding projects
+
+      1. examples of 'svn import'
+      2. vendor branches
+           (discussion of strategies and svn_load_dirs.pl)
+
+
+VI.  Advanced Topics
+
+   A. Run-time configuration area  (config, proxies, etc.)  [2.9]
+
+   B. Properties
+
+       1. General use (pset, pget, plist, pdel, pedit), including -r switch.
+       2. EOL translation
+       3. Keyword substitution
+       4. Other special keywords (executable, mime-type, ignore)
+
+   C. Modules  [2.6]
+
+
+VII.  Developer Information
+
+   A. Layered library design [1.2]
+
+   B. Using the APIs  
+        (C and python examples)
+
+   C. Inside the working copy and repository   [3.0 ?]
+        (discussion of interior structures)
+
+   D. Use of WebDAV [3.7, plus gstein's notes]
+
+   E. Contributing to Subversion
+        (how to reproduce/report bugs, send patches, overview of code layout.)
+
+
+VIII.  Complete Reference
+
+   (The part of the manual that will have grey borders and be most
+    thumbed through.  :-)  )
+
+
+IX.  Appendices
+
+   A.  SVN for CVS Users  [5.1]
+         (the appendix which CVS users can read in one sitting, to get
+         a quick conceptual 'diff' between the two systems)
+
+   B.  CVS repository migration 
+         (cvs2svn.py)
+
+   C.  Troubleshooting  
+         (how to save your working copy, svn cleanup, etc.)
+
+   D.  FAQ?
+
+   E.  Other clients
+         (description of GUIs?)
+
+   F.  Third-party tools
+         (describe what exists)         
+
+   G.  Index
