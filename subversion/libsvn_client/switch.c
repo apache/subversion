@@ -71,7 +71,6 @@ svn_client_switch (svn_revnum_t *result_rev,
   const char *diff3_cmd;
   svn_boolean_t timestamp_sleep = FALSE;  
   svn_boolean_t use_commit_times;
-  const char *commit_time_str;
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
@@ -85,13 +84,8 @@ svn_client_switch (svn_revnum_t *result_rev,
                   SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
   /* See if the user wants last-commit timestamps instead of current ones. */
-  svn_config_get (cfg, &commit_time_str, SVN_CONFIG_SECTION_MISCELLANY,
-                  SVN_CONFIG_OPTION_USE_COMMIT_TIMES, NULL);
-  if (commit_time_str)
-    use_commit_times = (strcasecmp (commit_time_str, "yes") == 0)
-                        ? TRUE : FALSE;
-  else
-    use_commit_times = FALSE;
+  svn_config_get_bool (cfg, &use_commit_times, SVN_CONFIG_SECTION_MISCELLANY,
+                       SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE);
 
   /* Sanity check.  Without these, the switch is meaningless. */
   assert (path);

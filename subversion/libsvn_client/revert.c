@@ -83,20 +83,13 @@ svn_client_revert (const char *path,
 
   /* Look for run-time config variables that affect behavior. */
   {
-    const char *commit_time_str;
-
     svn_config_t *cfg = ctx->config
       ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
                       APR_HASH_KEY_STRING)
       : NULL;
 
-    svn_config_get (cfg, &commit_time_str, SVN_CONFIG_SECTION_MISCELLANY,
-                    SVN_CONFIG_OPTION_USE_COMMIT_TIMES, NULL);
-    if (commit_time_str)
-      use_commit_times = (strcasecmp (commit_time_str, "yes") == 0)
-                          ? TRUE : FALSE;
-    else
-      use_commit_times = FALSE;
+    svn_config_get_bool (cfg, &use_commit_times, SVN_CONFIG_SECTION_MISCELLANY,
+                         SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE);
   }
 
   err = svn_wc_revert (path, adm_access, recursive, use_commit_times,

@@ -1119,13 +1119,13 @@ main (int argc, const char * const *argv)
     {
       if (opt_state.autoprops)
         {
-          svn_config_set (cfg, SVN_CONFIG_SECTION_MISCELLANY,
-                          SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, "yes");
+          svn_config_set_bool (cfg, SVN_CONFIG_SECTION_MISCELLANY,
+                               SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, TRUE);
         }
       if (opt_state.no_autoprops)
         {
-          svn_config_set (cfg, SVN_CONFIG_SECTION_MISCELLANY,
-                          SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, "no");
+          svn_config_set_bool (cfg, SVN_CONFIG_SECTION_MISCELLANY,
+                               SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, FALSE);
         }
     }
 
@@ -1135,7 +1135,7 @@ main (int argc, const char * const *argv)
 
   /* Authentication set-up. */
   {
-    const char *store_password_val = NULL;
+    svn_boolean_t store_password_val = TRUE;
     svn_auth_provider_object_t *provider;
 
     /* The whole list of registered providers */
@@ -1218,11 +1218,11 @@ main (int argc, const char * const *argv)
     /* There are two different ways the user can disable disk caching
        of credentials:  either via --no-auth-cache, or in the config
        file ('store-password = no'). */
-    svn_config_get (cfg, &store_password_val,
-                    SVN_CONFIG_SECTION_AUTH, SVN_CONFIG_OPTION_STORE_PASSWORD,
-                    NULL);
-    if (opt_state.no_auth_cache
-        || (store_password_val && (strcmp (store_password_val, "no") == 0)))
+    svn_config_get_bool (cfg, &store_password_val,
+                         SVN_CONFIG_SECTION_AUTH,
+                         SVN_CONFIG_OPTION_STORE_PASSWORD,
+                         TRUE);
+    if (opt_state.no_auth_cache || !store_password_val)
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE,
                              (void *) "");
   }

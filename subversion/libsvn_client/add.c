@@ -140,7 +140,7 @@ svn_client__get_auto_props (apr_hash_t **properties,
                             apr_pool_t *pool)
 {
   svn_config_t *cfg;
-  const char *cfgvalue;
+  svn_boolean_t use_autoprops;
   auto_props_baton_t autoprops;
 
   /* initialisation */
@@ -154,9 +154,9 @@ svn_client__get_auto_props (apr_hash_t **properties,
                         APR_HASH_KEY_STRING);
 
   /* check that auto props is enabled */
-  svn_config_get (cfg, &cfgvalue, SVN_CONFIG_SECTION_MISCELLANY,
-                  SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, "no");
-  if (strcmp (cfgvalue, "yes") == 0)
+  svn_config_get_bool (cfg, &use_autoprops, SVN_CONFIG_SECTION_MISCELLANY,
+                       SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, FALSE);
+  if (use_autoprops)
   {
     /* search for auto props */
     svn_config_enumerate (cfg, SVN_CONFIG_SECTION_AUTO_PROPS,
