@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-07-26 21:06+0200\n"
-"PO-Revision-Date: 2004-07-26 21:15+0200\n"
+"PO-Revision-Date: 2004-08-01 20:58+0200\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -1497,11 +1497,11 @@ msgstr "Eksport wykonany.\n"
 
 #: clients/cmdline/notify.c:267
 msgid "External checkout complete.\n"
-msgstr "Zewnętrzny eksport wykonany.\n"
+msgstr "Zakończono pobieranie zewnętrznej kopii roboczej.\n"
 
 #: clients/cmdline/notify.c:268
 msgid "Checkout complete.\n"
-msgstr "Eksport wykonany.\n"
+msgstr "Pobieranie kopii roboczej wykonane.\n"
 
 #: clients/cmdline/notify.c:275
 msgid "External update complete.\n"
@@ -2768,7 +2768,7 @@ msgstr "Nieznany rodzaj obiektu: '%s'"
 #: libsvn_client/copy.c:792
 #, c-format
 msgid "Path '%s' not found in revision %ld"
-msgstr "Ścieżka '%s' nie znaleziona w wersji '%s'"
+msgstr "Ścieżka '%s' nie znaleziona w wersji '%ld'"
 
 #: libsvn_client/copy.c:797
 #, c-format
@@ -3107,100 +3107,104 @@ msgid ""
 "hotcopy algorithm.  If the problem persists, try deactivating \n"
 "this feature in DB_CONFIG."
 msgstr ""
+"Błąd odtwarzania po załamaniu na kopii na gorąco;  właściwość \n"
+"DB_LOG_AUTOREMOVE może wpływać na algorytm hotcopy.  Jeżeli \n"
+"problem będzie się powtarzał, spróbuj wyłączyć tę właściwość \n"
+"w DB_CONFIG."
 
 #: libsvn_fs_base/fs.c:1229
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported FS loader version (%d) for bdb"
-msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_dav."
+msgstr "Nieobsługiwana wersja loadera systemu plików (%d) dla bdb"
 
 #: libsvn_fs_base/tree.c:381 libsvn_fs_fs/tree.c:301
-#, fuzzy, c-format
+#, c-format
 msgid "File not found: revision %ld, path '%s'"
-msgstr "Atrybutu '%s' nie znaleziono w ścieżce '%s'"
+msgstr "Nie znaleziono pliku: wersja '%ld', ścieżka '%s'"
 
 #: libsvn_fs_base/tree.c:402 libsvn_fs_fs/tree.c:322
 #, c-format
 msgid "File already exists: filesystem '%s', revision %ld, path '%s'"
-msgstr ""
+msgstr "Plik już istnieje: system plików '%s', wersja %ld, ścieżka '%s'"
 
 #: libsvn_fs_fs/err.c:40
-#, fuzzy
 msgid "Filesystem object has not been opened yet"
-msgstr "System plików nie jest otwarty"
+msgstr "Obiekt systemu plików nie jest otwarty"
 
 #: libsvn_fs_fs/err.c:61
 #, c-format
 msgid "Corrupt node revision for node '%s' in filesystem '%s'"
-msgstr ""
+msgstr "Uskodzona wersja obiektu '%s' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:84
 #, c-format
 msgid "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"
-msgstr ""
+msgstr "Uszkodzony zapis kopii '%s' w transakcji '%s' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:93
 #, c-format
 msgid "Corrupt node revision id '%s' appears in filesystem '%s'"
-msgstr ""
+msgstr "Uszkodzona wersja obiektu id '%s' wystąpiła w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:104
 #, c-format
 msgid "Reference to non-existent node '%s' in filesystem '%s'"
-msgstr ""
+msgstr "Odnośnik do nieistniejącego obiektu '%s' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:125
 #, c-format
 msgid "Malformed ID as key in 'nodes' table of filesystem '%s'"
-msgstr ""
+msgstr "Błędny ID jako klucz w tabeli 'nodes' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:135
 #, c-format
 msgid "Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"
-msgstr ""
+msgstr "Błędna wartość klucza 'next-id' w tabeli '%s' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:147
 #, c-format
 msgid "Corrupt entry in 'transactions' table for '%s' in filesystem '%s'"
 msgstr ""
+"Uszkodzone dane w tabeli 'transactions' dla '%s' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:158
 #, c-format
 msgid "Corrupt entry in 'copies' table for '%s' in filesystem '%s'"
-msgstr ""
+msgstr "Uszkodzone dane w tabeli 'copies' dla '%s' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:180
 #, c-format
 msgid "Search for malformed path '%s' in filesystem '%s'"
-msgstr ""
+msgstr "Próba wyszukania błędnej ścieżki '%s' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:191
 #, c-format
 msgid "No transaction named '%s' in filesystem '%s'"
-msgstr ""
+msgstr "Brak transakcji '%s' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:202
 #, c-format
 msgid "Cannot modify transaction named '%s' in filesystem '%s'"
-msgstr ""
+msgstr "Nie można zmodyfikować transakcji '%s' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:213
 #, c-format
 msgid "No copy with id '%s' in filesystem '%s'"
-msgstr ""
+msgstr "Brak kopii o id '%s' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:223
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a directory in filesystem '%s'"
-msgstr "'%s' nie jest katalogiem"
+msgstr "'%s' nie jest katalogiem w systemie plików '%s'"
 
 #: libsvn_fs_fs/fs.c:290
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported FS loader version (%d) for fsfs"
-msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_dav."
+msgstr "Nieobsługiwana wersja loadera systemu plików (%d) dla fsfs"
 
 #: libsvn_fs_fs/fs_fs.c:364 libsvn_fs_fs/fs_fs.c:378
 msgid "Found malformed header in revision file"
-msgstr ""
+msgstr "Błędny nagłówek w pliku wersji"
 
 #: libsvn_fs_fs/fs_fs.c:480 libsvn_fs_fs/fs_fs.c:494 libsvn_fs_fs/fs_fs.c:501
 #: libsvn_fs_fs/fs_fs.c:508 libsvn_fs_fs/fs_fs.c:516 libsvn_fs_fs/fs_fs.c:524
@@ -3209,54 +3213,52 @@ msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:593
 msgid "Missing kind field in node-rev"
-msgstr ""
+msgstr "Brak pola kind w node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:624
 msgid "Missing cpath in node-rev"
-msgstr ""
+msgstr "Brak cpath w node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:651 libsvn_fs_fs/fs_fs.c:657
 msgid "Malformed copyroot line in node-rev"
-msgstr ""
+msgstr "Błędna linia copyroot w node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:675 libsvn_fs_fs/fs_fs.c:681
 msgid "Malformed copyfrom line in node-rev"
-msgstr ""
+msgstr "Błędna linia copyfrom w node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2866
 msgid "Attempted to write to non-transaction"
 msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:863
-#, fuzzy
 msgid "Malformed representation header"
-msgstr "Błędne dane wzorcowe"
+msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:887
 msgid "Missing node-id in node-rev"
-msgstr ""
+msgstr "Brak node-id w node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:893
 msgid "Corrupt node-id in node-rev"
-msgstr ""
+msgstr "Błędny node-id w node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:938
-#, fuzzy
 msgid "Revision file lacks trailing newline"
-msgstr "nie wypisuj końcowego znaku nowego wiersza"
+msgstr "W pliku wersji brak końcowego znaku końca wiersza"
 
 #: libsvn_fs_fs/fs_fs.c:950
 msgid "Final line in revision file longer than 64 characters"
-msgstr ""
+msgstr "Ostatnia linia w pliku wersji dłuższa niż 64 znaki"
 
 #: libsvn_fs_fs/fs_fs.c:963
 msgid "Final line in revision file missing space"
-msgstr ""
+msgstr "Brak spacji w ostatniej linii pliku wersji"
 
 #: libsvn_fs_fs/fs_fs.c:990 libsvn_repos/log.c:163 libsvn_repos/log.c:167
-#, fuzzy, c-format
+#, c-format
 msgid "No such revision %ld"
-msgstr "Nie ma takiego obiektu: '%s'"
+msgstr "Nie ma takiej wersji %ld"
 
 #: libsvn_fs_fs/fs_fs.c:1108
 msgid "Malformed svndiff data in representation"
@@ -3276,19 +3278,17 @@ msgid "svndiff requested position beyond end of stream"
 msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:1362
-#, fuzzy
 msgid "svndiff window length is corrupt"
 msgstr "Błędne okno danych svndiff"
 
 #: libsvn_fs_fs/fs_fs.c:1498 libsvn_fs_fs/fs_fs.c:1511
 #: libsvn_fs_fs/fs_fs.c:1517
 msgid "Directory entry corrupt"
-msgstr ""
+msgstr "Uszkodzony wpis w katalogu"
 
 #: libsvn_fs_fs/fs_fs.c:1684
-#, fuzzy
 msgid "Missing required node revision ID"
-msgstr "Nie podano wymaganej specyfikacji wersji"
+msgstr "Brak wymaganego ID wersji obiektu"
 
 #: libsvn_fs_fs/fs_fs.c:1694
 msgid "Invalid change ordering: new node revision ID without delete"
@@ -3317,47 +3317,46 @@ msgid "Invalid prop-mod flag in rev-file"
 msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:2099
-#, fuzzy
 msgid "Copying from transactions not allowed"
-msgstr "Podana transakcja nie może być modyfikowana"
+msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:2341 libsvn_fs_fs/fs_fs.c:2348
 msgid "next-id file corrupt"
-msgstr ""
+msgstr "Plik next-id jest uszkodzony"
 
 #: libsvn_fs_fs/fs_fs.c:2574
 msgid "Invalid change type"
-msgstr ""
+msgstr "Niewłaściwy typ zmiany"
 
 #: libsvn_fs_fs/fs_fs.c:2885
-#, fuzzy
 msgid "Can't set text contents of a directory"
-msgstr "Nie można stworzyć katalogu tymczasowego"
+msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:2975 libsvn_fs_fs/fs_fs.c:2980
 #: libsvn_fs_fs/fs_fs.c:2987
 msgid "Corrupt current file"
-msgstr ""
+msgstr "Bieżący plik jest uszkodzony"
 
 #: libsvn_fs_fs/fs_fs.c:3275
-#, fuzzy, c-format
+#, c-format
 msgid "Can't chmod '%s'"
-msgstr "Nie można pobrać informacji o '%s'"
+msgstr "Nie można wykonać chmod '%s'"
 
 #: libsvn_fs_fs/fs_fs.c:3408
-#, fuzzy
 msgid "Transaction out of date"
 msgstr "Transakcja jest nieaktualna"
 
 #: libsvn_fs_fs/fs_fs.c:3647
 msgid "No such transaction"
-msgstr ""
+msgstr "Brak takiej transakcji"
 
 #: libsvn_ra/ra_loader.c:209
 #, c-format
 msgid ""
 "Mismatched RA plugin version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr ""
+"Niewłaściwa wersja wtyczki RA dla '%s': znaleziona %d.%d.%d%s, oczekiwana %d."
+"%d.%d%s"
 
 #: libsvn_ra/ra_loader.c:225
 #, c-format
@@ -3431,15 +3430,15 @@ msgstr "Błędna odpowiedź od serwera na żądanie dated-rev"
 
 #: libsvn_ra_dav/fetch.c:1235
 msgid "get-locations REPORT not implemented"
-msgstr ""
+msgstr "Nie zaimplementowany get-locations REPORT"
 
 #: libsvn_ra_dav/fetch.c:1303
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
 msgstr ""
-"Żądanie DAV nie powiodło się; prawdopodobnie skrypt pre-revprop-change\n"
-"nie istnieje lub zgłosił błąd w trakcie działania."
+"Żądanie DAV nie powiodło się; prawdopodobnie skrypt pre-revprop-change nie "
+"istnieje lub zgłosił błąd w trakcie działania."
 
 #: libsvn_ra_dav/fetch.c:2018
 #, c-format
@@ -3457,20 +3456,20 @@ msgstr "Obsługa odpowiedzi REPORT nie zrealizowała cyklu współpracy z edytor
 
 #: libsvn_ra_dav/file_revs.c:360
 msgid "get-file-revs REPORT not implemented"
-msgstr ""
+msgstr "Nie zaimplementowane get-file-revs REPORT"
 
 #: libsvn_ra_dav/file_revs.c:367
 msgid "The file-revs report didn't contain any revisions"
-msgstr ""
+msgstr "Raport file-revs nie zawierał żadnych wersji"
 
 #: libsvn_ra_dav/merge.c:216
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Protocol error: we told the server not to auto-merge any resources, but it "
 "said that '%s' was merged"
 msgstr ""
-"Błąd protokołu: serwer miał nie przeprowadzać automatyczneg łączenia\n"
-"zmian, tymczasem poinformował że '%s' zostało zmienione"
+"Błąd protokołu: serwer miał nie przeprowadzać automatycznego łączenia zmian, "
+"tymczasem poinformował że '%s' zostało połączone"
 
 #: libsvn_ra_dav/merge.c:225
 #, c-format
@@ -3478,16 +3477,16 @@ msgid ""
 "Internal error: there is an unknown parent (%d) for the 'DAV:response' "
 "element within the MERGE response"
 msgstr ""
-"Błąd wewnętrzny: nieznany rodzic (%d) dla elementy 'DAV:response' w\n"
-"ramach wyniku żądania MERGE"
+"Błąd wewnętrzny: nieznany rodzic (%d) dla elementu 'DAV:response' w ramach "
+"wyniku żądania MERGE"
 
 #: libsvn_ra_dav/merge.c:240
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Protocol error: the MERGE response for the '%s' resource did not return all "
 "of the properties that we asked for (and need to complete the commit)"
 msgstr ""
-"Błąd protokołu: żądanie MERGE dla zasobu %s nie zwróciło wszystkich\n"
+"Błąd protokołu: żądanie MERGE dla zasobu '%s' nie zwróciło wszystkich "
 "atrybutów których zażądano (i które były wymagane do zatwierdzenia zmian)."
 
 #: libsvn_ra_dav/merge.c:259
@@ -3595,14 +3594,12 @@ msgid "Invalid config: unable to load certificate file '%s'"
 msgstr "Błąd konfiguracji: ładowanie certyfikatu '%s' nie powiodło się"
 
 #: libsvn_ra_dav/session.c:812
-#, fuzzy
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr ""
 "Atrybut UUID nie został znaleziony ani w podanym obiekcie, ani też w\n"
 "żadnym z jego katalogów nadrzędnych."
 
 #: libsvn_ra_dav/session.c:820
-#, fuzzy
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "Zaktualizuj serwer do wersji 0.19 lub nowszej."
 
@@ -3613,7 +3610,7 @@ msgstr ""
 "WebDAV (DeltaV)."
 
 #: libsvn_ra_dav/session.c:874
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
 msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_dav."
 
@@ -3648,7 +3645,7 @@ msgstr "%s z '%s'"
 #: libsvn_ra_dav/util.c:657
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
-msgstr "Dla żądanie '%s' otrzymano niepoprawny wynikowy XML: %s (%s)"
+msgstr "Dla żądania '%s' otrzymano niepoprawny wynikowy XML: %s (%s)"
 
 #: libsvn_ra_dav/util.c:671
 #, c-format
@@ -3656,16 +3653,19 @@ msgid "%s request failed on '%s'"
 msgstr "żądanie %s nie powiodło się dla '%s'"
 
 #: libsvn_ra_local/ra_plugin.c:98 libsvn_ra_local/ra_plugin.c:465
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "'%s'\n"
 "is not the same repository as\n"
 "'%s'"
-msgstr "'%s' nie jest katalogiem"
+msgstr ""
+"'%s'\n"
+"nie jest tym samym repozytorium co\n"
+"'%s'"
 
 #: libsvn_ra_local/ra_plugin.c:226
 msgid "Unable to open an ra_local session to URL"
-msgstr ""
+msgstr "Nie można utworzyć połączenia w sesji ra_local do URL"
 
 #: libsvn_ra_local/ra_plugin.c:927
 #, fuzzy
