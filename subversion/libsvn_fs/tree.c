@@ -1754,6 +1754,8 @@ svn_fs_commit_txn (const char **conflict_p,
           if (youngest_rev == youngish_rev)
             return err;
         }
+      else if (err)
+        return err;
       else
         {
           *new_rev = commit_args.new_rev;

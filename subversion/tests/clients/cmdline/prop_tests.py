@@ -111,7 +111,7 @@ def commit_props():
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Created expected status tree.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, 1)
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
   for item in status_list:
     item[3]['repos_rev'] = '2'     # post-commit status
     if (item[0] == mu_path) or (item[0] == H_path):
@@ -156,7 +156,7 @@ def update_props():
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Created expected status tree.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, 1)
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
   for item in status_list:
     item[3]['repos_rev'] = '2'     # post-commit status
     if (item[0] == mu_path) or (item[0] == H_path):
@@ -186,13 +186,17 @@ def update_props():
 
   # Create expected status tree for the update.
   status_list = svntest.actions.get_virginal_status_list(wc_backup, '2')
+  for item in status_list:
+    if (item[0] == mu_path) or (item[0] == H_path):
+      item[3]['status'] = '__'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
   
-  # Do the update and check the results in three ways.
+  # Do the update and check the results in three ways... INCLUDING PROPS
   return svntest.actions.run_and_verify_update(wc_backup,
                                                expected_output_tree,
                                                expected_disk_tree,
-                                               expected_status_tree)
+                                               expected_status_tree,
+                                               None, None, None, None, 1)
 
 ########################################################################
 # Run the tests
