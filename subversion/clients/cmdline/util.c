@@ -75,7 +75,8 @@ get_cmd_table_entry (const char *cmd_name)
  * with no arguments. Those commands make use of this function to
  * add "." to the target array if the user passes no args */
 void
-svn_cl__push_implicit_dot_target (apr_array_header_t *targets, apr_pool_t *pool)
+svn_cl__push_implicit_dot_target (apr_array_header_t *targets, 
+                                  apr_pool_t *pool)
 {
   if (targets->nelts == 0)
     array_push_svn_string (targets, ".", pool);
@@ -94,7 +95,8 @@ svn_cl__parse_num_args (apr_getopt_t *os,
 {
   int i;
   
-  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_stringbuf_t *));
+  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, 
+                                    sizeof (svn_stringbuf_t *));
 
   /* loop for num_args and add each arg to the args array */
   for (i = 0; i < num_args; i++)
@@ -102,7 +104,8 @@ svn_cl__parse_num_args (apr_getopt_t *os,
       if (os->ind >= os->argc)
         {
           svn_cl__subcommand_help (subcommand, pool);
-          return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
+          return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 
+                                   0, 0, pool, "");
         }
       array_push_svn_string (opt_state->args, os->argv[os->ind++], pool);
     }
@@ -119,7 +122,8 @@ svn_cl__parse_all_args (apr_getopt_t *os,
                         const char *subcommand,
                         apr_pool_t *pool)
 {
-  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_stringbuf_t *));
+  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, 
+                                    sizeof (svn_stringbuf_t *));
 
   if (os->ind >= os->argc)
     {
@@ -147,9 +151,9 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
   for (; os->ind < os->argc; os->ind++)
     {
       svn_stringbuf_t *target = svn_stringbuf_create (os->argv[os->ind], pool);
-      svn_stringbuf_t *basename = svn_path_last_component (target,
-                                                        svn_path_local_style,
-                                                        pool);
+      svn_stringbuf_t *basename = 
+        svn_path_last_component (target, svn_path_local_style, pool);
+
       /* If this target is not a Subversion administrative directory,
          add it to the target list.  TODO: Perhaps this check should
          not call the target a SVN admin dir unless svn_wc_check_wc

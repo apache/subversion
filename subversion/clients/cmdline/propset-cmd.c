@@ -70,9 +70,8 @@ svn_cl__propset (apr_getopt_t *os,
       if (err)
         return err;
 
-      /* fitz todo: make these print out only when VERBOSE */
-      printf ("property `%s' set on %s.\n",
-	      propname->data, target->data);
+      if (! opt_state->quiet)
+        printf ("property `%s' set on %s.\n", propname->data, target->data);
     }
 
   return SVN_NO_ERROR;
