@@ -21,7 +21,6 @@ Blanket commit access:
    mab: Matthew Braithwaite <matt@braithwaite.net>
    daniel: Daniel Stenberg <daniel@haxx.se>
    mmurphy: Mark Murphy <mmurphy@collab.net>
-   rassilon: Bill Tutt <rassilon@lyra.org>
    cmpilato: C. Michael Pilato <cmpilato@collab.net>
    kevin: Kevin Pilch-Bisson <kevin@pilch-bisson.net>
    philip: Philip Martin <philip@codematters.co.uk>
@@ -32,3 +31,4 @@ Commit access for specific areas:
    yoshiki: Yoshiki Hayashi <yoshiki@xemacs.org>      (Ruby bindings)
    david: David Summers <david@summersoft.fay.ar.us>  (RPMs)
    striker: Sander Striker <striker@apache.org>       (website, docs)
+   rassilon: Bill Tutt <rassilon@lyra.org>            (Win32, COM stuff)
