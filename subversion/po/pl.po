@@ -2882,12 +2882,12 @@ msgid ".working"
 msgstr ".robocza"
 
 #: libsvn_client/diff.c:661
-#, c-format, fuzzy
+#, c-format
 msgid ".merge-left.r%ld"
 msgstr ".merge-lewo.w%ld"
 
 #: libsvn_client/diff.c:664
-#, c-format, fuzzy
+#, c-format
 msgid ".merge-right.r%ld"
 msgstr ".merge-prawo.w%ld"
 
@@ -3777,9 +3777,8 @@ msgid "Server requires minimum version %d"
 msgstr "Serwer wymaga co najmniej wersji %d"
 
 #: libsvn_ra_svn/client.c:641
-#, fuzzy
 msgid "impossibly long repository root from server"
-msgstr "Brak parametru podającego ścieżkę w repozytorium"
+msgstr "Ścieżka katalogu głównego repozytorium jest zbyt długa"
 
 #: libsvn_ra_svn/client.c:705
 msgid "Server did not send repository root"
@@ -3928,9 +3927,10 @@ msgid "<<< Started new transaction, based on original revision %ld\n"
 msgstr "<<< Nowa transakcja, na bazie oryginalnej wersji %ld\n"
 
 #: libsvn_repos/load.c:845
-#, c-format, fuzzy
+#, c-format
 msgid "Relative source revision %ld is not available in current repository"
-msgstr "Źródłowa wersja %ld nie jest dostępna w bieżącym repozytorium"
+msgstr "Odpowiednia źródłowa wersja %ld nie jest dostępna w bieżącym "
+"repozytorium"
 
 #: libsvn_repos/load.c:1117
 #, c-format
