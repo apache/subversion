@@ -962,7 +962,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
         {
           svn_fs_root_t *from_root;
           SVN_ERR (svn_fs_revision_root (&from_root, fs, from_rev, subpool));
-          SVN_ERR (svn_repos_dir_delta (from_root, "/", NULL, 
+          SVN_ERR (svn_repos_dir_delta (from_root, "/", "",
                                         to_root, "/",
                                         dump_editor, dump_edit_baton,
                                         NULL,
