@@ -639,9 +639,9 @@ SVN_ERROR_START
               SVN_ERR_MISC_CATEGORY_START + 7,
               "Trying to use an unsupported feature")
 
-  SVN_ERRDEF (SVN_ERR_BAD_PROP_KIND,
+  SVN_ERRDEF (SVN_ERR_UNKNOWN_PROP_KIND,
               SVN_ERR_MISC_CATEGORY_START + 8,
-              "Unexpected or unknown property kind")
+              "Unknown svn_prop_kind")
 
   SVN_ERRDEF (SVN_ERR_ILLEGAL_TARGET,
               SVN_ERR_MISC_CATEGORY_START + 9,
