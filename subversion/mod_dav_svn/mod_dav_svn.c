@@ -92,7 +92,7 @@ static void dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
 {
     ap_add_version_component(p, "SVN/" SVN_VERSION);
 }
-static void dav_svn_header_parser(request_rec *r)
+static int dav_svn_header_parser(request_rec *r)
 {
     /* Use this hook to initialize the request pool as SVN's "top-most"
        pool (and create the error sub-pool).
@@ -105,6 +105,8 @@ static void dav_svn_header_parser(request_rec *r)
        ### while header_parser is only the main request
     */
     (void) svn_error_init_pool (r->pool);
+
+    return OK;
 }
 
 static void *dav_svn_create_server_config(apr_pool_t *p, server_rec *s)
