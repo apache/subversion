@@ -343,15 +343,13 @@ V.  BUILDING A SUBVERSION SERVER
        Note: if you have multiple db versions installed on your system,
        Apache might link to a different one than Subversion, causing
        failures when accessing the repository through Apache.  To prevent
-       this from happening, you have to tell Apache where to find the
-       version of db subversion uses.  Right before configure: 
-       
-       export LDFLAGS=-L/usr/local/BerkeleyDB.4.0/lib
-       export CPPFLAGS=-I/usr/local/BerkeleyDB.4.0/include
-
-       Add --with-dbm=db4 to the configure line.  This note assumes
-       you have installed Berkeley DB 4.0.14 at its default locations.
-       For more info about the db requirement, see section III.C.1. 
+       this from happening, you have to tell Apache which db version to
+       use and where to find db.  Add --with-dbm=db4 and
+       --with-berkeley-db=/usr/local/BerkeleyDB.4.0 to the configure
+       line.  Make sure this is the same db as the one Subversion uses.
+       This note assumes you have installed Berkeley DB 4.0.14
+       at its default locations.  For more info about the db requirement,
+       see section III.C.1. 
 
   All instructions below assume you configured Apache to install
   under /usr/local/apache2/; substitute appropriately if you
