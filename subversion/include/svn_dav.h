@@ -54,6 +54,7 @@ extern "C" {
 #define SVN_DAV_OPTION_LOCK_BREAK        "lock-break"
 #define SVN_DAV_OPTION_LOCK_STEAL        "lock-steal"
 #define SVN_DAV_OPTION_RELEASE_LOCKS     "release-locks"
+#define SVN_DAV_OPTION_KEEP_LOCKS        "keep-locks"
 
 /** This header is used when an svn client wants to tell mod_dav_svn
  * exactly what revision of a resource it thinks it's operating on.

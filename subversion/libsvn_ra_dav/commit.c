@@ -709,7 +709,10 @@ static svn_error_t * commit_delete_entry(const char *path,
   if (SVN_IS_VALID_REVNUM(revision))
     {
       const char *revstr = apr_psprintf(pool, "%ld", revision);
-      extra_headers = apr_hash_make(pool);
+
+      if (! extra_headers)
+        extra_headers = apr_hash_make(pool);
+
       apr_hash_set(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
                    APR_HASH_KEY_STRING, revstr);
     }
@@ -738,6 +741,18 @@ static svn_error_t * commit_delete_entry(const char *path,
           apr_hash_set(extra_headers, "If", APR_HASH_KEY_STRING,
                        token_header_val);
         }
+    }
+
+  /* dav_method_delete() always calls dav_unlock(), but if the svn
+     client passed --no-unlock to 'svn commit', then we need to send a
+     header which prevents mod_dav_svn from actually doing the unlock. */
+  if (parent->cc->keep_locks)
+    {
+      if (! extra_headers)
+        extra_headers = apr_hash_make(pool);
+
+      apr_hash_set(extra_headers, SVN_DAV_OPTIONS_HEADER,
+                   APR_HASH_KEY_STRING, SVN_DAV_OPTION_KEEP_LOCKS);
     }
 
   /* ### 404 is ignored, because mod_dav_svn is effectively merging
