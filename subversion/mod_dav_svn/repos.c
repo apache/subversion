@@ -17,7 +17,7 @@
  * 
  * 3. The end-user documentation included with the redistribution, if
  * any, must include the following acknowlegement: "This product includes
- * software developed by CollabNet (http://www.Collab.Net)."
+ * software developed by CollabNet (http://www.Collab.Net/)."
  * Alternately, this acknowlegement may appear in the software itself, if
  * and wherever such third-party acknowlegements normally appear.
  * 
@@ -150,6 +150,24 @@ typedef struct {
   dav_resource res;
   dav_resource_private priv;
 } dav_resource_combined;
+
+/* private context for doing a walk */
+typedef struct {
+  /* the input walk parameters */
+  const dav_walk_params *params;
+
+  /* reused as we walk */
+  dav_walk_resource wres;
+
+  /* the current resource */
+  dav_resource res;             /* wres.resource refers here */
+  dav_resource_private info;    /* the info in res */
+  svn_string_t *path;           /* the path within info */
+  svn_string_t *uri;            /* the uri within res */
+
+  dav_buffer locknull_buf;
+
+} dav_svn_walker_context;
 
 
 static int dav_svn_setup_activity(dav_resource_combined *comb,
@@ -678,12 +696,47 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
   return NULL;
 }
 
-static dav_error * dav_svn_walk(dav_walker_ctx *wctx, int depth)
+static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 {
-  /* ### fill this in */
-  /* ### see svn_fs_dir_entries() */
-
   return NULL;
+}
+
+static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
+				dav_response **response)
+{
+  dav_svn_walker_context ctx = { 0 };
+  dav_error *err;
+
+  ctx.params = params;
+
+  ctx.wres.walk_ctx = params->walk_ctx;
+  ctx.wres.resource = &ctx.res;
+
+  /* copy the resource over and adjust the "info" reference */
+  ctx.res = *params->root;
+  ctx.info = *ctx.res.info;
+
+  ctx.res.info = &ctx.info;
+
+  /* Don't monkey with the path from params->root. Create a new one.
+     This path will then be extended/shortened as necessary. */
+  ctx.info.path = svn_string_dup(ctx.info.path, params->pool);
+
+  /* prep the URI buffer */
+  ctx.uri = svn_string_create(params->root->uri, params->pool);
+
+  /* if we have a collection, then ensure the URI has a trailing "/" */
+  if (ctx.res.collection && ctx.uri->data[ctx.uri->len - 1] != '/') {
+    svn_string_appendcstr(ctx.uri, "/");
+  }
+
+  /* the current resource's URI is stored in the (telescoping) ctx.uri */
+  ctx.res.uri = ctx.uri->data;
+
+  /* always return the error, and any/all multistatus responses */
+  err = dav_svn_do_walk(&ctx, depth);
+  *response = ctx.wres.response;
+  return err;
 }
 
 
