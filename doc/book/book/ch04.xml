@@ -561,7 +561,7 @@ M  integer.c
 
       <para>The output of <command>svn merge</command> shows that your
         copy of <filename>integer.c</filename> was patched.  It now
-        contains Sally's change &mdash; it has been "copied" from the
+        contains Sally's change &mdash; the change has been "copied" from the
         trunk to your working copy of your private branch, and now
         exists as a local modification.  At this point, it's up to you
         to review the local modification and make sure it works
