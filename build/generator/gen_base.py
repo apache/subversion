@@ -701,10 +701,12 @@ class TargetJavaClasses(TargetJava):
 
       # object depends upon source
       self.gen_obj.graph.add(DT_OBJECT, ofile, sfile)
-      self.deps.append(sfile)
 
       # target (a linked item) depends upon object
       self.gen_obj.graph.add(DT_LINK, self.name, ofile)
+
+      # Add the class file to the dependency tree for this target
+      self.deps.append(ofile)
 
     # collect all the paths where stuff might get built
     ### we should collect this from the dependency nodes rather than
