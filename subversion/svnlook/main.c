@@ -125,6 +125,7 @@ generate_delta_tree (svn_repos_node_t **tree,
                      svn_repos_t *repos,
                      svn_fs_root_t *root, 
                      svn_revnum_t base_rev, 
+                     svn_boolean_t use_copy_history,
                      apr_pool_t *pool)
 {
   svn_fs_root_t *base_root;
@@ -142,8 +143,8 @@ generate_delta_tree (svn_repos_node_t **tree,
   
   /* Drive our editor. */
   SVN_ERR (svn_repos_dir_delta (base_root, "", NULL, root, "",
-                                editor, edit_baton, FALSE, TRUE, FALSE, TRUE,
-                                edit_pool));
+                                editor, edit_baton, FALSE, TRUE, FALSE, 
+                                use_copy_history, edit_pool));
 
   /* Return the tree we just built. */
   *tree = svn_repos_node_from_baton (edit_baton);
@@ -811,7 +812,8 @@ do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
        "Transaction '%s' is not based on a revision.  How odd.",
        c->txn_name);
   
-  SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, pool)); 
+  SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
+                                TRUE, pool)); 
   if (tree)
     SVN_ERR (print_dirs_changed_tree (tree, svn_stringbuf_create ("", pool),
                                       pool));
@@ -841,7 +843,8 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
        "Transaction '%s' is not based on a revision.  How odd.",
        c->txn_name);
   
-  SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, pool)); 
+  SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
+                                TRUE, pool)); 
   if (tree)
     SVN_ERR (print_changed_tree (tree, svn_stringbuf_create ("", pool), pool));
 
@@ -869,7 +872,8 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
        "Transaction '%s' is not based on a revision.  How odd.",
        c->txn_name);
   
-  SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, pool)); 
+  SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
+                                TRUE, pool)); 
   if (tree)
     {
       svn_node_kind_t kind;
@@ -891,7 +895,7 @@ do_tree (svnlook_ctxt_t *c, svn_boolean_t show_ids, apr_pool_t *pool)
   svn_repos_node_t *tree;
 
   SVN_ERR (get_root (&root, c, pool));
-  SVN_ERR (generate_delta_tree (&tree, c->repos, root, 0, pool)); 
+  SVN_ERR (generate_delta_tree (&tree, c->repos, root, 0, FALSE, pool)); 
   if (tree)
     {
       if (show_ids)
