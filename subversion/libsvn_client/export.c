@@ -675,7 +675,7 @@ close_file (void *file_baton,
   if (fb->executable_val)
     SVN_ERR (svn_io_set_file_executable (fb->path, TRUE, FALSE, pool));
 
-  if (fb->date)
+  if (fb->date && (! fb->special))
     SVN_ERR (svn_io_set_file_affected_time (fb->date, fb->path, pool));
 
   if (fb->edit_baton->notify_func)
