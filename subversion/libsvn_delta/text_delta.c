@@ -39,7 +39,7 @@ struct svn_txdelta_stream_t {
 
   /* Private data */
   svn_boolean_t more;           /* TRUE if there are more data in the pool. */
-  apr_off_t pos;                /* Offset of next read in source file. */
+  svn_filesize_t pos;           /* Offset of next read in source file. */
   char *buf;                    /* Buffer for vdelta data. */
 
   apr_md5_ctx_t context;        /* APR's MD5 context container. */
@@ -65,7 +65,7 @@ struct apply_baton {
   apr_pool_t *pool;             /* Pool to allocate data from */
   char *sbuf;                   /* Source buffer */
   apr_size_t sbuf_size;         /* Allocated source buffer space */
-  apr_off_t sbuf_offset;        /* Offset of SBUF data in source stream */
+  svn_filesize_t sbuf_offset;   /* Offset of SBUF data in source stream */
   apr_size_t sbuf_len;          /* Length of SBUF data */
   char *tbuf;                   /* Target buffer */
   apr_size_t tbuf_size;         /* Allocated target buffer space */
@@ -136,8 +136,8 @@ svn_txdelta__copy_window (const svn_txdelta_window_t *window,
 void
 svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
                         int opcode,
-                        apr_off_t offset,
-                        apr_off_t length,
+                        apr_size_t offset,
+                        apr_size_t length,
                         const char *new_data,
                         apr_pool_t *pool)
 {

@@ -58,10 +58,10 @@ struct encoder_baton {
 */
 
 static char *
-encode_int (char *p, apr_off_t val)
+encode_int (char *p, svn_filesize_t val)
 {
   int n;
-  apr_off_t v;
+  svn_filesize_t v;
   unsigned char cont;
 
   assert (val >= 0);
@@ -89,7 +89,8 @@ encode_int (char *p, apr_off_t val)
 
 /* Append an encoded integer to a string.  */
 static void
-append_encoded_int (svn_stringbuf_t *header, apr_off_t val, apr_pool_t *pool)
+append_encoded_int (svn_stringbuf_t *header, svn_filesize_t val,
+                    apr_pool_t *pool)
 {
   char buf[128], *p;
 
@@ -226,7 +227,7 @@ struct decode_baton
 
   /* The offset and size of the last source view, so that we can check
      to make sure the next one isn't sliding backwards.  */
-  apr_off_t last_sview_offset;
+  svn_filesize_t last_sview_offset;
   apr_size_t last_sview_len;
 
   /* We have to discard four bytes at the beginning for the header.
@@ -247,7 +248,7 @@ struct decode_baton
    file for more detail on the encoding format.  */
 
 static const unsigned char *
-decode_int (apr_off_t *val,
+decode_int (svn_filesize_t *val,
             const unsigned char *p,
             const unsigned char *end)
 {
@@ -272,7 +273,7 @@ decode_instruction (svn_txdelta_op_t *op,
                     const unsigned char *p,
                     const unsigned char *end)
 {
-  apr_off_t val;
+  svn_filesize_t val;
 
   if (p == end)
     return NULL;
@@ -293,14 +294,14 @@ decode_instruction (svn_txdelta_op_t *op,
       p = decode_int (&val, p, end);
       if (p == NULL)
         return NULL;
-      op->length = val;
+      op->length = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
     }
   if (op->action_code != svn_txdelta_new)
     {
       p = decode_int (&val, p, end);
       if (p == NULL)
         return NULL;
-      op->offset = val;
+      op->offset = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
     }
 
   return p;
@@ -389,7 +390,7 @@ write_handler (void *baton,
 {
   struct decode_baton *db = (struct decode_baton *) baton;
   const unsigned char *p, *end;
-  apr_off_t val, sview_offset;
+  svn_filesize_t val, sview_offset;
   apr_size_t sview_len, tview_len, inslen, newlen, remaining, npos;
   apr_size_t buflen = *len;
   svn_txdelta_op_t *op;
@@ -442,22 +443,22 @@ write_handler (void *baton,
       p = decode_int (&val, p, end);
       if (p == NULL)
 	return SVN_NO_ERROR;
-      sview_len = val;
+      sview_len = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
 
       p = decode_int (&val, p, end);
       if (p == NULL)
 	return SVN_NO_ERROR;
-      tview_len = val;
+      tview_len = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
 
       p = decode_int (&val, p, end);
       if (p == NULL)
 	return SVN_NO_ERROR;
-      inslen = val;
+      inslen = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
 
       p = decode_int (&val, p, end);
       if (p == NULL)
 	return SVN_NO_ERROR;
-      newlen = val;
+      newlen = (apr_size_t) val; /* FIXME: Decode to apr_size_t! */
 
       /* Check for integer overflow (don't want to let the input trick
          us into invalid pointer games using negative numbers).  */
