@@ -375,18 +375,22 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
   serr = svn_fs_is_dir(&comb->res.collection,
                        comb->priv.root.root, comb->priv.repos_path,
                        pool);
-  if (serr->apr_err == SVN_ERR_FS_NOT_FOUND)
+  if (serr != NULL)
     {
+      if (serr->apr_err != SVN_ERR_FS_NOT_FOUND)
+        {
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Could not determine resource type");
+        }
+
       /* ### verify that the parent exists. needed for PUT, MKCOL, COPY. */
+      /* ### actually, mod_dav validates that (via get_parent_resource) */
       comb->res.exists = FALSE;
     }
-  else if (serr != NULL)
-    {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not determine resource type");
-    }
   else
-    comb->res.exists = TRUE;
+    {
+      comb->res.exists = TRUE;
+    }
 
   return NULL;
 }
