@@ -92,18 +92,20 @@ D. Auto-detection of text/binary file types.  Use it for keyword
                    - Newline translation might have the following
                      values:
 
-                   - "none": No translation; default for binary files
+                     - "none": No translation; default for binary
+                       files
 
-                   - "native": Use whatever the client platform's own
-                      line separator is; this would be the default for
-                      plain text files
+                     - "native": Use whatever the client platform's
+                        own line separator is; this would be the
+                        default for plain text files
 
-                   - "unix", "dos", "mac": force newlines to \n, \r\n
-                     or \n\r, respectively; for instance, MSVC's .dsp
-                     and .dsw files would need "dos" translation.
+                     - "unix", "dos", "mac": force newlines to \n,
+                       \r\n or \n\r, respectively; for instance,
+                       MSVC's .dsp and .dsw files would need "dos"
+                       translation.
 
-                  Also see dev thread
-                  Subject: Alphe-checklist comments                --xbc ]
+                     Also see dev thread
+                     Subject: Alphe-checklist comments             --xbc ]
 
 
 E. Locking issues with the filesystem: mod_dav_svn (as well as
