@@ -60,33 +60,31 @@
 #include "svn_hash.h"
 
 
+/* Global variables */
 
-int
-main (void)
+apr_pool_t *pool = NULL;
+apr_hash_t *proplist, *new_proplist;
+svn_string_t *key;
+apr_file_t *f = NULL;     /* init to NULL very important! */
+apr_status_t err;
+
+char *review =
+"A forthright entrance, yet coquettish on the tongue, its deceptively\n"
+"fruity exterior hides the warm mahagony undercurrent that is the\n"
+"hallmark of Chateau Fraisant-Pitre.  Connoisseurs of the region will\n"
+"be pleased to note the familiar, subtle hints of mulberries and\n"
+"carburator fluid.  Its confident finish is marred only by a barely\n"
+"detectable suggestion of rancid squid ink.";
+
+
+
+
+static int
+test1()
 {
-  apr_pool_t *pool = NULL;
-  apr_hash_t *proplist, *new_proplist;
-  svn_string_t *key;
-  apr_file_t *f = NULL;     /* init to NULL very important! */
-  apr_status_t err;
-
-  /* Our longest piece of test data. */
-  char *review =
-    "A forthright entrance, yet coquettish on the tongue, its deceptively\n"
-    "fruity exterior hides the warm mahagony undercurrent that is the\n"
-    "hallmark of Chateau Fraisant-Pitre.  Connoisseurs of the region will\n"
-    "be pleased to note the familiar, subtle hints of mulberries and\n"
-    "carburator fluid.  Its confident finish is marred only by a barely\n"
-    "detectable suggestion of rancid squid ink.";
-
-  /* Set up APR */
-
-  apr_initialize ();
-  apr_create_pool (&pool, NULL);
-
+  apr_status_t result;
 
   /* Build a hash in memory, and fill it with test data. */
-
   proplist = apr_make_hash (pool);
 
   key = svn_string_create ("color", pool);
@@ -108,42 +106,162 @@ main (void)
   apr_hash_set (proplist, key->data, key->len,
                svn_string_create ("This is the SECOND value.", pool));
 
-
   /* Dump the hash to a file. */
-  apr_open (&f, "hashdump.out", (APR_WRITE | APR_CREATE), APR_OS_DEFAULT, pool);
-  hash_write (proplist, svn_unpack_bytestring, f);
+  apr_open (&f, "hashdump.out",
+            (APR_WRITE | APR_CREATE),
+            APR_OS_DEFAULT, pool);
+
+  result = hash_write (proplist, svn_unpack_bytestring, f);
+
   apr_close (f);
 
+  return ((int) result);
+}
 
-  /* Now create a new hash, and read the file back into it. */
+
+
+
+static int
+test2()
+{
+  apr_status_t result;
 
   new_proplist = apr_make_hash (pool);
 
   apr_open (&f, "hashdump.out", APR_READ, APR_OS_DEFAULT, pool);
-  err = hash_read (&new_proplist, svn_pack_bytestring, f, pool);
+  result = hash_read (&new_proplist, svn_pack_bytestring, f, pool);
   apr_close (f);
-  
-  if (err)
+
+  return ((int) result);
+}
+
+
+
+
+
+/*
+   ====================================================================
+   If you add a new test to this file, update these two arrays.
+
+*/
+
+/* An array of all test functions */
+int (*test_funcs[])() = 
+{
+  NULL,
+  test1,
+  test2,
+};
+
+/* Descriptions of each test we can run */
+static char *descriptions[] = 
+{
+  NULL,
+  "test 1: write a hash to a file",
+  "test 2: read a file into a hash"
+};
+
+/* ================================================================= */
+
+
+
+/* Execute a test number TEST_NUM.  Pretty-print test name and dots
+   according to our test-suite spec, and return the result code. */
+static int
+do_test_num (const char *progname, int test_num)
+{
+  int retval;
+  int numdots, i;
+  int (*func)();
+  int array_size = sizeof(test_funcs)/sizeof(int (*)()) - 1;
+
+  /* Check our array bounds! */
+  if ((test_num > array_size) 
+      || (test_num <= 0))
     {
-      svn_error_t *readerr = svn_create_error (err, 0, 
-                                               "hash_read() failed.",
-                                               NULL, pool);
-      svn_handle_error (readerr, stderr);
+      char *msg = (char *) apr_psprintf (pool, "%s test %d: NO SUCH TEST",
+                                         progname, test_num);
+      printf ("%s", msg);
+      numdots = 75 - strlen (msg);
+      if (numdots > 0)
+        for (i = 0; i < numdots; i++)
+          printf (".");
+      else
+        printf ("...");
+      printf ("FAIL\n");
+
+      return 1;  /* BAIL, this test number doesn't exist. */
     }
 
+  /* Do test */
+  func = test_funcs[test_num];
+  retval = (*func)();
 
-  /* Now dump the new hash into a SECOND file; an external script will
-     compare the two output files.  */
+  /* Pretty print results */
+  printf ("%s %s", progname, descriptions[test_num]);
 
-  apr_open (&f, "hashdump2.out", (APR_WRITE | APR_CREATE),APR_OS_DEFAULT, pool);
-  hash_write (new_proplist, svn_unpack_bytestring, f);
-  apr_close (f);
+  /* (some cute trailing dots) */
+  numdots = 74 - (strlen (progname) + strlen (descriptions[test_num]));
+  if (numdots > 0)
+    for (i = 0; i < numdots; i++)
+      printf (".");
+  else
+    printf ("...");
 
+  if (! retval)
+    printf ("PASS\n");
+  else
+    printf ("FAIL\n");
 
-  /* Clean up and exit */
-  apr_destroy_pool (pool);
-  return 0;
+  return retval;
 }
+
+
+
+int
+main (int argc, char *argv[])
+{
+  int test_num;
+  int i;
+  int got_error = 0;
+
+  /* How many tests are there? */
+  int array_size = sizeof(test_funcs)/sizeof(int (*)()) - 1;
+  
+  /* Initialize APR (Apache pools) */
+  if (apr_initialize () != APR_SUCCESS)
+    {
+      printf ("apr_initialize() failed.\n");
+      exit (1);
+    }
+  if (apr_create_pool (&pool, NULL) != APR_SUCCESS)
+    {
+      printf ("apr_create_pool() failed.\n");
+      exit (1);
+    }
+
+  /* Notice if there's a command-line argument */
+  if (argc >= 2) 
+    {
+      test_num = atoi (argv[1]);
+      got_error = do_test_num (argv[0], test_num);
+    }
+  else /* just run all tests */
+    for (i = 1; i <= array_size; i++)
+      if (do_test_num (argv[0], i))
+        got_error = 1;
+
+  /* Clean up APR */
+  apr_destroy_pool (pool);
+  apr_terminate();
+
+  return got_error;
+}
+
+
+
+
+
 
 
 
