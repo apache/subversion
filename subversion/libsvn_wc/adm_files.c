@@ -379,11 +379,12 @@ svn_wc__text_base_path (const svn_string_t *path,
 }
 
 
-svn_error_t *
-svn_wc__prop_path (svn_string_t **prop_path,
-                   const svn_string_t *path,
-                   svn_boolean_t tmp,
-                   apr_pool_t *pool)
+static svn_error_t *
+prop_path_internal (svn_string_t **prop_path,
+                    const svn_string_t *path,
+                    svn_boolean_t base,
+                    svn_boolean_t tmp,
+                    apr_pool_t *pool)
 {
   svn_error_t *err;
   enum svn_node_kind kind;
@@ -409,12 +410,13 @@ svn_wc__prop_path (svn_string_t **prop_path,
   if (is_wc)  /* It's not only a dir, it's a working copy dir */
     {
       *prop_path = svn_string_dup (path, pool);
-      extend_with_adm_name (*prop_path,
-                            0,
-                            pool,
-                            tmp ? SVN_WC__ADM_TMP : "",
-                            SVN_WC__ADM_DIR_PROPS,
-                            NULL);
+      extend_with_adm_name 
+        (*prop_path,
+         0,
+         pool,
+         tmp ? SVN_WC__ADM_TMP : "",
+         base ? SVN_WC__ADM_DIR_PROP_BASE : SVN_WC__ADM_DIR_PROPS,
+         NULL);
     }
   else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
     {
@@ -434,12 +436,23 @@ svn_wc__prop_path (svn_string_t **prop_path,
                             0,
                             pool,
                             tmp ? SVN_WC__ADM_TMP : "",
-                            SVN_WC__ADM_PROPS,
+                            base ? SVN_WC__ADM_PROP_BASE : SVN_WC__ADM_PROPS,
                             entry_name->data,
                             NULL);
     }
 
   return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_wc__prop_path (svn_string_t **prop_path,
+                   const svn_string_t *path,
+                   svn_boolean_t tmp,
+                   apr_pool_t *pool)
+{
+  return prop_path_internal (prop_path, path, FALSE, tmp, pool);
 }
 
 
@@ -449,61 +462,7 @@ svn_wc__prop_base_path (svn_string_t **prop_path,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
-  svn_error_t *err;
-  enum svn_node_kind kind;
-  svn_boolean_t is_wc;
-  svn_string_t *entry_name;
-
-  err = svn_io_check_path (path, &kind, pool);
-  if (err)
-    return err;
-
-  /* kff todo: some factorization can be done on most callers of
-     svn_wc__check_wc()? */
-
-  is_wc = FALSE;
-  entry_name = NULL;
-  if (kind == svn_node_dir)
-    {
-      err = svn_wc__check_wc (path, &is_wc, pool);
-      if (err)
-        return err;
-    }
-
-  if (is_wc)  /* It's not only a dir, it's a working copy dir */
-    {
-      *prop_path = svn_string_dup (path, pool);
-      extend_with_adm_name (*prop_path,
-                            0,
-                            pool,
-                            tmp ? SVN_WC__ADM_TMP : "",
-                            SVN_WC__ADM_DIR_PROP_BASE,
-                            NULL);
-    }
-  else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
-    {
-      svn_path_split (path, prop_path, &entry_name,
-                      svn_path_local_style, pool);
- 
-      err = svn_wc__check_wc (*prop_path, &is_wc, pool);
-      if (err)
-        return err;
-      else if (! is_wc)
-        return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-           "svn_wc__prop_path: %s is not a working copy directory",
-           (*prop_path)->data);
-
-      extend_with_adm_name (*prop_path,
-                            0,
-                            pool,
-                            tmp ? SVN_WC__ADM_TMP : "",
-                            SVN_WC__ADM_PROP_BASE,
-                            entry_name->data,
-                            NULL);
-    }
-
-  return SVN_NO_ERROR;
+  return prop_path_internal (prop_path, path, TRUE, tmp, pool);
 }
 
 
