@@ -223,7 +223,6 @@ static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
   svn_string_t *str;
   svn_revnum_t crev;
   const char *cdate, *cauthor, *uuid;
-  svn_fs_t *fs;
 
   /* Get the properties. */
   SVN_ERR(svn_fs_node_proplist(props, root, path, pool));
@@ -241,7 +240,7 @@ static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
   apr_hash_set(*props, SVN_PROP_ENTRY_LAST_AUTHOR, APR_HASH_KEY_STRING, str);
 
   /* Hardcode the values for the UUID. */
-  SVN_ERR(svn_fs_get_uuid(svn_fs_root_fs(fs), &uuid, pool));
+  SVN_ERR(svn_fs_get_uuid(svn_fs_root_fs(root), &uuid, pool));
   str = (uuid) ? svn_string_create(uuid, pool) : NULL;
   apr_hash_set(*props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING, str);
   
