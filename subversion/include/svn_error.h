@@ -59,6 +59,9 @@ typedef enum svn_errno_t {
   /* A delta-pkg is missing ancestry. */
   SVN_ERR_XML_MISSING_ANCESTRY,
 
+  /* A binary data encoding was specified which we don't know how to decode. */
+  SVN_ERR_XML_UNKNOWN_ENCODING,
+
   /* Not one of the valid kinds in svn_node_kind. */
   SVN_ERR_UNKNOWN_NODE_KIND,
 

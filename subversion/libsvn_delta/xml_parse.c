@@ -40,6 +40,7 @@
 #include "svn_delta.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
+#include "svn_quoprint.h"
 #include "apr_strings.h"
 #include "xmlparse.h"
 #include "delta.h"
@@ -665,7 +666,7 @@ lookup_file_baton (void **file_baton,
    svndiff parser.  (The svndiff parser knows how to "push" windows of
    svndiff to the consumption routine.)  */
 static svn_error_t *
-do_begin_textdelta (svn_xml__digger_t *digger)
+do_begin_textdelta (svn_xml__digger_t *digger, svn_string_t *encoding)
 {
   svn_error_t *err;
   svn_txdelta_window_handler_t *window_consumer = NULL;
@@ -727,8 +728,15 @@ do_begin_textdelta (svn_xml__digger_t *digger)
   /* Now create an svndiff parser based on the consumer/baton we got. */
   intermediate = svn_txdelta_parse_svndiff (window_consumer, consumer_baton,
                                             digger->pool);
-  digger->svndiff_parser = svn_base64_decode (intermediate, digger->pool);
-  
+  if (encoding == NULL || strcmp(encoding->data, "base64") == 0)
+    digger->svndiff_parser = svn_base64_decode (intermediate, digger->pool);
+  else if (encoding != NULL && strcmp(encoding->data, "quoted-printable") == 0)
+    digger->svndiff_parser = svn_quoprint_decode (intermediate, digger->pool);
+  else
+    return svn_error_createf (SVN_ERR_XML_UNKNOWN_ENCODING, 0, NULL,
+                              digger->pool,
+                              "do_begin_textdelta: unknown encoding %s.",
+                              encoding->data);
   return SVN_NO_ERROR;
 }
 
@@ -986,6 +994,11 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   if (value)
     new_frame->ref_id = svn_string_create (value, my_digger->pool);
 
+  /* Set "encoding" in frame, if there's any such attribute in ATTS */
+  value = svn_xml_get_attr_value ("encoding", atts);
+  if (value)
+    new_frame->encoding = svn_string_create (value, my_digger->pool);
+
   /* If this frame is a <delta-pkg>, it's the top-most frame, which
      holds the "base" ancestry info */
   if (new_frame->tag == svn_delta__XML_deltapkg)
@@ -1100,7 +1113,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   /* EVENT:  Are we starting a new text-delta?  */
   if (new_frame->tag == svn_delta__XML_textdelta) 
     {
-      err = do_begin_textdelta (my_digger);
+      err = do_begin_textdelta (my_digger, new_frame->encoding);
       if (err)
         svn_xml_signal_bailout (err, my_digger->svn_parser);
       return;
