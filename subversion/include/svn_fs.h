@@ -597,7 +597,7 @@ svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
 /* Allocate and return an array *REVS of svn_revnum_t revisions in
    which PATHS under ROOT were modified.  Use POOL for all allocations.
    The array of *REVS are sorted in descending order. All duplicates
-   will also be removed. PATHS is an array of `const char *' entries.
+   will also be removed.  PATHS is an array of `const char *' entries.
    
    If CROSS_COPY_HISTORY is not set, this function will halt the
    search for revisions in which a given path was changed when it
@@ -620,12 +620,27 @@ svn_error_t *svn_fs_revisions_changed (apr_array_header_t **revs,
                                        apr_pool_t *pool);
 
 
+/* Allocate and return an array *PATHS of const char * paths that were
+   modified in REVS in FS.  *REVS is an array of svn_revnum_t
+   revisions.  
+
+   NOTE: This function uses node-id ancestry alone to determine
+   modifiedness, and therefore does NOT claim that in any of the
+   returned revisions file contents changed, properties changed,
+   directory entries lists changed, etc.  */
+svn_error_t *svn_fs_paths_changed (apr_array_header_t **paths,
+                                   svn_fs_t *fs,
+                                   const apr_array_header_t *revs,
+                                   apr_pool_t *pool);
+
+
 /* Set *IS_DIR to non-zero iff PATH in ROOT is a directory.
    Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_is_dir (int *is_dir,
                             svn_fs_root_t *root,
                             const char *path,
                             apr_pool_t *pool);
+
 
 /* Set *IS_FILE to non-zero iff PATH in ROOT is a file.
    Do any necessary temporary allocation in POOL.  */
@@ -640,7 +655,7 @@ svn_error_t *svn_fs_is_file (int *is_file,
    If ROOT is the root of a transaction, keep in mind that other
    changes to the transaction can change which node PATH refers to,
    and even whether the path exists at all.  */
-svn_error_t *svn_fs_node_id (svn_fs_id_t **id_p,
+svn_error_t *svn_fs_node_id (const svn_fs_id_t **id_p,
                              svn_fs_root_t *root,
                              const char *path,
                              apr_pool_t *pool);
