@@ -790,12 +790,12 @@ wcprop_list (apr_hash_t **props,
   
   if (kind == svn_node_none)
     return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
-                              "svn_wc__wcprop_list: non-existent path '%s'.",
+                              "wcprop_list: non-existent path '%s'.",
                               path->data);
   
   if (kind == svn_node_unknown)
     return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
-                              "svn_wc__wcprop_list: unknown node kind: '%s'.",
+                              "wcprop_list: unknown node kind: '%s'.",
                               path->data);
 
   /* Construct a path to the relevant property file */

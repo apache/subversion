@@ -228,6 +228,9 @@ struct file_baton
      the code that syncs up the adm dir and working copy. */
   svn_boolean_t prop_changed;
 
+  /* This gets set if a "wc" prop was stored. */
+  svn_boolean_t wcprop_changed;
+
   /* This gets set if there's a conflict when merging a prop-delta
      into the locally modified props.  */
   svn_boolean_t prop_conflict;
@@ -235,6 +238,10 @@ struct file_baton
   /* An array of (svn_prop_t *)'s, representing all the property
      changes to be applied to this file. */
   apr_array_header_t *propchanges;
+
+  /* An array of (svn_prop_t *)'s, representing all the "wc" property
+     changes to be stored for this file. */
+  apr_array_header_t *wcpropchanges;
 
 };
 
@@ -966,20 +973,22 @@ change_file_prop (void *file_baton,
   else
     local_value = NULL;
 
-  /* If this is a 'wc' prop, store it in the administrative area and
-     get on with life.  It's not a regular versioned property. */
-  if (is_wc_prop (name))
-    {
-      SVN_ERR (svn_wc__wcprop_set (name, value, fb->path, fb->pool));
-      return SVN_NO_ERROR;
-    }
-  
-  /* Else, it's a real property... */
-
   /* Build propchange object */
   propchange = apr_pcalloc (fb->pool, sizeof(*propchange));
   propchange->name = local_name;
   propchange->value = local_value;
+
+  /* If this is a 'wc' prop, store it in a different array. */
+  if (is_wc_prop (name))
+    {
+      receiver = (svn_prop_t **) apr_array_push (fb->wcpropchanges);
+      *receiver = propchange;
+      
+      fb->wcprop_changed = 1;
+      return SVN_NO_ERROR;
+    }
+  
+  /* Else, it's a normal property... */
 
   /* Push the object to the file baton's array of propchanges */
   receiver = (svn_prop_t **) apr_array_push (fb->propchanges);
@@ -1301,6 +1310,20 @@ close_file (void *file_baton)
         return
           svn_error_quick_wrap (err, "close_file: couldn't do prop merge.");
     }
+
+  /* Dump any stored-up "wc" props */
+  if (fb->wcprop_changed)
+    {
+      int i;
+      for (i = 0; i < fb->wcpropchanges->nelts; i++)
+        {
+          svn_prop_t *prop;
+          prop = (((svn_prop_t **)(fb->wcpropchanges)->elts)[i]);
+          SVN_ERR (svn_wc__wcprop_set (prop->name, prop->value, 
+                                       fb->path, fb->pool));
+        }
+    }
+
 
   /* Set revision. */
   revision_str = apr_psprintf (fb->pool,
