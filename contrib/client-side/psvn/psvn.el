@@ -145,6 +145,10 @@
 (defvar svn-status-hide-unmodified nil "Hide unmodified files in *svn-status* buffer.")
 (defvar svn-status-directory-history nil "List of visited svn working directories.")
 
+(defvar svn-status-unmark-files-after-list '(commit revert)
+  "A list of operations, after that all files will be unmarked.
+Possible values are: commit, revert.")
+
 ;;; default arguments to pass to svn commands
 (defvar svn-status-default-log-arguments ""
   "*Arguments to pass to svn log.
@@ -407,7 +411,9 @@ for  example: '(\"revert\" \"file1\"\)"
                  ((eq svn-process-cmd 'commit)
                   (svn-status-remove-temp-file-maybe)
                   (svn-status-show-process-buffer-internal t)
-                  (svn-status-update)
+                  (if (member 'commit svn-status-unmark-files-after-list)
+                      (svn-status-unset-all-usermarks)
+                    (svn-status-update))
                   (message "svn commit finished"))
                  ((eq svn-process-cmd 'update)
                   (svn-status-show-process-buffer-internal t)
@@ -420,7 +426,9 @@ for  example: '(\"revert\" \"file1\"\)"
                   (svn-status-update)
                   (message "svn mkdir finished"))
                  ((eq svn-process-cmd 'revert)
-                  (svn-status-update)
+                  (if (member 'revert svn-status-unmark-files-after-list)
+                      (svn-status-unset-all-usermarks)
+                    (svn-status-update))
                   (message "svn revert finished"))
                  ((eq svn-process-cmd 'mv)
                   (svn-status-update)
@@ -955,7 +963,10 @@ Symbolic links to directories count as directories (see `file-directory-p')."
     ;; Insert all files and directories
     (while st-info
       (setq start-pos (point))
-      (cond ((svn-status-line-info->hide-because-user-elide (car st-info))
+      (cond ((svn-status-line-info->has-usermark (car st-info))
+             ;; Show a marked file always
+             (svn-insert-line-in-status-buffer (car st-info)))
+            ((svn-status-line-info->hide-because-user-elide (car st-info))
              );(message "user wanted to hide %s" (svn-status-line-info->filename (car st-info))))
             ((svn-status-line-info->hide-because-unknown (car st-info))
              (setq unknown-count (+ unknown-count 1)))
