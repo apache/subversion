@@ -55,6 +55,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include "svn_string.h"   /* This includes <apr_*.h> */
 
 
