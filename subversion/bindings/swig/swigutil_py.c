@@ -189,6 +189,13 @@ static PyObject *make_ob_status(void *ptr)
   return make_pointer("svn_wc_status_t *", ptr);
 } 
 
+/* for use by the "O&" format specifier */
+static PyObject *make_ob_fs_root(void *ptr)
+{
+  return make_pointer("svn_fs_root_t *", ptr);
+} 
+
+
 static PyObject *convert_hash(apr_hash_t *hash,
                               PyObject * (*converter_func)(void *value,
                                                            void *ctx),
@@ -1128,6 +1135,47 @@ svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
   PyErr_SetString(PyExc_TypeError, "not a string");
   err = convert_python_error();
 
+ finished:
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
+
+/* Thunked version of svn_repos_authz_func_t callback type. */
+svn_error_t *svn_swig_py_thunk_repos_authz_func(svn_boolean_t *allowed,
+                                                svn_fs_root_t *root,
+                                                const char *path,
+                                                void *baton,
+                                                apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (function == NULL || function == Py_None)
+    return SVN_NO_ERROR;
+
+  *allowed = TRUE;
+
+  svn_swig_py_acquire_py_lock();
+  if ((result = PyObject_CallFunction(function, 
+                                      (char *)"O&sO&", 
+                                      make_ob_fs_root, root,
+                                      path, make_ob_pool, pool)) != NULL)
+    {
+      if (result != Py_None)
+        {
+          if (PyInt_Check(result))
+            *allowed = PyInt_AsLong(result);
+          else if (PyLong_Check(result))
+            *allowed = PyLong_AsLong(result);
+          else
+            err = convert_python_error();
+        }
+      Py_DECREF(result);
+      goto finished;
+    }
+  
  finished:
   svn_swig_py_release_py_lock();
   return err;
