@@ -2,11 +2,10 @@
 
 use Test::More qw(no_plan);
 use strict;
-BEGIN {
-use_ok 'SVN::Core';
-use_ok 'SVN::Repos';
-use_ok 'SVN::Fs';
-}
+
+require SVN::Core;
+require SVN::Repos;
+require SVN::Fs;
 
 my $repospath = "/tmp/svn-$$";
 

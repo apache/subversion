@@ -49,7 +49,6 @@ will need extra handling.
 sub import {
     my (undef, $pkg, $prefix) = @_;
     unless (${"SVN::_${pkg}::ISA"}[0] eq 'DynaLoader') {
-	warn "boostrapping $pkg";
 	@{"SVN::_${pkg}::ISA"} = qw(DynaLoader);
 	eval qq'
 package SVN::_$pkg;

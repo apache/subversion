@@ -1,5 +1,9 @@
 package SVN::Delta;
+use strict;
 use SVN::Base qw(Delta svn_delta_);
+
+package SVN::TxDelta;
+use SVN::Base qw(Delta svn_txdelta_);
 
 package _p_svn_txdelta_op_t;
 use SVN::Base qw(Delta svn_txdelta_op_t_);
@@ -10,7 +14,6 @@ use SVN::Base qw(Delta svn_txdelta_window_t_);
 package SVN::Delta::Editor;
 use SVN::Base qw(Delta svn_delta_editor_);
 *invoke_set_target_revision = *SVN::_Delta::svn_delta_editor_invoke_set_target_revision;
-use strict;
 
 sub convert_editor {
     my $self = shift;
