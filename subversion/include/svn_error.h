@@ -137,13 +137,12 @@ typedef enum svn_errno_t {
   /* The name given does not refer to a directory.  */
   SVN_ERR_FS_NOT_DIRECTORY,
 
-  /* The user has called `svn_fs_replace_root' more than once on a
-     given transaction (which is permitted), but specified different
-     revision numbers each time.  */
-  SVN_ERR_FS_BAD_REPLACE_ROOT,
-
   /* The caller attempted to change a node which is not mutable.  */
   SVN_ERR_FS_NOT_MUTABLE,
+
+  /* The transaction could not be committed, because of a conflict with
+     a prior change.  */
+  SVN_ERR_FS_CONFLICT,
 
   /* The error is a Berkeley DB error.  `src_err' is the Berkeley DB
      error code, and `message' is an error message.  */
