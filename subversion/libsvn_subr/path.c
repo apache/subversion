@@ -737,7 +737,7 @@ svn_path_is_url (const char *path)
   /* ### This function is reaaaaaaaaaaaaaally stupid right now.
      We're just going to look for:
  
-        (scheme)://(optional_servername)/(optional_stuff)
+        (scheme)://(optional_stuff)
 
      Where (scheme) has no ':' or '/' characters.
 
@@ -745,7 +745,7 @@ svn_path_is_url (const char *path)
   */
 
   /* Make sure we have enough characters to even compare. */
-  if (len < 5)
+  if (len < 4)
     return FALSE;
 
   /* Look for the sequence '://' */
@@ -764,11 +764,10 @@ svn_path_is_url (const char *path)
       if (j == 0)
         return FALSE;
 
-      /* Expecting the next two chars to be '/', and somewhere
-         thereafter another '/'. */
+      /* Expecting the next two chars to be '/' */
+
       if ((path[j + 1] == '/')
-          && (path[j + 2] == '/')
-          && (strchr (path + j + 3, '/') != NULL))
+          && (path[j + 2] == '/'))
         return TRUE;
       
       return FALSE;
