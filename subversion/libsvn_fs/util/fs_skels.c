@@ -121,15 +121,18 @@ is_valid_rep_delta_chunk_skel (skel_t *skel)
     return FALSE;
   if (! ((! window->children->is_atom)
          && (window->children->next->is_atom)
-         && (svn_fs__list_length (window->children->next->next) == 2)
          && (window->children->next->next->next->is_atom)))
     return FALSE;
   if ((len == 5) 
       && (! window->children->next->next->next->next->is_atom))
     return FALSE;
   
-  /* check the checksum list. */
-  if (! is_valid_checksum_skel (window->children->next->next))
+  /* The per-chunk checksum is now obsolete and is always stored as an
+     empty list.  However, older repositories may still have real a
+     checksum list here.  We never use the checksum itself, but we
+     should at least make sure it's one of these two expected forms. */
+  if (! ((svn_fs__list_length (window->children->next->next) == 0)
+         || (is_valid_checksum_skel (window->children->next->next))))
     return FALSE;
   
   /* check the diff. ### currently we support only svndiff version
@@ -538,8 +541,6 @@ svn_fs__parse_representation_skel (svn_fs__representation_t **rep_p,
           chunk->size = atoi (apr_pstrmemdup (pool,
                                               diff_skel->next->data,
                                               diff_skel->next->len));
-          memcpy (&(chunk->checksum), checksum_skel->children->next->data, 
-                  MD5_DIGESTSIZE);
           chunk->rep_key = apr_pstrmemdup (pool, 
                                            checksum_skel->next->data,
                                            checksum_skel->next->len);
@@ -952,7 +953,7 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
           skel_t *window_skel = svn_fs__make_empty_list (pool);
           skel_t *chunk_skel = svn_fs__make_empty_list (pool);
           skel_t *diff_skel = svn_fs__make_empty_list (pool);
-          skel_t *checksum_skel = svn_fs__make_empty_list (pool);
+          skel_t *obsolete_checksum_skel = svn_fs__make_empty_list (pool);
           const char *size_str, *offset_str, *version_str;
           svn_fs__rep_delta_chunk_t *chunk = 
             (((svn_fs__rep_delta_chunk_t **) chunks->elts)[i - 1]);
@@ -976,20 +977,13 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
           svn_fs__prepend (svn_fs__str_atom (version_str, pool), diff_skel);
           svn_fs__prepend (svn_fs__str_atom ("svndiff", pool), diff_skel);
         
-          /* CHECKSUM */
-          svn_fs__prepend (svn_fs__mem_atom (chunk->checksum,
-                                             MD5_DIGESTSIZE / 
-                                             sizeof (*(chunk->checksum)), 
-                                             pool), checksum_skel);
-          svn_fs__prepend (svn_fs__str_atom ("md5", pool), checksum_skel);
-          
           /* REP-KEY */
           if ((! chunk->rep_key) || (! *(chunk->rep_key)))
             svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), window_skel);
           else
             svn_fs__prepend (svn_fs__str_atom (chunk->rep_key, pool), 
                              window_skel);
-          svn_fs__prepend (checksum_skel, window_skel);
+          svn_fs__prepend (obsolete_checksum_skel, window_skel);
           svn_fs__prepend (svn_fs__str_atom (size_str, pool), window_skel);
           svn_fs__prepend (diff_skel, window_skel);
           
