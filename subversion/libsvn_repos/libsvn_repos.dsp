@@ -101,6 +101,10 @@ SOURCE=.\lock.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\node_tree.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\reporter.c
 # End Source File
 # Begin Source File

@@ -90,24 +90,12 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\editors.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\main.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\nodetree.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
-
-SOURCE=.\svnlook.h
-# End Source File
 # End Group
 # End Target
 # End Project
