@@ -90,7 +90,10 @@ svn_ra_local__split_URL (svn_repos_t **repos,
         && (dup_path[2] == ':' || dup_path[2] == '|')
         && dup_path[3] == '/')
       {
+        /* Skip the leading slash. */
         ++dup_path;
+        /* We're using path below to calculate fs_path, so keep it in sync. */
+        ++path;
         if (dup_path[1] == '|')
           dup_path[1] = ':';
       }
