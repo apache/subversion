@@ -104,18 +104,24 @@ store_locks_callback (void *baton,
   struct lock_baton *lb = baton;
   svn_wc_adm_access_t *adm_access;
   const char *abs_path;
-  
+
   abs_path = svn_path_join (svn_wc_adm_access_path (lb->adm_access), 
                             path, lb->pool);
-  
+
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, lb->adm_access,
                                       abs_path, lb->pool));
-
+      
   if (do_lock)
-    SVN_ERR (svn_wc_add_lock (abs_path, lock, adm_access, lb->pool));
-  else
-    SVN_ERR (svn_wc_remove_lock (abs_path, adm_access, lb->pool));
+    if (!ra_err)
+      SVN_ERR (svn_wc_add_lock (abs_path, lock, adm_access, lb->pool));
 
+  if (!do_lock)
+    /* Remove our wc lock token either a) if we got no error, or b) if
+       we got any locking-related error except for owner mismatch. */
+    if (!ra_err ||
+        (ra_err && (ra_err->apr_err != SVN_ERR_FS_LOCK_OWNER_MISMATCH)))
+      SVN_ERR (svn_wc_remove_lock (abs_path, adm_access, lb->pool));
+  
   /* Call our callback, if we've got one. */
   if (lb->nested_callback)
     SVN_ERR (lb->nested_callback (lb->nested_baton, path, do_lock, 

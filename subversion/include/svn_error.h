@@ -218,6 +218,21 @@ void svn_handle_warning (FILE *stream, svn_error_t *error);
 
 /** @} */
 
+/* 
+ * @since New in 1.2.  
+ *
+ * Return TRUE if @a err is an error specifically related to locking a
+ * path, FALSE otherwise. */
+svn_boolean_t svn_error_is_lock_error (svn_error_t *err);
+
+/* 
+ * @since New in 1.2.  
+ *
+ * Return TRUE if @a err is an error specifically related to unlocking
+ * a path, FALSE otherwise. */
+svn_boolean_t svn_error_is_unlock_error (svn_error_t *err);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

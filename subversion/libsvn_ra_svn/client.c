@@ -1429,6 +1429,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
       apr_ssize_t keylen;
       void *val;
       svn_revnum_t *revnum;
+      svn_error_t *err, *callback_err;
 
       apr_hash_this(hi, &key, &keylen, &val);
       path = key;
@@ -1443,12 +1444,24 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
                                      _("Server doesn't support "
                                        "the lock command")));
 
-      SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &list));
-      SVN_ERR(parse_lock(list, pool, &lock));
+      err = svn_ra_svn_read_cmd_response(conn, pool, "l", &list);
+
+      if (!err)
+        SVN_ERR(parse_lock(list, pool, &lock));
+      
+      if (err && !svn_error_is_lock_error (err))
+        return err;
 
       /* Run the lock callback if we have one. */
       if (lock_func)
-        SVN_ERR(lock_func(lock_baton, path, TRUE, lock, NULL));
+        callback_err = lock_func(lock_baton, path, TRUE, lock, err);
+
+      /* clear the error if there was one. */
+      if (err)
+        svn_error_clear (err);
+
+      if (callback_err)
+        return callback_err;
 
       /* Add lock to the array of locks */
       APR_ARRAY_PUSH(locks, svn_lock_t *) = lock;
@@ -1479,6 +1492,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
       apr_ssize_t keylen;
       void *val;
       const char *token;
+      svn_error_t *err, *callback_err;
 
       apr_hash_this(hi, &key, &keylen, &val);
       path = key;
@@ -1496,12 +1510,21 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
                                      _("Server doesn't support the unlock "
                                        "command")));
 
-      SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+      err = svn_ra_svn_read_cmd_response(conn, pool, "");
+
+      if (err && !svn_error_is_unlock_error (err))
+        return err;
 
       /* Run the lock callback if we have one. */
       if (lock_func)
-        SVN_ERR(lock_func(lock_baton, path, FALSE, NULL, NULL));
+        callback_err = lock_func(lock_baton, path, FALSE, NULL, err);
 
+      /* clear the error if there was one. */
+      if (err)
+        svn_error_clear (err);
+
+      if (callback_err)
+        return callback_err;
     }
 
   return SVN_NO_ERROR;

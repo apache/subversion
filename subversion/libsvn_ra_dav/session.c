@@ -1104,17 +1104,28 @@ svn_ra_dav__lock(svn_ra_session_t *session,
       apr_ssize_t keylen;
       void *val;
       svn_revnum_t *revnum;
+      svn_error_t *err, *callback_err;
 
       apr_hash_this(hi, &key, &keylen, &val);
       path = key;
       revnum = val;
 
-      SVN_ERR (shim_svn_ra_dav__lock(session, &lock, path, comment, 
-                                     force, *revnum, pool));
+      err = shim_svn_ra_dav__lock(session, &lock, path, comment, 
+                                  force, *revnum, pool);
+
+      if (err && !svn_error_is_lock_error (err))
+        return err;
 
       /* Run the lock callback if we have one. */
       if (lock_func)
-        SVN_ERR(lock_func(lock_baton, path, TRUE, lock, NULL));
+        callback_err = lock_func(lock_baton, path, TRUE, lock, err);
+
+      /* clear the error if there was one. */
+      if (err)
+        svn_error_clear (err);
+
+      if (callback_err)
+        return callback_err;
 
       /* Add lock to the array of locks */
       APR_ARRAY_PUSH(locks, svn_lock_t *) = lock;
@@ -1230,6 +1241,7 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
       apr_ssize_t keylen;
       void *val;
       const char *token;
+      svn_error_t *err, *callback_err;
 
       apr_hash_this(hi, &key, &keylen, &val);
       path = key;
@@ -1240,11 +1252,21 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
       else
         token = NULL;
 
-      SVN_ERR (shim_svn_ra_dav__unlock (session, path, token, force, pool));
+      err = shim_svn_ra_dav__unlock (session, path, token, force, pool);
+
+      if (err && !svn_error_is_unlock_error (err))
+        return err;
 
       /* Run the lock callback if we have one. */
       if (lock_func)
-        SVN_ERR(lock_func(lock_baton, path, FALSE, NULL, NULL));
+        callback_err = lock_func(lock_baton, path, FALSE, NULL, err);
+
+      /* clear the error if there was one. */
+      if (err)
+        svn_error_clear (err);
+
+      if (callback_err)
+        return callback_err;
     }
 
   return SVN_NO_ERROR;
