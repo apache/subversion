@@ -32,14 +32,6 @@ Candidate changes:
       +1: ghudson
       Nominated by: David James <james82@gmail.com>
 
-  * r11685
-    Internationalization issues for the Windows Installer
-    Justification:
-      Keeping the installer in sync with actual 1.1.x Windows build.
-      The Apache Server will not run on some systems w/o this merge.
-    Votes:
-      +1: josander
-
   * r11708
     Fix a bug which caused certain unfinished switch operations to leave
     the working copy in a busticated state.
@@ -129,4 +121,13 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: lundblad, kfogel, maxb
       +0: nori
+
+  * r11685
+    Internationalization issues for the Windows Installer
+    Justification:
+      Keeping the installer in sync with actual 1.1.x Windows build.
+      The Apache Server will not run on some systems w/o this merge.
+    Votes:
+      +1: josander
+      +0: maxb
 
