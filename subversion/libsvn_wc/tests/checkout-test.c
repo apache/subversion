@@ -102,8 +102,14 @@ apply_delta (void *delta_src,
     return err;
 
   /* ... and edit! */
-  return svn_xml_auto_parse (read_fn, delta_src,
-                             editor, edit_baton, dir_baton, pool);
+  return svn_xml_auto_parse (read_fn,
+                             delta_src,
+                             dest,
+                             version,
+                             editor,
+                             edit_baton,
+                             dir_baton,
+                             pool);
 }
 
 
