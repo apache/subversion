@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os, shutil
+import string, sys, os, shutil, re
 
 # Our testing module
 import svntest
@@ -466,6 +466,72 @@ def no_copy_overwrites(sbox):
 
   return 0
 
+#----------------------------------------------------------------------
+
+# Issue 845.  A WC -> WC copy will write a destination text-base and
+# prop-base, so the destination cannot be a versioned file even if the
+# destination is scheduled for deletion.
+
+def expect_extra_files(node, extra_files):
+  "singleton handler for expected singletons"
+
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern))
+      return 0
+  print "Found unexpected disk object:", node.name
+  raise svntest.main.SVNTreeUnequal
+
+def no_wc_copy_overwrites(sbox):
+  "svn cp PATH PATH cannot overwrite destination"
+
+  if sbox.build():
+    return 1
+  wc_dir = sbox.wc_dir
+
+  # File scheduled for deletion
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  outlines, errlines = svntest.main.run_svn(None, 'rm', rho_path)
+  if errlines:
+    return 1
+
+  # File simply missing
+  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
+  os.remove(tau_path)
+
+  # Status before attempting copies
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/rho', status='D ')
+  extra_files = [ 'tau' ]
+  if (svntest.actions.run_and_verify_status(wc_dir, expected_status,
+                                            None, None,
+                                            expect_extra_files, extra_files)
+      or extra_files):
+    return 1
+
+  # These copies should fail
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  outlines, errlines = svntest.main.run_svn(1, 'cp', pi_path, rho_path)
+  if not errlines:
+    return 1
+  outlines, errlines = svntest.main.run_svn(1, 'cp', pi_path, tau_path)
+  if not errlines:
+    return 1
+  outlines, errlines = svntest.main.run_svn(1, 'cp', pi_path, alpha_path)
+  if not errlines:
+    return 1
+
+  # Status after failed copies should not have changed
+  extra_files = [ 'tau' ]
+  if (svntest.actions.run_and_verify_status(wc_dir, expected_status,
+                                            None, None,
+                                            expect_extra_files, extra_files)
+      or extra_files):
+    return 1
+
+#----------------------------------------------------------------------
 
 # Takes out working-copy locks for A/B2 and child A/B2/E. At one stage
 # during issue 749 the second lock cause an already-locked error.
@@ -511,6 +577,7 @@ test_list = [ None,
               receive_copy_in_update,
               resurrect_deleted_dir,
               no_copy_overwrites,
+              no_wc_copy_overwrites,
               copy_modify_commit,
              ]
 
