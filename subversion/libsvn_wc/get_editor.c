@@ -66,6 +66,10 @@ struct edit_baton
   svn_boolean_t is_checkout;
   svn_stringbuf_t *ancestor_url;
 
+  /* Only used by 'switch' operations. */
+  svn_boolean_t is_switch;
+  svn_stringbuf_t *switch_url;
+
   apr_pool_t *pool;
 };
 
@@ -2027,19 +2031,21 @@ close_edit (void *edit_baton)
 {
   struct edit_baton *eb = edit_baton;
   
-  /* By definition, anybody "driving" this editor for update purposes
-     at a *minimum* must have called set_target_revision() at the
-     outset, and close_edit() at the end -- even if it turned out that
-     no changes ever had to be made, and open_root() was never
+  /* By definition, anybody "driving" this editor for update or switch
+     purposes at a *minimum* must have called set_target_revision() at
+     the outset, and close_edit() at the end -- even if it turned out
+     that no changes ever had to be made, and open_root() was never
      called.  That's fine.  But regardless, when the edit is over,
      this editor needs to make sure that *all* paths have had their
      revisions bumped to the new target revision. */
 
-  if (! eb->is_checkout)  
+  if (eb->is_checkout)
+    /* do nothing for checkout;  all urls and working revs are fine. */
+    ;
+
+  else  /* must be an update or switch */
     {
-      /* checkouts already have a uniform wc revision; only updates
-         need this bumping, and only directory updates at that.
-         Updated files should already be up-to-date. */
+      /* bump all the working revisions, starting at the top of the tree */
       svn_wc_entry_t *entry;
       svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->anchor, eb->pool);
       if (eb->target)
@@ -2050,6 +2056,17 @@ close_edit (void *edit_baton)
                                                   eb->target_revision,
                                                   eb->recurse,
                                                   eb->pool));
+      if (eb->is_switch)
+        {
+          /* rewrite all the urls as well, starting at the top of the tree */
+          if (entry->kind == svn_node_dir)            
+            {
+              svn_stringbuf_t *url = svn_stringbuf_dup (eb->switch_url,
+                                                        eb->pool);
+              SVN_ERR (svn_wc__recursively_rewrite_urls (full_path,
+                                                         url, eb->pool));
+            }
+        }
     }
 
   /* The edit is over, free its pool. */
@@ -2069,6 +2086,8 @@ make_editor (svn_stringbuf_t *anchor,
              svn_revnum_t target_revision,
              svn_boolean_t is_checkout,
              svn_stringbuf_t *ancestor_url,
+             svn_boolean_t is_switch,
+             svn_stringbuf_t *switch_url,
              svn_boolean_t recurse,
              const svn_delta_edit_fns_t **editor,
              void **edit_baton,
@@ -2087,6 +2106,8 @@ make_editor (svn_stringbuf_t *anchor,
   eb->is_checkout     = is_checkout;
   eb->target_revision = target_revision;
   eb->ancestor_url    = ancestor_url;
+  eb->is_switch       = is_switch;
+  eb->switch_url      = switch_url;
   eb->anchor          = anchor;
   eb->target          = target;
   eb->recurse         = recurse;
@@ -2122,8 +2143,10 @@ svn_wc_get_update_editor (svn_stringbuf_t *anchor,
                           void **edit_baton,
                           apr_pool_t *pool)
 {
-  return make_editor (anchor, target, target_revision, FALSE, NULL, recurse,
-                      editor, edit_baton, pool);
+  return make_editor (anchor, target, target_revision, 
+                      FALSE, NULL,
+                      FALSE, NULL,
+                      recurse, editor, edit_baton, pool);
 }
 
 
@@ -2136,8 +2159,27 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
                             void **edit_baton,
                             apr_pool_t *pool)
 {
-  return make_editor (dest, NULL, target_revision, TRUE, ancestor_url, recurse,
-                      editor, edit_baton, pool);
+  return make_editor (dest, NULL, target_revision, 
+                      TRUE, ancestor_url, 
+                      FALSE, NULL,
+                      recurse, editor, edit_baton, pool);
+}
+
+
+svn_error_t *
+svn_wc_get_switch_editor (svn_stringbuf_t *anchor,
+                          svn_stringbuf_t *target,
+                          svn_revnum_t target_revision,
+                          svn_stringbuf_t *switch_url,
+                          svn_boolean_t recurse,
+                          const svn_delta_edit_fns_t **editor,
+                          void **edit_baton,
+                          apr_pool_t *pool)
+{
+  return make_editor (anchor, target, target_revision,
+                      FALSE, NULL,
+                      TRUE, switch_url,
+                      recurse, editor, edit_baton, pool);
 }
 
 
