@@ -94,12 +94,20 @@ SOURCE=.\main.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\shell.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\clients\win32\svn.rc
 # End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
+# Begin Source File
+
+SOURCE=.\svnadmin.h
+# End Source File
 # End Group
 # End Target
 # End Project
