@@ -23,16 +23,9 @@
   <title>Subversion: Diverse dokumentasjon</title>
 
   <!-- External entity refs -->
-  <!-- @ENGLISH {{{
   &quick_walkthrough; 
   &best_practices;
   &directory_versioning;
-  @ENGLISH }}} -->
-  <!-- Kommentert ut for &#229; ikke plage make {{{
-  &quick_walkthrough;
-  &best_practices;
-  &directory_versioning;
-  }}} -->
 
   </book>
   <!-- vim: set ft=svnbook : -->
