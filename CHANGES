@@ -8,7 +8,7 @@ Version 0.17.0 (released ? Jan 2003, revision ????)
  * default global-ignores now built-in, new runtime-config file commented out
 
  Developer-visible changes:
- * checksums, checksums everywhere:
+ * checksums, checksums everywhere (issues #649, #689):
     - filesystem stores them, and verifies them when reading/writing
     - working copy stores them, and verifies them when reading/writing
     - checksums transferred both ways over network, RA layers verify them
