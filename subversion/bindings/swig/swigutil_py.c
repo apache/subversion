@@ -194,7 +194,6 @@ const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
        (like, say, apr_array_push would). */
     temp->nelts = targlen;
     while (targlen--) {
-        const char *string;
         PyObject *o = PySequence_GetItem(source, targlen);
         if (o == NULL)
             return NULL;
@@ -203,8 +202,7 @@ const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
             PyErr_SetString(PyExc_TypeError, "not a sequence");
             return NULL;
         }
-        string = apr_pstrdup (pool, PyString_AS_STRING(o));
-        APR_ARRAY_IDX(temp, targlen, const char *) = string;
+        APR_ARRAY_IDX(temp, targlen, const char *) = PyString_AS_STRING(o);
         Py_DECREF(o);
     }
     return temp;
@@ -622,9 +620,14 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
   PyObject *chpaths;
 
   if (changed_paths)
-    chpaths = svn_swig_py_convert_hash (changed_paths, tinfo);
+    {
+      chpaths = svn_swig_py_convert_hash (changed_paths, tinfo);
+    }
   else
-    chpaths = Py_None;
+    {
+      chpaths = Py_None;
+      Py_INCREF(Py_None);
+    }
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallFunction(receiver, 
@@ -632,11 +635,13 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
                                       chpaths, rev, author, date, msg, 
                                       make_ob_pool, pool)) == NULL)
     {
+      Py_DECREF(chpaths);
       return convert_python_error(pool);
     }
 
   /* there is no return value, so just toss this object (probably Py_None) */
   Py_DECREF(result);
+  Py_DECREF(chpaths);
   return SVN_NO_ERROR;
 }
 
