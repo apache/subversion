@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion\n"
 "POT-Creation-Date: 2004-09-30 16:40+0900\n"
-"PO-Revision-Date: 2004-10-26 11:37+0900\n"
+"PO-Revision-Date: 2004-10-27 16:03+0900\n"
 "Last-Translator: seolin <blueboh@gmail.com>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -4963,7 +4963,7 @@ msgstr ""
 
 #: svnadmin/main.c:242
 msgid "no progress (only errors) to stderr"
-msgstr ""
+msgstr "stderr 에 대한 진행사항이 (오류에 한해서) 없습니다"
 
 #: svnadmin/main.c:245
 msgid "ignore any repos UUID found in the stream"
@@ -5121,6 +5121,9 @@ msgid ""
 "\n"
 "Verifies the data stored in the repository.\n"
 msgstr ""
+"사용법: svnadmin verify REPOS_PATH\n"
+"\n"
+"저장소에 저장된 데이타를 검증합니다.\n"
 
 #: svnadmin/main.c:496
 #: svnadmin/main.c:551
@@ -5143,6 +5146,10 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
+"일반적인 사용법: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
+"특정 subcommand 의 사용법을 위해서는 \"svnadmin help <subcommand>\" 를 참조하십시오.\n"
+"\n"
+"이용 가능한 subcommands:\n"
 
 #: svnadmin/main.c:653
 msgid ""
@@ -5216,7 +5223,7 @@ msgstr "원본 경로 '%s' 에 대한 잘못된 복제입니다"
 
 #: svndumpfilter/main.c:414
 msgid "Node with dropped parent sneaked in"
-msgstr ""
+msgstr "Node with dropped parent sneaked in"
 
 #: svndumpfilter/main.c:586
 msgid "This is an empty revision for padding."
@@ -5253,12 +5260,16 @@ msgid ""
 "Filter out nodes with given prefixes from dumpstream.\n"
 "usage: svndumpfilter exclude PATH_PREFIX...\n"
 msgstr ""
+"dumpstream에서 인자로 주어진 프리픽스(경로)가 있는 노드를 제거합니다.\n"
+"usage: svndumpfilter exclude PATH_PREFIX...\n"
 
 #: svndumpfilter/main.c:730
 msgid ""
 "Filter out nodes without given prefixes from dumpstream.\n"
 "usage: svndumpfilter include PATH_PREFIX...\n"
 msgstr ""
+"dumpstream에서 인자로 주어진 프리픽스(경로)가 없는 노드를 필터링합니다.\n"
+"사용법: svndumpfilter include PATH_PREFIX...\n"
 
 #: svndumpfilter/main.c:736
 msgid ""
@@ -5275,22 +5286,26 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
+"일반적인 사용법: vndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+"특정 subcommand 의 사용법을 위해서는 \"svndumpfilter help <subcommand>\" 를 참조하십시오.\n"
+"\n"
+"이용 가능한 subcommands:\n"
 
 #: svndumpfilter/main.c:854
 msgid "Excluding (and dropping empty revisions for) prefixes:\n"
-msgstr ""
+msgstr "프리픽스를 제외시킵니다( 그리고 빈 리비젼을 없앱니다):\n"
 
 #: svndumpfilter/main.c:856
 msgid "Excluding prefixes:\n"
-msgstr ""
+msgstr "프리픽스를 제외시킵니다:\n"
 
 #: svndumpfilter/main.c:858
 msgid "Including (and dropping empty revisions for) prefixes:\n"
-msgstr ""
+msgstr "프리픽스를 포함합니다( 그리고 빈 리비젼을 없앱니다):\n"
 
 #: svndumpfilter/main.c:860
 msgid "Including prefixes:\n"
-msgstr ""
+msgstr "프리픽스를 포함합니다:\n"
 
 #: svndumpfilter/main.c:887
 #, c-format
@@ -5298,36 +5313,40 @@ msgid ""
 "Dropped %d revision(s).\n"
 "\n"
 msgstr ""
+"노드(s) %d 를 떨어뜨립니다.\n"
+"\n"
 
 #: svndumpfilter/main.c:893
 msgid "Revisions renumbered as follows:\n"
-msgstr ""
+msgstr "리비젼들이 다음과 같이 다시 번호를 매깁니다:\n"
 
 #: svndumpfilter/main.c:921
 #, c-format
 msgid "   %ld => (dropped)\n"
-msgstr ""
+msgstr "   %ld => (없어졌습니다)\n"
 
 #: svndumpfilter/main.c:925
 #, c-format
 msgid "   %ld => %ld\n"
-msgstr ""
+msgstr "   %ld => %ld\n"
 
 #: svndumpfilter/main.c:936
 #, c-format
 msgid "Dropped %d node(s):\n"
-msgstr ""
+msgstr "노드(s) %d 를 없앱니다: \n"
 
 #: svndumpfilter/main.c:1125
 #, c-format
 msgid "unknown command: '%s'\n"
-msgstr ""
+msgstr "알 수 없는 명령: '%s'\n"
 
 #: svndumpfilter/main.c:1144
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
 msgstr ""
+"\n"
+"오류: prefixes 가 없습니다.\n"
 
 #: svndumpfilter/main.c:1187
 #, c-format
