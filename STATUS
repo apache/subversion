@@ -14,42 +14,19 @@ something stable to test.
 
 Candidate changes:
 
-  * r8431
-    Bugfix to commits: allow deletions below schedule-add-with-history dirs.
-    Justification:  reported by a user, an unnecessary restriction.
-    Notes:  change just sets a flag differently for this case.  See #830.
-    Votes:
-      +1: sussman, jszakmeister, kfogel
-      +0: dlr, gstein
-
-  * r8616,r8912
-    Improved warnings from svnlook and svnadmin.
-    Justification: greatly increased admin-friendliness.
-    Votes:
-      +1: julianfoad, sussman, kfogel
-    Old votes (for r8616 alone):
-      +1: cmpilato, dlr, sussman
-      -1: julianfoad (memory leak and inappropriate verbosity; see the dev@
-            mailing list thread "r8616: candidate for 1.0.1: Improved warnings
-            from svnlook and svnadmin")
-
   * r8708
     Use warnings pragma on perl hook-scripts.
     Justification: Perl correctness issue.
     Votes:
        +1: sussman
 
-  * r8490,r8794
+  * r8490,r8794,r8514
     Make dav_svn_convert_err() consume its svn_error_t * input.
     Justification:  Fixes svn_error_t leaks.
-    Notes
     Votes:
+      +1: cmpilato, kfogel
+    Old votes (for just r8490,r8794):
       +1: cmpilato, kfogel, jszakmeister
-
-  * r8838
-    Finish issue #1750 -- svn export [url] doesn't export any svn:externals
-    Votes:
-      +1: cmpilato, jszakmeister, kfogel
 
   * r8839,r8932
     Finish Issue #1756 -- import doesn't handle svn:eol-style or svn:keywords
@@ -60,32 +37,11 @@ Candidate changes:
       +1: cmpilato, jszakmeister
       -1: kfogel (doc string bug, fixed in r8932)
 
-  * r8842
-    Finish Issue #1741 - svn status -v shows unwanted status of externals.
-    Votes:
-      +1: cmpilato, jszakmeister, kfogel
-      +0: dlr
-
   * r8846
     Add an example wrapper to help svn+ssh users using setgid svnserve.
     Votes:
       +1: epg, sussman
       +0: dionisos
-
-  * r8856
-    Fix compressed streams on LP64 arch.
-    Justification: potential seg fault
-    Votes:
-       +1: kfogel, cmpilato, jszakmeister
-  
-  * r8883
-    Check apr_sockaddr_info_get() return value in svnserve.
-    Justification: Fixes a segmentation fault if an invalid hostname
-    is specified.
-    Notes: This was originally reported here: http://bugs.debian.org/235755
-    This fix doesn't try to fix the ipv6 issue, just the SIGSEGV.
-    Votes:
-      +1: dwhedon, jerenkrantz, rooneg
 
   * r8867, r8868, r8902
     Trivial performance fix for mod_authz_svn; cache the access file per
