@@ -49,7 +49,7 @@
       each accessing your repositories in its own way, and each
       without hindering the other (see <xref
       linkend="svn-ch-6-sect-5"/>).  Here's a brief overview and
-      comparsion of of the two available Subversion servers&mdash; as
+      comparison of of the two available Subversion servers&mdash; as
       an administrator, it's up to you to choose whatever works best
       for you and your users.</para>
       
@@ -201,7 +201,7 @@
     <sect2 id="svn-ch-6-sect-2.2">
       <title>Client Credentials Caching</title>
 
-      <para>Many servers are configured to require authenication on
+      <para>Many servers are configured to require authentication on
         every request.  This can become a big annoyance to users, who
         are forced to type their passwords over and over again.</para>
 
@@ -219,8 +219,8 @@
         authentication realm.</para>  
 
       <para>When the client receives an authentication challenge, it
-        first looks for the appropriae credentials in the disk cache;
-        if not present, or if the cached credenials fail to
+        first looks for the appropriate credentials in the disk cache;
+        if not present, or if the cached credentials fail to
         authenticate, then the client simply prompts the user for the
         information.</para>
 
@@ -300,11 +300,11 @@ END
       <para>Once you have located the proper cache file, just delete
       it.</para>
 
-      <para>One last word about client authenication behavior: a bit
+      <para>One last word about client authentication behavior: a bit
         of explanation about the <literal>--username</literal> and
         <literal>--password</literal> options is needed.  Many client
         subcommands accept these options; however it is important to
-        understand using these opions <emphasis>does not</emphasis>
+        understand using these options <emphasis>does not</emphasis>
         automatically send credentials to the server.  As discussed
         earlier, the server "pulls" credentials from the client when
         it deems necessary; the client cannot "push" them at will.  If
@@ -334,12 +334,12 @@ END
           
 
       <para>Here is a final summary that describes how a Subversion
-        client behaves when it receives an authenication
+        client behaves when it receives an authentication
         challenge:</para>
 
       <orderedlist>
         <listitem>
-          <para>Check wheher the user specified any credentials as
+          <para>Check whether the user specified any credentials as
             commandline options, via <literal>--username</literal>
             and/or <literal>--password</literal>.  If not, or if these
             options fail to authenticate successfully, then</para>
@@ -357,7 +357,7 @@ END
         </listitem>
       </orderedlist>
 
-      <para>If the client successfully authenicates by any of the
+      <para>If the client successfully authenticates by any of the
         methods listed above, it will attempt to cache the credentials
         on disk (unless the user has disabled this behavior, as
         mentioned earlier.)</para>
@@ -602,7 +602,7 @@ sally = barpassword
           live in a more public place.  The repositories sharing the
           users file should also be configured to have the same realm,
           since the list of users essentially defines an
-          authentication realm.  Whereever the file lives, be sure to
+          authentication realm.  Wherever the file lives, be sure to
           set the file's read and write permissions appropriately.  If
           you know which user(s) <command>svnserve</command> will run
           as, restrict read access to the user file as necessary.</para>
@@ -784,7 +784,7 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
     <para>The Apache HTTP Server is a "heavy duty" network server that
       Subversion can leverage.  Via a custom module,
       <command>httpd</command> makes Subversion repositories available
-      to clients via the WebDAV/deltaV protocol, which is an extension
+      to clients via the WebDAV/DeltaV protocol, which is an extension
       to HTTP 1.1 (see <systemitem
       class="url">http://www.webdav.org/</systemitem> for more
       information.) This protocol takes the ubiquitous HTTP protocol
@@ -1237,7 +1237,7 @@ Certificate information:
           you the ability to make your Subversion client automatically
           trust specific CAs, either globally or on a per-host basis.
           Simply set the <literal>ssl-authority-files</literal>
-          variable to a semicolon-separated list of pem-encoded CA
+          variable to a semicolon-separated list of PEM-encoded CA
           certificates:</para>
 
         <screen>
@@ -1296,7 +1296,7 @@ ssl-client-cert-password = somepassword
 
         <para>Once you've set the
           <literal>ssl-client-cert-file</literal> and
-          <literal>ss-client-cert-password</literal> variables, the
+          <literal>ssl-client-cert-password</literal> variables, the
           Subversion client can automatically respond to a client
           certificate challenge without prompting you.
           <footnote>
@@ -1641,13 +1641,13 @@ jane = r
           <para>Your web browser only speaks ordinary HTTP.  That
             means it only knows how to GET public URLs, which
             represent the latest versions of files and directories.
-            According to the WebDAV/deltaV spec, each server defines a
+            According to the WebDAV/DeltaV spec, each server defines a
             private URL syntax for older versions of resources, and
             that syntax is opaque to clients.  To find an older
             version of a file, a client must follow a specific
             procedure to <quote>discover</quote> the proper URL; the
             procedure involves issuing a series of WebDAV PROPFIND
-            requests and understanding deltaV concepts.  This is
+            requests and understanding DeltaV concepts.  This is
             something your web browser simply can't do.</para>
 
           <para>So to answer the question, one obvious way to see
@@ -1702,7 +1702,7 @@ jane = r
           free.</para>
 
         <para>Finally, because <command>mod_dav_svn</command> is
-          speaking a semi-complete dialect of WebDAV/deltaV, it's
+          speaking a semi-complete dialect of WebDAV/DeltaV, it's
           possible to access the repository via third-party DAV
           clients.  Most modern operating systems (Win32, OS X, and
           Linux) have the built-in ability to mount a DAV server as a
