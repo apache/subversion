@@ -214,10 +214,15 @@ Committed revision 341.
         the new directory is a copy of
         <filename>/trunk/calc</filename>.  Notice that the second
         method, however, performs an <emphasis>immediate</emphasis>
-        commit.  It's an easier procedure, because it doesn't require
-        you to check out a large mirror of the repository.  In fact,
-        this technique doesn't even require you to have a working copy
-        at all.</para>
+        commit.<footnote> <para>Subversion does not support
+        cross-repository copying.  When using URLs with <command>svn
+        copy</command> or <command>svn move</command>, you can only
+        copy items within the same repository.</para>
+        </footnote>
+        It's an easier procedure, because it doesn't require you to
+        check out a large mirror of the repository.  In fact, this
+        technique doesn't even require you to have a working copy at
+        all.</para>
       
       <figure id="svn-ch4-dia3">
         <title>Repository With New Copy</title>
@@ -882,7 +887,14 @@ Url: http://svn.example.com/branches/calc/my-calc-branch
       mixture of repository locations, these locations must all be
       within the <emphasis>same</emphasis> repository.  Subversion
       repositories aren't yet able to communicate with one another;
-      that's a feature planned beyond Subversion 1.0.</para>
+      that's a feature planned beyond Subversion
+      1.0.<footnote><para>You <emphasis>can</emphasis>, however, use
+      <command>svn switch</command> with the
+      <option>--relocate</option> switch if the URL of your server
+      changes and you don't want to abandon an existing working copy.
+      See the <command>svn switch</command> section in <xref
+      linkend="svn-ch-8"/> for more information and an example.</para>
+      </footnote></para>
     
     <sidebar>
       <title>Switches and Updates</title>
