@@ -66,7 +66,6 @@ is_deeply (\@history, [['/tags/foo/filea',2],['/trunk/filea',1]],
 {
 my $pool = SVN::Pool->new_default;
 my $something = bless {}, 'something';
-use Internals qw/GetRefCount/;
 $editor = SVN::Delta::Editor->
     new (SVN::Repos::get_commit_editor($repos, "file://$repospath",
 				       '/', 'root', 'FOO', sub {committed(@_);
