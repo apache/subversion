@@ -3,28 +3,59 @@
 
 @c Ben is hacking on this.
 
+The @dfn{Subversion server} isn't a simple, monolithic daemon process
+like sshd or ftpd;  rather, it's a set of well-defined interface
+layers that is meant to be as flexible as possible.
+
+@menu
+* Modules::                     The server's modular design.
+* Main Subversion Library::     The highest-level server interface.
+* Locking::                     How read and write locks work.
+* Filesystem::                  The low-level Subversion Filesystem.
+* Back-ends::                   Putting the information on disk.
+@end menu
+
 @c ----------------------------------------------------------------
 
 @node Filesystem
 @section Filesystem
 
-Here are some examples of the API offered by Subversion's Filesystem:
+Here is a rough draft of the Subversion Filesystem API.
 
-@itemize *
-@item
-        latest ()
-@item
-        read (version, path)
-@item
-        read_node_prop (version, path, propname)
-@item
-        read_version_prop (version, propname)
-@item
-        delta (from_version, from_path, to_version, to_path)
-@item
-        submit (delta)
-@item
-        write (delta, token)
-@item
-        abandon (token)
-@end itemize        
+@c  Ben sez:  @table specificially creates a 2-column table.
+@c  Ben sez:    first argument is how to format the first column.
+@c  Ben sez:    for multiple columns, use @multitable.
+
+@table @code
+
+@item latest ()
+ returns the latest global version of the repository
+
+@item read (version, path)
+ if path is a file, return full text (which includes property stream);
+ if path is a directory, return list of directory entries.
+
+@item read_node_prop (version, path, propname)
+@itemx write_node_prop (version, path, propname)
+ read/write a particular property of a file or directory
+
+@item read_version_prop (version, propname)
+@itemx write_version_prop (version, propname)
+ read/write a particular property of a version-history (such as a log)
+
+@item delta (from_version, from_path, to_version, to_path)
+ produce a delta object which converts one subtree to another
+
+@item submit (delta)
+ ask filesystem's lock manager for approval of delta; returns token (or
+failure)
+
+@item write (delta, token)
+ actually write the delta into the filesystem 
+
+@item abandon (token)
+ tell lock manager that the delta will @emph{not} be written (despite
+ previous approval)
+
+@end table
+
