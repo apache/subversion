@@ -557,6 +557,7 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   int code;
   ne_buffer *body; /* ### using an ne_buffer because it can realloc */
   svn_stringbuf_t *url_str;
+  svn_error_t *err;
 
   /* just punt if there are no changes to make. */
   if ((rb->prop_changes == NULL || apr_is_empty_table(rb->prop_changes))
@@ -609,13 +610,15 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  SVN_ERR( svn_ra_dav__request_dispatch(&code, req, ras->sess, "PROPPATCH",
-                                        url_str->data,
-                                        207 /* Multistatus */,
-                                        0 /* nothing else allowed */,
-                                        ras->pool) );
+  err = svn_ra_dav__request_dispatch(&code, req, ras->sess, "PROPPATCH",
+                                     url_str->data,
+                                     207 /* Multistatus */,
+                                     0 /* nothing else allowed */,
+                                     ras->pool);
 
-  return SVN_NO_ERROR;
+  ne_buffer_destroy(body);
+
+  return err;
 }
 
 

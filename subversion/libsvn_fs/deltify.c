@@ -134,8 +134,10 @@ deltify_by_id (svn_fs_t *fs,
       /* If that doesn't exist, we'll branch TARGET_ID, and see if
          that exists.  */
       tmp_id = apr_palloc (trail->pool, sizeof (*tmp_id));
-      tmp_id->digits = apr_pmemdup (trail->pool, target_id->digits, 
-                                    (len + 3) * sizeof (target_id->digits[0]));
+      tmp_id->digits = apr_palloc (trail->pool, 
+                                   (len + 3) * sizeof (target_id->digits[0]));
+      memcpy (tmp_id->digits, target_id->digits,
+              len * sizeof (target_id->digits[0]));
       tmp_id->digits[len] = 1;
       tmp_id->digits[len + 1] = 1;
       tmp_id->digits[len + 2] = -1;
