@@ -103,8 +103,9 @@ sub doInitialForm
 #-----------------------------------------------------------------------------#
 {
     my $youngest = `$gSvnadminCmd youngest $gReposPath`;
-    my $i;
-
+    my $rev;
+    my $oldest;
+    
     print "<html>\n<head>\n<title>Tweak Log</title>\n</head>\n";
     print "<body>\n<form action=\"$gActionURL\" method=\"post\">\n";
     print "<a name=\"__top__\"></a>\n";
@@ -118,9 +119,11 @@ sub doInitialForm
     print "commits (click the revision number to edit that revision's log):\n";
     print "</p>\n";
     chomp $youngest;
-    for( $i = 0; $i < $gNumRecentCommits; $i++ )
+    $oldest = $youngest - $gNumRecentCommits + 1;
+    $oldest = 1 if( $oldest < 1 );
+    $rev = $youngest;
+    while( $rev >= $oldest )
     {
-        my $rev = $youngest - $i;
         my @infolines = `$gSvnlookCmd $gReposPath rev $rev info`;
         my $author = shift @infolines;
         my $date = shift @infolines;
@@ -134,6 +137,7 @@ sub doInitialForm
 	print @infolines;
 	print "</pre><br />\n";
 	print "<a href=\"#__top__\">(back to top)</a>\n";
+        $rev--;
     }
     print "</body></html>\n";
     return;
@@ -203,13 +207,11 @@ sub doFetchLog
     print "<h1>Editing Log Message for Revision $rev</h1>\n";
     print "<h2>Current log message:</h2>\n";
     print "<blockquote><hr /><pre>$escaped_log</pre><hr /></blockquote>\n";
-    print "\n<p>\n";
-    print "<font color=\"red\">\n";
-    print "<i>Every change made is logged in <tt>${gHistoryFile}</tt> in\n";
-    print "the directory this cgi script runs in.  If you make a bogus\n";
+    print "<p><font color=\"red\">\n";
+    print "<i>Every change made is logged in <tt>${gHistoryFile}</tt>.\n";
+    print "If you make a bogus\n";
     print "change, you can still recover the old message from there.</i>\n";
-    print "</font>\n";
-    print "\n<p>\n";
+    print "</font></p>\n";
     print "<form action=\"$gActionURL\" method=\"post\">\n";
     print "<h2>New log message:</h2>\n";
     print "<blockquote>\n";
