@@ -12,8 +12,8 @@ $LastChangedDate$
 * Introduction
 * Software version requirements
 * Starting a new translation
-* Updating existing po files
 * Verifying your po file
+* Updating existing po files
 * Requirements for po and mo files
 * Conventions for the empty string msgid section
 * Translation teams
@@ -48,11 +48,14 @@ Starting a new translation
 ==========================
 
 Before starting a new translation please contact the subversion
-development mailing list to make sure you are not duplicating efforts.
+development mailing list to make sure you are not duplicating efforts. Also
+please note that the project has a strong preference for translations which
+are maintained by more than one person: mailing the lists with your
+intentions might help you find supporters.
 
 After that, you should perform the following steps:
 
- Unix
+* Unix (GNU gettext)
 
 1) check out Subversion (see INSTALL for more information)
 2) run ./autogen.sh
@@ -60,30 +63,45 @@ After that, you should perform the following steps:
 4) run make locale-gnu-pot
   This step is currently only supported for GNU gettext Makefile based
   systems
-5) Copy the generated subversion.pot to a file named LANG.po, where LANG
-  is the language code of your language.
+5) run msginit --locale LOCALE -o LOCALE.po in the
+  subversion/po directory of your working copy. LOCALE is the ll[_LL]
+  language and country code used to identify your locale.
 
 Steps (2) and (3) generate a Makefile; step (4) generates
 subversion/po/subversion.pot
 
-The header comment of the pot file contains a line like this:
+The Subversion project has a policy not to put names in its files, so please
+apply the two changes described below.  (See HACKING for a description of
+this convention.)
 
+
+The header in the newly generated .po file looks like this:
+  # SOME DESCRIPTIVE TITLE.
+  # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+  # This file is distributed under the same license as the PACKAGE package.
   # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 
-Because the Subversion project has a policy not to put names in its files,
-please don't fill it out; delete it instead.  (See HACKING for a
-description of this convention.)
+Please replace that block with the following text:
+  # <Your language> translation for subversion package
+  # Copyright (C) <YEAR> Collab Net.
+  # This file is distributed under the same license as the subversion package.
+
+The first translation block in the .po file contains two lines like these:
+  "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+  "Language-Team: LANGUAGE <LL@li.org>\n"
+
+Please replace those with these two lines:
+  "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
+  "Language-Team: YOUR LANGUAGE <dev@subversion.tigris.org>\n"
 
 
-
-Updating existing po files
-==========================
+* Unix (non-GNU gettext)
 
-The Makefile based part of the build system contains a make target to
-facilitate maintenance of existing po files.  To update po files on
-systems with GNU gettext run
+  To be documented
 
-    make locale-gnu-po-update
+* Windows
+
+  See issue #1977 in the subversion issue tracker
 
 
 
@@ -101,6 +119,17 @@ steps (on Makefile based systems):
 The autogen.sh step is important, since it adds new po files as
 dependencies of the 'locale' build target.  Note however that steps 1
 and 2 are only needed once after you have added a new translation.
+
+
+
+Updating existing po files
+==========================
+
+The Makefile based part of the build system contains a make target to
+facilitate maintenance of existing po files.  To update po files on
+systems with GNU gettext run
+
+    make locale-gnu-po-update
 
 
 
