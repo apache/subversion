@@ -74,7 +74,7 @@ local-all: libs programs @FS_RULES@ @BUILD_APACHE_RULE@
 local-clean:
 	@list='$(CLEAN_DIRS)'; for i in $$list; do \
 	    echo "Cleaning $$i ..." ; \
-	    (cd $$i && rm -f *.o *.lo *.a *.la *.so *.obj && rm -rf .libs) ; \
+	    (cd $$i && rm -f *.o *.lo *.la *.la-a && rm -rf .libs) ; \
 	done
 	rm -f $(CLEAN_FILES)
 
@@ -83,7 +83,10 @@ local-distclean: local-clean
 		svn_private_config.h
 
 local-extraclean: local-distclean
-	rm -f build-outputs.mk svn_private_config.in aclocal.m4 configure
+	rm -f build-outputs.mk svn_private_config.h.in configure \
+		ac-helpers/config.guess ac-helpers/config.sub \
+		ac-helpers/libtool.m4 ac-helpers/ltconfig \
+		ac-helpers/ltmain.sh
 
 local-install: install-lib install-include install-bin install-sbin \
 		$(INSTALL_APACHE_RULE)
@@ -118,14 +121,24 @@ check: $(TEST_DEPS)
 	fi
 
 # recursive targets to handle external projects (e.g. APR, Neon)
-external-all external-clean external-distclean external-extraclean \
-	external-install:
+external-all external-clean external-distclean external--install:
 	@target=`echo $@ | sed s/external-//`; \
 	list='$(EXTERNAL_PROJECT_DIRS)'; \
 	for i in $$list; do \
 	    echo "------ making $$target in $$i"; \
 	    (cd $$i && $(MAKE) $$target) || exit 1; \
 	    echo "------ completed $$target in $$i"; \
+	done;
+
+### temporary hack. Neon does not have an "extraclean"
+external-extraclean:
+	@list='$(EXTERNAL_PROJECT_DIRS)'; \
+	for i in $$list; do \
+	    if test "$$i" != "neon"; then \
+		echo "------ making extraclean in $$i"; \
+		(cd $$i && $(MAKE) $$target) || exit 1; \
+		echo "------ completed extraclean in $$i"; \
+	    fi; \
 	done;
 
 ## Use Karl's script to create a Changelog from CVS.
