@@ -74,10 +74,8 @@ svn_cl__status (apr_getopt_t *os,
          output format or not. */
       svn_cl__print_status_list (statushash, 
                                  youngest,
-                                 (opt_state->verbose || 
-                                  opt_state->update ||
-                                  opt_state->very_verbose),
-                                 opt_state->very_verbose,
+                                 (opt_state->verbose || opt_state->update),
+                                 opt_state->verbose,
                                  opt_state->quiet,
                                  pool);
     }
