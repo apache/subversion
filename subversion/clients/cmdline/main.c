@@ -445,7 +445,7 @@ main (int argc, const char * const *argv)
                                0, NULL, pool,
                                "Syntax error in revision argument \"%s\"",
                                opt_arg),
-                              stdout, FALSE);
+                              stderr, FALSE);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -458,7 +458,7 @@ main (int argc, const char * const *argv)
                               (SVN_ERR_CL_ARG_PARSING_ERROR,
                                0, NULL, pool,
                                "Unable to parse \"%s\"", opt_arg),
-                              stdout, FALSE);
+                              stderr, FALSE);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
