@@ -36,7 +36,9 @@
 #include "svn_repos.h"
 #include "svn_time.h"
 #include "svn_utf.h"
+#include "svn_subst.h"
 #include "svn_opt.h"
+#include "svn_props.h"
 
 
 /*** Some convenience macros and types. ***/
@@ -192,12 +194,43 @@ get_property (svn_string_t **prop_value,
               const char *prop_name /* UTF-8! */,
               apr_pool_t *pool)
 {
+  svn_string_t *raw_value;
+
   /* Fetch transaction property... */
   if (! c->is_revision)
-    return svn_fs_txn_prop (prop_value, c->txn, prop_name, pool);
+    SVN_ERR (svn_fs_txn_prop (&raw_value, c->txn, prop_name, pool));
 
   /* ...or revision property -- it's your call. */
-  return svn_fs_revision_prop (prop_value, c->fs, c->rev_id, prop_name, pool);
+  else
+    SVN_ERR (svn_fs_revision_prop (&raw_value, c->fs, c->rev_id,
+                                   prop_name, pool));
+
+  if (! svn_prop_is_svn_prop (prop_name))
+    *prop_value = raw_value;
+  else
+    { 
+      svn_error_t *err;
+      const char *val_native_locale, *val_native_locale_eol;
+      err = svn_utf_cstring_from_utf8 (&val_native_locale,
+                                       raw_value->data, pool);
+      if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
+        val_native_locale = svn_utf_cstring_from_utf8_fuzzy (raw_value->data, 
+                                                             pool);
+      else if (err)
+        return err;
+      
+      SVN_ERR (svn_subst_translate_cstring (val_native_locale,
+                                            &val_native_locale_eol,
+                                            APR_EOL_STR, /* the 'native' eol */
+                                            FALSE,       /* no repair */
+                                            NULL,        /* no keywords */
+                                            FALSE,       /* no expansion */
+                                            pool));
+
+      *prop_value = svn_string_create (val_native_locale_eol, pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

@@ -19,7 +19,9 @@
 
 #include <locale.h>
 #include <apr_file_io.h>
-#include <svn_opt.h>
+#include "svn_opt.h"
+#include "svn_utf.h"
+#include "svn_subst.h"
 #include "svnadmin.h"
 
 
@@ -492,6 +494,7 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_stringbuf_t *file_contents, *file_contents_utf8;
+  const char *file_contents_utf8_LF;
   svn_string_t log_contents;
   const char *filename_utf8;
   apr_array_header_t *args;
@@ -515,8 +518,15 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_stringbuf_from_file (&file_contents, filename_utf8, pool)); 
   SVN_ERR (svn_utf_stringbuf_to_utf8 (&file_contents_utf8, file_contents,
                                       pool));
-  log_contents.data = file_contents_utf8->data;
-  log_contents.len = file_contents_utf8->len;
+  SVN_ERR (svn_subst_translate_cstring (file_contents_utf8->data,
+                                        &file_contents_utf8_LF,
+                                        "\n",        /* the 'native' eol */
+                                        FALSE,       /* don't repair */
+                                        NULL,        /* no keywords */
+                                        FALSE,       /* no expansion */
+                                        pool));
+  log_contents.data = file_contents_utf8_LF;
+  log_contents.len = strlen(file_contents_utf8_LF);
   
   /* open the filesystem  */
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
