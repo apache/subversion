@@ -295,7 +295,7 @@ def make_repo_and_wc(test_name):
   expected_wc_tree = tree.build_generic_tree(main.greek_tree)
 
   # Do a checkout, and verify the resulting output and disk contents.
-  url = 'file:///' + os.path.abspath(repo_dir)
+  url = 'file://' + os.path.abspath(repo_dir)
   return run_and_verify_checkout(url, wc_dir,
                                  expected_output_tree,
                                  expected_wc_tree)
