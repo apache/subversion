@@ -178,7 +178,7 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
                in our policy structure! */
 
             printf ("svr_init(): got repository aliases.\n");
-            my_policies->repos_aliases = (svn_proplist_t *) val;
+            my_policies->repos_aliases = (ap_hash_t *) val;
           }
 
         else if (svn_string_compare_2cstring ((svn_string_t *) key,
@@ -189,7 +189,7 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
                in our policy (the commands are interpreted elsewhere) */
 
             printf ("svr_init(): got security restrictions.\n");
-            my_policies->global_restrictions = (svn_proplist_t *) val;
+            my_policies->global_restrictions = (ap_hash_t *) val;
           }
 
         else if (svn_string_compare_2cstring ((svn_string_t *) key,

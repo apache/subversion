@@ -76,17 +76,10 @@ typedef struct svn_string_t
 } svn_string_t;
 
 
-/* a property list is an unordered list of properties, implemented as
-   an `ap_hash_t' whose keys and vals are bytestrings (`svn_string_t') */
-
-typedef ap_hash_t svn_proplist_t;
-
-
-
 /* a file is a proplist and a string */
 typedef struct svn_file_t
 {
-  svn_proplist_t *proplist;  /* the file's properties */
+  ap_hash_t *proplist;  /* the file's properties */
   svn_string_t *text;        /* the file's main content */
 } svn_file_t;
 
@@ -96,7 +89,7 @@ typedef struct svn_dirent_t
 {
   unsigned long node_num;    /* a node pointed to */
   svn_string_t *name;        /* name of the node pointed to */
-  svn_proplist_t *proplist;  /* entry's properties */
+  ap_hash_t *proplist;  /* entry's properties */
 } svn_dirent_t;
 
 
@@ -106,7 +99,7 @@ typedef struct svn_directory_t
 {
   svn_dirent_t *list;        /* an array of dirents */
   size_t len;                /* length of array */
-  svn_proplist_t *proplist;  /* directory's properties */
+  ap_hash_t *proplist;  /* directory's properties */
 } svn_directory_t;
 
 
@@ -126,7 +119,7 @@ typedef struct svn_node_t
 typedef struct svn_ver_t
 {
   unsigned long node_num;             /* the root node of a tree */
-  svn_proplist_t *proplist;           /* version's properties */
+  ap_hash_t *proplist;           /* version's properties */
 } svn_ver_t;
 
 

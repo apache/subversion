@@ -317,7 +317,7 @@ svn_svr_get_ver_prop (svn_svr_policies_t *policy,
 
 /* Retrieve entire proplist of a version */
 
-svn_proplist_t * 
+ap_hash_t * 
 svn_svr_get_ver_proplist (svn_svr_policies_t *policy,
                           svn_string_t *repos, 
                           svn_string_t *user, 
@@ -357,7 +357,7 @@ svn_svr_get_ver_proplist (svn_svr_policies_t *policy,
 */
 
 
-svn_proplist_t * 
+ap_hash_t * 
 svn_svr_get_ver_propnames (svn_svr_policies_t *policy,
                            svn_string_t *repos, 
                            svn_string_t *user, 
@@ -522,7 +522,7 @@ svn_svr_get_dirent_prop (svn_svr_policies_t *policy,
 
 /* Get a node's entire proplist */
 
-svn_proplist_t * 
+ap_hash_t * 
 svn_svr_get_node_proplist (svn_svr_policies_t *policy,
                            svn_string_t *repos,
                            svn_user_t *user,
@@ -561,7 +561,7 @@ svn_svr_get_node_proplist (svn_svr_policies_t *policy,
 
 /* Get a dirent's entire proplist */
 
-svn_proplist_t * 
+ap_hash_t * 
 svn_svr_get_dirent_proplist (svn_svr_policies_t *policy,
                              svn_string_t *repos, 
                              svn_user_t *user, 
@@ -599,7 +599,7 @@ svn_svr_get_dirent_proplist (svn_svr_policies_t *policy,
 
 /* Get a list of a node's property names */
 
-svn_proplist_t * 
+ap_hash_t * 
 svn_svr_get_node_propnames (svn_svr_policies_t *policy,
                             svn_string_t *repos, 
                             svn_user_t *user, 
@@ -637,7 +637,7 @@ svn_svr_get_node_propnames (svn_svr_policies_t *policy,
 
 /* Get a list of a dirent's property names */
      
-svn_proplist_t * 
+ap_hash_t * 
 svn_svr_get_dirent_propnames (svn_svr_policies_t *policy,
                               svn_string_t *repos, 
                               svn_user_t *user, 
