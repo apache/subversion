@@ -104,6 +104,19 @@ Step 3:  Install Specific Language Bindings
    3.  to install run `make install-swig-pl' from the top of the
        Subversion source tree.
 
+   If you need to pass extra parameters to perl build process (Makefile.PL),
+   then you need to do this process somewhat different:
+
+   1.  Run `make swig-pl-lib' from the top of the Subversion source tree.
+
+   2.  Run `make install-swig-pl-lib'
+
+   3.  cd subversion/bindings/swig/perl/native 
+
+   4.  Run `perl Makefile.PL EXTRAOPTIONSHERE` 
+
+   5.  Run `make install'
+
 *  Java
 
    The Java bindings are still under development, and have not yet
