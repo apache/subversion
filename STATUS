@@ -23,7 +23,7 @@ Status of 1.1.1:
 
 Candidate changes:
 
-  * r10788, r10796, r10904
+  * r10788, r10796, r10904, r10914
     Fix performance regression in character encoding translations.  Most
     noticable on Win32, but impacts other platforms as well.
     Justification:
@@ -32,4 +32,4 @@ Candidate changes:
       Proposed during 1.1.0 preparation, but it is too late and complicated
       to put in 1.1.0 at this stage.
     Votes:
-      +1: lundblad
+      +1: (lundblad: not r10914 yet)
