@@ -28,6 +28,7 @@
 #include <apr_file_io.h>
 
 #include "svn_types.h"
+#include "svn_io.h"
 #include "svn_error.h"
 
 
@@ -48,20 +49,81 @@ extern "C" {
  * @{
  */
 
-/** Read a hash table from @a srcfile, storing the resultants names and
- * values in @a hash.  Use a @a pool for all allocations.  @a hash will 
- * have <tt>const char *</tt> keys and <tt>svn_string_t *</tt> values.  
+/** @since New in 1.1.
+ * The conventional terminator for hash dumps. */
+#define SVN_HASH_TERMINATOR "END"
+
+/**
+ * @since New in 1.1.
+ *
+ * Read a hash table from @a stream, storing the resultants names and
+ * values in @a hash.  Use a @a pool for all allocations.  @a hash will
+ * have <tt>const char *</tt> keys and <tt>svn_string_t *</tt> values.
+ * If @a terminator is NULL, expect the hash to be terminated by the
+ * end of the stream; otherwise, expect the hash to be terminated by a
+ * line containing @a terminator.  Pass @c SVN_HASH_TERMINATOR to use
+ * the conventional terminator "END".
+ */
+svn_error_t *svn_hash_read2 (apr_hash_t *hash,
+                             svn_stream_t *stream,
+                             const char *terminator,
+                             apr_pool_t *pool);
+
+/**
+ * @since New in 1.1.
+ *
+ * Dump @a hash to @a stream.  Use @a pool for all allocations.  @a
+ * hash has <tt>const char *</tt> keys and <tt>svn_string_t *</tt>
+ * values.  If @a terminator is not NULL, terminate the hash with a
+ * line containing @a terminator.
+ */
+svn_error_t *svn_hash_write2 (apr_hash_t *hash, 
+                              svn_stream_t *stream,
+                              const char *terminator,
+                              apr_pool_t *pool);
+
+/**
+ * @since New in 1.1.
+ *
+ * Similar to @c svn_hash_read2(), but allows @a stream to contain
+ * deletion lines which remove entries from @a hash as well as adding
+ * to it.
+ */
+svn_error_t *svn_hash_read_incremental (apr_hash_t *hash,
+                                        svn_stream_t *stream,
+                                        const char *terminator,
+                                        apr_pool_t *pool);
+
+/**
+ * @since New in 1.1.
+ *
+ * Similar to @c svn_hash_write2(), but only writes out entries for
+ * keys which differ between @a hash and @a oldhash, and also writes
+ * out deletion lines for keys which are present in @a oldhash but not
+ * in @a hash.
+ */
+svn_error_t *svn_hash_write_incremental (apr_hash_t *hash,
+                                         apr_hash_t *oldhash,
+                                         svn_stream_t *stream,
+                                         const char *terminator,
+                                         apr_pool_t *pool);
+
+/** @deprecated Provided for backward compatibility with the 1.0.0
+ * API.  This function behaves like svn_hash_read2, but it only works
+ * on an apr_file_t input, empty files are accepted, and the hash is
+ * expected to be terminated with a line containing "END" or
+ * "PROPS-END".
  */
 svn_error_t *svn_hash_read (apr_hash_t *hash, 
                             apr_file_t *srcfile,
                             apr_pool_t *pool);
 
-/** Dump @a hash to @a destfile.  Use @a pool for all allocations.  @a hash 
- * has <tt>const char *</tt> keys and <tt>svn_string_t *</tt> values.  
- */
+/** @deprecated Provided for backward compatibility with the 1.0.0
+ * API.  This function behaves like svn_hash_write2, but it only works
+ * on an apr_file_t output, and the terminator is always "END". */
 svn_error_t *svn_hash_write (apr_hash_t *hash, 
-                apr_file_t *destfile,
-                apr_pool_t *pool);
+                             apr_file_t *destfile,
+                             apr_pool_t *pool);
 
 /** @} */
 
