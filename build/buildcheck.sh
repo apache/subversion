@@ -1,4 +1,7 @@
 #! /bin/sh
+#
+# buildcheck.sh: Inspects the build setup to make detection and
+# correction of problems an easier process.
 
 # Initialize parameters
 VERSION_CHECK="$1"
