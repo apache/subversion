@@ -1240,6 +1240,9 @@ make_patch_open_tag (svn_stringbuf_t **entry_accum,
                          /* force */
                          SVN_WC__LOG_ATTR_ARG_4,
                          svn_stringbuf_create ("-f", pool), 
+                         /* silent */
+                         SVN_WC__LOG_ATTR_ARG_4,
+                         svn_stringbuf_create ("--silent", pool),
                          /* target file */
                          SVN_WC__LOG_ATTR_ARG_5,
                          svn_stringbuf_create ("--", pool),
