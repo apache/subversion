@@ -105,21 +105,14 @@ Candidate changes:
     Votes:
       +1: breser
 
-  * r12738
+  * r12904
     Fix some assertions that were killing Apache children due to non-
     canonicalized paths entering the system via JavaSVN's custom REPORT
     requests.  Part of issue #2199.
     Justification:
       Assertions on the server lead to unclean BDB shutdowns, which lead
       to the amassing of locks, which lead (ultimately) to downtime.
-    Notes:
-      The change as-is adds an API, which is bad.  To backport, simply
-      replicate the tiny new svn_path_is_canonical() functionality as a
-      private function in mod_dav_svn/util.c (like dav_svn__is_canonical).
-      See <http://svn.haxx.se/dev/archive-2005-01/0643.shtml for why lundblad
-      dislikes this change.
     Votes:
       +1: cmpilato
-      -0: lundblad.
 
 Approved changes (further review is welcome, but not required):
