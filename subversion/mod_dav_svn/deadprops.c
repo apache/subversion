@@ -119,14 +119,13 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
 {
   char *propname;
   svn_error_t *serr;
-  char *tpropname;
 
   /* get the repos-local name */
   get_repos_propname(db, name, &propname);
 
   /* ### disallow arbitrary, non-SVN properties. this effectively shuts
      ### off arbitrary DeltaV clients for now. */
-  if (tpropname == NULL)
+  if (propname == NULL)
     return dav_new_error(db->p, HTTP_CONFLICT, 0,
                          "Properties may only be defined in the "
                          SVN_PROP_PREFIX " and " SVN_PROP_CUSTOM_PREFIX
