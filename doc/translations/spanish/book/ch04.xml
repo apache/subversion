@@ -1160,14 +1160,15 @@ Committed revision 350.
         <command>svn merge</command> para aplicar el changeset #303
         a nuestra copia local <emphasis>al revés</emphasis>.</para>
     
-      <para>Keep in mind that rolling back a change like this is just
-        like any other <command>svn merge</command> operation, so you
-        should use <command>svn status</command> and <command>svn
-        diff</command> to confirm that your work is in the state you
-        want it to be in, and then use <command>svn commit</command>
-        to send the final version to the repository.  After
-        committing, this particular changeset is no longer reflected
-        in the <literal>HEAD</literal> revision.</para>
+      <para>Tenga presente que reshacer un cambio de esta manera es
+        como realizar cualquier otra operación <command>svn
+        merge</command>, así que debería usar <command>svn
+        status</command> y <command>svn diff</command> para
+        confirmar que su trabajo está en el estado que usted
+        desea, y entonces usar <command>svn commit</command> para
+        enviar la versión final al repositorio. Tras el envío,
+        este changeset particular ya no se verá reflejado en la
+        revisión <literal>HEAD</literal>.</para>
 
       <para>Again, you may be thinking: well, that really didn't undo
         the commit, did it?  The change still exists in revision 303.
