@@ -624,8 +624,11 @@ typedef struct parent_path_t
   /* The parent of NODE, or zero if NODE is the root directory.  */
   struct parent_path_t *parent;
 
-  /* The copy ID inheritence style and (optional) source path. */
+  /* The copy ID inheritence style. */
   copy_id_inherit_t copy_inherit;
+
+  /* If copy ID inheritence style is copy_id_inherit_new, this is the
+     path which should be implicitly copied; otherwise, this is NULL. */
   const char *copy_src_path;
 
 } parent_path_t;
@@ -4064,12 +4067,19 @@ examine_copy_inheritance (const char **copy_id,
   if (! parent_path->parent) 
     return SVN_NO_ERROR;
 
+  /* We could be a branch destination (which would answer our question
+     altogether)!  But then, again, we might just have been modified
+     in this revision, so all bets are off. */
   if (parent_path->copy_inherit == copy_id_inherit_self)
     {
+      /* A copy ID of "0" means we've never been branched.  Therefore,
+         therefore there are no copies relevant to our history. */
       if (((*copy_id)[0] == '0') && ((*copy_id)[1] == '\0'))
         return SVN_NO_ERROR;
 
-      /* Get the COPY record. */
+      /* Get the COPY record.  If it was a real copy (not an implicit
+         one), we have our answer.  Otherwise, we fall through to the
+         recursive case. */
       SVN_ERR (svn_fs__bdb_get_copy (copy, fs, *copy_id, trail));
       if ((*copy)->kind != svn_fs__copy_kind_soft)
         return SVN_NO_ERROR;
