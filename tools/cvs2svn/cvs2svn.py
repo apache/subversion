@@ -205,16 +205,29 @@ class CollectData(rcsparse.Sink):
                     branch_name, self.get_tags(revision),
                     self.get_branches(revision))
 
-def branch_path(ctx, branch_name = None):
-  ### FIXME: Our recommended layout has changed, and this function
-  ### will have to change with it.
-  if branch_name:
-     return ctx.branches_base + '/' + branch_name + '/'
-  else:
-     return ctx.trunk_base + '/'
 
-def get_tag_path(ctx, tag_name):
-  return ctx.tags_base + '/' + tag_name + '/'
+def make_path(ctx, path, branch_name = None, tag_name = None):
+  """Return the trunk path, branch path, or tag path for PATH.
+  CTX holds the name of the branches or tags directory, which is found
+  under PATH's first component.
+
+  It is an error to pass both a BRANCH_NAME and a TAG_NAME."""
+
+  if branch_name and tag_name:
+    sys.stderr.write('make_path() miscalled, both branch and tag given')
+    sys.exit(1)
+
+  first_sep = path.find('/')
+
+  if branch_name:
+    return path[:first_sep] + '/' + ctx.branches_base + '/' \
+           + branch_name + path[first_sep:]
+  elif tag_name:
+    return path[:first_sep] + '/' + ctx.tags_base + '/' \
+           + tag_name + path[first_sep:]
+  else:
+    return path[:first_sep] + '/' + ctx.trunk_base + path[first_sep:]
+
 
 def relative_name(cvsroot, fname):
   l = len(cvsroot)
@@ -690,11 +703,11 @@ class Commit:
     if ctx.dry_run:
       for f, r, br, tags, branches in self.changes:
         # compute a repository path, dropping the ,v from the file name
-        svn_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
+        svn_path = make_path(ctx, relative_name(ctx.cvsroot, f[:-2]), br)
         print '    adding or changing %s : %s' % (r, svn_path)
       for f, r, br, tags, branches in self.deletes:
         # compute a repository path, dropping the ,v from the file name
-        svn_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
+        svn_path = make_path(ctx, relative_name(ctx.cvsroot, f[:-2]), br)
         print '    deleting %s : %s' % (r, svn_path)
       print '    (skipped; dry run enabled)'
       return
@@ -738,7 +751,7 @@ class Commit:
     for rcs_file, cvs_rev, br, tags, branches in self.changes:
       # compute a repository path, dropping the ,v from the file name
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
-      svn_path = branch_path(ctx, br) + cvs_path
+      svn_path = make_path(ctx, cvs_path, br)
       print '    adding or changing %s : %s' % (cvs_rev, svn_path)
       if not started_revision:
         dump.start_revision(props)
@@ -748,7 +761,7 @@ class Commit:
     for rcs_file, cvs_rev, br, tags, branches in self.deletes:
       # compute a repository path, dropping the ,v from the file name
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
-      svn_path = branch_path(ctx, br) + cvs_path
+      svn_path = make_path(ctx, cvs_path, br)
       print '    deleting %s : %s' % (cvs_rev, svn_path)
       if cvs_rev != '1.1':
         if not started_revision:
