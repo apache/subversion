@@ -62,7 +62,7 @@ $ svnadmin create path/to/repos
       and not a URL like the <command>svn</command> client program
       uses when referring to repositories.  Both
       <command>svnadmin</command> and <command>svnlook</command> are
-      considered server-side utilities &mdash; they are used on the
+      considered server-side utilities&mdash;they are used on the
       machine where the repository resides to examine or modify
       aspects of the repository, and are in fact unable to perform
       tasks across a network.  A common mistake made by Subversion
@@ -137,8 +137,8 @@ conf/  dav/  db/  format  hooks/  locks/  README
       </varlistentry>
     </variablelist>
       
-    <para>In general, you'll not want to tamper with most of the
-      items in your repository, at least not "by hand".  The
+    <para>In general, you'll not want to tamper with most of the items
+      in your repository, at least not <quote>by hand</quote>.  The
       <command>svnadmin</command> tool should be sufficient for any
       changes necessary to your repository, or you can look to
       third-party tools (such as Berkeley DB's tool suite) for
@@ -152,19 +152,15 @@ conf/  dav/  db/  format  hooks/  locks/  README
       <para>A <firstterm>hook</firstterm> is a program triggered by
         some repository event, such as the creation of a new revision
         or the modification of an unversioned property.  Each hook is
-        handed enough information to tell what the action is, what
-        target(s) it's operating on, and who is doing it.  Depending
-        on the hook's output or return status, the hook program may
-        continue the action, stop it, or suspend it in some
-        way.</para>
+        handed enough information to tell what that event is, what
+        target(s) it's operating on, and the username of the person
+        who triggered the event.  Depending on the hook's output or
+        return status, the hook program may continue the action, stop
+        it, or suspend it in some way.</para>
             
       <para>The <filename>hooks</filename> subdirectory is, by
-        default, filled with templates for various repository hooks.
-        There is one template for each hook that that Subversion
-        repository implements, and by examining the contents of
-        those template scripts, you can see what triggers each such
-        script to run and what data is passed to that script.
-        perhaps the <filename>conf</filename> subdirectory.</para>
+        default, filled with templates for various repository
+        hooks.</para>
             
       <screen>
 $ ls repos/hooks/
@@ -173,30 +169,39 @@ post-revprop-change.tmpl  read-sentinels.tmpl
 pre-commit.tmpl           start-commit.tmpl
 </screen>
             
-      <para>This is how the <filename>hooks</filename> directory
-        appears after a repository is first created.  It doesn't
-        contain any hook programs&mdash;just templates.</para>
+      <para>There is one template for each hook that the Subversion
+        repository implements, and by examining the contents of those
+        template scripts, you can see what triggers each such script
+        to run and what data is passed to that script.  Also present
+        in many of these templates are examples of how one might use
+        that script, in conjunction with other Subversion-supplied
+        programs, to perform common useful tasks.  To actually install
+        a working hook, you need only place some executable program or
+        script into the <filename>repos/hooks</filename> directory
+        which can be execute as the name (like
+        <command>start-commit</command> or
+        <command>post-commit</command>) of the hook.</para>
+
+      <para>On Unix platforms, this means supplying a script or
+        program (which could be a shell script, a Python program, a
+        compiled C binary, or any number of other things) named
+        exactly like the name of the hook.  Of course, the template
+        files are present for more than just informational
+        purposes&mdash;the easiest way to install a hook on Unix
+        platforms is to simply copy the appropriate template file to a
+        new file that lacks the <literal>.tmpl</literal> extension,
+        and then customize the hooks contents.  Windows, however, uses
+        file extensions to denote executability, so you would need to
+        supply a program whose basename is the name of the hook plus
+        one of the special extensions recognized by Windows for
+        executable programs, such as <filename>.exe</filename> or
+        <filename>.com</filename> for programs, and
+        <filename>.bat</filename> for batch files.</para>
           
-      <para>The actual hooks need to be named
-        <filename>start-commit</filename>,
-        <filename>pre-commit</filename> and
-        <filename>post-commit</filename>.  The template (.tmpl) files
-        are example shell scripts to get you started; read them for
-        details about how each hook works.  To make your own hook,
-        just copy <filename>foo.tmpl</filename> to
-        <filename>foo</filename> and edit.</para>
-          
-      <para>(The <filename>read-sentinels</filename> and
-        <filename>write-sentinels</filename> are not yet implemented.
-        They are intended to be more like daemons than hooks.  A
-        sentinel is started up at the beginning of a user operation.
-        The Subversion server communicates with the sentinel using a
-        protocol yet to be defined.  Depending on the sentinel's
-        responses, Subversion may stop or otherwise modify the
-        operation.)</para>
-      
-      <para>Here is a description of the hook programs:</para>
-            
+      <para>Currently there are five true hooks implemented by the
+        Subversion repository.  The following is a brief description
+        of how each of those works:</para>
+
       <variablelist>
         <varlistentry>
           <term><filename>start-commit</filename></term>
@@ -204,11 +209,10 @@ pre-commit.tmpl           start-commit.tmpl
             <para>This is run before the committer's transaction is
               even created.  It is typically used to decide if the
               user has commit privileges at all.  The repository
-              passes two arguments to this program: the path to the
-              repository, and username which is attempting to commit.
+              passes two arguments to this program:  the path to the
+              repository, and username which is attempting the commit.
               If the program returns a non-zero exit value, the commit
-              is stopped before the transaction is even
-              created.</para>
+              is stopped before the transaction is even created.</para>
           </listitem>
         </varlistentry>
             
@@ -221,25 +225,23 @@ pre-commit.tmpl           start-commit.tmpl
               content or location (for example, your site might
               require that all commits to a certain branch include a
               ticket number from the bug tracker, or that the incoming
-              log message is non-empty.)
-              <footnote id="svn-ch-5-fn-2">
-                <para>At this time, this is the only method by which
-                  users can implement finer-grained access control
-                  beyond what <filename>httpd.conf</filename> offers.
-                  In a future version of Subversion, we plan to
-                  implement ACLs directly in the filesystem.</para>
-              </footnote>
-              The repository passes two arguments to this program: the
-              path to the repository, and the name of the transaction
-              being committed.  If the program returns a non-zero exit
-              value, the commit is aborted and transaction is
-              removed.</para>
+              log message is non-empty).  The repository passes two
+              arguments to this program: the path to the repository,
+              and the name of the transaction being committed.  If the
+              program returns a non-zero exit value, the commit is
+              aborted and transaction is removed.</para>
 
             <para>The Subversion distribution includes a
-              <command>tools/hook-scripts/commit-access-control.pl</command>
-              script that can be called from
-              <command>pre-commit</command> to implement fine-grained
-              access control.</para>
+              <command>commit-access-control.pl</command> script
+              (located in the <filename>tools/hook-scripts</filename>
+              directory of the Subversion source tree) that can be
+              called from <command>pre-commit</command> to implement
+              fine-grained access control.  At this time, this is the
+              only method by which users can implement finer-grained
+              access control beyond what
+              <filename>httpd.conf</filename> offers.  In a future
+              version of Subversion, we plan to implement ACLs
+              directly in the filesystem.</para>
           </listitem>
         </varlistentry>
 
@@ -247,29 +249,121 @@ pre-commit.tmpl           start-commit.tmpl
           <term><filename>post-commit</filename></term>
           <listitem>
             <para>This is run after the transaction is committed, and
-              we have a new revision.  Most people use this hook to
-              send out descriptive commit-emails or to make a
-              hot-backup of the repository.  The repository passes two
-              arguments to this program: the path to the repository,
-              and the new revision number that was created.  The exit
-              code of the program is ignored.</para>
+              a new revision is created.  Most people use this hook to
+              send out descriptive emails about the commit or to make
+              a perform a backup of the repository.  The repository
+              passes two arguments to this program: the path to the
+              repository, and the new revision number that was
+              created.  The exit code of the program is ignored.</para>
                 
             <para>The Subversion distribution includes a
-              <command>tools/hook-scripts/commit-email.pl</command>
-              script that can be used to send out the differences
-              applied in the commit to any number of email addresses.
-              Also included is
-              <command>tools/backup/hot-backup.py</command>, which is
-              a script that perform hot backups of your Subversion
-              repository after every commit.</para>
+              <command>commit-email.pl</command> script (located in
+              the <filename>tools/hook-scripts/</filename> directory
+              of the Subversion source tree) that can be used to send
+              email with (and/or append to a log file) a description
+              of a given commit.  This mail contains a list of the
+              paths that were changed, the log message attached to the
+              commit, the author and date of the commit, as well as a
+              GNU diff-style display of the changes made to the
+              various versioned files as part of the commit.</para>
+
+            <para>Another useful tool provided by Subversion is the
+              <command>hot-backup.py</command> script (located in the
+              <filename>tools/backup/</filename> directory of the
+              Subversion source tree).  This script performs hot
+              backups of your Subversion repository (a feature
+              supported by the Berkeley DB database backend), and can
+              be used to make a per-commit snapshot of your repository
+              for archival or emergency recovery purposes.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><filename>pre-revprop-change</filename></term>
+          <listitem>
+            <para>Because Subversion's revision properties are not
+              versioned, making modifications to such a property (for
+              example, the <literal>svn:log</literal> commit message
+              property) will overwrite the previous value of that
+              property forever.  Since data can be potentially lost
+              here, Subversion supplies this hook (and its
+              counterpart, <filename>post-revprop-change</filename>)
+              so that repository administrators can keep records of
+              changes to these items using some externals means if
+              they so desire.</para>
+
+            <para>This hook runs just before such a modification is
+              made to the repository.  The repository passes four
+              arguments to this hook: the path to the repository, the
+              revision on which the to-be-modied property exist, the
+              authenticated username of the person making the change,
+              and name of the property itself.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><filename>pre-revprop-change</filename></term>
+          <listitem>
+            <para>As mentioned earlier, this hook is the counterpart
+              of <filename>pre-revprop-change</filename> hook.  In
+              fact, for the sake of paranoia this script will not run
+              unless the <filename>pre-revprop-change</filename> hook
+              exists.  When both of these hooks are present, the
+              <filename>post-revprop-change</filename> hook runs just
+              after a revision property has been changed, and is
+              typically used to send an email containing the new value
+              of the changed property.  The repository passes four
+              arguments to this hook: the path to the repository, the
+              revision on which the property exists, the authenticated
+              username of the person making the change, and name of
+              the property itself.</para>
+
+            <para>The Subversion distribution includes a
+              <command>propchange-email.pl</command> script (located
+              in the <filename>tools/hook-scripts/</filename>
+              directory of the Subversion source tree) that can be
+              used to send email with (and/or append to a log file)
+              the details of a revision property change.  This mail
+              contains the revision and name of the changed property,
+              the user who made the change, and the new property
+              value.</para>
           </listitem>
         </varlistentry>
       </variablelist>
+
+      <sidebar>
+        <title>Sentinels, Those <quote>Other</quote> Hooks</title>
+
+        <para>In addition to the hook scripts, Subversion has
+          templates for two other special event handlers&mdash;the
+          <filename>read-sentinels</filename> and
+          <filename>write-sentinels</filename>.  These special
+          programs, called <firstterm>sentinels</firstterm>, are
+          intended to be daemon-like applications which are started at
+          the beginning of a user's operation, and which receive
+          multiple event notifications of a single type over the
+          course of that operation.  Depending on the sentinel's
+          responses to each of these notifications, Subversion may
+          stop or otherwise modify the operation.  Fortunately for
+          today's Subversion repository administrators, these
+          sentinels can be ignored, since support for them is not yet
+          implemented in Subversion itself!</para>
+      </sidebar>
             
-      <para>Note that the hooks must be executable by the user who
-        will invoke them (commonly the user httpd runs as), and that
-        same user needs to be able to access the repository.</para>
-          
+      <para>Subversion will attempt to execute hooks as the same user
+        who owns the Subversion repository process.  In most cases,
+        the repository is being access via Apache HTTP server and
+        mod_dav_svn, so this user is the same user that Apache runs
+        as.  The hooks themselves will need to be configured with
+        OS-level permissions that allow that user to execute them.
+        Also, this means that any file or programs (including the
+        Subversion repository itself) accessed directly or indirectly
+        by the hook will be accessed as the same user.  In other
+        words, be alert to potential permissioning problems that might
+        keep the hook from performing the tasks you've written it to
+        perform.</para>
+
+      <!--
       <para>The <command>pre-commit</command> and
         <command>post-commit</command> hooks need to know things about
         the change about to be committed (or that has just been
@@ -282,7 +376,7 @@ pre-commit.tmpl           start-commit.tmpl
         machine-readable, so hook scripts can easily parse it.  Note
         that <command>svnlook</command> is read-only&mdash;it can only
         inspect, not change the repository.</para>
-
+      -->
     </sect2>
 
     <!-- ***************************************************************** -->
@@ -381,7 +475,7 @@ pre-commit.tmpl           start-commit.tmpl
         <title>svnlook</title>
             
         <para><command>svnlook</command> is a read-only
-          <footnote id="svn-ch-5-fn-1">
+          <footnote>
             <para>Why read-only?  Because if a pre-commit hook script
               changed the transaction before commit, the working copy
               would have no way of knowing what happened, and would
