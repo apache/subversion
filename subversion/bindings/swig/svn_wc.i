@@ -39,7 +39,8 @@
 %apply SWIGTYPE **OUTPARAM {
     svn_wc_entry_t **,
     svn_wc_adm_access_t **,
-    svn_wc_status_t **
+    svn_wc_status_t **,
+    apr_hash_t **
 };
 
 /* we can't use the OUTPARAM cuz that is only for pointers. use the
