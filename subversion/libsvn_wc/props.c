@@ -1125,19 +1125,18 @@ expand_keyword (svn_io_keywords_t *keywords,
                 apr_pool_t *pool)
 {
   svn_wc_entry_t *entry;
+  svn_stringbuf_t *value = NULL;
 
   SVN_ERR (svn_wc_entry (&entry, svn_stringbuf_create (path, pool), pool));
   
-  if (! entry)
-    return SVN_NO_ERROR;
-
   if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
       || (! strcmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
     {
-      svn_stringbuf_t *value = (svn_stringbuf_t *)
-        apr_hash_get (entry->attributes, 
-                      SVN_ENTRY_ATTR_COMMITTED_REV,
-                      strlen(SVN_ENTRY_ATTR_COMMITTED_REV));
+      if (entry)
+        value = (svn_stringbuf_t *)
+          apr_hash_get (entry->attributes, 
+                        SVN_ENTRY_ATTR_COMMITTED_REV,
+                        strlen(SVN_ENTRY_ATTR_COMMITTED_REV));
 
       if (! value)
         /* We found a recognized keyword, so it needs to be expanded
@@ -1150,10 +1149,11 @@ expand_keyword (svn_io_keywords_t *keywords,
   else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
            || (! strcmp (keyword, SVN_KEYWORD_DATE_SHORT)))
     {
-      svn_stringbuf_t *value = (svn_stringbuf_t *)
-        apr_hash_get (entry->attributes, 
-                      SVN_ENTRY_ATTR_COMMITTED_DATE,
-                      strlen(SVN_ENTRY_ATTR_COMMITTED_DATE));
+      if (entry)
+        value = (svn_stringbuf_t *)
+          apr_hash_get (entry->attributes, 
+                        SVN_ENTRY_ATTR_COMMITTED_DATE,
+                        strlen(SVN_ENTRY_ATTR_COMMITTED_DATE));
       
       if (! value)
         keywords->date = svn_string_create ("", pool);
@@ -1163,10 +1163,11 @@ expand_keyword (svn_io_keywords_t *keywords,
   else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
            || (! strcmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
     {
-      svn_stringbuf_t *value = (svn_stringbuf_t *)
-        apr_hash_get (entry->attributes, 
-                      SVN_ENTRY_ATTR_LAST_AUTHOR,
-                      strlen(SVN_ENTRY_ATTR_LAST_AUTHOR));
+      if (entry) 
+        value = (svn_stringbuf_t *)
+          apr_hash_get (entry->attributes, 
+                        SVN_ENTRY_ATTR_LAST_AUTHOR,
+                        strlen(SVN_ENTRY_ATTR_LAST_AUTHOR));
       
       if (! value)
         keywords->author = svn_string_create ("", pool);
@@ -1176,10 +1177,11 @@ expand_keyword (svn_io_keywords_t *keywords,
   else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
            || (! strcmp (keyword, SVN_KEYWORD_URL_SHORT)))
     {
-      svn_stringbuf_t *value = (svn_stringbuf_t *)
-        apr_hash_get (entry->attributes, 
-                      SVN_WC_ENTRY_ATTR_URL,
-                      strlen(SVN_WC_ENTRY_ATTR_URL));
+      if (entry)
+        value = (svn_stringbuf_t *)
+          apr_hash_get (entry->attributes, 
+                        SVN_WC_ENTRY_ATTR_URL,
+                        strlen(SVN_WC_ENTRY_ATTR_URL));
       
       if (! value)
         keywords->url = svn_string_create ("", pool);
