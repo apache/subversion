@@ -643,9 +643,9 @@ Berkeley DB tables
                 "nodes" : btree(ID -> NODE-REVISION)
             "revisions" : recno(REVISION)
          "transactions" : btree(TXN -> TRANSACTION, "next-id" -> TXN)
+               "copies" : btree(CPY -> COPY, "next-id" -> CPY)
               "strings" : btree(STR -> STRING, "next-id" -> STR)
       "representations" : btree(REP -> REPRESENTATION, "next-id" -> REP)
-               "copies" : btree(CPY -> COPY, "next-id" -> CPY)
 
 Syntactic elements
 ------------------
@@ -653,10 +653,10 @@ Syntactic elements
 Table keys:
 
                      ID ::= NODE-REV-ID ;
-                    TXN ::= number-36 ;
+                    TXN ::= number ;
+                    CPY ::= number ;
                     STR ::= number-36 ;
                     REP ::= number-36 ;
-                    CPY ::= number-36 ;
 
 Property lists:
 
@@ -739,8 +739,8 @@ Strings:
 
 Node revision IDs:
 
-            NODE-REV-ID ::= number-36 '.' CPY '.' TXN ;
-                NODE-ID ::= number-36 ;
+            NODE-REV-ID ::= NODE-ID '.' CPY '.' TXN ;
+                NODE-ID ::= number ;
 
 
 Lexical elements
