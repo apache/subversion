@@ -747,11 +747,22 @@ def hook_test():
 
   # Setup the hook configs to echo data back
   start_commit_hook = svntest.main.get_start_commit_hook_path (repo_dir)
-  svntest.main.file_append (start_commit_hook, "echo $repos\n")
+  svntest.main.file_append (start_commit_hook,
+                            """#!/bin/sh
+                            echo $1""")
+  os.chmod (start_commit_hook, 0755)
+
   pre_commit_hook = svntest.main.get_pre_commit_hook_path (repo_dir)
-  svntest.main.file_append (pre_commit_hook, "echo $repos $txn\n")
+  svntest.main.file_append (pre_commit_hook,
+                            """#!/bin/sh
+                            echo $1 $2 """)
+  os.chmod (pre_commit_hook, 0755)
+
   post_commit_hook = svntest.main.get_post_commit_hook_path (repo_dir)
-  svntest.main.file_append (post_commit_hook, "echo $repos $rev\n")
+  svntest.main.file_append (post_commit_hook,
+                            """#!/bin/sh
+                            echo $1 $2 """)
+  os.chmod (post_commit_hook, 0755)
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join (wc_dir, "iota")
@@ -789,7 +800,7 @@ test_list = [ None,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
               hudson_part_2,
-              # hook_test
+              hook_test
              ]
 
 if __name__ == '__main__':
