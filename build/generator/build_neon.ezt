@@ -22,7 +22,7 @@ set OPENSSL_SRC=[openssl_path][end]
 set EXPAT_INC=[expat_path]
 
 @rem **************************************************************************
-cd ..\..\neon
+cd /D [neon_path]
 set exitcode=0
 
 if "%2" == "rebuild" goto clean

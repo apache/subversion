@@ -1,5 +1,6 @@
 [DEFAULT]
 aprrel = Release
+aprxml = xml/expat/lib/LibR
 svnrel = Release
 bdbver = 42
 

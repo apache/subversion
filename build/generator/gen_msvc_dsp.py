@@ -86,6 +86,7 @@ class Generator(gen_win.WinGeneratorBase):
   def write(self, oname):
     "Write a Workspace (.dsw)"
 
+    self.write_neon_project_file('neon.dsp')
     install_targets = self.get_install_targets()
     
     targets = [ ]
