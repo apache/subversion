@@ -55,38 +55,27 @@ send_file_contents (svn_stringbuf_t *path,
   apr_file_t *f = NULL;
   apr_status_t apr_err;
 
-  /* Get a subpool for our allocations. */
-  apr_pool_t *subpool = svn_pool_create (pool);
-
   /* Get an apr file for PATH. */
-  apr_err = apr_file_open (&f, path->data, APR_READ, APR_OS_DEFAULT, subpool);
+  apr_err = apr_file_open (&f, path->data, APR_READ, APR_OS_DEFAULT, pool);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
-    {
-      return svn_error_createf
-        (apr_err, 0, NULL, subpool, 
-         "error opening `%s' for reading", path->data);
-    }
+    return svn_error_createf (apr_err, 0, NULL, pool, 
+                              "error opening `%s' for reading", path->data);
   
   /* Get a readable stream of the file's contents. */
-  contents = svn_stream_from_aprfile (f, subpool);
+  contents = svn_stream_from_aprfile (f, pool);
 
   /* Get an editor func that wants to consume the delta stream. */
   SVN_ERR (editor->apply_textdelta (file_baton, &handler, &handler_baton));
 
   /* Send the file's contents to the delta-window handler. */
-  SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton,
-                                    subpool));
+  SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton, pool));
 
   /* Close the file. */
   apr_err = apr_file_close (f);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
-    {
-      return svn_error_createf
-        (apr_err, 0, NULL, subpool, "error closing `%s'", path->data);
-    }
-  
-  /* Destroy our subpool. */
-  svn_pool_destroy (subpool);
+    return svn_error_createf
+      (apr_err, 0, NULL, pool, "error closing `%s'", path->data);
+
   return SVN_NO_ERROR;
 }
 
@@ -97,32 +86,29 @@ send_file_contents (svn_stringbuf_t *path,
  * Use POOL for any temporary allocation.
  */
 static svn_error_t *
-import_file (const svn_delta_edit_fns_t *editor,
+import_file (apr_hash_t *committed_targets,
+             const svn_delta_edit_fns_t *editor,
              void *dir_baton,
              svn_stringbuf_t *path,
              svn_stringbuf_t *name,
              apr_pool_t *pool)
 {
   void *file_baton;
+  const char *mimetype;
+  svn_stringbuf_t *full_path 
+    = svn_stringbuf_dup (path, apr_hash_pool_get (committed_targets));;
 
-  SVN_ERR (editor->add_file (name, dir_baton,
-                             NULL, SVN_INVALID_REVNUM, 
+  SVN_ERR (editor->add_file (name, dir_baton, NULL, SVN_INVALID_REVNUM, 
                              &file_baton));          
-  SVN_ERR (send_file_contents (path, file_baton, editor, pool));
-  
-  /* Try to detect the mime-type of this new addition. */
-  {
-    const char *mimetype;
+  SVN_ERR (svn_io_detect_mimetype (&mimetype, full_path->data, pool));
+  if (mimetype)
+    SVN_ERR (editor->change_file_prop 
+             (file_baton,
+              svn_stringbuf_create (SVN_PROP_MIME_TYPE, pool),
+              svn_stringbuf_create (mimetype, pool)));
 
-    SVN_ERR (svn_io_detect_mimetype (&mimetype, path->data, pool));
-    if (mimetype)
-      SVN_ERR (editor->change_file_prop 
-               (file_baton,
-                svn_stringbuf_create (SVN_PROP_MIME_TYPE, pool),
-                svn_stringbuf_create (mimetype, pool)));
-  }
-
-  SVN_ERR (editor->close_file (file_baton));
+  apr_hash_set (committed_targets, full_path->data, full_path->len,
+                (void *)file_baton);
 
   return SVN_NO_ERROR;
 }
@@ -135,7 +121,8 @@ import_file (const svn_delta_edit_fns_t *editor,
  * Use POOL for any temporary allocation.
  */
 static svn_error_t *
-import_dir (const svn_delta_edit_fns_t *editor, 
+import_dir (apr_hash_t *committed_targets,
+            const svn_delta_edit_fns_t *editor, 
             void *dir_baton,
             svn_stringbuf_t *path,
             apr_pool_t *pool)
@@ -190,12 +177,14 @@ import_dir (const svn_delta_edit_fns_t *editor,
                                           &this_dir_baton));
 
           /* Recurse. */
-          SVN_ERR (import_dir (editor, this_dir_baton, new_path, subpool));
+          SVN_ERR (import_dir (committed_targets,
+                               editor, this_dir_baton, new_path, subpool));
           SVN_ERR (editor->close_directory (this_dir_baton));
         }
       else if (this_entry.filetype == APR_REG)
         {
-          SVN_ERR (import_file (editor, dir_baton, new_path, name, subpool));
+          SVN_ERR (import_file (committed_targets,
+                                editor, dir_baton, new_path, name, subpool));
         }
       else
         {
@@ -254,6 +243,9 @@ import (svn_stringbuf_t *path,
 {
   void *root_baton;
   enum svn_node_kind kind;
+  apr_hash_t *committed_targets = apr_hash_make (pool);
+  apr_pool_t *subpool = svn_pool_create (pool); /* for post-fix textdeltas */
+  apr_hash_index_t *hi;
 
   /* Basic sanity check. */
   if (new_entry && (strcmp (new_entry->data, "") == 0))
@@ -285,13 +277,12 @@ import (svn_stringbuf_t *path,
   if (kind == svn_node_file)
     {
       if (! new_entry)
-        {
-          return svn_error_create
-            (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
-             "new entry name required when importing a file");
-        }
+        return svn_error_create
+          (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+           "new entry name required when importing a file");
 
-      SVN_ERR (import_file (editor, root_baton, path, new_entry, pool));
+      SVN_ERR (import_file (committed_targets,
+                            editor, root_baton, path, new_entry, pool));
     }
   else if (kind == svn_node_dir)
     {
@@ -303,7 +294,7 @@ import (svn_stringbuf_t *path,
                                         NULL, SVN_INVALID_REVNUM,
                                         &new_dir_baton));
 
-      SVN_ERR (import_dir (editor,
+      SVN_ERR (import_dir (committed_targets, editor,
                            new_dir_baton ? new_dir_baton : root_baton,
                            path,
                            pool));
@@ -311,7 +302,6 @@ import (svn_stringbuf_t *path,
       /* Close one baton or two. */
       if (new_dir_baton)
         SVN_ERR (editor->close_directory (new_dir_baton));
-      SVN_ERR (editor->close_directory (root_baton));
     }
   else if (kind == svn_node_none)
     {
@@ -319,7 +309,31 @@ import (svn_stringbuf_t *path,
         (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
          "'%s' does not exist.", path->data);  
     }
+
+  SVN_ERR (editor->close_directory (root_baton));
+
+  /* Do post-fix textdeltas here! */
+  for (hi = apr_hash_first (pool, committed_targets); 
+       hi; 
+       hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t keylen;
+      void *file_baton;
+      svn_stringbuf_t *full_path;
+
+      apr_hash_this (hi, &key, &keylen, &file_baton);
+      full_path = svn_stringbuf_create ((char *) key, subpool);
+      SVN_ERR (send_file_contents (full_path, file_baton, editor, subpool));
+      SVN_ERR (editor->close_file (file_baton));
+
+      /* Clear our per-iteration subpool. */
+      svn_pool_clear (subpool);
+    }
   
+  /* Destroy the per-iteration subpool. */
+  svn_pool_destroy (subpool);
+
   SVN_ERR (editor->close_edit (edit_baton));
 
   return SVN_NO_ERROR;
