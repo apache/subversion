@@ -848,9 +848,13 @@ def repos_to_wc(sbox):
   # we should get some scheduled additions *with history*.
   E_url = svntest.main.current_repo_url + "/A/B/E"
   pi_url = svntest.main.current_repo_url + "/A/D/G/pi"
+  pi_path = os.path.join (wc_dir, 'pi')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', E_url, wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', pi_url, wc_dir)
+
+  # Extra test: modify file ASAP to check there was a timestamp sleep
+  svntest.main.file_append(pi_path, 'zig')
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
@@ -860,6 +864,18 @@ def repos_to_wc(sbox):
     'E/beta'  :  Item(status='  ', copied='+', wc_rev='-', repos_rev=1),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_output)
+
+  # Modification will only show up if timestamps differ
+  out,err = svntest.main.run_svn(None, 'diff', pi_path)
+  if err or not out:
+    print "diff failed"
+    raise svntest.Failure
+  for line in out:
+    if line == '-This is the file \'pi\'.\n': # Crude check for diff-like output
+      break
+  else:
+    print "diff output incorrect", out
+    raise svntest.Failure
   
   # Revert everything and verify.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
