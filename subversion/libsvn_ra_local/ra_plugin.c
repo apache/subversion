@@ -396,6 +396,32 @@ get_log (void *session_baton,
 }
 
 
+static svn_error_t *
+do_check_path (svn_node_kind_t *kind,
+               void *session_baton,
+               svn_stringbuf_t *path,
+               svn_revnum_t revision)
+{
+  svn_ra_local__session_baton_t *sbaton = session_baton;
+  svn_fs_root_t *root;
+  svn_stringbuf_t *abs_path 
+    = svn_stringbuf_dup (sbaton->fs_path, sbaton->pool);
+
+  /* ### Not sure if this counts as a workaround or not.  The
+     session baton uses the empty string to mean root, and not
+     sure that should change.  However, it would be better to use
+     a path library function to add this separator -- hardcoding
+     it is totally bogus.  See issue #559, though it may be only
+     tangentially related. */
+  if (abs_path->len == 0)
+    svn_stringbuf_appendcstr (abs_path, "/");
+
+  svn_path_add_component (abs_path, path, svn_path_repos_style);
+  SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, sbaton->pool));
+  *kind = svn_fs_check_path (root, abs_path, sbaton->pool);
+  return SVN_NO_ERROR;
+}
+
 
 /*----------------------------------------------------------------*/
 
@@ -413,7 +439,8 @@ static const svn_ra_plugin_t ra_local_plugin =
   do_checkout,
   do_update,
   do_status,
-  get_log
+  get_log,
+  do_check_path
 };
 
 

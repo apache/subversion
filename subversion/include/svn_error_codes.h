@@ -302,6 +302,9 @@ SVN_ERROR_START
     SVN_ERRDEF (SVN_ERR_RA_DELETE_FAILED,
                 "RA layer failed to delete server resource")
 
+    SVN_ERRDEF (SVN_ERR_RA_PROPS_NOT_FOUND,
+                "RA layer failed to fetch properties")
+    
   /* End of ra_dav errors */
 
   /* These RA errors are specific to ra_local */
