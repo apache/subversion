@@ -1,4 +1,4 @@
-Version 0.33.0 (released 13 November 2003, revision r7735)
+Version 0.33.0 (released 13 November 2003, revision r7737)
 http://svn.collab.net/repos/svn/tags/0.33.0
 
                               NOTICES:
@@ -12,6 +12,7 @@ http://svn.collab.net/repos/svn/tags/0.33.0
        recommends 'nice -2 svnadmin deltify "$REPOS" -r "$REV" &'.
 
  User-visible changes:
+ * now require APR/APU 0.9.5 (ships in Apache 2.0.48)
  * lose automatic deltification, but recommend it in post-commit (r7695, #1573)
  * new configuration and authn/authz support in ra_svn (r7604, r7601)
  * much faster checkouts and updates, over both svn:// and http:// (#1429)
