@@ -164,40 +164,46 @@
         desde el punto de vista del usuario de Subversion, las
         cosas <quote>al otro lado de la línea.</quote></para>
 
-      <para>The Subversion Filesystem is accessed via the libsvn_fs
-        API, and is not a kernel-level filesystem that one would
-        install in an operating system (like the Linux ext2 or NTFS),
-        but a virtual filesystem.  Rather than storing
-        <quote>files</quote> and <quote>directories</quote> as real
-        files and directories (as in, the kind you can navigate
-        through using your favorite shell program), it uses a database
-        system for its back-end storage mechanism.  Currently, the
-        database system in use is Berkeley DB.
+      <para>Al sistema de ficheros de Subversion se accede vía la
+        API de libsvn_fs, y no se trata de un sistema de
+        ficheros que uno instalaría en un sistema operativo
+        (como ext2 de Linux o NTFS), sino un sistema de ficheros
+        virtual. En lugar de almacenar <quote>ficheros</quote>
+        y <quote>directorios</quote> como ficheros y directorios
+        reales (vamos, el tipo que puede explorar usando su
+        programa favorito de shell), usa un sistema de base de
+        datos para sus mecanismos back-end <!-- TODO back-end? -->
+        de almacenamiento.  Actualmente el sistema de base de datos
+        que usa es la base de datos de Berkeley.
         <footnote>
-          <para>The choice of Berkeley DB brought several automatic
-            features that Subversion needed, such as data integrity,
-            atomic writes, recoverability, and hot backups.</para>
+          <para>La elección de la base de datos de Berkeley trajo
+            varias características de forma automática que
+            Subversion necesitaba, como integridad de datos,
+            escrituras atómicas, recuperabilidad, y copias de
+            seguridad en caliente.</para>
         </footnote>
-        However, there has been considerable interest by the
-        development community in giving future releases of Subversion
-        the ability to use other back-end database systems, perhaps
-        through a mechanism such as Open Database Connectivity
-        (ODBC).</para>
+        No obstante, en la comunidad de desarrolladores ha habido
+        un considerable interés para que futuras versiones de
+        Subversion tengan la capacidad para usar otros sistemas
+        back-ends de base de datos, quizás a través de mecanismos
+        como la Open Database Connectivity (ODBC).</para>
 
-      <para>The filesystem API exported by libsvn_fs contains the
-        kinds of functionality you would expect from any other
-        filesystem API: you can create and remove files and
-        directories, copy and move them around, modify file contents,
-        and so on.  It also has features that are not quite as common,
-        such as the ability to add, modify, and remove metadata
-        (<quote>properties</quote>) on each file or directory.
-        Furthermore, the Subversion Filesystem is a versioning
-        filesystem, which means that as you make changes to your
-        directory tree, Subversion remembers what your tree looked
-        like before those changes.  And before the previous changes.
-        And the previous ones.  And so on, all the way back through
-        versioning time to (and just beyond) the moment you first
-        started adding things to the filesystem.</para>
+      <para>La API de sistema de ficheros exportada por libsvn_fs
+        contiene el tipo de funcionalidad que esperaría de
+        cualquier otro API de sistema de ficheros: puede crear
+        y borrar ficheros y directorios, copiarlos y moverlos,
+        modificar el contenido de ficheros, y un largo etcétera.
+        También tiene características que no son tan comunes, como
+        la habilidad de añadir, modificar o eliminar meta datos
+        (<quote>propiedades</quote>) sobre cualquier fichero o
+        directorio.  Además, el sistema de archivos de Subversion
+        es versionado, lo que significa que a medida que realiza
+        cambios a su árbol de directorios, Subversion recuerda el
+        aspecto que tenía el árbol antes de esos cambios. Y antes
+        que los cambios anteriores. Y que los anteriores a los
+        anteriores. Y así todo el camino de vuelta por el tiempo
+        de versionado hasta el momento inicial en el cual comenzó
+        a añadir cosas al sistema de archivos.</para>
 
       <para>All the modifications you make to your tree are done
         within the context of a Subversion transaction.  The following
