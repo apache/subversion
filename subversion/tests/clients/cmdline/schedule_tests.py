@@ -24,6 +24,9 @@ import string, sys, os.path
 import svntest
 
 
+Item = svntest.wc.StateItem
+
+
 ######################################################################
 # Tests
 #
@@ -61,22 +64,14 @@ def add_files_core(sbox, wc_dir):
   svntest.main.run_svn(None, 'add', delta_path, zeta_path, epsilon_path)
   
   # Make sure the adds show up as such in status
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  status_list.append([delta_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([zeta_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([epsilon_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'delta' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/B/zeta' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/G/epsilon' : Item(status='A ', wc_rev=0, repos_rev=1),
+    })
 
-  return svntest.actions.run_and_verify_status(wc_dir, expected_output_tree)
+  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 
@@ -98,22 +93,14 @@ def add_directories_core(sbox, wc_dir):
   svntest.main.run_svn(None, 'add', X_path, Y_path, Z_path)
   
   # Make sure the adds show up as such in status
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  status_list.append([X_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([Y_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([Z_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'X' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/C/Y' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/H/Z' : Item(status='A ', wc_rev=0, repos_rev=1),
+    })
 
-  return svntest.actions.run_and_verify_status(wc_dir, expected_output_tree)
+  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 
@@ -156,50 +143,21 @@ def nested_adds_core(sbox, wc_dir):
   svntest.main.run_svn(None, 'add', '--recursive', X_path, Y_path, Z_path)
     
   # Make sure the adds show up as such in status
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  status_list.append([X_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([Y_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([Z_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([P_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([Q_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([R_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([delta_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([epsilon_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([upsilon_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([zeta_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'X' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/C/Y' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/H/Z' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'X/P' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/C/Y/Q' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/H/Z/R' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'X/delta' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/C/Y/epsilon' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/C/Y/upsilon' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/H/Z/zeta' : Item(status='A ', wc_rev=0, repos_rev=1),
+    })
 
-  return svntest.actions.run_and_verify_status(wc_dir, expected_output_tree)
+  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
 #----------------------------------------------------------------------
@@ -219,13 +177,11 @@ def delete_files_core(sbox, wc_dir):
   svntest.main.run_svn(None, 'del', iota_path, mu_path, rho_path, omega_path)
     
   # Make sure the deletes show up as such in status
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  for item in status_list:
-    if item[0] == iota_path or item[0] == mu_path or item[0] == rho_path or item[0] == omega_path:
-      item[3]['status'] = 'D '
-  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', 'A/mu', 'A/D/G/rho', 'A/D/H/omega',
+                        status='D ')
 
-  return svntest.actions.run_and_verify_status(wc_dir, expected_output_tree)
+  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 
@@ -249,20 +205,13 @@ def delete_dirs_core(sbox, wc_dir):
   svntest.main.run_svn(None, 'del', E_path, F_path, H_path)
     
   # Make sure the deletes show up as such in status
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  for item in status_list:
-    if item[0] == E_path \
-    or item[0] == alpha_path \
-    or item[0] == beta_path \
-    or item[0] == F_path \
-    or item[0] == H_path \
-    or item[0] == chi_path \
-    or item[0] == omega_path \
-    or item[0] == psi_path:
-      item[3]['status'] = 'D '
-  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                        'A/B/F',
+                        'A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi',
+                        status='D ')
 
-  return svntest.actions.run_and_verify_status(wc_dir, expected_output_tree)
+  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
 #######################################################################
@@ -328,11 +277,12 @@ def revert_add_files(sbox):
   if len(errput) > 0:
     print errput
     return 1
-  if len (expected_output) != len (output): return 1
+
+  ### do we really need to sort these?
   output.sort()
   expected_output.sort()
-  for index in range (len (output)):
-    if output[index] != expected_output[index]: return 1
+  if output != expected_output:
+    return 1
 
   return 0
 
@@ -359,11 +309,12 @@ def revert_add_directories(sbox):
   if len(errput) > 0:
     print errput
     return 1
-  if len (expected_output) != len (output): return 1
+
+  ### do we really need to sort these?
   output.sort()
   expected_output.sort()
-  for index in range (len (output)):
-    if output[index] != expected_output[index]: return 1
+  if output != expected_output:
+    return 1
 
   return 0
 
@@ -390,11 +341,12 @@ def revert_nested_adds(sbox):
   if len(errput) > 0:
     print errput
     return 1
-  if len (expected_output) != len (output): return 1
+
+  ### do we really need to sort these?
   output.sort()
   expected_output.sort()
-  for index in range (len (output)):
-    if output[index] != expected_output[index]: return 1
+  if output != expected_output:
+    return 1
 
   return 0
 
@@ -423,11 +375,12 @@ def revert_delete_files(sbox):
   if len(errput) > 0:
     print errput
     return 1
-  if len (expected_output) != len (output): return 1
+
+  ### do we really need to sort these?
   output.sort()
   expected_output.sort()
-  for index in range (len (output)):
-    if output[index] != expected_output[index]: return 1
+  if output != expected_output:
+    return 1
 
   return 0
 
@@ -464,11 +417,12 @@ def revert_delete_dirs(sbox):
   if len(errput) > 0:
     print errput
     return 1
-  if len (expected_output) != len (output): return 1
+
+  ### do we really need to sort these?
   output.sort()
   expected_output.sort()
-  for index in range (len (output)):
-    if output[index] != expected_output[index]: return 1
+  if output != expected_output:
+    return 1
 
   return 0
 

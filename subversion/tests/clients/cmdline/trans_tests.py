@@ -23,6 +23,8 @@ import string, sys, os.path, re
 import svntest
 
 
+Item = svntest.wc.StateItem
+
 ######################################################################
 # THINGS TO TEST
 #
@@ -155,33 +157,15 @@ def keywords_from_birth(sbox):
   if setup_working_copy (wc_dir): return 1
 
   # Add all the files
-  status_list = svntest.actions.get_virginal_status_list (wc_dir, '1')
-  status_list.append ([author_rev_unexp_path, None, {},
-                       {'status' : 'A ',
-                        'wc_rev' : '0',
-                        'repos_rev' : '1'}])
-  status_list.append ([author_rev_exp_path, None, {},
-                       {'status' : 'A ',
-                        'wc_rev' : '0',
-                        'repos_rev' : '1'}])
-  status_list.append ([bogus_keywords_path, None, {},
-                       {'status' : 'A ',
-                        'wc_rev' : '0',
-                        'repos_rev' : '1'}])
-  status_list.append ([embd_author_rev_unexp_path, None, {},
-                       {'status' : 'A ',
-                        'wc_rev' : '0',
-                        'repos_rev' : '1'}])
-  status_list.append ([embd_author_rev_exp_path, None, {},
-                       {'status' : 'A ',
-                        'wc_rev' : '0',
-                        'repos_rev' : '1'}])
-  status_list.append ([embd_bogus_keywords_path, None, {},
-                       {'status' : 'A ',
-                        'wc_rev' : '0',
-                        'repos_rev' : '1'}])
-
-  expected_output_tree = svntest.tree.build_generic_tree (status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'author_rev_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'author_rev_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'bogus_keywords' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'embd_author_rev_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'embd_author_rev_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'embd_bogus_keywords' : Item(status='A ', wc_rev=0, repos_rev=1),
+    })
 
   svntest.main.run_svn (None, 'add', author_rev_unexp_path)
   svntest.main.run_svn (None, 'add', author_rev_exp_path)
@@ -190,22 +174,23 @@ def keywords_from_birth(sbox):
   svntest.main.run_svn (None, 'add', embd_author_rev_exp_path)
   svntest.main.run_svn (None, 'add', embd_bogus_keywords_path)
 
-  svntest.actions.run_and_verify_status(wc_dir, expected_output_tree)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Add the keyword properties.
   keywords_on (author_rev_unexp_path)
   keywords_on (embd_author_rev_exp_path)
 
   # Commit.
-  output_list = [[author_rev_unexp_path, None, {}, {'verb' : 'Adding' }],
-                 [author_rev_exp_path, None, {}, {'verb' : 'Adding' }],
-                 [bogus_keywords_path, None, {}, {'verb' : 'Adding' }],
-                 [embd_author_rev_unexp_path, None, {}, {'verb' : 'Adding' }],
-                 [embd_author_rev_exp_path, None, {}, {'verb' : 'Adding' }],
-                 [embd_bogus_keywords_path, None, {}, {'verb' : 'Adding' }]]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'author_rev_unexp' : Item(verb='Adding'),
+    'author_rev_exp' : Item(verb='Adding'),
+    'bogus_keywords' : Item(verb='Adding'),
+    'embd_author_rev_unexp' : Item(verb='Adding'),
+    'embd_author_rev_exp' : Item(verb='Adding'),
+    'embd_bogus_keywords' : Item(verb='Adding'),
+    })
 
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
                                             None, None,
                                             None, None, None, None, wc_dir):
     return 1
@@ -270,20 +255,19 @@ def update_modified_with_translation(sbox):
   svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'native', rho_path)
 
   # Create expected output and status trees of a commit.
-  output_list = [ [rho_path, None, {}, {'verb' : 'Sending' }] ]
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    if (item[0] != rho_path):  # everything else is at working rev 1    
-      item[3]['wc_rev'] = '1'
-    else:  # rho_path has props
-      item[3]['status'] = '__'
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  # rho has props
+  expected_status.tweak('A/D/G/rho', wc_rev=2, status='__')
 
   # Commit revision 2:  it has the new rho.
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             rho_path):
     return 1
@@ -294,16 +278,13 @@ def update_modified_with_translation(sbox):
   f.close()
 
   # Commit revision 3 
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
-  for item in status_list:
-    if (item[0] != rho_path):  # everything else is at working rev 1    
-      item[3]['wc_rev'] = '1'
-    else:  # rho_path has props
-      item[3]['status'] = '__'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D/G/rho', wc_rev=3, status='__')
+
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             rho_path):
     return 1
@@ -314,12 +295,12 @@ def update_modified_with_translation(sbox):
   f.close()
 
   # Prepare trees for an update to rev 1.
-  output_list = [ [rho_path, None, {}, {'status' : 'CU' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
-  my_greek_tree = svntest.main.copy_greek_tree()
-  for item in my_greek_tree:
-    if item[0] == 'A/D/G/rho':
-      item[1] = """<<<<<<< .mine
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho' : Item(status='CU'),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/G/rho', contents="""<<<<<<< .mine
 1
 2
 3
@@ -333,14 +314,13 @@ def update_modified_with_translation(sbox):
 10
 =======
 This is the file 'rho'.>>>>>>> .r1
-"""
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+""")
 
   # Updating back to revision 1 should not error; the merge should
   # work, with eol-translation turned on.
   return svntest.actions.run_and_verify_update(wc_dir,
-                                               expected_output_tree,
-                                               expected_disk_tree,
+                                               expected_output,
+                                               expected_disk,
                                                None, None,
                                                do_nothing, None,
                                                None, None,

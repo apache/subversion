@@ -53,7 +53,7 @@ msg_separator = '------------------------------------' \
 
 
 # (abbreviation)
-path_index = svntest.actions.path_index
+Item = svntest.wc.StateItem
 
 
 ######################################################################
@@ -148,24 +148,17 @@ def guarantee_repos_and_wc(sbox):
   # Let's run 'svn status' and make sure the working copy looks
   # exactly the way we think it should.  Start with a generic
   # greek-tree-list, where every local and repos revision is at 9.
-  status_list = svntest.actions.get_virginal_status_list(wc_path, '9')
-
-  # remove A/B/E/alpha, add A/C/epsilon
-  status_list.pop(path_index(status_list, os.path.join(wc_path, alpha_path)))
-  status_list.append([os.path.join(wc_path, epsilon_path), None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '9',
-                       'repos_rev' : '9'}])
+  expected_status = svntest.actions.get_virginal_state(wc_path, 9)
+  expected_status.remove('A/B/E/alpha')
+  expected_status.add({
+    'A/C/epsilon' : Item(status='_ ', wc_rev=9, repos_rev=9),
+    })
 
   # props exist on A/B and A/mu
-  status_list[path_index(status_list, os.path.join(wc_path, B_path))][3]['status'] = "__"
-  status_list[path_index(status_list, os.path.join(wc_path, mu_path))][3]['status'] = "__"
-
-  # Convert the list into a real tree.
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status.tweak('A/B', 'A/mu', status='__')
 
   # Run 'svn st -uv' and compare the actual results with our tree.
-  return svntest.actions.run_and_verify_status(wc_path, expected_status_tree)
+  return svntest.actions.run_and_verify_status(wc_path, expected_status)
 
 
 

@@ -24,7 +24,6 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
-path_index = svntest.actions.path_index
 Item = wc.StateItem
 
 #----------------------------------------------------------------------
@@ -201,10 +200,13 @@ def basic_update(sbox):
     })
 
   # Create expected disk tree for the update.
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree[2][1] = my_greek_tree[2][1] + 'appended mu text'
-  my_greek_tree[14][1] = my_greek_tree[14][1] + 'new appended text for rho'
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'appended mu text')
+  expected_disk.tweak('A/D/G/rho',
+                      contents=expected_disk.desc['A/D/G/rho'].contents
+                      + 'new appended text for rho')
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
@@ -212,7 +214,7 @@ def basic_update(sbox):
   # Do the update and check the results in three ways.
   return svntest.actions.run_and_verify_update(wc_backup,
                                                expected_output,
-                                               expected_disk_tree,
+                                               expected_disk,
                                                expected_status)
 
 #----------------------------------------------------------------------
@@ -297,9 +299,10 @@ def basic_corruption(sbox):
     })
 
   # Create expected disk tree for the update.
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree[2][1] = my_greek_tree[2][1] + 'appended mu text'
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'appended mu text')
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
@@ -321,7 +324,7 @@ def basic_corruption(sbox):
   # Do the update and check the results in three ways.
   if svntest.actions.run_and_verify_update(other_wc,
                                            expected_output,
-                                           expected_disk_tree,
+                                           expected_disk,
                                            expected_status,
                                            "checksum", other_wc):
     return 1
@@ -337,7 +340,7 @@ def basic_corruption(sbox):
   # that this works without even an intervening "svn cleanup".)
   return svntest.actions.run_and_verify_update (other_wc,
                                                 expected_output,
-                                                expected_disk_tree,
+                                                expected_disk,
                                                 expected_status)
 
 
@@ -437,16 +440,11 @@ def basic_merge(sbox):
     })
   
   # Create expected disk tree for the update.
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree[2][1] = 'This is the new line 1 in the backup copy of mu'
-  for x in range(2,11):
-    my_greek_tree[2][1] = my_greek_tree[2][1] + '\nThis is line ' + `x` + ' in mu'
-  my_greek_tree[2][1] = my_greek_tree[2][1] + ' Appended to line 10 of mu'  
-  my_greek_tree[14][1] = 'This is the new line 1 in the backup copy of rho'
-  for x in range(2,11):
-    my_greek_tree[14][1] = my_greek_tree[14][1] + '\nThis is line ' + `x` + ' in rho'
-  my_greek_tree[14][1] = my_greek_tree[14][1] + ' Appended to line 10 of rho'
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=backup_mu_text + ' Appended to line 10 of mu')
+  expected_disk.tweak('A/D/G/rho',
+                      contents=backup_rho_text + ' Appended to line 10 of rho')
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
@@ -455,7 +453,7 @@ def basic_merge(sbox):
   # Do the update and check the results in three ways.
   return svntest.actions.run_and_verify_update(wc_backup,
                                                expected_output,
-                                               expected_disk_tree,
+                                               expected_disk,
                                                expected_status)
 
 
@@ -513,20 +511,19 @@ def basic_conflict(sbox):
     })
   
   # Create expected disk tree for the update.
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree[2][1] =  """<<<<<<< .mine
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents="""<<<<<<< .mine
 This is the file 'mu'.
 Conflicting appended text for mu=======
 This is the file 'mu'.
 Original appended text for mu>>>>>>> .r2
-"""
-  my_greek_tree[14][1] = """<<<<<<< .mine
+""")
+  expected_disk.tweak('A/D/G/rho', contents="""<<<<<<< .mine
 This is the file 'rho'.
 Conflicting appended text for rho=======
 This is the file 'rho'.
 Original appended text for rho>>>>>>> .r2
-"""
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+""")
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, '2')
@@ -541,7 +538,7 @@ Original appended text for rho>>>>>>> .r2
   # All "extra" files are passed to expect_extra_files().
   if svntest.actions.run_and_verify_update(wc_backup,
                                            expected_output,
-                                           expected_disk_tree,
+                                           expected_disk,
                                            expected_status,
                                            None,
                                            expect_extra_files,
@@ -730,9 +727,9 @@ def basic_switch(sbox):
     })
 
   # Create expected disk tree (iota will have gamma's contents)
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree[0][1] = my_greek_tree[11][1]
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota',
+                      contents=expected_disk.desc['A/D/gamma'].contents)
 
   # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -740,7 +737,7 @@ def basic_switch(sbox):
   # Do the switch and check the results in three ways.
   if svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
                                            expected_output,
-                                           expected_disk_tree,
+                                           expected_disk,
                                            expected_status):
     return 1
   
@@ -768,21 +765,15 @@ def basic_switch(sbox):
 
   # Create expected disk tree (iota will have gamma's contents,
   # A/D/H/* will look like A/D/G/*)
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree[0][1] = my_greek_tree[11][1]
-  my_greek_tree.pop(path_index(my_greek_tree,
-                               os.path.join('A', 'D', 'H', 'chi')))
-  my_greek_tree.pop(path_index(my_greek_tree,
-                               os.path.join('A', 'D', 'H', 'omega')))
-  my_greek_tree.pop(path_index(my_greek_tree,
-                               os.path.join('A', 'D', 'H', 'psi')))
-  my_greek_tree.append([os.path.join('A', 'D', 'H', 'pi'),
-                        "This is the file 'pi'.", {}, {}])
-  my_greek_tree.append([os.path.join('A', 'D', 'H', 'rho'),
-                        "This is the file 'rho'.", {}, {}])
-  my_greek_tree.append([os.path.join('A', 'D', 'H', 'tau'),
-                        "This is the file 'tau'.", {}, {}])
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota',
+                      contents=expected_disk.desc['A/D/gamma'].contents)
+  expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  expected_disk.add({
+    'A/D/H/pi' : Item("This is the file 'pi'."),
+    'A/D/H/rho' : Item("This is the file 'rho'."),
+    'A/D/H/tau' : Item("This is the file 'tau'."),
+    })
 
   # Create expected status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -798,7 +789,7 @@ def basic_switch(sbox):
   # Do the switch and check the results in three ways.
   return svntest.actions.run_and_verify_switch(wc_dir, ADH_path, ADG_url,
                                                expected_output,
-                                               expected_disk_tree,
+                                               expected_disk,
                                                expected_status)
 
 

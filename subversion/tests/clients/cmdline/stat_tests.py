@@ -23,6 +23,8 @@ import string, sys, os.path
 import svntest
 
 
+Item = svntest.wc.StateItem
+
 
 ######################################################################
 # Tests
@@ -84,24 +86,23 @@ def status_update_with_nested_adds(sbox):
   svntest.main.run_svn(None, 'add', newfile_path)
 
   # Created expected output tree for commit
-  output_list = [ [newdir_path, None, {}, {'verb' : 'Adding' }],
-                  [newfile_path, None, {}, {'verb' : 'Adding' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'newdir' : Item(verb='Adding'),
+    'newdir/newfile' : Item(verb='Adding'),
+    })
 
   # Create expected status tree; all local revisions should be at 1,
   # but newdir and newfile should be at revision 2.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  status_list.append([newdir_path, None, {},
-                      {'status' : '_ ', 'wc_rev' : '2', 'repos_rev' : '2' }])
-  status_list.append([newfile_path, None, {},
-                      {'status' : '_ ', 'wc_rev' : '2', 'repos_rev' : '2' }])
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'newdir' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'newdir/newfile' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    })
 
   # Commit.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                                            expected_status_tree, None,
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                            expected_status, None,
                                             None, None, None, None, wc_dir):
     return 1
 
@@ -111,11 +112,9 @@ def status_update_with_nested_adds(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but newdir and newfile should be present with 'blank' attributes.
-  status_list = svntest.actions.get_virginal_status_list(wc_backup, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
-  
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.tweak(wc_rev=1)
+
   # Verify status.  Notice that we're running status *without* the
   # --quiet flag, so the unversioned items will appear.
   # Unfortunately, the regexp that we currently use to parse status
@@ -124,7 +123,7 @@ def status_update_with_nested_adds(sbox):
   # regression test for now.  Someday, though, it would be nice to
   # positively match the mostly-empty lines.
   return svntest.actions.run_and_verify_unquiet_status(wc_backup,
-                                                       expected_status_tree)
+                                                       expected_status)
 
 
 

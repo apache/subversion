@@ -24,7 +24,8 @@ import svntest
 
 
 # (abbreviation)
-path_index = svntest.actions.path_index
+Item = svntest.wc.StateItem
+
 
 #----------------------------------------------------------------------
 
@@ -130,21 +131,20 @@ def test_youngest(sbox):
   svntest.main.file_append (rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }],
-                  [rho_path, None, {}, {'verb' : 'Sending' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    'A/D/G/rho' : Item(verb='Sending'),
+    })
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    if (item[0] != mu_path) and (item[0] != rho_path):
-      item[3]['wc_rev'] = '1'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None,
                                             None, None,
                                             None, None,
@@ -232,22 +232,21 @@ def list_revs(sbox):
   svntest.main.file_append (rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }],
-                  [rho_path, None, {}, {'verb' : 'Sending' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    'A/D/G/rho' : Item(verb='Sending'),
+    })
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    if (item[0] != mu_path) and (item[0] != rho_path):
-      item[3]['wc_rev'] = '1'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
   # Commit, and create revision 2.
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None,
                                             None, None,
                                             None, None,
@@ -259,22 +258,20 @@ def list_revs(sbox):
   svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [gamma_path, None, {}, {'verb' : 'Deleting' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Deleting'),
+    })
 
   # Create expected status tree
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-    if (item[0] == mu_path) or (item[0] == rho_path):
-      item[3]['wc_rev'] = '2'
-  status_list.pop(path_index(status_list, gamma_path))
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
+  expected_status.remove('A/D/gamma')
 
   # Commit, and create revision 3.
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None,
                                             None, None,
                                             None, None,
