@@ -213,16 +213,16 @@ svn_wc__conflicting_propchanges_p (svn_string_t **description,
     {
       *description =
         svn_string_createf
-        (pool, "property `%s': user set value, and update deletes it.",
-         local->name->data);
+        (pool, "prop `%s': user set value to '%s', but update deletes it.\n",
+         local->name->data, local->value->data);
       return TRUE;  /* conflict */
     }
   if ((local->value == NULL) && (update->value != NULL))
     {
       *description =
         svn_string_createf
-        (pool, "property `%s': user deleted, and update sets it.",
-         local->name->data);
+        (pool, "prop `%s': user deleted, but update sets it to '%s'.\n",
+         local->name->data, update->value->data);
       return TRUE;  /* conflict */
     }
 
@@ -237,8 +237,8 @@ svn_wc__conflicting_propchanges_p (svn_string_t **description,
     {
       *description =
         svn_string_createf
-        (pool, "property `%s': user and update set to different values.",
-         local->name->data);
+        (pool, "prop `%s': user set to '%s', but update set to '%s'.\n",
+         local->name->data, local->value->data, update->value->data);
       return TRUE;  /* conflict */
     }
   else
