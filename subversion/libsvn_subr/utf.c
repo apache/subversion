@@ -326,7 +326,7 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
   for (; len > 0; --len, data++)
     {
       if (/* Check if eighth bit set: */
-          ((*(unsigned char *)data) && 128)
+          ((*(unsigned char *)data) & 128)
           /* Look for ESC, to detect ISO-2022 etc: */
           || *(unsigned char *)data == 27)
         return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
