@@ -62,18 +62,27 @@ IV. Branching and Merging
        Show clever use-cases in here too. (Ben has some examples.)
 
 
-V.  Setting Up a Repository
+V.  Repository Administration
 
-   A.  Server setup
+   A.  Repository creation and configuration 
 
       1. creating a repository
-      2. examining a repository (svnlook, shell)
-      3. networking a repository (apache setup, auth options)
-      4. maintaining a repository (svnadmin, svnadmin recover, backup options)
-      5. repository hooks
-      6. migrating a repository (dump/load)
+      2. repository hooks
+      3. DB_CONFIG file
 
-   B.  Adding projects
+   B.  Repository maintenance
+
+      1. examining a repository (svnlook, shell)
+      2. maintaining a repository (svnadmin, svnadmin recover, backup options)
+      3. migrating a repository (dump/load)
+
+   C.  Networking your repository (apache setup, auth options)
+
+      1. apache setup
+      2. auth options
+      3. common mistakes (?? permissions of repos/dav and such)
+
+   D.  Adding projects
 
       1. examples of 'svn import'
       2. vendor branches
