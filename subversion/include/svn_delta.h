@@ -407,10 +407,10 @@ typedef struct svn_delta_edit_fns_t
 
   /* Creating and modifying directories.  */
   
-  /* These are like add_directory() and replace_directory(), except
-     that because it's the root dir, it takes neither parent baton nor
-     name (note that by "root dir", we mean the root dir of this
-     change, which may or may not be the root dir of the repository).
+  /* This is like replace_directory(), except that because it's the
+     root dir, it takes neither parent baton nor name (note that by
+     "root dir", we mean the root dir of this change, which may or may
+     not be the root dir of the repository).
 
      This function sets DIR_BATON, which will be the dir baton for its
      matching finish_directory() and the parent baton for any child
@@ -418,17 +418,12 @@ typedef struct svn_delta_edit_fns_t
 
      kff todo:
 
-     Jim: you're probably thinking, these ought to be documented in a
+     Jim: you're probably thinking, this ought to be documented in a
      more independent fashion.  We agree. :-)  But just needed to get
      'em up and running right now since libsvn_wc is bottlenecked on
-     it.  I think you'd probably document them better, so please have
+     it.  I think you'd probably document it better, so please have
      at it if you'd like, or if you want me to do it I'm happy to as
      well. */
-  svn_error_t *(*add_root) (svn_string_t *ancestor_path,
-                            svn_vernum_t ancestor_version,
-                            void *edit_baton,
-                            void **dir_baton);
-
   svn_error_t *(*replace_root) (svn_string_t *ancestor_path,
                                 svn_vernum_t ancestor_version,
                                 void *edit_baton,
