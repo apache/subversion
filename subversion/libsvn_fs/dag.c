@@ -1432,16 +1432,16 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
 
 dag_node_t *
 svn_fs__dag_dup (dag_node_t *node,
-                 trail_t *trail)
+                 apr_pool_t *pool)
 {
   /* Allocate our new node. */
-  dag_node_t *new_node = apr_pcalloc (trail->pool, sizeof (*new_node));
+  dag_node_t *new_node = apr_pcalloc (pool, sizeof (*new_node));
 
   new_node->fs = node->fs;
-  new_node->pool = trail->pool;
-  new_node->id = svn_fs__id_copy (node->id, trail->pool);
+  new_node->pool = pool;
+  new_node->id = svn_fs__id_copy (node->id, pool);
   new_node->kind = node->kind;
-  new_node->created_path = apr_pstrdup (trail->pool, node->created_path);
+  new_node->created_path = apr_pstrdup (pool, node->created_path);
 
   /* Leave new_node->node_revision zero for now, so it'll get read in.
      We can get fancy and duplicate node's cache later.  */
