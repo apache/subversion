@@ -42,7 +42,7 @@ create_berkeley_filesystem (const char **msg)
 {
   svn_fs_t *fs;
 
-  *msg = "open Berkeley DB filesystem";
+  *msg = "create Berkeley DB filesystem";
 
   fs = svn_fs_new (pool);
   if (fs == NULL)
