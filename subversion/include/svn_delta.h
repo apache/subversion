@@ -487,9 +487,9 @@ typedef struct
   /* Deleting things.  */
        
   /* Remove the directory entry named PATH, a child of the directory
-     represented by PARENT_BATON.  REVISION is used as a sanity check
-     to ensure that you are removing the revision of PATH that you
-     really think you are.
+     represented by PARENT_BATON.  If REVISION is set, it is used as a
+     sanity check to ensure that you are removing the revision of PATH
+     that you really think you are.
 
      All allocations should be performed in POOL. */
   svn_error_t *(*delete_entry) (const char *path,
@@ -522,8 +522,8 @@ typedef struct
      identified by PARENT_BATON). The subdirectory is specified by
      PATH. The callback must store a value in *CHILD_BATON that should
      be used as the PARENT_BATON for subsequent changes in this
-     subdirectory.  BASE_REVISION is the current revision of the
-     subdirectory.
+     subdirectory.  If set, BASE_REVISION is the current revision of
+     the subdirectory.
 
      Allocations for the returned CHILD_BATON should be performed in
      DIR_POOL. It is also typical to (possibly) save this pool for later
@@ -580,8 +580,8 @@ typedef struct
 
      The callback can store a baton for this new file in **FILE_BATON;
      whatever value it stores there should be passed through to
-     apply_textdelta and/or apply_propdelta.  This file has a current
-     revision of BASE_REVISION.
+     apply_textdelta and/or apply_propdelta.  If set, BASE_REVISION is
+     the current revision of the file.
 
      Allocations for the returned FILE_BATON should be performed in
      FILE_POOL. It is also typical to save this pool for later usage
