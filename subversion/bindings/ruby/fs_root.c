@@ -103,6 +103,24 @@ fs_root_close (VALUE self)
 }
 
 static VALUE
+check_path (VALUE self, VALUE aPath)
+{
+  svn_node_kind_t kind;
+  svn_ruby_fs_root_t *root;
+  apr_pool_t *pool;
+
+  Check_Type (aPath, T_STRING);
+  Data_Get_Struct (self, svn_ruby_fs_root_t, root);
+  if (root->closed)
+    rb_raise (rb_eRuntimeError, "closed root");
+  pool = svn_pool_create (root->pool);
+  kind = svn_fs_check_path (root->root, StringValuePtr (aPath), pool);
+  apr_pool_destroy (pool);
+
+  return INT2FIX (kind);
+}
+
+static VALUE
 is_dir (VALUE self, VALUE aPath)
 {
   int is_dir;
@@ -316,6 +334,7 @@ svn_ruby_init_fs_root (void)
   cSvnFsRoot = rb_define_class_under (svn_ruby_mSvn, "FsRoot", rb_cObject);
   rb_undef_method (CLASS_OF (cSvnFsRoot), "new");
   rb_define_method (cSvnFsRoot, "close", fs_root_close, 0);
+  rb_define_method (cSvnFsRoot, "checkPath", check_path, 1);
   rb_define_method (cSvnFsRoot, "dir?", is_dir, 1);
   rb_define_method (cSvnFsRoot, "file?", is_file, 1);
   rb_define_method (cSvnFsRoot, "file", file, 1);
