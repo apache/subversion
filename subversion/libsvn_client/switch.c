@@ -135,6 +135,7 @@ svn_client_switch (const char *path,
 
   if (entry->kind == svn_node_dir)
     {
+      svn_boolean_t timestamp_sleep = FALSE;
       const svn_delta_editor_t *switch_editor;
       void *switch_edit_baton;
       svn_wc_traversal_info_t *traversal_info
@@ -186,9 +187,11 @@ svn_client_switch (const char *path,
 
       /* We handle externals after the switch is complete, so that
          handling external items (and any errors therefrom) doesn't
-         delay the primary operation.  */
+         delay the primary operation.  We ignore the timestamp_sleep
+         value since there is an unconditional sleep later on. */
       SVN_ERR (svn_client__handle_externals (traversal_info,
                                              FALSE,
+                                             &timestamp_sleep,
                                              ctx,
                                              pool));
     }

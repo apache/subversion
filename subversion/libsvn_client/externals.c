@@ -190,6 +190,7 @@ struct handle_external_item_change_baton
 
   /* If set, then run update on items that didn't change. */
   svn_boolean_t update_unchanged;
+  svn_boolean_t *timestamp_sleep;
 
   apr_pool_t *pool;
 };
@@ -371,7 +372,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                 path,
                 &(new_item->revision),
                 TRUE, /* recurse */
-                TRUE, /* timestamp_sleep */
+                ib->timestamp_sleep,
                 ib->ctx,
                 ib->pool));
     }
@@ -429,7 +430,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                 path,
                 &(new_item->revision),
                 TRUE, /* recurse */
-                TRUE, /* timestamp_sleep */
+                ib->timestamp_sleep,
                 ib->ctx,
                 ib->pool));
     }
@@ -455,7 +456,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       err = svn_client__update_internal (path,
                                          &(new_item->revision),
                                          TRUE, /* recurse */
-                                         TRUE, /* timestamp_sleep */
+                                         ib->timestamp_sleep,
                                          ib->ctx,
                                          ib->pool);
 
@@ -480,7 +481,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                     path,
                     &(new_item->revision),
                     TRUE, /* recurse */
-                    TRUE, /* timestamp_sleep */
+                    ib->timestamp_sleep,
                     ib->ctx,
                     ib->pool));
         }
@@ -502,6 +503,7 @@ struct handle_externals_desc_change_baton
   /* Passed through to handle_external_item_change_baton. */
   svn_client_ctx_t *ctx;
   svn_boolean_t update_unchanged;
+  svn_boolean_t *timestamp_sleep;
 
   apr_pool_t *pool;
 };
@@ -537,6 +539,7 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
   ib.parent_dir        = (const char *) key;
   ib.ctx               = cb->ctx;
   ib.update_unchanged  = cb->update_unchanged;
+  ib.timestamp_sleep   = cb->timestamp_sleep;
   ib.pool              = cb->pool;
 
   SVN_ERR (svn_hash_diff (old_desc, new_desc,
@@ -549,6 +552,7 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
 svn_error_t *
 svn_client__handle_externals (svn_wc_traversal_info_t *traversal_info,
                               svn_boolean_t update_unchanged,
+                              svn_boolean_t *timestamp_sleep,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
 {
@@ -561,6 +565,7 @@ svn_client__handle_externals (svn_wc_traversal_info_t *traversal_info,
   cb.externals_old     = externals_old;
   cb.ctx               = ctx;
   cb.update_unchanged  = update_unchanged;
+  cb.timestamp_sleep   = timestamp_sleep;
   cb.pool              = pool;
 
   SVN_ERR (svn_hash_diff (externals_old, externals_new,
