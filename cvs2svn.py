@@ -140,6 +140,12 @@ class CollectData(rcsparse.Sink):
     self.revs.write('%08lx %s %s %s %s\n' % (timestamp, digest,
                                              op, revision, self.fname))
 
+def branch_path(ctx, branch_name = None):
+  if branch_name:
+     return ctx.branches_base + '/' + branch_name + '/'
+  else:
+     return ctx.trunk_base + '/'
+
 def relative_name(cvsroot, fname):
   l = len(cvsroot)
   if fname[:l] == cvsroot:
@@ -315,12 +321,12 @@ class Commit:
       for f, r in self.changes:
         # compute a repository path. ensure we have a leading "/" and drop
         # the ,v from the file name
-        repos_path = '/' + relative_name(ctx.cvsroot, f[:-2])
+        repos_path = branch_path(ctx) + relative_name(ctx.cvsroot, f[:-2])
         print '    changing %s : %s' % (r, repos_path)
       for f, r in self.deletes:
         # compute a repository path. ensure we have a leading "/" and drop
         # the ,v from the file name
-        repos_path = '/' + relative_name(ctx.cvsroot, f[:-2])
+        repos_path = branch_path(ctx) + relative_name(ctx.cvsroot, f[:-2])
         print '    deleting %s : %s' % (r, repos_path)
       print '    (skipped; dry run enabled)'
       return
@@ -340,7 +346,7 @@ class Commit:
     for f, r in self.changes:
       # compute a repository path. ensure we have a leading "/" and drop
       # the ,v from the file name
-      repos_path = '/' + relative_name(ctx.cvsroot, f[:-2])
+      repos_path = branch_path(ctx) + relative_name(ctx.cvsroot, f[:-2])
       #print 'DEBUG:', repos_path
 
       print '    changing %s : %s' % (r, repos_path)
@@ -415,7 +421,7 @@ class Commit:
     for f, r in self.deletes:
       # compute a repository path. ensure we have a leading "/" and drop
       # the ,v from the file name
-      repos_path = '/' + relative_name(ctx.cvsroot, f[:-2])
+      repos_path = branch_path(ctx) + relative_name(ctx.cvsroot, f[:-2])
 
       print '    deleting %s : %s' % (r, repos_path)
 
@@ -549,7 +555,10 @@ def pass3(ctx):
 def pass4(ctx):
   # create the target repository
   if not ctx.dry_run:
-    t_repos = _repos.svn_repos_create(ctx.target, ctx.pool)
+    if ctx.create_repos:
+      t_repos = _repos.svn_repos_create(ctx.target, ctx.pool)
+    else:
+      t_repos = _repos.svn_repos_open(ctx.target, ctx.pool)
     t_fs = _repos.svn_repos_fs(t_repos)
   else:
     t_fs = t_repos = None
@@ -628,31 +637,41 @@ def convert(pool, ctx, start_pass=1):
       print 'pass %d: %d seconds' % (i, int(times[i] - times[i-1]))
     print ' total:', int(times[len(_passes)] - times[start_pass-1]), 'seconds'
 
-def usage():
+def usage(ctx):
   print 'USAGE: %s [-n] [-v] [-s svn-repos-path] [-p pass] cvs-repos-path' \
         % os.path.basename(sys.argv[0])
-  print '  -n       dry run. parse CVS repos, but do not construct SVN repos.'
-  print '  -v       verbose.'
-  print '  -s PATH  path for new SVN repos.'
-  print '  -p NUM   start at pass NUM of %d.' % len(_passes)
+  print '  -n               dry run. parse CVS repos, but do not construct SVN repos.'
+  print '  -v               verbose.'
+  print '  -s PATH          path for SVN repos.'
+  print '  -p NUM           start at pass NUM of %d.' % len(_passes)
+  print '  --create         create a new SVN repository'
+  print '  --trunk=PATH     path for trunk (default: %s)' % ctx.trunk_base
+  print '  --branches=PATH  path for branches (default: %s)' % ctx.branches_base
+  print '  --tags=PATH      path for tags (default: %s)' % ctx.tags_base
   sys.exit(1)
 
 def main():
-  try:
-    opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn')
-  except getopt.GetoptError:
-    usage()
-  if len(args) != 1:
-    usage()
-
   # prepare the operation context
   ctx = _ctx()
-  ctx.cvsroot = args[0]
+  ctx.cvsroot = None
   ctx.target = SVNROOT
   ctx.log_fname_base = DATAFILE
   ctx.verbose = 0
   ctx.dry_run = 0
+  ctx.create_repos = 0
+  ctx.trunk_base = "/trunk"
+  ctx.tags_base = "/tags"
+  ctx.branches_base = "/branches"
 
+  try:
+    opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn',
+                               [ "create", "trunk", "branches", "tags" ])
+  except getopt.GetoptError:
+    usage(ctx)
+  if len(args) != 1:
+    usage(ctx)
+
+  ctx.cvsroot = args[0]
   start_pass = 1
 
   for opt, value in opts:
@@ -668,6 +687,14 @@ def main():
       ctx.dry_run = 1
     elif opt == '-s':
       ctx.target = value
+    elif opt == '--create':
+      ctx.create_repos = 1
+    elif opt == '--trunk':
+      ctx.trunk_base = value
+    elif opt == '--branches':
+      ctx.branches_base = value
+    elif opt == '--tags':
+      ctx.tags_base = value
 
   util.run_app(convert, ctx, start_pass=start_pass)
 
