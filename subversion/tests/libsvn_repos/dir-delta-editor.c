@@ -265,7 +265,9 @@ test_change_file_prop (void *file_baton,
                        svn_stringbuf_t *name, svn_stringbuf_t *value)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
-  svn_string_t propvalue = { value->data, value->len };
+  svn_string_t propvalue;
+  propvalue.data = value->data;
+  propvalue.len = value->len;
 
   return svn_fs_change_node_prop (fb->dir_baton->edit_baton->txn_root,
                                   fb->path->data, name->data, &propvalue,
@@ -278,7 +280,9 @@ test_change_dir_prop (void *parent_baton,
                       svn_stringbuf_t *name, svn_stringbuf_t *value)
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
-  svn_string_t propvalue = { value->data, value->len };
+  svn_string_t propvalue;
+  propvalue.data = value->data;
+  propvalue.len = value->len;
 
   return svn_fs_change_node_prop (d->edit_baton->txn_root,
                                   d->path->data, name->data, &propvalue,
