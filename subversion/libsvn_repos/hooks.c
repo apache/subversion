@@ -27,6 +27,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
+#include "svn_private_config.h" /* for SVN_WIN32 */
 #include "svn_repos.h"
 #include "repos.h"
 
@@ -106,6 +107,39 @@ run_hook_cmd (const char *name,
   return err;
 }
 
+/* Check if the HOOK program exists and is a file, using POOL for
+   temporary allocations. Returns the hook program if found,
+   otherwise NULL. */
+static const char*
+check_hook_cmd (const char *hook, apr_pool_t *pool)
+{
+  static const char* const check_extns[] = {
+#ifdef SVN_WIN32
+  /* For WIN32 we need to check with an added extentsion(s). */
+    ".exe", ".cmd", ".bat",  /* ### Any other extentsions? */
+#else
+    "",
+#endif
+    NULL
+  };
+
+  const char *const *extn;
+  svn_error_t *err = NULL;
+  for (extn = check_extns; *extn; ++extn)
+    {
+      const char *const hook_path =
+        (**extn ? apr_pstrcat (pool, hook, *extn, 0) : hook);
+      
+      svn_node_kind_t kind;
+      if (!(err = svn_io_check_resolved_path (hook_path, &kind, pool))
+          && kind == svn_node_file)
+        return hook_path;
+        
+    }
+
+  svn_error_clear(err);
+  return NULL;
+}
 
 /* Run the start-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  */
@@ -114,11 +148,9 @@ svn_repos__hooks_start_commit (svn_repos_t *repos,
                                const char *user,
                                apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
   const char *hook = svn_repos_start_commit_hook (repos, pool);
 
-  if ((! svn_io_check_resolved_path (hook, &kind, pool)) 
-      && (kind == svn_node_file))
+  if ((hook = check_hook_cmd (hook, pool)))
     {
       const char *args[4];
 
@@ -141,11 +173,9 @@ svn_repos__hooks_pre_commit (svn_repos_t *repos,
                              const char *txn_name,
                              apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
   const char *hook = svn_repos_pre_commit_hook (repos, pool);
 
-  if ((! svn_io_check_resolved_path (hook, &kind, pool)) 
-      && (kind == svn_node_file))
+  if ((hook = check_hook_cmd (hook, pool)))
     {
       const char *args[4];
 
@@ -168,11 +198,9 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
                               svn_revnum_t rev,
                               apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
   const char *hook = svn_repos_post_commit_hook (repos, pool);
 
-  if ((! svn_io_check_resolved_path (hook, &kind, pool)) 
-      && (kind == svn_node_file))
+  if ((hook = check_hook_cmd (hook, pool)))
     {
       const char *args[4];
 
@@ -199,11 +227,9 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
                                      const svn_string_t *value,
                                      apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
   const char *hook = svn_repos_pre_revprop_change_hook (repos, pool);
 
-  if ((! svn_io_check_resolved_path (hook, &kind, pool)) 
-      && (kind == svn_node_file))
+  if ((hook = check_hook_cmd (hook, pool)))
     {
       const char *args[6];
 
@@ -245,11 +271,9 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
                                       const char *name,
                                       apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
   const char *hook = svn_repos_post_revprop_change_hook (repos, pool);
   
-  if ((! svn_io_check_resolved_path (hook, &kind, pool)) 
-      && (kind == svn_node_file))
+  if ((hook = check_hook_cmd (hook, pool)))
     {
       const char *args[6];
 
