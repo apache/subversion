@@ -1003,6 +1003,7 @@ static svn_error_t *ra_svn_diff(void *baton,
   return SVN_NO_ERROR;
 }
 
+/** @since New in 1.2. */
 static svn_error_t *ra_svn_log2(void *baton, const apr_array_header_t *paths,
                                 svn_revnum_t start, svn_revnum_t end,
                                 unsigned int limit,

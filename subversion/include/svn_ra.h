@@ -782,7 +782,10 @@ typedef struct svn_ra_plugin_t
      ABI breakage. */
   const svn_version_t *(*get_version) (void);
 
-  /** Invoke @a receiver with @a receiver_baton on each log message from
+  /**
+   * @since New in 1.2.
+   *
+   * Invoke @a receiver with @a receiver_baton on each log message from
    * @a start to @a end.  @a start may be greater or less than @a end; 
    * this just controls whether the log messages are processed in descending 
    * or ascending revision number order.
@@ -795,7 +798,8 @@ typedef struct svn_ra_plugin_t
    * was added or deleted).  Each path is an <tt>const char *</tt>, relative 
    * to the session's common parent.
    *
-   * If @a limit is non-zero only return the first @a limit logs.
+   * If @a limit is non-zero only invoke @a receiver on the first @a limit
+   * logs.
    *
    * If @a discover_changed_paths, then each call to receiver passes a
    * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths argument;

@@ -717,7 +717,10 @@ svn_client_status (svn_revnum_t *result_rev,
                    apr_pool_t *pool);
 
 
-/** Invoke @a receiver with @a receiver_baton on each log message from @a 
+/** 
+ * @since New in 1.2.
+ *
+ * Invoke @a receiver with @a receiver_baton on each log message from @a 
  * start to @a end in turn, inclusive (but never invoke @a receiver on a 
  * given log message more than once).
  *
@@ -729,7 +732,8 @@ svn_client_status (svn_revnum_t *result_rev,
  *
  * ### todo: the above paragraph is not fully implemented yet.
  *
- * If @a limit is non-zero only the first @a limit logs are returned.
+ * If @a limit is non-zero only invoke @a receiver on the first @a limit
+ * logs.
  *
  * If @a discover_changed_paths is set, then the `@a changed_paths' argument
  * to @a receiver will be passed on each invocation.
@@ -758,7 +762,6 @@ svn_client_status (svn_revnum_t *result_rev,
  *
  * If @a ctx->notify_func is non-null, then call @a ctx->notify_func/baton
  * with a 'skip' signal on any unversioned targets.
- *
  */
 svn_error_t *
 svn_client_log2 (const apr_array_header_t *targets,
