@@ -212,7 +212,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
        * ### kff todo fooo working here.
        */
       /*
-        SVN_ERR (svn_wc_import_tree (path, editor, edit_baton, pool));
+        SVN_ERR (svn_wc_import (path, editor, edit_baton, pool));
       */
     }
   else

@@ -9,8 +9,8 @@ lib_LTLIBRARIES = libsvn_wc.la
 
 ## Sources needed to build each library (names canonicalized)
 libsvn_wc_la_SOURCES = adm_crawler.c adm_files.c adm_ops.c entries.c \
-                       get_editor.c local_changes.c lock.c log.c props.c \
-                       questions.c status.c util.c wc.h
+                       get_editor.c import.c local_changes.c lock.c  \
+                       log.c props.c questions.c status.c util.c wc.h
 
 ## Build flags ---------
 

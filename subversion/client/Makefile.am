@@ -1,12 +1,12 @@
 ## Makefile.in is generated from this by automake.
 
 bin_PROGRAMS = svn
-svn_SOURCES = main.c status.c props.c                  \
-              add-cmd.c commit-cmd.c checkout-cmd.c    \
-              proplist-cmd.c delete-cmd.c status-cmd.c \
-              update-cmd.c propget-cmd.c propset-cmd.c \
-              diff.c diff-cmd.c help-cmd.c util.c      \
-              trace-update.c trace-commit.c cl.h
+svn_SOURCES = main.c status.c props.c                   \
+              add-cmd.c commit-cmd.c checkout-cmd.c     \
+              proplist-cmd.c delete-cmd.c status-cmd.c  \
+              update-cmd.c propget-cmd.c propset-cmd.c  \
+              diff.c diff-cmd.c help-cmd.c import-cmd.c \
+	      util.c trace-update.c trace-commit.c cl.h
 
 ## Flags needed when compiling:
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@

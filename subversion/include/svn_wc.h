@@ -307,6 +307,20 @@ svn_error_t *svn_wc_set_revision (void *baton,
                                   svn_string_t *target,
                                   svn_revnum_t new_revnum);
 
+
+/* Update working copy PATH with NEW_REVISION after a commit has succeeded.
+ * TARGETS is a hash of files/dirs that actually got committed --
+ * these are the only ones who we can write log items for, and whose
+ * revision numbers will get set.  todo: eventually this hash will be
+ * of the sort used by svn_wc__compose_paths(), as with all entries
+ * recursers.
+ */
+svn_error_t *svn_wc_close_commit (svn_string_t *path,
+                                  svn_revnum_t new_revision,
+                                  apr_hash_t *targets,
+                                  apr_pool_t *pool);
+
+
 /* This is a function of type svn_ra_get_wc_prop_t.  Return *VALUE for
    property NAME on TARGET.  */
 svn_error_t *svn_wc_get_wc_prop (void *baton,
@@ -321,18 +335,39 @@ svn_error_t *svn_wc_set_wc_prop (void *baton,
                                  svn_string_t *name,
                                  svn_string_t *value);
 
+/* Recursively import PATH to a repository using EDITOR and
+ * EDIT_BATON.  PATH can be a file or directory.
+ * 
+ * NEW_ENTRY is the name to use in the repository.  If PATH is a
+ * directory, NEW_ENTRY may be null, which creates as many new entries
+ * in the top repository target directory as there are entries in the
+ * top of PATH; but if NEW_ENTRY is non-null, it is the name of a new
+ * subdirectory in the repository to hold the import.  If PATH is a
+ * file, NEW_ENTRY may not be null.
+ * 
+ * NEW_ENTRY can never be the empty string.
+ * 
+ * Use POOL for any temporary allocation.
+ *
+ * Note: the repository directory receiving the import was specified
+ * when the editor was fetched.  (I.e, when EDITOR->replace_root() is
+ * called, it returns a directory baton for that directory, which is
+ * not necessarily the root.)
+ */ 
+svn_error_t *svn_wc_import (svn_string_t *path,
+                            svn_string_t *new_entry,
+                            const svn_delta_edit_fns_t *editor,
+                            void *edit_baton,
+                            apr_pool_t *pool);
 
 
-
-/* Crawl a tree depth-first, to import new data or commit changes.
-
+/* Crawl a tree depth-first, committing changes.
    Start the crawl at ROOT_DIRECTORY, communicate all local changes (both
    textual and tree) to EDIT_FNS and EDIT_BATON.  */
-svn_error_t *
-svn_wc_crawl_local_mods (svn_string_t *root_directory,
-                         const svn_delta_edit_fns_t *edit_fns,
-                         void *edit_baton,
-                         apr_pool_t *pool);
+svn_error_t *svn_wc_crawl_local_mods (svn_string_t *root_directory,
+                                      const svn_delta_edit_fns_t *edit_fns,
+                                      void *edit_baton,
+                                      apr_pool_t *pool);
 
 
 /* Do a depth-first crawl in a working copy, beginning at
