@@ -80,6 +80,8 @@ static svn_error_t *dir_from_scratch (struct context *c,
 
 /* Public interface to delta computation.  */
 
+/* ben sez:  whoa!  this declaration doesn't even match the svn_fs.c
+   prototype!   No wonder this file isn't being compiled. :) */
 
 svn_error_t *
 svn_fs_dir_delta (svn_fs_dir_t *source,
@@ -95,6 +97,17 @@ svn_fs_dir_delta (svn_fs_dir_t *source,
   struct context c;
 
   source_path.len = 0;
+
+  /* ben sez:  this routine is using an out-of-date editor interface.  
+
+      1.  It must call set_target_revision(), passing the revision
+      that is built into the TARGET_ROOT argument it received.
+
+      2.  The call to replace_root() below (and all calls to
+      replace_*(), actually), must pass a base_rev argument as a
+      sanity check: just to make sure that the thing we're changing in
+      the working copy really is what we think it is.
+  */
 
   svn_err = editor->replace_root (edit_baton, &root_baton);
   if (svn_err) goto error;

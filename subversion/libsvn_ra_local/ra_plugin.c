@@ -51,43 +51,15 @@ cleanup_commit (svn_revnum_t new_rev, void *baton)
 }
 
 
-
-/*----------------------------------------------------------------*/
 
-/** The reporter routines (for updates) **/
+/* The reporter vtable needed by do_update() */
 
-
-static svn_error_t *
-set_directory (void *report_baton,
-               svn_string_t *dir_path,
-               svn_revnum_t revision)
+static const svn_ra_reporter_t ra_local_reporter = 
 {
-  /* TODO:  someday when we try to get updates working */
-
-  return SVN_NO_ERROR;
-}
-  
-
-static svn_error_t *
-set_file (void *report_baton,
-          svn_string_t *file_path,
-          svn_revnum_t revision)
-{
-  /* TODO:  someday when we try to get updates working */
-
-  return SVN_NO_ERROR;
-}
-  
-
-
-static svn_error_t *
-finish_report (void *report_baton)
-{
-  /* TODO:  someday when we try to get updates working */
-
-  return SVN_NO_ERROR;
-}
-
+  svn_ra_local__set_directory,
+  svn_ra_local__set_file,
+  svn_ra_local__finish_report
+};
 
 
 
@@ -239,19 +211,19 @@ do_checkout (void *session_baton,
              void *edit_baton)
 {
   svn_revnum_t revnum_to_fetch;
-  svn_ra_local__session_baton_t *baton = 
+  svn_ra_local__session_baton_t *sbaton = 
     (svn_ra_local__session_baton_t *) session_baton;
   
   if (! SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR (get_latest_revnum (session_baton, &revnum_to_fetch));
+    SVN_ERR (get_latest_revnum (sbaton, &revnum_to_fetch));
   else
     revnum_to_fetch = revision;
 
-  SVN_ERR (svn_ra_local__checkout (baton->fs,
+  SVN_ERR (svn_ra_local__checkout (sbaton->fs,
                                    revnum_to_fetch,
-                                   baton->repository_URL,
-                                   baton->fs_path,
-                                   editor, edit_baton, baton->pool));
+                                   sbaton->repository_URL,
+                                   sbaton->fs_path,
+                                   editor, edit_baton, sbaton->pool));
 
   return SVN_NO_ERROR;
 }
@@ -262,12 +234,38 @@ static svn_error_t *
 do_update (void *session_baton,
            const svn_ra_reporter_t **reporter,
            void **report_baton,
-           apr_array_header_t *targets,
+           svn_revnum_t base_revision,
+           svn_revnum_t update_revision,
            const svn_delta_edit_fns_t *update_editor,
            void *update_baton)
 {
-  /* TODO:  someday */
+  svn_revnum_t revnum_to_update_to;
+  svn_ra_local__session_baton_t *sbaton = 
+    (svn_ra_local__session_baton_t *) session_baton;
+  svn_ra_local__report_baton_t *rbaton;
+  
+  if (! SVN_IS_VALID_REVNUM(update_revision))
+    SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
+  else
+    revnum_to_update_to = update_revision;
 
+  /* Build a reporter baton. */
+  rbaton = apr_pcalloc (sbaton->pool, sizeof(*rbaton));
+  rbaton->revnum_to_update_to = revnum_to_update_to;
+  rbaton->update_editor = update_editor;
+  rbaton->update_edit_baton = update_baton;
+  rbaton->fs = sbaton->fs;
+  rbaton->base_path = sbaton->fs_path;
+  rbaton->pool = sbaton->pool;
+
+  /* Start a transaction based on BASE_REVISION. */
+  SVN_ERR (svn_fs_begin_txn (&(rbaton->txn), sbaton->fs,
+                             base_revision, sbaton->pool));
+  SVN_ERR (svn_fs_txn_root (&(rbaton->txn_root), rbaton->txn, sbaton->pool));
+  
+  /* Hand reporter back to client. */
+  *reporter = &ra_local_reporter;
+  *report_baton = rbaton;
   return SVN_NO_ERROR;
 }
 
@@ -275,15 +273,7 @@ do_update (void *session_baton,
 
 /*----------------------------------------------------------------*/
 
-/** The static reporter and ra_plugin objects **/
-
-static const svn_ra_reporter_t ra_local_reporter = 
-{
-  set_directory,
-  set_file,
-  finish_report
-};
-
+/** The ra_plugin **/
 
 static const svn_ra_plugin_t ra_local_plugin = 
 {
