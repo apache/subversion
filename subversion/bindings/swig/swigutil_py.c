@@ -869,7 +869,7 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
   *edit_baton = make_baton(pool, py_editor, NULL);
 }
 
-/* This is very hacky and gross.  And did I mention broken? */
+/* This is very hacky and gross.  */
 apr_file_t *svn_swig_py_make_file (PyObject *py_file,
                                    apr_pool_t *pool)
 {
@@ -890,16 +890,16 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
     {
       apr_status_t status;
       FILE *file;
-      apr_os_file_t *osfile;
+      apr_os_file_t osfile;
 
       /* input is a file object -- convert to apr_file_t */
       file = PyFile_AsFile(py_file);
 #ifdef WIN32
-      osfile = (apr_os_file_t *)_get_osfhandle(_fileno(file));
+      osfile = (apr_os_file_t)_get_osfhandle(_fileno(file));
 #else
-      osfile = (apr_os_file_t *)fileno(file);
+      osfile = (apr_os_file_t)fileno(file);
 #endif
-      status = apr_os_file_put (&apr_file, osfile, O_CREAT | O_WRONLY, pool);
+      status = apr_os_file_put (&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
       if (status)
         return NULL;
     }
