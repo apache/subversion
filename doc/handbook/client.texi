@@ -1209,8 +1209,8 @@ $ svn mkdir new-dir
 A     new-dir
 @end example
 
-Or, it can be used to instantly delete a file or directory from a
-repository (no working copy needed):
+Or, it can be used to instantly create a directory in a repository (no
+working copy needed):
 
 @example
 $ svn mkdir file:///usr/local/svn/newrepos/branches -m "made new dir"
