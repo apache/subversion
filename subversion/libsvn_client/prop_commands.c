@@ -101,6 +101,7 @@ propset_walk_cb (const char *path,
 {
   struct propset_walk_baton *wb = walk_baton;
   svn_error_t *err;
+  svn_wc_adm_access_t *adm_access;
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use
@@ -113,8 +114,12 @@ propset_walk_cb (const char *path,
   if (entry->schedule == svn_wc_schedule_delete)
     return SVN_NO_ERROR;
 
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, wb->base_access,
+                                (entry->kind == svn_node_dir ? path
+                                 : svn_path_dirname (path, pool)),
+                                pool));
   err = svn_wc_prop_set (wb->propname, wb->propval,
-                         path, wb->base_access, pool);
+                         path, adm_access, pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_ILLEGAL_TARGET)
