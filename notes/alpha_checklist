@@ -87,7 +87,7 @@ D. Auto-detection of text/binary file types.  Use it for keyword
 
                    - For keyword substitution, you could enable only a
                      subset of the available keywords -- e.g., turn of
-                     the infamous $Log: not supported by cvs2svn $.
+                     the infamous [$]Log[$].
 
                    - Newline translation might have the following
                      values:
