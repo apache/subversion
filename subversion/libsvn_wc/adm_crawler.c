@@ -374,6 +374,7 @@ svn_wc_crawl_revisions (const char *path,
   svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
   svn_boolean_t missing = FALSE;
+  svn_wc_entry_t *parent_entry = NULL;
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
@@ -382,11 +383,9 @@ svn_wc_crawl_revisions (const char *path,
   base_rev = entry->revision;
   if (base_rev == SVN_INVALID_REVNUM)
     {
-      svn_wc_entry_t *parent_entry;
-      const char *parent_name
-        = svn_path_remove_component_nts (path, pool);
-
-      SVN_ERR (svn_wc_entry (&parent_entry, parent_name, FALSE, pool));
+      SVN_ERR (svn_wc_entry (&parent_entry, 
+                             svn_path_remove_component_nts (path, pool),
+                             FALSE, pool));
       base_rev = parent_entry->revision;
     }
 
@@ -432,6 +431,8 @@ svn_wc_crawl_revisions (const char *path,
 
   else if (entry->kind == svn_node_file)
     {
+      const char *pdir, *bname;
+
       if (missing && restore_files)
         {
           /* Recreate file from text-base. */
@@ -448,8 +449,29 @@ svn_wc_crawl_revisions (const char *path,
                             svn_wc_notify_state_unknown,
                             SVN_INVALID_REVNUM);
         }
-
-      if (entry->revision != base_rev)
+      
+      /* Split PATH into parent PDIR and basename BNAME. */
+      svn_path_split_nts (path, &pdir, &bname, pool);
+      if (! parent_entry)
+        SVN_ERR (svn_wc_entry (&parent_entry, pdir, FALSE, pool));
+      
+      if (parent_entry 
+          && parent_entry->url 
+          && entry->url
+          && strcmp (entry->url, 
+                     svn_path_join (parent_entry->url, bname, pool)))
+        {
+          /* This file is disjoint with respect to its parent
+             directory.  Since we are looking at the actual target of
+             the report (not some file in a subdirectory of a target
+             directory), and that target is a file, we need to pass an
+             empty string to link_path. */
+          SVN_ERR (reporter->link_path (report_baton,
+                                        "",
+                                        entry->url,
+                                        entry->revision));
+        }
+      else if (entry->revision != base_rev)
         {
           /* If this entry is a file node, we just want to report that
              node's revision.  Since we are looking at the actual target

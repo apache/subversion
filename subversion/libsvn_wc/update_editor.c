@@ -2076,11 +2076,11 @@ svn_wc_edited_externals (apr_hash_t **externals_old,
    too, specifically for the case where a single directory is being
    committed (we have to anchor at that directory's parent in case the
    directory itself needs to be modified) */
-
-svn_error_t *
-svn_wc_is_wc_root (svn_boolean_t *wc_root,
-                   const char *path,
-                   apr_pool_t *pool)
+static svn_error_t *
+check_wc_root (svn_boolean_t *wc_root,
+               svn_node_kind_t *kind,
+               const char *path, 
+               apr_pool_t *pool)
 {
   const char *parent, *base_name, *expected_url;
   svn_wc_entry_t *p_entry, *entry;
@@ -2096,6 +2096,8 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
        "svn_wc_is_wc_root: %s is not a versioned resource", path);
+  if (kind)
+    *kind = entry->kind;
 
   /* If PATH is the current working directory, we have no choice but
      to consider it a WC root (we can't examine its parent at all) */
@@ -2137,25 +2139,36 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
 
 
 svn_error_t *
+svn_wc_is_wc_root (svn_boolean_t *wc_root,
+                   const char *path,
+                   apr_pool_t *pool)
+{
+  return check_wc_root (wc_root, NULL, path, pool);
+}
+
+
+svn_error_t *
 svn_wc_get_actual_target (const char *path,
                           const char **anchor,
                           const char **target,
                           apr_pool_t *pool)
 {
   svn_boolean_t is_wc_root;
+  svn_node_kind_t kind;
 
-  /* If PATH is a WC root, do not lop off a basename. */
-  SVN_ERR (svn_wc_is_wc_root (&is_wc_root, path, pool));
-  if (is_wc_root)
-    {
-      *anchor = apr_pstrdup (pool, path);
-      *target = NULL;
-    }
-  else
+  SVN_ERR (check_wc_root (&is_wc_root, &kind, path, pool));
+
+  /* If PATH is not a WC root, or if it is a file, lop off a basename. */
+  if ((! is_wc_root) || (kind == svn_node_file))
     {
       svn_path_split_nts (path, anchor, target, pool);
       if ((*anchor)[0] == '\0')
         *anchor = ".";
+    }
+  else
+    {
+      *anchor = apr_pstrdup (pool, path);
+      *target = NULL;
     }
 
   return SVN_NO_ERROR;
