@@ -34,6 +34,7 @@ RUN_FOP = ${BOOK_TOP}/tools/bin/run-fop.sh
 
 # Book xsltproc options for HTML output
 BOOK_HTML_XSLTPROC_OPTS = --stringparam html.stylesheet styles.css
+BOOK_CHUNK_HTML_XSLTPROC_OPTS = stringparam html.stylesheet styles.css
 
 # Book xsltproc options for PDF and PostScript output
 # BOOK_PDF_XSLTPROC_OPTS = --stringparam page.height 9in --stringparam page.width 6.4in
@@ -70,8 +71,10 @@ $(BOOK_HTML_TARGET): $(BOOK_ALL_SOURCE)
 ## This trailing slash is essential that xsltproc will output pages to the dir
 book-html-chunk: $(BOOK_ALL_SOURCE)
 	mkdir -p $(BOOK_HTML_CHUNK_DIR)
-	$(XSLTPROC) --output $(BOOK_HTML_CHUNK_DIR)/ \
-           $(XSL_HTML_CHUNK) $(BOOK_XML_SOURCE)
+	$(XSLTPROC) $(BOOK_HTML_XSLTPROC_OPTS) \
+           --output $(BOOK_HTML_CHUNK_DIR)/ \
+	   $(XSL_HTML_CHUNK) $(BOOK_XML_SOURCE)
+	cp -a $(BOOK_DIR)/styles.css $(BOOK_DIR)/images $(BOOK_HTML_CHUNK_DIR)
 
 book-pdf: $(BOOK_PDF_TARGET)
 
