@@ -296,8 +296,9 @@ tienen y envían parches a la lista de correo:
 
 - Por ahora ningún ejemplo de línea de comando o imagen será
   traducido. Dejar las cosas tal cual (ej: lo que viene dentro de
-  las etiquetas screen), excepto los nombres de usuario que serán
-  traducidos según lo que se haya especificado en el glosario.
+  las etiquetas screen o programlisting), excepto los nombres de
+  usuario que serán traducidos según lo que se haya especificado
+  en el glosario.
 
 - A veces es necesario añadir una nota de traductor ya sea para
   indicar un uso inusual de una palabra o comando, explicar alguna

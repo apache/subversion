@@ -362,28 +362,32 @@
         con la implementación de un sistema de ficheros versionados,
         razón por la cual fue colocada en su propia librería.</para>
       
-      <para>Developers who wish to use the libsvn_repos API will find
-        that it is not a complete wrapper around the filesystem
-        interface.  That is, only certain major events in the general
-        cycle of filesystem activity are wrapped by the repository
-        interface.  Some of these include the creation and commit of
-        Subversion transactions, and the modification of revision
-        properties.  These particular events are wrapped by the
-        repository layer because they have hooks associated with them.
-        In the future, other events may be wrapped by the repository
-        API.  All of the remaining filesystem interaction will
-        continue to occur directly via the libsvn_fs API, though.</para>
+      <para>Los desarrolladores que deseen usar la API de
+        libsvn_repos se encontrarán con que no es un envoltorio
+        completo sobre la interfaz del sistema de ficheros.
+        Es decir, sólo ciertos eventos de categoría en el ciclo
+        general de la actividad del sistema de ficheros están
+        envueltos por la interfaz de repositorio.  Elgunos de éstos
+        incluyen la creación y enviado de transacciones Subversion,
+        y la modificación de propiedades de revisiones. Estos eventos
+        particulares están envueltos por la capa de repositorio
+        porque tienen enganches asociados con ellos. En el futuro,
+        puede que otros eventos sean envueltos por la API de
+        repositorio. Mientras tanto, el resto de la interacción con
+        el sistema de ficheros continuará ocurriendo directamente
+        via la API de libsvn_fs.</para>
 
-      <para>For example, here is a code segment that illustrates the
-        use of both the repository and filesystem interfaces to create
-        a new revision of the filesystem in which a directory is
-        added.  Note that in this example (and all others throughout
-        this book), the <function>SVN_ERR</function> macro simply
-        checks for a non-successful error return from the function it
-        wraps, and returns that error if it exists.</para>
+      <para>Por ejemplo, aquí tiene un segmento de código que
+        ilustra el uso de ambas interfaces (repositorio y sistema
+        de ficheros) para crear una nueva revisión del sistema de
+        ficheros en la cual se añade un directorio. Tenga en cuenta
+        que en este ejemplo (y todos los demás del libro), la macro
+        <function>SVN_ERR</function> simplemente verifica de forma
+        booleana el código de retorno de la función que envuelve,
+        y retorna si hay algún error.</para>
 
       <example id="svn-ch-8-sect-1.1-ex-1">
-        <title>Using the Repository Layer</title>
+        <title>Usando la capa de repositorio</title>
 
         <programlisting>
 /* Create a new directory at the path NEW_DIRECTORY in the Subversion
