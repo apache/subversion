@@ -643,11 +643,19 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * a directory; its status will simply be stored in STATUSHASH like
  * any other.
  *
- * If STRICT is non-zero, then if we encounter a path that is missing
- * from the wc, or is obstructing a resource in the wc, we'll return an
- * error. STRICT should be zero if we're updating, as the update will
- * catch any non wc path errors (and properly deal with files that are
- * in the repository but missing from the wc for whatever reason).
+ * If STRICT is set, then if we encounter a path that is missing from
+ * the wc, or is obstructing a resource in the wc, we'll return an
+ * error.  Else if STRICT is unset, then just use the appropriate
+ * status codes for entries that would have caused an error if STRICT
+ * were set: that is, missing items produce status code
+ * `svn_wc_status_absent', and items which exist but whose actual type
+ * does not match their entry type get `svn_wc_status_obstructed'.
+ *
+ * If STRICT is set, then: if what should be a versioned directory
+ * appears to be unversioned, return SVN_ERR_WC_NOT_DIRECTORY; else if
+ * the item on disk is simply a different kind from what's expected by
+ * the entry, then return SVN_ERR_UNEXPECTED_NODE_KIND; else if the
+ * item is missing from disk, return APR_ENOENT.
  *
  * Assuming PATH is a directory, then:
  * 

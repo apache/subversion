@@ -57,8 +57,7 @@ svn_client__can_delete (const char *path,
 
       if (statstruct->text_status == svn_wc_status_obstructed)
         {
-          /* ### Do we need to invent a new error code for this case?  */
-          return svn_error_createf (SVN_ERR_CLIENT_UNVERSIONED,
+          return svn_error_createf (SVN_ERR_UNEXPECTED_NODE_KIND,
                                     0, NULL, pool,
                                     "'%s' is in the way of the resource "
                                     "actually under revision control.",

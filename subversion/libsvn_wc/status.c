@@ -150,7 +150,6 @@ assemble_status (svn_wc_status_t **status,
           final_text_status = svn_wc_status_obstructed;
 
           if (strict)
-            /* ### Not sure if this is the correct error code to use */
             return svn_error_createf (
                      SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
                      "assemble_status: "
@@ -262,9 +261,8 @@ assemble_status (svn_wc_status_t **status,
               final_text_status = svn_wc_status_obstructed;
 
               if (strict)
-                /* ### Not sure if this is the correct error code to use */
                 return svn_error_createf (
-                         SVN_ERR_WC_UNEXPECTED_KIND, 0, NULL, pool,
+                         SVN_ERR_UNEXPECTED_NODE_KIND, 0, NULL, pool,
                          "assemble_status: "
                          "'%s' is obstructing a versioned resource",
                          path);
