@@ -177,8 +177,18 @@ typedef enum svn_errno_t {
   SVN_ERR_RA_HOSTNAME_LOOKUP,
 
   /* an unsuitable container-pool was passed to svn_make_pool() */
-  SVN_ERR_BAD_CONTAINING_POOL
+  SVN_ERR_BAD_CONTAINING_POOL,
 
+  /* the server was misconfigured: a pathname to an SVN FS was not supplied */
+  SVN_ERR_APMOD_MISSING_PATH_TO_FS,
+
+  /* the specified URI refers to our namespace, but was malformed */
+  SVN_ERR_APMOD_MALFORMED_URI,
+
+
+  /* simple placeholder to mark the highest SVN error. subtle benny: we don't
+     have to worry about trailing commas (on errors above) as we add them */
+  SVN_ERR_LAST
 } svn_errno_t;
 
 
