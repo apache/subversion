@@ -346,6 +346,17 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
                                             const ne_propname *which_props,
                                             apr_pool_t *pool);
 
+
+/* Issue a PROPPATCH request on URL, transmitting PROP_CHANGES (a hash
+   of const svn_string_t * values keyed on Subversion user-visible
+   property names) and PROP_DELETES (an array of property names to
+   delete).  Use POOL for all allocations.  */
+svn_error_t *svn_ra_dav__do_proppatch (svn_ra_session_t *ras,
+                                       const char *url,
+                                       apr_hash_t *prop_changes,
+                                       apr_array_header_t *prop_deletes,
+                                       apr_pool_t *pool);
+
 extern const ne_propname svn_ra_dav__vcc_prop;
 extern const ne_propname svn_ra_dav__checked_in_prop;
 

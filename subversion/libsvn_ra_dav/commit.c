@@ -30,6 +30,7 @@
 #if APR_HAVE_STDLIB
 #include <stdlib.h>     /* for free() */
 #endif
+#include <assert.h>
 
 #include <ne_request.h>
 #include <ne_props.h>
@@ -43,6 +44,7 @@
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_dav.h"
+#include "svn_base64.h"
 
 #include "ra_dav.h"
 
@@ -179,6 +181,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
 {
   svn_ra_dav_resource_t *propres;
   const char *url;
+  const svn_string_t *url_str;
 
   if (!force && cc->get_func != NULL)
     {
@@ -224,10 +227,10 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
      Version Resource */
   SVN_ERR( svn_ra_dav__get_props_resource(&propres, cc->ras->sess, url,
                                           NULL, fetch_props, pool) );
-  url = apr_hash_get(propres->propset,
-                     SVN_RA_DAV__PROP_CHECKED_IN,
-                     APR_HASH_KEY_STRING);
-  if (url == NULL)
+  url_str = apr_hash_get(propres->propset,
+                         SVN_RA_DAV__PROP_CHECKED_IN,
+                         APR_HASH_KEY_STRING);
+  if (url_str == NULL)
     {
       /* ### need a proper SVN_ERR here */
       return svn_error_create(APR_EGENERAL, NULL,
@@ -238,22 +241,15 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
 
   /* ensure we get the proper lifetime for this URL since it is going into
      a resource object. */
-  rsrc->vsn_url = apr_pstrdup(cc->ras->pool, url);
+  rsrc->vsn_url = apr_pstrdup(cc->ras->pool, url_str->data);
 
   if (cc->push_func != NULL)
     {
-      /* save the (new) version resource URL into the item */
-
-      svn_string_t value;
-
-      value.data = url;
-      value.len = strlen(url);
-
       /* Now we can store the new version-url. */
       SVN_ERR( (*cc->push_func)(cc->cb_baton,
                                 rsrc->local_path,
                                 SVN_RA_DAV__LP_VSN_URL,
-                                &value,
+                                url_str,
                                 pool) );
     }
 
@@ -522,33 +518,6 @@ static void record_prop_change(apr_pool_t *pool,
     }
 }
 
-/* Callback iterator for apr_table_do below. */
-static int do_setprop(ne_buffer *body, 
-                      const char *name, 
-                      svn_string_t *value,
-                      apr_pool_t *pool)
-{
-  /* Map property names to namespaces */
-#define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
-  if (strncmp(name, SVN_PROP_PREFIX, NSLEN) == 0)
-    {
-      svn_stringbuf_t *xml_esc = NULL;
-      svn_xml_escape_cdata_string(&xml_esc, value, pool);
-      ne_buffer_concat(body, "<S:", name + NSLEN, ">", xml_esc->data, 
-                       "</S:", name + NSLEN, ">", NULL);
-    }
-#undef NSLEN
-  else 
-    {
-      svn_stringbuf_t *xml_esc = NULL;
-      svn_xml_escape_cdata_string(&xml_esc, value, pool);
-      ne_buffer_concat(body, "<C:", name, ">", xml_esc->data,
-                       "</C:", name, ">", NULL);
-    }
-
-  return 1;
-}
-
 /* 
 A very long note about enforcing directory-up-to-dateness when
 proppatching, writ by Ben: 
@@ -594,81 +563,9 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
                                   resource_baton_t *rb,
                                   apr_pool_t *pool)
 {
-  ne_request *req;
-  int code;
-  ne_buffer *body; /* ### using an ne_buffer because it can realloc */
-  svn_error_t *err;
   const char *url = rsrc->wr_url;
-
-  /* just punt if there are no changes to make. */
-  if ((rb->prop_changes == NULL || (! apr_hash_count(rb->prop_changes)))
-      && (rb->prop_deletes == NULL || rb->prop_deletes->nelts == 0))
-    return NULL;
-
-  /* easier to roll our own PROPPATCH here than use ne_proppatch(), which 
-   * doesn't really do anything clever. */
-  body = ne_buffer_create();
-
-  ne_buffer_zappend(body,
-                    "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
-                    "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:C=\""
-                    SVN_DAV_PROP_NS_CUSTOM "\" xmlns:S=\""
-                    SVN_DAV_PROP_NS_SVN "\">");
-
-  if (rb->prop_changes != NULL)
-    {
-      apr_hash_index_t *hi;
-
-      ne_buffer_zappend(body, "<D:set><D:prop>");
-
-      for (hi = apr_hash_first(pool, rb->prop_changes); 
-           hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          apr_hash_this (hi, &key, NULL, &val);
-          do_setprop(body, key, val, pool);
-        }
-
-      ne_buffer_zappend(body, "</D:prop></D:set>");
-    }
-  
-  if (rb->prop_deletes != NULL)
-    {
-      int n;
-
-      ne_buffer_zappend(body, "<D:remove><D:prop>");
-      
-      for (n = 0; n < rb->prop_deletes->nelts; n++) 
-        {
-          const char *name = APR_ARRAY_IDX(rb->prop_deletes, n, const char *);
-
-          /* use custom prefix for anything that doesn't start with "svn:" */
-          if (strncmp(name, "svn:", 4) == 0)
-            ne_buffer_concat(body, "<S:", name + 4, "/>", NULL);
-          else
-            ne_buffer_concat(body, "<C:", name, "/>", NULL);
-        }
-
-      ne_buffer_zappend(body, "</D:prop></D:remove>");
-
-    }
-
-  ne_buffer_zappend(body, "</D:propertyupdate>");
-  req = ne_request_create(ras->sess, "PROPPATCH", url);
-  ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
-  ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
-
-  /* run the request and get the resulting status code (and svn_error_t) */
-  err = svn_ra_dav__request_dispatch(&code, req, ras->sess, "PROPPATCH",
-                                     url,
-                                     207 /* Multistatus */,
-                                     0 /* nothing else allowed */,
-                                     pool);
-
-  ne_buffer_destroy(body);
-
-  return err;
+  return svn_ra_dav__do_proppatch(ras, url, rb->prop_changes, 
+                                  rb->prop_deletes, pool);
 }
 
 
