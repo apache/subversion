@@ -82,16 +82,19 @@ svn_cl__commit (apr_getopt_t *os,
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
                           FALSE, pool);
 
+  /* We're creating a new log message baton because we can use our base_dir 
+     to store the temp file, instead of the current working directory.  The 
+     client might not have write access to their working directory, but they 
+     better have write access to the directory they're committing.  */
+  ctx->log_msg_baton = svn_cl__make_log_msg_baton (opt_state, base_dir, pool);
+
   /* Commit. */
-  log_msg_baton = svn_cl__make_log_msg_baton (opt_state, base_dir, pool);
   SVN_ERR (svn_cl__cleanup_log_msg
-           (log_msg_baton, svn_client_commit (&commit_info,
-                                              targets,
-                                              svn_cl__get_log_message,
-                                              log_msg_baton,
-                                              opt_state->nonrecursive,
-                                              ctx,
-                                              pool)));
+           (ctx->log_msg_baton, svn_client_commit (&commit_info,
+                                                   targets,
+                                                   opt_state->nonrecursive,
+                                                   ctx,
+                                                   pool)));
   if (commit_info && ! opt_state->quiet)
     svn_cl__print_commit_info (commit_info);
 

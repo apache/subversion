@@ -46,7 +46,6 @@ svn_cl__move (apr_getopt_t *os,
   const char *src_path, *dst_path;
   svn_client_commit_info_t *commit_info = NULL;
   svn_error_t *err;
-  void *log_msg_baton;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -64,19 +63,16 @@ svn_cl__move (apr_getopt_t *os,
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
                           FALSE, pool);
 
-  log_msg_baton = svn_cl__make_log_msg_baton (opt_state, NULL, pool);
   err = svn_client_move 
            (&commit_info, 
             src_path, &(opt_state->start_revision), dst_path,
             opt_state->force,
-            &svn_cl__get_log_message,
-            log_msg_baton,
             ctx,
             pool);
 
   if (err)
     err = svn_cl__may_need_force (err);
-  SVN_ERR (svn_cl__cleanup_log_msg (log_msg_baton, err));
+  SVN_ERR (svn_cl__cleanup_log_msg (ctx->log_msg_baton, err));
 
   if (commit_info && ! opt_state->quiet)
     svn_cl__print_commit_info (commit_info);

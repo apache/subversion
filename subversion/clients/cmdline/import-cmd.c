@@ -46,7 +46,6 @@ svn_cl__import (apr_getopt_t *os,
   const char *url;
   const char *new_entry;
   svn_client_commit_info_t *commit_info = NULL;
-  void *log_msg_baton;
 
   /* Import takes up to three arguments, for example
    *
@@ -113,17 +112,14 @@ svn_cl__import (apr_getopt_t *os,
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton,
                           FALSE, FALSE, FALSE, pool);
 
-  log_msg_baton = svn_cl__make_log_msg_baton (opt_state, NULL, pool);
   SVN_ERR (svn_cl__cleanup_log_msg 
-           (log_msg_baton, svn_client_import (&commit_info,
-                                              path,
-                                              url,
-                                              new_entry,
-                                              &svn_cl__get_log_message,
-                                              log_msg_baton,
-                                              opt_state->nonrecursive,
-                                              ctx,
-                                              pool)));
+           (ctx->log_msg_baton, svn_client_import (&commit_info,
+                                                   path,
+                                                   url,
+                                                   new_entry,
+                                                   opt_state->nonrecursive,
+                                                   ctx,
+                                                   pool)));
 
   if (commit_info && ! opt_state->quiet)
     svn_cl__print_commit_info (commit_info);

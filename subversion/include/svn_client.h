@@ -113,38 +113,6 @@ typedef struct svn_client_auth_baton_t
 } svn_client_auth_baton_t;
 
 
-/** A client context structure, which holds client specific callbacks, 
- * batons, serves as a cache for configuration options, and other various 
- * and sundry things.
- */
-typedef struct svn_client_ctx_t
-{
-  /** old-style auth baton, soon to die. */
-  svn_client_auth_baton_t *old_auth_baton;
-
-  /** main auth baton. */
-  svn_auth_baton_t *auth_baton;
-
-  /** if the application has a 'default' username or password, it's in
-   * this structure, if @c NULL, then no defaults exist.
-   */
-  svn_auth_cred_simple_t *default_simple_creds;
-
-  /** prompt callback function */
-  svn_client_prompt_t prompt_func;
-
-  /** prompt callback baton */
-  void *prompt_baton;
-
-  /** notification callback function */
-  svn_wc_notify_func_t notify_func;
-
-  /** notification callback baton */
-  void *notify_baton;
-
-} svn_client_ctx_t;
-
-
 /** This is a structure which stores a filename and a hash of property
  * names and values.
  */
@@ -249,6 +217,43 @@ typedef svn_error_t *
                                 void *baton,
                                 apr_pool_t *pool);
 
+
+/** A client context structure, which holds client specific callbacks, 
+ * batons, serves as a cache for configuration options, and other various 
+ * and sundry things.
+ */
+typedef struct svn_client_ctx_t
+{
+  /** old-style auth baton, soon to die. */
+  svn_client_auth_baton_t *old_auth_baton;
+
+  /** main auth baton. */
+  svn_auth_baton_t *auth_baton;
+
+  /** if the application has a 'default' username or password, it's in
+   * this structure, if @c NULL, then no defaults exist.
+   */
+  svn_auth_cred_simple_t *default_simple_creds;
+
+  /** prompt callback function */
+  svn_client_prompt_t prompt_func;
+
+  /** prompt callback baton */
+  void *prompt_baton;
+
+  /** notification callback function */
+  svn_wc_notify_func_t notify_func;
+
+  /** notification callback baton */
+  void *notify_baton;
+
+  /** log message callback function */
+  svn_client_get_commit_log_t log_msg_func;
+
+  /** log message callback baton */
+  void *log_msg_baton;
+
+} svn_client_ctx_t;
 
 
 /** Names of files that contain authentication information.
@@ -376,8 +381,8 @@ svn_client_add (const char *path,
  * addition (using @c svn_client_add, whose docstring you should
  * read).
  *
- * @a log_msg_func/@a log_msg_baton are a callback/baton combo that this
- * function can use to query for a commit log message when one is
+ * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that 
+ * this function can use to query for a commit log message when one is
  * needed.
  *
  * If @a ctx->notify_func is non-null, when the directory has been created
@@ -388,8 +393,6 @@ svn_client_add (const char *path,
 svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   const char *path,
-                  svn_client_get_commit_log_t log_msg_func,
-                  void *log_msg_baton,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
                   
@@ -397,9 +400,9 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
 /** Delete an item from a repository or working copy.
  *
  * If @a path is a @a url, use the authentication baton in @a ctx and 
- * @a log_msg_func/@a log_msg_baton to immediately attempt to commit a 
- * deletion of the @a url from the repository.  If the commit succeeds,
- * allocate (in @a pool) and populate @a *commit_info.
+ * @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately attempt to 
+ * commit a deletion of the @a url from the repository.  If the commit 
+ * succeeds, allocate (in @a pool) and populate @a *commit_info.
  *
  * Else, schedule a working copy @a path for removal from the repository.
  * @a path's parent must be under revision control. This is just a
@@ -418,8 +421,8 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
  * released by the function.  If deleting from a repository (@a path is an
  * URL) then @a optional_adm_access is irrelevant.
  *
- * @a log_msg_func/@a log_msg_baton are a callback/baton combo that this
- * function can use to query for a commit log message when one is
+ * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that 
+ * this function can use to query for a commit log message when one is
  * needed.
  *
  * If @a ctx->notify_func is non-null, then for each item deleted, call
@@ -431,8 +434,6 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    const char *path,
                    svn_wc_adm_access_t *optional_adm_access,
                    svn_boolean_t force,
-                   svn_client_get_commit_log_t log_msg_func,
-                   void *log_msg_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
@@ -441,8 +442,9 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
  *
  * Import file or directory @a path into repository directory @a url at
  * head, authenticating with the authentication baton cached in @a ctx, 
- * and using @a log_msg as the log message for the (implied) commit.  
- * Set @a *commit_info to the results of the commit, allocated in @a pool.
+ * and using @a ctx->log_msg_func/@ctx->log_msg_baton to get a log message 
+ * for the (implied) commit.  Set @a *commit_info to the results of the 
+ * commit, allocated in @a pool.
  *
  * @a new_entry is the new entry created in the repository directory
  * identified by @a url.  @a new_entry may be null (see below), but may 
@@ -467,8 +469,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
  *
  * Use @a pool for any temporary allocation.  
  * 
- * @a log_msg_func/@a log_msg_baton are a callback/baton combo that this
- * function can use to query for a commit log message when one is needed.
+ * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that 
+ * this function can use to query for a commit log message when one is needed.
  *
  * Use @a nonrecursive to indicate that imported directories should not
  * recurse into any subdirectories they may have.
@@ -484,8 +486,6 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 const char *path,
                                 const char *url,
                                 const char *new_entry,
-                                svn_client_get_commit_log_t log_msg_func,
-                                void *log_msg_baton,
                                 svn_boolean_t nonrecursive,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
@@ -495,8 +495,8 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
  *
  * Commit file or directory @a path into repository, authenticating with
  * the authentication baton cached in @a ctx, and using 
- * @a log_msg_func/@a log_msg_baton to obtain the log message.  Set 
- * @a *commit_info to the results of the commit, allocated in @a pool.
+ * @a ctx->log_msg_func/@a ctx->log_msg_baton to obtain the log message. 
+ * Set @a *commit_info to the results of the commit, allocated in @a pool.
  *
  * @a targets is an array of <tt>const char *</tt> paths to commit.  They 
  * need not be canonicalized nor condensed; this function will take care of
@@ -520,8 +520,6 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
 svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
                    const apr_array_header_t *targets,
-                   svn_client_get_commit_log_t log_msg_func,
-                   void *log_msg_baton,
                    svn_boolean_t nonrecursive,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
@@ -774,9 +772,9 @@ svn_client_resolve (const char *path,
  * the parent will be acquired and released by the function.
  *
  * If either @a src_path or @a dst_path are URLs, use the authentication baton 
- * in @a ctx and @a log_msg_func/@a log_msg_baton to immediately attempt to 
- * commit the copy action in the repository.  If the commit succeeds, allocate 
- * (in @a pool) and populate @a *commit_info.
+ * in @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately 
+ * attempt to commit the copy action in the repository.  If the commit 
+ * succeeds, allocate (in @a pool) and populate @a *commit_info.
  *
  * If neither @a src_path nor @a dst_path is a URL, then this is just a
  * variant of @c svn_client_add, where the @a dst_path items are scheduled
@@ -784,8 +782,8 @@ svn_client_resolve (const char *path,
  * until a commit occurs.  This scheduling can be removed with
  * @c svn_client_revert.
  *
- * @a log_msg_func/@a log_msg_baton are a callback/baton combo that this
- * function can use to query for a commit log message when one is
+ * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
+ * this function can use to query for a commit log message when one is
  * needed.
  *
  * If @a ctx->notify_func is non-null, invoke it with @a ctx->notify_baton 
@@ -798,8 +796,6 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_wc_adm_access_t *optional_adm_access,
-                 svn_client_get_commit_log_t log_msg_func,
-                 void *log_msg_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
@@ -818,8 +814,8 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  *   - @a src_revision is used to choose the revision from which to copy 
  *     the @a src_path.
  *
- *   - the authentication baton in @a ctx and @a log_msg_func/@a log_msg_baton 
- *     are used to commit the move.
+ *   - the authentication baton in @a ctx and @a ctx->log_msg_func/@a 
+ *     ctx->log_msg_baton are used to commit the move.
  *
  *   - The move operation will be immediately committed.  If the
  *     commit succeeds, allocate (in @a pool) and populate @a *commit_info.
@@ -828,7 +824,8 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  *
  *   - @a dst_path must also be a working copy path (existent or not).
  *
- *   - @a src_revision, and @a log_msg_func/@a log_msg_baton are ignored.
+ *   - @a src_revision, and @a ctx->log_msg_func/@a ctx->log_msg_baton are 
+ *     ignored.
  *
  *   - This is a scheduling operation.  No changes will happen to the
  *     repository until a commit occurs.  This scheduling can be removed
@@ -841,8 +838,8 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  *     and @a force is not set, the copy will fail. If @a force is set such 
  *     items will be removed.
  *
- * @a log_msg_func/@a log_msg_baton are a callback/baton combo that this
- * function can use to query for a commit log message when one is needed.
+ * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
+ * this function can use to query for a commit log message when one is needed.
  *
  * If @a ctx->notify_func is non-null, then for each item moved, call
  * @a ctx->notify_func with the @a ctx->notify_baton twice, once to indicate 
@@ -857,8 +854,6 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_boolean_t force,
-                 svn_client_get_commit_log_t log_msg_func,
-                 void *log_msg_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
