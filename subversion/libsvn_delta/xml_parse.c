@@ -1005,13 +1005,15 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_TARGET_REV, 
                                       atts);
       if (value)
-        my_digger->target_revision = atoi (value);
-
-      /* Set the global target revision by calling into the editor */
-      if (my_digger->editor->set_target_revision)
         {
-          err = my_digger->editor->set_target_revision
-            (my_digger->edit_baton, my_digger->target_revision);
+          my_digger->target_revision = atoi (value);
+
+          /* Set the global target revision by calling into the editor */
+          if (my_digger->editor->set_target_revision)
+            {
+              err = my_digger->editor->set_target_revision
+                (my_digger->edit_baton, my_digger->target_revision);
+            }
         }
     }
 
