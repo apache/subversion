@@ -598,7 +598,11 @@ make_node_baton (apr_hash_t *headers,
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
                            APR_HASH_KEY_STRING)))
     {
-      nb->copyfrom_path = apr_pstrdup (pool, val);
+      if (rb->pb->parent_dir)
+        nb->copyfrom_path = svn_path_join (rb->pb->parent_dir,
+                                           (*val == '/' ? val + 1 : val), pool);
+      else
+        nb->copyfrom_path = apr_pstrdup (pool, val);
     }
 
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM,
