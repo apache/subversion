@@ -1073,6 +1073,46 @@ validate_prop_against_node_kind (const char *name,
   return SVN_NO_ERROR;
 }                             
 
+
+static svn_error_t *
+validate_eol_prop_against_file (const char *path, 
+                                apr_pool_t *pool)
+{
+  apr_file_t *fp;
+  svn_stream_t *read_stream, *write_stream;
+  svn_error_t *err;
+  const svn_string_t *mime_type;
+
+  /* See if this file has been determined to be binary. */
+  SVN_ERR (svn_wc_prop_get (&mime_type, SVN_PROP_MIME_TYPE, path, pool));
+  if (mime_type && svn_mime_type_is_binary (mime_type->data))
+    return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, 0, NULL,
+                              "File '%s' has binary mimetype property", path);
+
+  /* Open PATH. */
+  SVN_ERR (svn_io_file_open (&fp, path, 
+                             (APR_READ | APR_BINARY | APR_BUFFERED),
+                             0, pool));
+
+  /* Get a READ_STREAM from the file we just opened. */
+  read_stream = svn_stream_from_aprfile (fp, pool);
+
+  /* Now, make an empty WRITE_STREAM. */
+  write_stream = svn_stream_empty (pool);
+
+  /* Do a newline translation.  Of course, all we really care about
+     here is whether or not the function fails on inconsistent line
+     endings.  The function is "translating" to an empty stream.  This
+     is sneeeeeeeeeeeaky. */
+  err = svn_wc_translate_stream (read_stream, write_stream, 
+                                 "", FALSE, NULL, FALSE);
+  if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
+    return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, 0, err,
+                              "File '%s' has inconsistent newlines", path);
+  return err;
+}
+
+
 svn_error_t *
 svn_wc_prop_set (const char *name,
                  const svn_string_t *value,
@@ -1103,7 +1143,11 @@ svn_wc_prop_set (const char *name,
      property is allowed since older clients allowed (and other clients
      possibly still allow) setting it. */
   if (value)
-    SVN_ERR (validate_prop_against_node_kind (name, path, kind, pool));
+    {
+      SVN_ERR (validate_prop_against_node_kind (name, path, kind, pool));
+      if (strcmp (name, SVN_PROP_EOL_STYLE) == 0)
+        SVN_ERR (validate_eol_prop_against_file (path, pool));
+    }
 
   if (kind == svn_node_file && strcmp (name, SVN_PROP_EXECUTABLE) == 0)
     {

@@ -883,6 +883,13 @@ read_handler_empty (void *baton, char *buffer, apr_size_t *len)
 }
 
 
+static svn_error_t *
+write_handler_empty (void *baton, const char *data, apr_size_t *len)
+{
+  return SVN_NO_ERROR;
+}
+
+
 svn_stream_t *
 svn_stream_empty (apr_pool_t *pool)
 {
@@ -890,6 +897,7 @@ svn_stream_empty (apr_pool_t *pool)
 
   stream = svn_stream_create (NULL, pool);
   svn_stream_set_read (stream, read_handler_empty);
+  svn_stream_set_write (stream, write_handler_empty);
   return stream;
 }
 

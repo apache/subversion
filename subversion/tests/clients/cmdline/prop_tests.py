@@ -590,6 +590,53 @@ def inappropriate_props(sbox):
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
+# Issue #920. Don't allow setting of svn:eol-style on binary files or files 
+# with inconsistent eol stypes.
+  
+  path = os.path.join(wc_dir, 'binary')
+  svntest.main.file_append(path, "binary")
+  svntest.main.run_svn(None, 'add', path)
+  
+  svntest.main.run_svn(None, 'propset', 'svn:mime-type', 
+                       'application/octet-stream', path)
+  
+  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
+                                           'svn:eol-style',
+                                           'CRLF', path)
+  if not errlines:
+    return 1
+   
+  path = os.path.join(wc_dir, 'multi-eol')
+  svntest.main.file_append(path, "line1\rline2\n")
+  svntest.main.run_svn(None, 'add', path)
+  
+  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
+                                           'svn:eol-style',
+                                           'LF', path)
+  if not errlines:
+    return 1
+    
+  path = os.path.join(wc_dir, 'backwards-eol')
+  svntest.main.file_append(path, "line1\n\r")
+  svntest.main.run_svn(None, 'add', path)
+  
+  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
+                                           'svn:eol-style',
+                                           'native', path)
+  if not errlines:
+    return 1
+    
+  path = os.path.join(wc_dir, 'incomplete-eol')
+  svntest.main.file_append(path, "line1\r\n\r")
+  svntest.main.run_svn(None, 'add', path)
+  
+  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
+                                           'svn:eol-style',
+                                           'CR', path)
+  if not errlines:
+    return 1
+    
+
 
 #----------------------------------------------------------------------
 
