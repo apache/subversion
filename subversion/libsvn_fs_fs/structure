@@ -7,17 +7,29 @@ See the "Design" section of the README file for a design overview.
 Layout of the FS directory
 --------------------------
 
-We will need:
+The layout of the FS directory is:
 
-  * A naming scheme for revision files (probably the obvious one)
-  * A naming scheme for rev-prop files
-  * A way of quickly determining the most recent revision
-  * A lockfile to grab during the final part of a commit
-  * A way of naming transaction directories
+  revs          Subdirectory containing revs
+   <revnum>      File containing rev <revnum>
+  revprops      Subdirectory containing rev-props
+   <revnum>      File containing rev-props for <revnum>
+  transactions  Subdirectory containing transactions
+   <txnid>       Directory containing transaction <txnid>
+  current       File specifying current revision
+  write-lock    Lockfile for commits
 
-(Rev-props must live in a separate file from the immutable part of
-revisions so that they can be atomically replaced without rewriting
-the entire rev file.)
+The format of the "current" file is a single line containing the most
+recent committed revision number.
+
+The "write-lock" file only exists when a process is holding a
+write-lock for the final phase of a commit.  It contains a line
+"<IP-address> <pid>\n" identifying the IP address and PID of the
+process holding the lock.  [NOTE: This may be too Unix-specific.  It's
+borrowed from Mozilla and allows detection of stale locks on the
+machine which has the process which holds the lock.  The meaning of
+"this machine's IP address" is a little tricky, but the only real
+requirement is that it be uniquely determinable from the machine.  We
+can worry about the details of this file a little later.]
 
 Node-revision IDs
 -----------------
@@ -108,9 +120,9 @@ structure, we should measure the performance impact of this operation
 on "svn log -v" of a large import.]
 
 At the very end of a rev file is a pair of lines containing
-"\noffsets: <root-offset> <cp-offset>\n", where <root-offset> is the
-offset of the root directory node revision and <cp-offset> is the
-offset of the changed-path data.
+"\n<root-offset> <cp-offset>\n", where <root-offset> is the offset of
+the root directory node revision and <cp-offset> is the offset of the
+changed-path data.
 
 All numbers in the rev file format are unsigned and are represented as
 ASCII decimal.

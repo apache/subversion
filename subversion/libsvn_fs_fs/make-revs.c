@@ -47,6 +47,7 @@ struct parse_baton
   apr_hash_t *deleted_paths;
   apr_hash_t *added_paths;
   apr_hash_t *modified_paths;
+  apr_hash_t *rev_props;
   apr_md5_ctx_t md5_ctx;
   int next_node_id;
   int next_copy_id;
@@ -512,7 +513,7 @@ new_revision_record(void **revision_baton, apr_hash_t *headers, void *baton,
                     apr_pool_t *pool)
 {
   struct parse_baton *pb = baton;
-  const char *revstr;
+  const char *revstr, *path;
   svn_revnum_t rev;
   struct entry *root;
 
@@ -527,15 +528,18 @@ new_revision_record(void **revision_baton, apr_hash_t *headers, void *baton,
   pb->rev_pool = svn_pool_create(pb->pool);
 
   /* Open a file for this revision. */
-  SVN_ERR(svn_io_file_open(&pb->rev_file, revstr,
+  SVN_ERR(svn_io_make_dir_recursively("revs", pb->rev_pool));
+  path = svn_path_join("revs", revstr, pb->rev_pool);
+  SVN_ERR(svn_io_file_open(&pb->rev_file, path,
                            APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
                            APR_OS_DEFAULT, pb->rev_pool));
   pb->rev_stream = svn_stream_from_aprfile(pb->rev_file, pb->rev_pool);
 
-  /* Initialize the changed-path hash tables. */
+  /* Initialize the changed-path hash tables and rev-props. */
   pb->deleted_paths = apr_hash_make(pb->rev_pool);
   pb->added_paths = apr_hash_make(pb->rev_pool);
   pb->modified_paths = apr_hash_make(pb->rev_pool);
+  pb->rev_props = apr_hash_make(pb->rev_pool);
 
   /* Set up a new root for this rev. */
   root = new_entry(pb->pool);
@@ -627,7 +631,11 @@ new_node_record(void **node_baton, apr_hash_t *headers, void *baton,
 static svn_error_t *
 set_revision_property(void *baton, const char *name, const svn_string_t *value)
 {
-  /* Nothing yet. */
+  struct parse_baton *pb = baton;
+
+  name = apr_pstrdup(pb->rev_pool, name);
+  value = svn_string_dup(value, pb->rev_pool);
+  apr_hash_set(pb->rev_props, name, APR_HASH_KEY_STRING, value);
   return SVN_NO_ERROR;
 }
 
@@ -737,21 +745,39 @@ svn_error_t *close_revision(void *baton)
 {
   struct parse_baton *pb = baton;
   struct entry *root = get_root(pb, pb->current_rev);
+  apr_pool_t *pool = pb->rev_pool;
   apr_off_t offset;
+  apr_file_t *revprops_file;
+  svn_stream_t *revprops_stream;
+  const char *revstr, *path;
 
-  SVN_ERR(write_entry(pb, root, pb->rev_pool));
+  SVN_ERR(write_entry(pb, root, pool));
 
   /* Get the rev file offset of the changed-path data. */
   offset = 0;
-  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &offset, pb->rev_pool));
+  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &offset, pool));
 
-  SVN_ERR(write_changed_path_data(pb, pb->rev_pool));
+  SVN_ERR(write_changed_path_data(pb, pool));
 
   /* Write out the offsets for the root node and changed-path data. */
-  SVN_ERR(svn_stream_printf(pb->rev_stream, pb->rev_pool,
+  SVN_ERR(svn_stream_printf(pb->rev_stream, pool,
                             "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
                             root->node_off, offset));
-  SVN_ERR(svn_io_file_close(pb->rev_file, pb->rev_pool));
+  SVN_ERR(svn_io_file_close(pb->rev_file, pool));
+
+  /* Open a file for the rev-props. */
+  SVN_ERR(svn_io_make_dir_recursively("revprops", pool));
+  revstr = apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, pb->current_rev);
+  path = svn_path_join("revprops", revstr, pool);
+  SVN_ERR(svn_io_file_open(&revprops_file, path,
+                           APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  revprops_stream = svn_stream_from_aprfile(revprops_file, pool);
+
+  /* Dump the rev-props. */
+  SVN_ERR(hash_write(pb->rev_props, revprops_stream, pool));
+  apr_file_close(revprops_file);
+
   svn_pool_destroy(pb->rev_pool);
   return SVN_NO_ERROR;
 }
