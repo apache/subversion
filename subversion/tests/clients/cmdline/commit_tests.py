@@ -648,7 +648,7 @@ def hudson_part_1(sbox):
                                                expected_disk_tree,
                                                expected_status_tree,
                                                None, None, None, None,
-                                               0, "--quiet")
+                                               0)
 
 #----------------------------------------------------------------------
 
@@ -714,7 +714,7 @@ def hudson_part_1_variation_1(sbox):
                                                expected_disk_tree,
                                                expected_status_tree,
                                                None, None, None, None,
-                                               0, "--quiet")
+                                               0)
 
 #----------------------------------------------------------------------
 
@@ -964,7 +964,7 @@ def merge_mixed_revisions(sbox):
                                             expected_disk_tree,
                                             expected_status_tree,
                                             None, None, None, None,
-                                            0, "--quiet"):
+                                            0):
     return 1
 
 
