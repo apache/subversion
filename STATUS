@@ -117,8 +117,7 @@ Candidate changes:
     Branch:
       1.1.x-new-swig r13071:HEAD
     Votes:
-      +1: maxb
-      -1: clkao (http://svn.haxx.se/dev/archive-2005-02/1021.shtml)
+      +1: maxb, clkao
 
   * r13090
     javahl binding cleanup of usage of path and url.
