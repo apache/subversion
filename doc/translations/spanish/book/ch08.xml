@@ -1674,32 +1674,34 @@ crawl_dir (apr_array_header_t *files,
     
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-6.2">
-      <title>Get the Source Code</title>
+      <title>Obtenga el código fuente</title>
       
-      <para>To edit the code, you need to have the code.  This means
-        you need to check out a working copy from the public
-        Subversion source repository.  As straightforward as that
-        might sound, the task can be slightly tricky.  Because
-        Subversion's source code is versioned using Subversion itself,
-        you actually need to <quote>bootstrap</quote> by getting a
-        working Subversion client via some other method.  The most
-        common methods include downloading the latest binary
-        distribution (if such is available for your platform), or
-        downloading the latest source tarball and building your own
-        Subversion client.  If you build from source, make sure to
-        read the <filename>INSTALL</filename> file in the top level of
-        the source tree for instructions.</para>
+      <para>Para editar código fuente, necesita tener código
+        fuente. Esto significa que debe obtener una copia local
+        del repositorio público de código fuente de Subversion.
+        A pesar de lo simple que parezca esta tarea, puede ser
+        algo complicada. Dado que el código fuente de Subversion
+        se versiona con el propio Subversion, en realidad necesita
+        <quote>arrancar</quote> obteniendo un cliente de Subversion
+        funcional por otro método. Los métodos más habituales
+        incluyen descargar la última distribución binaria (si es
+        que hay una disponible para su plataforma), o descargar el
+        último paquete de código fuente y compilar su propio cliente
+        de Subversion. Si compila el código fuente, asegúrese de leer
+        las instrucciones del fichero <filename>INSTALL</filename>
+        en el directorio raíz del código fuente.</para>
 
-      <para>After you have a working Subversion client, you are now
-        poised to checkout a working copy of the Subversion source
-        repository from <systemitem
+      <para>Una vez disponga de un cliente de Subversion funcional,
+        puede obtener una copia local del código
+        fuente de Subversion de <systemitem
         class="url">http://svn.collab.net/repos/svn/trunk/</systemitem>:
         <footnote>
-          <para>Note that the URL checked out in the example above
-            ends not with <literal>svn</literal>, but with a
-            subdirectory thereof called <literal>trunk</literal>.  See
-            our discussion of Subversion's branching and tagging model
-            for the reasoning behind this.</para>
+          <para>Tenga en cuenta que la URL obtenida en el ejemplo
+            no finaliza con un <literal>svn</literal>, si no con uno
+            de sus subdirectorios llamado <literal>trunk</literal>.
+            Vea nuestra discusión sobre el modelo de ramas y
+            etiquetado de Subversion para entender el razonamiendo
+            subyacente.</para>
         </footnote></para>
 
       <screen>
