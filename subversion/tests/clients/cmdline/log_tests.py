@@ -485,6 +485,51 @@ def url_missing_in_head(sbox):
     os.chdir (was_cwd)
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+def setup_copyfrom_history(sbox):
+  "setup repository with copyfrom history"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  mu_path = os.path.join (wc_dir, 'A', 'mu')
+  mu2_path = os.path.join (wc_dir, 'A', 'mu2')
+  mu_URL = svntest.main.current_repo_url + '/A/mu'
+  mu2_URL = svntest.main.current_repo_url + '/A/mu2'
+
+  svntest.main.file_append (mu_path, "2")
+  svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
+                                      '-m', "Log message for revision 2")
+  svntest.main.file_append (mu_path, "3")
+  svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
+                                      '-m', "Log message for revision 3")
+
+  svntest.actions.run_and_verify_svn (None, None, [],
+                                      'cp', '-r', '2', mu_URL, mu2_URL,
+                                      '-m', "Log message for revision 4")
+
+def log_through_copyfrom_history(sbox):
+  "'svn log URL' with copyfrom history"
+  setup_copyfrom_history(sbox)
+  mu2_URL = svntest.main.current_repo_url + '/A/mu2'
+  output, errput = svntest.main.run_svn (None, 'log', mu2_URL)
+  if errput:
+    raise svntest.Failure
+  log_chain = parse_log_output (output)
+  if check_log_chain (log_chain, [4, 2, 1]):
+    raise svntest.Failure
+
+# XFail because it tries to get /A/mu2 at rev 2
+def log_rN_through_copyfrom_history(sbox):
+  "'svn log -rN URL' with copyfrom history"
+  setup_copyfrom_history(sbox)
+  mu2_URL = svntest.main.current_repo_url + '/A/mu2'
+  output, errput = svntest.main.run_svn (None, 'log', '-r', '2', mu2_URL)
+  if errput:
+    raise svntest.Failure
+  log_chain = parse_log_output (output)
+  if check_log_chain (log_chain, [2]):
+    raise svntest.Failure
+  
 ########################################################################
 # Run the tests
 
@@ -498,6 +543,8 @@ test_list = [ None,
               log_to_revision_zero,
               log_with_path_args,
               url_missing_in_head,
+              log_through_copyfrom_history,
+              XFail(log_rN_through_copyfrom_history),
              ]
 
 if __name__ == '__main__':
