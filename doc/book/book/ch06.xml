@@ -687,7 +687,7 @@ $ whoami
 harry
 
 $ svn list svn+ssh://host.example.com/repos/project
-harry@host.example.com's password:  XXXXX
+harry@host.example.com's password:  *****
 
 foo
 bar
@@ -1161,8 +1161,15 @@ $
 
 
       <sect3 id="svn-ch-6-sect-4.3.2">
-        <title>SSL and Certificates</title>
+        <title>SSL Certificate Management</title>
         
+        <para>Businesses that need to expose their repositories for access
+          outside the company firewall should be conscious of the
+          possibility that unauthorized parties could be
+          <quote>sniffing</quote> their network traffic.  SSL makes
+          that kind of unwanted attention less likely to result in
+          sensitive data leaks.</para>
+
         <para>If a Subversion client is compiled to use OpenSSL, then
           it gains the ability to speak to an Apache server via
           <literal>https://</literal> URLs.  The Neon library used by
@@ -1170,13 +1177,7 @@ $
           certificates, but can also supply client certificates when
           challenged.  When the client and server have exchanged SSL
           certificates and successfully authenticated one another, all
-          further communication is encrypted via a session key.
-          Businesses that need to expose their repositories for access
-          outside the company firewall should be conscious of the
-          possibility that unauthorized parties could be
-          <quote>sniffing</quote> their network traffic.  SSL makes
-          that kind of unwanted attention less likely to result in
-          sensitive data leaks.</para>
+          further communication is encrypted via a session key.</para>
 
         <para>It's beyond the scope of this book to describe how to
           generate client and server certificates, and how to
@@ -1199,20 +1200,112 @@ $
           verify that it trusts the certificate: is the server really
           who it claims to be?  The OpenSSL library does this by
           examining the signer of the server certificate, or
-          <firstterm>certifying authority</firstterm>
-          (CA)..... <emphasis> blah blah blah, how the prompt looks,
-          how caching works, how to set lists of trusted
-          CAs.</emphasis></para>
+          <firstterm>certifying authority</firstterm> (CA).  If
+          OpenSSL is unable to automatically trust the CA, or if some
+          other problem occurs (such as as an expired certificate or
+          hostname mismatch), the Subversion commandline client will
+          ask you whether you want to trust the server certificate
+          anyway:</para>
 
-        <para>If the client receives a challenge for a certificate,
-          Apache is asking the client to identify itself: is the
-          client really who it says it is?  If all goes correctly, the
-          Subversion client sends back a certificate that is signed by
-          a CA that Apache trusts.  <emphasis>.... blah blah blah,
-          explain pkcs12 requirement, show example of prompting
-          provider, and how to set up permanent pointer in servers
-          file.</emphasis></para>
-          
+        <screen>
+$ svn list https://host.example.com/repos/project
+
+Error validating server certificate for 'https://home.example.com:443':
+ - The certificate is not issued by a trusted authority. Use the
+   fingerprint to validate the certificate manually!
+Certificate information:
+ - Hostname: host.example.com
+ - Valid: from Jan 30 19:23:56 2004 GMT until Jan 30 19:23:56 2006 GMT
+ - Issuer: CA, example.com, Sometown, California, US
+ - Fingerprint: 7d:e1:a9:34:33:39:ba:6a:e9:a5:c4:22:98:7b:76:5c:92:a0:9c:7b
+
+(R)eject, accept (t)emporarily or accept (p)ermanently?
+</screen>
+
+        <para>This dialogue should look familiar; it's essentially the
+          same question you've probably seen coming from your web
+          browser (which is just another HTTP client like Subversion!)
+          If you choose the (p)ermanent option, the server certificate
+          will be cached in your private run-time
+          <filename>auth/</filename> area in just the same way your
+          username and password are cached (see <xref
+          linkend="svn-ch-6-sect-2.2"/>.)  If cached, Subversion will
+          automatically remember to trust this certificate in future
+          negotiations.</para>
+
+        <para>Your run-time <filename>servers</filename> also gives
+          you the ability to make your Subversion client automatically
+          trust specific CAs, either globally or on a per-host basis.
+          Simply set the <literal>ssl-authority-files</literal>
+          variable to a semicolon-separated list of pem-encoded CA
+          certificates:</para>
+
+        <screen>
+[global]
+ssl-authority-files = /path/to/CAcert1.pem;/path/to/CAcert2.pem
+</screen>
+        
+        <para>Many OpenSSL installations also have a pre-defined set
+          of <quote>default</quote> CAs that are nearly universally
+          trusted.  To make the Subversion client automatically trust
+          these standard authorities, set the
+          <literal>ssl-trust-default-ca</literal> variable to
+          <literal>true</literal>.</para>
+
+        <para>When talking to Apache, a Subversion client might also
+          receive a challenge for a client certificate.  Apache is
+          asking the client to identify itself: is the client really
+          who it says it is?  If all goes correctly, the Subversion
+          client sends back a private certificate signed by a CA that
+          Apache trusts.  A client certificate is usually stored on
+          disk in encrypted format, protected by a local password.
+          When Subversion receives this challenge, it will ask you for
+          both a path to the certificate and the password which
+          protects it:</para>
+
+        <screen>
+$ svn list https://host.example.com/repos/project
+
+Authentication realm: https://host.example.com:443
+Client certificate filename: /path/to/my/cert.p12
+Passphrase for '/path/to/my/cert.p12':  ********
+&hellip;
+</screen>
+
+        <para>Notice that the client certificate is a
+          <quote>p12</quote> file.  To use a client certificate with
+          Subversion, it must be in PKCS#12 format, which is a
+          portable standard.  Most web browsers are already able to
+          import and export certificates in that format.   Another
+          option is to use the OpenSSL commandline tools to convert
+          existing certificates into PKCS#12.</para>
+
+        <para>Again, the runtime <filename>servers</filename> file
+          allows you to automate this challenge on a per-host basis.
+          Either or both pieces of information can be described in
+          runtime variables:</para>
+
+        <screen>
+[groups]
+examplehost = host.example.com
+
+[examplehost]
+ssl-client-cert-file = /path/to/my/cert.p12
+ssl-client-cert-password = somepassword
+</screen>
+
+        <para>Once you've set the
+          <literal>ssl-client-cert-file</literal> and
+          <literal>ss-client-cert-password</literal> variables, the
+          Subversion client can automatically respond to a client
+          certificate challenge without prompting you.
+          <footnote>
+            <para>More security-conscious folk might not want to store
+              the client certificate password in the runtime
+              <filename>servers</filename> file.</para>
+          </footnote>
+        </para>
+
       </sect3>
 
     </sect2>
@@ -1240,6 +1333,8 @@ $
 &lt;Location /svn&gt;
   DAV svn
   SVNParentPath /usr/local/svn
+
+  # how to authenticate a user
   AuthType Basic
   AuthName "Subversion repository"
   AuthUserFile /path/to/users/file
@@ -1282,6 +1377,8 @@ $
 &lt;Location /svn&gt;
   DAV svn
   SVNParentPath /usr/local/svn
+
+  # how to authenticate a user
   AuthType Basic
   AuthName "Subversion repository"
   AuthUserFile /path/to/users/file
@@ -1294,7 +1391,8 @@ $
 </screen>
 
         <para>These are only a few simple examples.  For more in-depth
-          information about Apache access control, take a look at the
+          information about Apache access control and the
+          <literal>Require</literal> directive,, take a look at the
           <literal>Security</literal> section of the Apache
           documentation's tutorials collection at <systemitem
           class="url">http://httpd.apache.org/docs-2.0/misc/tutorials.html</systemitem>.</para>
@@ -1305,10 +1403,170 @@ $
       <sect3 id="svn-ch-6-sect-4.4.2">
         <title>Per-Directory Access Control</title>
 
-        <para><emphasis>all about mod_authz_svn!</emphasis></para>
+        <para>It's possible to set up finer-grained permissions using
+          a second Apache httpd module,
+          <command>mod_authz_svn</command>.  This module grabs the
+          various opaque URLs passing from client to server, asks
+          <command>mod_dav_svn</command> to decode them, and then
+          possibly vetoes requests based on access policies defined in
+          a configuration file.</para>
+
+        <para>If you've built Subversion from source code,
+          <command>mod_authz_svn</command> is automatically built
+          and installed alongside <command>mod_dav_svn</command>.
+          Many binary distributions install it automatically as well.
+          To verify that it's installed correctly, make sure it comes
+          right after <command>mod_dav_svn</command>'s
+          <literal>LoadModule</literal> directive in
+          <filename>httpd.conf</filename>:</para>
+
+        <screen>
+LoadModule dav_svn_module     modules/mod_dav_svn.so
+LoadModule authz_svn_module   modules/mod_authz_svn.so
+</screen>
+
+        <para>To activate this module, you need to configure your
+          <literal>Location</literal> block in a specific way:</para>
+
+        <itemizedlist>
+          <listitem>
+            <para>You must use <literal>SVNPath</literal>.  The
+              <literal>SVNParentPath</literal> directive is not yet
+              supported.</para></listitem>
+          <listitem>
+            <para>You must unconditionally <literal>Require
+                valid-user</literal>; it cannot be modified via
+                <literal>Limit</literal> or
+                <literal>LimitExcept</literal> directives.</para></listitem>
+          <listitem>
+            <para>You must use specify a path to an <firstterm>access
+                file</firstterm>, which describes the permissions
+                policy for the repository, via the new
+                <literal>AuthzSVNAccessFile</literal>
+                directive.</para></listitem>.
+        </itemizedlist>
+
+        <para>Here's a simple example:</para>
+
+        <screen>
+&lt;Location /svn/project&gt;
+  DAV svn
+  SVNPath /usr/local/svn/project
+
+  # how to authenticate a user
+  AuthType Basic
+  AuthName "Subversion repository"
+  AuthUserFile /path/to/users/file
+
+  # only authenticated users may access the repository
+  Require valid-user
+
+  # our access control policy
+  AuthzSVNAccessFile /path/to/access/file
+
+&lt;/Location&gt;
+</screen>
+        
+        <para>At this point, you need to create the access file and
+          define some authorization rules in it.</para>
+
+        <para>The format of the access file is the same familiar one
+          used by <command>svnserve.conf</command> and runtime
+          configuration files.  Lines that start with hash
+          (<literal>#</literal>)) are ignored.  In its simplest form,
+          each <quote>section</quote> is a path within the repository,
+          and the authenticated usernames are the variables.  The
+          value of each variable describes the user's level of access
+          to the repository path: either <literal>r</literal>
+          (read-only) or <literal>rw</literal> (read-write).  If the
+          user is not mentioned at all, no access is allowed.</para>
+
+        <screen>
+[/branches/calc/bug-142]
+harry = rw
+sally = r
+</screen>
+
+        <para>In this example, user harry has full read and write
+          access on the <filename>/branches/calc/bug-142</filename>
+          directory, but user sally has read-only
+          access.  Any other users are blocked from accessing this
+          directory.</para>
+
+        <para>Of course, permissions <quote>inherit</quote> from
+          parent to child directory.  That means that we can specify a
+          subdirectory with a different access policy for
+          sally:</para>
+
+        <screen>
+[/branches/calc/bug-142]
+harry = rw
+sally = r
+
+# give sally write access only to the 'testing' subdir
+[/branches/calc/bug-142/testing]
+sally = rw
+</screen>
+
+        <para>Now sally can write to the <filename>testing</filename>
+          subdirectory of the branch, but can still only read other
+          parts.  Harry, meanwhile, continues to have complete
+          read-write access to the whole branch.</para>
+
+        <para>By default, nobody has any access to the repository at
+          all.  That means that if you're starting with an empty file,
+          you'll probably want to give at least read permission to all
+          users at the root of the repository.  You can do this by
+          using the asterisk variable (<literal>*</literal>), which
+          means <quote>all users</quote>:</para>
+
+        <screen>
+[/]
+* = r
+</screen>
+
+        <para>This is a common setup; once all users have read-access
+          to the repository, you can give explicit
+          <literal>rw</literal> permission to certain users on certain
+          subdirectories.  Fortunately, the access file allows you to
+          define whole groups of users, much like the Unix
+          <filename>/etc/group</filename> file:</para>
+
+        <screen>
+[groups]
+calc-developers = harry, sally, joe
+paint-developers = frank, sally, jane
+everyone = harry, sally, joe, frank, sally, jane
+</screen>
+
+        <para>Groups can be granted access control just like users.
+          Distinguish them with a <literal>@</literal> prefix:</para>
+
+        <screen>
+[/projects/calc]
+@calc-developers = rw
+
+[/projects/paint]
+@paint-developers = rw
+jane = r 
+</screen>
+
+        <para>...and that's pretty much all there is to it.</para>
+
+        <para>A final note about <command>mod_authz_svn</command>:
+          because it demands an authenticated user at all times, this
+          means your repository cannot be accessed anonymously.  In
+          the simpler authorization setup (<xref
+          linkend="svn-ch-6-sect-4.4.1"/>), it's possible for certain
+          HTTP requests to happen without any authentication at all.
+          But at the moment, <command>mod_authz_svn</command> requires
+          an authenticated username to be associated with every HTTP
+          request.  As a workaround, you might want to create a
+          <quote>guest</quote> user with read-access to your
+          repository, and announce the account to the general
+          public.</para>        
 
       </sect3>
-
 
     </sect2>
 
@@ -1373,11 +1631,39 @@ $
           path&mdash;browsers need to be able to read your stylesheets
           in order to make use of them!</para>
 
-        <para><emphasis>add a sidebar about why there's no URL for
-            older revisions (use 'ls' or ViewCVS (xref) instead).
-            Also, pointer to DTD for xslt
-            directive??</emphasis></para>
-        
+        <sidebar>
+          <title>Can I view older revisions?</title>
+
+          <para>With an ordinary web browser?  In one word: nope.  At
+            least, not with <command>mod_dav_svn</command> as your
+            only tool.</para>
+
+          <para>Your web browser only speaks ordinary HTTP.  That
+            means it only knows how to GET public URLs, which
+            represent the latest versions of files and directories.
+            According to the WebDAV/deltaV spec, each server defines a
+            private URL syntax for older versions of resources, and
+            that syntax is opaque to clients.  To find an older
+            version of a file, a client must follow a specific
+            procedure to <quote>discover</quote> the proper URL; the
+            procedure involves issuing a series of WebDAV PROPFIND
+            requests and understanding deltaV concepts.  This is
+            something your web browser simply can't do.</para>
+
+          <para>So to answer the question, one obvious way to see
+            older revisions of files and directories is by passing the
+            <option>--revision</option> argument to the <command>svn
+            list</command> and <command>svn cat</command> commands.
+            To browse old revisions with your web browser, however,
+            you can use third-party software.  A good example of this
+            is ViewCVS (<systemitem
+            class="url">http://viewcvs.sourceforge.net/</systemitem>).
+            ViewCVS was originally written to display CVS repositories
+            through the web, and the latest bleeding-edge versions (at
+            the time of writing) are able to understand Subversion
+            repositories as well.</para>
+        </sidebar>
+
       </sect3>
 
       <sect3 id="svn-ch-6-sect-4.5.2">
@@ -1439,10 +1725,9 @@ $
     <title>Using Multiple Servers</title>
 
     <para>You've seen how a repository can be accessed in many
-      different ways.  But is it possible&mdash;or safe&mdash;for
-      your repository to be accessed by multiple repository access
-      methods simultaneously?  The answer is yes, provided you use a
-      bit of foresight.</para>
+      different ways.  But is it possible&mdash;or safe&mdash;for your
+      repository to be accessed by multiple methods simultaneously?
+      The answer is yes, provided you use a bit of foresight.</para>
     
     <para>At any given time, these processes may require read and/or
       write access to your repository:</para>
@@ -1490,10 +1775,18 @@ $
       can write a similar wrapper script for the
       <command>svnserve</command> program, and add a <command>umask
       002</command> command to Apache's own startup script,
-      <filename>apachectl</filename>.</para>
+      <filename>apachectl</filename>.  For example:</para>
 
-    <!-- TODO: example of such a wrapper script? -->
-    
+    <screen>
+$ cat /usr/local/bin/svn
+
+#!/bin/sh
+
+umask 002
+/usr/local/subversion/bin/svn
+
+</screen>
+
     <para>Once you've jumped through these hoops, your repository
       should be accessible by all the necessary processes.  It may
       seem a bit messy and complicated, but the problems of having
