@@ -344,11 +344,6 @@ Makefile  integer.c  button.c  .svn/
                 <entry>direct repository access (on local disk)</entry>
               </row>
               <row>
-                <entry>svn://</entry>
-                <entry>access via custom TCP/IP protocol to an
-                  <quote>svnserve</quote> server</entry>
-              </row>
-              <row>
                 <entry>http://</entry>
                 <entry>access via WebDAV protocol to Subversion-aware
                   Apache server</entry>
@@ -356,6 +351,11 @@ Makefile  integer.c  button.c  .svn/
               <row>
                 <entry>https://</entry>
                 <entry>same as http://, but with SSL encryption.</entry>
+              </row>
+              <row>
+                <entry>svn://</entry>
+                <entry>access via custom TCP/IP protocol to an
+                  <quote>svnserve</quote> server</entry>
               </row>
             </tbody>
           </tgroup>
