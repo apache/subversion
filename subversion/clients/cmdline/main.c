@@ -161,9 +161,9 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "blame", svn_cl__blame, {"annotate", "ann"},
     "Output the content of specified files or URLs with revision and\n"
     "author information in-line.\n"
-    "\n"
-    "Blame will cross copy history by default; use --strict to disable this.\n"
-    "usage: blame TARGET...\n",
+    "usage: blame TARGET...\n\n"
+    "Blame will cross copy history by default; use --strict to disable\n"
+    "this.\n",
     {'r', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__strict_opt} },
 
   { "cat", svn_cl__cat, {0},
