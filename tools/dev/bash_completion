@@ -26,12 +26,16 @@ _svn()
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
 		return 0
 	else
-		# if our first command was "help", then complete on any 
-		# svn command, since they all have valid help messages
-		if [[ ${COMP_WORDS[1]} = "help" ]] ; then
+		# if we're completing for 'svn help' or 'svn h', then just 
+		# complete on any valid svn command
+		case ${COMP_WORDS[1]} in
+		help|h)
 			COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
 			return 0
-		fi
+			;;
+		*)
+			;;
+		esac
 	fi
 
 	# options that require a parameter
