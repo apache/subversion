@@ -69,8 +69,19 @@ typedef struct {
   svn_boolean_t *aborted;
   svn_boolean_t done;
   apr_pool_t *pool;
+  apr_pool_t *file_pool;
+  int file_refs;
 } ra_svn_driver_state_t;
 
+/* Works for both directories and files; however, the pool handling is
+   different for files.  To save space during commits (where file
+   batons generally last until the end of the commit), token entries
+   for files are all created in a single reference-counted pool (the
+   file_pool member of the driver state structure), which is cleared
+   at close_file time when the reference count hits zero.  So the pool
+   field in this structure is vestigial for files, and we use it for a
+   different purpose instead: at apply-textdelta time, we set it to a
+   subpool of the file pool, which is destroyed in textdelta-end. */
 typedef struct {
   const char *token;
   void *baton;
@@ -539,17 +550,14 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
   const char *path, *token, *file_token, *copy_path;
   svn_revnum_t copy_rev;
   ra_svn_token_entry_t *entry, *file_entry;
-  apr_pool_t *subpool;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccc(?cr)", &path, &token,
                                  &file_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
-
-  /* File may outlive parent directory, so use ds->pool here. */
-  subpool = svn_pool_create(ds->pool);
-  file_entry = store_token(ds, NULL, file_token, TRUE, subpool);
+  ds->file_refs++;
+  file_entry = store_token(ds, NULL, file_token, TRUE, ds->file_pool);
   SVN_CMD_ERR(ds->editor->add_file(path, entry->baton, copy_path, copy_rev,
-                                   subpool, &file_entry->baton));
+                                   ds->file_pool, &file_entry->baton));
   return SVN_NO_ERROR;
 }
 
@@ -561,16 +569,13 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
   const char *path, *token, *file_token;
   svn_revnum_t rev;
   ra_svn_token_entry_t *entry, *file_entry;
-  apr_pool_t *subpool;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccc(?r)", &path, &token,
                                  &file_token, &rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
-
-  /* File may outlive parent directory, so use ds->pool here. */
-  subpool = svn_pool_create(ds->pool);
-  file_entry = store_token(ds, NULL, file_token, TRUE, subpool);
-  SVN_CMD_ERR(ds->editor->open_file(path, entry->baton, rev, subpool,
+  ds->file_refs++;
+  file_entry = store_token(ds, NULL, file_token, TRUE, ds->file_pool);
+  SVN_CMD_ERR(ds->editor->open_file(path, entry->baton, rev, ds->file_pool,
                                     &file_entry->baton));
   return SVN_NO_ERROR;
 }
@@ -593,6 +598,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
   if (entry->dstream)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             "Apply-textdelta already active");
+  entry->pool = svn_pool_create(ds->file_pool);
   SVN_CMD_ERR(ds->editor->apply_textdelta(entry->baton, base_checksum,
                                           entry->pool, &wh, &wh_baton));
   entry->dstream = svn_txdelta_parse_svndiff(wh, wh_baton, TRUE, entry->pool);
@@ -634,6 +640,7 @@ static svn_error_t *ra_svn_handle_textdelta_end(svn_ra_svn_conn_t *conn,
                             "Apply-textdelta not active");
   SVN_CMD_ERR(svn_stream_close(entry->dstream));
   entry->dstream = NULL;
+  apr_pool_destroy(entry->pool);
   return SVN_NO_ERROR;
 }
 
@@ -649,8 +656,7 @@ static svn_error_t *ra_svn_handle_change_file_prop(svn_ra_svn_conn_t *conn,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc(?s)", &token, &name,
                                  &value));
   SVN_ERR(lookup_token(ds, token, TRUE, &entry));
-  SVN_CMD_ERR(ds->editor->change_file_prop(entry->baton, name, value,
-                                           entry->pool));
+  SVN_CMD_ERR(ds->editor->change_file_prop(entry->baton, name, value, pool));
   return SVN_NO_ERROR;
 }
 
@@ -671,7 +677,8 @@ static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
   /* Close the file and destroy the baton. */
   SVN_CMD_ERR(ds->editor->close_file(entry->baton, text_checksum, pool));
   apr_hash_set(ds->tokens, token, APR_HASH_KEY_STRING, NULL);
-  apr_pool_destroy(entry->pool);
+  if (--ds->file_refs == 0)
+    apr_pool_clear(ds->file_pool);
   return SVN_NO_ERROR;
 }
 
@@ -761,6 +768,8 @@ svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
   state.aborted = aborted;
   state.done = FALSE;
   state.pool = pool;
+  state.file_pool = svn_pool_create(pool);
+  state.file_refs = 0;
 
   while (!state.done)
     {
