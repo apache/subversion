@@ -59,8 +59,7 @@ Candidate changes:
     Justification:  users have noticed unintelligible XML parse error.
     Notes:  one-line change to mod_dav_svn allows a real error to get through.
     Votes:
-      +1: sussman
-      +0: dlr
+      +1: sussman, dlr
 
   * r8253
     Make svnlook use apr_tempdir(), instead of trying to write in '.'
@@ -74,8 +73,7 @@ Candidate changes:
     Justification: users (especially on win32) have reported this.
     Notes:  whoops, we forgot to uri-encode the root_path.  duh.
     Votes:
-      +1: sussman
-      +0: dlr
+      +1: sussman, dlr
 
   * r8431
     Bugfix to commits: allow deletions below schedule-add-with-history dirs.
@@ -97,8 +95,7 @@ Candidate changes:
     Justification:  They won't run at all!
     Notes: 
     Votes:
-      +1: sussman, blair
-      +0: dlr
+      +1: sussman, blair, dlr
 
   * r8564
     Adjust contrib/client-side/search-svnlog.pl for new 'svn log' output.
