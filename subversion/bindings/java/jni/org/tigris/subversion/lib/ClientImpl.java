@@ -32,12 +32,7 @@ public class ClientImpl implements org.tigris.subversion.lib.Client {
 
   public native void add(String path, boolean recursive) throws SubversionException;
 
-  public native void unAdd(String path) throws SubversionException;
-
   public native void delete(String path, boolean force) throws SubversionException;
-
-  public native void unDelete(String path, boolean recursive)
-    throws SubversionException;
 
   public native void performImport(TreeDeltaEditor beforeEditor,
       TreeDeltaEditor afterEditor, String path, String url,
