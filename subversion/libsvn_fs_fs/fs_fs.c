@@ -3443,6 +3443,9 @@ get_write_lock (svn_fs_t *fs,
   
   lock_filename = path_lock (fs, pool);
 
+  /* svn 1.1.1 and earlier deferred lock file creation to the first
+     commit.  So in case the repository was created by an earlier
+     version of svn, check the lock file here. */
   SVN_ERR (svn_io_check_path (lock_filename, &kind, pool));
   if ((kind == svn_node_unknown) || (kind == svn_node_none))
     SVN_ERR (svn_io_file_create (lock_filename, "", pool));
@@ -3591,6 +3594,7 @@ svn_fs_fs__create (svn_fs_t *fs,
                                                        pool),
                                         pool));
   SVN_ERR (svn_io_file_create (path_current (fs, pool), "0 1 1\n", pool));
+  SVN_ERR (svn_io_file_create (path_lock (fs, pool), "", pool));
 
   apr_uuid_get (&uuid);
   apr_uuid_format (buffer, &uuid);
