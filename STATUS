@@ -14,7 +14,7 @@ Candidate changes:
     svn:author property from a revision.
     Justification: Maybe you missed the part where I said, "SEGFAULT" ?
     Votes:
-      +1: cmpilato, naked
+      +1: cmpilato, naked, dlr
 
   * r9045
     Fix bug in the changes table change-folding code.
