@@ -159,6 +159,16 @@ class CollectData(rcsparse.Sink):
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
     self.default_branches_db = default_branches_db
     self.metadata_db = Database(METADATA_DB, 'n')
+
+    # Branch and tag label types.
+    self.BRANCH_LABEL = 0
+    self.VENDOR_BRANCH_LABEL = 1
+    self.TAG_LABEL = 2
+    # A label type to string conversion list
+    self.LABEL_TYPES = [ 'branch', 'vendor branch', 'tag' ]
+    # A dict mapping label names to types
+    self.label_type = { }
+
     # See set_fname() for initializations of other variables.
 
   def set_fname(self, fname):
@@ -262,13 +272,26 @@ class CollectData(rcsparse.Sink):
                        "   '%s' is not a valid tag or branch name, ignoring\n"
                        % (warning_prefix, self.fname, name))
     elif branch_tag.match(revision):
+      label_type = self.BRANCH_LABEL
       self.add_cvs_branch(revision, name)
     elif vendor_tag.match(revision):
+      label_type = self.VENDOR_BRANCH_LABEL
       self.set_branch_name(revision, name)
     else:
+      label_type = self.TAG_LABEL
       if not self.taglist.has_key(revision):
         self.taglist[revision] = []
       self.taglist[revision].append(name)
+
+    try:
+      if self.label_type[name] != label_type:
+        sys.exit("%s: in '%s':\n"
+                 "   '%s' is defined as %s here, but as a %s elsewhere"
+                 % (error_prefix, self.fname, name,
+                    self.LABEL_TYPES[label_type],
+                    self.LABEL_TYPES[self.label_type[name]]))
+    except KeyError:
+      self.label_type[name] = label_type
 
   def define_revision(self, revision, timestamp, author, state,
                       branches, next):
