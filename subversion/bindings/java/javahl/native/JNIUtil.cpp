@@ -250,7 +250,7 @@ void JNIUtil::handleAPRError(int error, const char *op)
 	{
 		return;
 	}
-    apr_snprintf(buffer, formatBufferSize, "an error occured in funcation %s with return value %d",
+    apr_snprintf(buffer, formatBufferSize, "an error occurred in function %s with return value %d",
 		op, error);
 
 	throwError(buffer);
