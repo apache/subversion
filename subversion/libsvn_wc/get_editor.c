@@ -856,6 +856,12 @@ change_file_prop (void *file_baton,
   svn_error_t *err;
   struct file_baton *fb = file_baton;
 
+  /* Duplicate storage of name/value pair;  they should live in the
+     file baton's pool, not some pool within the editor's driver. :)
+  */
+  svn_string_t *my_name = svn_string_dup (name, fb->pool);
+  svn_string_t *my_value = svn_string_dup (value, fb->pool);
+
   /* Create the file's in-memory prophashes if they don't yet exist */
   if (! fb->baseprops)
     {
@@ -893,17 +899,17 @@ change_file_prop (void *file_baton,
      doesn't yet exist, now it does.  If it already exists, it will be
      overwritten.  If value is NULL, the key is removed altogether.
      How fortuituous that these behaviors align so perfectly.  ;) */
-  apr_hash_set (fb->baseprops, name->data, name->len, value);
+  apr_hash_set (fb->baseprops, my_name->data, my_name->len, my_value);
   
   /* With our `local' properties, we want to signal conflicts on a
      merge, so we should first check to see if the hash key exists.  */
   {
-    void *val = apr_hash_get (fb->localprops, name->data, name->len);
+    void *val = apr_hash_get (fb->localprops, my_name->data, my_name->len);
     if (val)
       fb->prop_conflict = 1;
   }
   /* Now do the conflicting merge anyway. */
-  apr_hash_set (fb->localprops, name->data, name->len, value);
+  apr_hash_set (fb->localprops, my_name->data, my_name->len, my_value);
 
   /* Let close_file() know to write a future log entry about this: */
   fb->prop_changed = 1;
@@ -1060,6 +1066,9 @@ close_file (void *file_baton)
   
   if (fb->prop_changed)
     {
+      svn_string_t *tmp_props, *real_props;
+      svn_string_t *tmp_prop_base, *real_prop_base;
+
       /* Write the merged pristine prop hash to a file in SVN/tmp/prop-base/ */
       base_prop_tmp_path = svn_wc__adm_path (fb->dir_baton->path,
                                              TRUE, /* tmp area */
@@ -1082,22 +1091,69 @@ close_file (void *file_baton)
       err = save_prop_file (local_prop_tmp_path, fb->localprops, fb->pool);
       if (err) return err;
       
-      /* Merge props. */
+
+      /* Generate proper *relative* pathnames for the logfile `mv'
+         entries.  For example, we want something like:
+
+           <mv name="SVN/tmp/prop-base/name"
+               dest="SVN/prop-base/name">
+
+        Rather than something like this:
+
+           <mv name="/home/joe/project/SVN/tmp/prop-base/name"
+               dest="/home/joe/project/SVN/prop-base/name">
+
+        The problem with the latter is that is violates the
+        separability of SVN subdirectories, should we ever need to do
+        cleanup or log recovery. 
+      */
+      tmp_prop_base = svn_wc__adm_path (svn_string_create ("", fb->pool),
+                                        1, /* tmp */
+                                        fb->pool,
+                                        SVN_WC__ADM_PROP_BASE,
+                                        fb->name->data,
+                                        NULL);
+      real_prop_base = svn_wc__adm_path (svn_string_create ("", fb->pool),
+                                         0, /* no tmp */
+                                         fb->pool,
+                                         SVN_WC__ADM_PROP_BASE,
+                                         fb->name->data,
+                                         NULL);
+
+      tmp_props = svn_wc__adm_path (svn_string_create ("", fb->pool),
+                                    1, /* tmp */
+                                    fb->pool,
+                                    SVN_WC__ADM_PROPS,
+                                    fb->name->data,
+                                    NULL);
+      real_props = svn_wc__adm_path (svn_string_create ("", fb->pool),
+                                     0, /* no tmp */
+                                     fb->pool,
+                                     SVN_WC__ADM_PROPS,
+                                     fb->name->data,
+                                     NULL);
+
+
+      /* Write log entry to move pristine tmp copy to real pristine area. */
       svn_xml_make_open_tag (&entry_accum,
                              fb->pool,
                              svn_xml_self_closing,
-                             SVN_WC__LOG_MERGE_PROPS,
+                             SVN_WC__LOG_MV,
                              SVN_WC__LOG_ATTR_NAME,
-                             fb->name,
+                             tmp_prop_base,
+                             SVN_WC__LOG_ATTR_DEST,
+                             real_prop_base,
                              NULL);
-      
-      /* Replace prop base. */
+
+      /* Write log entry to move working tmp copy to real working area. */
       svn_xml_make_open_tag (&entry_accum,
                              fb->pool,
                              svn_xml_self_closing,
-                             SVN_WC__LOG_REPLACE_PROP_BASE,
+                             SVN_WC__LOG_MV,
                              SVN_WC__LOG_ATTR_NAME,
-                             fb->name,
+                             tmp_props,
+                             SVN_WC__LOG_ATTR_DEST,
+                             real_props,
                              NULL);
     }
 
