@@ -760,14 +760,135 @@ svn_fs_fs__get_locks (apr_hash_t **locks,
 {
   char *abs_path;
   struct dir_walker_baton baton;
-  baton.fs = fs;
-  baton.locks = *locks;
+  apr_finfo_t finfo;
+  apr_status_t status;
+
+  /* Make the hash that we'll return. */
+  *locks = apr_hash_make(pool);
 
   /* Compose the absolute/rel path to PATH */
   SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
+
+  status = apr_stat (&finfo, abs_path, APR_FINFO_TYPE, pool);
+
+  /* If base dir doesn't exist, then we don't have any locks. */
+  if (APR_STATUS_IS_ENOENT (status))
+      return SVN_NO_ERROR;
+
+  baton.fs = fs;
+  baton.locks = *locks;
 
   SVN_ERR (svn_io_dir_walk (abs_path, APR_FINFO_TYPE, locks_dir_walker,
                             &baton, pool));
 
   return SVN_NO_ERROR;
 }
+
+/* Utility function:  verify that a lock can be used.
+
+   If no username is attached to the FS, return SVN_ERR_FS_NO_USER.
+
+   If the FS username doesn't match LOCK's owner, return
+   SVN_ERR_FS_LOCK_OWNER_MISMATCH.
+
+   If FS hasn't been supplied with a matching lock-token for LOCK,
+   return SVN_ERR_FS_BAD_LOCK_TOKEN.
+
+   Otherwise return SVN_NO_ERROR.
+
+   ###It pains me that I had to copy and paste this and verify_locks()
+      from libsvn_base. -Fitz
+ */
+static svn_error_t *
+verify_lock (svn_fs_t *fs,
+             svn_lock_t *lock,
+             apr_pool_t *pool)
+{
+  if ((! fs->access_ctx) || (! fs->access_ctx->username))
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_USER, NULL,
+       _("Cannot verify lock on path '%s'; no username available"),
+       lock->path);
+  
+  else if (strcmp (fs->access_ctx->username, lock->owner) != 0)
+    return svn_error_createf 
+      (SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
+       _("User %s does not own lock on path '%s' (currently locked by %s)"),
+       fs->access_ctx->username, lock->path, lock->owner);
+
+  else if (apr_hash_get (fs->access_ctx->lock_tokens, lock->token,
+                         APR_HASH_KEY_STRING) == NULL)
+    return svn_error_createf 
+      (SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+       _("Cannot verify lock on path '%s'; no matching lock-token available"),
+       lock->path);
+    
+  return SVN_NO_ERROR;
+}
+
+
+/* Utility function: verify that an entire hash of LOCKS can all be used.
+
+   Loop over hash, call svn_fs__verify_lock() on each lock, throw any
+   of the three specific errors when an usuable lock is encountered.
+   If all locks are usable, return SVN_NO_ERROR.
+ */
+static svn_error_t *
+verify_locks (svn_fs_t *fs,
+              apr_hash_t *locks,
+              apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first (pool, locks); hi; hi = apr_hash_next (hi))
+    {
+      void *lock;
+
+      apr_hash_this (hi, NULL, NULL, &lock);
+      SVN_ERR (verify_lock (fs, lock, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* The main routine for lock enforcement, used throughout libsvn_fs_fs. */
+svn_error_t *
+svn_fs_fs__allow_locked_operation (const char *path,
+                                   svn_node_kind_t kind,
+                                   svn_fs_t *fs,
+                                   svn_boolean_t recurse,
+                                   apr_pool_t *pool)
+{
+  if (kind == svn_node_dir && recurse)
+    {
+      apr_hash_t *locks;
+
+      /* Discover all locks at or below the path. */
+      SVN_ERR (svn_fs_fs__get_locks (&locks, fs, path, pool));
+
+      /* Easy out. */
+      if (apr_hash_count (locks) == 0)
+          return SVN_NO_ERROR;
+
+      /* Some number of locks exist below path; are we allowed to
+         change them? */
+      return verify_locks (fs, locks, pool);      
+    }
+
+  /* We're either checking a file, or checking a dir non-recursively: */
+    {
+      svn_lock_t *lock;
+
+      /* Discover any lock attached to the path. */
+      SVN_ERR (get_lock_from_path_helper (fs, &lock, path, pool));
+
+      /* Easy out. */
+      if (! lock)
+        return SVN_NO_ERROR;
+
+      /* The path is locked;  are we allowed to change it? */
+      return verify_lock (fs, lock, pool);
+    }
+}
+

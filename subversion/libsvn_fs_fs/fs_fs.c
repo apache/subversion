@@ -37,6 +37,7 @@
 #include "fs.h"
 #include "err.h"
 #include "tree.h"
+#include "lock.h"
 #include "dag.h"
 #include "revs-txns.h"
 #include "key-gen.h"
@@ -3471,6 +3472,8 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   apr_off_t changed_path_offset, offset;
   char *buf;
   apr_hash_t *txnprops;
+  apr_hash_t *changed_paths;
+  apr_hash_index_t *hi;
 
   /* First grab a write lock. */
   SVN_ERR (get_write_lock (fs, subpool));
@@ -3485,6 +3488,44 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
       svn_pool_destroy (subpool);
       return svn_error_create (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
                                _("Transaction out of date"));
+    }
+
+  /* Locks may have been added (or stolen) between the calling of
+     previous svn_fs.h functions and svn_fs_commit_txn(), so we need
+     to re-examine every changed-path in the txn and re-verify all
+     discovered locks. */
+  SVN_ERR (svn_fs_fs__txn_changes_fetch (&changed_paths, fs, txn->id, 
+                                         NULL, pool));
+
+  for (hi = apr_hash_first (pool, changed_paths);
+       hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      const char *path;
+      dag_node_t *node;
+      svn_fs_path_change_t *change;
+      svn_node_kind_t kind;
+      
+      apr_hash_this (hi, &key, NULL, &val);
+      path = key;
+      change = val;
+      
+      SVN_ERR (svn_fs_fs__dag_get_node
+               (&node, fs, change->node_rev_id, pool));
+      kind = svn_fs_fs__dag_node_kind (node);
+      /* always do a non-recursive lock check on a file. */         
+      if (kind == svn_node_file)
+        SVN_ERR (svn_fs_fs__allow_locked_operation (path, kind, fs, 0, pool));
+      /* if a directory wasn't added or deleted, then it must be
+         listed because of a propchange only;  do a non-recursive
+         lock-check.   otherwise, added/deleted dirs must be checked
+         recursively. */
+      else
+        SVN_ERR (svn_fs_fs__allow_locked_operation 
+                 (path, kind, fs,                 
+                  (change->change_kind == svn_fs_path_change_modify) ? 0 : 1,
+                  pool));
     }
 
   /* Get the next node_id and copy_id to use. */
