@@ -15,7 +15,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libexpat"=".\EXPAT-LITE\libexpat.dsp" - Package Owner=<4>
+Project: "libexpat"=".\expat-lite\libexpat.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -27,7 +27,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libsvn_client"=.\SUBVERSION\LIBSVN_CLIENT\libsvn_client.dsp - Package Owner=<4>
+Project: "libsvn_client"=.\subversion\libsvn_client\libsvn_client.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -42,7 +42,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libsvn_delta"=.\SUBVERSION\LIBSVN_DELTA\libsvn_delta.dsp - Package Owner=<4>
+Project: "libsvn_delta"=.\subversion\libsvn_delta\libsvn_delta.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -69,7 +69,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libsvn_subr"=.\SUBVERSION\LIBSVN_SUBR\libsvn_subr.dsp - Package Owner=<4>
+Project: "libsvn_subr"=.\subversion\libsvn_subr\libsvn_subr.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -84,7 +84,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libsvn_test_editor"=".\SUBVERSION\TESTS-COMMON\libsvn_test_editor.dsp" - Package Owner=<4>
+Project: "libsvn_test_editor"=".\subversion\tests-common\libsvn_test_editor.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -114,7 +114,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libsvn_wc"=.\SUBVERSION\LIBSVN_WC\libsvn_wc.dsp - Package Owner=<4>
+Project: "libsvn_wc"=.\subversion\libsvn_wc\libsvn_wc.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -129,7 +129,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "subversion_client"=.\SUBVERSION\CLIENT\subversion_client.dsp - Package Owner=<4>
+Project: "subversion_client"=.\subversion\client\subversion_client.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
