@@ -89,6 +89,9 @@ my__readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
       
       if (c == '\n')          /* line is finished. */
         {
+          /* store the newline in our bytestring (important!) */
+          svn_string_appendbytes (line, &c, 1, pool);
+
           return APR_SUCCESS;
         }
       
@@ -101,10 +104,60 @@ my__readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
 
 
 
+/* 
+   NOT EXPORTED.
+
+   Input:  a bytestring
+
+   Returns: offset of first non-whitespace character 
+
+      (if bytestring is ALL whitespace, then it returns the size of
+      the bytestring.  Be careful not to use this value as an array
+      offset!)
+
+*/
+
+size_t
+first__non_whitespace (svn_string_t *str)
+{
+}
+
+
+/* 
+   NOT EXPORTED.
+
+   Input:  a bytestring, starting search offset, search character, and pool
+
+   Returns:  1. the offset of the search character
+             2. a newly allocated substring in "substr".
+                * This substring starts at `start' and goes to the offset
+                * This substring has no whitespace at either end
+
+     If used repeatedly, this routine is like a poor man's `split' 
+     (combined with chomp).
+
+     If search character ISN'T in the bytestring, then return NULL for
+     a substring!
+             
+*/
+
+size_t
+slurp__to (svn_string_t *searchstr,
+           svn_string_t *substr,
+           size_t start, 
+           char sc,
+           ap_pool_t *pool)
+{
+}
+
+
 
 
 
 /* 
+   svn_parse()                        (finally)
+
+
    Input:  a filename and pool
 
    Output: a pointer to a hash of hashes, all built within the pool
@@ -132,8 +185,6 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
   ap_string_t *currentline;
   ap_status_t result;     
 
-  char c;          
-  ap_size_t n = 1;
   
   /* Create our uberhash */
   uberhash = ap_make_hash (pool);
@@ -176,39 +227,108 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
 
   while (my__readline (FILE, currentline, scratchpool) != APR_EOF)
     {
-      
+      char c;
+      size_t offset = first__non_whitespace (currentline);
 
+      if (offset == currentline->len)
+        {
+          /* whole line is whitespace, read next line! */
+          continue;
+        }
+      
+      c = currentline->data[offset];  /* our first non-white character */
+
+      switch (c)
+        {
+        case '#': 
+          {
+            /* It's a comment line, so read next line! */
+            continue;
+          };
+
+        case '[':
+          {
+            /* It's a new section!  Slurp up the section name */
+            svn_string_t *new_section;
+
+            slurp__to (currentline,  /* search current line */
+                       new_section,  /* place new substring here */
+                       offset,       /* start searching at latest offset */
+                       ']',          /* look for this ending character */
+                       pool);        /* build our substring in this pool */
+           
+            if (new_section == NULL)  /* couldn't find a ']' ! */
+              {
+                svn_string_t *msg = 
+                  svn_string_create 
+                  ("svn_parse(): warning: skipping malformed line: ", pool);
+                svn_string_appendstr (msg, currentline, pool);
+                
+                svn_handle_error 
+                  (svn_create_error 
+                   (result, FALSE, msg, pool), pool);
+                break;
+              }
+                                        
+            /* create new hash to hold this section's keys/vals  */
+            ap_hash_t new_section_hash = ap_make_hash (pool);  
+
+            /* make this the "active" hash */
+            current_hash = new_section_hash;  
+
+            /* store this new hash in our uberhash */
+            ap_hash_set (uberhash, 
+                         new_section,         /* key: ptr to bytestring */
+                         sizeof(svn_string_t),/* the length of the key */
+                         new_section_hash);   /* val: ptr to the new hash */
+            break;
+          }
+
+        default:
+          {
+            /* If it's not a blank line, comment line, or section line,
+               then it MUST be a key : val line!  */
+
+            /* Slurp up both the key and value, split on colons.  */
+
+            svn_string_t *new_key, *new_val;
+            size_t local_offset;
+
+            local_offset = slurp__to (currentline, /* search current line */
+                                      new_key,     /* put substring here */
+                                      offset,      /* start at this offset */
+                                      ':',         /* look for a colon */
+                                      pool);       /* build substr here */
+
+            if (new_key == NULL)
+              {
+                svn_string_t *msg = 
+                  svn_string_create 
+                  ("svn_parse(): warning: skipping malformed line: ", pool);
+                svn_string_appendstr (msg, currentline, pool);
+                
+                svn_handle_error 
+                  (svn_create_error 
+                   (result, FALSE, msg, pool), pool);
+                break;
+              }
+
+            slurp__to (currentline,
+                       new_val,
+                       local_offset,
+                       '\n',
+                       pool);
+
+            /* Store key and val in the currently active hash */
+            ap_hash_set (current_hash,
+                         new_key,             /* key: ptr to bytestring */
+                         sizeof(svn_string_t),
+                         new_val);            /* val: ptr to bytestring */
+            break;
+          }
+        }
 
     }
-
-
-  /*each time we find a comment line, break back to top of loop;
-
-     each time we find a new section, place the section name in
-     a bytestring called "new_section".  Then: */
-  {
-    ap_hash_t new_section_hash = ap_make_hash (pool);  /* create new hash */
-
-    current_hash = new_section_hash;  /* make this the "active" hash */
-
-    /* store this new hash in our uberhash */
-     
-    ap_hash_set (uberhash, 
-                 new_section,         /* key: ptr to bytestring */
-                 sizeof(svn_string_t),/* the length of the key */
-                 new_section_hash);   /* val: ptr to the new hash */
-  }
-
-  /* 
-     each time we find a key/val pair, put them in bytestrings called
-     "new_key" and "new_val", then:
-  */
-  {
-    ap_hash_set (current_hash,
-                 new_key,             /* key: ptr to bytestring */
-                 sizeof(svn_string_t),
-                 new_val);            /* val: ptr to bytestring */
-  }
 
      
   /* Close the file and free our scratchpool */
