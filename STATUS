@@ -82,3 +82,10 @@ Candidate changes:
       Showstopper when using symlinks.  One-liner.
     Votes:
       +1: bliss
+
+  * r11250
+    Fix #2060, make ls work when path contians non-ASCII chars over ra_dav.
+    Justification:
+      BFI, ls-R didn't work at all in this case, affects many GUI clients.
+    Votes:
+      +1: lundblad
