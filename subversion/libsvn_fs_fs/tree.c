@@ -48,7 +48,7 @@
 #include "revs-txns.h"
 #include "fs_fs.h"
 
-#include "../libsvn_fs/fs_loader.h"
+#include "../libsvn_fs/fs-loader.h"
 
 
 /* ### I believe this constant will become internal to reps-strings.c.

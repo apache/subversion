@@ -27,7 +27,7 @@
 #include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
-#include "../../libsvn_fs/fs_loader.h"
+#include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
 #include "txn-table.h"
 

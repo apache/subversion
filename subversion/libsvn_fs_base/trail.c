@@ -25,7 +25,7 @@
 #include "err.h"
 #include "bdb/bdb-err.h"
 #include "trail.h"
-#include "../libsvn_fs/fs_loader.h"
+#include "../libsvn_fs/fs-loader.h"
 
 
 #if defined(SVN_FS__TRAIL_DEBUG)

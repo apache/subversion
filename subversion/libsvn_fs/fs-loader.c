@@ -29,7 +29,7 @@
 #include "svn_path.h"
 #include "svn_private_config.h"
 
-#include "fs_loader.h"
+#include "fs-loader.h"
 
 #define DEFAULT_FS_TYPE "bdb"
 #define FS_TYPE_FILENAME "fs-type"

@@ -36,7 +36,7 @@
 #include "tree.h"
 #include "svn_private_config.h"
 
-#include "../libsvn_fs/fs_loader.h"
+#include "../libsvn_fs/fs-loader.h"
 
 
 

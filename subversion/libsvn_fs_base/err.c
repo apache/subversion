@@ -24,7 +24,7 @@
 
 #include "svn_fs.h"
 #include "err.h"
-#include "../libsvn_fs/fs_loader.h"
+#include "../libsvn_fs/fs-loader.h"
 
 svn_error_t *
 svn_fs_base__check_fs (svn_fs_t *fs)

@@ -42,7 +42,7 @@
 #include "key-gen.h"
 #include "fs_fs.h"
 
-#include "../libsvn_fs/fs_loader.h"
+#include "../libsvn_fs/fs-loader.h"
 
 /* Notes:
 

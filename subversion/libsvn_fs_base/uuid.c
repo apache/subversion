@@ -22,7 +22,7 @@
 #include "err.h"
 #include "uuid.h"
 #include "bdb/uuids-table.h"
-#include "../libsvn_fs/fs_loader.h"
+#include "../libsvn_fs/fs-loader.h"
 
 
 struct get_uuid_args

@@ -27,7 +27,7 @@
 #include "../err.h"
 #include "../trail.h"
 #include "../util/fs_skels.h"
-#include "../../libsvn_fs/fs_loader.h"
+#include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
 #include "dbt.h"
 #include "changes-table.h"

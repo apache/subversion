@@ -43,7 +43,7 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 
-#include "../libsvn_fs/fs_loader.h"
+#include "../libsvn_fs/fs-loader.h"
 
 
 /* Initializing a filesystem.  */

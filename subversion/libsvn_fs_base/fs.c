@@ -50,7 +50,7 @@
 #include "bdb/strings-table.h"
 #include "bdb/uuids-table.h"
 
-#include "../libsvn_fs/fs_loader.h"
+#include "../libsvn_fs/fs-loader.h"
 
 
 /* Checking for return values, and reporting errors.  */

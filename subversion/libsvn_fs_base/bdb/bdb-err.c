@@ -29,7 +29,7 @@
 #include "svn_fs.h"
 #include "../fs.h"
 #include "../err.h"
-#include "../../libsvn_fs/fs_loader.h"
+#include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
 
 

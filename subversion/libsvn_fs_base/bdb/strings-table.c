@@ -23,7 +23,7 @@
 #include "dbt.h"
 #include "../trail.h"
 #include "../key-gen.h"
-#include "../../libsvn_fs/fs_loader.h"
+#include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
 #include "strings-table.h"
 
