@@ -17,6 +17,7 @@
 #include "err.h"
 #include "dbt.h"
 #include "skel.h"
+#include "proplist.h"
 #include "validate.h"
 #include "rev-table.h"
 
@@ -271,29 +272,18 @@ txn_body_revision_prop (void *baton,
   struct revision_prop_args *args = baton;
 
   skel_t *skel;
-  skel_t *proplist, *prop;
+  skel_t *proplist;
 
   SVN_ERR (svn_fs__get_rev (&skel, args->fs, args->rev, trail));
 
   /* PROPLIST is the third element of revision skel.  */
   proplist = skel->children->next->next;
 
-  /* Search the proplist for a property with the right name.  */
-  for (prop = proplist->children; prop; prop = prop->next->next)
-    {
-      skel_t *name = prop;
-      skel_t *value = prop->next;
-
-      if (svn_fs__atom_matches_string (name, args->propname))
-        {
-          *(args->value_p) = svn_string_ncreate (value->data, value->len,
-                                                 trail->pool);
-          return SVN_NO_ERROR;
-        }
-    }
-
-  *(args->value_p) = 0;
-  return SVN_NO_ERROR;
+  /* Return the results of the generic property getting function. */
+  return svn_fs__get_prop (args->value_p,
+                           proplist,
+                           args->propname,
+                           trail->pool);
 }
 
 
@@ -331,30 +321,18 @@ static svn_error_t *
 txn_body_revision_proplist (void *baton, trail_t *trail)
 {
   struct revision_proplist_args *args = baton;
-
   skel_t *skel;
-  skel_t *proplist, *prop;
-  apr_hash_t *table;
+  skel_t *proplist;
 
   SVN_ERR (svn_fs__get_rev (&skel, args->fs, args->rev, trail));
 
   /* PROPLIST is the third element of revision skel.  */
   proplist = skel->children->next->next;
 
-  /* Build a hash table from the property list.  */
-  table = apr_hash_make (trail->pool);
-  for (prop = proplist->children; prop; prop = prop->next->next)
-    {
-      skel_t *name = prop;
-      skel_t *value = prop->next;
-
-      apr_hash_set (table, name->data, name->len,
-                    svn_string_ncreate (value->data, value->len,
-                                        trail->pool));
-    }
-
-  *args->table_p = table;
-  return SVN_NO_ERROR;
+  /* Return the results of the generic property hash getting function. */
+  return svn_fs__make_prop_hash (args->table_p,
+                                 proplist,
+                                 trail->pool);
 }
 
 
@@ -394,87 +372,15 @@ txn_body_change_rev_prop (void *baton, trail_t *trail)
 
   svn_fs_t *fs = args->fs;
   skel_t *skel;
-  skel_t *proplist, *prop;
-  skel_t *prev = NULL;
+  skel_t *proplist;
 
   SVN_ERR (svn_fs__get_rev (&skel, fs, args->rev, trail));
 
   /* PROPLIST is the third element of revision skel.  */
   proplist = skel->children->next->next;
 
-  /* Delete the skel, either replacing or adding the given property.  */
-  for (prop = proplist->children; prop; prop = prop->next->next)
-    {
-      skel_t *name = prop;
-      skel_t *value = prop->next;
-
-      if (svn_fs__atom_matches_string (name, args->name))
-        {
-          /* We've found the property we wish to change. */
-          if (! args->value)
-            {
-              /* If our new value for this is NULL, we'll remove the
-                 property altogether by effectively routing our linked
-                 list of properties around the current property
-                 name/value pair. */
-
-              if (prev)
-                {
-                  /* If this isn't the first pair in the list, this
-                     can be done by setting the previous value's next
-                     pointer to the name of the following property
-                     pair, if one exists, or zero if we are removing
-                     the last name/value pair currently in the
-                     list. */
-                  if (prop->next)
-                    prev->next->next = prop->next->next;
-                  else
-                    prev->next->next = 0;
-                }
-              else
-                {
-                  /* If, however, this is the first item in the list,
-                     we'll set the children pointer of the PROPLIST
-                     skel to the following name/value pair, if one
-                     exists, or zero if we're removing the only
-                     property pair in the list. */
-                  if (prop->next)
-                    proplist->children = prop->next->next;
-                  else
-                    proplist->children = 0;
-                }
-            }
-          else
-            {
-              value->data = args->value->data;
-              value->len = args->value->len;
-            }
-
-          /* Regardless of what we changed, we're done editing the
-             list now that we've acted on the property we found. */
-          break;
-        }
-
-      /* Squirrel away a pointer to this property name/value pair, as
-         we may need this in the next iteration of this loop. */
-      prev = prop;
-    }
-
-  if (! prop)
-    {
-      /* The property we were seeking to change is not currently in
-         the property list, so well add its name and desired value to
-         the beginning of the property list. */
-      svn_fs__prepend (svn_fs__mem_atom (args->value->data,
-                                         args->value->len,
-                                         trail->pool),
-                       proplist);
-      svn_fs__prepend (svn_fs__mem_atom (args->name->data,
-                                         args->name->len,
-                                         trail->pool),
-                       proplist);
-    }
-
+  /* Call the generic property setting function. */
+  SVN_ERR (svn_fs__set_prop (proplist, args->name, args->value, trail->pool));
   {
     int db_err;
     DBT key, value;

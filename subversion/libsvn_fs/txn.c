@@ -174,7 +174,8 @@ txn_body_abort_txn (void *baton, trail_t *trail)
   svn_fs_id_t *root_id, *ignored_id;
 
   SVN_ERR (svn_fs_txn_name (&txn_name, txn, txn->pool));
-  SVN_ERR (svn_fs__get_txn (&root_id, &ignored_id, txn->fs, txn_name, trail));
+  SVN_ERR (svn_fs__get_txn_ids (&root_id, &ignored_id, txn->fs, 
+                                txn_name, trail));
   SVN_ERR (svn_fs__dag_delete_if_mutable (txn->fs, root_id, trail));
   SVN_ERR (svn_fs__delete_txn (txn->fs, txn->id, trail));
 
@@ -211,8 +212,8 @@ txn_body_open_txn (void *baton,
   svn_fs_id_t *root_id;
   svn_fs_id_t *base_root_id;
 
-  SVN_ERR (svn_fs__get_txn (&root_id, &base_root_id,
-                            args->fs, args->name, trail));
+  SVN_ERR (svn_fs__get_txn_ids (&root_id, &base_root_id,
+                                args->fs, args->name, trail));
 
   *args->txn_p = make_txn (args->fs, args->name, trail->pool); 
   return SVN_NO_ERROR;
