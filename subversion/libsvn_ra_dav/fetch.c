@@ -45,29 +45,6 @@
 
 #define CHKERR(e) if (1) { err = (e); if (err != NULL) goto error; } else
 
-/* when we begin a checkout, we fetch these from the "public" resources to
-   steer us towards a Baseline Collection. we fetch the resourcetype to
-   verify that we're accessing a collection. */
-static const ne_propname starting_props[] =
-{
-  { "DAV:", "version-controlled-configuration" },
-  { SVN_PROP_PREFIX, "baseline-relative-path" },
-  { "DAV:", "resourcetype" },
-  { NULL }
-};
-
-/* we will fetch this from a Baseline to get the revision number */
-static const ne_propname version_name_prop = { "DAV:", "version-name" };
-
-/* when speaking to a Baseline to reach the Baseline Collection, fetch these
-   properties. */
-static const ne_propname baseline_props[] =
-{
-  { "DAV:", "baseline-collection" },
-  { "DAV:", "version-name" },
-  { NULL }
-};
-
 typedef struct {
   /* the information for this subdir. if rsrc==NULL, then this is a sentinel
      record in fetch_ctx_t.subdirs to close the directory implied by the
@@ -447,11 +424,10 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
                                     const char **bc_root)
 {
   apr_pool_t *pool = ras->pool;
-  svn_ra_dav_resource_t *rsrc;
-  const char *vcc;
-  const char *relpath;
-  const char *bc;
-  const char *vsn_name;
+  svn_boolean_t is_dir;
+  svn_string_t bc_url;
+  svn_string_t bc_relative;
+  svn_stringbuf_t *path;
 
   /* ### if REVISION means "get latest", then we can use an expand-property
      ### REPORT rather than two PROPFINDs to reach the baseline-collection */
@@ -461,12 +437,10 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
   SVN_ERR( svn_ra_dav__get_activity_url(activity_url, ras, ras->root.path,
                                         pool) );
 
-  /* fetch the DAV:version-controlled-configuration, and the
-     svn:baseline-relative-path properties from the session root URL */
-
-  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, ras->root.path,
-                                          NULL, starting_props, pool) );
-  if (!rsrc->is_collection)
+  SVN_ERR( svn_ra_dav__get_baseline_info(&is_dir, &bc_url, &bc_relative,
+                                         target_rev, ras->sess,
+                                         ras->root.path, revision, pool) );
+  if (!is_dir)
     {
       /* ### eek. what to do? */
 
@@ -475,72 +449,13 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
                               "URL does not identify a collection.");
     }
 
-  vcc = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
-  relpath = apr_hash_get(rsrc->propset,
-                         SVN_RA_DAV__PROP_BASELINE_RELPATH,
-                         APR_HASH_KEY_STRING);
-  if (vcc == NULL || relpath == NULL)
-    {
-      /* ### better error reporting... */
-
-      /* ### need an SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                              "The VCC and/or relative-path properties "
-                              "were not found on the resource.");
-    }
-
-  if (revision == SVN_INVALID_REVNUM)
-    {
-      /* Fetch the latest revision */
-
-      const svn_string_t *baseline;
-
-      /* Get the Baseline from the DAV:checked-in value, then fetch its
-         DAV:baseline-collection property. */
-      /* ### should wrap this with info about rsrc==VCC */
-      SVN_ERR( svn_ra_dav__get_one_prop(&baseline, ras->sess, vcc, NULL,
-                                        &svn_ra_dav__checked_in_prop, pool) );
-
-      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, 
-                                              baseline->data, NULL,
-                                              baseline_props, pool) );
-    }
-  else
-    {
-      /* Fetch a specific revision */
-
-      char label[20];
-
-      /* ### send Label hdr, get DAV:baseline-collection [from the baseline] */
-
-      apr_snprintf(label, sizeof(label), "%ld", revision);
-      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, vcc, label,
-                                              baseline_props, pool) );
-    }
-
-  /* rsrc is the Baseline. We will checkout from the DAV:baseline-collection.
-     The revision we are checking out is in DAV:version-name */
-  bc = apr_hash_get(rsrc->propset,
-                    SVN_RA_DAV__PROP_BASELINE_COLLECTION, APR_HASH_KEY_STRING);
-  vsn_name = apr_hash_get(rsrc->propset,
-                          SVN_RA_DAV__PROP_VERSION_NAME, APR_HASH_KEY_STRING);
-  if (bc == NULL || vsn_name == NULL)
-    {
-      /* ### better error reporting... */
-
-      /* ### need an SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                              "DAV:baseline-collection and/or "
-                              "DAV:version-name was not present on the "
-                              "baseline resource.");
-    }
-
-  *target_rev = atol(vsn_name);
-
   /* The root for the checkout is the Baseline Collection root, plus the
      relative location of the public URL to its repository root. */
-  /* ### this assumes bc has a trailing slash. fix this code one day. */
-  *bc_root = apr_psprintf(pool, "%s%s", bc, relpath);
+
+  path = svn_stringbuf_create_from_string(&bc_url, pool);
+  svn_path_add_component_nts(path, bc_relative.data, svn_path_url_style);
+
+  *bc_root = path->data;
 
   return NULL;
 }
@@ -717,30 +632,15 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
                                            svn_revnum_t *latest_revnum)
 {
   svn_ra_session_t *ras = session_baton;
-  apr_pool_t *pool = ras->pool;
-  const svn_string_t *vcc;
-  const svn_string_t *baseline;
-  const svn_string_t *vsn_name;
-
-  /* ### this whole sequence can/should be replaced with an expand-property
-     ### REPORT when that is available on the server. */
 
   /* ### should we perform an OPTIONS to validate the server we're about
      ### to talk to? */
 
-  /* fetch the DAV:version-controlled-configuration from the session's URL */
-  SVN_ERR( svn_ra_dav__get_one_prop(&vcc, ras->sess, ras->root.path, NULL,
-                                    &svn_ra_dav__vcc_prop, pool) );
-
-  /* Get the Baseline from the DAV:checked-in value */
-  SVN_ERR( svn_ra_dav__get_one_prop(&baseline, ras->sess, vcc->data, NULL,
-                                    &svn_ra_dav__checked_in_prop, pool) );
-
-  /* The revision is in DAV:version-name on the latest Baseline */
-  SVN_ERR( svn_ra_dav__get_one_prop(&vsn_name, ras->sess, baseline->data, NULL,
-                                    &version_name_prop, pool) );
-
-  *latest_revnum = atol(vsn_name->data);
+  /* we don't need any of the baseline URLs and stuff, but this does
+     give us the latest revision number */
+  SVN_ERR( svn_ra_dav__get_baseline_info(NULL, NULL, NULL, latest_revnum,
+                                         ras->sess, ras->root.path,
+                                         SVN_INVALID_REVNUM, ras->pool) );
 
   SVN_ERR( svn_ra_dav__maybe_store_auth_info(ras) );
 
