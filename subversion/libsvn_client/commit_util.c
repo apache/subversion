@@ -1103,7 +1103,7 @@ do_item_commit (void **dir_baton,
       /* Add this file mod to the FILE_MODS hash. */
       mod->item = item;
       mod->file_baton = file_baton;
-      apr_hash_set (file_mods, item->url, APR_HASH_KEY_STRING, (void *)mod);
+      apr_hash_set (file_mods, item->url, APR_HASH_KEY_STRING, mod);
     }
   else if (file_baton)
     {

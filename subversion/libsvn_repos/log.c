@@ -303,8 +303,7 @@ svn_repos_get_logs3 (svn_repos_t *repos,
                      here in order to avoid more allocations.  */
                   svn_revnum_t *chrev = 
                     (((svn_revnum_t *)(changed_revs)->elts) + j);
-                  apr_hash_set (all_revs, (void *)chrev, sizeof (chrev), 
-                                (void *)1);
+                  apr_hash_set (all_revs, chrev, sizeof (chrev), (void *)1);
                 }
             }
 
