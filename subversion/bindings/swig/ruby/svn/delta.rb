@@ -116,6 +116,10 @@ module Svn
         dir_changed(parent_baton)
       end
       
+      def close_edit(baton)
+        @changed_dirs.sort!
+      end
+      
       private
       def dir_changed(baton)
         if baton[0]
