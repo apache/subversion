@@ -98,7 +98,8 @@ svn_client_switch (svn_revnum_t *result_rev,
      it needs a full tree lock to do so.  If someday the RA layer gets
      smarter about this, then we can start passing `recurse' below
      again.  See issue #1000 and related commits for details. */
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, TRUE, TRUE, pool));
+  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, TRUE, -1,
+                                   pool));
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   
   if (! entry)

@@ -607,8 +607,8 @@ svn_client__harvest_committables (apr_hash_t **committables,
           if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
             {
               svn_error_clear (err);
-              SVN_ERR (svn_wc_adm_open (&parent_access, NULL, parent,
-                                        FALSE, FALSE, subpool));
+              SVN_ERR (svn_wc_adm_open2 (&parent_access, NULL, parent,
+                                         FALSE, 0, subpool));
             }
           else if (err)
             {

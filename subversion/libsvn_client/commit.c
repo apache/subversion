@@ -1163,10 +1163,10 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       svn_pool_destroy (subpool);
     }
 
-  SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL, base_dir,
-           TRUE,  /* Write lock */
-           lock_base_dir_recursive, /* Tree lock */
-           pool));
+  SVN_ERR (svn_wc_adm_open2 (&base_dir_access, NULL, base_dir,
+                             TRUE,  /* Write lock */
+                             lock_base_dir_recursive ? -1 : 0, /* Depth */
+                             pool));
 
   if (!lock_base_dir_recursive)
     {
@@ -1200,10 +1200,11 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
             {
               target = APR_ARRAY_IDX (dirs_to_lock, i, const char *);
 
-              SVN_ERR (svn_wc_adm_open (&adm_access, base_dir_access, target,
-                       TRUE,  /* Write lock */
-                       FALSE, /* Tree lock */
-                       pool));
+              SVN_ERR (svn_wc_adm_open2 (&adm_access, base_dir_access,
+                                         target,
+                                         TRUE,  /* Write lock */
+                                         0,     /* Depth */
+                                         pool));
             }
         }
 
@@ -1214,10 +1215,11 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
             {
               target = APR_ARRAY_IDX (dirs_to_lock_recursive, i, const char *);
 
-              SVN_ERR (svn_wc_adm_open (&adm_access, base_dir_access, target,
-                       TRUE, /* Write lock */
-                       TRUE, /* Tree lock */
-                       pool));
+              SVN_ERR (svn_wc_adm_open2 (&adm_access, base_dir_access,
+                                         target,
+                                         TRUE, /* Write lock */
+                                         -1,   /* Depth */
+                                         pool));
             }
         }
     }

@@ -257,8 +257,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
             SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
           /* Let the working copy library handle the PATH. */
-          SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, 
-                                    TRUE, FALSE, subpool));
+          SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, parent_path, 
+                                     TRUE, 0, subpool));
           SVN_ERR (svn_client__wc_delete (path, adm_access, force, 
                                           FALSE, ctx, subpool));
           SVN_ERR (svn_wc_adm_close (adm_access));

@@ -276,8 +276,9 @@ svn_cl__info (apr_getopt_t *os,
 
       svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-      SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE,
-                                      opt_state->recursive, subpool));
+      SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target, FALSE,
+                                       opt_state->recursive ? -1 : 0,
+                                       subpool));
       SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));
       if (! entry)
         {

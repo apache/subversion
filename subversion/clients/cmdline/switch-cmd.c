@@ -124,8 +124,8 @@ svn_cl__switch (apr_getopt_t *os,
   switch_url = svn_path_canonicalize (switch_url, pool);
 
   /* Validate the target */
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE, FALSE,
-                                  pool));
+  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target, FALSE, 0,
+                                   pool));
   SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf 

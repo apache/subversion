@@ -1061,7 +1061,7 @@ log_do_committed (struct log_runner *loggy,
     if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
       {
         svn_error_clear (err);
-        SVN_ERR (svn_wc_adm_open (&paccess, NULL, pdir, TRUE, FALSE, pool));
+        SVN_ERR (svn_wc_adm_open2 (&paccess, NULL, pdir, TRUE, 0, pool));
         unassociated = TRUE;
       }
     else if (err)

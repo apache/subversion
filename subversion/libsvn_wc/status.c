@@ -1682,8 +1682,8 @@ svn_wc_status (svn_wc_status_t **status,
         {
           const char *parent_path = svn_path_dirname (path, pool);
           svn_wc_adm_access_t *parent_access;
-          SVN_ERR (svn_wc_adm_open (&parent_access, NULL, parent_path,
-                                    FALSE, FALSE, pool));
+          SVN_ERR (svn_wc_adm_open2 (&parent_access, NULL, parent_path,
+                                     FALSE, 0, pool));
           SVN_ERR (svn_wc_entry (&parent_entry, parent_path, parent_access,
                                  FALSE, pool));
         }

@@ -319,7 +319,8 @@ copy_dir_administratively (const char *src_path,
      After the commit, ra_dav should regenerate them and re-store them as
      an optimization.  Note we use the normal locking mechanism here, even
      though this directory has not yet been added to the parent. */
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_path, TRUE, TRUE, pool));
+  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, dst_path, TRUE, -1,
+                             pool));
   SVN_ERR (svn_wc__remove_wcprops (adm_access, TRUE, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
 
@@ -359,8 +360,8 @@ svn_wc_copy (const char *src_path,
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t src_kind;
 
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, src_path, FALSE, TRUE,
-                                  pool));
+  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, src_path, FALSE, -1,
+                                   pool));
 
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   

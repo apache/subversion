@@ -121,8 +121,8 @@ svn_client_log (const apr_array_header_t *targets,
           const svn_wc_entry_t *entry;
           const char *URL;
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
-          SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target,
-                                          FALSE, FALSE, pool));
+          SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target,
+                                           FALSE, 0, pool));
           SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
           if (! entry)
             {

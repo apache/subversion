@@ -740,8 +740,8 @@ svn_wc_delete (const char *path,
   svn_node_kind_t was_kind;
   svn_boolean_t was_deleted = FALSE; /* Silence a gcc uninitialized warning */
 
-  SVN_ERR (svn_wc_adm_probe_try (&dir_access, adm_access, path,
-                                 TRUE, TRUE, pool));
+  SVN_ERR (svn_wc_adm_probe_try2 (&dir_access, adm_access, path,
+                                  TRUE, -1, pool));
   if (dir_access)
     SVN_ERR (svn_wc_entry (&entry, path, dir_access, FALSE, pool));
   else
@@ -902,8 +902,9 @@ svn_wc_add (const char *path,
      Note that this is one of the few functions that is allowed to see
     'deleted' entries;  it's totally fine to have an entry that is
      scheduled for addition and still previously 'deleted'.  */
-  SVN_ERR (svn_wc_adm_probe_try (&adm_access, parent_access, path,
-                                 TRUE, copyfrom_url != NULL, pool));
+  SVN_ERR (svn_wc_adm_probe_try2 (&adm_access, parent_access, path,
+                                  TRUE, copyfrom_url != NULL ? -1 : 0,
+                                  pool));
   if (adm_access)
     SVN_ERR (svn_wc_entry (&orig_entry, path, adm_access, TRUE, pool));
   else
@@ -1022,9 +1023,12 @@ svn_wc_add (const char *path,
       
       /* We want the locks to persist, so use the access baton's pool */
       if (! orig_entry || orig_entry->deleted)
-        SVN_ERR (svn_wc_adm_open (&adm_access, parent_access, path,
-                                  TRUE, copyfrom_url != NULL,
-                                  svn_wc_adm_access_pool (parent_access)));
+        {
+          apr_pool_t* access_pool = svn_wc_adm_access_pool (parent_access);
+          SVN_ERR (svn_wc_adm_open2 (&adm_access, parent_access, path,
+                                     TRUE, copyfrom_url != NULL ? -1 : 0,
+                                     access_pool));
+        }
 
       /* We're making the same mods we made above, but this time we'll
          force the scheduling.  Also make sure to undo the

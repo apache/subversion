@@ -49,8 +49,8 @@ revert (const char *path,
 
   /* We need to open the parent of PATH, if PATH is not a wc root, but we
      don't know if path is a directory.  It gets a bit messy. */
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, TRUE, recursive,
-                                  pool));
+  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, TRUE,
+                                   recursive ? -1 : 0, pool));
   if ((err = svn_wc_is_wc_root (&wc_root, path, adm_access, pool)))
     goto out;
   if (! wc_root)
@@ -71,11 +71,12 @@ revert (const char *path,
                  is no way to close such a set. */
               svn_wc_adm_access_t *dir_access;
               if ((err = svn_wc_adm_close (adm_access))
-                  || (err = svn_wc_adm_open (&adm_access, NULL,
-                                             svn_path_dirname (path, pool),
-                                             TRUE, FALSE, pool))
-                  || (err = svn_wc_adm_open (&dir_access, adm_access, path,
-                                          TRUE, recursive, pool)))
+                  || (err = svn_wc_adm_open2 (&adm_access, NULL,
+                                              svn_path_dirname (path, pool),
+                                              TRUE, 0, pool))
+                  || (err = svn_wc_adm_open2 (&dir_access, adm_access,
+                                              path, TRUE,
+                                              recursive ? -1 : 0, pool)))
                 goto out;
             }
         }
