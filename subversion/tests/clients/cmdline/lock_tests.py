@@ -252,11 +252,35 @@ def steal_lock(sbox):
 
 
 #----------------------------------------------------------------------
-# II.B.2, II.C.2.e: Lock several files in wc A.  Query wc for all
-# locks and verify that all locks are present and correct.
+# II.B.2, II.C.2.e: Lock a file in wc A.  Query wc for the
+# lock and verify that all lock fields are present and correct.
 def examine_lock(sbox):
   "examine the fields of a lockfile for correctness"
-  raise svntest.Failure
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  fname = 'iota'
+  comment = 'This is a lock test.'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  # lock a file as wc_author
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', comment, file_path)
+
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'info', file_path)
+
+  lock_info = output[-5:-1]
+
+  if ((len(lock_info) != 4)
+      or lock_info[0].find('Lock Token: opaquelocktoken:')
+      or (not lock_info[1] == 'Lock Owner: ' + svntest.main.wc_author + '\n')
+      or (not lock_info[2] == 'Lock Comment: ' + comment + '\n')
+      or lock_info[3].find('Lock Creation Date:')):
+    raise svntest.Failure
 
 
 
@@ -288,7 +312,7 @@ test_list = [ None,
               unlock_file,
               XFail(break_lock),
               steal_lock,
-              Skip(examine_lock, 1),
+              examine_lock,
               Skip(handle_defunct_lock, 1),
               Skip(enforce_lock, 1),
              ]
