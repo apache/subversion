@@ -39,6 +39,43 @@ import random
 import md5
 import base64
 
+
+class VCActions:
+  def __init__(self):
+    pass
+  def add_file(self, path):
+    pass
+  def remove_file(self, path):
+    pass
+
+
+class CVSActions(VCActions):
+  def add_file(self, path):
+    cwd = os.getcwd()
+    try:
+      dirname, basename = os.path.split(path)
+      os.chdir(os.path.join(cwd, dirname))
+      os.system('cvs -Q add -m "Adding file to repository" ' + basename)
+    finally:
+      os.chdir(cwd)
+  def remove_file(self, path):
+    cwd = os.getcwd()
+    try:
+      dirname, basename = os.path.split(path)
+      os.chdir(os.path.join(cwd, dirname))
+      os.system('cvs -Q rm -f ' + basename)
+    finally:
+      os.chdir(cwd)
+
+
+class SVNActions(VCActions):
+  def add_file(self, path):
+    os.system('svn add --quiet ' + path)
+  def remove_file(self, path):
+    os.remove(path)
+    os.system('svn rm --quiet --force ' + path)
+
+    
 class hashDir:
   """Given a directory, creates a string containing all directories
   and files under that directory (sorted alphanumerically) and makes a
@@ -66,9 +103,10 @@ class hashDir:
 
 
 class Scrambler:
-  def __init__(self, seed, use_svn, dry_run):
-    self.use_svn = use_svn
+  def __init__(self, seed, vc_actions, dry_run):
+    self.vc_actions = vc_actions
     self.dry_run = dry_run
+    self.file_name = 'newfile.txt' 
     self.greeking = """
 ======================================================================
 This is some text that was inserted into this file by the lovely and
@@ -111,10 +149,9 @@ talented scramble-tree.py script.
   def _mod_delete_file(self, path):
     print 'delete_file:', path
     if self.dry_run:
-      return
-    os.remove(path)
-    if use_svn:
-      os.system('svn rm --quiet --force ' + path)
+      return    
+    if self.vc_actions:
+      self.vc_actions.remove_file(path)
 
   def munge_file(self, path):
     # Only do something 33% of the time
@@ -123,13 +160,13 @@ talented scramble-tree.py script.
 
   def maybe_add_file(self, dir):
     if self.rand.randrange(3) == 2:
-      path = os.path.join(dir, 'newfile.txt')
+      path = os.path.join(dir, self.file_name)
       print "maybe_add_file:", path
       if self.dry_run:
         return
       open(path, 'w').write(self.greeking)
-      if use_svn:
-        os.system('svn add --quiet ' + path)
+      if self.vc_actions:
+        self.vc_actions.add_file(path)
 
 
 def usage(retcode=255):
@@ -138,6 +175,8 @@ def usage(retcode=255):
   print 'Options:'
   print '    --seed ARG  : Use seed ARG to scramble the tree.'
   print '    --use-svn   : Use Subversion (as "svn") to perform file additions'
+  print '                  and removals.'
+  print '    --use-cvs   : Use CVS (as "cvs") to perform file additions'
   print '                  and removals.'
   print '    --dry-run   : Don\'t actually change the disk.'
   sys.exit(retcode)
@@ -153,21 +192,24 @@ def walker_callback(scrambler, dirname, fnames):
       scrambler.munge_file(path)
 
 
-if __name__ == '__main__':
+def main():
   seed = None
-  use_svn = 0
+  vc_actions = None
   dry_run = 0
 
   # Mm... option parsing.
   optlist, args = getopt.getopt(sys.argv[1:], "h",
-                                ['seed=', 'use-svn', 'help', 'dry-run'])
+                                ['seed=', 'use-svn', 'use-cvs',
+                                 'help', 'dry-run'])
   for opt, arg in optlist:
     if opt == '--help' or opt == '-h':
       usage(0)
     if opt == '--seed':
       seed = arg
     if opt == '--use-svn':
-      use_svn = 1
+      vc_actions = SVNActions()
+    if opt == '--use-cvs':
+      vc_actions = CVSActions()
     if opt == '--dry-run':
       dry_run = 1
 
@@ -180,9 +222,13 @@ if __name__ == '__main__':
   # If a seed wasn't provide, calculate one.
   if seed is None:
     seed = hashDir(rootdir).gen_seed()
-  scrambler = Scrambler(seed, use_svn, dry_run)
+  scrambler = Scrambler(seed, vc_actions, dry_run)  
   
   # Fire up the treewalker
   print 'SEED: ' + seed
   
   os.path.walk(rootdir, walker_callback, scrambler)
+
+
+if __name__ == '__main__':
+  main()
