@@ -586,6 +586,10 @@ class RepositoryMirror:
     components = string.split(path, '/')
     path_so_far = None
 
+    deletions = None
+    if expected_entries:
+      deletions = []
+
     parent_key = self.revs_db[str(self.youngest)]
     parent = marshal.loads(self.nodes_db[parent_key])
     if not parent.has_key(self.mutable_flag):
@@ -605,10 +609,7 @@ class RepositoryMirror:
       # Ensure that the parent has an entry for this component.
       if not parent.has_key(component):
         if only_if_already_exists:
-          if expected_entries:
-            return Change(OP_NOOP, [], [], [])
-          else:
-            return Change(OP_NOOP, [], [])
+          return Change(OP_NOOP, [], [], deletions)
         # else
         new_child_key = gen_key()
         parent[component] = new_child_key
@@ -648,21 +649,14 @@ class RepositoryMirror:
       # The contract for copying over existing nodes is to do nothing
       # and return:
       if copyfrom_path:
-        if expected_entries:
-          return Change(OP_NOOP, old_names[0], old_names[1], [])
-        else:
-          return Change(OP_NOOP, old_names[0], old_names[1])
+        return Change(OP_NOOP, old_names[0], old_names[1], deletions)
       # else
       op = OP_CHANGE
       new_val = marshal.loads(self.nodes_db[parent[last_component]])
     elif only_if_already_exists:
-      if expected_entries:
-        return Change(OP_NOOP, [], [], [])
-      else:
-        return Change(OP_NOOP, [], [])
+      return Change(OP_NOOP, [], [], deletions)
 
     leaf_key = gen_key()
-    deletions = []
     if copyfrom_path:
       new_val = self.probe_path(copyfrom_path, copyfrom_rev)
       if new_val is None:
@@ -670,10 +664,7 @@ class RepositoryMirror:
         # marked as 'dead'. There is no reason to assume that the
         # current path shares any history with any older live parent
         # of the dead revision, so we do nothing and return.
-        if expected_entries:
-          return Change(OP_NOOP, [], [], [])
-        else:
-          return Change(OP_NOOP, [], [])
+        return Change(OP_NOOP, [], [], deletions)
     if expected_entries:
       approved_entries = new_val.get(self.approved_entries) or { }
       new_approved_entries = { }
@@ -692,10 +683,7 @@ class RepositoryMirror:
     new_val[self.mutable_flag] = 1
     self.nodes_db[leaf_key] = marshal.dumps(new_val)
 
-    if expected_entries:
-      return Change(op, old_names[0], old_names[1], deletions, copyfrom_rev)
-    else:
-      return Change(op, old_names[0], old_names[1], None, copyfrom_rev)
+    return Change(op, old_names[0], old_names[1], deletions, copyfrom_rev)
 
   def delete_path(self, path, tags, branches, prune=None):
     """Delete PATH from the tree.  PATH may not have a leading slash.
