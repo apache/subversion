@@ -2055,29 +2055,6 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
 
 
 svn_error_t *
-svn_wc_get_checkout_editor (const char *dest,
-                            const char *ancestor_url,
-                            svn_revnum_t target_revision,
-                            svn_boolean_t recurse,
-                            svn_wc_notify_func_t notify_func,
-                            void *notify_baton,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            svn_wc_traversal_info_t *traversal_info,
-                            apr_pool_t *pool)
-{
-  return make_editor (NULL, dest, NULL, target_revision, 
-                      TRUE, ancestor_url, NULL,
-                      recurse, notify_func, notify_baton,
-                      cancel_func, cancel_baton, NULL,
-                      editor, edit_baton,
-                      traversal_info, pool);
-}
-
-
-svn_error_t *
 svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                           const char *target,
                           svn_revnum_t target_revision,
