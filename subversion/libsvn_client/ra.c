@@ -636,7 +636,7 @@ svn_client__repos_locations (const char **start_url,
     return svn_error_createf 
       (APR_EGENERAL, NULL,
        "Unable to find repository location for '%s' in revision %ld",
-       peg_revnum);
+       path, peg_revnum);
     
   /* Repository paths might be absolute, but we want to treat them as
      relative. */
