@@ -67,6 +67,9 @@ svn_error_t *svn_io_check_path (svn_string_t *path,
 
 
 /* Set *TMP_NAME to a unique filename in the same directory as PATH.
+ * The name will include as much of PATH as possible, plus a random
+ * portion, plus an iterated portion (00001 for the first name, 00002
+ * for the second, etc), and end with SUFFIX.
  *
  * It doesn't matter if PATH is a file or directory, the tmp name will
  * be in PATH's parent either way.
@@ -88,7 +91,8 @@ svn_error_t *svn_io_check_path (svn_string_t *path,
  *    tempname() tries standard system tmp areas first.
  */
 svn_error_t *svn_io_tmp_name (svn_string_t **tmp_name,
-                              svn_string_t *path,
+                              const svn_string_t *path,
+                              const char *suffix,
                               apr_pool_t *pool);
 
 

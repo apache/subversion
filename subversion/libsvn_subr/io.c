@@ -95,13 +95,13 @@ svn_io_check_path (svn_string_t *path,
 
 svn_error_t *
 svn_io_tmp_name (svn_string_t **tmp_name,
-                 svn_string_t *path,
+                 const svn_string_t *path,
+                 const char *suffix,
                  apr_pool_t *pool)
 {
   char number_buf[6];
   int i;
   apr_size_t iterating_portion_idx;
-  const char *suffix = "tmp";
 
   /* Would be nice to use process ID for the random portion, but
      that's not portable.  So instead we use the pointer as an
@@ -119,7 +119,8 @@ svn_io_tmp_name (svn_string_t **tmp_name,
     {
       int chop_amt = ((*tmp_name)->len - 255)
                       + random_portion_width
-                      + 7
+                      + 3  /* 3 dots */
+                      + 5  /* 5 digits of iteration portion */
                       + strlen (suffix);
       svn_string_chop (*tmp_name, chop_amt);
     }
