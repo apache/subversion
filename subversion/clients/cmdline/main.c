@@ -476,7 +476,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "Update working copy to mirror a new URL\n"
     "usage: switch URL [PATH]   or\n"
     "       switch --relocate FROM TO [PATH ... ]\n\n"
-    "   Note:  this is the way to move a working copy to a new branch.\n",
+    "  Note:  this is the way to move a working copy to a new branch.\n",
     { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
       SVN_CL__AUTH_OPTIONS} },
  
