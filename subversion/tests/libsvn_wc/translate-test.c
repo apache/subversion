@@ -598,12 +598,12 @@ substitute_and_verify (const char *test_name,
       if (contents->len < idx)
         return svn_error_createf
           (SVN_ERR_MALFORMED_FILE, 0, NULL, pool,
-           "%s has short contents at line %d", dst_fname, i + 1);
+           "%s has short contents at line %" APR_SIZE_T_FMT, dst_fname, i + 1);
 
       if (strncmp (contents->data + idx, expect[i], strlen (expect[i])) != 0)
         return svn_error_createf
           (SVN_ERR_MALFORMED_FILE, 0, NULL, pool, 
-           "%s has wrong contents at line %d", dst_fname, i + 1);
+           "%s has wrong contents at line %" APR_SIZE_T_FMT, dst_fname, i + 1);
 
       /* Else, the data is correct, at least up to the next eol. */
 
@@ -614,7 +614,8 @@ substitute_and_verify (const char *test_name,
           if (strncmp (contents->data + idx, dst_eol, strlen (dst_eol)) != 0)
             return svn_error_createf
               (SVN_ERR_IO_CORRUPT_EOL, 0, NULL, pool, 
-               "%s has wrong eol style at line %d", dst_fname, i + 1);
+               "%s has wrong eol style at line %" APR_SIZE_T_FMT, dst_fname,
+               i + 1);
           else
             idx += strlen (dst_eol);
         }
