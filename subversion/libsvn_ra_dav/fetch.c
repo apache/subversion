@@ -1066,7 +1066,8 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
                                  svn_revnum_t revision,
                                  apr_hash_t **dirents,
                                  svn_revnum_t *fetched_rev,
-                                 apr_hash_t **props)
+                                 apr_hash_t **props,
+                                 apr_pool_t *pool)
 {
   svn_ra_dav_resource_t *rsrc;
   apr_hash_index_t *hi;
@@ -1075,7 +1076,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
   const char *final_url;
   char *stripped_final_url;
   svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
-  const char *url = svn_path_url_add_component (ras->url, path, ras->pool);
+  const char *url = svn_path_url_add_component (ras->url, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
@@ -1093,10 +1094,10 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
                                              &got_rev,
                                              ras->sess,
                                              url, revision,
-                                             ras->pool));
+                                             pool));
       final_url = svn_path_url_add_component(bc_url.data,
                                              bc_relative.data,
-                                             ras->pool);
+                                             pool);
       if (fetched_rev != NULL)
         *fetched_rev = got_rev;
     }
@@ -1107,11 +1108,11 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
          PROPFIND on the directory of depth 1. */
       SVN_ERR( svn_ra_dav__get_props(&resources, ras->sess,
                                      final_url, NE_DEPTH_ONE,
-                                     NULL, NULL /* all props */, ras->pool) );
+                                     NULL, NULL /* all props */, pool) );
       
       /* Clean up any trailing slashes on final_url, creating
          stripped_final_url */
-      stripped_final_url = apr_pstrdup(ras->pool, final_url);
+      stripped_final_url = apr_pstrdup(pool, final_url);
       len = strlen(final_url);
       if (len > 1 && final_url[len - 1] == '/')
         stripped_final_url[len - 1] = '\0';
@@ -1119,8 +1120,8 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
       /* Now we have a hash that maps a bunch of url children to resource
          objects.  Each resource object contains the properties of the
          child.   Parse these resources into svn_dirent_t structs. */
-      *dirents = apr_hash_make (ras->pool);
-      for (hi = apr_hash_first (ras->pool, resources);
+      *dirents = apr_hash_make (pool);
+      for (hi = apr_hash_first (pool, resources);
            hi;
            hi = apr_hash_next (hi))
         {
@@ -1140,7 +1141,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
           if (strcmp(resource->url, stripped_final_url) == 0)
             continue;
           
-          entry = apr_pcalloc (ras->pool, sizeof(*entry));
+          entry = apr_pcalloc (pool, sizeof(*entry));
           
           /* node kind */
           entry->kind = resource->is_collection ? svn_node_dir : svn_node_file;
@@ -1156,7 +1157,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
           
           /* does this resource contain any 'svn' or 'custom' properties,
              i.e.  ones actually created and set by the user? */
-          for (h = apr_hash_first (ras->pool, resource->propset);
+          for (h = apr_hash_first (pool, resource->propset);
                h; h = apr_hash_next (h))
             {
               const void *kkey;
@@ -1196,7 +1197,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
                                  APR_HASH_KEY_STRING);
           if (propval != NULL)
             SVN_ERR( svn_time_from_cstring(&(entry->time),
-                                           propval, ras->pool) );
+                                           propval, pool) );
           
           propval = apr_hash_get(resource->propset,
                                  SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME,
@@ -1204,7 +1205,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
           if (propval != NULL)
             entry->last_author = propval;
           
-          apr_hash_set(*dirents, svn_path_basename(childname, ras->pool),
+          apr_hash_set(*dirents, svn_path_basename(childname, pool),
                        APR_HASH_KEY_STRING, entry);
         }
     }
@@ -1213,10 +1214,10 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
     {
       SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, final_url, 
                                               NULL, NULL /* all props */, 
-                                              ras->pool) ); 
+                                              pool) ); 
 
-      *props = apr_hash_make(ras->pool);
-      SVN_ERR (filter_props (*props, rsrc, TRUE, ras->pool));
+      *props = apr_hash_make(pool);
+      SVN_ERR (filter_props (*props, rsrc, TRUE, pool));
     }
 
   return SVN_NO_ERROR;
