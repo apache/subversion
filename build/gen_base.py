@@ -13,9 +13,6 @@ import ConfigParser
 import getversion
 
 
-__all__ = ['GeneratorBase', 'MsvcProjectGenerator']
-
-
 class GeneratorBase:
 
   #
@@ -180,22 +177,6 @@ class GeneratorBase:
       hdrs = [ ]
       for short in _find_includes(sources[0], include_deps):
         self.graph.add(DT_OBJECT, objname, include_deps[short][0])
-
-
-class MsvcProjectGenerator(GeneratorBase):
-
-  _extension_map = {
-    ('exe', 'target'): '.exe',
-    ('exe', 'object'): '.obj',
-    ('lib', 'target'): '.dll',
-    ('lib', 'object'): '.obj',
-    }
-
-  def __init__(self, fname, oname):
-    GeneratorBase.__init__(self, fname)
-
-  def write(self):
-    raise NotImplementedError
 
 
 class DependencyGraph:
@@ -379,32 +360,6 @@ class Target:
         graph.add(DT_LINK, self.name, ofile)
       else:
         raise GenError('ERROR: unknown file extension on ' + src)
-
-  def write_dsp(self):
-    ### we should have class attrs for template names, but I don't want
-    ### to monkey this too much while somebody else is working on the
-    ### .dsp generation stuff...
-    if isinstance(self, TargetExe):
-      template = open('build/win32/exe-template', 'rb').read()
-    elif isinstance(self, TargetLib):
-      template = open('build/win32/dll-template', 'rb').read()
-    else:
-      raise GenError('unknown build type -- cannot generate a .dsp')
-
-    dsp = string.replace(template, '@NAME@', self.name)
-
-    cfiles = [ ]
-    for src in self._sources:
-      cfiles.append('# Begin Source File\x0d\x0a'
-                    '\x0d\x0a'
-                    'SOURCE=.\\%s\x0d\x0a'
-                    '# End Source File\x0d\x0a' % os.path.basename(src))
-    dsp = string.replace(dsp, '@CFILES@', string.join(cfiles, ''))
-
-    dsp = string.replace(dsp, '@HFILES@', '')
-
-    fname = os.path.join(self.path, self.name + '.dsp-test')
-    open(fname, 'wb').write(dsp)
 
   def __cmp__(self, ob):
     if isinstance(ob, Target):

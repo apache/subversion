@@ -9,10 +9,7 @@ import string
 import gen_base
 
 
-__all__ = ['MakefileGenerator']
-
-
-class MakefileGenerator(gen_base.GeneratorBase):
+class Generator(gen_base.GeneratorBase):
 
   _extension_map = {
     ('exe', 'target'): '',
