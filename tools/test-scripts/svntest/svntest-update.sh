@@ -75,13 +75,13 @@ PASS
 UPDATE_REBUILD_FLAG SVN "$TEST_ROOT/LOG_up_apu" "$APU_REPO.rb"
 
 START "update $HTTPD_NAME" "Updating $HTTPD_NAME..."
-cd $HTTPD_REPO && $CVS -f -q -z6 update -d -P > "$TEST_ROOT/LOG_up_httpd" 2>&1
+cd $HTTPD_REPO && $SVN update > "$TEST_ROOT/LOG_up_httpd" 2>&1
 test $? = 0 || {
     FAIL_LOG "$TEST_ROOT/LOG_up_httpd"
     FAIL
 }
 PASS
-UPDATE_REBUILD_FLAG CVS "$TEST_ROOT/LOG_up_httpd" "$HTTPD_REPO.rb"
+UPDATE_REBUILD_FLAG SVN "$TEST_ROOT/LOG_up_httpd" "$HTTPD_REPO.rb"
 
 # Update svn
 START "update subversion" "Updating Subversion..."

@@ -119,10 +119,9 @@ I.    BUILD REQUIREMENTS
       in "./apr" and "./apr-util", where Subversion wants it:
 
       $ svn co \
-        http://svn.apache.org/repos/asf/apr/apr/branches/APR_0_9_BRANCH apr
+        http://svn.apache.org/repos/asf/apr/apr/branches/0.9.x apr
       $ svn co \
-        http://svn.apache.org/repos/asf/apr/apr-util/branches/APU_0_9_BRANCH \
-        apr-util
+        http://svn.apache.org/repos/asf/apr/apr-util/branches/0.9.x apr-util
 
       The "./apr" and "./apr-util" directories will not be considered
       if the search for apr-config and apu-config scripts is successful.
@@ -131,10 +130,9 @@ I.    BUILD REQUIREMENTS
       the apr and apr-util directories:
       
       $ svn co \
-        http://svn.apache.org/repos/asf/apr/apr-iconv/branches/API_0_9_BRANCH \
-        apr-iconv
+        http://svn.apache.org/repos/asf/apr/apr-iconv/branches/0.9.x apr-iconv
 
-      Be sure to use a native Windows CVS client (as opposed to
+      Be sure to use a native Windows SVN client (as opposed to
       Cygwin's version) so that the .dsp files get carriage-returns at
       the ends of their lines.  Otherwise Visual Studio will complain
       that it doesn't recognize the .dsp files.
@@ -951,28 +949,24 @@ III.  BUILDING A SUBVERSION SERVER
       of Apache httpd-2.0.  The easiest thing for you to do is
       download a source tarball of the latest release and unpack that.
 
-      Alternately, if you'd rather use the latest CVS versions of
-      everything, checkout the "httpd-2.0" cvs module from apache.org.
+      Alternately, if you'd rather use the latest SVN versions of
+      everything, checkout the "httpd 2.0.x"  branch from apache.org.
       If you have questions about the Apache 2.0 build, please consult
       the HTTPD install documentation:
 
       http://httpd.apache.org/docs-2.0/install.html.  Place this
       module wherever you wish; it's an independent project.
-
-          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
-          (password 'anoncvs')
-
-          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic \
-            co -r APACHE_2_0_BRANCH httpd-2.0
+      
+      $ svn co \
+        http://svn.apache.org/repos/asf/httpd/httpd/branches/2.0.x httpd-2.0 
 
       Checkout the "apr" and "apr-util" modules into the srclib/ directory:
 
       $ cd httpd-2.0/srclib
       $ svn co \
-        http://svn.apache.org/repos/asf/apr/apr/branches/APR_0_9_BRANCH apr
+        http://svn.apache.org/repos/asf/apr/apr/branches/0.9.x apr
       $ svn co \
-        http://svn.apache.org/repos/asf/apr/apr-util/branches/APU_0_9_BRANCH \
-        apr-util
+        http://svn.apache.org/repos/asf/apr/apr-util/branches/0.9.x apr-util
 
       At the top of the httpd-2.0 tree:
 
