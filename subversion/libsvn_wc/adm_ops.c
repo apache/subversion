@@ -694,11 +694,20 @@ svn_wc_delete (const char *path,
         }
       else
         {
-          /* Recursively mark a whole tree for deletion. */
-          SVN_ERR (mark_tree (dir_access, SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                              svn_wc_schedule_delete, FALSE,
-                              notify_func, notify_baton,
-                              pool));
+          /* if adm_probe_retrieve returned the parent access baton,
+             (which is the same access baton that we came in here
+             with), this means we're dealing with a missing directory.
+             So there's no tree to mark for deletion.  Instead, the
+             next phase of code will simply schedule the directory for
+             deletion in its parent. */
+          if (dir_access != adm_access)
+            {
+              /* Recursively mark a whole tree for deletion. */
+              SVN_ERR (mark_tree (dir_access, SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                                  svn_wc_schedule_delete, FALSE,
+                                  notify_func, notify_baton,
+                                  pool));
+            }
         }
     }
   

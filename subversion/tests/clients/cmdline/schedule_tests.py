@@ -593,6 +593,47 @@ def unschedule_missing_added(sbox):
   return 0
 
 #----------------------------------------------------------------------
+# Regression test for issue #962:
+#
+# Make sure 'rm foo; svn rm foo' works on files and directories.
+# Also make sure that the deletion is committable.
+
+def delete_missing(sbox):
+  "schedule: schedule (& commit) deletion on missing items"
+
+  wc_dir = sbox.wc_dir
+
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+
+  # Manually remove a file and a directory.
+  os.remove(mu_path)
+  svntest.main.remove_wc(H_path)
+
+  # Now schedule them for deletion anyway, and make sure no error is output.
+  stdout, stderr = svntest.main.run_svn(None, 'rm', mu_path, H_path)
+  if len(stderr) != 0:
+    return 1
+
+  # Commit the deletions.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Deleting'),
+    'A/D/H' : Item(verb='Deleting'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/mu', 'A/D/H',
+                         'A/D/H/psi', 'A/D/H/omega', 'A/D/H/chi')
+  expected_status.tweak(wc_rev=1)
+
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                expected_output,
+                                                expected_status,
+                                                None, None, None, None, None,
+                                                wc_dir)
 
 ########################################################################
 # Run the tests
@@ -619,6 +660,7 @@ test_list = [ None,
               XFail(commit_delete_files),
               XFail(commit_delete_dirs),
               unschedule_missing_added,
+              delete_missing,
              ]
 
 if __name__ == '__main__':

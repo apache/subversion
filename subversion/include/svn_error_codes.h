@@ -309,7 +309,9 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 13,
               "Unmergeable scheduling requested on an entry")
 
-  /* UNUSED error slot:                 + 14 */
+  SVN_ERRDEF (SVN_ERR_WC_PATH_FOUND,
+              SVN_ERR_WC_CATEGORY_START + 14,
+              "Found a working copy path.")
 
   SVN_ERRDEF (SVN_ERR_WC_FOUND_CONFLICT,
               SVN_ERR_WC_CATEGORY_START + 15,
