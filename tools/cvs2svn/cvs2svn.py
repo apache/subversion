@@ -395,7 +395,7 @@ class TreeMirror:
     # don't prune, because if the highest_empty subtree were pruneable
     # at all, it should have been done before now.)
     #
-    # See the run-tests.py:prune_with_care() for the scenario.
+    # See run-tests.py:prune_with_care() for the scenario.
     if not parent_dir.has_key(components[-1:][0]):
       return None
 
