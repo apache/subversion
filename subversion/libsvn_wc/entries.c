@@ -688,7 +688,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
       if (! is_wc)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-           "svn_wc_entry: %s is not a working copy directory", path->data);
+           "svn_wc_entry: %s is not a working copy directory", dir->data);
       
       SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
       

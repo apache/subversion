@@ -52,7 +52,13 @@ svn_wc_check_wc (const svn_stringbuf_t *path,
   if (err)
     return err;
   
-  if (kind != svn_node_dir)
+  if (kind == svn_node_none)
+    {
+      return svn_error_createf
+        (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+         "svn_wc_check_wc: %s does not exist", path->data);
+    }
+  else if (kind != svn_node_dir)
     *is_wc = FALSE;
   else
     {
