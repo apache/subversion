@@ -1043,6 +1043,42 @@ svn_repos_create (svn_repos_t **repos_p,
 }
 
 
+/* Check if @a path is the root of a repository by checking if the
+ * path contains the expected files and directories.  Return TRUE
+ * on errors (which would be permission errors, probably) so that
+ * we the user will see them after we try to open the repository
+ * for real.  */
+static svn_boolean_t
+check_repos_path (const char *path,
+                  apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  svn_error_t *err;
+
+  err = svn_io_check_path (svn_path_join (path, SVN_REPOS__FORMAT, pool),
+                           &kind, pool);
+  if (err)
+    {
+      svn_error_clear (err);
+      return TRUE;
+    }
+  if (kind != svn_node_file)
+    return FALSE;
+
+  err = svn_io_check_path (svn_path_join (path, SVN_REPOS__DB_DIR, pool),
+                           &kind, pool);
+  if (err)
+    {
+      svn_error_clear (err);
+      return TRUE;
+    }
+  if (kind != svn_node_dir)
+    return FALSE;
+
+  return TRUE;
+}
+
+
 /* Verify that the repository's 'format' file is a suitable version. */
 static svn_error_t *
 check_repos_version (const char *path,
@@ -1051,21 +1087,14 @@ check_repos_version (const char *path,
   int version;
   svn_error_t *err;
 
-  /* ### for now, an error here might occur because we *just*
-     introduced the whole format thing.  Until the next time we
-     *change* our format, we'll ignore the error (and default to a 0
-     version). */
   err = svn_io_read_version_file 
     (&version, svn_path_join (path, SVN_REPOS__FORMAT, pool), pool);
   if (err)
-    {
-      if (0 != SVN_REPOS__VERSION)
-        return svn_error_createf 
-          (SVN_ERR_REPOS_UNSUPPORTED_VERSION, err,
-           "Expected version '%d' of repository; found no version at all; "
-           "is `%s' a valid repository path?",
-           SVN_REPOS__VERSION, path);
-    }
+    return svn_error_createf 
+      (SVN_ERR_REPOS_UNSUPPORTED_VERSION, err,
+       "Expected version '%d' of repository; found no version at all; "
+       "is `%s' a valid repository path?",
+       SVN_REPOS__VERSION, path);
 
   if (version != SVN_REPOS__VERSION)
     return svn_error_createf 
@@ -1153,6 +1182,25 @@ get_repos (svn_repos_t **repos_p,
   return SVN_NO_ERROR;
 }
 
+
+
+char *
+svn_repos_find_root_path (const char *path,
+                          apr_pool_t *pool)
+{
+  char *candidate = apr_pstrdup (pool, path);
+
+  while (1)
+    {
+      if (check_repos_path (candidate, pool))
+        break;
+      if (candidate[0] == '\0' || strcmp(candidate, "/") == 0)
+        return NULL;
+      candidate = svn_path_dirname (candidate, pool);
+    }
+
+  return candidate;
+}
 
 
 svn_error_t *
