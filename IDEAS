@@ -86,3 +86,32 @@ getline.c says:
  * implied warranty.
  *
 <names snipped>
+
+
+* possible cvs-compatibility wrapper for svn
+
+  Daniel Stenberg <daniel@haxx.se> wrote:
+  
+  ... no matter how the command line interface for SVN ends up like, it
+  would still be cool to offer a 'stealth-mode' SVN client that would
+  look and feel exactly (well, as similar as it can) like a cvs
+  client...
+  
+  
+  "Jonathan S. Shapiro" <shap@eros-os.org> replied: 
+  
+  Wouldn't Perl be good for this?
+  Why crud up the new system with compatibility code?
+  
+  
+  Dave Glowacki <dglo@ssec.wisc.edu> further opined:
+  
+  I agree, and I also support Jonathan Shapiro's idea that a
+  cvs-compatibility wrapper could be written in Perl and would simply
+  map the CVS options to the Subversion options (and maybe echo the
+  proper 'svn' options back so that it'd serve as a learning tool as
+  well.)
+  
+  That way, Subversion can have its own options (-r instead of -R)
+  and not have to worry about the CVS cruft like '-d' meaning one
+  thing as a global option and another thing as a command option.
