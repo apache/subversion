@@ -146,7 +146,6 @@ main (int argc, char **argv)
   svn_pool_destroy (wpool);
   fprintf (stdout, "(LENGTH %ld +%d)\n", (long) len, count);
 
-  svn_txdelta_free (stream);
   if (source_file)
     fclose (source_file);
   fclose (target_file);

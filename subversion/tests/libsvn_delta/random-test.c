@@ -218,7 +218,6 @@ random_test (const char **msg,
                                           handler_baton,
                                           delta_pool));
 
-      svn_txdelta_free (txdelta_stream);
       svn_pool_destroy (delta_pool);
 
       SVN_ERR (compare_files (target, target_regen, pool));

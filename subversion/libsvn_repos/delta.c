@@ -623,7 +623,6 @@ delta_files (struct context *c, void *file_baton,
   SVN_ERR (send_text_delta (c, file_baton, delta_stream, subpool));
 
   /* Cleanup. */
-  svn_txdelta_free (delta_stream);
   svn_pool_destroy (subpool);
 
   return 0;

@@ -473,9 +473,6 @@ do_apply_textdelta (svn_stringbuf_t *filename,
                                       window_handler_baton,
                                       pool));
 
-  /* Free the stream */
-  svn_txdelta_free (txdelta_stream);
-
   /* Close the two files */
   status = apr_file_close (localfile);
   if (status)

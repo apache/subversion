@@ -37,7 +37,6 @@ struct svn_txdelta_stream_t {
   svn_stream_t *target;
 
   /* Private data */
-  apr_pool_t *pool;             /* Pool to allocate stream data from. */
   svn_boolean_t more;           /* TRUE if there are more data in the pool. */
   apr_off_t pos;                /* Offset of next read in source file. */
   char *buf;                    /* Buffer for vdelta data. */
@@ -116,14 +115,13 @@ make_window (apr_pool_t *pool, struct build_ops_baton_t *bob)
 /* Insert a delta op into a delta window. */
 
 void
-svn_txdelta__insert_op (void *build_baton,
+svn_txdelta__insert_op (struct build_ops_baton_t *bob,
                         int opcode,
                         apr_off_t offset,
                         apr_off_t length,
                         const char *new_data,
                         apr_pool_t *pool)
 {
-  struct build_ops_baton_t *bob = build_baton;
   svn_txdelta_op_t *op;
 
   /* Create space for the new op. */
@@ -176,28 +174,16 @@ svn_txdelta (svn_txdelta_stream_t **stream,
              svn_stream_t *target,
              apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (pool);
-  assert (subpool != NULL);
-
-  *stream = apr_palloc (subpool, sizeof (**stream));
+  *stream = apr_palloc (pool, sizeof (**stream));
   (*stream)->source = source; 
   (*stream)->target = target;
-  (*stream)->pool = subpool;
   (*stream)->more = TRUE;
   (*stream)->pos = 0;
-  (*stream)->buf = apr_palloc (subpool, 3 * SVN_STREAM_CHUNK_SIZE);
+  (*stream)->buf = apr_palloc (pool, 3 * SVN_STREAM_CHUNK_SIZE);
   (*stream)->saved_source_len = 0;
 
   /* Initialize MD5 digest calculation. */
   apr_md5_init (&((*stream)->context));
-}
-
-
-void
-svn_txdelta_free (svn_txdelta_stream_t *stream)
-{
-  if (stream)
-    svn_pool_destroy (stream->pool);
 }
 
 
