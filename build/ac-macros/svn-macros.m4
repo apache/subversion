@@ -103,3 +103,26 @@ done
 $1="${svn_cur}"
 ])
 
+dnl SVN_MAYBE_ADD_TO_CFLAGS(option)
+dnl
+dnl Attempt to compile a trivial C program to test if the option passed
+dnl is valid. If it is, then add it to CFLAGS. with the passed in option
+dnl and see if it was successfully compiled.
+
+AC_DEFUN(SVN_MAYBE_ADD_TO_CFLAGS,
+[
+  option="$1"
+  svn_maybe_add_to_cflags_saved_flags="$CFLAGS"
+  CFLAGS="$CFLAGS $option"
+  AC_MSG_CHECKING([if $CC accepts $option])
+  AC_TRY_COMPILE([], [],
+    [svn_maybe_add_to_cflags_ok="yes"],
+    [svn_maybe_add_to_cflags_ok="no"]
+  )
+  if test "$svn_maybe_add_to_cflags_ok" = "yes"; then
+    AC_MSG_RESULT([yes, will use it])
+  else
+    AC_MSG_RESULT([no])
+    CFLAGS="$svn_maybe_add_to_cflags_saved_flags"
+  fi
+])
