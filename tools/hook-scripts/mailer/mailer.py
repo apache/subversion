@@ -125,6 +125,10 @@ except AttributeError:
         cmd = argv_to_command_string(cmd)
       self.fromchild, self.tochild = popen2.popen4(cmd, mode='b')
 
+    def wait(self):
+      rv = self.fromchild.close()
+      rv = self.tochild.close() or rv
+      return rv
 
 class MailedOutput:
   def __init__(self, cfg, repos, prefix_param):
