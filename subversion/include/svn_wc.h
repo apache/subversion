@@ -229,6 +229,11 @@ svn_error_t *svn_wc_get_ancestry (svn_stringbuf_t **url,
  * So we have svn_wc_status() for depth 0, and svn_wc_statuses() for
  * depths 1 and 2, since the latter two involve multiple return
  * values.
+ *
+ * NOTE:  Status structures returned by svn_wc_status() or found in
+ * the hash created by svn_wc_statuses() may contain a NULL ->entry
+ * field.  This indicates an item that is not versioned in the working
+ * copy.
  */
 
 enum svn_wc_status_kind
@@ -535,15 +540,12 @@ svn_wc_crawl_as_copy (svn_stringbuf_t *parent,
    copy.  Thus the return value may very well reflect the result of
    the update!
 
-   If PRINT_UNRECOGNIZED is set, then unversioned objects will be
-   reported to the application layer via a pool feedback table.  If
-   RESTORE_FILES is set, then unexpectedly missing working files will
-   be restored from the administrative directory's cache. */
+   If RESTORE_FILES is set, then unexpectedly missing working files
+   will be restored from the administrative directory's cache. */
 svn_error_t *
 svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         const svn_ra_reporter_t *reporter,
                         void *report_baton,
-                        svn_boolean_t print_unrecognized,
                         svn_boolean_t restore_files,
                         svn_boolean_t recurse,
                         apr_pool_t *pool);

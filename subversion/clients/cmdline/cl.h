@@ -203,9 +203,13 @@ svn_cl__subcommand_help (const char *subcommand,
 
 /* Print a hash that maps (char *) names to (svn_wc_status_t *)
    structs to stdout for human consumption.  Prints in abbreviated
-   format by default, or DETAILED format if flag is set.  */
+   format by default, or DETAILED format if flag is set.  
+
+   If SKIP_UNRECOGNIZED is TRUE, this function will not print out
+   unversioned items found in the working copy. */
 void svn_cl__print_status_list (apr_hash_t *statushash,
                                 svn_boolean_t detailed,
+                                svn_boolean_t skip_unrecognized,
                                 apr_pool_t *pool);
 
 /* Print a hash that maps property names (char *) to property values

@@ -29,16 +29,12 @@
 #include "cl.h"
 
 
-
 /* Fill in the first four characters of STR_STATUS with status code
-   characters, based on TEXT_STATUS, PROP_STATUS, LOCKED, and COPIED.
-   PROP_TIME is used to determine if properties exist in the first
-   place (when prop_status is 'none').  */
+   characters, based on TEXT_STATUS, PROP_STATUS, LOCKED, and COPIED. */
 static void
 generate_status_codes (char *str_status,
                        enum svn_wc_status_kind text_status,
                        enum svn_wc_status_kind prop_status,
-                       apr_time_t prop_time,
                        svn_boolean_t locked,
                        svn_boolean_t copied)
 {
@@ -72,7 +68,6 @@ generate_status_codes (char *str_status,
       break;
     case svn_wc_status_conflicted:
       text_statuschar = 'C';
-
       break;
     default:
       text_statuschar = '?';
@@ -132,12 +127,18 @@ print_short_format (const char *path,
     return;
 
   /* Create local-mod status code block. */
-  generate_status_codes (str_status,
-                         status->text_status,
-                         status->prop_status,
-                         status->entry->prop_time,
-                         status->locked,
-                         status->copied);
+  if (! status->entry)
+    generate_status_codes (str_status,
+                           svn_wc_status_none,
+                           svn_wc_status_none,
+                           FALSE, 
+                           FALSE);
+  else
+    generate_status_codes (str_status,
+                           status->text_status,
+                           status->prop_status,
+                           status->locked,
+                           status->copied);
 
   printf ("%s   %s\n", str_status, path);
 }
@@ -149,6 +150,7 @@ print_long_format (const char *path,
                    svn_wc_status_t *status)
 {
   char str_status[5];
+  char str_rev[7];
   char update_char;
   svn_revnum_t local_rev;
 
@@ -156,19 +158,18 @@ print_long_format (const char *path,
     return;
 
   /* Create local-mod status code block. */
-  generate_status_codes (str_status,
-                         status->text_status,
-                         status->prop_status,
-                         status->entry->prop_time,
-                         status->locked,
-                         status->copied);
-
-  /* Create update indicator. */
-  if ((status->repos_text_status != svn_wc_status_none)
-      || (status->repos_prop_status != svn_wc_status_none))
-    update_char = '*';
+  if (! status->entry)
+    generate_status_codes (str_status,
+                           svn_wc_status_none,
+                           svn_wc_status_none,
+                           FALSE, 
+                           FALSE);
   else
-    update_char = ' ';
+    generate_status_codes (str_status,
+                           status->text_status,
+                           status->prop_status,
+                           status->locked,
+                           status->copied);
 
   /* Get local revision number */
   if (status->entry)
@@ -176,27 +177,23 @@ print_long_format (const char *path,
   else
     local_rev = SVN_INVALID_REVNUM;
 
-  /* Print */
-
-
-  /* If the item is on the repository, but not in the working copy, we
-     do complex things: */
+  /* Set the update character. */
+  update_char = ' ';
   if (status->repos_text_status == svn_wc_status_added)
-    {
-      if (status->repos_prop_status == svn_wc_status_added) 
-        printf ("__     %c         -    %s\n", update_char, path);
-      else
-        printf ("_      %c         -    %s\n", update_char, path);
-    }
+    update_char = '*';
 
-  /* Otherwise, go ahead and show the local revision number. */
+  /* Determine the appropriate local revision string. */
+  if (! status->entry)
+    strcpy (str_rev, "      ");
   else if (local_rev == SVN_INVALID_REVNUM)
-    printf ("%s   %c      ?       %s\n", str_status, update_char, path);
+    strcpy (str_rev, "  ?   ");
   else if (status->copied)
-    printf ("%s   %c         -    %s\n", str_status, update_char, path);
+    strcpy (str_rev, "     -");
   else
-    printf ("%s   %c    %6ld    %s\n", str_status, update_char,
-            local_rev, path);
+    sprintf (str_rev, "%6ld", local_rev);
+
+  /* One Printf to rule them all, one Printf to bind them..." */
+  printf ("%s   %c    %s    %s\n", str_status, update_char, str_rev, path);
 }
 
 
@@ -204,6 +201,7 @@ print_long_format (const char *path,
 void
 svn_cl__print_status_list (apr_hash_t *statushash, 
                            svn_boolean_t detailed,
+                           svn_boolean_t skip_unrecognized,
                            apr_pool_t *pool)
 {
   int i;
@@ -224,6 +222,9 @@ svn_cl__print_status_list (apr_hash_t *statushash,
       item = (((svn_item_t **)(statusarray)->elts)[i]);
       path = item->key;
       status = item->data;
+
+      if ((skip_unrecognized) && (! status->entry))
+        continue;
 
       if (detailed)
         print_long_format (path, status);
