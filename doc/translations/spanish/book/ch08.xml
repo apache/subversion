@@ -1763,33 +1763,37 @@ A  build.conf
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-6.4">
-      <title>Make and Test Your Changes</title>
+      <title>Realizando y verificando sus cambios</title>
       
-      <para>With the code and community policy understanding in hand,
-        you are ready to make your changes.  It is best to try to make
-        smaller but related sets of changes, even tackling larger
-        tasks in stages, instead of making huge, sweeping
-        modifications.  Your proposed changes will be easier to
-        understand (and therefore easier to review) if you disturb
-        the fewest lines of code possible to accomplish your task
-        properly.  After making each set of proposed changes, your
-        Subversion tree should be in a state in which the software
-        compiles with no warnings.</para>
+      <para>Habiendo entendido las reglas del código fuente y
+        la comunidad, está preparado para realizar sus cambios. Lo
+        mejor es intentar hacer cambios pequeños pero relacionados,
+        incluso separando tareas grandes en fases, en lugar de
+        hacer enormes modificaciones demoledoras. <!-- TODO estilo:
+        sweeping != demoledoras -->  Los cambios que proponga
+        serán más fáciles de entender (y por lo tanto, revisar)
+        si distribuye el menor número de lineas de código posible
+        para realizar la tarea correctamente. Tras realizar cada
+        conjunto de cambios propuestos, su árbol Subversion debe
+        estar en un estado en el cual el software compila sin ningún
+        mensaje de aviso.</para>
 
-      <para>Subversion has a fairly thorough
+      <para>Subversion cuenta con una suite de tests de regresión bastante
+        detallados
         <footnote>
-          <para>You might want to grab some popcorn.
-            <quote>Thorough</quote>, in this instance, translates to
-            somewhere in the neighborhood of thirty minutes of
-            non-interactive machine churn.</para>
-        </footnote>
-        regression test suite, and your proposed changes are expected
-        to not cause any of those tests to fail.  By running
-        <command>make check</command> (in Unix) from the top of the
-        source tree, you can sanity-check your changes.  The fastest
-        way to get your code contributions rejected (other than
-        failing to supply a good log message) is to submit changes
-        that cause failure in the test suite.</para>
+          <para>Quizás quiera coger palomitas.
+            <quote>Detallados</quote>, en este caso, se traduce
+            en aproximadamente treinta minutos de computación no
+            interactiva.</para>
+        </footnote>, y se espera que los cambios que propone no
+        harán que alguno de esos tests falle. Puede verificar sus
+        cambios ejecutando <command>make check</command> (bajo
+        Unix) desde el directorio raíz del código fuente. La forma
+        más rápida para conseguir que sus contribuciones de código
+        sean rechazadas (aparte de no proporcionar un buen mensaje
+        de cambios) es proponer cambios que provocan fallos en
+        la suite de tests<!-- TODO quizás cambiar test suite por
+        unidades de verificación?-->.</para>
 
       <!-- ### TODO: Describe building and testing on Windows. -->
 
