@@ -124,7 +124,7 @@ svn_client__update_internal (const char *path,
                                   revnum,
                                   target,
                                   recurse,
-                                  update_editor, update_edit_baton));
+                                  update_editor, update_edit_baton, pool));
 
       SVN_ERR (svn_io_check_path (path, &kind, pool));
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,

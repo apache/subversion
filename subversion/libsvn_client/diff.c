@@ -1176,7 +1176,7 @@ do_diff (const apr_array_header_t *options,
                                   start_revnum,
                                   svn_path_uri_decode (url_target, pool),
                                   recurse,                                  
-                                  diff_editor, diff_edit_baton));
+                                  diff_editor, diff_edit_baton, pool));
 
       SVN_ERR (svn_io_check_path (path2, &kind, pool));
       if (kind == svn_node_dir)
