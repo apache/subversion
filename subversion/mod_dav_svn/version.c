@@ -1308,306 +1308,118 @@ static dav_error *dav_svn_make_activity(dav_resource *resource)
 }
 
 
-/* ----------------------------------------------------------------------- */
-/* ### TEMPORARY HACK:   REMOVE THESE FUNCTIONS  when we stop pulling
-   the hash from the If: header and start parsing the request body!
-   It's only here because mod_dav doesn't export it, and
-   build_lock_hash() needs to parse the If: header.   */
-
-
-static dav_if_header *dav_svn_add_if_resource(apr_pool_t *p,
-                                              dav_if_header *next_ih,
-                                              const char *uri,
-                                              apr_size_t uri_len)
-{
-  dav_if_header *ih;
-  
-  if ((ih = apr_pcalloc(p, sizeof(*ih))) == NULL)
-    return NULL;
-  
-  ih->uri = uri;
-  ih->uri_len = uri_len;
-  ih->next = next_ih;
-  
-  return ih;
-}
-
-
-static dav_error * dav_svn_add_if_state(apr_pool_t *p, dav_if_header *ih,
-                                        const char *state_token,
-                                        dav_if_state_type t, int condition,
-                                        const dav_hooks_locks *locks_hooks)
-{
-  dav_if_state_list *new_sl;
-  
-  new_sl = apr_pcalloc(p, sizeof(*new_sl));
-  
-  new_sl->condition = condition;
-  new_sl->type      = t;
-  
-  if (t == dav_if_opaquelock) {
-    dav_error *err;
-    
-    if ((err = (*locks_hooks->parse_locktoken)(p, state_token,
-                                               &new_sl->locktoken)) != NULL) {
-      /* In cases where the state token is invalid, we'll just skip
-       * it rather than return 400.
-       */
-      if (err->error_id == DAV_ERR_LOCK_UNK_STATE_TOKEN) {
-        return NULL;
-      }
-      else {
-        /* ### maybe add a higher-level description */
-        return err;
-      }
-    }
-  }
-  else
-    new_sl->etag = state_token;
-  
-  new_sl->next = ih->state;
-  ih->state = new_sl;
-  
-  return NULL;
-}
-
-
-static char *dav_svn_fetch_next_token(char **str, char term)
-{
-    char *sp;
-    char *token;
-        
-    token = *str + 1;
-
-    while (*token && (*token == ' ' || *token == '\t'))
-        token++;
-
-    if ((sp = strchr(token, term)) == NULL)
-        return NULL;
-
-    *sp = '\0';
-    *str = sp;
-    return token;
-}
-
-
-static dav_error * dav_svn_process_if_header(request_rec *r,
-                                             dav_if_header **p_ih)
-{
-  dav_error *err;
-  char *str;
-  char *list;
-  const char *state_token;
-  const char *uri = NULL;        /* scope of current production; NULL=no-tag */
-  apr_size_t uri_len = 0;
-  dav_if_header *ih = NULL;
-  apr_uri_t parsed_uri;
-  const dav_hooks_locks *locks_hooks = DAV_GET_HOOKS_LOCKS(r);
-  enum {no_tagged, tagged, unknown} list_type = unknown;
-  int condition;
-  
-  *p_ih = NULL;
-  
-  if ((str = apr_pstrdup(r->pool, apr_table_get(r->headers_in, "If"))) == NULL)
-    return NULL;
-  
-  while (*str) {
-    switch(*str) {
-    case '<':
-      /* Tagged-list production - following states apply to this uri */
-      if (list_type == no_tagged
-          || ((uri = dav_svn_fetch_next_token(&str, '>')) == NULL)) {
-        return dav_new_error(r->pool, HTTP_BAD_REQUEST,
-                             DAV_ERR_IF_TAGGED,
-                             "Invalid If-header: unclosed \"<\" or "
-                             "unexpected tagged-list production.");
-      }
-      
-      /* 2518 specifies this must be an absolute URI; just take the
-       * relative part for later comparison against r->uri */
-      if (apr_uri_parse(r->pool, uri, &parsed_uri) != APR_SUCCESS) {
-        return dav_new_error(r->pool, HTTP_BAD_REQUEST,
-                             DAV_ERR_IF_TAGGED,
-                             "Invalid URI in tagged If-header.");
-      }
-      /* note that parsed_uri.path is allocated; we can trash it */
-      
-      /* clean up the URI a bit */
-      ap_getparents(parsed_uri.path);
-      uri_len = strlen(parsed_uri.path);
-      if (uri_len > 1 && parsed_uri.path[uri_len - 1] == '/')
-        parsed_uri.path[--uri_len] = '\0';
-      
-      uri = parsed_uri.path;
-      list_type = tagged;
-      break;
-      
-    case '(':
-      /* List production */
-      
-      /* If a uri has not been encountered, this is a No-Tagged-List */
-      if (list_type == unknown)
-        list_type = no_tagged;
-      
-      if ((list = dav_svn_fetch_next_token(&str, ')')) == NULL) {
-        return dav_new_error(r->pool, HTTP_BAD_REQUEST,
-                             DAV_ERR_IF_UNCLOSED_PAREN,
-                             "Invalid If-header: unclosed \"(\".");
-      }
-      
-      if ((ih = dav_svn_add_if_resource(r->pool, ih, uri, uri_len)) == NULL) {
-        /* ### dav_add_if_resource() should return an error for us! */
-        return dav_new_error(r->pool, HTTP_BAD_REQUEST,
-                             DAV_ERR_IF_PARSE,
-                             "Internal server error parsing \"If:\" "
-                             "header.");
-      }
-      
-      condition = DAV_IF_COND_NORMAL;
-      
-      while (*list) {
-        /* List is the entire production (in a uri scope) */
-        
-        switch (*list) {
-        case '<':
-          if ((state_token = dav_svn_fetch_next_token(&list, '>')) == NULL) {
-            /* ### add a description to this error */
-            return dav_new_error(r->pool, HTTP_BAD_REQUEST,
-                                 DAV_ERR_IF_PARSE, NULL);
-          }
-          
-          if ((err = dav_svn_add_if_state(r->pool, ih,
-                                          state_token, dav_if_opaquelock,
-                                          condition, locks_hooks)) != NULL) {
-            /* ### maybe add a higher level description */
-            return err;
-          }
-          condition = DAV_IF_COND_NORMAL;
-          break;
-          
-        case '[':
-          if ((state_token = dav_svn_fetch_next_token(&list, ']')) == NULL) {
-            /* ### add a description to this error */
-            return dav_new_error(r->pool, HTTP_BAD_REQUEST,
-                                 DAV_ERR_IF_PARSE, NULL);
-          }
-          
-          if ((err = dav_svn_add_if_state(r->pool, ih, state_token,
-                                          dav_if_etag,
-                                          condition, locks_hooks)) != NULL) {
-            /* ### maybe add a higher level description */
-            return err;
-          }
-          condition = DAV_IF_COND_NORMAL;
-          break;
-          
-        case 'N':
-          if (list[1] == 'o' && list[2] == 't') {
-            if (condition != DAV_IF_COND_NORMAL) {
-              return dav_new_error(r->pool, HTTP_BAD_REQUEST,
-                                   DAV_ERR_IF_MULTIPLE_NOT,
-                                   "Invalid \"If:\" header: "
-                                   "Multiple \"not\" entries "
-                                   "for the same state.");
-            }
-            condition = DAV_IF_COND_NOT;
-          }
-          list += 2;
-          break;
-          
-        case ' ':
-        case '\t':
-          break;
-          
-        default:
-          return dav_new_error(r->pool, HTTP_BAD_REQUEST,
-                               DAV_ERR_IF_UNK_CHAR,
-                               apr_psprintf(r->pool,
-                                            "Invalid \"If:\" "
-                                            "header: Unexpected "
-                                            "character encountered "
-                                            "(0x%02x, '%c').",
-                                            *list, *list));
-        }
-        
-        list++;
-      }
-      break;
-      
-    case ' ':
-    case '\t':
-      break;
-      
-    default:
-      return dav_new_error(r->pool, HTTP_BAD_REQUEST,
-                           DAV_ERR_IF_UNK_CHAR,
-                           apr_psprintf(r->pool,
-                                        "Invalid \"If:\" header: "
-                                        "Unexpected character "
-                                        "encountered (0x%02x, '%c').",
-                                        *str, *str));
-    }
-    
-    str++;
-  }
-  
-  *p_ih = ih;
-  return NULL;
-}
 
 /* -------------------------------------------------------------------- */
 
 /* Helper for dav_svn_merge().  Return a hash that maps (const char *)
    absolute fs paths to (const char *) locktokens.  Allocate the hash
-   and all keys/vals in POOL.  BASE_URI is the uri sent in the MERGE
-   request.
-
-   ### This will change later to scan an XML body document.  For now,
-       it reads the data out of the request's If: header. 
+   and all keys/vals in POOL.  PATH_PREFIX is the prefix we need to
+   prepend to each relative 'lock-path' in the xml in order to create
+   an absolute fs-path.
 */
 static dav_error *build_lock_hash(apr_hash_t **locks,
                                   request_rec *r,
-                                  const char *base_uri,
+                                  const char *path_prefix,
                                   apr_pool_t *pool)
 {
-  dav_error *err;
-  dav_if_header *ih;
+  apr_status_t apr_err;
+  void *data = NULL;
+  apr_xml_doc *doc = NULL;
+  apr_xml_elem *child, *lockchild;
+  int ns;
   apr_hash_t *hash = apr_hash_make(pool);
-
-  err = dav_svn_process_if_header(r, &ih);
-  if (err)
-    return err;
-
-  if (ih != NULL)
+  
+  /* Grab the MERGE body out of r->pool, as it contains all of the
+     lock tokens.  It should have been stashed already by our custom
+     input filter. */
+  apr_err = apr_pool_userdata_get(&data, "svn-merge-body", r->pool);
+  if (apr_err)
+    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                               HTTP_INTERNAL_SERVER_ERROR,
+                               "Error fetching pool userdata.",
+                               pool);
+  doc = data;
+  if (! doc)
     {
-      dav_if_header *this_if = ih;
-      
-      do
-        {
-          if (this_if->uri 
-              && this_if->state
-              && (this_if->state->type == dav_if_opaquelock))
-            {
-              const char *fs_path;
-
-              fs_path = svn_path_is_child(base_uri, this_if->uri, pool);
-              if (! fs_path)
-                {
-                  this_if = this_if->next;
-                  continue;
-                }
-
-              apr_hash_set(hash, fs_path, APR_HASH_KEY_STRING,
-                           apr_pstrdup(pool,
-                                       this_if->state->locktoken->uuid_str));
-            }
-
-          this_if = this_if->next;
-
-        } while (this_if != NULL);
-      
+      *locks = hash;
+      return SVN_NO_ERROR;
+    }
+  
+  /* Sanity check. */
+  ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  if (ns == -1)
+    {
+      return dav_new_error_tag(pool, HTTP_BAD_REQUEST, 0,
+                               "The request does not contain the 'svn:' "
+                               "namespace, so it is not going to have certain "
+                               "required elements.",
+                               SVN_DAV_ERROR_NAMESPACE,
+                               SVN_DAV_ERROR_TAG);
     }
 
+  /* Search all the doc's children until we find the <lock-token-list>. */
+  for (child = doc->root->first_child; child != NULL; child = child->next)
+    {
+      /* if this element isn't one of ours, then skip it */
+      if (child->ns != ns)
+        continue;
+
+      if (strcmp(child->name, "lock-token-list") == 0)
+        break;
+    }
+
+  /* Then look for N different <lock> structures within. */
+  for (lockchild = child->first_child; lockchild != NULL;
+       lockchild = lockchild->next)
+    {
+      if (strcmp(lockchild->name, "lock") == 0)
+        {
+          const char *lockpath = NULL, *locktoken = NULL;
+          apr_xml_elem *lfchild;
+          
+          for (lfchild = lockchild->first_child; lfchild != NULL;
+               lfchild = lfchild->next)
+            {
+              if (strcmp(lfchild->name, "lock-path") == 0)
+                {
+                  if (lfchild->first_cdata.first)
+                    {
+                      /* Create an absolute fs-path */
+                      lockpath = 
+                        svn_path_join(path_prefix,
+                                      lfchild->first_cdata.first->text,
+                                      pool);
+                      
+                      if (lockpath && locktoken)
+                        {
+                          apr_hash_set(hash, lockpath,
+                                       APR_HASH_KEY_STRING, locktoken);
+                          lockpath = NULL;
+                          locktoken = NULL;
+                        }
+                    }
+                }
+              else if (strcmp(lfchild->name, "lock-token") == 0)
+                {
+                  if (lfchild->first_cdata.first)
+                    {
+                      locktoken = 
+                        apr_pstrdup(pool,
+                                    lfchild->first_cdata.first->text);
+                      
+                      if (lockpath && locktoken)
+                        {
+                          apr_hash_set(hash, lockpath,
+                                       APR_HASH_KEY_STRING, locktoken);
+                          lockpath = NULL;
+                          locktoken = NULL;
+                        }
+                    }
+                }
+            }
+        }
+    }
+  
   *locks = hash;
   return SVN_NO_ERROR;
 }
@@ -1653,6 +1465,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
   const char *conflict;
   svn_error_t *serr;
   svn_revnum_t new_rev;
+  apr_hash_t *locks;
   svn_boolean_t disable_merge_response = FALSE;
 
   /* We'll use the target's pool for our operation. We happen to know that
@@ -1670,6 +1483,54 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
                                "as the source [at this time].",
                                SVN_DAV_ERROR_NAMESPACE,
                                SVN_DAV_ERROR_TAG);
+    }
+
+  /* Before attempting the final commit, we need to push any incoming
+     lock-tokens into the filesystem's access_t.   Normally they come
+     in via 'If:' header, and dav_svn_get_resource() automatically
+     notices them and does this work for us.  In the case of MERGE,
+     however, svn clients are sending them in the request body. */
+
+  err = build_lock_hash(&locks, target->info->r,
+                        target->info->repos_path,
+                        pool);
+  if (err != NULL)
+    return err;
+
+  if (apr_hash_count(locks))
+    {
+      svn_fs_access_t *fsaccess;
+      apr_hash_index_t *hi;
+
+      serr = svn_fs_get_access (&fsaccess, source->info->repos->fs);
+      if (serr)
+        {
+          /* If an authenticated username was attached to the MERGE
+             request, then dav_svn_get_resource() should have already
+             noticed and created an fs_access_t in the filesystem.  */
+          const char *new_msg = "Lock token(s) in request, but no username.";
+          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                          NULL, new_msg);
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, source->info->r,
+                        "%s", serr->message);
+          svn_error_clear(serr);
+          return dav_svn_convert_err (sanitized_error, HTTP_BAD_REQUEST,
+                                      apr_psprintf(pool, new_msg), pool);
+        }
+      
+      for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
+        {
+          const char *token;
+          void *val;
+          apr_hash_this(hi, NULL, NULL, &val);
+          token = val;
+
+          serr = svn_fs_access_add_lock_token (fsaccess, token);
+          if (serr)
+            return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "Error pushing token into filesystem.",
+                                        pool);
+        }
     }
 
   /* We will ignore no_auto_merge and no_checkout. We can't do those, but the
@@ -1732,25 +1593,19 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
      request. */
   if (source->info->svn_client_options != NULL)
     {
-      if (NULL != (ap_strstr_c(source->info->svn_client_options,
-                               SVN_DAV_OPTION_RELEASE_LOCKS)))
+      /* The client might want us to release all locks sent in the
+         MERGE request. */
+      if ((NULL != (ap_strstr_c(source->info->svn_client_options,
+                                SVN_DAV_OPTION_RELEASE_LOCKS)))
+          && apr_hash_count(locks))
         {
-          /* Release any locks used in the commit. */
-          apr_hash_t *locks;
-
-          err = build_lock_hash(&locks, source->info->r,
-                                source->info->repos->root_path,
-                                pool);
-          if (err != NULL)
-            return err;
- 
           serr = release_locks(locks, source->info->repos->repos, pool);
           if (serr != NULL)
             return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                        "Error releasing locks", pool);
         }
 
-      /* We may want to disable the merge response altogether. */
+      /* The client might want us to disable the merge response altogether. */
       if (NULL != (ap_strstr_c(source->info->svn_client_options,
                                SVN_DAV_OPTION_NO_MERGE_RESPONSE)))
         disable_merge_response = TRUE;

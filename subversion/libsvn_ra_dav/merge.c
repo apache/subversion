@@ -33,6 +33,7 @@
 #include "svn_ra.h"
 #include "svn_pools.h"
 #include "svn_props.h"
+#include "svn_xml.h"
 
 #include "svn_private_config.h"
 
@@ -556,6 +557,8 @@ svn_error_t * svn_ra_dav__merge_activity(
   merge_ctx_t mc = { 0 };
   const char *body;
   apr_hash_t *extra_headers = NULL;
+  apr_hash_index_t *hi;
+  svn_stringbuf_t *lockbuf = svn_stringbuf_create("", pool);
 
   mc.pool = pool;
   mc.scratchpool = svn_pool_create (pool);
@@ -590,45 +593,82 @@ svn_error_t * svn_ra_dav__merge_activity(
                     value);
     }
 
-  if (lock_tokens != NULL)
+  /* Need to marshal the whole [path->token] hash to the server as
+     a string within the body of the MERGE request. */
+  if ((lock_tokens != NULL)
+      && (apr_hash_count(lock_tokens) > 0))
     {
-      /* Send *all* of the client's tokens in a single If: header.
-         Notice that unlike our other write requests, this header not
-         only contains tokens, but paths as well.  That's because the
-         entire hash is needed by the server (both keys and values) to
-         free all the locks. */
+#define SVN_LOCK "<S:lock>"
+#define SVN_LOCK_LEN sizeof(SVN_LOCK)-1
+#define SVN_LOCK_CLOSE "</S:lock>"
+#define SVN_LOCK_CLOSE_LEN sizeof(SVN_LOCK_CLOSE)-1
+#define SVN_LOCK_PATH "<S:lock-path>"
+#define SVN_LOCK_PATH_LEN sizeof(SVN_LOCK_PATH)-1
+#define SVN_LOCK_PATH_CLOSE "</S:lock-path>"
+#define SVN_LOCK_PATH_CLOSE_LEN sizeof(SVN_LOCK_CLOSE)-1
+#define SVN_LOCK_TOKEN "<S:lock-token>"
+#define SVN_LOCK_TOKEN_LEN sizeof(SVN_LOCK_TOKEN)-1
+#define SVN_LOCK_TOKEN_CLOSE "</S:lock-token>"
+#define SVN_LOCK_TOKEN_CLOSE_LEN sizeof(SVN_LOCK_TOKEN_CLOSE)-1
 
-      /* ### FIXME: we should be marshalling the lock hash in the XML
-         body, which requires a change to mod_dav itself.  Apache will
-         reject a header longer than 8K, which means a limit of about
-         70 locks in one commit.  We could send multiple If: headers,
-         but then we still hit a 5000 lock boundaray. */
+      apr_size_t buf_size = 0;
 
-      apr_hash_index_t *hi;
-      const char *tokenlist = "";
-
-      for (hi = apr_hash_first(pool, lock_tokens);
-           hi; hi = apr_hash_next(hi))
+      /* First, figure out how much string data we're talking about,
+         and allocate a stringbuf big enough to hold it all. */
+      for (hi = apr_hash_first(pool, lock_tokens); hi; hi = apr_hash_next(hi))
         {
           const void *key;
           void *val;
-          const char *abs_uri;
+          apr_ssize_t klen;
+
+          apr_hash_this(hi, &key, &klen, &val);
+
+          buf_size += SVN_LOCK_LEN;
+          buf_size += SVN_LOCK_PATH_LEN;
+          buf_size += klen;
+          buf_size += SVN_LOCK_PATH_CLOSE_LEN;
+          buf_size += SVN_LOCK_TOKEN_LEN;
+          buf_size += strlen(val);
+          buf_size += SVN_LOCK_TOKEN_CLOSE_LEN;
+          buf_size += SVN_LOCK_CLOSE_LEN;
+        }
+      svn_stringbuf_ensure(lockbuf, buf_size + 1);
+
+      /* Now append all the hash's keys and values into the stringbuf.
+         This is better than doing apr_pstrcat() in a loop, because
+         (1) there's no need to constantly re-alloc, and (2) the
+         stringbuf already knows the end of the buffer, so there's no
+         seek-time to the end of the string when appending. */
+      for (hi = apr_hash_first(pool, lock_tokens); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
 
           apr_hash_this(hi, &key, NULL, &val);
-          abs_uri = apr_pstrcat(pool,
-                                ras->url, "/", (const char *)key, NULL);
 
-          tokenlist = apr_pstrcat(pool,
-                                  tokenlist,
-                                  apr_psprintf(pool, "<%s> (<%s>) ",
-                                               abs_uri,
-                                               (const char *)val),
-                                  NULL);
+          svn_stringbuf_appendcstr(lockbuf, SVN_LOCK);
+          svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_PATH);
+          svn_stringbuf_appendcstr(lockbuf, key);
+          svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_PATH_CLOSE);
+          svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_TOKEN);
+          svn_stringbuf_appendcstr(lockbuf, val);
+          svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_TOKEN_CLOSE);
+          svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_CLOSE);
         }
 
-      if (! extra_headers)
-        extra_headers = apr_hash_make(pool);
-      apr_hash_set (extra_headers, "If", APR_HASH_KEY_STRING, tokenlist);
+#undef SVN_LOCK
+#undef SVN_LOCK_LEN
+#undef SVN_LOCK_CLOSE
+#undef SVN_LOCK_CLOSE_LEN
+#undef SVN_LOCK_PATH
+#undef SVN_LOCK_PATH_LEN
+#undef SVN_LOCK_PATH_CLOSE
+#undef SVN_LOCK_PATH_CLOSE_LEN
+#undef SVN_LOCK_TOKEN
+#undef SVN_LOCK_TOKEN_LEN
+#undef SVN_LOCK_TOKEN_CLOSE
+#undef SVN_LOCK_TOKEN_CLOSE_LEN
+
     }
 
   body = apr_psprintf(pool,
@@ -640,7 +680,10 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "<D:checked-in/><D:version-name/><D:resourcetype/>"
                       "<D:creationdate/><D:creator-displayname/>"
                       "</D:prop>"
-                      "</D:merge>", activity_url);
+                      "<S:lock-token-list xmlns:S=\"" SVN_XML_NAMESPACE "\">"
+                      "%s</S:lock-token-list>"
+                      "</D:merge>",
+                      activity_url, lockbuf->data);
 
   SVN_ERR( svn_ra_dav__parsed_request_compat(ras->sess, "MERGE", repos_url,
                                              body, 0, NULL, merge_elements,
