@@ -1,4 +1,4 @@
-/* lock-nodes-table.h : internal interface to ops on `lock-nodes' table
+/* lock-tokens-table.h : internal interface to ops on `lock-tokens' table
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -15,8 +15,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_LOCKS_TABLE_H
-#define SVN_LIBSVN_FS_LOCKS_TABLE_H
+#ifndef SVN_LIBSVN_FS_LOCK_TOKENS_TABLE_H
+#define SVN_LIBSVN_FS_LOCK_TOKENS_TABLE_H
 
 #include "svn_fs.h"
 #include "svn_error.h"
@@ -28,29 +28,37 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Open a `lock-nodes' table in ENV.  If CREATE is non-zero, create
-   one if it doesn't exist.  Set *LOCK_NODES_P to the new table.
+/* Open a `lock-tokens' table in ENV.  If CREATE is non-zero, create
+   one if it doesn't exist.  Set *LOCK_TOKENS_P to the new table.
    Return a Berkeley DB error code.  */
-int svn_fs_bdb__open_lock_nodes_table (DB **locks_nodes_p,
-                                       DB_ENV *env,
-                                       svn_boolean_t create);
+int svn_fs_bdb__open_lock_tokens_table (DB **locks_tokens_p,
+                                        DB_ENV *env,
+                                        svn_boolean_t create);
 
 svn_error_t *
-svn_fs_bdb__lock_node_add (svn_fs_t *fs,
-                           const char **lock_node_id,
-                           lock_node_t *lock_node,
-                           trail_t *trail);
+svn_fs_bdb__lock_token_add (svn_fs_t *fs,
+                            const char *path,
+                            const char *lock_token,
+                            trail_t *trail);
 
 svn_error_t *
-svn_fs_bdb__lock_node_delete (svn_fs_t *fs,
-                              const char *lock_node_id,
-                              trail_t *trail);
+svn_fs_bdb__lock_token_delete (svn_fs_t *fs,
+                               const char *path,
+                               trail_t *trail);
 
 svn_error_t *
-svn_fs_bdb__lock_node_get (lock_node_t **lock_node_p,
-                           svn_fs_t *fs,
-                           const char *lock_node_id,
-                           trail_t *trail);
+svn_fs_bdb__lock_token_get (const char **lock_token_p,
+                            svn_fs_t *fs,
+                            const char *path,
+                            trail_t *trail);
+
+
+svn_error_t *
+svn_fs_bdb__lock_tokens_get (apr_hash_t **lock_tokens_p,
+                             svn_fs_t *fs,
+                             const char *path,
+                             trail_t *trail);
+
 
 #ifdef __cplusplus
 }

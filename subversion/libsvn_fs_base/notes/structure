@@ -597,48 +597,24 @@ where:
    * EXPIRATION-DATE is a string representation of the date/time when
      the lock will cease to be valid.  (see svn_time_to_cstring())
 
-In addition to creating a lock in the `locks' table, a series of nodes
-is created in a `lock-nodes' table.  The `lock-nodes' table reflects a
-tree of nodes which are either locked, or are directories that lead to
-locked nodes.  Note that these "nodes" have nothing to do with DAG
-nodes or anything in the `nodes' table.  This is an independent tree,
-used only for tracking locked paths.
+In addition to creating a lock in the `locks' table, a new row is
+created in a `locks-nodes' table.  The `lock-nodes' table is a btree
+whose key is an absolute path in the filesystem.  The value of each
+key is a lock-token (which is a key into the `locks' table.)
 
-If the filesystem wants to know whether a certain path is locked or
-not, it merely needs to test whether that path exists in the lock
-tree.  And the mere existence of a directory in the lock tree implies
-that at least one of its children is locked, and thus the directory
-cannot be deleted without further investigation.
+To test if a path is locked, simply check if the path is a key in the
+`locks-nodes' table.  To see if a certain directory has any locked
+children below, we ask BerkeleyDB to do a "greater or equal match" on
+the directory path, and see if any results come back.  If they do,
+then at least one of the directory's children is locked, and thus the
+directory cannot be deleted without further investigation.
 
 Locks are epheremal things, not historied in any way.  They are
 potentially created and deleted quite often.  When a lock is
 destroyed, the appropriate row is removed from the `locks' table.
 Additionally, the locked-path is removed from the `lock-nodes' table.
-The cleaning of the `lock-nodes' table begins by removing the locked
-file-node, then its immediate parent, repeating all the way up to the
-root directory.  If, at any point during the bubble-up, a directory
-either has more than one child or has a lock attached, then the
-node-removal process stops.
 
-The `lock-nodes' table is a btree whose key is a standard base-36
-number that represents a unique node in the lock tree.  The value of
-each key is a skel that describes a node:
 
-     ("lock-node" (ENTRIES) [LOCK])
-
-where:
-
-   * ENTRIES is a skel of child entries, possibly empty, of the form:
-
-         ((NAME LOCK-NODE-ID) [(NAME LOCK-NODE-ID)] ...)
-
-     where:
- 
-          * NAME is the name of the node
-          * LOCK-NODE-ID is a base-36 key to another lock-node.
-
-   * LOCK, if present, means that the node is locked.  This field is a
-     uuid key (lock-token) into the `locks' table.
 
 
 
@@ -802,8 +778,7 @@ Berkeley DB tables
       "representations" : btree(REP -> REPRESENTATION, "next-id" -> REP)
                 "uuids" : recno(UUID)
                 "locks" : btree(LOCK-TOKEN -> LOCK)
-           "lock-nodes" : btree(LOCK-NODE-ID -> LOCK-NODE,
-                               "next-id" -> LOCK_NODE_ID)
+           "lock-nodes" : btree(PATH -> LOCK-TOKEN)
 
 Syntactic elements
 ------------------
@@ -816,7 +791,6 @@ Table keys:
                     STR ::= number-36 ;
                     REP ::= number-36 ;
              LOCK-TOKEN ::= uuid ;
-           LOCK-NODE-ID ::= number-36 ;
 
 Property lists:
 
@@ -929,10 +903,8 @@ Locks:
 
 Lock nodes:
 
-              LOCK-NODE ::= ("lock-node" LOCK-ENTRIES [LOCK-TOKEN])
-           LOCK-ENTRIES ::= (LOCK-ENTRY ...) ;
-             LOCK-ENTRY ::= (NAME LOCK-NODE-ID) ;
-                   NAME ::= atom ;
+               (the value is just a lock-token, which is a uuid)
+
 
         
 Lexical elements
