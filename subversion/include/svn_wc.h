@@ -238,16 +238,16 @@ svn_error_t *svn_wc_get_ancestry (svn_stringbuf_t **url,
 
 enum svn_wc_status_kind
 {
-    svn_wc_status_none = 1,   /* component does not exist (e.g. properties) */
-    svn_wc_status_normal,     /* component exists, but uninteresting. */
-    svn_wc_status_added,      /* component is scheduled for additon */
-    svn_wc_status_absent,     /* component under v.c., but is missing */
-    svn_wc_status_deleted,    /* component scheduled for deletion */
-    svn_wc_status_replaced,   /* foo.c was deleted and then re-added */
-    svn_wc_status_modified,   /* foo.c's text or props have been modified */
-    svn_wc_status_merged,     /* local mods received repos mods */
-    svn_wc_status_conflicted, /* local mods received conflicting repos mods */
-    svn_wc_status_unversioned /* foo.c is not a versioned thing in this wc */
+    svn_wc_status_none = 1,    /* does not exist */
+    svn_wc_status_unversioned, /* is not a versioned thing in this wc */
+    svn_wc_status_normal,      /* exists, but uninteresting. */
+    svn_wc_status_added,       /* is scheduled for additon */
+    svn_wc_status_absent,      /* under v.c., but is missing */
+    svn_wc_status_deleted,     /* scheduled for deletion */
+    svn_wc_status_replaced,    /* was deleted and then re-added */
+    svn_wc_status_modified,    /* text or props have been modified */
+    svn_wc_status_merged,      /* local mods received repos mods */
+    svn_wc_status_conflicted   /* local mods received conflicting repos mods */
 };
 
 /* Structure for holding the "status" of a working copy item. 
