@@ -165,3 +165,17 @@ back-end -> ???
     capítulo se usa al menos tres veces para referirse al "motor"
     que hay detrás de la capa de base de datos. Hmmm... pero motor
     suena raro...
+
+hook, to hook -> gancho, enganchar
+    Usado en terminología de programación para indicar que el usuario
+    tiene un mecanismo estándar para modificar el comportamiento de
+    un dispositivo existente. Un ejemplo a nivel de programación
+    son las funciones "callback" que se pasan como parámetros,
+    o a nivel de sistema, scripts que existen en un directorio
+    concreto y que se ejecutan por el servidor de Subversion para
+    realizar tareas personalizadas por el administrador.
+
+wrapper -> envoltorio
+    Normalmente una función o librería que engloba o asimila otra
+    menor, con el propósito de extender su funcionalidad o hacerla
+    más fácil de usar de cara al usuario.
