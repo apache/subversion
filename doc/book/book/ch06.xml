@@ -1990,16 +1990,15 @@ umask 002
 
       <itemizedlist>
         <listitem>
-          <para>Put all the SSH users into a single group.</para>
+          <para>All of your SSH users need to be able to read and
+            write to the repository.  Put all the SSH users into a
+            single group.  Make the repository wholly owned by that
+            group, and set the group permissions to read/write.</para>
         </listitem>
 
         <listitem>
-          <para>Make the repository wholly owned by that group, and
-            give complete read/write access to that group.</para>
-        </listitem>
-
-        <listitem>
-          <para>Make sure that <command>svnserve</command>
+          <para>Your users need to use a sane umask when accessing the
+            repository.  Make sure that <command>svnserve</command>
             (<filename>/usr/local/bin/svnserve</filename>, or wherever
             it lives in <literal>$PATH</literal>) is actually a
             wrapper script which sets <command>umask 002</command> and
@@ -2008,9 +2007,10 @@ umask 002
         </listitem>
 
         <listitem>
-          <para>Make sure you run <command>chmod g+s</command> on the
-            repository's <filename>db</filename> directory, so new
-            logfiles are created with the correct group owner.</para>
+          <para>When BerkeleyDB creates new logfiles, they need to be
+            owned by the group as well, so make sure you run
+            <command>chmod g+s</command> on the repository's
+            <filename>db</filename> directory.</para>
         </listitem>
       </itemizedlist>
 
