@@ -22,6 +22,7 @@
 #include "svn_fs.h"
 #include "svn_hash.h"
 #include "svn_time.h"
+#include "svn_utf.h"
 
 #include "apr_uuid.h"
 #include "apr_file_io.h"
@@ -193,7 +194,7 @@ write_lock_token_to_file (svn_fs_t *fs,
   apr_file_t *fd;
   char *abs_path, *dir;
 
-  SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, lock->path, pool));
+  SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, lock->token, pool));
 
   /* Make sure that the directory exists before we create the lock file. */
   dir = svn_path_dirname (abs_path, pool);
@@ -286,6 +287,26 @@ generate_new_lock (svn_lock_t **lock_p,
     lock->expiration_date = lock->creation_date + apr_time_from_sec(timeout);
 
   *lock_p = lock;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+read_path_from_lock_token_file(svn_fs_t *fs, 
+                               char **path_p,
+                               const char *token, 
+                               apr_pool_t *pool)
+{
+  char *abs_path;
+  const char *abs_path_utf8;
+  svn_stringbuf_t *buf;
+
+  SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, token, pool));
+
+  SVN_ERR (svn_utf_cstring_to_utf8 (&abs_path_utf8, abs_path, pool));
+  
+  SVN_ERR (svn_stringbuf_from_file (&buf, abs_path_utf8, pool));
+
+  *path_p = buf->data;         
   return SVN_NO_ERROR;
 }
 
@@ -506,13 +527,25 @@ svn_fs_fs__get_lock_from_path (svn_lock_t **lock_p,
 
 
 svn_error_t *
-svn_fs_fs__get_lock_from_token (svn_lock_t **lock,
+svn_fs_fs__get_lock_from_token (svn_lock_t **lock_p,
                                 svn_fs_t *fs,
                                 const char *token,
                                 apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
+  svn_lock_t *lock;
+  char *path;
+
+  /* Read lock token from disk */
+  SVN_ERR (read_path_from_lock_token_file(fs, &path, token, pool));
+
+  /* Pass path to read_lock_from_file */
+  read_lock_from_file(&lock, fs, path, pool);
+
+  /* Get lock back, check for null */
+  if (!lock)
+    return svn_fs_fs__err_no_such_lock (fs, path);
+  *lock_p = lock;
+  return SVN_NO_ERROR;
 }
 
 
