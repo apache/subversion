@@ -18,6 +18,12 @@ import shutil
 import anydbm
 import marshal
 
+# Make sure this Python is recent enough.
+import sys
+if sys.hexversion < 0x2000000:
+  sys.stderr.write('Python 2.0 or higher is required; see www.python.org.')
+  sys.exit(1)
+
 # Don't settle for less.
 if anydbm._defaultmod.__name__ == 'dumbdbm':
   print 'ERROR: your installation of Python does not contain a proper'
