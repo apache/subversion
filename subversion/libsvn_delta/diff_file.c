@@ -58,13 +58,13 @@ datasource_to_index(svn_diff_datasource_e datasource)
 {
   switch (datasource)
     {
-    case svn_diff_datasource_baseline:
+    case svn_diff_datasource_original:
       return 0;
 
-    case svn_diff_datasource_workingcopy:
+    case svn_diff_datasource_modified:
       return 1;
 
-    case svn_diff_datasource_repository:
+    case svn_diff_datasource_latest:
       return 2;
     }
 
@@ -244,7 +244,7 @@ svn_diff_file(svn_diff_t **diff,
   memset(&vtable, 0, sizeof(vtable));
   vtable.datasource_open = svn_diff__file_datasource_open;
   vtable.datasource_close = svn_diff__file_datasource_close;
-  vtable.datasource_get_token = svn_diff__file_datasource_get_token;
+  vtable.datasource_get_next_token = svn_diff__file_datasource_get_token;
   vtable.token_compare = svn_diff__file_token_compare;
   vtable.token_discard = svn_diff__file_token_discard;
 
