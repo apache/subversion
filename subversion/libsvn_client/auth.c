@@ -443,11 +443,6 @@ typedef struct
   /* how many times to re-prompt after the first one fails */
   int retry_limit;
 
-  /* a default username and password to try before prompting.  may
-     each be NULL. */
-  const char *default_username;
-  const char *default_password;
-
 } simple_prompt_provider_baton_t;
 
 
@@ -468,6 +463,7 @@ static svn_error_t *
 simple_prompt_first_creds (void **credentials,
                            void **iter_baton,
                            void *provider_baton,
+                           apr_hash_t *parameters,
                            apr_pool_t *pool)
 {
   simple_prompt_provider_baton_t *pb = provider_baton;
@@ -475,7 +471,15 @@ simple_prompt_first_creds (void **credentials,
   simple_prompt_iter_baton_t *ibaton = apr_pcalloc (pool, sizeof(*ibaton));
   const char *username, *password;
 
-  if (pb->default_username == NULL)
+  /* run-time parameters */
+  const char *default_username
+    = apr_hash_get (parameters, SVN_AUTH_PARAM_DEFAULT_USERNAME,
+                    APR_HASH_KEY_STRING);
+  const char *default_password
+    = apr_hash_get (parameters, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
+                    APR_HASH_KEY_STRING);
+
+  if (default_username == NULL)
     {
       SVN_ERR (pb->prompt_func (&username, "username: ",
                                 FALSE, /* screen echo ok */
@@ -483,10 +487,10 @@ simple_prompt_first_creds (void **credentials,
     }
   else
     {
-      username = pb->default_username;
+      username = default_username;
     }
 
-  if (pb->default_password == NULL)
+  if (default_password == NULL)
     {
       const char *prompt = apr_psprintf (pool, "%s's password: ", username);
       SVN_ERR (pb->prompt_func (&password, prompt,
@@ -495,7 +499,7 @@ simple_prompt_first_creds (void **credentials,
     }
   else
     {
-      password = pb->default_password;
+      password = default_password;
     }
 
   creds->username = username;
@@ -515,6 +519,7 @@ simple_prompt_first_creds (void **credentials,
 static svn_error_t *
 simple_prompt_next_creds (void **credentials,
                           void *iter_baton,
+                          apr_hash_t *parameters,
                           apr_pool_t *pool)
 {
   simple_prompt_iter_baton_t *ib = iter_baton;
@@ -554,8 +559,6 @@ svn_client__get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                         svn_client_prompt_t prompt_func,
                                         void *prompt_baton,
                                         int retry_limit,
-                                        const char *default_username,
-                                        const char *default_password,
                                         apr_pool_t *pool)
 {
   simple_prompt_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
@@ -569,11 +572,6 @@ svn_client__get_simple_prompt_provider (const svn_auth_provider_t **provider,
   pb->prompt_func = prompt_func;
   pb->prompt_baton = prompt_baton;
   pb->retry_limit = retry_limit;
-
-  if (default_username)
-    pb->default_username = apr_pstrdup (pool, default_username);
-  if (default_password)
-    pb->default_password = apr_pstrdup (pool, default_password);
 
   *provider = prov;
   *provider_baton = pb;

@@ -65,11 +65,17 @@ typedef struct
 } provider_set_t;
 
 
-/* The auth baton contains all of the tables. */
+/* The main auth baton. */
 struct svn_auth_baton_t
 {
-  apr_hash_t *tables;  /* maps cred_kind -> provider_set */
-  apr_pool_t *pool;    /* the pool I'm allocated in. */
+  /* a collection of tables.  maps cred_kind -> provider_set */
+  apr_hash_t *tables;
+
+  /* the pool I'm allocated in. */
+  apr_pool_t *pool;
+
+  /* run-time parameters needed by providers. */
+  apr_hash_t *parameters;
 
 };
 
@@ -81,6 +87,7 @@ struct svn_auth_iterstate_t
   svn_boolean_t got_first;     /* did we get the provider's first creds? */
   void *provider_iter_baton;   /* the provider's own iteration context */
   void *last_creds;            /* the last set of credentials returned */
+  apr_hash_t *parameters;      /* pointer to auth_baton's runtime params */
 };
 
 
@@ -93,11 +100,29 @@ svn_auth_open (svn_auth_baton_t **auth_baton,
 
   ab = apr_pcalloc (pool, sizeof (*ab));
   ab->tables = apr_hash_make (pool);
+  ab->parameters = apr_hash_make (pool);
   ab->pool = pool;
 
   *auth_baton = ab;
   return SVN_NO_ERROR;
 }
+
+
+void 
+svn_auth_set_parameter (svn_auth_baton_t *auth_baton,
+                        const char *name,
+                        const void *value)
+{
+  apr_hash_set (auth_baton->parameters, name, APR_HASH_KEY_STRING, value);
+}
+
+const void * 
+svn_auth_get_parameter (svn_auth_baton_t *auth_baton,
+                        const char *name)
+{
+  return apr_hash_get (auth_baton->parameters, name, APR_HASH_KEY_STRING);
+}
+
 
 
 void
@@ -174,7 +199,8 @@ svn_auth_first_credentials (void **credentials,
     {
       provider = APR_ARRAY_IDX(table->providers, i, provider_t *);
       SVN_ERR (provider->vtable->first_credentials 
-               (&creds, &iter_baton, provider->provider_baton, pool));
+               (&creds, &iter_baton, provider->provider_baton,
+                auth_baton->parameters, pool));
 
       if (creds != NULL)
         break;
@@ -191,6 +217,7 @@ svn_auth_first_credentials (void **credentials,
       iterstate->got_first = TRUE;
       iterstate->provider_iter_baton = iter_baton;
       iterstate->last_creds = creds;
+      iterstate->parameters = auth_baton->parameters;
       *state = iterstate;
     }
 
@@ -221,14 +248,15 @@ svn_auth_next_credentials (void **credentials,
         {
           SVN_ERR (provider->vtable->first_credentials 
                    (&creds, &(state->provider_iter_baton),
-                    provider->provider_baton, pool));
+                    provider->provider_baton, state->parameters, pool));
           state->got_first = TRUE;
         }
       else
         {
           if (provider->vtable->next_credentials)
             SVN_ERR (provider->vtable->next_credentials 
-                     (&creds, state->provider_iter_baton, pool));
+                     (&creds, state->provider_iter_baton,
+                      state->parameters, pool));
         }
 
       if (creds != NULL)
@@ -262,7 +290,8 @@ svn_auth_save_credentials (svn_auth_iterstate_t *state,
   if (provider->vtable->save_credentials)
     SVN_ERR (provider->vtable->save_credentials (&save_succeeded, 
                                                  state->last_creds,
-                                                 provider->provider_baton, 
+                                                 provider->provider_baton,
+                                                 state->parameters,
                                                  pool));
   if (save_succeeded)
     return SVN_NO_ERROR;
@@ -276,7 +305,7 @@ svn_auth_save_credentials (svn_auth_iterstate_t *state,
       if (provider->vtable->save_credentials)
         SVN_ERR (provider->vtable->save_credentials 
                  (&save_succeeded, state->last_creds,
-                  provider->provider_baton, pool));
+                  provider->provider_baton, state->parameters, pool));
 
       if (save_succeeded)
         break;

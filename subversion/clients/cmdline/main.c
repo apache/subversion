@@ -43,6 +43,7 @@
 #include "svn_opt.h"
 #include "svn_time.h"
 #include "svn_utf.h"
+#include "svn_auth.h"
 #include "cl.h"
 
 
@@ -521,7 +522,6 @@ main (int argc, const char * const *argv)
   apr_status_t apr_err;
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
-  svn_auth_cred_simple_t *default_creds;
 
   /* C programs default to the "C" locale by default.  But because svn
      is supposed to be i18n-aware, it should inherit the default
@@ -885,6 +885,15 @@ main (int argc, const char * const *argv)
   /* Build an authentication baton to give to libsvn_client. */
   svn_auth_open (&ab, pool);
 
+  /* Place any default --username or --password credentials into the
+     auth_baton's run-time parameter hash.  ### Same with --no-auth-cache? */
+  if (opt_state.auth_username)
+    svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
+                           opt_state.auth_username);
+  if (opt_state.auth_password)
+    svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
+                           opt_state.auth_password);
+
   ctx.old_auth_baton = svn_cl__make_auth_baton (&opt_state, pool);
   ctx.auth_baton = ab;
 
@@ -893,16 +902,6 @@ main (int argc, const char * const *argv)
 
   ctx.log_msg_func = svn_cl__get_log_message;
   ctx.log_msg_baton = svn_cl__make_log_msg_baton (&opt_state, NULL, pool);
-
-  /* Place any default --username or --password credentials into the cxt. */
-  if (opt_state.auth_username || opt_state.auth_password)
-    {
-      default_creds = apr_pcalloc (pool, sizeof(*default_creds));
-      default_creds->username = opt_state.auth_username;
-      default_creds->password = opt_state.auth_password;
-
-      ctx.default_simple_creds = default_creds;
-    }
 
   err = (*subcommand->cmd_func) (os, &command_baton, pool);
   if (err)

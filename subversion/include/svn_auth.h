@@ -62,6 +62,13 @@ extern "C" {
  * behaviors (by changing registration order), and very easily write
  * new authentication providers.
  *
+ * An auth_baton also contains an internal hashtable of run-time
+ * parameters; any provider or library layer can set these run-time
+ * parameters at any time, so that the provider has access to the
+ * data.  (For example, certain run-time data may not be available
+ * until an authentication challenge is made.)  Each provider must
+ * document run-time parameters it requires.
+ *
  * @defgroup auth_fns authentication functions
  * @{
  */
@@ -86,11 +93,13 @@ typedef struct
    * credentials are available.  Set @a *iter_baton to context that
    * allows a subsequent call to @c next_credentials, in case the
    * first credentials fail to authenticate.  @a provider_baton is
-   * general context for the vtable.
+   * general context for the vtable, and @a parameters contains any
+   * run-time data that the provider may need.
    */
   svn_error_t * (*first_credentials) (void **credentials,
                                       void **iter_baton,
                                       void *provider_baton,
+                                      apr_hash_t *parameters,
                                       apr_pool_t *pool);
 
   /** Get a different set of credentials.
@@ -99,24 +108,28 @@ typedef struct
    * @a iter_baton as the context from previous call to first_credentials
    * or next_credentials).  If no more credentials are available, set
    * @a **credenitals to NULL.  If the provider only has one set of
-   * credentials, this function pointer should simply be NULL.
+   * credentials, this function pointer should simply be NULL.  @a
+   * parameters contains any run-time data that the provider may need.
    */
   svn_error_t * (*next_credentials) (void **credentials,
                                      void *iter_baton,
+                                     apr_hash_t *parameters,
                                      apr_pool_t *pool);
   
   /** Save credentials.
    *
    * Store @a credentials for future use.  @a provider_baton is
-   * general context for the vtable.  Set @a *saved to true if the
-   * save happened, or false if not.  The provider is not required to
-   * save; if it refuses or is unable to save for non-fatal reasons,
-   * return false.  If the provider never saves data, then this
-   * function pointer should simply be NULL.
+   * general context for the vtable, and @a parameters contains any
+   * run-time data the provider may need.  Set @a *saved to true if
+   * the save happened, or false if not.  The provider is not required
+   * to save; if it refuses or is unable to save for non-fatal
+   * reasons, return false.  If the provider never saves data, then
+   * this function pointer should simply be NULL.
    */
   svn_error_t * (*save_credentials) (svn_boolean_t *saved,
                                      void *credentials,
                                      void *provider_baton,
+                                     apr_hash_t *parameters,
                                      apr_pool_t *pool);
   
 } svn_auth_provider_t;
@@ -153,6 +166,31 @@ typedef struct
  */
 svn_error_t * svn_auth_open(svn_auth_baton_t **auth_baton,
                             apr_pool_t *pool);
+
+/** Set an authentication run-time parameter.
+ *
+ * Store @a name / @a value pair as a run-time parameter in @a
+ * auth_baton, making the data accessible to all providers.  @a name
+ * and @a value will be NOT be duplicated into the auth_baton's
+ * pool. To delete a run-time parameter, pass NULL for @a value.
+ */
+void svn_auth_set_parameter(svn_auth_baton_t *auth_baton,
+                            const char *name,
+                            const void *value);
+
+/** Get an authentication run-time parameter.
+ *
+ * Return a value for run-time parameter @a name from @a auth_baton.
+ * Return NULL if the parameter doesn't exist.
+ */
+const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
+                                    const char *name);
+
+/** Universal run-time parameters, made available to all providers. */
+#define SVN_AUTH_PARAM_PREFIX "svn:auth:"
+#define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX "username"
+#define SVN_AUTH_PARAM_DEFAULT_PASSWORD  SVN_AUTH_PARAM_PREFIX "password"
+
 
 /** Register an authentication provider.
  *

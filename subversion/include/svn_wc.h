@@ -1886,20 +1886,35 @@ svn_wc_save_simple_creds (svn_boolean_t *saved,
 
 
 /** Set @a *provider and @ *provider_baton to an authentication
-    provider of type @c svn_auth_cred_simple_t that gets/sets
-    information from a working copy directory @a wc_dir.  If an access
-    baton for @a wc_dir is already open and available, pass it in @a
-    wc_dir_access, else pass NULL.  If either @a default_username or
-    @a default_password is non-NULL, return the default argument(s)
-    when @c svn_auth_first_credentials is called. */
+ *  provider of type @c svn_auth_cred_simple_t that gets/sets
+ *  information from a working copy directory. 
+ *  
+ *   This provider requires certain run-time parameters be present in
+ *   the auth_baton:
+ *
+ *    - a working copy directory to read/write to.
+ *             (@c SVN_AUTH_PARAM_SIMPLE_WC_WCDIR)
+ *
+ *    - if available, an access baton for the directory.
+ *             (@c SVN_AUTH_PARAM_SIMPLE_WC_ACCESS)
+ *
+ *  Additionally, if a default username or password is available, this
+ *  provider will honor them as well, and return them when @c
+ *  svn_auth_first_credentials is called.  (see @c
+ *  SVN_AUTH_PARAM_DEFAULT_USERNAME and @c SVN_AUTH_PARAM_DEFAULT_PASSWORD).
+ */
 void 
 svn_wc_get_simple_wc_provider (const svn_auth_provider_t **provider,
                                void **provider_baton,
-                               const char *wc_dir,
-                               svn_wc_adm_access_t *wc_dir_access,
-                               const char *default_username,
-                               const char *default_password,
                                apr_pool_t *pool);
+
+
+/** The specialized runtime parameters required by the simple wc
+    provider; see svn_auth.h for more explanation. */
+#define SVN_AUTH_SIMPLE_WC_PARAM_PREFIX SVN_AUTH_PARAM_PREFIX "wc:"
+#define SVN_AUTH_PARAM_SIMPLE_WC_WCDIR SVN_AUTH_SIMPLE_WC_PARAM_PREFIX "wcdir"
+#define SVN_AUTH_PARAM_SIMPLE_WC_ACCESS SVN_AUTH_SIMPLE_WC_PARAM_PREFIX "access"
+
 
 
 /* Tmp files */
