@@ -409,11 +409,12 @@ typedef struct svn_delta_edit_fns_t
   
   /* These are like add_directory() and replace_directory(), except
      that because it's the root dir, it takes neither parent baton nor
-     name (note that this is because it is the root dir of this
+     name (note that by "root dir", we mean the root dir of this
      change, which may or may not be the root dir of the repository).
 
-     This function supplies the parent baton for child directories by
-     setting DIR_BATON.
+     This function sets DIR_BATON, which will be the dir baton for its
+     matching finish_directory() and the parent baton for any child
+     calls.
 
      kff todo:
 
