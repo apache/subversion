@@ -14,6 +14,8 @@ ACLOCAL = @ACLOCAL@ -I ac-helpers
 
 ## Use Karl's script to create a Changelog from CVS.
 
+log: changelog
+
 ChangeLog: changelog
 
 changelog:
