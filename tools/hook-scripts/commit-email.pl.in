@@ -26,8 +26,14 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
-require 5.6.0;  #  minimum Perl version for "warnings" module
-use warnings;
+# Turn on warnings the best way depending on the Perl version.
+BEGIN {                                                                         
+  if ( $] >= 5.006_000)                                                         
+    { require warnings; import warnings; }                
+  else                                                                          
+    { $^W = 1; }                                                  
+}                                                                               
+						
 use strict;
 use Carp;
 
