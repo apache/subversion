@@ -990,8 +990,8 @@ test_list = [ None,
               basic_conflict,
               basic_cleanup,
               basic_revert,
-              update_binary_file
-              # update_binary_file_2
+              update_binary_file,
+              update_binary_file_2
              ]
 
 if __name__ == '__main__':

@@ -4572,9 +4572,14 @@ get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
                  apr_pool_t *pool)
 {
   svn_stream_t *stream;
-  char buf[4096];
   apr_size_t len;
   apr_md5_ctx_t context;
+
+  /* ### todo:  Pool usage in svndiff is currently really, really
+     crappy.  We need to keep this buffer fairly large so we don't run
+     out of memory doing undeltification of large files into tiny
+     buffers.  Issue #465.  */
+  char buf[100000]; 
 
   /* Get a stream for the file contents. */
   SVN_ERR (svn_fs_file_contents (&stream, root, path, pool));  
@@ -4653,11 +4658,7 @@ large_file_integrity (const char **msg,
   /* Because we've had problems in the past with files with sizes >
      svn_txdelta__window_size, our file should be at least one byte
      bigger than that. */
-#ifdef MAKE_THIS_FUNCTION_FAIL
   apr_size_t filesize = svn_txdelta__window_size + 1;
-#else
-  apr_size_t filesize = svn_txdelta__window_size;
-#endif
 
   *msg = "create and modify a large file, verifying its integrity";
 
