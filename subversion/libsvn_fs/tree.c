@@ -1497,7 +1497,12 @@ merge (const char **conflict_p,
           else if (svn_fs_id_distance (t_entry->id, a_entry->id) != -1)
             {
               /* E is an attempt to modify ancestor, so it's a
-                 conflict with the deletion of E in source.
+                 conflict with the deletion of E in source.  If E
+                 were unrelated to ancestor, it would not be an
+                 attempt to modify ancestor (it might just be a copy
+                 or rename of something unrelated), in which case we
+                 wouldn't conflict.  It's because E is *related* to
+                 the ancestor that we conflict here.
 
                  ### TODO: see issue #418 about this inelegance. */
               *conflict_p = path_append (target_path, t_entry->name,
