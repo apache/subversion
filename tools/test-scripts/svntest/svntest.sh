@@ -20,17 +20,31 @@ $EXEC_PATH/svntest-update.sh || {
     exit
 }
 
+# Check what was the update status for projects,
+# if there is nothing to do, send NOOP email and abort testing
+RB_APR="`$CAT $TEST_ROOT/$APR_NAME.rb`"
+RB_APU="`$CAT $TEST_ROOT/$APU_NAME.rb`"
+RB_HTTPD="`$CAT $TEST_ROOT/$HTTPD_NAME.rb`"
+RB_SVN="`$CAT $TEST_ROOT/$SVN_NAME.rb`"
+
+if [ $RB_APR -ne 0 -a $RB_APU -ne 0 -a $RB_HTTPD -ne 0 -a $RB_SVN -ne 0 \
+    -a $RB_APR -lt $RB_APU -a $RB_APU -lt $RB_HTTPD -a $RB_HTTPD -lt $RB_SVN ]; 
+then
+    $EXEC_PATH/svntest-sendmail.sh "update" "" "" "NOOP"
+    exit
+fi
+    
 # conditionally rebuild apr, apr-util and httpd
-$EXEC_PATH/svntest-rebuild-generic.sh "$APR_NAME" "$APU_NAME" "$MAKE_OPTS" || {
+$EXEC_PATH/svntest-rebuild-generic.sh "$APR_NAME" "" "$MAKE_OPTS" || {
     $EXEC_PATH/svntest-sendmail.sh "update" "" "" "FAIL"
     exit
 }
-$EXEC_PATH/svntest-rebuild-generic.sh "$APU_NAME" "$HTTPD_NAME" "$MAKE_OPTS" || {
+$EXEC_PATH/svntest-rebuild-generic.sh "$APU_NAME" "$APR_NAME" "$MAKE_OPTS" || {
     $EXEC_PATH/svntest-sendmail.sh "update" "" "" "FAIL"
     exit
 }
 # httpd won't build with parallel make
-$EXEC_PATH/svntest-rebuild-generic.sh "$HTTPD_NAME" "" "" || {
+$EXEC_PATH/svntest-rebuild-generic.sh "$HTTPD_NAME" "$APU_NAME" "" || {
     $EXEC_PATH/svntest-sendmail.sh "update" "" "" "FAIL"
     exit
 }

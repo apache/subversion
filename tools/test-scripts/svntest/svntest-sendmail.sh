@@ -35,8 +35,8 @@ EOF
     exit 1
 fi
 
-# The status may only be PASS or FAIL
-if [ "$BUILD_STAT" != "PASS" -a "$BUILD_STAT" != "FAIL" ]
+# The status may only be PASS or FAIL or NOOP
+if [ "$BUILD_STAT" != "PASS" -a "$BUILD_STAT" != "FAIL" -a "$BUILD_STAT" != "NOOP" ]
 then
     $SENDMAIL -t <<EOF
 From: $FROM
@@ -46,6 +46,19 @@ To: $ERROR_TO
 Invalid build status: $BUILD_STAT
 EOF
     exit 1
+fi
+
+# Send the No-Op mail
+if [ "$BUILD_STAT" = "NOOP" ]
+then
+    $SENDMAIL -t <<EOF
+From: $FROM
+Subject: svn $REVPREFIX$REV: NOOP ($TEST)
+To: $TO
+
+$REVPREFIX$REV: There is nothing to test.
+EOF
+    exit 0
 fi
 
 # Send the status mail
