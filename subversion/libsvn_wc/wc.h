@@ -69,6 +69,8 @@
 svn_error_t *svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool);
 
 
+/** Timestamp-related things **/
+
 /* Set *APR_TIME to the later of PATH's (a regular file) mtime or ctime.
  *
  * Unix traditionally distinguishes between "mod time", which is when
@@ -93,6 +95,17 @@ svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
                                             svn_string_t *file1,
                                             svn_string_t *file2,
                                             apr_pool_t *pool);
+
+
+/* A special timestamp value which means "use the timestamp from the
+   working copy".  This is sometimes used in a log entry like:
+   
+   <modify-entry name="foo.c" revision="5" timestamp="working"/>
+
+ */
+#define SVN_WC_TIMESTAMP_WC   "working"
+
+
 
 
 /* Set *MODIFIED_P to non-zero if FILENAME has been locally modified,
@@ -322,9 +335,6 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 #define SVN_WC__LOG_ATTR_DEST           "dest"
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_SAVED_MODS     "saved-mods"
-
-/** Special log attribute values **/
-#define SVN_WC__LOG_ATTR_TIMESTAMP_WC   "working"
 
 
 /* Starting at PATH, write out log entries indicating that a commit

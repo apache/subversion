@@ -58,26 +58,68 @@
 
 
 
-/*** Timestamp generation and comparision. ***/
+/*** Timestamp generation and comparison. ***/
 
 svn_error_t *
 svn_wc__file_affected_time (apr_time_t *apr_time,
                             svn_string_t *path,
                             apr_pool_t *pool)
 {
-  apr_finfo_t finfo;
   apr_status_t apr_err;
+  svn_error_t *err;
+  svn_string_t *prop_path, *shorter_path, *basename;
+  enum svn_node_kind pkind;
+  apr_finfo_t finfo, pinfo;
+  apr_time_t latest_file_time = 0;
+  apr_time_t latest_prop_time = 0;
 
+  /* finfo holds the status of the working file */
   apr_err = apr_stat (&finfo, path->data, pool);
   if (apr_err)
     return svn_error_createf
       (apr_err, 0, NULL, pool,
        "svn_wc__file_affected_time: cannot stat %s", path->data);
 
+  /* Figure out if this file has properties */
+  svn_path_split (path, &shorter_path, &basename,
+                  svn_path_local_style, pool);
+  prop_path = svn_wc__adm_path (shorter_path,
+                                0, /* no tmp */
+                                pool,
+                                SVN_WC__ADM_PROPS,
+                                basename->data,
+                                NULL);
+  err = svn_io_check_path (prop_path, &pkind, pool);
+  if (err) return err;
+  if (pkind == svn_node_file)
+    {
+      /* Aha, this file has properties! */
+      /* pinfo holds the status of the property file */
+      apr_err = apr_stat (&pinfo, prop_path->data, pool);
+      if (apr_err)
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "svn_wc__file_affected_time: cannot stat %s", prop_path->data);
+    }
+
+  /* Compare timestamps all around, return whichever is latest. */
   if (finfo.mtime > finfo.ctime)
-    *apr_time = finfo.mtime;
+    latest_file_time = finfo.mtime;
   else
-    *apr_time = finfo.ctime;
+    latest_file_time = finfo.ctime;
+
+  if (pkind == svn_node_file)
+    {
+      if (pinfo.mtime > pinfo.ctime)
+        latest_prop_time = pinfo.mtime;
+      else
+        latest_prop_time = pinfo.ctime;
+    }
+
+  if (latest_file_time > latest_prop_time)
+    *apr_time = latest_file_time;
+  else
+    *apr_time = latest_prop_time;
 
   return SVN_NO_ERROR;
 }

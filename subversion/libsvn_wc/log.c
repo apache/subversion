@@ -430,7 +430,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                field */
           
           /* Scenario 2:  use the working copy's timestamp */
-          else if (! strcmp (timestr->data, SVN_WC__LOG_ATTR_TIMESTAMP_WC))
+          else if (! strcmp (timestr->data, SVN_WC_TIMESTAMP_WC))
             {
               enum svn_node_kind wfile_kind;
               err = svn_io_check_path (wfile, &wfile_kind, loggy->pool);
