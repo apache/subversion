@@ -224,8 +224,8 @@ client_ssl_callback(void *userdata, ne_session *sess,
 #else
           if (client_creds->cert_type == svn_auth_ssl_pem_cert_type)
             {
-              // FIXME
-              return; // no PEM support in neon 0.24
+              /* FIXME */
+              return; /* no PEM support in neon 0.24 */
             }
           ne_ssl_client_cert *clicert =
             ne_ssl_clicert_read(client_creds->cert_file);
@@ -234,7 +234,7 @@ client_ssl_callback(void *userdata, ne_session *sess,
               char pw[128];
               if (client_ssl_keypw_callback(userdata, pw, 128))
                 {
-                  return; // no password given
+                  return; /* no password given */
                 }
               ne_ssl_clicert_decrypt(clicert, pw);
               ne_ssl_set_clicert(sess, clicert);
@@ -641,8 +641,8 @@ svn_ra_dav__open (void **session_baton,
       ne_ssl_keypw_prompt(sess, client_ssl_keypw_callback, ras);
       ne_ssl_keypw_prompt(sess2, client_ssl_keypw_callback, ras);
 #else
-      // FIXME: the server and client certificates need to be saved,
-      // and later unloaded.
+      /* FIXME: the server and client certificates need to be saved,
+         and later unloaded. */
 
       if (authorities_file != NULL)
         {
