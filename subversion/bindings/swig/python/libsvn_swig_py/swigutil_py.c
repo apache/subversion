@@ -32,6 +32,12 @@
 #include "svn_opt.h"
 #include "svn_delta.h"
 
+#if SVN_SWIG_VERSION >= 103024
+#include <swigrun.swg>
+#include <python/pyrun.swg>
+#include <runtime.swg>
+#endif
+
 #include "swigutil_py.h"
 
 

@@ -89,7 +89,9 @@ sub MY::postamble {
    my $module_make_commands = join ('',map {"\t\$(MAKE) -f Makefile.$_\n"} @modules);
 
    my $flags;
-   if ($swig_version >= 103020) {
+   if ($swig_version >= 103024) {
+     $flags = '-noproxy';
+   } elsif ($swig_version >= 103020) {
      $flags = '-noruntime -noproxy';
    } else {
      $flags = '-c';

@@ -293,6 +293,17 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
         svn_swig_pl_set_current_pool(argp);
 }
 
+/* Fix for SWIG 1.3.24 */
+#if SWIG_VERSION == 0x010324
+%typemap(varin) apr_pool_t * {
+  void *temp;
+  if (SWIG_ConvertPtr($input, (void **) &temp, $1_descriptor,0) < 0) {
+    croak("Type error in argument $argnum of $symname. Expected $1_mangle");
+  }
+  $1 = ($1_ltype) temp;
+}
+#endif
+
 %typemap (varout,type="$1_descriptor") apr_pool_t *current_pool
   "sv_setiv(SvRV($result),(IV) svn_swig_pl_get_current_pool());";
 
