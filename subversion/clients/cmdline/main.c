@@ -146,17 +146,17 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "add", svn_cl__add, {0},
     "Put files and directories under revision control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
-    "usage: add PATH [PATH [PATH ... ]]\n",
+    "usage: add PATH...\n",
     {svn_cl__targets_opt, 'N', 'q'} },
 
   { "cat", svn_cl__cat, {0},
     "Output the content of specified files or URLs.\n"
-    "usage: cat TARGET [TARGET [TARGET ... ]]\n",
+    "usage: cat TARGET...\n",
     {'r', SVN_CL__AUTH_OPTIONS} },
 
   { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
-    "usage: checkout URL [URL [URL ... ]] [PATH]\n"
+    "usage: checkout URL... [PATH]\n"
     "  Note: If PATH is omitted, the basename of the URL will be used as\n"
     "  the destination. If multiple URLs are given each will be checked\n"
     "  out into a sub-directory of PATH, with the name of the sub-directory\n"
@@ -166,12 +166,12 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "cleanup", svn_cl__cleanup, {0},
     "Recursively clean up the working copy, removing locks, resuming\n"
     "unfinished operations, etc.\n"
-    "usage: cleanup [PATH [PATH ... ]]\n",
+    "usage: cleanup [PATH...]\n",
     {0} },
   
   { "commit", svn_cl__commit, {"ci"},
     "Send changes from your working copy to the repository.\n"
-    "usage: commit [PATH [PATH ... ]]\n\n"
+    "usage: commit [PATH...]\n\n"
     "  Be sure to use one of -m or -F to send a log message.\n",
     {'m', 'F', 'q', 'N', svn_cl__targets_opt,
      svn_cl__force_log_opt, SVN_CL__AUTH_OPTIONS,
@@ -190,8 +190,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
     "Remove files and directories from version control.\n"
-    "usage: 1. delete PATH [PATH ... ]\n"
-    "       2. delete URL [URL ...]\n\n"
+    "usage: 1. delete PATH...\n"
+    "       2. delete URL...\n\n"
     "  If run on a working copy PATHs, each item is scheduled for deletion\n"
     "  upon the next commit.  Files, and directories that have not been\n"
     "  committed, are immediately removed from the working copy.  The\n"
@@ -206,7 +206,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "diff", svn_cl__diff, {"di"},
     "display the differences between two paths.\n"
-    "usage: 1. diff [-r N[:M]] [--old OLD-TGT] [--new NEW-TGT] [PATH ...]\n"
+    "usage: 1. diff [-r N[:M]] [--old OLD-TGT] [--new NEW-TGT] [PATH...]\n"
     "       2. diff -r N:M URL\n"
     "       3. diff [-r N[:M]] URL1[@N] URL2[@M]\n\n"
     "  1. Display the differences between OLD-TGT and NEW-TGT.  PATHs, if\n"
@@ -241,7 +241,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 
   { "help", svn_cl__help, {"?", "h"},
     "Display this usage message.\n"
-    "usage: help [SUBCOMMAND [SUBCOMMAND ... ]]\n",
+    "usage: help [SUBCOMMAND...]\n",
     {svn_cl__version_opt, 'q'} },
   /* We need to support "--help", "-?", and all that good stuff, of
      course.  But those options, since unknown, will result in the
@@ -259,19 +259,19 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
  
   { "info", svn_cl__info, {0},
     "Display info about a resource.\n"
-    "usage: info [PATH [PATH ... ]]\n\n"
+    "usage: info [PATH...]\n\n"
     "  Print information about PATHs.\n",
     {svn_cl__targets_opt, 'R'} },
  
   { "list", svn_cl__ls, {"ls"},
     "List directory entries of a URL.\n"
-    "usage: list URL [URL ... ]\n\n"
+    "usage: list URL...\n\n"
     "  If URL is a file, just file entry will be displayed.\n",
     {'r', 'v', 'R', SVN_CL__AUTH_OPTIONS} },
   
   { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"
-    "usage: log [URL] [PATH [PATH ... ]]\n"
+    "usage: log [URL] [PATH...]\n"
     "  Print the log messages for local PATHs, or for PATHs under\n"
     "  URL, if URL is given.  If URL is given by itself, then print log\n"
     "  messages for everything under it.  With -v, also print all affected\n"
@@ -314,8 +314,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"
-    "usage: 1. mkdir PATH [PATH ... ]\n"
-    "       2. mkdir URL [URL ...]\n\n"
+    "usage: 1. mkdir PATH...\n"
+    "       2. mkdir URL...\n\n"
     "  Create version controlled directories.\n\n"
     "  If run on a working copy PATHs, each directory is scheduled for\n"
     "  addition upon the next commit.\n\n"
@@ -337,7 +337,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "propdel", svn_cl__propdel, {"pdel"},
     "Remove PROPNAME from files, dirs, or revisions.\n"
-    "usage: 1. propdel PROPNAME [PATH [PATH ... ]]\n"
+    "usage: 1. propdel PROPNAME [PATH...]\n"
     "       2. propdel PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Removes versioned props in working copy.\n"
     "  2. Removes unversioned remote prop on repos revision.\n",
@@ -345,7 +345,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
     "Edit property PROPNAME with $EDITOR on targets.\n"
-    "usage: 1. propedit PROPNAME PATH [PATH [PATH ... ]]\n"
+    "usage: 1. propedit PROPNAME PATH...\n"
     "       2. propedit PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Edits versioned props in working copy.\n"
     "  2. Edits unversioned remote prop on repos revision.\n",
@@ -354,7 +354,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "propget", svn_cl__propget, {"pget", "pg"},
     "Print value of PROPNAME on files, dirs, or revisions.\n"
-    "usage: 1. propget PROPNAME [PATH [PATH ... ]]\n"
+    "usage: 1. propget PROPNAME [PATH...]\n"
     "       2. propget PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Prints versioned prop in working copy.\n"
     "  2. Prints unversioned remote prop on repos revision.\n\n"
@@ -369,7 +369,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 
   { "proplist", svn_cl__proplist, {"plist", "pl"},
     "List all properties on files, dirs, or revisions.\n"
-    "usage: 1. proplist [PATH [PATH ... ]]\n"
+    "usage: 1. proplist [PATH...]\n"
     "       2. proplist --revprop -r REV [URL]\n\n"
     "  1. Lists versioned props in working copy.\n"
     "  2. Lists unversioned remote props on repos revision.\n",
@@ -377,7 +377,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 
   { "propset", svn_cl__propset, {"pset", "ps"},
     "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n\n"
-    "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH [PATH [PATH ... ]]\n"
+    "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
     "       2. propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] [URL]\n"
     "\n"
     "  1. Creates a versioned, local propchange in working copy.\n"
@@ -413,7 +413,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "resolve", svn_cl__resolve, {0},
     "Remove 'conflicted' state on working copy files or directories.\n"
-    "usage: resolve PATH [PATH [PATH ... ]]\n\n"
+    "usage: resolve PATH...\n\n"
     "  Note:  this routine does not semantically resolve conflict markers;\n"
     "  it merely removes conflict-related artifact files and allows PATH\n"
     "  to be committed again.\n",
@@ -421,14 +421,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
  
   { "revert", svn_cl__revert, {0},
     "Restore pristine working copy file (undo all local edits)\n"
-    "usage: revert PATH [PATH [PATH ... ]]\n\n"
+    "usage: revert PATH...\n\n"
     "  Note:  this routine does not require network access, and \n"
     "  resolves any conflicted states.\n",
     {svn_cl__targets_opt, 'R', 'q'} },
 
   { "status", svn_cl__status, {"stat", "st"},
     "Print the status of working copy files and directories.\n"
-    "usage: status [PATH [PATH ... ]]\n\n"
+    "usage: status [PATH...]\n\n"
     "  With no args, print only locally modified items (no network access).\n"
     "  With -u, add working revision and server out-of-date information.\n"
     "  With -v, print full revision information on every item.\n"
@@ -491,14 +491,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "switch", svn_cl__switch, {"sw"},
     "Update working copy to mirror a new URL\n"
     "usage: switch URL [PATH]   or\n"
-    "       switch --relocate FROM TO [PATH ... ]\n\n"
+    "       switch --relocate FROM TO [PATH...]\n\n"
     "  Note:  this is the way to move a working copy to a new branch.\n",
     { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
       SVN_CL__AUTH_OPTIONS} },
  
   { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
-    "usage: update [PATH [PATH ... ]]\n\n"
+    "usage: update [PATH...]\n\n"
     "  If no revision given, bring working copy up-to-date with HEAD rev.\n"
     "  Else synchronize working copy to revision given by -r.\n"
     "\n"

@@ -164,7 +164,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {'r', svnadmin__incremental, 'q'} },
 
     {"help", subcommand_help, {"?", "h"},
-     "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
+     "usage: svnadmin help [SUBCOMMAND...]\n\n"
      "Display this usage message.\n",
      {svnadmin__version} },
 
@@ -201,7 +201,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {0} },
 
     {"rmtxns", subcommand_rmtxns, {0},
-     "usage: svnadmin rmtxns REPOS_PATH TXN_NAME [TXN_NAME2 ...]\n\n"
+     "usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n\n"
      "Delete the named transaction(s).\n",
      {0} },
 
