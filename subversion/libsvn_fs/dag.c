@@ -119,7 +119,8 @@ has_mutable_flag (skel_t *node_content)
    Allocate the flag in POOL; it is advisable that POOL be at least as
    long-lived as the pool CONTENT is allocated in.  If the mutability
    flag is already set, this function does nothing.  If PARENT_ID is
-   null, the mutable flag skel will not have a parent_id element. */
+   null, the mutable flag skel will have the empty string as its
+   PARENT-ID element. */
 static void
 set_mutable_flag (skel_t *content, svn_fs_id_t *parent_id, apr_pool_t *pool)
 {
@@ -127,18 +128,18 @@ set_mutable_flag (skel_t *content, svn_fs_id_t *parent_id, apr_pool_t *pool)
     return;
   else
     {
-      skel_t *the_word_mutable = svn_fs__str_atom ((char *) "mutable", pool);
-      skel_t *p_atom = NULL;
       skel_t *flag_skel = svn_fs__make_empty_list (pool);
-
-      svn_fs__append (the_word_mutable, flag_skel);
-
-      if (parent_id)
-        {
-          svn_string_t *p_string = svn_fs_unparse_id (parent_id, pool);
-          p_atom = svn_fs__str_atom (p_string->data, pool);
-          svn_fs__append (p_atom, flag_skel);
-        }
+      svn_string_t *parent_id_string
+        = (parent_id
+           ? svn_fs_unparse_id (parent_id, pool)
+           : svn_string_create ("", pool));
+      
+      svn_fs__prepend (svn_fs__mem_atom (parent_id_string->data,
+                                         parent_id_string->len,
+                                         pool),
+                       flag_skel);
+      svn_fs__prepend (svn_fs__str_atom ((char *) "mutable", pool),
+                       flag_skel);
 
       svn_fs__append (flag_skel, content->children);
     }
