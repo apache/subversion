@@ -52,7 +52,7 @@
 #define SVN_LIBSVN_CLIENT_LINKS_RA_SVN
 
 /* Defined to be the path to the installed binaries */
-#define SVN_BINARY_DIR "/usr/local/bin"
+#define SVN_BINDIR "/usr/local/bin"
 
 /* Define to the Python/C API format character suitable for apr_int64_t */
 /*

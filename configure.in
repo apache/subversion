@@ -100,7 +100,7 @@ AC_SUBST(SVN_EXTRA_INCLUDES)
 AC_SUBST(SVN_EXTRA_LIBS)
 AC_SUBST(SVN_SUBDIRS)
 
-dnl Configure APR, and local Berkeley DB if any --------------------------
+dnl Configure APR --------------------------
 
 dnl verify apr version and set apr flags
 changequote(<<, >>)
@@ -113,12 +113,6 @@ changequote([, ])
 
 SVN_LIB_APR($APR_VER_REGEX, $APR_VER_REGEX_TOO)
 SVN_LIB_APRUTIL($APU_VER_REGEX, $APU_VER_REGEX_TOO)
-
-if test -d "$abs_srcdir/db" ; then
-    AC_MSG_ERROR([Configuring against an in-tree copy of Berkeley DB is no
-                  longer supported. Berkeley DB must be separately installed,
-                  and perhaps specified by adding --with-berkeley-db=PATH])
-fi
 
 dnl What version of Expat are we using? -----------------
 
@@ -151,17 +145,8 @@ SVN_BINDIR="`eval echo ${SVN_BINDIR}`"
 AC_SUBST(SVN_BINDIR)
 
 dnl provide ${bindir} in svn_private.h for use in compiled code
-AC_DEFINE_UNQUOTED(SVN_BINARY_DIR, "${SVN_BINDIR}",
+AC_DEFINE_UNQUOTED(SVN_BINDIR, "${SVN_BINDIR}",
         [Defined to be the path to the installed binaries])
-
-dnl This directory is where we will store our data. We don't want to
-dnl evaluate it so that later changes in datadir will propagate properly
-svndatadir='${datadir}/subversion'
-
-
-docdir='${datadir}/doc'
-docdir="${docdir}/subversion-${svn_version}"
-AC_SUBST(docdir)
 
 dnl This purposely does *not* allow for multiple parallel installs.
 dnl However, it is compatible with most gettext usages.
