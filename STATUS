@@ -36,6 +36,10 @@ Candidate changes:
     Votes:
       +1: kfogel
 
+  * r8660
+    Update status documentation to add missing flags and alphabetize.
+    Justification: Documentation correctness.
+    Votes:
 
 Status of 1.0.1:
 ================
