@@ -72,6 +72,7 @@ struct w_baton
 {
   svn_string_t *dest_dir;
   svn_string_t *repository;
+  svn_vernum_t version;
   apr_pool_t *pool;
 };
 
@@ -191,7 +192,10 @@ add_directory (svn_string_t *name,
   svn_string_t *npath;
 
   maybe_prepend_dest (&path_so_far, wb);
-  svn_wc__ensure_wc_prepared (path_so_far, wb->repository, wb->pool);
+  svn_wc__ensure_wc_prepared (path_so_far, 
+                              wb->repository,
+                              wb->version,
+                              wb->pool);
 
   npath = svn_string_dup (path_so_far, wb->pool);
   svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, wb->pool);
@@ -206,7 +210,10 @@ add_directory (svn_string_t *name,
     return err;
 
   /* Prep it. */
-  err = svn_wc__ensure_wc_prepared (npath, wb->repository, wb->pool);
+  err = svn_wc__ensure_wc_prepared (npath,
+                                    wb->repository,
+                                    wb->version,
+                                    wb->pool);
   if (err)
     return err;
 
@@ -294,7 +301,10 @@ add_file (svn_string_t *name,
   svn_string_t *npath;
 
   maybe_prepend_dest (&path_so_far, wb);
-  svn_wc__ensure_wc_prepared (path_so_far, wb->repository, wb->pool);
+  svn_wc__ensure_wc_prepared (path_so_far,
+                              wb->repository,
+                              wb->version,
+                              wb->pool);
 
   npath = svn_string_dup (path_so_far, wb->pool);
   svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, wb->pool);
@@ -387,6 +397,7 @@ svn_wc_apply_delta (void *delta_src,
                     svn_delta_read_fn_t *read_fn,
                     svn_string_t *dest,
                     svn_string_t *repos,
+                    svn_vernum_t version,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -421,6 +432,7 @@ svn_wc_apply_delta (void *delta_src,
   w_baton.dest_dir   = dest;      /* Remember, DEST might be null. */
   w_baton.repository = repos;
   w_baton.pool       = pool;
+  w_baton.version    = version;
   telescoping_path = svn_string_create ("", pool);
 
   /* ... and walk! */

@@ -371,19 +371,31 @@ init_contents_thing (svn_string_t *path,
 static svn_error_t *
 init_adm (svn_string_t *path,
           svn_string_t *repository,
+          svn_vernum_t version,
           apr_pool_t *pool)
 {
+  svn_error_t *err;
+
   /* Initial contents for certain adm files. */
   const char *format_contents = "1\n";
   const char *readme_contents =
     "This is a Subversion working copy administrative directory.\n"
     "Visit http://www.subversion.tigris.org/ for more information.\n";
-  /* kff todo: func-ize this, & pass in real version soon. */
-  const char *versions_contents =
+  const char *versions_contents_part_1 =
     "<wc-versions xmlns=\"http://subversion.tigris.org/xmlns/\">\n"
+    "   <entry version=\"";
+  const char *versions_contents_part_2 =
+    "\"/>\n"
     "</wc-versions>";
 
-  svn_error_t *err;
+  /* Is this lame or what? */
+  char buf[1000];
+  svn_string_t *versions_contents;
+  versions_contents = svn_string_create (versions_contents_part_1, pool);
+  sprintf (buf, "%ld", (long int) version);
+  svn_string_appendbytes (versions_contents, buf, strlen (buf), pool);
+  svn_string_appendbytes (versions_contents, versions_contents_part_2,
+                          strlen (versions_contents_part_2), pool);
 
   /* First, make an empty administrative area. */
   err = make_empty_adm (path, pool);
@@ -427,8 +439,7 @@ init_adm (svn_string_t *path,
   if (err)
     return err;
   err = init_contents_thing (path, SVN_WC__ADM_VERSIONS,
-                             svn_string_create (versions_contents, pool),
-                             pool);
+                             versions_contents, pool);
   if (err)
     return err;
 
@@ -509,6 +520,7 @@ init_adm (svn_string_t *path,
 svn_error_t *
 svn_wc__ensure_adm (svn_string_t *path,
                     svn_string_t *repository,
+                    svn_vernum_t version,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -521,7 +533,7 @@ svn_wc__ensure_adm (svn_string_t *path,
   if (! exists)
     {
       /* kff todo: modify chain above to pass ancestry/version down. */
-      err = init_adm (path, repository, pool);
+      err = init_adm (path, repository, version, pool);
       if (err)
         return err;
     }

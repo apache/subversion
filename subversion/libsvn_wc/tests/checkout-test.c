@@ -119,12 +119,14 @@ main (int argc, char **argv)
   if (argc == 3)
     target = svn_string_create (argv[2], pool);
 
-  err = svn_wc_apply_delta (src, 
-                            test_read_fn,
-                            target,
-                            svn_string_create ("some repository", pool),
-                            pool);
-
+  err = svn_wc_apply_delta 
+    (src, 
+     test_read_fn,
+     target,
+     svn_string_create (":ssh:jrandom@svn.tigris.org/repos", pool),
+     1,  /* kff todo: version must be passed in, right? */
+     pool);
+  
   if (err)
     svn_handle_error (err, stdout);
 
