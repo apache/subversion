@@ -411,15 +411,18 @@ typedef struct svn_delta_edit_fns_t
      that because it's the root dir, it takes neither parent baton nor
      name (note that this is because it is the root dir of this
      change, which may or may not be the root dir of the repository).
-     It supplies the parent baton for child directories by setting
-     DIR_BATON.
+
+     This function supplies the parent baton for child directories by
+     setting DIR_BATON.
 
      kff todo:
-     Jim: you're probably thinking, these ought to be documented more
-     independently than this.  We agree. :-)  But just needed to get
-     'em up and running right now since libsvn_wc is bottlenecked. 
-     I think you'd probably document them better, so please have at it
-     if you'd like, or if you want me to do it I'm happy to as well. */
+
+     Jim: you're probably thinking, these ought to be documented in a
+     more independent fashion.  We agree. :-)  But just needed to get
+     'em up and running right now since libsvn_wc is bottlenecked on
+     it.  I think you'd probably document them better, so please have
+     at it if you'd like, or if you want me to do it I'm happy to as
+     well. */
   svn_error_t *(*add_root) (svn_string_t *ancestor_path,
                             svn_vernum_t ancestor_version,
                             void **dir_baton);
