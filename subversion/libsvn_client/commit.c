@@ -196,27 +196,36 @@ import_dir (apr_hash_t *files,
     {
       const char *this_path, *this_edit_path, *abs_path;
 
-      if (finfo.filetype == APR_DIR)
+      if ((finfo.filetype == APR_DIR)
+          && (finfo.name[0] == '.')
+          && (finfo.name[1] == '\0'
+              || (finfo.name[1] == '.' && finfo.name[2] == '\0')))
         {
           /* Skip entries for this dir and its parent.  
              (APR promises that they'll come first, so technically
              this guard could be moved outside the loop.  But somehow
              that feels iffy. */
-          if (finfo.name[0] == '.'
-              && (finfo.name[1] == '\0'
-                  || (finfo.name[1] == '.' && finfo.name[2] == '\0')))
-            continue;
+          continue;
+        }
 
+      if (strcmp (finfo.name, SVN_WC_ADM_DIR_NAME) == 0)
+        {
           /* If someone's trying to import a directory named the same
              as our administrative directories, that's probably not
-             what they wanted to do.  Someday we can take an option to
-             make these subdirs be silently ignored, but for now,
-             seems safest to error. */
-          if (strcmp (finfo.name, SVN_WC_ADM_DIR_NAME) == 0)
-            return svn_error_createf
-              (SVN_ERR_CL_ADM_DIR_RESERVED, 0, NULL,
-               "cannot import directory named \"%s\" (in `%s')",
-               finfo.name, path);
+             what they wanted to do.  If they are importing a file
+             with that name, something is bound to blow up when they
+             checkout what they've imported.  So, just skip items with
+             that name.  */
+          if (notify_func)
+            (*notify_func) (notify_baton,
+                            svn_path_join (path, finfo.name, subpool),
+                            svn_wc_notify_skip,
+                            svn_node_dir,
+                            NULL,
+                            svn_wc_notify_state_inapplicable,
+                            svn_wc_notify_state_inapplicable,
+                            SVN_INVALID_REVNUM);
+          continue;
         }
 
       /* Typically, we started importing from ".", in which case
