@@ -16,7 +16,7 @@ package org.tigris.subversion.lib;
  * ====================================================================
  **/
 
-public interface Entry {
+public class Entry {
     public final static int SCHEDULE_NORMAL=0;
     public final static int SCHEDULE_ADD=1;
     public final static int SCHEDULE_DELETE=2;
@@ -33,10 +33,29 @@ public interface Entry {
     public final static int NODEKIND_DIR = 2;
     public final static int NODEKIND_UNKNOWN = 3;
 
-    public void setRevision(Revision revision);
-    public Revision getRevision();
-    public void setAncestor(String ancestor);
-    public String getAncestor();
-    public void setNodeKind(int nodeKind);
-    public int getNodeKind();
+    public final String url;
+    public final int revision;
+    public final int nodeKind;
+    public final int schedule;
+    public final int existence;
+
+    public Entry(String url, int revision, 
+		 int nodeKind, int schedule, int existence)
+	{
+	    this.url = url;
+	    this.revision = revision;
+	    this.nodeKind = nodeKind;
+	    this.schedule = schedule;
+	    this.existence = existence;
+	}
 }
+
+/* 
+ * local variables:
+ * eval: (load-file "../../../../../../../svn-dev.el")
+ * end: 
+ */
+
+
+
+
