@@ -1,4 +1,4 @@
-Conversion of old editors to the new editor interface
+Conversion of old EDITORS to the new editor interface
 =====================================================
 
 DONE    clients/cmdline/trace-commit.c
@@ -19,3 +19,25 @@ DONE    libsvn_wc/update_editor.c
         mod_dav_svn/update.c
         tests/libsvn_repos/dir-delta-editor.c
         tests/libsvn_test_editor.c
+
+
+Conversion of old DRIVERS to the new editor interface
+=====================================================
+        libsvn_ra_dav/fetch.c           [svn update]
+        libsvn_ra_dav/fetch.c           [svn checkout]
+        libsvn_delta/pipe_editor.c      [obsolete; to be folded into ra_local]
+DONE    libsvn_delta/compose_editors.c
+        libsvn_repos/delta.c            [svn_repos_dir_delta()]
+        tests/libsvn_delta/xml-output-test.c
+        bindings/ruby/delta_editor.c
+        libsvn_client/delete.c          [mini-drive]
+        libsvn_client/add.c             [mini-drive]
+STARTED libsvn_client/commit.c
+        libsvn_client/copy.c            [mini-ddrive]
+        libsvn_ra_local/update_editor.c
+        libsvn_ra_local/checkout.c
+        libsvn_wc/adm_crawler.c         [crawl_local_mods()]
+        libsvn_wc/adm_crawler.c         [crawl_as_copy()]
+
+
+(*) mini-drive means a short, special-purpose editor drive
