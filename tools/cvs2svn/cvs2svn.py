@@ -2009,11 +2009,11 @@ class SymbolicNameTracker:
         if name[0] != '/':
           print "finishing '%s' as branch" % name
           self.fill_branch(dumper, ctx, name, [1])
-    print "Finishing tags:"
-    for name in parent.keys():
-      if name[0] != '/':
-        print "finishing '%s' as tag" % name
-        self.fill_tag(dumper, ctx, name, [1])
+      print "Finishing tags:"
+      for name in parent.keys():
+        if name[0] != '/':
+          print "finishing '%s' as tag" % name
+          self.fill_tag(dumper, ctx, name, [1])
 
 
 def is_trunk_vendor_revision(default_branches_db, cvs_path, cvs_rev):
