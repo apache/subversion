@@ -334,3 +334,10 @@ already know about.)
      Justification: Avoid uncontrolled svnserve termination, low risk.
      Votes:
       +1: bliss
+
+
+   * Issue #1681
+     Make svnserve require --inetd to use stdin/stdout.
+     Justification: Make svnserve more user friendly, low risk.
+     Votes:
+      +1: bliss
