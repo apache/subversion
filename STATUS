@@ -21,7 +21,8 @@ Candidate changes:
     Fix --enable-maintainer-mode builds on OS X with new XCode.
     Justification:
       Tiny fix, avoids build breakage, affects --enable-maintainer-mode only.
-      Can go in without a resoak.
+    Notes:
+     Not worth a resoak on its own.
     Votes:
       +1: maxb, mbk
 
