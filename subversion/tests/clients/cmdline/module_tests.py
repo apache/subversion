@@ -291,7 +291,7 @@ def checkout_with_externals(sbox):
 #----------------------------------------------------------------------
 
 def update_receive_new_external(sbox):
-  "Update to receive a new external module."
+  "update to receive a new external module."
 
   if externals_test_setup(sbox):
     return 1
@@ -343,7 +343,7 @@ def update_receive_new_external(sbox):
 #----------------------------------------------------------------------
 
 def update_lose_external(sbox):
-  "Update to lose an external module."
+  "update to lose an external module."
 
   if externals_test_setup(sbox):
     return 1
@@ -436,7 +436,7 @@ def update_lose_external(sbox):
 #----------------------------------------------------------------------
 
 def update_change_pristine_external(sbox):
-  "Update to receive a change to an unmodifed external module."
+  "update to receive a change to an unmodifed external module."
 
   if externals_test_setup(sbox):
     return 1
@@ -492,7 +492,7 @@ def update_change_pristine_external(sbox):
 
 
 def update_change_modified_external(sbox):
-  "Update to receive a change to a modified external module."
+  "update to receive a change to a modified external module."
 
   if externals_test_setup(sbox):
     return 1
@@ -556,7 +556,7 @@ def update_change_modified_external(sbox):
 
 
 def update_receive_change_under_external(sbox):
-  "Update to receive a change under an external module."
+  "update to receive a change under an external module."
 
   if externals_test_setup(sbox):
     return 1
