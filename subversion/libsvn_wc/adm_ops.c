@@ -730,8 +730,12 @@ svn_wc_get_ancestry (char **url,
   const svn_wc_entry_t *ent;
 
   SVN_ERR (svn_wc_entry (&ent, path, adm_access, FALSE, pool));
-  *url = apr_pstrdup (pool, ent->url);
-  *rev = ent->revision;
+
+  if (url)
+    *url = apr_pstrdup (pool, ent->url);
+
+  if (rev)
+    *rev = ent->revision;
 
   return SVN_NO_ERROR;
 }
