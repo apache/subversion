@@ -279,15 +279,17 @@ def ensure_directories(path, root, dumpfile):
 
     if not os.path.exists(os.path.join(root, path_so_far)):
       os.mkdir(os.path.join(root, path_so_far))
-      dumpfile.write("Node-path: %s\n" % path_so_far)
-      dumpfile.write("Node-kind: dir\n")
-      dumpfile.write("Node-action: add\n")
-      dumpfile.write("Prop-content-length: 10\n")
-      dumpfile.write("Content-length: 10\n")
-      dumpfile.write("\n")
-      dumpfile.write("PROPS-END\n")
-      dumpfile.write("\n")
-      dumpfile.write("\n")
+      dumpfile.write("Node-path: %s\n" 
+                     "Node-kind: dir\n"
+                     "Node-action: add\n"
+                     "Prop-content-length: 10\n"
+                     "Content-length: 10\n"
+                     "\n"
+                     "PROPS-END\n"
+                     "\n"
+                     "\n"
+                     % path_so_far)
+
 
 class Dump:
   def __init__(self, dumpfile_path, revision):
@@ -314,10 +316,10 @@ class Dump:
     # The CVS repository doesn't have a UUID, and the Subversion
     # repository will be created with one anyway.  So when we load
     # the dumpfile, we'll tell svnadmin to ignore the UUID below. 
-    self.dumpfile.write('SVN-fs-dump-format-version: 2\n')
-    self.dumpfile.write('\n')
-    self.dumpfile.write('UUID: ????????-????-????-????-????????????\n')
-    self.dumpfile.write('\n')
+    self.dumpfile.write('SVN-fs-dump-format-version: 2\n'
+                        '\n'
+                        'UUID: ????????-????-????-????-????????????\n'
+                        '\n')
 
   def start_revision(self, props):
     'Write a revision, with properties, to the dumpfile.'
@@ -361,15 +363,20 @@ class Dump:
       total_len = total_len + klen + klen_len + vlen + vlen_len
         
     # Print the revision header and props
-    self.dumpfile.write('Revision-number: %d\n' % self.revision)
-    self.dumpfile.write('Prop-content-length: %d\n' % total_len)
-    self.dumpfile.write('Content-length: %d\n' % total_len)
-    self.dumpfile.write('\n')
+    self.dumpfile.write('Revision-number: %d\n'
+                        'Prop-content-length: %d\n'
+                        'Content-length: %d\n'
+                        '\n'
+                        % (self.revision, total_len, total_len))
+
     for propname in props.keys():
-      self.dumpfile.write('K %d\n' % len(propname))
-      self.dumpfile.write('%s\n' % propname)
-      self.dumpfile.write('V %d\n' % len(props[propname]))
-      self.dumpfile.write('%s\n' % props[propname])
+      self.dumpfile.write('K %d\n' 
+                          '%s\n' 
+                          'V %d\n' 
+                          '%s\n' % (len(propname),
+                                    propname,
+                                    len(props[propname]),
+                                    props[propname]))
     self.dumpfile.write('PROPS-END\n')
     self.dumpfile.write('\n')
 
@@ -419,21 +426,26 @@ class Dump:
     else:
       action = 'change'
 
-    self.dumpfile.write('Node-path: %s\n' % svn_path)
-    self.dumpfile.write('Node-kind: file\n')
-    self.dumpfile.write('Node-action: %s\n' % action)
-    self.dumpfile.write('Prop-content-length: %d\n' % props_len)
-    self.dumpfile.write('Text-content-length: ')
+    self.dumpfile.write('Node-path: %s\n'
+                        'Node-kind: file\n'
+                        'Node-action: %s\n'
+                        'Prop-content-length: %d\n'
+                        'Text-content-length: '
+                        % (svn_path, action, props_len))
+
     pos = self.dumpfile.tell()
-    self.dumpfile.write('0000000000000000\n')
-    self.dumpfile.write('Text-content-md5: 00000000000000000000000000000000\n')
-    self.dumpfile.write('Content-length: 0000000000000000\n')
-    self.dumpfile.write('\n')
+
+    self.dumpfile.write('0000000000000000\n'
+                        'Text-content-md5: 00000000000000000000000000000000\n'
+                        'Content-length: 0000000000000000\n'
+                        '\n')
+
     if is_executable:
-      self.dumpfile.write('K 14\n')
-      self.dumpfile.write('svn:executable\n')
-      self.dumpfile.write('V 1\n')
-      self.dumpfile.write('*\n')
+      self.dumpfile.write('K 14\n'
+                          'svn:executable\n'
+                          'V 1\n'
+                          '*\n')
+
     self.dumpfile.write('PROPS-END\n')
 
     # Insert the rev contents, calculating length and checksum as we go.
@@ -451,7 +463,7 @@ class Dump:
     self.dumpfile.seek(pos, 0)
     # We left 16 zeros for the text length; replace them with the real
     # length, padded on the left with spaces:
-    self.dumpfile.write(string.rjust(str(length), 16))
+    self.dumpfile.write('%16d' % length)
     # 16... + 1 newline + len('Text-content-md5: ') == 35
     self.dumpfile.seek(pos + 35, 0)
     self.dumpfile.write(checksum.hexdigest())
@@ -459,7 +471,7 @@ class Dump:
     self.dumpfile.seek(pos + 84, 0)
     # The content length is the length of property data, text data,
     # and any metadata around/inside around them.
-    self.dumpfile.write(string.rjust(str(length + props_len), 16))
+    self.dumpfile.write('%16d' % (length + props_len))
     # Jump back to the end of the stream
     self.dumpfile.seek(0, 2)
 
