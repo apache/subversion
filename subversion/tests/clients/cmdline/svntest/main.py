@@ -66,6 +66,10 @@ svn_binary = os.path.abspath('../../../clients/cmdline/svn')
 svnadmin_binary = os.path.abspath('../../../svnadmin/svnadmin')
 svnlook_binary = os.path.abspath('../../../svnlook/svnlook')
 
+# Username and password used by the working copies
+wc_author = 'jrandom'
+wc_passwd = 'rayjandom'
+
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
 general_repo_dir = "repositories"
@@ -130,8 +134,6 @@ def get_admin_name():
   # todo: One day this sucker will try to intelligently discern what
   # the admin dir is.  For now, '.svn' will suffice.
   return '.svn'
-
-
 
 def get_start_commit_hook_path(repo_dir):
   "Return the path of the start-commit-hook conf file in REPO_DIR."

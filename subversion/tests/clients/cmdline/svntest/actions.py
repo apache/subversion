@@ -51,8 +51,8 @@ def guarantee_greek_repository(path):
     ### todo: svn should not be prompting for auth info when using
     ### repositories with no auth/auth requirements
     output, errput = main.run_svn(None, 'import',
-                                  '--username', 'foo',
-                                  '--password', 'bar',
+                                  '--username', main.wc_author,
+                                  '--password', main.wc_passwd,
                                   '-m', 'Log message for revision 1.',
                                   url, main.greek_dump_dir)
 
@@ -128,8 +128,8 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   ### todo: svn should not be prompting for auth info when using
   ### repositories with no auth/auth requirements
   output, errput = main.run_svn (None, 'co',
-                                 '--username', 'foo',
-                                 '--password', 'bar',
+                                 '--username', main.wc_author,
+                                 '--password', main.wc_passwd,
                                  URL, '-d', wc_dir_name)
   mytree = tree.build_tree_from_checkout (output)
 
