@@ -1535,8 +1535,7 @@ svn_wc_revert (const char *path,
       if (entry->kind == svn_node_dir) 
         {
           SVN_ERR (svn_wc__entry_modify (dir_access, NULL, tmp_entry,
-                                         SVN_WC__ENTRY_MODIFY_SCHEDULE 
-                                         | SVN_WC__ENTRY_MODIFY_PREJFILE
+                                         modify_flags
                                          | SVN_WC__ENTRY_MODIFY_FORCE,
                                          TRUE, pool));
         }
