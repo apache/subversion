@@ -36,7 +36,6 @@ struct edit_baton
 struct dir_baton
 {
   struct edit_baton *edit_baton;
-  struct dir_baton *parent_dir_baton;
   void *dir_baton_1;
   void *dir_baton_2;
 };
@@ -44,7 +43,7 @@ struct dir_baton
 
 struct file_baton
 {
-  struct dir_baton *dir_baton;
+  struct edit_baton *edit_baton;
   void *file_baton_1;
   void *file_baton_2;
 };
@@ -54,17 +53,12 @@ static svn_error_t *
 set_target_revision (void *edit_baton, svn_revnum_t target_revision)
 {
   struct edit_baton *eb = edit_baton;
-  svn_error_t *err;
 
-  err = (* (eb->editor_1->set_target_revision)) (eb->edit_baton_1,
-                                                 target_revision);
-  if (err)
-    return err;
+  SVN_ERR ((* (eb->editor_1->set_target_revision)) (eb->edit_baton_1,
+                                                    target_revision));
   
-  err = (* (eb->editor_2->set_target_revision)) (eb->edit_baton_2,
-                                                 target_revision);
-  if (err)
-    return err;
+  SVN_ERR ((* (eb->editor_2->set_target_revision)) (eb->edit_baton_2,
+                                                    target_revision));
 
   return SVN_NO_ERROR;
 }
@@ -74,23 +68,17 @@ static svn_error_t *
 open_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
-  svn_error_t *err;
   struct dir_baton *d = apr_pcalloc (eb->pool, sizeof (*d));
 
   d->edit_baton = eb;
-  d->parent_dir_baton = NULL;
 
-  err = (* (eb->editor_1->open_root)) (eb->edit_baton_1,
-                                       base_revision,
-                                       &(d->dir_baton_1));
-  if (err)
-    return err;
+  SVN_ERR ((* (eb->editor_1->open_root)) (eb->edit_baton_1,
+                                          base_revision,
+                                          &(d->dir_baton_1)));
   
-  err = (* (eb->editor_2->open_root)) (eb->edit_baton_2,
-                                       base_revision,
-                                       &(d->dir_baton_2));
-  if (err)
-    return err;
+  SVN_ERR ((* (eb->editor_2->open_root)) (eb->edit_baton_2,
+                                          base_revision,
+                                          &(d->dir_baton_2)));
   
   *root_baton = d;
   
@@ -102,17 +90,12 @@ static svn_error_t *
 delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
 {
   struct dir_baton *d = parent_baton;
-  svn_error_t *err;
 
-  err = (* (d->edit_baton->editor_1->delete_entry)) 
-    (name, revision, d->dir_baton_1);
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_1->delete_entry)) 
+           (name, revision, d->dir_baton_1));
   
-  err = (* (d->edit_baton->editor_2->delete_entry)) 
-    (name, revision, d->dir_baton_2);
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_2->delete_entry)) 
+           (name, revision, d->dir_baton_2));
   
   return SVN_NO_ERROR;
 }
@@ -126,23 +109,17 @@ add_directory (svn_stringbuf_t *name,
                void **child_baton)
 {
   struct dir_baton *d = parent_baton;
-  svn_error_t *err;
   struct dir_baton *child = apr_pcalloc (d->edit_baton->pool, sizeof (*child));
 
   child->edit_baton = d->edit_baton;
-  child->parent_dir_baton = d;
 
-  err = (* (d->edit_baton->editor_1->add_directory))
-    (name, d->dir_baton_1, copyfrom_path, copyfrom_revision,
-     &(child->dir_baton_1));
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_1->add_directory))
+           (name, d->dir_baton_1, copyfrom_path, copyfrom_revision,
+            &(child->dir_baton_1)));
     
-  err = (* (d->edit_baton->editor_2->add_directory))
-    (name, d->dir_baton_2, copyfrom_path, copyfrom_revision,
-     &(child->dir_baton_2));
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_2->add_directory))
+           (name, d->dir_baton_2, copyfrom_path, copyfrom_revision,
+            &(child->dir_baton_2)));
 
   *child_baton = child;
 
@@ -157,21 +134,15 @@ open_directory (svn_stringbuf_t *name,
                 void **child_baton)
 {
   struct dir_baton *d = parent_baton;
-  svn_error_t *err;
   struct dir_baton *child = apr_pcalloc (d->edit_baton->pool, sizeof (*child));
 
   child->edit_baton = d->edit_baton;
-  child->parent_dir_baton = d;
 
-  err = (* (d->edit_baton->editor_1->open_directory))
-    (name, d->dir_baton_1, base_revision, &(child->dir_baton_1));
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_1->open_directory))
+           (name, d->dir_baton_1, base_revision, &(child->dir_baton_1)));
   
-  err = (* (d->edit_baton->editor_2->open_directory))
-    (name, d->dir_baton_2, base_revision, &(child->dir_baton_2));
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_2->open_directory))
+           (name, d->dir_baton_2, base_revision, &(child->dir_baton_2)));
 
   *child_baton = child;
 
@@ -183,15 +154,10 @@ static svn_error_t *
 close_directory (void *dir_baton)
 {
   struct dir_baton *d = dir_baton;
-  svn_error_t *err;
 
-  err = (* (d->edit_baton->editor_1->close_directory)) (d->dir_baton_1);
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_1->close_directory)) (d->dir_baton_1));
   
-  err = (* (d->edit_baton->editor_2->close_directory)) (d->dir_baton_2);
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_2->close_directory)) (d->dir_baton_2));
 
   return SVN_NO_ERROR;
 }
@@ -201,17 +167,12 @@ static svn_error_t *
 close_file (void *file_baton)
 {
   struct file_baton *fb = file_baton;
-  svn_error_t *err;
 
-  err = (* (fb->dir_baton->edit_baton->editor_1->close_file))
-    (fb->file_baton_1);
-  if (err)
-    return err;
+  SVN_ERR ((* (fb->edit_baton->editor_1->close_file))
+           (fb->file_baton_1));
   
-  err = (* (fb->dir_baton->edit_baton->editor_2->close_file))
-    (fb->file_baton_2);
-  if (err)
-    return err;
+  SVN_ERR ((* (fb->edit_baton->editor_2->close_file))
+           (fb->file_baton_2));
 
   return SVN_NO_ERROR;
 }
@@ -221,15 +182,10 @@ static svn_error_t *
 close_edit (void *edit_baton)
 {
   struct edit_baton *eb = edit_baton;
-  svn_error_t *err;
 
-  err = (* (eb->editor_1->close_edit)) (eb->edit_baton_1);
-  if (err)
-    return err;
+  SVN_ERR ((* (eb->editor_1->close_edit)) (eb->edit_baton_1));
   
-  err = (* (eb->editor_2->close_edit)) (eb->edit_baton_2);
-  if (err)
-    return err;
+  SVN_ERR ((* (eb->editor_2->close_edit)) (eb->edit_baton_2));
 
   return SVN_NO_ERROR;
 }
@@ -239,15 +195,10 @@ static svn_error_t *
 abort_edit (void *edit_baton)
 {
   struct edit_baton *eb = edit_baton;
-  svn_error_t *err;
 
-  err = (* (eb->editor_1->abort_edit)) (eb->edit_baton_1);
-  if (err)
-    return err;
+  SVN_ERR ((* (eb->editor_1->abort_edit)) (eb->edit_baton_1));
   
-  err = (* (eb->editor_2->abort_edit)) (eb->edit_baton_2);
-  if (err)
-    return err;
+  SVN_ERR ((* (eb->editor_2->abort_edit)) (eb->edit_baton_2));
 
   return SVN_NO_ERROR;
 }
@@ -268,15 +219,10 @@ static svn_error_t *
 window_handler (svn_txdelta_window_t *window, void *handler_pair)
 {
   struct handler_pair *hp = handler_pair;
-  svn_error_t *err;
   
-  err = (* (hp->handler_1)) (window, hp->handler_baton_1);
-  if (err)
-    return err;
+  SVN_ERR ((* (hp->handler_1)) (window, hp->handler_baton_1));
 
-  err = (* (hp->handler_2)) (window, hp->handler_baton_2);
-  if (err)
-    return err;
+  SVN_ERR ((* (hp->handler_2)) (window, hp->handler_baton_2));
 
   return SVN_NO_ERROR;
 }
@@ -288,21 +234,16 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *fb = file_baton;
-  svn_error_t *err;
   struct handler_pair *hp
-    = apr_pcalloc (fb->dir_baton->edit_baton->pool, sizeof (*hp));
+    = apr_pcalloc (fb->edit_baton->pool, sizeof (*hp));
   
   hp->file_baton = fb;
 
-  err = (* (fb->dir_baton->edit_baton->editor_1->apply_textdelta))
-    (fb->file_baton_1, &(hp->handler_1), &(hp->handler_baton_1));
-  if (err)
-    return err;
+  SVN_ERR ((* (fb->edit_baton->editor_1->apply_textdelta))
+           (fb->file_baton_1, &(hp->handler_1), &(hp->handler_baton_1)));
 
-  err = (* (fb->dir_baton->edit_baton->editor_2->apply_textdelta))
-    (fb->file_baton_2, &(hp->handler_2), &(hp->handler_baton_2));
-  if (err)
-    return err;
+  SVN_ERR ((* (fb->edit_baton->editor_2->apply_textdelta))
+           (fb->file_baton_2, &(hp->handler_2), &(hp->handler_baton_2)));
 
   *handler = window_handler;
   *handler_baton = hp;
@@ -319,22 +260,17 @@ add_file (svn_stringbuf_t *name,
           void **file_baton)
 {
   struct dir_baton *d = parent_baton;
-  svn_error_t *err;
   struct file_baton *fb = apr_pcalloc (d->edit_baton->pool, sizeof (*fb));
 
-  fb->dir_baton = d;
+  fb->edit_baton = d->edit_baton;
 
-  err = (* (d->edit_baton->editor_1->add_file))
-    (name, d->dir_baton_1, copyfrom_path, 
-     copyfrom_revision, &(fb->file_baton_1));
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_1->add_file))
+           (name, d->dir_baton_1, copyfrom_path, 
+            copyfrom_revision, &(fb->file_baton_1)));
 
-  err = (* (d->edit_baton->editor_2->add_file))
-    (name, d->dir_baton_2, copyfrom_path, 
-     copyfrom_revision, &(fb->file_baton_2));
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_2->add_file))
+           (name, d->dir_baton_2, copyfrom_path, 
+            copyfrom_revision, &(fb->file_baton_2)));
 
   *file_baton = fb;
   return SVN_NO_ERROR;
@@ -348,20 +284,15 @@ open_file (svn_stringbuf_t *name,
            void **file_baton)
 {
   struct dir_baton *d = parent_baton;
-  svn_error_t *err;
   struct file_baton *fb = apr_pcalloc (d->edit_baton->pool, sizeof (*fb));
 
-  fb->dir_baton = d;
+  fb->edit_baton = d->edit_baton;
 
-  err = (* (d->edit_baton->editor_1->open_file))
-    (name, d->dir_baton_1, base_revision, &(fb->file_baton_1));
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_1->open_file))
+           (name, d->dir_baton_1, base_revision, &(fb->file_baton_1)));
 
-  err = (* (d->edit_baton->editor_2->open_file))
-    (name, d->dir_baton_2, base_revision, &(fb->file_baton_2));
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_2->open_file))
+           (name, d->dir_baton_2, base_revision, &(fb->file_baton_2)));
 
   *file_baton = fb;
   return SVN_NO_ERROR;
@@ -374,17 +305,12 @@ change_file_prop (void *file_baton,
                   svn_stringbuf_t *value)
 {
   struct file_baton *fb = file_baton;
-  svn_error_t *err;
 
-  err = (* (fb->dir_baton->edit_baton->editor_1->change_file_prop))
-    (fb->file_baton_1, name, value);
-  if (err)
-    return err;
+  SVN_ERR ((* (fb->edit_baton->editor_1->change_file_prop))
+           (fb->file_baton_1, name, value));
 
-  err = (* (fb->dir_baton->edit_baton->editor_2->change_file_prop))
-    (fb->file_baton_2, name, value);
-  if (err)
-    return err;
+  SVN_ERR ((* (fb->edit_baton->editor_2->change_file_prop))
+           (fb->file_baton_2, name, value));
 
   return SVN_NO_ERROR;
 }
@@ -396,17 +322,12 @@ change_dir_prop (void *dir_baton,
                  svn_stringbuf_t *value)
 {
   struct dir_baton *d = dir_baton;
-  svn_error_t *err;
 
-  err = (* (d->edit_baton->editor_1->change_dir_prop))
-    (d->dir_baton_1, name, value);
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_1->change_dir_prop))
+           (d->dir_baton_1, name, value));
 
-  err = (* (d->edit_baton->editor_2->change_dir_prop))
-    (d->dir_baton_2, name, value);
-  if (err)
-    return err;
+  SVN_ERR ((* (d->edit_baton->editor_2->change_dir_prop))
+           (d->dir_baton_2, name, value));
 
   return SVN_NO_ERROR;
 }
