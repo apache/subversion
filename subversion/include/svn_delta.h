@@ -233,7 +233,7 @@ svn_error_t *svn_txdelta_send_string (const svn_string_t *string,
  *
  * If @a digest is non-null, populate it with the md5 checksum for the
  * fulltext that was deltified (@a digest must be at least
- * @c MD5_DIGESTSIZE bytes long).
+ * @c APR_MD5_DIGESTSIZE bytes long).
  *
  * All temporary allocation is performed in @a pool.
  */
@@ -261,7 +261,7 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
  * @a *handler_baton is set to the value to pass as the @a baton argument to
  * @a *handler.
  *
- * If @a result_digest is non-null, it points to MD5_DIGESTSIZE bytes
+ * If @a result_digest is non-null, it points to APR_MD5_DIGESTSIZE bytes
  * of storage, and the final call to @a handler populates it with the
  * MD5 digest of the resulting fulltext.
  *

@@ -346,8 +346,8 @@ svn_base64_from_md5 (unsigned char digest[], apr_pool_t *pool)
   /* This cast is safe because we know encode_bytes does a memcpy and
    * does an implicit unsigned char * cast.
    */
-  encode_bytes (md5str, (char*)digest, MD5_DIGESTSIZE, ingroup, &ingrouplen,
-                &linelen);
+  encode_bytes (md5str, (char*)digest, APR_MD5_DIGESTSIZE, ingroup, 
+                &ingrouplen, &linelen);
   encode_partial_group (md5str, ingroup, ingrouplen, linelen);
 
   /* Our base64-encoding routines append a final newline if any data

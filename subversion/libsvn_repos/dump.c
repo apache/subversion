@@ -423,7 +423,7 @@ dump_node (struct edit_baton *eb,
      here, and a md5 checksum (if available.) */
   if (must_dump_text && (kind == svn_node_file))
     {
-      unsigned char md5_digest[MD5_DIGESTSIZE];
+      unsigned char md5_digest[APR_MD5_DIGESTSIZE];
       const char *hex_digest;
 
       SVN_ERR (svn_fs_file_length (&textlen, eb->fs_root, path, pool));

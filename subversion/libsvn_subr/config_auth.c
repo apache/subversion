@@ -40,7 +40,7 @@ auth_file_path (const char **path,
                 apr_pool_t *pool)
 {
   const char *authdir_path, *hexname;
-  unsigned char digest[MD5_DIGESTSIZE];
+  unsigned char digest[APR_MD5_DIGESTSIZE];
       
   /* Construct the path to the directory containing the creds files,
      e.g. "~/.subversion/auth/svn.simple".  The last component is

@@ -203,7 +203,7 @@ typedef struct
 
      If all the bytes are 0, then for compatibility behave as though
      this checksum matches the expected checksum. */
-  unsigned char checksum[MD5_DIGESTSIZE];
+  unsigned char checksum[APR_MD5_DIGESTSIZE];
 
   /* kind-specific stuff */
   union 

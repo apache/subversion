@@ -599,7 +599,7 @@ svn_wc_transmit_text_deltas (const char *path,
   apr_file_t *localfile = NULL;
   apr_file_t *basefile = NULL;
   const char *base_digest_hex = NULL;
-  unsigned char digest[MD5_DIGESTSIZE];
+  unsigned char digest[APR_MD5_DIGESTSIZE];
   
   /* Make an untranslated copy of the working file in the
      administrative tmp area because a) we want this to work even if
@@ -631,7 +631,7 @@ svn_wc_transmit_text_deltas (const char *path,
       if (ent->checksum)
         {
           const char *tb = svn_wc__text_base_path (path, FALSE, pool);
-          unsigned char tb_digest[MD5_DIGESTSIZE];
+          unsigned char tb_digest[APR_MD5_DIGESTSIZE];
 
           SVN_ERR (svn_io_file_checksum (tb_digest, tb, pool));
           base_digest_hex = svn_md5_digest_to_cstring (tb_digest, pool);

@@ -252,7 +252,7 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
       if (! is_dir)
         {
           /* files have checksums */
-          unsigned char digest[MD5_DIGESTSIZE];
+          unsigned char digest[APR_MD5_DIGESTSIZE];
           SVN_ERR (svn_fs_file_md5_checksum
                    (digest, uc->rev_root, real_path, pool));
           

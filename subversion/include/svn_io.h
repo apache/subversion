@@ -274,7 +274,7 @@ svn_error_t *svn_io_filesizes_different_p (svn_boolean_t *different_p,
 
 
 /** Put the md5 checksum of @a file into @a digest.
- * @a digest points to @c MD5_DIGESTSIZE bytes of storage.
+ * @a digest points to @c APR_MD5_DIGESTSIZE bytes of storage.
  * Use @a pool only for temporary allocations.
  */
 svn_error_t *svn_io_file_checksum (unsigned char digest[],
