@@ -48,6 +48,9 @@
 <!ENTITY colo     SYSTEM "colo.xml">
 ]>
 
+  <!-- @ENGLISH {{{
+  <book id="svn">
+  @ENGLISH }}} -->
   <book id="svn" lang="no">
   <!-- @ENGLISH {{{
   <title>Version Control with Subversion</title>

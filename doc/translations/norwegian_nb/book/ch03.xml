@@ -2089,7 +2089,7 @@ $ svn diff &gt; patchfil
 </screen>
 
         <!-- @ENGLISH {{{
-        <para>You could, for example, email the patchfile to another
+        <para>You could, for example, email the patch file to another
           developer for review or testing prior to commit.</para>
         @ENGLISH }}} -->
         <para>Du kan for eksempel sende denne patchfilen til en annen 
