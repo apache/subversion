@@ -25,3 +25,31 @@ and greek letter names are files.  There are no properties yet.
                         /           |          \
                        pi          rho         tau
 
+<===============================< Or... >===================================>
+
+         /iota
+   
+         /A/                        /A/D/
+         /A/mu                      /A/D/gamma
+                                    /A/D/H/
+         /A/B/                      /A/D/H/chi
+         /A/B/lambda                /A/D/H/psi
+         /A/B/E                     /A/D/H/omega
+         /A/B/E/alpha
+         /A/B/E/beta                /A/D/G/
+         /A/B/F                     /A/D/G/pi
+                                    /A/D/G/rho
+         /A/C/                      /A/D/G/tau
+                                  
+                                  
+                                  
+
+
+
+
+
+
+
+
+
+
