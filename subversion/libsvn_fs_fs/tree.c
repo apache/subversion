@@ -156,7 +156,7 @@ make_root (svn_fs_t *fs,
   /* We create a subpool for each root object to allow us to implement
      svn_fs_close_root.  */
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_fs_root_t *root = apr_pcalloc (pool, sizeof (*root));
+  svn_fs_root_t *root = apr_pcalloc (subpool, sizeof (*root));
 
   root->fs = fs;
   root->pool = subpool;
