@@ -234,6 +234,14 @@ svn_repos_set_path (void *report_baton,
                                                   rbaton->pool));
       SVN_ERR (svn_fs_txn_root (&(rbaton->txn_root), rbaton->txn,
                                 rbaton->pool));
+
+      if (start_empty)
+        /* Destroy any children & props of the report 'anchor'
+           directory.  We assume that the client will (later) re-add
+           the entries it knows about.  */
+        SVN_ERR (remove_directory_children (rbaton->base_path,
+                                            rbaton->txn_root,
+                                            pool));
     }
 
   else  /* this is not the first call to set_path. */ 
