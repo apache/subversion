@@ -639,6 +639,9 @@ typedef struct svn_repos_node_t
   /** Pointer to the first child of this node */
   struct svn_repos_node_t *child;
 
+  /** Pointer to the parent of this node */
+  struct svn_repos_node_t *parent;
+
 } svn_repos_node_t;
 
 
