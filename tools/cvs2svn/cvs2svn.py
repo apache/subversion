@@ -1415,14 +1415,15 @@ class SymbolicNameTracker:
     which are not correct and need to be deleted or recopied; those
     can only be detected by descending and examining their scores.
 
-    If OPENINGS is false, return the empty list, else if CLOSINGS is
-    false, return OPENINGS."""
+    If OPENINGS is false, return the empty list."""
 
     # First look for easy outs.
     if not openings:
       return []
-    if not closings:
-      return openings
+
+    # Must be able to call len(closings) below.
+    if closings is None:
+      closings = []
       
     # No easy out, so wish for lexical closures and calculate the scores :-). 
     scores = []
