@@ -1307,7 +1307,8 @@ static svn_error_t *unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb", &token, &force));
 
-  SVN_ERR(must_have_write_access(conn, pool, b, TRUE));
+  /* Username required unless force was specified. */
+  SVN_ERR(must_have_write_access(conn, pool, b, ! force));
 
   SVN_CMD_ERR(svn_repos_fs_unlock(b->repos, token, force, pool));
 
