@@ -246,7 +246,10 @@ SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
 /* put the va_arg in stack and invoke caller_func with func.
    fmt:
    * O: perl object
-   * i: integer
+   * i: int (use for fixed 32-bit types signed or unsigned)
+   * l: long (signed or unsigned)
+   * L: long long (use for fixed 64-bit types)
+   * U: unsigned long long
    * s: string
    * S: swigtype
 
@@ -300,6 +303,28 @@ svn_error_t *svn_swig_pl_callback_thunk (perl_func_invoker_t caller_func,
 	    XPUSHs(sv_2mortal(newSViv(va_arg(ap, int))));
 	    break;
 
+	case 'l': /* long */
+	    XPUSHs(sv_2mortal(newSViv(va_arg(ap, long))));
+	    break;
+
+	case 'L': /* long long */
+	    /* Pass into perl as a string because some implementations may
+	     * not be able to handle a 64-bit int.  If it's too long to
+	     * fit in Perl's interal IV size then perl will only make
+	     * it available as a string.  If not then perl will convert
+	     * it to an IV for us.  So this handles the problem gracefully */
+	    c = malloc(30);
+	    snprintf(c,30,"%lld",va_arg(ap, long long));
+	    XPUSHs(sv_2mortal(newSVpv(c, 0)));
+	    free(c);
+	    break;
+	    
+	case 'U': /* unsigned long long */
+	    c = malloc(30);
+	    snprintf(c,30,"%llu",va_arg(ap, unsigned long long));
+	    XPUSHs(sv_2mortal(newSVpv(c, 0)));
+	    free(c);
+	    break;
 	}
     }
 
@@ -397,7 +422,7 @@ static svn_error_t * thunk_set_target_revision(void *edit_baton,
 
     SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
 				         (void *)"set_target_revision", NULL,
-				         "Oi", ib->editor, target_revision));
+				         "Ol", ib->editor, target_revision));
 
     return SVN_NO_ERROR;
 }
@@ -413,7 +438,7 @@ static svn_error_t * thunk_open_root(void *edit_baton,
 
     SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
 				         (void *)"open_root", &result,
-				         "OiS", ib->editor, base_revision,
+				         "OlS", ib->editor, base_revision,
 				         dir_pool, poolinfo));
 
     *root_baton = make_baton(dir_pool, ib->editor, result);
@@ -430,7 +455,7 @@ static svn_error_t * thunk_delete_entry(const char *path,
 
     SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
 				         (void *)"delete_entry", NULL,
-				         "OsiOS", ib->editor, path, revision,
+				         "OslOS", ib->editor, path, revision,
 				         ib->baton, pool, poolinfo));
     return SVN_NO_ERROR;
 }
@@ -448,7 +473,7 @@ static svn_error_t * thunk_add_directory(const char *path,
 
     SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
 				         (void *)"add_directory", &result,
-				         "OsOsiS", ib->editor, path, ib->baton,
+				         "OsOslS", ib->editor, path, ib->baton,
 				         copyfrom_path, copyfrom_revision, 
 				         dir_pool, poolinfo));
     *child_baton = make_baton(dir_pool, ib->editor, result);
@@ -467,7 +492,7 @@ static svn_error_t * thunk_open_directory(const char *path,
 
     SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
 				         (void *)"open_directory", &result,
-				         "OsOiS", ib->editor, path, ib->baton,
+				         "OsOlS", ib->editor, path, ib->baton,
 				         base_revision, dir_pool, poolinfo));
 
     *child_baton = make_baton(dir_pool, ib->editor, result);
@@ -526,7 +551,7 @@ static svn_error_t * thunk_add_file(const char *path,
 
     SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
 				         (void *)"add_file", &result,
-				         "OsOsiS", ib->editor, path, ib->baton,
+				         "OsOslS", ib->editor, path, ib->baton,
 				         copyfrom_path, copyfrom_revision,
 				         file_pool, poolinfo));
 
@@ -546,7 +571,7 @@ static svn_error_t * thunk_open_file(const char *path,
 
     SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
 				         (void *)"open_file", &result,
-				         "OsOiS", ib->editor, path, ib->baton,
+				         "OsOlS", ib->editor, path, ib->baton,
 				         base_revision, file_pool, poolinfo));
 
     *file_baton = make_baton(file_pool, ib->editor, result);
@@ -725,7 +750,7 @@ svn_error_t *svn_swig_pl_thunk_log_receiver(void *baton,
 
     svn_swig_pl_callback_thunk (CALL_SV,
 			        receiver, NULL,
-			        "OisssS", (changed_paths) ?
+			        "OlsssS", (changed_paths) ?
 			        svn_swig_pl_convert_hash(changed_paths, tinfo)
 			        : &PL_sv_undef,
 			        rev, author, date, msg, pool, poolinfo);
@@ -746,7 +771,7 @@ svn_error_t *svn_swig_pl_thunk_history_func(void *baton,
 
     svn_swig_pl_callback_thunk (CALL_SV,
 			        func, NULL,
-			        "siS", path, revision, pool, poolinfo);
+			        "slS", path, revision, pool, poolinfo);
 
     return SVN_NO_ERROR;
 }
@@ -783,7 +808,7 @@ svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
 	return SVN_NO_ERROR;
 
     svn_swig_pl_callback_thunk (CALL_SV, baton, NULL,
-			        "iss", new_revision, date, author);
+			        "lss", new_revision, date, author);
 
     return SVN_NO_ERROR;
 }
@@ -1016,7 +1041,7 @@ void svn_swig_pl_notify_func(void * baton,
 
     svn_swig_pl_callback_thunk (CALL_SV,
 		                baton, NULL,
-				"siisiii", path, action, kind, mime_type,
+				"siisiil", path, action, kind, mime_type,
 				content_state, prop_state, revision);
     
 }
@@ -1139,8 +1164,8 @@ svn_error_t *svn_swig_pl_blame_func (void *baton,
     SV *result;
     svn_error_t *ret_val = SVN_NO_ERROR;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
-    
-    svn_swig_pl_callback_thunk (CALL_SV, baton, &result, "iisssS",
+ 
+    svn_swig_pl_callback_thunk (CALL_SV, baton, &result, "UlsssS",
 		                line_no, revision, author, date, line,
 				pool, poolinfo);
 
@@ -1199,7 +1224,14 @@ static svn_error_t *io_handle_read (void *baton,
     if ((mg = SvTIED_mg((SV*)io->io, PERL_MAGIC_tiedscalar))) {
 	SV *ret;
 	SV *buf = sv_newmortal();
-	svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"READ", &ret, "OOi",
+	const char *fmt;
+
+	if (sizeof (apr_size_t) == 32) {
+	    fmt = "OOl";
+	} else if (sizeof (apr_size_t) == 64) {
+            fmt = "OOL";
+	}
+	svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"READ", &ret, fmt,
 			            SvTIED_obj((SV*)io->io, mg),
 			            buf, *len);
 	*len = SvIV (ret);
@@ -1217,11 +1249,18 @@ static svn_error_t *io_handle_write (void *baton,
 {
     io_baton_t *io = baton;
     MAGIC *mg;
+    const char *fmt;
+
+    if (sizeof (apr_size_t) == 32) {
+        fmt = "OOl";
+    } else if (sizeof (apr_size_t) == 64) {
+        fmt = "OOL";
+    }
 
     if ((mg = SvTIED_mg((SV*)io->io, PERL_MAGIC_tiedscalar))) {
 	SV *ret, *pv;
         pv = sv_2mortal (newSVpvn (data, *len));
-	svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"WRITE", &ret, "OOi",
+	svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"WRITE", &ret, fmt,
 			            SvTIED_obj((SV*)io->io, mg), pv, *len);
 	*len = SvIV (ret);
 	SvREFCNT_dec (ret);
