@@ -1227,19 +1227,19 @@ svn_wc__get_keywords (char **revision,
  
   do {
     /* Find the start of a word by skipping past whitespace. */
-    while ((value[offset] != NULL) && (apr_isspace (value[offset])))
+    while ((value[offset] != '\0') && (apr_isspace (value[offset])))
       offset++;
     
     /* Hit either a non-whitespace or NULL char. */
 
-    if (value[offset] != NULL) /* found non-whitespace char */
+    if (value[offset] != '\0') /* found non-whitespace char */
       {
         int word_start, word_end;
 
         word_start = offset;
         
         /* Find the end of the word by skipping non-whitespace chars */
-        while ((value[offset] != NULL) && (! apr_isspace (value[offset])))
+        while ((value[offset] != '\0') && (! apr_isspace (value[offset])))
           offset++;
         
         /* Hit either a whitespace or NULL char.  Either way, it's the
@@ -1259,7 +1259,7 @@ svn_wc__get_keywords (char **revision,
                                  path, pool));
       }
 
-  } while (value[offset] != NULL);
+  } while (value[offset] != '\0');
 
       
   return SVN_NO_ERROR;

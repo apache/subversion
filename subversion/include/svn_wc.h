@@ -866,6 +866,29 @@ svn_wc_create_tmp_file (apr_file_t **fp,
                         apr_pool_t *pool);
 
 
+/* Set *XLATED_P to a path to a possibly translated copy of versioned
+ * file VFILE, or to VFILE itself if no translation is necessary.
+ * That is, if VFILE's properties indicate newline conversion or
+ * keyword expansion, point *XLATED_P to a copy of VFILE whose
+ * newlines are unconverted and keywords contracted, in whatever
+ * manner is indicated by VFILE's properties; otherwise, set *XLATED_P
+ * to VFILE.
+ *
+ * Caller is responsible for detecting if they are different, and for
+ * removing *XLATED_P if necessary.
+ *
+ * This function is generally used to get a file that can be compared
+ * meaningfully against VFILE's text base.
+ *
+ * If *XLATED_P is different from VFILE, allocate it in POOL; also use
+ * POOL for any temporary allocation.
+ *
+ * If an error is returned, the effect on *XLATED_P is undefined.
+ */
+svn_error_t *svn_wc_translated_file (svn_stringbuf_t **xlated_p,
+                                     svn_stringbuf_t *vfile,
+                                     apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

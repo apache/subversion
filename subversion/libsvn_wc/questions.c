@@ -331,6 +331,8 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
 
   if (q)
     *same = 1;
+  else
+    *same = 0;
 
   return SVN_NO_ERROR;
 }
@@ -342,96 +344,19 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
                                  svn_stringbuf_t *base_file,
                                  apr_pool_t *pool)
 {
-  svn_boolean_t different_filesizes, identical_p;
-  enum svn_wc__eol_style style;
-  const char *eol;
+  svn_boolean_t same;
+  svn_stringbuf_t *tmp_vfile;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  SVN_ERR (svn_wc_translated_file (&tmp_vfile, versioned_file, pool));
   
-  /* ### todo: add keyword handling here too. */
+  err = svn_wc__files_contents_same_p (&same, tmp_vfile, base_file, pool);
+  *modified_p = (! same);
   
-  SVN_ERR (svn_wc__get_eol_style (&style, &eol, versioned_file->data, pool));
-  if ((style == svn_wc__eol_style_none)
-      || (style == svn_wc__eol_style_fixed))
-    {
-      /* Because base_file and working file use the same eol style, a
-         filesize check is possible. */
-      SVN_ERR (filesizes_definitely_different_p (&different_filesizes,
-                                                 versioned_file,
-                                                 base_file,
-                                                 pool));
-      if (different_filesizes)
-        {
-          *modified_p = TRUE;
-          return SVN_NO_ERROR;
-        }
-      
-      /* Else the filesize check didn't answer the question, so
-         compare the files the hard way --  a brute force,
-         byte-for-byte comparison. */
-      SVN_ERR (contents_identical_p (&identical_p,
-                                     versioned_file,
-                                     base_file,
-                                     pool));
-    }
-  else if (style == svn_wc__eol_style_native)
-    {
-      /* Because base_file and working file do not use the same eol
-         style, our only recourse is to convert one of them and do a
-         byte-for-byte comparison. */
-      svn_stringbuf_t *tmp_dir, *tmp_vfile;
-      apr_file_t *ignored;
-      apr_status_t apr_err;
-      svn_error_t *err;
-      
-      svn_path_split (versioned_file, &tmp_dir, &tmp_vfile,
-                      svn_path_local_style, pool);
-      
-      tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool,
-                                    tmp_vfile, NULL);
-      
-      SVN_ERR (svn_io_open_unique_file (&ignored,
-                                        &tmp_vfile,
-                                        tmp_vfile,
-                                        SVN_WC__TMP_EXT,
-                                        FALSE,
-                                        pool));
-      
-      /* Toss return value from this, it doesn't matter, we're not
-         writing to this handle anyway. */
-      apr_file_close (ignored);
-      
-      SVN_ERR (svn_io_copy_and_translate (versioned_file->data,
-                                          tmp_vfile->data,
-                                          SVN_WC__DEFAULT_EOL_MARKER,
-                                          0,
-                                          "",
-                                          "",
-                                          "",
-                                          "",
-                                          0,
-                                          pool));
-      
-      err = contents_identical_p (&identical_p, tmp_vfile, base_file, pool);
-      apr_err = apr_file_remove (tmp_vfile->data, pool);
-
-      if (err)
-        return err;
-      else if (apr_err)
-        return svn_error_createf 
-          (apr_err, 0, NULL, pool,
-           "svn_wc__versioned_file_modcheck: error removing %s.",
-           tmp_vfile->data);
-    }
-  else
-    {
-      return svn_error_createf
-        (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, pool,
-         "svn_wc__versioned_file_modcheck: %s has unknown eol style property",
-         versioned_file->data);
-    }
-
-  *modified_p = (! identical_p);
-
-  return SVN_NO_ERROR;
+  if (tmp_vfile != versioned_file)
+    SVN_ERR (svn_io_remove_file (tmp_vfile->data, pool));
+  
+  return err;
 }
 
 
@@ -477,7 +402,7 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
       goto cleanup;
     }
   
-  /* Otherwise, fall back on filesize and/or byte-for-byte comparison. */
+  /* Otherwise, fall back on the standard mod detector. */
   SVN_ERR (svn_wc__versioned_file_modcheck (modified_p,
                                             filename,
                                             textbase_filename,

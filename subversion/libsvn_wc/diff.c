@@ -306,79 +306,29 @@ file_diff (struct dir_baton *dir_baton,
       SVN_ERR (svn_wc_text_modified_p (&modified, path, dir_baton->pool));
       if (modified)
         {
-          enum svn_wc__eol_style style;
-          const char *eol;
+          svn_stringbuf_t *translated;
+          svn_error_t *err;
 
           pristine_copy = svn_wc__text_base_path (path, FALSE,
                                                   dir_baton->pool);   
-          SVN_ERR (svn_wc__get_eol_style (&style, &eol,
-                                          path->data, dir_baton->pool));
 
-          if ((style == svn_wc__eol_style_none)
-              || (style == svn_wc__eol_style_fixed))
-            {
-              /* Because text-base and working file use the same eol
-                 style, we can compare them directly. */
-              SVN_ERR (diff_cmd (pristine_copy, path, path,
-                                 dir_baton->edit_baton->diff_cmd_baton));
-            }
-          else if (style == svn_wc__eol_style_native)
-            {
-              /* Because text-base and working file do not use the same eol
-                 style, our only recourse is to convert one of them
-                 before comparing. */
-              svn_stringbuf_t *tmp_dir, *tmp_workingfile;
-              apr_file_t *ignored;
-              apr_status_t apr_err;
-              
-              svn_path_split (path, &tmp_dir, &tmp_workingfile,
-                              svn_path_local_style, dir_baton->pool);
+          /* Note that this might be the _second_ time we translate
+             the file, as svn_wc_text_modified_p() might have used a
+             tmp translated copy too.  But what the heck, diff is
+             already expensive, translating twice for the sake of code
+             modularity is liveable. */
+          SVN_ERR (svn_wc_translated_file (&translated, path,
+                                           dir_baton->pool));
 
-              tmp_workingfile = svn_wc__adm_path (tmp_dir, 1, dir_baton->pool,
-                                                  tmp_workingfile, NULL);
-              SVN_ERR (svn_io_open_unique_file (&ignored,
-                                                &tmp_workingfile,
-                                                tmp_workingfile,
-                                                SVN_WC__TMP_EXT,
-                                                FALSE,
-                                                dir_baton->pool));
-              
-              /* Toss return value from this, it doesn't matter, we're not
-                 writing to this handle anyway. */
-              apr_file_close (ignored);
+          err = diff_cmd (pristine_copy, translated, path,
+                          dir_baton->edit_baton->diff_cmd_baton);
+          
+          if (translated != path)
+            SVN_ERR (svn_io_remove_file (translated->data, dir_baton->pool));
 
-              SVN_ERR (svn_io_copy_and_translate (path->data,
-                                                  tmp_workingfile->data,
-                                                  SVN_WC__DEFAULT_EOL_MARKER,
-                                                  0,
-                                                  "",
-                                                  "",
-                                                  "",
-                                                  "",
-                                                  0,
-                                                  dir_baton->pool));
-              
-              SVN_ERR (diff_cmd (pristine_copy, tmp_workingfile, path,
-                                 dir_baton->edit_baton->diff_cmd_baton));
-
-              apr_err = apr_file_remove (tmp_workingfile->data,
-                                         dir_baton->pool);
-              if (apr_err)
-                return svn_error_createf 
-                  (apr_err, 0, NULL, dir_baton->pool,
-                   "file_diff: error removing scratch file %s.",
-                   tmp_workingfile->data);
-            }
-          else
-            {
-              return svn_error_createf
-                (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, dir_baton->pool,
-                 "file_diff: %s has unknown eol style property",
-                 path->data);
-            }          
+          if (err)
+            return err;
         }
-      
-      break;
     }
 
   return SVN_NO_ERROR;
@@ -793,73 +743,19 @@ close_file (void *file_baton)
     }
   else
     {
-      enum svn_wc__eol_style style;
-      const char *eol;
+      svn_stringbuf_t *translated;
+      svn_error_t *err2;
       
-      SVN_ERR (svn_wc__get_eol_style (&style, &eol,
-                                      b->wc_path->data, b->pool));
-
-      if ((style == svn_wc__eol_style_none)
-          || (style == svn_wc__eol_style_fixed))
-        {
-          /* Because text-base and working file use the same eol
-             style, we can compare them directly. */
-          err = diff_cmd (temp_file_path, b->path, b->path,
-                          b->edit_baton->diff_cmd_baton);
-        }
-      else if (style == svn_wc__eol_style_native)
-        {
-          /* Because text-base and working file do not use the same eol
-             style, our only recourse is to convert one of them
-             before comparing. */
-          svn_stringbuf_t *tmp_dir, *tmp_workingfile;
-          apr_file_t *ignored;
-          apr_status_t apr_err;
-          
-          svn_path_split (b->wc_path, &tmp_dir, &tmp_workingfile,
-                          svn_path_local_style, b->pool);
-          
-          tmp_workingfile = svn_wc__adm_path (tmp_dir, 1, b->pool,
-                                              tmp_workingfile, NULL);
-          SVN_ERR (svn_io_open_unique_file (&ignored,
-                                            &tmp_workingfile,
-                                            tmp_workingfile,
-                                            SVN_WC__TMP_EXT,
-                                            FALSE,
-                                            b->pool));
-              
-          /* Toss return value from this, it doesn't matter, we're not
-             writing to this handle anyway. */
-          apr_file_close (ignored);
-
-          SVN_ERR (svn_io_copy_and_translate (b->path->data,
-                                              tmp_workingfile->data,
-                                              SVN_WC__DEFAULT_EOL_MARKER,
-                                              0,
-                                              "",
-                                              "",
-                                              "",
-                                              "",
-                                              0,
-                                              b->pool));
-
-          err = diff_cmd (temp_file_path, tmp_workingfile, b->path,
-                          b->edit_baton->diff_cmd_baton);
-
-          apr_err = apr_file_remove (tmp_workingfile->data, b->pool);
-          if (apr_err)
-            return svn_error_createf 
-              (apr_err, 0, NULL, b->pool,
-               "close_file: error removing scratch file %s.",
-               tmp_workingfile->data);
-        }
-      else
-        {
-          return svn_error_createf
-            (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, b->pool,
-             "close_file: %s has unknown eol style property",
-             b->wc_path->data);
-        }                
+      SVN_ERR (svn_wc_translated_file (&translated, b->path, b->pool));
+      
+      err2 = diff_cmd (temp_file_path, translated, b->path,
+                       b->edit_baton->diff_cmd_baton);
+      
+      if (translated != b->path)
+        SVN_ERR (svn_io_remove_file (translated->data, b->pool));
+      
+      if (err2)
+        return err2;
     }
 
 #if 0
