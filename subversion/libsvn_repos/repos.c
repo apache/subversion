@@ -268,7 +268,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# if it exits with failure (non-zero), the commit is stopped before"
       APR_EOL_STR
-      "# even a Subversion txn is created."
+      "# a Subversion txn is created, and STDERR is returned to the client."
       APR_EOL_STR
       "#"
       APR_EOL_STR
@@ -364,11 +364,11 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# If the hook program exits with success, the txn is committed; but"
       APR_EOL_STR
-      "# if it exits with failure (non-zero), the txn is aborted and no"
+      "# if it exits with failure (non-zero), the txn is aborted, no commit"
       APR_EOL_STR
-      "# commit takes place.  The hook program can use the 'svnlook'"
+      "# takes place, and STDERR is returned to the client.   The hook"
       APR_EOL_STR
-      "# utility to help it examine the txn."
+      "# program can use the 'svnlook' utility to help it examine the txn."
       APR_EOL_STR
       "#"
       APR_EOL_STR
