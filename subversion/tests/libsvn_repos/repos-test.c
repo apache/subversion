@@ -590,7 +590,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
                                apr_pool_t *pool) = {
   0,
   dir_deltas,
-#ifdef KARL_GETS_HIS_CONF_PARSING_STUFF_RIGHT
+#ifdef MIKE_GETS_HIS_CONF_TESTING_STUFF_RIGHT
   verify_hooks,
 #endif
   0

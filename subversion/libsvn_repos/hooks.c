@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "apr_pools.h"
 #include "apr_file_io.h"
@@ -31,9 +32,181 @@
 
 /*** Hook/sentinel file parsing. ***/
 
-/* Read the next non-comment line from HOOK_FILE, setting *CMD_P to
-   the command with its arguments, ready to be run by system().
-   HOOK_FILE is already open, and is not closed.
+/* Set *C to the next char from open file F.  
+   If hit EOF, set *C to '\n', set *GOT_EOF to 1, and return success.
+   If neither EOF nor error, set *GOT_EOF to 0.
+   Use POOL for error allocation.  */
+static svn_error_t *
+read_char (char *c, int *got_eof, apr_file_t *f, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+
+  apr_err = apr_file_getc (c, f);
+
+  if (APR_STATUS_IS_EOF (apr_err))
+    {
+      *c = '\n';
+      *got_eof = 1;
+    }
+  else if (! APR_STATUS_IS_SUCCESS (apr_err))
+     return svn_error_create (apr_err, 0, NULL, pool, "read_char");
+  else
+    *got_eof = 0;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Eat to end of line in F, including the newline.
+   If see EOF, set *GOT_EOF to 1, else set it to 0.
+   Use POOL for error allocation.  */
+static svn_error_t *
+eat_to_eol (int *got_eof, apr_file_t *f, apr_pool_t *pool)
+{
+  char c;
+
+  do {
+    SVN_ERR (read_char (&c, got_eof, f, pool));
+  } while (c != '\n');
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Read a variable name from hook file (starting on the first char
+   after the `$' sign), and insert its expansion into BUF + *IDX.
+   *IDX is incremented by the size of the expanded variable, but if it
+   would exceed MAX_IDX, then an error is returned instead.
+
+   Known variable expansions are:
+
+         "repos"   ==>   REPOS
+         "user"    ==>   USER
+         "rev"     ==>   REV
+         "txn"     ==>   TXN_NAME
+
+   If expanding a variable but the expansion given in the right hand
+   column is null, return the error SVN_ERR_REPOS_HOOK_FAILURE.  Also,
+   return that error if the variable name being expanded does not
+   appear in the left hand column at all.
+   
+   Valid variable names contain only alphanumerics, hyphen, and
+   underscore; this is used to stop reading and ungetc() when reach
+   the end of the variable.  */
+static svn_error_t *
+expand (char *buf,
+        int *idx,
+        int *got_eof,
+        int max_idx,
+        const char *repos,
+        const char *user,
+        const char *rev,
+        const char *txn_name,
+        apr_file_t *hook_file,
+        apr_pool_t *pool)
+{
+  char c;                              /* next char of unexpanded var name */
+  char unexpanded_name[APR_PATH_MAX];  /* holds unexpanded var name */
+  int unexpanded_len = 0;              /* length of unexpanded var name */
+  const char *expansion = NULL;
+
+  while (1)
+    {
+      SVN_ERR (read_char (&c, got_eof, hook_file, pool));
+      
+      if ((isalnum (c)) || (c == '-') || (c == '_'))
+        {
+          unexpanded_name[unexpanded_len++] = c;
+          if (unexpanded_len > (APR_PATH_MAX - 1))
+            return svn_error_create
+              (SVN_ERR_REPOS_HOOK_FAILURE, 0, NULL, pool,
+               "expand: var name waaaay too long");
+        }
+      else  /* hit a char that can't be part of a var name */
+        {
+          if (! *got_eof)  /* Push the char back if not at eof. */
+            {
+              apr_status_t apr_err = apr_file_ungetc (c, hook_file);
+
+              if (! (APR_STATUS_IS_SUCCESS (apr_err)))
+                return svn_error_create
+                  (apr_err, 0, NULL, pool,
+                   "expand: error from apr_file_ungetc()");
+            }
+
+          unexpanded_name[unexpanded_len] = '\0';
+          break;
+        }
+    }
+
+  /* Now, unexpanded_name[] holds the raw variable name. */
+
+  /* Try to expand it. */
+  if (unexpanded_len)
+    {
+      if (strcmp (unexpanded_name, "repos") == 0)
+        expansion = repos;
+      else if (strcmp (unexpanded_name, "user") == 0)
+        expansion = user;
+      else if (strcmp (unexpanded_name, "rev") == 0)
+        expansion = rev;
+      else if (strcmp (unexpanded_name, "txn") == 0)
+        expansion = txn_name;
+      else
+        return svn_error_createf
+          (SVN_ERR_REPOS_HOOK_FAILURE, 0, NULL, pool,
+           "expand: cannot expand unknown var `%s'", unexpanded_name);
+    }
+  else  /* cannot expand empty variable */
+    {
+      return svn_error_create
+        (SVN_ERR_REPOS_HOOK_FAILURE, 0, NULL, pool,
+         "expand: cannot expand an empty variable");
+    }
+  
+  /* Check that there was an expansion available for the valid var. */
+  if (expansion == NULL)
+    return svn_error_createf
+      (SVN_ERR_REPOS_HOOK_FAILURE, 0, NULL, pool,
+       "expand: no expansion available for var `%s'", unexpanded_name);
+    
+  /* Check that the expansion is not too long. */
+  if (((strlen (expansion)) + *idx) > max_idx)
+    return svn_error_createf
+      (SVN_ERR_REPOS_HOOK_FAILURE, 0, NULL, pool,
+       "expand: expanding var `%s' to `%s' exceeds %d",
+       unexpanded_name, expansion, max_idx);
+
+  /* Everything checks out, store the expanded variable. */
+  strcpy (buf + *idx, expansion);
+  *idx += strlen (expansion);
+  
+  return SVN_NO_ERROR;
+}
+
+
+/* Return 1 if BUF's first non-whitespace character is '#', or if the
+   line contains only whitespace characters.  Otherwise, return 0.
+   BUF is null-terminated and contains no newlines.  */
+static int
+is_irrelevant_line (char *buf)
+{
+  char c;
+
+  while (((c = *buf++) != '\0') && (isspace (c)))
+    ;
+
+  if ((c == '#') || (c == '\0'))
+    return 1;
+  else
+    return 0;
+}
+
+
+/* Read the next non-comment line from HOOK_FILE, tossing the newline,
+   and set *LINE_P to the command with its arguments, ready to be run
+   by system().  HOOK_FILE is already open, and will not be closed
+   even if reach eof.
 
    When constructing arguments, expand "$user" to USER, "$rev" to REV,
    "$txn" to TXN_NAME, and "$repos" to REPOS.  If expansion is
@@ -41,12 +214,12 @@
    SVN_ERR_REPOS_HOOK_FAILURE.
 
    After the last line of HOOK_FILE has been read, the next call sets
-   *CMD_P to null.
+   *LINE_P to null.
 
-   *CMD_P is allocated in POOL, which is also used for any temporary
+   *LINE_P is allocated in POOL, which is also used for any temporary
    allocations.  */
 static svn_error_t *
-read_hook_line (char **cmd_p,
+read_hook_line (char **line_p,
                 apr_file_t *hook_file,
                 const char *repos,
                 const char *user,
@@ -55,20 +228,11 @@ read_hook_line (char **cmd_p,
                 apr_pool_t *pool)
 {
   char buf[APR_PATH_MAX];
-  apr_size_t idx, len;
+  apr_size_t idx;
   char c;
-  int i;
   apr_status_t apr_err;
-  apr_array_header_t *args = apr_array_make (pool, 4, sizeof (*cmd_p));
   const char *hook_file_path;  /* for error msgs */
-  
-  int
-    done = 0,
-    escaped = 0,
-    commented = 0,
-    suppress_expansion = 0,
-    suppress_comment_effect = 0,
-    suppress_escape_effect = 0;
+  int this_line_done, got_eof;
               
   /* Get the hook's file name, for use in error messages. */
   apr_err = apr_file_name_get (&hook_file_path, hook_file);
@@ -79,194 +243,70 @@ read_hook_line (char **cmd_p,
     
  restart:
 
+  /* Reset the parms. */
+  this_line_done = 0;
+  got_eof = 0;
   idx = 0;
-  done = 0;
-  commented = 0;
+  buf[0] = '\0';
   while (1)
     {
-      apr_err = apr_file_getc (&c, hook_file);
-
-      if ((! APR_STATUS_IS_SUCCESS (apr_err))
-          && (APR_STATUS_IS_EOF (apr_err)))   /* reached end of file */
-        {
-          if (idx > 0)
-            {
-              c = '\n';  /* fake a newline */
-              done = 1;
-            }
-          else
-            *cmd_p = NULL;
-
-          return SVN_NO_ERROR;
-        }
-      else if (! APR_STATUS_IS_SUCCESS (apr_err))   /* error other than eof */
-        {
-          return svn_error_createf 
-            (apr_err, 0, NULL, pool,
-             "read_hook_line: error reading line from `%s'", hook_file_path);
-        }
-
-      /* Else, we got another char in the line. */
-
-      /* Sanity check: is this line overly long? */
-      if (idx >= APR_PATH_MAX)
-        return svn_error_createf 
-          (apr_err, 0, NULL, pool,
-           "read_hook_line: line too long in `%s'", hook_file_path);
-        
-      if (escaped)
-        {
-          /* The char before this one was backslash, the escape
-             character.  That means this char has been escaped;
-             depending on what it is, we might have to handle it
-             specially. */
-
-          switch (c)
-            {
-            case '\n':
-              c = ' ';
-            case '$':
-              suppress_expansion = 1;
-            case '#':
-              suppress_comment_effect = 1;
-            case '\\':
-              suppress_escape_effect = 1;
-            }
-
-          escaped = 0;
-        }
-
-      /* Proceed, having handled or prepared any escapes on this char. */
-
-      /* ### todo: when have test suite from Mike, change this to
-         check for `\\' outside the switch below, and if it is an
-         escape, then just read the next char right away.  Then we can
-         get rid of the whole `escaped' switch block above. 
-
-         Likewise, check for comment char.  If have it, then call a
-         new function, eat_to_end_of_line(), then restart.  There's no
-         reason this whole state machine has to be done inline and
-         unrolled, the way it is right now.
-
-         We can do expansion the same way: see a dollar sign, expand
-         right away.  That will give us more flexible syntax in the
-         conf file anyway. */
+      SVN_ERR (read_char (&c, &got_eof, hook_file, pool));
 
       switch (c)
         {
-        case '\\':
-          if (suppress_escape_effect)
-            {
-              suppress_escape_effect = 0;
-              goto add_it;
-            }
-          else
-            escaped = 1;
+        case '\\':       /* read the next char unconditionally */
+          SVN_ERR (read_char (&c, &got_eof, hook_file, pool));
+          if (c == '\n')
+            c = ' ';
+          goto nonspecial;
           break;
-          
+
         case '#':
-          if (suppress_comment_effect)
-            {
-              suppress_comment_effect = 0;
-              goto add_it;
-            }
-          else
-            commented = 1;
+          SVN_ERR (eat_to_eol (&got_eof, hook_file, pool));
+          c = '\n';
+          goto nonspecial;
           break;
-          
-        case '\n':
-          done = 1;
-        /* fallthru */
-        case ' ':
-        case '\t':
-          if (idx > 0)   /* convert the buffered data  */
+
+        case '$':
+          SVN_ERR (expand (buf, &idx, &got_eof, APR_PATH_MAX,
+                           repos,
+                           user,
+                           rev,
+                           txn_name,
+                           hook_file, pool));
+          if (got_eof)
+            c = '\n';
+          break;
+
+        nonspecial:
+        default:
+          if (c == '\n')
             {
               buf[idx] = '\0';
-
-              if (! suppress_expansion)
-                {
-                  /* ### todo: error check expanded length here */
-
-                  if (strcmp (buf, "$user") == 0)
-                    {
-                      if (user)
-                        strcpy (buf, user);
-                      else
-                        goto expansion_error;
-                    }
-                  else if (strcmp (buf, "$txn") == 0)
-                    {
-                      if (txn_name)
-                        strcpy (buf, txn_name);
-                      else
-                        goto expansion_error;
-                    }
-                  else if (strcmp (buf, "$rev") == 0)
-                    {
-                      if (rev)
-                        strcpy (buf, rev);
-                      else
-                        goto expansion_error;
-                    }
-                  else if (strcmp (buf, "$repos") == 0)
-                    {
-                      if (repos)
-                        strcpy (buf, repos);
-                      else
-                        goto expansion_error;
-                    }
-                  else if (buf[0] == '$')
-                    {
-                    expansion_error:
-                      return svn_error_createf
-                        (SVN_ERR_REPOS_HOOK_FAILURE, 0, NULL, pool,
-                         "read_hook_line: error expanding `%s' in `%s'",
-                         buf, hook_file_path);
-                    }
-                }
-
-              *((const char **)apr_array_push (args))
-                = apr_pstrdup (pool, buf);
-
-              /* Reset. */
-              idx = 0;
-              suppress_expansion = 0;
+              this_line_done = 1;
             }
-
-          break;
-
-        default:
-        add_it:
-          if (! commented)
+          else
             buf[idx++] = c;
         }
 
-      if (done)
+      if (this_line_done)
         break;
     }
 
-  /* If no uncommented text here, move on to the next line. */
-  if (args->nelts == 0)
-    goto restart;
-
-  /* Compute the length needed. */
-  len = 0;
-  for (i = 0; i < args->nelts; i++)
-    len += (strlen (((char **) args->elts)[i])) + 1;
-
-  /* Allocate it. */
-  *cmd_p = apr_pcalloc (pool, len);
-
-  /* Copy the command and args. */
-  for (i = 0; i < args->nelts; i++)
+  /* Retry or return. */
+  if ((idx > 0) && (is_irrelevant_line (buf)))
     {
-      const char *this = ((char **) args->elts)[i];
-      strcat (*cmd_p, this);
-      strcat (*cmd_p, " ");
+      if (got_eof)
+        *line_p = NULL;
+      else
+        goto restart;
     }
-
-  /* Change the last space into a null terminator. */
-  (*cmd_p)[len - 1] = '\0';
+  else if ((idx == 0) && got_eof)
+    *line_p = NULL;
+  else if (idx == 0)
+    goto restart;
+  else
+    *line_p = apr_pstrdup (pool, buf);
 
   return SVN_NO_ERROR;
 }
