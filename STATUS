@@ -73,13 +73,6 @@ Candidate changes:
     Votes:
       +1: mbk, lundblad
 
-  * r10722
-    Display the targets printed for propedit in local style.
-    Justification:
-      Very tiny error in the output of the propedit command.
-    Votes:
-      +1: breser, lundblad, bliss
-
   * r10731
     Fix svn_path_dirname() so it returns canonical paths when passed a path
       with the last segment separated by multiple slashes.
