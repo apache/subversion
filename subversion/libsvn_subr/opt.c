@@ -566,7 +566,11 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
       if (svn_path_is_url (utf8_target))
         {
           /* No need to canonicalize a URL's case or path separators. */
-
+          if (! svn_path_is_uri_safe (utf8_target))
+            return svn_error_createf (SVN_ERR_BAD_URL, 0,
+                                      "URL `%s' is not properly URI-encoded",
+                                      utf8_target);
+                                      
           /* strip any trailing '/' */
           target = svn_path_canonicalize (utf8_target, pool);
         }
