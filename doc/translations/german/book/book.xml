@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+<!DOCTYPE book SYSTEM "../../../book/tools/dtd/dblite.dtd"
+[
+<!ENTITY % vers   SYSTEM "version.xml">
+%vers;
+<!ENTITY foreword SYSTEM "foreword.xml">
+<!ENTITY ch00     SYSTEM "ch00.xml">
+<!ENTITY ch01     SYSTEM "ch01.xml">
+<!ENTITY ch02     SYSTEM "ch02.xml">
+<!ENTITY ch03     SYSTEM "ch03.xml">
+<!ENTITY ch04     SYSTEM "ch04.xml">
+<!ENTITY ch05     SYSTEM "ch05.xml">
+<!ENTITY ch06     SYSTEM "ch06.xml">
+<!ENTITY ch07     SYSTEM "ch07.xml">
+<!ENTITY ch08     SYSTEM "ch08.xml">
+<!ENTITY ch09     SYSTEM "ch09.xml">
+<!ENTITY appa     SYSTEM "appa.xml">
+<!ENTITY appb     SYSTEM "appb.xml">
+<!ENTITY appc     SYSTEM "appc.xml">
+<!ENTITY appd     SYSTEM "appd.xml">
+<!ENTITY gloss    SYSTEM "glossary.xml">
+<!ENTITY copy     SYSTEM "copyright.xml">
+<!ENTITY colo     SYSTEM "colo.xml">
+]>
+
+  <!-- Diese Version basiert auf book.xlm von der russischen Übersetzung commited-rev=7314 
+       und benötigt eine Begutachtung auf korrektes xml (syntax, struktur, ...).
+       (und Grundsatzentscheidungen, z.B. ob encoding mit "ISO-8859-15" bleibt,
+       oder ob wir auf "UTF-8" umstellen sollten?)
+  -->
+       
+  <book id="svn" lang="de">
+  <title>Versionskontrolle mit Subversion</title>
+
+  <!-- Die Verwendung der Revisionsnummer wäre passender, aber die -->
+  <!-- benutzten stylesheets scheinen dies nicht zu unterstützen. -->
+  <subtitle>&svn.version;</subtitle>
+
+  <bookinfo>
+
+    <edition>First</edition>
+    <isbn>0-59600-448-6</isbn>
+    <authorgroup>
+
+      <author>
+        <firstname>Ben</firstname>
+        <surname>Collins-Sussman</surname>
+      </author>
+
+      <author>
+        <firstname>Brian W.</firstname>
+        <surname>Fitzpatrick</surname>
+      </author>
+
+      <author>
+        <firstname>C. Michael</firstname>
+        <surname>Pilato</surname>
+      </author>
+
+    </authorgroup>
+
+    <editor>
+      <firstname>Linda</firstname>
+      <surname>Mui</surname>
+    </editor>
+
+    <pagenums>350 Seiten (ca.) *TODO: check when ready*</pagenums>
+    <pubdate>(TBA)</pubdate>
+
+    <copyright>
+      <year>2000</year>
+      <year>2001</year>
+      <year>2002</year>
+      <year>2003</year>
+      <year>2004</year>
+      <holder>CollabNet, Inc.</holder>
+    </copyright>
+
+  </bookinfo>
+
+  <!-- External entity refs -->
+
+  &foreword;
+  &ch00;
+  &ch01;
+  &ch02;
+  &ch03;
+  &ch04;
+  &ch05;
+  &ch06;
+  &ch07;
+  &ch08;
+  &ch09;
+  &appa;
+  &appb;
+  &appc;
+  &appd;
+<!--  &copy; This gives validation errors -->
+  &gloss;
+  &colo;
+
+  </book>
