@@ -313,7 +313,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_WC_FOUND_CONFLICT,
               SVN_ERR_WC_CATEGORY_START + 15,
-              "A conflict in working copy obstructs the current operation")
+              "A conflict in the working copy obstructs the current operation")
 
   SVN_ERRDEF (SVN_ERR_WC_CORRUPT,
               SVN_ERR_WC_CATEGORY_START + 16,
