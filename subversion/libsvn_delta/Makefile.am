@@ -4,12 +4,11 @@
 ## indicating shared libraries to build using `libtool'.
 
 
-# List of libraries to build and install in `libdir'
+## List of libraries to build and install in `libdir'
 lib_LTLIBRARIES = libsvn_delta.la
 
 ## Sources needed to build each library (names canonicalized)
 libsvn_delta_la_SOURCES = delta_parse.c
-
 
 ## Build flags ---------
 

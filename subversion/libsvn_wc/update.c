@@ -70,7 +70,7 @@
  * If unable to determine whether or not PATH exists, due to another
  * error condition, return an svn error containing that apr error.
  */
-svn_error_t *
+static svn_error_t *
 check_existence (svn_string_t *path,
                  apr_status_t err_to_report,
                  apr_pool_t *pool)
@@ -96,7 +96,7 @@ check_existence (svn_string_t *path,
     }
   else              /* path definitely does not exist */
     {
-      close (tmp_f);
+      apr_close (tmp_f);
       return 0;
     }
 }
@@ -112,45 +112,33 @@ check_existence (svn_string_t *path,
 static svn_string_t *
 delta_stack_to_path (svn_delta_stackframe_t *stack, apr_pool_t *pool)
 {
+  svn_delta_stackframe_t *p = stack;
   svn_string_t *path;
 
+  /* Start out with an empty path... */
   path = svn_string_create ("", pool);
 
-  /* Recursive, but not tail-recursive.  
-     Oh, wait -- this is C, there's no difference (thud). */
-
-  if (stack->kind == svn_XML_content) /* either "<dir ...>" or "<file ...>" */
+  /* ... then walk down the stack appending to it. */
+  while (p)
     {
-      if (stack->content_kind == svn_content_dir)   /* it's "<dir ...>" */
+      if (stack->kind == svn_XML_content) /* "<dir ...>" or "<file ...>" */
         {
-          char dirsep = SVN_DIR_SEPARATOR;
-          svn_string_appendbytes (path, &dirsep, 1, pool);
-          svn_string_appendstr (path, stack->name, pool);
-          
-          if (stack->next)
+          if (! svn_string_isempty (path))
             {
-              /* Return the current path, having recursively appended
-                 whatever path remains. */
-              svn_string_appendstr 
-                (path, delta_stack_to_path (stack->next, pool), pool);
-              return path;
+              char dirsep = SVN_DIR_SEPARATOR;
+              svn_string_appendbytes (path, &dirsep, 1, pool);
             }
-          else
-            return path;
-        }
-      if (stack->content_kind == svn_content_file)  /* it's "<file ...>" */
-        {
-          /* Don't recurse past a non-directory, just return. */
+
           svn_string_appendstr (path, stack->name, pool);
-          return path;
+
+          if (stack->content_kind == svn_content_file)
+            break;
         }
+
+      p = p->next;
     }
-  else if (stack->next)  /* Not an edit_content, so skip to next if can... */
-    {
-      return delta_stack_to_path (stack->next, pool);
-    }
-  else                   /* ... but if can't, return an empty string. */
-    return path;
+
+  return path;
 }
 
 
@@ -168,6 +156,8 @@ update_dir_handler (svn_delta_digger_t *diggy, svn_delta_stackframe_t *frame)
 
   /* Else, make the directory. */
   printf ("Got dir \"%s\".\n", dir->data);  /* kff todo */
+
+  return 0;
 }
 
 
@@ -196,13 +186,13 @@ update (apr_file_t *src, svn_string_t *dst, apr_pool_t *pool)
   apr_status_t err;
   int len;
   int done;
-  apr_file_t *tmp_f;
   svn_delta_digger_t diggy;
   XML_Parser parsimonious;
 
-  diggy.unknown_elt_handler = NULL;
+  /* Init everything to null. */
+  memset (&diggy, '\0', sizeof (diggy));
+
   diggy.pool = pool;
-  diggy.data_handler = NULL;
   diggy.dir_handler = update_dir_handler;
 
   /* Make a parser with the usual shared handlers and diggy as userData. */
