@@ -465,8 +465,8 @@ wc_entry_text_time (VALUE self)
   if (!text_time)
     return Qnil;
   else
-    return rb_time_new (text_time / APR_USEC_PER_SEC,
-                        text_time % APR_USEC_PER_SEC);
+    return rb_time_new (apr_time_sec(text_time),
+                        apr_time_usec(text_time));
 }
 
 static VALUE
@@ -482,8 +482,8 @@ wc_entry_prop_time (VALUE self)
   if (!prop_time)
     return Qnil;
   else
-    return rb_time_new (prop_time / APR_USEC_PER_SEC,
-                        prop_time % APR_USEC_PER_SEC);
+    return rb_time_new (apr_time_sec(prop_time),
+                        apr_time_usec(prop_time));
 }
 
 #if 0

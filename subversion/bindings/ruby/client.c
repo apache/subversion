@@ -83,7 +83,7 @@ parse_revision (VALUE revOrDate)
       sec = NUM2LONG (rb_funcall (revOrDate, rb_intern ("tv_sec"), 0));
       usec = NUM2LONG (rb_funcall (revOrDate, rb_intern ("tv_usec"), 0));
       revision.kind = svn_opt_revision_date;
-      revision.value.date = sec * APR_USEC_PER_SEC + usec;
+      revision.value.date = apr_time_make(sec, usec);
     }
   else if (revOrDate == Qnil)
     revision.kind = svn_opt_revision_unspecified;

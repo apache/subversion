@@ -96,7 +96,7 @@ create_lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
               if (wait_for <= 0)
                 break;
               wait_for--;
-              apr_sleep (1 * APR_USEC_PER_SEC);  /* micro-seconds */
+              apr_sleep (apr_time_from_sec(1));  /* micro-seconds */
             }
           else
             return err;
