@@ -55,6 +55,10 @@ Item = svntest.wc.StateItem
 #
 #   'svnadmin lsrevs':   Parse headers as above.
 #
+#   'svnadmin dump':     A couple regression tests that ensure dump doesn't
+#                        error out. The actual contents of the dump aren't
+#                        verified at all.
+#
 #  ### TODO:  someday maybe we could parse the contents of trees too.
 #
 ######################################################################
@@ -285,6 +289,51 @@ def list_revs(sbox):
 
   return 0
 
+#----------------------------------------------------------------------
+
+def dump_copied_dir(sbox):
+  "test 'svnadmin dump' on a copied directory"
+  if sbox.build(): return 1
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  old_C_path = os.path.join(wc_dir, 'A', 'C')
+  new_C_path = os.path.join(wc_dir, 'A', 'B', 'C')
+  svntest.main.run_svn(None, 'cp', old_C_path, new_C_path)
+  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', '-m', 'log msg')
+
+  output_lines, errput_lines = svntest.main.run_svnadmin("dump", repo_dir)
+
+  if errput_lines != ["* Dumped revision 0.\n",
+                      "* Dumped revision 1.\n",
+                      "* Dumped revision 2.\n"]:
+    print errput_lines
+    return 1
+  return 0
+
+#----------------------------------------------------------------------
+
+def dump_move_dir_modify_child(sbox):
+  "test 'svnadmin dump' after on modified child of copied directory"
+  
+  if sbox.build(): return 1
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  b_path = os.path.join(wc_dir, 'A', 'b')
+  svntest.main.run_svn(None, 'cp', B_path, b_path)
+  svntest.main.file_append(os.path.join(b_path, 'lambda'), 'hello')
+  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', '-m', 'log msg')
+
+  output_lines, errput_lines = svntest.main.run_svnadmin("dump", repo_dir)
+
+  if errput_lines != ["* Dumped revision 0.\n",
+                      "* Dumped revision 1.\n",
+                      "* Dumped revision 2.\n"]:
+    print errput_lines
+    return 1
+  return 0
 
 
 ########################################################################
@@ -297,7 +346,9 @@ test_list = [ None,
               test_youngest,
               create_txn,
               remove_txn,
-              list_revs
+              list_revs,
+              dump_copied_dir,
+              dump_move_dir_modify_child
              ]
 
 if __name__ == '__main__':
