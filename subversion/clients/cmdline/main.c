@@ -511,8 +511,8 @@ main (int argc, const char * const *argv)
   apr_pool_t *pool;
   int opt_id, err2;
   apr_getopt_t *os;  
-  svn_cl__opt_state_t opt_state;
-  svn_client_ctx_t ctx;
+  svn_cl__opt_state_t opt_state = { 0 };
+  svn_client_ctx_t ctx = { 0 };
   int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
   const svn_opt_subcommand_desc_t *subcommand = NULL;
@@ -547,13 +547,9 @@ main (int argc, const char * const *argv)
   pool = svn_pool_create (NULL);
 
   /* Begin processing arguments. */
-  memset (&opt_state, 0, sizeof (opt_state));
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
  
-  /* Clear out our context. */
-  memset (&ctx, 0, sizeof (ctx));
-
   /* No args?  Show usage. */
   if (argc <= 1)
     {
