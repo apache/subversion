@@ -174,7 +174,8 @@ log_message_receiver (void *baton,
                       apr_pool_t *pool)
 {
   struct log_receiver_baton *lb = baton;
-  const char *author_native, *date_native, *msg_native;
+  const char *author_native, *date_native;
+  const char *msg_native = NULL;     /* Silence a gcc uninitialized warning */
   svn_error_t *err;
 
   /* Number of lines in the msg. */
