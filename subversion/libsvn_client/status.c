@@ -23,6 +23,7 @@
 /*** Includes. ***/
 #include <assert.h>
 #include <apr_strings.h>
+#include <apr_pools.h>
 
 #include "svn_pools.h"
 #include "client.h"
@@ -41,7 +42,7 @@
 struct status_baton
 {
   svn_boolean_t deleted_in_repos;          /* target is deleted in repos */
-  svn_wc_status_func_t real_status_func;   /* real status function */
+  svn_wc_status_func2_t real_status_func;   /* real status function */
   void *real_status_baton;                 /* real status baton */
 };
 
@@ -52,7 +53,7 @@ struct status_baton
 static void
 tweak_status (void *baton,
               const char *path,
-              svn_wc_status_t *status)
+              svn_wc_status2_t *status)
 {
   struct status_baton *sb = baton;
 
@@ -192,7 +193,7 @@ svn_error_t *
 svn_client_status2 (svn_revnum_t *result_rev,
                     const char *path,
                     svn_opt_revision_t *revision,
-                    svn_wc_status_func_t status_func,
+                    svn_wc_status_func2_t status_func,
                     void *status_baton,
                     svn_boolean_t recurse,
                     svn_boolean_t get_all,
@@ -352,6 +353,26 @@ svn_client_status2 (svn_revnum_t *result_rev,
   return SVN_NO_ERROR;
 }
 
+
+/* Helpers for deprecated svn_wc_status_editor(), of type
+   svn_wc_status_func2_t. */
+struct old_status_func_cb_baton
+{
+  svn_wc_status_func_t original_func;
+  void *original_baton;
+};
+
+static void old_status_func_cb (void *baton,
+                                const char *path,
+                                svn_wc_status2_t *status)
+{
+  struct old_status_func_cb_baton *b = baton;
+  svn_wc_status_t *stat = (svn_wc_status_t *) status;
+  
+  b->original_func (b->original_baton, path, stat);
+}
+
+
 svn_error_t *
 svn_client_status (svn_revnum_t *result_rev,
                    const char *path,
@@ -365,8 +386,13 @@ svn_client_status (svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
+  struct old_status_func_cb_baton *b = apr_pcalloc(pool, sizeof(*b));
+  b->original_func = status_func;
+  b->original_baton = status_baton;
+
   return svn_client_status2 (result_rev, path, revision, 
-                             status_func, status_baton,
+                             old_status_func_cb, b,
                              recurse, get_all, update, no_ignore, FALSE,
                              ctx, pool);
 }
+

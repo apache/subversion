@@ -1314,14 +1314,14 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
 
       if (!recurse)
         {
-          svn_wc_status_t *status;
+          svn_wc_status2_t *status;
           svn_node_kind_t kind;
           
           SVN_ERR (svn_io_check_path (target, &kind, pool));
 
           if (kind == svn_node_dir)
             {
-              SVN_ERR (svn_wc_status (&status, target, adm_access, pool));
+              SVN_ERR (svn_wc_status2 (&status, target, adm_access, pool));
               if (status->text_status == svn_wc_status_deleted ||
                   status->text_status == svn_wc_status_replaced)
                 return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,

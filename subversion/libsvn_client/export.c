@@ -132,13 +132,13 @@ copy_one_versioned_file (const char *from,
     }
   else
     {
-      svn_wc_status_t *status;
+      svn_wc_status2_t *status;
       
       base = from;
       SVN_ERR (svn_wc_prop_list (&props, from, 
                                  adm_access, pool));
-      SVN_ERR (svn_wc_status (&status, from, 
-                              adm_access, pool));
+      SVN_ERR (svn_wc_status2 (&status, from, 
+                               adm_access, pool));
       if (status->text_status != svn_wc_status_normal)
         local_mod = TRUE;
     }

@@ -50,7 +50,7 @@ struct status_baton
 static void
 print_status (void *baton,
               const char *path,
-              svn_wc_status_t *status)
+              svn_wc_status2_t *status)
 {
   struct status_baton *sb = baton;
   svn_error_t *err;

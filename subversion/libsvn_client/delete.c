@@ -48,7 +48,7 @@ struct status_baton
 static void
 find_undeletables (void *baton,
                    const char *path,
-                   svn_wc_status_t *status)
+                   svn_wc_status2_t *status)
 {
   struct status_baton *sb = baton;
 
@@ -89,8 +89,8 @@ svn_client__can_delete (const char *path,
   revision.kind = svn_opt_revision_unspecified;
   sb.err = SVN_NO_ERROR;
   sb.pool = pool;
-  SVN_ERR (svn_client_status (NULL, path, &revision, find_undeletables, &sb,
-                              TRUE, FALSE, FALSE, FALSE, ctx, pool));
+  SVN_ERR (svn_client_status2 (NULL, path, &revision, find_undeletables, &sb,
+                               TRUE, FALSE, FALSE, FALSE, FALSE, ctx, pool));
   return sb.err;
 }
 

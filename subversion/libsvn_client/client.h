@@ -622,9 +622,9 @@ svn_client__fetch_externals (apr_hash_t *externals,
 
 /* Perform status operations on each external in TRAVERSAL_INFO.  All
    other options are the same as those passed to svn_client_status(). */
-svn_error_t*
+svn_error_t *
 svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
-                                svn_wc_status_func_t status_func,
+                                svn_wc_status_func2_t status_func,
                                 void *status_baton,
                                 svn_boolean_t get_all,
                                 svn_boolean_t update,
