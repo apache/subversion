@@ -67,6 +67,8 @@ const apr_getopt_option_t svn_cl__options[] =
     {"revision",      'r', 1, "specify revision number ARG (or X:Y range)"},
     {"date",          'D', 1, "specify a date ARG (instead of a revision)"},
     {"file",          'F', 1, "read data from file ARG"},
+    {"incremental",   svn_cl__incremental_opt, 0,
+                      "give output suitable for concatenation"},
     {"xml-file",      svn_cl__xml_file_opt, 1,
                       "read/write xml to specified file ARG"},
     {"message-encoding", svn_cl__msg_encoding_opt, 1,
@@ -243,7 +245,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       svn log http://www.example.com/repo/project foo.c bar.c\n",
     {'r', 'D', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-     svn_cl__strict_opt, svn_cl__xml_opt} },
+     svn_cl__strict_opt, svn_cl__incremental_opt, svn_cl__xml_opt} },
 
   { "merge", svn_cl__merge, {0},
     "apply the differences between two paths to a working copy path.\n"
@@ -564,6 +566,9 @@ main (int argc, const char * const *argv)
         break;
       case 'q':
         opt_state.quiet = TRUE;
+        break;
+      case svn_cl__incremental_opt:
+        opt_state.incremental = TRUE;
         break;
       case svn_cl__xml_file_opt:
         err = svn_utf_cstring_to_utf8 (&opt_state.xml_file, opt_arg,

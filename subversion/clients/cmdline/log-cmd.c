@@ -74,16 +74,13 @@ num_lines (const char *msg)
 }
 
 
-/* Baton for log_message_receiver(). */
-struct log_message_receiver_baton
-{
-  svn_boolean_t first_call;
-};
+/* The separator between log messages. */
+#define SEP_STRING \
+  "------------------------------------------------------------------------\n"
 
 
 /* This implements `svn_log_message_receiver_t', printing the logs in
- * a human-readable and machine-parseable format.  BATON is of type
- * `struct log_message_receiver_baton *'.
+ * a human-readable and machine-parseable format.  BATON is ignored.
  *
  * Here is an example of the output:
  *
@@ -115,7 +112,6 @@ log_message_receiver (void *baton,
                       const char *msg,
                       apr_pool_t *pool)
 {
-  struct log_message_receiver_baton *lb = baton;
   const char *author_native, *date_native, *msg_native;
   svn_error_t *err;
 
@@ -166,14 +162,7 @@ log_message_receiver (void *baton,
   else if (err)
     return err;
 
-#define SEP_STRING \
-  "------------------------------------------------------------------------\n"
-
-  if (lb->first_call)
-    {
-      printf (SEP_STRING);
-      lb->first_call = 0;
-    }
+  printf (SEP_STRING);
 
   lines = num_lines (msg_native);
   printf ("rev %" SVN_REVNUM_T_FMT ":  %s | %s | %d line%s\n",
@@ -227,7 +216,6 @@ log_message_receiver (void *baton,
     }
   printf ("\n");  /* A blank line always precedes the log message. */
   printf ("%s\n", msg_native);
-  printf (SEP_STRING);
 
   return SVN_NO_ERROR;
 }
@@ -384,7 +372,6 @@ svn_cl__log (apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
   svn_client_auth_baton_t *auth_baton;
-  struct log_message_receiver_baton lb;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -431,7 +418,6 @@ svn_cl__log (apr_getopt_t *os,
         }
     }
 
-  lb.first_call = 1;
   if (opt_state->xml)
     {
       svn_stringbuf_t *sb;
@@ -456,7 +442,7 @@ svn_cl__log (apr_getopt_t *os,
                                opt_state->verbose,
                                opt_state->strict,
                                log_message_receiver_xml,
-                               &lb,
+                               NULL,  /* no baton necessary */
                                pool));
       
       sb = NULL;
@@ -472,8 +458,11 @@ svn_cl__log (apr_getopt_t *os,
                                opt_state->verbose,
                                opt_state->strict,
                                log_message_receiver,
-                               &lb,
+                               NULL,  /* no baton necessary */
                                pool));
+
+      if (! opt_state->incremental)
+        printf (SEP_STRING);
     }
 
   return SVN_NO_ERROR;
