@@ -571,17 +571,30 @@ fake_dirent (const svn_fs_dirent_t **entry, svn_fs_root_t *root,
 }
 
 
-/* Emit an appropriate edit to transform the entry E_PATH under
-   DIR_BATON with the changes between S_REV/S_PATH (with contents
-   S_ENTRY) and B->t_root/T_PATH (with contents T_ENTRY).
-   S_PATH/S_ENTRY or T_PATH/T_ENTRY may be NULL if the entry does not
-   exist in the source or target.  The source and to some extent the
-   target may be modified by INFO.  S_PATH may be set and S_ENTRY may
-   be NULL if the caller expects report information to modify the
-   source to an existing location.  If RECURSE is not set, avoid
-   operating on directories.  (Normally RECURSE is simply taken from
-   B->recurse, but drive() needs to force us to recurse into the
-   target even if that flag is not set.) */
+/* Emit a series of editing operations to transform a source entry to
+   a target entry.
+
+   S_REV and S_PATH specify the source entry.  S_ENTRY contains the
+   already-looked-up information about the node-revision existing at
+   that location.
+
+   B->t_root and T_PATH specify the target entry.  T_ENTRY contains
+   the already-looked-up information about the node-revision existing
+   at that location.
+
+   DIR_BATON and E_PATH contain the parameters which should be passed
+   to the editor calls--DIR_BATON for the parent directory baton and
+   E_PATH for the pathname.  (E_PATH is the anchor-relative working
+   copy pathname, which may differ from the source and target
+   pathnames if the report contains a link_path.)
+
+   INFO contains the report information for this working copy path.
+   This function will internally modify the source and target entries
+   as appropriate based on the report information.
+
+   If RECURSE is not set, avoid operating on directories.  (Normally
+   RECURSE is simply taken from B->recurse, but drive() needs to force
+   us to recurse into the target even if that flag is not set.) */
 static svn_error_t *
 update_entry (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
               const svn_fs_dirent_t *s_entry, const char *t_path,
