@@ -118,6 +118,11 @@ svn_cl__ls (apr_getopt_t *os,
   SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
                                          FALSE, pool));
 
+  /* Give me arguments or give me death! */
+  if (targets->nelts == 0)
+    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS,
+                             0, NULL, pool, "");
+
   /* For each target, try to list it. */
   for (i = 0; i < targets->nelts; i++)
     {
