@@ -266,7 +266,7 @@ M             1047    ./foo.c
        *      1045    ./faces.html
        *         -    ./bloo.png
 M             1050    ./bar/baz.c
-Head revision:   1066
+Status against revision:   1066
     </screen>
 
     <para>In this case, two new columns appear.  The second column

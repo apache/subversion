@@ -92,6 +92,11 @@
             <entry>The working copy management library</entry>
           </row>
           <row>
+            <entry>mod_authz_svn</entry>
+            <entry>Apache authorization module for Subversion
+            repositories access via WebDAV.</entry>
+          </row>
+          <row>
             <entry>mod_dav_svn</entry>
             <entry>Apache module for mapping WebDAV operations to
             Subversion ones</entry>
@@ -1027,16 +1032,18 @@ if __name__ == '__main__':
 </programlisting>
       </example>
 
-      <para>Currently, it is Subversion's Python bindings that are the
-        most complete.  Some attention is also being given to the Java
-        bindings.  Once you have the SWIG interface files properly
-        configured, generation of the specific wrappers for all the
-        supported SWIG languages (which currently includes versions of
-        C#, Guile, Java, Mzscheme, OCaml, Perl, PHP, Python, Ruby, and Tcl)
-        should theoretically be trivial.  Still, some extra
-        programming is required to compensate for complex APIs that
-        SWIG needs some help generalizing.  For more information on
-        SWIG itself, see the project's website at <systemitem
+      <para>Subversion's language bindings unfortunately tend to lack
+        the level of attention given to the core Subversion modules.
+        However, there have been significant efforts towards creating
+        functional bindings for Python, Perl, and Java.  Once you have
+        the SWIG interface files properly configured, generation of
+        the specific wrappers for all the supported SWIG languages
+        (which currently includes versions of C#, Guile, Java,
+        Mzscheme, OCaml, Perl, PHP, Python, Ruby, and Tcl) should
+        theoretically be trivial.  Still, some extra programming is
+        required to compensate for complex APIs that SWIG needs some
+        help generalizing.  For more information on SWIG itself, see
+        the project's website at <systemitem
         class="url">http://www.swig.org/</systemitem>.</para>
 
     </sect2>
