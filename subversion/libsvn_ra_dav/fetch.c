@@ -305,10 +305,10 @@ static svn_error_t *set_special_wc_prop (const char *key,
 }
 
 
-static void add_props(apr_hash_t *props,
-                      prop_setter_t setter,
-                      void *baton,
-                      apr_pool_t *pool)
+static svn_error_t *add_props(apr_hash_t *props,
+                              prop_setter_t setter,
+                              void *baton,
+                              apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 
@@ -329,7 +329,7 @@ static void add_props(apr_hash_t *props,
           /* for props in the 'custom' namespace, we strip the
              namespace and just use whatever name the user gave the
              property. */
-          (*setter)(baton, key + NSLEN, val, pool);
+          SVN_ERR( (*setter)(baton, key + NSLEN, val, pool) );
           continue;
         }
 #undef NSLEN
@@ -340,9 +340,9 @@ static void add_props(apr_hash_t *props,
           /* This property is an 'svn:' prop, recognized by client, or
              server, or both.  Convert the URI namespace into normal
              'svn:' prefix again before pushing it at the wc. */
-          (*setter)(baton, 
-                    apr_pstrcat(pool, SVN_PROP_PREFIX, key + NSLEN, NULL), 
-                    val, pool);
+          SVN_ERR( (*setter)(baton, apr_pstrcat(pool, SVN_PROP_PREFIX,
+                                                key + NSLEN, NULL), 
+                             val, pool) );
         }
 #undef NSLEN
 
@@ -354,9 +354,10 @@ static void add_props(apr_hash_t *props,
              The following routine converts a handful of DAV: props
              into 'svn:wc:' or 'svn:entry:' props that libsvn_wc
              wants. */
-          set_special_wc_prop (key, val, setter, baton, pool);
+          SVN_ERR( set_special_wc_prop (key, val, setter, baton, pool) );
         }
     }
+  return SVN_NO_ERROR;
 }
                       
 
@@ -1817,11 +1818,12 @@ start_element(void *userdata, int parent_state, const char *nspace,
 
       /* Removing a prop.  */
       if (rb->file_baton == NULL)
-        rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
-                                    NULL, TOP_DIR(rb).pool);
+        CHKERR( rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+                                            rb->namestr->data, 
+                                            NULL, TOP_DIR(rb).pool) );
       else
-        rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
-                                     NULL, rb->file_pool);
+        CHKERR( rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
+                                             NULL, rb->file_pool) );
       break;
       
     case ELEM_fetch_props:
@@ -1834,11 +1836,13 @@ start_element(void *userdata, int parent_state, const char *nspace,
           svn_stringbuf_set(rb->namestr, SVN_PROP_PREFIX "BOGOSITY");
 
           if (rb->file_baton == NULL)
-            rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
-                                        NULL, TOP_DIR(rb).pool);
+            CHKERR( rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+                                                rb->namestr->data, 
+                                                NULL, TOP_DIR(rb).pool) );
           else
-            rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
-                                         NULL, rb->file_pool);
+            CHKERR( rb->editor->change_file_prop(rb->file_baton,
+                                                 rb->namestr->data, 
+                                                 NULL, rb->file_pool) );
         }
       else
         {
@@ -1948,10 +1952,10 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
           props = rsrc->propset;
         }
 
-      add_props(props, 
-                rb->editor->change_file_prop, 
-                rb->file_baton,
-                pool);
+      SVN_ERR(add_props(props, 
+                        rb->editor->change_file_prop, 
+                        rb->file_baton,
+                        pool));
     }
   else
     {
@@ -1975,10 +1979,10 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
           props = rsrc->propset;
         }
 
-      add_props(props, 
-                rb->editor->change_dir_prop, 
-                TOP_DIR(rb).baton, 
-                pool);
+      SVN_ERR(add_props(props, 
+                        rb->editor->change_dir_prop, 
+                        TOP_DIR(rb).baton, 
+                        pool));
     }
     
   return SVN_NO_ERROR;
@@ -2156,13 +2160,15 @@ static int end_element(void *userdata, int state,
         /* Set the prop. */
         if (rb->file_baton)
           {
-            rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
-                                         decoded_value_p, pool);
+            CHKERR( rb->editor->change_file_prop(rb->file_baton,
+                                                 rb->namestr->data, 
+                                                 decoded_value_p, pool) );
           }
         else
           {
-            rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
-                                        decoded_value_p, pool);
+            CHKERR( rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+                                                rb->namestr->data, 
+                                                decoded_value_p, pool) );
           }
       }
 
