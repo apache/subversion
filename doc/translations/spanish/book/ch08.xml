@@ -744,32 +744,37 @@ The following repository access (RA) modules are available:
           <literal>file://localhost/ruta/al/repositorio</literal>
           o <literal>file:///ruta/al/repositorio</literal>.</para>
 
-        <para>Also, be aware that Subversion's
-          <literal>file:</literal> URLs cannot be used in a regular
-          web browser the way typical <literal>file:</literal> URLs
-          can.  When you attempt to view a <literal>file:</literal>
-          URL in a regular web browser, it reads and displays the
-          contents of the file at that location by examining the
-          filesystem directly.  However, Subversion's resources exist
-          in a virtual filesystem (see <xref
-          linkend="svn-ch-8-sect-1.1" />), and your browser will not
-          understand how to read that filesystem.</para>
+        <para>Además, tenga en cuenta que las URLS
+          <literal>file:</literal> de Subversion no pueden ser
+          usadas en un navegador normal al igual que con la
+          URL <literal>file:</literal> típica.  Cuando intenta
+          visualizar una URL <literal>file:</literal> en un
+          navegador normal, lee y muestra el contenido del fichero
+          que está en ese lugar examinando el sistema de ficheros
+          directamente. No obstante, los recursos de Subversion
+          existen en un sistema de ficheros virtual (vea <xref
+          linkend="svn-ch-8-sect-1.1"/>), y su navegador no
+          será capaz de entender cómo leer este sistema de
+          ficheros.</para>
 
       </sect3>
 
       <sect3 id="svn-ch-8-sect-1.2.4">
-        <title>Your RA Library Here</title>
+        <title>Su librería RA aquí</title>
 
-        <para>For those who wish to access a Subversion repository
-          using still another protocol, that is precisely why the
-          Repository Access Layer is modularized!  Developers can
-          simply write a new library that implements the RA interface
-          on one side and communicates with the repository on the
-          other.  Your new library can use existing network protocols,
-          or you can invent your own.  You could use inter-process
-          communication (IPC) calls, or&mdash;let's get crazy, shall
-          we?&mdash;you could even implement an email-based protocol.
-          Subversion supplies the APIs; you supply the creativity.</para>
+        <para>Para aquellos que deseen acceder al repositorio
+          Subversion usando todavía otro protocolo, ¡para eso
+          precisamente está modularizada la capa de acceso al
+          repositorio! Los desarrolladores pueden simplemente
+          escribir una nueva librería que implemente la interfaz
+          RA en un lado y se comunique con el repositorio por
+          el otro. Su nueva librería puede usar protocolos
+          de red existentes, o puede inventarse uno propio.
+          Puede usar llamadas de comunicación inter-proceso
+          (IPC), o&mdash;tiremos la casa por la ventana, ¿de
+          acuerdo&mdash;podría incluso implementar un protocolo
+          basado en email. Subversion proporciona las APIs; usted
+          proporciona la creatividad.</para>
 
       </sect3>
     </sect2>
