@@ -15,119 +15,10 @@ will be Apache interacting with the Subversion server libraries.  The
 ``server'' computer will be any machine running this special Apache
 process.  (@xref{Protocol}.)
 
-To build our concepts cleanly, we'll explore this set of Subversion
-server-libraries from the bottom up.  (For full diagram,
-@xref{Architecture}.)
-
-@example
-
- +------+-------------+--+---------+-------+ <===== Server interface
- |                                         |
- |            Main SVN Library             |
- |                                         |
- +-----------------------------------------+ <===== Filesystem interface
- |                                         |
- |          Subversion Filesystem          |
- |                                         |
- +-+--------------+--------+---------+-----+ <===== Database interface
-   | Berkeley DBM |        |   SQL   |
-   +--------------+        +---------+
-
-@end example
-
 @menu
-* Database::                  Putting the information on disk.
-* Filesystem::                The low-level Subversion Filesystem.
+* Filesystem::                The Subversion Filesystem.
 * Main Library::              The highest-level server interface.
 @end menu
-
-@c ----------------------------------------------------------------
-
-@node Database
-@section Database
-
-@subsection Overview
-
-@itemize
-@item
-  @b{Requires:}
-  @itemize
-  @item
-    An operating system capable of running a transactional database
-  @item
-    A reasonable amount of writable disk space
-  @end itemize
-@item
-  @b{Provides:}
-  @itemize
-  @item
-    the ability to efficiently store key/value pairs
-  @item
-    transactions
-  @end itemize
-@end itemize
-
-@subsection Transactions
-
-At the bottom of our design, we require a way of storing information on
-disk.  More specifically, we need @dfn{transactions}.
-
-A @dfn{transaction} is a term that refers to a set of modifications made
-to a database; however, these modifications behave as a @emph{single
-unit} of change.  Specifically,
-
-@enumerate
-@item
-   If a transaction succeeds, the database recognizes a single unit of
-   work as having been performed.  (And if the database allows you to
-   "undo" the work, the entire set of changes is undone as a unit.)
-@item
-   If some portion of the transaction fails (for either logical or
-   hardware-crash reasons), then the @emph{entire}
-   transaction fails, and no changes are made at all.  The database is
-   guaranteed to remain in a good, consistent state.
-@end enumerate
-
-This inability to divide the set of changes is known as @dfn{atomicity},
-and is the critical concept behind transactions.
-
-@subsection API
-
-Subversion's @dfn{database interface}, therefore, is a simple API for
-reading and writing information to any sort of disk-based system that
-supports transactions.
-
-@c What's written below is just a simplification of a typical DBM API:
-
-@table @code
-@item svn_db_init ()
-   tell the database to initialize itself
-@item svn_db_open (path)
-   open a particular database file (or object)
-@item svn_db_close (db)
-   close a database file (or object)
-@item svn_db_txn_begin (db, *txn_id)
-   start a transaction, receiving transaction_id
-@item svn_db_put (db, *txn_id, *key, *value)
-   write a key/value pair into the database
-@item svn_db_get (db, *txn_id, *key, *value)
-   read a key/value pair from the database
-@item svn_db_del (db, *txn_id, *key)
-   remove a key/value pair from the database
-@item svn_db_txn_commit (db, *txn_id)
-   commit the transaction
-@item svn_db_txn_abort (db, *txn_id)
-   abort the transaction in progress
-@end table
-
-@subsection Implementation
-
-For the initial release of Subversion, we will probably use the
-open-source Berkeley DBM library running on a variant of UNIX.  (For
-information, see @uref{http://www.sleepycat.com, Sleepycat Software}.)
-
-In the future, of course, contributors are free to write libraries that
-implement this same API on top of a more powerful SQL system.
 
 
 @c ----------------------------------------------------------------
@@ -495,9 +386,14 @@ When the lock manager has no more open server connections, it dies.
 @subsection Implementation
 
 For the initial release of Subversion, we will implement the filesystem
-library on UNIX-class operating systems.  The lock manager will be
-launched and will communicate with other processes via UNIX domain
-sockets. 
+library on UNIX.  The lock manager will communicate with other processes
+via UNIX domain sockets.  Transactions will be handled in the ``back
+end'' by the Berkeley Database library, which works on top of the UNIX
+filesystem.@footnote{In the future, of course, contributors are free
+modify the Subversion filesystem to operate with more powerful SQL
+database.}  (For information, see @uref{http://www.sleepycat.com,
+Sleepycat Software}.)
+
 
 
 @c ----------------------------------------------------------------
