@@ -2209,6 +2209,9 @@ svn_error_t *svn_wc_merge (const char *left,
  * .prej file), and the entry is marked "conflicted".  Base properties
  * are changed unconditionally, if @a base_merge is @c TRUE, they never result
  * in a conflict.
+ *
+ * If @a path is not under version control, return the error
+ * SVN_ERR_UNVERSIONED_RESOURCE and don't touch anyone's properties.
  */
 svn_error_t *
 svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
