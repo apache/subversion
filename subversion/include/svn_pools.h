@@ -41,6 +41,22 @@ extern "C" {
 
 /* If you want pool usage debug info dumped to stderr (in environments
  * that support that kind of thing), #define SVN_POOL_DEBUG here.
+ *
+ * Output looks like one of these three:
+ *
+ *    PDEBUG: +                       0xHHHHHHHH (FILE:LINE) parent=0xPPPPPPPP
+ *    PDEBUG: 0 SSSSSSSSSS TTTTTTTTTT 0xHHHHHHHH (FILE:LINE) 
+ *    PDEBUG: - SSSSSSSSSS TTTTTTTTTT 0xHHHHHHHH (FILE:LINE) 
+ *
+ * where:
+ *
+ *    '+' signifies the creation of a pool
+ *    '0' signifies the clearing of a pool
+ *    '-' signifies the destruction of a pool
+ *    SSSSSSSSSS is the decimal size in bytes of the pool
+ *    TTTTTTTTTT is the total allocation of that pool tree at the time
+ *    0xHHHHHHHH is the address of the pool
+ *    0xPPPPPPPP is the address of the pool's parent pool
  */
 /*
 #define SVN_POOL_DEBUG 
