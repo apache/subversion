@@ -252,6 +252,22 @@ static const svn_ra_dav__xml_elm_t drev_report_elements[] =
   { NULL }
 };
 
+/* Elements used in a get-locks-report response */
+static const svn_ra_dav__xml_elm_t getlocks_report_elements[] =
+{
+  { SVN_XML_NAMESPACE, "get-locks-report", ELEM_get_locks_report, 0 },
+  { SVN_XML_NAMESPACE, "lock", ELEM_lock, 0},
+  { SVN_XML_NAMESPACE, "path", ELEM_lock_path, SVN_RA_DAV__XML_CDATA },
+  { SVN_XML_NAMESPACE, "token", ELEM_lock_token, SVN_RA_DAV__XML_CDATA },
+  { SVN_XML_NAMESPACE, "owner", ELEM_lock_owner, SVN_RA_DAV__XML_CDATA },
+  { SVN_XML_NAMESPACE, "comment", ELEM_lock_comment, SVN_RA_DAV__XML_CDATA },
+  { SVN_XML_NAMESPACE, "creationdate",
+    ELEM_lock_creationdate, SVN_RA_DAV__XML_CDATA },
+  { SVN_XML_NAMESPACE, "expirationdate",
+    ELEM_lock_expirationdate, SVN_RA_DAV__XML_CDATA },
+  { NULL }
+};
+
 static svn_error_t *simple_store_vsn_url(const char *vsn_url,
                                          void *baton,
                                          prop_setter_t setter,
@@ -1242,6 +1258,319 @@ svn_ra_dav__get_locations(svn_ra_session_t *session,
 
   return err;
 }
+
+
+/* -------------------------------------------------------------------------
+**
+** GET-LOCKS REPORT HANDLING
+**
+** DeltaV provides a mechanism for fetching a list of locks below a
+** path, but it's often unscalable.  It requires doing a PROPFIND of
+** depth infinity, looking for the 'DAV:lockdiscovery' prop on every
+** resource.  But depth-infinity propfinds can sometimes behave like a
+** DoS attack, and mod_dav even disables them by default!
+**
+** So we send a custom 'get-locks' REPORT on a public URI... which is
+** fine, since all lock queries are always against HEAD anyway.  The
+** response is a just a list of svn_lock_t's.  (Generic DAV clients,
+** of course, are free to do infinite PROPFINDs as they wish, assuming
+** the server allows it.)
+*/
+
+ 
+/*
+ * The get-locks-report xml request body is super-simple.
+ * The server doesn't need anything but the URI in the REPORT request line.
+ *
+ *    <S:get-locks-report xmlns...>
+ *    </S:get-locks-report>
+ *
+ * The get-locks-report xml response is just a list of svn_lock_t's
+ * that exist at or "below" the request URI.  (The server runs
+ * svn_repos_fs_get_locks()).
+ *
+ *    <S:get-locks-report xmlns...>
+ *        <S:lock>
+ *           <S:path>/foo/bar/baz</S:path>
+ *           <S:token>opaquelocktoken:706689a6-8cef-0310-9809-fb7545cbd44e
+ *                </S:token>
+ *           <S:owner>fred</S:owner>
+ *           <S:comment encoding="base64">ET39IGCB93LL4M</S:comment>
+ *           <S:creationdate>2005-02-07 14:17:08 -0600 (Mon, 07 Feb 2005)
+ *                </S:creationdate>
+ *           <S:expirationdate>2005-02-08 14:17:08 -0600 (Mon, 08 Feb 2005)
+ *                </S:expirationdate>
+ *        </S:lock>
+ *        ...
+ *    </S:get-locks-report>
+ *
+ *
+ * The <path> and <token> and date-element cdata is xml-escaped by mod_dav_svn.
+ * The <owner> and <comment> cdata is xml-escaped, or *possibly* base64.
+ * The absence of <expirationdate> means that there's no expiration.
+ *
+ * If there are no locks to return, then the response will look just
+ * like the request.
+ */
+
+
+
+/* Context for parsing server's response. */
+typedef struct {
+  svn_lock_t *current_lock;        /* the lock being constructed */
+  svn_stringbuf_t *cdata_accum;    /* a place to accumulate cdata */
+  const char *encoding;            /* normally NULL, else the value of
+                                      'encoding' attribute on cdata's tag.*/
+  apr_hash_t *lock_hash;           /* the final hash returned */
+
+  apr_pool_t *scratchpool;         /* temporary stuff goes in here */
+  apr_pool_t *pool;                /* permanent stuff goes in here */
+
+} get_locks_baton_t;
+
+
+
+/* This implements the `ne_xml_startelem_cb' prototype. */
+static int getlocks_start_element(void *userdata, int parent_state,
+                                  const char *ns, const char *ln,
+                                  const char **atts)
+{
+  get_locks_baton_t *baton = userdata;
+  const svn_ra_dav__xml_elm_t *elm;
+
+  elm = svn_ra_dav__lookup_xml_elem(getlocks_report_elements, ns, ln);
+
+  /* Just skip unknown elements. */
+  if (!elm)
+    return NE_XML_DECLINE;
+
+  if (elm->id == ELEM_lock)
+    {
+      if (parent_state != ELEM_get_locks_report)
+        return NE_XML_ABORT;
+      else
+        /* allocate a new svn_lock_t in the permanent pool */
+        baton->current_lock = apr_pcalloc(baton->pool,
+                                          sizeof(*(baton->current_lock)));
+    }
+
+  else if (elm->id == ELEM_lock_path
+           || elm->id == ELEM_lock_token
+           || elm->id == ELEM_lock_owner
+           || elm->id == ELEM_lock_comment
+           || elm->id == ELEM_lock_creationdate
+           || elm->id == ELEM_lock_expirationdate)
+    {
+      const char *encoding;
+
+      if (parent_state != ELEM_lock)
+        return NE_XML_ABORT;
+
+      /* look for any incoming encodings on these elements. */
+      encoding = svn_xml_get_attr_value("encoding", atts);
+      if (encoding)
+        baton->encoding = apr_pstrdup(baton->scratchpool, encoding);
+    }
+
+  return elm->id;
+}
+
+
+/* This implements the `ne_xml_cdata_cb' prototype. */
+static int getlocks_cdata_handler(void *userdata, int state,
+                                  const char *cdata, size_t len)
+{
+  get_locks_baton_t *baton = userdata;
+
+  switch(state)
+    {
+    case ELEM_lock_path:
+    case ELEM_lock_token:
+    case ELEM_lock_owner:
+    case ELEM_lock_comment:
+    case ELEM_lock_creationdate:
+    case ELEM_lock_expirationdate:
+      /* accumulate cdata in the scratchpool. */
+      svn_stringbuf_appendbytes(baton->cdata_accum, cdata, len);
+      break;
+    }
+
+  return 0; /* no error */
+}
+
+
+
+/* This implements the `ne_xml_endelm_cb' prototype. */
+static int getlocks_end_element(void *userdata, int state,
+                                const char *ns, const char *ln)
+{
+  get_locks_baton_t *baton = userdata;
+  const svn_ra_dav__xml_elm_t *elm;
+  svn_error_t *err;
+
+  elm = svn_ra_dav__lookup_xml_elem(getlocks_report_elements, ns, ln);
+
+  /* Just skip unknown elements. */
+  if (elm == NULL)
+    return NE_XML_DECLINE;
+
+  switch (elm->id)
+    {
+    case ELEM_lock:
+      /* finish the whole svn_lock_t. */
+      apr_hash_set(baton->lock_hash, baton->current_lock->path,
+                   APR_HASH_KEY_STRING, baton->current_lock);
+      break;
+      
+    case ELEM_lock_path:
+      /* neon has already xml-unescaped the cdata for us. */
+      baton->current_lock->path = apr_pstrdup(baton->pool,
+                                              baton->cdata_accum->data);
+      /* clean up the accumulator. */
+      svn_stringbuf_setempty(baton->cdata_accum);
+      svn_pool_clear(baton->scratchpool);
+      break;
+
+    case ELEM_lock_token:
+      /* neon has already xml-unescaped the cdata for us. */
+      baton->current_lock->token = apr_pstrdup(baton->pool,
+                                               baton->cdata_accum->data);
+      /* clean up the accumulator. */
+      svn_stringbuf_setempty(baton->cdata_accum);
+      svn_pool_clear(baton->scratchpool);
+      break;
+
+    case ELEM_lock_creationdate:
+      err = svn_time_from_cstring(&(baton->current_lock->creation_date),
+                                  baton->cdata_accum->data,
+                                  baton->scratchpool);
+      /* clean up the accumulator. */
+      svn_stringbuf_setempty(baton->cdata_accum);
+      svn_pool_clear(baton->scratchpool);
+      break;
+
+    case ELEM_lock_expirationdate:
+      err = svn_time_from_cstring(&(baton->current_lock->expiration_date),
+                                  baton->cdata_accum->data,
+                                  baton->scratchpool);
+      /* clean up the accumulator. */
+      svn_stringbuf_setempty(baton->cdata_accum);
+      svn_pool_clear(baton->scratchpool);
+      break;
+
+    case ELEM_lock_owner:
+    case ELEM_lock_comment:
+      {
+        const char *final_val;
+
+        if (baton->encoding)
+          {
+            /* ### possibly recognize other encodings someday */
+            if (strcmp(baton->encoding, "base64") == 0)
+              {
+                svn_string_t *encoded_val;
+                const svn_string_t *decoded_val;
+
+                encoded_val = svn_string_create_from_buf(baton->cdata_accum,
+                                                         baton->scratchpool);
+                decoded_val = svn_base64_decode_string(encoded_val,
+                                                       baton->scratchpool);
+                final_val = decoded_val->data;
+              }
+            else
+              /* unrecognized encoding! */
+              return NE_XML_ABORT;
+
+            baton->encoding = NULL;
+          }
+        else
+          {
+            /* neon has already xml-unescaped the cdata for us. */            
+            final_val = baton->cdata_accum->data;
+          }
+
+        if (elm->id == ELEM_lock_owner)
+          baton->current_lock->owner = apr_pstrdup(baton->pool, final_val);
+        if (elm->id == ELEM_lock_comment)
+          baton->current_lock->comment = apr_pstrdup(baton->pool, final_val);
+
+        /* clean up the accumulator. */
+        svn_stringbuf_setempty(baton->cdata_accum);
+        svn_pool_clear(baton->scratchpool);
+        break;
+      }      
+
+
+    default:
+      break;
+    }
+
+  return 0;
+}
+  
+
+
+svn_error_t *
+svn_ra_dav__get_locks(svn_ra_session_t *session,
+                      apr_hash_t **locks,
+                      const char *path,
+                      apr_pool_t *pool)
+{
+  svn_ra_dav__session_t *ras = session->priv;
+  const char *body, *url;
+  svn_error_t *err;
+  int status_code = 0;
+  get_locks_baton_t *baton;
+
+  baton = apr_pcalloc(pool, sizeof(*baton));
+  baton->lock_hash = apr_hash_make (pool);
+  baton->pool = pool;
+  baton->scratchpool = svn_pool_create(pool);
+  baton->cdata_accum = svn_stringbuf_create("", baton->scratchpool);
+
+  body = apr_psprintf(pool,
+                      "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                      "<S:get-locks-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+                      "xmlns:D=\"DAV:\">"
+                      "</S:get-locks-report>");
+
+
+  /* We always run the report on the 'public' URL, which represents
+     HEAD anyway.  If the path doesn't exist in HEAD, then
+     svn_ra_get_locks() *should* fail.  Lock queries are always on HEAD. */
+  url = svn_path_url_add_component (ras->url, path, pool);
+
+  err = svn_ra_dav__parsed_request(ras->sess, "REPORT", url,
+                                   body, NULL, NULL,
+                                   getlocks_start_element,
+                                   getlocks_cdata_handler,
+                                   getlocks_end_element,
+                                   baton,
+                                   NULL, /* extra headers */
+                                   &status_code,
+                                   pool);
+
+  /* Map status 501: Method Not Implemented to our not implemented error.
+     1.0.x servers and older don't support this report. */
+  if (status_code == 501)
+    return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                             _("Server does not support locking features."));
+
+  if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+    return svn_error_quick_wrap(err,
+                                _("Server does not support locking features"));
+
+  else if (err)
+    return err;
+
+  svn_pool_destroy(baton->scratchpool);
+
+  *locks = baton->lock_hash;
+  return err;
+}
+
+/* ------------------------------------------------------------------------- */
+
 
 svn_error_t *svn_ra_dav__change_rev_prop (svn_ra_session_t *session,
                                           svn_revnum_t rev,

@@ -1272,16 +1272,6 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
 }
 
 
-static svn_error_t *
-svn_ra_dav__get_locks(svn_ra_session_t *session,
-                      apr_hash_t **locks,
-                      const char *path,
-                      apr_pool_t *pool)
-{
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
-}
-
 
 
 static const svn_version_t *

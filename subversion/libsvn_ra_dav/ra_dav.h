@@ -644,7 +644,15 @@ enum {
   ELEM_location,
   ELEM_file_revs_report,
   ELEM_file_rev,
-  ELEM_rev_prop
+  ELEM_rev_prop,
+  ELEM_get_locks_report,
+  ELEM_lock,
+  ELEM_lock_path,
+  ELEM_lock_token,
+  ELEM_lock_owner,
+  ELEM_lock_comment,
+  ELEM_lock_creationdate,
+  ELEM_lock_expirationdate
 };
 
 /* ### docco */
@@ -738,6 +746,16 @@ svn_ra_dav__get_locations (svn_ra_session_t *session,
                            svn_revnum_t peg_revision,
                            apr_array_header_t *location_revisions,
                            apr_pool_t *pool);
+
+
+/*
+ * Implements the get_locks RA layer function. */
+svn_error_t *
+svn_ra_dav__get_locks(svn_ra_session_t *session,
+                      apr_hash_t **locks,
+                      const char *path,
+                      apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
