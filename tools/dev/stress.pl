@@ -69,6 +69,11 @@
 #
 #         % stress.pl -s1 -i2
 #         % stress.pl -s1 -i3
+#
+# Running several instances at once will cause a *lot* of disk
+# activity. I have run ten instances simultaneously on a Linux tmpfs
+# (RAM based) filesystem -- watching ten xterms scroll irregularly
+# can be quite hypnotic!
 
 
 use Getopt::Std;
@@ -121,7 +126,9 @@ sub status_update
     system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
   }
 
-# Print status, update and commit. The update is to do any required merges.
+# Print status, update and commit. The update is to do any required
+# merges.  Returns 0 if the commit succeeds and 1 if it fails due to a
+# conflict.
 sub status_update_commit
   {
     my ( $wc_dir, $wait_for_key ) = @_;
@@ -130,10 +137,44 @@ sub status_update_commit
     # Use current time as log message
     my $now_time = localtime;
     my $svn_cmd = "svn ci $wc_dir -m '$now_time'";
-    my $val = system( $svn_cmd );
-    # abort on anything other than success or "normal" fail
-    die "$svn_cmd: failed: $val" if $val != 0 and $val != 256;
-    return $val;
+
+    # Need to handle the commit carefully. It could fail for all sorts
+    # of reasons, but errors that indicate a conflict are "acceptable"
+    # while other errors are not.  Thus there is a need to check the
+    # return value and parse the error text.
+
+    pipe COMMIT_ERR_READ, COMMIT_ERR_WRITE or die "pipe: $!\n";
+    my $pid = fork();
+    die "fork failed: $!\n" if not defined $pid;
+    if ( not $pid )
+      {
+	# This is the child process
+	open( STDERR, ">&COMMIT_ERR_WRITE" ) or die "redirect failed: $!\n";
+	exec $svn_cmd or die "exec $svn_cmd failed: $!\n";
+      }
+
+    # This is the main parent process, look for acceptable errors
+    close COMMIT_ERR_WRITE or die "close COMMIT_ERR_WRITE: $!\n";
+    my $acceptable_error = 0;
+    while ( <COMMIT_ERR_READ> )
+      {
+	print STDERR;
+	$acceptable_error = 1 if ( /^svn_error[^<]*<
+				   (
+				    Transaction[ ]is[ ]out[ ]of[ ]date
+				    |
+				    Merge[ ]conflict[ ]during[ ]commit
+				   )
+				   >/x );
+      }
+    close COMMIT_ERR_READ or die "close COMMIT_ERR_READ: $!\n";
+
+    # Get commit subprocess exit status
+    die "waitpid: $!\n" if $pid != waitpid $pid, 0;
+    die "unexpected commit fail: exit status: $?\n"
+      if ( $? != 0 and $? != 256 ) or ( $? == 256 and $acceptable_error != 1 );
+
+    return $? == 256 ? 1 : 0;
   }
 
 # Get a list of all versioned files in the working copy
@@ -169,7 +210,7 @@ sub populate
 	  {
 	    print FOO "A$line\n$line\n" or die "write to $filename: $!\n";
 	  }
-	close FOO or die "close $filename:: $!\n";
+	close FOO or die "close $filename: $!\n";
 
 	my $svn_cmd = "svn add $filename";
 	system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
