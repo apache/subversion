@@ -297,7 +297,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_WC_NOT_LOCKED,
               SVN_ERR_WC_CATEGORY_START + 5,
-              "Working copy not locked")
+              "Working copy not locked; this is probably a bug, please report")
 
   /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_INVALID_LOCK,
