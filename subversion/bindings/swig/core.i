@@ -298,7 +298,9 @@ apr_pool_t *current_pool;
 /* Allow None to be passed as config_dir argument */
 %typemap(python,in,parse="z") const char *config_dir "";
 
+#ifdef SWIGPYTHON
 PyObject *svn_swig_py_exception_type(void);
+#endif
 
 
 /* ----------------------------------------------------------------------- */
