@@ -16,32 +16,35 @@
  */
 
 import junit.framework.*;
+import org.tigris.subversion.lib.Revision;
 
 /**
- * JUnits tests for the Java subversion binding helper functions
+ * Testcases for the native functions with prefix "revision" 
+ * in the class NativeWrapper
+ *
+ * @see NativeWrapper
+ * @see org.tigris.subversion.lib.Revision
  */
-public class AllTests {
-
-    public static void main( String [] args )
+public class RevisionTests extends TestCase
+{
+    public RevisionTests(String name)
 	{
-	    junit.textui.TestRunner.run( suite() );
+	    super(name);
 	}
 
-    public static Test suite( )
+    public void testRevisionCreate()
 	{
-	    TestSuite suite = new TestSuite(
-		"All JUnit tests for the Java Subversion binding");
+	    Revision revision = NativeWrapper.revisionCreate(0);
+	    
+	    assertNotNull( revision );
+	}
 
-	    //add tests here
-	    suite.addTestSuite( DateTests.class );
-	    suite.addTestSuite( EntryTests.class );
-	    suite.addTestSuite( VectorTests.class );
-	    suite.addTestSuite( HashtableTests.class );
-	    suite.addTestSuite( MiscTests.class );
-	    suite.addTestSuite( StatusTests.class );
-	    suite.addTestSuite( NodekindTests.class );
-	    suite.addTestSuite( RevisionTests.class );
+    public void testRevisionCreateIntegrity()
+	{
+	    long rev = 55;
+	    Revision revision = NativeWrapper.revisionCreate(rev);
 
-	    return suite;
+	    assertEquals( rev, revision.toLong() );
 	}
 }
+
