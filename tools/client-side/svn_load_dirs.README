@@ -1,0 +1,111 @@
+This Perl script is designed to load a number of directories into
+Subversion.  This is useful if you have previously released a number
+of .zip's or tar.{Z,gz,bz}'s for a particular package and want to load
+them into Subversion.  This assumes that these packages were not
+previously in a source control system, in particular CVS, because then
+you would use another script to migrate the repository over, and in
+CVS' case, you would use cvs2svn.  This script will properly tag each
+release in the tags directory if you use the -t command line option.
+
+Steps:
+
+1) Unpack your .tar.{Z,gz,bz}'s or .zips into a directory that is not
+   in a Subversion repository.
+
+   Example:
+
+   I'll use an example from my Orca distribution:
+
+   % cd /tmp/
+   % zcat orca-0.18.tar.gz | tar xf -
+   % zcat orca-0.27b2.tar.gz | tar xf -
+
+2) Decide where in the Subversion repository you want to load the
+   directories.
+
+   Example:
+
+   I have a Subversion repository at http://svn.orcaware.com:8000/repos
+   and I want Orca under http://svn.orcaware.com:8000/repos/orca.
+
+3) [Optional, this script will perform this step for you].
+
+   Create the standard Subversion directory structure, which consists
+   of the three directories "branches", "tags" and "trunk" under the
+   main project directory.
+
+   Note that if there are multiple directories between the existing
+   directory structure and your desired project location, this script
+   will not create them all.
+
+   Example:
+
+   This would then be:
+
+   % cd /tmp
+   % svn co http://svn.orcaware.com:8000/repos
+   % cd repos
+   % mkdir orca orca/branches orca/tags orca/trunk
+   % svn add orca orca/*
+   % svn commit -m 'Create Subversion standard structure for Orca'
+
+  In the example, it would create the orca and its subdirectories, but
+  if you wanted to place Orca into /repos/perl-packages/orca and
+  perl-packages did not exist, then the script would not create it.
+
+4) Back up your Subversion repository in case you are not happy with
+   the results of running the script.
+
+   Example:
+
+   % /opt/i386-linux/apache-2.0/bin/apachectl stop
+   % cd /export/svn
+   % tar cvf repos_backup.tar repos
+   % /opt/i386-linux/apache-2.0/bin/apachectl start
+
+5) Decide on the tags you want on your directories.  If you don't want
+   any tags, then ignore this step.
+
+   Look at your directories and come up with a Perl regular expression
+   that matches only the portion of the directory name that identifies
+   each directory.
+
+   This becomes the argument to the -t option.  Make sure to protect
+   the regular expression from the shell by using quotes.
+
+   Example:
+
+   For the Orca directories orca-0.18 and orca-0.27b2 I can use the
+   regular expression \d.* because anything after the first digit is
+   part of the version number.
+
+   So this is -t '\d.*'
+
+6) Run this script.  The first argument is the root of the Subversion
+   package directory where you want to install the directories.  This
+   name should not contain the string "branches", "tags" or "trunk".
+   The directories are loaded in order that they appear on the command
+   line.
+
+   Example:
+
+   svn_load_dirs.pl http://svn.orcaware.com:8000/orca -t '\d.*' \
+      orca-0.18 orca-0.27b2
+
+7) Check the results by either checking out a new tree and or browsing
+   the repository with a browser.  If they are not what you want, back
+   out the changes.
+
+   Example:
+
+   These commands back out the changes:
+
+   % /opt/i386-linux/apache-2.0/bin/apachectl stop
+   % cd /export/svn
+   % rm -fr repos
+   % tar xvf repos_backup.tar
+   % /opt/i386-linux/apache-2.0/bin/apachectl start
+
+# local variables:
+# eval: (load-file "../dev/svn-dev.el")
+# end:
