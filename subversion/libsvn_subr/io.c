@@ -1860,18 +1860,22 @@ svn_io_write_version_file (const char *path,
   apr_status_t apr_err;
   const char *format_contents = apr_psprintf (pool, "%d\n", version);
 
+  /* We only promise to handle non-negative integers. */
   if (version < 0)
     return svn_error_createf (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
                               "Version %d is not non-negative", version);
 
+  /* Open (or create+open) PATH... */
   SVN_ERR (svn_io_file_open (&format_file, path,
                              APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
   
+  /* ...dump out our version number string... */
   apr_err = apr_file_write_full (format_file, format_contents,
                                  strlen (format_contents), NULL);
   if (apr_err)
     return svn_error_createf (apr_err, 0, 0, pool, "writing to `%s'", path);
   
+  /* ...and close the file. */
   apr_err = apr_file_close (format_file);
   if (apr_err)
     return svn_error_createf (apr_err, 0, 0, pool, "closing `%s'", path);
@@ -1890,11 +1894,21 @@ svn_io_read_version_file (int *version,
   svn_stringbuf_t *version_str;
   apr_status_t apr_err;
 
+  /* Read a line from PATH */
   SVN_ERR (svn_io_file_open (&format_file, path, APR_READ, 
                              APR_OS_DEFAULT, pool));
   format_stream = svn_stream_from_aprfile (format_file, pool);
   SVN_ERR (svn_stream_readline (format_stream, &version_str, pool));
+
+  /* If there was no data in PATH, return an error. */
+  if (! version_str)
+    return svn_error_createf (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL, pool,
+                              "reading `%s'", path);
+
+  /* ...string to integer conversion... */
   *version = atoi (version_str->data);
+
+  /* And finally, close the file. */
   apr_err = apr_file_close (format_file);
   if (apr_err)
     return svn_error_createf (apr_err, 0, 0, pool, "closing `%s'", path);
