@@ -21,13 +21,14 @@
 #include <string.h>
 #include <apr_strings.h>
 #include <assert.h>
-#include "wc.h"
 #include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_types.h"
 #include "svn_time.h"
 #include "svn_pools.h"
 
+#include "wc.h"
+#include "adm_files.h"
 
 /*------------------------------------------------------------------*/
 

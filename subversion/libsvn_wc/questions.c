@@ -31,7 +31,9 @@
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_wc.h"
+
 #include "wc.h"
+#include "adm_files.h"
 
 
 

@@ -36,8 +36,9 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_wc.h"
-#include "wc.h"
 
+#include "wc.h"
+#include "adm_files.h"
 
 
 /*** File names in the adm area. ***/
@@ -378,17 +379,6 @@ svn_wc__text_base_path (const svn_stringbuf_t *path,
                         NULL);
     
   return newpath;
-}
-
-svn_stringbuf_t *
-svn_wc__empty_file_path (const svn_stringbuf_t *path,
-                         apr_pool_t *pool)
-{
-  svn_stringbuf_t *empty_file_path = svn_stringbuf_dup (path, pool);
-  svn_path_remove_component (empty_file_path);
-  extend_with_adm_name (empty_file_path, NULL, 0, pool, SVN_WC__ADM_EMPTY_FILE,
-                        NULL);
-  return empty_file_path;
 }
 
 
@@ -741,6 +731,44 @@ svn_wc__close_adm_file (apr_file_t *fp,
 
 
 svn_error_t *
+svn_wc__remove_adm_file (svn_stringbuf_t *path, apr_pool_t *pool, ...)
+{
+  svn_error_t *err = NULL;
+  apr_status_t apr_err = 0;
+  int components_added;
+  va_list ap;
+
+  va_start (ap, pool);
+  components_added = v_extend_with_adm_name (path, NULL, 0, pool, ap);
+  va_end (ap);
+      
+  /* Remove read-only flag on path. */
+  SVN_ERR(svn_io_set_file_read_write (path->data, FALSE, pool));
+
+  apr_err = apr_file_remove (path->data, pool);
+  if (apr_err)
+    err = svn_error_create (apr_err, 0, NULL, pool, path->data);
+
+  /* Restore path to its original state no matter what. */
+  chop_admin_name (path, components_added);
+
+  return err;
+}
+
+
+svn_stringbuf_t *
+svn_wc__empty_file_path (const svn_stringbuf_t *path,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *empty_file_path = svn_stringbuf_dup (path, pool);
+  svn_path_remove_component (empty_file_path);
+  extend_with_adm_name (empty_file_path, NULL, 0, pool, SVN_WC__ADM_EMPTY_FILE,
+                        NULL);
+  return empty_file_path;
+}
+
+
+svn_error_t *
 svn_wc__open_empty_file (apr_file_t **handle,
                          svn_stringbuf_t *path,
                          apr_pool_t *pool)
@@ -991,32 +1019,6 @@ svn_wc__sync_props (svn_stringbuf_t *path,
 
 }
 
-
-
-svn_error_t *
-svn_wc__remove_adm_file (svn_stringbuf_t *path, apr_pool_t *pool, ...)
-{
-  svn_error_t *err = NULL;
-  apr_status_t apr_err = 0;
-  int components_added;
-  va_list ap;
-
-  va_start (ap, pool);
-  components_added = v_extend_with_adm_name (path, NULL, 0, pool, ap);
-  va_end (ap);
-      
-  /* Remove read-only flag on path. */
-  SVN_ERR(svn_io_set_file_read_write (path->data, FALSE, pool));
-
-  apr_err = apr_file_remove (path->data, pool);
-  if (apr_err)
-    err = svn_error_create (apr_err, 0, NULL, pool, path->data);
-
-  /* Restore path to its original state no matter what. */
-  chop_admin_name (path, components_added);
-
-  return err;
-}
 
 
 
