@@ -76,7 +76,13 @@ SPECIFIC LANGUAGE BINDINGS
    3.  Verify that an 'svn' package has been installed correctly.  You can
        do this by running python via 'python -c "from svn import client"'.
 
-   4.  Try some demo programs.  From the top of your svn working copy,
+   4.  Make sure that whatever directory the bindings got installed in
+       is in your PYTHONPATH.  That directory depends on how you
+       installed; a typical location is /usr/local/lib/svn-python/,
+       see http://subversion.tigris.org/issues/show_bug.cgi?id=1125
+       for some imminent improvements to the install process.
+
+   5.  Try some demo programs.  From the top of your svn working copy,
        cd tools/examples/, and try running 'svnlook.py'.
 
 
