@@ -74,6 +74,7 @@ typedef struct svn_string_t svn_string_t;
    TYPE: svn_string_t
 */
 
+
 /* const svn_string_t * is always an input parameter */
 %typemap(python,in) const svn_string_t * (svn_string_t value) {
     if ($input == Py_None)
@@ -95,7 +96,6 @@ typedef struct svn_string_t svn_string_t;
 %#error need pool argument from somewhere
     $1 = svn_string_dup($input, pool);
 }
-
 
 //%typemap(python,out) svn_string_t * {
 //    $result = PyBuffer_FromMemory($1->data, $1->len);
@@ -135,7 +135,7 @@ typedef struct svn_string_t svn_string_t;
 
 %typemap(python,in) const apr_array_header_t *STRINGLIST {
 %#error need pool argument from somewhere
-    $1 = svn_swig_strings_to_array($input, NULL);
+    $1 = svn_swig_py_strings_to_array($input, NULL);
     if ($1 == NULL)
         return NULL;
 }

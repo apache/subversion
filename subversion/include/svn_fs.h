@@ -498,18 +498,6 @@ svn_error_t *svn_fs_txn_root (svn_fs_root_t **root_p,
                               apr_pool_t *pool);
 
 
-/* Set *ROOT_P to a root object that can be used to access nodes by
-   node revision ID in FS.  Whenever you pass *ROOT_P to a filesystem
-   access function, any filename "relative" to *ROOT_P must actually
-   be the printed form of a node revision ID: a sequence of decimal
-   numbers without leading zeros, separated by '.' characters,
-   containing an even number of numbers; otherwise, return
-   SVN_ERR_FS_NOT_ID.  Allocate ROOT_P in POOL.  */
-svn_error_t *svn_fs_id_root (svn_fs_root_t **root_p,
-                             svn_fs_t *fs,
-                             apr_pool_t *pool);
-
-
 /* Free the root directory ROOT.  Simply clearing or destroying the
    pool ROOT was allocated in will have the same effect as calling
    this function.  */
@@ -520,10 +508,9 @@ void svn_fs_close_root (svn_fs_root_t *root);
 svn_fs_t *svn_fs_root_fs (svn_fs_root_t *root);
 
 
-/* Return true iff ROOT is a transaction/revision/id root.  */
+/* Return true iff ROOT is a transaction or revision root.  */
 int svn_fs_is_txn_root      (svn_fs_root_t *root);
 int svn_fs_is_revision_root (svn_fs_root_t *root);
-int svn_fs_is_id_root       (svn_fs_root_t *root);
 
 
 /* If ROOT is the root of a transaction, return a pointer to the name
@@ -537,28 +524,6 @@ const char *svn_fs_txn_root_name (svn_fs_root_t *root,
    Otherwise, return SVN_INVALID_REVNUM.  */
 svn_revnum_t svn_fs_revision_root_revision (svn_fs_root_t *root);
 
-
-/* If PATH in TXN_ROOT matches the specified ID, then set MATCHES to
-   true (1). Otherwise, set MATCHES to zero.
-
-   In essence, this function answers the question, "I want to change
-   node ID. Is that the node which is present in TXN_ROOT?" If the
-   TXN_ROOT is based on the youngest (head) revision, then this test
-   is essentially a test for out-of-dateness.
-
-   Note that a small compensation is made for asking to change a
-   directory identified by ID, but where the directory's id in the
-   TXN_ROOT is different because it was modified by the bubble-up
-   algorithm of a change below the directory. Since there were no
-   semantic changes, this function deems the bubbled-up directory
-   to match the specified ID, and returns MATCHES := 1.
-
-   All temporary allocation is performed in POOL.  */
-svn_error_t *svn_fs_txn_path_is_id (int *matches,
-                                    svn_fs_root_t *txn_root,
-                                    const char *path,
-                                    const svn_fs_id_t *id,
-                                    apr_pool_t *pool);
 
 
 /* Directory entry names and directory paths.  */

@@ -48,5 +48,8 @@
 %include svn_repos.h
 %{
 #include "svn_repos.h"
-#include "swigutil.h"
+
+#ifdef SWIGPYTHON
+#include "swigutil_py.h"
+#endif
 %}
