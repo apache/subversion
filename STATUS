@@ -35,18 +35,3 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r12006, r12136, r12146
-    Fix issue 2124 - bugs in svn switch over ra-dav.
-    Justification:
-      Changes made in the 1.1 client cause 1.0 and 1.1 servers to be
-      driven in a way that weren't able to handle, resulting in
-      working copies that *look* okay, but can actually send commits
-      to the wrong repository location (if able to commit at all).
-      r12006: Teach mod_dav_svn how to handle the new request.
-      r12136: Make sure there is a versioned entry before setting the property.
-      r12146: Work around for buggy 1.1.0/1.1.1 servers by disabling res. walk.
-    Branch:
-      rs=http://svn.collab.net/repos/svn
-      svn merge -r12390:HEAD $rs/branches/1.1.x-dav-switch
-    Votes:
-      +1: cmpilato, kfogel, jerenkrantz
