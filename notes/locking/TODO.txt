@@ -13,9 +13,7 @@ MUST HAVE
 
 * fix svn_fs_access_t handling in svnserve (sussman)
 
-* ?? make post-lock and post-unlock take list of paths.  (fitz)
-   
-       --> then possibly teach mailer.py to send lock/unlock mails.
+* possibly teach mailer.py to send lock/unlock mails (fitz)
 
 * autoversioning:
 
