@@ -31,7 +31,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-01 00:09+0200\n"
+"POT-Creation-Date: 2004-09-02 10:01+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -1349,7 +1349,7 @@ msgstr ""
 "Loggmeldingen er en filsti (ville du bruke -F?). Bruk '--force-log' for å\n"
 "overstyre"
 
-#: clients/cmdline/main.c:1350
+#: clients/cmdline/main.c:1358
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -4269,7 +4269,7 @@ msgid ""
 "Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
 "addition) is not itself scheduled for addition"
 msgstr ""
-"Ødelagt arbeidskopi: '%s' i katalogen '%s' (som er klargjort for å legges "
+"Ødelagt arbeidskopi: '%s' i katalogen '%s' (som er klargjort for å bli lagt "
 "til) er ikke selv klargjort for dette."
 
 #: libsvn_wc/entries.c:822
@@ -4278,7 +4278,7 @@ msgid ""
 "Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
 "deletion) is not itself scheduled for deletion"
 msgstr ""
-"Ødelagt arbeidskopi: '%s' i katalogen '%s' (som er klargjort for å slettes ) "
+"Ødelagt arbeidskopi: '%s' i katalogen '%s' (som er klargjort for sletting) "
 "er ikke selv klargjort for dette"
 
 #: libsvn_wc/entries.c:830
@@ -4287,8 +4287,8 @@ msgid ""
 "Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
 "replacement) has an invalid schedule"
 msgstr ""
-"Ødelagt arbeidskopi: '%s' i katalogen '%s' (som er klargjort for å byttes "
-"ut) er ikke selv klargjort for dette"
+"Ødelagt arbeidskopi: '%s' i katalogen '%s' (som er klargjort for å bli "
+"byttet ut) er ikke selv klargjort for dette"
 
 #: libsvn_wc/entries.c:1109
 #, c-format
@@ -4306,8 +4306,8 @@ msgid ""
 "Can't add '%s' to deleted directory; try undeleting its parent directory "
 "first"
 msgstr ""
-"Kan ikke legge '%s' til en slettet katalog. Prøv å gjenopprette forelder- "
-"katalogen først"
+"Kan ikke legge '%s' til en slettet katalog. Prøv å gjenopprette "
+"foreldrekatalogen først"
 
 #: libsvn_wc/entries.c:1407
 #, c-format
@@ -4315,8 +4315,8 @@ msgid ""
 "Can't replace '%s' in deleted directory; try undeleting its parent directory "
 "first"
 msgstr ""
-"Kan ikke slette '%s' i en slettet katalog. Prøv å gjenopprette forelder- "
-"katalogen først"
+"Kan ikke slette '%s' i en slettet katalog. Prøv å gjenopprette "
+"foreldrekatalogen først"
 
 #: libsvn_wc/entries.c:1416
 #, c-format
@@ -4942,7 +4942,7 @@ msgstr ""
 "\n"
 "Kjør Berkeley DBs reparasjonsprosedyre på et depot.\n"
 "Gjør dette hvis du får feilmeldinger som indikerer at depotet må\n"
-"repareres. Gjenoppretting krever eksklusiv aksess og vil avslutte\n"
+"repareres. Gjenoppretting krever eksklusiv tilgang og vil avslutte\n"
 "hvis depotet er i bruk av en annen prosess.\n"
 "\n"
 
@@ -5024,12 +5024,13 @@ msgstr "Vennligst vent. Gjenoppretting av depotet kan ta lang tid...\n"
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
-msgstr "Klarte ikke å få eksklusiv tilgang til depotet. Kanskje en annen\n"
+msgstr ""
+"Klarte ikke å få eksklusiv tilgang til depotet. Kanskje en annen\n"
 "prosess som for eksempel httpd, svnserve eller svn holder det åpent?"
 
 #: svnadmin/main.c:692
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
-msgstr "Venter på depotlås; kanskje en annen prosess har åpnet den?\n"
+msgstr "Venter på depotlås; kanskje en annen prosess har åpnet depotet?\n"
 
 #: svnadmin/main.c:699
 msgid ""
