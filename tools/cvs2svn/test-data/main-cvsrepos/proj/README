@@ -46,3 +46,20 @@ history:
   12. Did "cvs up -A" on sub2/default, then in one commit, made a
       change to sub2/default and sub2/branch_B_MIXED_only.  So this
       commit should be spread between the branch and the trunk.
+
+  13. Do "cvs up -A" to get everyone back to trunk, then make a new
+      branch B_SPLIT on everyone except sub1/subsubB/default,v.
+
+  14. Switch to branch B_SPLIT (see sub1/subsubB/default disappear)
+      and commit a change that affects everyone except sub3/default.
+
+  15. An hour or so later, "cvs up -A" to get sub1/subsubB/default
+      back, then commit a change on that file, on trunk.  (It's
+      important that this change happened after the previous commits
+      on B_SPLIT.)
+
+  16. Branch sub1/subsubB/default to B_SPLIT, then "cvs up -r B_SPLIT"
+      to switch the whole working copy to the branch.
+
+  17. Commit a change on B_SPLIT, to sub1/subsubB/default and
+      sub3/default.

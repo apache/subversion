@@ -114,6 +114,16 @@ class Log:
 def parse_log(svn_repos):
   """Return a dictionary of Logs, keyed on revision number, for SVN_REPOS."""
 
+  class LineFeeder:
+    'Make a list of lines behave like an open file handle.'
+    def __init__(self, lines):
+      self.lines = lines
+    def readline(self):
+      if len(self.lines) > 0:
+        return self.lines.pop(0)
+      else:
+        return None
+
   def absorb_changed_paths(out, log):
     'Read changed paths from OUT into Log item LOG, until no more.'
     while 1:
@@ -139,17 +149,7 @@ def parse_log(svn_repos):
 
   logs = { }
 
-  # We use popen3 directly, instead of run_svn(), because it's
-  # actually easier to process the results by calling readline()
-  # repeatedly than it would be to have all the lines in a list.
-  ign, out, err = os.popen3('%s log -v %s'
-                            % (svn, repos_to_url(svn_repos)), 'b')
-  err_lines = err.readlines()
-  if err_lines:
-    print '\n%s said:\n' % svn
-    for line in err_lines: print '   ' + line,
-    print
-    sys.exit(1)
+  out = LineFeeder(run_svn('log', '-v', repos_to_url(svn_repos)))
 
   while 1:
     this_log = None
@@ -159,6 +159,7 @@ def parse_log(svn_repos):
 
     if line.find(log_separator) == 0:
       line = out.readline()
+      if not line: break
       line = line[:-1]
       m = log_start_re.match(line)
       if m:
@@ -379,6 +380,67 @@ def simple_commits():
     raise svntest.Failure
 
 
+def interleaved_commits():
+  "two interleaved trunk commits, with different log msgs"
+  # See test-data/main-cvsrepos/proj/README.
+  repos, wc, logs = ensure_conversion('main')
+
+  # The initial import.
+  for path in ('/interleaved',
+               '/interleaved/trunk',
+               '/interleaved/trunk/1',
+               '/interleaved/trunk/2',
+               '/interleaved/trunk/3',
+               '/interleaved/trunk/4',
+               '/interleaved/trunk/5',
+               '/interleaved/trunk/a',
+               '/interleaved/trunk/b',
+               '/interleaved/trunk/c',
+               '/interleaved/trunk/d',
+               '/interleaved/trunk/e',):
+    if not (logs[14].changed_paths.has_key(path)
+            and logs[14].changed_paths[path] == 'A'):
+      raise svntest.Failure
+
+  if logs[14].msg.find('Initial revision') != 0:
+    raise svntest.Failure
+    
+  def check_letters(rev):
+    'Return 1 if REV is the rev where only letters were committed, else None.'
+    for path in ('/interleaved/trunk/a',
+                 '/interleaved/trunk/b',
+                 '/interleaved/trunk/c',
+                 '/interleaved/trunk/d',
+                 '/interleaved/trunk/e',):
+      if not (logs[rev].changed_paths.has_key(path)
+              and logs[rev].changed_paths[path] == 'M'):
+        return None
+    if logs[rev].msg.find('Committing letters only.') != 0:
+      return None
+    return 1
+
+  def check_numbers(rev):
+    'Return 1 if REV is the rev where only numbers were committed, else None.'
+    for path in ('/interleaved/trunk/1',
+                 '/interleaved/trunk/2',
+                 '/interleaved/trunk/3',
+                 '/interleaved/trunk/4',
+                 '/interleaved/trunk/5',):
+      if not (logs[rev].changed_paths.has_key(path)
+              and logs[rev].changed_paths[path] == 'M'):
+        return None
+    if logs[rev].msg.find('Committing numbers only.') != 0:
+      return None
+    return 1
+
+  # One of the commits was letters only, the other was numbers only.
+  # But they happened "simultaneously", so we don't assume anything
+  # about which commit appeared first, we just try both ways.
+  if not ((check_letters(15) and check_numbers(16))
+          or (check_numbers(15) and check_letters(16))):
+    raise svntest.Failure
+
+
 def simple_tags():
   "simple tags"
   # See test-data/main-cvsrepos/proj/README.
@@ -474,6 +536,33 @@ def mixed_commit():
     raise svntest.Failure
 
 
+def mixed_commit():
+  "a branch created at different times in different places"
+  # See test-data/main-cvsrepos/proj/README.
+  repos, wc, logs = ensure_conversion('main')
+  # Don't yet know the exact revision numbers, but basically we're
+  # testing these steps from test-data/main-cvsrepos/proj/README:
+  # 
+  # 13. Do "cvs up -A" to get everyone back to trunk, then make a new
+  #     branch B_SPLIT on everyone except sub1/subsubB/default,v.
+  # 
+  # 14. Switch to branch B_SPLIT (see sub1/subsubB/default disappear)
+  #     and commit a change that affects everyone except sub3/default.
+  # 
+  # 15. An hour or so later, "cvs up -A" to get sub1/subsubB/default
+  #     back, then commit a change on that file, on trunk.  (It's
+  #     important that this change happened after the previous commits
+  #     on B_SPLIT.)
+  # 
+  # 16. Branch sub1/subsubB/default to B_SPLIT, then "cvs up -r B_SPLIT"
+  #     to switch the whole working copy to the branch.
+  # 
+  # 17. Commit a change on B_SPLIT, to sub1/subsubB/default and
+  #     sub3/default.
+
+  raise svntest.Failure
+  
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -487,9 +576,11 @@ test_list = [ None,
               two_quick,
               prune_with_care,
               simple_commits,
+              interleaved_commits,
               XFail(simple_tags),
               XFail(simple_branch_commits),
               XFail(mixed_commit),
+              XFail(split_branch),
              ]
 
 if __name__ == '__main__':
