@@ -129,9 +129,8 @@ create_locks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
   apr_status_t apr_err;
 
   /* Create the locks directory. */
-  apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, 0, "creating lock dir `%s'", path);
+  SVN_ERR_W (svn_io_dir_make (path, APR_OS_DEFAULT, pool),
+                              "creating lock dir");
 
   /* Create the DB lockfile under that directory. */
   {
@@ -183,10 +182,8 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
   apr_size_t written;
 
   /* Create the hook directory. */
-  apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_error_createf 
-      (apr_err, 0, 0, "creating hook directory `%s'", path);
+  SVN_ERR_W (svn_io_dir_make (path, APR_OS_DEFAULT, pool),
+             "creating hook directory");
 
   /*** Write a default template for each standard hook file. */
 
@@ -719,16 +716,12 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
   SVN_ERR (svn_fs_create_berkeley (repos->fs, repos->db_path));
 
   /* Create the DAV sandbox directory.  */
-  apr_err = apr_dir_make (repos->dav_path, APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_error_createf 
-      (apr_err, 0, 0, "creating DAV sandbox dir `%s'", repos->dav_path);
+  SVN_ERR_W (svn_io_dir_make (repos->dav_path, APR_OS_DEFAULT, pool),
+             "creating DAV sandbox dir");
 
   /* Create the conf directory.  */
-  apr_err = apr_dir_make (repos->conf_path, APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_error_createf 
-      (apr_err, 0, 0, "creating conf dir `%s'", repos->conf_path);
+  SVN_ERR_W (svn_io_dir_make (repos->conf_path, APR_OS_DEFAULT, pool),
+             "creating conf dir");
 
   /* Create the lock directory.  */
   SVN_ERR (create_locks (repos, repos->lock_path, pool));
