@@ -13,11 +13,6 @@ my $rev = shift @ARGV;
 my @users = @ARGV;
 my @svnlooklines = ();
 
-# open a pipe to 'mail'
-my $userlist = join (' ', @users); 
-open (MAILER, "| mail -s 'Commit - Revision $rev' $userlist") 
-    or die ("Error opening a pipe to your mailer");
-
 # get the auther, date, and log from svnlook
 open (INPUT, "svnlook $repos rev $rev info |") 
     or die ("Error running svnlook (info)");
@@ -29,6 +24,19 @@ shift @svnlooklines;
 my @log = @svnlooklines;
 chomp $author;
 chomp $date;
+
+# figure out what directories have changed (using svnlook)
+open (INPUT, "svnlook $repos rev $rev dirs-changed |")
+    or die ("Error running svnlook (changed)");
+my @dirschanged = <INPUT>;
+chomp @dirschanged;
+grep 
+{
+    # lose the trailing slash if one exists (except in the case of '/')
+    $_ =~ s/(.+)[\/\\]$/$1/;
+} 
+@dirschanged; 
+close (INPUT);
 
 # figure out what's changed (using svnlook)
 open (INPUT, "svnlook $repos rev $rev changed |") 
@@ -60,6 +68,13 @@ open (INPUT, "svnlook $repos rev $rev diff |")
     or die ("Error running svnlook (diff)");
 my @difflines = <INPUT>;
 close (INPUT);
+
+
+# open a pipe to 'mail'
+my $dirlist = join (' ', @dirschanged);
+my $userlist = join (' ', @users); 
+open (MAILER, "| mail -s 'commit: revision $rev - $dirlist' $userlist") 
+    or die ("Error opening a pipe to your mailer");
 
 print MAILER "Author: $author\nDate: $date\nNew Revision: $rev\n\n";
 if (scalar @adds)
