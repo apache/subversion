@@ -39,62 +39,125 @@ system that is a compelling replacement for CVS in the open source
 community.  The software is released under an <a
 href="/license-1.html">Apache/BSD-style</a> open source license.
 See the <a href="/project_status.html">status page</a> for current
-progress.  Our goals are:
+progress.
 </p>
+
+<p>
+<h2>Features planned for Subversion 1.0:</h2>
+<p>
 
 <ul>  <!-- list of features -->
 
 <li><strong>All current CVS features.</strong>
-    <p>CVS is good, as far as it goes, so we want to keep
-    feature-compatibility: versioning, folding of non-conflicting
-    changes, detection of conflicting changes, branching, merging,
-    historical diffs, log messages, line-by-line history (<tt>cvs
-    annotate</tt>), etc.</p>
-
-    <p>Generally, Subversion's conceptual interface to a particular
-    feature will be as similar to CVS's as possible, except where
-    there's a compelling reason to do otherwise.</p>
+    <p>Subversion is trying to be a better CVS, so it supports all
+    CVS features.  It versions files, automatically folds
+    non-conflicting changes and detects conflicting ones, supports
+    branches and merging, diffs between past revisions, log messages,
+    etc (but see below regarding "cvs annotate").  Generally,
+    Subversion's interface to a particular feature is as similar to
+    CVS's as possible, except where there's a compelling reason to do
+    otherwise.</p>
 </li>
 
 <li><strong>Directories, renames, and file meta-data are versioned.</strong>
-    <p>Lack of these features is the most common complaint against CVS --
-    basically, CVS only versions file contents.  Subversion will handle
-    directory changes, file renames, and permission and other
-    meta-data changes as well.</p>
-</li>
-
-<li><strong>Symbolic links, etc, are supported</strong>
-    <p>Subversion will handle symbolic links ("shortcuts"), multiple hard
-    links, and other special file types as long as their semantics are
-    compatible with version control.</p>
+    <p>Lack of these features is one of the most common complaints
+    against CVS.  Subversion versions not only file contents and file
+    existence, but also directories, copies, and renames.  It also
+    allows arbitrary metadata ("properties") to be versioned along
+    with any file or directory, and provides a mechanism for
+    versioning the `execute' permission flag on files.
+ </p>
 </li>
 
 <li><strong>Commits are truly atomic.</strong>
     <p>No part of a commit takes effect until the entire commit has
-    succeeded.  Revision numbers are per-commit, not per-file.</p>
+    succeeded.  Revision numbers are per-commit, not per-file; log
+    messages are attached to the revision, not stored redundantly as
+    in CVS.</p>
+</li>
+
+<li><strong>Apache as network server, WebDAV/DeltaV for protocol</strong>
+    <p>Subversion uses the HTTP-based WebDAV/DeltaV protocol for
+    network communications, and uses the Apache web server to provide
+    repository-side network service.  This gives Subversion a big
+    advantage in stability and interoperability, and provides various
+    key features for free: authentication, basic authorization,
+    wire compression, and repository browsing, for example.</p> 
 </li>
 
 <li><strong>Branching and tagging are cheap (constant time) operations</strong>
-    <p>There is no reason for these operations to be expensive, so they
-    aren't.</p>
+    <p>There is no reason for these operations to be expensive, so
+    they aren't.</p>
 
-    <p>Branches and tags will both be implemented in terms of an
-    underlying "clone" operation.  A clone is just an alias,
-    optionally within the project's namespace, pointing at a specific
-    revision of an existing project.  An clone takes up a small,
-    constant amount of space.  All clones are tags; if you start
-    committing on one, then it's a branch as well.</p>
-
-    <p>(This does away with CVS's "branch-point tagging", by removing the
-    artificial distinction that made branch-point tags necessary in
-    the first place.)</p>
+    <p>Branches and tags are both implemented in terms of an
+    underlying "copy" operation.  An copy takes up a small, constant
+    amount of space.  Any copy is a tag; and if you start committing
+    on a copy, then it's a branch as well.  (This does away with CVS's
+    "branch-point tagging", by removing the distinction that made
+    branch-point tags necessary in the first place.)</p>
 </li>
 
-<li><strong>Repeated merges are handled gracefully</strong>
-    <p>Subversion will have a way of remembering what has been merged, so
-    that repeated merges from the same source do not require careful
-    human calculation to avoid spurious conflicts (anyone who's done
-    repeated CVS merges knows what we're talking about).</p>
+<li><strong>Natively client/server, layered library design</strong>
+    <p> Subversion is designed to be client/server from the beginning;
+    thus avoiding some of the maintenance problems which have plagued
+    CVS.  The code is structured as a set of modules with well-defined
+    interfaces, designed to be called by other applications.</p>
+</li>
+
+<li><strong>Client/server protocol sends diffs in both directions</strong>
+    <p>The network protocol uses bandwidth efficiently by transmitting
+    diffs in both directions whenever possible (CVS sends diffs from
+    server to client, but not client to server).</p>
+</li>
+
+<li><strong>Costs are proportional to change size, not data size</strong>
+    <p>In general, the time required for an Subversion operation is
+    proportional to the size of the <i>changes</i> resulting from that
+    operation, not to the absolute size of the project in which the
+    changes are taking place.  This is a property of the Subversion
+    repository model.</p>
+</li>
+
+<li><strong>Efficient handling of binary files</strong>
+    <p>Subversion is equally efficient on binary as on text files,
+    because it uses a binary diffing algorithm to transmit and store
+    successive revisions.</p>
+</li>
+
+<li><strong>Parseable output</strong>
+    <p>All output of the Subversion command-line client is carefully
+    designed to be both human readable and automatically parseable;
+    scriptability is a high priority.
+</p>
+</li>
+
+</ul>  <!-- end list of features -->
+
+<p>
+<h2>Features planned for after 1.0:</h2>
+<p>
+
+<ul>
+
+<li><strong>Support for symbolic links</strong>
+    <p>Subversion will handle symbolic links ("shortcuts").  It may
+    also support multiple hard links and other special file types, as
+    long as this can be done portably and with semantics that are
+    compatible with version control.</p>
+</li>
+
+<li><strong>"svn blame" (cvs annotate)</strong>
+    <p>Subversion will have a counterpart to CVS's "annotate"
+    feature, but it will most likely happen after the 1.0 release,
+    due to prioritization and scheduling.</p> 
+</li>
+
+<li><strong>Graceful handling of repeated merges</strong>
+    <p>Subversion will use its generic metadata mechanism as a way of
+    remembering what has been merged, so that repeated merges from the
+    same source do not require careful human calculation to avoid
+    spurious conflicts (anyone who's done repeated CVS merges knows
+    what we're talking about).</p>
 
     <p>(There are some theoretical problems with remembering merge
     sources -- knowing where the merged data came from implies some
@@ -106,34 +169,20 @@ progress.  Our goals are:
     good "90%" solutions that will work in practice).</p>
 </li>
 
+<li><strong>Broader WebDAV compatibility</strong>
+    <p>Currently, the Subversion server only responds to a subset of
+    WebDAV requests -- the subset necessary to support Subversion's
+    own functionality.  Increased support for WebDAV is a high
+    priority after the 1.0 release, however.</p>
+</li>
+
 <li><strong>Support for plug-in client side diff programs</strong>
-    <p>Subversion knows how to show diffs for text files, and also gives
-    the user the option to plug in external diff programs for any kind
-    of file.  The external program need merely conform to some simple
-    invocation interface (i.e., "<tt>diffprog file1 file2
-    [file3...]</tt>", where the various files might be different
-    revisions of the same file).</p>
-</li>
-
-<li><strong>Natively client/server</strong>
-    <p> Subversion is designed to be client/server from the beginning;
-    thus avoiding some of the maintenance problems which have plagued
-    CVS.</p>
-</li>
-
-<li><strong>Client/server protocol sends diffs in both directions</strong>
-    <p>The network protocol uses bandwidth efficiently by transmitting
-    diffs in both directions whenever possible (CVS sends diffs from
-    server to client, but not client to server).  The protocol will
-    support compression too, of course.</p>
-</li>
-
-<li><strong>Costs are proportional to change size, not project size</strong>
-    <p>In general, the time required for an Subversion operation is
-    proportional to the size of the <i>changes</i> resulting from that
-    operation, not to the absolute size of the project in which the
-    changes are taking place.  This is a property of the Subversion
-    repository model.</p>
+    <p>Subversion knows how to show diffs for text files, and later
+    will also give the user the option to plug in external diff
+    programs for any kind of file.  The external program need merely
+    conform to some simple invocation interface (i.e., "<tt>diffprog
+    file1 file2 [file3...]</tt>", where the various files might be
+    different revisions of the same file).</p>
 </li>
 
 <li><strong>Internationalization</strong>
@@ -141,9 +190,6 @@ progress.  Our goals are:
     errors can be customized to the appropriate human language at
     build-time.  Also, there will be I18N support for the <i>names</i>
     as well as the contents of versioned entities.
-
-    <p><font color="blue"><strong>NOTE: Internationalization is planned,
-    but may not be present in the first release.</strong></font></p>
 </li>
 
 <li><strong>Progressive multi-lingual support</strong>
@@ -151,17 +197,14 @@ progress.  Our goals are:
     line-ending conversion, CVS makes a distinction between text and
     binary files, and treats the text files specially.</p>
 
-    <p>Subversion will make the same distinction, but with a more generous
-    notion of what constitutes a text file: not only ASCII, but UTF-*
-    encodings of Unicode too.  Not all such encodings will be handled
-    as text in the first release of Subversion, but the support will
-    become more complete over time.  UTF-8 is the first priority.</p>
-
-    <p><font color="blue"><strong>NOTE:Multi-Lingual support is planned,
-    but may not be present in the first release.</strong></font></p>
+    <p>Subversion makes the same distinction, but will offer a more
+    generous notion of what constitutes a text file: not only ASCII,
+    but UTF-* encodings of Unicode too.  UTF-8 is the first priority,
+    with other encodings following if needed.</p>
 </li>
 
-</ul>  <!-- end list of features -->
+</ul>
+
 
 <br>
 </table>
