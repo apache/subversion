@@ -488,12 +488,6 @@ delta_proplists (struct context *c,
           SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_LAST_AUTHOR,
                               last_author, subpool));
 
-          /* Transmit the last-author. */
-          svn_fs_revision_prop (&last_author, fs, committed_rev, 
-                                SVN_PROP_REVISION_AUTHOR, subpool);
-          SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_UUID,
-                              last_author, subpool));
-
           /* Transmit the UUID. */
           svn_fs_get_uuid (fs, &uuid, subpool);
           SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_UUID,
