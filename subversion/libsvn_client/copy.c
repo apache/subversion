@@ -24,7 +24,6 @@
 
 #include <string.h>
 #include <assert.h>
-#include "svn_private_config.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
