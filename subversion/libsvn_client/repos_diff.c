@@ -548,7 +548,7 @@ delete_entry (const char *path,
       || (state == svn_wc_notify_state_obstructed))
     action = svn_wc_notify_skip;
   else
-    action = svn_wc_notify_delete;
+    action = svn_wc_notify_update_delete;
 
   if (pb->edit_baton->notify_func)
     (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
