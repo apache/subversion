@@ -106,8 +106,8 @@ import main  # the general svntest routines in this module.
 # of helper routines named 'run_and_verify_FOO'.  These routines take
 # one or more "expected" trees as input, then run some svn subcommand,
 # then push the output through an appropriate parser to derive an
-# "actual" tree.  Then it runs compare_trees() and returns the result.
-# This is why most tests typically end with a call to
+# "actual" tree.  Then it runs compare_trees() and raises an exception
+# on failure.  This is why most tests typically end with a call to
 # run_and_verify_FOO().
 
 
@@ -376,7 +376,7 @@ def compare_trees(a, b,
   SVNTreeNode and a context baton), and may raise exception
   main.SVNTreeUnequal.  Their return value is ignored.
 
-  If A and B are both files, then return 0 if their contents,
+  If A and B are both files, then return if their contents,
   properties, and names are all the same; else raise a main.SVNTreeUnequal.
   If A is a file and B is a directory, raise a main.SVNTypeMismatch; same
   vice-versa.  If both are directories, then for each entry that
@@ -439,7 +439,6 @@ def compare_trees(a, b,
       for b_child in b.children:
         if (b_child not in accounted_for):
           singleton_handler_b(b_child, b_baton)
-      return 0
   except main.SVNTypeMismatch:
     print 'Unequal Types: one Node is a file, the other is a directory'
     raise main.SVNTreeUnequal
@@ -451,11 +450,11 @@ def compare_trees(a, b,
     raise main.SVNTreeUnequal
   except main.SVNTreeUnequal:
     if a.name == root_node_name:
-      return 1
+      raise main.SVNTreeUnequal
     else:
       print "Unequal at node %s" % a.name
       raise main.SVNTreeUnequal
-  return 0
+
 
 
 
