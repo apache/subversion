@@ -74,15 +74,12 @@ Ben and Karl (longer term):
 Greg:
 
    - mod_dav_svn:
-      - finish repository hooks (waiting on FS a bit)
-        need: MKCOL, DELETE, GET, PUT
-	defer copy/move
+      - implement copy/move in the repos
 
       - liveprop hooks:
 	core: getcontentlength, creationdate, getetag,
 	      getlastmodified, resourcetype
-	deltav: checked-in, version-name, label-name-set, baseline-collection
-      - OPTIONS handling: activity-collection-set
+	deltav: label-name-set
 
       - vsn hooks: ???  REPORT and MKACTIVITY first
         REPORT: need the SVN:status-report
@@ -90,7 +87,6 @@ Greg:
 	validate proper support for VERSION-CONTROL. this would be the 
 	  missing piece for DeltaV "Core" support.
 
-      - MKACTIVITY should begin a txn
       - version resource URL prep should look up the node
       - CHECKOUT of a VR URL should verify the node ID of the
         REPOS_PATH in the latest revision matches the node ID in the
@@ -102,7 +98,6 @@ Greg:
    - mod_dav: no apparent changes until vsn comes in
       - need: MERGE
       - verify Vasta's work against our needs: REPORT, LABEL
-      - probably need BASELINE-CONTROL
 
    - libsvn_ra_dav:
       - update editor
