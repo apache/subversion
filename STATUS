@@ -61,9 +61,3 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: cmpilato, kfogel, jerenkrantz
 
-  * r12273, r12393
-    Fix simple bug in 'svn ls "local file with space(s) in its name"'.
-    Justification: Trivial change, annoying bug.
-    Votes:
-      +1: maxb, bliss, lundblad
-      (r12273 only) +1: kfogel

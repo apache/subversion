@@ -112,6 +112,10 @@ svn_client_ls (apr_hash_t **dirents,
 
       /* Re-open the session to the file's parent instead. */
       svn_path_split (url, &parent_url, &base_name, pool);
+      /* 'base_name' is now the last component of an URL, but we want
+         to use it as a plain file name. Therefore, we must URI-decode
+         it. */
+      base_name = svn_path_uri_decode(base_name, pool);
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, parent_url,
                                             NULL,
                                             NULL, NULL, FALSE, TRUE, 
