@@ -176,7 +176,8 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
 
   apr_hash_t *locks = apr_hash_make(trail->pool);
 
-  if (kind == svn_node_dir)
+  if ((kind == svn_node_dir)
+      && (strcmp (path, "/") != 0))
     lookup_path = apr_pstrcat (trail->pool, path, "/", NULL);
 
   svn_fs_base__trail_debug (trail, "lock-tokens", "cursor");
