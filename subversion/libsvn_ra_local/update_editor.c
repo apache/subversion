@@ -107,11 +107,15 @@ send_entry_props (svn_fs_root_t *root,
   name = svn_stringbuf_create (SVN_PROP_ENTRY_COMMITTED_DATE, subpool);  
   if (committed_date)
     value = svn_stringbuf_create_from_string (committed_date, subpool);
+  else
+    value = NULL;
   SVN_ERR ((*pset_func) (real_baton, name, value));
 
   name = svn_stringbuf_create (SVN_PROP_ENTRY_LAST_AUTHOR, subpool);
   if (last_author)
     value = svn_stringbuf_create_from_string (last_author, subpool);
+  else
+    value = NULL;
   SVN_ERR ((*pset_func) (real_baton, name, value));
 
   svn_pool_destroy (subpool);

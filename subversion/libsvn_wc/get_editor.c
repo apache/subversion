@@ -680,7 +680,7 @@ change_dir_prop (void *dir_baton,
                       local_name->len, local_value);
       else
         apr_hash_set (att_hash, local_name->data,
-                      local_name->len, "");
+                      local_name->len, svn_stringbuf_create ("", db->pool));
 
       /* write out the new attribute (via the hash) to the directory's
          THIS_DIR entry. */
