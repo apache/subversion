@@ -139,7 +139,7 @@ already know about.)
      Add prompting and retry count (at most 2) to SSL auth providers
      Justification: API, consistency with other auth provider behavior
      Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, bliss
 
 
    * r8012
@@ -157,7 +157,7 @@ already know about.)
        r8101 below solves the problem, I believe, so will remove this
        veto when that one has got approval.
      Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, bliss
       -1: kfogel
 
 
@@ -166,6 +166,7 @@ already know about.)
      Justification: Better external API documentation, ultra-low risk.
      Notes: See Concerns field of r8013 above.
      Votes:
+      +1: bliss
 
 
    * r8015,r8020
@@ -206,7 +207,7 @@ already know about.)
      Add a pool parameter to finish_abort and abort_report.
      Justification: API stability; low risk
      Votes:
-      +1: jerenkrantz, ghudson
+      +1: jerenkrantz, ghudson, bliss
 
 
    * r8096
@@ -228,6 +229,7 @@ already know about.)
      SVN_CONFIG_OPTION_STORE_AUTH_CREDS.
      Justification: API stability; low risk
      Votes:
+      +1: bliss
 
 
    * r8022, r8024, r8038
@@ -303,7 +305,7 @@ already know about.)
      Implement "--listen-port" and "--listen-host" svnserve options.
      Justification: useful features for 1.0, low risk.
      Votes:
-      +1: mbk
+      +1: mbk, bliss
 
 
    * r8055, r8085, r8104, r8105
@@ -318,3 +320,17 @@ already know about.)
      Justification: I changed my directory structure because I've now got
         non-i386 binaries.
      Votes:
+
+
+   * r8140
+     Ignore SIGPIPE in svserve.
+     Justification: Avoid uncontrolled svnserve termination, low risk.
+     Votes:
+      +1: bliss
+
+
+   * r8142
+     Fix an svnserve crash bug for network errors.
+     Justification: Avoid uncontrolled svnserve termination, low risk.
+     Votes:
+      +1: bliss
