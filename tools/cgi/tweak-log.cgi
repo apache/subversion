@@ -41,6 +41,20 @@ my $gNumRecentCommits = 20;  # number of recent commits to show on init form
 my %gCGIValues = &doCGI( );
 &main( );
 
+
+#-----------------------------------------------------------------------------#
+sub html_escape
+# (log)
+#-----------------------------------------------------------------------------#
+{
+  my $str = shift;
+  $str =~ s/&/&amp;/g;
+  $str =~ s/>/&gt;/g;
+  $str =~ s/</&lt;/g;
+  return $str;
+}
+
+
 #-----------------------------------------------------------------------------#
 sub doCGI
 # (void)
@@ -134,6 +148,9 @@ sub doInitialForm
         print "<i>Author: $author</i><br />\n";
         print "<i>Date: $date</i><br />\n";
         print "<i>Log: </i><br /><pre>\n";
+        map {
+            $_ = &html_escape ($_);
+        } @infolines;
 	print @infolines;
 	print "</pre><br />\n";
 	print "<a href=\"#__top__\">(back to top)</a>\n";
@@ -167,19 +184,6 @@ sub isValidRev
     return 1;
 }
 
-
-
-#-----------------------------------------------------------------------------#
-sub html_escape
-# (log)
-#-----------------------------------------------------------------------------#
-{
-  my $str = shift;
-  $str =~ s/&/&amp;/g;
-  $str =~ s/>/&gt;/g;
-  $str =~ s/</&lt;/g;
-  return $str;
-}
 
 #-----------------------------------------------------------------------------#
 sub doFetchLog
