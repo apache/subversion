@@ -1031,9 +1031,18 @@ svn_fs_fs__revision_proplist (apr_hash_t **proplist_p,
 {
   apr_file_t *revprop_file;
   apr_hash_t *proplist;
+  svn_error_t *err;
 
-  SVN_ERR (svn_io_file_open (&revprop_file, path_revprops (fs, rev, pool),
-                             APR_READ | APR_CREATE, APR_OS_DEFAULT, pool));
+  err = svn_io_file_open (&revprop_file, path_revprops (fs, rev, pool),
+                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+  if (err && APR_STATUS_IS_ENOENT (err->apr_err))
+    {
+      svn_error_clear (err);
+      return svn_error_createf (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                _("No such revision %ld"), rev);
+    }
+  else if (err)
+    return err;
 
   proplist = apr_hash_make (pool);
 
