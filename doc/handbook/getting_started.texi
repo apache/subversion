@@ -69,7 +69,7 @@ comfortable at a Unix command-line.
 People familiar with CVS may want to skip some of the introductory
 sections that describe Subversion's concurrent versioning model.
 Also, there is a quick guide for CVS users attached as an appendix
-(@xref{SVN for CVS users}).
+(@xref{SVN for CVS users}.)
 
 
 @subsection Features
