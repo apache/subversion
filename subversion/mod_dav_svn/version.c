@@ -1411,6 +1411,7 @@ static dav_error *build_lock_hash(apr_hash_t **locks,
                                   apr_pool_t *pool)
 {
   apr_status_t apr_err;
+  dav_error *derr;
   void *data = NULL;
   apr_xml_doc *doc = NULL;
   apr_xml_elem *child, *lockchild;
@@ -1472,6 +1473,10 @@ static dav_error *build_lock_hash(apr_hash_t **locks,
                 {
                   if (lfchild->first_cdata.first)
                     {
+                      if ((derr = dav_svn__test_canonical
+                           (lfchild->first_cdata.first->text, pool)))
+                        return derr;
+
                       /* Create an absolute fs-path */
                       lockpath = 
                         svn_path_join(path_prefix,
