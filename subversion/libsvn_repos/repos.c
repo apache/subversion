@@ -639,7 +639,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# Deltify predecessors of things changed in this revision."
       APR_EOL_STR
-      "svnadmin deltify \"$REPOS\" -r \"$REV\""
+      "nice -2 svnadmin deltify \"$REPOS\" -r \"$REV\" &"
       APR_EOL_STR
       APR_EOL_STR
       "commit-email.pl \"$REPOS\" \"$REV\" commit-watchers@example.org"
