@@ -520,8 +520,51 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
                         svn_fs_t *fs,
                         apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
+  svn_node_kind_t kind;
+  svn_lock_t *existing_lock;
+  svn_fs_root_t *root;
+  svn_revnum_t youngest;
+
+  SVN_ERR (svn_fs_fs__check_fs (fs));
+
+  SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
+
+  SVN_ERR (svn_fs_revision_root (&root, fs, youngest, pool));
+
+  SVN_ERR (svn_fs_fs__check_path (&kind, root, lock->path, pool));
+
+  /* Until we implement directory locks someday, we only allow locks
+     on files or non-existent paths. */
+  if (kind == svn_node_dir)
+    return svn_fs_fs__err_not_file (fs, lock->path);
+
+  /* We need to have a username attached to the fs. */
+  if (!fs->access_ctx || !fs->access_ctx->username)
+    return svn_fs_fs__err_no_user (fs);
+
+  /* Try and get a lock from lock->path */ 
+  SVN_ERR (get_lock_from_path_helper (fs, &existing_lock, lock->path, pool));
+
+  if (existing_lock)
+    {
+      /* If token and owner match, set creation_date of the new lock
+         to the creation date of the existing lock--this is the only
+         field that has to be the same as the existing lock (path,
+         token, and owner are by definition already the same if we've
+         made it to this codepath). */
+      if ((strcmp (lock->owner, existing_lock->owner) == 0)
+          && (strcmp (lock->token, existing_lock->token) == 0))
+        {
+          lock->creation_date = existing_lock->creation_date;
+          SVN_ERR (delete_lock (fs, existing_lock, pool));
+        }
+      else
+        return svn_fs_fs__err_path_locked (fs, existing_lock);
+    }
+
+  save_lock (fs, lock, pool);
+
+  return SVN_NO_ERROR;
 }
 
 
