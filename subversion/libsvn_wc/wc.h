@@ -847,6 +847,19 @@ svn_error_t *svn_wc__get_keywords (svn_wc_keywords_t **keywords,
 
 
 
+/* Return a new string, allocated in POOL, containing just the
+ * human-friendly portion of DATE.  Subversion date strings typically
+ * contain more information than humans want, for example
+ *
+ *   "Mon 28 Jan 2002 16:17:09.777994 (day 028, dst 0, gmt_off -21600)"
+ *   
+ * would be converted to
+ *
+ *   "Mon 28 Jan 2002 16:17:09"
+ */
+svn_string_t *svn_wc__friendly_date (const char *date, apr_pool_t *pool);
+
+
 
 /* 
  * local variables:

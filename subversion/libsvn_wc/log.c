@@ -364,7 +364,7 @@ log_do_file_xfer (struct log_runner *loggy,
         svn_string_create (revision, loggy->pool) :
         NULL;
       keywords->date = date ? 
-        svn_string_create (date, loggy->pool) :
+        svn_wc__friendly_date (date, loggy->pool) :
         NULL;
       keywords->author = author ?
         svn_string_create (author, loggy->pool) :
