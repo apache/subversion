@@ -757,6 +757,10 @@ typedef struct svn_ra_plugin_t
    * SVN_ERR_RA_NOT_IMPLEMENTED error.
    *
    * Use @a pool for all allocations.
+   *
+   * NOTE: This functionality is not available in pre-1.1 servers.  If the
+   * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
+   * returned. */
    */
   svn_error_t *(*get_locations) (void *session_baton,
                                  apr_hash_t **locations,
@@ -769,7 +773,8 @@ typedef struct svn_ra_plugin_t
    * Retrieve a subset of the interesting revisions of a file @a path
    * as seen in revision @a end.  Invoke @a handler with @a handler_baton
    * as its first argument for each such revision.  @a sesson_baton is
-   * an open RA session.  @a pool is used for all allocations.
+   * an open RA session.  @a pool is used for all allocations.  See
+   * @c svn_fs_history_prev for a discussion of interesting revisions.
    *
    * If there is an interesting revision of the file that is less than or
    * equal to start, the iteration will start at that revision.  Else, the
@@ -779,7 +784,11 @@ typedef struct svn_ra_plugin_t
    *
    * In a series of calls, the file contents for the first interesting revision
    * will be provided as a text delta against the empty file.  In the following
-   * calls, the delta will be against the contents for the previous call. */
+   * calls, the delta will be against the contents for the previous call.
+   *
+   * NOTE: This functionality is not available in pre-1.1 servers.  If the
+   * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
+   * returned. */
   svn_error_t *(*get_file_revs) (void *session_baton,
                                  const char *path,
                                  svn_revnum_t start,
