@@ -313,7 +313,7 @@ svn_error_t *svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool);
 */
 svn_error_t *svn_wc__entry_set (svn_string_t *path,
                                 apr_pool_t *pool,
-                                const char *entryname,
+                                const char *entryname, /* Ben, svn_string_t? */
                                 svn_vernum_t version,
                                 ...);
 
@@ -327,9 +327,10 @@ svn_error_t *svn_wc__entry_set (svn_string_t *path,
 */
 svn_error_t *svn_wc__entry_get (svn_string_t *path,
                                 apr_pool_t *pool,
-                                const char *entryname,
+                                const char *entryname, /* Ben, svn_string_t? */
                                 svn_vernum_t *version,
-                                ...);
+                                /* int kind, */
+                                ...);  /* Ben, hash here? */
 
 
 /* Remove ENTRYNAME from PATH's `entries' file. */
@@ -337,6 +338,28 @@ svn_error_t *svn_wc__entry_remove (svn_string_t *path,
                                    apr_pool_t *pool,
                                    const char *entryname);
 
+
+#if 0  /* Ben, have at it. */
+
+struct svn_wc__entries_index
+{
+  /* To be continued */
+};
+
+
+/* Start a loop over PATH's entries file. */
+svn_error_t *svn_wc__entries_start (struct svn_wc__entries_index **idx,
+                                    svn_string_t *path,
+                                    apr_pool_t *pool);
+
+
+/* Loop over the entries file, returning the name of each entry. 
+   When there are no more entries, *ENTRYNAME will be set to null. */
+svn_error_t *svn_wc__entries_next (struct svn_wc__entries_index *idx,
+                                   svn_string_t **entryname,
+                                   svn_vernum_t *version,
+                                   int kind);
+#endif /* 0 */
 
 
 
