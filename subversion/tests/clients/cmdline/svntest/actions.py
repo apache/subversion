@@ -47,8 +47,13 @@ def guarantee_greek_repository(path):
     # build a URL for doing an import.
     url = main.test_area_url + '/' + main.pristine_dir
 
-    # import the greek tree.
-    output, errput = main.run_svn(None, "import", url, main.greek_dump_dir)
+    # import the greek tree, using l:foo/p:bar
+    ### todo: svn should not be prompting for auth info when using
+    ### repositories with no auth/auth requirements
+    output, errput = main.run_svn(None, 'import',
+                                  '--username', 'foo',
+                                  '--password', 'bar',
+                                  url, main.greek_dump_dir)
 
     # check for any errors from the import
     if len(errput):
@@ -116,8 +121,13 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   # Remove dir if it's already there.
   main.remove_wc(wc_dir_name)
 
-  # Checkout and make a tree of the output.
-  output, errput = main.run_svn (None, 'co', URL, '-d', wc_dir_name)
+  # Checkout and make a tree of the output, using l:foo/p:bar
+  ### todo: svn should not be prompting for auth info when using
+  ### repositories with no auth/auth requirements
+  output, errput = main.run_svn (None, 'co',
+                                 '--username', 'foo',
+                                 '--password', 'bar',
+                                 URL, '-d', wc_dir_name)
   mytree = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
