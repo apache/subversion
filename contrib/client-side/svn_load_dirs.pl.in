@@ -674,6 +674,24 @@ while (defined (my $load_dir = &get_next_load_dir))
                       "performed.\n";
                   }
 
+                # Sort the added and deleted files and directories by
+                # the lowercase versions of their basenames instead of
+                # their complete path, which makes finding files that
+                # were moved into different directories easier to
+                # match up.
+                @add_files = map { $_->[0] }
+                             sort { $a->[1] cmp $b->[1] }
+                             map { [$_->[0], lc($_->[1])] }
+                             map { [$_, m#([^/]+)$#] }
+                             @add_files;
+                @del_files = map { $_->[0] }
+                             sort { $a->[1] cmp $b->[1] }
+                             map { [$_->[0], lc($_->[1])] }
+                             map { [$_, m#([^/]+)$#] }
+                             @del_files;
+
+              RELIST:
+
                 for (my $i=0; $i<$max; ++$i)
                   {
                     my $add_filename = '';
@@ -708,7 +726,7 @@ while (defined (my $load_dir = &get_next_load_dir))
 
                     printf $printf_format, $i;
                     print  " ", $del_filename,
-                           " " x ($filename_width - length($del_filename)),
+                           "_" x ($filename_width - length($del_filename)),
                            " ", $add_filename, "\n";
 
                     if (($i+1) % 22 == 0)
@@ -728,10 +746,15 @@ while (defined (my $load_dir = &get_next_load_dir))
                 my $del_index;
                 my $got_line = 0;
                 do {
-                  print "Enter two indexes for each column to rename or F ",
-                        "when you are finished: ";
+                  print "Enter two indexes for each column to rename, ",
+                        "(R)elist, or (F)inish: ";
                   $line = <STDIN>;
                   $line = '' unless defined $line;
+                  if ($line =~ /^R$/i )
+                    {
+                      goto RELIST;
+                    }
+                  
                   if ($line =~ /^F$/i)
                     {
                       $got_line = 1;
