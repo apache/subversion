@@ -87,7 +87,7 @@ SVN::Delta::Editor objects, with the edit_baton omitted. The pool is
 also optional.
 
 If you are subclassing, the methods take exactly the same arguments as
-the member functions (note tht void ** are returned data though as
+the member functions (note that void ** are returned data though as
 throughout the perl bindings), with the edit_baton omitted.
 
 =cut

@@ -154,7 +154,7 @@ Last up-to-date time for properties (0 means no information available).
 =item $wcent-E<gt>checksum()
 
 Base-64 encoded checksum for the untranslated text base file, can be undef for
-backwards compatability.
+backwards compatibility.
 
 =item $wcent-E<gt>cmt_rev()
 

@@ -85,7 +85,7 @@ my ($rph, $rplrev) = $ctx->revprop_list($reposurl,$current_rev);
 isa_ok($rph,'HASH','Returned hash reference form revprop_list');
 is($rplrev,$current_rev,'Returned current rev from revprop_list');
 is($rph->{'svn:author'},$username,
-   'svn:author is exected user from revprop_list');
+   'svn:author is expected user from revprop_list');
 if ($^O eq 'MSWin32') {
     # we skip the log change test on win32 so we have to test
     # for a different var here
@@ -126,7 +126,7 @@ $ctx->log_msg(
         isa_ok($commit_item,'_p_svn_client_commit_item_t',
                'commit_item element is a _p_svn_client_commit_item_t');
         is($commit_item->path(),"$wcpath/dir1/new",
-           "commit_item has proper path for commited file");
+           "commit_item has proper path for committed file");
         is($commit_item->kind(),$SVN::Node::file,
            "kind() shows the node as a file");
         is($commit_item->url(),"$reposurl/dir1/new",
@@ -302,7 +302,7 @@ is($ctx->blame("$reposurl/foo",'HEAD','HEAD', sub {
    undef,
    'blame returns undef');
 
-ok(open(CAT, "+>$testpath/cattest"),'open file for cat ouput');
+ok(open(CAT, "+>$testpath/cattest"),'open file for cat output');
 is($ctx->cat(\*CAT, "$reposurl/foo", 'HEAD'),undef,
    'cat returns undef');
 ok(seek(CAT,0,0),
