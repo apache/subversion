@@ -47,7 +47,7 @@ Candidate changes:
     Justification:
       Positively huge performance regression.
     Votes:
-      +1: bliss
+      +1: bliss, lundblad
       +1: brane (only r11211 so far)
 
   * r11224 (Issue 2070)
@@ -95,4 +95,11 @@ Candidate changes:
       Completely breaks Perl bindings for some versions of Perl.
     Votes:
       +1: breser
-      
+
+  * r11294
+    Fix issue #2090. Don't send invalid XML over DAV.
+    Justification:
+      Makes it impossible to use, i.e. ISO-8859-1 non-svn: props over DAV.
+      Simple fix.
+    Votes:
+      +1: lundblad
