@@ -50,10 +50,8 @@
 /* ==================================================================== */
 
 
-#include "svn_types.h"
-#include "svn_delta.h"
-#include "apr_pools.h"
-#include "apr_file_io.h"
+#include "wc.h"
+
 
 
 /* Send the entire contents of XML_BUFFER to be parsed by XML_PARSER;
@@ -75,46 +73,111 @@ flush_xml_buffer (svn_string_t *xml_buffer,
 }
 
 
-/* Fetch the next child subdirectory of CURRENT_DIR by searching in
-   DIRHANDLE.  If there are no more subdir children, return NULL.  */
-static svn_string_t *
-get_next_child_subdir (svn_string_t *current_dir,
+
+
+
+/* Return the NAME of the next child subdir of DIRHANDLE.  DIRHANDLE
+   is assumed to be already open.  If there are no more subdir
+   children, return NULL.  */
+static svn_error_t *
+get_next_child_subdir (svn_string_t **name,
                        apr_dir_t *dirhandle,
                        apr_pool_t *pool)
 {
-  /* Todo: get this right, using apr's functions for grabbing "next"
-     dirent in a apr_dir_t and examining the "current dirent".  */
+  apr_status_t status;
+  char *entryname;
+  apr_filetype_e entrytype;
+  int done = 0;
+
+  do {
+    /* Read the next entry from dirhandle, get its name and type, too. */
+    status = apr_readdir (dirhandle);
+    if (status = APR_ENOENT) /* no more entries */
+      {
+        *name = NULL;
+        return SVN_NO_ERROR;
+      }
+    else if (status)
+      return svn_create_error (status, 0, "apr_readdir choked.", NULL, pool);
+
+    status = apr_get_dir_filename (&entryname, dirhandle);
+    if (status)
+      return svn_create_error (status, 0, "apr_get_dir_filename choked.",
+                               NULL, pool);
+
+    status = apr_dir_entry_ftype (&entrytype, dirhandle);
+    if (status)
+      return svn_create_error (status, 0, "apr_dir_entry_ftype choked.",
+                               NULL, pool);
+
+    /* Exit the loop if the entry is a subdir AND isn't "." or ".." */
+    if ( (entrytype == APR_DIR)
+         && (strcmp (entryname, "."))
+         && (strcmp (entryname, "..")) )
+      {
+        *name = svn_string_create (entryname, pool);
+        return SVN_NO_ERROR;
+      }
+
+  } while (1);
+  
 }
 
 
-/* Return a bytestring containing the contents of `DIR/SVN/delta_here',
-   using whatever abstraction methods libsvn_wc implements.  If the
-   file is empty, return NULL instead.  */
-static svn_string_t *
-get_delta_here_contents (svn_string_t *dir,
+
+
+
+/* Return a bytestring STR containing the contents of
+   `DIR/SVN/delta_here', using whatever abstraction methods libsvn_wc
+   implements.  If the file is empty, set STR to NULL instead.  */
+static svn_error_t *
+get_delta_here_contents (svn_string_t **str,
+                         svn_string_t *dir,
                          apr_pool_t *pool)
 {
+  char buf[BUFSIZ];
+  svn_error_t *err;
+  apr_size_t bytes_read;
+  apr_status_t status = 0;
+  apr_file_t *filehandle = NULL;
   svn_string_t *localmod_buffer = svn_string_create ("", pool);
 
   /* Have libsvn_wc return a filehandle to `delta_here' using its
      abstract methods to search DIR */
-  apr_file_t *delta_here = svn_wc_get_delta_here (dir);
+  err = svn_wc__open_adm_file (&filehandle, dir,
+                               SVN_WC__ADM_DELTA_HERE,
+                               APR_READ, pool);
+  if (err)
+    return err;
 
-  apr_open (delta_here);
-  apr_full_read (delta_here, localmod_buffer);
-  apr_close (delta_here);
+  /* Copy the contents of the file into a bytestring */
+  while (status != APR_EOF)
+    {
+      status = apr_full_read (filehandle, buf, BUFSIZ, &bytes_read);
+      if (status && (status != APR_EOF))
+        return svn_create_error (status, 0, "apr_full_read choked", 
+                                 NULL, pool);
+      svn_string_appendbytes (localmod_buffer, buf, bytes_read, pool);
+    }
+  err = svn_wc__close_adm_file (filehandle, dir,
+                                SVN_WC__ADM_DELTA_HERE, pool);
+  if (err)
+    return err;
 
-  if (file is empty)
-    return NULL;
+  if (svn_string_isempty (localmod_buffer))
+    *str = NULL;
 
   else
-    return localmod_buffer;
+    *str = localmod_buffer;
+
+  return SVN_NO_ERROR;
 }
 
 
 
 
-/* Recursive working-copy crawler. Push xml out to parser when
+
+/* The recursive working-copy crawler. Push xml out to parser when
    appropriate. */
 static svn_error_t *
 do_crawl (svn_string_t *current_dir,
@@ -124,43 +187,75 @@ do_crawl (svn_string_t *current_dir,
 
 {
   svn_error_t *err;
-  svn_string_t *child;
+  apr_status_t status;
+  apr_dir_t *thisdir;
+  svn_string_t *child = NULL;
   int fruitful = 0;
+  svn_string_t *localmod_buffer = NULL;
 
-  /* grab contents of current `delta-here' file */
-  svn_string_t *localmod_buffer = get_delta_here_contents (current_dir);
+  /* Grab contents of current `delta-here' file, place into
+     localmod_buffer. */
+  err = get_delta_here_contents (&localmod_buffer, current_dir, pool);
+  if (err)
+    return err;
   
-  /* if non-empty, send the contents to the parser */
+  /* If non-NULL, append to our xml_buffer and send everything to parser */
   if (localmod_buffer)
     {
-      svn_string_appendbytes (xml_buffer, localmod_buffer, pool)
+      svn_string_appendstr (xml_buffer, localmod_buffer, pool)
       err = flush_xml_buffer (xml_buffer, xml_parser);
       if (err)
         return err;
       fruitful = 1;
     }
 
-  /* recurse depth-first */
+  /* Open the current directory */
+  status = apr_opendir (&thisdir, current_dir->data, pool);
+  if (status)
+    return svn_create_error (status, 0, "apr_opendir choked.", NULL, pool);
 
-  while (child = get_next_child_subdir ())
-    {
-      write 3 "down" tags into xml_buffer;
-      err = do_crawl (child);
+  /* Get the first subdir child */
+  err = get_next_child_subdir (&child, thisdir, pool);
+  if (err)
+    return err;
 
-      if (err->apr_err == SVN_NO_ERROR)
+  /* Recurse depth-first: */
+  while (child)
+    { 
+      /* write 3 "down" tags into xml_buffer */
+      size_t remember_this_offset = xml_buffer->len;  /* backup */
+      svn_string_appendbytes (xml_buffer, " <replace name=\"", 16, pool);
+      svn_string_appendstr (xml_buffer, current_dir, pool);
+      svn_string_appendbytes (xml_buffer,
+                              "\"> <dir> <tree-delta> ", 22, pool);
+
+      err = do_crawl (child, xml_buffer, xml_parser, pool);
+      
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_UNFRUITFUL_DESCENT)
+            /* remove 3 "down" tags from xml_buffer */
+            xml_buffer->len = remember_this_offset;  /* restore */
+
+          else
+            return err;  /* uh-oh, a _real_ error */
+        }
+      
+      else  /* err->apr_err == SVN_NO_ERROR */
         fruitful = 1;
       
-      else if (err->apr_err == SVN_ERR_UNFRUITFUL_DESCENT)
-        /* effectively "undo" the descent tags */
-        remove 3 "down" tags from xml_buffer;
-
-      else /* uh-oh, a _real_ error */
+      /* Get the next subdir child */
+      err = get_next_child_subdir (&child, thisdir, pool);
+      if (err)
         return err;
-    } 
-  
+  } 
+    
   if (fruitful) 
     {
-      write 3 "up" tags into xml_buffer;
+      /* write 3 "up" tags into xml_buffer */
+      svn_string_appendbytes 
+        (xml_buffer, " </tree-delta> </dir> </replace> ", 33, pool);
+      
       return SVN_NO_ERROR;
     }
 
@@ -169,12 +264,12 @@ do_crawl (svn_string_t *current_dir,
 }
 
 
-
+/*------------------------------------------------------------------*/
 /* Public interface.
 
    Do a depth-first crawl of the local changes in a working copy,
-   beginning at ROOT_DIRECTORY.  Push synthesized xml (representing a
-   coherent tree-delta) at XML_PARSER.
+   beginning at ROOT_DIRECTORY (absolute path).  Push synthesized xml
+   (representing a coherent tree-delta) at XML_PARSER.
 
    Presumably, the client library will grab a "walker" from libsvn_ra,
    build an svn_xml_parser_t around it, and then pass the parser to
@@ -182,7 +277,7 @@ do_crawl (svn_string_t *current_dir,
    ultimately translated into network requests.  */
 
 svn_error_t *
-svn_cl_crawl_local_mods (svn_string_t *root_directory,
+svn_wc_crawl_local_mods (svn_string_t *root_directory,
                          svn_xml_parser_t *xml_parser,
                          apr_pool_t *pool)
 {
