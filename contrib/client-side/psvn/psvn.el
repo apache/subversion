@@ -195,7 +195,7 @@ Possible values are: commit, revert.")
 (defvar svn-status-default-column 23)
 (defvar svn-status-default-revision-width 4)
 (defvar svn-status-default-author-width 9)
-(defvar svn-status-line-format " %c%c %4s %4s %-9s")
+(defvar svn-status-line-format " %c%c%c %4s %4s %-9s")
 (defvar svn-status-short-mod-flag-p t)
 (defvar svn-start-of-file-list-line-number 0)
 (defvar svn-status-files-to-commit nil)
@@ -267,9 +267,31 @@ See `svn-status--line-info->directory-p' for what counts as a directory."
 See `svn-status--line-info->directory-p' for what counts as a directory."
   :group 'psvn-faces)
 
+;based on font-lock-warning-face
+(defface svn-status-locked-face
+  '((t
+     (:weight bold :foreground "Red")))
+  "Face for the phrase \"[ LOCKED ]\" *svn-status* buffers."
+  :group 'psvn-faces)
+
+;based on vhdl-font-lock-directive-face
+(defface svn-status-switched-face
+  '((((class color)
+      (background light))
+     (:foreground "CadetBlue"))
+    (((class color)
+      (background dark))
+     (:foreground "Aquamarine"))
+    (t
+     (:bold t :italic t)))
+  "Face for the phrase \"(switched)\" non-directories in svn status buffers."
+  :group 'psvn-faces)
+
 (defvar svn-highlight t)
 ;; stolen from PCL-CVS
 (defun svn-add-face (str face &optional keymap)
+  "Return string STR decorated with the specified FACE.
+If `svn-highlight' is nil then just return STR."
   (when svn-highlight
     ;; Do not use `list*'; cl.el might not have been loaded.  We could
     ;; put (require 'cl) at the top but let's try to manage without.
@@ -295,6 +317,13 @@ Else return TEXT unchanged."
   (if condition
       (svn-add-face text face1)
     (svn-add-face text face2)))
+
+(defun svn-status-maybe-add-string (condition string face)
+  "If CONDITION then return STRING decorated with FACE.
+Otherwise, return \"\"."
+  (if condition
+      (svn-add-face string face)
+    ""))
 
 ; compatibility
 ; emacs 20
@@ -526,6 +555,9 @@ The results are used to build the `svn-status-info' variable."
           (svn-marks)
           (svn-file-mark)
           (svn-property-mark)
+          (svn-locked-mark)
+          (svn-with-history-mark)
+          (svn-switched-mark)
           (svn-update-mark)
           (local-rev)
           (last-change-rev)
@@ -548,21 +580,25 @@ The results are used to build the `svn-status-info' variable."
             (setq svn-status-head-revision (match-string 1))))
          ((looking-at "Performing status on external item at '\(.*\)'")
           ;; The *next* line has info about the directory named in svn:externals
+          ;; [ie the directory in (match-string 1)]
           ;; we should parse it, and merge the info with what we have already know
           ;; but for now just ignore the line completely
           (forward-line)
           )
          (t
           (setq svn-marks (buffer-substring (point) (+ (point) 8))
-                svn-file-mark (elt svn-marks 0) ; 1st column
-                svn-property-mark (elt svn-marks 1) ; 2nd column
-                ;;svn-locked-mark (elt svn-marks 2)            ; 3rd column
-                ;;svn-added-with-history-mark (elt svn-marks 3); 4th column
-                ;;svn-switched-mark (elt svn-marks 4)          ; 5th column
-                svn-update-mark (elt svn-marks 7)) ; 8th column
+                svn-file-mark (elt svn-marks 0)         ; 1st column - M,A,C,D,G,? etc
+                svn-property-mark (elt svn-marks 1)     ; 2nd column - M,C (properties)
+                svn-locked-mark (elt svn-marks 2)       ; 3rd column - L or blank
+                svn-with-history-mark (elt svn-marks 3) ; 4th column - + or blank
+                svn-switched-mark (elt svn-marks 4)     ; 5th column - S or blank
+                svn-update-mark (elt svn-marks 7))      ; 8th column - * or blank
 
-          (when (eq svn-property-mark ?\ ) (setq svn-property-mark nil))
-          (when (eq svn-update-mark ?\ ) (setq svn-update-mark nil))
+          (when (eq svn-property-mark ?\ )     (setq svn-property-mark nil))
+          (when (eq svn-locked-mark ?\ )       (setq svn-locked-mark nil))
+          (when (eq svn-with-history-mark ?\ ) (setq svn-with-history-mark nil))
+          (when (eq svn-switched-mark ?\ )     (setq svn-switched-mark nil))
+          (when (eq svn-update-mark ?\ )       (setq svn-update-mark nil))
           (forward-char 8)
           (skip-chars-forward " ")
           (cond
@@ -587,7 +623,10 @@ The results are used to build the `svn-status-info' variable."
                                             local-rev
                                             last-change-rev
                                             author
-                                            svn-update-mark)
+                                            svn-update-mark
+                                            svn-locked-mark
+                                            svn-with-history-mark
+                                            svn-switched-mark)
                                       svn-status-info))
           (setq revision-width (max revision-width
                                     (length (number-to-string local-rev))
@@ -599,7 +638,7 @@ The results are used to build the `svn-status-info' variable."
       (setq svn-status-default-column
             (+ 6 revision-width revision-width author-width
                (if svn-status-short-mod-flag-p 3 0)))
-      (setq svn-status-line-format (format " %%c%%c %%%ds %%%ds %%-%ds"
+      (setq svn-status-line-format (format " %%c%%c%%c %%%ds %%%ds %%-%ds"
                                            revision-width
                                            revision-width
                                            author-width))
@@ -962,6 +1001,23 @@ EVENT could be \"mouse clicked\" or similar."
     nil))
 (defun svn-status-line-info->author (line-info) (nth 6 line-info))
 (defun svn-status-line-info->modified-external (line-info) (nth 7 line-info))
+(defun svn-status-line-info->locked (line-info)
+  "Return whether LINE-INFO represents a locked file.
+This is column three of the `svn status' output.
+The result will be nil or \"L\".
+\(A file becomes locked when an operation is interupted; run \[svn-status-cleanup]'
+to unlock it.\)"
+  (nth 8 line-info))
+(defun svn-status-line-info->historymark (line-info)
+  "Mark from column four of output from `svn status'.
+This will be nil unless the file is scheduled for addition with
+history, when it will be \"+\"."
+  (nth 9 line-info))
+(defun svn-status-line-info->switched (line-info)
+  "Return whether LINE-INFO is switched relative to its parent.
+This is column five of the output from `svn status'.
+The result will be nil or \"S\"."
+  (nth 10 line-info))
 
 (defun svn-status-line-info->is-visiblep (line-info)
   (not (or (svn-status-line-info->hide-because-unknown line-info)
@@ -1135,25 +1191,29 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
     (let ((action)
           (name)
           (done)
+          (skip)
           (result))
       (goto-char (point-min))
       (setq svn-status-commit-rev-number nil)
-      (while (not done)
-        (cond ((looking-at "Sending")
+      (setq skip nil) ; set to t whenever we find a line not about a committed file
+      (while (< (point) (point-max))
+        (cond ((= (point-at-eol) (point-at-bol)) ;skip blank lines
+               (setq skip t))
+              ((looking-at "Sending")
                (setq action 'committed))
               ((looking-at "Adding")
                (setq action 'added))
               ((looking-at "Deleting")
                (setq action 'deleted))
               ((looking-at "Transmitting file data")
-               ;; perhaps parse next line also (Committed revision 96.)
-               (re-search-forward "Committed revision \\([0-9]+\\)")
+               (setq skip t))
+              ((looking-at "Committed revision \([0-9]+\)")
                (setq svn-status-commit-rev-number
                      (string-to-number (match-string-no-properties 1)))
-               (setq done t))
-              (t
+               (setq skip t))
+              (t ;; this should never be needed(?)
                (setq action 'unknown)))
-        (unless done
+        (unless skip                                ;found an interesting line
           (forward-char 15)
           (when svn-status-operated-on-dot
             ;; when the commit used . as argument, delete the trailing directory
@@ -1163,10 +1223,11 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
           ;;(message "%S %S" action name)
           (setq result (cons (list name action)
                              result))
-          (forward-line 1)
-          (goto-char (point-at-bol))))
+          (setq skip nil))
+        (forward-line 1))
       result)))
-;; (svn-status-parse-commit-output)
+;;(svn-status-parse-commit-output)
+;;(svn-status-annotate-status-buffer-entry)
 
 (defun svn-status-line-info->directory-p (line-info)
   "Return t if LINE-INFO refers to a directory, nil otherwise.
@@ -1217,12 +1278,17 @@ Symbolic links to directories count as directories (see `file-directory-p')."
                      (format svn-status-line-format
                              (svn-status-line-info->filemark line-info)
                              (or (svn-status-line-info->propmark line-info) ? )
+                             (or (svn-status-line-info->historymark line-info) ? )
                              (or (svn-status-line-info->localrev line-info) "")
                              (or (svn-status-line-info->lastchangerev line-info) "")
                              (svn-status-line-info->author line-info)))
              'svn-status-marked-face)
             (if svn-status-short-mod-flag-p external filename)
             (if svn-status-short-mod-flag-p filename external)
+            (svn-status-maybe-add-string (svn-status-line-info->locked line-info)
+                                         " [ LOCKED ]" 'svn-status-locked-face)
+            (svn-status-maybe-add-string (svn-status-line-info->switched line-info)
+                                         " (switched)" 'svn-status-switched-face)
             elide-hint
             "\n")))
 
@@ -2760,7 +2826,7 @@ The conflicts must be marked with rcsmerge conflict markers."
   (let ((file-info (svn-status-get-line-information)))
     (or (and file-info
              (= ?C (svn-status-line-info->filemark file-info))
-             (svn-resolve-conflicts 
+             (svn-resolve-conflicts
               (svn-status-line-info->full-path file-info)))
         (error "can not resolve conflicts at this point"))))
 
