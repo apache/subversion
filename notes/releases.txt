@@ -63,44 +63,30 @@
 
 6. It's release time, so cd to the release branch's working copy.
 
-   a) Make sure your release branch wc has the following packages
-      extracted into the root of the wc tree:
+   Make sure your release branch wc has the following packages
+   extracted into the root of the wc tree:
 
-      apr           (see INSTALL, section I)
-      apr-util      (see INSTALL, section I)
-      neon          (see INSTALL, section I)
+   apr           (see INSTALL, section I)
+   apr-util      (see INSTALL, section I)
+   neon          (see INSTALL, section I)
 
-      To install apr/apr-util, see INSTALL, section I.1.
+   To install apr/apr-util, see INSTALL, section I.1.
 
-      To install neon, see INSTALL, section I.5.
+   To install neon, see INSTALL, section I.5.
 
-      To configure/install Apache (httpd-2.X.YY), see INSTALL,
-      section I.7 and section III.  If you maintain a separate
-      build/release area, and don't want to over-write an
-      existing/working installation of Apache, you may want to use
-      --prefix=/usr/local/apache2 to install a parallel instance of
-      Apache.
+   To configure/install Apache (httpd-2.X.YY), see INSTALL,
+   section I.7 and section III.  If you maintain a separate
+   build/release area, and don't want to over-write an
+   existing/working installation of Apache, you may want to use
+   --prefix=/usr/local/apache2 to install a parallel instance of
+   Apache.
 
-      To make sure httpd.conf is properly set up for DAV access, see
-      subversion/tests/clients/cmdline/README.
+   To make sure httpd.conf is properly set up for DAV access, see
+   subversion/tests/clients/cmdline/README.
 
-      Also, see sections 'Building the Latest Source under Unix' and
-      'BUILDING A SUBVERSION SERVER' in the INSTALL file. for more
-      detailed build information.
-
-   b) Run './autogen.sh && ./configure' so the design docs can get
-      built in the branch tree (in step 4, dist.sh will move the built
-      design docs into the release sandbox).
-
-   c) Grab the latest prebuilt book from http://svnbook.red-bean.com/
-
-      cd doc/book/book
-      wget http://svnbook.red-bean.com/book.pdf
-      wget http://svnbook.red-bean.com/book.html
-      cd ../../..
-
-      (The book maintainers keep those files up to date, so the
-      release manager doesn't have to rebuild the book.)
+   Also, see sections 'Building the Latest Source under Unix' and
+   'BUILDING A SUBVERSION SERVER' in the INSTALL file. for more
+   detailed build information.
 
 7. Merge CHANGES into the release branch. Do it the same way as described in
    section 4 in this document when merging fixes to the release branch.

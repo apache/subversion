@@ -94,9 +94,6 @@ echo "  relase branch's revision: $REVISION"
 echo "     executable's revision: $REVISION_SVN"
 echo "     constructed from path: /$REPOS_PATH"
 
-echo "Building new design docs in docs/ ..."
-make doc-design
-
 rm -rf "$DIST_SANDBOX"
 mkdir "$DIST_SANDBOX"
 echo "Removed and recreated $DIST_SANDBOX"
@@ -127,16 +124,15 @@ find "$DISTPATH" -name config.nice -print | xargs rm -f
 echo "Running ./autogen.sh in sandbox, to create ./configure ..."
 (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
 
-echo "Copying new docs into sandbox..."
-for name in doc/programmer/design/svn-design.info   \
-            doc/programmer/design/svn-design.info-* \
-            doc/programmer/design/svn-design.html   \
-            doc/programmer/design/svn-design.txt    \
-            doc/book/book/*.html                    \
-            doc/book/book/*.pdf                     
-do
-   cp "$name" "$DISTPATH/$name"
-done
+echo "Downloading book into sandbox..."
+
+wget http://svnbook.red-bean.com/book.pdf \
+  -O "$DISTPATH/doc/book/book/book.pdf" ||
+  echo "ERROR: Problem getting the book.pdf file." && exit 1
+
+wget http://svnbook.red-bean.com/book.html \
+  -O "$DISTPATH/doc/book/book/book.html" ||
+  echo "ERROR: Problem getting the book.html file." && exit 1
 
 cat > "$DISTPATH/ChangeLog.CVS" <<EOF
 The old CVS ChangeLog is kept at 
