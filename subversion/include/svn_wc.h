@@ -291,8 +291,8 @@ svn_error_t *svn_wc_copy (svn_string_t *src,
                           svn_string_t *dst,
                           apr_pool_t *pool);
 
-svn_error_t *svn_wc_delete_file (svn_string_t *file,
-                                 apr_pool_t *pool);
+svn_error_t *svn_wc_delete (svn_string_t *path,
+                            apr_pool_t *pool);
 
 /* Add an entry for DIR, and create an administrative directory for
    it.  Does not check that DIR exists on disk; caller should take

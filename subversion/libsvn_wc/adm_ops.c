@@ -285,14 +285,17 @@ svn_wc_copy (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_wc_delete_file (svn_string_t *file, apr_pool_t *pool)
+svn_wc_delete (svn_string_t *path, apr_pool_t *pool)
 {
   svn_string_t *dir, *basename;
 
-  svn_path_split (file, &dir, &basename, svn_path_local_style, pool);
+  /* We need to mark this entry for deletion in its parent's entries
+     file, so we split off basename from the parent path, then fold in
+     the addition of a delete flag. */
+  svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
 
   SVN_ERR (svn_wc__entry_fold_sync_intelligently 
-           (dir, basename, SVN_INVALID_REVNUM, svn_node_file,
+           (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
             SVN_WC_ENTRY_DELETED, 0, 0, pool, NULL, NULL));
 
   return SVN_NO_ERROR;

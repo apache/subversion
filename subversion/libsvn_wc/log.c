@@ -229,79 +229,111 @@ signal_error (struct log_runner *loggy, svn_error_t *err)
 
 
 static svn_error_t *
-remove_from_revision_control (struct log_runner *loggy, svn_string_t *name)
+remove_from_revision_control (struct log_runner *loggy, 
+                              svn_string_t *name,
+                              svn_boolean_t keep_wf)
 {
   svn_error_t *err;
   apr_hash_t *entries = NULL;
+  svn_string_t *full_path = svn_string_dup (loggy->path, loggy->pool);
+  svn_boolean_t is_this_dir;
+
+  /* `name' is either a file's basename, or SVN_WC_ENTRY_THIS_DIR. */
+  is_this_dir = (strcmp (name->data, 
+                         SVN_WC_ENTRY_THIS_DIR)) ? FALSE : TRUE;
+      
+  /* Determine the actual full path of the affected item so we can
+     easily read its entry and check its state. */
+  if (is_this_dir)
+    {
+      svn_string_t *parent_dir, *basename;
+
+      svn_path_split (full_path, &parent_dir, &basename,
+                      svn_path_local_style, loggy->pool);
+
+      /* Remove this entry (which is a directory) from its parent's
+         entries file, not the "this dir" entry from its own entries
+         file. */
+      SVN_ERR (svn_wc_entries_read (&entries, parent_dir, loggy->pool));
+      svn_wc__entry_remove (entries, basename);
+      SVN_ERR (svn_wc__entries_write (entries, parent_dir, loggy->pool));
+    }
+  else
+    {
+      svn_path_add_component (full_path, name, svn_path_local_style);
+
+      /* Remove this entry from its parent's entries file. */
+      SVN_ERR (svn_wc_entries_read (&entries, loggy->path, loggy->pool));
+      svn_wc__entry_remove (entries, name);
+      SVN_ERR (svn_wc__entries_write (entries, loggy->path, loggy->pool));
+    }
   
-  /* Remove this entry from the entries file. */
-  err = svn_wc_entries_read (&entries, loggy->path, loggy->pool);
-  if (err)
-    return err;
-  svn_wc__entry_remove (entries, name);
-  err = svn_wc__entries_write (entries, loggy->path, loggy->pool);
-  if (err)
-    return err;
   
-  /* Remove its text-base copy, if any, and conditionally remove
-     working file too. */
-  {
-    svn_string_t *file_full_path;
-    svn_string_t *text_base_path;
-    enum svn_node_kind kind;
+  if (is_this_dir)
+    {
+      /* This should be simple (I hope).  We just need to destroy
+         the administrative directory associated with this
+         directory entry. */
+      SVN_ERR (svn_wc__adm_destroy (full_path, loggy->pool));
+    }
+  else
+    {
+      /* Remove its text-base copy, if any, and conditionally remove
+         working file too. */
+      svn_string_t *text_base_path;
+      enum svn_node_kind kind;
     
-    file_full_path = svn_string_dup (loggy->path, loggy->pool);
-    svn_path_add_component (file_full_path, name, svn_path_local_style);
-    text_base_path
-      = svn_wc__text_base_path (file_full_path, 0, loggy->pool);
-    err = svn_io_check_path (text_base_path, &kind, loggy->pool);
-    if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-      return SVN_NO_ERROR;
-    else if (err)
-      return err;
+      text_base_path
+        = svn_wc__text_base_path (full_path, 0, loggy->pool);
+      err = svn_io_check_path (text_base_path, &kind, loggy->pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        return SVN_NO_ERROR;
+      else if (err)
+        return err;
     
     /* Else we have a text-base copy, so use it. */
 
-    if (kind == svn_node_file)
-      {
-        apr_status_t apr_err;
-        svn_boolean_t same;
-        
+      if (kind == svn_node_file)
         {
-          /* Aha!  There is a text-base file still around.  Use it
-             to check if the working file is modified; if wf is not
-             modified, we should remove it too. */
-          err = svn_wc__files_contents_same_p (&same,
-                                               file_full_path,
-                                               text_base_path,
-                                               loggy->pool);
-          if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
-            return err;
-          else if (! err)
-            {
-              apr_err = apr_file_remove (file_full_path->data,
-                                         loggy->pool);
-              if (apr_err)
-                return svn_error_createf
-                  (apr_err, 0, NULL,
-                   loggy->pool,
-                   "log.c:start_handler() (SVN_WC__LOG_DELETE_ENTRY): "
-                   "error removing file %s",
-                   file_full_path->data);
-            }
-        }
+          apr_status_t apr_err;
+          svn_boolean_t same;
         
-        apr_err = apr_file_remove (text_base_path->data, loggy->pool);
-        if (apr_err)
-          return svn_error_createf
-            (apr_err, 0, NULL,
-             loggy->pool,
-             "log.c:start_handler() (SVN_WC__LOG_DELETE_ENTRY): "
-             "error removing file %s",
-             text_base_path->data);
-      }
-  }
-
+          if (! keep_wf)
+            {
+              /* Aha!  There is a text-base file still around.  Use it to
+                 check if the working file is modified; if wf is not
+                 modified, and we haven't been asked to keep the wf
+                 around, we should remove it too. */
+              err = svn_wc__files_contents_same_p (&same,
+                                                   full_path,
+                                                   text_base_path,
+                                                   loggy->pool);
+              if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
+                return err;
+              else if (! err)
+                {
+                  apr_err = apr_file_remove (full_path->data,
+                                             loggy->pool);
+                  if (apr_err)
+                    return svn_error_createf
+                      (apr_err, 0, NULL,
+                       loggy->pool,
+                       "log.c:start_handler() (SVN_WC__LOG_DELETE_ENTRY): "
+                       "error removing file %s",
+                       full_path->data);
+                }
+            }
+        
+          apr_err = apr_file_remove (text_base_path->data, loggy->pool);
+          if (apr_err)
+            return svn_error_createf
+              (apr_err, 0, NULL,
+               loggy->pool,
+               "log.c:start_handler() (SVN_WC__LOG_DELETE_ENTRY): "
+               "error removing file %s",
+               text_base_path->data);
+        }
+    }
   return SVN_NO_ERROR;
 }
 
@@ -689,7 +721,7 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
   svn_error_t *err;
   svn_string_t *sname = svn_string_create (name, loggy->pool);
   
-  err = remove_from_revision_control (loggy, sname);
+  err = remove_from_revision_control (loggy, sname, FALSE);
   if (err)
     return err;
 
@@ -852,37 +884,38 @@ log_do_committed (struct log_runner *loggy,
       apr_time_t text_time = 0; /* By default, don't override old stamp. */
       apr_time_t prop_time = 0; /* By default, don't override old stamp. */
       enum svn_node_kind kind;
-      svn_string_t *sname = svn_string_create (name, loggy->pool);
-      apr_hash_t *entries = NULL;
       svn_wc_entry_t *entry;
       svn_string_t *prop_path, *tmp_prop_path, *prop_base_path;
+      svn_string_t *sname = svn_string_create (name, loggy->pool);
+      svn_boolean_t is_this_dir;
 
-      err = svn_wc_entries_read (&entries, loggy->path, loggy->pool);
-      if (err)
-        return err;
-          
-      entry = apr_hash_get (entries, sname->data, sname->len);
+      /* `name' is either a file's basename, or SVN_WC_ENTRY_THIS_DIR. */
+      is_this_dir = (strcmp (name, SVN_WC_ENTRY_THIS_DIR)) ? FALSE : TRUE;
+      
+      /* Determine the actual full path of the affected item so we can
+         easily read its entry and check its state. */
+      {
+        svn_string_t *full_path;
+
+        full_path = svn_string_dup (loggy->path, loggy->pool);
+        if (! is_this_dir)
+          svn_path_add_component (full_path, sname, svn_path_local_style);
+        SVN_ERR (svn_wc_entry (&entry, full_path, loggy->pool));
+      }
+
       if (entry && (entry->state & SVN_WC_ENTRY_DELETED))
         {
-          err = remove_from_revision_control (loggy, sname);
+          err = remove_from_revision_control (loggy, sname, TRUE);
           if (err)
             return err;
         }
       else   /* entry not being deleted, so mark commited-to-date */
         {
-          /* `name' will either be a file's basename, or
-             SVN_WC_ENTRY_THIS_DIR. */
-          svn_boolean_t is_this_dir;
-
-          if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
-            is_this_dir = TRUE;
-          else
-            is_this_dir = FALSE;
-
           if (! is_this_dir)
             {
-              /* `name' is a file's basename.  check for textual
-                 changes. */
+              /* If we get here, `name' is a file's basename.
+                 `basename' is an svn_string_t version of it.  Check
+                 for textual changes. */
               working_file = svn_string_dup (loggy->path, loggy->pool);
               svn_path_add_component (working_file,
                                       sname,
