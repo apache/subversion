@@ -3,7 +3,7 @@
 <center>
 <img src="/subversion.jpg">
 <h2>Weekly Status</h2>
-$Date: 2001-06-01 22:34:17 $
+$Date: 2001-06-11 14:45:52 $
 </center>
 
 <!-- ------------------------------------------------------------- -->
@@ -15,10 +15,10 @@ $Date: 2001-06-01 22:34:17 $
       client can checkout/update/commit using XML files. </li>
 <li> <b>Milestone 2</b> (15 May 2001):  rudimentary working filesystem;
       client can checkout/update/commit using WebDAV layer. </li>
-<li> <b>Milestone 3</b> (15 June 2001):  self-hosting. </li>
-<li> <b>Alpha</b> (15 July 2001):  feature-complete. </li>
-<li> <b>Beta</b> (15 August 2001):  release candidate, heavy testing. </li>
-<li> <b>1.0 Release</b> (30 Sept 2001):  we hope.  :-) </li>
+<li> <b>Milestone 3</b> (15 July 2001):  self-hosting. </li>
+<li> <b>Alpha</b> (15 August 2001):  feature-complete. </li>
+<li> <b>Beta</b> (15 Sept 2001):  release candidate, heavy testing. </li>
+<li> <b>1.0 Release</b> (30 Oct 2001):  we hope.  :-) </li>
 </ul>
 
 <!----------------------------------------------------------------->
@@ -88,6 +88,18 @@ $Date: 2001-06-01 22:34:17 $
     </td>
   </tr>
 
+  <tr valign="top">
+    <td align="left">Tests</td>
+    <td>
+        <table cellspacing="0" cellpadding="0" border=0><tr>
+          <td width=60 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>15%</font></td>
+          <td width=340 bgcolor="FF0000">&nbsp;</td>
+        </tr></table>
+    </td>
+  </tr>
+
+
 </table>
 
 </ul>  <!-- END unordered list for indentation only -->
@@ -97,15 +109,18 @@ $Date: 2001-06-01 22:34:17 $
 <h3>Recent Activities</h3>
 
 <p>
-Mike P. and Ben have been working on dealing with thorny issues
-related to versioning directories.  They've been put off for a long
-time, but now we're needing to complexify the working copy library to
-properly deal with them.
+Mike P. and Ben continue to work on thorny issues related to
+versioning directories.  They've been put off for a long time, but now
+we're needing to complexify the working copy library to properly deal
+with them.  Working copy behaviors are being documented in a user manual.
+<p>
+Karl is now working on adding deltified storage to the repository
+filesystem. 
 <p>
 Greg Stein replaced our recursive-make build system (based on
 'automake') with a new, single-Makefile system.
 <p>
-Mike Sussman has begun writing new python tests.
+Mike Sussman continues to write new python tests.
 
 
 <!----------------------------------------------------------------->
@@ -115,9 +130,9 @@ Mike Sussman has begun writing new python tests.
 <ul>
 <li><b>Filesystem</b>: brane, kfogel </li>
 <li><b>Repository Access layers</b>:  gstein, sussman </li>
-<li><b>Client libs</b>:  fitz, sussman, cmpilato </li>
+<li><b>Client libs</b>: sussman, cmpilato, fitz </li>
 <li><b>Migration tools</b>:  gstein </li>
-<li><b>Docs</b>:  everyone, but on hold during fs work </li>
+<li><b>Docs</b>: sussman </li>
 <li><b>Testing/QA</b>: msussman </li>
 </ul>
 
