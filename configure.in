@@ -272,7 +272,7 @@ AC_SUBST(abs_srcdir)
 dnl
 dnl BSD/OS (BSDi) needs to use a different include syntax in the Makefiles
 dnl
-case "$host_alias" in
+case "$host" in
 *bsdi*)
     # Check whether they've installed GNU make
     if make --version > /dev/null 2>&1; then 
