@@ -155,3 +155,14 @@ editor.
   resource forks), a single database of data (rather than per-dir), or
   server-based storage (via DeltaV)
 
+
+* Server side project policy enforcement
+
+  From: Branko =?iso-8859-2?Q?=C8ibej?= <brane@xbc.nu>
+  Date: Mon, 23 Oct 2000 18:37:49 +0200
+  
+  I'd be quite happy if we could "promise" that someday it'll be possible
+  to write a script on the SVN server side to, e.g., reject an export
+  if an explicit tag wasn't supplied; or reject a commit if there were
+  merge conflicts; etc., etc. Then all of this boils down to putting
+  examples into contrib/ (once we have it).
