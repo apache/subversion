@@ -55,8 +55,12 @@ extern "C" {
 #if SVN_SWIG_VERSION >= 103020
 #include "perl5/precommon.swg"
 /* The following two aren't handled by the precommon.swg.  */
+#ifndef SWIG_MakePtr
 #define SWIG_MakePtr SWIG_Perl_MakePtr
+#endif
+#ifndef SWIG_ConvertPtr
 #define SWIG_ConvertPtr SWIG_Perl_ConvertPtr
+#endif
 #endif
 
 typedef struct _unnamed swig_type_info;

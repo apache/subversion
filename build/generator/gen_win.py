@@ -6,6 +6,7 @@ import os
 import sys
 import string
 import fnmatch
+import re
 
 try:
   from cStringIO import StringIO
@@ -106,54 +107,18 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     # parse (and save) the options that were passed to us
     self.parse_options(options)
 
-    #Find db-4.0.x or db-4.1.x
+    # Find db-4.0.x or db-4.1.x
     self.dblibname = None
+    self._find_bdb()
 
-    #We translate all slashes to windows format later on
-    search = [("libdb42", "db4-win32/lib"),
-              ("libdb41", "db4-win32/lib"),
-              ("libdb40", "db4-win32/lib")]
+    # Find the right Perl library name to link SWIG bindings with
+    self._find_perl()
 
-    if self.bdb_path:
-      search = [("libdb42", self.bdb_path + "/lib"),
-                ("libdb41", self.bdb_path + "/lib"),
-                ("libdb40", self.bdb_path + "/lib")] + search
+    # Find the installed SWIG version to adjust swig options
+    self._find_swig()
 
-    for libname, path in search:
-      libpath = self.search_for(libname + ".lib", [path])
-      if libpath:
-        sys.stderr.write("Found %s.lib in %s\n" % (libname, libpath))
-        self.dblibname = libname
-        self.dblibpath = libpath
-
-    if not self.dblibname:
-      sys.stderr.write("DB not found; assuming db-4.2.x in db4-win32 "
-                       "by default\n")
-      self.dblibname = "libdb42"
-      self.dblibpath = os.path.join("db4-win32","lib")
-
-    self.dbincpath = string.replace(self.dblibpath, "lib", "include")
-    self.dbbindll = "%s//%s.dll" % (string.replace(self.dblibpath,
-                                                   "lib", "bin"),
-                                    self.dblibname)
-
-    # Find the right perl library name to link swig bindings with
-    fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
-                  'print "$Config{PERL_REVISION}$Config{PERL_VERSION}"'), 'r')
-    try:
-      num = fp.readline()
-      if num:
-        self.perl_lib = 'perl' + string.rstrip(num) + '.lib'
-        sys.stderr.write('Found installed perl version number. Perl bindings\n'
-                         '  will be linked with %s\n' % self.perl_lib)
-      else:
-        self.perl_lib = 'perl56.lib'
-        sys.stderr.write('Could not detect perl version. Perl bindings will\n'
-                         '  be linked with %s\n' % self.perl_lib)
-    finally:
-      fp.close()
-
-    #Make some files for the installer so that we don't need to require sed or some other command to do it
+    #Make some files for the installer so that we don't need to
+    #require sed or some other command to do it
     ### GJS: don't do this right now
     if 0:
       buf = open(os.path.join("packages","win32-innosetup","svn.iss.in"), 'rb').read()
@@ -296,7 +261,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                            custom_target=csrc,
                                            user_deps=[],
                                            swig_language=target.lang, 
-                                           swig_output=None))
+                                           swig_output=None,
+                                           swig_libdir=self.swig_libdir))
                 continue
 
               # output path passed to swig has to use forward slashes,
@@ -304,7 +270,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
               # classes) will be saved to the wrong directory
               cout = string.replace(os.path.join(rootpath, cobj.filename),
                                     os.sep, '/')
-                                    
+
               # included header files that the generated c file depends on
               user_deps = []
 
@@ -320,7 +286,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                            custom_target=csrc,
                                            user_deps=user_deps,
                                            swig_language=target.lang,
-                                           swig_output=cout))
+                                           swig_output=cout,
+                                           swig_libdir=self.swig_libdir))
 
     sources.sort(lambda x, y: cmp(x.path, y.path))
     return sources
@@ -458,6 +425,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
+      fakedefines.append(self.swig_defines)
+
+    if isinstance(target, gen_base.TargetSWIGLib):
+      fakedefines.append(self.swig_defines)
 
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
@@ -509,6 +480,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                         self.dbincpath,
                                         ""],
                                        rootpath)
+
+    if isinstance(target, gen_base.TargetSWIG) \
+       or isinstance(target, gen_base.TargetSWIGLib):
+      fakeincludes.append(self.swig_libdir)
 
     return self.make_windirs(fakeincludes)
 
@@ -610,6 +585,105 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     "Override me when creating a new project type"
 
     raise NotImplementedError
+
+  def _find_bdb(self):
+    "Find the Berkley DB library and version"
+    #We translate all slashes to windows format later on
+    search = [("libdb42", "db4-win32/lib"),
+              ("libdb41", "db4-win32/lib"),
+              ("libdb40", "db4-win32/lib")]
+
+    if self.bdb_path:
+      search = [("libdb42", self.bdb_path + "/lib"),
+                ("libdb41", self.bdb_path + "/lib"),
+                ("libdb40", self.bdb_path + "/lib")] + search
+
+    for libname, path in search:
+      libpath = self.search_for(libname + ".lib", [path])
+      if libpath:
+        sys.stderr.write("Found %s.lib in %s\n" % (libname, libpath))
+        self.dblibname = libname
+        self.dblibpath = libpath
+
+    if not self.dblibname:
+      sys.stderr.write("DB not found; assuming db-4.2.x in db4-win32 "
+                       "by default\n")
+      self.dblibname = "libdb42"
+      self.dblibpath = os.path.join("db4-win32","lib")
+
+    self.dbincpath = string.replace(self.dblibpath, "lib", "include")
+    self.dbbindll = "%s//%s.dll" % (string.replace(self.dblibpath,
+                                                   "lib", "bin"),
+                                    self.dblibname)
+
+  def _find_perl(self):
+    "Find the right perl library name to link swig bindings with"
+    fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
+                  'print "$Config{PERL_REVISION}$Config{PERL_VERSION}"'), 'r')
+    try:
+      num = fp.readline()
+      if num:
+        msg = 'Found installed perl version number.'
+        self.perl_lib = 'perl' + string.rstrip(num) + '.lib'
+      else:
+        msg = 'Could not detect perl version.'
+        self.perl_lib = 'perl56.lib'
+      sys.stderr.write('%s\n  Perl bindings will be linked with %s\n'
+                       % (msg, self.perl_lib))
+    finally:
+      fp.close()
+
+  def _find_swig(self):
+    # Require (and assume) version 1.3.19
+    base_version = '1.3.19'
+    vernum = base_vernum = 103019
+    options = '-c'
+
+    infp, outfp = os.popen4('swig -version')
+    infp.close()
+    try:
+      txt = outfp.read()
+      if (txt):
+        vermatch = re.compile(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)$', re.M) \
+                   .search(txt)
+      else:
+        vermatch = None
+
+      if (vermatch):
+        version = (int(vermatch.group(1)),
+                   int(vermatch.group(2)),
+                   int(vermatch.group(3)))
+        # build/ac-macros/swig.m4 explains the next incantation
+        vernum = int('%d%02d%03d' % version)
+        sys.stderr.write('Found installed SWIG version %d.%d.%d\n' % version)
+        if vernum < base_vernum:
+          sys.stderr.write('WARNING: Subversion requires version %s\n'
+                           % base_version)
+        if vernum >= 103020:
+          options = '-noruntime'
+
+        self._find_swig_libdir()
+      else:
+        sys.stderr.write('Could not find installed SWIG,'
+                         ' assuming version %s\n' % base_version)
+    finally:
+      outfp.close()
+
+    self.swig_defines = 'SVN_SWIG_VERSION=%d' % vernum
+    self.swig_options = '%s -D%s' % (options, self.swig_defines)
+
+  def _find_swig_libdir(self):
+    fp = os.popen('swig -swiglib', 'r')
+    try:
+      self.swig_libdir = string.rstrip(fp.readline())
+      if self.swig_libdir:
+        sys.stderr.write('Using SWIG library directory %s\n'
+                         % self.swig_libdir)
+      else:
+        sys.stderr.write('WARNING: could not find SWIG library directory\n')
+        self.swig_libdir = ''
+    finally:
+      fp.close()
 
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
