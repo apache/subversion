@@ -284,7 +284,7 @@ merge_file_deleted (const char *mine,
       SVN_ERR (svn_client_delete (NULL, 
                                   svn_stringbuf_create (mine, subpool),
                                   FALSE, /* don't force */
-                                  NULL, NULL, NULL, NULL, subpool));
+                                  NULL, NULL, NULL, NULL, NULL, subpool));
       break;
     case svn_node_dir:
       /* ### create a .drej conflict or something someday? */
@@ -317,7 +317,7 @@ merge_dir_added (const char *path,
   switch (kind)
     {
     case svn_node_none:
-      SVN_ERR (svn_client_mkdir (NULL, path_s, NULL, NULL,
+      SVN_ERR (svn_client_mkdir (NULL, path_s, NULL, NULL, NULL,
                                  NULL, NULL, subpool));
       SVN_ERR (svn_client_add (path_s, FALSE, NULL, NULL, subpool));
       break;
@@ -357,7 +357,7 @@ merge_dir_deleted (const char *path,
       SVN_ERR (svn_client_delete (NULL, 
                                   svn_stringbuf_create (path, subpool),
                                   FALSE, /* don't force */
-                                  NULL, NULL, NULL, NULL, subpool));
+                                  NULL, NULL, NULL, NULL, NULL, subpool));
       break;
     case svn_node_file:
       /* ### create a .drej conflict or something someday? */

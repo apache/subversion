@@ -266,7 +266,7 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
   const char *editor = NULL;
   const char *command = NULL;
   apr_file_t *tmp_file;
-  const char *tmpfile_name;
+  svn_stringbuf_t *tmpfile_name;
   apr_status_t apr_err;
   apr_size_t written;
   apr_finfo_t finfo_before, finfo_after;
@@ -279,21 +279,22 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
   if (! editor)
     editor = getenv ("VISUAL");
 
-  /* Worst-case scenario: pick the default editor. */
+  /* If there is no editor specified, return an error stating that a
+     log message should be supplied via command-line options. */
   if (! editor)
-#ifdef SVN_WIN32
-    editor = "notepad.exe";
-#else
-    editor = "vi";
-#endif
+    return svn_error_create 
+      (SVN_ERR_CL_NO_EXTERNAL_EDITOR, 0, NULL, pool,
+       "Could not find an editor in the usual environment variable "
+       "(SVN_EDITOR, EDITOR, VISUAL)");
 
   /* By now, we had better have an EDITOR to work with. */
   assert (editor);
 
   /* Ask the working copy for a temporary file based on BASE_DIR, and ask
      APR for that new file's name. */
-  SVN_ERR (svn_wc_create_tmp_file (&tmp_file, base_dir, FALSE, pool));
-  apr_file_name_get (&tmpfile_name, tmp_file);
+  SVN_ERR (svn_io_open_unique_file 
+           (&tmp_file, &tmpfile_name,
+            svn_path_join (base_dir->data, "msg", pool), ".tmp", FALSE, pool));
 
   /*** From here one, any problems that occur require us to cleanup
        the file we just created!! ***/
@@ -315,11 +316,11 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
     }
 
   /* Create the editor command line. */
-  command = apr_psprintf (pool, "%s %s", editor, tmpfile_name);
+  command = apr_psprintf (pool, "%s %s", editor, tmpfile_name->data);
 
   /* Get information about the temporary file before the user has
      been allowed to edit its contents. */
-  apr_stat (&finfo_before, tmpfile_name, 
+  apr_stat (&finfo_before, tmpfile_name->data, 
             APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
 
   /* Now, run the editor command line.  
@@ -329,7 +330,7 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
   system (command);
 
   /* Get information about the temporary file after the assumed editing. */
-  apr_stat (&finfo_after, tmpfile_name, 
+  apr_stat (&finfo_after, tmpfile_name->data, 
             APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   
   /* If the file looks changed... */
@@ -339,7 +340,7 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
       svn_stringbuf_t *new_contents = svn_stringbuf_create ("", pool);
 
       /* We have new contents in a temporary file, so read them. */
-      apr_err = apr_file_open (&tmp_file, tmpfile_name, APR_READ,
+      apr_err = apr_file_open (&tmp_file, tmpfile_name->data, APR_READ,
                                APR_UREAD, pool);
       
       if (apr_err)
@@ -385,11 +386,220 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
  cleanup:
 
   /* Destroy the temp file if we created one. */
-  apr_file_remove (tmpfile_name, pool); /* ignore status */
+  apr_file_remove (tmpfile_name->data, pool); /* ignore status */
 
   /* ...and return! */
   return SVN_NO_ERROR;
 }
+
+
+struct log_msg_baton
+{
+  svn_stringbuf_t *message;
+  svn_stringbuf_t *base_dir;
+};
+
+
+void *
+svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
+                            svn_stringbuf_t *base_dir,
+                            apr_pool_t *pool)
+{
+  struct log_msg_baton *baton = apr_palloc (pool, sizeof (*baton));
+
+  if (opt_state->filedata) 
+    baton->message = opt_state->filedata;
+  else
+    baton->message = opt_state->message;
+  baton->base_dir = base_dir ? base_dir : svn_stringbuf_create (".", pool);
+  return baton;
+}
+
+
+/* Return a pointer to the character after the first newline in LINE,
+   or NULL if there is no newline.  ### FIXME: this is not fully
+   portable for other kinds of newlines! */
+static char *
+get_next_line (char *line)
+{
+  char *newline = strchr (line, '\n');
+  return (newline ? newline + 1 : NULL);
+}
+
+
+/* Remove all lines from BUFFER that begin with PREFIX. */
+static svn_stringbuf_t *
+strip_prefix_from_buffer (svn_stringbuf_t *buffer,
+                          const char *strip_prefix,
+                          apr_pool_t *pool)
+{
+  /* Start with a pointer to the first letter in the buffer, this is
+     also on the beginning of a line */
+  char *ptr = buffer->data;
+  size_t strip_prefix_len = strlen (strip_prefix);
+
+  while (ptr && (ptr < (buffer->data + buffer->len)))
+    {
+      char *first_prefix = ptr;
+
+      /* First scan through all consecutive lines WITH prefix. */
+      while (ptr && (! strncmp (ptr, strip_prefix, strip_prefix_len)))
+        ptr = get_next_line (ptr);
+
+      if (first_prefix != ptr)
+        {
+          /* One or more prefixed lines were found, cut them off. */
+          if (! ptr)
+            {
+              /* This is the last line, no memmove() is necessary. */
+              buffer->len -= (buffer->data + buffer->len - first_prefix);
+              break;
+            }
+
+          /* Shift over the rest of the buffer to cover up the
+             stripped prefix'ed line. */
+          memmove (first_prefix, ptr, buffer->data + buffer->len - ptr);
+          buffer->len -= (ptr - first_prefix);
+          ptr = first_prefix;
+        }
+
+      /* Now skip all consecutive lines WITHOUT prefix */
+      while (ptr && strncmp (ptr, strip_prefix, strip_prefix_len) )
+        ptr = get_next_line (ptr);
+    }
+  buffer->data[buffer->len] = 0;
+  return buffer;
+}
+
+
+#define EDITOR_PREFIX_TXT  "SVN:"
+
+/* This function is of type svn_client_get_commit_log_t. */
+svn_error_t *
+svn_cl__get_log_message (svn_stringbuf_t **log_msg,
+                         apr_array_header_t *commit_items,
+                         void *baton,
+                         apr_pool_t *pool)
+{
+  const char *default_msg = "\n"
+    EDITOR_PREFIX_TXT 
+    " ---------------------------------------------------------------------\n" 
+    EDITOR_PREFIX_TXT " Enter Log.  Lines beginning with '" 
+                             EDITOR_PREFIX_TXT "' are removed automatically\n"
+    EDITOR_PREFIX_TXT "\n"
+    EDITOR_PREFIX_TXT " Current status of the target files and directories:\n"
+    EDITOR_PREFIX_TXT "\n";
+  struct log_msg_baton *lmb = baton;
+  svn_stringbuf_t *message = NULL;
+
+  if (lmb->message)
+    {
+      *log_msg = svn_stringbuf_dup (lmb->message, pool);
+      return SVN_NO_ERROR;
+    }
+
+  if (! (commit_items || commit_items->nelts))
+    {
+      *log_msg = svn_stringbuf_create ("", pool);
+      return SVN_NO_ERROR;
+    }
+
+  while (! message)
+    {
+      /* We still don't have a valid commit message.  Use $EDITOR to
+         get one. */
+      int i;
+      svn_stringbuf_t *tmp_message = svn_stringbuf_create (default_msg, pool);
+      svn_string_t tmp_str;
+
+      for (i = 0; i < commit_items->nelts; i++)
+        {
+          svn_client_commit_item_t *item
+            = ((svn_client_commit_item_t **) commit_items->elts)[i];
+          svn_stringbuf_t *path = item->path;
+          char text_mod = 'M', prop_mod = ' ';
+
+          if (! path)
+            path = item->url;
+
+          if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+              && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
+            text_mod = 'R';
+          else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+            text_mod = 'A';
+          else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+            text_mod = 'D';
+
+          if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
+            prop_mod = '_';
+
+          svn_stringbuf_appendcstr (tmp_message, EDITOR_PREFIX_TXT);
+          svn_stringbuf_appendcstr (tmp_message, "   ");
+          svn_stringbuf_appendbytes (tmp_message, &text_mod, 1); 
+          svn_stringbuf_appendbytes (tmp_message, &prop_mod, 1); 
+          svn_stringbuf_appendcstr (tmp_message, "   ");
+          svn_stringbuf_appendcstr (tmp_message, path->data);
+          svn_stringbuf_appendcstr (tmp_message, "\n");
+        }
+
+      tmp_str.data = tmp_message->data;
+      tmp_str.len = tmp_message->len;
+      SVN_ERR (svn_cl__edit_externally (&message, lmb->base_dir, 
+                                        &tmp_str, pool));
+
+      /* Strip the prefix from the buffer. */
+      if (message)
+        message = strip_prefix_from_buffer (message, EDITOR_PREFIX_TXT, pool);
+
+      if (message)
+        {
+          /* We did get message, now check if it is anything more than just
+             white space as we will consider white space only as empty */
+          int len;
+
+          for (len = message->len; len >= 0; len--)
+            {
+              if (! apr_isspace (message->data[len]))
+                break;
+            }
+          if (len < 0)
+            message = NULL;
+        }
+
+      if (! message)
+        {
+          char *reply;
+          svn_cl__prompt_user (&reply,
+                               "\nLog message unchanged or not specified\n"
+                               "a)bort, c)ontinue, e)dit\n",
+                               FALSE, /* don't hide the reply */
+                               NULL, pool);
+          if (reply)
+            {
+              char letter = apr_tolower (reply[0]);
+
+              /* If the user chooses to abort, we exit the loop with a
+                 NULL message. */
+              if ('a' == letter)
+                break;
+
+              /* If the user chooses to continue, we make an empty
+                 message, which will cause us to exit the loop. */
+              if ('c' == letter) 
+                message = svn_stringbuf_create ("", pool);
+
+              /* If the user chooses anything else, the loop will
+                 continue on the NULL message. */
+            }
+        }
+    }
+  
+  *log_msg = message ? svn_stringbuf_dup (message, pool) : NULL;
+  return SVN_NO_ERROR;
+}
+
+#undef EDITOR_PREFIX_TXT
+
 
 
 /* 

@@ -409,13 +409,15 @@ svn_client_import (svn_client_commit_info_t **commit_info,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *url,
                    svn_stringbuf_t *new_entry,
-                   svn_stringbuf_t *log_msg,
+                   svn_client_get_commit_log_t log_msg_func,
+                   void *log_msg_baton,
                    svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
   apr_status_t apr_err;
   svn_error_t *err;
+  svn_stringbuf_t *log_msg;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   const svn_delta_edit_fns_t *wrap_editor;
@@ -434,8 +436,24 @@ svn_client_import (svn_client_commit_info_t **commit_info,
     return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0, NULL, pool,
                              "empty string is an invalid entry name");
 
-  /* Make sure our log message at least exists, even if empty. */
-  if (! log_msg)
+  /* Create a new commit item and add it to the array. */
+  if (log_msg_func)
+    {
+      svn_client_commit_item_t *item;
+      apr_array_header_t *commit_items 
+        = apr_array_make (pool, 1, sizeof (item));
+      
+      item = apr_pcalloc (pool, sizeof (*item));
+      item->path = svn_stringbuf_dup (path, pool);
+      item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
+      (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
+        = item;
+      
+      SVN_ERR ((*log_msg_func) (&log_msg, commit_items, log_msg_baton, pool));
+      if (! log_msg)
+        return SVN_NO_ERROR;
+    }
+  else
     log_msg = svn_stringbuf_create ("", pool);
 
   /* If we're importing to XML ... */
@@ -663,9 +681,14 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
   /* Go get a log message.  If an error occurs, or no log message is
      specified, abort the operation. */
-  if (((*log_msg_func)(&log_msg, commit_items, log_msg_baton, pool))
-      || (! log_msg))
-    goto cleanup;
+  if (log_msg_func)
+    {
+      if (((*log_msg_func)(&log_msg, commit_items, log_msg_baton, pool))
+          || (! log_msg))
+        goto cleanup;
+    }
+  else
+    log_msg = svn_stringbuf_create ("", pool);
 
   /* Sort and condense our COMMIT_ITEMS. */
   if ((cmt_err = svn_client__condense_commit_items (&base_url, 

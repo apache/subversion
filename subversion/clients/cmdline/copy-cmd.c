@@ -43,26 +43,18 @@ svn_cl__copy (apr_getopt_t *os,
   svn_stringbuf_t *src_path, *dst_path;
   svn_string_t path_str;
   svn_client_auth_baton_t *auth_baton = NULL;
-  svn_stringbuf_t *message = NULL;
   const svn_delta_editor_t *trace_editor = NULL;
   void *trace_edit_baton = NULL;
   svn_boolean_t src_is_url, dst_is_url;
   svn_client_commit_info_t *commit_info = NULL;
 
   targets = svn_cl__args_to_target_array (os, opt_state, pool);
-
   if (targets->nelts != 2)
     {
       svn_cl__subcommand_help ("copy", pool);
       return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
     }
 
-  /* Take our message from ARGV or a FILE */
-  if (opt_state->filedata) 
-    message = opt_state->filedata;
-  else
-    message = opt_state->message;
-  
   /* Build an authentication object to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
@@ -122,7 +114,8 @@ svn_cl__copy (apr_getopt_t *os,
   SVN_ERR (svn_client_copy 
            (&commit_info,
             src_path, &(opt_state->start_revision), dst_path, auth_baton, 
-            message ? message : svn_stringbuf_create ("", pool),
+            &svn_cl__get_log_message,
+            svn_cl__make_log_msg_baton (opt_state, NULL, pool),
             NULL, NULL,                   /* no before_editor */
             trace_editor, trace_edit_baton, /* one after_editor */
             SVN_CL_NOTIFY(opt_state),
