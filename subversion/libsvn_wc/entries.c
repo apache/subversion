@@ -433,7 +433,9 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
   /* Find the name and set up the entry under that name.  This
      should *NOT* be NULL, since svn_wc__atts_to_entry() should
      have made it into SVN_WC_ENTRY_THIS_DIR.  */
-  if ((entry->deleted) && (! accum->show_deleted))
+  if (entry->deleted
+      && (entry->schedule != svn_wc_schedule_add)
+      && (! accum->show_deleted))
     ;
   else
     apr_hash_set (accum->entries, entry->name->data, entry->name->len, entry);
