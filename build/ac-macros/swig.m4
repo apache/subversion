@@ -171,9 +171,9 @@ AC_DEFUN(SVN_FIND_SWIG,
     fi
 
     if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_perl" = "yes"; then
-      ### TODO: enable when the target is implemented correctly
-#      SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-pl-lib"
-#      SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-pl-lib"
+      SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-pl"
+      SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-pl"
+      SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-pl" 
       SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
       SWIG_PL_COMPILE="`$PERL -MConfig -e 'print $Config{cc}'` \$(SWIG_PL_INCLUDES)"
       SWIG_PL_LINK="`$PERL -MConfig -e 'print $Config{ld}'` `$PERL -MConfig -e 'print $Config{lddlflags}'` `$PERL -MExtUtils::Embed -e ldopts`"
@@ -182,6 +182,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   fi
   AC_SUBST(SWIG_BUILD_RULES)
   AC_SUBST(SWIG_INSTALL_RULES)
+  AC_SUBST(SWIG_CLEAN_RULES)
   AC_SUBST(SWIG_NORUNTIME_FLAG)
   AC_SUBST(SWIG_PY_INCLUDES)
   AC_SUBST(SWIG_PY_COMPILE)

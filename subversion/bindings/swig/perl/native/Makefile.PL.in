@@ -91,14 +91,15 @@ sub MY::postamble {
                       $apr_cflags;
 
    my $swig_modules_command = join ('',
-                                    map {"\nsvn_$_.c : $swig_srcdir/svn_$_.i ".
-                                         "ra_plugin.hi ra_reporter.hi ".
-                                         "delta_editor.hi\n" .
-                                         "\t$swig_command -module SVN::_".
-                                         main::perlish($_) .
-                                         " -o svn_$_.c $swig_srcdir/svn_$_.i\n"}
-                                         @modules
-                                   );
+                              map {"\nsvn_$_.c : $swig_srcdir/svn_$_.i ".
+                                   "$svnlib_builddir/libsvn_$_/libsvn_$_-1.la ".
+                                   "ra_plugin.hi ra_reporter.hi ".
+                                   "delta_editor.hi\n" .
+                                   "\t$swig_command -module SVN::_".
+                                   main::perlish($_) .
+                                   " -o svn_$_.c $swig_srcdir/svn_$_.i\n"}
+                                   @modules
+                                 );
 
   my $fullperlrun = "$apr_shlib_path_var=" . join(':',@ldpaths);
   
