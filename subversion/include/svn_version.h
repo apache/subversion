@@ -51,7 +51,7 @@ extern "C" {
  * Modify when new functionality is added or new interfaces are
  * defined, but all changes are backward compatible.
  */
-#define SVN_VER_MINOR      25
+#define SVN_VER_MINOR      26
 
 /** Patch number.
  *
@@ -75,7 +75,7 @@ extern "C" {
  * During the distribution process, we automatically replace this text
  * with something like "r1504".
  */
-#define SVN_VER_TAG        "dev build"
+#define SVN_VER_TAG        "r6550"
 
 
 /** Number tag: a string indicating whether this is a released version.
@@ -88,7 +88,7 @@ extern "C" {
  * During the distribution process, we automatically replace this text
  * with "" to indicate a baselined version.
  */
-#define SVN_VER_NUMTAG     "+"
+#define SVN_VER_NUMTAG     ""
 
 
 /** Revision number: The repository revision number of this release.
@@ -99,7 +99,7 @@ extern "C" {
  * During the distribution process, we automatically replace it with
  * what we guess to be the correct revision number.
  */
-#define SVN_VER_REVISION   0
+#define SVN_VER_REVISION   6550
 
 
 /* Version strings composed from the above definitions. */
