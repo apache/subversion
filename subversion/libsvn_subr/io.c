@@ -360,8 +360,8 @@ svn_io_append_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool
 
 
 svn_error_t *
-svn_io_convert_eol (svn_stringbuf_t *src,
-                    svn_stringbuf_t *dst,
+svn_io_convert_eol (const char *src,
+                    const char *dst,
                     const char *eol_str,
                     svn_boolean_t repair,
                     apr_pool_t *pool)
@@ -376,21 +376,21 @@ svn_io_convert_eol (svn_stringbuf_t *src,
   abort(); /* don't use this function yet, it's not finished! */
 
   /* Open source file. */
-  apr_err = apr_file_open (&s, src->data, APR_READ, APR_OS_DEFAULT, pool);
+  apr_err = apr_file_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf
       (apr_err, 0, NULL, pool, 
-       "svn_io_convert_eol: error opening `%s'", src->data);
+       "svn_io_convert_eol: error opening `%s'", src);
   
   /* Open dest file. */
-  apr_err = apr_file_open (&d, dst->data, APR_WRITE | APR_CREATE, 
+  apr_err = apr_file_open (&d, dst, APR_WRITE | APR_CREATE, 
                            APR_OS_DEFAULT, pool);
   if (apr_err)
     {
       apr_file_close (s); /* toss */
       return svn_error_createf
         (apr_err, 0, NULL, pool, 
-         "svn_io_convert_eol: error opening `%s'", dst->data);
+         "svn_io_convert_eol: error opening `%s'", dst);
     }
 
   /*** Any errors after this point require us to close the two files and
@@ -408,7 +408,7 @@ svn_io_convert_eol (svn_stringbuf_t *src,
         {
           err = svn_error_createf
             (read_err, 0, NULL, pool, 
-             "svn_io_convert_eol: error reading `%s'", src->data);
+             "svn_io_convert_eol: error reading `%s'", src);
           goto cleanup;
         }
 
@@ -439,7 +439,7 @@ svn_io_convert_eol (svn_stringbuf_t *src,
         {
           err = svn_error_createf
             (write_err, 0, NULL, pool, 
-             "svn_io_convert_eol: error writing `%s'", dst->data);
+             "svn_io_convert_eol: error writing `%s'", dst);
           goto cleanup;
         }
 
@@ -453,7 +453,7 @@ svn_io_convert_eol (svn_stringbuf_t *src,
               s = NULL;
               err = svn_error_createf
                 (apr_err, 0, NULL, pool, 
-                 "svn_io_convert_eol: error closing `%s'", src->data);
+                 "svn_io_convert_eol: error closing `%s'", src);
               goto cleanup;
             }
           
@@ -463,7 +463,7 @@ svn_io_convert_eol (svn_stringbuf_t *src,
               d = NULL;
               err = svn_error_createf
                 (apr_err, 0, NULL, pool, 
-                 "svn_io_convert_eol: error closing `%s'", dst->data);
+                 "svn_io_convert_eol: error closing `%s'", dst);
               goto cleanup;
             }
         }
@@ -475,7 +475,7 @@ svn_io_convert_eol (svn_stringbuf_t *src,
     apr_file_close (s); /* toss */
   if (d)
     apr_file_close (d); /* toss */
-  apr_file_remove (dst->data, pool); /* toss */
+  apr_file_remove (dst, pool); /* toss */
   return err;
 }
 

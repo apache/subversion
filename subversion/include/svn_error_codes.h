@@ -121,6 +121,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_IO_INCONSISTENT_EOL,
               "Inconsistent newline format")
 
+  SVN_ERRDEF (SVN_ERR_IO_CORRUPT_EOL,
+              "Line endings other than expected")
+
   SVN_ERRDEF (SVN_ERR_WC_OBSTRUCTED_UPDATE,
               "Obstructed update")
 
