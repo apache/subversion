@@ -6,7 +6,7 @@
    improvements himself, but that's okay -- I'm still finding it
    helpful to consider the problem from scratch.  -kff]
 
-Last updated: $Date: 2001-04-16 23:00:19 $
+Last updated: $Date: 2001-04-16 23:05:15 $
 
 Three related things that need to happen in the filesystem before we
 get to alpha:
@@ -26,8 +26,8 @@ a) File contents need to be moved into a separate table.
 
 There will be a new table, `strings'.  The keys will simply be numbers
 (or whatever -- the point is, they're not node rev IDs), and the
-values are, well, a string.  Not a skel, just a string.  Berkeley
-keeps track of the length for us anyway, so no point making it a skel.
+values are, well, strings.  Not skels, just strings.  Berkeley keeps
+track of length for us anyway, so no point making them skels.
 
 Before we go on, here's some background from `structure':
 
