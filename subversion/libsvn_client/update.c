@@ -99,11 +99,11 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
        "svn_client_update: entry '%s' has been deleted", anchor->data);
-  if (! entry->ancestor)
+  if (! entry->url)
     return svn_error_createf
-      (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY, 0, NULL, pool,
+      (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool,
        "svn_client_update: entry '%s' has no URL", anchor->data);
-  URL = svn_stringbuf_create (entry->ancestor->data, pool);
+  URL = svn_stringbuf_dup (entry->url, pool);
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      either the RA or XML driver will call editor->set_target_revision

@@ -85,7 +85,7 @@ svn_wc__entries_init (svn_stringbuf_t *path,
      svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_DIR_STR, pool), 
      SVN_WC_ENTRY_ATTR_REVISION,
      svn_stringbuf_create (initial_revstr, pool),
-     SVN_WC_ENTRY_ATTR_ANCESTOR,
+     SVN_WC_ENTRY_ATTR_URL,
      ancestor_path,
      NULL);
 
@@ -177,11 +177,11 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       entry->revision = SVN_INVALID_REVNUM;
   }
 
-  /* Attempt to set up ancestor path (again, see resolve_to_defaults). */
+  /* Attempt to set up url path (again, see resolve_to_defaults). */
   {
-    entry->ancestor
+    entry->url
       = apr_hash_get (entry->attributes,
-                      SVN_WC_ENTRY_ATTR_ANCESTOR, APR_HASH_KEY_STRING);
+                      SVN_WC_ENTRY_ATTR_URL, APR_HASH_KEY_STRING);
   }
 
   /* Set up kind. */
@@ -386,19 +386,18 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
   if ((dst->revision == SVN_INVALID_REVNUM) && (dst->kind != svn_node_dir))
     dst->revision = src->revision;
   
-  /* Inherits parent's ancestor if doesn't have an ancestor of one's
-     own and is not marked for addition.  An entry being added doesn't
-     really have ancestry yet.  */
-  if ((! dst->ancestor) 
+  /* Inherits parent's url if doesn't have a url of one's own and is not
+     marked for addition.  An entry being added doesn't really have
+     url yet.  */
+  if ((! dst->url) 
       && (! ((dst->schedule == svn_wc_schedule_add)
              || (dst->schedule == svn_wc_schedule_replace))))
     {
       svn_stringbuf_t *name = apr_hash_get (dst->attributes,
                                          SVN_WC_ENTRY_ATTR_NAME,
                                          APR_HASH_KEY_STRING);
-      dst->ancestor = svn_stringbuf_dup (src->ancestor, pool);
-      svn_path_add_component (dst->ancestor, name,
-                              svn_path_url_style);
+      dst->url = svn_stringbuf_dup (src->url, pool);
+      svn_path_add_component (dst->url, name, svn_path_url_style);
     }
 }
 
@@ -429,12 +428,12 @@ resolve_to_defaults (svn_stringbuf_t *path,
                              pool,
                              "default entry has no revision number");
 
-  if (! default_entry->ancestor)
-    return svn_error_create (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY,
+  if (! default_entry->url)
+    return svn_error_create (SVN_ERR_WC_ENTRY_MISSING_URL,
                              0,
                              NULL,
                              pool,
-                             "default entry missing ancestry");
+                             "default entry missing url");
   
     
   /* Then use it to fill in missing information in other entries. */
@@ -488,11 +487,10 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
                   SVN_WC_ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
                   svn_stringbuf_createf (pool, "%ld", entry->revision));
   
-  /* Ancestor */
-  if ((entry->ancestor) && (entry->ancestor->len))
+  /* URL */
+  if ((entry->url) && (entry->url))
   apr_hash_set (entry->attributes,
-                SVN_WC_ENTRY_ATTR_ANCESTOR, APR_HASH_KEY_STRING,
-                entry->ancestor);
+                SVN_WC_ENTRY_ATTR_URL, APR_HASH_KEY_STRING, entry->url);
   
   /* Kind */
   switch (entry->kind)
@@ -871,13 +869,13 @@ write_entry (svn_stringbuf_t **output,
              svn_wc_entry_t *this_dir,
              apr_pool_t *pool)
 {
-  /* We only want to write out 'revision' and 'ancestor' for the
+  /* We only want to write out 'revision' and 'url' for the
      following things:
      1. the current directory's "this dir" entry.
      2. non-directory entries:
         a. which are marked for addition (and consequently should
            have an invalid revnum) 
-        b. whose revision or ancestor is valid and different than 
+        b. whose revision or url is valid and different than 
            that of the "this dir" entry.
   */
   if (strcmp (this_entry_name, SVN_WC_ENTRY_THIS_DIR))
@@ -893,14 +891,14 @@ write_entry (svn_stringbuf_t **output,
 
       if (this_entry->kind == svn_node_dir)
         {
-          /* We don't write ancestor or revision for subdir
+          /* We don't write url or revision for subdir
              entries. */
           apr_hash_set (this_entry->attributes, 
                         SVN_WC_ENTRY_ATTR_REVISION,
                         APR_HASH_KEY_STRING,
                         NULL);
           apr_hash_set (this_entry->attributes, 
-                        SVN_WC_ENTRY_ATTR_ANCESTOR,
+                        SVN_WC_ENTRY_ATTR_URL,
                         APR_HASH_KEY_STRING,
                         NULL);
         }
@@ -917,17 +915,17 @@ write_entry (svn_stringbuf_t **output,
                           APR_HASH_KEY_STRING,
                           NULL);
           
-          /* If this is not the "this dir" entry, and the ancestor is
+          /* If this is not the "this dir" entry, and the url is
              trivially calculable from that of the "this dir" entry,
-             don't write out the ancestor. */
-          if (this_entry->ancestor)
+             don't write out the url */
+          if (this_entry->url)
             {
-              this_path = svn_stringbuf_dup (this_dir->ancestor, pool);
+              this_path = svn_stringbuf_dup (this_dir->url, pool);
               svn_path_add_component_nts (this_path, this_entry_name,
                                           svn_path_url_style);
-              if (svn_stringbuf_compare (this_path, this_entry->ancestor))
+              if (svn_stringbuf_compare (this_path, this_entry->url))
                 apr_hash_set (this_entry->attributes, 
-                              SVN_WC_ENTRY_ATTR_ANCESTOR,
+                              SVN_WC_ENTRY_ATTR_URL,
                               APR_HASH_KEY_STRING,
                               NULL);
             }
@@ -1085,8 +1083,8 @@ fold_entry (apr_hash_t *entries,
     entry->prop_time = prop_time;
 
   /* Ancestral URL in repository */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_ANCESTOR)
-    entry->ancestor = svn_stringbuf_dup (ancestor, pool);
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_URL)
+    entry->url = svn_stringbuf_dup (ancestor, pool);
 
   /* Attributes */
   if (atts)
@@ -1448,8 +1446,8 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
   svn_wc_entry_t *dupentry = apr_pcalloc (pool, sizeof(*dupentry));
 
   dupentry->revision   = entry->revision;
-  if (entry->ancestor)
-    dupentry->ancestor = svn_stringbuf_dup (entry->ancestor, pool);
+  if (entry->url)
+    dupentry->url      = svn_stringbuf_dup (entry->url, pool);
   dupentry->kind       = entry->kind;
   dupentry->schedule   = entry->schedule;
   dupentry->existence  = entry->existence;
@@ -1513,7 +1511,7 @@ svn_wc__recursively_rewrite_ancestry (svn_stringbuf_t *dirpath,
   this_dir = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR,
                            APR_HASH_KEY_STRING);
   fold_entry (entries, svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, subpool),
-              SVN_WC__ENTRY_MODIFY_ANCESTOR,
+              SVN_WC__ENTRY_MODIFY_URL,
               SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0,
               ancestor, NULL, subpool, NULL);
 
@@ -1542,7 +1540,7 @@ svn_wc__recursively_rewrite_ancestry (svn_stringbuf_t *dirpath,
       /* If a file, tweak the entry's URL. */
       if (current_entry->kind == svn_node_file)
         fold_entry (entries, svn_stringbuf_create (name, subpool),
-                    SVN_WC__ENTRY_MODIFY_ANCESTOR,
+                    SVN_WC__ENTRY_MODIFY_URL,
                     SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0,
                     child_url, NULL, subpool, NULL);
 

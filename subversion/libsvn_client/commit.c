@@ -489,7 +489,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
             return svn_error_createf
               (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
                "entry '%s' has already been deleted", base_dir->data);
-          url = entry->ancestor;
+          url = entry->url;
         }
       
       /* Make sure our log message at least exists, even if empty. */

@@ -432,7 +432,7 @@ log_do_modify_entry (struct log_runner *loggy,
                               entry->conflicted,
                               entry->text_time,
                               entry->prop_time,
-                              entry->ancestor,
+                              entry->url,
                               entry->attributes,
                               loggy->pool,
                               NULL);
