@@ -9,15 +9,6 @@ Status of 1.2.0:
 
 Candidate changes:
 
-  * r13945
-    Revert r13369 (svn:keywords canonicalization).
-    Justification:
-      http://svn.haxx.se/dev/archive-2005-04/0397.shtml
-    Notes:
-      I vote that this block 1.2.0-rc2 --maxb
-    Votes:
-      +1: maxb, lundblad, epg, julianfoad
-
   * r13954
     Remove GCCisms.
     Justification:
