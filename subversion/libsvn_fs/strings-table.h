@@ -41,12 +41,11 @@ int svn_fs__open_strings_table (DB **strings_p,
 /* Set *STREAM to a read stream on string KEY in FS, as part of
  * TRAIL.  
  * 
- * The stream is allocated in TRAIL->pool.  KEY will be shared by the
+ * Allocate the stream in TRAIL->pool.  KEY will be shared by the
  * stream, not copied, so KEY's storage must be at least as long-lived
  * as TRAIL->pool.
  * 
- * If string KEY does not exist, SVN_ERR_FS_NO_SUCH_STRING is the
- * error returned.
+ * If string KEY does not exist, return SVN_ERR_FS_NO_SUCH_STRING.
  */
 svn_error_t *svn_fs__read_string_stream (svn_stream_t **stream,
                                          svn_fs_t *fs,
@@ -57,8 +56,7 @@ svn_error_t *svn_fs__read_string_stream (svn_stream_t **stream,
 /* Set *SIZE to the size in bytes of string KEY in FS, as part of
  * TRAIL.
  *
- * If string KEY does not exist, SVN_ERR_FS_NO_SUCH_STRING is the
- * error returned.
+ * If string KEY does not exist, return SVN_ERR_FS_NO_SUCH_STRING.
  */
 svn_error_t *svn_fs__string_size (apr_size_t *size,
                                   svn_fs_t *fs,
@@ -69,12 +67,11 @@ svn_error_t *svn_fs__string_size (apr_size_t *size,
 /* Set *STREAM to a write stream for string KEY in FS, as part of
  * TRAIL.
  * 
- * The stream is allocated in TRAIL->pool.  KEY will be shared by the
+ * Allocate the stream in TRAIL->pool.  KEY will be shared by the
  * stream, not copied, so KEY's storage must be at least as long-lived
  * as TRAIL->pool.
  * 
- * The string is created if it does not exist; otherwise, it is
- * overwritten. 
+ * Create the string if it does not exist; otherwise, overwrite it.
  */
 svn_error_t *svn_fs__write_string_stream (svn_stream_t **stream,
                                           svn_fs_t *fs,
@@ -85,12 +82,11 @@ svn_error_t *svn_fs__write_string_stream (svn_stream_t **stream,
 /* Set *STREAM to an appending write stream for string KEY in FS, as
  * part of TRAIL.
  * 
- * The stream is allocated in TRAIL->pool.  KEY will be shared by the
+ * Allocate the stream in TRAIL->pool.  KEY will be shared by the
  * stream, not copied, so KEY's storage must be at least as long-lived
  * as TRAIL->pool.
  * 
- * The string is created if it does not exist, otherwise, it is
- * appended to. 
+ * Create the string if it does not exist; otherwise, overwrite it.
  */
 svn_error_t *svn_fs__append_string_stream (svn_stream_t **stream,
                                            svn_fs_t *fs,
@@ -98,10 +94,20 @@ svn_error_t *svn_fs__append_string_stream (svn_stream_t **stream,
                                            trail_t *trail);
 
 
-/* There is no function to delete an entry from `strings'.  Deleting a
-   string is very dangerous: it would render unusable both nodes that
-   refer directly to the string and those that are deltas against it.
-   If we ever really need string deletion, though, it's easy to add.  */
+/* Delete string KEY from FS, as part of TRAIL.
+ *
+ * If string KEY does not exist, return SVN_ERR_FS_NO_SUCH_STRING.
+ *
+ * WARNING: Deleting a string renders unusable both nodes that refer
+ * directly to the string and nodes that are deltas against it.
+ * Probably the only time to remove a string is when it is referred to
+ * only by a txn that is itself being removed.
+ */ 
+svn_error_t *svn_fs__delete_string (svn_fs_t *fs,
+                                    const char *key,
+                                    trail_t *trail);
+
+
 
 
 #endif /* SVN_LIBSVN_FS_STRINGS_TABLE_H */

@@ -74,7 +74,7 @@ string_read (void *baton, char *buffer, apr_size_t *len)
   if (db_err == DB_NOTFOUND)
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_STRING, 0, 0, sb->fs->pool,
-       "No such string `%s'", sb->key);
+       "string_read: no such string `%s'", sb->key);
 
   /* Handle any other error conditions.  */
   SVN_ERR (DB_WRAP (sb->fs, "reading string", db_err));
@@ -137,7 +137,7 @@ svn_fs__string_size (apr_size_t *size,
   if (db_err == DB_NOTFOUND)
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_STRING, 0, 0, fs->pool,
-       "No such string `%s'", key);
+       "svn_fs__string_size: no such string `%s'", key);
 
   /* Handle any other error conditions.  */
   SVN_ERR (DB_WRAP (fs, "reading string", db_err));
@@ -224,6 +224,30 @@ svn_fs__append_string_stream (svn_stream_t **stream,
   svn_stream_set_write (s, string_write);
 
   *stream = s;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__delete_string (svn_fs_t *fs,
+                       const char *key,
+                       trail_t *trail)
+{
+  int db_err;
+  DBT query;
+
+  db_err = fs->strings->del (fs->strings, trail->db_txn,
+                             svn_fs__str_to_dbt (&query, (char *) key), 0);
+
+  /* If there's no such node, return an appropriately specific error.  */
+  if (db_err == DB_NOTFOUND)
+    return svn_error_createf
+      (SVN_ERR_FS_NO_SUCH_STRING, 0, 0, fs->pool,
+       "svn_fs__delete_string: no such string `%s'", key);
+
+  /* Handle any other error conditions.  */
+  SVN_ERR (DB_WRAP (fs, "deleting string", db_err));
+
   return SVN_NO_ERROR;
 }
 
