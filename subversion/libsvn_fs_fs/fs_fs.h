@@ -323,4 +323,20 @@ svn_error_t *svn_fs_fs__txn_changes_fetch (apr_hash_t **changes,
                                            apr_hash_t *copyfrom_cache,
                                            apr_pool_t *pool);
 
+
+/* Move a file into place from OLD_FILENAME in the transactions
+   directory to its final location NEW_FILENAME in the repository.  On
+   Unix, match the permissions of the new file to the permissions of
+   PERMS_REFERENCE.  Temporary allocations are from POOL. */
+svn_error_t * svn_fs_fs__move_into_place (const char *old_filename, 
+                                          const char *new_filename,
+                                          const char *perms_reference, 
+                                          apr_pool_t *pool);
+
+/* Match the perms on FILENAME to the PERMS_REFERENCE file if we're
+   not on a win32 system.  On win32, this is a no-op. */
+svn_error_t * svn_fs_fs__dup_perms (const char *filename,
+                                    const char *perms_reference,
+                                    apr_pool_t *pool);
+
 #endif

@@ -3328,28 +3328,36 @@ write_final_changed_path_info (apr_off_t *offset_p,
   return SVN_NO_ERROR;
 }
 
-/* Move a file into place from OLD_FILENAME in the transactions
-   directory to its final location NEW_FILENAME in the repository.  On
-   Unix, match the permissions of the new file to the permissions of
-   PERMS_REFERENCE.  Temporary allocations are from POOL. */
-static svn_error_t *
-move_into_place (const char *old_filename, const char *new_filename,
-                 const char *perms_reference, apr_pool_t *pool)
-{
-  svn_error_t *err;
 
+svn_error_t *
+svn_fs_fs__dup_perms (const char *filename,
+                      const char *perms_reference,
+                      apr_pool_t *pool)
+{
 #ifndef WIN32
   apr_status_t status;
   apr_finfo_t finfo;
   
-  /* Match the perms on the old file to the perms reference file. */
   status = apr_stat (&finfo, perms_reference, APR_FINFO_PROT, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't stat '%s'"), perms_reference);
-  status = apr_file_perms_set (old_filename, finfo.protection);
+  status = apr_file_perms_set (filename, finfo.protection);
   if (status)
-    return svn_error_wrap_apr (status, _("Can't chmod '%s'"), old_filename);
+    return svn_error_wrap_apr (status, _("Can't chmod '%s'"), filename);
 #endif
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_fs__move_into_place (const char *old_filename, 
+                            const char *new_filename,
+                            const char *perms_reference, 
+                            apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  SVN_ERR (svn_fs_fs__dup_perms (old_filename, perms_reference, pool));
 
   /* Move the file into place. */
   err = svn_io_file_rename (old_filename, new_filename, pool);
@@ -3428,7 +3436,7 @@ write_final_current (svn_fs_t *fs,
 
   SVN_ERR (svn_io_file_close (file, pool));
 
-  SVN_ERR (move_into_place (tmp_name, name, name, pool));
+  SVN_ERR (svn_fs_fs__move_into_place (tmp_name, name, name, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3584,14 +3592,14 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   /* Move the finished rev file into place. */
   old_rev_filename = path_rev (fs, old_rev, subpool);
   rev_filename = path_rev (fs, new_rev, subpool);
-  SVN_ERR (move_into_place (proto_filename, rev_filename, old_rev_filename,
-                            subpool));
+  SVN_ERR (svn_fs_fs__move_into_place (proto_filename, rev_filename, 
+                                       old_rev_filename, subpool));
 
   /* Move the revprops file into place. */
   revprop_filename = path_txn_props (fs, txn->id, subpool);
   final_revprop = path_revprops (fs, new_rev, subpool);
-  SVN_ERR (move_into_place (revprop_filename, final_revprop, old_rev_filename,
-                            subpool));
+  SVN_ERR (svn_fs_fs__move_into_place (revprop_filename, final_revprop, 
+                                       old_rev_filename, subpool));
   
   /* Update the 'current' file. */
   SVN_ERR (write_final_current (fs, txn->id, new_rev, start_node_id,
