@@ -729,7 +729,7 @@ $
 
       <screen>
 $ svn propdel license calc/button.c
-property `foo' deleted from ''.
+property `license' deleted from ''.
 $ svn proplist --verbose calc/button.c
 Properties on 'calc/button.c':
   copyright : (c) 2003 Red-Bean Software
