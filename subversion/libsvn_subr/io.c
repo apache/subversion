@@ -209,17 +209,16 @@ svn_io_copy_file (const char *src,
 {
   apr_file_t *d;
   apr_status_t apr_err;
-  const char *src_native, *dst_native;
+  const char *src_native, *dst_tmp_native;
   const char *dst_tmp;
 
   SVN_ERR (svn_utf_cstring_from_utf8 (&src_native, src, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&dst_native, dst, pool));
 
   /* For atomicity, we translate to a tmp file and then rename the tmp
      file over the real destination. */
 
-  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst_native,
-                                    ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst, ".tmp", FALSE, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&dst_tmp_native, dst_tmp, pool));
 
   apr_err = apr_file_close (d);
   if (apr_err)
@@ -229,11 +228,11 @@ svn_io_copy_file (const char *src,
          "svn_io_copy_file: error closing %s", dst_tmp);
     }
 
-  apr_err = apr_file_copy (src_native, dst_tmp, APR_OS_DEFAULT, pool);
+  apr_err = apr_file_copy (src_native, dst_tmp_native, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf
       (apr_err, 0, NULL, "svn_io_copy_file: error copying %s to %s",
-       src_native, dst_tmp);
+       src, dst_tmp);
 
   /* If copying perms, set the perms on dst_tmp now, so they will be
      atomically inherited in the upcoming rename.  But note that we
@@ -252,7 +251,7 @@ svn_io_copy_file (const char *src,
       if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL,
-           "svn_io_copy_file: opening %s for perms", src_native);
+           "svn_io_copy_file: opening %s for perms", src);
 
       apr_err = apr_file_info_get (&finfo, APR_FINFO_PROT, s);
       if (apr_err)
@@ -260,16 +259,16 @@ svn_io_copy_file (const char *src,
           apr_file_close (s);  /* toss any error */
           return svn_error_createf
             (apr_err, 0, NULL,
-             "svn_io_copy_file: getting perm info for %s", src_native);
+             "svn_io_copy_file: getting perm info for %s", src);
         }
 
       apr_err = apr_file_close (s);
       if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL,
-           "svn_io_copy_file: closing %s after reading perms", src_native);
+           "svn_io_copy_file: closing %s after reading perms", src);
 
-      apr_err = apr_file_perms_set (dst_tmp, finfo.protection);
+      apr_err = apr_file_perms_set (dst_tmp_native, finfo.protection);
 
       /* We shouldn't be able to get APR_INCOMPLETE or APR_ENOTIMPL
          here under normal circumstances, because the perms themselves
@@ -287,15 +286,7 @@ svn_io_copy_file (const char *src,
     }
 #endif /* ! SVN_WIN32 */
 
-  /* We already have the dst_tmp filename in native encoding, so call
-     apr_file_rename directly, instead of svn_io_file_rename. */
-  apr_err = apr_file_rename (dst_tmp, dst_native, pool);
-  if (apr_err)
-    return svn_error_createf
-      (apr_err, 0, NULL,
-       "svn_io_copy_file: error renaming '%s' to '%s'", dst_tmp, dst_native);
-
-  return SVN_NO_ERROR;
+  return svn_io_file_rename (dst_tmp, dst, pool);
 }
 
 
