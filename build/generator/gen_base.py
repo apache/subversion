@@ -107,7 +107,7 @@ class GeneratorBase:
 
       self.manpages.extend(string.split(parser.get(target, 'manpages')))
 
-      if type not in ('script', 'project', 'external', 'utility'):
+      if type not in ('script', 'project', 'external', 'utility', 'swig_utility'):
         # collect test programs
         if type == 'exe':
           if install == 'test':
