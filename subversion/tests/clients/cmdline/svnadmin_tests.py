@@ -17,16 +17,10 @@
 ######################################################################
 
 # General modules
-import shutil, string, sys, re, os.path, traceback
+import string, sys, re, os.path
 
-# The `svntest' module
-try:
-  import svntest
-except SyntaxError:
-  sys.stderr.write('[SKIPPED] ')
-  print "<<< Please make sure you have Python 2 or better! >>>"
-  traceback.print_exc(None,sys.stdout)
-  raise SystemExit
+# Our testing module
+import svntest
 
 
 # (abbreviation)
@@ -66,29 +60,34 @@ path_index = svntest.actions.path_index
 # Helper routines
 
 
-def get_trees(repo_dir, revision_p = 0):
-  """Run 'svnadmin' on REPO_DIR, with a subcommand of either 'lstxns'
-  or 'lsrevs', depending on the state of REVISION_P.  Return a list of
-  strings that are either transaction names or revision numbers."""
+def get_revs(repo_dir):
+  "Get a list of revisions in the repository, using 'svnadmin lsrevs'."
 
-  tree_names = []
+  revs = []
 
-  if revision_p:
-    output_lines, errput_lines = svntest.main.run_svnadmin("lsrevs", repo_dir)
-    rm = re.compile("^Revision\s+(.+)")
-  else:
-    output_lines, errput_lines = svntest.main.run_svnadmin("lstxns",
-                                                           repo_dir,
-                                                           "long")
-    rm = re.compile("^Txn\s+(.+):")
+  output_lines, errput_lines = svntest.main.run_svnadmin("lsrevs", repo_dir)
+  rm = re.compile("^Revision\s+(.+)")
 
   for line in output_lines:
     match = rm.search(line)
-    if match and match.groups():
-      tree_names.append(match.group(1))
-      
-  return tree_names
+    if match:
+      revs.append(match.group(1))
 
+  # sort, just in case
+  revs.sort()
+
+  return revs
+
+def get_txns(repo_dir):
+  "Get the txn names using 'svnadmin lstxns'."
+
+  output_lines, error_lines = svntest.main.run_svnadmin('lstxns', repo_dir)
+  txns = map(string.strip, output_lines)
+
+  # sort, just in case
+  txns.sort()
+
+  return txns
 
 
 
@@ -175,7 +174,7 @@ def create_txn(sbox):
   output, errput = svntest.main.run_svnadmin("createtxn", repo_dir, "1")
 
   # Look for it by running 'lstxn'.
-  tree_list = get_trees(repo_dir)
+  tree_list = get_txns(repo_dir)
   if tree_list != ['1']:
     return 1
 
@@ -201,7 +200,7 @@ def remove_txn(sbox):
   svntest.main.run_svnadmin("createtxn", repo_dir, "1")
 
   # Look for them by running 'lstxn'.
-  tree_list = get_trees(repo_dir)
+  tree_list = get_txns(repo_dir)
   if tree_list != ['1', '2', '3', '4', '5']:
     return 1
 
@@ -209,7 +208,7 @@ def remove_txn(sbox):
   svntest.main.run_svnadmin("rmtxns", repo_dir, "2", "4")
 
   # Examine the list of transactions again.
-  tree_list = get_trees(repo_dir)
+  tree_list = get_txns(repo_dir)
   if tree_list != ['1', '3', '5']:
     return 1
 
@@ -283,7 +282,7 @@ def list_revs(sbox):
     return 1
 
   # Now fetch all revisions from the repository.
-  tree_list = get_trees(repo_dir, 1)
+  tree_list = get_revs(repo_dir)
   if tree_list != ['0', '1', '2', '3']:
     return 1
 
@@ -311,5 +310,5 @@ if __name__ == '__main__':
 
 ### End of file.
 # local variables:
-# eval: (load-file "../../../svn-dev.el")
+# eval: (load-file "../../../../tools/dev/svn-dev.el")
 # end:

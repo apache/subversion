@@ -137,8 +137,8 @@ usage (const char *progname, int exit_code)
      "      If just LOWER_REV is given, that revision tree is printed.\n"
      "      If two revisions are given, that range is printed, inclusive.\n"
      "\n"
-     "   lstxns    REPOS_PATH [long]\n"
-     "      Print all txn names and, if \"long\" is specified, their\n"
+     "   lstxns    [--long] REPOS_PATH\n"
+     "      Print all txn names and, if \"--long\" is specified, their\n"
      "      metadata and trees.\n"
      "\n"
 #if 0 
@@ -236,7 +236,7 @@ main (int argc, const char * const *argv)
   if (argc < 3)
     {
       usage (argv[0], 1);
-      return EXIT_FAILURE;
+      /* NOTREACHED */
     }
 
   path = argv[2];
@@ -250,7 +250,7 @@ main (int argc, const char * const *argv)
     default:
       {
         usage (argv[0], 1);
-        return EXIT_FAILURE;
+        /* NOTREACHED */
       }
       break;
 
@@ -281,7 +281,7 @@ main (int argc, const char * const *argv)
         if (argc != 4)
           {
             usage (argv[0], 1);
-            return EXIT_FAILURE;
+            /* NOTREACHED */
           }
 
         INT_ERR (svn_repos_open (&repos, path, pool));
@@ -305,12 +305,13 @@ main (int argc, const char * const *argv)
 
         if (argc >= 4) 
           {
-            if (strcmp (argv[3], "long"))
+            if (strcmp (argv[2], "--long") != 0)
               {
                 usage (argv[0], 1);
-                return EXIT_FAILURE;
+                /* NOTREACHED */
               }
             show_extra = TRUE;
+            path = argv[3];
           }
 
         INT_ERR (svn_repos_open (&repos, path, pool));
@@ -435,7 +436,7 @@ main (int argc, const char * const *argv)
         if (! argv[3])
           {
             usage (argv[0], 1);
-            return EXIT_FAILURE;
+            /* NOTREACHED */
           }
         
         INT_ERR (svn_repos_open (&repos, path, pool));
@@ -457,7 +458,7 @@ main (int argc, const char * const *argv)
         if (! argv[3])
           {
             usage (argv[0], 1);
-            return EXIT_FAILURE;
+            /* NOTREACHED */
           }
         
         INT_ERR (svn_repos_open (&repos, path, pool));
@@ -507,7 +508,7 @@ main (int argc, const char * const *argv)
         if (argc != 5)
           {
             usage (argv[0], 1);
-            return EXIT_FAILURE;
+            /* NOTREACHED */
           }
 
         /* get revision and path from argv[] */
@@ -615,8 +616,8 @@ main (int argc, const char * const *argv)
 
       }
       break;
-
 #endif /* 0 */
+
     case svnadmin_cmd_shell:
       {
         INT_ERR (svn_repos_open (&repos, path, pool));

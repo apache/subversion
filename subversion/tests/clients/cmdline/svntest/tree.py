@@ -633,5 +633,5 @@ def build_tree_from_wc(wc_path, load_props=0, ignore_svn=1):
 
 ### End of file.
 # local variables:
-# eval: (load-file "../../../../svn-dev.el")
+# eval: (load-file "../../../../../tools/dev/svn-dev.el")
 # end:

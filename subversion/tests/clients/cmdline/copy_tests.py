@@ -17,16 +17,10 @@
 ######################################################################
 
 # General modules
-import shutil, string, sys, re, os, traceback
+import string, sys, os
 
-# The `svntest' module
-try:
-  import svntest
-except SyntaxError:
-  sys.stderr.write('[SKIPPED] ')
-  print "<<< Please make sure you have Python 2 or better! >>>"
-  traceback.print_exc(None,sys.stdout)
-  raise SystemExit
+# Our testing module
+import svntest
 
 
 # (abbreviation)
@@ -264,10 +258,8 @@ def mv_unversioned_file(sbox):
   svntest.main.file_append(unver_path, "an unversioned file")
   output, errput = svntest.main.run_svn(1, 'mv', unver_path, dst_path)
 
-  rm = re.compile ("not under revision control")
   for line in errput:
-    match = rm.search(line)
-    if match:
+    if string.find(line, "not under revision control") != -1:
       return 0
   return 1
 
@@ -290,5 +282,5 @@ if __name__ == '__main__':
 
 ### End of file.
 # local variables:
-# eval: (load-file "../../../svn-dev.el")
+# eval: (load-file "../../../../tools/dev/svn-dev.el")
 # end:
