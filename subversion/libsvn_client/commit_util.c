@@ -228,8 +228,9 @@ harvest_committables (apr_hash_t *committables,
   SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_SPECIAL, path, adm_access,
                             pool));
 
-  if (((! propval) && (is_special)) ||
-          ((propval) && (! is_special)))
+  if ((((! propval) && (is_special)) ||
+          ((propval) && (! is_special))) &&
+      (kind != svn_node_none))
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
