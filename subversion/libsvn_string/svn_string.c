@@ -58,7 +58,7 @@
    generic realloc for memory pools, *not* for strings.  append()
    calls this on the svn_string_t's *data field.  */
 
-void *
+static void *
 my__realloc (char *data, const size_t oldsize, const size_t request, 
              apr_pool_t *pool)
 {
