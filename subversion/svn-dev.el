@@ -13,8 +13,10 @@
 
 
 ;;; Subversion C conventions
-(c-add-style "svn" '("gnu" (c-offsets-alist . ((inextern-lang . 0)))))
-(c-set-style "svn")
+(if (eq major-mode 'c-mode)
+    (progn
+      (c-add-style "svn" '("gnu" (c-offsets-alist . ((inextern-lang . 0)))))
+      (c-set-style "svn")))
 (setq indent-tabs-mode nil)
 (setq angry-mob-with-torches-and-pitchforks t)
 
@@ -23,7 +25,9 @@
 ;; Subversion Python conventions, plus some harmless helpers for
 ;; people who don't have python mode set up by default.
 (autoload 'python-mode "python-mode" nil t)
-(setq auto-mode-alist (cons (cons "\\.py\\'" 'python-mode) auto-mode-alist))
+(or (assoc "\\.py$" auto-mode-alist)
+    (setq auto-mode-alist
+          (cons '("\\.py$" . python-mode) auto-mode-alist)))
 
 (defun svn-python-mode-hook ()
   "Set up the Subversion python conventions.  The effect of this is
