@@ -83,6 +83,7 @@ TEXI2DVI = texi2dvi
 DVIPS = dvips
 DVIPDF = dvipdf
 MSGFMT = @MSGFMT@
+MSGFMTFLAGS = @MSGFMTFLAGS@
 MSGMERGE = @MSGMERGE@
 XGETTEXT = @XGETTEXT@
 
@@ -533,12 +534,12 @@ doc-clean:
 @NO_GETTEXT_CODESET@	$< > $@
 
 @NO_GETTEXT_CODESET@.spo.mo:
-@NO_GETTEXT_CODESET@	$(MSGFMT) -o $@ $<
+@NO_GETTEXT_CODESET@	$(MSGFMT) $(MSGFMTFLAGS) -o $@ $<
 
 # For systems with bind_textdomain_codeset, just leave the Content-Type:
 # header alone.
 @GETTEXT_CODESET@.po.mo:
-@GETTEXT_CODESET@	$(MSGFMT) -o $@ $<
+@GETTEXT_CODESET@	$(MSGFMT) $(MSGFMTFLAGS) -o $@ $<
 
 
 install-docs: install-man @INSTALL_INFO@
