@@ -671,7 +671,7 @@ lock_expiration (const char **msg,
   SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
   SVN_ERR (svn_fs_set_access (fs, access));
 
-  /* Lock /A/D/G/rho, with an expiration 5 seconds from now. */
+  /* Lock /A/D/G/rho, with an expiration 3 seconds from now. */
   SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", "", 0, 3, pool));
 
   /* Become nobody. */
