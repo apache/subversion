@@ -58,7 +58,7 @@
 
 
 /* A vcdiff parser object.  */
-typedef struct svn_vcdiff_parser_t
+typedef struct svn_delta__vcdiff_parser_t
 {
   /* Once the vcdiff parser has enough data buffered to create a
      "window", it passes this window to the caller's consumer routine.  */
@@ -75,31 +75,33 @@ typedef struct svn_vcdiff_parser_t
   /* The actual vcdiff data buffer, living within subpool. */
   svn_string_t *buffer;
 
-} svn_vcdiff_parser_t;
+} svn_delta__vcdiff_parser_t;
 
 
 /* Return a vcdiff parser object, PARSER.  If we're receiving a
    vcdiff-format byte stream, one block of bytes at a time, we can
-   pass each block in succession to svn_vcdiff_parse, with PARSER as
+   pass each block in succession to svn_delta__vcdiff_parse, with PARSER as
    the other argument.  PARSER keeps track of where we are in the
    stream; each time we've received enough data for a complete
    svn_delta_window_t, we pass it to HANDLER, along with
    HANDLER_BATON.  POOL is used to create individual sub-pools to hold
    each window of vcdiff data.*/
-extern svn_vcdiff_parser_t *
-svn_make_vcdiff_parser (svn_text_delta_window_handler_t *handler,
-                        void *handler_baton,
-                        apr_pool_t *pool);
+extern svn_delta__vcdiff_parser_t *
+svn_delta__make_vcdiff_parser (svn_text_delta_window_handler_t *handler,
+                               void *handler_baton,
+                               apr_pool_t *pool);
 
 /* Parse another block of bytes in the vcdiff-format stream managed by
    PARSER.  When we've accumulated enough data for a complete window,
    call PARSER's consumer function.  */
-extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
-                                      const char *buffer,
-                                      apr_off_t *len);
+extern svn_error_t *
+svn_delta__vcdiff_parse (svn_delta__vcdiff_parser_t *parser,
+                         const char *buffer,
+                         apr_off_t *len);
 
 
-extern svn_error_t *svn_vcdiff_flush_buffer (svn_vcdiff_parser_t *parser);
+extern svn_error_t *
+svn_delta__vcdiff_flush_buffer (svn_delta__vcdiff_parser_t *parser);
 
 
 
@@ -129,37 +131,37 @@ extern svn_error_t *svn_vcdiff_flush_buffer (svn_vcdiff_parser_t *parser);
  * callback to be invoked, to figure out what to do next.
  */
 
-typedef enum svn_XML_t
+typedef enum svn_delta__XML_t
 {
-  svn_XML_treedelta = 1,
-  svn_XML_new,
-  svn_XML_delete,
-  svn_XML_replace,
-  svn_XML_file,
-  svn_XML_dir,
-  svn_XML_textdelta,
-  svn_XML_propdelta,
-  svn_XML_set
-} svn_XML_t;
+  svn_delta__XML_treedelta = 1,
+  svn_delta__XML_new,
+  svn_delta__XML_delete,
+  svn_delta__XML_replace,
+  svn_delta__XML_file,
+  svn_delta__XML_dir,
+  svn_delta__XML_textdelta,
+  svn_delta__XML_propdelta,
+  svn_delta__XML_set
+} svn_delta__XML_t;
 
 
-typedef struct svn_delta_stackframe_t
+typedef struct svn_delta__stackframe_t
 {
-  svn_XML_t tag;      /* represents an open <tag> */
-  void *baton;        /* holds caller data for a particular subdirectory */
-  svn_string_t *name; /* if the tag had a "name" attribute attached */
+  svn_delta__XML_t tag;  /* represents an open <tag> */
+  void *baton;           /* holds caller data for a particular subdirectory */
+  svn_string_t *name;    /* if the tag had a "name" attribute attached */
   
   svn_string_t *ancestor_path;     /* Explicit, else inherited from parent */ 
   svn_vernum_t ancestor_version;   /* Explicit, else inherited from parent */ 
 
-  struct svn_delta_stackframe_t *next;
-  struct svn_delta_stackframe_t *previous;
+  struct svn_delta__stackframe_t *next;
+  struct svn_delta__stackframe_t *previous;
   
-} svn_delta_stackframe_t;
+} svn_delta__stackframe_t;
 
 
 
-/* An svn_delta_digger_t is passed as *userData to Expat (and from
+/* An svn_delta__digger_t is passed as *userData to Expat (and from
  * there to registered callback functions).
  *
  * As the callbacks see various XML elements, they construct
@@ -187,14 +189,14 @@ typedef struct svn_delta_stackframe_t
  *
  */
 
-typedef struct svn_delta_digger_t
+typedef struct svn_delta__digger_t
 {
   /* Pool to do allocations from */
   apr_pool_t *pool;
 
   /* A mirror of the stack we're getting from the XML structure, used
      for storing XML attributes and for XML validation.  */
-  svn_delta_stackframe_t *stack;
+  svn_delta__stackframe_t *stack;
 
   /* Callbacks to use when we discover interesting XML events */
   svn_delta_walk_t *walker;
@@ -220,20 +222,20 @@ typedef struct svn_delta_digger_t
      expat.  Specifically, this is the _current_ vcdiff parser that
      we're using to handle the data within the _current_ file being
      added or replaced.*/
-  svn_vcdiff_parser_t *vcdiff_parser;
+  svn_delta__vcdiff_parser_t *vcdiff_parser;
 
   /* A similar parser, used to break up large pdelta changes into
      chunks. */
-  struct svn_pdelta_parser_t *pdelta_parser;
+  struct svn_delta__pdelta_parser_t *pdelta_parser;
 
-} svn_delta_digger_t;
+} svn_delta__digger_t;
 
 
 
 
 
 /* A pdelta parser object.  */
-typedef struct svn_pdelta_parser_t
+typedef struct svn_delta__pdelta_parser_t
 {
   /* The routine that this parser will send the final propchange
      to. */
@@ -254,31 +256,29 @@ typedef struct svn_pdelta_parser_t
      we're done. */
   svn_propchange_t *propchange;
 
-} svn_pdelta_parser_t;
+} svn_delta__pdelta_parser_t;
 
 
 
 /* Return a property delta parser. */
-extern svn_pdelta_parser_t *
-svn_make_pdelta_parser (svn_propchange_handler_t *handler,
-                        void *handler_baton,
-                        apr_pool_t *pool);
+extern svn_delta__pdelta_parser_t *
+svn_delta__make_pdelta_parser (svn_propchange_handler_t *handler,
+                               void *handler_baton,
+                               apr_pool_t *pool);
 
 
 
 /* Parse another block of bytes in the <prop-delta> */
 extern svn_error_t *
-svn_pdelta_parse (svn_delta_digger_t *digger,
-                  const char *buffer,
-                  apr_off_t *len);
+svn_delta__pdelta_parse (svn_delta__digger_t *digger,
+                         const char *buffer,
+                         apr_off_t *len);
 
 
 /* Deallocate parser's subpool (and propchange), and create a new one,
    ready to buffer a new propchange. */
 extern void
-svn_reset_parser_subpool (svn_pdelta_parser_t *parser);
-
-
+svn_delta__reset_parser_subpool (svn_delta__pdelta_parser_t *parser);
 
 
 

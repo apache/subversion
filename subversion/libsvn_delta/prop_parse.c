@@ -85,7 +85,7 @@
    it), andthen create a new subpool with a new propchange, ready to
    buffer the next change.  */
 void 
-svn_reset_parser_subpool (svn_pdelta_parser_t *parser)
+svn_delta__reset_parser_subpool (svn_delta__pdelta_parser_t *parser)
 {
   apr_destroy_pool (parser->subpool);
 
@@ -108,15 +108,15 @@ svn_reset_parser_subpool (svn_pdelta_parser_t *parser)
    each time we've received enough data for a complete chunk, we pass
    it to HANDLER, along with HANDLER_BATON.  POOL will be used to by
    PARSER to buffer the incoming data and create chunk to send off.  */
-svn_pdelta_parser_t *
-svn_make_pdelta_parser (svn_propchange_handler_t *handler,
-                        void *handler_baton,
-                        apr_pool_t *pool)
+svn_delta__pdelta_parser_t *
+svn_delta__make_pdelta_parser (svn_propchange_handler_t *handler,
+                               void *handler_baton,
+                               apr_pool_t *pool)
 {
   /* Allocate a vcdiff_parser and fill out its fields */
-  svn_pdelta_parser_t *new_pdelta_parser = 
-    (svn_pdelta_parser_t *) 
-    apr_palloc (pool, sizeof(svn_pdelta_parser_t));
+  svn_delta__pdelta_parser_t *new_pdelta_parser = 
+    (svn_delta__pdelta_parser_t *) 
+    apr_palloc (pool, sizeof(svn_delta__pdelta_parser_t));
 
   new_pdelta_parser->handler = handler;
   new_pdelta_parser->baton = handler_baton;
@@ -142,11 +142,11 @@ svn_make_pdelta_parser (svn_propchange_handler_t *handler,
 
 /* Buffer up incoming data within a <set> tag. */
 svn_error_t *
-svn_pdelta_parse (svn_delta_digger_t *digger,
-                  const char *buffer,
-                  apr_off_t *len)
+svn_delta__pdelta_parse (svn_delta__digger_t *digger,
+                         const char *buffer,
+                         apr_off_t *len)
 {
-  svn_pdelta_parser_t *parser = digger->pdelta_parser;
+  svn_delta__pdelta_parser_t *parser = digger->pdelta_parser;
 
   svn_string_appendbytes (parser->propchange->value,
                           buffer, *len,

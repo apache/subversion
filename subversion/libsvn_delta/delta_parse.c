@@ -103,8 +103,8 @@ get_attribute_value (const char **atts, char *name)
 
 
 /* Return the newest frame of an XML stack. (The "top" of the stack.) */
-static svn_delta_stackframe_t *
-find_stack_newest (svn_delta_stackframe_t *frame)
+static svn_delta__stackframe_t *
+find_stack_newest (svn_delta__stackframe_t *frame)
 {
   if (frame)
     {
@@ -124,7 +124,7 @@ find_stack_newest (svn_delta_stackframe_t *frame)
    Store ERROR in DIGGER and set all expat callbacks to NULL. (To
    understand why this works, see svn_delta_parse(). ) */
 static void
-signal_expat_bailout (svn_error_t *error, svn_delta_digger_t *digger)
+signal_expat_bailout (svn_error_t *error, svn_delta__digger_t *digger)
 {
   /* This will cause the current XML_Parse() call to finish quickly! */
   XML_SetElementHandler (digger->expat_parser, NULL, NULL);
@@ -160,6 +160,44 @@ XML_validation_error (apr_pool_t *pool,
 }
 
 
+/* Set up FRAME's ancestry information to the degree that it is not
+   already set.  Information is derived by walking backwards up from
+   FRAME and examining parents, so it is important that frame has
+   _already_ been linked into the digger's stack. */
+static void
+derive_ancestry (svn_delta__stackframe_t *youngest)
+{
+  svn_delta__stackframe_t *p = youngest->previous;
+
+  if ((youngest->tag != svn_delta__XML_dir) 
+      && (youngest->tag != svn_delta__XML_file))
+    {
+      return;
+    }
+  else if (youngest->ancestor_path
+           && (youngest->ancestor_version >= 0))
+    {
+      return;
+    }
+  else  /* okay, we know we need to derive some information from above */
+    {
+      while (p)
+        {
+          /* kff todo: this ancestor is only a basename, not a path.
+             It would be nice if users of this library could count on
+             it always being a full path... or would it? */
+          if ((! youngest->ancestor_path) && (p->name))
+            youngest->ancestor_path = p->name;
+
+          if ((youngest->ancestor_version < 0) && (p->ancestor_version >= 0))
+            youngest->ancestor_version = p->ancestor_version;
+
+          p = p->previous;
+        }
+    }
+}
+
+
 /* A validation note.  
 
    The strategy for validating our XML stream is simple:
@@ -180,14 +218,14 @@ XML_validation_error (apr_pool_t *pool,
    so, append the frame and inherit the parent's baton.  If not,
    return a validity error. (TAGNAME is used for error message.) */
 static svn_error_t *
-do_stack_append (svn_delta_digger_t *digger, 
-                 svn_delta_stackframe_t *new_frame,
+do_stack_append (svn_delta__digger_t *digger, 
+                 svn_delta__stackframe_t *new_frame,
                  const char *tagname)
 {
   apr_pool_t *pool = digger->pool;
 
   /* Get a grip on the youngest frame of the stack */
-  svn_delta_stackframe_t *youngest_frame = find_stack_newest (digger->stack);
+  svn_delta__stackframe_t *youngest_frame = find_stack_newest (digger->stack);
 
   if (youngest_frame == NULL)
     {
@@ -200,57 +238,57 @@ do_stack_append (svn_delta_digger_t *digger,
   else   /* We already have a context, so check validity. */
     {
       /* <tree-delta> must follow <dir> */
-      if ((new_frame->tag == svn_XML_treedelta)
-          && (youngest_frame->tag != svn_XML_dir))
+      if ((new_frame->tag == svn_delta__XML_treedelta)
+          && (youngest_frame->tag != svn_delta__XML_dir))
         return XML_validation_error (pool, tagname, FALSE);
       
       /* <new>, <replace> must follow <tree-delta> */
-      else if ( ((new_frame->tag == svn_XML_new)
-                 || (new_frame->tag == svn_XML_replace)
-                 || (new_frame->tag == svn_XML_delete))
-                && (youngest_frame->tag != svn_XML_treedelta) )
+      else if ( ((new_frame->tag == svn_delta__XML_new)
+                 || (new_frame->tag == svn_delta__XML_replace)
+                 || (new_frame->tag == svn_delta__XML_delete))
+                && (youngest_frame->tag != svn_delta__XML_treedelta) )
         return XML_validation_error (pool, tagname, FALSE);
 
       /* <delete> must follow either <tree-delta> or <prop-delta> */
-      else if ( (new_frame->tag == svn_XML_delete)
-                && (youngest_frame->tag != svn_XML_treedelta)
-                && (youngest_frame->tag != svn_XML_propdelta) )
+      else if ( (new_frame->tag == svn_delta__XML_delete)
+                && (youngest_frame->tag != svn_delta__XML_treedelta)
+                && (youngest_frame->tag != svn_delta__XML_propdelta) )
         return XML_validation_error (pool, tagname, FALSE);
       
       /* <file>, <dir> must follow either <new> or <replace> */
-      else if ((new_frame->tag == svn_XML_file)
-               || (new_frame->tag == svn_XML_dir))
+      else if ((new_frame->tag == svn_delta__XML_file)
+               || (new_frame->tag == svn_delta__XML_dir))
         {
-          if ((youngest_frame->tag != svn_XML_new)
-              && (youngest_frame->tag != svn_XML_replace))
+          if ((youngest_frame->tag != svn_delta__XML_new)
+              && (youngest_frame->tag != svn_delta__XML_replace))
             return XML_validation_error (digger->pool, tagname, FALSE);
         }
       
       /* <prop-delta> must follow one of <new>, <replace> (if talking
          about a directory entry's properties) or must follow one of
          <file>, <dir> */
-      else if ((new_frame->tag == svn_XML_propdelta)
-               && (youngest_frame->tag != svn_XML_new)
-               && (youngest_frame->tag != svn_XML_replace)
-               && (youngest_frame->tag != svn_XML_file)
-               && (youngest_frame->tag != svn_XML_dir))
+      else if ((new_frame->tag == svn_delta__XML_propdelta)
+               && (youngest_frame->tag != svn_delta__XML_new)
+               && (youngest_frame->tag != svn_delta__XML_replace)
+               && (youngest_frame->tag != svn_delta__XML_file)
+               && (youngest_frame->tag != svn_delta__XML_dir))
         return XML_validation_error (pool, tagname, FALSE);
       
       /* <text-delta> must follow <file> */
-      else if ((new_frame->tag == svn_XML_textdelta)
-               && (youngest_frame->tag != svn_XML_file))
+      else if ((new_frame->tag == svn_delta__XML_textdelta)
+               && (youngest_frame->tag != svn_delta__XML_file))
         return XML_validation_error (pool, tagname, FALSE);
 
       /* <set> must follow <prop-delta> */
-      else if ((new_frame->tag == svn_XML_textdelta)
-               && (youngest_frame->tag != svn_XML_file))
+      else if ((new_frame->tag == svn_delta__XML_textdelta)
+               && (youngest_frame->tag != svn_delta__XML_file))
         return XML_validation_error (pool, tagname, FALSE);
 
       /* ancestry information can only appear as <file> or <dir> attrs */
-      else if (((new_frame->ancestor_path) 
+      else if ((new_frame->ancestor_path
                 || (new_frame->ancestor_version >= 0))
-               && (new_frame->tag != svn_XML_file)
-               && (new_frame->tag != svn_XML_dir))
+               && (new_frame->tag != svn_delta__XML_file)
+               && (new_frame->tag != svn_delta__XML_dir))
         return XML_validation_error (pool, tagname, FALSE);
 
 
@@ -261,24 +299,8 @@ do_stack_append (svn_delta_digger_t *digger,
   
   new_frame->previous = youngest_frame;
 
-  /* Inherit ancestry information.  It may get overridden later, but
-   * if it's not, then defaulting to the previous frame's information
-   * is correct.  Note that all frames get this, whether of type
-   * file|dir or not.  Once validation is done, it's okay for us to
-   * just set ancestry information in every frame, even those whose
-   * XML attributes couldn't ever have held ancestory information. 
-   * 
-   * Of course, we only set it in new_frame if it's not already
-   * explicitly set by attributes.
-   */
-  if (new_frame->previous)
-    {
-      if (! new_frame->ancestor_path)
-        new_frame->ancestor_path = new_frame->previous->ancestor_path;
-
-      if (new_frame->ancestor_version < 0)
-        new_frame->ancestor_version = new_frame->previous->ancestor_version;
-    }
+  /* Set up any unset ancestry information. */
+  derive_ancestry (new_frame);
 
   return SVN_NO_ERROR;
 }
@@ -290,12 +312,12 @@ do_stack_append (svn_delta_digger_t *digger,
    youngest frame in DIGGER's stack.  If so, remove YOUNGEST_FRAME
    from the stack.  If not, return a validity error. */
 static svn_error_t *
-do_stack_remove (svn_delta_digger_t *digger, const char *tagname)
+do_stack_remove (svn_delta__digger_t *digger, const char *tagname)
 {
   apr_pool_t *pool = digger->pool;
 
   /* Get a grip on the youngest frame of the stack */
-  svn_delta_stackframe_t *youngest_frame = find_stack_newest (digger->stack);
+  svn_delta__stackframe_t *youngest_frame = find_stack_newest (digger->stack);
 
   if (youngest_frame == NULL)
     return XML_validation_error (pool, tagname, TRUE);
@@ -305,39 +327,39 @@ do_stack_remove (svn_delta_digger_t *digger, const char *tagname)
      at the bottom of the stack! */
   
   if ((strcmp (tagname, "tree-delta") == 0)
-      && (youngest_frame->tag != svn_XML_treedelta))
+      && (youngest_frame->tag != svn_delta__XML_treedelta))
     return XML_validation_error (pool, tagname, TRUE);
 
   else if ((strcmp (tagname, "new") == 0)
-           && (youngest_frame->tag != svn_XML_new))
+           && (youngest_frame->tag != svn_delta__XML_new))
     return XML_validation_error (pool, tagname, TRUE);
 
   else if ((strcmp (tagname, "delete") == 0)
-           && (youngest_frame->tag != svn_XML_delete))
+           && (youngest_frame->tag != svn_delta__XML_delete))
     return XML_validation_error (pool, tagname, TRUE);
 
   else if ((strcmp (tagname, "replace") == 0)
-           && (youngest_frame->tag != svn_XML_replace))
+           && (youngest_frame->tag != svn_delta__XML_replace))
     return XML_validation_error (pool, tagname, TRUE);
 
   else if ((strcmp (tagname, "file") == 0)
-           && (youngest_frame->tag != svn_XML_file))
+           && (youngest_frame->tag != svn_delta__XML_file))
     return XML_validation_error (pool, tagname, TRUE);
 
   else if ((strcmp (tagname, "dir") == 0)
-           && (youngest_frame->tag != svn_XML_dir))
+           && (youngest_frame->tag != svn_delta__XML_dir))
     return XML_validation_error (pool, tagname, TRUE);
 
   else if ((strcmp (tagname, "textdelta") == 0)
-           && (youngest_frame->tag != svn_XML_textdelta))
+           && (youngest_frame->tag != svn_delta__XML_textdelta))
     return XML_validation_error (pool, tagname, TRUE);
 
   else if ((strcmp (tagname, "propdelta") == 0)
-           && (youngest_frame->tag != svn_XML_propdelta))
+           && (youngest_frame->tag != svn_delta__XML_propdelta))
     return XML_validation_error (pool, tagname, TRUE);
 
   else if ((strcmp (tagname, "set") == 0)
-           && (youngest_frame->tag != svn_XML_set))
+           && (youngest_frame->tag != svn_delta__XML_set))
     return XML_validation_error (pool, tagname, TRUE);
 
 
@@ -355,30 +377,30 @@ do_stack_remove (svn_delta_digger_t *digger, const char *tagname)
 
 
 
-/* Utility:  set FRAME's tag field to an svn_XML_t, according to NAME */
+/* Utility:  set FRAME's tag field to an svn_delta__XML_t, according to NAME */
 static svn_error_t *
-set_tag_type (svn_delta_stackframe_t *frame,
+set_tag_type (svn_delta__stackframe_t *frame,
               const char *name,
-              svn_delta_digger_t *digger)
+              svn_delta__digger_t *digger)
 {
   if (strcmp (name, "tree-delta") == 0)
-    frame->tag = svn_XML_treedelta;
+    frame->tag = svn_delta__XML_treedelta;
   else if (strcmp (name, "new") == 0)
-    frame->tag = svn_XML_new;
+    frame->tag = svn_delta__XML_new;
   else if (strcmp (name, "replace") == 0)
-    frame->tag = svn_XML_replace;
+    frame->tag = svn_delta__XML_replace;
   else if (strcmp (name, "delete") == 0)
-    frame->tag = svn_XML_delete;
+    frame->tag = svn_delta__XML_delete;
   else if (strcmp (name, "file") == 0)
-    frame->tag = svn_XML_file;
+    frame->tag = svn_delta__XML_file;
   else if (strcmp (name, "dir") == 0)
-    frame->tag = svn_XML_dir;
+    frame->tag = svn_delta__XML_dir;
   else if (strcmp (name, "text-delta") == 0)
-    frame->tag = svn_XML_textdelta;
+    frame->tag = svn_delta__XML_textdelta;
   else if (strcmp (name, "prop-delta") == 0)
-    frame->tag = svn_XML_propdelta;
+    frame->tag = svn_delta__XML_propdelta;
   else if (strcmp (name, "set") == 0)
-    frame->tag = svn_XML_set;
+    frame->tag = svn_delta__XML_set;
   else 
     return XML_validation_error (digger->pool, name, TRUE);
 
@@ -392,8 +414,8 @@ set_tag_type (svn_delta_stackframe_t *frame,
    <replace> tag; calls the appropriate callback inside
    DIGGER->WALKER, depending on the value of REPLACE_P. */
 static svn_error_t *
-do_directory_callback (svn_delta_digger_t *digger, 
-                       svn_delta_stackframe_t *youngest_frame,
+do_directory_callback (svn_delta__digger_t *digger, 
+                       svn_delta__stackframe_t *youngest_frame,
                        const char **atts,
                        svn_boolean_t replace_p)
 {
@@ -463,8 +485,8 @@ do_directory_callback (svn_delta_digger_t *digger,
 
 /* Called when we find a <delete> tag after a <tree-delta> tag. */
 static svn_error_t *
-do_delete_dirent (svn_delta_digger_t *digger, 
-                  svn_delta_stackframe_t *youngest_frame)
+do_delete_dirent (svn_delta__digger_t *digger, 
+                  svn_delta__stackframe_t *youngest_frame)
 {
   svn_string_t *dir_name = NULL;
   svn_error_t *err;
@@ -496,8 +518,8 @@ do_delete_dirent (svn_delta_digger_t *digger,
 
 /* Called when we find a <delete> tag after a <prop-delta> tag. */
 static svn_error_t *
-do_delete_prop (svn_delta_digger_t *digger, 
-                svn_delta_stackframe_t *youngest_frame)
+do_delete_prop (svn_delta__digger_t *digger, 
+                svn_delta__stackframe_t *youngest_frame)
 {
   svn_string_t *dir_name = NULL;
   svn_error_t *err;
@@ -531,7 +553,7 @@ do_delete_prop (svn_delta_digger_t *digger,
   /* Now deallocate the parser's subpool, the one which was holding
      the propchange, and then create a new subpool for the next
      propchange. */
-  svn_reset_parser_subpool (digger->pdelta_parser);
+  svn_delta__reset_parser_subpool (digger->pdelta_parser);
 
 
   return SVN_NO_ERROR;
@@ -545,8 +567,8 @@ do_delete_prop (svn_delta_digger_t *digger,
 
 
 static svn_error_t *
-do_file_callback (svn_delta_digger_t *digger,
-                  svn_delta_stackframe_t *youngest_frame,
+do_file_callback (svn_delta__digger_t *digger,
+                  svn_delta__stackframe_t *youngest_frame,
                   const char **atts,
                   svn_boolean_t replace_p)
 {
@@ -605,7 +627,7 @@ do_file_callback (svn_delta_digger_t *digger,
 
 /* Called when we get a </dir> tag */
 static svn_error_t *
-do_finish_directory (svn_delta_digger_t *digger)
+do_finish_directory (svn_delta__digger_t *digger)
 {
   svn_error_t *err;
 
@@ -628,7 +650,7 @@ do_finish_directory (svn_delta_digger_t *digger)
 
 /* Called when we get a </file> tag */
 static svn_error_t *
-do_finish_file (svn_delta_digger_t *digger)
+do_finish_file (svn_delta__digger_t *digger)
 {
   svn_error_t *err;
 
@@ -659,7 +681,7 @@ do_finish_file (svn_delta_digger_t *digger)
    vcdiff parser.  (The vcdiff parser knows how to "push" windows of
    vcdata to the consumption routine.)  */
 static svn_error_t *
-do_begin_textdelta (svn_delta_digger_t *digger)
+do_begin_textdelta (svn_delta__digger_t *digger)
 {
   svn_error_t *err;
   svn_text_delta_window_handler_t *window_consumer;
@@ -675,7 +697,7 @@ do_begin_textdelta (svn_delta_digger_t *digger)
                                                &consumer_baton);
 
   /* Now create a vcdiff parser based on the consumer/baton we got. */  
-  digger->vcdiff_parser = svn_make_vcdiff_parser (window_consumer,
+  digger->vcdiff_parser = svn_delta__make_vcdiff_parser (window_consumer,
                                                   consumer_baton,
                                                   digger->pool);
   return SVN_NO_ERROR;
@@ -685,10 +707,10 @@ do_begin_textdelta (svn_delta_digger_t *digger)
 
 /* When we find a new prop-delta */
 static svn_error_t *
-do_begin_propdelta (svn_delta_digger_t *digger)
+do_begin_propdelta (svn_delta__digger_t *digger)
 {
   svn_error_t *err;
-  svn_delta_stackframe_t *youngest_frame;
+  svn_delta__stackframe_t *youngest_frame;
   svn_propchange_location_t location;
   svn_propchange_handler_t *consumer;
   void *consumer_baton = NULL;
@@ -710,22 +732,22 @@ do_begin_propdelta (svn_delta_digger_t *digger)
   
   switch (youngest_frame->previous->tag)
     {
-    case svn_XML_file:
+    case svn_delta__XML_file:
       {
         location = svn_prop_file;
         break;
       }
-    case svn_XML_dir:
+    case svn_delta__XML_dir:
       {
         location = svn_prop_dir;
         break;
       }
-    case svn_XML_new:
+    case svn_delta__XML_new:
       {
         location = svn_prop_dirent;
         break;
       }
-    case svn_XML_replace:
+    case svn_delta__XML_replace:
       {
         location = svn_prop_dirent;
         break;
@@ -747,9 +769,9 @@ do_begin_propdelta (svn_delta_digger_t *digger)
                                                &consumer_baton);
 
   /* Now create a pdelta parser based on the consumer/baton we got. */
-  digger->pdelta_parser = svn_make_pdelta_parser (consumer,
-                                                  consumer_baton,
-                                                  digger->pool);
+  digger->pdelta_parser = svn_delta__make_pdelta_parser (consumer,
+                                                         consumer_baton,
+                                                         digger->pool);
 
   /* Fill out what fields we can in the parser's propchange object: */
   digger->pdelta_parser->loc = location;
@@ -763,13 +785,13 @@ do_begin_propdelta (svn_delta_digger_t *digger)
 
 /* Clean up after finishing receiving a text-delta */
 static svn_error_t *
-do_finish_textdelta (svn_delta_digger_t *digger)
+do_finish_textdelta (svn_delta__digger_t *digger)
 {
   svn_error_t *err;
 
   /* First, don't forget to flush out any remaining bytes sitting in
      the buffer of our vcdiff parser!  */
-  err = svn_vcdiff_flush_buffer (digger->vcdiff_parser);
+  err = svn_delta__vcdiff_flush_buffer (digger->vcdiff_parser);
 
   /* Now call the walker callback, if it exists */
   if (digger->walker->finish_textdelta)
@@ -790,7 +812,7 @@ do_finish_textdelta (svn_delta_digger_t *digger)
 
 /* Clean up after finishing receiving a prop-delta */
 static svn_error_t *
-do_finish_propdelta (svn_delta_digger_t *digger)
+do_finish_propdelta (svn_delta__digger_t *digger)
 {
   svn_error_t *err;
 
@@ -817,7 +839,7 @@ do_finish_propdelta (svn_delta_digger_t *digger)
 /* When we get a </set>, send off the buffered name/value within
    digger->pdelta_parser->propchange */
 static svn_error_t *
-do_finish_setprop (svn_delta_digger_t *digger)
+do_finish_setprop (svn_delta__digger_t *digger)
 {
   svn_error_t *err;
 
@@ -840,7 +862,7 @@ do_finish_setprop (svn_delta_digger_t *digger)
   /* Now deallocate the parser's subpool, the one which was holding
      the propchange, and then create a new subpool for the next
      propchange. */
-  svn_reset_parser_subpool (digger->pdelta_parser);
+  svn_delta__reset_parser_subpool (digger->pdelta_parser);
 
   return SVN_NO_ERROR;
 }
@@ -864,11 +886,11 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   const char *value;
 
   /* Resurrect our digger structure */
-  svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
+  svn_delta__digger_t *my_digger = (svn_delta__digger_t *) userData;
 
   /* Create new stackframe */
-  svn_delta_stackframe_t *new_frame
-    = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t));
+  svn_delta__stackframe_t *new_frame
+    = apr_pcalloc (my_digger->pool, sizeof (svn_delta__stackframe_t));
 
   /* Initialize the ancestor version to a recognizably invalid value. */
   new_frame->ancestor_version = -1;
@@ -911,8 +933,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 
   /* EVENT:  Are we adding a new directory?  */
   if (new_frame->previous)
-    if ((new_frame->previous->tag == svn_XML_new) 
-        && (new_frame->tag == svn_XML_dir))
+    if ((new_frame->previous->tag == svn_delta__XML_new) 
+        && (new_frame->tag == svn_delta__XML_dir))
       {
         err = do_directory_callback (my_digger, new_frame, atts, FALSE);
         if (err)
@@ -922,8 +944,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 
   /* EVENT:  Are we replacing a directory?  */
   if (new_frame->previous)
-    if ((new_frame->previous->tag == svn_XML_replace) 
-        && (new_frame->tag == svn_XML_dir))
+    if ((new_frame->previous->tag == svn_delta__XML_replace) 
+        && (new_frame->tag == svn_delta__XML_dir))
       {
         err = do_directory_callback (my_digger, new_frame, atts, TRUE);
         if (err)
@@ -933,8 +955,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 
   /* EVENT:  Are we deleting a directory entry?  */
   if (new_frame->previous)
-    if ( (new_frame->tag == svn_XML_delete) &&
-         (new_frame->previous->tag == svn_XML_treedelta) )
+    if ( (new_frame->tag == svn_delta__XML_delete) &&
+         (new_frame->previous->tag == svn_delta__XML_treedelta) )
       {
         err = do_delete_dirent (my_digger, new_frame);
         if (err)
@@ -944,8 +966,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 
   /* EVENT:  Are we deleting a directory entry?  */
   if (new_frame->previous)
-    if ( (new_frame->tag == svn_XML_delete) &&
-         (new_frame->previous->tag == svn_XML_propdelta) )
+    if ( (new_frame->tag == svn_delta__XML_delete) &&
+         (new_frame->previous->tag == svn_delta__XML_propdelta) )
       {
         err = do_delete_prop (my_digger, new_frame);
         if (err)
@@ -956,8 +978,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 
   /* EVENT:  Are we adding a new file?  */
   if (new_frame->previous)
-    if ((new_frame->previous->tag == svn_XML_new) 
-        && (new_frame->tag == svn_XML_file))
+    if ((new_frame->previous->tag == svn_delta__XML_new) 
+        && (new_frame->tag == svn_delta__XML_file))
       {
         err = do_file_callback (my_digger, new_frame, atts, FALSE);
         if (err)
@@ -967,8 +989,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 
   /* EVENT:  Are we replacing a file?  */
   if (new_frame->previous)
-    if ((new_frame->previous->tag == svn_XML_replace) 
-        && (new_frame->tag == svn_XML_file))
+    if ((new_frame->previous->tag == svn_delta__XML_replace) 
+        && (new_frame->tag == svn_delta__XML_file))
       {
         err = do_file_callback (my_digger, new_frame, atts, TRUE);
         if (err)
@@ -977,7 +999,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       }
 
   /* EVENT:  Are we starting a new text-delta?  */
-  if (new_frame->tag == svn_XML_textdelta) 
+  if (new_frame->tag == svn_delta__XML_textdelta) 
     {
       err = do_begin_textdelta (my_digger);
       if (err)
@@ -986,7 +1008,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     }
 
   /* EVENT:  Are we starting a new prop-delta?  */
-  if (new_frame->tag == svn_XML_propdelta) 
+  if (new_frame->tag == svn_delta__XML_propdelta) 
     {
       err = do_begin_propdelta (my_digger);
       if (err)
@@ -1009,7 +1031,7 @@ xml_handle_end (void *userData, const char *name)
   svn_error_t *err;
 
   /* Resurrect our digger structure */
-  svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
+  svn_delta__digger_t *my_digger = (svn_delta__digger_t *) userData;
 
   /*  Remove youngest frame from stack, validating in the process. */
   err = do_stack_remove (my_digger, name);
@@ -1081,7 +1103,7 @@ xml_handle_data (void *userData, const char *data, int len)
   apr_off_t numbytes = len;
 
   /* Resurrect digger structure */
-  svn_delta_digger_t *digger = (svn_delta_digger_t *) userData;
+  svn_delta__digger_t *digger = (svn_delta__digger_t *) userData;
 
   /* Figure out the context of this callback.  If we're currently
      inside a <text-delta> or <prop-delta>, that's great.  If not,
@@ -1089,7 +1111,7 @@ xml_handle_data (void *userData, const char *data, int len)
      should return an error. */
 
   /* Get a grip on the youngest frame in our stack. */
-  svn_delta_stackframe_t *youngest_frame = find_stack_newest (digger->stack);
+  svn_delta__stackframe_t *youngest_frame = find_stack_newest (digger->stack);
 
   if (youngest_frame == NULL) {
     svn_error_t *err = svn_create_error (SVN_ERR_MALFORMED_XML, 0,
@@ -1099,7 +1121,7 @@ xml_handle_data (void *userData, const char *data, int len)
     return;
   }
 
-  if (youngest_frame->tag == svn_XML_textdelta)
+  if (youngest_frame->tag == svn_delta__XML_textdelta)
     {
       svn_error_t *err;
       
@@ -1111,7 +1133,7 @@ xml_handle_data (void *userData, const char *data, int len)
          parser has received enough bytes to make a "window", it
          pushes the window to the uber-caller's own window-consumer
          routine. */
-      err = svn_vcdiff_parse (digger->vcdiff_parser, data, &numbytes);
+      err = svn_delta__vcdiff_parse (digger->vcdiff_parser, data, &numbytes);
       if (err)
         {
           signal_expat_bailout
@@ -1122,7 +1144,7 @@ xml_handle_data (void *userData, const char *data, int len)
         }                          
     }
 
-  else if (youngest_frame->tag == svn_XML_set)
+  else if (youngest_frame->tag == svn_delta__XML_set)
     {
       /* We're about to receive the "value" data for a prop-delta
          `set' command.  (The "name" data is already stored in the
@@ -1137,7 +1159,7 @@ xml_handle_data (void *userData, const char *data, int len)
 
       /* Pass the data to our current pdelta parser, so it can buffer
          up the whole value in RAM. */
-      err = svn_pdelta_parse (digger, data, &numbytes);
+      err = svn_delta__pdelta_parse (digger, data, &numbytes);
       if (err)
         {
           signal_expat_bailout
@@ -1165,7 +1187,7 @@ xml_handle_data (void *userData, const char *data, int len)
    above as callbacks.  */
 
 static XML_Parser
-svn_delta_make_xml_parser (svn_delta_digger_t *diggy)
+svn_delta_make_xml_parser (svn_delta__digger_t *diggy)
 {
   /* Create the parser */
   XML_Parser parser = XML_ParserCreate (NULL);
@@ -1208,7 +1230,8 @@ svn_delta_parse (svn_delta_read_fn_t *source_fn,
   XML_Parser expat_parser;
 
   /* Create a digger structure */
-  svn_delta_digger_t *digger = apr_pcalloc (pool, sizeof (svn_delta_digger_t));
+  svn_delta__digger_t *digger
+    = apr_pcalloc (pool, sizeof (svn_delta__digger_t));
 
   digger->pool             = pool;
   digger->stack            = NULL;
