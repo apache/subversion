@@ -85,7 +85,7 @@ dir_deltas (const char **msg,
   /* REVISION 1 */
   /***********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "iota",        "This is the file 'iota'.\n" },
       { "A",           0 },
@@ -124,7 +124,7 @@ dir_deltas (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   {
-    svn_test__txn_script_command_t script_entries[] = {
+    static svn_test__txn_script_command_t script_entries[] = {
       { 'a', "A/delta",     "This is the file 'delta'.\n" },
       { 'a', "A/epsilon",   "This is the file 'epsilon'.\n" },
       { 'a', "A/B/Z",       0 },
@@ -145,7 +145,7 @@ dir_deltas (const char **msg,
   /* REVISION 2 */
   /***********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "iota",        "Changed file 'iota'.\n" },
       { "A",           0 },
@@ -184,7 +184,7 @@ dir_deltas (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   {
-    svn_test__txn_script_command_t script_entries[] = {
+    static svn_test__txn_script_command_t script_entries[] = {
       { 'a', "A/mu",        "Re-added file 'mu'.\n" },
       { 'a', "A/D/H/omega", 0 }, /* re-add omega as directory! */
       { 'd', "iota",        "" },
@@ -199,7 +199,7 @@ dir_deltas (const char **msg,
   /* REVISION 3 */
   /***********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "A",           0 },
       { "A/delta",     "This is the file 'delta'.\nLine 2.\n" },
@@ -251,7 +251,7 @@ dir_deltas (const char **msg,
   /* REVISION 4 */
   /***********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "A",           0 },
       { "A/delta",     "This is the file 'delta'.\nLine 2.\n" },

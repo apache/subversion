@@ -1537,7 +1537,7 @@ test_tree_node_validation (const char **msg,
 
   /* In a txn, create the greek tree. */
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "iota",        "This is the file 'iota'.\n" },
       { "A",           0 },
@@ -1579,7 +1579,7 @@ test_tree_node_validation (const char **msg,
 
   /* In a new txn, modify the greek tree. */
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "iota",          "This is a new version of 'iota'.\n" },
       { "A",             0 },
@@ -1864,7 +1864,7 @@ merge_re_id (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, greek, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   {
-    svn_test__txn_script_command_t script_entries[] = {
+    static svn_test__txn_script_command_t script_entries[] = {
       { 'a', "A/D/zeta",    "This is the file 'zeta'.\n" },
       { 'a', "A/D/zima",    "This is the file 'zima'.\n" },
     };
@@ -1910,7 +1910,7 @@ merge_re_id (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, greek, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   {
-    svn_test__txn_script_command_t script_entries[] = {
+    static svn_test__txn_script_command_t script_entries[] = {
       { 'a', "A/D/data",    "This is the file 'data'.\n" },
       { 'a', "A/D/diva",    "This is the file 'diva'.\n" },
     };
@@ -1951,7 +1951,7 @@ merge_re_id (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn2, fs, youngest, pool));
   SVN_ERR (svn_fs_txn_root (&txn2_root, txn2, pool));
   {
-    svn_test__txn_script_command_t script_entries[] = {
+    static svn_test__txn_script_command_t script_entries[] = {
       { 'a', "A/D/pita",     "This is the file 'pita'.\n" },
       { 'a', "A/D/pizza",    "This is the file 'pizza'.\n" },
     };
@@ -1963,7 +1963,7 @@ merge_re_id (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, greek, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   {
-    svn_test__txn_script_command_t script_entries[] = {
+    static svn_test__txn_script_command_t script_entries[] = {
       { 'a', "A/D/quota",    "This is the file 'quota'.\n" },
       { 'a', "A/D/quiva",    "This is the file 'quiva'.\n" },
     };
@@ -2056,7 +2056,7 @@ merging_commit (const char **msg,
   /* REVISION 1 */
   /***********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "iota",        "This is the file 'iota'.\n" },
       { "A",           0 },
@@ -2107,7 +2107,7 @@ merging_commit (const char **msg,
   /* REVISION 2 */
   /***********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "A",             0 },
       { "A/mu",          "This is the file 'mu'.\n" },
@@ -2154,7 +2154,7 @@ merging_commit (const char **msg,
   /* REVISION 3 */
   /***********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "iota",          "This is the new file 'iota'.\n" },
       { "A",             0 },
@@ -2194,7 +2194,7 @@ merging_commit (const char **msg,
   /* REVISION 4 */
   /***********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "A",             0 },
       { "A/mu",          "This is the file 'mu'.\n" },
@@ -2280,7 +2280,7 @@ merging_commit (const char **msg,
     /* REVISION 5 */
     /*********************************************************************/
     {
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "theta",         "This is the file 'theta'.\n" },
         { "A",             0 },
@@ -2350,7 +2350,7 @@ merging_commit (const char **msg,
     /* REVISION 6 */
     /*********************************************************************/
     {
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "theta",         "This is the file 'theta'.\n" },
         { "A",             0 },
@@ -2436,7 +2436,7 @@ merging_commit (const char **msg,
       /* REVISION 9 */
       /*********************************************************************/
       {
-        svn_test__tree_entry_t expected_entries[] = {
+        static svn_test__tree_entry_t expected_entries[] = {
           /* path, contents (0 = dir) */
           { "theta",         "This is the file 'theta'.\n" },
           { "A",             0 },
@@ -2483,7 +2483,7 @@ merging_commit (const char **msg,
   /* REVISION 10 */
   /*********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "theta",         "This is the file 'theta'.\n" },
       { "A",             0 },
@@ -2561,7 +2561,7 @@ merging_commit (const char **msg,
       /* REVISION 11 */
       /*********************************************************************/
       {
-        svn_test__tree_entry_t expected_entries[] = {
+        static svn_test__tree_entry_t expected_entries[] = {
           /* path, contents (0 = dir) */
           { "theta",         "This is the file 'theta'.\n" },
           { "A",             0 },
@@ -2609,7 +2609,7 @@ merging_commit (const char **msg,
   /* REVISION 12 */
   /*********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "theta",         "This is the file 'theta'.\n" },
       { "A",             0 },
@@ -2665,7 +2665,7 @@ merging_commit (const char **msg,
     /* REVISION 13 */
     /*********************************************************************/
     {
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "theta",         "This is the file 'theta'.\n" },
         { "A",             0 },
@@ -2732,7 +2732,7 @@ merging_commit (const char **msg,
       /* REVISION 14 */
       /*********************************************************************/
       {
-        svn_test__tree_entry_t expected_entries[] = {
+        static svn_test__tree_entry_t expected_entries[] = {
           /* path, contents (0 = dir) */
           { "theta",         "This is the file 'theta'.\n" },
           { "A",             0 },
@@ -3046,7 +3046,7 @@ copy_test (const char **msg,
   /* After all these changes, let's see if the filesystem looks as we
      would expect it to. */
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "iota",        "This is the file 'iota'.\n" },
       { "H2",          0 },
@@ -3533,7 +3533,7 @@ delete (const char **msg,
   /* 1. Delete mutable file. */
   {
     svn_fs_id_t *iota_id, *gamma_id;
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "A",           0 },
       { "A/mu",        "This is the file 'mu'.\n" },
@@ -3682,7 +3682,7 @@ delete (const char **msg,
 
     /* Validate the tree.  */
     {
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "iota",        "This is the file 'iota'.\n" } };
       SVN_ERR (svn_test__validate_tree (txn_root, expected_entries, 1, pool));
@@ -3805,7 +3805,7 @@ delete (const char **msg,
 
     /* Validate the tree.  */
     {
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "iota",        "This is the file 'iota'.\n" }
       };
@@ -3846,7 +3846,7 @@ delete (const char **msg,
 
     /* Validate the tree.  */
     {
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "A",           0 },
         { "A/mu",        "This is the file 'mu'.\n" },
@@ -3966,7 +3966,7 @@ delete (const char **msg,
 
     /* Validate the tree.  */
     {
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "iota",        "This is the file 'iota'.\n" }
       };
@@ -4146,7 +4146,7 @@ not a dot, will pass from the law until all is accomplished."
     /* Validate revision 1.  */
     {
       svn_fs_root_t *root;
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "iota",        iota_contents_1 },
         { "A",           0 },
@@ -4177,7 +4177,7 @@ not a dot, will pass from the law until all is accomplished."
     /* Validate revision 2.  */
     {
       svn_fs_root_t *root;
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "iota",        iota_contents_2 },
         { "A",           0 },
@@ -4208,7 +4208,7 @@ not a dot, will pass from the law until all is accomplished."
     /* Validate revision 3.  */
     {
       svn_fs_root_t *root;
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "iota",        iota_contents_3 },
         { "A",           0 },
@@ -4239,7 +4239,7 @@ not a dot, will pass from the law until all is accomplished."
     /* Validate revision 4.  */
     {
       svn_fs_root_t *root;
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "iota",        iota_contents_4 },
         { "A",           0 },
@@ -4270,7 +4270,7 @@ not a dot, will pass from the law until all is accomplished."
     /* Validate revision 5.  */
     {
       svn_fs_root_t *root;
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "iota",        iota_contents_5 },
         { "A",           0 },
@@ -4301,7 +4301,7 @@ not a dot, will pass from the law until all is accomplished."
     /* Validate revision 6.  */
     {
       svn_fs_root_t *root;
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "iota",        iota_contents_6 },
         { "A",           0 },
@@ -4332,7 +4332,7 @@ not a dot, will pass from the law until all is accomplished."
     /* Validate revision 7.  */
     {
       svn_fs_root_t *root;
-      svn_test__tree_entry_t expected_entries[] = {
+      static svn_test__tree_entry_t expected_entries[] = {
         /* path, contents (0 = dir) */
         { "iota",        iota_contents_7 },
         { "A",           0 },
@@ -4442,7 +4442,7 @@ check_all_revisions (const char **msg,
   /* REVISION 1 */
   /***********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "iota",        "This is the file 'iota'.\n" },
       { "A",           0 },
@@ -4476,7 +4476,7 @@ check_all_revisions (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   {
-    svn_test__txn_script_command_t script_entries[] = {
+    static svn_test__txn_script_command_t script_entries[] = {
       { 'a', "A/delta",     "This is the file 'delta'.\n" },
       { 'a', "A/epsilon",   "This is the file 'epsilon'.\n" },
       { 'a', "A/B/Z",       0 },
@@ -4497,7 +4497,7 @@ check_all_revisions (const char **msg,
   /* REVISION 2 */
   /***********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "iota",        "Changed file 'iota'.\n" },
       { "A",           0 },
@@ -4531,7 +4531,7 @@ check_all_revisions (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   {
-    svn_test__txn_script_command_t script_entries[] = {
+    static svn_test__txn_script_command_t script_entries[] = {
       { 'a', "A/mu",        "Re-added file 'mu'.\n" },
       { 'a', "A/D/H/omega", 0 }, /* re-add omega as directory! */
       { 'd', "iota",        "" },
@@ -4546,7 +4546,7 @@ check_all_revisions (const char **msg,
   /* REVISION 3 */
   /***********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "A",           0 },
       { "A/delta",     "This is the file 'delta'.\nLine 2.\n" },
@@ -4581,7 +4581,7 @@ check_all_revisions (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   {
-    svn_test__txn_script_command_t script_entries[] = {
+    static svn_test__txn_script_command_t script_entries[] = {
       { 'c', "A/D/G",        "A/D/G2" },
       { 'c', "A/epsilon",    "A/B/epsilon" },
     };
@@ -4594,7 +4594,7 @@ check_all_revisions (const char **msg,
   /* REVISION 4 */
   /***********************************************************************/
   {
-    svn_test__tree_entry_t expected_entries[] = {
+    static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "A",           0 },
       { "A/delta",     "This is the file 'delta'.\nLine 2.\n" },
