@@ -549,7 +549,7 @@ collabnet = svn.collab.net
                 command, Subversion lists unversioned files and
                 directories along with the versioned ones, annotating
                 them with a <literal>?</literal> character (see <xref
-                linkend="svn-ch-3-sect-4.3.1" />).  Sometimes, it can
+                linkend="svn-ch-3-sect-5.3.1" />).  Sometimes, it can
                 be annoying to see uninteresting, unversioned
                 items&mdash;for example, object files that result from
                 a program's compilation&mdash;in this display.  The
@@ -974,7 +974,7 @@ $
         <filename>calc/button.c</filename>, but not modified its
         textual contents.  Had we changed both, we would have seen
         <literal>M</literal> in the first column, too (see <xref
-        linkend="svn-ch-3-sect-4.3.1" />).</para>
+        linkend="svn-ch-3-sect-5.3.1" />).</para>
 
       <sidebar>
         <title>Property Conflicts</title>

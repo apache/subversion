@@ -168,7 +168,7 @@
       book.</para>
     
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-0-sect3.1">
+    <sect2 id="svn-ch-0-sect-3.1">
       <title>Typographic Conventions</title>
       
       <variablelist>
@@ -199,7 +199,7 @@
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-0-sect3.2">
+    <sect2 id="svn-ch-0-sect-3.2">
       <title>Icons</title>
 
       <note>
@@ -553,7 +553,7 @@
             custom file format.  These repositories aren't susceptible
             to <quote>wedging</quote>, but also aren't as well-tested
             as Berkeley DB repositories.  See <xref
-            linkend="svn-ch-5-sect-1.2.A"/>.</para>
+            linkend="svn-ch-5-sect-1.3"/>.</para>
         </listitem>
       </varlistentry>
 

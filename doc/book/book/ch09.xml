@@ -2010,7 +2010,7 @@ $ svn list --verbose file:///tmp/repos
 </screen>
 
           <para>For further details, see <xref
-            linkend="svn-ch-3-sect-5.4"/>.</para>
+            linkend="svn-ch-3-sect-6.4"/>.</para>
 
         </refsect1>
       </refentry>
@@ -3004,7 +3004,7 @@ property 'owner-pic' set on 'moo.c'
             conflict-related artifact files and allows PATH to be
             committed again; that is, it tells Subversion that the
             conflicts have been <quote>resolved</quote>.  See <xref
-            linkend="svn-ch-3-sect-4.4"/> for an in-depth look at
+            linkend="svn-ch-3-sect-5.4"/> for an in-depth look at
             resolving conflicts.</para>
         </refsect1>
 
@@ -3491,7 +3491,7 @@ Head revision:   981
 </screen>
 
           <para>For many more examples of <command>svn status</command>,
-            see <xref linkend="svn-ch-3-sect-4.3.1"/>.</para>
+            see <xref linkend="svn-ch-3-sect-5.3.1"/>.</para>
 
         </refsect1>
       </refentry>

@@ -16,7 +16,7 @@
   </simplesect>
   
   
-  <sect1 id="svn-ch-2-sect-1" > 
+  <sect1 id="svn-ch-2-sect-1">
     <title>The Repository</title>  
     
     <para>Subversion is a centralized system for sharing information.
@@ -654,7 +654,7 @@ calc/Makefile:6
       <para>This may sound like a lot to keep track of, but the
         <command>svn status</command> command will show you the state
         of any item in your working copy.  For more information on
-        that command, see <xref linkend="svn-ch-3-sect-4.3.1" />.</para>
+        that command, see <xref linkend="svn-ch-3-sect-5.3.1" />.</para>
      
     </sect2>
     
