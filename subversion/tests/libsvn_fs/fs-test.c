@@ -110,14 +110,14 @@ test_commit_txn (svn_revnum_t *new_rev,
       if (! expected_conflict)
         {
           return svn_error_createf
-            (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
+            (SVN_ERR_FS_CONFLICT, 0, NULL,
              "commit conflicted at `%s', but no conflict expected",
              conflict ? conflict : "(missing conflict info!)");
         }
       else if (conflict == NULL)
         {
           return svn_error_createf
-            (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
+            (SVN_ERR_FS_CONFLICT, 0, NULL,
              "commit conflicted as expected, "
              "but no conflict path was returned (`%s' expected)",
              expected_conflict);
@@ -126,7 +126,7 @@ test_commit_txn (svn_revnum_t *new_rev,
                && (strcmp (conflict, expected_conflict) != 0))
         {
           return svn_error_createf
-            (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
+            (SVN_ERR_FS_CONFLICT, 0, NULL,
              "commit conflicted at `%s', but expected conflict at `%s')",
              conflict, expected_conflict);
         }
@@ -141,7 +141,7 @@ test_commit_txn (svn_revnum_t *new_rev,
       if (expected_conflict)
         {
           return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+            (SVN_ERR_FS_GENERAL, 0, NULL,
              "commit succeeded that was expected to fail at `%s'",
              expected_conflict);
         }
@@ -207,7 +207,7 @@ trivial_transaction (const char **msg,
   SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
   
   if (! txn_name)
-    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL,
                              "Got a NULL txn name.");
 
   /* Close the transaction and fs. */
@@ -290,15 +290,15 @@ create_file_transaction (const char **msg,
 
 
 static svn_error_t *
-check_no_fs_error (svn_error_t *err, apr_pool_t *pool)
+check_no_fs_error (svn_error_t *err)
 {
   if (err && (err->apr_err != SVN_ERR_FS_NOT_OPEN))
     return svn_error_create
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "checking not opened filesystem got wrong error");
   else if (! err)
     return svn_error_create
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "checking not opened filesytem failed to get error");
   else
     return SVN_NO_ERROR;
@@ -326,50 +326,50 @@ call_functions_with_unopened_fs (const char **msg,
 
   fs = svn_fs_new (pool);
   err = svn_fs_set_berkeley_errcall (fs, berkeley_error_handler);
-  SVN_ERR (check_no_fs_error (err, pool));
+  SVN_ERR (check_no_fs_error (err));
 
   {
     svn_fs_txn_t *ignored;
     err = svn_fs_begin_txn (&ignored, fs, 0, pool);
-    SVN_ERR (check_no_fs_error (err, pool));
+    SVN_ERR (check_no_fs_error (err));
     err = svn_fs_open_txn (&ignored, fs, "0", pool);
-    SVN_ERR (check_no_fs_error (err, pool));
+    SVN_ERR (check_no_fs_error (err));
   }
 
   {
     apr_array_header_t *ignored;
     err = svn_fs_list_transactions (&ignored, fs, pool);
-    SVN_ERR (check_no_fs_error (err, pool));
+    SVN_ERR (check_no_fs_error (err));
   }
 
   {
     svn_fs_root_t *ignored;
     err = svn_fs_revision_root (&ignored, fs, 0, pool);
-    SVN_ERR (check_no_fs_error (err, pool));
+    SVN_ERR (check_no_fs_error (err));
   }
 
   {
     svn_revnum_t ignored;
     err = svn_fs_youngest_rev (&ignored, fs, pool);
-    SVN_ERR (check_no_fs_error (err, pool));
+    SVN_ERR (check_no_fs_error (err));
   }
 
   {
     svn_string_t *ignored;
     err = svn_fs_revision_prop (&ignored, fs, 0, NULL, pool);
-    SVN_ERR (check_no_fs_error (err, pool));
+    SVN_ERR (check_no_fs_error (err));
   }
 
   {
     apr_hash_t *ignored;
     err = svn_fs_revision_proplist (&ignored, fs, 0, pool);
-    SVN_ERR (check_no_fs_error (err, pool));
+    SVN_ERR (check_no_fs_error (err));
   }
 
   {
     svn_string_t unused1;
     err = svn_fs_change_rev_prop (fs, 0, NULL, &unused1, pool);
-    SVN_ERR (check_no_fs_error (err, pool));
+    SVN_ERR (check_no_fs_error (err));
   }
 
   return SVN_NO_ERROR;
@@ -423,7 +423,7 @@ verify_txn_list (const char **msg,
   
  all_bad:
 
-  return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+  return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL,
                            "Got a bogus txn list.");
  all_good:
   
@@ -471,7 +471,7 @@ write_and_read_file (const char **msg,
 
   /* Compare what was read to what was written. */
   if (! svn_stringbuf_compare (rstring, wstring))
-    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL,
                              "data read != data written.");    
 
   /* Clean up the repos. */
@@ -557,34 +557,34 @@ create_greek_tree_transaction (const char **msg,
 /* Verify that entry KEY is present in ENTRIES, and that its value is
    an svn_fs_dirent_t whose name and id are not null. */
 static svn_error_t *
-verify_entry (apr_hash_t *entries, const char *key, apr_pool_t *pool)
+verify_entry (apr_hash_t *entries, const char *key)
 {
   svn_fs_dirent_t *ent = apr_hash_get (entries, key, 
                                        APR_HASH_KEY_STRING);
 
   if (ent == NULL)
     return svn_error_createf
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "didn't find dir entry for \"%s\"", key);
 
   if ((ent->name == NULL) && (ent->id == NULL))
     return svn_error_createf
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "dir entry for \"%s\" has null name and null id", key);
   
   if (ent->name == NULL)
     return svn_error_createf
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "dir entry for \"%s\" has null name", key);
   
   if (ent->id == NULL)
     return svn_error_createf
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "dir entry for \"%s\" has null id", key);
   
   if (strcmp (ent->name, key) != 0)
      return svn_error_createf
-     (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+     (SVN_ERR_FS_GENERAL, 0, NULL,
       "dir entry for \"%s\" contains wrong name (\"%s\")", key, ent->name);
         
   return SVN_NO_ERROR;
@@ -641,14 +641,14 @@ list_directory (const char **msg,
   /* Make sure exactly the right set of entries is present. */
   if (apr_hash_count (entries) != 3)
     {
-      return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL,
                                "unexpected number of entries in dir");
     }
   else
     {
-      SVN_ERR (verify_entry (entries, "x", pool));
-      SVN_ERR (verify_entry (entries, "y", pool));
-      SVN_ERR (verify_entry (entries, "z", pool));
+      SVN_ERR (verify_entry (entries, "x"));
+      SVN_ERR (verify_entry (entries, "y"));
+      SVN_ERR (verify_entry (entries, "z"));
     }
 
   /* Close the transaction and fs. */
@@ -724,7 +724,7 @@ revision_props (const char **msg,
 
     if (apr_hash_count (proplist) < 4 )
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "too few revision properties found");
 
     /* Loop through our list of expected revision property name/value
@@ -741,14 +741,14 @@ revision_props (const char **msg,
                                    APR_HASH_KEY_STRING);
         if (! prop_value)
           return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+            (SVN_ERR_FS_GENERAL, 0, NULL,
              "unable to find expected revision property");
 
         /* Step 2.  Make sure the value associated with it is the same
            as what was expected, else return an error. */
         if (strcmp (prop_value->data, final_props[i][1]))
           return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+            (SVN_ERR_FS_GENERAL, 0, NULL,
              "revision property had an unexpected value");
       }
   }
@@ -831,7 +831,7 @@ transaction_props (const char **msg,
        so we expect *5*, not 4 properties. */
     if (apr_hash_count (proplist) != 5 )
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "unexpected number of transaction properties were found");
 
     /* Loop through our list of expected revision property name/value
@@ -848,7 +848,7 @@ transaction_props (const char **msg,
                                    APR_HASH_KEY_STRING);
         if (! prop_value)
           return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+            (SVN_ERR_FS_GENERAL, 0, NULL,
              "unable to find expected transaction property");
 
         /* Step 2.  Make sure the value associated with it is the same
@@ -856,7 +856,7 @@ transaction_props (const char **msg,
         if (strcmp (final_props[i][0], SVN_PROP_REVISION_DATE))
           if (strcmp (prop_value->data, final_props[i][1]))
             return svn_error_createf
-              (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+              (SVN_ERR_FS_GENERAL, 0, NULL,
                "transaction property had an unexpected value");
       }
   }
@@ -865,7 +865,7 @@ transaction_props (const char **msg,
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
   if (after_rev != 1)
     return svn_error_createf
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "committed transaction got wrong revision number");
   SVN_ERR (svn_fs_close_txn (txn));
 
@@ -879,7 +879,7 @@ transaction_props (const char **msg,
 
     if (apr_hash_count (proplist) < 5 )
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "unexpected number of revision properties were found");
 
     /* Loop through our list of expected revision property name/value
@@ -896,7 +896,7 @@ transaction_props (const char **msg,
                                    APR_HASH_KEY_STRING);
         if (! prop_value)
           return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+            (SVN_ERR_FS_GENERAL, 0, NULL,
              "unable to find expected revision property");
 
         /* Step 2.  Make sure the value associated with it is the same
@@ -904,7 +904,7 @@ transaction_props (const char **msg,
         if (strcmp (final_props[i][0], SVN_PROP_REVISION_DATE))
           if (strcmp (prop_value->data, final_props[i][1]))
             return svn_error_createf
-              (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+              (SVN_ERR_FS_GENERAL, 0, NULL,
                "revision property had an unexpected value");
       }
   }
@@ -994,7 +994,7 @@ node_props (const char **msg,
 
     if (apr_hash_count (proplist) != 4 )
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "unexpected number of node properties were found");
 
     /* Loop through our list of expected node property name/value
@@ -1011,14 +1011,14 @@ node_props (const char **msg,
                                    APR_HASH_KEY_STRING);
         if (! prop_value)
           return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+            (SVN_ERR_FS_GENERAL, 0, NULL,
              "unable to find expected node property");
 
         /* Step 2.  Make sure the value associated with it is the same
            as what was expected, else return an error. */
         if (strcmp (prop_value->data, final_props[i][1]))
           return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+            (SVN_ERR_FS_GENERAL, 0, NULL,
              "node property had an unexpected value");
       }
   }
@@ -1066,7 +1066,7 @@ check_entry_present (svn_fs_root_t *root, const char *path,
 
   if (! present)
     return svn_error_createf
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "entry \"%s\" absent when it should be present", name);
 
   return SVN_NO_ERROR;
@@ -1083,7 +1083,7 @@ check_entry_absent (svn_fs_root_t *root, const char *path,
 
   if (present)
     return svn_error_createf
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "entry \"%s\" present when it should be absent", name);
 
   return SVN_NO_ERROR;
@@ -1115,7 +1115,7 @@ txn_body_check_id (void *baton, trail_t *trail)
     {
       svn_string_t *id_str = svn_fs_unparse_id (args->id, trail->pool);
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "error looking for node revision id \"%s\"", id_str->data);
     }
 
@@ -1155,7 +1155,7 @@ check_id_present (svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
     {
       svn_string_t *id_str = svn_fs_unparse_id (id, pool);
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "node revision id \"%s\" absent when should be present",
          id_str->data);
     }
@@ -1175,7 +1175,7 @@ check_id_absent (svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
     {
       svn_string_t *id_str = svn_fs_unparse_id (id, pool);
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "node revision id \"%s\" present when should be absent",
          id_str->data);
     }
@@ -1361,13 +1361,13 @@ abort_txn (const char **msg,
     if (err && (err->apr_err != SVN_ERR_FS_NO_SUCH_TRANSACTION))
       {
         return svn_error_create
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "opening non-existent txn got wrong error");
       }
     else if (! err)
       {
         return svn_error_create
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "opening non-existent txn failed to get error");
       }
   }
@@ -1384,7 +1384,7 @@ abort_txn (const char **msg,
         || (strcmp (txn3_name, txn1_name) == 0))
       {
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "txn name \"%s\" was recycled", txn3_name);
       }
 
@@ -1436,11 +1436,11 @@ fetch_youngest_rev (const char **msg,
   SVN_ERR (svn_fs_youngest_rev (&new_youngest_rev, fs, pool));
 
   if (youngest_rev == new_rev)
-    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL,
                              "commit didn't bump up revision number");
 
   if (new_youngest_rev != new_rev)
-    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL,
                              "couldn't fetch youngest revision");
 
   /* Close the transaction and fs. */
@@ -1483,7 +1483,7 @@ basic_commit (const char **msg,
   SVN_ERR (svn_fs_youngest_rev (&after_rev, fs, pool));
   if (after_rev != before_rev)
     return svn_error_create
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "youngest revision changed unexpectedly");
 
   /* Create the greek tree. */
@@ -1498,7 +1498,7 @@ basic_commit (const char **msg,
   /* Make sure it's a different revision than before. */
   if (after_rev == before_rev)
     return svn_error_create
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "youngest revision failed to change");
 
   /* Get root of the revision */
@@ -2182,7 +2182,7 @@ merging_commit (const char **msg,
                                           "This is the file 'mu'.\n") != 0))
         {
           return svn_error_create
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+            (SVN_ERR_FS_GENERAL, 0, NULL,
              "got wrong contents from an old revision tree");
         }
       SVN_ERR (svn_fs_make_file (txn_root, "A/sigma", pool));
@@ -2355,7 +2355,7 @@ merging_commit (const char **msg,
                       "This is the file 'lambda'.\n") != 0))
         {
           return svn_error_create
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+            (SVN_ERR_FS_GENERAL, 0, NULL,
              "got wrong contents from an old revision tree");
         }
       SVN_ERR (svn_test__set_file_contents 
@@ -2473,12 +2473,12 @@ copy_test (const char **msg,
 
     if (rev != after_rev)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "pre-commit copy history not preserved (rev lost) for A/D/H/pi2");
 
     if (strcmp (path, "/A/D/G/pi") != 0)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "pre-commit copy history not preserved (path lost) for A/D/H/pi2");
   }
   SVN_ERR (svn_test__set_file_contents 
@@ -2496,12 +2496,12 @@ copy_test (const char **msg,
 
     if (rev != (after_rev - 1))
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "post-commit copy history wrong (rev) for A/D/H/pi2");
 
     if (strcmp (path, "/A/D/G/pi") != 0)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "post-commit copy history wrong (path) for A/D/H/pi2");
   }
 
@@ -2524,12 +2524,12 @@ copy_test (const char **msg,
 
     if (rev != (after_rev - 2))
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "first copy history wrong (rev) for A/D/H/pi2");
 
     if (strcmp (path, "/A/D/G/pi") != 0)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "first copy history wrong (path) for A/D/H/pi2");
 
     /* Check that the copy of the copy has the right history. */
@@ -2538,12 +2538,12 @@ copy_test (const char **msg,
 
     if (rev != (after_rev - 1))
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "second copy history wrong (rev) for A/D/H/pi3");
 
     if (strcmp (path, "/A/D/H/pi2") != 0)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "second copy history wrong (path) for A/D/H/pi3");
   }
 
@@ -2567,12 +2567,12 @@ copy_test (const char **msg,
 
     if (rev != (after_rev - 2))
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "copy history wrong (rev) for A/D/H/pi3");
 
     if (strcmp (path, "/A/D/H/pi2") != 0)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "copy history wrong (path) for A/D/H/pi3");
 
     /* Check that the next revision after the copy has no copy history. */
@@ -2581,12 +2581,12 @@ copy_test (const char **msg,
 
     if (rev != SVN_INVALID_REVNUM)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "copy history wrong (rev) for A/D/H/pi3");
 
     if (path != NULL)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "copy history wrong (path) for A/D/H/pi3");
   }
 
@@ -2609,12 +2609,12 @@ copy_test (const char **msg,
 
     if (rev != (after_rev - 1))
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "copy history wrong (rev) for H2");
 
     if (strcmp (path, "/A/D/H") != 0)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "copy history wrong (path) for H2");
 
     /* Check that a random file under H2 reports no copy history. */
@@ -2622,12 +2622,12 @@ copy_test (const char **msg,
 
     if (rev != SVN_INVALID_REVNUM)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "copy history wrong (rev) for H2/omega");
 
     if (path != NULL)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "copy history wrong (path) for H2/omega");
 
     /* Note that H2/pi2 still has copy history, though.  See the doc
@@ -2655,12 +2655,12 @@ copy_test (const char **msg,
 
     if (rev != (after_rev - 1))
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "copy history wrong (rev) for A/B/E/B");
 
     if (strcmp (path, "/A/B") != 0)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "copy history wrong (path) for A/B/E/B");
 
     /* Check that the original does not have copy history. */
@@ -2669,12 +2669,12 @@ copy_test (const char **msg,
 
     if (rev != SVN_INVALID_REVNUM)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "copy history wrong (rev) for A/B");
 
     if (path != NULL)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "copy history wrong (path) for A/B");
   }
 
@@ -2736,7 +2736,7 @@ link_test (const char **msg,
   *msg = "linking, so no copy history";
   if (msg_only)
     return SVN_NO_ERROR;
-  return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL, pool, "XFAIL");
+  return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL, "XFAIL");
 
 #if 0 /* ### todo: svn_fs_link() as we knew it no longer exists.  This
          test should be rewritten as a test of svn_fs_revision_link()
@@ -2782,13 +2782,13 @@ link_test (const char **msg,
 
     if (SVN_IS_VALID_REVNUM (rev))
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "link_test: copy rev present when should be absent on `%s'",
          "A/D/G/pi2");
 
     if (path)
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "link_test: copy path present when should be absent on `%s'",
          "A/D/G/pi2");
   }
@@ -2802,7 +2802,7 @@ link_test (const char **msg,
 
     if (! svn_fs__id_eq (orig_id, link_id))
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "link_test: orig id not same as link id (`%s', `%s')",
          "A/D/G/pi", "A/D/G/pi2");
   }
@@ -2826,13 +2826,13 @@ link_test (const char **msg,
 
     if (SVN_IS_VALID_REVNUM (rev))
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "link_test: copy rev wrongly present on committed `%s'",
          "A/D/G/pi2");
 
     if (path)
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "link_test: copy path wrongly present on committed `%s'",
          "A/D/G/pi2");
   }
@@ -2846,7 +2846,7 @@ link_test (const char **msg,
 
     if (svn_fs__id_eq (orig_id, link_id))
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "link_test: orig id same as newly committed link id (`%s', `%s')",
          "A/D/G/pi", "A/D/G/pi2");
   }
@@ -2880,7 +2880,7 @@ link_test (const char **msg,
 
     if (svn_fs__id_eq (orig_id, link_id))
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "link_test: orig not same as unchanged committed link (`%s', `%s')",
          "A/D/G/pi", "A/D/G/pi2");
   }
@@ -3010,13 +3010,13 @@ delete_mutables (const char **msg,
     if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
       {
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "deleting non-empty directory got wrong error");
       }
     else if (! err)
       {
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "deleting non-empty directory failed to get error");
       }
 
@@ -3076,13 +3076,13 @@ delete_mutables (const char **msg,
     if (err && (err->apr_err != SVN_ERR_FS_ROOT_DIR))
       {
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "deleting root directory got wrong error");
       }
     else if (! err)
       {
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "deleting root directory failed to get error");
       }
 
@@ -3099,13 +3099,13 @@ delete_mutables (const char **msg,
     if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
       {
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "deleting non-empty directory got wrong error");
       }
     else if (! err)
       {
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "deleting non-empty directory failed to get error");
       }
 
@@ -3291,13 +3291,13 @@ delete (const char **msg,
     if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
       {
         return svn_error_create
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "delete failed as expected, but for wrong reason");
       }
     else if (! err)
       {
         return svn_error_create
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "delete succeeded when expected to fail");
       }
 
@@ -3411,13 +3411,13 @@ delete (const char **msg,
     if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
       {
         return svn_error_create
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "delete failed as expected, but for wrong reason");
       }
     else if (! err)
       {
         return svn_error_create
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "delete succeeded when expected to fail");
       }
 
@@ -3573,13 +3573,13 @@ delete (const char **msg,
     if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
       {
         return svn_error_create
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "delete failed as expected, but for wrong reason");
       }
     else if (! err)
       {
         return svn_error_create
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "delete succeeded when expected to fail");
       }
 
@@ -3664,19 +3664,19 @@ commit_date (const char **msg,
 
   if (datestamp == NULL)
     return svn_error_create
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "failed to get datestamp of committed revision");
 
   SVN_ERR (svn_time_from_nts (&at_commit, datestamp->data, pool));
 
   if (at_commit < before_commit)
     return svn_error_create
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "datestamp too early");
     
   if (at_commit > after_commit)
     return svn_error_create
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "datestamp too late");
 
   return SVN_NO_ERROR;
@@ -4033,7 +4033,7 @@ validate_revisions (svn_fs_t *fs,
                                      subpool);
       if (err)
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, err, pool, 
+          (SVN_ERR_FS_GENERAL, 0, err, 
            "Error validating revision %" SVN_REVNUM_T_FMT
            " (youngest is %" SVN_REVNUM_T_FMT ")", i, max_rev);
       
@@ -4501,7 +4501,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
       SVN_ERR (get_file_digest (digest, rev_root, "bigfile", subpool));
       if (memcmp (digest, digest_list[j], MD5_DIGESTSIZE))
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "MD5 checksum failure, revision %" SVN_REVNUM_T_FMT, j);
     }
 
@@ -4579,7 +4579,7 @@ check_root_revision (const char **msg,
   SVN_ERR (svn_fs_node_created_rev (&test_rev, rev_root, "", pool));
   if (test_rev != youngest_rev)
     return svn_error_createf
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "Root node in revision %" SVN_REVNUM_T_FMT
        " has unexpected stored revision %" SVN_REVNUM_T_FMT,
        youngest_rev, test_rev);
@@ -4601,7 +4601,7 @@ check_root_revision (const char **msg,
       SVN_ERR (svn_fs_node_created_rev (&test_rev, rev_root, "", pool));
       if (test_rev != youngest_rev)
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "Root node in revision %" SVN_REVNUM_T_FMT
            " has unexpected stored revision %" SVN_REVNUM_T_FMT,
            youngest_rev, test_rev);
@@ -4708,7 +4708,7 @@ undeltify_deltify (const char **msg,
                                                 iterpool));
           if (strcmp (greek_files[i][i_rev], contents->data))
             return svn_error_createf
-              (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+              (SVN_ERR_FS_CORRUPT, 0, NULL,
                "%s:%" SVN_REVNUM_T_FMT
                " undeltified contents are incorrect", path, i_rev);
 
@@ -4720,7 +4720,7 @@ undeltify_deltify (const char **msg,
                                                 iterpool));
           if (strcmp (greek_files[i][i_rev], contents->data))
             return svn_error_createf
-              (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+              (SVN_ERR_FS_CORRUPT, 0, NULL,
                "%s:%" SVN_REVNUM_T_FMT
                " re-deltified contents are incorrect", path, i_rev);
 #endif /* 0 */
@@ -4759,7 +4759,7 @@ undeltify_deltify (const char **msg,
                                                 iterpool));
           if (strcmp (greek_files[i][i_rev], contents->data))
             return svn_error_createf
-              (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+              (SVN_ERR_FS_CORRUPT, 0, NULL,
                "%s:%" SVN_REVNUM_T_FMT
                " undeltified contents are incorrect", path, i_rev);
 
@@ -4795,7 +4795,7 @@ undeltify_deltify (const char **msg,
                                                 iterpool));
           if (strcmp (greek_files[i][i_rev], contents->data))
             return svn_error_createf
-              (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+              (SVN_ERR_FS_CORRUPT, 0, NULL,
                "%s:%" SVN_REVNUM_T_FMT
                " re-deltified contents are incorrect", path, i_rev);
 
@@ -4840,7 +4840,7 @@ verify_path_revs (svn_fs_root_t *root,
       SVN_ERR (svn_fs_node_created_rev (&rev, root, args[i].path, subpool));
       if (rev != args[i].rev)
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "verify_path_revs: '%s' has created rev '%"
            SVN_REVNUM_T_FMT "' (expected '%"
            SVN_REVNUM_T_FMT "')",
@@ -5189,14 +5189,14 @@ check_related (const char **msg,
             else if (related && (! related_matrix[i][j]))
               {
                 return svn_error_createf
-                  (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                  (SVN_ERR_TEST_FAILED, 0, NULL,
                    "expected `%s:%d' to be related to `%s:%d'; it was not",
                    pr1.path, (int)pr1.rev, pr2.path, (int)pr2.rev);
               }
             else if ((! related) && related_matrix[i][j])
               {
                 return svn_error_createf
-                  (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                  (SVN_ERR_TEST_FAILED, 0, NULL,
                    "expected `%s:%d' to not be related to `%s:%d'; it was",
                    pr1.path, (int)pr1.rev, pr2.path, (int)pr2.rev);
               }
@@ -5418,7 +5418,7 @@ revisions_changed (const char **msg,
            revisions? */
         if ((! revs) || (revs->nelts != num_revs))
           return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, spool,
+            (SVN_ERR_FS_GENERAL, 0, NULL,
              "Changed revisions differ from expected for `%s'\n%s",
              path, print_chrevs (revs, num_revs, &(chrevs[j][1]), spool));
 
@@ -5428,7 +5428,7 @@ revisions_changed (const char **msg,
             svn_revnum_t rev = ((svn_revnum_t *)revs->elts)[i];
             if (rev != chrevs[j][i + 1])
               return svn_error_createf
-                (SVN_ERR_FS_GENERAL, 0, NULL, spool,
+                (SVN_ERR_FS_GENERAL, 0, NULL,
                  "Changed revisions differ from expected for `%s'\n%s",
                  path, print_chrevs (revs, num_revs, &(chrevs[j][1]), spool));
           }
@@ -5493,13 +5493,13 @@ canonicalize_abspath (const char **msg,
       if ((! output) && (! actual))
         continue;
       if ((! output) && actual)
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
                                   "expected NULL path; got `%s'", actual);
       if (output && (! actual))
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
                                   "expected `%s' path; got NULL", output);
       if (strcmp (output, actual))
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
                                   "expected `%s' path; got `%s'",
                                   output, actual);
     }

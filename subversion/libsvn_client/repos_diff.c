@@ -292,8 +292,7 @@ get_file_from_ra (struct file_baton *b)
 
   status = apr_file_close (file);
   if (status)
-    return svn_error_createf (status, 0, NULL, b->pool,
-                              "failed to close file '%s'",
+    return svn_error_createf (status, 0, NULL, "failed to close file '%s'",
                               b->path_start_revision);
 
   return SVN_NO_ERROR;
@@ -331,7 +330,7 @@ create_empty_file (const char **empty_file,
 
   status = apr_file_close (file);
   if (status)
-    return svn_error_createf (status, 0, NULL, pool,
+    return svn_error_createf (status, 0, NULL,
                               "failed to create empty file '%s'", *empty_file);
   return SVN_NO_ERROR;
 }
@@ -358,7 +357,7 @@ get_path_access (svn_wc_adm_access_t **path_access,
         {
           if (! lenient)
             return err;
-          svn_error_clear_all (err);
+          svn_error_clear (err);
           *path_access = NULL;
         }
     }
@@ -621,13 +620,13 @@ window_handler (svn_txdelta_window_t *window,
 
       status = apr_file_close (b->file_start_revision);
       if (status)
-        return svn_error_createf (status, 0, NULL, b->pool,
+        return svn_error_createf (status, 0, NULL,
                                   "failed to close file '%s'",
                                   b->path_start_revision);
 
       status = apr_file_close (b->file_end_revision);
       if (status)
-        return svn_error_createf (status, 0, NULL, b->pool,
+        return svn_error_createf (status, 0, NULL,
                                   "failed to close file '%s'",
                                   b->path_end_revision);
     }

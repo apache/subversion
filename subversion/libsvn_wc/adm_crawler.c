@@ -313,7 +313,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                hosed.  It can't receive updates within this dir
                anymore.  Throw a real error. */
             return svn_error_createf
-              (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, subpool,
+              (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
                "The entry '%s' is no longer a directory,\n"
                "which prevents proper updates.\n"
                "Please remove this entry and try updating again.",
@@ -596,7 +596,7 @@ svn_wc_transmit_text_deltas (const char *path,
             *tempfile = NULL;
           
           return svn_error_createf
-            (SVN_ERR_WC_CORRUPT_TEXT_BASE, 0, NULL, pool,
+            (SVN_ERR_WC_CORRUPT_TEXT_BASE, 0, NULL,
              "svn_wc_transmit_text_deltas: checksum mismatch for '%s':\n"
              "   recorded checksum: %s\n"
              "   actual checksum:   %s\n",
@@ -624,7 +624,7 @@ svn_wc_transmit_text_deltas (const char *path,
     
   /* Close the two files */
   if ((status = apr_file_close (localfile)))
-    return svn_error_create (status, 0, NULL, pool,
+    return svn_error_create (status, 0, NULL,
                              "error closing local file");
   
   if (basefile)

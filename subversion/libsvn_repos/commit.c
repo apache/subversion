@@ -107,9 +107,9 @@ struct file_baton
 
 /* Create and return a generic out-of-dateness error. */
 static svn_error_t *
-out_of_date (const char *path, const char *txn_name, apr_pool_t *pool)
+out_of_date (const char *path, const char *txn_name)
 {
-  return svn_error_createf (SVN_ERR_FS_TXN_OUT_OF_DATE, 0, NULL, pool, 
+  return svn_error_createf (SVN_ERR_FS_TXN_OUT_OF_DATE, 0, NULL,
                             "out of date: `%s' in txn `%s'", path, txn_name);
 }
 
@@ -181,7 +181,7 @@ delete_entry (const char *path,
      deleting, else return an out-of-dateness error. */
   SVN_ERR (svn_fs_node_created_rev (&cr_rev, eb->txn_root, full_path, pool));
   if (SVN_IS_VALID_REVNUM (revision) && (revision < cr_rev))
-    return out_of_date (full_path, eb->txn_name, pool);
+    return out_of_date (full_path, eb->txn_name);
   
   /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
      because that will delete files and recursively delete
@@ -210,7 +210,7 @@ add_directory (const char *path,
   /* Sanity check. */  
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
     return svn_error_createf 
-      (SVN_ERR_FS_GENERAL, 0, NULL, eb->pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "add_dir `%s': got copy_path, but no copy_rev", full_path);
 
   if (copy_path)
@@ -226,7 +226,7 @@ add_directory (const char *path,
          out-of-dateness error. */
       kind = svn_fs_check_path (eb->txn_root, full_path, subpool);
       if ((kind != svn_node_none) && (! pb->was_copied))
-        return out_of_date (full_path, eb->txn_name, subpool);
+        return out_of_date (full_path, eb->txn_name);
 
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
@@ -234,7 +234,7 @@ add_directory (const char *path,
       repos_url_len = strlen (eb->repos_url);
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
         return svn_error_createf 
-          (SVN_ERR_FS_GENERAL, 0, NULL, subpool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "add_dir `%s': copy_url is from different repo", full_path);
 
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
@@ -289,7 +289,7 @@ open_directory (const char *path,
      else return an out-of-dateness error. */
   kind = svn_fs_check_path (eb->txn_root, full_path, pool);
   if (kind == svn_node_none)
-    return out_of_date (full_path, eb->txn_name, pool);
+    return out_of_date (full_path, eb->txn_name);
 
   /* Build a new dir baton for this directory */
   new_dirb = apr_pcalloc (pool, sizeof (*new_dirb));
@@ -336,7 +336,7 @@ add_file (const char *path,
   /* Sanity check. */  
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
     return svn_error_createf 
-      (SVN_ERR_FS_GENERAL, 0, NULL, eb->pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "add_file `%s': got copy_path, but no copy_rev", full_path);
 
   if (copy_path)
@@ -352,7 +352,7 @@ add_file (const char *path,
          out-of-dateness error. */
       kind = svn_fs_check_path (eb->txn_root, full_path, subpool);
       if ((kind != svn_node_none) && (! pb->was_copied))
-        return out_of_date (full_path, eb->txn_name, subpool);
+        return out_of_date (full_path, eb->txn_name);
 
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
@@ -360,7 +360,7 @@ add_file (const char *path,
       repos_url_len = strlen (eb->repos_url);
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
             return svn_error_createf 
-              (SVN_ERR_FS_GENERAL, 0, NULL, eb->pool,
+              (SVN_ERR_FS_GENERAL, 0, NULL,
                "add_file `%s': copy_url is from different repo", full_path);
       
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
@@ -416,7 +416,7 @@ open_file (const char *path,
   /* If the node our caller has is an older revision number than the
      one in our transaction, return an out-of-dateness error. */
   if (base_revision < cr_rev)
-    return out_of_date (full_path, eb->txn_name, pool);
+    return out_of_date (full_path, eb->txn_name);
 
   /* Build a new file baton */
   new_fb = apr_pcalloc (pool, sizeof (*new_fb));

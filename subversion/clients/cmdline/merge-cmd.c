@@ -62,7 +62,7 @@ svn_cl__merge (apr_getopt_t *os,
           svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
                                    svn_cl__options, pool);
           return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS,
-                                   0, 0, pool, "Second revision required.");
+                                   0, 0, "Second revision required.");
         }
       using_alternate_syntax = TRUE;
     }
@@ -78,7 +78,7 @@ svn_cl__merge (apr_getopt_t *os,
      friendly help message, rather than spewing an error.  */
   if (targets->nelts == 0)
     {
-      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool,
+      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0,
 			       "" /* message is unused */);
     }
 
@@ -90,7 +90,7 @@ svn_cl__merge (apr_getopt_t *os,
         {
           svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
                                    svn_cl__options, pool);
-          return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, 0, pool,
+          return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, 0,
                                    "Wrong number of paths given.");
         }
 
@@ -98,7 +98,7 @@ svn_cl__merge (apr_getopt_t *os,
       source = ((const char **)(targets->elts))[0];
       SVN_ERR (svn_cl__get_url_from_target(&url, source, pool));
       if (! url)
-        return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, 0, NULL,
                                   "'%s' has no URL", source);
 
       sourcepath1 = sourcepath2 = url;
@@ -115,7 +115,7 @@ svn_cl__merge (apr_getopt_t *os,
         {
           svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
                                    svn_cl__options, pool);
-          return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, 0, pool,
+          return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, 0,
                                    "Wrong number of paths given.");
         }
 

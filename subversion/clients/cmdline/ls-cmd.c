@@ -134,7 +134,7 @@ svn_cl__ls (apr_getopt_t *os,
   /* Give me arguments or give me death! */
   if (targets->nelts == 0)
     return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS,
-                             0, NULL, pool, "");
+                             0, NULL, "");
 
   /* For each target, try to list it. */
   for (i = 0; i < targets->nelts; i++)

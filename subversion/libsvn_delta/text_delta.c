@@ -259,7 +259,7 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
       apr_err = apr_md5_final (stream->digest, &(stream->context));
       if (apr_err)
         return svn_error_create 
-          (apr_err, 0, NULL, pool,
+          (apr_err, 0, NULL,
            "svn_txdelta_next_window: MD5 finalization failed");
 
       *window = NULL;
@@ -460,7 +460,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
       len = window->sview_len - ab->sbuf_len;
       err = svn_stream_read (ab->source, ab->sbuf + ab->sbuf_len, &len);
       if (err == SVN_NO_ERROR && len != window->sview_len - ab->sbuf_len)
-        err = svn_error_create (SVN_ERR_INCOMPLETE_DATA, 0, NULL, ab->pool,
+        err = svn_error_create (SVN_ERR_INCOMPLETE_DATA, 0, NULL,
                                 "Delta source ended unexpectedly");
       if (err != SVN_NO_ERROR)
         return err;

@@ -53,7 +53,7 @@ svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool)
 {
   *fs_p = svn_fs_new (pool);
   if (! *fs_p)
-    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL,
                              "Couldn't alloc a new fs object.");
 
   /* Provide a warning function that just dumps the message to stderr.  */
@@ -81,7 +81,7 @@ svn_test__create_fs (svn_fs_t **fs_p,
       if (finfo.filetype == APR_DIR)
         SVN_ERR (svn_fs_delete_berkeley (name, pool));
       else
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
                                   "there is already a file named `%s'", name);
     }
 
@@ -112,7 +112,7 @@ svn_test__create_repos (svn_repos_t **repos_p,
       if (finfo.filetype == APR_DIR)
         SVN_ERR (svn_repos_delete (name, pool));
       else
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
                                   "there is already a file named `%s'", name);
     }
 
@@ -259,7 +259,7 @@ validate_tree_entry (svn_fs_root_t *root,
   SVN_ERR (svn_fs_is_dir (&is_dir, root, path, pool));
   if ((!is_dir && !contents) || (is_dir && contents))
     return svn_error_createf
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "node `%s' in tree was of unexpected node type", 
        path);
 
@@ -271,7 +271,7 @@ validate_tree_entry (svn_fs_root_t *root,
       if (! svn_stringbuf_compare (rstring, 
                                    svn_stringbuf_create (contents, pool)))
         return svn_error_createf 
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+          (SVN_ERR_FS_GENERAL, 0, NULL,
            "node `%s' in tree had unexpected contents",
            path);
     }
@@ -386,7 +386,7 @@ svn_test__validate_tree (svn_fs_root_t *root,
   if (missing_entries || extra_entries || corrupt_entries)
     {
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL,
          "Repository tree does not look as expected.\n"
          "Corrupt entries:\n%s"
          "Missing entries:\n%s"
@@ -499,7 +499,7 @@ svn_test__check_greek_tree (svn_fs_root_t *root,
       SVN_ERR (svn_test__stream_to_string (&rstring, rstream, pool));
       content = svn_stringbuf_create (file_contents[i][1], pool);
       if (! svn_stringbuf_compare (rstring, content))
-        return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL,
                                  "data read != data written in file `%s'.",
                                  file_contents[i][0]);
     }

@@ -24,10 +24,9 @@
 
 
 static svn_error_t *
-skel_err (const char *skel_type,
-          apr_pool_t *pool)
+skel_err (const char *skel_type)
 {
-  return svn_error_createf (SVN_ERR_FS_MALFORMED_SKEL, 0, NULL, pool, 
+  return svn_error_createf (SVN_ERR_FS_MALFORMED_SKEL, 0, NULL,
                             "Malformed%s%s skeleton", 
                             skel_type ? " " : "",
                             skel_type ? skel_type : "");
@@ -322,7 +321,7 @@ svn_fs__parse_proplist_skel (apr_hash_t **proplist_p,
 
   /* Validate the skel. */
   if (! is_valid_proplist_skel (skel))
-    return skel_err ("proplist", pool);
+    return skel_err ("proplist");
   
   /* Create the returned structure */
   if (skel->children)
@@ -352,7 +351,7 @@ svn_fs__parse_revision_skel (svn_fs__revision_t **revision_p,
 
   /* Validate the skel. */
   if (! is_valid_revision_skel (skel))
-    return skel_err ("revision", pool);
+    return skel_err ("revision");
 
   /* Create the returned structure */
   revision = apr_pcalloc (pool, sizeof (*revision));
@@ -376,7 +375,7 @@ svn_fs__parse_transaction_skel (svn_fs__transaction_t **transaction_p,
   
   /* Validate the skel. */
   if (! is_valid_transaction_skel (skel))
-    return skel_err ("transaction", pool);
+    return skel_err ("transaction");
 
   root_id = skel->children->next;
   base_id_or_rev = skel->children->next->next;
@@ -394,7 +393,7 @@ svn_fs__parse_transaction_skel (svn_fs__transaction_t **transaction_p,
       transaction->revision = atoi (apr_pstrmemdup (pool, base_id_or_rev->data,
                                                     base_id_or_rev->len));
       if (! SVN_IS_VALID_REVNUM (transaction->revision))
-        return skel_err ("tranaction", pool);
+        return skel_err ("tranaction");
     }
   else /* ...where unfinished transactions have a base node-revision-id. */
     {
@@ -444,7 +443,7 @@ svn_fs__parse_representation_skel (svn_fs__representation_t **rep_p,
 
   /* Validate the skel. */
   if (! is_valid_representation_skel (skel))
-    return skel_err ("representation", pool);
+    return skel_err ("representation");
   header_skel = skel->children;
 
   /* Create the returned structure */
@@ -539,7 +538,7 @@ svn_fs__parse_node_revision_skel (svn_fs__node_revision_t **noderev_p,
 
   /* Validate the skel. */
   if (! is_valid_node_revision_skel (skel))
-    return skel_err ("node-revision", pool);
+    return skel_err ("node-revision");
   header_skel = skel->children;
 
   /* Create the returned structure */
@@ -603,7 +602,7 @@ svn_fs__parse_copy_skel (svn_fs__copy_t **copy_p,
 
   /* Validate the skel. */
   if (! is_valid_copy_skel (skel))
-    return skel_err ("copy", pool);
+    return skel_err ("copy");
 
   /* Create the returned structure */
   copy = apr_pcalloc (pool, sizeof (*copy));
@@ -639,7 +638,7 @@ svn_fs__parse_entries_skel (apr_hash_t **entries_p,
   skel_t *elt;
 
   if (! (len >= 0))
-    return skel_err ("entries", pool);
+    return skel_err ("entries");
     
   if (len > 0)
     {
@@ -654,7 +653,7 @@ svn_fs__parse_entries_skel (apr_hash_t **entries_p,
 
           /* ENTRY must be a list of two elements. */
           if (svn_fs__list_length (elt) != 2)
-            return skel_err ("entries", pool);
+            return skel_err ("entries");
 
           /* Get the entry's name and ID. */
           name = apr_pstrmemdup (pool, elt->children->data, 
@@ -683,7 +682,7 @@ svn_fs__parse_change_skel (svn_fs__change_t **change_p,
 
   /* Validate the skel. */
   if (! is_valid_change_skel (skel, &kind))
-    return skel_err ("change", pool);
+    return skel_err ("change");
 
   /* Create the returned structure */
   change = apr_pcalloc (pool, sizeof (*change));
@@ -751,7 +750,7 @@ svn_fs__unparse_proplist_skel (skel_t **skel_p,
      
   /* Validate and return the skel. */
   if (! is_valid_proplist_skel (skel))
-    return skel_err ("proplist", pool);
+    return skel_err ("proplist");
   *skel_p = skel;
   return SVN_NO_ERROR;
 }
@@ -775,7 +774,7 @@ svn_fs__unparse_revision_skel (skel_t **skel_p,
 
   /* Validate and return the skel. */
   if (! is_valid_revision_skel (skel))
-    return skel_err ("revision", pool);
+    return skel_err ("revision");
   *skel_p = skel;
   return SVN_NO_ERROR;
 }
@@ -848,7 +847,7 @@ svn_fs__unparse_transaction_skel (skel_t **skel_p,
 
   /* Validate and return the skel. */
   if (! is_valid_transaction_skel (skel))
-    return skel_err ("transaction", pool);
+    return skel_err ("transaction");
   *skel_p = skel;
   return SVN_NO_ERROR;
 }
@@ -973,7 +972,7 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
 
   /* Validate and return the skel. */
   if (! is_valid_representation_skel (skel))
-    return skel_err ("representation", pool);
+    return skel_err ("representation");
   *skel_p = skel;
   return SVN_NO_ERROR;
 }
@@ -1041,7 +1040,7 @@ svn_fs__unparse_node_revision_skel (skel_t **skel_p,
 
   /* Validate and return the skel. */
   if (! is_valid_node_revision_skel (skel))
-    return skel_err ("node-revision", pool);
+    return skel_err ("node-revision");
   *skel_p = skel;
   return SVN_NO_ERROR;
 }
@@ -1079,7 +1078,7 @@ svn_fs__unparse_copy_skel (skel_t **skel_p,
 
   /* Validate and return the skel. */
   if (! is_valid_copy_skel (skel))
-    return skel_err ("copy", pool);
+    return skel_err ("copy");
   *skel_p = skel;
   return SVN_NO_ERROR;
 }
@@ -1193,9 +1192,9 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
 
   /* Validate and return the skel. */
   if (! is_valid_change_skel (skel, &kind))
-    return skel_err ("change", pool);
+    return skel_err ("change");
   if (kind != change->kind)
-    return skel_err ("change", pool);
+    return skel_err ("change");
   *skel_p = skel;
   return SVN_NO_ERROR;
 }

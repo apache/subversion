@@ -42,7 +42,7 @@ svn_fs_deltify (svn_fs_root_t *root,
 {
   /* ### todo: make this work [currently, deltify_undeltify() does
      nothing in the deltify case].  */
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
                            "svn_fs_deltify: currently not implemented");
 }
 

@@ -32,10 +32,10 @@
 
 /* Convert an apr_status_t into an svn_error_t.  */
 static svn_error_t *
-check (apr_status_t status, apr_pool_t *pool)
+check (apr_status_t status)
 {
   if (status != APR_SUCCESS)
-    return svn_error_create (status, 0, 0, pool, "");
+    return svn_error_create (status, 0, 0, "");
   else
     return SVN_NO_ERROR;
 }
@@ -100,7 +100,7 @@ test1 (const char **msg,
 
   apr_file_close (f);
 
-  return check (result, pool);
+  return check (result);
 }
 
 
@@ -127,7 +127,7 @@ test2 (const char **msg,
 
   apr_file_close (f);
 
-  return check (result, pool);
+  return check (result);
 }
 
 
@@ -188,7 +188,7 @@ test3 (const char **msg,
 
 
   if (found_discrepancy)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, 0, pool,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, 0,
                               "found discrepancy reading back hash table");
 
   return SVN_NO_ERROR;

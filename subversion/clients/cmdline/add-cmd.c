@@ -59,7 +59,7 @@ svn_cl__add (apr_getopt_t *os,
                                          FALSE, pool));
 
   if (! targets->nelts)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, "");
       
   if (! opt_state->quiet)
     svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
@@ -76,7 +76,7 @@ svn_cl__add (apr_getopt_t *os,
           if (err->apr_err == SVN_ERR_ENTRY_EXISTS)
             {
               svn_handle_warning (err->pool, stderr, err->message);
-              svn_error_clear_all (err);
+              svn_error_clear (err);
             }
           else
             return err;

@@ -58,16 +58,14 @@ char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
   Input:  an APR or SVN custom error code,
           the original errno,
           a "child" error to wrap,
-          a pool
           a descriptive message,
 
   Returns:  a new error structure (containing the old one).
 
-  Notes: Errors are always allocated in a special top-level error
-         pool, obtained from POOL's attributes.  If POOL is null, then
-         the error pool is obtained from CHILD's pool's attributes.
-         A pool has this attribute if it was allocated using
-         svn_pool_create().
+  Notes: Errors are always allocated in a subpool of the global pool,
+         since an error's lifetime is generally not related to the
+         lifetime of the any convenient pool.  Errors must be be freed
+         with svn_error_clear().
 
          If creating the "bottommost" error in a chain, pass NULL for
          the child argument.
@@ -75,49 +73,47 @@ char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
 svn_error_t *svn_error_create (apr_status_t apr_err,
                                int src_err,
                                svn_error_t *child,
-                               apr_pool_t *pool,
                                const char *message);
 
-#ifdef SVN_DEBUG
+/* Wrapper macro to collect file and line information */
 #define svn_error_create \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_create))
-#endif
 
-/* Create an error structure with the given APR_ERR, SRC_ERR, CHILD,
-   and POOL, with a printf-style error message produced by passing
-   FMT, ... through apr_psprintf.  */
+/* Create an error structure with the given APR_ERR, SRC_ERR, and
+   CHILD, with a printf-style error message produced by passing FMT,
+   ... through apr_psprintf.  */
 svn_error_t *svn_error_createf (apr_status_t apr_err,
                                 int src_err,
                                 svn_error_t *child,
-                                apr_pool_t *pool,
                                 const char *fmt, 
                                 ...)
-       __attribute__ ((format (printf, 5, 6)));
+       __attribute__ ((format (printf, 4, 5)));
 
-#ifdef SVN_DEBUG
+/* Wrapper macro to collect file and line information */
 #define svn_error_createf \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_createf))
-#endif
 
 /* A quick n' easy way to create a wrappered exception with your own
    message, before throwing it up the stack.  (It uses all of the
    child's fields.)  */
 svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
 
-#ifdef SVN_DEBUG
+/* Wrapper macro to collect file and line information */
 #define svn_error_quick_wrap \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrap))
-#endif
 
 /* Add NEW to the end of CHAIN's chain of errors; i.e., NEW will be
    the last child error in CHAIN.  */
 void svn_error_compose (svn_error_t *chain, svn_error_t *new_err);
 
 
-/* Clear ERROR's pool.  Note that this is likely the top-level error
-   pool shared with any other errors currently extant, though usually
-   only one error exists at a time, so this is not a problem. */
-void svn_error_clear_all (svn_error_t *error);
+/* Free the memory used by ERROR, as well as all ancestors and
+   descendents of ERROR.  Unlike other Subversion objects, errors are
+   managed explicitly; you MUST clear an error if you are ignoring it,
+   or you are leaking memory.  For convenience, ERROR may be NULL, in
+   which case this function does nothing; thus,
+   svn_error_clear(svn_foo(...)) works as an idiom to ignore errors. */
+void svn_error_clear (svn_error_t *error);
 
 
 /* Very basic default error handler: print out error stack, and quit

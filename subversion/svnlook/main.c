@@ -315,7 +315,7 @@ open_writable_binary_file (apr_file_t **fh,
   /* If the file path has no parent, then we've already tried to open
      it as best as we care to try above. */
   if (svn_path_is_empty_nts (dir))
-    return svn_error_createf (err->apr_err, err->src_err, err, pool,
+    return svn_error_createf (err->apr_err, err->src_err, err,
                               "Error opening writable file %s", path);
 
   path_pieces = svn_path_decompose (dir, pool);
@@ -338,7 +338,7 @@ open_writable_binary_file (apr_file_t **fh,
       else if (kind != svn_node_dir)
         {
           if (err)
-            return svn_error_createf (err->apr_err, err->src_err, err, pool,
+            return svn_error_createf (err->apr_err, err->src_err, err,
                                       "Error creating dir %s (path exists)", 
                                       full_path);
         }
@@ -350,7 +350,7 @@ open_writable_binary_file (apr_file_t **fh,
                           APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
                           APR_OS_DEFAULT, pool);
   if (err)
-    return svn_error_createf (err->apr_err, err->src_err, err, pool,
+    return svn_error_createf (err->apr_err, err->src_err, err,
                               "Error opening writable file %s", path);
     
   return SVN_NO_ERROR;
@@ -380,7 +380,7 @@ dump_contents (apr_file_t *fh,
       apr_err = apr_file_write (fh, buffer, &len2);
       if ((apr_err) || (len2 != len))
         return svn_error_createf 
-          (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, 0, NULL, pool,
+          (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, 0, NULL,
                "Error writing contents of %s", path);
       if (len != sizeof (buffer))
         break;
@@ -527,8 +527,7 @@ print_diff_tree (svn_fs_root_t *root,
       apr_err = apr_file_open_stdout (&outhandle, pool);
       if (apr_err)
         return svn_error_create 
-          (apr_err, 0, NULL, pool,
-           "print_diff_tree: can't open handle to stdout");
+          (apr_err, 0, NULL, "print_diff_tree: can't open handle to stdout");
 
       label = apr_psprintf (pool, "%s\t(original)", base_path);
       SVN_ERR (svn_path_get_absolute (&abs_path, orig_path, pool));
@@ -793,7 +792,7 @@ do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
 
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL, pool,
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL,
        "Transaction '%s' is not based on a revision.  How odd.",
        c->txn_name);
   
@@ -823,7 +822,7 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
 
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL, pool,
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL,
        "Transaction '%s' is not based on a revision.  How odd.",
        c->txn_name);
   
@@ -852,7 +851,7 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
 
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL, pool,
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL,
        "Transaction '%s' is not based on a revision.  How odd.",
        c->txn_name);
   

@@ -171,7 +171,7 @@ svn_time_from_nts(apr_time_t *when, const char *data, apr_pool_t *pool)
       apr_err = apr_implode_gmt (when, &exploded_time);
       if(apr_err != APR_SUCCESS)
         {
-          return svn_error_createf (SVN_ERR_BAD_DATE, apr_err, NULL, pool,
+          return svn_error_createf (SVN_ERR_BAD_DATE, apr_err, NULL,
                                     "Date conversion failed.");
         }
       
@@ -202,7 +202,7 @@ svn_time_from_nts(apr_time_t *when, const char *data, apr_pool_t *pool)
       apr_err = apr_implode_gmt (when, &exploded_time);
       if(apr_err != APR_SUCCESS)
         {
-          return svn_error_createf (SVN_ERR_BAD_DATE, apr_err, NULL, pool,
+          return svn_error_createf (SVN_ERR_BAD_DATE, apr_err, NULL,
                                     "Date conversion failed.");
         }
 
@@ -211,7 +211,7 @@ svn_time_from_nts(apr_time_t *when, const char *data, apr_pool_t *pool)
   /* Timestamp is something we do not recognize. */
   else
     {
-      return svn_error_createf(SVN_ERR_BAD_DATE, 0, NULL, pool,
+      return svn_error_createf(SVN_ERR_BAD_DATE, 0, NULL,
                                "Date parsing failed.");
     }
 }

@@ -142,11 +142,10 @@ static svn_error_t *delta_dirs (struct context *c,
 
 static svn_error_t *
 not_a_dir_error (const char *role, 
-                 const char *path,
-                 apr_pool_t *pool)
+                 const char *path)
 {
   return svn_error_createf 
-    (SVN_ERR_FS_NOT_DIRECTORY, 0, 0, pool,
+    (SVN_ERR_FS_NOT_DIRECTORY, 0, 0,
      "not_a_dir_error: invalid %s directory '%s'",
      role, path ? path : "(null)");
 }
@@ -193,11 +192,11 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
 
   /* SRC_PARENT_DIR must be valid. */
   if (! src_parent_dir)
-    return not_a_dir_error ("source parent", src_parent_dir, pool);
+    return not_a_dir_error ("source parent", src_parent_dir);
 
   /* TGT_PATH must be valid. */
   if (! tgt_path)
-    return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0, 0, pool,
+    return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0, 0,
                              "svn_repos_dir_delta: invalid target path");
   
   /* Ensure absolute filesystem paths (for the sake of consistency,
@@ -228,14 +227,14 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
       int s_dir;
       SVN_ERR (svn_fs_is_dir (&s_dir, src_root, src_parent_dir, pool));
       if (! s_dir)
-        return not_a_dir_error ("source parent", src_parent_dir, pool);
+        return not_a_dir_error ("source parent", src_parent_dir);
     }
   if (! svn_path_is_empty_nts (tgt_parent_dir))
     {
       int t_dir;
       SVN_ERR (svn_fs_is_dir (&t_dir, tgt_root, tgt_parent_dir, pool));
       if (! t_dir)
-        return not_a_dir_error ("target parent", tgt_parent_dir, pool);
+        return not_a_dir_error ("target parent", tgt_parent_dir);
     }
   
   /* Setup our pseudo-global structure here.  We need these variables
@@ -287,7 +286,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
         {
           /* Caller thinks that target still exists, but it doesn't.
              So just delete the target and go home.  */
-          svn_error_clear_all (err);
+          svn_error_clear (err);
           SVN_ERR (delete (&c, root_baton, src_fullpath, pool));
           goto cleanup;
         }
@@ -303,7 +302,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
         {
           /* The target has been deleted from our working copy. Add
              back a new one. */
-          svn_error_clear_all (err);
+          svn_error_clear (err);
           SVN_ERR (add_file_or_dir (&c, root_baton,
                                     tgt_parent_dir,
                                     tgt_entry,

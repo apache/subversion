@@ -92,7 +92,7 @@ svn_cl__import (apr_getopt_t *os,
   /* Get a repository url. */
   if (targets->nelts < 1)
     return svn_error_create
-      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
        "repository url required when importing");
   else
     url = ((const char **) (targets->elts))[0];
@@ -111,7 +111,7 @@ svn_cl__import (apr_getopt_t *os,
     new_entry = ((const char **) (targets->elts))[2];
   else
     return svn_error_create
-      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
        "too many arguments to import command");
   
   if (! opt_state->quiet)

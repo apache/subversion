@@ -59,8 +59,7 @@ run_hook_cmd (const char *name,
   apr_err = apr_file_pipe_create(&read_errhandle, &write_errhandle, pool);
   if (apr_err)
     return svn_error_createf
-      (apr_err, 0, NULL, pool,
-       "can't create pipe for %s hook", cmd);
+      (apr_err, 0, NULL, "can't create pipe for %s hook", cmd);
 
   err = svn_io_run_cmd (".", cmd, args, &exitcode, &exitwhy, FALSE,
                         NULL, NULL, write_errhandle, pool);
@@ -71,15 +70,13 @@ run_hook_cmd (const char *name,
   apr_err = apr_file_close (write_errhandle);
   if (!err && apr_err)
     return svn_error_create
-      (apr_err, 0, NULL, pool,
-       "can't close write end of stderr pipe");
+      (apr_err, 0, NULL, "can't close write end of stderr pipe");
 
   /* Function failed. */
   if (err)
     {
       err = svn_error_createf
-        (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
-         "failed to run %s hook", cmd);
+        (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, "failed to run %s hook", cmd);
     }
 
   if (!err && check_exitcode)
@@ -93,7 +90,7 @@ run_hook_cmd (const char *name,
           SVN_ERR (svn_stringbuf_from_aprfile (&error, read_errhandle, pool));
 
           err = svn_error_createf
-              (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
+              (SVN_ERR_REPOS_HOOK_FAILURE, 0, err,
                "%s hook failed with error output:\n%s",
                name, error->data);
         }
@@ -104,8 +101,7 @@ run_hook_cmd (const char *name,
   apr_err = apr_file_close (read_errhandle);
   if (!err && apr_err)
     return svn_error_create
-      (apr_err, 0, NULL, pool,
-       "can't close read end of stdout pipe");
+      (apr_err, 0, NULL, "can't close read end of stdout pipe");
 
   return err;
 }
@@ -230,7 +226,7 @@ run_pre_revprop_change_hook (svn_repos_t *repos,
          *deliberately* created the pre-hook, disallow all changes. */
       return 
         svn_error_create 
-        (SVN_ERR_REPOS_DISABLED_FEATURE, 0, NULL, pool,
+        (SVN_ERR_REPOS_DISABLED_FEATURE, 0, NULL,
          "Repository has not been enabled to accept revision propchanges;\n"
          "ask the administrator to create a pre-revprop-change hook.");
     }
@@ -287,7 +283,7 @@ svn_repos_fs_commit_txn (const char **conflict_p,
 
   if (fs != svn_fs_txn_fs (txn))
     return svn_error_createf 
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      (SVN_ERR_FS_GENERAL, 0, NULL,
        "Transaction does not belong to given repository's filesystem");
 
   /* Run pre-commit hooks. */

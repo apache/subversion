@@ -304,7 +304,7 @@ get_user_and_pass (char **username,
 
   if (CLASS_OF (obj) != rb_cArray
       || RARRAY (obj)->len != 2)
-    return svn_error_create (APR_EGENERAL, 0, 0, pool,
+    return svn_error_create (APR_EGENERAL, 0, 0,
                              "GetUserAndPass returned wrong object");
   {
     VALUE user, pass;
@@ -349,7 +349,7 @@ get_authenticator (void **authenticator,
       *auth_baton = (void *)cb->callback;
     }
   else
-    return svn_error_create (SVN_ERR_RA_UNKNOWN_AUTH, 0, 0, pool,
+    return svn_error_create (SVN_ERR_RA_UNKNOWN_AUTH, 0, 0,
                              "Unknown authorization method");
   return SVN_NO_ERROR;
 }

@@ -454,8 +454,7 @@ svn_ra_dav__maybe_store_auth_info (svn_ra_session_t *ras);
    what was being attempted. */
 svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                        const char *context,
-                                       int retcode,
-                                       apr_pool_t *pool);
+                                       int retcode);
 
 
 /* Given a neon REQUEST and SESSION, run the request and return the

@@ -115,7 +115,6 @@ typedef struct
 
 typedef struct
 {
-  apr_pool_t *pool;
   apr_file_t *tmpfile;
   svn_stringbuf_t *fname;
   resource_baton_t *file;
@@ -156,7 +155,6 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, 0, NULL,
-                               ras->pool,
                                "Could not create a request (%s %s)",
                                method, url);
     }
@@ -227,7 +225,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
   if (url == NULL)
     {
       /* ### need a proper SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+      return svn_error_create(APR_EGENERAL, 0, NULL,
                               "Could not fetch the Version Resource URL "
                               "(needed during an import or when it is "
                               "missing from the local, cached props).");
@@ -406,7 +404,6 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, 0, NULL,
-                               cc->ras->pool,
                                "Could not create a CHECKOUT request (%s)",
                                vsn_url);
     }
@@ -468,7 +465,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
-        return svn_error_createf(err->apr_err, err->src_err, err, NULL,
+        return svn_error_createf(err->apr_err, err->src_err, err,
                                  "Your file '%s' is probably out-of-date.",
                                  res->local_path);
       return err;
@@ -478,7 +475,6 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   if (locn == NULL)
     {
       return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, 0, NULL,
-                              cc->ras->pool,
                               "The CHECKOUT response did not contain a "
                               "Location: header.");
     }
@@ -768,7 +764,7 @@ static svn_error_t * commit_add_dir(const char *path,
         {
           const char *msg = apr_psprintf(dir_pool, "COPY of %s", path);
           return svn_ra_dav__convert_error(parent->cc->ras->sess,
-                                           msg, status, dir_pool);
+                                           msg, status);
         }
     }
 
@@ -894,14 +890,13 @@ static svn_error_t * commit_add_file(const char *path,
         {
           /* If the PROPFIND succeeds the file already exists */
           return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, 0, NULL,
-                                   file_pool,
                                    "file '%s' already exists", file->rsrc->url);
         }
       else if (err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
         {
           /* ### TODO: This is what we get if the file doesn't exist
              but an explicit not-found error might be better */
-          svn_error_clear_all(err);
+          svn_error_clear(err);
         }
       else
         {
@@ -958,7 +953,7 @@ static svn_error_t * commit_add_file(const char *path,
         {
           const char *msg = apr_psprintf(file_pool, "COPY of %s", path);
           return svn_ra_dav__convert_error(parent->cc->ras->sess,
-                                           msg, status, file_pool);
+                                           msg, status);
         }
     }
 
@@ -1008,7 +1003,7 @@ static svn_error_t * commit_stream_write(void *baton,
   /* drop the data into our temp file */
   status = apr_file_write_full(pb->tmpfile, data, *len, NULL);
   if (status)
-    return svn_error_create(status, 0, NULL, pb->pool,
+    return svn_error_create(status, 0, NULL,
                             "Could not write svndiff to temp file.");
 
   return SVN_NO_ERROR;
@@ -1031,7 +1026,6 @@ static svn_error_t * commit_stream_close(void *baton)
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, 0, NULL,
-                               pb->pool,
                                "Could not create a PUT request (%s)",
                                url);
     }
@@ -1044,15 +1038,14 @@ static svn_error_t * commit_stream_close(void *baton)
   if (status)
     {
       (void) apr_file_close(pb->tmpfile);
-      return svn_error_create(status, 0, NULL, pb->pool,
-                              "Couldn't rewind tmpfile.");
+      return svn_error_create(status, 0, NULL, "Couldn't rewind tmpfile.");
     }
   /* Convert the (apr_file_t *)tmpfile into a file descriptor for neon. */
   status = svn_io_fd_from_file(&fdesc, pb->tmpfile);
   if (status)
     {
       (void) apr_file_close(pb->tmpfile);
-      return svn_error_create(status, 0, NULL, pb->pool,
+      return svn_error_create(status, 0, NULL,
                               "Couldn't get file-descriptor of tmpfile.");
     }
 
@@ -1069,9 +1062,6 @@ static svn_error_t * commit_stream_close(void *baton)
   /* we're done with the file.  this should delete it. */
   (void) apr_file_close(pb->tmpfile);
 
-  /* toss the pool. all things pb are now history */
-  svn_pool_destroy(pb->pool);
-
   if (err)
     return err;
 
@@ -1085,15 +1075,10 @@ commit_apply_txdelta(void *file_baton,
                      void **handler_baton)
 {
   resource_baton_t *file = file_baton;
-  apr_pool_t *subpool;
   put_baton_t *baton;
   svn_stream_t *stream;
 
-  /* ### should use the file_baton's pool */
-  subpool = svn_pool_create(file->cc->ras->pool);
-
-  baton = apr_pcalloc(subpool, sizeof(*baton));
-  baton->pool = subpool;
+  baton = apr_pcalloc(pool, sizeof(*baton));
   baton->file = file;
 
   /* ### oh, hell. Neon's request body support is either text (a C string),
@@ -1105,15 +1090,15 @@ commit_apply_txdelta(void *file_baton,
           (&baton->tmpfile, 
            file->cc->ras->callback_baton));
 
-  /* ### register a cleanup on our subpool which closes the file. this
+  /* ### register a cleanup on file_pool which closes the file; this
      ### will ensure that the file always gets tossed, even if we exit
      ### with an error. */
 
-  stream = svn_stream_create(baton, subpool);
+  stream = svn_stream_create(baton, pool);
   svn_stream_set_write(stream, commit_stream_write);
   svn_stream_set_close(stream, commit_stream_close);
 
-  svn_txdelta_to_svndiff(stream, subpool, handler, handler_baton);
+  svn_txdelta_to_svndiff(stream, pool, handler, handler_baton);
 
   /* Add this path to the valid targets hash. */
   add_valid_target (file->cc, file->rsrc->local_path, svn_nonrecursive);
@@ -1216,7 +1201,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
       const char *msg = apr_psprintf(cc->ras->pool,
                                      "applying log message to %s",
                                      baseline_rsrc.wr_url);
-      return svn_ra_dav__convert_error(cc->ras->sess, msg, rv, cc->ras->pool);
+      return svn_ra_dav__convert_error(cc->ras->sess, msg, rv);
     }
 
   return SVN_NO_ERROR;

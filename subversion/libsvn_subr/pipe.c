@@ -34,7 +34,7 @@ struct svn_pipe_t {
 static svn_error_t *
 procattr_creation_error(apr_status_t apr_err, apr_pool_t *pool)
 {
-  return svn_error_create(apr_err, 0, NULL, pool,
+  return svn_error_create(apr_err, 0, NULL,
                           "couldn't create process attributes for pipe");
 }
 
@@ -72,7 +72,7 @@ svn_pipe_open(svn_pipe_t **result,
   pipe->proc = apr_pcalloc(pool, sizeof(*pipe->proc));
   apr_err = apr_proc_create(pipe->proc, argv[0], argv, NULL, attr, pool);
   if (apr_err != APR_SUCCESS)
-    return svn_error_create(apr_err, 0, NULL, pool,
+    return svn_error_create(apr_err, 0, NULL,
                             "couldn't create process for pipe");
 
   pipe->read = pipe->proc->out;
@@ -98,7 +98,7 @@ svn_pipe_endpoint(svn_pipe_t **result,
 static svn_error_t *
 close_error(apr_status_t apr_err, apr_pool_t *pool)
 {
-  return svn_error_create(apr_err, 0, NULL, pool,
+  return svn_error_create(apr_err, 0, NULL,
                             "pipe: shutdown error");
 }
 
@@ -131,7 +131,7 @@ svn_pipe_close(svn_pipe_t *pipe, apr_pool_t *pool)
 static svn_error_t *
 write_error(apr_status_t apr_err, apr_pool_t *pool)
 {
-  return svn_error_create(apr_err, 0, NULL, pool,
+  return svn_error_create(apr_err, 0, NULL,
                           "couldn't write data to pipe");
 }
 
@@ -198,13 +198,13 @@ svn_pipe_receive(svn_pipe_t *pipe,
       char c;
       apr_err = apr_file_getc(&c, pipe->read);
       if (apr_err != APR_SUCCESS)
-        return svn_error_create(apr_err, 0, 0, pool,
+        return svn_error_create(apr_err, 0, 0,
                                 "pipe: could not read from peer");
       if (c == ':')
         break;
 
       if (!apr_isdigit(c))
-        return svn_error_create(SVN_ERR_IO_PIPE_FRAME_ERROR, 0, 0, pool,
+        return svn_error_create(SVN_ERR_IO_PIPE_FRAME_ERROR, 0, 0,
                                 "non-digit in frame length");
 
       got_frame = TRUE;
@@ -212,18 +212,18 @@ svn_pipe_receive(svn_pipe_t *pipe,
     }
 
   if (!got_frame)
-      return svn_error_create(SVN_ERR_IO_PIPE_FRAME_ERROR, 0, 0, pool,
+      return svn_error_create(SVN_ERR_IO_PIPE_FRAME_ERROR, 0, 0,
                               "missing frame");
 
   buf = apr_pcalloc(pool, frame_len);
 
   apr_err = apr_file_read_full(pipe->read, buf, frame_len, &total);
   if (apr_err != APR_SUCCESS && !APR_STATUS_IS_EOF(apr_err))
-    return svn_error_create(apr_err, 0, 0, pool,
+    return svn_error_create(apr_err, 0, 0,
                             "read from pipe");
 
   if (total != frame_len)
-    return svn_error_create(SVN_ERR_IO_PIPE_READ_ERROR, 0, 0, pool,
+    return svn_error_create(SVN_ERR_IO_PIPE_READ_ERROR, 0, 0,
                             "premature EOF");
 
   *data = buf;

@@ -78,12 +78,12 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
   
   if (! entry)
     return svn_error_createf
-      (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+      (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
        "svn_client_switch: %s is not under revision control", path);
 
   if (! entry->url)
     return svn_error_createf
-      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
+      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL,
        "svn_client_switch: entry '%s' has no URL", path);
 
   if (entry->kind == svn_node_file)
@@ -94,12 +94,12 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       SVN_ERR (svn_wc_entry (&session_entry, anchor, adm_access, FALSE, pool));
       if (! session_entry)
         return svn_error_createf
-          (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+          (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
            "svn_client_switch: %s is not under revision control", anchor);
 
       if (! session_entry->url)
         return svn_error_createf
-          (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
+          (SVN_ERR_ENTRY_MISSING_URL, 0, NULL,
            "svn_client_switch: directory '%s' has no URL", anchor);
     }
   else if (entry->kind == svn_node_dir)

@@ -98,7 +98,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   /* Abort if there is no editor specified */
   if (! editor)
     return svn_error_create 
-      (SVN_ERR_CL_NO_EXTERNAL_EDITOR, 0, NULL, pool,
+      (SVN_ERR_CL_NO_EXTERNAL_EDITOR, 0, NULL,
        "None of the environment variables "
        "SVN_EDITOR, VISUAL or EDITOR is set.");
 
@@ -111,7 +111,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   if (apr_err)
     {
       return svn_error_create
-        (apr_err, 0, NULL, pool, "failed to get current working directory");
+        (apr_err, 0, NULL, "failed to get current working directory");
     }
   SVN_ERR (svn_utf_cstring_from_utf8 (&base_dir_native, base_dir, pool));
   /* APR doesn't like "" directories */
@@ -121,7 +121,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   if (apr_err)
     {
       return svn_error_createf
-        (apr_err, 0, NULL, pool,
+        (apr_err, 0, NULL,
          "failed to change working directory to '%s'", base_dir);
     }
 
@@ -149,7 +149,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   if (apr_err || (written != strlen (contents_native)))
     {
       err = svn_error_createf
-        (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, 0, NULL, pool,
+        (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, 0, NULL,
          "failed writing '%s'", tmpfile_name);
       goto cleanup;
     }
@@ -164,7 +164,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
-      err =  svn_error_createf (apr_err, 0, NULL, pool,
+      err =  svn_error_createf (apr_err, 0, NULL,
                                 "failed to stat '%s'", tmpfile_name);
       goto cleanup;
     }
@@ -176,7 +176,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     {
       /* Extracting any meaning from sys_err is platform specific, so just
          use the raw value. */
-      err =  svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, pool,
+      err =  svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL,
                                 "system('%s') returned %d", cmd, sys_err);
       goto cleanup;
     }
@@ -186,7 +186,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
-      err = svn_error_createf (apr_err, 0, NULL, pool,
+      err = svn_error_createf (apr_err, 0, NULL,
                                "failed to stat '%s'", tmpfile_name);
       goto cleanup;
     }
@@ -235,7 +235,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   if (apr_err)
     {
       svn_handle_error (svn_error_create
-                        (apr_err, 0, NULL, pool,
+                        (apr_err, 0, NULL,
                          "failed to restore current working directory"),
                         stderr, TRUE /* fatal */);
     }
@@ -297,7 +297,7 @@ svn_cl__cleanup_log_msg (void *log_msg_baton,
      commit error chain, too. */
   conv_err = svn_utf_cstring_from_utf8 (&native, lmb->tmpfile_left, lmb->pool);
   svn_error_compose (commit_err, svn_error_createf 
-                     (commit_err->apr_err, 0, conv_err, lmb->pool,
+                     (commit_err->apr_err, 0, conv_err,
                       "Your commit message was left in a temporary file:\n"
                       "   %s", 
                       conv_err ? "(see the following error)" : native));
@@ -379,7 +379,7 @@ svn_cl__get_log_message (const char **log_msg,
             apr_xlate_open (&xlator, "UTF-8", lmb->message_encoding, pool);
 
           if (apr_err != APR_SUCCESS)
-            return svn_error_create (apr_err, 0, NULL, pool,
+            return svn_error_create (apr_err, 0, NULL,
                                      "failed to create a converter to UTF-8");
 
           return svn_utf_cstring_to_utf8 (log_msg, lmb->message, xlator, pool);

@@ -107,8 +107,7 @@ svn_diff__file_datasource_close(void *baton,
   rv = apr_file_close(file_baton->file[idx]);
   if (rv != APR_SUCCESS)
     {
-      return svn_error_createf(rv, 0, NULL, file_baton->pool, 
-                               "failed to close file '%s'.",
+      return svn_error_createf(rv, 0, NULL, "failed to close file '%s'.",
                                file_baton->path[idx]);
     }
 
@@ -196,8 +195,7 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
 
   if (rv != APR_SUCCESS && ! APR_STATUS_IS_EOF(rv))
     {
-      return svn_error_createf(rv, 0, NULL, file_baton->pool, 
-                               "error reading from '%s'.",
+      return svn_error_createf(rv, 0, NULL, "error reading from '%s'.",
                                file_baton->path[idx]);
     }
 
@@ -406,8 +404,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
 
   if (rv != APR_SUCCESS && ! APR_STATUS_IS_EOF(rv))
     {
-      return svn_error_createf(rv, 0, NULL, baton->pool, 
-                               "error reading from '%s'.",
+      return svn_error_createf(rv, 0, NULL, "error reading from '%s'.",
                                baton->path[idx]);
     }
 
@@ -486,7 +483,7 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   rv = apr_file_write(baton->output_file, baton->hunk->data, &hunk_len);
   if (rv != APR_SUCCESS)
     {
-      return svn_error_create(rv, 0, NULL, baton->pool,
+      return svn_error_create(rv, 0, NULL,
                "svn_diff_file_output_unified: error writing hunk.");
     }
 
@@ -645,7 +642,7 @@ svn_diff_file_output_unified(apr_file_t *output_file,
           apr_status_t rv = apr_file_close(baton.file[i]);
           if (rv != APR_SUCCESS)
             {
-              return svn_error_createf(rv, 0, NULL, pool, 
+              return svn_error_createf(rv, 0, NULL,
                                        "failed to close file '%s'.",
                                        baton.path[i]);
             }

@@ -69,7 +69,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
       || (end->kind == svn_opt_revision_unspecified))
     {
       return svn_error_create
-        (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
+        (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL,
          "svn_client_log: caller failed to supply revision");
     }
 
@@ -124,11 +124,11 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
       SVN_ERR (svn_wc_entry (&entry, base_name, adm_access, FALSE, pool));
       if (! entry)
         return svn_error_createf
-          (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
+          (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL,
           "svn_client_log: %s is not under revision control", base_name);
       if (! entry->url)
         return svn_error_createf
-          (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
+          (SVN_ERR_ENTRY_MISSING_URL, 0, NULL,
           "svn_client_log: entry '%s' has no URL", base_name);
       URL = apr_pstrdup (pool, entry->url);
       SVN_ERR (svn_wc_adm_close (adm_access));

@@ -150,7 +150,6 @@ reporter_link_path (void *reporter_baton,
   repos_url_len = strlen(rbaton->session->repos_url);
   if (strncmp(url, rbaton->session->repos_url, repos_url_len) != 0)
     return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
-                              rbaton->session->pool,
                               "'%s'\n"
                               "is not the same repository as\n"
                               "'%s'", url, rbaton->session->repos_url);
@@ -434,7 +433,7 @@ make_reporter (void *session_baton,
          the original session url! */
       if (strncmp (other_url, sbaton->repos_url, repos_url_len) != 0)
         return svn_error_createf 
-          (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, sbaton->pool,
+          (SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
            "'%s'\n"
            "is not the same repository as\n"
            "'%s'", other_url, sbaton->repos_url);
@@ -693,8 +692,7 @@ svn_ra_local__get_file (void *session_baton,
              error was returned.  According to the docstring, this
              should never happen. */
           return 
-            svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL,
-                              sbaton->pool, "Error writing to svn_stream.");
+            svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL, "Error writing to svn_stream.");
         }
       
       if (rlen != SVN_STREAM_CHUNK_SIZE)

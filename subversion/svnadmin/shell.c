@@ -370,7 +370,7 @@ get_input (svn_stringbuf_t **input,
   status = apr_file_open_stdin (&fp, pool);
   if (status)
     return
-      svn_error_create (status, 0, NULL, pool,
+      svn_error_create (status, 0, NULL,
                         "get_input():  couldn't open STDIN.");
 
   /* ### Rewrite, to make backspaces work??? */
@@ -379,7 +379,7 @@ get_input (svn_stringbuf_t **input,
     {
       status = apr_file_getc (&c, fp);
       if (status && ! APR_STATUS_IS_EOF(status))
-        return svn_error_create (status, 0, NULL, pool,
+        return svn_error_create (status, 0, NULL,
                                  "get_input(): error reading STDIN.");
       if ((c == '\n') || (c == '\r'))
         break;
