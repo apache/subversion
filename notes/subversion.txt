@@ -2,7 +2,15 @@
 
      Subversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.50 $ of this document.)
+              ($Revision: 1.51 $ of this document.)
+
+
+* Important note to the reader.
+
+THIS DOCUMENT IS NOW VERY OUT-OF-DATE.  BASED ON THE SUBVERSION TEAM
+MEETINGS IN SAN FRANCISCO, SEVERAL CHANGES IN DESIGN AND
+IMPLEMENTATION PLAN ARE BEING MADE.  PLEASE BE PATIENT WHILE WE GET
+THESE CHANGES ONLINE; IT SHOULD BE DONE BY JUNE 1ST, 2000.
 
 * Introduction
 
