@@ -479,13 +479,49 @@ svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* --- READING DATA ITEMS --- */
 
+/* Read LEN bytes from CONN into already-allocated structure ITEM.
+ * Afterwards, *ITEM is of type 'SVN_RA_SVN_STRING', and its string
+ * data is allocated in POOL. */
+static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                svn_ra_svn_item_t *item, apr_uint64_t len)
+{
+  char readbuf[4096];
+  apr_size_t readbuf_len;
+  svn_stringbuf_t *stringbuf = svn_stringbuf_create ("", pool);
+
+  /* We can't store strings longer than the maximum size of apr_size_t,
+   * so check for wrapping */
+  if (((apr_size_t) len) < len) 
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            "String length larger than maximum");
+
+  while (len)
+    {
+      readbuf_len = len > sizeof(readbuf) ? sizeof(readbuf) : len;
+
+      SVN_ERR(readbuf_read(conn, pool, readbuf, readbuf_len));
+      /* Read into a stringbuf_t to so we don't allow the sender to allocate
+       * an arbitrary amount of memory without actually sending us that much
+       * data */
+      svn_stringbuf_appendbytes(stringbuf, readbuf, readbuf_len);
+      len -= readbuf_len;
+    }
+  
+  item->kind = SVN_RA_SVN_STRING;
+  item->u.string = apr_palloc(pool, sizeof(*item->u.string));
+  item->u.string->data = stringbuf->data;
+  item->u.string->len = stringbuf->len;
+
+  return SVN_NO_ERROR; 
+}
+
 /* Given the first non-whitespace character FIRST_CHAR, read an item
  * into the already allocated structure ITEM. */
 static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                               svn_ra_svn_item_t *item, char first_char)
 {
-  char c = first_char, *strdata;
-  apr_uint64_t val;
+  char c = first_char;
+  apr_uint64_t val, prev_val=0;
   svn_stringbuf_t *str;
   svn_ra_svn_item_t *listitem;
 
@@ -498,21 +534,19 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       val = c - '0';
       while (1)
         {
+          prev_val = val;
           SVN_ERR(readbuf_getchar(conn, pool, &c));
           if (!apr_isdigit(c))
             break;
           val = val * 10 + (c - '0');
+          if ((val / 10) != prev_val) /* val wrapped past maximum value */
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                    "Number is larger than maximum"); 
         }
       if (c == ':')
         {
           /* It's a string. */
-          strdata = apr_palloc(pool, val + 1);
-          SVN_ERR(readbuf_read(conn, pool, strdata, val));
-          strdata[val] = '\0';
-          item->kind = SVN_RA_SVN_STRING;
-          item->u.string = apr_palloc(pool, sizeof(*item->u.string));
-          item->u.string->data = strdata;
-          item->u.string->len = val;
+          SVN_ERR(read_string(conn, pool, item, val));
           SVN_ERR(readbuf_getchar(conn, pool, &c));
         }
       else
@@ -521,7 +555,6 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           item->kind = SVN_RA_SVN_NUMBER;
           item->u.number = val;
         }
-      return SVN_NO_ERROR;
     }
   else if (apr_isalpha(c))
     {
