@@ -58,6 +58,8 @@
 #include <apr_file_io.h>
 #include <xmlparse.h>
 #include "svn_types.h"
+#include "svn_string.h"
+#include "svn_error.h"
 
 
 /* Text deltas.  */
@@ -117,8 +119,8 @@ typedef struct svn_delta_op_t {
     svn_delta_new
   } op;
   
-  ap_off_t offset;
-  ap_off_t length;
+  apr_off_t offset;
+  apr_off_t length;
 } svn_delta_op_t;
 
 
@@ -160,7 +162,7 @@ extern void svn_free_delta_window (svn_delta_window_t *window);
    actually read, or zero at the end of the data stream.  */
 typedef svn_error_t *svn_delta_read_fn_t (void *data,
                                           char *buffer,
-                                          ap_off_t *len);
+                                          apr_off_t *len);
 
 /* Set *STREAM to a pointer to a delta stream that will turn the text
    from SOURCE into the text from TARGET.
@@ -272,7 +274,7 @@ typedef struct svn_delta_stackframe_t
   struct svn_delta_stackframe_t *next;
   struct svn_delta_stackframe_t *previous;
 
-} svn_delta_stackframe_t
+} svn_delta_stackframe_t;
 
 
 
@@ -322,18 +324,18 @@ typedef struct svn_delta_digger_t
    */
 
   /* Caller uses delta context to determine if prop data or text data. */
-  svn_error_t (*data_handler) (svn_delta_digger_t *digger,
-                               svn_edit_content *eddy);
+  svn_error_t (*data_handler) (struct svn_delta_digger_t *digger,
+                               svn_delta_stackframe_t *frame);
 
   /* Call handles dirs specially, because might want to create them. 
    * It gets the digger for context, but also the current edit_content
    * because that's a faster way to get this edit. 
    */
-  svn_error_t (*dir_handler) (svn_delta_digger_t *digger,
-                              svn_edit_content_t *this_edit_content);
+  svn_error_t (*dir_handler) (struct svn_delta_digger_t *digger,
+                              svn_delta_stackframe_t *frame);
 
   /* Caller optionally decides what to do with unrecognized elements. */
-  svn_error_t (*unknown_elt_handler) (svn_delta_digger_t *digger,
+  svn_error_t (*unknown_elt_handler) (struct svn_delta_digger_t *digger,
                                       const char *name,
                                       const char **atts);
 
