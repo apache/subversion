@@ -96,7 +96,7 @@ extern "C" {
      /etc/svn.conf    or
      REGISTRY:HKLM/Software/Tigris.org/Subversion/Config
 
-   end one for per-user configuration:
+   and one for per-user configuration:
 
      ~/.svnrc         or
      REGISTRY:HKCU/Software/Tigris.org/Subversion/Config
@@ -132,9 +132,10 @@ void svn_config_destroy (svn_config_t *cfg);
 
 
 /* Find the value of a (SECTION, OPTION) pair in CFG, returning a copy in
-   VALUEP. If the value does not exist, return DEFAULT_VALUE.
-   This function may change CFG by expanding variable placeholders
-   in (SECTION, OPTION)'s value. */
+   VALUEP. If the value does not exist, return DEFAULT_VALUE.  The string
+   returned in VALUEP will remain valid at least until the next operation
+   that invalidates variable expansions.
+   This function may change CFG by expanding option values. */
 void svn_config_get (svn_config_t *cfg, svn_string_t *valuep,
                      const char *section, const char *option,
                      const char *default_value);
