@@ -149,7 +149,7 @@ is_valid_representation_skel (skel_t *skel)
      atoms.  */
   header = skel->children;
   if (! ((svn_fs__list_length (header) == 2)
-         && (header->children->next->is_atom)
+         && (header->children->is_atom)
          && (header->children->next->is_atom)))
     return 0;
 
