@@ -318,19 +318,19 @@ library.
 @subsection Difference Queries
 
 @table @code
-@item skelta ra_get_status (repos, user, skelta)
+@item skelta_t ra_get_status (repos, user, skelta)
  Return status (up-to-date or not) for the files mentioned in @emph{skelta}.
-@item delta ra_get_update (repos, user, skelta)
+@item delta_t ra_get_update (repos, user, skelta)
  Return changes for files mentioned in @emph{skelta}.  Like
  @code{ra_get_status}, but returns filled delta instead of a skelta.
-@item delta ra_get_delta (repos, user, ver1, path1, ver2, path2)
+@item delta_t ra_get_delta (repos, user, ver1, path1, ver2, path2)
  Return delta between two trees in @emph{repos}.@*
  (Note: it's not yet clear that this function is strictly necessary.  It
  is included for completeness' sake, but I think we can implement
  everything without it.)
-@item diff ra_get_diff (repos, user, ver1, path1, ver2, path2)
- @c todo: skelta vs file diff list problem, talk w/ Jim 
- Return a text diff between versions in the repository.
+@item diff_t ra_get_diff (repos, user, ver1, path1, ver2, path2)
+ @c todo: skelta vs file diff list problem, talk w/ Jim
+ Return a text diff between versions in @emph{repos}.
  (This must be done server side, the client doesn't have enough
  information to make the diff.)
 @end table
@@ -338,17 +338,18 @@ library.
 @subsection Writing
 
 @table @code
-@item token ra_submit_delta (repos, user, skelta)
+@item token_t ra_submit (repos, user, skelta)
  Submit @emph{skelta} for approval (see @pxref{Locking}).
- Either a skelta or a full delta can be passed.
-@item ver ra_write_delta (repos, user, delta, token)
- Write previously-approved @emph{delta} into the version history.
- Must be a full delta, of course; a skelta would be insufficient.
-@item bool ra_abandon (repos, user, token)
- Abandon the transaction identified by token (for example, a user might
- interrupt the client between calls to submit_delta() and write_delta(),
- and the server would want to know the commit has been abandoned so it
- can clear out its pool of approved changes).
+@item ver_t ra_write (repos, user, delta, token)
+ Write previously-approved @emph{delta} into the repository.@*
+ Returns the @emph{repos}'s new version number.@*
+ This @emph{delta} and @emph{token} must correspond to the @emph{skelta}
+ and @emph{token} of a previous @code{submit()} call.
+@item bool_t ra_abandon (repos, user, token)
+ Abandon the commit identified by token.  For example, a user might
+ interrupt the client between calls to @code{submit()} and
+ @code{write()}, and the server would want to know the commit has been
+ abandoned so it can clear out its pool of approved changes.
 @end table
 
 @c -----------------------------------------------------------------------
