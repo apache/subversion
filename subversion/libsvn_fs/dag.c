@@ -1376,12 +1376,6 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
   if (! noderev->edit_key)
     return SVN_NO_ERROR;
 
-  /* ### todo#689: to be continued.
-     Why, when running 'basic_tests.py 4' over ra_local, does this
-     fail with the `expected' checksum correct and the `actual'
-     checksum as if for the empty string?  The representation behind
-     noderev->edit_key ought to be finalized by now, and have the
-     checksum of the new 'A/mu'... Debug with Mike in the morning. */
   if (checksum)
     {
       unsigned char digest[MD5_DIGESTSIZE];

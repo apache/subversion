@@ -1300,10 +1300,11 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
  *
  * Do any necessary temporary allocation in @a pool.
  *
- * ### todo#689: this is like svn_fs_apply_textdelta, but takes the
- * text straight.  It is currently used only by the loader, see
- * libsvn_repos/load.c.  It should accept a checksum, of course,
- * which would come from a header in the dump file.
+ * ### This is like svn_fs_apply_textdelta, but takes the text
+ * straight.  It is currently used only by the loader, see
+ * libsvn_repos/load.c.  It should accept a checksum, of course, which
+ * would come from an (optional) header in the dump file.  See
+ * http://subversion.tigris.org/issues/show_bug.cgi?id=1102 for more.
  */
 svn_error_t *svn_fs_apply_text (svn_stream_t **contents_p,
                                 svn_fs_root_t *root,
