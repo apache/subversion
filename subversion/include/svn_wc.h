@@ -152,7 +152,7 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_CLEAR_ALL    32  /* action: clear all flags */
 
 /* How an entries file's owner dir is named in the entries file. */
-#define SVN_WC_ENTRY_THIS_DIR  ""
+#define SVN_WC_ENTRY_THIS_DIR  "svn:this_dir"
 
 
 /* Get the ENTRY structure for PATH, allocating from POOL. */
