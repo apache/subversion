@@ -193,12 +193,7 @@ map_or_read_file(apr_file_t **file,
       /* Since we have the entire contents of the file we can
        * close it now.
        */
-      rv = apr_file_close(*file);
-      if (rv != APR_SUCCESS)
-        {
-          return svn_error_createf(rv, NULL, "Failed to close file '%s'.",
-                                   path);
-        }
+      SVN_ERR (svn_io_file_close(*file, pool));
 
       *file = NULL;
     }
@@ -916,13 +911,7 @@ svn_diff_file_output_unified(apr_file_t *output_file,
 
       for (i = 0; i < 2; i++)
         {
-          apr_status_t rv = apr_file_close(baton.file[i]);
-          if (rv != APR_SUCCESS)
-            {
-              return svn_error_createf(rv, NULL,
-                                       "Failed to close file '%s'.",
-                                       baton.path[i]);
-            }
+	  SVN_ERR (svn_io_file_close(baton.file[i], pool));
         }
     }
 
@@ -1170,7 +1159,6 @@ svn_diff_file_output_merge(apr_file_t *output_file,
   svn_diff3__file_output_baton_t baton;
   apr_file_t *file[3];
   apr_off_t size;
-  apr_status_t rv;
   int idx;
 #if APR_HAS_MMAP
   apr_mmap_t *mm[3] = { 0 };
@@ -1217,7 +1205,7 @@ svn_diff_file_output_merge(apr_file_t *output_file,
 #if APR_HAS_MMAP
       if (mm[idx])
         {
-          rv = apr_mmap_delete(mm[idx]);
+          apr_status_t rv = apr_mmap_delete(mm[idx]);
           if (rv != APR_SUCCESS)
             {
               return svn_error_createf(rv, NULL, "Failed to delete mmap '%s'.",
@@ -1228,12 +1216,7 @@ svn_diff_file_output_merge(apr_file_t *output_file,
 
       if (file[idx])
         {
-          rv = apr_file_close(file[idx]);
-          if (rv != APR_SUCCESS)
-            {
-              return svn_error_createf(rv, NULL, "Failed to close file '%s'.",
-                                       baton.path[idx]);
-            }
+          SVN_ERR (svn_io_file_close(file[idx], pool));
         }
     }
 

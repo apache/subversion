@@ -68,7 +68,6 @@ svn_wc_translated_file (const char **xlated_p,
   else  /* some translation is necessary */
     {
       const char *tmp_dir, *tmp_vfile;
-      apr_status_t apr_err;
       apr_file_t *ignored;
 
       /* First, reserve a tmp file name. */
@@ -87,11 +86,7 @@ svn_wc_translated_file (const char **xlated_p,
       
       /* We were just reserving the name and don't actually need the
          filehandle, so close immediately. */
-      apr_err = apr_file_close (ignored);
-      if (apr_err)
-        return svn_error_createf
-          (0, NULL,
-           "svn_wc_translated_file: unable to close '%s'", tmp_vfile);
+      SVN_ERR (svn_io_file_close (ignored, pool));
       
       if (style == svn_subst_eol_style_fixed)
         {

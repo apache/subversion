@@ -341,13 +341,7 @@ svn_io_copy_file (const char *src,
   SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst, ".tmp", FALSE, pool));
   SVN_ERR (svn_path_cstring_from_utf8 (&dst_tmp_apr, dst_tmp, pool));
 
-  apr_err = apr_file_close (d);
-  if (apr_err)
-    {
-      return svn_error_createf
-        (apr_err, NULL,
-         "svn_io_copy_file: error closing '%s'", dst_tmp);
-    }
+  SVN_ERR (svn_io_file_close (d, pool));
 
   apr_err = apr_file_copy (src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
   if (apr_err)
@@ -383,11 +377,7 @@ svn_io_copy_file (const char *src,
              "svn_io_copy_file: getting perm info for '%s'", src);
         }
 
-      apr_err = apr_file_close (s);
-      if (apr_err)
-        return svn_error_createf
-          (apr_err, NULL,
-           "svn_io_copy_file: closing '%s' after reading perms", src);
+      SVN_ERR (svn_io_file_close (s, pool));
 
       apr_err = apr_file_perms_set (dst_tmp_apr, finfo.protection);
 
@@ -619,10 +609,8 @@ svn_error_t *svn_io_file_create (const char *file,
     return svn_error_createf
       (apr_err, NULL, "svn_io_file_create: error writing '%s'", file);
 
-  apr_err = apr_file_close (f);
-  if (apr_err)
-    return svn_error_createf (apr_err, NULL,
-                              "svn_io_file_create: error closing '%s'", file);
+  SVN_ERR (svn_io_file_close (f, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -757,11 +745,7 @@ svn_io_file_checksum (unsigned char digest[],
 
   } while (! APR_STATUS_IS_EOF(apr_err));
 
-  apr_err = apr_file_close (f);
-  if (apr_err)
-    return svn_error_createf
-      (apr_err, NULL,
-       "svn_io_file_checksum: error closing '%s'", file);
+  SVN_ERR (svn_io_file_close (f, pool));
 
   apr_md5_final (digest, &context);
 
@@ -971,7 +955,6 @@ svn_stringbuf_from_file (svn_stringbuf_t **result,
                          const char *filename,
                          apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   apr_file_t *f = NULL;
 
   if (filename[0] == '-' && filename[1] == '\0')
@@ -984,11 +967,8 @@ svn_stringbuf_from_file (svn_stringbuf_t **result,
 
   SVN_ERR (svn_stringbuf_from_aprfile (result, f, pool));
 
-  apr_err = apr_file_close (f);
-  if (apr_err)
-    return svn_error_createf (apr_err, NULL,
-                              "svn_stringbuf_from_file: failed to close '%s'",
-                              filename);
+  SVN_ERR (svn_io_file_close (f, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -2171,9 +2151,7 @@ svn_io_write_version_file (const char *path,
     return svn_error_createf (apr_err, 0, "writing to '%s'", path);
   
   /* ...and close the file. */
-  apr_err = apr_file_close (format_file);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, "closing '%s'", path);
+  SVN_ERR (svn_io_file_close (format_file, pool));
   
   return SVN_NO_ERROR;
 }
@@ -2223,9 +2201,7 @@ svn_io_read_version_file (int *version,
   *version = atoi (buf);
 
   /* And finally, close the file. */
-  apr_err = apr_file_close (format_file);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, "closing '%s'", path);
+  SVN_ERR (svn_io_file_close (format_file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2278,17 +2254,8 @@ contents_identical_p (svn_boolean_t *identical_p,
         }
     }
 
-  status = apr_file_close (file1_h);
-  if (status)
-    return svn_error_createf 
-      (status, NULL,
-       "contents_identical_p: failed to close '%s'.", file1);
-
-  status = apr_file_close (file2_h);
-  if (status)
-    return svn_error_createf 
-      (status, NULL,
-       "contents_identical_p: failed to close '%s'.", file2);
+  SVN_ERR (svn_io_file_close (file1_h, pool));
+  SVN_ERR (svn_io_file_close (file2_h, pool));
 
   return SVN_NO_ERROR;
 }

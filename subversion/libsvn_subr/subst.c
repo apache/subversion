@@ -710,7 +710,6 @@ svn_subst_copy_and_translate (const char *src,
                               apr_pool_t *pool)
 {
   const char *dst_tmp;
-  apr_status_t apr_err;
   svn_stream_t *src_stream, *dst_stream;
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   svn_error_t *err, *err2;
@@ -760,13 +759,8 @@ svn_subst_copy_and_translate (const char *src,
   SVN_ERR (svn_stream_close (src_stream));
   SVN_ERR (svn_stream_close (dst_stream));
 
-  apr_err = apr_file_close(s);
-  if (apr_err)
-    return svn_error_createf (apr_err, NULL, "error closing '%s'", src);
-
-  apr_err = apr_file_close(d);
-  if (apr_err)
-    return svn_error_createf (apr_err, NULL, "error closing '%s'", dst);
+  SVN_ERR (svn_io_file_close (s, pool));
+  SVN_ERR (svn_io_file_close (d, pool));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
   SVN_ERR (svn_io_file_rename (dst_tmp, dst, pool));

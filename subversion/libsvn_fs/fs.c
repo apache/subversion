@@ -491,10 +491,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
         }
     }
 
-    apr_err = apr_file_close (dbconfig_file);
-    if (apr_err != APR_SUCCESS)
-      return svn_error_createf (apr_err, 0,
-                                "closing '%s'", dbconfig_file_name);
+    SVN_ERR (svn_io_file_close (dbconfig_file, fs->pool));
   }
 
   svn_err = allocate_env (fs);

@@ -171,11 +171,7 @@ svn_wc__load_prop_file (const char *propfile_path,
                                   "load_prop_file:  can't parse '%s'",
                                   propfile_path);
 
-      status = apr_file_close (propfile);
-      if (status)
-        return svn_error_createf (status, NULL,
-                                  "load_prop_file: can't close '%s'",
-                                  propfile_path);
+      SVN_ERR (svn_io_file_close (propfile, pool));
     }
 
   return SVN_NO_ERROR;
@@ -205,11 +201,7 @@ svn_wc__save_prop_file (const char *propfile_path,
                               "save_prop_file: can't write prop hash to '%s'",
                               propfile_path);
 
-  apr_err = apr_file_close (prop_tmp);
-  if (apr_err)
-    return svn_error_createf (apr_err, NULL,
-                              "save_prop_file: can't close '%s'",
-                              propfile_path);
+  SVN_ERR (svn_io_file_close (prop_tmp, pool));
 
   return SVN_NO_ERROR;
 }
@@ -644,12 +636,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 
       /* First, _close_ this temporary conflicts file.  We've been
          appending to it all along. */
-      apr_status_t status;
-      status = apr_file_close (reject_tmp_fp);
-      if (status)
-        return svn_error_createf (status, NULL,
-                                  "do_property_merge: can't close '%s'",
-                                  reject_tmp_path);
+      SVN_ERR (svn_io_file_close (reject_tmp_fp, pool));
                                   
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
@@ -677,11 +664,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                                             FALSE,
                                             pool));
 
-          status = apr_file_close (reject_fp);
-          if (status)
-            return svn_error_createf (status, NULL,
-                                      "do_property_merge: can't close '%s'",
-                                      full_reject_path);
+          SVN_ERR (svn_io_file_close (reject_fp, pool));
           
           /* This file will be overwritten when the log is run; that's
              ok, because at least now we have a reservation on
