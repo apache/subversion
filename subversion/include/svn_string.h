@@ -318,7 +318,7 @@ svn_boolean_t svn_cstring_match_glob_list (const char *str,
                                            const char *list,
                                            apr_pool_t *pool);
 
-/* Return a string showing the octal representation of @a digest,
+/** Return a string showing the octal representation of @a digest,
  * which must be MD5_DIGESTSIZE bytes long.  Allocate the string in 
  * @a pool.
  */
