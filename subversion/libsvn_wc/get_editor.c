@@ -1773,7 +1773,7 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
    update X.
 
    We will, however, lop off a basename when we are updating a path
-   ...W/X, rooting our editor at ...W and updating X.  This case
+   ...P/X, rooting our editor at ...P and updating X.  This case
    provides enough information to us to be able to gracefully handle
    the above changed-type cases that might occur.
 
