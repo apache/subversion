@@ -1439,7 +1439,7 @@ Committed revision 1390.
           when the 2.0 work is complete, a new 2.0 release branch is
           created, tested, tagged, and eventually released.  After
           some years, the repository ends up with a number of release
-          branches in <quote>maintenance</quote> mode , and a number
+          branches in <quote>maintenance</quote> mode, and a number
           of tags representing final shipped versions.</para>
 
       </sect3>
@@ -1503,7 +1503,7 @@ Committed revision 1390.
           described in <xref linkend="svn-ch-4-sect-3.2.1"/>).  You'll
           need to write careful log messages detailing exactly which
           revision ranges have been been merged already (as
-          demonstrated in <xref linkend="svn-ch-4-sect-4.1"/>.)  It
+          demonstrated in <xref linkend="svn-ch-4-sect-4.1"/>).  It
           may sound intimidating, but it's actually pretty easy to
           do.</para>
 
