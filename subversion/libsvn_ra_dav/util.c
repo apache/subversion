@@ -165,6 +165,7 @@ static int shim_endelm(void *userdata, int state, const char *nspace,
                        const char *name)
 {
   const neon_shim_baton_t *baton = userdata;
+  svn_ra_dav__xml_elm_t elm_unknown_filled;
   const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace,
                                                   name);
   int rc;
@@ -172,8 +173,13 @@ static int shim_endelm(void *userdata, int state, const char *nspace,
   if (!elem)
     return -1; /* shouldn't be here if startelm didn't abort the parse */
 
-  /* TODO: ask Neon to create a whitespace-suppressing parser */
-  svn_stringbuf_strip_whitespace(baton->cdata_accum);
+  if (elem->id == ELEM_unknown) {
+    elm_unknown_filled.nspace = nspace;
+    elm_unknown_filled.name = name;
+    elm_unknown_filled.id = elem->id;
+    elm_unknown_filled.flags = elem->flags;
+    elem = &elm_unknown_filled;
+  }
 
   rc = baton->endelm_cb(baton->original_userdata,
                         elem,
