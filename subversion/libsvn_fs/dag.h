@@ -183,7 +183,7 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
 
 /* Set *ENTRIES_P to the directory entry list skel of NODE, as part of
    TRAIL.  The returned skel has the form (ENTRY ...), as described in
-   `structure'.
+   `structure'; this function guarantees that *ENTRIES_P is well-formed.
 
    The caller must not modify the returned skel --- it's shared with
    dag.c's internal cache of node contents.
