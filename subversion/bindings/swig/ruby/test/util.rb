@@ -1,6 +1,5 @@
 require "fileutils"
 
-require "svn/core"
 require "svn/client"
 require "svn/repos"
 
