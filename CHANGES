@@ -65,7 +65,6 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: svn:external 'wc not locked' bug (issue #1897)
  * fixed: proper mod_dav_svn html/xml escaping (issue #1209)
  * fixed: memleak in 'svn propset -R URL' (issue #1928)
- * fixed: potential repos corruption; ensure stdin/out/err always open (r10819)
  * fixed: stop 'svn up' from deleting schedule-add target dir (issue #1793)
  * fixed: 'svn merge' adding a directory already 'deleted' (issue #1769)
  * fixed: excessive memory use when fs deltifies revision 2^N (r10070)
@@ -122,6 +121,25 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: prevent canonicalized URIs from ending in '/' (r10317)
  * huge improvements to python, perl, java bindings
  * huge changes to win32 build system
+
+
+Version 1.0.7
+(17 September 2004, from /branches/1.0.x)
+http://svn.collab.net/repos/svn/tags/1.0.7
+
+ User-visible-changes:
+ * fixed: win32 'file not found' error [issue #1862]
+ * fixed: 'svn st -u' crash (r10841)
+ * fixed: potential repos corruption; ensure stdin/out/err always open (r10819)
+ * fixed: allow propnames containing ":" to be fetched via http:// (r10190)
+ * fixed: allow user to interrupt between authentication prompts (see r11014)
+ * fixed: work around +t directory-creation bug in APR (r10616, 10638, 10642)
+ * various small fixes to Book
+
+ Developer-visible changes:
+ * fix library dependencies for bindings (r9338, 9340)
+ * java bindings: fix a crash and other bugs (r9883, 9905, 8027)
+ * perl bindings: various fixes (see r11023)
 
 
 Version 1.0.6
