@@ -73,10 +73,6 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
 
   *root_baton = rb;
 
-  /* This is to prevent the trace editor from possibly printing stuff
-     immediately after any authentication prompt: */
-  printf ("\n");
-
   return SVN_NO_ERROR;
 }
 

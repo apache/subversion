@@ -109,6 +109,12 @@ svn_cl__prompt_user (char **result,
       if (status)
         return svn_error_create (status, 0, NULL, pool,
                                  "error from apr_password_get().");      
+
+      /* If echo is turned off, then we must manually add the visible
+         newline that the user's input would have provided; this
+         prevents formatting ugliness, see resolved issue #450 for
+         more details.  */
+      printf ("\n");
     }
 
   *result = strbuf->data;
