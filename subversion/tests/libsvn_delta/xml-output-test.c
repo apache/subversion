@@ -43,12 +43,12 @@ int main(int argc, char **argv)
 
   apr_initialize();
   pool = svn_pool_create (NULL);
-  foo_string = svn_string_create ("foo", pool);
-  bar_string = svn_string_create ("bar", pool);
-  baz_string = svn_string_create ("baz", pool);
-  aaa_string = svn_string_create ("aaa", pool);
-  bbb_string = svn_string_create ("bbb", pool);
-  ccc_string = svn_string_create ("ccc", pool);
+  foo_string = svn_stringbuf_create ("foo", pool);
+  bar_string = svn_stringbuf_create ("bar", pool);
+  baz_string = svn_stringbuf_create ("baz", pool);
+  aaa_string = svn_stringbuf_create ("aaa", pool);
+  bbb_string = svn_stringbuf_create ("bbb", pool);
+  ccc_string = svn_stringbuf_create ("ccc", pool);
 
   window.sview_offset = 0;
   window.sview_len = 0;
@@ -59,7 +59,7 @@ int main(int argc, char **argv)
   window.ops[0].action_code = svn_txdelta_new;
   window.ops[0].offset = 0;
   window.ops[0].length = 10;
-  window.new_data = svn_string_create ("test delta", pool);
+  window.new_data = svn_stringbuf_create ("test delta", pool);
 
   svn_delta_get_xml_editor (svn_stream_from_stdio (stdout, pool),
 			    &editor, &edit_baton, pool);

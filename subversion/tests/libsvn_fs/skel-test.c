@@ -46,7 +46,7 @@ get_empty_string (apr_pool_t *pool)
 {
   svn_pool_clear (pool);
 
-  return svn_string_ncreate (0, 0, pool);
+  return svn_stringbuf_ncreate (0, 0, pool);
 }
 
 /* Parse a skeleton from a Subversion string.  */
@@ -171,9 +171,9 @@ put_implicit_length_byte (svn_stringbuf_t *str, char byte, char term)
       && ! skel_is_space (term)
       && ! skel_is_paren (term))
     abort ();
-  svn_string_appendbytes (str, &byte, 1);
+  svn_stringbuf_appendbytes (str, &byte, 1);
   if (term != '\0')
-    svn_string_appendbytes (str, &term, 1);
+    svn_stringbuf_appendbytes (str, &term, 1);
 }
 
 
@@ -224,9 +224,9 @@ put_implicit_length_all_chars (svn_stringbuf_t *str, char term)
       && ! skel_is_paren (term))
     abort ();
 
-  svn_string_appendbytes (str, name, len);
+  svn_stringbuf_appendbytes (str, name, len);
   if (term != '\0')
-    svn_string_appendbytes (str, &term, 1);
+    svn_stringbuf_appendbytes (str, &term, 1);
 }
 
 
@@ -262,7 +262,7 @@ parse_implicit_length (const char **msg, apr_pool_t *pool)
       for (i = 0; i < 256; i++)
         if (skel_is_name((apr_byte_t)i))
           {
-            svn_string_setempty (str);
+            svn_stringbuf_setempty (str);
             put_implicit_length_byte (str, (apr_byte_t)i, *c);
             skel = parse_str (str, pool);
             if (! check_implicit_length_byte (skel,  (apr_byte_t)i))
@@ -274,7 +274,7 @@ parse_implicit_length (const char **msg, apr_pool_t *pool)
 
   /* Try an atom that contains every character that's legal in an
      implicit-length atom.  */
-  svn_string_setempty (str);
+  svn_stringbuf_setempty (str);
   put_implicit_length_all_chars (str, '\0');
   skel = parse_str (str, pool);
   if (! check_implicit_length_all_chars (skel))
@@ -306,7 +306,7 @@ put_explicit_length (svn_stringbuf_t *str, const char *data, int len, char sep)
   /* Copy in the real data (which may contain nulls).  */
   memcpy (buf + length_len, data, len);
 
-  svn_string_appendbytes (str, buf, length_len + len);
+  svn_stringbuf_appendbytes (str, buf, length_len + len);
 }
 
 
@@ -333,7 +333,7 @@ try_explicit_length (const char *data, int len, int check_len,
   for (i = 0; i < 256; i++)
     if (skel_is_space ( (apr_byte_t)i))
       {
-	svn_string_setempty (str);
+	svn_stringbuf_setempty (str);
 	put_explicit_length (str, data, len,  (apr_byte_t)i);
 	skel = parse_str (str, pool);
 	if (! check_explicit_length (skel, data, check_len))
@@ -441,9 +441,9 @@ put_list_start (svn_stringbuf_t *str, char space, int len)
   if (len > 0 && ! skel_is_space (space))
     abort ();
 
-  svn_string_appendcstr (str, "(");
+  svn_stringbuf_appendcstr (str, "(");
   for (i = 0; i < len; i++)
-    svn_string_appendbytes (str, &space, 1);
+    svn_stringbuf_appendbytes (str, &space, 1);
 }
 
 
@@ -458,8 +458,8 @@ put_list_end (svn_stringbuf_t *str, char space, int len)
     abort ();
 
   for (i = 0; i < len; i++)
-    svn_string_appendbytes (str, &space, 1);
-  svn_string_appendcstr (str, ")");
+    svn_stringbuf_appendbytes (str, &space, 1);
+  svn_stringbuf_appendcstr (str, ")");
 }
 
 
@@ -653,7 +653,7 @@ parse_list (const char **msg, apr_pool_t *pool)
 	      /* A list containing an invalid element.  */
 	      str = get_empty_string (pool);
 	      put_list_start (str,  (apr_byte_t)sep, sep_count);
-	      svn_string_appendcstr (str, "100 ");
+	      svn_stringbuf_appendcstr (str, "100 ");
 	      put_list_end (str,  (apr_byte_t)sep, sep_count);
 	      if (parse_str (str, pool))
 		return fail (pool, "failed to detect invalid element");

@@ -59,7 +59,7 @@ test_delete_entry (svn_stringbuf_t *filename, void *parent_baton)
   svn_stringbuf_t *full_path;
 
   /* Construct the full path of this entry based on its parent. */
-  full_path = svn_string_dup (d->path, d->edit_baton->pool);
+  full_path = svn_stringbuf_dup (d->path, d->edit_baton->pool);
   svn_path_add_component (full_path, filename, svn_path_repos_style);
 
   /* Now delete item from the txn. */
@@ -77,7 +77,7 @@ test_replace_root (void *edit_baton,
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *d = apr_pcalloc (eb->pool, sizeof (*d));
 
-  d->path = (svn_stringbuf_t *) svn_string_dup (eb->root_path, eb->pool);
+  d->path = (svn_stringbuf_t *) svn_stringbuf_dup (eb->root_path, eb->pool);
   d->edit_baton = eb;
   *root_baton = d;
   
@@ -98,7 +98,7 @@ add_or_replace_dir (svn_stringbuf_t *name,
   svn_fs_root_t *rev_root = NULL;
 
   /* Construct the full path of the new directory */
-  d->path = svn_string_dup (pd->path, pd->edit_baton->pool);
+  d->path = svn_stringbuf_dup (pd->path, pd->edit_baton->pool);
   svn_path_add_component (d->path, name, svn_path_local_style);
 
   /* Fill in other baton members */
@@ -178,7 +178,7 @@ add_or_replace_file (svn_stringbuf_t *name,
   svn_fs_root_t *rev_root = NULL;
 
   /* Construct the full path of the new directory */
-  fb->path = svn_string_dup (pd->path, pd->edit_baton->pool);
+  fb->path = svn_stringbuf_dup (pd->path, pd->edit_baton->pool);
   svn_path_add_component (fb->path, name, svn_path_local_style);
 
   /* Fill in other baton members */
@@ -317,7 +317,7 @@ dir_delta_get_editor (const svn_delta_edit_fns_t **editor,
 
   /* Set up the edit baton. */
   my_edit_baton = apr_pcalloc (pool, sizeof (*my_edit_baton));
-  my_edit_baton->root_path = svn_string_dup (path, pool);
+  my_edit_baton->root_path = svn_stringbuf_dup (path, pool);
   my_edit_baton->pool = pool;
   my_edit_baton->fs = fs;
   my_edit_baton->txn_root = txn_root;

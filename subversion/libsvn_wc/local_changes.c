@@ -78,7 +78,7 @@ svn_wc__time_to_string (apr_time_t t, apr_pool_t *pool)
                          exploded_time.tm_isdst,
                          exploded_time.tm_gmtoff);
 
-  return svn_string_create (t_cstr, pool);
+  return svn_stringbuf_create (t_cstr, pool);
 }
 
 

@@ -85,7 +85,7 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
 
   if (elm->id == DAV_ELM_href)
     {
-      oc->activity_url = svn_string_create(cdata, oc->pool);
+      oc->activity_url = svn_stringbuf_create(cdata, oc->pool);
     }
 
   return 0;

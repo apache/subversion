@@ -78,7 +78,7 @@ svn_cl__print_file_diff (svn_stringbuf_t *path,
   printf( "Index: %s\n", path->data );
   printf( "===================================================================\n" );
 
-  err = svn_wc_run_cmd_in_directory (svn_string_create (".", pool), 
+  err = svn_wc_run_cmd_in_directory (svn_stringbuf_create (".", pool), 
                                      SVN_CLIENT_DIFF,
                                      args,
                                      NULL, outhandle, NULL, pool);

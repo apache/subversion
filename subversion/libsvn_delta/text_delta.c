@@ -77,7 +77,7 @@ svn_txdelta__make_window (apr_pool_t *pool)
   window->num_ops = 0;
   window->ops_size = 0;
   window->ops = NULL;
-  window->new_data = svn_string_create ("", subpool);
+  window->new_data = svn_stringbuf_create ("", subpool);
   window->pool = subpool;
   return window;
 }
@@ -127,7 +127,7 @@ svn_txdelta__insert_op (svn_txdelta_window_t *window,
       op->action_code = opcode;
       op->offset = window->new_data->len;
       op->length = length;
-      svn_string_appendbytes (window->new_data, new_data, length);
+      svn_stringbuf_appendbytes (window->new_data, new_data, length);
       break;
     default:
       assert (!"unknown delta op.");

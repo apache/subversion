@@ -93,10 +93,10 @@ add_component_internal (svn_stringbuf_t *path,
 {
   char dirsep = get_separator_from_style (style);
 
-  if (! svn_string_isempty (path))
-    svn_string_appendbytes (path, &dirsep, sizeof (dirsep));
+  if (! svn_stringbuf_isempty (path))
+    svn_stringbuf_appendbytes (path, &dirsep, sizeof (dirsep));
 
-  svn_string_appendbytes (path, component, len);
+  svn_stringbuf_appendbytes (path, component, len);
   svn_path_canonicalize (path, style);
 }
 
@@ -126,8 +126,8 @@ svn_path_remove_component (svn_stringbuf_t *path, enum svn_path_style style)
 
   svn_path_canonicalize (path, style);
 
-  if (! svn_string_chop_back_to_char (path, dirsep))
-    svn_string_setempty (path);
+  if (! svn_stringbuf_chop_back_to_char (path, dirsep))
+    svn_stringbuf_setempty (path);
 }
 
 
@@ -139,15 +139,15 @@ svn_path_last_component (const svn_stringbuf_t *path,
   char dirsep = get_separator_from_style (style);
 
   apr_size_t i
-    = svn_string_find_char_backward (path, dirsep);
+    = svn_stringbuf_find_char_backward (path, dirsep);
 
   if (i < path->len)
     {
       i += 1;  /* Get past the separator char. */
-      return svn_string_ncreate (path->data + i, (path->len - i), pool);
+      return svn_stringbuf_ncreate (path->data + i, (path->len - i), pool);
     }
   else
-    return svn_string_dup (path, pool);
+    return svn_stringbuf_dup (path, pool);
 }
 
 
@@ -165,7 +165,7 @@ svn_path_split (const svn_stringbuf_t *path,
 
   if (dirpath)
     {
-      n_dirpath = svn_string_dup (path, pool);
+      n_dirpath = svn_stringbuf_dup (path, pool);
       svn_path_remove_component (n_dirpath, style);
     }
 
@@ -199,7 +199,7 @@ int
 svn_path_is_empty (const svn_stringbuf_t *path, enum svn_path_style style)
 {
   return ((path == NULL)
-          || (svn_string_isempty (path))
+          || (svn_stringbuf_isempty (path))
           || (svn_path_is_thisdir (path, style)));
 }
 
@@ -243,7 +243,7 @@ svn_path_get_longest_ancestor (const svn_stringbuf_t *path1,
   /* If either string is NULL or empty, we must go no further. */
   
   if ((! path1) || (! path2)
-      || (svn_string_isempty (path1)) || (svn_string_isempty (path2)))
+      || (svn_stringbuf_isempty (path1)) || (svn_stringbuf_isempty (path2)))
     return NULL;
   
   while (path1->data[i] == path2->data[i])
@@ -265,9 +265,9 @@ svn_path_get_longest_ancestor (const svn_stringbuf_t *path1,
   if (((i == path1->len) && (path2->data[i] == dirsep)) 
       || ((i == path2->len) && (path1->data[i] == dirsep))
       || ((i == path1->len) && (i == path2->len)))
-    common_path = svn_string_ncreate (path1->data, i, pool);
+    common_path = svn_stringbuf_ncreate (path1->data, i, pool);
   else
-    common_path = svn_string_ncreate (path1->data, last_dirsep, pool);
+    common_path = svn_stringbuf_ncreate (path1->data, last_dirsep, pool);
     
   svn_path_canonicalize (common_path, svn_path_local_style);
 
@@ -291,7 +291,7 @@ svn_path_is_child (const svn_stringbuf_t *path1,
       
   /* If either path is empty, return NULL. */
   if ((! path1) || (! path2)
-      || (svn_string_isempty (path1)) || (svn_string_isempty (path2)))
+      || (svn_stringbuf_isempty (path1)) || (svn_stringbuf_isempty (path2)))
     return NULL;
   
   /* If path2 isn't longer than path1, return NULL.  */
@@ -315,11 +315,11 @@ svn_path_is_child (const svn_stringbuf_t *path1,
   if (i == path1->len)
     {
       if (path1->data[i - 1] == dirsep)
-        return svn_string_ncreate (path2->data + i, 
+        return svn_stringbuf_ncreate (path2->data + i, 
                                    path2->len - i, 
                                    pool);
       else if (path2->data[i] == dirsep)
-        return svn_string_ncreate (path2->data + i + 1,
+        return svn_stringbuf_ncreate (path2->data + i + 1,
                                    path2->len - i - 1,
                                    pool);
     }
@@ -337,7 +337,7 @@ store_component (apr_array_header_t *array,
 {
   svn_stringbuf_t **receiver;
   
-  svn_stringbuf_t *component = svn_string_ncreate (bytes, len, pool);
+  svn_stringbuf_t *component = svn_stringbuf_ncreate (bytes, len, pool);
 
   receiver = (svn_stringbuf_t **) apr_array_push (array);
   *receiver = component;

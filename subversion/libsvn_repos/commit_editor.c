@@ -144,7 +144,7 @@ replace_root (void *edit_baton,
   dirb->base_rev = base_revision;
   dirb->parent = NULL;
   dirb->subpool = subpool;
-  dirb->path = svn_string_dup (eb->base_path, dirb->subpool);
+  dirb->path = svn_stringbuf_dup (eb->base_path, dirb->subpool);
   dirb->ref_count = 1;
 
   *root_baton = dirb;
@@ -159,7 +159,7 @@ delete_entry (svn_stringbuf_t *name,
 {
   struct dir_baton *parent = parent_baton;
   struct edit_baton *eb = parent->edit_baton;
-  svn_stringbuf_t *path_to_kill = svn_string_dup (parent->path, parent->subpool);
+  svn_stringbuf_t *path_to_kill = svn_stringbuf_dup (parent->path, parent->subpool);
   svn_path_add_component (path_to_kill, name, svn_path_repos_style);
 
   /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
@@ -202,7 +202,7 @@ add_directory (svn_stringbuf_t *name,
   new_dirb->parent = pb;
   new_dirb->ref_count = 1;
   new_dirb->subpool = subpool;
-  new_dirb->path = svn_string_dup (pb->path, new_dirb->subpool);
+  new_dirb->path = svn_stringbuf_dup (pb->path, new_dirb->subpool);
   svn_path_add_component (new_dirb->path, name, svn_path_repos_style);
   
   /* Increment parent's refcount. */
@@ -258,7 +258,7 @@ replace_directory (svn_stringbuf_t *name,
   new_dirb->parent = pb;
   new_dirb->subpool = subpool;
   new_dirb->ref_count = 1;
-  new_dirb->path = svn_string_dup (pb->path, new_dirb->subpool);
+  new_dirb->path = svn_stringbuf_dup (pb->path, new_dirb->subpool);
   svn_path_add_component (new_dirb->path, name, svn_path_repos_style);
 
   /* Increment parent's refcount. */
@@ -358,7 +358,7 @@ add_file (svn_stringbuf_t *name,
   new_fb = apr_pcalloc (subpool, sizeof (*new_fb));
   new_fb->parent = pb;
   new_fb->subpool = subpool;
-  new_fb->path = svn_string_dup (pb->path, new_fb->subpool);
+  new_fb->path = svn_stringbuf_dup (pb->path, new_fb->subpool);
   svn_path_add_component (new_fb->path, name, svn_path_repos_style);
 
   /* Increment parent's refcount. */
@@ -407,7 +407,7 @@ replace_file (svn_stringbuf_t *name,
   new_fb = apr_pcalloc (subpool, sizeof (*new_fb));
   new_fb->parent = pb;
   new_fb->subpool = subpool;
-  new_fb->path = svn_string_dup (pb->path, new_fb->subpool);
+  new_fb->path = svn_stringbuf_dup (pb->path, new_fb->subpool);
   svn_path_add_component (new_fb->path, name, svn_path_repos_style);
 
   /* Increment parent's refcount. */
@@ -570,7 +570,7 @@ svn_repos_get_editor (svn_delta_edit_fns_t **editor,
   eb->log_msg.len = log_msg->len;
   eb->hook = hook;
   eb->hook_baton = hook_baton;
-  eb->base_path = svn_string_dup (base_path, subpool);
+  eb->base_path = svn_stringbuf_dup (base_path, subpool);
   eb->fs = fs;
   eb->txn = NULL;
 

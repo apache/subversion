@@ -83,7 +83,7 @@ svn_client_status (apr_hash_t **statushash,
       svn_revnum_t latest_revnum;
 
       /* Open an RA session to URL, get latest revnum, close session. */
-      SVN_ERR (ra_lib->open (&session, svn_string_create (URL, pool), pool));
+      SVN_ERR (ra_lib->open (&session, svn_stringbuf_create (URL, pool), pool));
       SVN_ERR (ra_lib->get_latest_revnum (session, &latest_revnum));
       SVN_ERR (ra_lib->close (session));
 

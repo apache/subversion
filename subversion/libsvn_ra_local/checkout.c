@@ -90,7 +90,7 @@ set_any_props (svn_fs_root_t *root,
 
       apr_hash_this (hi, &key, &klen, &val);
       value = (svn_stringbuf_t *) val;
-      name = svn_string_ncreate (key, klen, pool);
+      name = svn_stringbuf_ncreate (key, klen, pool);
       
       if (is_dir)
         SVN_ERR (editor->change_dir_prop (object_baton, name, value));
@@ -139,12 +139,12 @@ walk_tree (svn_fs_root_t *root,
       apr_size_t klen;
       svn_fs_dirent_t *dirent;
       svn_stringbuf_t *dirent_name;
-      svn_stringbuf_t *URL_path = svn_string_dup (URL, subpool);
-      svn_stringbuf_t *dirent_path = svn_string_dup (dir_path, subpool);
+      svn_stringbuf_t *URL_path = svn_stringbuf_dup (URL, subpool);
+      svn_stringbuf_t *dirent_path = svn_stringbuf_dup (dir_path, subpool);
 
       apr_hash_this (hi, &key, &klen, &val);
       dirent = (svn_fs_dirent_t *) val;
-      dirent_name = svn_string_create (dirent->name, subpool);
+      dirent_name = svn_stringbuf_create (dirent->name, subpool);
       svn_path_add_component (dirent_path, dirent_name, svn_path_repos_style);
       svn_path_add_component (URL_path, dirent_name, svn_path_url_style);
 

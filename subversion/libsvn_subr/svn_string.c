@@ -62,7 +62,7 @@ static svn_stringbuf_t *create_string (char *data, apr_size_t size,
 }
 
 svn_stringbuf_t *
-svn_string_ncreate (const char *bytes, const apr_size_t size, 
+svn_stringbuf_ncreate (const char *bytes, const apr_size_t size, 
                     apr_pool_t *pool)
 {
   char *data;
@@ -81,14 +81,14 @@ svn_string_ncreate (const char *bytes, const apr_size_t size,
 
 
 svn_stringbuf_t *
-svn_string_create (const char *cstring, apr_pool_t *pool)
+svn_stringbuf_create (const char *cstring, apr_pool_t *pool)
 {
-  return svn_string_ncreate (cstring, strlen (cstring), pool);
+  return svn_stringbuf_ncreate (cstring, strlen (cstring), pool);
 }
 
 
 svn_stringbuf_t *
-svn_string_createv (apr_pool_t *pool, const char *fmt, va_list ap)
+svn_stringbuf_createv (apr_pool_t *pool, const char *fmt, va_list ap)
 {
   char *data = apr_pvsprintf (pool, fmt, ap);
 
@@ -98,13 +98,13 @@ svn_string_createv (apr_pool_t *pool, const char *fmt, va_list ap)
 
 
 svn_stringbuf_t *
-svn_string_createf (apr_pool_t *pool, const char *fmt, ...)
+svn_stringbuf_createf (apr_pool_t *pool, const char *fmt, ...)
 {
   svn_stringbuf_t *str;
 
   va_list ap;
   va_start (ap, fmt);
-  str = svn_string_createv (pool, fmt, ap);
+  str = svn_stringbuf_createv (pool, fmt, ap);
   va_end (ap);
 
   return str;
@@ -112,24 +112,24 @@ svn_string_createf (apr_pool_t *pool, const char *fmt, ...)
 
 
 void 
-svn_string_fillchar (svn_stringbuf_t *str, const unsigned char c)
+svn_stringbuf_fillchar (svn_stringbuf_t *str, const unsigned char c)
 {
   memset (str->data, c, str->len);
 }
 
 
 void
-svn_string_set (svn_stringbuf_t *str, const char *value)
+svn_stringbuf_set (svn_stringbuf_t *str, const char *value)
 {
   apr_size_t amt = strlen (value);
 
-  svn_string_ensure (str, amt + 1);
+  svn_stringbuf_ensure (str, amt + 1);
   memcpy (str->data, value, amt + 1);
   str->len = amt;
 }
 
 void
-svn_string_setempty (svn_stringbuf_t *str)
+svn_stringbuf_setempty (svn_stringbuf_t *str)
 {
   if (str->len > 0)
     str->data[0] = '\0';
@@ -139,7 +139,7 @@ svn_string_setempty (svn_stringbuf_t *str)
 
 
 void
-svn_string_chop (svn_stringbuf_t *str, apr_size_t nbytes)
+svn_stringbuf_chop (svn_stringbuf_t *str, apr_size_t nbytes)
 {
   if (nbytes > str->len)
     str->len = 0;
@@ -151,14 +151,14 @@ svn_string_chop (svn_stringbuf_t *str, apr_size_t nbytes)
 
 
 svn_boolean_t
-svn_string_isempty (const svn_stringbuf_t *str)
+svn_stringbuf_isempty (const svn_stringbuf_t *str)
 {
   return (str->len == 0);
 }
 
 
 void
-svn_string_ensure (svn_stringbuf_t *str, 
+svn_stringbuf_ensure (svn_stringbuf_t *str, 
                    apr_size_t minimum_size)
 {
   /* Keep doubling capacity until have enough. */
@@ -179,7 +179,7 @@ svn_string_ensure (svn_stringbuf_t *str,
 
 
 void
-svn_string_appendbytes (svn_stringbuf_t *str, const char *bytes, 
+svn_stringbuf_appendbytes (svn_stringbuf_t *str, const char *bytes, 
                         const apr_size_t count)
 {
   apr_size_t total_len;
@@ -188,7 +188,7 @@ svn_string_appendbytes (svn_stringbuf_t *str, const char *bytes,
   total_len = str->len + count;  /* total size needed */
 
   /* +1 for null terminator. */
-  svn_string_ensure (str, (total_len + 1));
+  svn_stringbuf_ensure (str, (total_len + 1));
 
   /* get address 1 byte beyond end of original bytestring */
   start_address = (str->data + str->len);
@@ -203,32 +203,32 @@ svn_string_appendbytes (svn_stringbuf_t *str, const char *bytes,
 
 
 void
-svn_string_appendstr (svn_stringbuf_t *targetstr, const svn_stringbuf_t *appendstr)
+svn_stringbuf_appendstr (svn_stringbuf_t *targetstr, const svn_stringbuf_t *appendstr)
 {
-  svn_string_appendbytes (targetstr, appendstr->data, appendstr->len);
+  svn_stringbuf_appendbytes (targetstr, appendstr->data, appendstr->len);
 }
 
 
 void
-svn_string_appendcstr (svn_stringbuf_t *targetstr, const char *cstr)
+svn_stringbuf_appendcstr (svn_stringbuf_t *targetstr, const char *cstr)
 {
-  svn_string_appendbytes (targetstr, cstr, strlen(cstr));
+  svn_stringbuf_appendbytes (targetstr, cstr, strlen(cstr));
 }
 
 
 
 
 svn_stringbuf_t *
-svn_string_dup (const svn_stringbuf_t *original_string, apr_pool_t *pool)
+svn_stringbuf_dup (const svn_stringbuf_t *original_string, apr_pool_t *pool)
 {
-  return (svn_string_ncreate (original_string->data,
+  return (svn_stringbuf_ncreate (original_string->data,
                               original_string->len, pool));
 }
 
 
 
 svn_boolean_t
-svn_string_compare (const svn_stringbuf_t *str1, const svn_stringbuf_t *str2)
+svn_stringbuf_compare (const svn_stringbuf_t *str1, const svn_stringbuf_t *str2)
 {
   /* easy way out :)  */
   if (str1->len != str2->len)
@@ -245,7 +245,7 @@ svn_string_compare (const svn_stringbuf_t *str1, const svn_stringbuf_t *str2)
 
 
 apr_size_t
-svn_string_first_non_whitespace (const svn_stringbuf_t *str)
+svn_stringbuf_first_non_whitespace (const svn_stringbuf_t *str)
 {
   apr_size_t i;
 
@@ -263,12 +263,12 @@ svn_string_first_non_whitespace (const svn_stringbuf_t *str)
 
 
 void
-svn_string_strip_whitespace (svn_stringbuf_t *str)
+svn_stringbuf_strip_whitespace (svn_stringbuf_t *str)
 {
   apr_size_t i;
 
   /* Find first non-whitespace character */
-  apr_size_t offset = svn_string_first_non_whitespace (str);
+  apr_size_t offset = svn_stringbuf_first_non_whitespace (str);
 
   /* Go ahead!  Waste some RAM, we've got pools! :)  */
   str->data += offset;
@@ -291,7 +291,7 @@ svn_string_strip_whitespace (svn_stringbuf_t *str)
 
 
 apr_size_t
-svn_string_find_char_backward (const svn_stringbuf_t *str, char ch)
+svn_stringbuf_find_char_backward (const svn_stringbuf_t *str, char ch)
 {
   int i;        /* signed! */
 
@@ -306,14 +306,14 @@ svn_string_find_char_backward (const svn_stringbuf_t *str, char ch)
 
 
 apr_size_t
-svn_string_chop_back_to_char (svn_stringbuf_t *str, char ch)
+svn_stringbuf_chop_back_to_char (svn_stringbuf_t *str, char ch)
 {
-  apr_size_t i = svn_string_find_char_backward (str, ch);
+  apr_size_t i = svn_stringbuf_find_char_backward (str, ch);
 
   if (i < str->len)
     {
       apr_size_t nbytes = (str->len - i);
-      svn_string_chop (str, nbytes);
+      svn_stringbuf_chop (str, nbytes);
       return nbytes;
     }
 

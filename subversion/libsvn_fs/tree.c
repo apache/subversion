@@ -2202,7 +2202,7 @@ write_to_string (void *baton, const char *data, apr_size_t *len)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
   
-  svn_string_appendbytes (tb->target_string, data, *len);
+  svn_stringbuf_appendbytes (tb->target_string, data, *len);
 
   return SVN_NO_ERROR;
 }
@@ -2285,7 +2285,7 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
   tb->root = root;
   tb->path = path;
   tb->pool = pool;
-  tb->target_string = svn_string_create ("", pool);
+  tb->target_string = svn_stringbuf_create ("", pool);
  
   /* Make a readable "source" stream out of the current contents of
      ROOT/PATH; obviously, this must done in the context of a

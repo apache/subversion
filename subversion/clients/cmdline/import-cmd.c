@@ -93,7 +93,7 @@ svn_cl__import (apr_getopt_t *os,
 
   /* Get a local path. */
   if (targets->nelts < 2)
-    path = svn_string_create (".", pool);
+    path = svn_stringbuf_create (".", pool);
   else
     path = ((svn_stringbuf_t **) (targets->elts))[1];
 
@@ -102,7 +102,7 @@ svn_cl__import (apr_getopt_t *os,
      it normally does.  This leads to very confusing output.  Instead,
      for consistency, it will print those paths being added in the
      repository, completely ignoring the local source.  */
-  printpath = svn_string_create ("", pool);
+  printpath = svn_stringbuf_create ("", pool);
 
   /* Optionally get the dest entry name. */
   if (targets->nelts < 3)

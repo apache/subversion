@@ -199,7 +199,7 @@ main (int argc, const char * const *argv)
 
       switch (opt_id) {
       case 'm':
-        opt_state.message = svn_string_create (opt_arg, pool);
+        opt_state.message = svn_stringbuf_create (opt_arg, pool);
         break;
       case 'r':
         opt_state.revision = (svn_revnum_t) atoi (opt_arg);
@@ -211,10 +211,10 @@ main (int argc, const char * const *argv)
         opt_state.help = TRUE;
         break;
       case svn_cl__xml_file_opt:
-        opt_state.xml_file = svn_string_create (opt_arg, pool);
+        opt_state.xml_file = svn_stringbuf_create (opt_arg, pool);
         break;
       case 'd':
-        opt_state.target = svn_string_create (opt_arg, pool);
+        opt_state.target = svn_stringbuf_create (opt_arg, pool);
         break;
       case 'F':
         err = svn_string_from_file (&(opt_state.filedata), opt_arg, pool);

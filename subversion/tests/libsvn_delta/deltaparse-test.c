@@ -67,7 +67,7 @@ main (int argc, char *argv[])
     }
 
   /* Set context variable for evaluating a tree-delta */
-  base_path = svn_string_create ("/root", globalpool);
+  base_path = svn_stringbuf_create ("/root", globalpool);
 
   /* Set up a stream to print to stdout. */
   out_stream = svn_stream_from_stdio (stdout, globalpool);
@@ -75,7 +75,7 @@ main (int argc, char *argv[])
   /* Grab the "test" editor and baton */
   err = svn_test_get_editor (&editor, 
                              &edit_baton,
-                             svn_string_create ("DELTAPARSE-TEST", 
+                             svn_stringbuf_create ("DELTAPARSE-TEST", 
                                                 globalpool),
                              out_stream, 
                              3, 

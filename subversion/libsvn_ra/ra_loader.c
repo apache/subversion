@@ -208,7 +208,7 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
 {
   apr_hash_index_t *this;
   apr_hash_t *hash = ra_baton;
-  *descriptions = svn_string_create ("", pool);
+  *descriptions = svn_stringbuf_create ("", pool);
 
   for (this = apr_hash_first (hash); this; this = apr_hash_next (this))
     {
@@ -226,7 +226,7 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
 
       libdesc = apr_psprintf (pool, "* %s : handles '%s' schema\n (%s)\n",
                               lib->name, keystr, lib->description);
-      svn_string_appendcstr (*descriptions, libdesc);
+      svn_stringbuf_appendcstr (*descriptions, libdesc);
     }      
      
   return SVN_NO_ERROR;

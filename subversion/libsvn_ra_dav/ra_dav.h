@@ -198,11 +198,11 @@ svn_error_t * svn_ra_dav__merge_activity(
     apr_pool_t *pool);
 
 
-/* Make a buffer for repeated use with svn_string_set().
+/* Make a buffer for repeated use with svn_stringbuf_set().
    ### it would be nice to start this buffer with N bytes, but there isn't
    ### really a way to do that in the string interface (yet), short of
    ### initializing it with a fake string (and copying it) */
-#define MAKE_BUFFER(p) svn_string_ncreate("", 0, (p))
+#define MAKE_BUFFER(p) svn_stringbuf_ncreate("", 0, (p))
 
 void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src);
 

@@ -349,7 +349,7 @@ unparse (skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
     {
       /* Append an atom to STR.  */
       if (use_implicit (skel))
-        svn_string_appendbytes (str, skel->data, skel->len);
+        svn_stringbuf_appendbytes (str, skel->data, skel->len);
       else
         {
           /* Append the length to STR.  */
@@ -362,11 +362,11 @@ unparse (skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
 
           /* Make sure we have room for the length, the space, and the
              atom's contents.  */
-          svn_string_ensure (str,
+          svn_stringbuf_ensure (str,
                              str->len + length_len + 1 + skel->len);
-          svn_string_appendbytes (str, buf, length_len);
+          svn_stringbuf_appendbytes (str, buf, length_len);
           str->data[str->len++] = ' ';
-          svn_string_appendbytes (str, skel->data, skel->len);
+          svn_stringbuf_appendbytes (str, skel->data, skel->len);
         }
     }
   else
@@ -375,7 +375,7 @@ unparse (skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
       skel_t *child;
 
       /* Emit an opening parenthesis.  */
-      svn_string_ensure (str, str->len + 1);
+      svn_stringbuf_ensure (str, str->len + 1);
       str->data[str->len++] = '(';
       
       /* Append each element.  Emit a space between each pair of elements.  */
@@ -384,13 +384,13 @@ unparse (skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
           unparse (child, str, pool);
           if (child->next)
             {
-              svn_string_ensure (str, str->len + 1);
+              svn_stringbuf_ensure (str, str->len + 1);
               str->data[str->len++] = ' ';
             }
         }
 
       /* Emit a closing parenthesis.  */
-      svn_string_ensure (str, str->len + 1);
+      svn_stringbuf_ensure (str, str->len + 1);
       str->data[str->len++] = ')';
     }
 

@@ -97,7 +97,7 @@ svn_test__stream_to_string (svn_stringbuf_t **string,
 {
   char buf[50];
   apr_size_t len;
-  svn_stringbuf_t *str = svn_string_create ("", pool);
+  svn_stringbuf_t *str = svn_stringbuf_create ("", pool);
 
   do 
     {
@@ -106,7 +106,7 @@ svn_test__stream_to_string (svn_stringbuf_t **string,
       SVN_ERR (svn_stream_read (stream, buf, &len));
       
       /* Now copy however many bytes were *actually* read into str. */
-      svn_string_appendbytes (str, buf, len);
+      svn_stringbuf_appendbytes (str, buf, len);
       
     } while (len);  /* Continue until we're told that no bytes were
                        read. */
@@ -123,7 +123,7 @@ svn_test__set_file_contents (svn_fs_root_t *root,
 {
   svn_txdelta_window_handler_t consumer_func;
   void *consumer_baton;
-  svn_stringbuf_t *wstring = svn_string_create (contents, pool);
+  svn_stringbuf_t *wstring = svn_stringbuf_create (contents, pool);
 
   SVN_ERR (svn_fs_apply_textdelta (&consumer_func, &consumer_baton,
                                    root, path, pool));
@@ -179,9 +179,9 @@ get_dir_entries (apr_hash_t *tree_entries,
 
       /* Calculate the full path of this entry (by appending the name
          to the path thus far) */
-      full_path = svn_string_dup (path, pool);
+      full_path = svn_stringbuf_dup (path, pool);
       svn_path_add_component (full_path, 
-                              svn_string_create (dirent->name, pool),
+                              svn_stringbuf_create (dirent->name, pool),
                               svn_path_repos_style); 
 
       /* Now, copy this dirent to the master hash, but this time, use
@@ -221,8 +221,8 @@ validate_tree_entry (svn_fs_root_t *root,
     {
       SVN_ERR (svn_fs_file_contents (&rstream, root, entry->path, pool));  
       SVN_ERR (svn_test__stream_to_string (&rstring, rstream, pool));
-      if (! svn_string_compare (rstring, 
-                                svn_string_create (entry->contents, pool)))
+      if (! svn_stringbuf_compare (rstring, 
+                                svn_stringbuf_create (entry->contents, pool)))
         return svn_error_createf 
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
            "node `%s' in tree had unexpected contents",
@@ -247,7 +247,7 @@ svn_test__validate_tree (svn_fs_root_t *root,
   apr_hash_t *tree_entries;
   int i;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_stringbuf_t *root_dir = svn_string_create ("", subpool);
+  svn_stringbuf_t *root_dir = svn_stringbuf_create ("", subpool);
   
   /* Create our master hash for storing the entries */
   tree_entries = apr_hash_make (pool);
@@ -372,8 +372,8 @@ svn_test__check_greek_tree (svn_fs_root_t *root,
       SVN_ERR (svn_fs_file_contents (&rstream, root, 
                                      file_contents[i][0], pool));
       SVN_ERR (svn_test__stream_to_string (&rstring, rstream, pool));
-      content = svn_string_create (file_contents[i][1], pool);
-      if (! svn_string_compare (rstring, content))
+      content = svn_stringbuf_create (file_contents[i][1], pool);
+      if (! svn_stringbuf_compare (rstring, content))
         return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
                                  "data read != data written in file `%s'.",
                                  file_contents[i][0]);

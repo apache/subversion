@@ -76,7 +76,7 @@ main (int argc, char *argv[])
   globalpool = svn_pool_create (NULL);
 
   targets = apr_array_make (globalpool, 1, sizeof (svn_stringbuf_t *));
-  rootdir = svn_string_create (argv[1], globalpool);
+  rootdir = svn_stringbuf_create (argv[1], globalpool);
   (*((svn_stringbuf_t**) apr_array_push (targets))) = rootdir;
 
   for (i = 2; i < argc; i++)
@@ -115,7 +115,7 @@ main (int argc, char *argv[])
 
       err = svn_test_get_editor (&my_editor, 
                                  &my_edit_baton,
-                                 svn_string_create ("COMMIT-TEST", 
+                                 svn_stringbuf_create ("COMMIT-TEST", 
                                                     globalpool),
                                  out_stream, 
                                  3, 

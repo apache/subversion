@@ -143,14 +143,14 @@ import_dir (const svn_delta_edit_fns_t *editor,
        APR_STATUS_IS_SUCCESS (apr_err);
        apr_err = apr_dir_read (&this_entry, APR_FINFO_NORM, dir))
     {
-      svn_stringbuf_t *new_path = svn_string_dup (path, subpool);
+      svn_stringbuf_t *new_path = svn_stringbuf_dup (path, subpool);
       svn_path_add_component (new_path,
-                              svn_string_create (this_entry.name, subpool),
+                              svn_stringbuf_create (this_entry.name, subpool),
                               svn_path_local_style);
 
       if (this_entry.filetype == APR_DIR)
         {
-          svn_stringbuf_t *name = svn_string_create (this_entry.name, subpool);
+          svn_stringbuf_t *name = svn_stringbuf_create (this_entry.name, subpool);
           void *this_dir_baton;
 
           /* Skip entries for this dir and its parent.  
@@ -185,7 +185,7 @@ import_dir (const svn_delta_edit_fns_t *editor,
           SVN_ERR (import_file (editor,
                                 dir_baton,
                                 new_path,
-                                svn_string_create (this_entry.name, subpool),
+                                svn_stringbuf_create (this_entry.name, subpool),
                                 subpool));
         }
       else
@@ -459,7 +459,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       
       /* Make sure our log message at least exists, even if empty. */
       if (! log_msg)
-        log_msg = svn_string_create ("", pool);
+        log_msg = svn_stringbuf_create ("", pool);
       
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));

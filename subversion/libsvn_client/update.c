@@ -76,7 +76,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
        "svn_client_update: %s is not under revision control",
        path->data);
 
-  URL = svn_string_create (entry->ancestor->data, pool);
+  URL = svn_stringbuf_create (entry->ancestor->data, pool);
 
   /* The following is an ugly kludge.  In order to let the RA layer
      know the difference between updating entry 'Z' in dir 'X/Y' and

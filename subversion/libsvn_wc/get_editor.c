@@ -132,17 +132,17 @@ make_dir_baton (svn_stringbuf_t *name,
     {
       /* I, the baton-in-creation, have a parent, so base my path on
          that of my parent. */
-      path = svn_string_dup (parent_baton->path, subpool);
+      path = svn_stringbuf_dup (parent_baton->path, subpool);
     }
   else
     {
       /* I am Adam.  All my base are belong to me. */
-      path = svn_string_dup (eb->anchor, subpool);
+      path = svn_stringbuf_dup (eb->anchor, subpool);
     }
 
   if (name)
     {
-      d->name = svn_string_dup (name, subpool);
+      d->name = svn_stringbuf_dup (name, subpool);
       svn_path_add_component (path, name, svn_path_local_style);
     }
 
@@ -277,7 +277,7 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_stringbuf_t *name)
 {
   apr_pool_t *subpool = svn_pool_create (parent_dir_baton->pool);
   struct file_baton *f = apr_pcalloc (subpool, sizeof (*f));
-  svn_stringbuf_t *path = svn_string_dup (parent_dir_baton->path,
+  svn_stringbuf_t *path = svn_stringbuf_dup (parent_dir_baton->path,
                                        subpool);
 
   /* Make the file's on-disk name. */
@@ -448,7 +448,7 @@ delete_entry (svn_stringbuf_t *name, void *parent_baton)
   struct dir_baton *parent_dir_baton = parent_baton;
   apr_status_t apr_err;
   apr_file_t *log_fp = NULL;
-  svn_stringbuf_t *log_item = svn_string_create ("", parent_dir_baton->pool);
+  svn_stringbuf_t *log_item = svn_stringbuf_create ("", parent_dir_baton->pool);
 
   err = svn_wc__lock (parent_dir_baton->path, 0, parent_dir_baton->pool);
   if (err)
@@ -559,7 +559,7 @@ add_directory (svn_stringbuf_t *name,
       SVN_ERR (svn_wc_entry (&parent_entry,
                              parent_dir_baton->path,
                              parent_dir_baton->pool));
-      new_URL = svn_string_dup (parent_entry->ancestor, this_dir_baton->pool);
+      new_URL = svn_stringbuf_dup (parent_entry->ancestor, this_dir_baton->pool);
       svn_path_add_component (new_URL, name, svn_path_local_style);
 
       copyfrom_path = new_URL;
@@ -637,11 +637,11 @@ change_dir_prop (void *dir_baton,
   /* Duplicate storage of name/value pair;  they should live in the
      dir baton's pool, not some pool within the editor's driver. :)
   */
-  local_name = svn_string_dup (name, db->pool);
+  local_name = svn_stringbuf_dup (name, db->pool);
   if (value)
     /* remember that value could be NULL, signifying a property
        `delete' */
-    local_value = svn_string_dup (value, db->pool);
+    local_value = svn_stringbuf_dup (value, db->pool);
   else
     local_value = NULL;
 
@@ -698,7 +698,7 @@ close_directory (void *dir_baton)
       apr_file_t *log_fp = NULL;
 
       /* to hold log messages: */
-      svn_stringbuf_t *entry_accum = svn_string_create ("", db->pool);
+      svn_stringbuf_t *entry_accum = svn_stringbuf_create ("", db->pool);
 
       /* Lock down the administrative area */
       err = svn_wc__lock (db->path, 0, db->pool);
@@ -733,10 +733,10 @@ close_directory (void *dir_baton)
                              svn_xml_self_closing,
                              SVN_WC__LOG_MODIFY_ENTRY,
                              SVN_WC__LOG_ATTR_NAME,
-                             svn_string_create
+                             svn_stringbuf_create
                              (SVN_WC_ENTRY_THIS_DIR, db->pool),
                              SVN_WC_ENTRY_ATTR_REVISION,
-                             svn_string_create (revision_str, db->pool),
+                             svn_stringbuf_create (revision_str, db->pool),
                              NULL);
 
 
@@ -754,11 +754,11 @@ close_directory (void *dir_baton)
                                svn_xml_self_closing,
                                SVN_WC__LOG_MODIFY_ENTRY,
                                SVN_WC__LOG_ATTR_NAME,
-                               svn_string_create
+                               svn_stringbuf_create
                                (SVN_WC_ENTRY_THIS_DIR, db->pool),
                                SVN_WC_ENTRY_ATTR_PROP_TIME,
                                /* use wfile time */
-                               svn_string_create (SVN_WC_TIMESTAMP_WC,
+                               svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
                                                   db->pool),
                                NULL);
 
@@ -993,11 +993,11 @@ change_file_prop (void *file_baton,
   /* Duplicate storage of name/value pair;  they should live in the
      file baton's pool, not some pool within the editor's driver. :)
   */
-  local_name = svn_string_dup (name, fb->pool);
+  local_name = svn_stringbuf_dup (name, fb->pool);
   if (value)
     /* remember that value could be NULL, signifying a property
        `delete' */
-    local_value = svn_string_dup (value, fb->pool);
+    local_value = svn_stringbuf_dup (value, fb->pool);
   else
     local_value = NULL;
 
@@ -1094,7 +1094,7 @@ close_file (void *file_baton)
   if (err)
     return err;
 
-  entry_accum = svn_string_create ("", fb->pool);
+  entry_accum = svn_stringbuf_create ("", fb->pool);
 
   if (fb->text_changed)
     {
@@ -1230,7 +1230,7 @@ close_file (void *file_baton)
       else if (wfile_kind == svn_node_file)
         {
           /* Patch repos changes into an existing local file. */
-          svn_stringbuf_t *patch_cmd = svn_string_create (SVN_CLIENT_PATCH,
+          svn_stringbuf_t *patch_cmd = svn_stringbuf_create (SVN_CLIENT_PATCH,
                                                        fb->pool);
           apr_file_t *reject_file = NULL;
           svn_stringbuf_t *reject_filename = NULL;
@@ -1266,12 +1266,12 @@ close_file (void *file_baton)
 
              Sometimes I think I think too much.  I think.
           */ 
-          reject_filename = svn_string_ncreate
+          reject_filename = svn_stringbuf_ncreate
             (reject_filename->data + fb->dir_baton->path->len + 1,
              reject_filename->len - fb->dir_baton->path->len - 1,
              fb->pool);
 
-          received_diff_filename = svn_string_ncreate
+          received_diff_filename = svn_stringbuf_ncreate
             (received_diff_filename->data + fb->dir_baton->path->len + 1,
              received_diff_filename->len - fb->dir_baton->path->len - 1,
              fb->pool);
@@ -1287,11 +1287,11 @@ close_file (void *file_baton)
                                  SVN_WC__LOG_ATTR_NAME,
                                  patch_cmd,
                                  SVN_WC__LOG_ATTR_ARG_1,
-                                 svn_string_create ("-r", fb->pool),
+                                 svn_stringbuf_create ("-r", fb->pool),
                                  SVN_WC__LOG_ATTR_ARG_2,
                                  reject_filename,
                                  SVN_WC__LOG_ATTR_ARG_3,
-                                 svn_string_create ("--", fb->pool),
+                                 svn_stringbuf_create ("--", fb->pool),
                                  SVN_WC__LOG_ATTR_ARG_4,
                                  fb->name,
                                  SVN_WC__LOG_ATTR_INFILE,
@@ -1353,10 +1353,10 @@ close_file (void *file_baton)
                          SVN_WC__LOG_ATTR_NAME,
                          fb->name,
                          SVN_WC_ENTRY_ATTR_KIND,
-                         svn_string_create (SVN_WC__ENTRIES_ATTR_FILE_STR, 
+                         svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_FILE_STR, 
                                             fb->pool),
                          SVN_WC_ENTRY_ATTR_REVISION,
-                         svn_string_create (revision_str, fb->pool),
+                         svn_stringbuf_create (revision_str, fb->pool),
                          NULL);
 
   if (fb->text_changed)
@@ -1380,7 +1380,7 @@ close_file (void *file_baton)
                                fb->name,
                                SVN_WC_ENTRY_ATTR_TEXT_TIME,
                                /* use wfile time */
-                               svn_string_create (SVN_WC_TIMESTAMP_WC,
+                               svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
                                                   fb->pool),
                                NULL);
     }
@@ -1406,7 +1406,7 @@ close_file (void *file_baton)
                                fb->name,
                                SVN_WC_ENTRY_ATTR_PROP_TIME,
                                /* use wfile time */
-                               svn_string_create (SVN_WC_TIMESTAMP_WC,
+                               svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
                                                   fb->pool),
                                NULL);
     }
@@ -1483,7 +1483,7 @@ close_edit (void *edit_baton)
          need this bumping, and only directory updates at that.
          Updated files should already be up-to-date. */
       svn_wc_entry_t *entry;
-      svn_stringbuf_t *full_path = svn_string_dup (eb->anchor, eb->pool);
+      svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->anchor, eb->pool);
       if (eb->target)
         svn_path_add_component (full_path, eb->target,
                                 svn_path_local_style);
@@ -1690,7 +1690,7 @@ svn_wc_get_actual_update_target (svn_stringbuf_t *path,
      a basename.  Trivial.  */
   if (svn_path_is_empty (path, svn_path_local_style))
     {
-      *parent_dir = svn_string_dup (path, pool);
+      *parent_dir = svn_stringbuf_dup (path, pool);
       *entry = NULL;
       return SVN_NO_ERROR;
     }
@@ -1705,7 +1705,7 @@ svn_wc_get_actual_update_target (svn_stringbuf_t *path,
     {
       /* Case II: If PATH is an entry of a non-versioned directory, do
          not lop off a basename.  */
-      *parent_dir = svn_string_dup (path, pool);
+      *parent_dir = svn_stringbuf_dup (path, pool);
       *entry = NULL;
     }
   else
@@ -1714,7 +1714,7 @@ svn_wc_get_actual_update_target (svn_stringbuf_t *path,
          off its basename. */
       *parent_dir = dirname;
       if (svn_path_is_empty (dirname, svn_path_local_style))
-        svn_string_set (*parent_dir, ".");
+        svn_stringbuf_set (*parent_dir, ".");
       *entry = basename;
     }
 

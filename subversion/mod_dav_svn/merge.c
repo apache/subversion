@@ -122,7 +122,7 @@ static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
   SVN_ERR( svn_fs_node_id(&id, mrc->root, baton->path, baton->pool) );
 
   stable_id = svn_fs_unparse_id(id, baton->pool);
-  svn_string_appendcstr(stable_id, baton->path);
+  svn_stringbuf_appendcstr(stable_id, baton->path);
 
   vsn_url = dav_svn_build_uri(mrc->repos, DAV_SVN_BUILD_URI_VERSION,
                               SVN_INVALID_REVNUM, stable_id->data,
@@ -401,7 +401,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   mrc.repos = repos;
 
   /* ### grumble */
-  rootpath = svn_string_create("/", pool);
+  rootpath = svn_stringbuf_create("/", pool);
 
   serr = svn_repos_dir_delta(previous_root, rootpath, revs,
                              committed_root, rootpath,

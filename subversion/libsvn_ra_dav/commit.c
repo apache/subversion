@@ -197,9 +197,9 @@ static svn_error_t * get_activity_url(commit_ctx_t *cc,
          property store. */
 
       /* ### damn, this is annoying to have to create strings */
-      svn_stringbuf_t * propname = svn_string_create(SVN_RA_DAV__LP_ACTIVITY_URL,
+      svn_stringbuf_t * propname = svn_stringbuf_create(SVN_RA_DAV__LP_ACTIVITY_URL,
                                                   cc->ras->pool);
-      svn_stringbuf_t * path = svn_string_create(".", cc->ras->pool);
+      svn_stringbuf_t * path = svn_stringbuf_create(".", cc->ras->pool);
 
       /* get the URL where we should create activities */
       SVN_ERR( (*cc->get_func)(cc->close_baton, path, propname,
@@ -210,7 +210,7 @@ static svn_error_t * get_activity_url(commit_ctx_t *cc,
           /* the property was there. return it. */
 
           /* ### urk. copy the thing to get a proper pool in there */
-          *activity_url = svn_string_dup(*activity_url, cc->ras->pool);
+          *activity_url = svn_stringbuf_dup(*activity_url, cc->ras->pool);
 
           return NULL;
         }
@@ -268,7 +268,7 @@ static svn_error_t * add_child(resource_t **child,
   rsrc = apr_pcalloc(pool, sizeof(*rsrc));
   rsrc->url = apr_pstrcat(pool, parent->url, "/", name, NULL);
 
-  rsrc->local_path = svn_string_dup(parent->local_path, pool);
+  rsrc->local_path = svn_stringbuf_dup(parent->local_path, pool);
   svn_path_add_component_nts(rsrc->local_path, name, svn_path_local_style);
 
   /* If the resource was just created, then its WR appears under the
@@ -444,7 +444,7 @@ static svn_error_t * commit_replace_root(void *edit_baton,
   rsrc->url = cc->ras->root.path;
 
   /* ### should we use the WC symbol? (SVN_WC_ENTRY_THIS_DIR) */
-  rsrc->local_path = svn_string_create("", cc->ras->pool);
+  rsrc->local_path = svn_stringbuf_create("", cc->ras->pool);
 
   SVN_ERR( get_version_url(cc, rsrc) );
 
@@ -751,7 +751,7 @@ static svn_error_t * commit_apply_txdelta(void *file_baton,
      ### or a FILE*. since we are getting binary data, we must use a FILE*
      ### for now. isn't that special? */
   /* ### fucking svn_stringbuf_t */
-  path = svn_string_create(".svn_commit", subpool);
+  path = svn_stringbuf_create(".svn_commit", subpool);
   SVN_ERR( svn_io_open_unique_file(&baton->tmpfile, &baton->fname, path,
                                    ".ra_dav", subpool) );
 
@@ -831,7 +831,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc = apr_pcalloc(ras->pool, sizeof(*cc));
   cc->ras = ras;
   cc->resources = apr_hash_make(ras->pool);
-  cc->vsn_url_name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
+  cc->vsn_url_name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
   cc->get_func = get_func;
   cc->set_func = set_func;
   cc->close_func = close_func;

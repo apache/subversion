@@ -414,7 +414,7 @@ write_and_read_file (const char **msg,
   svn_fs_root_t *txn_root;
   svn_stream_t *rstream;
   svn_stringbuf_t *rstring;
-  svn_stringbuf_t *wstring = svn_string_create ("Wicki wild, wicki wicki wild.",
+  svn_stringbuf_t *wstring = svn_stringbuf_create ("Wicki wild, wicki wicki wild.",
                                              pool);
 
   *msg = "write and read a file's contents";
@@ -436,7 +436,7 @@ write_and_read_file (const char **msg,
   SVN_ERR (svn_test__stream_to_string (&rstring, rstream, pool));
 
   /* Compare what was read to what was written. */
-  if (! svn_string_compare (rstring, wstring))
+  if (! svn_stringbuf_compare (rstring, wstring))
     return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
                              "data read != data written.");    
 
@@ -1783,7 +1783,7 @@ fetch_by_id (const char **msg,
   {
     svn_fs_id_t *iota_id, *beta_id, *C_id, *D_id, *omega_id;
     svn_stringbuf_t *iota_str, *beta_str, *C_str, *D_str, *omega_str;
-    svn_stringbuf_t *not_an_id_str = svn_string_create ("fish", pool);
+    svn_stringbuf_t *not_an_id_str = svn_stringbuf_create ("fish", pool);
     apr_hash_t *entries;
     apr_off_t len;
     void *val;

@@ -142,7 +142,7 @@ open_ra_session (const char **msg)
 
   /* Open an ra session into this repository. */
   SVN_ERR (plugin->open (&session,
-                         svn_string_create ("file:test-repo-open", pool),
+                         svn_stringbuf_create ("file:test-repo-open", pool),
                          pool));
 
   /* Close the session. */
@@ -171,7 +171,7 @@ get_youngest_rev (const char **msg)
 
   /* Open an ra session into this repository. */
   SVN_ERR (plugin->open (&session,
-                         svn_string_create ("file:test-repo-getrev", pool),
+                         svn_stringbuf_create ("file:test-repo-getrev", pool),
                          pool));
 
   /* Get the youngest revision and make sure it's 0. */
@@ -198,7 +198,7 @@ try_split_url (const char *url)
   svn_stringbuf_t *repos_path, *fs_path;
 
   SVN_ERR (svn_ra_local__split_URL (&repos_path, &fs_path, 
-                                    svn_string_create (url, pool),
+                                    svn_stringbuf_create (url, pool),
                                     pool));
   return SVN_NO_ERROR;
 }
@@ -288,7 +288,7 @@ check_split_url (const char *repos_path,
 
   /* Run this URL through our splitter... */
   SVN_ERR (svn_ra_local__split_URL (&repos_part, &fs_part, 
-                                    svn_string_create (url, pool),
+                                    svn_stringbuf_create (url, pool),
                                     pool));
   if ((strcmp (repos_part->data, repos_loc))
       || (strcmp (fs_part->data, fs_path)))

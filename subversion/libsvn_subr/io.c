@@ -97,7 +97,7 @@ svn_io_open_unique_file (apr_file_t **f,
      (unsigned int)unique_name,
      &random_portion_width);
 
-  *unique_name = svn_string_dup (path, pool);
+  *unique_name = svn_stringbuf_dup (path, pool);
 
   /* Not sure of a portable PATH_MAX constant to use here, so just
      guessing at 255. */
@@ -108,11 +108,11 @@ svn_io_open_unique_file (apr_file_t **f,
                       + 3  /* 2 dots */
                       + 5  /* 5 digits of iteration portion */
                       + strlen (suffix);
-      svn_string_chop (*unique_name, chop_amt);
+      svn_stringbuf_chop (*unique_name, chop_amt);
     }
 
   iterating_portion_idx = (*unique_name)->len + random_portion_width + 2;
-  svn_string_appendcstr (*unique_name,
+  svn_stringbuf_appendcstr (*unique_name,
                          apr_psprintf (pool, ".%s.00000%s",
                                        random_portion, suffix));
 
@@ -603,7 +603,7 @@ svn_string_from_file (svn_stringbuf_t **result, const char *filename, apr_pool_t
   apr_size_t len;
   apr_file_t *f = NULL;
 
-  res = svn_string_create ("", pool);
+  res = svn_stringbuf_create ("", pool);
 
   apr_err = apr_file_open (&f, filename, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err)
@@ -618,7 +618,7 @@ svn_string_from_file (svn_stringbuf_t **result, const char *filename, apr_pool_t
                                 "read_from_file: failed to read '%s'",
                                 filename);
     
-    svn_string_appendbytes (res, buf, len);
+    svn_stringbuf_appendbytes (res, buf, len);
   } while (len != 0);
 
   apr_err = apr_file_close (f);

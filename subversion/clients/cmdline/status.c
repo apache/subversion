@@ -149,7 +149,7 @@ svn_cl__print_status_list (apr_hash_t *statushash, apr_pool_t *pool)
       path = (const char *) item->key;
       status = (svn_wc_status_t *) item->data;
 
-      svn_cl__print_status (svn_string_create (path, pool), status);
+      svn_cl__print_status (svn_stringbuf_create (path, pool), status);
     }
 }
 
