@@ -97,6 +97,7 @@ $(BOOK_INSTALL_DIR):
 install-book-html: $(BOOK_HTML_TARGET)
 	$(INSTALL) -d $(BOOK_INSTALL_DIR)/images
 	$(INSTALL) $(BOOK_HTML_TARGET) $(BOOK_INSTALL_DIR)
+	$(INSTALL) $(BOOK_DIR)/styles.css $(BOOK_INSTALL_DIR)
 	$(INSTALL) $(BOOK_DIR)/images/*.png $(BOOK_INSTALL_DIR)/images
 
 ## index.html is created last
