@@ -59,6 +59,11 @@ typedef struct svn_delta_walk_t
 				     svn_pdelta_t *pdelta,
 				     void **child_baton);
 
+  /* We are done processing a subdirectory, whose baton is
+     CHILD_BATON.  This lets the caller do any cleanups necessary,
+     since CHILD_BATON won't be used any more.  */
+  svn_error_t *(*finish_directory) (void *child_baton);
+
   /* We are going to add a new file named NAME.  TEXT specifies the
      file contents as a text delta versus the base text; if BASE_PATH
      is zero, the changes are relative to the empty file.  */
