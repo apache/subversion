@@ -19,7 +19,7 @@ import sys
 import os
 import getopt
 
-from svn import fs, util, core
+from svn import fs, core
 
 def plist(pool, rev=None, home='.', *props):
 
@@ -61,7 +61,7 @@ def main():
     elif name == '-h':
       home = value
 
-  apply(util.run_app, (plist, rev, home) + tuple(args))
+  apply(core.run_app, (plist, rev, home) + tuple(args))
 
 if __name__ == '__main__':
   main()

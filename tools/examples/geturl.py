@@ -9,7 +9,7 @@ import os
 import sys
 
 import svn.wc
-import svn.util
+import svn.core
 
 def main(pool, files):
   for f in files:
@@ -24,4 +24,4 @@ def main(pool, files):
       svn.wc.adm_close(adm_baton)
 
 if __name__ == '__main__':
-  svn.util.run_app(main, sys.argv[1:])
+  svn.core.run_app(main, sys.argv[1:])
