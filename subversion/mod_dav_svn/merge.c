@@ -136,8 +136,9 @@ static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
                        "<D:checked-in><D:href>",
                        vsn_url,
                        "</D:href></D:checked-in>" DEBUG_CR
-                       "<D:status>200 OK</D:status>" DEBUG_CR
-                       "</D:prop></D:propstat>" DEBUG_CR
+                       "</D:prop>" DEBUG_CR
+                       "<D:status>HTTP/1.1 200 OK</D:status>" DEBUG_CR
+                       "</D:propstat>" DEBUG_CR
                        "</D:response>" DEBUG_CR,
                        NULL);
 
@@ -353,9 +354,14 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                      "<D:response>" DEBUG_CR
                      "<D:href>", vcc, "</D:href>" DEBUG_CR
                      "<D:propstat><D:prop>" DEBUG_CR
+                     /* ### this is wrong. it's a VCC, not a baseline. but
+                        ### we need to tell the client to look at *this*
+                        ### resource for the version-name. */
+                     "<D:resourcetype><D:baseline/></D:resourcetype>" DEBUG_CR
                      "<D:version-name>", revbuf, "</D:version-name>" DEBUG_CR
-                     "<D:status>200 OK</D:status>" DEBUG_CR
-                     "</D:prop></D:propstat>" DEBUG_CR
+                     "</D:prop>" DEBUG_CR
+                     "<D:status>HTTP/1.1 200 OK</D:status>" DEBUG_CR
+                     "</D:propstat>" DEBUG_CR
                      "</D:response>" DEBUG_CR,
 
                      NULL);
