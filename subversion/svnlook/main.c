@@ -1076,6 +1076,7 @@ main (int argc, const char * const *argv)
 
   /* Convert repository path and txn name (if present) to UTF-8 */
   INT_ERR (svn_utf_cstring_to_utf8 (&repos_path_utf8, repos_path, NULL, pool));
+  repos_path_utf8 = svn_path_canonicalize_nts (repos_path_utf8, pool);
   if(txn_name)
     INT_ERR (svn_utf_cstring_to_utf8 (&c.txn_name, txn_name, NULL, pool));    
 
