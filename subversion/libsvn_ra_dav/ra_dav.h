@@ -55,11 +55,19 @@ typedef struct {
 
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
 
-  svn_boolean_t compression;            /* should we use http compression? */
-
   const char *uuid;                     /* repository UUID */
 } svn_ra_session_t;
 
+
+/* A baton which is attached to Neon session's to hold session-related
+   private data. */
+typedef struct {
+  svn_boolean_t compression;            /* should we use http compression? */
+} svn_ra_ne_session_baton_t;
+
+/* Id used with ne_set_session_private() and ne_get_session_private()
+   to retrieve the associated svn_ra_ne_session_baton_t baton. */
+#define SVN_RA_NE_SESSION_ID   "SVN"
 
 #ifdef SVN_DEBUG
 #define DEBUG_CR "\n"
@@ -379,7 +387,7 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
 
 
 /* Send a METHOD request (e.g., "MERGE", "REPORT", "PROPFIND") to URL
- * in session RAS, and parse the response.  If BODY is non-null, it is
+ * in session SESS, and parse the response.  If BODY is non-null, it is
  * the body of the request, else use the contents of file BODY_FILE
  * as the body.
  *
@@ -394,7 +402,7 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
  *
  * Use POOL for any temporary allocation.
  */
-svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
+svn_error_t *svn_ra_dav__parsed_request(ne_session *sess,
                                         const char *method,
                                         const char *url,
                                         const char *body,

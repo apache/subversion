@@ -468,7 +468,6 @@ static svn_error_t *custom_get_request(ne_session *sess,
                                        svn_ra_get_wc_prop_func_t get_wc_prop,
                                        void *cb_baton,
                                        svn_boolean_t use_base,
-                                       svn_boolean_t compression,
                                        apr_pool_t *pool)
 {
   custom_get_ctx_t cgc = { 0 };
@@ -478,7 +477,9 @@ static svn_error_t *custom_get_request(ne_session *sess,
   svn_error_t *err;
   int code;
   int decompress_rv;
-  
+  svn_ra_ne_session_baton_t *sess_baton =
+    ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
+
   if (use_base)
     {
       /* See if we can get a version URL for this resource. This will
@@ -519,7 +520,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
     }
 
   /* add in a reader to capture the body of the response. */
-  if (compression) {
+  if (sess_baton->compression) {
     decompress = ne_decompress_reader(req, ne_accept_2xx, reader, &cgc);
   }
   else {
@@ -669,7 +670,6 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                       const char *url,
                                       const char *relpath,
                                       svn_boolean_t text_deltas,
-                                      svn_boolean_t compression,
                                       void *file_baton,
                                       const char *base_checksum,
                                       const svn_delta_editor_t *editor,
@@ -702,7 +702,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
   SVN_ERR( custom_get_request(sess, url, relpath,
                               fetch_file_reader, &frc,
                               get_wc_prop, cb_baton,
-                              TRUE, compression, pool) );
+                              TRUE, pool) );
 
   /* close the handler, since the file reading completed successfully. */
   SVN_ERR( (*frc.handler)(NULL, frc.handler_baton) );
@@ -715,7 +715,6 @@ static svn_error_t *fetch_file(ne_session *sess,
                                void *dir_baton,
                                const svn_delta_editor_t *editor,
                                const char *edit_path,
-                               svn_boolean_t compression,
                                apr_pool_t *pool)
 {
   const char *bc_url = rsrc->url;    /* url in the Baseline Collection */
@@ -734,7 +733,7 @@ static svn_error_t *fetch_file(ne_session *sess,
   /* fetch_file() is only used for checkout, so we just pass NULL for the
      simple_fetch_file() params related to fetching version URLs (for
      fetching deltas) */
-  err = simple_fetch_file(sess, bc_url, NULL, TRUE, compression, file_baton, 
+  err = simple_fetch_file(sess, bc_url, NULL, TRUE, file_baton, 
                           NULL, editor, NULL, NULL, pool);
   if (err)
     {
@@ -1031,7 +1030,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                   get_file_reader, &fwc,
                                   ras->callbacks->get_wc_prop,
                                   ras->callback_baton,
-                                  FALSE, ras->compression, pool) );
+                                  FALSE, pool) );
 
       if (fwc.do_checksum)
         {
@@ -1375,8 +1374,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
           /* ### should we close the dir batons first? */
           SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton,
-                                editor, edit_path->data, 
-                                ras->compression, subpool),
+                                editor, edit_path->data, subpool),
                      "could not checkout a file");
           svn_stringbuf_chop(edit_path, edit_path->len - edit_len);
 
@@ -1482,7 +1480,8 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                       svn_time_to_cstring(timestamp, pool));
 
   *revision = SVN_INVALID_REVNUM;
-  err = svn_ra_dav__parsed_request(ras, "REPORT", ras->root.path, body, NULL,
+  err = svn_ra_dav__parsed_request(ras->sess, "REPORT",
+                                   ras->root.path, body, NULL,
                                    drev_report_elements,
                                    drev_validate_element,
                                    drev_start_element, drev_end_element,
@@ -2024,7 +2023,6 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
                                 rb->href->data,
                                 TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
-                                rb->ras->compression,
                                 rb->file_baton,
                                 base_checksum,
                                 rb->editor,
@@ -2163,7 +2161,6 @@ static int end_element(void *userdata,
                                 rb->href->data,
                                 TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
-                                rb->ras->compression,
                                 rb->file_baton,
                                 NULL,  /* no base checksum in an add */
                                 rb->editor,
@@ -2411,7 +2408,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   rb->cpathstr = MAKE_BUFFER(rb->ras->pool);
   rb->href = MAKE_BUFFER(rb->ras->pool);
 
-  err = svn_ra_dav__parsed_request(rb->ras, "REPORT", rb->ras->root.path,
+  err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT", rb->ras->root.path,
                                    NULL, rb->tmpfile,
                                    report_elements, validate_element,
                                    start_element, end_element, rb,
