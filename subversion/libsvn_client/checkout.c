@@ -113,6 +113,9 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (ra_lib->do_checkout (session,
                                     checkout_editor,
                                     checkout_edit_baton));
+
+      /* Close the RA session. */
+      SVN_ERR (ra_lib->close (session));
     }      
   
   /* else we're checking out from xml */
