@@ -147,7 +147,7 @@ not, @xref{Model}.
 For completeness, we can now offer a precise, technical description of
 these terms.  
 
-@subsubsection Schema  @c -----------------
+Here is the schema for the Subversion Filesystem:
 
 @c This is taken from jimb's very first Subversion spec!
 @c Is there some standardized notation for describing schemas like this?
@@ -194,30 +194,14 @@ A @dfn{repository} consists of node table and a history.
 
 @end quotation
 
-@subsubsection Lineage @c -----------------
-
-We say that a node @var{n} is a @dfn{direct child} of a directory
-@var{d} iff @var{d} contains a directory entry whose node number is
-@var{n}.
-
-A node @var{n} is a @dfn{child} of a directory @var{d} iff @var{n} is
-a direct child of @var{d}, or if there exists some sequence of
-directories (@var{e1}, ... @var{eM}) such that 
-
-@itemize @bullet
-@item
-   @var{e1} is a direct child of @var{d}
-@item
-   @var{n} is a direct child of @var{eM}
-@item
-   for any natural numbers 1 <= (J, K) <= M, where K = J + 1, @var{eK}
-is a direct child of @var{eJ}.
-@end itemize
-
-Given these definitions of ``direct child'' and ``child,'' the obvious
-definitions of ``direct parent'' and ``parent'' hold.
-
-@subsubsection Restrictions @c ---------------
+Some definitions: we say that a node @var{n} is a @dfn{direct child} 
+of a directory @var{d} iff @var{d} contains a directory entry whose 
+node number is @var{n}. A node @var{n} is a @dfn{child} of a 
+directory @var{d} iff @var{n} is a direct child of @var{d}, or if 
+there exists some directory @var{e} which is a direct child of 
+@var{d}, and @var{n} is a child of @var{e}. Given this definition of 
+``direct child'' and ``child,'' the obvious definitions of ``direct 
+parent'' and ``parent'' hold.
 
 Now that we've explained the form of the data, we make some restrictions
 on that form.
