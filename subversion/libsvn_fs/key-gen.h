@@ -37,8 +37,8 @@ int svn_fs__putsize (char *data, apr_size_t len, apr_size_t value);
 
 
 /* In the `representations' and `strings', the value at this key is
-   the key to use when next storing a rep or string. */
-extern const char next_key_key[];
+   the key to use when storing a new rep or string. */
+extern const char svn_fs__next_key_key[];
 
 
 /* Generate the next key after a given alphanumeric key.

@@ -47,20 +47,20 @@ svn_error_t *svn_fs__read_rep (skel_t **skel_p,
 /* Store SKEL as the representation for KEY in FS, as part of
    TRAIL.  Do any necessary temporary allocation in TRAIL->pool.  */
 svn_error_t *svn_fs__write_rep (svn_fs_t *fs,
-                                const char *id,
+                                const char *key,
                                 skel_t *skel,
                                 trail_t *trail);
 
 
-/* Store SKEL as the representation for KEY in FS, as part of
-   TRAIL.  Do any necessary temporary allocation in TRAIL->pool.  */
-svn_error_t *svn_fs__write_new_rep (svn_fs_t *fs,
-                                    char **id,
+/* Store SKEL as a new representation in FS, and the new rep's key in
+   *KEY, as part of trail.  The new key is allocated in TRAIL->pool.  */
+svn_error_t *svn_fs__write_new_rep (char **key,
+                                    svn_fs_t *fs,
                                     skel_t *skel,
                                     trail_t *trail);
 
 /* Delete representation KEY from FS, as part of TRAIL.
-   WARNING: This does not ensure that no nodes refer to the
+   WARNING: This does not ensure that no one references this
    representation!  Callers should ensure that themselves.  */
 svn_error_t *svn_fs__delete_rep (svn_fs_t *fs,
                                  const char *key,

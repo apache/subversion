@@ -110,7 +110,7 @@ svn_fs__putsize (char *data, apr_size_t len, apr_size_t value)
 
 /*** Keys for reps and strings. ***/
 
-static const char next_key_key[] = "next-key";
+const char svn_fs__next_key_key[] = "next-key";
 
 
 void

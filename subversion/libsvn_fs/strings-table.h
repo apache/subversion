@@ -79,6 +79,17 @@ svn_error_t *svn_fs__write_string_stream (svn_stream_t **stream,
                                           trail_t *trail);
 
 
+/* Set *STREAM to a write stream for a new string in FS, as part of
+ * TRAIL.  Store the new string's key in *KEY.
+ * 
+ * Allocate the stream and the new key in TRAIL->pool.
+ */
+svn_error_t *svn_fs__new_string_stream (const char *key,
+                                        svn_stream_t **stream,
+                                        svn_fs_t *fs,
+                                        trail_t *trail);
+
+
 /* Set *STREAM to an appending write stream for string KEY in FS, as
  * part of TRAIL.
  * 
