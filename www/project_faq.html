@@ -49,6 +49,7 @@
 <li><a href="#bdblogs">Why is my repository taking up so much disk space?</a></li>
 <li><a href="#reposperms">How do I set repository permissions correctly?</a></li>
 <li><a href="#readonly">Why do read-only operations still need repository write access?</a></li>
+<li><a href="#removal">How do I completely remove a file from the repository's history?</a></li>
 <li><a href="#patch">How do I submit a patch for Subversion?</a></li>
 <p>
 <strong>Troubleshooting:</strong>
@@ -681,6 +682,29 @@ operations by comparing two trees.  One tree is the usually the HEAD
 revision, and the other is often a temporary transaction-tree -- thus
 the need for write access.</p>
 
+<![CDATA[=========================================================]]>
+
+<h3><a name="removal">
+How do I completely remove a file from the repository's history?
+</a></h3>
+
+<p>There are special cases where you might want to destroy all
+evidence of a file or commit. (Perhaps somebody accidentally committed
+a confidential document.) This isn't so easy, because Subversion is
+deliberately designed to never lose information. Revisions are
+immutable trees which build upon one another. Removing a revision from
+history would cause a domino effect, creating chaos in all subsequent
+revisions and possibly invalidating all working copies.</p>
+
+<p>The project has plans, however, to someday implement an <b>svnadmin
+obliterate</b> command which would accomplish the task of permanently
+deleting information. (See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=516">issue
+516</a>.)</p>
+
+<p>In the meantime, your only recourse is to <b>svnadmin dump</b> your
+repository, then pipe the dumpfile through <b>svndumpfilter</b>
+(excluding the bad path) into an <b>svnadmin load</b> command.</p>
 
 
 <![CDATA[=========================================================]]>
