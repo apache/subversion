@@ -48,16 +48,17 @@ reputation as stable and useful software, and has a design that makes it
 perfect for open-source development.  However, it also has a number of
 problems that are difficult to fix.
 
-Subversion's original designersb settled on a few simple goals: it was
-decided that Subversion should be a functional replacement for CVS.  It
-should do everything that CVS does -- preserving the same development
-model while fixing the the most obvious flaws.  Existing CVS users are
-the first target audience: any CVS user should be able to start using
-Subversion with little effort.
+Subversion's original designers settled on a few simple goals: it was
+decided that Subversion should be a functional replacement for CVS.
+It should do everything that CVS does -- preserving the same
+development model while fixing the the most obvious flaws.  Existing
+CVS users are the first target audience: any CVS user should be able
+to start using Subversion with little effort.
 
-Collabnet (@url{http://www.collab.net}) provided the initial funding in
-2000 to begin development work, and the effort has now blossomed into a
-large, open-source project backed by a healthy volunteer community.
+Collabnet (@url{http://www.collab.net}) provided the initial funding
+in 2000 to begin development work, and the effort has now blossomed
+into a large, open-source project backed by a community of Free
+software developers.
 
 
 @node Features
@@ -66,44 +67,43 @@ large, open-source project backed by a healthy volunteer community.
 What sort of things does Subversion do better than CVS?  Here's a short
 list to whet your appetite:
 
-@table @bullet
+@itemize @bullet
 
-@item Directory versioning
+@item 
+@b{Directory versioning} The Subversion repository doesn't use RCS
+files like CVS; instead, it implements a 'virtual' versioned
+filesystem that tracks tree-structures over time.  Files @emph{and}
+directories are versioned.  At last, there are real client-side `mv'
+and `cp' commands.
 
-The Subversion repository doesn't use RCS files like CVS; instead, it
-implements a 'virtual' versioned filesystem that tracks tree-structures
-over time.  Files *and* directories are versioned.  At last, there are
-real client-side `mv' and `cp' commands.
+@item 
+@b{Atomic commits} A commit either goes into the repository
+completely, or not all.
 
-@item Atomic commits
+@item 
+@b{Advanced network layer} The Subversion network server is Apache,
+and client and server speak WebDAV protocol to one another.  (see
+@ref{Design})
 
-A commit either goes into the repository completely, or not all.
+@item
+@b{Faster network access} A binary diffing algorithm is used to store
+and transmit deltas in both directions, regardless of whether a file
+is of text or binary type.
 
-@item Advanced network layer
+@item
+@b{Meta-data} Each file or directory has an invisible hashtable
+attached.  You can invent and store any arbitrary key/value pairs you
+wish: owner, perms, icons, app-creator, mime-type, personal notes,
+etc.  This is a general-purpose feature for users.  Properties are
+versioned over time, just like file contents.
 
-The Subversion network server is Apache, and client and server speak
-WebDAV protocol to one another.  (see @ref{Design})
+@item
+@b{Hackability} Subversion has no historical baggage; it is primarily
+a collection of shared C libraries with well-defined APIs.  This makes
+Subversion extremely maintainable and usable by other applications and
+languages.
 
-@item Faster network access
-
-A binary diffing algorithm is used to store and transmit deltas in both
-directions, regardless of whether a file is of text or binary type.
-
-@item Meta-data
-
-Each file or directory has an invisible hashtable attached.  You can
-invent and store any arbitrary key/value pairs you wish: owner, perms,
-icons, app-creator, mime-type, personal notes, etc.  This is a
-general-purpose feature for users.  Properties are versioned over time,
-just like file contents.
-
-@item Hackability
-
-Subversion has no historical baggage; it is primarily a collection of
-shared C libraries with well-defined APIs.  This makes Subversion
-extremely maintainable and usable by other applications and languages.
-
-@end table
+@end itemize
 
 
 @c ------------------------------------------------------------------
@@ -116,7 +116,7 @@ libraries.  Each layer has a well-defined purpose and interface.
 
 If you aren't interested in how Subversion works under the hood, feel
 free to skip this section and move on to the @ref{Installation} and
-@xef{Basics} parts.
+@ref{Basics}.
 
 Here's a helpful diagram of Subversion's layers.  Program flow begins at
 the top of the diagram (initiated by the user) and flows "downward".
@@ -547,7 +547,7 @@ merged correctly, you can commit the new revision of @file{search.c},
 which now contains everyone's changes.
 @end itemize
 
-Some version control systems provide ``locks'', which prevent others
+Some revision control systems provide ``locks'', which prevent others
 from changing a file once one person has begun working on it.  In our
 experience, merging is preferable to locks, because:
 @itemize @bullet
@@ -594,19 +594,19 @@ exist as libraries.  You can see which methods are available to your svn
 client like so:
 
 @example
-    $ svn --version
-    Subversion Client, version N
-    compiled Jan 26 2002, 16:43:58
+$ svn --version
+Subversion Client, version N
+compiled Jan 26 2002, 16:43:58
 
-    Copyright (C) 2000-2002 CollabNet.
-    Subversion is open source software, see http://subversion.tigris.org/
+Copyright (C) 2000-2002 CollabNet.
+Subversion is open source software, see http://subversion.tigris.org/
 
-    The following repository access (RA) modules are available:
+The following repository access (RA) modules are available:
 
-    * ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
-           - handles 'http' schema
-    * ra_local : Module for accessing a repository on local disk.
-           - handles 'file' schema
+* ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
+     - handles 'http' schema
+* ra_local : Module for accessing a repository on local disk.
+     - handles 'file' schema
 @end example
 
 If you don't see ra_local, it probably means that Berkeley DB (or
@@ -618,7 +618,7 @@ Start by creating a new, empty repository using the @command{svnadmin}
 tool:
 
 @example
-    $ svnadmin create myrepos
+$ svnadmin create myrepos
 @end example
 
 Let's assume you have a directory @file{someproject} which contains
@@ -636,9 +636,9 @@ After the repository exists, you can initially import your data into it,
 using the ra_local access method (invoked by using a 'file' URL):
 
 @example
-    $ svn import file:///absolute/path/to/myrepos someproject myproj    
-    [...]
-    Committed revision 1.
+$ svn import file:///absolute/path/to/myrepos someproject myproj    
+[...]
+Committed revision 1.
 @end example
 
 The example above creates a new directory @file{myproj} in the root of
@@ -654,12 +654,12 @@ specify a URL to the exact directory within the repository that we want.
 The '-d' option allows us to name the working copy we check out.
 
 @example
-    $ svn co file:///usr/local/svn/repos1 -d wc
-    A wc/foo
-    A wc/bar
-    A wc/baz
-    A wc/baz/gloo
-    A wc/baz/bloo
+$ svn co file:///usr/local/svn/repos1 -d wc
+A  wc/foo
+A  wc/bar
+A  wc/baz
+A  wc/baz/gloo
+A  wc/baz/bloo
 @end example
 
 Now we have a working copy in a local directory called @file{wc}, which
@@ -669,18 +669,18 @@ For the sake of example, let's duplicate the working copy, and pretend
 it belongs to someone else:
 
 @example
-    $ cp -R wc wc2
-@end example.
+$ cp -R wc wc2
+@end example
 
 From here, let's make some changes within our original working copy:
 
 @example
-    $ cd wc
-    $ echo "new text" >> bar       # change bar's text
-    $ svn propset color green foo  # add a metadata property to foo
-    $ svn rm baz                   # schedule baz directory for deletion
-    $ touch newfile
-    $ svn add newfile              # schedule newfile for addition
+$ cd wc
+$ echo "new text" >> bar       # change bar's text
+$ svn propset color green foo  # add a metadata property to foo
+$ svn rm baz                   # schedule baz directory for deletion
+$ touch newfile
+$ svn add newfile              # schedule newfile for addition
 @end example
 
 That's a lot of changes!  If we were to leave and come back tomorrow,
@@ -689,13 +689,13 @@ command will show us all of the "local modifications" in our working
 copy:
 
 @example
-    $ svn status                   # See what's locally modified
-    M   ./bar
-    _M  ./foo
-    A   ./newfile
-    D   ./baz
-    D   ./baz/gloo
-    D   ./baz/bloo
+$ svn status                   # See what's locally modified
+M   ./bar
+_M  ./foo
+A   ./newfile
+D   ./baz
+D   ./baz/gloo
+D   ./baz/bloo
 @end example
 
 According to this output, three items are scheduled to be (D)eleted from
@@ -708,13 +708,13 @@ Now we decide to commit our changes, creating Revision 2 in the
 repository:
 
 @example
-   $ svn commit -m "fixed bug #233"
-   Sending    bar
-   Sending    foo
-   Adding     newfile
-   Deleting   baz
-   Transmitting data...
-   Committed revision 2.
+$ svn commit -m "fixed bug #233"
+Sending    bar
+Sending    foo
+Adding     newfile
+Deleting   baz
+Transmitting data...
+Committed revision 2.
 @end example
 
 The -m argument is a way of specifying a @dfn{log message}: that is, a
@@ -724,7 +724,7 @@ repository log messages, and now will know what your Revision 2 changes
 were for.
 
 Finally, pretend that you are now Felix, or some other collaborator.  If
-you go file{wc2} (that other working copy you made), it will need the
+you go @file{wc2} (that other working copy you made), it will need the
 @command{svn update} command to receive the Revision 2 changes:
 
 @example
@@ -735,10 +735,25 @@ you go file{wc2} (that other working copy you made), it will need the
    _U  ./foo
    A   ./newfile
    D   ./baz
-@example
+@end example
 
 The output of the @command{update} command tells Felix that baz was
 (D)eleted from his working copy, newfile was (A)dded to his working
 copy, and that bar and foo had their contents (U)pdated.
 
+If for some reason @file{bar} contained some local changes made by
+Felix, then the server changes would be @dfn{merged} into @file{bar}:
+that is, @file{bar} would now contain both sets of changes.  Whenever
+server changes are merged into a locally-modified file, two possible
+things can happen:
+
+@itemize @bullet
+@item
+The merge can go smoothly.  That is, the two sets of changes do not
+overlap.  In this case, @command{svn update} prints a G
+(``mer(G)ed'').
+@item
+The sets of changes overlap, and a C for (C)onflict is printed.  See
+section ??? for information about how conflict resolution works.
+@end itemize
 
