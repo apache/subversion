@@ -53,17 +53,14 @@ svn_error_t *svn_fs__create_node (svn_fs_id_t **id_p,
                                   trail_t *trail);
 
 
-/* Create a mutable node in FS which is an immediate successor of
+/* Create a node revision in FS which is an immediate successor of
    OLD_ID, whose contents are NEW_SKEL, as part of TRAIL.  Set
    *NEW_ID_P to the new node revision's ID.  Use TRAIL->pool for any
    temporary allocation.
 
-   kff todo: I think the mutability part might be a lie.
-   put_representation_skel() doesn't seem to do anything with
-   mutability yet... Must check into this.
-
    After this call, the deltification code assumes that the new node's
-   contents will change frequently.  */
+   contents will change frequently, and will avoid representing other
+   nodes as deltas against this node's contents.  */
 svn_error_t *svn_fs__create_successor (svn_fs_id_t **new_id_p,
                                        svn_fs_t *fs,
                                        svn_fs_id_t *old_id,
