@@ -434,7 +434,7 @@ class RepositoryMirror:
     for component in components:
 
       if debugging:
-        print "  " * i
+        print "  " * i,
         print "'%s' key: %s, val:" % (previous_component, parent_key), parent
 
       if not parent.has_key(component):
@@ -451,7 +451,7 @@ class RepositoryMirror:
       i = i + 1
   
     if debugging:
-      print "  " * i
+      print "  " * i,
       print "parent_key: %s, val:" % parent_key, parent
 
     # It's not actually a parent at this point, it's the leaf node.
@@ -1080,7 +1080,7 @@ class SymbolicNameTracker:
     i = 1
     for component in components:
       if debugging:
-        print "  " * i
+        print "  " * i,
         print "'%s' key: %s, val:" % (last_component, parent_key), parent
 
       if not parent.has_key(component):
@@ -1096,7 +1096,7 @@ class SymbolicNameTracker:
       i = i + 1
   
     if debugging:
-      print "  " * i
+      print "  " * i,
       print "parent_key: %s, val:" % parent_key, parent
 
     # It's not actually a parent at this point, it's the leaf node.
