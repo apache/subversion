@@ -120,37 +120,38 @@ static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
 static void
 usage(const apr_getopt_option_t *options, apr_pool_t *pool)
 {
-  fprintf
-    (stderr, 
-     _("usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n\n"
-       "  Produce a compact \"version number\" for the working copy path\n"
-       "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
-       "  determine if WC_PATH itself is switched (detection of switches\n"
-       "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
-       "  is written to standard output.  For example:\n"
-       "\n"
-       "    $ svnversion . /repos/svn/trunk \n"
-       "    4168\n"
-       "\n"
-            "  The version number will be a single number if the working\n"
-       "  copy is single revision, unmodified, not switched and with\n"
-       "  an URL that matches the TRAIL_URL argument.  If the working\n"
-       "  copy is unusual the version number will be more complex:\n"
-       "\n"
-       "   4123:4168     mixed revision working copy\n"
-       "   4168M         modified working copy\n"
-       "   4123S         switched working copy\n"
-       "   4123:4168MS   mixed revision, modified, switched working copy\n"
-            "\n"
-       "  If invoked on a directory that is not a working copy, an\n"
-       "  exported directory say, the program will output \"exported\".\n"
-       "\n"
-       "Valid options:\n"));
+  svn_error_clear
+    (svn_cmdline_fprintf
+     (stderr, pool,
+      _("usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n\n"
+        "  Produce a compact \"version number\" for the working copy path\n"
+        "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
+        "  determine if WC_PATH itself is switched (detection of switches\n"
+        "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
+        "  is written to standard output.  For example:\n"
+        "\n"
+        "    $ svnversion . /repos/svn/trunk \n"
+        "    4168\n"
+        "\n"
+        "  The version number will be a single number if the working\n"
+        "  copy is single revision, unmodified, not switched and with\n"
+        "  an URL that matches the TRAIL_URL argument.  If the working\n"
+        "  copy is unusual the version number will be more complex:\n"
+        "\n"
+        "   4123:4168     mixed revision working copy\n"
+        "   4168M         modified working copy\n"
+        "   4123S         switched working copy\n"
+        "   4123:4168MS   mixed revision, modified, switched working copy\n"
+        "\n"
+        "  If invoked on a directory that is not a working copy, an\n"
+        "  exported directory say, the program will output \"exported\".\n"
+        "\n"
+        "Valid options:\n")));
   while (options->description)
     {
       const char *optstr;
       svn_opt_format_option(&optstr, options, TRUE, pool);
-      fprintf(stderr, "  %s\n", optstr);
+      svn_error_clear (svn_cmdline_fprintf(stderr, pool, "  %s\n", optstr));
       ++options;
     }
 }
@@ -256,14 +257,16 @@ main(int argc, const char *argv[])
       SVN_INT_ERR(svn_io_check_path (wc_path, &kind, pool));
       if (kind == svn_node_dir)
         {
-          printf ("exported\n");
+          SVN_INT_ERR (svn_cmdline_printf (pool, _("exported\n")));
           svn_pool_destroy (pool);
           return EXIT_SUCCESS;
         }
       else
         {
-          fprintf (stderr, _("'%s' not versioned, and not exported\n"),
-                   wc_path);
+          svn_error_clear
+            (svn_cmdline_fprintf (stderr, pool,
+                                  _("'%s' not versioned, and not exported\n"),
+                                  wc_path));
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
@@ -308,17 +311,20 @@ main(int argc, const char *argv[])
         }
     }
 
-  printf ("%ld", sb.min_rev);
+  SVN_INT_ERR (svn_cmdline_printf (pool, "%ld", sb.min_rev));
   if (sb.min_rev != sb.max_rev)
-    printf (":%ld", sb.max_rev);
+    SVN_INT_ERR (svn_cmdline_printf (pool, ":%ld", sb.max_rev));
   if (sb.modified)
-    fputs ("M", stdout);
+    SVN_INT_ERR (svn_cmdline_fputs ("M", stdout, pool));
   if (sb.switched)
-    fputs ("S", stdout);
+    SVN_INT_ERR (svn_cmdline_fputs ("S", stdout, pool));
   if (! no_newline)
-    fputs ("\n", stdout);
+    SVN_INT_ERR (svn_cmdline_fputs ("\n", stdout, pool));
 
   svn_pool_destroy (pool);
+
+  /* Flush stdout to make sure that the user will see any printing errors. */
+  SVN_INT_ERR (svn_cmdline_fflush (stdout));
 
   return EXIT_SUCCESS;
 }

@@ -563,6 +563,7 @@ close_revision (void *revision_baton)
   apr_hash_index_t *hi;
   apr_pool_t *hash_pool = apr_hash_pool_get (rb->props);
   svn_stringbuf_t *props = svn_stringbuf_create ("", hash_pool);
+  apr_pool_t *subpool = svn_pool_create (hash_pool);
 
   /* If this revision has no nodes left because the ones it had were
      dropped, and we are not dropping empty revisions, and we were not
@@ -636,16 +637,19 @@ close_revision (void *revision_baton)
       SVN_ERR (svn_stream_write (rb->pb->out_stream,
                                  rb->body->data   , &(rb->body->len)));
       if (! rb->pb->quiet)
-        fprintf (stderr, _("Revision %ld committed as %ld.\n"),
-                 rb->rev_orig, rb->rev_actual);
+        SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
+                                      _("Revision %ld committed as %ld.\n"),
+                                      rb->rev_orig, rb->rev_actual));
     }
   else
     {
       rb->pb->rev_drop_count++;
       if (! rb->pb->quiet)
-        fprintf (stderr, _("Revision %ld skipped.\n"),
-                 rb->rev_orig);
+        SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
+                                      _("Revision %ld skipped.\n"),
+                                      rb->rev_orig));
     }
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -833,18 +837,24 @@ do_filter (apr_getopt_t *os,
 
   if (! opt_state->quiet)
     {
-      fprintf (stderr, "%s %sprefixes:\n",
-               do_exclude ? "Excluding" : "Including",
-               opt_state->drop_empty_revs 
-               ? "(and dropping empty revisions for) " : "");
+      apr_pool_t *subpool = svn_pool_create (pool);
+      SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
+                                    "%s %sprefixes:\n",
+                                    do_exclude ? "Excluding" : "Including",
+                                    opt_state->drop_empty_revs 
+                                    ? "(and dropping empty revisions for) "
+                                    : ""));
 
       for (i = 0; i < opt_state->prefixes->nelts; i++)
         {
-          fprintf (stderr, "   '%s'\n",
-                   APR_ARRAY_IDX (opt_state->prefixes, i, const char *));
+          svn_pool_clear (subpool);
+          SVN_ERR (svn_cmdline_fprintf
+                   (stderr, subpool, "   '%s'\n",
+                    APR_ARRAY_IDX (opt_state->prefixes, i, const char *)));
         }
 
-      fprintf (stderr, "\n");
+      SVN_ERR (svn_cmdline_fputs ("\n", stderr, subpool));
+      svn_pool_destroy (subpool);
     }
 
   SVN_ERR (parse_baton_initialize (&pb, opt_state, do_exclude, pool));
@@ -856,14 +866,18 @@ do_filter (apr_getopt_t *os,
   if (opt_state->quiet)
     return SVN_NO_ERROR;
 
-  fprintf (stderr, "\n");
+  SVN_ERR (svn_cmdline_fputs ("\n", stderr, pool));
 
   if (pb->rev_drop_count)
-    fprintf (stderr, "Dropped %d revision(s).\n\n", pb->rev_drop_count);
+    SVN_ERR (svn_cmdline_fprintf (stderr, pool,
+                                  _("Dropped %d revision(s).\n\n"),
+                                  pb->rev_drop_count));
 
   if (pb->do_renumber_revs)
     {
-      fprintf (stderr, "Revisions renumbered as follows:\n");
+      apr_pool_t *subpool = svn_pool_create (pool);
+      SVN_ERR (svn_cmdline_fputs (_("Revisions renumbered as follows:\n"),
+                                  stderr, subpool));
 
       /* Get the keys of the hash, sort them, then print the hash keys
          and values, sorted by keys. */
@@ -880,26 +894,33 @@ do_filter (apr_getopt_t *os,
              keys->elt_size, svn_sort_compare_revisions);
       for (i = 0; i < keys->nelts; i++)
         {
-          svn_revnum_t this_key = APR_ARRAY_IDX (keys, i, svn_revnum_t);
-          svn_revnum_t this_val = 
+          svn_revnum_t this_key, this_val;
+
+          svn_pool_clear (subpool);
+          this_key = APR_ARRAY_IDX (keys, i, svn_revnum_t);
+          this_val = 
             *((svn_revnum_t *)apr_hash_get (pb->renumber_history,
                                             &this_key,
                                             sizeof (this_key)));
           if (this_val == SVN_INVALID_REVNUM)
-            fprintf (stderr, _("   %ld => (dropped)\n"),
-                     this_key);
+            SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
+                                          _("   %ld => (dropped)\n"),
+                                          this_key));
           else
-            fprintf (stderr, 
-                     _("   %ld => %ld\n"),
-                     this_key, this_val);
+            SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
+                                          _("   %ld => %ld\n"),
+                                          this_key, this_val));
         }
-      fprintf (stderr, "\n");
+      SVN_ERR (svn_cmdline_fputs ("\n", stderr, subpool));
+      svn_pool_destroy (subpool);
     }
 
   if (apr_hash_count (pb->dropped_nodes))
     {
-      fprintf (stderr, "Dropped %d node(s):\n", 
-               apr_hash_count (pb->dropped_nodes));
+      apr_pool_t *subpool = svn_pool_create (pool);
+      SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
+                                    _("Dropped %d node(s):\n"), 
+                                    apr_hash_count (pb->dropped_nodes)));
 
       /* Get the keys of the hash, sort them, then print the hash keys
          and values, sorted by keys. */
@@ -915,10 +936,13 @@ do_filter (apr_getopt_t *os,
       qsort (keys->elts, keys->nelts, keys->elt_size, compare_paths);
       for (i = 0; i < keys->nelts; i++)
         {
-          fprintf (stderr, "   '%s'\n", 
-                   (const char *)APR_ARRAY_IDX (keys, i, const char *));
+          svn_pool_clear (subpool);
+          SVN_ERR (svn_cmdline_fprintf
+                   (stderr, subpool, "   '%s'\n", 
+                    (const char *)APR_ARRAY_IDX (keys, i, const char *)));
         }
-      fprintf (stderr, "\n");
+      SVN_ERR (svn_cmdline_fputs ("\n", stderr, subpool));
+      svn_pool_destroy (subpool);
     }
 
   return SVN_NO_ERROR;
@@ -1051,7 +1075,8 @@ main (int argc, const char * const *argv)
     {
       if (os->ind >= os->argc)
         {
-          fprintf (stderr, "subcommand argument required\n");
+          svn_error_clear (svn_cmdline_fprintf
+                           (stderr, pool, "subcommand argument required\n"));
           subcommand_help (NULL, NULL, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -1062,7 +1087,19 @@ main (int argc, const char * const *argv)
           subcommand = svn_opt_get_canonical_subcommand (cmd_table, first_arg);
           if (subcommand == NULL)
             {
-              fprintf (stderr, "unknown command: '%s'\n", first_arg);
+              const char* first_arg_utf8;
+              if ((err = svn_utf_cstring_to_utf8 (&first_arg_utf8, first_arg,
+                                                  pool)))
+                {
+                  svn_handle_error (err, stderr, FALSE);
+                  svn_pool_destroy (pool);
+                  svn_error_clear (err);
+                  return EXIT_FAILURE;
+                }
+                
+              svn_error_clear (svn_cmdline_fprintf (stderr, pool,
+                                                    "unknown command: '%s'\n",
+                                                    first_arg_utf8));
               subcommand_help (NULL, NULL, pool);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
@@ -1078,7 +1115,9 @@ main (int argc, const char * const *argv)
     {
       if (os->ind >= os->argc)
         {
-          fprintf (stderr, "\nError: no prefixes supplied.\n");
+          svn_error_clear (svn_cmdline_fprintf
+                           (stderr, pool,
+                            _("\nError: no prefixes supplied.\n")));
           svn_opt_subcommand_help (subcommand->name, cmd_table,
                                    options_table, pool);
           svn_pool_destroy (pool);
@@ -1119,10 +1158,11 @@ main (int argc, const char * const *argv)
           const apr_getopt_option_t *badopt =
             svn_opt_get_option_from_code (opt_id, options_table);
           svn_opt_format_option (&optstr, badopt, FALSE, pool);
-          fprintf (stderr,
-                   "subcommand '%s' doesn't accept option '%s'\n"
-                   "Type 'svndumpfilter help %s' for usage.\n",
-                   subcommand->name, optstr, subcommand->name);
+          svn_error_clear (svn_cmdline_fprintf
+                           (stderr, pool,
+                            _("subcommand '%s' doesn't accept option '%s'\n"
+                              "Type 'svndumpfilter help %s' for usage.\n"),
+                            subcommand->name, optstr, subcommand->name));
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
@@ -1148,6 +1188,9 @@ main (int argc, const char * const *argv)
   else
     {
       svn_pool_destroy (pool);
+
+      /* Flush stdout, making sure the user will see any print errors. */
+      SVN_INT_ERR (svn_cmdline_fflush (stdout));
       return EXIT_SUCCESS;
     }
 }
