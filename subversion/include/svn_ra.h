@@ -733,7 +733,8 @@ typedef struct svn_ra_plugin_t
                             apr_pool_t *pool);
 
   /** Set @a *url to the repository's root URL.  The value
-   * will not include a trailing '/'.
+   * will not include a trailing '/'.  The returned URL is guaranteed
+   * to be a prefix of the session's parent URL.
    *
    * NOTE: the URL has the same lifetime as the session_baton. 
    *

@@ -33,10 +33,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   svn_error_t *err = SVN_NO_ERROR;
   const char *repos_root;
   const char *hostname, *path;
-
-  /* Decode the URL, as we only use its parts as filesystem paths
-     anyway. */
-  URL = svn_path_uri_decode (URL, pool);
+  svn_stringbuf_t *urlbuf;
 
   /* Verify that the URL is well-formed (loosely) */
 
@@ -59,15 +56,20 @@ svn_ra_local__split_URL (svn_repos_t **repos,
 
   /* Currently, the only hostnames we are allowing are the empty
      string and 'localhost' */
-  if ((hostname != path) && (strncmp (hostname, "localhost/", 10) != 0))
-    return svn_error_createf
-      (SVN_ERR_RA_ILLEGAL_URL, NULL, 
-       _("Local URL '%s' contains unsupported hostname"), URL);
+  if (hostname != path)
+    {
+      hostname = svn_path_uri_decode (apr_pstrmemdup (pool, hostname,
+                                                     path - hostname), pool);
+        if ((strncmp (hostname, "localhost/", 10) != 0))
+          return svn_error_createf
+            (SVN_ERR_RA_ILLEGAL_URL, NULL, 
+             _("Local URL '%s' contains unsupported hostname"), URL);
+    }
 
-
-  /* Duplicate the URL, starting at the top of the path */
+  /* Duplicate the URL, starting at the top of the path.
+     At the same time, we URI-decode the path. */
 #ifndef WIN32
-  repos_root = apr_pstrdup (pool, path);
+  repos_root = svn_path_uri_decode (path, pool);
 #else  /* WIN32 */
   /* On Windows, we'll typically have to skip the leading / if the
      path starts with a drive letter.  Like most Web browsers, We
@@ -80,21 +82,22 @@ svn_ra_local__split_URL (svn_repos_t **repos,
     also work, so we must make sure the transformation doesn't break
     that, and  file:///path  (that looks within the current drive
     only) should also keep working. */
- {
-   static const char valid_drive_letters[] =
-     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-   if (path[1] && strchr(valid_drive_letters, path[1])
-       && (path[2] == ':' || path[2] == '|')
-       && path[3] == '/')
-     {
-       char *const dup_path = apr_pstrdup (pool, ++path);
-       if (dup_path[1] == '|')
-         dup_path[1] = ':';
-       repos_root = dup_path;
-     }
-   else
-     repos_root = apr_pstrdup (pool, path);
- }
+  {
+    static const char valid_drive_letters[] =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    /* ### What about URI-encoded drive letters? */
+    if (path[1] && strchr(valid_drive_letters, path[1])
+        && (path[2] == ':' || path[2] == '|')
+        && path[3] == '/')
+      {
+        char *const dup_path = svn_path_uri_decode (++path, pool);
+        if (dup_path[1] == '|')
+          dup_path[1] = ':';
+        repos_root = dup_path;
+      }
+    else
+      repos_root = svn_path_uri_decode (path, pool);
+  }
 #endif /* WIN32 */
 
   /* Search for a repository in the full path. */
@@ -112,9 +115,18 @@ svn_ra_local__split_URL (svn_repos_t **repos,
        _("Unable to open repository '%s'"), URL);
 
   /* What remains of URL after being hacked at in the previous step is
-     REPOS_URL.  FS_PATH is what we've hacked off in the process. */
-  *fs_path = apr_pstrdup (pool, path + strlen (repos_root));
-  *repos_url = apr_pstrmemdup (pool, URL, strlen(URL) - strlen(*fs_path));
+     REPOS_URL.  FS_PATH is what we've hacked off in the process.
+     Note that path is not encoded and what we gave to svn_root_find_root_path
+     may have been destroyed by that function.  So we have to decode it once
+     more.  But then, it is ours... */
+  *fs_path = svn_path_uri_decode (path, pool) + strlen (repos_root);
+
+  /* Remove the path components in *fs_path from the original URL, to get
+     the URL to the repository root. */
+  urlbuf = svn_stringbuf_create (URL, pool);
+  svn_path_remove_components (urlbuf,
+                              svn_path_component_count (*fs_path));
+  *repos_url = urlbuf->data;
 
   return SVN_NO_ERROR;
 }

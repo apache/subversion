@@ -49,7 +49,7 @@ typedef struct {
   svn_config_t *cfg;       /* Parsed repository svnserve.conf */
   svn_config_t *pwdb;      /* Parsed password database */
   const char *realm;       /* Authentication realm */
-  const char *repos_url;   /* Decoded URL to base of repository */
+  const char *repos_url;   /* URL to base of repository */
   const char *fs_path;     /* Decoded base path inside repository */
   const char *user;
   svn_boolean_t tunnel;    /* Tunneled through login agent */
@@ -66,7 +66,7 @@ typedef struct {
 
 typedef struct {
   server_baton_t *sb;
-  const char *repos_url;
+  const char *repos_url;  /* Decoded repository URL. */
   void *report_baton;
   svn_error_t *err;
 } report_driver_baton_t;
@@ -84,7 +84,8 @@ typedef struct {
 enum authn_type { UNAUTHENTICATED, AUTHENTICATED };
 enum access_type { NO_ACCESS, READ_ACCESS, WRITE_ACCESS };
 
-/* Verify that URL is inside REPOS_URL and get its fs path. */
+/* Verify that URL is inside REPOS_URL and get its fs path. Assume that 
+   REPOS_URL and URL are already URI-decoded. */
 static svn_error_t *get_fs_path(const char *repos_url, const char *url,
                                 const char **fs_path, apr_pool_t *pool)
 {
@@ -332,7 +333,7 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      edit_baton, NULL, NULL, pool));
 
   rb.sb = b;
-  rb.repos_url = b->repos_url;
+  rb.repos_url = svn_path_uri_decode(b->repos_url, pool);
   rb.report_baton = report_baton;
   rb.err = NULL;
   err = svn_ra_svn_handle_commands(conn, pool, report_commands, &rb);
@@ -549,8 +550,11 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   ccb.new_rev = &new_rev;
   ccb.date = &date;
   ccb.author = &author;
+  /* ### Note that svn_repos_get_commit_editor actually wants a decoded URL. */
   SVN_CMD_ERR(svn_repos_get_commit_editor(&editor, &edit_baton, b->repos,
-                                          b->repos_url, b->fs_path, b->user,
+                                          svn_path_uri_decode(b->repos_url,
+                                                              pool),
+                                          b->fs_path, b->user,
                                           log_msg, commit_done, &ccb, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, &aborted));
@@ -786,7 +790,9 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-  SVN_CMD_ERR(get_fs_path(b->repos_url, switch_url, &switch_path, pool));
+  SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
+                          svn_path_uri_decode(switch_url, pool),
+                          &switch_path, pool));
 
   return accept_report(conn, pool, b, rev, target, switch_path, TRUE, recurse,
                        TRUE);
@@ -824,7 +830,9 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-  SVN_CMD_ERR(get_fs_path(b->repos_url, versus_url, &versus_path, pool));
+  SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
+                          svn_path_uri_decode(versus_url, pool),
+                          &versus_path, pool));
 
   return accept_report(conn, pool, b, rev, target, versus_path, TRUE, recurse,
                        ignore_ancestry);
@@ -1145,9 +1153,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
   apr_status_t apr_err;
   const char *path, *full_path, *path_apr, *root_apr, *repos_root, *pwdb_path;
   char *buffer;
-
-  /* Decode any escaped characters in the URL. */
-  url = svn_path_uri_decode(url, pool);
+  svn_stringbuf_t *url_buf;
 
   /* Skip past the scheme and authority part. */
   path = skip_scheme_part(url);
@@ -1156,6 +1162,9 @@ static svn_error_t *find_repos(const char *url, const char *root,
                              "Non-svn URL passed to svn server: '%s'", url);
   path = strchr(path, '/');
   path = (path == NULL) ? "" : path + 1;
+
+  /* Decode URI escapes from the path. */
+  path = svn_path_uri_decode(path, pool);
 
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr,
                                      svn_path_canonicalize(path, pool),
@@ -1186,7 +1195,9 @@ static svn_error_t *find_repos(const char *url, const char *root,
   SVN_ERR(svn_repos_open(&b->repos, repos_root, pool));
   b->fs = svn_repos_fs(b->repos);
   b->fs_path = apr_pstrdup(pool, full_path + strlen(repos_root));
-  b->repos_url = apr_pstrmemdup(pool, url, strlen(url) - strlen(b->fs_path));
+  url_buf = svn_stringbuf_create(url, pool);
+  svn_path_remove_components(url_buf, svn_path_component_count(b->fs_path));
+  b->repos_url = url_buf->data;
 
   /* Read repository configuration. */
   SVN_ERR(svn_config_read(&b->cfg, svn_repos_svnserve_conf(b->repos, pool),

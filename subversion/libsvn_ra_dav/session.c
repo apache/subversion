@@ -768,26 +768,18 @@ static svn_error_t *svn_ra_dav__get_repos_root(void *session_baton,
   if (! ras->repos_root)
     {
       svn_string_t bc_relative;
-      apr_size_t len;
-      apr_size_t relative_len;
+      svn_stringbuf_t *url_buf;
 
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative,
                                             NULL, ras->sess, ras->url,
                                             SVN_INVALID_REVNUM, pool));
 
-      /* Need to URI-encode bc_relative before determining length
-         since ras->url is URI-encoded */
-      relative_len = strlen (svn_path_uri_encode (bc_relative.data, pool));
-
-      len = strlen(ras->url);
-      if (len <= relative_len)
-        return svn_error_create(APR_EGENERAL, NULL,
-                                _("Impossibly long relative URL"));
-
-      /* Don't strip off the extra '/' unless there is a relative path */
-      if (relative_len)
-        len = len - relative_len - 1;
-      ras->repos_root = apr_pstrmemdup(ras->pool, ras->url, len);
+      /* Remove as many path components from the URL as there are components
+         in bc_relative. */
+      url_buf = svn_stringbuf_create(ras->url, pool);
+      svn_path_remove_components
+        (url_buf, svn_path_component_count(bc_relative.data));
+      ras->repos_root = url_buf->data;
     }
 
   *url = ras->repos_root;

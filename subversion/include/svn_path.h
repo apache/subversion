@@ -118,6 +118,10 @@ char *svn_path_basename (const char *path, apr_pool_t *pool);
  */
 char *svn_path_dirname (const char *path, apr_pool_t *pool);
 
+/** Return the number of components in the canonicalized @a path. */
+apr_size_t
+svn_path_component_count (const char *path);
+
 /** Add a @a component (a null-terminated C-string) to the
  * canonicalized @a path.  @a component is allowed to contain
  * directory separators.
@@ -134,6 +138,9 @@ void svn_path_add_component (svn_stringbuf_t *path,
 /** Remove one component off the end of the canonicalized @a path. */
 void svn_path_remove_component (svn_stringbuf_t *path);
 
+/** Remove @a n components off the end of the canonizalized @a path.
+ * Equivalent to calling @c svn_remove_component @a n times. */
+void svn_path_remove_components (svn_stringbuf_t *path, apr_size_t n);
 
 /** Divide the canonicalized @a path into @a *dirpath and @a
  * *base_name, allocated in @a pool.
