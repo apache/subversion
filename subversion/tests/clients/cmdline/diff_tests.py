@@ -1112,23 +1112,32 @@ def diff_targets(sbox):
     if not check_update_a_file(diff_output) or check_add_a_file(diff_output):
       raise svntest.Failure
 
-    out,err = svntest.main.run_svn(None, 'ci', '-m', 'log msg')
-    if err: raise svntest.Failure
+    diff_output, err_output = svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+    if err_output: raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2',
+    diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
                                                    update_path, add_path)
-    if check_update_a_file(diff_output) or check_add_a_file(diff_output):
+    for line in err_output:
+      if re.match('svn: Filesystem has no item$', line):
+        break
+    else:
       raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2',
+    diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
                                                    add_path)
-    if not check_update_a_file(diff_output) or check_add_a_file(diff_output):
+    for line in err_output:
+      if re.match('svn: Filesystem has no item$', line):
+        break
+    else:
       raise svntest.Failure
 
-    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2',
+    diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
                                                    '--old', parent_path,
                                                    'alpha', 'theta')
-    if check_update_a_file(diff_output) or check_add_a_file(diff_output):
+    for line in err_output:
+      if re.match('svn: Filesystem has no item$', line):
+        break
+    else:
       raise svntest.Failure
 
     diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2',

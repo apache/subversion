@@ -1573,36 +1573,24 @@ diff_repos_repos (const apr_array_header_t *options,
             (path2 == url2) ? NULL : path2, pool));
   callback_baton->revnum2 = rev2;
 
-  /* Choose useful anchors and targets for our two URLs.  If the URLs
-     are the same, we require that the thing exist in at least one
-     revision.  Otherwise, both URLs must exist. */
+  /* Choose useful anchors and targets for our two URLs, and verify
+     that both sides of the diff exist.  */
   anchor1 = url1;
   anchor2 = url2;
   target1 = NULL;
   target2 = NULL;
   SVN_ERR (ra_lib->check_path (session1, "", rev1, &kind1, temppool));
   SVN_ERR (ra_lib->check_path (session2, "", rev2, &kind2, temppool));
-  if (same_urls)
-    {
-      if ((kind1 == svn_node_none) && (kind2 == svn_node_none))
-        return svn_error_createf 
-          (SVN_ERR_FS_NOT_FOUND, NULL,
-           "'%s' was not found in the repository at either revision "
-           "%" SVN_REVNUM_T_FMT " or %" SVN_REVNUM_T_FMT, url1, rev1, rev2);
-    }
-  else
-    {
-      if (kind1 == svn_node_none)
-        return svn_error_createf 
-          (SVN_ERR_FS_NOT_FOUND, NULL,
-           "'%s' was not found in the repository at revision %"
-           SVN_REVNUM_T_FMT, url1, rev1);
-      if (kind2 == svn_node_none)
-        return svn_error_createf 
-          (SVN_ERR_FS_NOT_FOUND, NULL,
-           "'%s' was not found in the repository at revision %"
-           SVN_REVNUM_T_FMT, url2, rev2);
-    }
+  if (kind1 == svn_node_none)
+    return svn_error_createf 
+      (SVN_ERR_FS_NOT_FOUND, NULL,
+       "'%s' was not found in the repository at revision %"
+       SVN_REVNUM_T_FMT, url1, rev1);
+  if (kind2 == svn_node_none)
+    return svn_error_createf 
+      (SVN_ERR_FS_NOT_FOUND, NULL,
+       "'%s' was not found in the repository at revision %"
+       SVN_REVNUM_T_FMT, url2, rev2);
   if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
     {
       svn_path_split (url1, &anchor1, &target1, pool); 
