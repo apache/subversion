@@ -151,7 +151,7 @@ add_directory (svn_string_t *name,
   svn_string_t *path = (svn_string_t *) parent_baton;
   struct w_baton *wb = (struct w_baton *) walk_baton;
 
-  svn_path_add_component (path, name, wb->pool);
+  svn_path_add_component (path, name, SVN_PATH_LOCAL_STYLE, wb->pool);
   printf ("%s/    (ancestor == %s, %d)\n",
           path->data, ancestor_path->data, (int) ancestor_version);
 
@@ -184,7 +184,7 @@ finish_directory (void *child_baton)
 {
   svn_string_t *path = (svn_string_t *) child_baton;
 
-  svn_path_remove_component (path);
+  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
 
   return 0;
 }
@@ -243,7 +243,7 @@ add_file (svn_string_t *name,
   svn_string_t *path = (svn_string_t *) parent_baton;
   struct w_baton *wb = (struct w_baton *) walk_baton;
 
-  svn_path_add_component (path, name, wb->pool);
+  svn_path_add_component (path, name, SVN_PATH_LOCAL_STYLE, wb->pool);
 
   printf ("%s\n   ", path->data);
 
@@ -270,7 +270,7 @@ finish_file (void *child_baton)
 
   printf ("\n");
   /* Lop off the filename, so baton is the parent directory again. */
-  svn_path_remove_component (fname);
+  svn_path_remove_component (fname, SVN_PATH_LOCAL_STYLE);
   return 0;
 }
 

@@ -56,20 +56,31 @@
 
 
 
-#define SVN_PATH_SEPARATOR '/'
+#define SVN_PATH_REPOS_SEPARATOR '/'
+
+/* Pass this when you want a component added using the local
+   pathname conventions. */
+#define SVN_PATH_LOCAL_STYLE 1
+
+/* Pass this when you want a component added using repository pathname
+   conventions. */
+#define SVN_PATH_REPOS_STYLE 2
+
 
 /* Add a COMPONENT (a null-terminated C-string) to PATH. */
 void svn_path_add_component_nts (svn_string_t *path, 
                                  char *component,
+                                 int style,
                                  apr_pool_t *pool);
 
 /* Add COMPONENT to PATH. */
 void svn_path_add_component (svn_string_t *path,
                              svn_string_t *component,
+                             int style,
                              apr_pool_t *pool);
 
 /* Remove one component off the end of PATH. */
-void svn_path_remove_component (svn_string_t *path);
+void svn_path_remove_component (svn_string_t *path, int style);
 
 
 #endif /* SVN_PATHS_H */

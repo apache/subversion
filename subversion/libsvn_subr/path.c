@@ -64,9 +64,12 @@ static void
 add_component_internal (svn_string_t *path,
                         const char *component,
                         size_t len,
+                        int style,
                         apr_pool_t *pool)
 {
-  char dirsep = SVN_PATH_SEPARATOR;
+  /* kff todo: `style' ignored presently. */
+
+  char dirsep = SVN_PATH_REPOS_SEPARATOR;
 
   if (! svn_string_isempty (path))
     svn_string_appendbytes (path, &dirsep, sizeof (dirsep), pool);
@@ -80,9 +83,10 @@ add_component_internal (svn_string_t *path,
 void
 svn_path_add_component_nts (svn_string_t *path, 
                             char *component,
+                            int style,
                             apr_pool_t *pool)
 {
-  add_component_internal (path, component, strlen (component), pool);
+  add_component_internal (path, component, strlen (component), style, pool);
 }
 
 
@@ -90,16 +94,19 @@ svn_path_add_component_nts (svn_string_t *path,
 void
 svn_path_add_component (svn_string_t *path, 
                         svn_string_t *component,
+                        int style,
                         apr_pool_t *pool)
 {
-  add_component_internal (path, component->data, component->len, pool);
+  add_component_internal (path, component->data, component->len, style, pool);
 }
 
 
 /* Remove PATH's deepest COMPONENT, destructively. */
 void
-svn_path_remove_component (svn_string_t *path)
+svn_path_remove_component (svn_string_t *path, int style)
 {
-  if (! svn_string_chop_back_to_char (path, SVN_PATH_SEPARATOR))
+  /* kff todo: `style' ignored presently. */
+
+  if (! svn_string_chop_back_to_char (path, SVN_PATH_REPOS_SEPARATOR))
     svn_string_setempty (path);
 }

@@ -93,8 +93,10 @@ extend_with_admin_name (svn_string_t *path,
                         char *adm_file,
                         apr_pool_t *pool)
 {
-  svn_path_add_component     (path, svn_wc__adm_subdir (pool), pool);
-  svn_path_add_component_nts (path, adm_file, pool);
+  svn_path_add_component     (path, svn_wc__adm_subdir (pool), 
+                              SVN_PATH_LOCAL_STYLE, pool);
+  svn_path_add_component_nts (path, adm_file, 
+                              SVN_PATH_LOCAL_STYLE, pool);
 }
 
 
@@ -102,8 +104,8 @@ extend_with_admin_name (svn_string_t *path,
 static void
 chop_admin_name (svn_string_t *path)
 {
-  svn_path_remove_component (path);
-  svn_path_remove_component (path);
+  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
+  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
 }
 
 
@@ -117,14 +119,15 @@ make_adm_subdir (svn_string_t *path, apr_pool_t *pool)
   svn_error_t *err = NULL;
   apr_status_t apr_err = 0;
 
-  svn_path_add_component (path, svn_wc__adm_subdir (pool), pool);
+  svn_path_add_component (path, svn_wc__adm_subdir (pool), 
+                          SVN_PATH_LOCAL_STYLE, pool);
 
   apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
   if (apr_err)
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Restore path to its original state no matter what. */
-  svn_path_remove_component (path);
+  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
 
   return err;
 }
