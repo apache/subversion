@@ -22,6 +22,7 @@
 
 #include "svn_fs.h"
 #include "svn_pools.h"
+#include "svn_path.h"
 #include "../fs.h"
 #include "../id.h"
 #include "../err.h"
@@ -110,27 +111,12 @@ svn_fs__bdb_changes_delete (svn_fs_t *fs,
 }
 
 
-/* Make a public change structure from an internal one, allocating the
-   structure, and copies of necessary members, POOL. */
-static svn_fs_path_change_t *
-make_change (svn_fs__change_t *change, 
-             apr_pool_t *pool)
-{
-  svn_fs_path_change_t *new_one = apr_palloc (pool, sizeof (*new_one));
-  new_one->node_rev_id = svn_fs__id_copy (change->noderev_id, pool);
-  new_one->change_kind = change->kind;
-  new_one->text_mod = change->text_mod;
-  new_one->prop_mod = change->prop_mod;
-  return new_one;
-}
-
-
 /* Merge the internal-use-only CHANGE into a hash of public-FS
    svn_fs_path_change_t CHANGES, collapsing multiple changes into a
    single summarical (is that real word?) change per path. */
 static svn_error_t *
 fold_change (apr_hash_t *changes,
-             svn_fs__change_t *change)
+             const svn_fs__change_t *change)
 {
   apr_pool_t *pool = apr_hash_pool_get (changes);
   svn_fs_path_change_t *old_change, *new_change;
@@ -226,7 +212,11 @@ fold_change (apr_hash_t *changes,
       /* This change is new to the hash, so make a new public change
          structure from the internal one (in the hash's pool), and dup
          the path into the hash's pool, too. */
-      new_change = make_change (change, pool);
+      new_change = apr_pcalloc (pool, sizeof (*new_change));
+      new_change->node_rev_id = svn_fs__id_copy (change->noderev_id, pool);
+      new_change->change_kind = change->kind;
+      new_change->text_mod = change->text_mod;
+      new_change->prop_mod = change->prop_mod;
       path = apr_pstrdup (pool, change->path);
     }
 
@@ -286,6 +276,37 @@ svn_fs__bdb_changes_fetch (apr_hash_t **changes_p,
       err = fold_change (changes, change);
       if (err)
         goto cleanup;
+
+      /* Now, if our change was a deletion or replacement, we have to
+         blow away any changes thus far on paths that are (or, were)
+         children of this path.   
+         ### i won't bother with another iteration pool here -- at
+             most we talking about a few extra dups of paths into what
+             is already a temporary subpool.
+      */
+      if ((change->kind == svn_fs_path_change_delete)
+          || (change->kind == svn_fs_path_change_replace))
+        {
+          apr_hash_index_t *hi;
+
+          for (hi = apr_hash_first (subpool, changes); 
+               hi; 
+               hi = apr_hash_next (hi))
+            {
+              /* KEY is the path. */
+              const void *hashkey;
+              apr_ssize_t klen;
+              apr_hash_this (hi, &hashkey, &klen, NULL);
+              
+              /* If we come across our own path, ignore it. */
+              if (strcmp (change->path, hashkey) == 0)
+                continue;
+
+              /* If we come across a child of our path, remove it. */
+              if (svn_path_is_child (change->path, hashkey, subpool))
+                apr_hash_set (changes, hashkey, klen, NULL);
+            }
+        }
 
       /* Advance the cursor to the next record with this same KEY, and
          fetch that record. */
