@@ -973,6 +973,7 @@ static svn_error_t *
 print_tree (svn_fs_root_t *root,
             const char *path /* UTF-8! */,
             const svn_fs_id_t *id,
+            int is_dir,
             int indentation,
             svn_boolean_t show_ids,
             apr_pool_t *pool)
@@ -980,7 +981,6 @@ print_tree (svn_fs_root_t *root,
   apr_pool_t *subpool;
   int i;
   const char *name_native;
-  int is_dir;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
 
@@ -991,7 +991,6 @@ print_tree (svn_fs_root_t *root,
     }
 
   /* Print the node. */
-  SVN_ERR (svn_fs_is_dir (&is_dir, root, path, pool));
   SVN_ERR (svn_utf_cstring_from_utf8 (&name_native, 
                                       svn_path_basename (path, pool), 
                                       pool));
@@ -1023,7 +1022,8 @@ print_tree (svn_fs_root_t *root,
       apr_hash_this (hi, &key, &keylen, &val);
       entry = val;
       SVN_ERR (print_tree (root, svn_path_join (path, entry->name, pool),
-                           entry->id, indentation + 1, show_ids, subpool));
+                           entry->id, (entry->kind == svn_node_dir),
+                           indentation + 1, show_ids, subpool));
       svn_pool_clear (subpool);
     }
   svn_pool_destroy (subpool);
@@ -1349,10 +1349,12 @@ do_tree (svnlook_ctxt_t *c,
 {
   svn_fs_root_t *root;
   const svn_fs_id_t *id;
+  int is_dir;
 
   SVN_ERR (get_root (&root, c, pool));
   SVN_ERR (svn_fs_node_id (&id, root, path, pool));
-  SVN_ERR (print_tree (root, path, id, 0, show_ids, pool));
+  SVN_ERR (svn_fs_is_dir (&is_dir, root, path, pool));
+  SVN_ERR (print_tree (root, path, id, is_dir, 0, show_ids, pool));
   return SVN_NO_ERROR;
 }
 

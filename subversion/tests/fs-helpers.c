@@ -240,7 +240,6 @@ get_dir_entries (apr_hash_t *tree_entries,
       void *val;
       svn_fs_dirent_t *dirent;
       const char *full_path;
-      int is_dir;
  
       apr_hash_this (hi, &key, &keylen, &val);
       dirent = val;
@@ -254,8 +253,7 @@ get_dir_entries (apr_hash_t *tree_entries,
       apr_hash_set (tree_entries, full_path, APR_HASH_KEY_STRING, dirent);
 
       /* If this entry is a directory, recurse into the tree. */
-      SVN_ERR (svn_fs_is_dir (&is_dir, root, full_path, pool));
-      if (is_dir)
+      if (dirent->kind == svn_node_dir)
         SVN_ERR (get_dir_entries (tree_entries, root, full_path, pool));
     }
 

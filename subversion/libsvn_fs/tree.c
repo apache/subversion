@@ -949,9 +949,8 @@ svn_fs_node_created_rev (svn_revnum_t *revision,
 
 
 struct node_kind_args {
-  svn_fs_root_t *root;
-  const char *path;
-
+  svn_fs_t *fs;
+  const svn_fs_id_t *id;
   svn_node_kind_t kind; /* OUT parameter */
 };
 
@@ -962,38 +961,54 @@ txn_body_node_kind (void *baton, trail_t *trail)
   struct node_kind_args *args = baton;
   dag_node_t *node;
 
-  SVN_ERR (get_dag (&node, args->root, args->path, trail));
+  SVN_ERR (svn_fs__dag_get_node (&node, args->fs, args->id, trail));
   args->kind = svn_fs__dag_node_kind (node);
   
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+node_kind (svn_node_kind_t *kind_p,
+           svn_fs_root_t *root,
+           const char *path,
+           apr_pool_t *pool)
+{
+  struct node_kind_args args;
+  const svn_fs_id_t *node_id;
+
+  /* Get the node id. */
+  SVN_ERR (svn_fs_node_id (&node_id, root, path, pool));
+    
+  /* Use the node id to get the real kind. */
+  args.id = node_id;
+  args.fs = svn_fs_root_fs (root);
+  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool));
+
+  *kind_p = args.kind;
+  return SVN_NO_ERROR;
+}
+
+  
 svn_error_t *
 svn_fs_check_path (svn_node_kind_t *kind_p,
                    svn_fs_root_t *root,
                    const char *path,
                    apr_pool_t *pool)
 {
-  struct node_kind_args args;
-  svn_error_t *err;
-
-  args.root = root;
-  args.path = path;
-
-  err = svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool);
-
+  svn_error_t *err = node_kind (kind_p, root, path, pool);
   if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
     {
       svn_error_clear (err);
       *kind_p = svn_node_none;
     }
   else if (err)
-    return err;
-  else
-    *kind_p = args.kind;
-
+    {
+      return err;
+    }
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_fs_is_dir (int *is_dir,
@@ -1001,16 +1016,12 @@ svn_fs_is_dir (int *is_dir,
                const char *path,
                apr_pool_t *pool)
 {
-  struct node_kind_args args;
-
-  args.root = root;
-  args.path = path;
-
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool));
-  *is_dir = (args.kind == svn_node_dir);
-
+  svn_node_kind_t kind;
+  SVN_ERR (node_kind (&kind, root, path, pool));
+  *is_dir = (kind == svn_node_dir);
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_fs_is_file (int *is_file,
@@ -1018,14 +1029,9 @@ svn_fs_is_file (int *is_file,
                 const char *path,
                 apr_pool_t *pool)
 {
-  struct node_kind_args args;
-
-  args.root = root;
-  args.path = path;
-
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool));
-  *is_file = (args.kind == svn_node_file);
-
+  svn_node_kind_t kind;
+  SVN_ERR (node_kind (&kind, root, path, pool));
+  *is_file = (kind == svn_node_file);
   return SVN_NO_ERROR;
 }
 
@@ -2582,14 +2588,39 @@ svn_fs_dir_entries (apr_hash_t **table_p,
 {
   struct dir_entries_args args;
   apr_hash_t *table;
+  svn_fs_t *fs = svn_fs_root_fs (root);
 
   args.table_p = &table;
   args.root    = root;
   args.path    = path;
   SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_dir_entries, &args, pool));
 
-  if (! table)
-    table = apr_hash_make (pool);
+  /* Add in the kind data. */
+  if (table)
+    {
+      apr_hash_index_t *hi;
+      apr_pool_t *subpool = svn_pool_create (pool);
+      for (hi = apr_hash_first (subpool, table); hi; hi = apr_hash_next (hi))
+        {
+          svn_fs_dirent_t *entry;
+          struct node_kind_args nk_args;
+          void *val;
+
+          /* KEY will be the entry name in ancestor (about which we
+             simple don't care), VAL the dirent. */
+          apr_hash_this (hi, NULL, NULL, &val);
+          entry = val;
+          nk_args.id = entry->id;
+          nk_args.fs = fs;
+          SVN_ERR (svn_fs__retry_txn (fs, txn_body_node_kind, &nk_args, pool));
+          entry->kind = nk_args.kind;
+        }
+    }
+  else
+    {
+      table = apr_hash_make (pool);
+    }
+
   *table_p = table;
   return SVN_NO_ERROR;
 }

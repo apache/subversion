@@ -419,9 +419,10 @@ svn_fs__dag_init_fs (svn_fs_t *fs)
 /* Some of these are helpers for functions outside this section. */
 
 /* Given directory NODEREV in FS, set *ENTRIES_P to its entries list
-   hash, as part of TRAIL, or to NULL if NODEREV has no entries.
-   The entries list will be allocated in TRAIL->pool.  If NODEREV is
-   not a directory, return the error SVN_ERR_FS_NOT_DIRECTORY. */
+   hash, as part of TRAIL, or to NULL if NODEREV has no entries.  The
+   entries list will be allocated in TRAIL->pool, and the entries in
+   that list will not have interesting value in their 'kind' fields.
+   If NODEREV is not a directory, return the error SVN_ERR_FS_NOT_DIRECTORY. */
 static svn_error_t *
 get_dir_entries (apr_hash_t **entries_p,
                  svn_fs_t *fs,
@@ -472,6 +473,7 @@ get_dir_entries (apr_hash_t **entries_p,
       apr_hash_this (hi, &key, &klen, &val);
       dirent->name = (char *) key;
       dirent->id = val;
+      dirent->kind = svn_node_unknown;
       apr_hash_set (*entries_p, key, klen, (void *) dirent);
     }
 

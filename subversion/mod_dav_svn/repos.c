@@ -1991,30 +1991,17 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
     for (i = 0; i < sorted->nelts; ++i)
       {
         const svn_item_t *item = &APR_ARRAY_IDX(sorted, i, const svn_item_t);
-        /* unused: const svn_fs_dirent_t *entry = elem->value; */
-        const char *entry_path;
-        const char *name;
-        const char *href;
+        const svn_fs_dirent_t *entry = item->value;
+        const char *name = item->key;
+        const char *href = name;
         int is_dir;
-
-        /* for a REGULAR resource, the root is going to be a normal root,
-           which allows us to access it with a path. build a path for this
-           entry so that we can get information for it. */
-        entry_path = apr_pstrcat(entry_pool, resource->info->repos_path,
-                                 "/", item->key, NULL);
-
-        (void) svn_fs_is_dir(&is_dir, resource->info->root.root,
-                             entry_path, entry_pool);
-
-        name = item->key;
-        href = name;
 
         /* append a trailing slash onto the name for directories. we NEED
            this for the href portion so that the relative reference will
            descend properly. for the visible portion, it is just nice. */
         /* ### The xml output doesn't like to see a trailing slash on
            ### the visible portion, so avoid that. */
-        if (is_dir)
+        if (entry->kind == svn_node_dir)
           href = apr_pstrcat(entry_pool, href, "/", NULL);
 
         if (gen_html)
@@ -2561,7 +2548,6 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       apr_ssize_t klen;
       void *val;
       svn_fs_dirent_t *dirent;
-      int is_file;
 
       /* fetch one of the children */
       apr_hash_this(hi, &key, &klen, &val);
@@ -2582,14 +2568,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       ctx->res.uri = ctx->uri->data;
       ctx->info.repos_path = ctx->repos_path->data;
 
-      serr = svn_fs_is_file(&is_file,
-                            ctx->info.root.root, ctx->info.repos_path,
-                            params_subpool);
-      if (serr != NULL)
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "could not determine resource kind");
-
-      if ( is_file )
+      if (dirent->kind == svn_node_file)
         {
           err = (*params->func)(&ctx->wres, DAV_CALLTYPE_MEMBER);
           if (err != NULL)

@@ -998,6 +998,9 @@ typedef struct svn_fs_dirent_t {
   /** The node revision ID it names.  */
   svn_fs_id_t *id;
 
+  /** The node kind. */
+  svn_node_kind_t kind;
+
 } svn_fs_dirent_t;
 
 

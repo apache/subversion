@@ -259,7 +259,12 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
    The returned table is allocated in *either* TRAIL->pool or the pool
    NODE was allocated in, at this function's discretion; the caller
    must finish using it while both of those remain live.  If the
-   caller needs the table to live longer, it should copy the hash.  */
+   caller needs the table to live longer, it should copy the hash. 
+
+   NOTE: the 'kind' field of the svn_fs_dirent_t's is set to
+   svn_node_unknown by this function -- callers that need in
+   interesting value in these slots should fill them in using a new
+   TRAIL, since the list of entries can be arbitrarily large.  */
 svn_error_t *svn_fs__dag_dir_entries (apr_hash_t **entries_p,
                                       dag_node_t *node,
                                       trail_t *trail);
