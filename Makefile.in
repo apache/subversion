@@ -148,8 +148,11 @@ COMPILE_SWIG_PL = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAG
 
 # special compilation for files destined for javahl (i.e. C++)
 COMPILE_JAVAHL_CXX = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE_CXX) $(JAVAHL_INCLUDES) -o $@ -c
-COMPILE_JAVAHL_JAVAC = $(JAVAC)
+COMPILE_JAVAHL_JAVAC = $(JAVAC) $(JAVAC_FLAGS)
 COMPILE_JAVAHL_JAVAH = $(JAVAH)
+
+# special compilation for files destined for SWIG/Java
+COMPILE_SWIG_JAVA_JAVAC = $(JAVAC) $(JAVAC_FLAGS)
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
 
@@ -228,6 +231,7 @@ PYTHON = @PYTHON@
 JDK = @JDK@
 JAVA = @JAVA@
 JAVAC = @JAVAC@
+JAVAC_FLAGS = @JAVAC_FLAGS@
 JAVAH = @JAVAH@
 JAR = @JAR@
 
