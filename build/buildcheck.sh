@@ -2,6 +2,9 @@
 
 echo "buildcheck: checking installation..."
 
+# Initialize parameters
+NEON_CHECK_CONTROL="$1"
+
 #--------------------------------------------------------------------------
 # autoconf 2.50 or newer
 #
@@ -56,10 +59,14 @@ echo "buildcheck: libtool version $lt_pversion (ok)"
 NEON_WANTED_REGEX=0.19.4
 NEON_LATEST_WORKING_VER=0.19.4
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_LATEST_WORKING_VER}.tar.gz"
+NEON_TEST_REGEX="$NEON_WANTED_REGEX"
+if test "$NEON_CHECK_CONTROL" = "--disable-neon-version-check"; then
+  NEON_TEST_REGEX=*
+fi
 if test -d ./neon; then
   NEON_VERSION="`./ac-helpers/get-neon-ver.sh neon`"
   case "$NEON_VERSION" in
-    $NEON_WANTED_REGEX)
+    $NEON_TEST_REGEX)
       ;;
     *)
       echo "buildcheck: neon version $NEON_VERSION found in ./neon/."

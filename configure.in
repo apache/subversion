@@ -109,6 +109,15 @@ echo "configuring libtool now"
 AC_PROG_LIBTOOL
 
 NEON_WANTED_REGEX="`sed -n '/NEON_WANTED_REGEX=/s/.*=//p' $srcdir/build/buildcheck.sh`"
+dnl You can skip the neon version check only if you know what you are doing 
+AC_ARG_ENABLE(neon-version-check,
+  [  --disable-neon-version-check  do not check the Neon version ],
+  [
+    if test "$enableval" = "no" ; then
+      NEON_WANTED_REGEX="*"
+    fi
+  ],
+  [])
 NEON_LATEST_WORKING_VER="`sed -n '/NEON_LATEST_WORKING_VER=/s/.*=//p' $srcdir/build/buildcheck.sh`"
 eval "`grep '^ *NEON_URL=' $srcdir/build/buildcheck.sh`"
 SVN_LIB_NEON($NEON_WANTED_REGEX, $NEON_LATEST_WORKING_VER, $NEON_URL)
