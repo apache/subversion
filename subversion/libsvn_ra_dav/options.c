@@ -80,7 +80,7 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                          const char **atts)
 {
   /* nothing to do here */
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
@@ -93,7 +93,7 @@ static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       oc->activity_coll = svn_string_create(cdata, oc->pool);
     }
 
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 svn_error_t * svn_ra_dav__get_activity_collection(

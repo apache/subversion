@@ -310,7 +310,7 @@ static int start_element(void *userdata,
 
   /* Remember the last tag we opened. */
   pc->last_open_id = elm->id;
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 
@@ -336,7 +336,7 @@ static int end_element(void *userdata,
       /* Store the resource in the top-level hash table. */
       apr_hash_set(pc->props, pc->rsrc->url, APR_HASH_KEY_STRING, pc->rsrc);
       pc->rsrc = NULL;
-      return 0;
+      return SVN_RA_DAV__XML_VALID;
 
     case ELEM_propstat:
       /* We're at the end of a set of properties.  Do the right thing
@@ -365,7 +365,7 @@ static int end_element(void *userdata,
           /* No status at all?  Bogosity. */
           return SVN_RA_DAV__XML_INVALID;
         }
-      return 0;
+      return SVN_RA_DAV__XML_VALID;
 
     case ELEM_status:
       /* Parse the <status> tag's CDATA for a status code. */
@@ -373,14 +373,14 @@ static int end_element(void *userdata,
         return SVN_RA_DAV__XML_INVALID;
       free(status.reason_phrase);
       pc->status = status.code;
-      return 0;
+      return SVN_RA_DAV__XML_VALID;
 
     case ELEM_href:
       /* Special handling for <href> that belongs to the <response> tag. */
       if (rsrc->href_parent == ELEM_response)
         {
           assign_rsrc_url(pc->rsrc, cdata, pc->pool);
-          return 0;
+          return SVN_RA_DAV__XML_VALID;
         }
 
       /* Use the parent element's name, not the href. */
@@ -388,7 +388,7 @@ static int end_element(void *userdata,
 
       /* No known parent?  Get outta here. */
       if (!parent_defn)
-        return 0;
+        return SVN_RA_DAV__XML_VALID;
 
       /* All other href's we'll treat as property values. */
       name = parent_defn->name;
@@ -413,7 +413,7 @@ static int end_element(void *userdata,
         {
           defn = defn_from_id(elm->id);
           if (! (defn && defn->is_property))
-            return 0;
+            return SVN_RA_DAV__XML_VALID;
           name = defn->name;          
         }
 
@@ -448,7 +448,7 @@ static int end_element(void *userdata,
      <propstat>, we'll either dump the props as invalid or move them
      into the resource's property hash. */
   apr_hash_set(pc->propbuffer, name, APR_HASH_KEY_STRING, value);
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 

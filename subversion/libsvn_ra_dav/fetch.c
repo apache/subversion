@@ -1012,7 +1012,7 @@ static int drev_validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
 static int drev_start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                               const char **atts)
 {
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 /* This implements the `svn_ra_dav__xml_endelm_cb' prototype. */
@@ -1022,7 +1022,7 @@ static int drev_end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
   if (elm->id == ELEM_version_name)
     *((svn_revnum_t *) userdata) = SVN_STR_TO_REV(cdata);
 
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
@@ -1658,7 +1658,7 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       break;
     }
 
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 
@@ -1894,7 +1894,7 @@ static int end_element(void *userdata,
       break;
     }
 
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 

@@ -413,7 +413,7 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       break;
     }
 
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
@@ -524,7 +524,7 @@ static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       break;
     }
 
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 svn_error_t * svn_ra_dav__merge_activity(
