@@ -116,7 +116,7 @@ Name: {group}\Subversion on the Web; Filename: {app}\svn.url
 Name: {group}\Uninstall Subversion; Filename: {uninstallexe}
 Name: {group}\Licenses\Subversion; Filename: {app}\SubversionLicense.txt
 Name: {group}\Licenses\Berkeley DB Licence; Filename: {app}\BerkeleyLicense.txt
-Name: {group}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0
+Name: {group}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; IconFilename: {app}\bin\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0
 Name: {userdesktop}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0; Tasks: desktopicon
 Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Comment: The standard Subversion Documentation; IconFilename: {app}\svn.exe; IconIndex: 0; MinVersion: 4.01.1998,5.00.2195; Tasks: quicklaunchicon
 Name: {group}\Read Me; Filename: {app}\Readme.txt
