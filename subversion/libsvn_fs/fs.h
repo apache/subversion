@@ -46,7 +46,13 @@ struct svn_fs_t
   DB_ENV *env;
 
   /* The filesystem's various tables.  See `structure' for details.  */
-  DB *nodes, *revisions, *transactions, *representations, *strings, *copies;
+  DB *changes;
+  DB *copies;
+  DB *nodes;
+  DB *representations;
+  DB *revisions;
+  DB *strings;
+  DB *transactions;
 
   /* A callback function for printing warning messages, and a baton to
      pass through to it.  */
@@ -225,6 +231,32 @@ typedef struct
 
 } svn_fs__copy_t;
 
+
+/*** Change Kind ***/
+typedef enum
+{
+  svn_fs__change_add = 1,
+  svn_fs__change_delete,
+  svn_fs__change_replace,
+  svn_fs__change_text_mod,
+  svn_fs__change_prop_mod
+  
+} svn_fs__change_kind_t;
+
+
+/*** Change ***/
+typedef struct
+{
+  /* Path of the change. */
+  const char *path;
+
+  /* Node revision ID of the change. */
+  const svn_fs_id_t *noderev_id;
+
+  /* The kind of change. */
+  svn_fs__change_kind_t kind;
+
+} svn_fs__change_t;
 
 
 #ifdef __cplusplus

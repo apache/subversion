@@ -1,0 +1,200 @@
+/* changes-table.c : operations on the `changes' table
+ *
+ * ====================================================================
+ * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
+ *
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
+ * ====================================================================
+ */
+
+#include <db.h>
+#include "svn_fs.h"
+#include "svn_pools.h"
+#include "../fs.h"
+#include "../err.h"
+#include "../trail.h"
+#include "../util/fs_skels.h"
+#include "dbt.h"
+#include "changes-table.h"
+
+
+
+/*** Creating and opening the changes table. ***/
+
+int
+svn_fs__open_changes_table (DB **changes_p,
+                            DB_ENV *env,
+                            int create)
+{
+  DB *changes;
+
+  DB_ERR (db_create (&changes, env, 0));
+
+  /* Enable duplicate keys. This allows us to store the changes
+     one-per-row.  Note: this must occur before ->open().  */
+  DB_ERR (changes->set_flags (changes, DB_DUP));
+
+#if 0
+  /* ### Someday we might enable sorting of the items as they are
+     added to the table.  This will add cost to the addition of new
+     things to the table (a place where we might not want any more
+     cost), but would greatly enhance the efficiency of reading back
+     the changes (in that all the changes related to a given path, or
+     node-revision-id, would be grouped together).  */
+  DB_ERR (changes->set_flags (changes, DB_DUPSORT));
+  DB_ERR (changes->set_dup_sort (changes, not_yet_written_sort_function);
+#endif
+
+  DB_ERR (changes->open (changes, "changes", 0, DB_BTREE,
+                         create ? (DB_CREATE | DB_EXCL) : 0,
+                         0666));
+
+  *changes_p = changes;
+  return 0;
+}
+
+
+
+/*** Storing and retrieving changes.  ***/
+
+svn_error_t *
+svn_fs__changes_add (svn_fs_t *fs,
+                     const char *key,
+                     svn_fs__change_t *change,
+                     trail_t *trail)
+{
+  DBT query, value;
+  skel_t *skel;
+
+  /* Convert native type to skel. */
+  SVN_ERR (svn_fs__unparse_change_skel (&skel, change, trail->pool));
+
+  /* Store a new record into the database. */
+  svn_fs__str_to_dbt (&query, (char *) key);
+  svn_fs__skel_to_dbt (&value, skel, trail->pool);
+  SVN_ERR (DB_WRAP (fs, "creating change", 
+                    fs->changes->put (fs->changes, trail->db_txn,
+                                      &query, &value, 0)));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__changes_delete (svn_fs_t *fs,
+                        const char *key,
+                        trail_t *trail)
+{
+  int db_err;
+  DBT query;
+  
+  db_err = fs->changes->del (fs->changes, trail->db_txn,
+                             svn_fs__str_to_dbt (&query, (char *) key), 0);
+
+  /* If there're no changes for KEY, that is acceptable.  Any other
+     error should be propogated to the caller, though.  */
+  if ((db_err) && (db_err != DB_NOTFOUND))
+    {
+      SVN_ERR (DB_WRAP (fs, "deleting changes", db_err));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__changes_get_set (apr_array_header_t **changes_p,
+                         svn_fs_t *fs,
+                         const char *key,
+                         trail_t *trail)
+{
+  DBC *cursor;
+  DBT query, result;
+  int db_err = 0, db_c_err = 0;
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_fs__change_t *change;
+  apr_array_header_t *changes = apr_array_make (trail->pool, 4, 
+                                                sizeof (*change));
+
+  /* Get a cursor on the first record matching KEY, and then loop over
+     the records, adding them to the return array. */
+  SVN_ERR (DB_WRAP (fs, "creating cursor for reading changes",
+                    fs->strings->cursor (fs->changes, trail->db_txn,
+                                         &cursor, 0)));
+
+  /* Advance the cursor to the key that we're looking for. */
+  svn_fs__str_to_dbt (&query, (char *) key);
+  svn_fs__result_dbt (&result);
+  db_err = cursor->c_get (cursor, &query, &result, DB_SET);
+  if (! db_err)
+    svn_fs__track_dbt (&result, trail->pool);
+
+  while (! db_err)
+    {
+      skel_t *result_skel;
+      
+      /* RESULT now contains a change record associated with KEY.  We
+         need to parse that skel into an svn_fs__change_t structure ...  */
+      result_skel = svn_fs__parse_skel (result.data, result.size, trail->pool);
+      if (! result_skel)
+        {
+          err = svn_error_createf (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+                                   "error reading changes for key `%s'", key);
+          goto cleanup;
+        }
+      err = svn_fs__parse_change_skel (&change, result_skel, trail->pool);
+      if (err)
+        goto cleanup;
+      
+      /* ... and add it to our return array.  */
+      (*((svn_fs__change_t **) apr_array_push (changes))) = change;
+
+      /* Advance the cursor to the next record with this same KEY, and
+         fetch that record. */
+      svn_fs__result_dbt (&result);
+      db_err = cursor->c_get (cursor, &query, &result, DB_NEXT_DUP);
+      if (! db_err)
+        svn_fs__track_dbt (&result, trail->pool);
+    }
+
+  /* If there are no (more) change records for this KEY, we're
+     finished.  Just return the (possibly empty) array.  Any other
+     error, however, needs to get handled appropriately.  */
+  if (db_err && (db_err != DB_NOTFOUND))
+    err = DB_WRAP (fs, "fetching changes", db_err);
+
+ cleanup:
+  /* Close the cursor. */
+  db_c_err = cursor->c_close (cursor);
+
+  /* If we had an error prior to closing the cursor, return the error. */
+  if (err)
+    return err;
+  
+  /* If our only error thus far was when we closed the cursor, return
+     that error. */
+  if (db_c_err)
+    SVN_ERR (DB_WRAP (fs, "closing changes cursor", db_c_err));
+
+  /* Finally, set our return variable and get outta here. */
+  *changes_p = changes;
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../../../tools/dev/svn-dev.el")
+ * end:
+ */

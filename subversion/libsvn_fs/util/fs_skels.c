@@ -253,6 +253,53 @@ is_valid_copy_skel (skel_t *skel)
 }
 
 
+static int
+is_valid_change_skel (skel_t *skel, svn_fs__change_kind_t *kind)
+{
+  if ((svn_fs__list_length (skel) == 4)
+      && svn_fs__matches_atom (skel->children, "change")
+      && skel->children->next->is_atom
+      && skel->children->next->next->is_atom
+      && skel->children->next->next->next->is_atom)
+    {
+      skel_t *kind_skel = skel->children->next->next->next;
+
+      /* check the kind (and return it) */
+      if (svn_fs__matches_atom (kind_skel, "add"))
+        {
+          if (kind)
+            *kind = svn_fs__change_add;
+          return 1;
+        }
+      if (svn_fs__matches_atom (kind_skel, "delete"))
+        {
+          if (kind)
+            *kind = svn_fs__change_delete;
+          return 1;
+        }
+      if (svn_fs__matches_atom (kind_skel, "replace"))
+        {
+          if (kind)
+            *kind = svn_fs__change_replace;
+          return 1;
+        }
+      if (svn_fs__matches_atom (kind_skel, "text-mod"))
+        {
+          if (kind)
+            *kind = svn_fs__change_text_mod;
+          return 1;
+        }
+      if (svn_fs__matches_atom (kind_skel, "prop-mod"))
+        {
+          if (kind)
+            *kind = svn_fs__change_prop_mod;
+          return 1;
+        }
+    }
+  return 0;
+}
+
+
 
 /*** Parsing (conversion from skeleton to native FS type) ***/
 
@@ -605,6 +652,37 @@ svn_fs__parse_entries_skel (apr_hash_t **entries_p,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_fs__parse_change_skel (svn_fs__change_t **change_p,
+                           skel_t *skel,
+                           apr_pool_t *pool)
+{
+  svn_fs__change_t *change;
+  svn_fs__change_kind_t kind;
+
+  /* Validate the skel. */
+  if (! is_valid_change_skel (skel, &kind))
+    return skel_err ("change", pool);
+
+  /* Create the returned structure */
+  change = apr_pcalloc (pool, sizeof (*change));
+
+  /* PATH */
+  change->path = apr_pstrmemdup (pool, skel->children->next->data,
+                                 skel->children->next->len);
+
+  /* NODE-REV-ID */
+  change->noderev_id = svn_fs_parse_id (skel->children->next->next->data,
+                                        skel->children->next->next->len, pool);
+
+  /* KIND */
+  change->kind = kind;
+
+  /* Return the structure. */
+  *change_p = change;
+  return SVN_NO_ERROR;
+}
 
 
 
@@ -1009,6 +1087,61 @@ svn_fs__unparse_entries_skel (skel_t **skel_p,
   *skel_p = skel;
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_fs__unparse_change_skel (skel_t **skel_p,
+                             const svn_fs__change_t *change,
+                             apr_pool_t *pool)
+{
+  skel_t *skel;
+  svn_string_t *tmp_str;
+  svn_fs__change_kind_t kind;
+
+  /* Create the skel. */
+  skel = svn_fs__make_empty_list (pool);
+
+  /* KIND */
+  switch (change->kind)
+    {
+    default:
+      break;
+    case svn_fs__change_add:
+      svn_fs__prepend (svn_fs__str_atom ("add", pool), skel);
+      break;
+    case svn_fs__change_delete:
+      svn_fs__prepend (svn_fs__str_atom ("delete", pool), skel);
+      break;
+    case svn_fs__change_replace:
+      svn_fs__prepend (svn_fs__str_atom ("replace", pool), skel);
+      break;
+    case svn_fs__change_text_mod:
+      svn_fs__prepend (svn_fs__str_atom ("text-mod", pool), skel);
+      break;
+    case svn_fs__change_prop_mod:
+      svn_fs__prepend (svn_fs__str_atom ("prop-mod", pool), skel);
+      break;
+    }
+
+  /* NODE-REV-ID */
+  tmp_str = svn_fs_unparse_id (change->noderev_id, pool);
+  svn_fs__prepend (svn_fs__mem_atom (tmp_str->data, tmp_str->len, pool), skel);
+
+  /* PATH */
+  svn_fs__prepend (svn_fs__str_atom (change->path, pool), skel);
+
+  /* "change" */
+  svn_fs__prepend (svn_fs__str_atom ("change", pool), skel);
+
+  /* Validate and return the skel. */
+  if (! is_valid_change_skel (skel, &kind))
+    return skel_err ("change", pool);
+  if (kind != change->kind)
+    return skel_err ("change", pool);
+  *skel_p = skel;
+  return SVN_NO_ERROR;
+}
+
 
 
 /* 
