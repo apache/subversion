@@ -1,0 +1,709 @@
+<chapter id="svn-ch-1">
+
+	<title>Einführung</title>
+
+  <simplesect>
+    <para>Versionkontrolle ist die Kunst Änderungen zu Verwalten.
+      Es war lange Zeit ein kritisches Werkzeug für Programmierer
+      die üblicherweise ihre Zeit damit verbrachten kleine Änderungen
+      an Software vorzunehmen und diese am nächsten Tag wieder rückgängig
+      zu machen.
+      Aber die Nützlichkeit von Versionkontrollsoftware liegt weit
+      außerhalb der Grenzen der Softwareentwicklungswelt.
+      Überall wo Menschen Computer Verwenden, um Daten zu Verwalten
+      ändern sich diese häufig/ständig. Und das ist der Punkt wo
+      Subversion ins Spiel kommt.</para>
+
+    <para>Das Kapitel enthält eine Einführung in Subversion auf hoher Ebene.
+      Was es ist? Was es tut? Wie man es bekommt?</para>
+  </simplesect>
+
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-1">
+
+    <title>Was ist Subversion?</title>
+      
+    <para>Subversion ist ein freies/Open-Soucrce Versionskontroll
+      System. Subversion verwaltet Dateien und Verzeichnisse
+      über die Zeit hinweg. Ein Baum der Dateien wird in ein Zentrales
+      <firstterm>repository</firstterm> abgelegt. Das Repository
+      ist wie ein gewöhlicher File Server, aussser das der sich
+      an jede jemals gemachte Änderung erinnert. Das erlaubt
+      es Ihnen jede ältere Version Ihrer Daten wieder her zustellen,
+      oder die Geschichte der Änderungen zu untersuchen.
+      In dieser Hinsicht, stellen sich viele Leute ein 
+      Versionskontrollsystem als eine Art von 
+      <quote>Zeitmaschine</quote> vor.
+		  
+		  
+      Subversion is a free/open-source version control system.
+      That is, Subversion manages files and directories over time.  A
+      tree of files is placed into a central
+      <firstterm>repository</firstterm>.  The repository is much like
+      an ordinary file server, except that it remembers every change
+      ever made to your files and directories.  This allows you to
+      recover older versions of your data, or examine the history of
+      how your data changed.  In this regard, many people think of a
+      version control system as a sort of <quote>time
+      machine</quote>.</para>
+    
+    <para>Subversions erlaubt den Zugriff auf sein Repository durch
+      ein Netzwerk, womit der Zugriff durch Leute von unterschiedlichen
+      Rechnern aus ermöglicht wird.
+      ...At some Level die Möglichkeit verschiedener Leute Datensätze
+      an unterschiedlichen Orten zu Verwalten und zu modifizieren
+      fördert die Zusammenarbeit. Fortschritt kann früher eintreten
+      als ohne eine Kanaliserung durch die alle Änderung laufen müssen.
+      Und Aufgrund der Tatsache, dass die Arbeit Versioniert wird brauchen
+      Sie nicht zu befürchten, dass die Qualität der Ausgleich für den
+      Verlust der Kanalisierung ist wenn eine Fehlerhafte Änderung 
+      an den Daten durchgeführt wurde. Es kann einfach rückgängig gemacht
+      werden.
+		
+		
+		
+      Subversion can access its repository across networks, which
+      allows it to be used by people on different computers.  At some
+      level, the ability for various people to modify and manage the
+      same set of data from their respective locations fosters
+      collaboration.  Progress can occur more quickly without a single
+      conduit through which all modifications must occur.  And because
+      the work is versioned, you need not fear that quality is the
+      trade-off for losing that conduit&mdash;if some incorrect change
+      is made to the data, just undo that change.</para>
+
+    <para>Einige Versionskontrollsysteme sind auch Software Konfigurations
+      Management Systeme (SKM). Diese Systeme sind speziell darauf
+      zugeschnitten, Quellcodebäume zu verwalten. Sie haben sehr
+      viele Funktionalitäten, die auf die Software Entwicklung 
+      ausgerichtet sind. z.B. die Angebore Fähigkeit Programmiersprachen
+      zu verstehen oder liefern Spezielle Werkzeuge zum Erzeugen
+      (build) von Software. Subversion, aber ist keines von diesen Systemen.
+      Es ist ein allgemeines System welches zur Verwaltung 
+      <emphasis>jeder</emphasis> Art von Dateien verwendet werden kann.
+      Für Sie können die Dateien Quellcode sein, während es für andere
+      eine Einkaufsliste im Supermarkt ist bis zur Video Liste und
+      darüber hinaus.
+	  
+	  
+      Some version control systems are also software configuration
+      management (SCM) systems.  These systems are specifically
+      tailored to manage trees of source code, and have many features
+      that are specific to software development&mdash;such as natively
+      understanding programming languages, or supplying tools for
+      building software.  Subversion, however, is not one of these
+      systems.  It is a general system that can be used to manage
+      <emphasis>any</emphasis> collection of files.  For you, those
+      files might be source code&mdash;for others, anything from
+      grocery shopping lists to digital video mixdowns and
+      beyond.</para>
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-2">
+
+    <title>Die Geschichte von Subversion</title>
+
+    <para>
+      Anfang 2000, CollabNet, Inc. (<systemitem
+      class="url">http://www.collab.net</systemitem>)
+      suchte Entwickler to eine Ersatz für CVS erstellen sollten.
+      CollabNet bot eine Collaboration Software Suite genannt
+      SourceCast an, von deren eine Komponente Versionskontrolle ist.
+      Obwohl SourceCast CVS als initiale Versionskontrolle verwendete,
+      die Grenzen von CVS waren von Anfang an offensichtlich, wusste
+      CollabNet dass es etwas besseres finden mußte.
+      Bedauerlicherweise war CVS ein <foreignphrase>de facto</foreignphrase>
+      Standard in der Welt der Open Source weil es nichts besseres gab,
+      wenigstens nicht unter einer freien Lizenz.
+      Somit entschied sich CollabNet ein neues Versionskontrollsystem
+      von Grund auf neu zu entwickeln, aber unter zurückhaltender
+      Übernahme der Grundideen von CVS, aber ohne deren Fehler und Misständen.
+		  
+		  
+      In early 2000, CollabNet, Inc. (<systemitem
+      class="url">http://www.collab.net</systemitem>) began seeking
+      developers to write a replacement for CVS.  CollabNet offers a
+      collaboration software suite called SourceCast, of which one
+      component is version control.  Although SourceCast used CVS as
+      its initial version control system, CVS's limitations were
+      obvious from the beginning, and CollabNet knew it would
+      eventually have to find something better.  Unfortunately, CVS
+      had become the <foreignphrase>de facto</foreignphrase> standard
+      in the open source world largely because there
+      <emphasis>wasn't</emphasis> anything better, at least not under
+      a free license.  So CollabNet determined to write a new version
+      control system from scratch, retaining the basic ideas of CVS,
+      but without the bugs and misfeatures.</para>
+
+    <para>Im Frebruar 2000, nahmen Sie kontakt zu Karl Fogel, dem Autor
+      von <citetitle>Open Source Development with CVS</citetitle>
+      (Coriolis, 1999) und fragten Ihn ob er an diesem neuen 
+      Projekt arbeiten wollte. Zu dieser Zeit war Karl Fogel
+      zufälligerweise in Kontakt mit seinem Freund Jim Blandy und 
+      diskutierte ein neues Design eines neuen Versionskontrollsystems.
+      1995 hatten die beiden Cyclic Software gegründet welches Support 
+      Verträge für CVS bot, welche Sie später verkauften, wärend die
+      Verwendung von CVS in der täglichen Arbeit weiter geführt wurde.
+      Ihre Frustration mit CVS liess Jim über bessere Wege
+      der Versionsverwaltung nachdenken, wobei er nicht nur 
+      dem Namen <quote>Subversion</quote> lieferte, sondern auch mit 
+      dem Grundlegenden Design des Subversion Repositories.
+      Als CollabNet bei Karl Anfragte, stimmte Karl sofort zu im Projekt
+      mit zu arbeiten, womit Jim seinen Arbeitgeber, RedHat Software,
+      welcher die hauptsächliche Unterstützung über einen
+      umbestimmten Zeitraum für das Projekt darstellte, gefunden.
+
+      CollabNet liehen sich Karl und Ben Collins-Sussman aus und die 
+      Arbeiten am Detail Design begannen im Mai.
+      Mit einigen wohl platzierten anstößen von Brian Behlendorf und
+      Jason Robbins von CollabNet und Greg Stein (zu der Zeit ein unabhängiger
+      Entwickler aktiv im WebDAV/DeltaV Spezifikationsprozeß), 
+      zog Subversion schnell eine Gemeinschaft von aktiven Entwicklern
+      an. Es zeigte sich, dass viele Leute die gleichen frustrierenden 
+      Erfahrungen mit CVS hatten, und begrüßten die Chance etwas
+      zu ändern.
+
+
+	  
+      In February 2000, they contacted Karl Fogel, the author of
+      <citetitle>Open Source Development with CVS</citetitle>
+      (Coriolis, 1999), and asked if he'd like to work on this new
+      project.  Coincidentally, at the time Karl was already
+      discussing a design for a new version control system with his
+      friend Jim Blandy.  In 1995, the two had started Cyclic
+      Software, a company providing CVS support contracts, and
+      although they later sold the business, they still used CVS every
+      day at their jobs.  Their frustration with CVS had led Jim to
+      think carefully about better ways to manage versioned data, and
+      he'd already come up with not only the name
+      <quote>Subversion</quote>, but also with the basic design of the
+      Subversion repository.  When CollabNet called, Karl immediately
+      agreed to work on the project, and Jim got his employer, RedHat
+      Software, to essentially donate him to the project for an
+      indefinite period of time.  CollabNet hired Karl and Ben
+      Collins-Sussman, and detailed design work began in May.  With
+      the help of some well-placed prods from Brian Behlendorf and
+      Jason Robbins of CollabNet, and Greg Stein (at the time an
+      independent developer active in the WebDAV/DeltaV specification
+      process), Subversion quickly attracted a community of active
+      developers.  It turned out that many people had had the same
+      frustrating experiences with CVS, and welcomed the chance to
+      finally do something about it.</para>
+
+    <para>Das ursprüngliche Design Team setzte auf einige einfache 
+      Ziele. Sie wollten keine neuen Grundlagen im Bereich der
+      Versionskontrolle finden, sie wollten einfach die Probleme
+      bei CVS ablösen. Sie entschieden sich dafür, dass Subversion
+      die CVS Features abdeckte und das gleiche Entwicklungs Modell
+      bei behielt aber nicht die meist offensichtlichen Risse? übernahm.
+	  
+      Obgleich es war nicht nötig ein drop-in? Ersatz für CVS zu sein,
+      es an CVS angelehn sein, damit CVS Anwender den Übergang mit
+      geringem Aufwand durchführen konnten.
+
+
+      The original design team settled on some simple goals.  They
+      didn't want to break new ground in version control methodology,
+      they just wanted to fix CVS.  They decided that Subversion would
+      match CVS's features, and preserve the same development model,
+      but not duplicate CVS's most obvious flaws.  And although it did
+      not need to be a drop-in replacement for CVS, it should be
+      similar enough that any CVS user could make the switch with
+      little effort.</para>
+
+    <para>Nach vierziehn Monanten Entwicklung, konnte Subversion
+      sich am 31. August 2001 selbst Verwalten.
+      Damit stoppten die Subversion Entwickler die 
+      Verwendung von CVS und verwendeteten Subversion
+      ab diesem Zeitpunkt selbst zur Verwaltung.
+
+      After fourteen months of coding, Subversion became
+      <quote>self-hosting</quote> on August 31, 2001.  That is,
+      Subversion developers stopped using CVS to manage Subversion's
+      own source code, and started using Subversion instead.</para>
+
+    <para>Während CollabNet das Projekt initiierte, und finanziert
+      einen großen Teile der Arbeit (bezahlt die Gehälter von einigen
+      Voll-Zeit Subversion Entwicklern), Subversion schreitet
+      voran wie die meisten Open-Source Projekte, beherrscht durch
+      lockere, transparenten Satz von Regeln der die Leitstungsbereitschaft
+      bestärkt. CollabNet Urheberlizenz ist konform der Debian Freien Software
+      Richtlinien. Mit anderen Worten, jedem steht es frei, Subversion
+      runter zu laden, zu modifizieren und es weiter zu verbreiten
+      wie es einem gefällt ohne Erlaubnis von CollabNet oder
+      irgend jemand anderem ist Notwendig.
+
+      While CollabNet started the project, and still funds a large
+      chunk of the work (it pays the salaries of a few full-time
+      Subversion developers), Subversion is run like most open-source
+      projects, governed by a loose, transparent set of rules that
+      encourage meritocracy.  CollabNet's copyright license is fully
+      compliant with the Debian Free Software Guidelines.  In other
+      words, anyone is free to download, modify, and redistribute
+      Subversion as he pleases; no permission from CollabNet or anyone
+      else is required.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 3 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-3">
+
+    <title>Die Subversion Funktionen</title>
+
+    <para>Wenn die Diskussion über die Funktionen von Subversion
+      auf den Tisch kommt, ist es meist hilfreich über 
+      die Begriffe zu Nennen, die Sie über das CVS Design stellen???? Satz?
+      Wenn Sie nicht mit CVS vertraut sind, verstehen Sie eventuell
+      nicht alle dieser Funktionen.
+      Wenn Sie auch nicht mit Versionskontrolle vertraut sind, 
+      erstarren Ihre Augen so lange Sie nicht <xref linkend="svn-ch-2"/>
+      lesen, wo eine behutsame Einführung in das Themengebiet 
+      Versionskontrolle vorgenommen wird.
+
+      When discussing the features that Subversion brings to the
+      version control table, it is often helpful to speak of them in
+      terms of how they improve upon CVS's design.  If you're not
+      familiar with CVS, you may not understand all of these features.
+      And if you're not familiar with version control at all, your
+      eyes may glaze over unless you first read <xref
+      linkend="svn-ch-2"/>, in which we provide a gentle introduction
+      to version control in general.</para>
+
+    <para>Subversion provides:</para>
+
+    <variablelist>
+      <varlistentry>
+        <term>Verzeichnisversionierung</term>
+        <listitem>
+          <para>CVS zeichnet lediglich die Geschichte von einzelnenen
+            Dateien auf, während Subversion ein <quote>virtuelles</quote>
+            versioniertes Dateisystem implementiert, das die Änderung
+            an ganzen Verzeichnissbäumen über die Zeit aufzeichnet. 
+            Dateien <emphasis>und</emphasis> Verzeichnisse werden versioniert.
+
+            CVS only tracks the history of individual files, but
+            Subversion implements a <quote>virtual</quote> versioned
+            filesystem that tracks changes to whole directory trees
+            over time.  Files <emphasis>and</emphasis> directories are
+            versioned.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Wahre Geschichte    True version history</term>
+        <listitem>
+            <para>Während CVS auf die Versionierung von Dateien
+            beschränkt ist und operationen wie kopieren und umbenennen
+            was manchmal mit Dateien passiert, können die Dinge die
+            sich tatsächlich ändern, nämlich die Verzeichnisse
+            nicht durch CVS versioniert werden.
+
+            Zusätzlich können Sie in CVS keine versionierte Datei 
+            durch eine Datei gleichen Namens aber anderen Inhaltes
+            ersezten ohne die aufgezeichnete Geschichte der 
+            alten Datei zu erben, die aber ohne Bezug zur ihrem aktuellen
+            Inhalt ist.
+            Mit Subversion können Sie sowohl Dateien als auch 
+            Verzeichnisse hinzufügen, löschen, kopieren, umbenennen sowohl
+            der Dateien als auch der Verzeichnisse und jede neu
+            hinzugefügte Datei begint mit einer frischen und leeren
+            Geschichte seiner selbst.
+            
+            
+                
+            Since CVS is limited to file versioning, operations
+            such as copies and renames&mdash;which might happen to
+            files, but which are really changes to the contents of
+            some containing directory&mdash;aren't supported in CVS.
+            Additionally, in CVS you cannot replace a versioned file
+            with some new thing of the same name without the new item
+            inheriting the history of the old&mdash;perhaps completely
+            unrelated&mdash; file.  With Subversion, you can add,
+            delete, copy, and rename both files and directories.  And
+            every newly added file begins a with a fresh, clean
+            history all its own.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+          <term>Atomaree Commits... Atomic commits</term>
+        <listitem>
+            <para>
+            Ein Sammlung von Ändungern geht entweder vollständig
+            in das Repository oder aber keine. Das erlaubt Entwicklern
+            die Konstruktion und das Commiten von logischen Einheiten
+            als ganzes und verhindert Probleme, die auftreten können 
+            wenn nur Teile eines Änderungssatzes erfolgreich
+            in das Repository gesichert wurden.
+                
+                A collection of modifications either goes into the
+            repository completely, or not at all.  This allows
+            developers to construct and commit changes as logical
+            chunks, and prevents problems that can occur when only a
+            portion of a set of changes is successfully sent to the
+            repository.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Versionierte Metadaten    Versioned metadata</term>
+        <listitem>
+            <para>
+                Jede Datei und Verzeichnis an einen Satz von Eigenschaften;
+                Schlüssel zu denen Werte assoziiert sind.
+                Sie können beliebig Schlüssel/Werte Kombinationen
+                erzeugen und speichern. Eigenschaften werden über die
+                Zeit versioniert wie das mit dem Inhalt von Dateien
+                ebenfalls gemacht wird.
+                
+                Each file and directory has a set of
+            properties&mdash;keys and their values&mdash; associated
+            with it.  You can create and store any arbitrary key/value
+            pairs you wish.  Properties are versioned over time, just
+            like file contents.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Choice of network layers</term>
+        <listitem>
+            <para>
+                Subversion hat eine Abstrakte Vorstellung über den Zugriff
+                auf das Repository um es einfach zu ermöglichen
+                neue Netzwerk Mechanismen zu implementieren.
+                Subversion kann als Apache Module in den HTTP Server
+                angeschlossen werden als ein Erweiterungsmodul.
+                Das gibt Subversion einen großen Vorteil bzgl. Stabilität
+                und Kompatibilität und direktem Zugriff auf vorhandene
+                Eigenschaften die durch den Server zur Verfügung gestellt 
+                werden. Authentifizierung,  Berechtigung, Datenkompression
+                usw. Eine eigenständiger einfacher Subversion Server
+                ist ebenfalls vorhanden. Dieser spricht ein maßgeschneidertes
+                Protokoll, dass einfach via SSH getunnelt werden kann.
+                
+                Subversion has an abstracted notion of repository
+            access, making it easy for people to implement new network
+            mechanisms.  Subversion can plug into the Apache HTTP
+            Server as an extension module.  This gives Subversion a
+            big advantage in stability and interoperability, and
+            instant access to existing features provided by that
+            server&mdash;authentication, authorization, wire
+            compression, and so on.  A more lightweight, standalone
+            Subversion server process is also available.  This server
+            speaks a custom protocol which can be easily tunneled over
+            SSH.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Konsistente Datenverarbeitung</term>
+        <listitem>
+            <para>Subversion drückt die Unterschiede von 
+                Dateien unter der Verwendung eines binären
+                Differenzalgorithmus aus, der sowohl für Text (visuell wahrnehmbar)
+                als auch für binäre Daten arbeitet.
+                Beide arten von Dateien werden in gleicher Form
+                komprimiert im Repository gespeichert und die Unterschiede
+                werden in beiden Richtungen über das Netzwerk transportiert.
+
+                Subversion expresses file differences using a binary
+            differencing algorithm, which works identically on both
+            text (human-readable) and binary (human-unreadable) files.
+            Both types of files are stored equally compressed in the
+            repository, and differences are transmitted in both
+            directions across the network.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+          <term>Effizientes Branching und Tagging 
+              Efficient branching and tagging</term>
+        <listitem>
+          <para>
+               Die Kosten für Brachinung und Tagging sind nicht proportional
+               zur Projektgröße. Subversion erzeugt Branches und Tags 
+               durch das einfache kopieren eines Projektes unter der Verwendung
+               eines Mechanismus ähnlich zu einem Hard-Link. Folglich 
+               benötigt die Operation nur eine kleine konstante Menge von
+               Zeit. 
+                
+            The cost of branching and tagging need not be proportional to the
+            project size.  Subversion creates branches and tags by
+            simply copying the project, using a mechanism similar to a
+            hard-link.  Thus these operations take only a very small,
+            constant amount of time.
+          </para>
+        </listitem>
+      </varlistentry>
+      
+      <varlistentry>
+          <term>Attakierbarkeit ??     Hackability</term>
+        <listitem>
+            <para>Subversion schleppt keine Altlasten aus der Vergangenheit mit.
+                Es ist als eine Sammlung von Shared C Bibliotheken
+                impementiert und mit einer wohldefinierten 
+                Schnittstelle (API) versehen. Das macht Subversion extrem 
+                wartbar und Einsetzbar in anderen Applikationen
+                und Sprachen.
+                
+                Subversion has no historical baggage; it is
+            implemented as a collection of shared C libraries with
+            well-defined APIs.  This makes Subversion extremely
+            maintainable and usable by other applications and
+            languages.</para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-4">
+
+    <title>Die Subversion Architektur   Subversion's Architecture</title>
+
+    <para>Abbildung 1.1 illustriert was man als einen Blick
+        aus großer Höhe auf das Subversion Design bezeichnen würde.
+        
+        Figure 1.1 illustrates what one might call a
+      <quote>mile-high</quote> view of Subversion's design.</para>
+    
+    <figure id="svn-ch-1-dia1">
+      <title>Subversion Architektur</title>
+      <graphic fileref="images/ch01dia1.png"/>
+    </figure>
+
+    <para>Auf der einen Seite ist Subversion ein Repository 
+        dass die Historie aller Ihrer Versionierten Daten vorhält.
+        Auf der anderen Seite ist Subversion ein Client Programm,
+        dass die Lokale Reflektion eines Teils der versionierten Daten (
+        <quote>working copies</quote> genannt) darstellt.
+        Zwischen diesen Beiden extremen sind vielfältige Wege
+        durch Repository Zugriffs (RA) Schichten. Einige dieser Wege
+        gehen durch Netzwerke und durch Netzwerk Server welche dann
+        dann auf das Repository zugreifen. Andere Umgehen Netzwerk 
+        Server gänzlich und greifen auch das Repository direkt zu.
+        
+        On one end is a Subversion repository that holds all of your
+      versioned data.  On the other end is your Subversion client
+      program, which manages local reflections of portions of that
+      versioned data (called <quote>working copies</quote>).  Between
+      these extremes are multiple routes through various Repository
+      Access (RA) layers.  Some of these routes go across computer
+      networks and through network servers which then access the
+      repository.  Others bypass the network altogether and access the
+      repository directly.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-5">
+
+      <title>Subversion Installation      Installing Subversion</title>
+
+      <para>Subversion ist auf einer Portabilitäts Schicht 
+          APR (Apache Portable Runtime Library). Das bedeutet,
+          dass Subversion auf jedem Betriebssystem laufen sollte auf
+          dem der Apache Web Server läuft. Windows, Linux, alle Arten
+          von BSD, Mac OS X, Netware und andere.
+          
+          Subversion is built on a portability layer called APR (the
+      Apache Portable Runtime library).  This means Subversion should
+      work on any operating system that the Apache httpd server runs
+      on: Windows, Linux, all flavors of BSD, Mac OS X, Netware, and
+      others.</para>
+
+    <para>Der einfachste Weg, um Subversion zu bekommen ist es, 
+        eine binär Paket für das jeweilige Betriebssystem down zu loaden.
+        Auf der Subversion Web Seite (<systemitem class="url">http://subversion.tigris.org</systemitem>)
+        finden sich oft Pakete die durch freiwilige erzeugt wurden.
+        Die Seite enthält üblicherweise grafische Installations Pakete
+        für die Anwender des Microsoft Betriebssystems. Wenn Sie ein
+        Unix artiges Betriebssystem verwenden, können Sie 
+        
+
+
+        
+      The easiest way to get Subversion is to download a binary
+      package built for your operating system.  Subversion's website
+      (<systemitem
+      class="url">http://subversion.tigris.org</systemitem>) often has
+      these packages available for download, posted by volunteers.
+      The site usually contains graphical installer packages for users
+      of Microsoft operating systems.  If you run a Unix-like
+      operating system, you can use your system's native package
+      distribution system (RPMs, DEBs, the ports tree, etc.) to get
+      Subversion.</para>
+
+  <para>Alternativ kann man Subversion auch direkt aus dem Source Code
+      übersetzen. Nach dem herunterladen der aktuellesten Release 
+      von der Subversion Web Seite und nachfolgendem entpacken folgen Sie bitte
+      den Anweisungen in der Datei <filename>INSTALL</filename>, um
+      Subversion zu compileren. Beachten Sie bitte, dass ein veröffentliches
+      Souce Code Pakete alles beinhaltet, um eine Kommandozeilen Client,
+      der in der Lage ist sich mit einem Remote Repository zu unterhalten
+      (speziell APR, APR-Util und die Neon Bibliotheken) entsprechend zu 
+      übersetzen. Aber andere optionale Teile von Subversion können noch
+      andere Abhängigkeiten besitzen, wie z.B. Berkely DB und möglichweise
+      Apache httpd. Wenn Sie eine vollständige Übersetzung durchführen möchten,
+      so versichern Sie sich, dass Sie alle benötigten Pakete, die in der Datei
+      <filename>INSTALL</filename> angegeben sind auch haben.
+      Wenn Sie die Absicht haben an Subversion selbst zu arbeiten, können
+      Sie eigenes Client Programm dazu verwenden, um eine Aktuelle Version
+      (bleeding edge?) zu erhalten. Das wird in <xref linkend="svn-ch-8-sect-6.2"/>
+      beschrieben.
+      
+      
+      
+      
+      Alternately, you can build Subversion directly from source
+      code.  From the Subversion website, download the latest
+      source-code release.  After unpacking it, follow the
+      instructions in the <filename>INSTALL</filename> file to build
+      it.  Note that a released source package contains everything you
+      need to build a command-line client capable of talking to a
+      remote repository (in particular, the apr, apr-util, and neon
+      libraries).  But optional portions of Subversion have many other
+      dependencies, such as Berkeley DB and possibly Apache httpd.  If
+      you want to do a complete build, make sure you have all of the
+      packages documented in the <filename>INSTALL</filename> file.
+      If you plan to work on Subversion itself, you can use your
+      client program to grab the latest, bleeding-edge source code.
+      This is documented in <xref
+      linkend="svn-ch-8-sect-6.2"/>.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 6 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-6">
+
+      <title>Die Subversion Komponenten</title>
+    
+      <para>Einmal installiert, besteht Subversion aus
+          einer Menge von unterschiedlichen Teilen. Der
+          nachfolgende Teile ist ein kurzer überblick über
+          das was dann zur Verfügung steht. Seien Sie nicht
+          beunruhigt, wenn Sie diese kurze Einführung
+          Kopf kratzend zurück läßt. Es folgenden noch eine
+          Menge weitere Seiten in diesem Buch,
+          die dazu gedacht sind diese Irritationen zu lindern.
+          
+          
+          Subversion, once installed, has a number of different
+      pieces.  The following is a quick overview of what you get.
+      Don't be alarmed if the brief descriptions leave you scratching
+      your head&mdash;there are <emphasis>plenty</emphasis> more pages
+      in this book devoted to alleviating that confusion.</para>
+
+    <variablelist>
+      <varlistentry>
+        <term>svn</term>
+        <listitem>
+          <para>Kommandozeilen Client         The command-line client program.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svnversion</term>
+        <listitem>
+            <para>Ein Programm, um den Zustand 
+                
+                A program for reporting the state (in terms of
+            revisions of the items present) of a working copy.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svnlook</term>
+        <listitem>
+            <para>Ein Werkzeug, um das Subversion Repository zu 
+                betrachten.
+                
+                A tool for inspecting a Subversion repository.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svnadmin</term>
+        <listitem>
+            <para>Das Werkzeug um ein Subversion Repository zu erzeugen, 
+                tweaking? oder es zu reparieren.
+                
+                A tool for creating, tweaking or repairing a Subversion
+            repository.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svndumpfilter</term>
+        <listitem>
+            <para>Ein Programm zur Filterung einer Subversion Repository Dump
+                Datei.
+                
+                A program for filtering Subversion repository dumpfile
+            format streams.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>mod_dav_svn</term>
+        <listitem>
+            <para>Ein Plug-In Modul für den Apache HTTP Server,
+                welches es den Zugriff für andere auf das Repository ermöglicht.
+                
+                A plug-in module for the Apache HTTP Server, used to
+            make your repository available to others over a
+            network.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svnserve</term>
+        <listitem>
+            <para>Ein maßgeschneidertes Programm als Standalone Server Programm,
+                welcher als Deamon Prozeß Verwendung findet, der auch
+                über SSH aufgerufen werden kann. Das ist ein anderer Weg,
+                um ein Repository per Netzwerk verfügbar zu machen.
+                
+                A custom standalone server program, runnable as a
+            daemon process or invokable by SSH; another way to make
+            your repository available to others over a network.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+    <para>Unter der Annahme, dass Subversion einwandfrei installiert wurde,
+        sind wir jetzt fertig un können loslegen.
+        Die nächsten beiden Kapitel werden die Verwendung von <command>svn</command>
+        der Subversion Kommandozeilen Client zeigen.
+        
+        zeigen.
+        Assuming you have Subversion installed correctly, you should
+      be ready to start.  The next two chapters will walk you through
+      the use of <command>svn</command>, Subversion's command-line client 
+      program.</para>
+
+  </sect1>
+
+</chapter>
+
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "chapter")
+end:
+-->
