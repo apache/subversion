@@ -1762,9 +1762,10 @@ fetch_youngest_rev (const char **msg)
 }
 
 
-/* Create a tree and commit it.  */
+/* Test committing against an empty repository.
+   todo: also test committing against youngest? */
 static svn_error_t *
-commit_transaction (const char **msg)
+basic_commit (const char **msg)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
@@ -1772,10 +1773,10 @@ commit_transaction (const char **msg)
   svn_revnum_t before_rev, after_rev;
   const char *conflict;
 
-  *msg = "committing";
+  *msg = "basic commit";
 
   /* Prepare a filesystem. */
-  SVN_ERR (create_fs_and_repos (&fs, "test-repo-commit-txn"));
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-basic-commit"));
 
   /* Save the current youngest revision. */
   SVN_ERR (svn_fs_youngest_rev (&before_rev, fs, pool));
@@ -1817,6 +1818,21 @@ commit_transaction (const char **msg)
 }
 
 
+/* Commit with merging (committing against non-youngest). */ 
+static svn_error_t *
+merging_commit (const char **msg)
+{
+  svn_fs_t *fs;
+
+  *msg = "merging commit (INCOMPLETE TEST)";
+
+  /* Prepare a filesystem. */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-merging-commit"));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -1839,7 +1855,8 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   abort_txn,
   merge_trees,
   /* fetch_youngest_rev, */
-  commit_transaction,
+  basic_commit,
+  merging_commit,
   0
 };
 
