@@ -162,57 +162,57 @@ twiddle_edit_content_flags (svn_delta_stackframe_t *d,
 
 
 
+/* The way to officially bail out of expat.
 
-/* If we get malformed XML, store an informative error in DIGGER and set all
-   expat callbacks to NULL.  This should allow us to break out of
-   XML_Parse() rather quickly and return the validation error. 
+   Store ERROR in DIGGER and set all expat callbacks to NULL */
 
-   Set DESTROY_P to indicate an unexpected </close> tag.
-*/
+static void
+signal_expat_bailout (svn_error_t *error, svn_delta_digger_t *digger)
+{
+  digger->validation_error = err;
+
+  XML_SetElementHandler (digger->parser, NULL, NULL);
+  XML_SetCharacterDataHandler (digger->parser, NULL);
+}
+
+
+
+
+/* If we get malformed XML, create an informative error message. */
+   (Set DESTROY_P to indicate an unexpected </close> tag) */
 
 static svn_error_t *
 XML_type_error (svn_delta_digger_t *digger,
                 const char *name,
                 svn_boolean_t destroy_p)
 {
-  svn_error_t *err;
-
   if (destroy_p)
     char *msg = 
-      apr_psprintf (pool, "XML validation error: got unexpected closure-tag of type '%s'", name);
+      apr_psprintf (digger->pool, 
+                    "XML validation error: got unexpected closure-tag of type '%s'", 
+                    name);
 
   else
     char *msg = 
-      apr_psprintf (pool, "XML validation error: got unexpected open-tag of type '%s'", name);
+      apr_psprintf (digger->pool,
+                    "XML validation error: got unexpected open-tag of type '%s'",
+                    name);
 
-  err = svn_create_error (SVN_ERR_MALFORMED_XML, 0, msg, NULL, pool);
-
-  /* Since we got a validation error, store it in our digger */
-  digger->validation_error = err;
-
-  /* And also NULL out our callbacks */
-  XML_SetElementHandler (digger->parser, NULL, NULL);
-  XML_SetCharacterDataHandler (digger->parser, NULL);
-
-  return err;
+  return svn_create_error (SVN_ERR_MALFORMED_XML, 0, msg, NULL, pool);
 }
 
 
 
 /* 
-   starpend_delta() : either (ap)pend or (un)pend a frame to the
-                          end of a delta.  
+   telescope_delta_stack() : either append or un-pend a frame to the
+                             end of a delta, validating XML first.
 
-   Append or remove NEW_FRAME to/from the end of delta-stackframe
-   within DIGGER.
+   Append NEW_FRAME to the end of stack within DIGGER.  To remove
+   bottommost frame from stack, set DESTROY-P (in which case the
+   NEW_FRAME argument is ignored.)
 
-   Use DESTROY-P to toggle append/remove behavior.
-
-   This routine *type-checks* frames being added or removed.  The TAGNAME
-   argument is used to type-check a frame being removed;
-   NEW_FRAME->kind is used to type-check a frame being added.
-
-*/
+   TAGNAME is used to validate the current XML tag. If a validation
+   error is found, return it. */
 
 static svn_error_t *
 telescope_delta_stack (svn_delta_digger_t *digger,
@@ -220,8 +220,7 @@ telescope_delta_stack (svn_delta_digger_t *digger,
                        svn_delta_stackframe_t *new_frame,
                        const char *tagname)
 {
-  /* Get a grip on the bottommost and penultimate frames in our
-     digger's stack. */
+  /* Get a grip on the bottom frame of the stack */
 
   svn_delta_stackframe_t *bot_frame
     = find_delta_bottom (digger->stack);
@@ -231,18 +230,22 @@ telescope_delta_stack (svn_delta_digger_t *digger,
       /* Type-check: make sure the kind of object we're removing (due
          to an XML closure tag) actually agrees with the type of frame
          at the bottom of the stack! */
+
       if ((strcmp (tagname, "tree-delta") == 0)
           && (bot_frame->kind != svn_XML_tree))
-        return XML_type_error (digger->pool, tagname, TRUE);
+        return XML_type_error (digger, tagname, TRUE);
+
       else if (((strcmp (tagname, "new") == 0) 
                 || (strcmp (tagname, "replace") == 0)
                 || (strcmp (tagname, "delete") == 0))
                && (bot_frame->kind != svn_XML_edit))
         return XML_type_error (digger->pool, tagname, TRUE);
+
       else if (((strcmp (tagname, "file") == 0) 
                 || (strcmp (tagname, "dir") == 0))
                && (bot_frame->kind != svn_XML_content))
         return XML_type_error (digger->pool, tagname, TRUE);
+
 
       /* We're using pools, so just "lose" the pointer to the
          bottommost frame. */
@@ -257,21 +260,26 @@ telescope_delta_stack (svn_delta_digger_t *digger,
   else /* append procedure... */
     {
       /* Type-check: make sure the kind of object we're adding (due to
-         an XML open tag) actually connects properly with the type of
-         frame at the bottom of the stack! */
+         an XML open tag) logically follows the type of frame at the
+         bottom of the stack! */
+
       if ((strcmp (tagname, "tree-delta") == 0)
           && (bot_frame->kind != svn_XML_content))
-        return XML_type_error (digger->pool, tagname, FALSE);
+        return XML_type_error (digger, tagname, FALSE);
+
       else if (((strcmp (tagname, "new") == 0) 
                 || (strcmp (tagname, "replace") == 0)
                 || (strcmp (tagname, "delete") == 0))
                && (bot_frame->kind != svn_XML_tree))
-        return XML_type_error (digger->pool, tagname, FALSE);
+        return XML_type_error (digger, tagname, FALSE);
+
       else if (((strcmp (tagname, "file") == 0) 
                 || (strcmp (tagname, "dir") == 0))
                && (bot_frame->kind != svn_XML_edit))
-        return XML_type_error (digger->pool, tagname, FALSE);
+        return XML_type_error (digger, tagname, FALSE);
 
+
+      /* Append doublely-linked list item */
       bot_frame->next = new_frame;
       new_frame->previous = bot_frame;
       return SVN_NO_ERROR;
@@ -307,34 +315,21 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       /* Create new stackframe */
       svn_delta_stackframe_t *new_frame 
         = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t));
-
       new_frame->kind = svn_XML_tree;
       
       if (my_digger->stack == NULL)
         /* This is the very FIRST element of our tree delta! */
         my_digger->stack = new_frame;
-      else  /* This is a nested tree-delta.  Hook it in. */
+      else  /* This is a nested tree-delta.  Append to stack (& validate). */
         {
           err = telescope_delta_stack (my_digger, FALSE, new_frame, name);
           if (err)
-            svn_handle_error (err, stderr);
+            {
+              signal_expat_bailout (err, my_digger);
+              return;
+            }
         }
-    }
 
-  else if (strcmp (name, "text-delta") == 0)
-    {
-      /* Found a new text-delta element */
-      /* No need to create a text-delta structure... */
-
-      twiddle_edit_content_flags (my_digger->stack, TRUE, TRUE);
-    }
-
-  else if (strcmp (name, "prop-delta") == 0)
-    {
-      /* Found a new prop-delta element */
-      /* No need to create a prop-delta structure... */
-
-      twiddle_edit_content_flags (my_digger->stack, TRUE, FALSE);
     }
 
   else if (strcmp (name, "new") == 0)
@@ -342,17 +337,20 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       /* Create new stackframe */
       svn_delta_stackframe_t *new_frame 
         = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t));
-
       new_frame->kind = svn_XML_edit;
       new_frame->edit_kind = svn_edit_add;
 
       /* Fill in the stackframe's attributes from **atts */
       fill_attributes (my_digger->pool, new_frame, atts);
 
-      /* Append this frame to the end of the stack. */
+      /* Append this frame to the end of the stack (& validate). */
       err = telescope_delta_stack (my_digger, FALSE, new_frame, name);
       if (err)
-        svn_handle_error (err, stderr);
+        {
+          signal_expat_bailout (err, my_digger);
+          return;
+        }
+
     }
 
   else if (strcmp (name, "replace") == 0)
@@ -367,10 +365,14 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       /* Fill in the stackframe's attributes from **atts */
       fill_attributes (my_digger->pool, new_frame, atts);
 
-      /* Append this frame to the end of the stack. */
+      /* Append this frame to the end of the stack. (& validate). */
       err = telescope_delta_stack (my_digger, FALSE, new_frame, name);
       if (err)
-        svn_handle_error (err, stderr);
+        {
+          signal_expat_bailout (err, my_digger);
+          return;
+        }
+
     }
 
   else if (strcmp (name, "delete") == 0)
@@ -388,7 +390,22 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       /* Append this frame to the end of the stack. */
       err = telescope_delta_stack (my_digger, FALSE, new_frame, name);
       if (err)
-        svn_handle_error (err, stderr);
+        {
+          signal_expat_bailout (err, my_digger);
+          return;
+        }
+
+      /* This is a major svn_delta_walk event. */
+
+      err = (*(my_digger->walker->delete)) (new_frame->name,
+                                            my_digger->walk_baton,
+                                            my_digger->dir_baton);
+      if (err)
+        {
+          signal_expat_bailout (err, my_digger);
+          return;
+        }
+
     }
 
   else if (strcmp (name, "file") == 0)
@@ -431,6 +448,22 @@ xml_handle_start (void *userData, const char *name, const char **atts)
          for example. */
       if (my_digger->dir_handler)
         (* (my_digger->dir_handler)) (my_digger, new_frame);
+    }
+
+  else if (strcmp (name, "text-delta") == 0)
+    {
+      /* Found a new text-delta element */
+      /* No need to create a text-delta structure... */
+
+      twiddle_edit_content_flags (my_digger->stack, TRUE, TRUE);
+    }
+
+  else if (strcmp (name, "prop-delta") == 0)
+    {
+      /* Found a new prop-delta element */
+      /* No need to create a prop-delta structure... */
+
+      twiddle_edit_content_flags (my_digger->stack, TRUE, FALSE);
     }
 
   else
