@@ -165,6 +165,12 @@ else
   REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
 fi
 
+type pax &> /dev/null
+if [ ! $? ] && [ -z "$ZIP" ]; then
+  echo "ERROR: pax could not be found"
+  exit 1
+fi
+
 DISTNAME="subversion-${VERSION}${VER_NUMTAG}"
 DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
