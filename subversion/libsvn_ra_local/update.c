@@ -19,9 +19,9 @@
 /* The client reports that its copy of DIR_PATH is at REVISION.  Make
    the transaction reflect this. */
 svn_error_t *
-svn_ra_local__set_directory (void *report_baton,
-                             svn_string_t *dir_path,
-                             svn_revnum_t revision)
+svn_ra_local__set_path (void *report_baton,
+                        svn_string_t *path,
+                        svn_revnum_t revision)
 {
   svn_fs_root_t *from_root;
   svn_string_t *from_path;
@@ -32,7 +32,7 @@ svn_ra_local__set_directory (void *report_baton,
   SVN_ERR (svn_fs_revision_root (&from_root, rbaton->fs,
                                  revision, rbaton->pool));
   from_path = svn_string_dup (rbaton->base_path, rbaton->pool);
-  svn_path_add_component (from_path, dir_path, svn_path_repos_style);
+  svn_path_add_component (from_path, path, svn_path_repos_style);
 
   /* Copy into our txn. */
   SVN_ERR (svn_fs_copy (from_root, from_path->data,
@@ -41,20 +41,6 @@ svn_ra_local__set_directory (void *report_baton,
   return SVN_NO_ERROR;
 }
 
-
-  
-/* The client reports that its copy of DIR_PATH is at REVISION.  Make
-   the transaction reflect this. */
-svn_error_t *
-svn_ra_local__set_file (void *report_baton,
-                        svn_string_t *file_path,
-                        svn_revnum_t revision)
-{
-  /* ben sez:  let's merge these routines together.  */
-  SVN_ERR (svn_ra_local__set_directory (report_baton, file_path, revision));
-
-  return SVN_NO_ERROR;
-}
 
 
 /* Make the filesystem compare the transaction to a revision and have

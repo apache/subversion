@@ -54,25 +54,17 @@ typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *close_baton,
   
 typedef struct svn_ra_reporter_t
 {
-  /* Describe an entire subtree DIR_PATH as being at a particular
-     REVISION; this will *override* any previous set_directory() calls
-     made on DIR_PATH's parents.  DIR_PATH is relative to the URL
-     specified in open(), and are `svn_path_url_style'. */
-  svn_error_t *(*set_directory) (void *report_baton,
-                                 svn_string_t *dir_path,
-                                 svn_revnum_t revision);
-  
-  /* Describe a file FILE_PATH as being at a particular REVISION; this
-     will *override* any previous set_file() calls made on FILE_PATH's
-     parents.  FILE_PATH is relative to the URL specified in open(),
-     and are `svn_path_url_style'. */
-  svn_error_t *(*set_file) (void *report_baton,
-                            svn_string_t *file_path,
+  /* Describe a working copy PATH as being at a particular REVISION;
+     this will *override* any previous set_path() calls made on parent
+     paths.  PATH is relative to the URL specified in open(), and must
+     be given in `svn_path_url_style'. */
+  svn_error_t *(*set_path) (void *report_baton,
+                            svn_string_t *path,
                             svn_revnum_t revision);
-  
+    
   /* WC calls this when the state report is finished; any directories
      or files not explicitly `set' above are assumed to be at the
-     baseline revision.  */
+     baseline revision originally passed into do_update(). */
   svn_error_t *(*finish_report) (void *report_baton);
 
 } svn_ra_reporter_t;
