@@ -12,17 +12,17 @@ Contents:
      I. BUILD REQUIREMENTS
 
     II. INSTALLATION
-     A. Bootstrapping From A Tarball Or RPM
-     B. Building The Latest Source Under Unix
-     C. Building Under Unix In Different Directories
-     D. Bootstrapping From A Zip File Under Windows
-     E. Building The Latest Source Under Windows
+     A. Bootstrapping from a Tarball or RPM
+     B. Building the Latest Source under Unix
+     C. Building under Unix in Different Directories
+     D. Bootstrapping from a Zip File under Windows
+     E. Building the Latest Source under Windows
 
    III. BUILDING A SUBVERSION SERVER
-     A. Set Up Apache
-     B. Make And Install The Subversion Server
-     C. Configuring Apache For Subversion
-     D. Running And Testing
+     A. Setting Up Apache
+     B. Making and Installing the Subversion Server
+     C. Configuring Apache for Subversion
+     D. Running and Testing
 
 
 I.    BUILD REQUIREMENTS
@@ -243,7 +243,7 @@ I.    BUILD REQUIREMENTS
 II.   INSTALLATION
       ============
 
-  A.  Bootstrapping From A Tarball Or RPM
+  A.  Bootstrapping from a Tarball or RPM
       -----------------------------------
 
       In order to get the very latest Subversion source code, you need
@@ -251,7 +251,7 @@ II.   INSTALLATION
       first need a Subversion client.
 
 
-      1.  Boostrapping From Tarball
+      1.  Boostrapping from a Tarball
 
       Download the most recent distribution tarball from:
 
@@ -277,7 +277,7 @@ II.   INSTALLATION
           ...
 
 
-      2.  Bootstrapping From RPM
+      2.  Bootstrapping from an RPM
 
       If you are using Linux (or any OS that can use RPM) then another
       possibility is to download the binary RPM from the
@@ -314,7 +314,7 @@ II.   INSTALLATION
       one-line build procedure.
 
 
-  B.  Building The Latest Source Under Unix
+  B.  Building the Latest Source under Unix
       -------------------------------------
 
       (These instructions assume you have already installed Subversion
@@ -383,7 +383,7 @@ II.   INSTALLATION
           # make install
 
 
-  C.  Building Under Unix In Different Directories
+  C.  Building under Unix in Different Directories
       --------------------------------------------
 
       It is possible to configure and build Subversion on Unix in a
@@ -430,7 +430,7 @@ II.   INSTALLATION
       into a another working copy.
 
 
-  D.  Bootstrapping From A Zip File Under Windows
+  D.  Bootstrapping from a Zip File under Windows
       -------------------------------------------
 
       Of all the ways of getting a Subversion client, this is the
@@ -455,7 +455,7 @@ II.   INSTALLATION
       programs, as described in section I.10.
 
 
-  E.  Building The Latest Source Under Windows
+  E.  Building the Latest Source under Windows
       ----------------------------------------
 
       (These instructions assume you have already installed Subversion
@@ -546,8 +546,8 @@ II.   INSTALLATION
 III.  BUILDING A SUBVERSION SERVER
       ============================
 
-  A.  Set Up Apache
-      -------------
+  A.  Setting Up Apache
+      -----------------
 
       (Following the BOOTSTRAPPING FROM RPM procedures above will install and
       build the latest Subversion server for Linux RedHat 7.1, 7.2, and PPC
@@ -555,7 +555,7 @@ III.  BUILDING A SUBVERSION SERVER
       installed when the SUBVERSION RPM is built.)
 
 
-      1.  Obtaining And Installing Apache 2.0
+      1.  Obtaining and Installing Apache 2.0
 
       Checkout the "httpd-2.0" cvs module from apache.org.  If you have
       questions about the Apache 2.0 build, please consult the HTTPD
@@ -608,8 +608,8 @@ III.  BUILDING A SUBVERSION SERVER
 
           $ make depend && make && make install
 
-  B.  Make And Install The Subversion Server
-      --------------------------------------
+  B.  Making and Installing the Subversion Server
+      -------------------------------------------
 
       Go back into your subversion working copy and run ./autogen.sh if
       you need to.  Then run:
@@ -640,7 +640,7 @@ III.  BUILDING A SUBVERSION SERVER
       /usr/local/apache2/modules/.
 
 
-  C.  Configuring Apache For Subversion
+  C.  Configuring Apache for Subversion
       ---------------------------------
 
       Add this to the *bottom* of /usr/local/apache2/conf/httpd.conf:
@@ -709,7 +709,7 @@ III.  BUILDING A SUBVERSION SERVER
       Berkeley DB files!  This is a very common problem.
 
 
-  D.  Running And Testing
+  D.  Running and Testing
       -------------------
 
       Fire up apache 2.0:
