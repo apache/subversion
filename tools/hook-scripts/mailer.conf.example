@@ -1,6 +1,7 @@
 #
 # mailer.conf: example configuration file for mailer.py
 #
+# $Id$
 
 [general]
 

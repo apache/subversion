@@ -29,3 +29,5 @@ Your Mileage May Vary.
       Uses the `svnlook' program to send revision property change notice
       emails.  Invoke it from `repository/hook/post-revprop-change'.  Run
       the script with no arguments for usage.
+
+$Id$

@@ -2,6 +2,11 @@
 #
 # mailer.py: send email describing a commit
 #
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+#
 # USAGE: mailer.py REPOS-DIR REVISION [CONFIG-FILE]
 #
 #   Using CONFIG-FILE, deliver an email describing the changes between
