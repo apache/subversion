@@ -1512,6 +1512,8 @@ or release date:
    With voting:
      - Anything affecting only tools/, packages/, or bindings/.
      - Doc fixes in core code header or source files.
+     - Changes to printed output, such as error and usage messages, as
+       long as format string "%" codes and their args are not touched.
 
 Core code changes, of course, require voting, and restart the soak or
 test period, since otherwise the change could be undertested.
