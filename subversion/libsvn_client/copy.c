@@ -1041,6 +1041,12 @@ setup_copy (svn_client_commit_info_t **commit_info,
               SVN_ERR (svn_wc_entry (&entry, src_path, adm_access, FALSE,
                                      pool));
               SVN_ERR (svn_wc_adm_close (adm_access));
+
+              if (! entry)
+                return svn_error_createf
+                  (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                   "Source path '%s' is not under version control.", src_path);
+
               src_path = entry->url;
               src_is_url = TRUE;
             }
