@@ -158,7 +158,10 @@ svn_client__repos_locations (const char **start_url,
 /* Given PATH_OR_URL, which contains either a working copy path or an
    absolute url, a peg revision PEG_REVISON, and a desired revision
    REVISION, create an RA connection to that object as it exists in
-   that revision, following copy history if necessary.
+   that revision, following copy history if necessary.  If REVISION is
+   younger than PEG_REVISION, then PATH_OR_URL will be checked to see
+   that it is the same node in both PEG_REVISION and REVISON.  If it
+   is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
    The resulting ra_plugin is stored in *RA_LIB_P along with its
    session baton in *SESSION_P.  The actual revision number of the

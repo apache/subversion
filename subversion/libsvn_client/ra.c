@@ -875,7 +875,6 @@ svn_client__ra_lib_from_path (svn_ra_plugin_t **ra_lib_p,
      different) url in REVISION. */
   SVN_ERR (svn_client__repos_locations (&url, &new_rev,
                                         &ignored_url, &ignored_rev,
-                                        /* peg coords are path@BASE: */
                                         path_or_url, &peg_revision,
                                         /* search range: */
                                         &start_rev, &dead_end_rev,
