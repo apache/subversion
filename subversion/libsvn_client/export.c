@@ -611,6 +611,7 @@ svn_client_export (svn_revnum_t *result_rev,
 {
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
   svn_boolean_t use_ra = FALSE;
+  const char *URL;
 
   if (! svn_path_is_url (from) &&
       (revision->kind != svn_opt_revision_base) &&
@@ -624,16 +625,17 @@ svn_client_export (svn_revnum_t *result_rev,
       else
         {
           use_ra = TRUE;
-          SVN_ERR (svn_client_url_from_path (&from, from, pool));
+          SVN_ERR (svn_client_url_from_path (&URL, from, pool));
           if (! from)
             return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
                                       "'%s' has no URL", from);
         }
     }
+  else
+    URL = svn_path_canonicalize (from, pool);
 
   if (svn_path_is_url (from) || use_ra)
     {
-      const char *URL;
       svn_revnum_t revnum;
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
@@ -645,8 +647,6 @@ svn_client_export (svn_revnum_t *result_rev,
       struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
       svn_delta_editor_t *editor = svn_delta_default_editor (pool);
 
-      URL = svn_path_canonicalize (from, pool);
-      
       eb->root_path = to;
       eb->root_url = URL;
       eb->force = force;
@@ -682,7 +682,7 @@ svn_client_export (svn_revnum_t *result_rev,
       if (revision->kind == svn_opt_revision_unspecified)
         revision->kind = svn_opt_revision_head;
       SVN_ERR (svn_client__get_revision_number
-               (&revnum, ra_lib, session, revision, to, pool));
+               (&revnum, ra_lib, session, revision, from, pool));
 
       /* Manufacture a basic 'report' to the update reporter. */
       SVN_ERR (ra_lib->do_update (session,
