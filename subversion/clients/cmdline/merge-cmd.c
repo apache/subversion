@@ -35,11 +35,13 @@
 /*** Code. ***/
 
 
+/* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__merge (apr_getopt_t *os,
-               svn_cl__opt_state_t *opt_state,
+               void *baton,
                apr_pool_t *pool)
 {
+  svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
   svn_client_auth_baton_t *auth_baton;
   const char *sourcepath1, *sourcepath2, *targetpath;
@@ -52,12 +54,13 @@ svn_cl__merge (apr_getopt_t *os,
 
   /* If the first opt_state revision is filled in at this point, then
      we know the user must have used the '-r' switch. */
-  if (opt_state->start_revision.kind != svn_client_revision_unspecified)
+  if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {
       /* sanity check:  they better have given supplied a *range*.  */
-      if (opt_state->end_revision.kind == svn_client_revision_unspecified)
+      if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         {
-          svn_cl__subcommand_help ("merge", pool);
+          svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
+                                   svn_cl__options, pool);
           return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS,
                                    0, 0, pool, "Second revision required.");
         }
@@ -80,7 +83,8 @@ svn_cl__merge (apr_getopt_t *os,
     {
       if ((targets->nelts < 1) || (targets->nelts > 2))
         {
-          svn_cl__subcommand_help ("merge", pool);
+          svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
+                                   svn_cl__options, pool);
           return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, 0, pool,
                                    "Wrong number of paths given.");
         }
@@ -98,7 +102,8 @@ svn_cl__merge (apr_getopt_t *os,
     {
       if ((targets->nelts < 2) || (targets->nelts > 3))
         {
-          svn_cl__subcommand_help ("merge", pool);
+          svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
+                                   svn_cl__options, pool);
           return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, 0, pool,
                                    "Wrong number of paths given.");
         }
@@ -114,10 +119,10 @@ svn_cl__merge (apr_getopt_t *os,
         targetpath = "";
     }
 
-  if (opt_state->start_revision.kind == svn_client_revision_unspecified)
-    opt_state->start_revision.kind = svn_client_revision_head;
-  if (opt_state->end_revision.kind == svn_client_revision_unspecified)
-    opt_state->end_revision.kind = svn_client_revision_head;
+  if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
+    opt_state->start_revision.kind = svn_opt_revision_head;
+  if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
+    opt_state->end_revision.kind = svn_opt_revision_head;
 
   /*  ### Is anyone still using this debugging printf?
       printf ("I would now call svn_client_merge with these arguments\n");

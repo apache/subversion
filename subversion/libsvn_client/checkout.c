@@ -33,6 +33,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_io.h"
+#include "svn_opt.h"
 #include "client.h"
 
 
@@ -46,7 +47,7 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
                      svn_client_auth_baton_t *auth_baton,
                      const char *URL,
                      const char *path,
-                     const svn_client_revision_t *revision,
+                     const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
                      const char *xml_src,
                      apr_pool_t *pool)
@@ -63,7 +64,7 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
 
   /* Get revnum set to something meaningful, so we can fetch the
      checkout editor. */
-  if (revision->kind == svn_client_revision_number)
+  if (revision->kind == svn_opt_revision_number)
     revnum = revision->value.number; /* do the trivial conversion manually */
   else
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */

@@ -375,11 +375,13 @@ log_message_receiver_xml (void *baton,
 }
 
 
+/* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__log (apr_getopt_t *os,
-             svn_cl__opt_state_t *opt_state,
+             void *baton,
              apr_pool_t *pool)
 {
+  svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
   svn_client_auth_baton_t *auth_baton;
   struct log_message_receiver_baton lb;
@@ -393,8 +395,8 @@ svn_cl__log (apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target(targets, pool);
 
-  if ((opt_state->start_revision.kind != svn_client_revision_unspecified)
-      && (opt_state->end_revision.kind == svn_client_revision_unspecified))
+  if ((opt_state->start_revision.kind != svn_opt_revision_unspecified)
+      && (opt_state->end_revision.kind == svn_opt_revision_unspecified))
     {
       /* If the user specified exactly one revision, then start rev is
          set but end is not.  We show the log message for just that
@@ -415,13 +417,13 @@ svn_cl__log (apr_getopt_t *os,
       opt_state->end_revision.value.date
         = opt_state->start_revision.value.date;
     }
-  else if (opt_state->start_revision.kind == svn_client_revision_unspecified)
+  else if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
     {
-      opt_state->start_revision.kind = svn_client_revision_head;
+      opt_state->start_revision.kind = svn_opt_revision_head;
 
-      if (opt_state->end_revision.kind == svn_client_revision_unspecified)
+      if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         {
-          opt_state->end_revision.kind = svn_client_revision_number;
+          opt_state->end_revision.kind = svn_opt_revision_number;
           opt_state->end_revision.value.number = 1;  /* oldest commit */
         }
     }

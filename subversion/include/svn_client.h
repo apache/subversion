@@ -35,6 +35,7 @@
 #include "svn_ra.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_opt.h"
 
 
 #ifdef __cplusplus
@@ -53,39 +54,6 @@ extern "C" {
     overhead, etc.)  On the other hand, it's this is a very simple
     implementation, and allows for the possibility that different
     targets may come from different repositories.  */
-
-
-
-
-
-/* Various ways of specifying revisions. 
- *   
- * Note:
- * In contexts where local mods are relevant, the `working' kind
- * refers to the uncommitted "working" revision, which may be modified
- * with respect to its base revision.  In other contexts, `working'
- * should behave the same as `committed' or `current'.
- */
-enum svn_client_revision_kind {
-  svn_client_revision_unspecified,   /* No revision information given. */
-  svn_client_revision_number,        /* revision given as number */
-  svn_client_revision_date,          /* revision given as date */
-  svn_client_revision_committed,     /* rev of most recent change */
-  svn_client_revision_previous,      /* (rev of most recent change) - 1 */
-  svn_client_revision_base,          /* .svn/entries current revision */
-  svn_client_revision_working,       /* current, plus local mods */
-  svn_client_revision_head           /* repository youngest */
-};
-
-
-/* A revision, specified in one of `svn_client_revision_kind' ways. */
-typedef struct svn_client_revision_t {
-  enum svn_client_revision_kind kind;
-  union {
-    svn_revnum_t number;
-    apr_time_t date;
-  } value;
-} svn_client_revision_t;
 
 
 
@@ -252,7 +220,7 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
                      svn_client_auth_baton_t *auth_baton,
                      const char *URL,
                      const char *path,
-                     const svn_client_revision_t *revision,
+                     const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
                      const char *xml_src,
                      apr_pool_t *pool);
@@ -281,7 +249,7 @@ svn_error_t *
 svn_client_update (svn_client_auth_baton_t *auth_baton,
                    const char *path,
                    const char *xml_src,
-                   const svn_client_revision_t *revision,
+                   const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
@@ -310,7 +278,7 @@ svn_error_t *
 svn_client_switch (svn_client_auth_baton_t *auth_baton,
                    const char *path,
                    const char *url,
-                   const svn_client_revision_t *revision,
+                   const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
@@ -443,8 +411,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
    Use NONRECURSIVE to indicate that imported directories should not
    recurse into any subdirectories they may have.
 
-   Note: REVISION is svn_revnum_t, rather than svn_client_revision_t,
-   because only the svn_client_revision_number kind would be useful
+   Note: REVISION is svn_revnum_t, rather than svn_opt_revision_t,
+   because only the svn_opt_revision_number kind would be useful
    anyway.
 
    ### kff todo: This import is similar to cvs import, in that it does
@@ -492,8 +460,8 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
    will be updated appropriately.  If REVISION is invalid, the working
    copy remains unchanged.
 
-   Note: REVISION is svn_revnum_t, rather than svn_client_revision_t,
-   because only the svn_client_revision_number kind would be useful
+   Note: REVISION is svn_revnum_t, rather than svn_opt_revision_t,
+   because only the svn_opt_revision_number kind would be useful
    anyway.
 
    Use NONRECURSIVE to indicate that subdirectories of directory
@@ -574,15 +542,15 @@ svn_client_status (apr_hash_t **statushash,
    If STRICT_NODE_HISTORY is set, copy history (if any exists) will
    not be traversed while harvest revision logs for each target.
 
-   If START->kind or END->kind is svn_client_revision_unspecified,
+   If START->kind or END->kind is svn_opt_revision_unspecified,
    return the error SVN_ERR_CLIENT_BAD_REVISION.
 
    Use POOL for any temporary allocation.
 
    Special case for repositories at revision 0:
 
-   If START->kind is svn_client_revision_head, and END->kind is
-   svn_client_revision_number && END->number is 1, then handle an
+   If START->kind is svn_opt_revision_head, and END->kind is
+   svn_opt_revision_number && END->number is 1, then handle an
    empty (no revisions) repository specially: instead of erroring
    because requested revision 1 when the highest revision is 0, just
    invoke RECEIVER on revision 0, passing NULL for changed paths and
@@ -595,8 +563,8 @@ svn_client_status (apr_hash_t **statushash,
 svn_error_t *
 svn_client_log (svn_client_auth_baton_t *auth_baton,
                 const apr_array_header_t *targets,
-                const svn_client_revision_t *start,
-                const svn_client_revision_t *end,
+                const svn_opt_revision_t *start,
+                const svn_opt_revision_t *end,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_log_message_receiver_t receiver,
@@ -628,9 +596,9 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               svn_client_auth_baton_t *auth_baton,
                               const char *path1,
-                              const svn_client_revision_t *revision1,
+                              const svn_opt_revision_t *revision1,
                               const char *path2,
-                              const svn_client_revision_t *revision2,
+                              const svn_opt_revision_t *revision2,
                               svn_boolean_t recurse,
                               apr_file_t *outfile,
                               apr_file_t *errfile,
@@ -668,9 +636,9 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
                   void *notify_baton,
                   svn_client_auth_baton_t *auth_baton,
                   const char *path1,
-                  const svn_client_revision_t *revision1,
+                  const svn_opt_revision_t *revision1,
                   const char *path2,
-                  const svn_client_revision_t *revision2,
+                  const svn_opt_revision_t *revision2,
                   const char *target_wcpath,
                   svn_boolean_t recurse,
                   svn_boolean_t force,
@@ -749,7 +717,7 @@ svn_client_resolve (const char *path,
 svn_error_t *
 svn_client_copy (svn_client_commit_info_t **commit_info,
                  const char *src_path,
-                 const svn_client_revision_t *src_revision,
+                 const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_wc_adm_access_t *optional_adm_access,
                  svn_client_auth_baton_t *auth_baton,
@@ -807,7 +775,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
 svn_error_t *
 svn_client_move (svn_client_commit_info_t **commit_info,
                  const char *src_path,
-                 const svn_client_revision_t *src_revision,
+                 const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_boolean_t force,
                  svn_client_auth_baton_t *auth_baton,
@@ -889,7 +857,7 @@ svn_client_proplist (apr_array_header_t **props,
 svn_error_t *
 svn_client_export (const char *from,
                    const char *to,
-                   svn_client_revision_t *revision,
+                   svn_opt_revision_t *revision,
                    svn_client_auth_baton_t *auth_baton,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
@@ -913,7 +881,7 @@ svn_client_export (const char *from,
 svn_error_t *
 svn_client_ls (apr_hash_t **dirents,
                const char *url,
-               svn_client_revision_t *revision,
+               svn_opt_revision_t *revision,
                svn_client_auth_baton_t *auth_baton,
                svn_boolean_t recurse,
                apr_pool_t *pool);

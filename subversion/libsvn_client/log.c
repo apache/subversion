@@ -48,8 +48,8 @@
 svn_error_t *
 svn_client_log (svn_client_auth_baton_t *auth_baton,
                 const apr_array_header_t *targets,
-                const svn_client_revision_t *start,
-                const svn_client_revision_t *end,
+                const svn_opt_revision_t *start,
+                const svn_opt_revision_t *end,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_log_message_receiver_t receiver,
@@ -66,8 +66,8 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   svn_revnum_t start_revnum, end_revnum;
   svn_error_t *err;
 
-  if ((start->kind == svn_client_revision_unspecified)
-      || (end->kind == svn_client_revision_unspecified))
+  if ((start->kind == svn_opt_revision_unspecified)
+      || (end->kind == svn_opt_revision_unspecified))
     {
       return svn_error_create
         (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
@@ -178,8 +178,8 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
    * See also http://subversion.tigris.org/issues/show_bug.cgi?id=692.
    */
   if (err && (err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
-      && (start->kind == svn_client_revision_head)
-      && ((end->kind == svn_client_revision_number)
+      && (start->kind == svn_opt_revision_head)
+      && ((end->kind == svn_opt_revision_number)
           && (end->value.number == 1)))
     {
       svn_revnum_t youngest_rev;

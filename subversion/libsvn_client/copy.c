@@ -30,6 +30,8 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_opt.h"
+
 #include "client.h"
 
 
@@ -162,7 +164,7 @@ wc_to_wc_copy (const char *src_path,
 static svn_error_t *
 repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                      const char *src_url, 
-                     const svn_client_revision_t *src_revision, 
+                     const svn_opt_revision_t *src_revision, 
                      const char *dst_url, 
                      svn_client_auth_baton_t *auth_baton,
                      const char *message,
@@ -660,7 +662,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 */
 static svn_error_t *
 repos_to_wc_copy (const char *src_url,
-                  const svn_client_revision_t *src_revision,
+                  const svn_opt_revision_t *src_revision,
                   const char *dst_path, 
                   svn_wc_adm_access_t *optional_adm_access,
                   svn_client_auth_baton_t *auth_baton,
@@ -888,7 +890,7 @@ repos_to_wc_copy (const char *src_url,
 static svn_error_t *
 setup_copy (svn_client_commit_info_t **commit_info,
             const char *src_path,
-            const svn_client_revision_t *src_revision,
+            const svn_opt_revision_t *src_revision,
             const char *dst_path,
             svn_wc_adm_access_t *optional_adm_access,
             svn_client_auth_baton_t *auth_baton,
@@ -934,12 +936,12 @@ setup_copy (svn_client_commit_info_t **commit_info,
       /* It doesn't make sense to specify revisions in a move. */
 
       /* ### todo: this check could fail wrongly.  For example,
-         someone could pass in an svn_client_revision_number that just
+         someone could pass in an svn_opt_revision_number that just
          happens to be the HEAD.  It's fair enough to punt then, IMHO,
          and just demand that the user not specify a revision at all;
          beats mucking up this function with RA calls and such. */ 
-      if (src_revision->kind != svn_client_revision_unspecified
-          && src_revision->kind != svn_client_revision_head)
+      if (src_revision->kind != svn_opt_revision_unspecified
+          && src_revision->kind != svn_opt_revision_head)
         {
           return svn_error_create
             (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
@@ -950,8 +952,8 @@ setup_copy (svn_client_commit_info_t **commit_info,
     {
       if (!src_is_url)
         {
-          if (src_revision->kind != svn_client_revision_unspecified
-              && src_revision->kind != svn_client_revision_head)
+          if (src_revision->kind != svn_opt_revision_unspecified
+              && src_revision->kind != svn_opt_revision_head)
             {
               /* We can convert the working copy path to a URL based on the
                  entries file. */
@@ -1028,7 +1030,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
 svn_error_t *
 svn_client_copy (svn_client_commit_info_t **commit_info,
                  const char *src_path,
-                 const svn_client_revision_t *src_revision,
+                 const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_wc_adm_access_t *optional_adm_access,
                  svn_client_auth_baton_t *auth_baton,
@@ -1052,7 +1054,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
 svn_error_t *
 svn_client_move (svn_client_commit_info_t **commit_info,
                  const char *src_path,
-                 const svn_client_revision_t *src_revision,
+                 const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_boolean_t force,
                  svn_client_auth_baton_t *auth_baton,

@@ -34,12 +34,14 @@
 
 /*** Code. ***/
 
-/* An svn_cl__cmd_proc_t to handle the 'diff' command. */
+/* An svn_opt_subcommand_t to handle the 'diff' command.
+   This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__diff (apr_getopt_t *os,
-              svn_cl__opt_state_t *opt_state,
+              void *baton,
               apr_pool_t *pool)
 {
+  svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *options;
   apr_array_header_t *targets;
   svn_client_auth_baton_t *auth_baton;
@@ -57,8 +59,8 @@ svn_cl__diff (apr_getopt_t *os,
   if ((status = apr_file_open_stderr (&errfile, pool)))
     return svn_error_create (status, 0, NULL, pool, "can't open stderr");
   
-  if ((opt_state->start_revision.kind == svn_client_revision_unspecified)
-      && (opt_state->end_revision.kind == svn_client_revision_unspecified))
+  if ((opt_state->start_revision.kind == svn_opt_revision_unspecified)
+      && (opt_state->end_revision.kind == svn_opt_revision_unspecified))
     {
       /* No '-r' was supplied, so this is either the form 
          'svn diff URL1@N URL2@M', or 'svn diff wcpath ...' */
@@ -78,10 +80,10 @@ svn_cl__diff (apr_getopt_t *os,
           /* The @revs have already been parsed out if they were
              present, and assigned to start_revision and end_revision.
              If not present, we set HEAD as default. */
-          if (opt_state->start_revision.kind ==svn_client_revision_unspecified)
-            opt_state->start_revision.kind = svn_client_revision_head;
-          if (opt_state->end_revision.kind == svn_client_revision_unspecified)
-            opt_state->end_revision.kind = svn_client_revision_head;
+          if (opt_state->start_revision.kind ==svn_opt_revision_unspecified)
+            opt_state->start_revision.kind = svn_opt_revision_head;
+          if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
+            opt_state->end_revision.kind = svn_opt_revision_head;
 
           if (targets->nelts < 2)
             return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0,
@@ -107,8 +109,8 @@ svn_cl__diff (apr_getopt_t *os,
         {
           /* The form 'svn diff wcpath1 wcpath2 ...' */
           
-          opt_state->start_revision.kind = svn_client_revision_base;
-          opt_state->end_revision.kind = svn_client_revision_working;
+          opt_state->start_revision.kind = svn_opt_revision_base;
+          opt_state->end_revision.kind = svn_opt_revision_working;
 
           for (i = 0; i < targets->nelts; ++i)
             {
@@ -147,7 +149,7 @@ svn_cl__diff (apr_getopt_t *os,
         {
           const char *target = ((const char **) (targets->elts))[i];
   
-          if (opt_state->end_revision.kind == svn_client_revision_unspecified)
+          if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
             {
               /* The user specified only '-r N'.  Therefore, each path
                  -must- be a working copy path.  No URLs allowed! */        
@@ -161,7 +163,7 @@ svn_cl__diff (apr_getopt_t *os,
               /* URL or not, if the 2nd revision wasn't given by the
                  user, they must want to compare the 1st repsository
                  revision to their working files. */
-              opt_state->end_revision.kind = svn_client_revision_working;
+              opt_state->end_revision.kind = svn_opt_revision_working;
             }
         
           /* We're running diff on each TARGET independently;  also

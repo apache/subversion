@@ -36,11 +36,11 @@ svn_error_t *
 svn_client__get_revision_number (svn_revnum_t *revnum,
                                  svn_ra_plugin_t *ra_lib,
                                  void *sess,
-                                 const svn_client_revision_t *revision,
+                                 const svn_opt_revision_t *revision,
                                  const char *path,
                                  apr_pool_t *pool)
 {
-  /* ### When revision->kind == svn_client_revision_date, is there an
+  /* ### When revision->kind == svn_opt_revision_date, is there an
      optimization such that we can compare revision->value->date with
      the committed-date in the entries file (or rather, with some
      range of which committed-date is one endpoint), and sometimes
@@ -51,8 +51,8 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
 
   /* Sanity check. */
   if (((ra_lib == NULL) || (sess == NULL))
-      && ((revision->kind == svn_client_revision_date)
-          || (revision->kind == svn_client_revision_head)))
+      && ((revision->kind == svn_opt_revision_date)
+          || (revision->kind == svn_opt_revision_head)))
     {
       return svn_error_create
         (SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, 0, NULL, pool,
@@ -60,18 +60,18 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
          "need ra_lib and session for date or head revisions.");
     }
 
-  if (revision->kind == svn_client_revision_number)
+  if (revision->kind == svn_opt_revision_number)
     *revnum = revision->value.number;
-  else if (revision->kind == svn_client_revision_date)
+  else if (revision->kind == svn_opt_revision_date)
     SVN_ERR (ra_lib->get_dated_revision (sess, revnum, revision->value.date));
-  else if (revision->kind == svn_client_revision_head)
+  else if (revision->kind == svn_opt_revision_head)
     SVN_ERR (ra_lib->get_latest_revnum (sess, revnum));
-  else if (revision->kind == svn_client_revision_unspecified)
+  else if (revision->kind == svn_opt_revision_unspecified)
     *revnum = SVN_INVALID_REVNUM;
-  else if ((revision->kind == svn_client_revision_committed)
-           || (revision->kind == svn_client_revision_working)
-           || (revision->kind == svn_client_revision_base)
-           || (revision->kind == svn_client_revision_previous))
+  else if ((revision->kind == svn_opt_revision_committed)
+           || (revision->kind == svn_opt_revision_working)
+           || (revision->kind == svn_opt_revision_base)
+           || (revision->kind == svn_opt_revision_previous))
     {
       svn_wc_adm_access_t *adm_access; /* ### FIXME local */
       svn_wc_entry_t *ent;
@@ -93,13 +93,13 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
         (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
          "svn_client__get_revision: '%s' not under revision control", path);
       
-      if ((revision->kind == svn_client_revision_base)
-          || (revision->kind == svn_client_revision_working))
+      if ((revision->kind == svn_opt_revision_base)
+          || (revision->kind == svn_opt_revision_working))
         *revnum = ent->revision;
       else
         {
           *revnum = ent->cmt_rev;
-          if (revision->kind == svn_client_revision_previous)
+          if (revision->kind == svn_opt_revision_previous)
             (*revnum)--;
         }
     }
@@ -114,13 +114,13 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
 
 
 svn_boolean_t
-svn_client__compare_revisions (svn_client_revision_t *revision1,
-                               svn_client_revision_t *revision2)
+svn_client__compare_revisions (svn_opt_revision_t *revision1,
+                               svn_opt_revision_t *revision2)
 {
   if ((revision1->kind != revision2->kind)
-      || ((revision1->kind == svn_client_revision_number)
+      || ((revision1->kind == svn_opt_revision_number)
           && (revision1->value.number != revision2->value.number))
-      || ((revision1->kind == svn_client_revision_date)
+      || ((revision1->kind == svn_opt_revision_date)
           && (revision1->value.date != revision2->value.date)))
     return FALSE;
 

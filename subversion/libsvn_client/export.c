@@ -165,7 +165,7 @@ copy_versioned_files (const char *from,
 svn_error_t *
 svn_client_export (const char *from,
                    const char *to,
-                   svn_client_revision_t *revision,
+                   svn_opt_revision_t *revision,
                    svn_client_auth_baton_t *auth_baton,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,

@@ -51,11 +51,13 @@ svn_cl__may_need_force (svn_error_t *err)
   return err;
 }
 
+/* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__delete (apr_getopt_t *os,
-                svn_cl__opt_state_t *opt_state,
+                void *baton,
                 apr_pool_t *pool)
 {
+  svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
   svn_client_auth_baton_t *auth_baton = NULL;
   int i;

@@ -40,6 +40,7 @@
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_opt.h"
 #include "svn_time.h"
 #include "svn_utf.h"
 #include "cl.h"
@@ -47,6 +48,13 @@
 
 /*** Option Processing ***/
 
+/* Option codes and descriptions for the command line client.
+ *
+ * This must not have more than SVN_OPT_MAX_OPTIONS entries; if you
+ * need more, increase that limit first. 
+ *
+ * The entire list must be terminated with a entry of nulls.
+ */
 const apr_getopt_option_t svn_cl__options[] =
   {
     {"force",         svn_cl__force_opt, 0, "force operation to run"},
@@ -77,51 +85,18 @@ const apr_getopt_option_t svn_cl__options[] =
                       "disregard default and svn:ignore property ignores"},
     {"no-auth-cache", svn_cl__no_auth_cache_opt, 0,
                       "do not cache authentication tokens"},
-    {0,               0, 0}
+    {0,               0, 0, 0}
   };
-
-
-/* The maximum number of options that can be accepted by a subcommand;
-   this is simply the number of unique switches that exist in the
-   table above.  */
-#define SVN_CL__MAX_OPTS sizeof(svn_cl__options)/sizeof(svn_cl__options[0])
 
 
 
 /*** Command dispatch. ***/
 
-/* The maximum number of aliases a subcommand can have. */
-#define SVN_CL__MAX_ALIASES 3
-
-
-/* One element of the command dispatch table. */
-typedef struct svn_cl__cmd_desc_t
-{
-  /* The full name of this command. */
-  const char *name;
-
-  /* The function this command invokes. */
-  svn_cl__cmd_proc_t *cmd_func;
-
-  /* A list of alias names for this command. */
-  const char *aliases[SVN_CL__MAX_ALIASES];
-
-  /* A brief string describing this command, for usage messages. */
-  const char *help;
-
-  /* A list of options accepted by this command.  Each value in the
-     array is a unique enum (the 2nd field in apr_getopt_option_t) */
-  int valid_options[SVN_CL__MAX_OPTS];
-
-} svn_cl__cmd_desc_t;
-
-
-
 /* Our array of available subcommands.
  *
  * The entire list must be terminated with a entry of nulls.
  */
-const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
+const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 {
   { "add", svn_cl__add, {0},
     "Put files and directories under revision control, scheduling\n"
@@ -429,452 +404,6 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
 };
 
 
-
-
-/* Return the entry in svn_cl__cmd_table whose name matches CMD_NAME,
- * or NULL if none.  CMD_NAME may be an alias. */
-static const svn_cl__cmd_desc_t *
-svn_cl__get_canonical_command (const char *cmd_name)
-{
-  int i = 0;
-
-  if (cmd_name == NULL)
-    return NULL;
-
-  while (svn_cl__cmd_table[i].name) {
-    int j;
-    if (strcmp (cmd_name, svn_cl__cmd_table[i].name) == 0)
-      return svn_cl__cmd_table + i;
-    for (j = 0; 
-         (j < SVN_CL__MAX_ALIASES) && svn_cl__cmd_table[i].aliases[j]; 
-         j++)
-      if (strcmp (cmd_name, svn_cl__cmd_table[i].aliases[j]) == 0)
-        return svn_cl__cmd_table + i;
-
-    i++;
-  }
-
-  /* If we get here, there was no matching command name or alias. */
-  return NULL;
-}
-
-
-
-
-/*** 'help' processing ***/
-
-/* Print an option OPT nicely into a STRING allocated in POOL.  If DOC
-   is set, include generic documentation string of option.*/
-static void
-format_option (const char **string,
-               const apr_getopt_option_t *opt,
-               svn_boolean_t doc,
-               apr_pool_t *pool)
-{
-  char *opts;
-
-  if (opt == NULL)
-    {
-      *string = "?";
-      return;
-    }
-
-  /* We have a valid option which may or may not have a "short
-     name" (a single-character alias for the long option). */
-  if (opt->optch <= 255)  
-    opts = apr_psprintf (pool, "-%c [--%s]", opt->optch, opt->name);
-  else
-    opts = apr_psprintf (pool, "--%s", opt->name);
-
-  if (opt->has_arg)
-    opts = apr_pstrcat (pool, opts, " arg", NULL);
-
-  if (doc)
-    opts = apr_psprintf (pool, "%-24s : %s", opts, opt->description);
-
-  *string = opts;
-}
-
-
-
-const apr_getopt_option_t *
-svn_cl__get_option_from_enum (int code,
-                              const apr_getopt_option_t *option_table)
-{
-  apr_size_t i;
-  const apr_getopt_option_t *opt = NULL;
-
-  for (i = 0; i < SVN_CL__MAX_OPTS; i++)
-    {
-      if (option_table[i].optch == code)
-        {
-          opt = &(option_table[i]);
-          break;
-        }
-    }
-  
-  return opt;
-}
-
-
-/* Return TRUE iff subcommand COMMAND has OPTION_CODE listed within
-   it.  Else return FALSE. */
-static svn_boolean_t
-subcommand_takes_option (const svn_cl__cmd_desc_t *command,
-                         int option_code)
-{
-  apr_size_t i;
-  
-  for (i = 0; i < SVN_CL__MAX_OPTS; i++)
-    {          
-      if (command->valid_options[i] == option_code)
-        return TRUE;
-    }
-  return FALSE;
-}
-
-
-/* Print the canonical command name for CMD, all its aliases,
-   and if HELP is set, print the help string for the command too. */
-static void
-print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
-                    svn_boolean_t help, 
-                    apr_pool_t *pool,
-                    FILE *stream)
-{
-  const svn_cl__cmd_desc_t *canonical_cmd
-    = svn_cl__get_canonical_command (cmd_desc->name);
-  svn_boolean_t first_time;
-  apr_size_t i;
-
-  /* Print the canonical command name. */
-  fputs (canonical_cmd->name, stream);
-
-  /* Print the list of aliases. */
-  first_time = TRUE;
-  for (i = 0; i < SVN_CL__MAX_ALIASES; i++) 
-    {
-      if (canonical_cmd->aliases[i] == NULL)
-        break;
-
-      if (first_time) {
-        fprintf (stream, " (");
-        first_time = FALSE;
-      }
-      else
-        fprintf (stream, ", ");
-      
-      fprintf (stream, "%s", canonical_cmd->aliases[i]);
-    }
-
-  if (! first_time)
-    fprintf (stream, ")");
-  
-  if (help)
-    {
-      const apr_getopt_option_t *option;
-      svn_boolean_t have_options = FALSE;
-
-      fprintf (stream, ": %s", canonical_cmd->help);
-
-      /* Loop over all valid option codes attached to the subcommand */
-      for (i = 0; i < SVN_CL__MAX_OPTS; i++)
-        {
-          if (canonical_cmd->valid_options[i])
-            {
-              if (have_options == FALSE)
-                {
-                  fprintf (stream, "\nValid options:\n");
-                  have_options = TRUE;
-                }
-
-              /* convert each option code into an option */
-              option = 
-                svn_cl__get_option_from_enum (canonical_cmd->valid_options[i],
-                                              svn_cl__options);
-
-              /* print the option's docstring */
-              if (option)
-                {
-                  const char *optstr;
-                  format_option (&optstr, option, TRUE, pool);
-                  fprintf (stream, "  %s\n", optstr);
-                }
-            }
-        }
-
-      if (have_options)
-        fprintf (stream, "\n");
-    }
-}
-
-
-
-/* Print a generic (non-command-specific) usage message. */
-void
-svn_cl__print_generic_help (apr_pool_t *pool, FILE *stream)
-{
-  static const char usage[] =
-    "usage: svn <subcommand> [options] [args]\n"
-    "Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
-    "\n"
-    "Most subcommands take file and/or directory arguments, recursing\n"
-    "on the directories.  If no arguments are supplied to such a\n"
-    "command, it will recurse on the current directory (inclusive) by\n" 
-    "default.\n"
-    "\n"
-    "Available subcommands:\n";
-
-  static const char info[] =
-    "Subversion is a tool for revision control.\n"
-    "For additional information, see http://subversion.tigris.org\n";
-
-  int i = 0;
-
-  fprintf (stream, "%s", usage);
-  while (svn_cl__cmd_table[i].name) 
-    {
-      fprintf (stream, "   ");
-      print_command_info (svn_cl__cmd_table + i, FALSE, pool, stream);
-      fprintf (stream, "\n");
-      i++;
-    }
-
-  fprintf (stream, "\n");
-  fprintf (stream, "%s\n", info);
-
-}
-
-
-/* Helper function that will print the usage test of a subcommand
- * given the subcommand name as a char*. This function is also
- * used by subcommands that need to print a usage message */
-
-void
-svn_cl__subcommand_help (const char* subcommand,
-                         apr_pool_t *pool)
-{
-  const svn_cl__cmd_desc_t *cmd =
-    svn_cl__get_canonical_command (subcommand);
-    
-  if (cmd)
-    print_command_info (cmd, TRUE, pool, stdout);
-  else
-    fprintf (stderr, "\"%s\": unknown command.\n\n", subcommand);
-}
-
-
-
-/*** Parsing "X:Y"-style arguments. ***/
-
-/* If WORD matches one of the special revision descriptors,
- * case-insensitively, set *REVISION accordingly:
- *
- *   - For "head", set REVISION->kind to svn_client_revision_head.
- *
- *   - For "first", set REVISION->kind to svn_client_revision_number
- *     and REVISION->value.number to 0.  ### iffy, but might be useful
- *     when mixed with dates ###
- *
- *   - For "prev", set REVISION->kind to svn_client_revision_previous.
- *
- *   - For "base", set REVISION->kind to svn_client_revision_base.
- *
- *   - For "committed" or "changed", set REVISION->kind to
- *     svn_client_revision_committed.
- *
- * If match, return 1, else return 0 and don't touch REVISION.
- *
- * ### should we enforce a requirement that users write out these
- * words in full?  Actually, we probably will need to start enforcing
- * it as date parsing gets more sophisticated and the chances of a
- * first-letter overlap between a valid date and a valid word go up.
- */
-static int
-revision_from_word (svn_client_revision_t *revision, const char *word)
-{
-  if (strcasecmp (word, "head") == 0)
-    {
-      revision->kind = svn_client_revision_head;
-    }
-  else if (strcasecmp (word, "first") == 0)
-    {
-      revision->kind = svn_client_revision_number;
-      revision->value.number = 0;
-    }
-  else if (strcasecmp (word, "prev") == 0)
-    {
-      revision->kind = svn_client_revision_previous;
-    }
-  else if (strcasecmp (word, "base") == 0)
-    {
-      revision->kind = svn_client_revision_base;
-    }
-  else if ((strcasecmp (word, "committed") == 0)
-           || (strcasecmp (word, "changed") == 0))
-    {
-      revision->kind = svn_client_revision_committed;
-    }
-  else
-    return 0;
-
-  return 1;
-}
-
-
-/* Return non-zero if REV is all digits, else return 0. */
-static int
-valid_revision_number (const char *rev)
-{
-  while (*rev)
-    {
-      if (! apr_isdigit (*rev))
-        return 0;
-
-      /* Note: Keep this increment out of the apr_isdigit call, which
-         is probably a macro, although you can supposedly #undef to
-         get the function definition... But wait, I've said too much
-         already.  Let us speak of this no more tonight, for there are
-         strange doings in the Shire of late. */
-      rev++;
-    }
-
-  return 1;
-}
-
-
-svn_boolean_t
-svn_cl__parse_revision (svn_cl__opt_state_t *os,
-                        const char *arg,
-                        apr_pool_t *pool)
-{
-  char *left_rev, *right_rev;
-  char *sep;
-
-  /* Operate on a copy of the argument. */
-  left_rev = apr_pstrdup (pool, arg);
-  
-  if ((sep = strchr (arg, ':')))
-    {
-      /* There can only be one colon. */
-      if (strchr (sep + 1, ':'))
-        return TRUE;
-
-      *(left_rev + (sep - arg)) = '\0';
-      right_rev = (left_rev + (sep - arg)) + 1;
-
-      /* If there was a separator, both revisions must be present. */
-      if ((! *left_rev) || (! *right_rev))
-        return TRUE;
-    }
-  else  /* no separator */
-    right_rev = NULL;
-
-  /* Now left_rev holds N and right_rev holds M or null. */
-
-  if (! revision_from_word (&(os->start_revision), left_rev))
-    {
-      if (! valid_revision_number (left_rev))
-        return TRUE;
-
-      os->start_revision.kind = svn_client_revision_number;
-      os->start_revision.value.number = SVN_STR_TO_REV (left_rev);
-    }
-
-  if (right_rev)
-    {
-      if (! revision_from_word (&(os->end_revision), right_rev))
-        {
-          if (! valid_revision_number (right_rev))
-            return TRUE;
-
-          os->end_revision.kind = svn_client_revision_number;
-          os->end_revision.value.number = SVN_STR_TO_REV (right_rev);
-        }
-    }
-
-  return FALSE;
-}
-
-
-/* Set OPT_STATE->start_revision and/or OPT_STATE->end_revision
- * according to ARG, where ARG is "X" or "X:Y", like so:
- * 
- *    - If ARG is "X", set OPT_STATE->start_revision's kind to
- *      svn_client_revision_date and value to the apr_time_t for X,
- *      and leave OPT_STATE->end_revision untouched.
- *
- *    - If ARG is "X:Y", set OPT_STATE->start_revision's and
- *      OPT_STATE->end_revision's kinds to svn_client_revision_date
- *      and values to (apr_time_t) X and Y respectively.
- * 
- * X and/or Y may be one of the special revision descriptors
- * recognized by revision_from_word().
- *
- * If ARG is invalid, return TRUE; else return FALSE.
- * It is invalid to omit a revision (as in, ":", "X:" or ":Y").
- *
- * Note:
- *
- * It is typical, though not required, for OPT_STATE->start_revision
- * and OPT_STATE->end_revision to be svn_client_revision_unspecified
- * kind on entry.
- */
-static svn_boolean_t
-parse_date (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
-{
-  char *left_date, *right_date;
-  char *sep;
-
-  /* Operate on a copy of the argument. */
-  left_date = apr_pstrdup (pool, arg);
-
-  if ((sep = strchr (arg, ':')))
-    {
-      /* ### todo: some standard date formats contain colons.
-         Eventually, we should probably allow those, and use some
-         other syntax for expressing ranges.  But for now, I'm just
-         going to bail if see a non-separator colon, to get this up
-         and running.  -kff */
-      if (strchr (sep + 1, ':'))
-        return TRUE;
-
-      /* First, turn one string into two. */
-      *(left_date + (sep - arg)) = '\0';
-      right_date = (left_date + (sep - arg)) + 1;
-
-      /* If there was a separator, both dates must be present. */
-      if ((! *left_date) || (! *right_date))
-        return TRUE;
-    }
-  else  /* no separator */
-    right_date = NULL;
-    
-  /* Now left_date holds X and right_date holds Y or null. */
-
-  if (! revision_from_word (&(os->start_revision), left_date))
-    {
-      os->start_revision.kind = svn_client_revision_date;
-      apr_time_ansi_put (&(os->start_revision.value.date),
-                         svn_parse_date (left_date, NULL));
-      /* ### todo: check if apr_time_t is valid? */
-    }
-
-  if (right_date)
-    {
-      if (! revision_from_word (&(os->end_revision), right_date))
-        {
-          os->end_revision.kind = svn_client_revision_date;
-          apr_time_ansi_put (&(os->end_revision.value.date),
-                             svn_parse_date (right_date, NULL));
-          /* ### todo: check if apr_time_t is valid? */
-        }
-    }
-
-  return FALSE;
-}
-
-
 
 /*** Main. ***/
 
@@ -886,9 +415,9 @@ main (int argc, const char * const *argv)
   int opt_id, err2;
   apr_getopt_t *os;  
   svn_cl__opt_state_t opt_state;
-  int received_opts[SVN_CL__MAX_OPTS];
+  int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
-  const svn_cl__cmd_desc_t *subcommand = NULL;
+  const svn_opt_subcommand_desc_t *subcommand = NULL;
   svn_boolean_t log_under_version_control = FALSE;
   svn_boolean_t log_is_pathname = FALSE;
   apr_status_t apr_err;
@@ -918,8 +447,8 @@ main (int argc, const char * const *argv)
 
   /* Begin processing arguments. */
   memset (&opt_state, 0, sizeof (opt_state));
-  opt_state.start_revision.kind = svn_client_revision_unspecified;
-  opt_state.end_revision.kind = svn_client_revision_unspecified;
+  opt_state.start_revision.kind = svn_opt_revision_unspecified;
+  opt_state.end_revision.kind = svn_opt_revision_unspecified;
   
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -967,7 +496,7 @@ main (int argc, const char * const *argv)
         opt_state.message = apr_pstrdup (pool, opt_arg);
         break;
       case 'r':
-        if (opt_state.start_revision.kind != svn_client_revision_unspecified)
+        if (opt_state.start_revision.kind != svn_opt_revision_unspecified)
           {
             svn_handle_error (svn_error_create
                               (SVN_ERR_CL_ARG_PARSING_ERROR,
@@ -978,7 +507,9 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
-        ret = svn_cl__parse_revision (&opt_state, opt_arg, pool);
+        ret = svn_opt_parse_revision (&(opt_state.start_revision),
+                                      &(opt_state.end_revision),
+                                      opt_arg, pool);
         if (ret)
           {
             err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
@@ -996,7 +527,9 @@ main (int argc, const char * const *argv)
           }
         break;
       case 'D':
-        ret = parse_date (&opt_state, opt_arg, pool);
+        ret = svn_opt_parse_date (&(opt_state.start_revision),
+                                  &(opt_state.end_revision),
+                                  opt_arg, pool);
         if (ret)
           {
             err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
@@ -1172,7 +705,7 @@ main (int argc, const char * const *argv)
      just typos/mistakes.  Whatever the case, the subcommand to
      actually run is svn_cl__help(). */
   if (opt_state.help)
-    subcommand = svn_cl__get_canonical_command ("help");
+    subcommand = svn_opt_get_canonical_subcommand (svn_cl__cmd_table, "help");
 
   /* If we're not running the `help' subcommand, then look for a
      subcommand in the first argument. */
@@ -1188,7 +721,8 @@ main (int argc, const char * const *argv)
       else
         {
           const char *first_arg = os->argv[os->ind++];
-          subcommand = svn_cl__get_canonical_command (first_arg);
+          subcommand = svn_opt_get_canonical_subcommand (svn_cl__cmd_table,
+                                                         first_arg);
           if (subcommand == NULL)
             {
               /* FIXME: should we print "unknown foo" ?? seems ok */
@@ -1214,16 +748,19 @@ main (int argc, const char * const *argv)
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! subcommand_takes_option (subcommand, opt_id))
+      if (! svn_opt_subcommand_takes_option (subcommand, opt_id))
         {
           const char *optstr;
           const apr_getopt_option_t *badopt = 
-            svn_cl__get_option_from_enum (opt_id, svn_cl__options);
-          format_option (&optstr, badopt, FALSE, pool);
+            svn_opt_get_option_from_code (opt_id, svn_cl__options);
+          svn_opt_format_option (&optstr, badopt, FALSE, pool);
           fprintf (stderr,
                    "\nError: subcommand '%s' doesn't accept option '%s'\n\n",
                    subcommand->name, optstr);
-          svn_cl__subcommand_help (subcommand->name, pool);
+          svn_opt_subcommand_help (subcommand->name,
+                                   svn_cl__cmd_table,
+                                   svn_cl__options,
+                                   pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
@@ -1265,7 +802,8 @@ main (int argc, const char * const *argv)
   if (err)
     {
       if (err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
-        svn_cl__subcommand_help (subcommand->name, pool);
+        svn_opt_subcommand_help (subcommand->name, svn_cl__cmd_table,
+                                 svn_cl__options, pool);
       else
         svn_handle_error (err, stderr, 0);
       svn_pool_destroy (pool);
