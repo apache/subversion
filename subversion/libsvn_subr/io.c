@@ -19,6 +19,8 @@
 #include <errno.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
+#include <apr_file_info.h>
+#include <apr_strings.h>
 #include "svn_types.h"
 #include "svn_path.h"
 #include "svn_string.h"
@@ -609,9 +611,76 @@ svn_string_from_file (svn_string_t **result, const char *filename, apr_pool_t *p
 }
 
 
+
+
+
+/* Recursive directory deletion. */
+
+/* Neither windows nor unix allows us to delete a non-empty
+   directory.  
+
+   This is a function to perform the equivalent of 'rm -rf'. */
+
+apr_status_t
+apr_dir_remove_recursively (const char *path, apr_pool_t *pool)
+{
+  apr_status_t status;
+  apr_dir_t *this_dir;
+  apr_finfo_t this_entry;
+  apr_pool_t *subpool;
+  apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
+
+  status = apr_pool_create (&subpool, pool);
+  if (! (APR_STATUS_IS_SUCCESS (status))) return status;
+
+  status = apr_dir_open (&this_dir, path, subpool);
+  if (! (APR_STATUS_IS_SUCCESS (status))) return status;
+
+  for (status = apr_dir_read (&this_entry, flags, this_dir);
+       APR_STATUS_IS_SUCCESS (status);
+       status = apr_dir_read (&this_entry, flags, this_dir))
+    {
+      char *fullpath = apr_pstrcat (subpool, path, "/", this_entry.name, NULL);
+
+      if (this_entry.filetype == APR_DIR)
+        {
+          if ((strcmp (this_entry.name, ".") == 0)
+              || (strcmp (this_entry.name, "..") == 0))
+            continue;
+
+          status = apr_dir_remove_recursively (fullpath, subpool);
+          if (! (APR_STATUS_IS_SUCCESS (status))) return status;
+        }
+      else if (this_entry.filetype == APR_REG)
+        {
+          status = apr_file_remove (fullpath, subpool);
+          if (! (APR_STATUS_IS_SUCCESS (status))) return status;
+        }
+    }
+
+  if (! (APR_STATUS_IS_ENOENT (status)))
+    return status;
+
+  else
+    {
+      status = apr_dir_close (this_dir);
+      if (! (APR_STATUS_IS_SUCCESS (status))) return status;
+    }
+
+  status = apr_dir_remove (path, subpool);
+  if (! (APR_STATUS_IS_SUCCESS (status))) return status;
+
+  apr_pool_destroy (subpool);
+
+  return APR_SUCCESS;
+}
+
+
+
+
+
 
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end:
- */
+ * end: */

@@ -218,6 +218,9 @@ svn_error_t *svn_string_from_file (svn_string_t **result,
                                    const char *filename, 
                                    apr_pool_t *pool);
 
+/* Recursively remove directory PATH. */
+apr_status_t apr_dir_remove_recursively (const char *path, apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
