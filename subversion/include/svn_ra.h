@@ -226,7 +226,7 @@ typedef struct svn_ra_username_authenticator_t
    * If this routine is @c NULL, that means the client is unable, or
    * unwilling, to get the username.
    */
-  svn_error_t *(*get_username) (char **username,
+  svn_error_t *(*get_username) (const char **username,
                                 void *auth_baton,
                                 svn_boolean_t force_prompt,
                                 apr_pool_t *pool);
@@ -267,8 +267,8 @@ typedef struct svn_ra_simple_password_authenticator_t
    * If this routine is @c NULL, that means the client is unable, or
    * unwilling, to get the username and password.
    */
-  svn_error_t *(*get_user_and_pass) (char **username,
-                                     char **password,
+  svn_error_t *(*get_user_and_pass) (const char **username,
+                                     const char **password,
                                      void *auth_baton,
                                      svn_boolean_t force_prompt,
                                      apr_pool_t *pool);
