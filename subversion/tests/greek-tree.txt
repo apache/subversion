@@ -1,5 +1,9 @@
-In the tree described by co1-*.xml, capital letters are directories
-and greek letter names are files.  There are no properties yet.
+The "Greek Tree" is the standard Subversion testing tree, in which
+capital letters are directories and greek letter names are files.  By
+convention, the initial content of each file is a single line, such as
+"This is the file 'iota'.", followed by a newline.
+
+This is the Greek Tree:
 
 
                                    A                       iota
