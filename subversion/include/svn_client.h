@@ -1344,6 +1344,9 @@ svn_client_move (svn_client_commit_info_t **commit_info,
  * @a propname is "svn:mime-type", but @a propval is not a valid
  * mime-type).
  *
+ * If @a ctx->cancel_func is non-null, invoke it passing @a
+ * ctx->cancel_baton at various places during the operation.
+ *
  * Use @a pool for all memory allocation.
  */
 svn_error_t *
@@ -1352,6 +1355,7 @@ svn_client_propset2 (const char *propname,
                      const char *target,
                      svn_boolean_t recurse,
                      svn_boolean_t force,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 /**

@@ -246,7 +246,7 @@ svn_cl__propedit (apr_getopt_t *os,
               
               SVN_ERR (svn_client_propset2 (pname_utf8, propval, target, 
                                             FALSE, opt_state->force,
-                                            subpool));
+                                            ctx, subpool));
               SVN_ERR
                 (svn_cmdline_printf
                  (subpool, _("Set new value for property '%s' on '%s'\n"),
