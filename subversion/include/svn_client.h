@@ -57,15 +57,23 @@ extern "C" {
 
 
 
-/*** Various ways of specifying revisions. ***/
 
+/* Various ways of specifying revisions. 
+ *   
+ * Note:
+ * In contexts where local mods are relevant, the `working' kind
+ * refers to the uncommitted "working" revision, which may be modified
+ * with respect to its base revision.  In other contexts, `working'
+ * should behave the same as `committed' or `current'.
+ */
 enum svn_client_revision_kind {
   svn_client_revision_unspecified,   /* No revision information given. */
   svn_client_revision_number,        /* revision given as number */
   svn_client_revision_date,          /* revision given as date */
   svn_client_revision_committed,     /* rev of most recent change */
   svn_client_revision_previous,      /* (rev of most recent change) - 1 */
-  svn_client_revision_current,       /* .svn/entries revision */
+  svn_client_revision_base,          /* .svn/entries current revision */
+  svn_client_revision_working,       /* current, plus local mods */
   svn_client_revision_head           /* repository youngest */
 };
 
@@ -161,28 +169,28 @@ typedef struct svn_client_commit_info_t
 
 /*** Milestone 4 Interfaces ***/
 
-/* Perform a checkout from URL, providing pre- and post-checkout hook
-   editors and batons (BEFORE_EDITOR, BEFORE_EDIT_BATON /
-   AFTER_EDITOR, AFTER_EDIT_BATON).  These editors are purely optional
-   and exist only for extensibility;  pass four NULLs here if you
-   don't need them.
+/* Checkout a working copy of URL at REVISION, using PATH as the root
+   directory of the newly checked out working copy, and authenticating
+   with AUTH_BATON.
 
-   PATH will be the root directory of your checked out working copy.
+   REVISION must be of kind svn_client_revision_number,
+   svn_client_revision_head, or svn_client_revision_date.  In the xml
+   case (see below) svn_client_revision_unspecified is also allowed.
+   If REVISION does not meet these requirements, return the error
+   SVN_ERR_CLIENT_BAD_REVISION.
 
-   If XML_SRC is NULL, then the checkout will come from the repository
-   and subdir specified by URL.  An invalid REVISION will cause the
-   "latest" tree to be fetched, while a valid REVISION will fetch a
-   specific tree.  Alternatively, a time TM can be used to implicitly
-   select a revision.  TM cannot be used at the same time as REVISION.
+   BEFORE_EDITOR, BEFORE_EDIT_BATON and AFTER_EDITOR, AFTER_EDIT_BATON
+   are pre- and post-checkout hook editors.  They are optional; pass
+   four NULLs if you don't need them.
 
    If XML_SRC is non-NULL, it is an xml file to check out from; in
    this case, the working copy will record the URL as artificial
-   ancestry information.  An invalid REVISION implies that the
-   revision *must* be present in the <delta-pkg> tag, while a valid
-   REVISION will be simply be stored in the wc. (Note:  a <delta-pkg>
-   revision will *always* override the one passed in.)
+   ancestry information.  If REVISION is
+   svn_client_revision_unspecified, then the revision *must* be
+   present in the <delta-pkg> tag; otherwise, store REVISION in the
+   wc. (Note: a <delta-pkg> revision still overrides REVISION.)
 
-   This operation will use the provided memory POOL. */
+   Use POOL for any temporary allocation. */
 svn_error_t *
 svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      void *before_edit_baton,
@@ -191,39 +199,37 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      svn_client_auth_baton_t *auth_baton,
                      svn_stringbuf_t *URL,
                      svn_stringbuf_t *path,
-                     svn_revnum_t revision,
+                     const svn_client_revision_t *revision,
                      svn_boolean_t recurse,
-                     apr_time_t tm,
                      svn_stringbuf_t *xml_src,
                      apr_pool_t *pool);
 
 
-/* Perform an update of PATH (part of a working copy), providing pre-
-   and post-checkout hook editors and batons (BEFORE_EDITOR,
-   BEFORE_EDIT_BATON / AFTER_EDITOR, AFTER_EDIT_BATON).  These editors
-   are purely optional and exist only for extensibility; pass four
-   NULLs here if you don't need them.
+/* Update working tree PATH to REVISION, authenticating with
+   AUTH_BATON.
 
-   If XML_SRC is NULL, then the update will come from the repository
-   that PATH was originally checked-out from.  An invalid REVISION
-   will cause the PATH to be updated to the "latest" revision, while a
-   valid REVISION will update to a specific tree.  Alternatively, a
-   time TM can be used to implicitly select a revision.  TM cannot be
-   used at the same time as REVISION.
+   REVISION must be of kind svn_client_revision_number,
+   svn_client_revision_head, or svn_client_revision_date.  In the xml
+   case (see below) svn_client_revision_unspecified is also allowed.
+   If REVISION does not meet these requirements, return the error
+   SVN_ERR_CLIENT_BAD_REVISION.
 
    During an update, files may be restored from the text-base if they
-   have been removed from the working copy. When this happens,
+   have been removed from the working copy.  When this happens,
    NOTIFY_FUNC will be called with NOTIFY_BATON and the (relative)
-   path of the file that has been restored. NOTIFY_FUNC may be NULL
-   if this information is not required.
+   path of the file that has been restored.  NOTIFY_FUNC may be
+   NULL if this information is not required.
 
-   If XML_SRC is non-NULL, it is an xml file to update from.  An
-   invalid REVISION implies that the revision *must* be present in the
-   <delta-pkg> tag, while a valid REVISION will be simply be stored in
-   the wc. (Note: a <delta-pkg> revision will *always* override the
-   one passed in.)
+   BEFORE_EDITOR, BEFORE_EDIT_BATON and AFTER_EDITOR, AFTER_EDIT_BATON
+   are pre- and post-update hook editors.  They are optional; pass
+   four NULLs if you don't need them.
 
-   This operation will use the provided memory POOL. */
+   If XML_SRC is non-NULL, it is an xml file to update from.  If
+   REVISION is svn_client_revision_unspecified, then the revision
+   *must* be present in the <delta-pkg> tag; otherwise, store REVISION
+   in the wc. (Note: a <delta-pkg> revision still overrides REVISION.)
+   
+   Use POOL for any temporary allocation. */
 svn_error_t *
 svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
@@ -232,28 +238,24 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    svn_client_auth_baton_t *auth_baton,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *xml_src,
-                   svn_revnum_t revision,
-                   apr_time_t tm,
+                   const svn_client_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
                    apr_pool_t *pool);
 
 
+/* Switch working tree PATH to URL at REVISION, authenticating with
+   AUTH_BATON.
 
-/* Perform an update of PATH (part of a working copy), providing pre-
-   and post-checkout hook editors and batons (BEFORE_EDITOR,
-   BEFORE_EDIT_BATON / AFTER_EDITOR, AFTER_EDIT_BATON).  These editors
-   are purely optional and exist only for extensibility; pass four
-   NULLs here if you don't need them.
+   Summary of purpose: this is normally used to switch a working
+   directory over to another line of development, such as a branch or
+   a tag.  Switching an existing working directory is more efficient
+   than checking out URL from scratch.
 
-   SWITCH_URL is the new URL that the working copy will be 'switched' to.
-
-   An invalid REVISION will cause the PATH to be updated to the
-   "latest" revision of SWITCH_URL, while a valid REVISION will update
-   to a specific revision of SWITCH_URL.  Alternatively, a time TM can
-   be used to implicitly select a revision.  TM cannot be used at the
-   same time as REVISION.
+   REVISION must be of kind svn_client_revision_number,
+   svn_client_revision_head, or svn_client_revision_date; otherwise,
+   return SVN_ERR_CLIENT_BAD_REVISION.
 
    During a switch, files may be restored from the text-base if they
    have been removed from the working copy. When this happens,
@@ -261,7 +263,11 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
    path of the file that has been restored. NOTIFY_FUNC may be NULL
    if this information is not required.
 
-   This operation will use the provided memory POOL. */
+   BEFORE_EDITOR, BEFORE_EDIT_BATON and AFTER_EDITOR, AFTER_EDIT_BATON
+   are pre- and post-switch hook editors.  They are optional; pass
+   four NULLs if you don't need them.
+
+   Use POOL for any temporary allocation. */
 svn_error_t *
 svn_client_switch (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
@@ -269,9 +275,8 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
                    void *after_edit_baton,
                    svn_client_auth_baton_t *auth_baton,
                    svn_stringbuf_t *path,
-                   svn_stringbuf_t *switch_url,
-                   svn_revnum_t revision,
-                   apr_time_t tm,
+                   svn_stringbuf_t *url,
+                   const svn_client_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
@@ -348,48 +353,48 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    apr_pool_t *pool);
 
 
-/* Import a tree, using optional pre- and post-commit hook editors
-   (BEFORE_EDITOR, BEFORE_EDIT_BATON, and AFTER_EDITOR,
-   AFTER_EDIT_BATON).  These editors are purely optional and exist
-   only for extensibility; pass four NULLs here if you don't need
-   them.
-  
-   If the import succeeds, allocate (in POOL) and populate
-   *COMMIT_INFO.
-  
-   Store LOG_MSG as the log of the commit.
-   
-   PATH is the path to local tree being imported.  PATH can be a file
-   or directory.
-  
-   URL is the repository directory where the imported data is placed.
+/* Import file or directory PATH into repository directory URL at
+   head, authenticating with AUTH_BATON, and using LOG_MSG as the log
+   message for the (implied) commit.  Set *COMMIT_INFO to the results
+   of the commit, allocated in POOL.
   
    NEW_ENTRY is the new entry created in the repository directory
-   identified by URL.
+   identified by URL.  NEW_ENTRY may be null (see below), but may not
+   be the empty string.
   
-   If PATH is a file, that file is imported as NEW_ENTRY.  If PATH is
-   a directory, the contents of that directory are imported, under a
-   new directory the NEW_ENTRY in the repository.  Note and the
-   directory itself is not imported; that is, the basename of PATH is
-   not part of the import.
-  
-   If PATH is a directory and NEW_ENTRY is null, then the contents of
-   PATH are imported directly into the repository directory identified
-   by URL.  NEW_ENTRY may not be the empty string.
-  
-   If NEW_ENTRY already exists in the youngest revision, return error.
+   If PATH is a directory, the contents of that directory are
+   imported, under a new directory named NEW_ENTRY under URL; or if
+   NEW_ENTRY is null, then the contents of PATH are imported directly
+   into the directory identified by URL.  Note that the directory PATH
+   itself is not imported -- that is, the basename of PATH is not part
+   of the import.
+
+   If PATH is a file, that file is imported as NEW_ENTRY (which may
+   not be null).
+
+   In all cases, if NEW_ENTRY already exists in URL, return error.
    
+   BEFORE_EDITOR, BEFORE_EDIT_BATON, and AFTER_EDITOR,
+   AFTER_EDIT_BATON are pre- and post-import (i.e., post-commit) hook
+   editors.  They are optional; pass four NULLs here if you don't need
+   them.
+
    If XML_DST is non-NULL, it is a file in which to store the xml
    result of the commit, and REVISION is used as the revision.
    
-   Use POOL for all allocation.
+   Use POOL for any temporary allocation.  
    
+   Note: REVISION is svn_revnum_t, rather than svn_client_revision_t,
+   because only the svn_client_revision_number kind would be useful
+   anyway.
+
    ### kff todo: This import is similar to cvs import, in that it does
    not change the source tree into a working copy.  However, this
    behavior confuses most people, and I think eventually svn _should_
    turn the tree into a working copy, or at least should offer the
    option. However, doing so is a bit involved, and we don't need it
-   right now.  */
+   right now.  
+*/
 svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 const svn_delta_edit_fns_t *before_editor,
                                 void *before_edit_baton,
@@ -405,18 +410,17 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 apr_pool_t *pool);
 
 
-/* Perform an commit, providing pre- and post-commit hook editors and
-   batons (BEFORE_EDITOR, BEFORE_EDIT_BATON, and AFTER_EDITOR,
-   AFTER_EDIT_BATON).  These editors are purely optional and exist
-   only for extensibility; pass four NULLs here if you don't need
-   them.
+/* Commit file or directory PATH into repository, authenticating with
+   AUTH_BATON, and using LOG_MSG as the log message.  Set *COMMIT_INFO
+   to the results of the commit, allocated in POOL.
 
-   If the commit succeeds, allocate (in POOL) and populate
-   *COMMIT_INFO.
-  
    TARGETS is an array of svn_stringbuf_t * paths to commit.  They need
    not be canonicalized nor condensed; this function will take care of
    that.
+
+   BEFORE_EDITOR, BEFORE_EDIT_BATON, and AFTER_EDITOR,
+   AFTER_EDIT_BATON are pre- and post-commit hook editors.  They are
+   optional; pass four NULLs here if you don't need them.
 
    If XML_DST is NULL, then the commit will write to a repository, and
    the REVISION argument is ignored.
@@ -426,10 +430,14 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
    will be updated appropriately.  If REVISION is invalid, the working
    copy remains unchanged.
 
-   This operation will use the provided memory POOL.
+   Note: REVISION is svn_revnum_t, rather than svn_client_revision_t,
+   because only the svn_client_revision_number kind would be useful
+   anyway.
 
-   If no error is returned, and *COMMITTED_REV is set to
-   SVN_INVALID_REVNUM, then the commit was a no-op;  nothing needed to
+   Use POOL for any temporary allocation.
+
+   If no error is returned and (*COMMIT_INFO)->revision is set to
+   SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
    be committed.
  */
 svn_error_t *
@@ -501,8 +509,8 @@ svn_client_status (apr_hash_t **statushash,
 svn_error_t *
 svn_client_log (svn_client_auth_baton_t *auth_baton,
                 const apr_array_header_t *targets,
-                svn_revnum_t start,
-                svn_revnum_t end,
+                const svn_client_revision_t *start,
+                const svn_client_revision_t *end,
                 svn_boolean_t discover_changed_paths,
                 svn_log_message_receiver_t receiver,
                 void *receiver_baton,
@@ -510,30 +518,25 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 
 
 /* Given a TARGET which is either a path in the working copy or an URL,
-   compare it against the given repository version(s).
-  
-   START_REVISION/START_DATE and END_REVISION/END_DATE are the two
-   repository versions, for each specify either the revision of the
-   date. If the two revisions are the different the two repository versions
-   are compared. If the two revisions are the same the working copy is
-   compared against the repository.
+   compare it against the given repository version(s).  START and END
+   are the two revisions to be compared; if either has a `kind' of
+   `svn_client_revision_unspecified' or an unrecognized `kind', return
+   the error SVN_ERR_CLIENT_BAD_REVISION.
   
    If TARGET is a directory and RECURSE is true, this will be a recursive
    operation.
   
    DIFF_OPTIONS is used to pass additional command line options to the diff
-   processes invoked to compare files. DIFF_OPTIONS is an array of
+   processes invoked to compare files.  DIFF_OPTIONS is an array of
    svn_stringbuf_t * items.
   
    AUTH_BATON is used to communicate with the repository.
  */
-svn_error_t *svn_client_diff (svn_stringbuf_t *target,
-                              const apr_array_header_t *diff_options,
+svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               svn_client_auth_baton_t *auth_baton,
-                              svn_revnum_t start_revision,
-                              apr_time_t start_date,
-                              svn_revnum_t end_revision,
-                              apr_time_t end_date,
+                              const svn_client_revision_t *start,
+                              const svn_client_revision_t *end,
+                              svn_stringbuf_t *target,
                               svn_boolean_t recurse,
                               apr_pool_t *pool);
 
@@ -564,7 +567,7 @@ svn_client_revert (svn_stringbuf_t *path,
 
    SRC_PATH must be a file or directory under version control, or the
    URL of a versioned item in the repository.  If SRC_PATH is a URL,
-   SRC_REV is used to choose the revision from which to copy the
+   SRC_REVISION is used to choose the revision from which to copy the
    SRC_PATH.  DST_PATH must be a file or directory under version
    control, or a repository URL, existent or not.
 
@@ -592,7 +595,7 @@ svn_client_revert (svn_stringbuf_t *path,
 svn_error_t *
 svn_client_copy (svn_client_commit_info_t **commit_info,
                  svn_stringbuf_t *src_path,
-                 svn_revnum_t src_rev,
+                 const svn_client_revision_t *src_revision,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
                  svn_stringbuf_t *message,
@@ -614,7 +617,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
 
      - DST_PATH must also be a repository URL (existent or not).
 
-     - SRC_REV is used to choose the revision from which to copy the
+     - SRC_REVISION is used to choose the revision from which to copy the
        SRC_PATH.
 
      - AUTH_BATON and MESSAGE are used to commit the move.
@@ -626,7 +629,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
 
      - DST_PATH must also be a working copy path (existent or not).
 
-     - SRC_REV, AUTH and MESSAGE are ignored.
+     - SRC_REVISION, AUTH and MESSAGE are ignored.
 
      - This is a scheduling operation.  No changes will happen to the
        repository until a commit occurs.  This scheduling can be
@@ -639,7 +642,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
 svn_error_t *
 svn_client_move (svn_client_commit_info_t **commit_info,
                  svn_stringbuf_t *src_path,
-                 svn_revnum_t src_rev,
+                 const svn_client_revision_t *src_revision,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
                  svn_stringbuf_t *message,

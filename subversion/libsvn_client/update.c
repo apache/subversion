@@ -61,8 +61,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    svn_client_auth_baton_t *auth_baton,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *xml_src,
-                   svn_revnum_t revision,
-                   apr_time_t tm,
+                   const svn_client_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
@@ -76,17 +75,11 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
   svn_stringbuf_t *URL;
   svn_stringbuf_t *anchor, *target;
   svn_error_t *err;
+  svn_revnum_t revnum;
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path != NULL);
   assert (path->len > 0);
-
-  /* If both REVISION and TM are specified, this is an error.
-     They mostly likely contradict one another. */
-  if ((revision != SVN_INVALID_REVNUM) && tm)
-    return
-      svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL, pool,
-                       "Cannot specify _both_ revision and time.");
 
   /* Use PATH to get the update's anchor and targets. */
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
@@ -103,12 +96,19 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
        "svn_client_update: entry '%s' has no URL", anchor->data);
   URL = svn_stringbuf_dup (entry->url, pool);
 
+  /* Get revnum set to something meaningful, so we can fetch the
+     update editor. */
+  if (revision->kind == svn_client_revision_number)
+    revnum = revision->value.number; /* do the trivial conversion manually */
+  else
+    revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
+
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      either the RA or XML driver will call editor->set_target_revision
      later on. */
   SVN_ERR (svn_wc_get_update_editor (anchor,
                                      target,
-                                     revision,
+                                     revnum,
                                      recurse,
                                      &update_editor,
                                      &update_edit_baton,
@@ -134,15 +134,16 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
                                             TRUE, TRUE, auth_baton, pool));
 
-      /* If TM is given, convert the time into a revision number. */
-      if (tm)
-        SVN_ERR (ra_lib->get_dated_revision (session, &revision, tm));
-      
+      /* ### todo: shouldn't svn_client__get_revision_number be able
+         to take a url as easily as a local path?  */
+      SVN_ERR (svn_client__get_revision_number
+               (&revnum, ra_lib, session, revision, anchor->data, pool));
+
       /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
          invalid revnum, that means RA will use the latest revision.  */
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
-                                  revision,
+                                  revnum,
                                   target,
                                   recurse,
                                   update_editor, update_edit_baton));
@@ -185,7 +186,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                                       update_editor,
                                       update_edit_baton,
                                       URL->data,
-                                      revision,
+                                      revnum,
                                       pool);
 
       /* Sleep for one second to ensure timestamp integrity. */

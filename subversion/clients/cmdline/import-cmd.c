@@ -48,6 +48,7 @@ svn_cl__import (apr_getopt_t *os,
   void *trace_edit_baton;
   svn_client_auth_baton_t *auth_baton;
   svn_client_commit_info_t *commit_info = NULL;
+  svn_revnum_t revnum;
 
   /* Take our message from ARGV or a FILE */
   if (opt_state->filedata) 
@@ -127,6 +128,12 @@ svn_cl__import (apr_getopt_t *os,
                                             printpath,
                                             pool));
 
+  /* Get revnum set to something meaningful, to cover the xml case. */
+  if (opt_state->start_revision.kind == svn_client_revision_number)
+    revnum = opt_state->start_revision.value.number;
+  else
+    revnum = SVN_INVALID_REVNUM; /* no matter, this is fine */
+
   SVN_ERR (svn_client_import (&commit_info,
                               NULL, NULL,
                               opt_state->quiet ? NULL : trace_editor, 
@@ -137,7 +144,7 @@ svn_cl__import (apr_getopt_t *os,
                               new_entry,
                               message,
                               opt_state->xml_file,
-                              opt_state->start_revision,
+                              revnum,
                               pool));
 
   if (commit_info)

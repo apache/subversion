@@ -30,6 +30,42 @@
 #include "svn_client.h"
 
 
+
+/* Set *REVNUM to the revision number identified by REVISION.
+ *
+ * If REVISION->kind is svn_client_revision_number, just use
+ * REVISION->value.number, ignoring PATH, RA_LIB, and SESSION.
+ *
+ * Else if REVISION->kind is svn_client_revision_committed,
+ * svn_client_revision_previous, or svn_client_revision_base, or
+ * svn_client_revision_working, then the revision can be identified
+ * purely based on the working copy's administrative information for
+ * PATH, so RA_LIB and SESSION are ignored.  If PATH is not under
+ * revision control, return SVN_ERR_UNVERSIONED_RESOURCE, or if PATH
+ * is null, return SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED.
+ * 
+ * Else if REVISION->kind is svn_client_revision_date or
+ * svn_client_revision_head, then RA_LIB and SESSION are used to
+ * retrieve the revision from the repository (using
+ * REVISION->value.date in the former case), and PATH is ignored.  If
+ * RA_LIB or SESSION is null, return SVN_ERR_CLIENT_RA_ACCESS_REQUIRED. 
+ *
+ * Else if REVISION->kind is svn_client_revision_unspecified, set
+ * *REVNUM to SVN_INVALID_REVNUM.  
+ *
+ * Else return SVN_ERR_CLIENT_BAD_REVISION.
+ * 
+ * Use POOL for any temporary allocation.
+ */
+svn_error_t *
+svn_client__get_revision_number (svn_revnum_t *revnum,
+                                 svn_ra_plugin_t *ra_lib,
+                                 void *session,
+                                 const svn_client_revision_t *revision,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
+
 /* ---------------------------------------------------------------- */
 
 /*** RA callbacks ***/

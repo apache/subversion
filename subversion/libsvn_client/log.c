@@ -48,8 +48,8 @@
 svn_error_t *
 svn_client_log (svn_client_auth_baton_t *auth_baton,
                 const apr_array_header_t *targets,
-                svn_revnum_t start,
-                svn_revnum_t end,
+                const svn_client_revision_t *start,
+                const svn_client_revision_t *end,
                 svn_boolean_t discover_changed_paths,
                 svn_log_message_receiver_t receiver,
                 void *receiver_baton,
@@ -61,6 +61,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   svn_wc_entry_t *entry;
   svn_stringbuf_t *basename;
   apr_array_header_t *condensed_targets;
+  svn_revnum_t start_revnum, end_revnum;
 
   SVN_ERR (svn_path_condense_targets (&basename, &condensed_targets,
                                       targets, pool));
@@ -85,10 +86,18 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, basename,
                                         TRUE, TRUE, auth_baton, pool));
 
+  SVN_ERR (svn_client__get_revision_number
+           (&start_revnum, ra_lib, session, start, basename->data, pool));
+  SVN_ERR (svn_client__get_revision_number
+           (&end_revnum, ra_lib, session, end, basename->data, pool));
+
+  if (! SVN_IS_VALID_REVNUM (end_revnum))
+    end_revnum = 1;  /* default to the oldest commit */
+
   SVN_ERR (ra_lib->get_log (session,
                             condensed_targets,  /* ### todo: or `targets'? */
-                            start,
-                            end,
+                            start_revnum,
+                            end_revnum,
                             discover_changed_paths,
                             receiver,
                             receiver_baton));

@@ -615,7 +615,7 @@ def diff_pure_repository_update_a_file(sbox):
   if check_update_added_file(diff_output): return 1
 
   os.chdir(wc_dir)
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-rh')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-rhead')
   os.chdir(was_cwd)
   if check_add_a_file_in_a_subdir_reverse(diff_output): return 1
 

@@ -182,15 +182,12 @@ svn_cl__log (apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target(targets, pool);
 
-  /* ### todo: If opt_state->{start,end}_date, then convert to
-     opt_state->{start,end}_revision here. */
-
   lb.first_call = 1;
   lb.pool = pool;
   SVN_ERR (svn_client_log (auth_baton,
                            targets,
-                           opt_state->start_revision,
-                           opt_state->end_revision,
+                           &(opt_state->start_revision),
+                           &(opt_state->end_revision),
                            opt_state->verbose,
                            log_message_receiver,
                            &lb,
