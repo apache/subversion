@@ -35,7 +35,10 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   AC_MSG_CHECKING([APR-UTIL version])    
   apu_version="`$apu_config --version`"
   if test $? -ne 0; then
-    AC_MSG_ERROR([apu-config --version failed])
+    AC_MSG_ERROR([
+        apu-config --version failed.
+        Your apu-config doesn't support the --version switch, please upgrade
+        to APR-UTIL more recent than 2002-Nov-05.])
   fi
   AC_MSG_RESULT([$apu_version])
 
