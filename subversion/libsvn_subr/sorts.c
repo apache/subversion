@@ -57,19 +57,18 @@
 
 
 int
-svn_sort_compare_items_as_paths (const void *a, const void *b)
+svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b)
 {
-  const svn_item_t *item_a, *item_b;
   svn_stringbuf_t str_a, str_b;
 
-  item_a = *((svn_item_t **) a);
-  item_b = *((svn_item_t **) b);
+  /* ### these are bogus! compare_paths ought to take svn_string_t */
 
-  str_a.data = item_a->key;
-  str_a.len = item_a->size;
+  str_a.data = (char *)a->key;
+  str_a.len = str_a.blocksize = a->klen;
   str_a.pool = NULL;
-  str_b.data = item_b->key;
-  str_b.len = item_b->size;
+
+  str_b.data = (char *)b->key;
+  str_b.len = str_b.blocksize = b->klen;
   str_b.pool = NULL;
 
   return svn_path_compare_paths (&str_a, &str_b);
@@ -90,35 +89,27 @@ svn_sort_compare_strings_as_paths (const void *a, const void *b)
 /* see svn_sorts.h for documentation */
 apr_array_header_t *
 apr_hash_sorted_keys (apr_hash_t *ht,
-                      int (*comparison_func) (const void *, const void *),
+                      int (*comparison_func) (const svn_item_t *,
+                                              const svn_item_t *),
                       apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_array_header_t *ary;
 
   /* allocate an array with only one element to begin with. */
-  ary = apr_array_make (pool, 1, sizeof(svn_item_t *));
+  ary = apr_array_make (pool, 1, sizeof(svn_item_t));
 
   /* loop over hash table and push all keys into the array */
   for (hi = apr_hash_first (pool, ht); hi; hi = apr_hash_next (hi))
     {
-      const void *key;
-      apr_ssize_t klen;
-      void *value;
-      svn_item_t **receiver;
-      svn_item_t *item = apr_pcalloc (pool, sizeof(*item));
+      svn_item_t *item = apr_array_push (ary);
 
-      apr_hash_this (hi, &key, &klen, &value);
-      item->key = (char *) key;
-      item->size = klen;
-      item->data = value;
-      
-      receiver = (svn_item_t **)apr_array_push (ary);
-      *receiver = item;
+      apr_hash_this (hi, &item->key, &item->klen, &item->value);
     }
   
   /* now quicksort the array.  */
-  qsort (ary->elts, ary->nelts, ary->elt_size, comparison_func);
+  qsort (ary->elts, ary->nelts, ary->elt_size,
+         (int (*)(const void *, const void *))comparison_func);
 
   return ary;
 }

@@ -206,25 +206,20 @@ Java_org_tigris_subversion_lib_ClientImpl_status
               /* Loop over array, printing each name/status-structure */
               for (i = 0; i < statusarray->nelts; i++)
                 {
-                  svn_item_t *item;
-                  const char *path;
+                  const svn_item_t *item;
                   svn_wc_status_t *status = NULL;
-                  const void *key=NULL;
-                  apr_size_t len;
 		  jstring jpath = NULL;
 		  jobject jstatus = NULL;
-                  void *val=NULL;
 
-      
-                  item = (((svn_item_t **)(statusarray)->elts)[i]);
-                  path = item->key;
-                  status = item->data;
+
+                  item = &APR_ARRAY_IDX(statusarray, i, const svn_item_t);
+                  status = item->value;
 
                   if( !status->entry)
                     continue;
 
 		  /* convert native string to java string */
-		  jpath = string__c_to_j(env, path, &hasException);
+		  jpath = string__c_to_j(env, item->key, &hasException);
 
 		  /* convert svn_wc_status_t to java class Status */
                   if( !hasException )

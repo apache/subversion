@@ -33,6 +33,16 @@ extern "C" {
 
 
 
+
+/* This structure is used to hold a key/value from a hash table */
+typedef struct {
+  const void *key;      /* pointer to the key */
+  apr_ssize_t klen;     /* size of the key */
+
+  void *value;          /* pointer to the value */
+} svn_item_t;
+
+
 /* Compare two svn_stringbuf_t's, returning an integer greater than,
  * equal to, or less than 0, according as A is greater than, equal to,
  * or less than B.
@@ -57,31 +67,29 @@ int svn_sort_compare_strings_as_paths (const void *a, const void *b);
  *   apr_array_header_t *HDR;
  *   HDR = apr_hash_sorted_keys (HSH, svn_sort_compare_items_as_paths, pool);
  */
-int svn_sort_compare_items_as_paths (const void *a, const void *b);
+int svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b);
 
 
 #ifndef apr_hash_sorted_keys
 /* Sort HT according to its keys, return an apr_array_header_t
- * containing svn_item_t's representing those keys and values (i.e.,
- * for each svn_item_t ITEM in the returned array, ITEM->key is the
- * hash key, and ITEM->size and ITEM->data contain the hash value).
- * 
- * Storage is shared with the original hash, not copied.
- *
- * COMPARISON_FUNC should take two svn_item_t's and return an integer
- * greater than, equal to, or less than 0, according as the first item
- * is greater than, equal to, or less than the second.
- *
- * NOTE:
- * This is here because apr_item_t was removed from apr, and we wanted
- * a structure like that to store the result of sorting a hash.  So we
- * use svn_item_t.  For historical reasons, this function is still in
- * the apr namespace.  Probably it should get renamespaced.  Heck,
- * some days I feel like getting renamespaced myself.
- */
+   containing svn_item_t structures holding those keys and values
+   (i.e. for each svn_item_t ITEM in the returned array, ITEM->key
+   and is the ITEM->size are the hash key, and ITEM->data points to
+   the hash value).
+
+   Storage is shared with the original hash, not copied.
+
+   COMPARISON_FUNC should take two svn_item_t's and return an integer
+   greater than, equal to, or less than 0, according as the first item
+   is greater than, equal to, or less than the second.
+
+   NOTE:
+   This function and the svn_item_t should go over to APR. Got a Round Tuit?
+*/
 apr_array_header_t *
 apr_hash_sorted_keys (apr_hash_t *ht,
-                      int (*comparison_func) (const void *, const void *),
+                      int (*comparison_func) (const svn_item_t *,
+                                              const svn_item_t *),
                       apr_pool_t *pool);
 #endif /* apr_hash_sorted_keys */
 
