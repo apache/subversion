@@ -600,7 +600,8 @@ svn_error_t *svn_fs_change_node_prop (svn_fs_root_t *root,
    If there are differences between ANCESTOR and SOURCE that conflict
    with changes between ANCESTOR and TARGET, this function returns an
    SVN_ERR_FS_CONFLICT error, and sets *CONFLICT_P to the name of the
-   node in TARGET which couldn't be merged.
+   node in TARGET which couldn't be merged.  If there are no
+   conflicting differences, *CONFLICT_P is set to null.
 
    Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_merge (const char **conflict_p,
