@@ -278,7 +278,7 @@ create_file_transaction (const char **msg)
 
         /* Create a file named "my_file.txt" in the root directory. */
         if (SVN_NO_ERROR != svn_fs_make_file (txn_root,
-                                              "my_file.txt",
+                                              "beer.txt",
                                               pool))
           return fail();
       }

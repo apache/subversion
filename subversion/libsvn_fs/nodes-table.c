@@ -157,7 +157,14 @@ is_valid_flag (skel_t *skel)
   if (len == 2
       && svn_fs__matches_atom (skel->children, "mutable")
       && skel->children->next->is_atom)
-    return 1;
+    {      
+      return 1;      
+    }
+  else if (len == 1
+           && svn_fs__matches_atom (skel->children, "mutable"))
+    {      
+      return 1;
+    }
 
   return 0;
 }

@@ -140,7 +140,7 @@ set_mutable_flag (skel_t *content, svn_fs_id_t *parent_id, apr_pool_t *pool)
           svn_fs__append (p_atom, flag_skel);
         }
 
-      content->children->children->next->next = flag_skel;
+      svn_fs__append (flag_skel, content->children);
     }
 
   return;
@@ -922,6 +922,7 @@ make_entry (dag_node_t **child_p,
     SVN_ERR (get_node_revision (&pnew_node_skel,
                                 parent,
                                 trail));
+    pnew_node_skel = svn_fs__copy_skel (pnew_node_skel, trail->pool);
     
     /* ...and we construct a new ENTRY skel to be added to the
        parent's NODE-REVISION skel... */
@@ -935,7 +936,7 @@ make_entry (dag_node_t **child_p,
        So.  We now get to slap this entry into the parent's list of
        entries. 
     */
-    svn_fs__append (entry_list, pnew_node_skel);
+    svn_fs__append (entry_list, pnew_node_skel->children->next);
     
     /* Finally, update the parent's stored skel. */
     SVN_ERR (svn_fs__put_node_revision (parent->fs,
