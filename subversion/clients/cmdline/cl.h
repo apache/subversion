@@ -109,6 +109,7 @@ svn_cl__cmd_proc_t
   svn_cl__proplist,
   svn_cl__propget,
   svn_cl__propset,
+  svn_cl__propdel,
   svn_cl__status,
   svn_cl__diff,
   svn_cl__update;
