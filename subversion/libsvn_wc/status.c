@@ -54,11 +54,12 @@ assemble_status (svn_wc_status_t **status,
 {
   svn_wc_status_t *stat;
   enum svn_node_kind path_kind;
+  svn_boolean_t has_props;
   svn_boolean_t text_modified_p = FALSE;
   svn_boolean_t prop_modified_p = FALSE;
 
   /* Defaults for two main variables. */
-  enum svn_wc_status_kind final_text_status = svn_wc_status_none;
+  enum svn_wc_status_kind final_text_status = svn_wc_status_normal;
   enum svn_wc_status_kind final_prop_status = svn_wc_status_none;
 
   if (! entry)
@@ -73,6 +74,11 @@ assemble_status (svn_wc_status_t **status,
   /* 1. Set the two main variables to "discovered" values first (M, C). 
         Together, these two stati are of lowest precedence, and C has
         precedence over M. */
+
+  /* Does the entry have props? */
+  SVN_ERR (svn_wc__has_props (&has_props, path, pool));
+  if (has_props)
+    final_prop_status = svn_wc_status_normal;
 
   /* If the entry has a property file, see if it has local changes. */
   SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, path, pool));

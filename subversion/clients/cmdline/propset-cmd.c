@@ -69,7 +69,7 @@ svn_cl__propset (apr_getopt_t *os,
       SVN_ERR (svn_wc_prop_set (propname, propval, target, pool));
 
       if (! opt_state->quiet)
-        printf ("property `%s' set on %s.\n", propname->data, target->data);
+        printf ("property `%s' set on %s\n", propname->data, target->data);
     }
 
   return SVN_NO_ERROR;

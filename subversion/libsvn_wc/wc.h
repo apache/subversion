@@ -591,6 +591,14 @@ svn_error_t *svn_wc__ensure_uniform_revision (svn_stringbuf_t *path,
 
 /*** Routines that deal with properties ***/
 
+
+/* If the working item at PATH has properties attached, set HAS_PROPS. */
+svn_error_t *
+svn_wc__has_props (svn_boolean_t *has_props,
+                   svn_stringbuf_t *path,
+                   apr_pool_t *pool);
+
+
 /* Given two property hashes (working copy and `base'), deduce what
    propchanges the user has made since the last update.  Return these
    changes as a series of (svn_prop_t *) objects stored in
