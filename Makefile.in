@@ -220,7 +220,7 @@ revision-install:
 install-static: @INSTALL_STATIC_RULES@
 
 check: $(TEST_DEPS) @FS_TEST_DEPS@
-	@$(PYTHON) $(top_srcdir)/build/pycheck.;                           \
+	@$(PYTHON) $(top_srcdir)/build/pycheck.py;                         \
 	base_url=""; cleanup=""; verbose="--verbose";                      \
 	if test "$(BASE_URL)" != ""; then                                  \
 	  base_url="--url $(BASE_URL)";                                    \
