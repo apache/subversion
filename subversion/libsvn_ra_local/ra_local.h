@@ -22,10 +22,7 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 
-#include "svn_error.h"
-#include "svn_string.h"
-#include "svn_path.h"
-#include "svn_delta.h"
+#include "svn_types.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_ra.h"

@@ -178,6 +178,10 @@ install-misc-ps: $(MDOCS_PS_TARGET) $(MDOCS_INSTALL_DIR)
 # Stuff below here is added for building the Norwegian version.
 
 BUILDTMP_DIR = build.tmp
+BOOKFILES = appa.xml appb.xml appc.xml appd.xml book.xml ch00.xml \
+            ch01.xml ch02.xml ch03.xml ch04.xml ch05.xml ch06.xml \
+            ch07.xml ch08.xml ch09.xml colo.xml copyright.xml \
+            foreword.xml glossary.xml
 
 build: htmlbook copytobuild
 
@@ -203,7 +207,7 @@ commitmode:
 	$(MAKE) convfiles CONV_PARAM=
 
 convfiles:
-	for _prc in $(BOOK_ALL_SOURCE); do \
+	for _prc in $(BOOKFILES); do \
 		echo -n "$$_prc: convert..."; \
 		dest=book/$$_prc; \
 		swp=book/.$$_prc.swp; \

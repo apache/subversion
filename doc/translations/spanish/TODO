@@ -1,5 +1,6 @@
-Mandar mensajes periódicos a la lista de correo indicando el estado
-de la traducción y buscando revisores.
+Mejorar el script que envía un informe de estado con un porcentaje
+estimado para completar la traducción. Automatizar envío del mismo
+una vez se verifique que funciona relativamente bien.
 
 Estandarizar el uso de nombres como Harry o Sally. No me acuerdo
 cuáles se usaban en la literatura Española, pero no son esos. El
@@ -15,19 +16,9 @@ libro. Es decir, hacer nuestras propias imágenes. La más difícil
 sería crear un programa que añade textos en cualquier idioma a la
 imágen y que sea usado por todo el mundo.
 
-Documentar en alguna parte la forma en la que se contacta con
-los autores de http://svnbook.red-bean.com/ y cómo reciben
-parches. Aunque primero habría que ver si permiten traducir la web...
-
 Licencias creative commons en español. ¿Merece la pena pegarse
 por esto?
  http://creativecommons.org/license/results-one?lang=en&jurisdiction=es&license_code=by
  http://creativecommons.org/licenses/by/2.0/es/legalcode.es
-
-Contactar editores en España. ¿Les interesa este proyecto? ¿Tienen
-pensado o están haciendo algo al respecto? ¿Tema de la licencia?
-
-Anunciar proyecto en alguna lista de castellano, tipo lucas,
-y ¿quizás barrapunto?
 
 Añadir mecanismo aspell para verificar ortografía básica.

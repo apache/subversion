@@ -24,6 +24,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_utf.h"
+#include "svn_error.h"
 
 int main(int argc, char **argv)
 {

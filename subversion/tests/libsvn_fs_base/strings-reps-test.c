@@ -106,7 +106,7 @@ write_new_rep (const char **msg,
 
   /* Set up transaction baton */
   args.fs = fs;
-  args.skel = svn_fs_base__parse_skel ((char *)rep, strlen (rep), pool);
+  args.skel = svn_fs_base__parse_skel (rep, strlen (rep), pool);
   args.key = NULL;
 
   /* Write new rep to reps table. */
@@ -143,8 +143,7 @@ write_rep (const char **msg,
 
   /* Set up transaction baton */
   new_args.fs = fs;
-  new_args.skel = svn_fs_base__parse_skel ((char *)new_rep, strlen (new_rep),
-                                           pool);
+  new_args.skel = svn_fs_base__parse_skel (new_rep, strlen (new_rep), pool);
   new_args.key = NULL;
 
   /* Write new rep to reps table. */
@@ -158,7 +157,7 @@ write_rep (const char **msg,
 
   /* Set up transaction baton for re-writing reps. */
   args.fs = new_args.fs;
-  args.skel = svn_fs_base__parse_skel ((char *)rep, strlen (rep), pool);
+  args.skel = svn_fs_base__parse_skel (rep, strlen (rep), pool);
   args.key = new_args.key;
 
   /* Overwrite first rep in reps table. */
@@ -220,7 +219,7 @@ read_rep (const char **msg,
 
   /* Set up transaction baton */
   new_args.fs = fs;
-  new_args.skel = svn_fs_base__parse_skel ((char *)new_rep_before,
+  new_args.skel = svn_fs_base__parse_skel (new_rep_before,
                                            strlen (new_rep_before), pool);
   new_args.key = NULL;
 
@@ -252,7 +251,7 @@ read_rep (const char **msg,
   
   /* Set up transaction baton for re-writing reps. */
   args.fs = new_args.fs;
-  args.skel = svn_fs_base__parse_skel ((char *)rep, strlen (rep), pool);
+  args.skel = svn_fs_base__parse_skel (rep, strlen (rep), pool);
   args.key = new_args.key;
 
   /* Overwrite first rep in reps table. */
@@ -303,8 +302,7 @@ delete_rep (const char **msg,
 
   /* Set up transaction baton */
   new_args.fs = fs;
-  new_args.skel = svn_fs_base__parse_skel ((char *)new_rep, strlen (new_rep),
-                                           pool);
+  new_args.skel = svn_fs_base__parse_skel (new_rep, strlen (new_rep), pool);
   new_args.key = NULL;
 
   /* Write new rep to reps table. */

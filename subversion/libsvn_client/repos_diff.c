@@ -27,12 +27,11 @@
  * each file have been created the diff callback is invoked to display
  * the difference between the two files.  */
 
-#include "svn_client.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_io.h"
-#include "svn_utf.h"
+#include "svn_props.h"
 
 #include "client.h"
 

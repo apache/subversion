@@ -23,11 +23,8 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
-#include <apr_lib.h>
 #include <apr_strings.h>
-#include <apr_network_io.h>
 #include <apr_user.h>
-#include <apr_file_info.h>
 #include <apr_md5.h>
 
 #include "svn_private_config.h"  /* For SVN_PATH_LOCAL_SEPARATOR */
@@ -35,14 +32,13 @@
 #include <svn_string.h>
 #include <svn_pools.h>
 #include <svn_error.h>
-#include <svn_ra.h>
 #include <svn_ra_svn.h>
 #include <svn_repos.h>
 #include <svn_path.h>
 #include <svn_time.h>
-#include <svn_utf.h>
 #include <svn_md5.h>
 #include <svn_config.h>
+#include <svn_props.h>
 
 #include "server.h"
 
@@ -898,10 +894,10 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  &strict_node, &limit));
 
   /* If we got an unspecified number then the user didn't send us anything,
-     so we assume no limit.  If it's larger than UINT_MAX then someone is 
+     so we assume no limit.  If it's larger than INT_MAX then someone is 
      messing with us, since we know the svn client libraries will never send
      us anything that big, so play it safe and default to no limit. */
-  if (limit == SVN_RA_SVN_UNSPECIFIED_NUMBER || limit > UINT_MAX)
+  if (limit == SVN_RA_SVN_UNSPECIFIED_NUMBER || limit > INT_MAX)
     limit = 0;
 
   full_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
@@ -920,7 +916,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.fs_path = b->fs_path;
   lb.conn = conn;
   err = svn_repos_get_logs3(b->repos, full_paths, start_rev, end_rev,
-                            (unsigned int) limit, changed_paths, strict_node,
+                            (int) limit, changed_paths, strict_node,
                             NULL, NULL, log_receiver, &lb, pool);
 
   write_err = svn_ra_svn_write_word(conn, pool, "done");
@@ -1175,7 +1171,7 @@ repos_path_valid(const char *path)
         ++path;
 
       /* Check for '..'. */
-#if WIN32
+#ifdef WIN32
       /* On Windows, don't allow sequences of more than one character
          consisting of just dots and spaces.  Win32 functions treat
          paths such as ".. " and "......." inconsistently.  Make sure

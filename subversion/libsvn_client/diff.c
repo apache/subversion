@@ -32,11 +32,11 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
-#include "svn_test.h"
 #include "svn_io.h"
 #include "svn_utf.h"
 #include "svn_pools.h"
 #include "svn_config.h"
+#include "svn_props.h"
 #include "client.h"
 #include <assert.h>
 

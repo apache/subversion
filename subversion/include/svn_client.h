@@ -769,7 +769,7 @@ svn_error_t *
 svn_client_log2 (const apr_array_header_t *targets,
                  const svn_opt_revision_t *start,
                  const svn_opt_revision_t *end,
-                 unsigned int limit,
+                 int limit,
                  svn_boolean_t discover_changed_paths,
                  svn_boolean_t strict_node_history,
                  svn_log_message_receiver_t receiver,

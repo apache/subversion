@@ -26,7 +26,7 @@
 #include "svn_diff.h"
 #include "svn_pools.h"
 #include "svn_path.h"
-#include "svn_sorts.h"
+#include "svn_props.h"
 
 #include "svn_private_config.h"
 

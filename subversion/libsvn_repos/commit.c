@@ -29,6 +29,7 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_md5.h"
+#include "svn_props.h"
 
 
 

@@ -22,8 +22,6 @@
 
 #include "svn_types.h"
 #include "svn_delta.h"
-#include "svn_pools.h"
-#include "svn_path.h"
 
 
 static svn_error_t *

@@ -31,6 +31,7 @@
 #include "svn_repos.h"
 #include "svn_fs.h"
 #include "svn_version.h"
+#include "svn_props.h"
 
 #include "svn_private_config.h"
 

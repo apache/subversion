@@ -8,6 +8,12 @@ subject, or your message will not be read. Alternatively you can
 contact l10n-es@subversion.tigris.org, where all translators are
 subscribed.
 
+If you want to change the contents of some file of the translation
+project but you are not a translator, please send your proposed
+modification to the translation mailing list so it can be verified
+and approved by one of the translators. Any made contribution
+implies you have read and completely understood the file LEAME.
+
 The build instructions and everything else are in Spanish. TODO
 lists pending tasks to be done by the project administrator. TRABAJO
 lists the files which are being worked on and the status of the

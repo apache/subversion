@@ -9,19 +9,19 @@ import os
 import sys
 
 import svn.wc
-import svn.util
+import svn.core
 
 def main(pool, files):
   for f in files:
     dirpath = fullpath = os.path.abspath(f)
     if not os.path.isdir(dirpath):
       dirpath = os.path.dirname(dirpath)
-    adm_baton = svn.wc.svn_wc_adm_open(None, dirpath, 1, 1, pool)
+    adm_baton = svn.wc.adm_open(None, dirpath, 1, 1, pool)
     try:
-      entry = svn.wc.svn_wc_entry(fullpath, adm_baton, 0, pool)
+      entry = svn.wc.entry(fullpath, adm_baton, 0, pool)
       print entry.url
     finally:
-      svn.wc.svn_wc_adm_close(adm_baton)
+      svn.wc.adm_close(adm_baton)
 
 if __name__ == '__main__':
-  svn.util.run_app(main, sys.argv[1:])
+  svn.core.run_app(main, sys.argv[1:])

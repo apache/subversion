@@ -23,13 +23,10 @@
 
 #include <apr_tables.h>
 #include <apr_strings.h>
-#include <apr_portable.h>
 #include <apr_xml.h>
 
 #include <ne_socket.h>
-#include <ne_basic.h>
 #include <ne_utils.h>
-#include <ne_props.h>
 #include <ne_xml.h>
 
 #include "svn_error.h"
@@ -39,6 +36,7 @@
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
+#include "svn_props.h"
 #include "svn_private_config.h"
 
 #include "ra_dav.h"

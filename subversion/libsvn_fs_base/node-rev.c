@@ -21,7 +21,6 @@
 #include <apu_want.h>
 
 #include "svn_fs.h"
-#include "svn_pools.h"
 #include "fs.h"
 #include "err.h"
 #include "node-rev.h"

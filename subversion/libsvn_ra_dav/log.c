@@ -24,21 +24,12 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_strings.h>
-#include <apr_portable.h>
 #include <apr_xml.h>
 
 #include <ne_socket.h>
-#include <ne_basic.h>
-#include <ne_utils.h>
-#include <ne_207.h>
-#include <ne_props.h>
-#include <ne_xml.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
-#include "svn_delta.h"
-#include "svn_io.h"
-#include "svn_ra.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 
@@ -78,8 +69,8 @@ struct log_baton
   svn_log_message_receiver_t receiver;
   void *receiver_baton;
 
-  unsigned int limit;
-  unsigned int count;
+  int limit;
+  int count;
 
   /* If `receiver' returns error, it is stored here. */
   svn_error_t *err;
@@ -305,7 +296,7 @@ svn_error_t * svn_ra_dav__get_log2(void *session_baton,
                                    const apr_array_header_t *paths,
                                    svn_revnum_t start,
                                    svn_revnum_t end,
-                                   unsigned int limit,
+                                   int limit,
                                    svn_boolean_t discover_changed_paths,
                                    svn_boolean_t strict_node_history,
                                    svn_log_message_receiver_t receiver,
@@ -377,7 +368,7 @@ svn_error_t * svn_ra_dav__get_log2(void *session_baton,
     {
       svn_stringbuf_appendcstr(request_body,
                                apr_psprintf(ras->pool,
-                                            "<S:limit>%u</S:limit>", limit));
+                                            "<S:limit>%d</S:limit>", limit));
     }
 
   if (discover_changed_paths)

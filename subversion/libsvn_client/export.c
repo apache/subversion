@@ -34,6 +34,7 @@
 #include "svn_subst.h"
 #include "svn_time.h"
 #include "svn_md5.h"
+#include "svn_props.h"
 #include "client.h"
 
 #include "svn_private_config.h"

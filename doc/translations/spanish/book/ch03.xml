@@ -1303,17 +1303,19 @@ $ svn status foo
 
         <note>
           <para><command>svn revert</command>
-          <replaceable>ITEM</replaceable> has exactly the same effect as
-          deleting <replaceable>ITEM</replaceable> from your working
-          copy and then running <command>svn update -r BASE</command>
-          <replaceable>ITEM</replaceable>.  However, if you're reverting
-          a file, <command>svn revert</command> has one very noticeable
-          difference&mdash;it doesn't have to communicate with the
-          repository to restore your file.</para>
+          <replaceable>ITEM</replaceable> tiene exactamente el mismo
+          efecto que suprimiendo <replaceable>ITEM</replaceable> de
+          su copia de trabajo local y despues ejecutando
+          <command>svn update -r BASE</command>
+          <replaceable>ITEM</replaceable>. Sin embargo, si está
+          revirtiendo<!--TODO:reverting... o mejor "invirtiendo"?-->
+          un fichero, <command>svn revert</command> tiene una diferencia
+          muy considerable&mdash;no tiene que comunicarse con el
+          repositorio para reponer<!--restore--> su fichero.</para>
         </note>
 
-        <para>Or perhaps you mistakenly removed a file from version
-          control:</para>
+        <para>O quizás usted quito equivocadamente un fichero del control
+          de versión:</para>
 
         <screen>
 $ svn status README 
@@ -1332,43 +1334,48 @@ $ svn status README
       </sect3>
 
       <sidebar>
-          <title>Look Ma! No Network!</title>
+          <title>¡Mira Mamá! ¡Sin red!</title>
+          <!--TODO:Look Ma! No Network!... supongo que lo habré traducido
+          bien, pero por si acaso-->
 
-        <para>All three of these commands (<command>svn
-          status</command>, <command>svn diff</command>, and
-          <command>svn revert</command>) can be used without any
-          network access.  This makes it easy to manage your
-          changes-in-progress when you are somewhere without a network
-          connection, such as traveling on an airplane, riding a
-          commuter train or hacking on the beach.</para>
+        <para>Estos tres comandos<!--TODO:all three of these commands-->
+          (<command>svn status</command>, <command>svn diff</command>, y
+          <command>svn revert</command>) pueden ser usados sin ningún
+          acceso de red. Esto lo hace sencillo para administrar sus
+          cambios-en-progreso cuando usted está en alguna parte sin
+          una conexión de red, tal como viajando en un avión, montando en
+          un tren<!--TODO:riding a commuter train--> o hackeando en
+          la playa.</para>
 
-        <para>Subversion does this by keeping private caches of
-          pristine versions of each versioned file inside of the
-          <filename>.svn</filename> administrative areas.  This allows
-          Subversion to report&mdash;and revert&mdash;local
-          modifications to those files <emphasis>without network
-          access</emphasis>.  This cache (called the
-          <quote>text-base</quote>) also allows Subversion to send the
-          user's local modifications during a commit to the server as
-          a compressed <firstterm>delta</firstterm> (or
-          <quote>difference</quote>) against the pristine version.
-          Having this cache is a tremendous benefit&mdash;even if you
-          have a fast net connection, it's much faster to send only a
-          file's changes rather than the whole file to the server.  At
-          first glance, this might not seem that important, but
-          imagine the repercussions if you try to commit a one line
-          change to a 400MB file and have to send the whole file to
-          the server!</para>
+        <para>Subversion hace esto manteniendo almacenes privados de
+          versiones prístinas de cada fichero versionado dentro del
+          área administrativa <filename>.svn</filename>. Esto permite
+          a Subversion reportar&mdash;y revertir&mdash;modificaciones
+          locales a ésos ficheros emphasis>sin acceso de
+          red</emphasis>. Este almacén (llamado el
+          <quote>texto-base</quote>) también permite a Subversion
+          mandar las modificaciones locales del usuario durante un
+          envio al servidor como un <firstterm>delta</firstterm>
+          comprimido (o <quote>diferéncia</quote>) contra la
+          versión prístina. Tener este almacén es un benefício
+          tremendo&mdash;incluso si usted tiene una conexión de red
+          rápida, es mucho más rapido mandar solamente los cambios
+          del fichero al servidor antes que el fichero entero. A
+          primera vista, esto puede no parecer tán importante, pero
+          imagine la repercusión si usted intenta enviar un cambio de
+          una línea a un fichero de 400MB ¡ y tiene que enviar el fichero
+          entero al servidor!<!--TODO:la frase acaba "whole file to
+          the server!"... está bien donde he puesto la "¡"?--></para>
     </sidebar>
 
     </sect2>
 
     <sect2 id="svn-ch-3-sect-4.4">
-      <title>Resolve Conflicts (Merging Others' Changes)</title>
+      <title>Resolver Conflictos (Fusionando los Cambios de Otros)</title>
            
-      <para>We've already seen how <command>svn status -u</command>
-          can predict conflicts.  Suppose you run <command>svn
-          update</command> and some interesting things occur:</para>
+      <para>Ya hemos visto cómo <command>svn status -u</command> puede
+        predecir conflictos. Suponga que ejecuta <command>svn
+          update</command> y ocurren algunas cosas interesantes</para>
       
       <screen>
 $ svn update
@@ -1378,96 +1385,97 @@ C  bar.c
 Updated to revision 46.
 </screen>
            
-      <para>The <computeroutput>U</computeroutput> and
-        <computeroutput>G</computeroutput> codes are no cause for
-        concern; those files cleanly absorbed changes from the
-        repository.  The files marked with
-        <computeroutput>U</computeroutput> contained no local changes
-        but were <computeroutput>U</computeroutput>pdated with changes
-        from the repository.  The <computeroutput>G</computeroutput>
-        stands for mer<computeroutput>G</computeroutput>ed, which
-        means that the file had local changes to begin with, but the
-        changes coming from the repository didn't overlap in any
-        way.</para>
+      <para>Los códigos <computeroutput>U</computeroutput> y
+        <computeroutput>G</computeroutput> no son causa para la
+        <!--TODO:are no cause for concern-->inquietud; esos ficheros
+        absorbieron limpiamente los cambios del repositorio. Los
+        ficheros marcados con una <computeroutput>U</computeroutput>
+        no contienen cambios locales pero fueron
+        act<computeroutput>U</computeroutput>alizados<!--TODO:en ingles
+        ponía Updated--> con cambios del repositorio. La
+        <computeroutput>G</computeroutput> representa
+        mer<computeroutput>G</computeroutput>ed<!--TODO:se pone "enviado"
+        entre parentesis?-->, lo que significa que el fichero tenía
+        para comenzar cambios locales, pero los cambios que venían del
+        repositorio no se solaparon de ninguna manera.</para>
+
+      <para>Pero la <computeroutput>C</computeroutput> representa
+        conflicto. Esto significa que los cambios del servidor se solapan
+        con los suyos propios, y ahora tiene que elegir manualmente
+        entre ellos.</para>
            
-      <para>But the <computeroutput>C</computeroutput> stands for
-        conflict.  This means that the changes from the server overlapped
-        with your own, and now you have to manually choose between
-        them.</para>
-           
-      <para>Whenever a conflict occurs, three things occur to assist
-        you in noticing and resolving that conflict:</para>
+      <para>Siempre que ocurra un conflicto, ocurren tres cosas para
+        ayudarle a notar<!--TODO:to assist you in noticing--> y
+        resolver ese conflicto:</para>
            
       <itemizedlist>
 
         <listitem>
-          <para>Subversion prints a <computeroutput>C</computeroutput>
-            during the update, and remembers that the file is in a
-            state of conflict.</para>
+          <para>Subversion imprime una <computeroutput>C</computeroutput>
+            durante la actualización, y recuerda que el fichero está en
+            un estado de conflicto.</para>
         </listitem>
 
         <listitem>
-          <para>Subversion places <firstterm>conflict
-            markers</firstterm>&mdash;special strings of text which
-            delimit the <quote>sides</quote> of the
-            conflict&mdash;into the file to visibly demonstrate the
-            overlapping areas.</para>
+          <para>Subversion coloca <firstterm>marcas de
+            conflicto</firstterm>&mdash;secuencias especiales de texto
+            que delimitan los <quote>lados</quote> del conflicto&mdash;en
+            el fichero para demostrar visualmente las áreas solapadas.
+          </para>
         </listitem>
 
         <listitem>
-          <para>For every conflicted file, Subversion places three
-            extra files in your working copy:</para>
+          <para>Para cada fichero en conflicto, Subversion coloca tres
+            ficheros extra en su copia de trabajo local:</para>
 
           <variablelist>
             
             <varlistentry>
               <term><filename>filename.mine</filename></term>
               <listitem>
-                <para> This is your file as it existed in your working
-                  copy before you updated your working copy&mdash;that
-                  is, without conflict markers.  This file has your
-                  latest changes in it and nothing else.</para>
+                <para>Este es su fichero como existió en su copia de
+                  trabajo antes de que usted actualizara su copia de
+                  trabajo&mdash;esto es, sin marcas de conflicto.
+                  Este fichero tiene su últimos cambios y nada más.</para>
               </listitem>
             </varlistentry>
             
             <varlistentry>
               <term><filename>filename.rOLDREV</filename></term>
               <listitem>
-                <para>This is the file that was the
-                  <literal>BASE</literal> revision before you updated
-                  your working copy.  That is, the file that you
-                  checked out before you made your latest
-                  edits.</para>
+                <para>Este es el fichero que era la revisión
+                  <literal>BASE</literal> antes de que usted actalizara
+                  su copia de trabajo. Esto es, el fichero que usted
+                  descargó antes de que hiciera su última edición.</para>
               </listitem>
             </varlistentry>
 
             <varlistentry>
               <term><filename>filename.rNEWREV</filename></term>
               <listitem>
-                <para>This is the file that your Subversion client
-                  just received from the server when you updated your
-                  working copy.  This file corresponds to the
-                  <literal>HEAD</literal> revision of the
-                  repository.</para>
+                <para>Este es el fichero que su cliente de Subversion
+                  recibió del servidor justo cuando usted actualizó su
+                  copia de trabajo. Este fichero corresponde con la
+                  revisión <literal>HEAD</literal> del repositorio.</para>
               </listitem>
             </varlistentry>
 
           </variablelist>
           
-          <para>Here <literal>OLDREV</literal> is the revision number
-            of the file in your <filename>.svn</filename> directory
-            and <literal>NEWREV</literal> is the revision number of
-            the repository <literal>HEAD</literal>.
-          </para>
+          <para>Aquí <literal>OLDREV</literal> es el número de revisión
+            del fichero en su directorio <filename>.svn</filename> y
+            <literal>NEWREV</literal> es el número de revisión del
+            <literal>HEAD</literal> del repositorio.</para>
         </listitem>
         
       </itemizedlist>
       
-      <para>For example, Sally makes changes to the file
-        <filename>sandwich.txt</filename> in the repository.  Harry has
-        just changed the file in his working copy and checked it in.
-        Sally updates her working copy before checking in and she gets
-        a conflict:</para>
+      <para>Por ejemplo, Sally hace cambios al fichero
+        <filename>sandwich.txt</filename> en el repositorio. Harry acaba
+        de cambiar el fichero en su copia de trabajo y lo ha enviado. Sally
+        actualiza su copia de trabajo antes de enviarlo y recibe<!--TODO:
+        gets...recibir parece que es un premio, quizá haya algo mejo--> un
+        conflicto:</para>
       
       <screen>
 $ svn update
@@ -2226,9 +2234,9 @@ Adding         mytree/subdir/quux.h
 Committed revision 1.
 </screen>
 
-      <para>The previous example copied the contents of directory
-        <filename>mytree</filename> under the directory
-        <filename>some/project</filename> in the repository:</para>
+      <para>El ejemplo anterior copia el contenido del directorio
+        <filename>mytree</filename> debajo del directorio
+        <filename>some/project</filename> en el repositorio:</para>
 
       <screen>
 $ svn ls file:///usr/local/svn/newrepos/some/project

@@ -21,8 +21,6 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
-#include <apr_lib.h>
-#include <apr_strings.h>
 #include <apr_getopt.h>
 #include <apr_network_io.h>
 #include <apr_signal.h>
@@ -32,7 +30,6 @@
 
 #include "svn_cmdline.h"
 #include "svn_types.h"
-#include "svn_string.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_ra_svn.h"
@@ -137,16 +134,17 @@ static void help(apr_pool_t *pool)
 {
   apr_size_t i;
 
-  puts("Usage: svnserve [options]\n"
-       "\n"
-       "Valid options:");
+  svn_error_clear (svn_cmdline_fputs("Usage: svnserve [options]\n"
+                                     "\n"
+                                     "Valid options:",
+                                     stdout, pool));
   for (i = 0; svnserve__options[i].name && svnserve__options[i].optch; i++)
     {
       const char *optstr;
       svn_opt_format_option(&optstr, svnserve__options + i, TRUE, pool);
-      fprintf(stdout, "  %s\n", optstr);
+      svn_error_clear (svn_cmdline_fprintf(stdout, pool, "  %s\n", optstr));
     }
-  fprintf(stdout, "\n");
+  svn_error_clear (svn_cmdline_fprintf(stdout, pool, "\n"));
   exit(1);
 }
 

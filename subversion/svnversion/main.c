@@ -20,7 +20,6 @@
 #include "svn_utf.h"
 #include "svn_path.h"
 #include "svn_opt.h"
-#include <apr_tables.h>
 
 #include "svn_private_config.h"
 

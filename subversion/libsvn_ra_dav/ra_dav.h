@@ -31,7 +31,6 @@
 
 #include "svn_types.h"
 #include "svn_string.h"
-#include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -727,7 +726,7 @@ svn_ra_dav__get_log2 (void *session_baton,
                       const apr_array_header_t *paths,
                       svn_revnum_t start,
                       svn_revnum_t end,
-                      unsigned int limit,
+                      int limit,
                       svn_boolean_t discover_changed_paths,
                       svn_boolean_t strict_node_history,
                       svn_log_message_receiver_t receiver,

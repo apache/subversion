@@ -29,7 +29,7 @@
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
-#include "svn_sorts.h"
+#include "svn_props.h"
 
 #include <assert.h>
 #include <stdlib.h>  /* for qsort() */

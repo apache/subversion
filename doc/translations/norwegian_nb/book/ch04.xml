@@ -1308,11 +1308,11 @@ U   my-calc-branch/integer.c
 
         <!-- @ENGLISH {{{
         <para>Unfortunately, Subversion is not such a system.  Like
-          CVS, Subversion 1.0 does not yet record any information
-          about merge operations.  When you commit local
-          modifications, the repository has no idea whether those
-          changes came from running <command>svn merge</command>, or
-          from just hand-editing the files.</para>
+          CVS, Subversion does not yet record any information about
+          merge operations.  When you commit local modifications, the
+          repository has no idea whether those changes came from
+          running <command>svn merge</command>, or from just
+          hand-editing the files.</para>
         @ENGLISH }}} -->
         <para>Dessverre er ikke Subversion et s&#229;nt system.
           I likhet med CVS lagrer ikke Subversion 1.0 noen informasjon 
@@ -1532,7 +1532,7 @@ $ svn status
           very likely hear reference to the term
           <firstterm>ancestry</firstterm>.  This word is used to
           describe the relationship between two objects in a
-          repository: if they're related to each other, than one
+          repository: if they're related to each other, then one
           object is said to be an ancestor of the other.</para>
         @ENGLISH }}} -->
         <para>N&#229;r du snakker med en Subversionutvikler kan det hende du 

@@ -23,9 +23,7 @@
 #include <apr_xml.h>
 #include <mod_dav.h>
 
-#include "svn_pools.h"
 #include "svn_repos.h"
-#include "svn_fs.h"
 #include "svn_types.h"
 #include "svn_xml.h"
 #include "svn_path.h"
@@ -208,7 +206,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   dav_svn_authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = NULL;
-  unsigned int limit = 0;
+  int limit = 0;
   int ns;
 
   /* These get determined from the request document. */

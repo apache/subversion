@@ -22,10 +22,8 @@
 
 #include <ne_socket.h>
 #include <ne_request.h>
-#include <ne_xml.h>
 
 #include "svn_error.h"
-#include "svn_ra.h"
 
 #include "svn_private_config.h"
 

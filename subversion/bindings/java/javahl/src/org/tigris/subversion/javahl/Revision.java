@@ -100,10 +100,27 @@ public class Revision
      * Creates a Revision.Number object
      * @param revisionNumber    the revision number of the new object
      * @return  the new object
+     * @throws IllegalArgumentException If the specified revision
+     * number is invalid.
      */
     public static Revision getInstance(long revisionNumber)
     {
         return new Revision.Number(revisionNumber);
+    }
+
+    /**
+     * Factory which creates {@link #Number} objects for valid
+     * revision numbers only (those greater than zero).  For internal
+     * usage to avoid an IllegalArgumentException, where no external
+     * consumer of the javahl API passed an invalid revision number.
+     *
+     * @param revNumber The revision number to create an object for.
+     * @return An object representing <code>revNumber</code>, or
+     * <code>null</code> if the revision number was invalid.
+     */
+    static Number createNumber(long revNumber)
+    {
+        return (revNumber < 0 ? null : new Number(revNumber));
     }
 
     /**
@@ -158,6 +175,8 @@ public class Revision
         /**
          * create a revision by number object
          * @param number the number
+         * @throws IllegalArgumentException If the specified revision
+         * number is invalid.
          */
         public Number(long number)
         {

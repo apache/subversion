@@ -24,7 +24,6 @@
 #include <apr_want.h>
 
 #include <ne_socket.h>
-#include <ne_xml.h>
 #include <ne_request.h>
 
 
@@ -33,6 +32,7 @@
 #include "svn_path.h"
 #include "svn_ra.h"
 #include "svn_pools.h"
+#include "svn_props.h"
 
 #include "svn_private_config.h"
 

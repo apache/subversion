@@ -23,6 +23,8 @@
 #include "svn_repos.h"
 #include "svn_pools.h"
 #include "svn_time.h"
+#include "svn_props.h"
+#include "svn_path.h"
 #include "svn_private_config.h"
 
 #define APR_WANT_STRFUNC
@@ -614,7 +616,7 @@ svn_ra_local__get_log2 (void *session_baton,
                         const apr_array_header_t *paths,
                         svn_revnum_t start,
                         svn_revnum_t end,
-                        unsigned int limit,
+                        int limit,
                         svn_boolean_t discover_changed_paths,
                         svn_boolean_t strict_node_history,
                         svn_log_message_receiver_t receiver,

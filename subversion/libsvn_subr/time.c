@@ -25,6 +25,7 @@
 #include <apr_strings.h>
 #include "svn_time.h"
 #include "svn_utf.h"
+#include "svn_error.h"
 
 
 

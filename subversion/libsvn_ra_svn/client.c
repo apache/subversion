@@ -21,7 +21,6 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
-#include <apr_lib.h>
 #include <apr_strings.h>
 #include <apr_network_io.h>
 #include <apr_md5.h>
@@ -37,6 +36,7 @@
 #include "svn_ra.h"
 #include "svn_ra_svn.h"
 #include "svn_md5.h"
+#include "svn_props.h"
 
 #include "ra_svn.h"
 
@@ -1006,7 +1006,7 @@ static svn_error_t *ra_svn_diff(void *baton,
 /** @since New in 1.2. */
 static svn_error_t *ra_svn_log2(void *baton, const apr_array_header_t *paths,
                                 svn_revnum_t start, svn_revnum_t end,
-                                unsigned int limit,
+                                int limit,
                                 svn_boolean_t discover_changed_paths,
                                 svn_boolean_t strict_node_history,
                                 svn_log_message_receiver_t receiver,

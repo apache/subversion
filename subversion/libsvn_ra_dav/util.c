@@ -28,8 +28,6 @@
 #include "svn_string.h"
 #include "svn_utf.h"
 #include "svn_xml.h"
-#include "svn_path.h"
-#include "svn_config.h"
 
 #include "svn_private_config.h"
 

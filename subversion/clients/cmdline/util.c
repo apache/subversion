@@ -33,15 +33,12 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
-#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_cmdline.h"
 #include "svn_string.h"
 #include "svn_path.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_io.h"
-#include "svn_pools.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_config.h"

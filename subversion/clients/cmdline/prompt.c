@@ -26,10 +26,8 @@
 #include <apr_poll.h>
 
 #include "svn_cmdline.h"
-#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
-#include "svn_delta.h"
 #include "svn_auth.h"
 #include "svn_error.h"
 #include "cl.h"

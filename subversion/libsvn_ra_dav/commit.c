@@ -21,15 +21,12 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_uuid.h>
-#include <apr_portable.h>
 
 #define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
-#if APR_HAVE_STDLIB
 #include <stdlib.h>     /* for free() */
-#endif
 #include <assert.h>
 
 #include <ne_socket.h>
@@ -45,7 +42,7 @@
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_dav.h"
-#include "svn_base64.h"
+#include "svn_props.h"
 
 #include "svn_private_config.h"
 

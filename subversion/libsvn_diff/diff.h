@@ -23,8 +23,6 @@
 #include <apr_pools.h>
 #include <apr_general.h>
 
-#include "svn_pools.h"
-#include "svn_error.h"
 #include "svn_diff.h"
 #include "svn_types.h"
 
@@ -67,6 +65,7 @@ struct svn_diff__lcs_t
   svn_diff__lcs_t      *next;
   svn_diff__position_t *position[2];
   apr_off_t             length;
+  int                   refcount;
 };
 
 

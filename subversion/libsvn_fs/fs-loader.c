@@ -24,7 +24,6 @@
 
 #include "svn_types.h"
 #include "svn_version.h"
-#include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
