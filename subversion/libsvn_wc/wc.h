@@ -389,6 +389,11 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_TOPLEVEL       "wc-entries"
 #define SVN_WC__ENTRIES_ENTRY          "entry"
 
+/* String representations for svn_node_kind.  This maybe should be
+   abstracted farther out? */
+#define SVN_WC__ENTRIES_ATTR_FILE_STR   "file"
+#define SVN_WC__ENTRIES_ATTR_DIR_STR    "dir"
+
 /* Initialize contents of `entries' for a new adm area. */
 svn_error_t *svn_wc__entries_init (svn_string_t *path,
                                    svn_string_t *ancestor_path,

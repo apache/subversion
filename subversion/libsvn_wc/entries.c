@@ -69,15 +69,18 @@ svn_wc__entries_init (svn_string_t *path,
 
   /* Add an entry for the dir itself -- name is absent, only the
      revision and default ancestry are present as xml attributes. */
-  svn_xml_make_open_tag (&accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__ENTRIES_ENTRY,
-                         SVN_WC_ENTRY_ATTR_REVISION,
-                         svn_string_create (initial_revstr, pool),
-                         SVN_WC_ENTRY_ATTR_ANCESTOR,
-                         ancestor_path,
-                         NULL);
+  svn_xml_make_open_tag 
+    (&accum,
+     pool,
+     svn_xml_self_closing,
+     SVN_WC__ENTRIES_ENTRY,
+     SVN_WC_ENTRY_ATTR_KIND,
+     svn_string_create (SVN_WC__ENTRIES_ATTR_DIR_STR, pool), 
+     SVN_WC_ENTRY_ATTR_REVISION,
+     svn_string_create (initial_revstr, pool),
+     SVN_WC_ENTRY_ATTR_ANCESTOR,
+     ancestor_path,
+     NULL);
 
   /* Close the top-level form. */
   svn_xml_make_close_tag (&accum,
@@ -184,9 +187,10 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
           = apr_hash_get (entry->attributes,
                           SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING);
 
-        if ((! kindstr) || (strcmp (kindstr->data, "file") == 0))
+        if ((! kindstr)
+            || (strcmp (kindstr->data, SVN_WC__ENTRIES_ATTR_FILE_STR) == 0))
           entry->kind = svn_node_file;
-        else if (strcmp (kindstr->data, "dir") == 0)
+        else if (strcmp (kindstr->data, SVN_WC__ENTRIES_ATTR_DIR_STR) == 0)
           entry->kind = svn_node_dir;
         else
           {
@@ -320,7 +324,7 @@ resolve_to_defaults (apr_hash_t *entries, apr_pool_t *pool)
       apr_hash_this (hi, &key, &keylen, &val);
       this_entry = val;
 
-      if (strcmp (SVN_WC_ENTRY_THIS_DIR, (char *) key) == 0)
+      if (this_entry->kind == svn_node_dir)
         continue;
 
       take_from_entry (default_entry, this_entry, pool);
@@ -350,7 +354,7 @@ sync_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
   if (entry->kind == svn_node_dir)
     apr_hash_set (entry->attributes,
                   SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING,
-                  svn_string_create ("dir", pool));
+                  svn_string_create (SVN_WC__ENTRIES_ATTR_DIR_STR, pool));
   else if (entry->kind != svn_node_none)  /* default to file kind */
     apr_hash_set (entry->attributes,
                   SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING,
@@ -687,7 +691,9 @@ stuff_entry (apr_hash_t *entries,
                 APR_HASH_KEY_STRING,
                 name);
 
-  /* Absorb defaults from the parent dir, if any. */
+  /* Absorb defaults from the parent dir, if any, unless this is a
+     subdir entry. */
+  if (kind != svn_node_dir)
   {
     svn_wc_entry_t *default_entry
       = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
