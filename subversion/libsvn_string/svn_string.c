@@ -47,7 +47,7 @@
  * individuals on behalf of Collab.Net.
  */
 
-#include <string.h>      /* for memcpy(), memcmp() */
+#include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <stdlib.h>      /* for size_t, malloc(), realloc() */
 #include <stdio.h>       /* for svn_string_print() utility */
 #include <svn_string.h>  /* loads <svn_types.h> and string prototypes */
@@ -69,7 +69,7 @@ svn_string_create (char *cstring)
   /* This routine will actually call realloc(); realloc() behaves like
      malloc() as long as data == NULL */
 
-  svn_string_appendbytes (new_string, cstring, sizeof(cstring));
+  svn_string_appendbytes (new_string, cstring, strlen(cstring));
 
   return new_string;
 }
@@ -123,6 +123,10 @@ svn_string_fillchar (svn_string_t *str, unsigned char c)
 {
   size_t i;
   
+  /* safety check */
+  if (str->len > str->blocksize)
+    str->len = str->blocksize;
+
   if (c == 0) 
     {
       bzero (str->data, str->len);  /* for speed */

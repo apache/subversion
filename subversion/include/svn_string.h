@@ -62,7 +62,7 @@
 svn_string_t * svn_string_create (char *cstring);
 svn_string_t * svn_string_ncreate (char *bytes, size_t size);
 
-/* Free a string structure */
+/* Free a string structure (includes freeing its internal string) */
 
 void svn_string_free (svn_string_t *str);
 
