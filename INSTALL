@@ -640,8 +640,9 @@ II.   INSTALLATION
       "--with-openssl" to the gen-make.py script. See Section I.10 for
       more details.
 
-      If you are installing under Win9x, NT4, or WinME, and svn.exe
-      doesn't run, try installing shfolder.dll from here:
+      If you are installing under Win9x or NT4 (and do not have Internet
+      Explorer 5 or later) and svn.exe doesn't run, try installing
+      shfolder.dll from here:
 
           http://download.microsoft.com/download/platformsdk/Redist/5.50.4027.300/W9XNT4/EN-US/shfinst.EXE
 
