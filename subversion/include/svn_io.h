@@ -355,9 +355,6 @@ typedef svn_error_t *(*svn_close_fn_t) (void *baton);
 /** Creating a generic stream.  */
 svn_stream_t *svn_stream_create (void *baton, apr_pool_t *pool);
 
-/** Duplicate a generic stream. */
-svn_stream_t *svn_stream_dup (svn_stream_t *stream, apr_pool_t *pool);
-
 /** Set @a stream's baton to @a baton */
 void svn_stream_set_baton (svn_stream_t *stream, void *baton);
 
