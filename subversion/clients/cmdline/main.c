@@ -518,6 +518,7 @@ main (int argc, const char * const *argv)
   svn_boolean_t log_under_version_control = FALSE;
   svn_boolean_t log_is_pathname = FALSE;
   apr_status_t apr_err;
+  svn_cl__cmd_baton_t command_baton;
 
   /* C programs default to the "C" locale by default.  But because svn
      is supposed to be i18n-aware, it should inherit the default
@@ -875,7 +876,10 @@ main (int argc, const char * const *argv)
         }
     }
 
-  err = (*subcommand->cmd_func) (os, &opt_state, pool);
+  command_baton.opt_state = &opt_state;
+  command_baton.ctx = svn_client_ctx_create (pool);
+
+  err = (*subcommand->cmd_func) (os, &command_baton, pool);
   if (err)
     {
       svn_error_t *tmp_err;

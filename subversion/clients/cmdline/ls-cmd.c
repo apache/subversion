@@ -116,10 +116,10 @@ svn_cl__ls (apr_getopt_t *os,
             void *baton,
             apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   int i;
-  svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
   apr_pool_t *subpool = svn_pool_create (pool); 
 
   svn_client_ctx_set_auth_baton (ctx,
