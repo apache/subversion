@@ -136,22 +136,23 @@ typedef struct svn_cl__cmd_desc_t
 /* Declare all the command procedures */
 svn_cl__cmd_proc_t
   svn_cl__add,
-  svn_cl__commit,
-  svn_cl__copy,
   svn_cl__checkout,
   svn_cl__cleanup,
+  svn_cl__commit,
+  svn_cl__copy,
   svn_cl__delete,
+  svn_cl__diff,
   svn_cl__help,
   svn_cl__import,
   svn_cl__log,
   svn_cl__move,
-  svn_cl__proplist,
-  svn_cl__propget,
-  svn_cl__propset,
   svn_cl__propdel,
+  svn_cl__propget,
+  svn_cl__proplist,
+  svn_cl__propset,
   svn_cl__revert,
   svn_cl__status,
-  svn_cl__diff,
+  svn_cl__switch,
   svn_cl__update;
 
 

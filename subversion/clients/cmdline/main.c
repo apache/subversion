@@ -66,8 +66,13 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
 
   { "checkout",   FALSE, svn_cl__checkout,
     "Check out a working directory from a repository.\n"
-    "usage: checkout REPOSPATH1 [REPOSPATH2 REPOSPATH3...]\n" },
+    "usage: checkout REPOS_URL1 [REPOS_URL2 REPOS_URL3...]\n" },
   { "co",         TRUE, NULL, NULL },
+
+  { "cleanup",    FALSE, svn_cl__cleanup,
+    "Recursively clean up the working copy, removing locks, resuming\n"
+    "unfinished operations, etc.\n"
+    "usage: cleanup [TARGETS]\n" },
 
   { "commit",     FALSE, svn_cl__commit,
     "Commit changes from your working copy to the repository.\n"
@@ -86,6 +91,11 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "del",        TRUE, NULL, NULL },
   { "remove",     TRUE, NULL, NULL },
   { "rm",         TRUE, NULL, NULL },
+
+  { "diff",       FALSE, svn_cl__diff,
+    "Display local file changes as contextual diffs.\n"
+    "usage: diff [TARGETS]\n" },
+  { "di",         TRUE, NULL, NULL },
 
   { "help",       FALSE, svn_cl__help,
     "Display this usage message.\n"
@@ -111,17 +121,22 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "mv",         TRUE, NULL, NULL },
   { "ren",        TRUE, NULL, NULL },
 
-  { "proplist",   FALSE, svn_cl__proplist,
-    "List all properties for given files and directories.\n"
-    "usage: proplist [TARGETS]\n" },
-  { "plist",      TRUE, NULL, NULL },
-  { "pl",         TRUE, NULL, NULL },
+  { "propdel",    FALSE, svn_cl__propdel, 
+    "Remove property PROPNAME on files and directories.\n"
+    "usage: propdel PROPNAME [TARGETS]\n"},
+  { "pdel",       TRUE, NULL, NULL },
 
   { "propget",    FALSE, svn_cl__propget,
     "Get the value of property PROPNAME on files and directories.\n"
     "usage: propget PROPNAME [TARGETS]\n" },
   { "pget",       TRUE, NULL, NULL },
   { "pg",         TRUE, NULL, NULL },
+
+  { "proplist",   FALSE, svn_cl__proplist,
+    "List all properties for given files and directories.\n"
+    "usage: proplist [TARGETS]\n" },
+  { "plist",      TRUE, NULL, NULL },
+  { "pl",         TRUE, NULL, NULL },
 
   { "propset",    FALSE, svn_cl__propset, 
     "Set property PROPNAME to PROPVAL on files and directories.\n"
@@ -130,10 +145,9 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "pset",       TRUE, NULL, NULL },
   { "ps",         TRUE, NULL, NULL },
 
-  { "propdel",    FALSE, svn_cl__propdel, 
-    "Remove property PROPNAME on files and directories.\n"
-    "usage: propdel PROPNAME [TARGETS]\n"},
-  { "pdel",       TRUE, NULL, NULL },
+  { "revert",     FALSE, svn_cl__revert,
+    "Restore pristine working copy file (undo all local edits)\n"
+    "usage: revert [TARGETS]\n" },
 
   { "status",     FALSE, svn_cl__status,
     "Print the status of working copy files and directories.\n"
@@ -141,24 +155,16 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "stat",       TRUE, NULL, NULL },
   { "st",         TRUE, NULL, NULL },
  
-  { "diff",       FALSE, svn_cl__diff,
-    "Display local file changes as contextual diffs.\n"
-    "usage: diff [TARGETS]\n" },
-  { "di",         TRUE, NULL, NULL },
-
+  { "switch",     FALSE, svn_cl__switch,
+    "Update existing working copy files and directories to become\n"
+    "a working copy of a different repository URL.\n"
+    "usage: switch [TARGET] REPOS_URL\n" },
+  { "sw",         TRUE, NULL, NULL },
+ 
   { "update",     FALSE, svn_cl__update,
     "Bring changes from the repository into the working copy.\n"
     "usage: update [TARGETS]\n" },
   { "up",         TRUE, NULL, NULL },
-
-  { "cleanup",    FALSE, svn_cl__cleanup,
-    "Recursively clean up the working copy, removing locks, resuming\n"
-    "unfinished operations, etc.\n"
-    "usage: cleanup [TARGETS]\n" },
-
-  { "revert",     FALSE, svn_cl__revert,
-    "Restore pristine working copy file (undo all local edits)\n"
-    "usage: revert [TARGETS]\n" },
 
   { NULL,         FALSE, NULL, NULL }
 };
