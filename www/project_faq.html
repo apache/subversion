@@ -384,11 +384,16 @@ release, but for now, use it with caution.
 <h3><a name="proxy">What if I'm behind a proxy?</a></h3>
 
 <p>The Subversion client can go through a proxy, if you configure it
-to do so.  First, edit your ~/.subversion/servers configuration file
-to indicate which proxy to use.  There are comments in the file
-explaining how to do this.  If you don't have that file, get the
-latest Subversion client and run any command; this will cause the
-configuration directory and template files to be created.</p>
+to do so.  First, edit your "servers" configuration file
+to indicate which proxy to use. The files location depends on your
+operating system. On Linux or Unix it is located in the directory
+"~/.subversion". On Windows it is in "%APPDATA%\Subversion". (Try
+"echo %APPDATA%", note this is a hidden directory.)</p>
+
+<p>There are comments in the file explaining what to do.  If you don't
+have that file, get the latest Subversion client and run any command;
+this will cause the configuration directory and template files to be
+created.</p>
 
 <p>Older versions of Subversion, including the 0.14.3 bootstrap
 tarball, use the file ~/.subversion/proxies to define the proxy
