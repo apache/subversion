@@ -688,7 +688,7 @@ III.  BUILDING A SUBVERSION SERVER
           $ make clean && make && make install
 
       After the make install, the Subversion shared libraries are in
-      /usr/local/lib/.  libmod_dav_svn.so should be installed in
+      /usr/local/lib/.  mod_dav_svn.so should be installed in
       /usr/local/apache2/modules/.
 
 
