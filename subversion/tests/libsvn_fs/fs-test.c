@@ -246,6 +246,8 @@ validate_tree_entry (svn_fs_root_t *root,
 }
                      
 
+/* Change this to 1 to get a function that prints a tree to stdout. */
+#if 0
 static svn_error_t *
 print_tree (svn_fs_root_t *root)
 {
@@ -291,6 +293,7 @@ print_tree (svn_fs_root_t *root)
 
   return SVN_NO_ERROR;
 }
+#endif /* 0/1 */
 
 
 /* Given a transaction or revision root (ROOT), check to see if the
@@ -1915,26 +1918,69 @@ test_tree_node_validation (const char **msg)
 
 
 
+/* Commit TXN, expecting either success or failure:
+ *
+ * If EXPECTED_CONFLICT is null, then the commit is expected to
+ * succeed.  If it does succeed, then *NEW_REV is set to the new
+ * revision; if it fails, then an error is returned.
+ *
+ * If EXPECTED_CONFLICT is non-null, it is the expected path of the
+ * conflict.  If the commit fails, then the actual conflict path is
+ * compared against EXPECTED_CONFLICT -- they must match or this
+ * function will return an error.  
+ *
+ * If a conflict is expected but the commit succeeds anyway, an error
+ * is returned.
+ */
 static svn_error_t *
-test_commit_txn (const char **conflict,
+test_commit_txn (const char **conflict_p,
                  svn_revnum_t *new_rev,
                  svn_fs_txn_t *txn,
-                 svn_boolean_t expect_success)
+                 const char *expected_conflict)
 {
-  svn_error_t *err = svn_fs_commit_txn (conflict, new_rev, txn);
+  svn_error_t *err = svn_fs_commit_txn (conflict_p, new_rev, txn);
 
-  /* Did this fail when success was expected? */
-  if (err && expect_success)
-    return svn_error_quick_wrap 
-      (err, "commit failed that was expected to succeed.");
+  if (err && (err->apr_err == SVN_ERR_FS_CONFLICT))
+    {
+      if (! expected_conflict)
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
+             "commit conflicted at `%s', but no conflict expected",
+             *conflict_p ? *conflict_p : "(missing conflict info!)");
+        }
+      else if (*conflict_p == NULL)
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
+             "commit conflicted as expected, "
+             "but no conflict path was returned (`%s' expected)",
+             expected_conflict);
+        }
+      else if (strcmp (*conflict_p, expected_conflict) != 0)
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
+             "commit conflicted at `%s', but expected conflict at `%s')",
+             *conflict_p, expected_conflict);
+        }
+    }
+  else if (err)   /* commit failed, but not due to conflict */
+    {
+      return svn_error_quick_wrap 
+        (err, "commit failed due to something other than a conflict");
+    }
+  else            /* err == NULL, so commit succeeded */
+    {
+      if (expected_conflict)
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+             "commit succeeded that was expected to fail at `%s'",
+             expected_conflict);
+        }
+    }
 
-  /* Did this succeed when failure was expected? */
-  if (!err && !expect_success)
-    return svn_error_create
-      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-       "commit succeeded that was expected to fail.");
-
-  /* Did everything go as expected? :-) */
   return SVN_NO_ERROR;
 }
 
@@ -1974,7 +2020,7 @@ merging_commit (const char **msg)
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (greek_tree_under_root (txn_root));
-  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
 
   /***********************************************************************/
   /* REVISION 1 */
@@ -2024,7 +2070,7 @@ merging_commit (const char **msg)
   SVN_ERR (set_file_contents (txn_root, "A/C/kappa",
                               "This is the file 'kappa'.\n"));
   SVN_ERR (svn_fs_delete (txn_root, "iota", pool));
-  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
 
   /***********************************************************************/
   /* REVISION 2 */
@@ -2070,7 +2116,7 @@ merging_commit (const char **msg)
   SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
   SVN_ERR (set_file_contents (txn_root, "iota",
                               "This is the new file 'iota'.\n"));
-  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
 
   /***********************************************************************/
   /* REVISION 3 */
@@ -2109,7 +2155,7 @@ merging_commit (const char **msg)
   SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[revision_count-1], pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_fs_delete (txn_root, "iota", pool)); 
-  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
 
   /***********************************************************************/
   /* REVISION 4 */
@@ -2194,7 +2240,7 @@ merging_commit (const char **msg)
     SVN_ERR (svn_fs_make_file (txn_root, "theta", pool));
     SVN_ERR (set_file_contents (txn_root, "theta",
                                 "This is the file 'theta'.\n"));
-    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
 
     /*********************************************************************/
     /* REVISION 5 */
@@ -2244,7 +2290,7 @@ merging_commit (const char **msg)
     SVN_ERR (svn_fs_make_file (txn_root, "theta", pool));
     SVN_ERR (set_file_contents (txn_root, "theta",
                                 "This is another file 'theta'.\n"));
-    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, "/theta"));
 
     /* (1) E exists in ANCESTOR, but has been deleted from B.  Can't
        occur, by assumption that E doesn't exist in ANCESTOR. */
@@ -2263,7 +2309,7 @@ merging_commit (const char **msg)
     SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
     SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
     SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/H", pool));
-    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
     /*********************************************************************/
     /* REVISION 6 */
     /*********************************************************************/
@@ -2302,7 +2348,7 @@ merging_commit (const char **msg)
     SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
     SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
     SVN_ERR (svn_fs_delete (txn_root, "A/D/H/omega", pool));
-    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, "/A/D/H"));
 
     /* E exists in both ANCESTOR and B ... */
     {
@@ -2311,14 +2357,14 @@ merging_commit (const char **msg)
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
       SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/H", pool));
       SVN_ERR (svn_fs_make_dir (txn_root, "A/D/H", pool));
-      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
+      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, "/A/D/H"));
 
       /* (1) but refers to different revisions of the same node.
          Conflict. */
       SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
       SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/zeta", pool));
-      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
+      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, "/A/D/H"));
 
       /* (1) and refers to the same node revision.  Omit E from the
          merged tree.  This is already tested in Merge-Test 3
@@ -2327,7 +2373,7 @@ merging_commit (const char **msg)
       SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
       SVN_ERR (svn_fs_delete (txn_root, "A/mu", pool)); /* unrelated change */
-      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
 
       /*********************************************************************/
       /* REVISION 7 */
@@ -2372,7 +2418,7 @@ merging_commit (const char **msg)
   SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/xi", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/G/xi",
                               "This is the file 'xi'.\n"));
-  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
   /*********************************************************************/
   /* REVISION 8 */
   /*********************************************************************/
@@ -2420,14 +2466,14 @@ merging_commit (const char **msg)
     SVN_ERR (svn_fs_delete (txn_root, "A/mu", pool));
     SVN_ERR (svn_fs_make_file (txn_root, "A/mu", pool));
     SVN_ERR (set_file_contents (txn_root, "A/mu", "This is the file 'mu'.\n"));
-    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, "/A/mu"));
 
     /* (1) E exists in both ANCESTOR and B, but refers to different
        revisions of the same node.  Conflict. */
     SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
     SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
     SVN_ERR (set_file_contents (txn_root, "A/mu", "A change to file 'mu'.\n"));
-    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, "/A/mu"));
 
     /* (1) E exists in both ANCESTOR and B, and refers to the same
        node revision.  Replace E with A's node revision.  */
@@ -2446,7 +2492,7 @@ merging_commit (const char **msg)
       SVN_ERR (svn_fs_make_file (txn_root, "A/sigma", pool));
       SVN_ERR (set_file_contents (txn_root, "A/sigma",  /* unrelated change */
                                   "This is the file 'sigma'.\n"));
-      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
       /*********************************************************************/
       /* REVISION 9 */
       /*********************************************************************/
@@ -2492,7 +2538,7 @@ merging_commit (const char **msg)
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/lambda",
                               "Change to file 'lambda'.\n"));
-  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
   /*********************************************************************/
   /* REVISION 10 */
   /*********************************************************************/
@@ -2536,7 +2582,7 @@ merging_commit (const char **msg)
     SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
     SVN_ERR (set_file_contents (txn_root, "A/B/lambda",
                                 "A different change to 'lambda'.\n"));
-    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, "/A/B/lambda"));
 
     /* (1b) E exists in both ANCESTOR and B, but refers to different
        revisions of the same directory node.  Merge A/E and B/E,
@@ -2546,7 +2592,7 @@ merging_commit (const char **msg)
     SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/nu", pool));
     SVN_ERR (set_file_contents (txn_root, "A/D/G/nu",
                                 "This is the file 'nu'.\n"));
-    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
     /*********************************************************************/
     /* REVISION 11 */
     /*********************************************************************/
@@ -2590,13 +2636,7 @@ merging_commit (const char **msg)
     SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/xi", pool));
     SVN_ERR (set_file_contents (txn_root, "A/D/G/xi",
                                 "This is a different file 'xi'.\n"));
-    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
-    if (strcmp (conflict, "/A/D/G") != 0)
-      {
-        return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-           "got conflict `%s', but expected `/A/D/G'", conflict);
-      }
+    SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, "/A/D/G/xi"));
 
     /* (1) E exists in both ANCESTOR and B, and refers to the same node
        revision.  Replace E with A's node revision.  */
@@ -2615,7 +2655,7 @@ merging_commit (const char **msg)
         }
       SVN_ERR (set_file_contents (txn_root, "A/D/G/rho",
                                   "This is an irrelevant change to 'rho'.\n"));
-      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+      SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
       /*********************************************************************/
       /* REVISION 12 */
       /*********************************************************************/
@@ -2671,7 +2711,7 @@ merging_commit (const char **msg)
   SVN_ERR (svn_fs_delete (txn_root, "iota", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
   SVN_ERR (set_file_contents (txn_root, "iota", "New contents for 'iota'.\n"));
-  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, "/iota"));
 
   /* E exists in ANCESTOR, but has been deleted from A.  E exists in
      both ANCESTOR and B but refers to different revisions of the same
@@ -2679,7 +2719,7 @@ merging_commit (const char **msg)
   SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (set_file_contents (txn_root, "iota", "New contents for 'iota'.\n"));
-  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, FALSE));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, "/iota"));
 
   /* Close the filesystem. */
   SVN_ERR (svn_fs_close_fs (fs));
@@ -2706,7 +2746,7 @@ copy_test (const char **msg)
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (greek_tree_under_root (txn_root));
-  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
   SVN_ERR (svn_fs_close_txn (txn));
 
   /* In second txn, copy the file A/D/G/pi into the subtree A/D/H as
@@ -2719,7 +2759,7 @@ copy_test (const char **msg)
                         pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/H/pi2", 
                               "This is the file 'pi2'.\n"));
-  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
   SVN_ERR (svn_fs_close_txn (txn));
 
   /* Then, as if that wasn't fun enough, copy the whole subtree A/D/H
@@ -2730,7 +2770,7 @@ copy_test (const char **msg)
   SVN_ERR (svn_fs_copy (revision_root, "A/D/H", 
                         txn_root, "H2",
                         pool));
-  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
   SVN_ERR (svn_fs_close_txn (txn));
 
   /* Let's live dangerously.  What happens if we copy a path into one
@@ -2743,7 +2783,7 @@ copy_test (const char **msg)
   SVN_ERR (svn_fs_copy (revision_root, "A/B", 
                         txn_root, "A/B/E/B",
                         pool));
-  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, TRUE));
+  SVN_ERR (test_commit_txn (&conflict, &after_rev, txn, NULL));
   SVN_ERR (svn_fs_close_txn (txn));
 
   /* After all these changes, let's see if the filesystem looks as we
