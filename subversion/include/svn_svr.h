@@ -72,7 +72,8 @@
 
 
 #include <svn_types.h>   /* publically declared types */
-#include <svn_error.h>   /* private utility in svn_subr/  */
+#include <svn_error.h>   /* error system  */
+#include <svn_parse.h>   /* so folks can use the parser */
 #include <apr_dso.h>     /* defines ap_dso_handle_t */
 
 
