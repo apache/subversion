@@ -675,13 +675,6 @@ typedef struct
    * SVN_ERR_CHECKSUM_MISMATCH (if there is no base text, there may
    * still be an error if @a base_checksum is neither null nor the hex
    * MD5 checksum of the empty string).
-   *
-   * If @a *handler is set to @c NULL, then the editor is indicating to 
-   * the driver that it is not interested in receiving information about
-   * the changes in this file. The driver can use this information to
-   * avoid computing changes. Note that the editor knows the change
-   * has occurred (by virtue of this function being invoked), but is
-   * simply indicating that it doesn't want the details.
    */
   svn_error_t *(*apply_textdelta) (void *file_baton,
                                    const char *base_checksum,
@@ -746,6 +739,14 @@ typedef struct
  * safely do nothing of consequence.
  */
 svn_delta_editor_t *svn_delta_default_editor (apr_pool_t *pool);
+
+/** A text-delta window handler which does nothing.
+ *
+ * Editors can return this handler from apply_textdelta if they don't
+ * care about text delta windows.
+ */
+svn_error_t *svn_delta_null_window_handler (svn_txdelta_window_t *window,
+                                            void *baton);
 
 /** Return a cancellation editor that wraps @a wrapped_editor.
  *

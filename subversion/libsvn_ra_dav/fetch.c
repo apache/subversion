@@ -559,10 +559,6 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                         &frc.handler_baton),
              "could not save file");
 
-  /* If we have no handler for the windows, we can do nothing here. */
-  if (! frc.handler)
-    return SVN_NO_ERROR;
-
   /* Only bother with text-deltas if our caller cares. */
   if (! text_deltas)
     {

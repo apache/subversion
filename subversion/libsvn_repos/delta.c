@@ -594,10 +594,6 @@ send_text_delta (struct context *c,
            (file_baton, base_checksum, pool,
             &delta_handler, &delta_handler_baton));
 
-  /* Our editor didn't provide a window handler, so don't sweat the deltas. */
-  if (delta_handler == NULL)
-    return SVN_NO_ERROR;
-
   if (c->text_deltas && delta_stream)
     {
       /* Deliver the delta stream to the file.  */
