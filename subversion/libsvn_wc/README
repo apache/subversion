@@ -245,8 +245,8 @@ analogous to CVS/ sudirs:
    an error for the first item on the recovery stack to be undoable
    due to a missing file or whatever -- in that case, it is presumed
    to have been completed and just removed.  This means, however, that
-   one can *never* add an entry to the stack until all files whose
-   existence it depends on have been successfully created).
+   one can *never* add an entry to the stack until all files on whose
+   existence it depends have been successfully created).
 
    Soon there will be a general explanation/algorithm for using the
    pending stack; for now, this example gives the flavor:
