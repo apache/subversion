@@ -105,7 +105,7 @@ APACHE_CONF := /etc/httpd/conf.d
 
 # Minimal versions
 # NEON_MIN   := 0.23.0
-# SWIG_MIN   := 1.3.16
+# SWIG_MIN   := 1.3.19
 # APACHE_MIN := 2.0.43
 # DB4_MIN    := 4.0.14
 
@@ -188,7 +188,7 @@ REQUIRE_APACHE2 := $(if $(REQUIRE_APACHE2),$(REQUIRE_APACHE2),1)
 NEON_RPM        := $(if $(NEON),$(NEON),libneon0)
 SWIG_RPM        := $(if $(SWIG),$(SWIG),swig)
 SWIG_BUILD_RPM  := $(if $(SWIG_BUILD),$(SWIG_BUILD),swig)
-SWIG_MIN        := $(if $(SWIG_MIN),$(SWIG_MIN),$(if $(GE_30),1.3.16,1.3.16))
+SWIG_MIN        := $(if $(SWIG_MIN),$(SWIG_MIN),$(if $(GE_30),1.3.21,1.3.19))
 NEON_MIN        := $(if $(NEON_MIN),$(NEON_MIN),$(if $(GE_30),0.24.0,0.23.0))
 APACHE_MIN      := $(if $(APACHE_MIN),$(APACHE_MIN),$(if $(GE_30),2.0.47,2.0.43))
 DB4_MIN         := $(if $(DB4_MIN),$(DB4_MIN),$(if $(GE_30),4.1.25,4.0.14))

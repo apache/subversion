@@ -79,32 +79,42 @@ AC_DEFUN(SVN_FIND_SWIG,
 
   if test "$SWIG" != "none"; then
     AC_MSG_CHECKING([swig version])
-    SWIG_VERSION="`$SWIG -version 2>&1 | sed -ne 's/^.*Version \(.*\)$/\1/p'`"
-    AC_MSG_RESULT([$SWIG_VERSION])
+    SWIG_VERSION_RAW="`$SWIG -version 2>&1 | \
+                       sed -ne 's/^.*Version \(.*\)$/\1/p'`"
+    # We want the version as an integer so we can test against
+    # which version we're using.  SWIG doesn't provide this 
+    # to us so we have to come up with it on our own.  
+    # The major is passed straight through,
+    # the minor is zero padded to two places,
+    # and the patch level is zero padded to three places.
+    # e.g. 1.3.21 becomes 103021
+    SWIG_VERSION="`echo \"$SWIG_VERSION_RAW\" | \
+                   sed -e 's/\.\([[0-9]]\)$/.0\1/; \
+                           s/\.\([[0-9]][[0-9]]\)$/.0\1/; \
+                           s/\.\([[0-9]]\)\./0\1/; s/\.//g;'`"
+    AC_MSG_RESULT([$SWIG_VERSION_RAW])
+    AC_SUBST(SWIG_VERSION)
     # If you change the required swig version number, don't forget to update:
     #   subversion/bindings/swig/INSTALL
     #   subversion/bindings/swig/README
     #   packages/rpm/mandrake-9.0/subversion.spec
     #   packages/rpm/redhat-7.x/subversion.spec
     #   packages/rpm/redhat-8.x/subversion.spec
-    case $SWIG_VERSION in
-        [1.3.1[679]*])
-          SWIG_SUITABLE=yes
-          ;;
-        *)
-          SWIG_SUITABLE=no
-          AC_MSG_WARN([swig bindings require 1.3.19.])
-          ;;
-    esac
+    if test "$SWIG_VERSION" -ge "103019"; then
+        SWIG_SUITABLE=yes
+        AC_CACHE_CHECK([for swig library directory], [ac_cv_swig_swiglib_dir],[
+                        ac_cv_swig_swiglib_dir="`$SWIG -swiglib`"
+                       ])
+        SWIG_LIBSWIG_DIR="$ac_cv_swig_swiglib_dir"
+    else
+        SWIG_SUITABLE=no
+        AC_MSG_WARN([swig bindings version 1.3.19 or newer needed for swig support.])
+    fi
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_python" = "yes"; then
       AC_MSG_NOTICE("Configuring python swig binding")
       SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-py-lib"
       SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-py-lib"
 
-      AC_CACHE_CHECK([for swig library directory], [ac_cv_swig_swiglib_dir],[
-        ac_cv_swig_swiglib_dir="`$SWIG -swiglib`"
-      ])
-      SWIG_LIBSWIG_DIR="$ac_cv_swig_swiglib_dir"
 
       AC_CACHE_CHECK([if swig needs -L for its libraries],
         [ac_cv_swig_ldflags],[
@@ -155,7 +165,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       ### TODO: enable when the target is implemented correctly
 #      SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-pl-lib"
 #      SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-pl-lib"
-      SWIG_PL_INCLUDES="`$PERL -MExtUtils::Embed -e ccopts`"
+      SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
       SWIG_PL_COMPILE="`$PERL -MConfig -e 'print $Config{cc}'` \$(SWIG_PL_INCLUDES)"
       SWIG_PL_LINK="`$PERL -MConfig -e 'print $Config{ld}'` `$PERL -MConfig -e 'print $Config{lddlflags}'` `$PERL -MExtUtils::Embed -e ldopts`"
     fi
