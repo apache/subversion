@@ -28,7 +28,8 @@
       ever made to your files and directories.  This allows you to
       recover older versions of your data, or examine the history of
       how your data changed.  In this regard, many people think of a
-      version control system as a sort of ``time machine.''</para>
+      version control system as a sort of <quote>time
+      machine</quote>.</para>
     
     <!-- ### something about subversion facilitating communication
     between developers?? -->
@@ -60,7 +61,8 @@
       long talked about writing a replacement for CVS; Jim had even
       drafted a new, theoretical repository design, and had come up
       with a good project name.  Finally, in February of 2000, Brian
-      Behlendorf of CollabNet (http://www.collab.net) offered Karl a
+      Behlendorf of CollabNet (<systemitem
+      class="url">http://www.collab.net</systemitem>) offered Karl a
       full-time job to write a CVS replacement.  Karl gathered a team
       together and work began in May.  Because Subversion was
       developed openly under a free license, it quickly attracted a
@@ -74,9 +76,9 @@
       user could start using it with little effort.</para>
 
     <para>After fourteen months of coding, Subversion became
-      "self-hosting" on August 31, 2001.  That is, Subversion
-      developers stopped using CVS to manage Subversion's own source
-      code and started using Subversion instead.</para>
+      <quote>self-hosting</quote> on August 31, 2001.  That is,
+      Subversion developers stopped using CVS to manage Subversion's
+      own source code and started using Subversion instead.</para>
 
     <para>While CollabNet is credited with initiating and funding a
       very large chunk of the work (it pays the salaries of a few
@@ -157,13 +159,14 @@
       </varlistentry>
 
       <varlistentry>
-        <term>Better binary handling</term>
+        <term>Consistent data handling</term>
         <listitem>
           <para>Subversion expresses file differences using a binary
-            diffing algorithm, which works equally well on both text
-            and binary files.  Text and binary files are stored
-            equally compressed in the repository, and differences are
-            transmitted in both directions across the network.</para>
+            differencing algorithm, which works identically on both
+            text (human-readable) and binary (human-unreadable) files.
+            Both types of files are stored equally compressed in the
+            repository, and differences are transmitted in both
+            directions across the network.</para>
         </listitem>
       </varlistentry>
 
@@ -206,16 +209,18 @@
     <para>Subversion is built on a portablility layer called APR (the
       Apache Portable Runtime library).  This means Subversion should
       work on any operating system that the Apache httpd server runs
-      on: Win32, Linux, *BSD, Mac OS X, Netware, and others. </para>
+      on: Windows, Linux, all flavors of BSD, Mac OS X, Netware, and
+      others. </para>
 
-    <para>By far, the easiest way to get Subversion is to find a
-      binary package of some sort for your operating system.
-      Subversion's website often has binaries available for download,
-      posted by volunteers.  The site usually contains graphical
-      installer packages for users for Microsoft operating systems.
-      If you run a Unix-like operating system, you're best off using
-      your system's native package-distribution system (RPM, apt-get,
-      ports tree) to get Subversion.</para>
+    <para>The easiest way to get Subversion is to find a binary
+      package of some sort for your operating system.  Subversion's
+      website (<systemitem
+      class="url">http://subversion.tigris.org</systemitem>) often has
+      binaries available for download, posted by volunteers.  The site
+      usually contains graphical installer packages for users for
+      Microsoft operating systems.  If you run a Unix-like operating
+      system, you can use your system's native package-distribution
+      system (rpm, deb, ports tree) to get Subversion.</para>
 
     <para>Alternately, you can build Subversion directly from source
       code.  From the website, you can download the latest source-code
@@ -259,8 +264,8 @@
       <varlistentry>
         <term>svnlook</term>
         <listitem>
-          <para>A read-only tool for inspecting a Subversion
-          repository, discussed in Chapter 5.</para>
+          <para>A tool for inspecting a Subversion repository,
+          discussed in Chapter 5.</para>
         </listitem>
       </varlistentry>
 
