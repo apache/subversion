@@ -46,14 +46,27 @@ is_valid_prop_name (const char *name)
 {
   const char *p = name;
 
-  /* Each byte of a UTF8-encoded non-ASCII character has its high bit set and
-   * so will be rejected by this function. */
-  if (! isalpha (*p) && ! strchr ("_:", *p))
+  /* The characters we allow use identical representations in UTF8
+     and ASCII, so we can just test for the appropriate ASCII codes.
+     But we can't use standard C character notation ('A', 'B', etc)
+     because there's no guarantee that this C environment is using
+     ASCII.  So we hardcode the numbers below. */
+
+  if (! ((*p >= 65 && *p <= 90)      /* ASCII 'A' to 'Z' */
+         || (*p >= 97 && *p <= 122)  /* ASCII 'a' to 'z' */
+         || (*p == 95)               /* ASCII '_' */
+         || (*p == 58)))             /* ASCII ':' */
     return FALSE;
   p++;
   for (; *p; p++)
     {
-      if (! isalnum (*p) && ! strchr (".-_:", *p))
+      if (! ((*p >= 65 && *p <= 90)      /* ASCII 'A' to 'Z' */
+             || (*p >= 97 && *p <= 122)  /* ASCII 'a' to 'z' */
+             || (*p >= 48 && *p <= 57)   /* ASCII '0' to '9' */
+             || (*p == 95)               /* ASCII '_' */
+             || (*p == 58)               /* ASCII ':' */
+             || (*p == 46)               /* ASCII '.' */
+             || (*p == 45)))             /* ASCII '-' */
         return FALSE;
     }
   return TRUE;
