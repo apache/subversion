@@ -19,6 +19,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
+#include "svn_private_config.h"
 
 #include "apr_uuid.h"
 
@@ -524,6 +525,74 @@ svn_fs_base__get_locks (apr_hash_t **locks,
 
 
 
+/* Utility function:  verify that a lock can be used.
+
+   If no username is attached to the FS, return SVN_ERR_FS_NO_USER.
+
+   If the FS username doesn't match LOCK's owner, return
+   SVN_ERR_FS_LOCK_OWNER_MISMATCH.
+
+   If FS hasn't been supplied with a matching lock-token for LOCK,
+   return SVN_ERR_FS_BAD_LOCK_TOKEN.
+
+   Otherwise return SVN_NO_ERROR.
+ */
+static svn_error_t *
+verify_lock (svn_fs_t *fs,
+             svn_lock_t *lock,
+             apr_pool_t *pool)
+{
+  if ((! fs->access_ctx) || (! fs->access_ctx->username))
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_USER, NULL,
+       _("Cannot verify lock on path '%s'; no username available"),
+       lock->path);
+  
+  else if (strcmp (fs->access_ctx->username, lock->owner) != 0)
+    return svn_error_createf 
+      (SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
+       _("User %s does not own lock on path '%s' (currently locked by %s)"),
+       fs->access_ctx->username, lock->path, lock->owner);
+
+  else if (apr_hash_get (fs->access_ctx->lock_tokens, lock->token,
+                         APR_HASH_KEY_STRING) == NULL)
+    return svn_error_createf 
+      (SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+       _("Cannot verify lock on path '%s'; no matching lock-token avaliable"),
+       lock->path);
+    
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Utility function: verify that an entire hash of LOCKS can all be used.
+
+   Loop over hash, call svn_fs__verify_lock() on each lock, throw any
+   of the three specific errors when an usuable lock is encountered.
+   If all locks are usable, return SVN_NO_ERROR.
+ */
+static svn_error_t *
+verify_locks (svn_fs_t *fs,
+              apr_hash_t *locks,
+              apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first (pool, locks); hi; hi = apr_hash_next (hi))
+    {
+      void *lock;
+
+      apr_hash_this (hi, NULL, NULL, &lock);
+      SVN_ERR (verify_lock (fs, lock, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* The main routine for lock enforcement, used throughout libsvn_fs_base. */
 svn_error_t *
 svn_fs_base__allow_locked_operation (const char *path,
                                      svn_node_kind_t kind,
@@ -543,7 +612,7 @@ svn_fs_base__allow_locked_operation (const char *path,
 
       /* Some number of locks exist below path; are we allowed to
          change them? */
-      return svn_fs__verify_locks (trail->fs, locks, trail->pool);      
+      return verify_locks (trail->fs, locks, trail->pool);      
     }
 
   /* We're either checking a file, or checking a dir non-recursively: */
@@ -559,6 +628,6 @@ svn_fs_base__allow_locked_operation (const char *path,
         return SVN_NO_ERROR;
 
       /* The path is locked;  are we allowed to change it? */
-      return svn_fs__verify_lock (trail->fs, lock, trail->pool);
+      return verify_lock (trail->fs, lock, trail->pool);
     }
 }

@@ -397,33 +397,6 @@ struct svn_fs_access_t
 };
 
 
-/* Utility function for fs back-ends:  verify that a lock can be used.
-
-   If no username is attached to the FS, return SVN_ERR_FS_NO_USER.
-
-   If the FS username doesn't match LOCK's owner, return
-   SVN_ERR_FS_LOCK_OWNER_MISMATCH.
-
-   If FS hasn't been supplied with a matching lock-token for LOCK,
-   return SVN_ERR_FS_BAD_LOCK_TOKEN.
-
-   Otherwise return SVN_NO_ERROR.
- */
-svn_error_t *svn_fs__verify_lock (svn_fs_t *fs,
-                                  svn_lock_t *lock,
-                                  apr_pool_t *pool);
-
-/* Utility function for fs back-ends:  verify that an entire hash of
-   LOCKS can all be used.
-
-   Loop over hash, call svn_fs__verify_lock() on each lock, throw any
-   of the three specific errors when an usuable lock is encountered.
-   If all locks are usable, return SVN_NO_ERROR.
- */
-svn_error_t *svn_fs__verify_locks (svn_fs_t *fs,
-                                   apr_hash_t *locks,
-                                   apr_pool_t *pool);
-
 
 #ifdef __cplusplus
 }
