@@ -99,20 +99,19 @@ typedef struct svn_ra_plugin_t
 } svn_ra_plugin_t;
 
 
-/* libsvn_client will be reponsible for loading each RA DSO it needs.
+/* svn_ra_init_func_t :
+   
+   libsvn_client will be reponsible for loading each RA DSO it needs.
    However, all "ra_FOO" implementations *must* export a function named
-   `svn_ra_FOO_init()':
-
-      svn_error_t *svn_ra_FOO_init (int abi_version,
-                                    apr_pool_t *pconf,
-                                    const svn_ra_plugin_t **plugin);
+   `svn_ra_FOO_init()' of type `svn_ra_init_func_t'.
 
    When called by libsvn_client, this routine simply returns an
-   internal, static plugin structure.  (The client then adds it to its
-   ra_library hash.)
+   internal, static plugin structure.  POOL is a pool for allocating
+   configuration / one-time data.  */
+typedef svn_error_t *svn_ra_init_func_t (int abi_version,
+                                         apr_pool_t *pool,
+                                         const svn_ra_plugin_t **plugin);
 
-   PCONF is a pool for allocating configuration / one-time data.
-*/
 
 
 #endif  /* SVN_RA_H */
