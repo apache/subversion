@@ -93,20 +93,20 @@ Candidate changes:
     Votes:
       +1: breser, kfogel
 
- * r12184
-   Fix crash in javahl binding, when trying to retrieve non-existing property
-   Justification:
-     2 simple fixes in javahl binding only to prevent crash of jvm. Reported
-     by users.
-   Votes:
-      +1: pmayweg, jerenkrantz
+  * r12184
+    Fix crash in javahl binding, when trying to retrieve non-existing property
+    Justification:
+      2 simple fixes in javahl binding only to prevent crash of jvm. Reported
+      by users.
+    Votes:
+       +1: pmayweg, jerenkrantz
 
- * r11871
-   Support BDB 4.3.
-   Justification:
-     System will startup with BDB 4.3, but die at run-time without this.
-   Votes:
-      +1: jerenkrantz
+  * r11871
+    Support BDB 4.3.
+    Justification:
+      System will startup with BDB 4.3, but die at run-time without this.
+    Votes:
+       +1: jerenkrantz
 
 Approved changes (further review is welcome, but not required):
 
