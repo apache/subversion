@@ -254,9 +254,9 @@ typedef int pdelta_t;           /* todo: for now */
 typedef int vdelta_t;           /* todo: for now */
 
 typedef enum { 
-  delete_action = 1,      /* Delete the file or directory. */
-  new_action,             /* Create a new file or directory. */
-  replace_action,         /* Commit to an existing file or directory. */
+  action_delete = 1,      /* Delete the file or directory. */
+  action_new,             /* Create a new file or directory. */
+  action_replace,         /* Commit to an existing file or directory. */
   changes_done            /* End of change chain -- no more action. */
 } svn_change_action_t;
 
