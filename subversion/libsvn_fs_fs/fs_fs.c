@@ -2100,6 +2100,7 @@ svn_error_t *
 svn_fs_fs__txn_changes_fetch (apr_hash_t **changed_paths_p,
                               svn_fs_t *fs,
                               const char *txn_id,
+                              apr_hash_t *copyfrom_cache,
                               apr_pool_t *pool)
 {
   const char *changes;
@@ -2116,7 +2117,7 @@ svn_fs_fs__txn_changes_fetch (apr_hash_t **changed_paths_p,
   SVN_ERR (svn_io_file_open (&file, changes, APR_READ | APR_BUFFERED,
                              APR_OS_DEFAULT, pool));
 
-  SVN_ERR (fetch_all_changes (changed_paths, NULL, file, pool));
+  SVN_ERR (fetch_all_changes (changed_paths, copyfrom_cache, file, pool));
 
   SVN_ERR (svn_io_file_close (file, pool));
 
@@ -2591,36 +2592,20 @@ svn_fs_fs__set_entry (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__add_change (svn_fs_t *fs,
-                       const char *txn_id,
-                       const char *path,
-                       const svn_fs_id_t *id,
-                       svn_fs_path_change_kind_t change_kind,
-                       svn_boolean_t text_mod,
-                       svn_boolean_t prop_mod,
-                       svn_revnum_t copyfrom_rev,
-                       const char *copyfrom_path,
-                       apr_pool_t *pool)
+/* Write a single change entry, path PATH, change CHANGE, and copyfrom
+   string COPYFROM, into the file specified by FILE.  All temporary
+   allocations are in POOL. */
+static svn_error_t *
+write_change_entry (apr_file_t *file,
+                    const char *path,
+                    svn_fs_path_change_t *change,
+                    const char *copyfrom,
+                    apr_pool_t *pool)
 {
-  apr_file_t *file;
-  svn_stream_t *stream;
-  const char *txn_dir, *change_string = NULL;
-  const char *idstr;
-
-  txn_dir = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR,
-                                apr_pstrcat (pool, txn_id,
-                                             SVN_FS_FS__TXNS_EXT, NULL),
-                                NULL);
-
-  SVN_ERR (svn_io_file_open (&file, svn_path_join (txn_dir, SVN_FS_FS__CHANGES,
-                                                   pool),
-                             APR_APPEND | APR_WRITE | APR_CREATE,
-                             APR_OS_DEFAULT, pool));
-
-  stream = svn_stream_from_aprfile (file, pool);
-
-  switch (change_kind)
+  const char *idstr, *buf;
+  const char *change_string = NULL;
+  
+  switch (change->change_kind)
     {
     case svn_fs_path_change_modify:
       change_string = SVN_FS_FS__ACTION_MODIFY;
@@ -2642,33 +2627,75 @@ svn_fs_fs__add_change (svn_fs_t *fs,
                                "Invalid change type.");
     }
 
-  if (id)
+  if (change->node_rev_id)
     {
-      idstr = svn_fs_unparse_id (id, pool)->data;
+      idstr = svn_fs_unparse_id (change->node_rev_id, pool)->data;
     }
   else
     {
       idstr = SVN_FS_FS__ACTION_RESET;
     }
   
-  SVN_ERR (svn_stream_printf (stream, pool, "%s %s %s %s %s\n",
-                              idstr,
-                              change_string,
-                              text_mod ? SVN_FS_FS__TRUE : SVN_FS_FS__FALSE,
-                              prop_mod ? SVN_FS_FS__TRUE : SVN_FS_FS__FALSE,
-                              path));
+  buf = apr_psprintf (pool, "%s %s %s %s %s\n",
+                      idstr, change_string,
+                      change->text_mod ? SVN_FS_FS__TRUE : SVN_FS_FS__FALSE,
+                      change->prop_mod ? SVN_FS_FS__TRUE : SVN_FS_FS__FALSE,
+                      path);
+
+  SVN_ERR (svn_io_file_write_full (file, buf, strlen (buf), NULL, pool));
+
+  SVN_ERR (svn_io_file_write_full (file, copyfrom, strlen (copyfrom), NULL,
+                                   pool));
+
+  SVN_ERR (svn_io_file_write_full (file, "\n", 1, NULL, pool));
+  
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__add_change (svn_fs_t *fs,
+                       const char *txn_id,
+                       const char *path,
+                       const svn_fs_id_t *id,
+                       svn_fs_path_change_kind_t change_kind,
+                       svn_boolean_t text_mod,
+                       svn_boolean_t prop_mod,
+                       svn_revnum_t copyfrom_rev,
+                       const char *copyfrom_path,
+                       apr_pool_t *pool)
+{
+  apr_file_t *file;
+  const char *txn_dir, *copyfrom;
+  svn_fs_path_change_t *change = apr_pcalloc (pool, sizeof (*change));
+
+  txn_dir = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR,
+                                apr_pstrcat (pool, txn_id,
+                                             SVN_FS_FS__TXNS_EXT, NULL),
+                                NULL);
+
+  SVN_ERR (svn_io_file_open (&file, svn_path_join (txn_dir, SVN_FS_FS__CHANGES,
+                                                   pool),
+                             APR_APPEND | APR_WRITE | APR_CREATE,
+                             APR_OS_DEFAULT, pool));
 
   if (copyfrom_rev != SVN_INVALID_REVNUM)
     {
-      SVN_ERR (svn_stream_printf (stream, pool, "%" SVN_REVNUM_T_FMT " %s\n",
-                                  copyfrom_rev, copyfrom_path));
+      copyfrom = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT " %s",
+                               copyfrom_rev, copyfrom_path);
     }
   else
     {
-      SVN_ERR (svn_stream_printf (stream, pool, "\n"));
+      copyfrom = "";
     }
 
-  SVN_ERR (svn_stream_close (stream));
+  change->node_rev_id = id;
+  change->change_kind = change_kind;
+  change->text_mod = text_mod;
+  change->prop_mod = prop_mod;
+  
+  SVN_ERR (write_change_entry (file, path, change, copyfrom, pool));
+
+  SVN_ERR (svn_io_file_close (file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3331,89 +3358,52 @@ write_final_changed_path_info (apr_off_t *offset_p,
                                apr_pool_t *pool)
 {
   apr_file_t *changes_file;
-  const char *txn_dir;
+  const char *filename, *copyfrom;
   svn_stream_t *changes_stream;
-  apr_pool_t *iterpool = svn_pool_create (pool);
+  apr_hash_t *changed_paths, *copyfrom_cache = apr_hash_make (pool);
   apr_off_t offset;
+  apr_hash_index_t *hi;
   
   SVN_ERR (get_file_offset (&offset, file, pool));
-  
-  txn_dir = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR,
-                                apr_pstrcat (pool, txn_id,
-                                             SVN_FS_FS__TXNS_EXT, NULL),
-                                NULL);
 
-  SVN_ERR (svn_io_file_open (&changes_file, svn_path_join (txn_dir,
-                                                           SVN_FS_FS__CHANGES,
-                                                           pool),
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  changes_stream = svn_stream_from_aprfile (changes_file, pool);
+  SVN_ERR (svn_fs_fs__txn_changes_fetch (&changed_paths, fs, txn_id,
+                                         copyfrom_cache, pool));
   
-  /* Read the lines in one at a time, and convert the temporary
-     node-id into a permanent one for each change entry. */
-  while (1)
+  /* Iterate through the changed paths one at a time, and convert the
+     temporary node-id into a permanent one for each change entry. */
+  for (hi = apr_hash_first (pool, changed_paths); hi; hi = apr_hash_next (hi))
     {
-      char *str, *last_str;
-      svn_stringbuf_t *line, *buf;
-      svn_boolean_t eof;
       node_revision_t *noderev;
-      svn_fs_id_t *id;
+      const svn_fs_id_t *id;
+      svn_fs_path_change_t *change;
+      const void *key;
+      void *val;
+      apr_ssize_t keylen;
 
-      svn_pool_clear (iterpool);
+      apr_hash_this (hi, &key, &keylen, &val);
+      change = val;
       
-      SVN_ERR (svn_stream_readline (changes_stream, &line, "\n", &eof,
-                                    iterpool));
+      id = change->node_rev_id;
 
-      /* Check of end of file. */
-      if (eof)
-        break;
-
-      /* Get the temporary node-id. */
-      str = apr_strtok (line->data, " ", &last_str);
-
-      if (! str)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                 "Malformed changes line.");
-
-      if (strcmp (str, SVN_FS_FS__ACTION_RESET))
+      /* If this was a delete of a mutable node, then it is OK to
+         leave the change entry pointing to the non-existant temporary
+         node, since it will never be used. */
+      if ((change->change_kind != svn_fs_path_change_delete) &&
+          (! svn_fs_fs__get_id_txn (id)))
         {
-          id = svn_fs_parse_id (str, strlen (str), iterpool);
+          SVN_ERR (svn_fs_fs__get_node_revision (&noderev, fs, id, pool));
           
-          SVN_ERR (svn_fs_fs__get_node_revision (&noderev, fs, id, iterpool));
-
           /* noderev has the permanent node-id at this point, so we just
              substitute it for the temporary one. */
-          
-          buf = svn_stringbuf_createf (iterpool, "%s %s\n",
-                                       svn_fs_unparse_id (noderev->id,
-                                                          iterpool)->data,
-                                       last_str);
-        }
-      else
-        {
-          buf = svn_stringbuf_createf (iterpool, "%s %s\n",
-                                       SVN_FS_FS__ACTION_RESET, last_str);
+          change->node_rev_id = noderev->id;
         }
 
-      SVN_ERR (svn_io_file_write_full (file, buf->data, buf->len, NULL,
-                                       iterpool));
+      /* Find the cached copyfrom information. */
+      copyfrom = apr_hash_get (copyfrom_cache, key, APR_HASH_KEY_STRING);
 
-      /* Read the copyfrom line. */
-      SVN_ERR (svn_stream_readline (changes_stream, &line, "\n", &eof,
-                                    iterpool));
-      
-      SVN_ERR (svn_io_file_write_full (file, line->data, line->len, NULL,
-                                       iterpool));
-
-      SVN_ERR (svn_io_file_write_full (file, "\n", 1, NULL, iterpool));
+      /* Write out the new entry into the final rev-file. */
+      SVN_ERR (write_change_entry (file, key, change, copyfrom, pool));
     }
-
-  svn_pool_destroy (iterpool);
-
-  SVN_ERR (svn_io_file_close (changes_file, pool));
-  
-  SVN_ERR (svn_stream_close (changes_stream));
 
   *offset_p = offset;
   
