@@ -2026,7 +2026,7 @@ merging_commit (const char **msg,
   svn_revnum_t after_rev;
   svn_revnum_t revisions[24];
   int i;
-  int revision_count;
+  svn_revnum_t revision_count;
 
   *msg = "merging commit";
 
@@ -4367,22 +4367,22 @@ not a dot, will pass from the law until all is accomplished."
 }
 
 
-/* For each revision R in FS, from 0 to (NUM_REVS - 1), check that it
+/* For each revision R in FS, from 0 to MAX_REV, check that it
    matches the tree in EXPECTED_TREES[R].  Use POOL for any
-   allocations.  This is a helper function for check_all_revisions(). */
+   allocations.  This is a helper function for check_all_revisions. */
 static svn_error_t *
 validate_revisions (svn_fs_t *fs,
                     svn_test__tree_t *expected_trees,
-                    int num_revs,
+                    svn_revnum_t max_rev,
                     apr_pool_t *pool)
 {
   svn_fs_root_t *revision_root;
-  int i;
+  svn_revnum_t i;
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Validate all revisions up to the current one. */
-  for (i = 0; i < num_revs; i++)
+  for (i = 0; i <= max_rev; i++)
     {
       SVN_ERR (svn_fs_revision_root (&revision_root, fs, 
                                      (svn_revnum_t)i, subpool)); 
@@ -4394,8 +4394,7 @@ validate_revisions (svn_fs_t *fs,
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, 0, err, pool, 
            "Error validating revision %" SVN_REVNUM_T_FMT
-           " (youngest is %" SVN_REVNUM_T_FMT ")",
-           i, (num_revs - 1));
+           " (youngest is %" SVN_REVNUM_T_FMT ")", i, max_rev);
       
       svn_pool_clear (subpool);
     }
@@ -4415,7 +4414,7 @@ check_all_revisions (const char **msg,
   svn_fs_root_t *txn_root;
   svn_revnum_t youngest_rev;
   svn_test__tree_t expected_trees[5]; /* one tree per commit, please */
-  int revision_count = 0;
+  svn_revnum_t revision_count = 0;
 
   *msg = "after each commit, check all revisions";
 
@@ -4430,8 +4429,9 @@ check_all_revisions (const char **msg,
   /***********************************************************************/
   {
     expected_trees[revision_count].num_entries = 0;
-    expected_trees[revision_count++].entries = 0;
+    expected_trees[revision_count].entries = 0;
     SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+    revision_count++;
   }
 
   /* Create and commit the greek tree. */
@@ -4469,8 +4469,9 @@ check_all_revisions (const char **msg,
       { "A/D/H/omega", "This is the file 'omega'.\n" }
     };
     expected_trees[revision_count].entries = expected_entries;
-    expected_trees[revision_count++].num_entries = 20;
+    expected_trees[revision_count].num_entries = 20;
     SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+    revision_count++;
   }
 
   /* Make a new txn based on the youngest revision, make some changes,
@@ -4524,8 +4525,9 @@ check_all_revisions (const char **msg,
       { "A/D/H/psi",   "This is the file 'psi'.\n" }
     };
     expected_trees[revision_count].entries = expected_entries;
-    expected_trees[revision_count++].num_entries = 20;
+    expected_trees[revision_count].num_entries = 20;
     SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+    revision_count++;
   } 
 
   /* Make a new txn based on the youngest revision, make some changes,
@@ -4574,8 +4576,9 @@ check_all_revisions (const char **msg,
       { "A/D/H/omega", 0 }
     };
     expected_trees[revision_count].entries = expected_entries;
-    expected_trees[revision_count++].num_entries = 21;
+    expected_trees[revision_count].num_entries = 21;
     SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+    revision_count++;
   }
 
   /* Make a new txn based on the youngest revision, make some changes,
@@ -4626,8 +4629,9 @@ check_all_revisions (const char **msg,
       { "A/D/H/omega", 0 }
     };
     expected_trees[revision_count].entries = expected_entries;
-    expected_trees[revision_count++].num_entries = 25;
+    expected_trees[revision_count].num_entries = 25;
     SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+    revision_count++;
   }
 
   return SVN_NO_ERROR;
@@ -4737,7 +4741,7 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
   unsigned char digest_list[100][MD5_DIGESTSIZE];
   svn_txdelta_window_handler_t wh_func;
   void *wh_baton;
-  int j;
+  svn_revnum_t j;
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-large-file-integrity", pool));
