@@ -72,7 +72,7 @@ svn_client_delete (svn_string_t *file, svn_boolean_t force, apr_pool_t *pool)
   svn_error_t *err;
   apr_status_t apr_err;
 
-  /* Marke the entry for deletion. */
+  /* Mark the entry for deletion. */
   err = svn_wc_delete_file (file, pool);
   if (err)
     return err;
