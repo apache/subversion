@@ -102,11 +102,13 @@ const apr_getopt_option_t svn_cl__options[] =
     {"ignore-ancestry", svn_cl__ignore_ancestry_opt, 0,
                        "ignore ancestry when calculating differences"},
     {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
-                      "Use ARG as diff command"},
+                      "use ARG as diff command"},
     {"diff3-cmd",     svn_cl__merge_cmd_opt, 1,
-                      "Use ARG as merge command"},
+                      "use ARG as merge command"},
     {"editor-cmd",    svn_cl__editor_cmd_opt, 1,
-                      "Use ARG as external editor"},
+                      "use ARG as external editor"},
+    {"old",           svn_cl__old_cmd_opt, 1, "use ARG as the older target"},
+    {"new",           svn_cl__new_cmd_opt, 1, "use ARG as the newer target"},
 
     /* ### Perhaps the option should be named "--rev-prop" instead?
            Generally, we do include the hyphen; the only reason not to
@@ -200,19 +202,24 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "diff", svn_cl__diff, {"di"},
     "display the differences between two paths.\n"
-    "usage: 1. diff [-r N[:M]] [TARGET [TARGET ... ]]\n"
-    "       2. diff URL1[@N] URL2[@M]\n\n"
-    "  1. Each TARGET can be either a working copy path or URL.  If no\n"
-    "     TARGET is specified, a value of '.' is assumed.\n\n"
-    "     If TARGET is a URL, then revs N and M must be given via -r.\n\n"
-    "     If TARGET is a working copy path, then -r switch means:\n"
-    "       -r N:M  : server compares TARGET@N and TARGET@M,\n"
-    "       -r N    : client compares TARGET@N against working copy\n"
-    "       (no -r) : client compares base and working copies of TARGET\n\n"
-    "  2. If the alternate syntax is used, the server compares URL1 and URL2\n"
-    "     at revisions N and M respectively.  If either N or M are ommitted,\n"
-    "     a value of HEAD is assumed.\n",
-    {'r', 'x', 'N', svn_cl__diff_cmd_opt, svn_cl__no_diff_deleted,
+    "usage: 1. diff [-r N[:M]] [--old OLD-TGT [--new NEW-TGT]] [PATH ...]\n"
+    "       2. diff -r N:M URL\n"
+    "       3. diff URL1[@N] URL2[@M]\n\n"
+    "  1. Display the differences between OLD-TGT and NEW-TGT.  PATHs, if\n"
+    "     given, are relative to OLD-TGT and NEW-TGT and restrict the output\n"
+    "     to differences for those paths.  OLD-TGT and NEW-TGT may be working\n"
+    "     copy paths or URL[@REV].\n\n"
+    "     OLD-TGT defaults to the path '.' and NEW-TGT defaults to OLD-TGT.\n"
+    "     N defaults to \"BASE\" or, if OLD-TGT is an URL, to \"HEAD\".\n"
+    "     M defaults to the current working version or, if NEW-TGT is an URL,\n"
+    "     to \"HEAD\".\n\n"
+    "     '-r N' sets the revision of OLD-TGT to N, '-r N:M' also sets the\n"
+    "     revision of NEW-TGT to M.\n\n"
+    "  2. Shorthand for 'svn diff -r N:M --old=URL --new=URL'.\n\n"
+    "  3. Shorthand for 'svn diff [-r N[:M]] --old=URL1 --new=URL2'\n\n"
+    "  Use just 'svn diff' to display local modifications in a working copy\n",
+    {'r', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'x', 'N',
+     svn_cl__diff_cmd_opt, svn_cl__no_diff_deleted,
      svn_cl__ignore_ancestry_opt, SVN_CL__AUTH_OPTIONS} },
 
   { "export", svn_cl__export, {0},
@@ -777,6 +784,12 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__editor_cmd_opt:
         opt_state.editor_cmd = apr_pstrdup (pool, opt_arg);
+        break;
+      case svn_cl__old_cmd_opt:
+        opt_state.old_target = apr_pstrdup (pool, opt_arg);
+        break;
+      case svn_cl__new_cmd_opt:
+        opt_state.new_target = apr_pstrdup (pool, opt_arg);
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

@@ -816,16 +816,18 @@ def diff_nonextant_urls(sbox):
   non_extant_url = sbox.repo_url + '/A/does_not_exist'
   extant_url = sbox.repo_url + '/A/mu'
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', non_extant_url,
-                                                 extant_url)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 '--old', non_extant_url,
+                                                 '--new', extant_url)
   for line in err_output:
     if re.match('svn: Filesystem has no item$', line):
       break
   else:
     raise svntest.Failure
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', extant_url,
-                                                 non_extant_url)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 '--old', extant_url,
+                                                 '--new', non_extant_url)
   for line in err_output:
     if re.match('svn: Filesystem has no item$', line):
       break
@@ -1130,7 +1132,146 @@ def diff_deleted_in_head(sbox):
   if err_output:    
     raise svntest.Failure
 
+
+#----------------------------------------------------------------------
+def diff_targets(sbox):
+  "select diff targets"
+
+  sbox.build()
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    update_a_file()
+    add_a_file()
+
+    update_path = os.path.join('A', 'B', 'E', 'alpha')
+    add_path = os.path.join('A', 'B', 'E', 'theta')
+    parent_path = os.path.join('A', 'B', 'E')
+    update_url = svntest.main.current_repo_url + '/A/B/E/alpha'
+    parent_url = svntest.main.current_repo_url + '/A/B/E'
+
+    diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                   update_path, add_path)
+    if check_update_a_file(diff_output) or check_add_a_file(diff_output):
+      raise svntest.Failure
+
+    diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                   update_path)
+    if check_update_a_file(diff_output) or not check_add_a_file(diff_output):
+      raise svntest.Failure
+
+    diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                   '--old', parent_path,
+                                                   'alpha', 'theta')
+    if check_update_a_file(diff_output) or check_add_a_file(diff_output):
+      raise svntest.Failure
+
+    diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                   '--old', parent_path,
+                                                   'theta')
+    if not check_update_a_file(diff_output) or check_add_a_file(diff_output):
+      raise svntest.Failure
+
+    out,err = svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+    if err: raise svntest.Failure
+
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2',
+                                                   update_path, add_path)
+    if check_update_a_file(diff_output) or check_add_a_file(diff_output):
+      raise svntest.Failure
+
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2',
+                                                   add_path)
+    if not check_update_a_file(diff_output) or check_add_a_file(diff_output):
+      raise svntest.Failure
+
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2',
+                                                   '--old', parent_path,
+                                                   'alpha', 'theta')
+    if check_update_a_file(diff_output) or check_add_a_file(diff_output):
+      raise svntest.Failure
+
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2',
+                                                   '--old', parent_path,
+                                                   'alpha')
+    if check_update_a_file(diff_output) or not check_add_a_file(diff_output):
+      raise svntest.Failure
+
+  finally:
+    os.chdir(was_cwd)
   
+
+#----------------------------------------------------------------------
+def verify_expected_output(diff_output, expected):
+  "verify given line exists in diff output"
+  for line in diff_output:
+    if line.find(expected) != -1:
+      break
+  else:
+    raise svntest.Failure
+
+def diff_branches(sbox):
+  "diff for branches"
+
+  sbox.build()
+
+  A_url = svntest.main.current_repo_url + '/A'
+  A2_url = svntest.main.current_repo_url + '/A2'
+
+  out, err = svntest.main.run_svn(None, 'cp', '-m', 'log msg', A_url, A2_url)
+  if err: raise svntest.Failure
+
+  out, err = svntest.main.run_svn(None, 'up', sbox.wc_dir)
+  if err: raise svntest.Failure
+
+  A_alpha = os.path.join(sbox.wc_dir, 'A', 'B', 'E', 'alpha')
+  A2_alpha = os.path.join(sbox.wc_dir, 'A2', 'B', 'E', 'alpha')
+
+  svntest.main.file_append(A_alpha, "\nfoo\n")
+  out, err = svntest.main.run_svn(None, 'ci', '-m', 'log msg', sbox.wc_dir)
+  if err: raise svntest.Failure
+
+  svntest.main.file_append(A2_alpha, "\nbar\n")
+  out, err = svntest.main.run_svn(None, 'ci', '-m', 'log msg', sbox.wc_dir)
+  if err: raise svntest.Failure
+
+  svntest.main.file_append(A_alpha, "zig\n")
+
+  # Compare repository file on one branch against repository file on
+  # another branch
+  rel_path = os.path.join('B', 'E', 'alpha')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 '--old', A_url,
+                                                 '--new', A2_url,
+                                                 rel_path)
+  verify_expected_output(diff_output, "-foo")
+  verify_expected_output(diff_output, "+bar")
+
+  # Same again but using whole branch
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 '--old', A_url,
+                                                 '--new', A2_url)
+  verify_expected_output(diff_output, "-foo")
+  verify_expected_output(diff_output, "+bar")
+
+  # Compare working file on one branch against repository file on
+  # another branch
+  A_path = os.path.join(sbox.wc_dir, 'A')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 '--old', A2_url,
+                                                 '--new', A_path,
+                                                 rel_path)
+  verify_expected_output(diff_output, "-bar")
+  verify_expected_output(diff_output, "+foo")
+  verify_expected_output(diff_output, "+zig")
+
+  # Same again but using whole branch, hmm this doesn't work
+  #diff_output, err_output = svntest.main.run_svn(None, 'diff',
+  #                                               '--old', A2_url,
+  #                                               '--new', A_path)
+  #verify_expected_output(diff_output, "-bar")
+  #verify_expected_output(diff_output, "+foo")
+  #verify_expected_output(diff_output, "+zig")
 
 ########################################################################
 #Run the tests
@@ -1153,6 +1294,8 @@ test_list = [ None,
               diff_head_of_moved_file,
               diff_base_to_repos,
               diff_deleted_in_head,
+              diff_targets,
+              diff_branches,
               ]
 
 if __name__ == '__main__':

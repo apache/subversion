@@ -63,7 +63,9 @@ typedef enum {
   svn_cl__diff_cmd_opt,
   svn_cl__merge_cmd_opt,
   svn_cl__ignore_ancestry_opt,
-  svn_cl__editor_cmd_opt
+  svn_cl__editor_cmd_opt,
+  svn_cl__old_cmd_opt,
+  svn_cl__new_cmd_opt
 } svn_cl__longopt_t;
 
 
@@ -111,6 +113,8 @@ typedef struct svn_cl__opt_state_t
   const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
   const char *editor_cmd;        /* external editor command. */
+  const char *old_target;        /* diff target */
+  const char *new_target;        /* diff target */
 } svn_cl__opt_state_t;
 
 
