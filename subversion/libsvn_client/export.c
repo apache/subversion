@@ -202,10 +202,10 @@ svn_client_export (const char *from,
       void *edit_baton;
       const svn_delta_editor_t *export_editor;
 
-      SVN_ERR (svn_client__get_export_editor (&export_editor, &edit_baton,
-                                              to, ctx, pool));
-
       URL = svn_path_canonicalize (from, pool);
+      
+      SVN_ERR (svn_client__get_export_editor (&export_editor, &edit_baton,
+                                              to, URL, ctx, pool));
       
       if (revision->kind == svn_opt_revision_number)
         revnum = revision->value.number;
@@ -257,6 +257,7 @@ svn_client_export (const char *from,
 struct edit_baton
 {
   const char *root_path;
+  const char *root_url;
 
   svn_wc_notify_func_t notify_func;
   void *notify_baton;
@@ -275,11 +276,18 @@ struct file_baton
 
   const char *path;
   const char *tmppath;
-  apr_hash_t *props;
 
   /* The MD5 digest of the file's fulltext.  This is all zeros until
      the last textdelta window handler call returns. */
   unsigned char text_digest[MD5_DIGESTSIZE];
+
+  /* The three svn: properties we might actually care about. */
+  const svn_string_t *eol_style_val;
+  const svn_string_t *keywords_val;
+  const svn_string_t *executable_val;
+
+  /* Keyword structure, holding any keyword vals to be substituted */
+  svn_subst_keywords_t kw;
 };
 
 
@@ -290,6 +298,65 @@ struct handler_baton
   apr_pool_t *pool;
   const char *tmppath;
 };
+
+
+
+/* Helper function: parse FB->KEYWORDS_VAL (presumably the value of an
+   svn:keywords property), and copy appropriate data from FB->KW into
+   NEW_KW.  This function is also responsible for possibly creating
+   the URL and ID keyword vals, which FB->KW doesn't have. */
+static void
+build_final_keyword_struct (struct file_baton *fb,
+                            svn_subst_keywords_t *new_kw,
+                            apr_pool_t *pool)
+{
+  int i;
+  apr_array_header_t *keyword_tokens;
+
+  keyword_tokens = svn_cstring_split (fb->keywords_val->data,
+                                      " \t\v\n\b\r\f",
+                                      TRUE /* chop */, pool);
+
+  for (i = 0; i < keyword_tokens->nelts; i++)
+    {
+      const char *keyword = APR_ARRAY_IDX(keyword_tokens,i,const char *);
+      
+      if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
+          || (! strcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
+        {
+          new_kw->revision = fb->kw.revision;
+        }      
+      else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
+               || (! strcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
+        {
+          new_kw->date = fb->kw.date;
+        }
+      else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
+               || (! strcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
+        {
+          new_kw->author = fb->kw.author;
+        }
+      else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
+               || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
+        {
+          const char *url = 
+            svn_path_url_add_component 
+            (fb->parent_dir_baton->edit_baton->root_url, fb->path, pool);
+          
+          new_kw->url = svn_string_create (url, pool);         
+        }
+      else if ((! strcasecmp (keyword, SVN_KEYWORD_ID)))
+        {
+          const char *base_name = svn_path_basename (fb->path, pool);
+
+          new_kw->id = svn_string_createf (pool, "%s %s %s %s",
+                                           base_name,
+                                           fb->kw.revision->data,
+                                           fb->kw.date->data,
+                                           fb->kw.author->data);
+        }
+    }     
+}
 
 
 
@@ -377,7 +444,6 @@ add_file (const char *path,
 
   fb->parent_dir_baton = parent;
   fb->path = full_path;
-  fb->props = apr_hash_make (pool);
 
   *baton = fb;
   return SVN_NO_ERROR;
@@ -434,7 +500,6 @@ apply_textdelta (void *file_baton,
 }
 
 
-/* Cache props in the file baton */
 static svn_error_t *
 change_file_prop (void *file_baton,
                   const char *name,
@@ -442,10 +507,30 @@ change_file_prop (void *file_baton,
                   apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
- 
-  apr_hash_set (fb->props, apr_pstrdup (pool, name),
-                APR_HASH_KEY_STRING,
-                value ? svn_string_dup (value, pool) : NULL);
+
+  if (! value)
+    return SVN_NO_ERROR;
+
+  /* Store only the magic three properties. */
+  if (strcmp (name, SVN_PROP_EOL_STYLE) == 0)
+    fb->eol_style_val = svn_string_dup (value, pool);
+
+  else if (strcmp (name, SVN_PROP_KEYWORDS) == 0)
+    fb->keywords_val = svn_string_dup (value, pool);
+
+  else if (strcmp (name, SVN_PROP_EXECUTABLE) == 0)
+    fb->executable_val = svn_string_dup (value, pool);
+
+  /* Try to fill out the baton's keywords-structure too. */
+  else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
+    fb->kw.revision = svn_string_dup (value, pool);
+
+  else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
+    /* ### convert to human readable date??? */
+    fb->kw.date = svn_string_dup (value, pool);
+  
+  else if (strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
+    fb->kw.author = svn_string_dup (value, pool);
 
   return SVN_NO_ERROR;
 }
@@ -460,19 +545,10 @@ close_file (void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct dir_baton *db = fb->parent_dir_baton;
-  const svn_string_t *eol_value, *keywords_value, *executable_value;
 
   if (! fb->tmppath)
     /* No txdelta was ever sent. */
     return SVN_NO_ERROR;
-
-  /* Look for props that may affect the final file. */
-  eol_value = apr_hash_get (fb->props,
-                            SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING);
-  keywords_value = apr_hash_get (fb->props,
-                                 SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
-  executable_value = apr_hash_get (fb->props,
-                                   SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING);
 
   if (text_checksum)
     {
@@ -491,7 +567,7 @@ close_file (void *file_baton,
         }
     }
 
-  if (! eol_value)
+  if ((! fb->eol_style_val) && (! fb->keywords_val))
     {
       SVN_ERR (svn_io_file_rename (fb->tmppath, fb->path, pool));
     }
@@ -499,20 +575,26 @@ close_file (void *file_baton,
     {
       svn_subst_eol_style_t style;
       const char *eol;
+      svn_subst_keywords_t *final_kw = apr_pcalloc (pool, sizeof(*final_kw));
 
-      svn_subst_eol_style_from_value (&style, &eol, eol_value->data);
+      if (fb->eol_style_val)
+        svn_subst_eol_style_from_value (&style, &eol, fb->eol_style_val->data);
 
-      /* ### do keyword translation! */
+      if (fb->keywords_val)
+        build_final_keyword_struct (fb, final_kw, pool);
 
-      SVN_ERR (svn_subst_copy_and_translate (fb->tmppath, fb->path,
-                                             eol, TRUE, /* repair */
-                                             NULL, /* no keywords */
-                                             FALSE, /* don't expand */
-                                             pool));
+      SVN_ERR (svn_subst_copy_and_translate
+               (fb->tmppath, fb->path,
+                fb->eol_style_val ? eol : NULL,
+                fb->eol_style_val ? TRUE : FALSE, /* repair */
+                fb->keywords_val ? final_kw : NULL,
+                fb->keywords_val ? TRUE : FALSE, /* expand */
+                pool));
+
       SVN_ERR (svn_io_remove_file (fb->tmppath, pool));
     }
       
-  if (executable_value)
+  if (fb->executable_val)
     SVN_ERR (svn_io_set_file_executable (fb->path, TRUE, FALSE, pool));
 
   if (db->edit_baton->notify_func)
@@ -534,6 +616,7 @@ svn_error_t *
 svn_client__get_export_editor (const svn_delta_editor_t **editor,
                                void **edit_baton,
                                const char *root_path,
+                               const char *root_url,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
@@ -541,6 +624,7 @@ svn_client__get_export_editor (const svn_delta_editor_t **editor,
   svn_delta_editor_t *export_editor = svn_delta_default_editor (pool);
 
   eb->root_path = apr_pstrdup (pool, root_path);
+  eb->root_url = apr_pstrdup (pool, root_url);
   eb->notify_func = ctx->notify_func;
   eb->notify_baton = ctx->notify_baton;
 
