@@ -505,7 +505,7 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
   apr_file_open_stdin(&in_file, pool);
   apr_file_open_stdout(&out_file, pool);
   conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
-  err = svn_error_wrap_apr(status, NULL, _("Error in child process: %s"), desc);
+  err = svn_error_wrap_apr(status, _("Error in child process: %s"), desc);
   svn_error_clear(svn_ra_svn_write_cmd_failure(conn, pool, err));
   svn_error_clear(svn_ra_svn_flush(conn, pool));
 }
@@ -528,7 +528,7 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   if (status == APR_SUCCESS)
     status = apr_proc_create(proc, *args, args, NULL, attr, pool);
   if (status != APR_SUCCESS)
-    return svn_error_wrap_apr(status, NULL, _("Can't create tunnel"));
+    return svn_error_wrap_apr(status, _("Can't create tunnel"));
 
   /* Arrange for the tunnel agent to get a SIGKILL on pool
    * cleanup.  This is a little extreme, but the alternatives
