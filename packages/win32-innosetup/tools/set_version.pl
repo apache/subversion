@@ -88,15 +88,44 @@ sub PathSetupOut
 #          ..\svn_dynamics.iss
 sub PathSvn
 {
-    my $RetVal = &cmn_ValuePathfile('path_svnclient');
-    my $ErrMsg="ERROR: File not found: Could not find svn.exe in:\n  $RetVal\n";
+    my $RetVal = '';
+    my $path_svn = '';
+    my $path_svnclient = '';
+    my $ErrMsg = '';
+    my @paths;
+
+    $path_svn = &cmn_ValuePathfile('path_svn');
+    $path_svnclient = &cmn_ValuePathfile('path_svnclient');
+
+    # Let's check if we find svn.exe in $path_svn\bin and set $path_svnclient
+    if (-e "$path_svn\\bin\\svn.exe")
+      {
+        $path_svnclient = "$path_svn\\bin";
+      }
+    else
+      {
+        $path_svnclient = &cmn_ValuePathfile('path_svnclient');
+      }
+    # If we can't find svn.exe in $path_svnclient, then we assume that the
+    # template variable 'path_svn' is embedded in the template variable
+    # 'path_svnclient'. Something like this in svn_dynamics.iss:
+    #     #define path_svnclient         (path_svn + "bin")
+    unless (-e "$path_svnclient\\svn.exe")
+      {
+        @paths = ($path_svnclient =~ /(\w+)/g);
+        $path_svn = &cmn_ValuePathfile($paths[0]);
+        $path_svnclient = "$path_svn\\$paths[1]";
+        $path_svnclient =~ s/\\\\/\\/g; 
+      }
+
+    $ErrMsg="ERROR: File not found: Could not find svn.exe in:\n  $path_svnclient\n";
     $ErrMsg=$ErrMsg . "Please, check that the path_svnclient variable in the ";
     $ErrMsg=$ErrMsg . "..\\svn_dynamics.iss\n";
-    $ErrMsg=$ErrMsg . "file are correct and try again\n";
-    
-    if (-e "$RetVal\\svn.exe")
+    $ErrMsg=$ErrMsg . "file is correct and try again\n";
+
+    if (-e "$path_svnclient\\svn.exe")
       {
-        $RetVal="$RetVal\\svn.exe";
+        $RetVal="$path_svnclient\\svn.exe";
       }
     else
       {
