@@ -408,22 +408,26 @@ typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
 
 /* @since New in 1.2 */
 
-/** A lock token object, for client & server to share.
+/** A lock object, for client & server to share.
  *
- * A lock token represents the exclusive right to add, delete, or
- * modify a path.  A lock token is immutable.
+ * A lock represents the exclusive right to add, delete, or modify a
+ * path.  A lock is created in a repository, wholly controlled by the
+ * repository.  A "lock-token" is the lock's UUID, and can be used to
+ * learn more about a lock's fields, and or/make use of the lock.
+ * Because a lock is immutable, a client is free to not only cache the
+ * lock-token, but the lock's fields too, for convenience.
  *
  * ### Note: in the current implementation, only files are lockable.
  */
-typedef struct svn_lock_token_t
+typedef struct svn_lock_t
 {
-  const char *path;             /* the path this token applies to */
-  const char *uuid;             /* unique lock token identifier */
-  const char *owner;            /* the username which 'owns' the lock */
+  const char *path;             /* the path this lock applies to */
+  const char *uuid;             /* unique identifier ("lock-token") */
+  const char *owner;            /* the username which owns the lock */
   apr_time_t creation_date;     /* when lock was made */
   apr_time_t expiration_date;   /* (optional) when lock will expire;
                                    If value is 0, lock will never expire. */
-} svn_lock_token_t;
+} svn_lock_t;
 
 
 

@@ -603,7 +603,7 @@ typedef struct svn_delta_editor_t
    * before the editor needs to use it.
    */
   svn_error_t *(*push_lock_token) (void *edit_baton,
-                                   const svn_lock_token_t *token,
+                                   const char *token,
                                    apr_pool_t *pool);
 
 

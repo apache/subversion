@@ -330,7 +330,7 @@ svn_error_t *svn_fs_access_get_username (const char **username,
  * pool;  make sure the token's lifetime is at least as long as @a
  * access_ctx. */
 svn_error_t *svn_fs_access_add_lock_token (svn_fs_access_t *access_ctx,
-                                           const svn_lock_token_t *token);
+                                           const char *token);
 
 
 
@@ -1433,13 +1433,12 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  *
  * @a fs must have a username associated with it (see @c
  * svn_fs_access_t), else return @c SVN_ERR_FS_NO_USER.  Set the
- * 'owner' field in @a *token to the username of the current @a fs
- * access context.
+ * 'owner' field in the new lock to the fs username.
  *
  * If path is already locked by a different user, then return @c
  * SVN_ERR_FS_PATH_LOCKED.  If path is already locked by the same
- * user, and @a current_token matches the lock, then "refresh" the
- * lock and return a new token in @a *token.
+ * user, and @a current_token points to the same lock, then "refresh"
+ * the lock and return a new token in @a *token.
  *
  * If @a force is true, then "steal" any existing lock, even if the FS
  * access context username does not match the current lock owner.
@@ -1453,12 +1452,12 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  *
  * ### Note:  at this time, only files can be locked.
  */
-svn_error_t *svn_fs_lock (svn_lock_token_t **token,
+svn_error_t *svn_fs_lock (const char **token,
                           svn_fs_t *fs,
                           const char *path,
                           svn_boolean_t force,
                           long int timeout,
-                          svn_lock_token_t *current_token,
+                          const char *current_token,
                           apr_pool_t *pool);
 
 
@@ -1466,28 +1465,28 @@ svn_error_t *svn_fs_lock (svn_lock_token_t **token,
  *
  * If the path is not locked, return @c SVN_ERR_FS_PATH_NOT_LOCKED.
  *
- * If the path is locked, but @a token doesn't match the lock, return
- * @c SVN_ERR_FS_BAD_LOCK_TOKEN.
+ * If the path is locked, but @a token doesn't point to the correct
+ * lock, return @c SVN_ERR_FS_BAD_LOCK_TOKEN.
  *
- * If @a token matches the lock, but the username of @a fs's access
- * context doesn't match @a token's owner, return @c
+ * If @a token points to the correct lock, but the username of @a fs's
+ * access context doesn't match the lock's owner, return @c
  * SVN_ERR_FS_LOCK_OWNER_MISMATCH.  Do not return this error if @a
  * force is true; allow the unlock to succeed.
  *
  * Use @a pool for temporary allocations.
  */
 svn_error_t *svn_fs_unlock (svn_fs_t *fs,
-                            svn_lock_token_t *token,
+                            const char *token,
                             svn_boolean_t force,
                             apr_pool_t *pool);
 
 
-/** If @a path is locked in @a fs, set @a *token to a lock-token
- * describing the lock, allocated in @a pool.
+/** If @a path is locked in @a fs, set @a *lock to an svn_lock_t which
+ * points to the lock, allocated in @a pool.
  *  
- * If @a path is not locked, set @a *token to NULL.
+ * If @a path is not locked, set @a *lock to NULL.
  */
-svn_error_t *svn_fs_get_lock (svn_lock_token_t **token,
+svn_error_t *svn_fs_get_lock (svn_lock_t **lock,
                               svn_fs_t *fs,
                               const char *path,
                               apr_pool_t *pool);
@@ -1497,7 +1496,7 @@ svn_error_t *svn_fs_get_lock (svn_lock_token_t **token,
  * below @a path in @a fs.
  *
  * The hashtable maps (const char *) absolute fs paths to (const
- * svn_lock_token_t *) structures.  The hashtable -- and all keys and
+ * svn_lock_t *) structures.  The hashtable -- and all keys and
  * values -- are allocated in @a pool.
  */
 svn_error_t *svn_fs_get_locks (apr_hash_t **locks,

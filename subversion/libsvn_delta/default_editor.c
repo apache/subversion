@@ -37,7 +37,7 @@ set_target_revision (void *edit_baton,
 
 static svn_error_t *
 push_lock_token (void *edit_baton,
-                 const svn_lock_token_t *token,
+                 const char *token,
                  apr_pool_t *pool)
 {
   return SVN_NO_ERROR;

@@ -135,13 +135,13 @@ typedef struct fs_vtable_t
   svn_error_t *(*list_transactions) (apr_array_header_t **names_p,
                                      svn_fs_t *fs, apr_pool_t *pool);
   svn_error_t *(*deltify) (svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool);
-  svn_error_t *(*lock) (svn_lock_token_t **token, svn_fs_t *fs,
+  svn_error_t *(*lock) (const char **token, svn_fs_t *fs,
                         const char *path, svn_boolean_t force,
-                        long int timeout, svn_lock_token_t *current_token,
+                        long int timeout, const char *current_token,
                         apr_pool_t *pool);
-  svn_error_t *(*unlock) (svn_fs_t *fs, svn_lock_token_t *token,
+  svn_error_t *(*unlock) (svn_fs_t *fs, const char *token,
                           svn_boolean_t force, apr_pool_t *pool);
-  svn_error_t *(*get_lock) (svn_lock_token_t **token, svn_fs_t *fs,
+  svn_error_t *(*get_lock) (svn_lock_t **lock, svn_fs_t *fs,
                             const char *path, apr_pool_t *pool);
   svn_error_t *(*get_locks) (apr_hash_t **locks, svn_fs_t *fs,
                              const char *path, apr_pool_t *pool);
@@ -373,7 +373,9 @@ struct svn_fs_access_t
   const char *username;
 
   /* A collection of lock-tokens supplied by the fs caller.
-     Hash maps (const char *) path --> (const svn_lock_token_t *) token. */
+     Hash maps (const char *) UUID --> (void *) 1
+     fs functions should really only be interested whether a UUID
+     exiss as a hash key at all;  the value is irrelevant. */
   apr_hash_t *lock_tokens;
 };
 

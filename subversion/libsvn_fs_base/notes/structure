@@ -574,21 +574,20 @@ The `copies' table is a btree, with no particular sort order.
 Locks
 
 When a caller locks a file -- reserving an exclusive right to modify
-or delete it -- an object representing the lock is created in a
-`locks' table, called a "lock-token". 
+or delete it -- an lock object is created in a `locks' table.
 
-The `locks' table is a btree whose key is a UUID string, and whose
-value is a skel representing a lock-token.  The fields in the skel
-mirror those of an svn_lock_token_t (see svn_types.h):
+The `locks' table is a btree whose key is a UUID string (also known as
+a "lock-token"), and whose value is a skel representing a lock.  The
+fields in the skel mirror those of an svn_lock__t (see svn_types.h):
 
-    ("lock-token" PATH UUID OWNER CREATION-DATE EXPIRATION-DATE)
+    ("lock" PATH UUID OWNER CREATION-DATE EXPIRATION-DATE)
 
 where:
 
    * PATH is the absolute filesystem path reserved by the lock.
 
-   * UUID is the universally unique identifier of the lock (the string
-     representation of an apr_uuid_t).  This is the same as the table key.
+   * UUID is the universally unique identifier of the lock, also known
+     as the lock-token.  This is the same as the row's key.
 
    * OWNER is the authenticated username that "owns" the lock.
 
@@ -598,27 +597,28 @@ where:
    * EXPIRATION-DATE is a string representation of the date/time when
      the lock will cease to be valid.  (see svn_time_to_cstring())
 
-
 In addition to creating a lock in the `locks' table, a series of nodes
 is created in a `lock-nodes' table.  The `lock-nodes' table reflects a
-tree of nodes which are either locked, or are parent directories of
-nodes that are locked.
+tree of nodes which are either locked, or are directories that lead to
+locked nodes.  Note that these "nodes" have nothing to do with DAG
+nodes or anything in the `nodes' table.  This is an independent tree,
+used only for tracking locked paths.
 
 If the filesystem wants to know whether a certain path is locked or
-not, it merely needs to test whether that path exists in the virtual
-lock tree.  In the same way, the mere existence of a directory in the
-lock tree implies that some child is locked, and thus the directory
+not, it merely needs to test whether that path exists in the lock
+tree.  And the mere existence of a directory in the lock tree implies
+that at least one of its children is locked, and thus the directory
 cannot be deleted without further investigation.
 
-When a lock is destroyed, the appropriate row is removed from the
-`locks' table.  (Locks are epheremal things, not historied in any way.
-They are potentially created and deleted quite often.)  Additionally,
-the locked-path is removed frome `lock-nodes' table.  The cleaning of
-the `lock-nodes' table begins by removing the locked file-node, then
-its immediate parent, repeating all the way up to the root directory.
-If, at any point during the bubble-up, a directory either has more
-than one child or has a lock attached, then the node-removal process
-stops.
+Locks are epheremal things, not historied in any way.  They are
+potentially created and deleted quite often.  When a lock is
+destroyed, the appropriate row is removed from the `locks' table.
+Additionally, the locked-path is removed from the `lock-nodes' table.
+The cleaning of the `lock-nodes' table begins by removing the locked
+file-node, then its immediate parent, repeating all the way up to the
+root directory.  If, at any point during the bubble-up, a directory
+either has more than one child or has a lock attached, then the
+node-removal process stops.
 
 The `lock-nodes' table is a btree whose key is a standard base-36
 number that represents a unique node in the lock tree.  The value of
@@ -638,7 +638,7 @@ where:
           * LOCK-NODE-ID is a base-36 key to another lock-node.
 
    * LOCK, if present, means that the node is locked.  This field is a
-     key to a lock-token in the `locks' table (a uuid).
+     uuid key (lock-token) into the `locks' table.
 
 
 
@@ -801,7 +801,7 @@ Berkeley DB tables
               "strings" : btree(STR -> STRING, "next-id" -> STR)
       "representations" : btree(REP -> REPRESENTATION, "next-id" -> REP)
                 "uuids" : recno(UUID)
-                "locks" : btree(LOCK -> LOCK-TOKEN)
+                "locks" : btree(LOCK-TOKEN -> LOCK)
            "lock-nodes" : btree(LOCK-NODE-ID -> LOCK-NODE)
 
 Syntactic elements
@@ -814,7 +814,7 @@ Table keys:
                     CPY ::= number-36 ;
                     STR ::= number-36 ;
                     REP ::= number-36 ;
-                   LOCK ::= uuid ;
+             LOCK-TOKEN ::= uuid ;
            LOCK-NODE-ID ::= number-36 ;
 
 Property lists:
@@ -918,16 +918,15 @@ UUIDs:
                    UUID ::= uuid ;
 
 
-Lock tokens:
+Locks:
 
-             LOCK-TOKEN ::= ("lock-token" PATH UUID OWNER CR-DATE EXP-DATE) ;
+                   LOCK ::= ("lock" PATH LOCK-TOKEN OWNER CR-DATE EXP-DATE) ;
                    PATH ::= atom ;
-                   UUID ::= uuid ;
                   OWNER ::= atom ;
                 CR-DATE ::= atom ;
                EXP-DATE ::= atom ;
 
-Lock node:
+Lock nodes:
 
               LOCK-NODE ::= ("lock-node" ENTRIES [LOCK])
                 ENTRIES ::= (ENTRY ...) ;

@@ -65,10 +65,7 @@ svn_error_t *
 svn_fs_access_get_username (const char **username,
                             svn_fs_access_t *access_ctx)
 {
-  if (access_ctx)
-    *username = access_ctx->username;
-  else
-    return svn_error_create (SVN_ERR_FS_NO_USER, 0, "Access context is NULL.");
+  *username = access_ctx->username;
 
   return SVN_NO_ERROR;
 }
@@ -76,17 +73,10 @@ svn_fs_access_get_username (const char **username,
 
 svn_error_t *
 svn_fs_access_add_lock_token (svn_fs_access_t *access_ctx,
-                              const svn_lock_token_t *token)
+                              const char *token)
 {
-  if (! access_ctx)
-    return svn_error_create (SVN_ERR_FS_NO_USER, 0,
-                             "Access context is NULL.");  
-  if (! token)
-    return svn_error_create (SVN_ERR_FS_BAD_LOCK_TOKEN, 0,
-                             "Lock token is NULL.");
-
   apr_hash_set (access_ctx->lock_tokens,
-                token->path, APR_HASH_KEY_STRING, token);
+                token, APR_HASH_KEY_STRING, (void *) 1);
 
   return SVN_NO_ERROR;
 }

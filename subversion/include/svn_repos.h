@@ -888,11 +888,12 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
  * SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the caller sees this
  * error, it knows that the lock succeeded anyway.
  */
-svn_error_t *svn_repos_fs_lock (svn_lock_token_t **token,
+svn_error_t *svn_repos_fs_lock (const char **token,
                                 svn_repos_t *repos,
                                 const char *path,
                                 svn_boolean_t force,
                                 long int timeout,
+                                const char *current_token,
                                 apr_pool_t *pool);
 
 
@@ -910,7 +911,7 @@ svn_error_t *svn_repos_fs_lock (svn_lock_token_t **token,
  * error, it knows that the unlock succeeded anyway.
  */
 svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
-                                  svn_lock_token_t *token,
+                                  const char *token,
                                   svn_boolean_t force,
                                   apr_pool_t *pool);
 
