@@ -4046,7 +4046,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   basic_commit,
   copy_test,
   merging_commit,
-  /* dir_deltas, */
+  dir_deltas,
   0
 };
 
