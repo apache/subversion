@@ -91,11 +91,6 @@ dnl Configure neon --------------------------
 
   ])
   
-  # neon should not add -I/usr/include to --cflags; remove this when it doesn't.
-  # Leaving it in means a system DB3 etc could be picked up.
-  SVN_NEON_INCLUDES=`echo $SVN_NEON_INCLUDES | sed -e "s|-I/usr/include ||g" \
-                     -e "s|-I/usr/include$||g"`
-
   AC_SUBST(SVN_NEON_INCLUDES)
   AC_SUBST(NEON_LIBS)
 ])
