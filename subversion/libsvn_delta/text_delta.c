@@ -73,22 +73,40 @@ struct apply_baton {
 };
 
 
+/* Context/baton for building an operation sequence. */
+
+struct build_ops_baton_t {
+  int num_ops;                  /* current number of ops */
+  int ops_size;                 /* number of ops allocated */
+  svn_txdelta_op_t *ops;        /* the operations */
+
+  svn_stringbuf_t *new_data;    /* any new data used by the operations */
+};
+
+
 
 /* Allocate a delta window. */
 
-svn_txdelta_window_t *
-svn_txdelta__make_window (apr_pool_t *pool)
+static svn_txdelta_window_t *
+make_window (apr_pool_t *pool, struct build_ops_baton_t *bob)
 {
   svn_txdelta_window_t *window;
+  svn_string_t *new_data = apr_palloc (pool, sizeof (*new_data));
 
   window = apr_palloc (pool, sizeof (*window));
   window->sview_offset = 0;
   window->sview_len = 0;
   window->tview_len = 0;
-  window->num_ops = 0;
-  window->ops_size = 0;
-  window->ops = NULL;
-  window->new_data = svn_stringbuf_create ("", pool);
+
+  window->num_ops = bob->num_ops;
+  window->ops = bob->ops;
+
+  /* just copy the fields over, rather than alloc/copying into a whole new
+     svn_string_t structure. */
+  /* ### would be much nicer if window->new_data were not a ptr... */
+  new_data->data = bob->new_data->data;
+  new_data->len = bob->new_data->len;
+  window->new_data = new_data;
 
   return window;
 }
@@ -98,34 +116,35 @@ svn_txdelta__make_window (apr_pool_t *pool)
 /* Insert a delta op into a delta window. */
 
 void
-svn_txdelta__insert_op (svn_txdelta_window_t *window,
+svn_txdelta__insert_op (void *build_baton,
                         int opcode,
                         apr_off_t offset,
                         apr_off_t length,
                         const char *new_data,
                         apr_pool_t *pool)
 {
+  struct build_ops_baton_t *bob = build_baton;
   svn_txdelta_op_t *op;
 
   /* Create space for the new op. */
-  if (window->num_ops == window->ops_size)
+  if (bob->num_ops == bob->ops_size)
     {
-      svn_txdelta_op_t *const old_ops = window->ops;
-      int const new_ops_size = (window->ops_size == 0
-                                ? 16 : 2 * window->ops_size);
-      window->ops = apr_palloc (pool, new_ops_size * sizeof (*window->ops));
+      svn_txdelta_op_t *const old_ops = bob->ops;
+      int const new_ops_size = (bob->ops_size == 0
+                                ? 16 : 2 * bob->ops_size);
+      bob->ops = apr_palloc (pool, new_ops_size * sizeof (*bob->ops));
 
       /* Copy any existing ops into the new array */
       if (old_ops)
-        memcpy (window->ops, old_ops,
-                window->ops_size * sizeof (*window->ops));
-      window->ops_size = new_ops_size;
+        memcpy (bob->ops, old_ops,
+                bob->ops_size * sizeof (*bob->ops));
+      bob->ops_size = new_ops_size;
     }
 
   /* Insert the op. svn_delta_source and svn_delta_target are
      just inserted. For svn_delta_new, the new data must be
      copied into the window. */
-  op = &window->ops[window->num_ops];
+  op = &bob->ops[bob->num_ops];
   switch (opcode)
     {
     case svn_txdelta_source:
@@ -136,15 +155,15 @@ svn_txdelta__insert_op (svn_txdelta_window_t *window,
       break;
     case svn_txdelta_new:
       op->action_code = opcode;
-      op->offset = window->new_data->len;
+      op->offset = bob->new_data->len;
       op->length = length;
-      svn_stringbuf_appendbytes (window->new_data, new_data, length);
+      svn_stringbuf_appendbytes (bob->new_data, new_data, length);
       break;
     default:
       assert (!"unknown delta op.");
     }
 
-  ++window->num_ops;
+  ++bob->num_ops;
 }
 
 
@@ -228,6 +247,7 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
       apr_size_t total_source_len;
       apr_size_t new_source_len = SVN_STREAM_CHUNK_SIZE;
       apr_size_t target_len = SVN_STREAM_CHUNK_SIZE;
+      struct build_ops_baton_t bob = { 0 };
 
       /* If there is no saved source data yet, read an extra half
          window of data this time to get things started. */
@@ -267,14 +287,17 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
           return SVN_NO_ERROR;
         }
 
+      /* Compute the delta operations. */
+      bob.new_data = svn_stringbuf_create ("", pool);
+      svn_txdelta__vdelta (&bob, stream->buf,
+                           total_source_len, target_len,
+                           pool);
+
       /* Create the delta window. */
-      *window = svn_txdelta__make_window (pool);
+      *window = make_window (pool, &bob);
       (*window)->sview_offset = stream->pos - total_source_len;
       (*window)->sview_len = total_source_len;
       (*window)->tview_len = target_len;
-      svn_txdelta__vdelta (*window, stream->buf,
-                           total_source_len, target_len,
-                           pool);
 
       /* Save the last window's worth of data from the source view. */
       stream->saved_source_len = (total_source_len < SVN_STREAM_CHUNK_SIZE)
@@ -328,7 +351,7 @@ size_buffer (char **buf, apr_size_t *buf_size,
 static void
 apply_instructions (svn_txdelta_window_t *window, const char *sbuf, char *tbuf)
 {
-  svn_txdelta_op_t *op;
+  const svn_txdelta_op_t *op;
   apr_size_t i, tpos = 0;
 
   for (op = window->ops; op < window->ops + window->num_ops; op++)
@@ -482,6 +505,11 @@ svn_txdelta_send_string (svn_stringbuf_t *string,
 {
   svn_txdelta_window_t window = { 0 };
   svn_txdelta_op_t op;
+  svn_string_t new_data;
+
+  /* Build a structure for the new data. */
+  new_data.data = string->data;
+  new_data.len = string->len;
 
   /* Build a single `new' op */
   op.action_code = svn_txdelta_new;
@@ -491,9 +519,8 @@ svn_txdelta_send_string (svn_stringbuf_t *string,
   /* Build a single window containing a ptr to the string. */
   window.tview_len = string->len;
   window.num_ops = 1;
-  window.ops_size = 1;          
   window.ops = &op;
-  window.new_data = string;
+  window.new_data = &new_data;
 
   /* Push the one window at the handler. */
   SVN_ERR ((*handler) (&window, handler_baton));

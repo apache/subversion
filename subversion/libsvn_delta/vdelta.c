@@ -188,7 +188,7 @@ find_match_len (const char *match, const char *from, const char *end)
 /* This is the main vdelta generator. */
 
 static void
-vdelta (svn_txdelta_window_t *window,
+vdelta (void *build_baton,
         const char *data,
         const char *start,
         const char *end,
@@ -212,8 +212,8 @@ vdelta (svn_txdelta_window_t *window,
           const char *from = ((insert_from != NULL) ? insert_from : here);
 
           if (outputflag && from < end)
-            svn_txdelta__insert_op (window, svn_txdelta_new, 0, end - from,
-                                    from, pool);
+            svn_txdelta__insert_op (build_baton, svn_txdelta_new, 0,
+                                    end - from, from, pool);
           return;
         }
 
@@ -273,18 +273,18 @@ vdelta (svn_txdelta_window_t *window,
           if (insert_from != NULL)
             {
               /* Commit the pending insert. */
-              svn_txdelta__insert_op (window, svn_txdelta_new,
+              svn_txdelta__insert_op (build_baton, svn_txdelta_new,
                                       0, here - insert_from,
                                       insert_from, pool);
               insert_from = NULL;
             }
           if (current_match < start) /* Copy from source. */
-            svn_txdelta__insert_op (window, svn_txdelta_source,
+            svn_txdelta__insert_op (build_baton, svn_txdelta_source,
                                     current_match - data,
                                     current_match_len,
                                     NULL, pool);
           else                       /* Copy from target */
-            svn_txdelta__insert_op (window, svn_txdelta_target,
+            svn_txdelta__insert_op (build_baton, svn_txdelta_target,
                                     current_match - start,
                                     current_match_len,
                                     NULL, pool);
@@ -304,7 +304,7 @@ vdelta (svn_txdelta_window_t *window,
 
 
 void
-svn_txdelta__vdelta (svn_txdelta_window_t *window,
+svn_txdelta__vdelta (void *build_baton,
                      const char *data,
                      apr_size_t source_len,
                      apr_size_t target_len,
@@ -312,8 +312,8 @@ svn_txdelta__vdelta (svn_txdelta_window_t *window,
 {
   hash_table_t *table = create_hash_table (source_len + target_len, pool);
 
-  vdelta (window, data, data, data + source_len, FALSE, table, pool);
-  vdelta (window, data, data + source_len, data + source_len + target_len,
+  vdelta (build_baton, data, data, data + source_len, FALSE, table, pool);
+  vdelta (build_baton, data, data + source_len, data + source_len + target_len,
           TRUE, table, pool);
 
 #if 0
