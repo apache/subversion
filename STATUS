@@ -26,7 +26,7 @@ Candidate changes:
     Fix slow "svn st" where the targets are files by not locking the whole
     anchor tree.
     Votes:
-      +1: lundblad, dionisos
+      +1: lundblad, dionisos, ghudson
       (r11439 nominated by): Steve King
 
   * r11665
@@ -43,7 +43,7 @@ Candidate changes:
     Justification:
       RPM build breakage = bad.
     Votes:
-      +1: david
+      +1: david, ghudson
 
   * r11047 (Issue #2032)
     Always call mkdir-init, even if we're not in a VPATH setup.
@@ -51,7 +51,7 @@ Candidate changes:
       Allows users to install JavaHL without manually creating
       directories to work around Issue #2032.
     Votes:
-      +1: dlr
+      +1: dlr, ghudson
       Nominated by: David James <james82@gmail.com>
 
   * r11050
@@ -61,6 +61,7 @@ Candidate changes:
       compile and install the base subversion package.  Without this
       fix, JavaHL installation crashes in that case.
     Votes:
+      +1: ghudson
       Nominated by: David James <james82@gmail.com>
 
   * r11685
