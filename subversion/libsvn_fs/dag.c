@@ -99,10 +99,6 @@ svn_fs__dag_init_fs (svn_fs_t *fs)
    ### without them, we get undefined references from tree.c
    ### obviously, they don't work and will need to be filled in...
 */
-void svn_fs__dag_close (dag_node_t *node)
-{
-  abort();
-}
 
 
 const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node)
@@ -114,6 +110,44 @@ const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node)
 svn_fs_t *svn_fs__dag_get_fs (dag_node_t *node)
 {
   return node->fs;
+}
+
+
+/* Helper for next three funcs */
+static int
+node_is_kind_p (dag_node_t *node, const char *kindstr)
+{
+  /* No gratutitous syntax (or null-value) checks in here, because
+     we're assuming that lower layers have already scanned the content
+     skel for validity. */
+
+  /* The node "header" is the first element of a node-revision skel,
+     itself a list. */
+  skel_t *header = node->contents->children;
+  
+  /* The first element of the header should be an atom defining the
+     node kind. */
+  skel_t *kind = header->children;
+  
+  if (! memcmp (kind->data, kindstr, kind->len))
+    return TRUE;
+  else
+    return FALSE;
+}
+
+int svn_fs__dag_is_file (dag_node_t *node)
+{
+  return node_is_kind_p (node, "file");
+}
+
+int svn_fs__dag_is_directory (dag_node_t *node)
+{
+  return node_is_kind_p (node, "dir");
+}
+
+int svn_fs__dag_is_copy (dag_node_t *node)
+{
+  return node_is_kind_p (node, "copy");
 }
 
 
