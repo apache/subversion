@@ -15,3 +15,9 @@ Candidate changes:
     Votes:
       +1: breser, sussman, cmpilato (sussman and cmpilato via IRC)
 
+  * r10371:
+    Mark python and perl bindings modules "undefined-lib-symbols = yes".
+    This is because they require symbols from libperl/libpython, which we
+    don't explicitly link to.
+    Votes:
+      +1: maxb
