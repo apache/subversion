@@ -35,7 +35,18 @@ Not sure what to do about that. -Fitz
 >    the default message be changed to
 >    the new one?
 
-Karl?
+Karl says:
+
+"I think this may be based on a misunderstanding what happened in
+r13387.  No error's number changed.  A new error code was added
+(SVN_ERR_FS_UNSUPPORTED_FORMAT), and a comment was added to another
+error code (SVN_ERR_REPOS_UNSUPPORTED_VERSION) explaining the
+relationship between the two.
+
+This is not a case of a new error obsoleting an old one.  The two
+errors are not the same.  The whole purpose of the change is to allow
+us to distinguish repository format problems from fs format problems
+in the future."
 
 > svn_wc_notify_t
 > svn_wc_notify_func2_t
