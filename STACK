@@ -59,6 +59,19 @@ Ben todo:
          that a dir can't be deleted unless it's empty, but this is
          going too far.
 
+       - successive commit bug
+         
+         If I checkout a working copy, then mod a file, I can commit
+         it OK, but if I mod it again, I get an error (I modded iota
+         twice in the Greek tree) on the next commit:
+
+              pantheon: ...foo$../svn ci
+              
+              svn_error: #21038   file not found: filesystem `/home/bwf/svn-repo',
+              transaction `0', path `/A/D/iota'
+              pantheon: ...foo$
+         -Fitz
+
    Ben's todo list:
 
        - finish svn_fs_is_different, make status command use it.
