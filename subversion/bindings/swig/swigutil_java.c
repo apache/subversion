@@ -890,12 +890,19 @@ static svn_error_t *read_inputstream(void *baton,
       goto error;
     }
 
-  JCALL4(GetByteArrayRegion, jenv, bytearray, (jsize) 0, (jsize) read_len, 
-         (jbyte *) buffer);
-  exc = JCALL0(ExceptionOccurred, jenv);
-  if (exc)
+  if (read_len > 0) 
     {
-      goto error;
+      JCALL4(GetByteArrayRegion, jenv, bytearray, (jsize) 0, (jsize) read_len, 
+             (jbyte *) buffer);
+      exc = JCALL0(ExceptionOccurred, jenv);
+      if (exc)
+        {
+          goto error;
+        }
+    }
+  else
+    {
+      read_len = 0; /* -1 is EOF, svn_stream_t wants 0 */
     }
 
   JCALL1(DeleteLocalRef, jenv, bytearray);
