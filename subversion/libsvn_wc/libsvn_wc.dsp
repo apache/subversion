@@ -111,7 +111,7 @@ SOURCE=.\entries.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\get_editor.c
+SOURCE=.\update_editor.c
 # End Source File
 # Begin Source File
 
