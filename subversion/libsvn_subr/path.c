@@ -18,7 +18,27 @@
 #include <assert.h>
 #include "svn_string.h"
 #include "svn_path.h"
+#include "svn_private_config.h"         /* for SVN_PATH_LOCAL_SEPARATOR */
 
+
+/* todo: Though we have a notion of different types of separators for
+ * the local path style, there currently is no logic in place to
+ * account for cases where the separator for one system is a valid
+ * non-separator character for others.  For example, a backslash (\)
+ * character is a legal member of a Unix filename, but is the
+ * separator character for Windows platforms (the *file* foo\bar.c on
+ * Unix machine runs the risk of being interpreted by a Windows box as
+ * file bar.c in a directory foo). */
+
+/* kff todo: hey, it looks like APR may handle some parts of path
+   portability for us, and we just get to use `/' everywhere.  Check
+   up on this. */
+
+/* Path separator defines. */
+/* SVN_PATH_LOCAL_SEPARATOR (the local filesystem path separator)
+   _should_ have been defined external this file by the build stuffs */
+#define SVN_PATH_REPOS_SEPARATOR '/' /* repository separators */
+#define SVN_PATH_URL_SEPARATOR   '/' /* url separators */
 
 
 static char
@@ -28,19 +48,19 @@ get_separator_from_style (enum svn_path_style style)
     {
     case svn_path_local_style:
       /* local style - path separators used by local filesystem */
-      return (SVN_PATH_LOCAL_SEPARATOR);
+      return SVN_PATH_LOCAL_SEPARATOR;
 
     case svn_path_url_style:
       /* url style - path separators used in urls */
-      return (SVN_PATH_URL_SEPARATOR);
+      return SVN_PATH_URL_SEPARATOR;
 
     default:
     case svn_path_repos_style:
       /* repos style - separators used in repository paths */
-      return (SVN_PATH_REPOS_SEPARATOR);
+      return SVN_PATH_REPOS_SEPARATOR;
     }
   /* default case = repos style (we should never hit this...) */
-  return (SVN_PATH_REPOS_SEPARATOR);
+  return SVN_PATH_REPOS_SEPARATOR;
 }
  
 

@@ -23,7 +23,6 @@ extern "C" {
 
 #include <apr_pools.h>
 #include "svn_string.h"
-#include "config.h"
 
 
 /*** Notes:
@@ -32,27 +31,7 @@ extern "C" {
  * path is a file or directory, because we always canonicalize() it.
  *
  * todo: this library really needs a test suite!
- * 
- * todo: Though we have a notion of different types of separators for
- * the local path style, there currently is no logic in place to
- * account for cases where the separator for one system is a valid
- * non-separator character for others.  For example, a backslash (\)
- * character is a legal member of a Unix filename, but is the
- * separator character for Windows platforms (the *file* foo\bar.c on
- * Unix machine runs the risk of being interpreted by a Windows box as
- * file bar.c in a directory foo).
- *
  ***/
-
-/* kff todo: hey, it looks like APR may handle some parts of path
-   portability for us, and we just get to use `/' everywhere.  Check
-   up on this. */
-
-/* Path separator defines. */
-/* SVN_PATH_LOCAL_SEPARATOR (the local filesystem path separator)
-   _should_ have been defined external this file by the build stuffs */
-#define SVN_PATH_REPOS_SEPARATOR '/' /* repository separators */
-#define SVN_PATH_URL_SEPARATOR   '/' /* url separators */
 
 enum svn_path_style {
   svn_path_local_style = 1,  /* parse path using local (client) conventions */

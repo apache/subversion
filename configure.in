@@ -17,11 +17,11 @@ SVN_CONFIG_NICE(config.nice)
 dnl Required to init all of the `automake' macros, and to run typical macros
 AM_INIT_AUTOMAKE(subversion, 0.1, no-define)
 
-dnl AC_CONFIG_HEADER causes `autoheader' to produce config.h.in for us.
+dnl AC_CONFIG_HEADER causes `autoheader' to produce svn_config.h.in for us.
 dnl   (We can add custom defines by creating ./acconfig.h if we wish.)
 dnl Because we're using automake, we must use AM_ instead of AC_.  AM_ creates
 dnl    rules to regenerate the header file whenever config files change.
-AM_CONFIG_HEADER(config.h)
+AM_CONFIG_HEADER(svn_private_config.h)
 
 dnl Todo: we're English-only now, but GNU Gettext eventually?
 dnl Set of available languages.

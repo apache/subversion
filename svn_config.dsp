@@ -61,36 +61,36 @@ MTL=midl.exe
 # Name "__config__ - Win32 Debug"
 # Begin Source File
 
-SOURCE=.\config.h
+SOURCE=.\svn_private_config.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\config.h.in
+SOURCE=.\svn_private_config.h.in
 # PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
-SOURCE=.\config.hw
+SOURCE=.\svn_private_config.hw
 
 !IF  "$(CFG)" == "__config__ - Win32 Release"
 
 # PROP Ignore_Default_Tool 1
-# Begin Custom Build - Creating config.h from config.hw.
-InputPath=.\config.hw
+# Begin Custom Build - Creating svn_private_config.h from svn_private_config.hw.
+InputPath=.\svn_private_config.hw
 
-".\config.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy .\config.hw .\config.h > nul
+".\svn_private_config.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy .\svn_private_config.hw .\svn_private_config.h > nul
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "__config__ - Win32 Debug"
 
 # PROP Ignore_Default_Tool 1
-# Begin Custom Build - Creating config.h from config.hw.
-InputPath=.\config.hw
+# Begin Custom Build - Creating svn_private_config.h from svn_private_config.hw.
+InputPath=.\svn_private_config.hw
 
-".\config.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy .\config.hw .\config.h > nul
+".\svn_private_config.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy .\svn_private_config.hw .\svn_private_config.h > nul
 
 # End Custom Build
 

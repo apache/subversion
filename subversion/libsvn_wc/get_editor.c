@@ -34,7 +34,7 @@
 #include "svn_io.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
-#include "config.h"
+#include "svn_private_config.h"
 
 #include "wc.h"
 
