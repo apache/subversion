@@ -1454,7 +1454,7 @@ crawl_dir (apr_array_header_t *files,
       else if (finfo.filetype == APR_REG)
         {
           /* Copy the file's path into the FILES array's pool.  */
-          child_path = apr_pstrdup (hashpool, child_path);
+          child_path = apr_pstrdup (hash_pool, child_path);
 
           /* Add the path to the array.  */
           (*((const char **) apr_array_push (files))) = child_path;
