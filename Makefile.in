@@ -309,11 +309,11 @@ swig-clean: swig-py-ext-clean swig-java-ext-clean
 
 swig-py-ext: swig-assert-available
 	cd $(SWIG_BUILD_DIR)/python; \
-        $(PYTHON) $(PYTHON_DISTUTIL) build
+        $(PYTHON) $(PYTHON_DISTUTIL) build $(DISTUTIL_PARAM)
 
 install-swig-py-ext: swig-assert-available
 	cd $(SWIG_BUILD_DIR)/python; \
-        $(PYTHON) $(PYTHON_DISTUTIL) install
+        $(PYTHON) $(PYTHON_DISTUTIL) install $(DISTUTIL_PARAM)
 
 swig-py-ext-clean:
 	rm -rf $(SWIG_BUILD_DIR)/python/build

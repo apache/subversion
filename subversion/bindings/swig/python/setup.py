@@ -57,13 +57,12 @@ if len(sys.argv) < 2:
   _do_usage()
 
 # Parse the command-line arguments, keeping what we want and letting
-# distutils have the rest.  This effectively guts all manor of
-# command-line option support from distutils, leaving us to specify
-# all the options that we allow (which is FAR less than the set of
-# distutils options).  If we find that people actually care, we can
-# revisit this.
+# distutils have the rest.  Distutils parameters should come after
+# the target as in 'python setup.py build --prefix=/usr/local' and
+# parameters for us should appear before the target as in
+# 'python setup.py -I/usr/include build'.
 options, leftovers = getopt.getopt(sys.argv[1:], "I:L:C:R:S:s:h",
-                                   ["prefix=", "install-dir=", "help"])
+                                   ["help"])
 for option in options:
   if option[0] == '-I':
     include_dirs.append(option[1])
