@@ -1,6 +1,5 @@
-%define apache_version 2.0.34-0.1
+%define apache_version 2.0.36-0.1
 %define neon_version 0.19.2
-#%define apr_date 2002.03.06
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
