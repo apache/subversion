@@ -335,7 +335,7 @@ A  tools/svnbook.el
 A  tools/dtd
 A  tools/dtd/dblite.dtd
 &hellip;
-Checked out revision 3678.
+Checked out revision 2499.
 </screen>
     
     <para>Since Subversion uses a <quote>copy-modify-merge</quote>

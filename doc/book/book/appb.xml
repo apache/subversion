@@ -97,7 +97,7 @@ $ svnadmin recover /path/to/repos
           working copy:</para>
         
         <screen>
-$ svn cleanup working-copy
+$ svn cleanup
 </screen>
 
       </sect3>
