@@ -61,8 +61,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-20 00:21+0900\n"
-"PO-Revision-Date: 2004-09-19 23:58+0900\n"
+"POT-Creation-Date: 2004-09-26 22:31+0900\n"
+"PO-Revision-Date: 2004-09-25 01:21+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2456,213 +2456,221 @@ msgstr "認証供給者はすべて使い果たされています"
 msgid "Read access denied for root of edit"
 msgstr "編集のルートへの読み込みアクセスが拒否されました"
 
-#: include/svn_error_codes.h:675
+#: include/svn_error_codes.h:674
+msgid "Item is not readable."
+msgstr "項目が読み込み可能でありません。"
+
+#: include/svn_error_codes.h:679
+msgid "Item is partially readable."
+msgstr "項目の一部だけが読み込み可能です。"
+
+#: include/svn_error_codes.h:686
 msgid "Svndiff data has invalid header"
 msgstr "svndiff データに不正なヘッダがあります"
 
 # ? corrupt window
-#: include/svn_error_codes.h:679
+#: include/svn_error_codes.h:690
 msgid "Svndiff data contains corrupt window"
 msgstr "snvdiff データに壊れた window が含まれています"
 
-#: include/svn_error_codes.h:683
+#: include/svn_error_codes.h:694
 msgid "Svndiff data contains backward-sliding source view"
 msgstr "svndiff データに、逆方向にスライドするソースビューが含まれています"
 
-#: include/svn_error_codes.h:687
+#: include/svn_error_codes.h:698
 msgid "Svndiff data contains invalid instruction"
 msgstr "svndiff データに不正な命令が含まれています"
 
-#: include/svn_error_codes.h:691
+#: include/svn_error_codes.h:702
 msgid "Svndiff data ends unexpectedly"
 msgstr "svndiff データが突然終わりました"
 
-#: include/svn_error_codes.h:697
+#: include/svn_error_codes.h:708
 msgid "Apache has no path to an SVN filesystem"
 msgstr "Apache に SVN ファイルシステムへのパスがありません"
 
-#: include/svn_error_codes.h:701
+#: include/svn_error_codes.h:712
 msgid "Apache got a malformed URI"
 msgstr "Apache が不正な URI を受け取りました"
 
-#: include/svn_error_codes.h:705
+#: include/svn_error_codes.h:716
 msgid "Activity not found"
 msgstr "作業が見つかりません"
 
-#: include/svn_error_codes.h:709
+#: include/svn_error_codes.h:720
 msgid "Baseline incorrect"
 msgstr "ベースラインが不正です"
 
-#: include/svn_error_codes.h:713
+#: include/svn_error_codes.h:724
 msgid "Input/output error"
 msgstr "入出力エラーです"
 
-#: include/svn_error_codes.h:719
+#: include/svn_error_codes.h:730
 msgid "A path under version control is needed for this operation"
 msgstr "この操作ではバージョン管理下にあるパスが必要です"
 
-#: include/svn_error_codes.h:723
+#: include/svn_error_codes.h:734
 msgid "Repository access is needed for this operation"
 msgstr "この操作ではリポジトリへのアクセスが必要です。"
 
-#: include/svn_error_codes.h:727
+#: include/svn_error_codes.h:738
 msgid "Bogus revision information given"
 msgstr "不正なリビジョン情報を指定されました"
 
-#: include/svn_error_codes.h:731
+#: include/svn_error_codes.h:742
 msgid "Attempting to commit to a URL more than once"
 msgstr "URL に複数回コミットしようとしています"
 
-#: include/svn_error_codes.h:735
+#: include/svn_error_codes.h:746
 msgid "Operation does not apply to binary file"
 msgstr "バイナリファイルには適用できない操作です"
 
-#: include/svn_error_codes.h:741
+#: include/svn_error_codes.h:752
 msgid "Format of an svn:externals property was invalid"
 msgstr "属性 svn:external の形式が不正です"
 
-#: include/svn_error_codes.h:745
+#: include/svn_error_codes.h:756
 msgid "Attempting restricted operation for modified resource"
 msgstr "修正されているリソースに対し、制限のある操作をしようとしています"
 
-#: include/svn_error_codes.h:749
+#: include/svn_error_codes.h:760
 msgid "Operation does not apply to directory"
 msgstr "ディレクトリに対しては操作を適用できません"
 
-#: include/svn_error_codes.h:753
+#: include/svn_error_codes.h:764
 msgid "Revision range is not allowed"
 msgstr "リビジョン範囲は適用できません"
 
-#: include/svn_error_codes.h:757
+#: include/svn_error_codes.h:768
 msgid "Inter-repository relocation not allowed"
 msgstr "参照リポジトリの変更は、異なるリポジトリの間ではできません"
 
-#: include/svn_error_codes.h:761
+#: include/svn_error_codes.h:772
 msgid "Author name cannot contain a newline"
 msgstr "変更者の名前に改行文字を入れてはいけません"
 
-#: include/svn_error_codes.h:765
+#: include/svn_error_codes.h:776
 msgid "Bad property name"
 msgstr "不正な属性名です"
 
-#: include/svn_error_codes.h:770
+#: include/svn_error_codes.h:781
 msgid "Two versioned resources are unrelated"
 msgstr "バージョン管理下にある 2 つのリソースは関係がありません"
 
-#: include/svn_error_codes.h:777
+#: include/svn_error_codes.h:788
 msgid "A problem occurred; see later errors for details"
 msgstr "エラーが発生しました。詳しくは次のエラーメッセージを参照してください"
 
-#: include/svn_error_codes.h:781
+#: include/svn_error_codes.h:792
 msgid "Failure loading plugin"
 msgstr "プラグインをロードできませんでした"
 
-#: include/svn_error_codes.h:785
+#: include/svn_error_codes.h:796
 msgid "Malformed file"
 msgstr "不正なファイルです"
 
-#: include/svn_error_codes.h:789
+#: include/svn_error_codes.h:800
 msgid "Incomplete data"
 msgstr "不完全なデータです"
 
-#: include/svn_error_codes.h:793
+#: include/svn_error_codes.h:804
 msgid "Incorrect parameters given"
 msgstr "不正なパラメータを指定しました"
 
-#: include/svn_error_codes.h:797
+#: include/svn_error_codes.h:808
 msgid "Tried a versioning operation on an unversioned resource"
 msgstr ""
 "バージョン管理下にないリソースにバージョン管理操作を実行しようとしました"
 
-#: include/svn_error_codes.h:801
+#: include/svn_error_codes.h:812
 msgid "Test failed"
 msgstr "テストが失敗しました"
 
-#: include/svn_error_codes.h:805
+#: include/svn_error_codes.h:816
 msgid "Trying to use an unsupported feature"
 msgstr "サポートされていない機能を使おうとしています"
 
-#: include/svn_error_codes.h:809
+#: include/svn_error_codes.h:820
 msgid "Unexpected or unknown property kind"
 msgstr "予想外または未知の属性種別です"
 
-#: include/svn_error_codes.h:813
+#: include/svn_error_codes.h:824
 msgid "Illegal target for the requested operation"
 msgstr "要求された操作の対象としては不正です"
 
-#: include/svn_error_codes.h:817
+#: include/svn_error_codes.h:828
 msgid "MD5 checksum is missing"
 msgstr "MD5 チェックサムがありません"
 
-#: include/svn_error_codes.h:821
+#: include/svn_error_codes.h:832
 msgid "Directory needs to be empty but is not"
 msgstr "ディレクトリは空でなければなりませんが、そうではありません"
 
-#: include/svn_error_codes.h:825
+#: include/svn_error_codes.h:836
 msgid "Error calling external program"
 msgstr "外部プログラムの呼び出し中にエラーが発生しました"
 
-#: include/svn_error_codes.h:829
+#: include/svn_error_codes.h:840
 msgid "Python exception has been set with the error"
 msgstr "エラーに対して Python の例外が設定されました"
 
-#: include/svn_error_codes.h:833
+#: include/svn_error_codes.h:844
 msgid "A checksum mismatch occurred"
 msgstr "チェックサムの不一致が生じました"
 
-#: include/svn_error_codes.h:837
+#: include/svn_error_codes.h:848
 msgid "The operation was interrupted"
 msgstr "操作が中断されました"
 
-#: include/svn_error_codes.h:841
+#: include/svn_error_codes.h:852
 msgid "The specified diff option is not supported"
 msgstr "指定された差分表示 (diff) オプションはサポートされていません"
 
-#: include/svn_error_codes.h:845
+#: include/svn_error_codes.h:856
 msgid "Property not found"
 msgstr "属性が見つかりません"
 
-#: include/svn_error_codes.h:849
+#: include/svn_error_codes.h:860
 msgid "No auth file path available"
 msgstr "利用できる認証ファイルパスがありません"
 
-#: include/svn_error_codes.h:854
+#: include/svn_error_codes.h:865
 msgid "Incompatible library version"
 msgstr "ライブラリのバージョンは互換性がありません"
 
-#: include/svn_error_codes.h:860
+#: include/svn_error_codes.h:871
 msgid "Client error in parsing arguments"
 msgstr "クライアントが引数を解析しているときにエラーが生じました"
 
-#: include/svn_error_codes.h:864
+#: include/svn_error_codes.h:875
 msgid "Not enough args provided"
 msgstr "指定する引数が不十分です"
 
-#: include/svn_error_codes.h:868
+#: include/svn_error_codes.h:879
 msgid "Mutually exclusive arguments specified"
 msgstr "互いに排他的な引数が指定されています"
 
-#: include/svn_error_codes.h:872
+#: include/svn_error_codes.h:883
 msgid "Attempted command in administrative dir"
 msgstr "管理用ディレクトリでコマンドを実行しようとしました"
 
-#: include/svn_error_codes.h:876
+#: include/svn_error_codes.h:887
 msgid "The log message file is under version control"
 msgstr "ログメッセージファイルはバージョン管理下にあります"
 
-#: include/svn_error_codes.h:880
+#: include/svn_error_codes.h:891
 msgid "The log message is a pathname"
 msgstr "ログメッセージはパス名です"
 
-#: include/svn_error_codes.h:884
+#: include/svn_error_codes.h:895
 msgid "Committing in directory scheduled for addition"
 msgstr "追加準備状態にあるディレクトリにコミットしています"
 
-#: include/svn_error_codes.h:888
+#: include/svn_error_codes.h:899
 msgid "No external editor available"
 msgstr "利用できる外部エディタがありません"
 
-#: include/svn_error_codes.h:892
+#: include/svn_error_codes.h:903
 msgid "Something is wrong with the log message's contents"
 msgstr "ログメッセージの中身に不正な箇所があります"
 
@@ -3439,7 +3447,7 @@ msgstr "リビジョンファイルの最終行が 64 bytes 以上です"
 msgid "Final line in revision file missing space"
 msgstr "リビジョンファイルの最終行に空白文字がありません"
 
-#: libsvn_fs_fs/fs_fs.c:990 libsvn_repos/log.c:163 libsvn_repos/log.c:167
+#: libsvn_fs_fs/fs_fs.c:990 libsvn_repos/log.c:231 libsvn_repos/log.c:235
 #, c-format
 msgid "No such revision %ld"
 msgstr "リビジョン %ld はありません"
@@ -3832,7 +3840,7 @@ msgstr ""
 msgid "%s request failed on '%s'"
 msgstr "%s リクエスト (相手: '%s') が失敗しました"
 
-#: libsvn_ra_local/ra_plugin.c:98 libsvn_ra_local/ra_plugin.c:465
+#: libsvn_ra_local/ra_plugin.c:98 libsvn_ra_local/ra_plugin.c:467
 #, c-format
 msgid ""
 "'%s'\n"
@@ -3848,11 +3856,11 @@ msgstr ""
 msgid "Unable to open an ra_local session to URL"
 msgstr "URL に対し ra_local セッションを開始できません"
 
-#: libsvn_ra_local/ra_plugin.c:927
+#: libsvn_ra_local/ra_plugin.c:930
 msgid "Module for accessing a repository on local disk."
 msgstr "ローカルディスク上のリポジトリにアクセスするモジュール。"
 
-#: libsvn_ra_local/ra_plugin.c:972
+#: libsvn_ra_local/ra_plugin.c:975
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_local"
 msgstr ""
@@ -3972,15 +3980,19 @@ msgstr ""
 msgid "Failed to find time on revision %ld"
 msgstr "リビジョン %ld の日時が見つかりませんでした"
 
-#: libsvn_repos/rev_hunt.c:199
+#: libsvn_repos/rev_hunt.c:219
 #, c-format
 msgid "Invalid start revision %ld"
 msgstr "開始リビジョン '%ld' が不正です"
 
-#: libsvn_repos/rev_hunt.c:203
+#: libsvn_repos/rev_hunt.c:223
 #, c-format
 msgid "Invalid end revision %ld"
 msgstr "終了リビジョン '%ld' が不正です"
+
+#: libsvn_repos/rev_hunt.c:315
+msgid "Unreadable path encountered; access denied."
+msgstr "読み込み不可能なパスが見つかりました。アクセスを拒否されました。"
 
 #: libsvn_subr/error.c:294
 msgid "Can't recode error string from APR"
