@@ -623,6 +623,7 @@ read_entries (svn_wc_adm_access_t *adm_access,
               apr_pool_t *pool)
 {
   svn_error_t *err;
+  svn_boolean_t is_final;
   apr_file_t *infile = NULL;
   svn_xml_parser_t *svn_parser;
   char buf[BUFSIZ];
@@ -652,22 +653,19 @@ read_entries (svn_wc_adm_access_t *adm_access,
   accum.parser = svn_parser;
 
   /* Parse. */
-  err = SVN_NO_ERROR;
   do {
-    svn_error_clear (err);
-
     err = svn_io_file_read_full (infile, buf, sizeof(buf), &bytes_read, pool);
     if (err && !APR_STATUS_IS_EOF(err->apr_err))
       return err;
+
+    is_final = (svn_boolean_t) err; /* EOF is only possible error */
+    svn_error_clear (err);
     
-    SVN_ERR_W (svn_xml_parse (svn_parser, buf, bytes_read, 
-                              err && APR_STATUS_IS_EOF(err->apr_err)),
+    SVN_ERR_W (svn_xml_parse (svn_parser, buf, bytes_read, is_final),
                apr_psprintf (pool,
                              "XML parser failed in '%s'", 
                              svn_wc_adm_access_path (adm_access)));
-  } while (! err);
-
-  svn_error_clear (err);
+  } while (! is_final);
 
   /* Close the entries file. */
   SVN_ERR (svn_wc__close_adm_file (infile, svn_wc_adm_access_path (adm_access),
