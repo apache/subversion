@@ -1025,7 +1025,7 @@ Committed revision 351.
 $ ls
 ./    ../   my-working-copy/
 
-$ svn copy my-working-copy http://svn.example.com/repos/tags/calc/newtag
+$ svn copy my-working-copy http://svn.example.com/repos/tags/calc/mytag
 
 Committed revision 352.
 </screen>

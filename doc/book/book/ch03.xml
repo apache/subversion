@@ -541,7 +541,7 @@ Updated to revision 2.
     <sect2 id="svn-ch-3-sect-4.2">
       <title>Make Changes to Your Working Copy</title>
       
-      <para>Now you can to get to work and make changes in your
+      <para>Now you can get to work and make changes in your
         working copy. It's usually most convenient to decide on a
         particular change (or set of changes) to make, such as writing
         a new feature, fixing a bug, etc.  The Subversion commands

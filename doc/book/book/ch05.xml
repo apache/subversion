@@ -1914,7 +1914,7 @@ LoadModule dav_svn_module     modules/mod_dav_svn.so
           These items have already been configured with a set of
           permissions that allows them to work with Apache, or more
           appropriately, that allows Apache to work with those files.
-          Apache, when used a Subversion server, will also need the
+          Apache, when used as a Subversion server, will also need the
           correct permissions to read and write to your Subversion
           repository.</para>
     
