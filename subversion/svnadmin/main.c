@@ -101,7 +101,7 @@ usage (const char *progname, int exit_code)
      "\n"
      "  - lsrevs   REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
      "      If no revision is given, all revision trees are printed.\n"
-     "      If just LOWER_REV is given, that revision trees is printed.\n"
+     "      If just LOWER_REV is given, that revision tree is printed.\n"
      "      If two revisions are given, that range is printed, inclusive.\n"
      "      (Printing a revision tree shows its structure and file sizes.)\n"
      "\n",
