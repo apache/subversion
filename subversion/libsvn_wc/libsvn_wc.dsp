@@ -111,10 +111,6 @@ SOURCE=.\entries.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\update_editor.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\lock.c
 # End Source File
 # Begin Source File
@@ -131,10 +127,6 @@ SOURCE=.\props.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\providers.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\questions.c
 # End Source File
 # Begin Source File
@@ -148,6 +140,10 @@ SOURCE=.\status_editor.c
 # Begin Source File
 
 SOURCE=.\translate.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\update_editor.c
 # End Source File
 # Begin Source File
 

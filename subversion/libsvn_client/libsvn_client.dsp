@@ -147,6 +147,10 @@ SOURCE=.\prop_commands.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\providers.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\ra.c
 # End Source File
 # Begin Source File
