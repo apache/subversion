@@ -1,5 +1,5 @@
 /*
- * global configuration of the java / subversion binding
+ * utility functions to handle the java class java.util.Hashtable
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -16,12 +16,19 @@
  * ====================================================================
  */
 
-#ifndef SVN_JNI_GLOBAL_H
-#define SVN_JNI_GLOBAL_H
+#ifndef SVN_JNI_HASHTABLE_H
+#define SVN_JNI_HASHTABLE_H
 
-/*** Defines ***/
-#define SVN_JNI_SUBVERSION_EXCEPTION \
-"org/tigris/subversion/SubversionException"
+/* includes */
+#include <jni.h>
+
+/* functions */
+jobject
+hashtable__create(JNIEnv *env, jboolean *hasException);
+
+void
+jni_hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
+		   jobject value, jboolean *hasException);
 
 #endif
 
@@ -30,16 +37,3 @@
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-
-
-
-
-
-
-
-
-
-
-
-
-

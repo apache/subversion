@@ -1,6 +1,5 @@
 /*
- * svn_jni_hashtable.c utility functions to handle 
- * java hashtables with c
+ * utility functions to handle the java class java.util.Hashtable
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -23,7 +22,7 @@
 "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
 
 jobject
-svn_jni_hashtable__create(JNIEnv *env, jboolean *hasException)
+hashtable__create(JNIEnv *env, jboolean *hasException)
 {
   jobject hashtable = NULL;
   jboolean _hasException = JNI_FALSE;
@@ -83,8 +82,8 @@ svn_jni_hashtable__create(JNIEnv *env, jboolean *hasException)
 }
 
 void
-svn_jni_hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
-		      jobject value, jboolean *hasException)
+jni_hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
+		   jobject value, jboolean *hasException)
 {
   jboolean _hasException = JNI_FALSE;
 
@@ -141,6 +140,9 @@ svn_jni_hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
     }
 } 
 
-/* local variables:
+/* 
+ * local variables:
  * eval: (load-file "../../../svn-dev.el")
- * end: */
+ * end: 
+ */
+

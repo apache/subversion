@@ -1,5 +1,8 @@
 /*
- * svn_jni_string.c utility functions to deal with java strings
+ * utility functions to deal with strings:
+ * - java strings (java.lang.String)
+ * - svn strings (svn_string_t)
+ * - c strings (char *)
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -16,21 +19,24 @@
  * ====================================================================
  */
 
-/* includes */
+/*** Includes ***/
 #include <jni.h>
 #include <svn_string.h>
+#include "misc.h"
+#include "global.h"
 
+/*** Code ***/
 svn_string_t *
-svn_jni_string__j_to_svn(JNIEnv *env, 
-                         jstring jstr, 
-                         jboolean *hasException,
-                         apr_pool_t *pool)
+string__j_to_svn_string(JNIEnv *env, 
+                        jstring jstr, 
+                        jboolean *hasException,
+                        apr_pool_t *pool)
 {
   svn_string_t *result = NULL;
   jboolean _hasException = JNI_FALSE;
 
 #ifdef SVN_JNI__VERBOSE
-  fprintf(stderr, "svn_jni_string__j_to_svn\n");
+  fprintf(stderr, "string__j_to_svn_string\n");
 #endif
   
   /* make sure there is enough memory left for 
@@ -55,9 +61,9 @@ svn_jni_string__j_to_svn(JNIEnv *env,
 	   * otherwise throw an exception */
 	  if( buffer == NULL )
 	    {
-	      svn_jni__throw_exception_by_name(env, 
-					       "java/lang/OutOfMemoryError", 
-					       NULL);
+	      throw_exception_by_name(env, 
+                                      "java/lang/OutOfMemoryError", 
+                                      NULL);
 	      _hasException = JNI_TRUE;
 	    }
 	  else
@@ -93,10 +99,45 @@ svn_jni_string__j_to_svn(JNIEnv *env,
   return result;
 }
 
+svn_stringbuf_t *
+string__c_to_stringbuf(JNIEnv *env,
+                       jstring jstr,
+                       jboolean *hasException,
+                       apr_pool_t *pool)
+{
+  svn_stringbuf_t *result = NULL;
+  svn_string_t *string = NULL;
+  jboolean _hasException = JNI_FALSE;
+
+  string = string__j_to_svn_string(env, jstr, &_hasException, pool);
+
+  if( (!_hasException) && (string != NULL ) )
+    {
+      result = svn_stringbuf_create_from_string(string, pool);
+
+      // did the call succed? otherwise exception
+      if( result == NULL )
+        {
+          misc__throw_exception_by_name(env, 
+                                        SVN_JNI_SUBVERSION_EXCEPTION,
+                                        "svn_stringbuf_create_from_string" \
+                                        " failed");
+          _hasException = JNI_TRUE;
+        }
+    }
+
+  if( hasException != NULL )
+    {
+      *hasException = _hasException;
+    }
+
+  return result;
+}
+
 jstring
-svn_jni_string__c_to_j(JNIEnv *env, 
-                       char *string, 
-                       jboolean *hasException)
+string__c_to_j(JNIEnv *env, 
+               char *string, 
+               jboolean *hasException)
 {
   jboolean _hasException = JNI_FALSE;
   jstring result = NULL;
@@ -117,12 +158,21 @@ svn_jni_string__c_to_j(JNIEnv *env,
 }
 
 jstring
-svn_jni_string__svn_to_j(JNIEnv *env, 
-                         svn_string_t *string, 
-                         jboolean *hasException)
+string__svn_string_to_j(JNIEnv *env, 
+                        svn_string_t *string, 
+                        jboolean *hasException)
 {
-  return svn_jni_string__c_to_j(env, (char*)string->data, 
-                                hasException);
+  return string__c_to_j(env, (char*)string->data, 
+                        hasException);
+}
+
+jstring
+string__svn_stringbuf_to_j(JNIEnv *env,
+                           svn_stringbuf_t *stringbuf,
+                           jboolean *hasException)
+{
+  return string__c_to_j(env, (char*)stringbuf->data,
+                        hasException);
 }
 
 /* 

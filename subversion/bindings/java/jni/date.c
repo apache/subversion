@@ -20,6 +20,7 @@
 /* includes */
 #include <jni.h>
 #include <apr_time.h>
+#include "j.h"
 
 /* defines */
 #define SVN_JNI_DATE__CLASS "java/util/Date"
@@ -29,7 +30,7 @@
  * java.util.Date(long) so conversion is an easy job
  */
 jobject 
-svn_jni_date__apr_to_j(JNIEnv *env, jboolean *hasException,
+date__apr_to_j(JNIEnv *env, jboolean *hasException,
 		       apr_time_t time)
 {
   jobject result = NULL;
@@ -54,16 +55,16 @@ svn_jni_date__apr_to_j(JNIEnv *env, jboolean *hasException,
       jobject jdate = NULL;
 
       /* get class reference */
-      class = svn_jni_j_get_class(env, &_hasException,
-				  SVN_JNI_DATE__CLASS);
+      class = j__get_class(env, &_hasException,
+                          SVN_JNI_DATE__CLASS);
 
       /* get method reference */
       if( !_hasException )
 	{
-	  constructor = svn_jni_j_get_method(env, &_hasException,
-					     class,
-					     "<init>",
-					     SVN_JNI_DATE__SIG);
+	  constructor = j__get_method(env, &_hasException,
+                                     class,
+                                     "<init>",
+                                     SVN_JNI_DATE__SIG);
 	}
 
       /* create new instance */
@@ -72,15 +73,15 @@ svn_jni_date__apr_to_j(JNIEnv *env, jboolean *hasException,
 	  /* the apr_time_t parameter time may be passed
 	   * directly to the java.util.Date(long) constructor
 	   */
-	  jdate = (*env)->NewObject(env, class, constructor, time);
+	  result = (*env)->NewObject(env, class, constructor, time);
 
-	  if( jdate == NULL )
+	  if( result == NULL )
 	    {
 	      _hasException = JNI_TRUE;
 	    }
 	}
 
-      (*env)->PopLocalFrame(env, jdate);
+      (*env)->PopLocalFrame(env, result);
     }
 				    
   if( hasException != NULL )
@@ -88,7 +89,7 @@ svn_jni_date__apr_to_j(JNIEnv *env, jboolean *hasException,
       *hasException = _hasException;
     }
 
-  return jdate;
+  return result;
 }
 
 /* 

@@ -19,19 +19,16 @@
 #include <jni.h>
 #include <svn_client.h>
 
-/*
- * utility function to throw a java exception
- */
 void
-svn_jni_misc__throw_exception_by_name(JNIEnv *env,
-				 const char *name,
-				 const char *msg)
+misc__throw_exception_by_name(JNIEnv *env,
+                              const char *name,
+                              const char *msg)
 {
   jclass cls = NULL;
 
 #ifdef SVN_JNI__VERBOSE
   fprintf(stderr, 
-	  "svn_jni__throw_exception_by_name(name=\"%s\", msg=\"%s\"\n",
+	  "misc__throw_exception_by_name(name=\"%s\", msg=\"%s\"\n",
 	  name, msg);
 #endif
   /* ensure there is enough memory and stuff
@@ -56,23 +53,25 @@ svn_jni_misc__throw_exception_by_name(JNIEnv *env,
    
 
 svn_client_auth_baton_t *
-svn_jni_misc__make_auth_baton(JNIEnv *env, jobject jobj)
+misc__make_auth_baton(JNIEnv *env, jobject jobj)
 {
   /* the code here will build the auth_baton structure
    * right now, this doesnt work. now only NULL
    * is being returned 
    */
 #ifdef SVN_JNI__VERBOSE
-    fprintf(stderr, "svn_jni__make_auth_baton\n");
+    fprintf(stderr, "misc__make_auth_baton\n");
 #endif
 
   return NULL;
 } 
 
 
-/* local variables:
+/* 
+ * local variables:
  * eval: (load-file "../../../svn-dev.el")
- * end: */
+ * end: 
+ */
 
 
 

@@ -1,5 +1,6 @@
 /*
- * global configuration of the java / subversion binding
+ * utility functions to handle the class
+ * org.tigris.subversion.lib.Item
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -16,12 +17,17 @@
  * ====================================================================
  */
 
-#ifndef SVN_JNI_GLOBAL_H
-#define SVN_JNI_GLOBAL_H
+#ifndef SVN_JNI_ITEM_H
+#define SVN_JNI_ITEM_H
 
-/*** Defines ***/
-#define SVN_JNI_SUBVERSION_EXCEPTION \
-"org/tigris/subversion/SubversionException"
+/* includes */
+#include <jni.h>
+
+/* functions */
+jobject
+item__create(JNIEnv *env, jobject jpath, jobject jstatus, 
+	     jboolean *hasException);
+
 
 #endif
 
@@ -30,16 +36,3 @@
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,5 +1,6 @@
 /*
- * global configuration of the java / subversion binding
+ * utility functions to handle the java class
+ * org.tigris.subversion.lib.Entry
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -16,12 +17,17 @@
  * ====================================================================
  */
 
-#ifndef SVN_JNI_GLOBAL_H
-#define SVN_JNI_GLOBAL_H
+#ifndef SVN_JNI_ENTRY_H
+#define SVN_JNI_ENTRY_H
 
-/*** Defines ***/
-#define SVN_JNI_SUBVERSION_EXCEPTION \
-"org/tigris/subversion/SubversionException"
+/*** Includes ***/
+#include <jni.h>
+#include <svn_wc.h>
+
+/*** Functions ***/
+jobject
+entry__create(JNIEnv *env, jboolean *hasException,
+	      svn_wc_entry_t *entry);
 
 #endif
 
@@ -30,16 +36,3 @@
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-
-
-
-
-
-
-
-
-
-
-
-
-

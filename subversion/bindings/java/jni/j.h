@@ -1,5 +1,5 @@
 /*
- * global configuration of the java / subversion binding
+ * generic functions to handle java classes
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -16,12 +16,36 @@
  * ====================================================================
  */
 
-#ifndef SVN_JNI_GLOBAL_H
-#define SVN_JNI_GLOBAL_H
+#ifndef SVN_JNI_J_H
+#define SVN_JNI_J_H
 
-/*** Defines ***/
-#define SVN_JNI_SUBVERSION_EXCEPTION \
-"org/tigris/subversion/SubversionException"
+/* includes */
+#include <jni.h>
+
+/* functions */
+
+/* returns a JNI class reference matching 
+ * className. 
+ *
+ * Remark: you have to ensure that there
+ * is enough space for the class reference
+ * (needs 1 reference)
+ */
+jclass
+j__get_class(JNIEnv *env, jboolean *hasException, 
+             char *className);
+
+/* return a JNI method reference matching the
+ * class, methodName and methodSignature
+ *
+ * Remark: you have to ensure that there
+ * is enoug space for the class reference
+ * (needs
+ */
+jmethodID
+j__get_method(JNIEnv *env, jboolean *hasException,
+              jclass class,
+              char *methodName, char *methodSignature);
 
 #endif
 
@@ -30,16 +54,3 @@
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-
-
-
-
-
-
-
-
-
-
-
-
-

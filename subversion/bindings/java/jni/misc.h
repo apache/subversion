@@ -1,5 +1,5 @@
 /*
- * global configuration of the java / subversion binding
+ * svn_jni_misc.c miscelleneous help functions
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -16,12 +16,24 @@
  * ====================================================================
  */
 
-#ifndef SVN_JNI_GLOBAL_H
-#define SVN_JNI_GLOBAL_H
+#ifndef SVN_JNI_MISC_H
+#define SVN_JNI_MISC_H
 
-/*** Defines ***/
-#define SVN_JNI_SUBVERSION_EXCEPTION \
-"org/tigris/subversion/SubversionException"
+/* includes */
+#include <jni.h>
+#include <svn_client.h>
+
+/* functions */
+
+/*
+ * utility function to throw a java exception
+ */
+void
+misc__throw_exception_by_name(JNIEnv *env,
+			      const char *name,
+			      const char *msg);
+svn_client_auth_baton_t *
+misc__make_auth_baton(JNIEnv *env, jobject jobj);
 
 #endif
 
@@ -30,16 +42,4 @@
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-
-
-
-
-
-
-
-
-
-
-
-
 
