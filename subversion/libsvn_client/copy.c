@@ -196,7 +196,8 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data. */
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url, NULL,
-                                        FALSE, FALSE, TRUE, auth_baton, pool));
+                                        NULL, FALSE, FALSE, TRUE, 
+                                        auth_baton, pool));
 
   /* Pass null for the path, to ensure error if trying to get a
      revision based on the working copy. */
@@ -364,6 +365,11 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   const char *committed_date = NULL;
   const char *committed_author = NULL;
 
+  /* ### TEMPORARY ### */
+  return svn_error_create
+    (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+     "Copies of wc paths to repository URLs are temporarily disabled");
+
   /* Check the SRC_PATH. */
   SVN_ERR (svn_io_check_path (src_path->data, &src_kind, pool));
 
@@ -381,7 +387,8 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Open an RA session for the anchor URL. */
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, anchor, parent,
-                                        TRUE, TRUE, TRUE, auth_baton, pool));
+                                        NULL, TRUE, TRUE, TRUE, 
+                                        auth_baton, pool));
 
   /* Figure out the basename that will result from this operation. */
   SVN_ERR (ra_lib->check_path (&dst_kind, sess, target->data,
@@ -397,7 +404,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
       SVN_ERR (ra_lib->close (sess));
 
       SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, anchor, src_path,
-                                            TRUE, TRUE, TRUE, 
+                                            NULL, TRUE, TRUE, TRUE, 
                                             auth_baton, pool));
     }
   else
@@ -471,7 +478,8 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
      cannot go into the admin area. We do want to store the resulting
      auth data, though, once the WC is built. */
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, NULL,
-                                        TRUE, FALSE, TRUE, auth_baton, pool));
+                                        NULL, TRUE, FALSE, TRUE, 
+                                        auth_baton, pool));
       
   /* Pass null for the path, to ensure error if trying to get a
      revision based on the working copy. */

@@ -43,7 +43,6 @@ svn_cl__import (apr_getopt_t *os,
   svn_stringbuf_t *path;
   svn_stringbuf_t *url;
   svn_stringbuf_t *new_entry;
-  svn_stringbuf_t *printpath;
   const svn_delta_editor_t *trace_editor;
   void *trace_edit_baton;
   svn_client_auth_baton_t *auth_baton;
@@ -105,13 +104,6 @@ svn_cl__import (apr_getopt_t *os,
   else
     path = ((svn_stringbuf_t **) (targets->elts))[1];
 
-  /* Because we're working outside the context of a working copy, we
-     don't want the trace_editor to print out the 'local' paths like
-     it normally does.  This leads to very confusing output.  Instead,
-     for consistency, it will print those paths being added in the
-     repository, completely ignoring the local source.  */
-  printpath = svn_stringbuf_create ("", pool);
-
   /* Optionally get the dest entry name. */
   if (targets->nelts < 3)
     new_entry = NULL;  /* tells import() to create many entries at top
@@ -123,9 +115,14 @@ svn_cl__import (apr_getopt_t *os,
       (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
        "too many arguments to import command");
   
+  /* Because we're working outside the context of a working copy, we
+     don't want the trace_editor to print out the 'local' paths like
+     it normally does.  This leads to very confusing output.  Instead,
+     for consistency, it will print those paths being added in the
+     repository, completely ignoring the local source.  */
   SVN_ERR (svn_cl__get_trace_commit_editor (&trace_editor,
                                             &trace_edit_baton,
-                                            printpath,
+                                            NULL,
                                             pool));
 
   /* Get revnum set to something meaningful, to cover the xml case. */

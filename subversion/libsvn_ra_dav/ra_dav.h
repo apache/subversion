@@ -349,10 +349,6 @@ svn_error_t * svn_ra_dav__merge_activity(
     const char *repos_url,
     const char *activity_url,
     apr_hash_t *valid_targets,
-    svn_ra_set_wc_prop_func_t set_prop,
-    svn_ra_close_commit_func_t close_commit,
-    void *close_baton,
-    apr_array_header_t *deleted_entries,
     apr_pool_t *pool);
 
 

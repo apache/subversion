@@ -85,6 +85,13 @@ ${SVN_PROG} delete ${TEST_DIR_1}/A/B/E/newfile2
 check_status 5
 
 ### Commit.
+### This commit should contain the following targets:
+###    A/D/G/pi
+###    A/mu
+###    newfile1
+###    A/D/H/omega
+### and should therefore be anchored at the root, with targets
+### relative to that.
 echo "Committing changes in ${TEST_DIR_1}."
 (cd ${TEST_DIR_1};                                                \
  ${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-2.xml \
@@ -94,6 +101,7 @@ echo "Committing changes in ${TEST_DIR_1}."
 check_status 6
 
 ### Update.
+### The commit XML file was anchored at the root, so update from the root.
 echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
 (cd ${TEST_DIR_2};                                                \
  ${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_NAME}-2.xml \
@@ -126,6 +134,11 @@ echo "for commit rev2, tenth line in A/mu" >> ${TEST_DIR_2}/A/mu
 
 
 ### Commit.
+### This commit should contain the following targets:
+###    A/D/G/pi
+###    A/mu
+### and should therefore be anchored at A, with targets
+### relative to that.
 echo "Committing changes, this time from ${TEST_DIR_2}."
 (cd ${TEST_DIR_2};                                                \
  ${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-3.xml \
@@ -136,10 +149,11 @@ check_status 8
 
 
 ### Update.
+### The commit XML file was anchored at A, so update from there.
 echo "Updating ${TEST_DIR_1} from changes in ${TEST_DIR_2}."
-(cd ${TEST_DIR_1};                                                \
- ${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_NAME}-3.xml \
-             --revision 3;                                        \
+(cd ${TEST_DIR_1}/A;                                                 \
+ ${SVN_PROG} update --xml-file ../../${COMMIT_RESULTFILE_NAME}-3.xml \
+             --revision 3;                                           \
 )
 
 check_status 9
@@ -175,6 +189,10 @@ echo "for commit rev4, a non-conflicting change" >> ${TEST_DIR_2}/A/mu
 
 
 ### Commit.
+### This commit should contain the following targets:
+###    A/mu
+### and should therefore be anchored at A, with targets
+### relative to that.
 echo "Committing changes for merge, from ${TEST_DIR_1}."
 (cd ${TEST_DIR_1};                                                \
  ${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-4.xml \
@@ -185,12 +203,14 @@ check_status 10
 
 
 ### Update.
+### The commit XML file was anchored at A, so update from there.
 echo "Updating ${TEST_DIR_2}, merging changes from ${TEST_DIR_1}."
-(cd ${TEST_DIR_2};                                                \
- ${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_NAME}-4.xml \
-             --revision 4;                                        \
+(cd ${TEST_DIR_2}/A;                                                 \
+ ${SVN_PROG} update --xml-file ../../${COMMIT_RESULTFILE_NAME}-4.xml \
+             --revision 4;                                           \
 )
 
 check_status 11
 
 exit 0
+

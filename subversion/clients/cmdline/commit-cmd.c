@@ -542,8 +542,6 @@ svn_cl__commit (apr_getopt_t *os,
   svn_stringbuf_t *message;
   svn_stringbuf_t *base_dir;
   svn_stringbuf_t *cur_dir;
-  svn_stringbuf_t *remainder;
-  svn_stringbuf_t *trace_dir;
   const svn_delta_editor_t *trace_editor;
   void *trace_edit_baton;
   svn_client_auth_baton_t *auth_baton;
@@ -586,17 +584,6 @@ svn_cl__commit (apr_getopt_t *os,
       if (basename)
         svn_stringbuf_set (base_dir, parent_dir->data);
     }
-
-  /* ...so we can have a common parent path to pass to the trace
-     editor.  Note that what we are actually passing here is the
-     difference between the absolute path of the current working
-     directory and the absolute path of the common parent directory
-     used in the commit (if there is a concise difference). */
-  remainder = svn_path_is_child (cur_dir, base_dir, pool);
-  if (remainder)
-    trace_dir = remainder;
-  else
-    trace_dir = base_dir;
 
   while (NULL == message)
     {
@@ -665,7 +652,7 @@ svn_cl__commit (apr_getopt_t *os,
 
   SVN_ERR (svn_cl__get_trace_commit_editor (&trace_editor,
                                             &trace_edit_baton,
-                                            trace_dir,
+                                            NULL,
                                             pool));
 
   /* Get revnum set to something meaningful, to cover the xml case. */

@@ -142,7 +142,7 @@ svn_client_update (const svn_delta_editor_t *before_editor,
 
       /* Open an RA session for the URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                            TRUE, TRUE, TRUE, 
+                                            NULL, TRUE, TRUE, TRUE, 
                                             auth_baton, pool));
 
       /* ### todo: shouldn't svn_client__get_revision_number be able

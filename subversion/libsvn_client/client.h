@@ -87,6 +87,10 @@ typedef struct
   /* Record whether we should store the user/pass into the WC */
   svn_boolean_t do_store;
 
+  /* An array of svn_client_commit_item_t * structures, present only
+     during working copy commits. */
+  apr_array_header_t *commit_items;
+
   /* The pool to use for session-related items. */
   apr_pool_t *pool;
 
@@ -96,9 +100,12 @@ typedef struct
 /* Open an RA session, returning the session baton in SESSION_BATON. The
    RA library to use is specified by RA_LIB.
 
-   The root of the session is specified by REPOS_URL and BASE_DIR.
+   The root of the session is specified by BASE_URL and BASE_DIR.
 
    Additional control parameters:
+
+      - COMMIT_ITEMS is an array of svn_client_commit_item_t *
+        structures, present only for working copy commits, NULL otherwise.
 
       - DO_STORE indicates whether the RA layer should attempt to
         store authentication info.
@@ -117,12 +124,13 @@ typedef struct
    and allocations related to this session are performed in POOL.  */
 svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            const svn_ra_plugin_t *ra_lib,
-                                           svn_stringbuf_t *repos_URL,
+                                           svn_stringbuf_t *base_url,
                                            svn_stringbuf_t *base_dir,
+                                           apr_array_header_t *commit_items,
                                            svn_boolean_t do_store,
                                            svn_boolean_t use_admin,
                                            svn_boolean_t read_only_wc,
-                                           void *auth_baton,
+                                           svn_client_auth_baton_t *auth_baton,
                                            apr_pool_t *pool);
 
 
@@ -346,21 +354,19 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
 
 
 /* Commit the items in the COMMIT_ITEMS array using EDITOR/EDIT_BATON
-   to describe the committed local mods.
-
-   WC_COMMIT tells the RA layer whether or not this is a commit of the
-   working copy.  That is, whether the working copy is expected to be
-   modified as a result of the commit.
+   to describe the committed local mods.  Prior to this call,
+   COMMIT_ITEMS should have been run through (and BASE_URL generated
+   by) svn_client__condense_commit_items.
 
    REVNUM_FN/REV_BATON allows this routine to query the repository for
    the latest revision.  It is used (temporarily) for checking that
    directories are "up-to-date" when a dir-propchange is discovered.
    We don't expect it to be here forever.  :-)  */
 svn_error_t *
-svn_client__do_commit (apr_array_header_t *commit_items,
+svn_client__do_commit (svn_stringbuf_t *base_url,
+                       apr_array_header_t *commit_items,
                        const svn_delta_editor_t *editor,
                        void *edit_baton,
-                       svn_boolean_t wc_commit,
                        const svn_ra_get_latest_revnum_func_t *revnum_fn,
                        void *rev_baton,
                        apr_pool_t *pool);

@@ -65,8 +65,8 @@ typedef struct
   const char *url;
   const char *vsn_url;
   const char *wr_url;
-
   const char *local_path;
+
 } resource_t;
 
 typedef struct
@@ -77,14 +77,9 @@ typedef struct
   /* ### resources may not be needed */
   apr_hash_t *resources;        /* URL (const char *) -> RESOURCE_T */
 
-  /* items that have been deleted */
-  /* ### not sure if this "deleted" thing is Goodness */
-  apr_array_header_t *deleted;
-
   apr_hash_t *valid_targets;
   svn_ra_get_wc_prop_func_t get_func;
   svn_ra_set_wc_prop_func_t set_func;
-  svn_ra_close_commit_func_t close_func;
   void *close_baton;
 
   /* The (potential) author of this commit. */
@@ -555,6 +550,17 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   return NULL;
 }
 
+
+static void
+add_valid_target (commit_ctx_t *cc,
+                  const char *path,
+                  enum svn_recurse_kind kind)
+{
+  apr_hash_t *hash = cc->valid_targets;
+  apr_hash_set (hash, path, APR_HASH_KEY_STRING, &kind);
+}
+
+
 static svn_error_t * commit_open_root(void *edit_baton,
                                       svn_revnum_t base_revision,
                                       apr_pool_t *dir_pool,
@@ -618,10 +624,9 @@ static svn_error_t * commit_delete_entry(const char *path,
                                "Could not DELETE %s", child);
     }
 
-  /* duplicate the path into ras->pool for the proper lifetime */
-  *(const char **)apr_array_push(parent->cc->deleted) =
-    apr_pstrdup(parent->cc->ras->pool, path);
-
+  /* Add this path to the valid targets hash. */
+  add_valid_target (parent->cc, path, svn_nonrecursive);
+  
   return NULL;
 }
 
@@ -702,6 +707,10 @@ static svn_error_t * commit_add_dir(const char *path,
         }
     }
 
+  /* Add this path to the valid targets hash. */
+  add_valid_target (parent->cc, path, 
+                    copyfrom_path ? svn_recursive : svn_nonrecursive);
+
   *child_baton = child;
   return NULL;
 }
@@ -747,6 +756,9 @@ static svn_error_t * commit_change_dir_prop(void *dir_baton,
 
   /* do the CHECKOUT sooner rather than later */
   SVN_ERR( checkout_resource(dir->cc, dir->rsrc) );
+
+  /* Add this path to the valid targets hash. */
+  add_valid_target (dir->cc, dir->rsrc->local_path, svn_nonrecursive);
 
   return NULL;
 }
@@ -840,6 +852,9 @@ static svn_error_t * commit_add_file(const char *path,
                                            msg, status, file_pool);
         }
     }
+
+  /* Add this path to the valid targets hash. */
+  add_valid_target (parent->cc, path, svn_nonrecursive);
 
   /* return the file_baton */
   *file_baton = file;
@@ -987,6 +1002,9 @@ commit_apply_txdelta(void *file_baton,
 
   svn_txdelta_to_svndiff(stream, subpool, handler, handler_baton);
 
+  /* Add this path to the valid targets hash. */
+  add_valid_target (file->cc, file->rsrc->local_path, svn_nonrecursive);
+
   return NULL;
 }
 
@@ -1003,6 +1021,9 @@ static svn_error_t * commit_change_file_prop(void *file_baton,
 
   /* do the CHECKOUT sooner rather than later */
   SVN_ERR( checkout_resource(file->cc, file->rsrc) );
+
+  /* Add this path to the valid targets hash. */
+  add_valid_target (file->cc, file->rsrc->local_path, svn_nonrecursive);
 
   return NULL;
 }
@@ -1031,10 +1052,6 @@ static svn_error_t * commit_close_edit(void *edit_baton)
                                       cc->ras->root.path,
                                       cc->activity_url,
                                       cc->valid_targets,
-                                      cc->set_func,
-                                      cc->close_func,
-                                      cc->close_baton,
-                                      cc->deleted,
                                       cc->ras->pool) );
 
   SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras) );
@@ -1100,17 +1117,8 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_stringbuf_t *log_msg)
 {
   svn_ra_session_t *ras = session_baton;
-
-  /* The main commit editor and its baton. */
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
-
-  /* The editor we return will be composed with a tracking editor,
-     which will keep track of which targets should get their revisions
-     and wcprops set after the commit.  Thus we avoid overzealously
-     bumping directories on commit. */
-  const svn_delta_editor_t *tracking_editor;
-  void *tracking_baton;
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(ras->pool, sizeof(*cc));
@@ -1119,14 +1127,11 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc->valid_targets = apr_hash_make(ras->pool);
   cc->get_func = ras->callbacks->get_wc_prop;
   cc->set_func = ras->callbacks->set_wc_prop;
-  cc->close_func = ras->callbacks->close_commit;
   cc->close_baton = ras->callback_baton;
   cc->log_msg = log_msg;
   cc->new_rev = new_rev;
   cc->committed_date = committed_date;
   cc->committed_author = committed_author;
-
-  cc->deleted = apr_array_make(ras->pool, 10, sizeof(const char *));
 
   /* ### should we perform an OPTIONS to validate the server we're about
      ### to talk to? */
@@ -1165,22 +1170,9 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   commit_editor->close_file = commit_close_file;
   commit_editor->close_edit = commit_close_edit;
 
-  /* Get the tracking editor. */
-  SVN_ERR( svn_delta_get_commit_track_editor(&tracking_editor,
-                                             &tracking_baton,
-                                             ras->pool,
-                                             cc->valid_targets,
-                                             SVN_INVALID_REVNUM,
-                                             NULL,
-                                             NULL) );
-
-  /* Compose the two editors, returning the composition by reference. */
-  svn_delta_compose_editors(editor, edit_baton,
-                            tracking_editor, tracking_baton,
-                            commit_editor, cc,
-                            ras->pool);
-
-  return NULL;
+  *editor = commit_editor;
+  *edit_baton = cc;
+  return SVN_NO_ERROR;
 }
 
 

@@ -124,11 +124,11 @@ harvest_committables (apr_hash_t *committables,
   svn_stringbuf_t *p_path = svn_stringbuf_dup (path, pool);
   svn_boolean_t tconflict, pconflict;
 
-  /* Make P_PATH the parent dir. */
-  svn_path_remove_component (p_path);
-
   assert (entry);
   assert (url);
+
+  /* Make P_PATH the parent dir. */
+  svn_path_remove_component (p_path);
 
   /* Return error on unknown path kinds. */
   if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
@@ -140,7 +140,7 @@ harvest_committables (apr_hash_t *committables,
     { 
       /* ... then try to read its own entries file so we have a full
          entry for it (we were going to have to do this eventually to
-         recurse, so... ) */
+         recurse anyway, so... ) */
       svn_wc_entry_t *e;
 
       if (SVN_NO_ERROR == svn_wc_entries_read (&entries, path, subpool))
@@ -175,7 +175,7 @@ harvest_committables (apr_hash_t *committables,
     }
 
   /* Check for the trivial addition case.  Adds can be explicit
-     (schedule==add) or import (schedule==replace==delete+add).  We
+     (schedule==add) or implicit (schedule==replace==delete+add).  We
      also note whether or not this is an add with history here.  */
   if ((entry->schedule == svn_wc_schedule_add)
       || (entry->schedule == svn_wc_schedule_replace))
@@ -387,7 +387,7 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
 {
   apr_array_header_t *ci = commit_items; /* convenience */
   svn_stringbuf_t *url;
-  svn_client_commit_item_t *item;
+  svn_client_commit_item_t *item, *last_item = NULL;
   int i;
   
   assert (ci && ci->nelts);
@@ -397,11 +397,17 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
          ci->elt_size, svn_client__sort_commit_item_urls);
 
   /* Loop through the URLs, finding the longest usable ancestor common
-     to all of them.  */
+     to all of them, and making sure there are no duplicate URLs.  */
   for (i = 0; i < ci->nelts; i++)
     {
       item = (((svn_client_commit_item_t **) ci->elts)[i]);
       url = item->url;
+
+      if ((last_item) && (svn_stringbuf_compare (last_item->url, url)))
+        return svn_error_createf 
+          (SVN_ERR_CLIENT_DUPLICATE_COMMIT_URL, 0, NULL, pool,
+           "Cannot commit both `%s' and `%s' as they refer to the same URL.",
+           item->path->data, last_item->path->data);
 
       /* In the first iteration, our BASE_URL is just are only
          encountered commit URL to date.  After that, we find the
@@ -423,6 +429,9 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
           && (! ((item->entry->kind == svn_node_dir)
                  && item->state_flags == SVN_CLIENT_COMMIT_ITEM_PROP_MODS)))
         svn_path_remove_component (*base_url);
+
+      /* Stash our item here for the next iteration. */
+      last_item = item;
     }
   
   /* Now that we've settled on a *BASE_URL, go hack that base off
@@ -445,6 +454,7 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
         }
     }
 
+#if 0
   /* ### TEMPORARY CODE ### */
   printf ("COMMITTABLES: (base url=%s)\n", (*base_url)->data);
   for (i = 0; i < ci->nelts; i++)
@@ -452,6 +462,7 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
       url = (((svn_client_commit_item_t **) ci->elts)[i])->url;
       printf ("   %s\n", url->data ? url->data : "");
     }  
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -664,35 +675,39 @@ do_item_commit (const char *url,
 }
 
 
-
+#if 0
 /* Prototype for function below */
 static svn_error_t *get_test_editor (const svn_delta_editor_t **editor,
                                      void **edit_baton,
                                      const char *base_url,
                                      apr_pool_t *pool);
-
+#endif /* 0 */
 
 svn_error_t *
-svn_client__do_commit (apr_array_header_t *commit_items,
+svn_client__do_commit (svn_stringbuf_t *base_url,
+                       apr_array_header_t *commit_items,
                        const svn_delta_editor_t *editor,
                        void *edit_baton,
-                       svn_boolean_t wc_commit,
                        const svn_ra_get_latest_revnum_func_t *revnum_fn,
                        void *rev_baton,
                        apr_pool_t *pool)
 {
-  svn_stringbuf_t *base_url;
   apr_array_header_t *db_stack;
   apr_array_header_t *file_mods 
     = apr_array_make (pool, 1, sizeof (struct file_mod_t));
   int i, stack_ptr = 0;
 
-  /* Sort and condense our COMMIT_ITEMS. */
-  SVN_ERR (svn_client__condense_commit_items (&base_url, commit_items, pool));
-
-  /* ### TEMPORARY ### */
-  /* Editor?  Editor who?  We'll use our own testing editor for now. */
-  SVN_ERR (get_test_editor (&editor, &edit_baton, base_url->data, pool));
+#if 0 /* ### TEMPORARY ### */
+  {
+    const svn_delta_editor_t *test_editor;
+    void *test_edit_baton;
+    SVN_ERR (get_test_editor (&test_editor, &test_edit_baton, 
+                              base_url->data, pool));
+    svn_delta_compose_editors (&editor, &edit_baton,
+                               editor, edit_baton,
+                               test_editor, test_edit_baton, pool);
+  }
+#endif /* 0 */
 
   /* We start by opening the root. */
   SVN_ERR (init_stack (&db_stack, &stack_ptr, editor, edit_baton, pool));
@@ -724,7 +739,8 @@ svn_client__do_commit (apr_array_header_t *commit_items,
            the current item).  ***/
       if ((i > 0) && (last_url->len > common->len))
         {
-          int count = count_components (last_url->data + common->len + 1);
+          char *rel = last_url->data + (common->len ? (common->len + 1) : 0);
+          int count = count_components (rel);
           while (count--)
             {
               SVN_ERR (pop_stack (db_stack, &stack_ptr, editor));
@@ -789,7 +805,6 @@ svn_client__do_commit (apr_array_header_t *commit_items,
       svn_client_commit_item_t *item = mod->item;
       void *file_baton = mod->file_baton;
 
-      printf ("   Sending : %s\n", item->url->data);
       SVN_ERR (svn_wc_transmit_text_deltas 
                (item->path, item->entry, editor, file_baton, pool));
     }
@@ -800,7 +815,7 @@ svn_client__do_commit (apr_array_header_t *commit_items,
 }
 
 
-
+#if 0
 
 /*** Temporary test editor ***/
 
@@ -931,6 +946,7 @@ get_test_editor (const svn_delta_editor_t **editor,
   *edit_baton = eb;
   return SVN_NO_ERROR;
 }
+#endif /* 0 */
   
 
 /* 

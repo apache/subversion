@@ -37,7 +37,6 @@ extern "C" {
 
 /* Misc. declarations */
 
-
 /* This is a function type which allows the RA layer to fetch working
    copy (WC) properties.
 
@@ -66,40 +65,15 @@ typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *baton,
    The VALUE is the value that will be stored for the property.
 */
 typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *baton,
-                                                   const char *relpath,
+                                                   const char *path,
                                                    const char *name,
                                                    const svn_string_t *value,
                                                    apr_pool_t *pool);
-
-/* Function type for post-commit processing.  PATH is the path that
-   was committed, relative to the start of the commit edit (see
-   get_commit_editor in svn_ra_plugin_t).  NEW_REV is the revision
-   number resulting from the commit, REV_DATE is the server-side date
-   of the commit, REV_AUTHOR is the svn (i.e., server-authenticated)
-   name of the committer.
-
-   If RECURSE is set and PATH is a directory, then do post-commit
-   processing on all versioned objects at or under PATH.  This is
-   usually done for newly added trees.
-
-   Typically, the client layer supplies this routine to an RA layer,
-   which calls this routine on each PATH that was committed, allowing
-   the client to bump revision numbers, possibly recursively.
-*/
-typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *baton,
-                                                    svn_stringbuf_t *relpath,
-                                                    svn_boolean_t recurse,
-                                                    svn_revnum_t new_rev,
-                                                    const char *rev_date,
-                                                    const char *rev_author,
-                                                    apr_pool_t *pool);
 
 /* A function type for retrieving the youngest revision from a repos.   */
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t) 
        (void *session_baton,
         svn_revnum_t *latest_revnum);
-
-
 
 /*----------------------------------------------------------------------*/
 
@@ -246,9 +220,6 @@ typedef struct svn_ra_callbacks_t
 
   /* Set working copy properties. */
   svn_ra_set_wc_prop_func_t set_wc_prop;
-
-  /* Perform post-commit activity. */
-  svn_ra_close_commit_func_t close_commit;
 
 } svn_ra_callbacks_t;
 
