@@ -145,16 +145,18 @@ XML_validation_error (apr_pool_t *pool,
    FRAME and examining parents, so it is important that frame has
    _already_ been linked into the digger's stack. */
 static void
-maybe_derive_ancestry (svn_xml__stackframe_t *dest_frame, apr_pool_t *pool)
+maybe_derive_ancestry (svn_xml__digger_t *digger,
+                       svn_xml__stackframe_t *frame,
+                       apr_pool_t *pool)
 {
-  if ((dest_frame->tag != svn_delta__XML_dir) 
-      && (dest_frame->tag != svn_delta__XML_file))
+  if ((frame->tag != svn_delta__XML_dir) 
+      && (frame->tag != svn_delta__XML_file))
     {
       /* This is not the kind of frame that needs ancestry information. */
       return;
     }
-  else if (dest_frame->ancestor_path
-           && (dest_frame->ancestor_version >= 0))
+  else if (frame->ancestor_path
+           && (frame->ancestor_version >= 0))
     {
       /* It is the kind of frame that needs ancestry information, but
          all its ancestry information is already set. */
@@ -162,7 +164,7 @@ maybe_derive_ancestry (svn_xml__stackframe_t *dest_frame, apr_pool_t *pool)
     }
   else
     {
-      svn_xml__stackframe_t *p = dest_frame->previous;
+      svn_xml__stackframe_t *p = frame->previous;
       svn_string_t *this_name = NULL;
 
       while (p)
@@ -172,7 +174,7 @@ maybe_derive_ancestry (svn_xml__stackframe_t *dest_frame, apr_pool_t *pool)
           if ((! this_name) && p->name)
             this_name = p->name;
 
-          if (p->ancestor_path && (! dest_frame->ancestor_path))
+          if (p->ancestor_path && (! frame->ancestor_path))
             {
               /* Why are we setting derived_ancestry_path according to
                * the nearest previous ancestor_path, instead of
@@ -198,19 +200,19 @@ maybe_derive_ancestry (svn_xml__stackframe_t *dest_frame, apr_pool_t *pool)
                * under that change.
                */
 
-              dest_frame->ancestor_path
+              frame->ancestor_path
                 = svn_string_dup (p->ancestor_path, pool);
-              svn_path_add_component (dest_frame->ancestor_path, this_name,
+              svn_path_add_component (frame->ancestor_path, this_name,
                                       SVN_PATH_REPOS_STYLE, pool);
             }
 
           /* If ancestor_version not set, and see it here, then set it. */
-          if ((dest_frame->ancestor_version < 0) && (p->ancestor_version >= 0))
-            dest_frame->ancestor_version = p->ancestor_version;
+          if ((frame->ancestor_version < 0) && (p->ancestor_version >= 0))
+            frame->ancestor_version = p->ancestor_version;
 
           /* If we have all the ancestry information we need, then
              stop the search. */
-          if ((dest_frame->ancestor_version >= 0) && dest_frame->ancestor_path)
+          if ((frame->ancestor_version >= 0) && frame->ancestor_path)
             break;
 
           /* Else, keep searching. */
@@ -397,7 +399,7 @@ do_stack_append (svn_xml__digger_t *digger,
   new_frame->previous = youngest_frame;
 
   /* Set up any unset ancestry information. */
-  maybe_derive_ancestry (new_frame, pool);
+  maybe_derive_ancestry (digger, new_frame, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1252,6 +1254,7 @@ svn_make_xml_parser (const svn_delta_edit_fns_t *editor,
   digger->base_path        = base_path;
   digger->base_version     = base_version;
   digger->edit_baton       = edit_baton;
+  digger->rootdir_baton    = dir_baton;
   digger->dir_baton        = dir_baton;
   digger->validation_error = SVN_NO_ERROR;
   digger->vcdiff_parser    = NULL;
@@ -1320,6 +1323,16 @@ svn_xml_parsebytes (char *buffer, apr_off_t len, int isFinal,
       /* Kill the expat parser and return its error */
       XML_ParserFree (expat_parser);      
       return err;
+    }
+
+  if (isFinal && svn_xml_parser->digger->editor->finish_edit)
+    {
+      err = (* (svn_xml_parser->digger->editor->finish_edit))
+        (svn_xml_parser->digger->edit_baton,
+         svn_xml_parser->digger->rootdir_baton);
+
+      if (err)
+        return err;        
     }
   
   /* After parsing our chunk, check to see if any editor callback did
