@@ -157,35 +157,35 @@ msgstr "Revisjon: %ld\n"
 
 #: clients/cmdline/info-cmd.c:85
 msgid "Node Kind: file\n"
-msgstr "Nodetype: fil\n"
+msgstr "Nodetype: Fil\n"
 
 #: clients/cmdline/info-cmd.c:95
 msgid "Node Kind: directory\n"
-msgstr "Nodetype: katalog\n"
+msgstr "Nodetype: Katalog\n"
 
 #: clients/cmdline/info-cmd.c:101
 msgid "Node Kind: none\n"
-msgstr "Nodetype: ingen\n"
+msgstr "Nodetype: Ingen\n"
 
 #: clients/cmdline/info-cmd.c:106
 msgid "Node Kind: unknown\n"
-msgstr "Nodetype: ukjent\n"
+msgstr "Nodetype: Ukjent\n"
 
 #: clients/cmdline/info-cmd.c:113
 msgid "Schedule: normal\n"
-msgstr "Oppgave: normal\n"
+msgstr "Oppgave: Normal\n"
 
 #: clients/cmdline/info-cmd.c:117
 msgid "Schedule: add\n"
-msgstr "Oppgave: legg til\n"
+msgstr "Oppgave: Legg til\n"
 
 #: clients/cmdline/info-cmd.c:121
 msgid "Schedule: delete\n"
-msgstr "Oppgave: slett\n"
+msgstr "Oppgave: Slett\n"
 
 #: clients/cmdline/info-cmd.c:125
 msgid "Schedule: replace\n"
-msgstr "Oppgave: erstatt\n"
+msgstr "Oppgave: Erstatt\n"
 
 #: clients/cmdline/info-cmd.c:135
 #, c-format
@@ -5225,7 +5225,7 @@ msgid ""
 msgstr ""
 "bruk: svnlook cat DEPOTSTI FILSTI\n"
 "\n"
-"Viser innholdet i en fil.  ledende '/' på FILSTI er valgfritt.\n"
+"Viser innholdet i en fil. Innledende '/' på FILSTI er valgfri.\n"
 
 #: svnlook/main.c:133
 msgid ""
@@ -5288,7 +5288,7 @@ msgid ""
 msgstr ""
 "bruk: svnlook history DEPOTSTI [STI_I_DEPOT]\n"
 "\n"
-"Skriv ut informasjon om historien til en filsti i depotet (eller "
+"Skriv ut informasjon om historien til en filsti i depotet (eller\n"
 "rotkatalogen hvis filstien er utelatt).\n"
 
 #: svnlook/main.c:165
