@@ -502,6 +502,138 @@ svn_path_is_single_path_component (svn_stringbuf_t *path,
 }
 
 
+
+/*** URI Stuff ***/
+
+/* Here is the BNF for path components in a URI. "pchar" is a
+   character in a path component.
+
+      pchar       = unreserved | escaped | 
+                    ":" | "@" | "&" | "=" | "+" | "$" | ","
+      unreserved  = alphanum | mark
+      mark        = "-" | "_" | "." | "!" | "~" | "*" | "'" | "(" | ")"
+
+   Note that "escaped" doesn't really apply to what users can put in
+   their paths, so that really means the set of characters is:
+
+      alphanum | mark | ":" | "@" | "&" | "=" | "+" | "$" | "," 
+*/
+static svn_boolean_t
+char_is_uri_safe (const unsigned char c)
+{
+  unsigned char other[18] = "/:.-_!~'()@=+$,&*"; /* sorted by estimated use? */
+  int i;
+
+  /* Is this an alphanumeric character? */
+  if (((c >= 'A') && (c <='Z'))
+      || ((c >= 'a') && (c <='z'))
+      || ((c >= '0') && (c <='9')))
+    return TRUE;
+
+  /* Is this a supported non-alphanumeric character? */
+  for (i = 0; i < sizeof (other); i++)
+    {
+      if (c == other[i])
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
+
+svn_boolean_t 
+svn_path_is_uri_safe (const svn_stringbuf_t *path)
+{
+  int i;
+
+  for (i = 0; i < path->len; i++)
+    {
+      if (! char_is_uri_safe (path->data[i]))
+        return FALSE;
+    }
+
+  return TRUE;
+}
+  
+
+svn_stringbuf_t *
+svn_path_uri_encode (const svn_stringbuf_t *path, apr_pool_t *pool)
+{
+  svn_stringbuf_t *retstr;
+  int i;
+  int copied = 0;
+  unsigned char c;
+
+  if ((! path) || (! path->data))
+    return NULL;
+
+  retstr = svn_stringbuf_create ("", pool);
+  for (i = 0; i < path->len; i++)
+    {
+      c = path->data[i];
+      if (char_is_uri_safe (c))
+        continue;
+
+      /* If we got here, we're looking at a character that isn't
+         supported by the (or at least, our) URI encoding scheme.  We
+         need to escape this character.  */
+
+      /* First things first, copy all the good stuff that we haven't
+         yet copied into our output buffer. */
+      if (i - copied)
+        svn_stringbuf_appendbytes (retstr, path->data + copied, 
+                                   i - copied);
+      
+      /* Now, sprintf() in our escaped character, making sure our
+         buffer is big enough to hold the '%' and two digits. */
+      svn_stringbuf_ensure (retstr, retstr->len + 3);
+      sprintf (retstr->data + retstr->len, "%%%02X", c);
+      retstr->len += 3;
+
+      /* Finally, update our copy counter. */
+      copied = i + 1;
+    }
+
+  /* Anything left to copy? */
+  if (i - copied)
+    svn_stringbuf_appendbytes (retstr, path->data + copied, i - copied);
+
+  return retstr;
+}
+
+
+svn_stringbuf_t *
+svn_path_uri_decode (const svn_stringbuf_t *path, apr_pool_t *pool)
+{
+  svn_stringbuf_t *retstr;
+  int i;
+  unsigned char c;
+
+  if ((! path) || (! path->data))
+    return NULL;
+
+  retstr = svn_stringbuf_create ("", pool);
+  svn_stringbuf_ensure (retstr, path->len);
+  for (i = 0; i < path->len; i++)
+    {
+      c = path->data[i];
+      if (c == '+') /* _encode() doesn't do this, but it's easy...whatever. */
+        c = ' ';
+      else if (c == '%')
+        {
+          unsigned char digitz[3];
+          digitz[0] = path->data[++i];
+          digitz[1] = path->data[++i];
+          digitz[2] = '\0';
+          c = (unsigned char)(strtol (digitz, NULL, 16));
+        }
+
+      retstr->data[retstr->len++] = c;
+    }
+
+  return retstr;
+}
+
 
 
 /* 

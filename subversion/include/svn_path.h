@@ -253,10 +253,22 @@ apr_array_header_t *svn_path_decompose (const svn_stringbuf_t *path,
    If not, return NULL.
    If so, return the "remainder" path.  (The substring which, when
    appended to PATH1, yields PATH2 -- minus the dirseparator. ) */
-svn_stringbuf_t * svn_path_is_child (const svn_stringbuf_t *path1,
-                                  const svn_stringbuf_t *path2,
-                                  enum svn_path_style style,
-                                  apr_pool_t *pool);
+svn_stringbuf_t *svn_path_is_child (const svn_stringbuf_t *path1,
+                                    const svn_stringbuf_t *path2,
+                                    enum svn_path_style style,
+                                    apr_pool_t *pool);
+
+
+/* Return TRUE if PATH is URI-safe, FALSE otherwise. */
+svn_boolean_t svn_path_is_uri_safe (const svn_stringbuf_t *path);
+
+/* Return a URI-encoded copy of PATH, allocated in POOL. */
+svn_stringbuf_t *svn_path_uri_encode (const svn_stringbuf_t *path,
+                                      apr_pool_t *pool);
+
+/* Return a URI-decoded copy of PATH, allocated in POOL. */
+svn_stringbuf_t *svn_path_uri_decode (const svn_stringbuf_t *path,
+                                      apr_pool_t *pool);
 
 
 #endif /* SVN_PATH_H */
