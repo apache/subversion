@@ -12,7 +12,7 @@
     belongs to CollabNet.</a></li> 
 <li><a href="#stable">Is Subversion stable enough for me to use for my
     own projects?</a></li>
-<li><a href="#interop">What is Subversion's pre-1.0 interoperability
+<li><a href="#interop">What is Subversion's client/server interoperability
     policy?</a></li>
 <li><a href="#portability">What operating systems does Subversion run
     on?</a></li> 
@@ -168,68 +168,35 @@ CollabNet or anyone else is required.</p>
 <h3><a name="stable">Is Subversion stable enough for me to use for my
 own projects?</a></h3>
 
-<p><b>We think so!</b> Subversion has small bugs here and there, but
-is more than reliable enough for real use.  If it were any other
-project, it probably would have been declared "1.0" long ago; but
-because it's version-control software, we're being extra paranoid
-about labeling.</b></p>
+<p>Yes, absolutely.  It's ready for prime-time production.</p>
 
-<ul>
-
-<li>We believe that Subversion is stable and have confidence in our
-code, in fact, we've been self-hosting since September of 2001--eating
-our own caviar so to speak. We declared "beta" because we're ready for
-the world to try Subversion.</li>
-
-<li>After over two years of self-hosting, we haven't lost any data
-at all.</li>
-
-<li>Lots of people are already using Subversion in production,
-and are having great results.  See the <a href="svn-repositories.html">svn
-repositories</a> list for just a few examples.</li>
-
-<li>The repository db schema is stable now and it is extremely
-unlikely that it will undergo any more schema changes before 1.0.
-(See the question '<a href="#dumpload">What is this "dump/load cycle"
-people sometimes talk about when upgrading a Subversion server?</a>'
-for more about schema changes.)</li>
-
-<li>In order to make Subversion as stable as possible, we need more
-people to use Subversion. If you use Subversion on a day-to-day basis,
-you can help us find and fix any bugs that might turn up.</li>
-
-<li>For many more reasons, read the feature list on the <a
-href="http://subversion.tigris.org/">Subversion home page</a>.
- </li>
-
-</ul>
-
-<p><font color="red"><b>WARNING</b></font>: while Subversion is
-definitely <i>reliable</i>, the API and protocols still change from
-release to release, so it would be wrong to say it is <i>stable</i>.
-That's why it's still Beta sofware.  This means that if you depend on
-Subversion, you should <b>not</b> be using whatever binary packages
-ship in your distribution, they are most likely months old, and will
-no longer interoperate with modern clients or servers.  The developers
-release every month or so, and won't accept bug reports on old releases!</p>
-
-<p>What does this mean to you?  It means that if you depend on
-Subversion before it hits 1.0, you should <b>always</b> use the latest
-release, even if it means building from source.  This requires
-diligence: subscribe to the dev list, notice when new releases come
-out, and upgrade.  If you don't do this, you may (one day)
-accidentally discover that your clients and servers no longer
-<a href="#interop">interoperate.</a></p>
+<p>Subversion has been in development since 2000, and became
+self-hosting after one year.  A year later when we declared "alpha",
+Subversion was already being used by dozens of private developers and
+shops for real work.  After that, it was two more years of bugfixing
+and stabilization until we reached 1.0.  Most other projects probably
+would have called the product "1.0" much earlier, but we deliberately
+decided to delay that label as long as possible.  We were aware that
+many people were waiting for a 1.0 before using Subversion, and had
+very specific expectations about the meaning of that label. So we
+stuck to that same standard.</p>
 
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3><a name="interop">What is Subversion's pre-1.0 interoperability
-    policy?</h3>
+<h3><a name="interop">What is Subversion's client/server
+    interoperability policy?</h3>
 
-<p>The client and server are designed to work as long as they aren't
- more than one major release version apart.  (For example, a 0.25.X 
- client will talk to a 0.24.X or 0.26.X server.)</p>
+<p>For pre-1.0 releases of Subversion (which you shouldn't be using
+ anymore!), the client and server are designed to work as long as they
+ aren't more than one major release version apart.  (For example, a
+ 0.25.X client will talk to a 0.24.X or 0.26.X server.)</p>
+
+<p>Now that Subversion is beyond the 1.0 milestone, client/server
+ interoperability policy is documented in the "Compatibility" section
+ of the <a
+ href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING
+ file</a>.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -392,6 +359,10 @@ import data into it?</a></h3>
 href="http://svn.collab.net/repos/svn/trunk/README">
 http://svn.collab.net/repos/svn/trunk/README</a>;  specifically, look
 at section IV, the "Quickstart Guide".</p>
+
+<p>For even more detail, read chapter 5 in <a
+ href="http://svnbook.red-bean.com">The Subversion Book</a>.</p>
+
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -675,10 +646,12 @@ equivalent to CVS modules:
   
 <h3><a name="nfs">Should I store my repository on a NFS server?</a></h3>
 
-<p>In general, no.  Berkeley DB does not <a
-href="http://www.sleepycat.com/docs/ref/env/remote.html">support storage of
-databases on remote file systems</a>.  Some NFS servers claim that they
-explicitly support use of BDB on NFS-mounted partitions.  Caveat emptor.</p>
+<p>No, don't ever do that.  Berkeley DB does not <a
+href="http://www.sleepycat.com/docs/ref/env/remote.html">support
+storage of databases on remote file systems</a>.  Some NFS servers
+claim that they explicitly support use of BDB on NFS-mounted
+partitions, but we've only ever seen BDB databases get corrupted when
+living on an NFS or SMB network drive.</p>
 
 <p>A working copy, however, <b>can</b> be stored on a NFS server (i.e.
 your home directory is on a NFS server).  On Linux NFS servers, due to the
@@ -789,7 +762,9 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=516">issue
 
 <p>In the meantime, your only recourse is to <b>svnadmin dump</b> your
 repository, then pipe the dumpfile through <b>svndumpfilter</b>
-(excluding the bad path) into an <b>svnadmin load</b> command.</p>
+(excluding the bad path) into an <b>svnadmin load</b> command.  See <a
+href="http://svnbook.red-bean.com/html-chunk/ch05.html">chapter 5</a>
+of the Subversion book for details about this.</p>
 
 
 <![CDATA[=========================================================]]>
@@ -1563,7 +1538,7 @@ he can check the RFC's for further information.
 <p>Throughout subversion's source code there are many references to
 'baton' objects.  These are just <pre>void *</pre> datastructures that
 provide context to a function.  In other APIs, they're often called
-<pre>void *ctx</pre> or <pre>void *userdata</pre>.  Subversion
+<pre>void *ctx</pre> or <pre>void *userdata</pre>  Subversion
 developers call the structures "batons" because they're passed around
 quite a bit.</p>
 
