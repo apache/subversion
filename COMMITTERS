@@ -53,7 +53,7 @@ Commit access for specific areas:
            nsd   Nick Duffek <nick@duffek.com>               (doc)
        fmatias   Féliciano Matias <feliciano.matias@free.fr> (doc: fr)
       dimentiy   Dmitriy O. Popkov <dimentiy@dimentiy.info>  (doc: ru)
-        xsteve   Stefan Reichör <reichoer@web.de>            (psvn)
+        xsteve   Stefan Reichör <stefan@xsteve.at>           (psvn)
       josander   Jostein Andersen <jostein@josander.net>     (various)
       ballbach   Michael Ballbach <ballbach@rten.net>        (packages)
       niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
