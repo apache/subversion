@@ -159,21 +159,6 @@ svn_repos_update (svn_fs_root_t *target_root,
   svn_fs_id_t *target_id;
   int distance;
 
-  /* The Supertrivial case: we have no SOURCE_ENTRY.  Just deltify,
-     anchored at parent (which is known to be a directory). */
-  if ((! entry) || (! entry->len))
-    {
-      return (svn_repos_dir_delta 
-              (source_root,
-               parent_dir,
-               source_rev_diffs,
-               target_root,
-               parent_dir,
-               editor,
-               edit_baton,
-               pool));
-    }
-
   /* Source parent must be valid. */
   if (! parent_dir)
     {
