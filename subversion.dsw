@@ -32,6 +32,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name subversion_client
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name svn_com
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -261,6 +264,33 @@ Package=<4>
 
 ###############################################################################
 
+Project: "svn_com"=.\subversion\clients\win32\svn_com\svn_com.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_client
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_wc
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libexpat
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "tests_libsvn_delta_deltaparse"=.\subversion\libsvn_delta\tests\deltaparse_test.dsp - Package Owner=<4>
 
 Package=<5>
@@ -336,7 +366,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_fs_skel"=.\subversion\libsvn_fs\tests\skel_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_fs_fs"=.\subversion\libsvn_fs\tests\fs_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -351,7 +381,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_fs_fs"=.\subversion\libsvn_fs\tests\fs_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_fs_skel"=.\subversion\libsvn_fs\tests\skel_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
