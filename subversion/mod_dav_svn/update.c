@@ -185,6 +185,7 @@ static void send_vsn_url(item_baton_t *baton)
 {
   const char *href;
   const char *path;
+  svn_revnum_t revision;
 
   /* when sending back vsn urls, we'll try to see what this editor
      path really points to in the repos.  if it doesn't point to
@@ -192,12 +193,13 @@ static void send_vsn_url(item_baton_t *baton)
      to something else, we'll use the path that it points to. */
   path = get_from_path_map(baton->uc->pathmap, baton->path, baton->pool);
   path = strcmp(path, baton->path) ? path : baton->path2;
+
+  /* Try to use the CR, assuming the path exists in CR. */
+  revision = dav_svn_get_safe_cr(baton->uc->rev_root, path, baton->pool);
     
   href = dav_svn_build_uri(baton->uc->resource->info->repos,
 			   DAV_SVN_BUILD_URI_VERSION,
-			   SVN_INVALID_REVNUM,
-                           baton->uc->rev_root, path,
-			   0 /* add_href */, baton->pool);
+			   revision, path, 0 /* add_href */, baton->pool);
 
   send_xml(baton->uc, 
            "<D:checked-in><D:href>%s</D:href></D:checked-in>" DEBUG_CR, 

@@ -231,7 +231,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       if (resource->type != DAV_RESOURCE_TYPE_VERSION || !resource->baselined)
         return DAV_PROP_INSERT_NOTSUPP;
       value = dav_svn_build_uri(resource->info->repos, DAV_SVN_BUILD_URI_BC,
-                                resource->info->root.rev, NULL, NULL,
+                                resource->info->root.rev, NULL,
                                 1 /* add_href */, p);
       break;
 
@@ -251,9 +251,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
               break;
             }
           s = dav_svn_build_uri(resource->info->repos,
-                                DAV_SVN_BUILD_URI_BASELINE,
-                                revnum, NULL, NULL, 
-                                0 /* add_href */, p);
+                                DAV_SVN_BUILD_URI_BASELINE, 
+                                revnum, NULL, 0 /* add_href */, p);
           value = apr_psprintf(p, "<D:href>%s</D:href>", 
                                apr_xml_quote_string(p, s, 1));
         }
@@ -264,11 +263,13 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         }
       else
         {
+          svn_revnum_t rev_to_use =
+            dav_svn_get_safe_cr(resource->info->root.root,
+                                resource->info->repos_path, p);
+
           s = dav_svn_build_uri(resource->info->repos,
                                 DAV_SVN_BUILD_URI_VERSION,
-                                SVN_INVALID_REVNUM,
-                                resource->info->root.root,
-                                resource->info->repos_path,
+                                rev_to_use, resource->info->repos_path,
                                 0 /* add_href */, p);
           value = apr_psprintf(p, "<D:href>%s</D:href>", 
                                apr_xml_quote_string(p, s, 1));
@@ -282,7 +283,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
         return DAV_PROP_INSERT_NOTSUPP;
       value = dav_svn_build_uri(resource->info->repos, DAV_SVN_BUILD_URI_VCC,
-                                SVN_IGNORED_REVNUM, NULL, NULL, 
+                                SVN_IGNORED_REVNUM, NULL, 
                                 1 /* add_href */, p);
       break;
 
