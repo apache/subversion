@@ -167,6 +167,7 @@ void apr_pool_destroy(apr_pool_t *p);
 %include svn_pools.h
 %include svn_version.h
 %include svn_time.h
+%include svn_props.h
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
    need to do it manually, before SWIG sees this in svn_io.h. */
@@ -183,6 +184,7 @@ void apr_pool_destroy(apr_pool_t *p);
 #include "svn_pools.h"
 #include "svn_version.h"
 #include "svn_time.h"
+#include "svn_props.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
