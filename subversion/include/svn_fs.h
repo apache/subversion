@@ -874,7 +874,8 @@ svn_error_t *svn_fs_is_different (int *is_different,
 
 
 /* Examine the data associated with PATH under ROOT, and offer the
-   filesystem a chance store that data in a deltified fashion.
+   filesystem a chance store that data in a deltified fashion.  ROOT
+   is a revision root.
 
    If PATH represents a directory, deltify PATH's properties and list
    of entries, and if RECURSIVE is non-zero, perform this operation
@@ -892,7 +893,7 @@ svn_error_t *svn_fs_deltify (svn_fs_root_t *root,
 
 /* Ensure that the data associated with PATH under ROOT is stored as
    fulltext (that is, in an undeltified fashion).  If this is already
-   the case, do nothing.
+   the case, do nothing.  ROOT is a revision root.
 
    If PATH represents a directory, un-deltify PATH's properties and list
    of entries, and if RECURSIVE is non-zero, perform this operation

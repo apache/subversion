@@ -5002,9 +5002,9 @@ check_root_revision (const char **msg,
 
 
 static svn_error_t *
-undeltify (const char **msg,
-           svn_boolean_t msg_only,
-           apr_pool_t *pool)
+undeltify_deltify (const char **msg,
+                   svn_boolean_t msg_only,
+                   apr_pool_t *pool)
 { 
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
@@ -5028,14 +5028,14 @@ undeltify (const char **msg,
     { "A/D/H/omega", 0 }
   };
   
-  *msg = "pound on the filesystem's explicit undeltification code";
+  *msg = "pound on the filesystem's explicit (un-)deltification code";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-undeltify", pool));
+           (&fs, "test-repo-undeltify-deltify", pool));
 
   /* Make 10 revisions. */
   while (youngest_rev < 10)
@@ -5074,34 +5074,25 @@ undeltify (const char **msg,
   while (youngest_rev)
     {
       svn_fs_root_t *rev_root;
+      apr_pool_t *iterpool;
 
       /* Get a revision root. */
       SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, subpool));
 
+      iterpool = svn_pool_create (subpool);
       for (i = 0; i < 12; i++)
         {
           svn_stringbuf_t *contents;
 
-          /* Get the file's contents, and make sure they are what we
-             expected. */
-          SVN_ERR (svn_test__get_file_contents (rev_root,
-                                                greek_files[i][0],
-                                                &contents,
-                                                subpool));
-          if (strcmp (greek_files[i][youngest_rev], contents->data))
-            return svn_error_createf
-              (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-               "undeltify: %s:%ld stored contents seem strangely wrong",
-               greek_files[i][0], youngest_rev);
-
-          /* Now, the fun part:  undeltify this file. */
-          SVN_ERR (svn_fs_undeltify (rev_root, greek_files[i][0], 0, subpool));
+          /* Undeltify this file. */
+          SVN_ERR (svn_fs_undeltify (rev_root, greek_files[i][0], 
+                                     0, iterpool));
 
           /* Now get its file contents... */
           SVN_ERR (svn_test__get_file_contents (rev_root,
                                                 greek_files[i][0],
                                                 &contents,
-                                                subpool));
+                                                iterpool));
 
           /* ...and make sure they 'check out'.  */
           if (strcmp (greek_files[i][youngest_rev], contents->data))
@@ -5109,13 +5100,37 @@ undeltify (const char **msg,
               (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
                "undeltify: %s:%ld undeltified contents seem oddly incorrect",
                greek_files[i][0], youngest_rev);
+
+          /* Now, we're going to try to re-deltify the file. */
+          SVN_ERR (svn_fs_deltify (rev_root, greek_files[i][0], 0, iterpool));
+
+          /* And again, see if its contents are all good. */
+          SVN_ERR (svn_test__get_file_contents (rev_root,
+                                                greek_files[i][0],
+                                                &contents,
+                                                iterpool));
+          if (strcmp (greek_files[i][youngest_rev], contents->data))
+            return svn_error_createf
+              (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+               "undeltify: %s:%ld re-deltified contents seem strangely wrong",
+               greek_files[i][0], youngest_rev);
+
+          /* Clear out the per-file pool. */
+          svn_pool_clear (iterpool);
         }
 
+      /* Destroy the per-file pool. */
+      svn_pool_destroy (iterpool);
+
+      /* Clear out the per-revision pool. */
       svn_pool_clear (subpool);
       youngest_rev--;
     }
+
+  /* Destroy the per-revision pool. */
   svn_pool_destroy (subpool);
 
+  /* Close the filesystem. */
   svn_fs_close_fs (fs);
   return SVN_NO_ERROR;
 }
@@ -5159,7 +5174,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   check_all_revisions,
   large_file_integrity,
   check_root_revision,
-  undeltify,
+  undeltify_deltify,
   0
 };
 
