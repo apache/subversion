@@ -62,7 +62,20 @@
 
 /*** Command dispatch. ***/
 
-/* All client command procedures conform to this prototype */
+/* All client command procedures conform to this prototype.
+
+   The main loop is responsible for creating the base apr pool.
+   It is responsible for cleaning it up, too.
+
+   For the time being, argc and argv are passed through from
+   the command line because option processing must happen within
+   the command procedure.  Once we have option descriptors for
+   each subcommand, then the main procedure (or main loop :),
+   will be able to do the option processing and simply pass an
+   argc/argv with the post-option arguments.
+
+   The error result will generally be that returned by the
+   command implementation procedures.  */
 typedef svn_error_t *(svn_cl__cmd_proc_t) (int argc, char **argv, apr_pool_t*);
 
 
@@ -80,9 +93,6 @@ typedef struct svn_cl__cmd_desc_t
      them all under one canonical name when appropriate. */
   const char *short_for;
 
-  /* Bruce: you can document this more accurately than I.  -kff */
-  svn_boolean_t fork_first;
-
   /* The function this command invokes. */
   svn_cl__cmd_proc_t *cmd_func;
 
@@ -94,6 +104,9 @@ typedef struct svn_cl__cmd_desc_t
 } svn_cl__cmd_desc_t;
 
 
+/*  These are all the command procedures we currently know about.
+    The "null" entry is simply an enumerated invalid entry that makes
+    initializations easier */
 typedef enum {
   svn_cl__null_command = 0,
   svn_cl__add_command,
@@ -107,6 +120,7 @@ typedef enum {
 } svn_cl__te_command;
 
 
+/* Declare all the command procedures */
 svn_cl__cmd_proc_t
   svn_cl__add,
   svn_cl__commit,
