@@ -946,8 +946,6 @@ ce_apply_textdelta (VALUE self)
   if (ce->file_baton == NULL)
     rb_raise (rb_eRuntimeError,
               "openFile or addFile must be called beforehand");
-  /* ### This needs to be converted to the new editor->apply_text
-     interface.  See issue #510 and its commits for details. */
   err = ce->editor->apply_textdelta (ce->file_baton->baton,
                                      &handler, &handler_baton);
   if (err)
