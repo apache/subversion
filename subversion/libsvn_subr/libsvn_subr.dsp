@@ -119,6 +119,10 @@ SOURCE=.\svn_string.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\target.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\xml.c
 # End Source File
 # End Group

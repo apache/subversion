@@ -8,12 +8,12 @@ CFG=__config__ - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "subversion_config.mak".
+!MESSAGE NMAKE /f "svn_config.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "subversion_config.mak" CFG="__config__ - Win32 Debug"
+!MESSAGE NMAKE /f "svn_config.mak" CFG="__config__ - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
@@ -62,11 +62,6 @@ MTL=midl.exe
 # Begin Source File
 
 SOURCE=.\svn_private_config.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\svn_private_config.h.in
-# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 

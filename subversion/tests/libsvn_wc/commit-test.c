@@ -30,7 +30,7 @@
 #include "svn_test.h"
 
 /* libsvn_test.la requires this symbol */
-svn_error_t *(*test_funcs[])(char **msg, apr_pool_t *p) = {};
+svn_error_t *(*test_funcs[])(char **msg, apr_pool_t *p) = { 0, 0 };
 
 int
 main (int argc, char *argv[])

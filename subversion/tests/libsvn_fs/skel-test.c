@@ -192,13 +192,14 @@ check_implicit_length_byte (skel_t *skel, char byte)
 static char *
 gen_implicit_length_all_chars (int *len_p)
 {
-  int i, pos;
+  int pos;
+  apr_byte_t i;
   static char name[256];
 
   /* Gotta start with a valid name character.  */
   pos = 0;
   name[pos++] = 'x';
-  for (i = 0; i < 256; i++)
+  for (i = 0; i <= 255; i++)
     if (! skel_is_space (i)
         && ! skel_is_paren (i))
       name[pos++] = i;
@@ -254,10 +255,10 @@ parse_implicit_length (const char **msg, apr_pool_t *pool)
   /* Try all valid single-byte atoms.  */
   {
     const char *c;
-    int i;
+    apr_byte_t i;
 
     for (c = "\t\n\f\r ()[]"; *c; c++)
-      for (i = 0; i < 256; i++)
+      for (i = 0; i <= 255; i++)
         if (skel_is_name(i))
           {
             svn_string_setempty (str);
@@ -323,12 +324,12 @@ static svn_error_t *
 try_explicit_length (const char *data, int len, int check_len,
                      apr_pool_t *pool)
 {
-  int i;
+  apr_byte_t i;
   svn_string_t *str = get_empty_string (pool);
   skel_t *skel;
 
   /* Try it with every possible separator character.  */
-  for (i = 0; i < 256; i++)
+  for (i = 0; i <= 255; i++)
     if (skel_is_space (i))
       {
 	svn_string_setempty (str);
@@ -497,9 +498,9 @@ parse_list (const char **msg, apr_pool_t *pool)
 	 list_len < 4 ? list_len++ : (list_len *= 3))
       {
 	/* Try lists with different separators.  */
-	int sep;
+	apr_byte_t sep;
 
-	for (sep = 0; sep < 256; sep++)
+	for (sep = 0; sep <= 255; sep++)
 	  if (skel_is_space (sep))
 	    {
 	      /* Try lists with different numbers of separator
@@ -512,9 +513,9 @@ parse_list (const char **msg, apr_pool_t *pool)
 		{
 		  /* Try various single-byte implicit-length atoms
 		     for elements.  */
-		  int atom_byte;
+		  apr_byte_t atom_byte;
 
-		  for (atom_byte = 0; atom_byte < 256; atom_byte++)
+		  for (atom_byte = 0; atom_byte <= 255; atom_byte++)
 		    if (skel_is_name (atom_byte))
 		      {
 			int i;
@@ -620,10 +621,10 @@ parse_list (const char **msg, apr_pool_t *pool)
 
   /* Try to parse some invalid lists.  */
   {
-    int sep;
+    apr_byte_t sep;
 
     /* Try different separators.  */ 
-    for (sep = 0; sep < 256; sep++)
+    for (sep = 0; sep <= 255; sep++)
       if (skel_is_space (sep))
 	{
 	  /* Try lists with different numbers of separator
@@ -740,9 +741,9 @@ unparse_implicit_length (const char **msg, apr_pool_t *pool)
 
   /* Unparse and check every single-byte implicit-length atom.  */
   {
-    int byte;
+    apr_byte_t byte;
 
-    for (byte = 0; byte < 256; byte++)
+    for (byte = 0; byte <= 255; byte++)
       if (skel_is_name (byte))
 	{
 	  svn_string_t *str = get_empty_string (pool);
@@ -774,11 +775,11 @@ unparse_list (const char **msg, apr_pool_t *pool)
   /* Make a list of all the single-byte implicit-length atoms.  */
   {
     svn_string_t *str = get_empty_string (pool);
-    int byte;
+    apr_byte_t byte;
     skel_t *list = empty (pool);
     skel_t *reparsed, *elt;
 
-    for (byte = 0; byte < 256; byte++)
+    for (byte = 0; byte <= 255; byte++)
       if (skel_is_name (byte))
 	{
 	  char buf = byte;

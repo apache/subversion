@@ -213,7 +213,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libsvn_repos"=.\subversion\libsvn_repos\libsvn_repos.dsp - Package Owner=<4>
+Project: "libsvn_repos"=.\SUBVERSION\LIBSVN_REPOS\libsvn_repos.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -475,6 +475,12 @@ Package=<4>
 {{{
     Begin Project Dependency
     Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
     End Project Dependency
 }}}
 
