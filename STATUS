@@ -59,3 +59,9 @@ Candidate changes:
     Last tweaks to make Swedish translation complete.
     Votes:
       +1: lundblad
+
+  * r10431
+    Disable wait_for_input on Windows.
+    Justification: Fix prompting on Windows so it actually works right.
+    Votes:
+      +1: breser, sussman
