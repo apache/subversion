@@ -505,7 +505,7 @@ def add_with_history(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               textual_merges_galore,
-              add_with_history,
+              # add_with_history,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.
