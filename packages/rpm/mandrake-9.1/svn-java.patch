@@ -1,0 +1,2892 @@
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/native/JNIUtil.cpp subversion-0.29.0/subversion/bindings/java/javahl/native/JNIUtil.cpp
+--- subversion-0.29.0/subversion/bindings/java/javahl/native/JNIUtil.cpp	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/native/JNIUtil.cpp	2003-09-26 00:22:45.000000000 +0300
+@@ -100,11 +100,11 @@
+ 	/* Create our top-level pool. */
+ 	g_pool = svn_pool_create (NULL);
+ 
+-	svn_error *err = svn_config_ensure (g_pool);
++	svn_error *err = svn_config_ensure (NULL, g_pool); // we use the default directory for config files
+ 	if (err)
+ 	{
+ 		svn_pool_destroy (g_pool);
+-		handleSVNError(err, 0);
++		handleSVNError(err);
+ 		return false;
+ 	}
+ 
+@@ -159,14 +159,14 @@
+ 	env->DeleteLocalRef(clazz);
+ }
+ 
+-void JNIUtil::handleSVNError(svn_error *err, const char *message)
++void JNIUtil::handleSVNError(svn_error *err)
+ {
+ 	JNIEnv *env = getEnv();
+ 	jclass clazz = env->FindClass(JAVA_PACKAGE"/ClientException");
+ 	if(getLogLevel() >= exceptionLog)
+ 	{
+ 		JNICriticalSection cs(*g_logMutex);
+-		g_logStream << "Error SVN exception thrown message:<" << (message ? message : "#")<< "> description:<";
++		g_logStream << "Error SVN exception thrown message:<";
+ 		g_logStream << err->message << "> file:<" << err->file << "> apr-err:<" << err->apr_err;
+ 		g_logStream	<< ">" << std::endl;
+ 	}
+@@ -178,15 +178,10 @@
+ 	std::string buffer;
+ 	assembleErrorMessage(err, 0, APR_SUCCESS, buffer);
+ 	jstring jmessage = makeJString(buffer.c_str());
+-	jstring jdescription = NULL;
+ 	if(isJavaExceptionThrown())
+ 	{
+ 		return;
+ 	}
+-	if(message)
+-	{
+-		jdescription = makeJString(message);
+-	}
+ 	if(isJavaExceptionThrown())
+ 	{
+ 		return;
+@@ -196,12 +191,12 @@
+ 	{
+ 		return;
+ 	}
+-	jmethodID mid = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V");
++	jmethodID mid = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;Ljava/lang/String;I)V");
+ 	if(isJavaExceptionThrown())
+ 	{
+ 		return;
+ 	}
+-	jobject error = env->NewObject(clazz, mid, jmessage, jdescription, jfile, static_cast<jint>(err->apr_err));
++	jobject error = env->NewObject(clazz, mid, jmessage, jfile, static_cast<jint>(err->apr_err));
+ 	if(isJavaExceptionThrown())
+ 	{
+ 		return;
+@@ -216,11 +211,6 @@
+ 	{
+ 		return;
+ 	}
+-	env->DeleteLocalRef(jdescription);
+-	if(isJavaExceptionThrown())
+-	{
+-		return;
+-	}
+ 	env->DeleteLocalRef(jfile);
+ 	if(isJavaExceptionThrown())
+ 	{
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/native/JNIUtil.h subversion-0.29.0/subversion/bindings/java/javahl/native/JNIUtil.h
+--- subversion-0.29.0/subversion/bindings/java/javahl/native/JNIUtil.h	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/native/JNIUtil.h	2003-09-26 00:22:45.000000000 +0300
+@@ -56,7 +56,7 @@
+ 	static bool isExceptionThrown();
+ 	static void handleAPRError(int error, const char *op);
+ 	static void putFinalizedClient(SVNClient *cl);
+-	static void handleSVNError(svn_error *err, const char *message);
++	static void handleSVNError(svn_error *err);
+ 	static void throwError(const char *message);
+ 	static apr_pool_t * getPool();
+ 	static bool JNIInit(JNIEnv *env);
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/native/Notify.cpp subversion-0.29.0/subversion/bindings/java/javahl/native/Notify.cpp
+--- subversion-0.29.0/subversion/bindings/java/javahl/native/Notify.cpp	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/native/Notify.cpp	2003-09-26 00:22:45.000000000 +0300
+@@ -128,60 +128,83 @@
+ 	switch(action)
+ 	{
+ 	case svn_wc_notify_add:
++		/* Adding a path to revision control. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_add;
+ 		break;
+ 	case svn_wc_notify_copy:
++		/* Copying a versioned path. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_copy;
+ 		break;
+ 	case svn_wc_notify_delete:
++		/* Deleting a versioned path. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_delete;
+ 		break;
+ 	case svn_wc_notify_restore:
++		/* Restoring a missing path from the pristine text-base. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_restore;
+ 		break;
+ 	case svn_wc_notify_revert:
++		/* Reverting a modified path. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_revert;
+ 		break;
+ 	case svn_wc_notify_failed_revert:
++		/* A revert operation has failed. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_failed_revert;
+ 		break;
+ 	case svn_wc_notify_resolved:
++		/* Resolving a conflict. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_resolved;
+ 		break;
+-	case svn_wc_notify_status:
+-		jAction = org_tigris_subversion_javahl_Notify_Action_status;
++	case svn_wc_notify_status_completed:
++		/* The last notification in a status (including status on externals). */
++		jAction = org_tigris_subversion_javahl_Notify_Action_status_completed;
++		break;
++	case svn_wc_notify_status_external:
++		/* Running status on an external module. */
++		jAction = org_tigris_subversion_javahl_Notify_Action_status_external;
+ 		break;
+ 	case svn_wc_notify_skip:
++		/* Skipping a path. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_skip;
+ 		break;
+ 	case svn_wc_notify_update_delete:
++		/* Got a delete in an update. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_update_delete;
+ 		break;
+ 	case svn_wc_notify_update_add:
++		/* Got an add in an update. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_update_add;
+ 		break;
+ 	case svn_wc_notify_update_update:
++		/* Got any other action in an update. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_update_update;
+ 		break;
+ 	case svn_wc_notify_update_completed:
++		/* The last notification in an update (including updates of externals). */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_update_completed;
+ 		break;
+ 	case svn_wc_notify_update_external:
++		/* Updating an external module. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_update_external;
+ 		break;
+ 	case svn_wc_notify_commit_modified:
++		/* Committing a modification. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_commit_modified;
+ 		break;
+ 	case svn_wc_notify_commit_added:
++		/* Committing an addition. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_commit_added;
+ 		break;
+ 	case svn_wc_notify_commit_deleted:
++		/* Committing a deletion. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_commit_deleted;
+ 		break;
+ 	case svn_wc_notify_commit_replaced:
++		/* Committing a replacement. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_commit_replaced;
+ 		break;
+ 	case svn_wc_notify_commit_postfix_txdelta:
++		/* Transmitting post-fix text-delta data for a file. */
+ 		jAction = org_tigris_subversion_javahl_Notify_Action_commit_postfix_txdelta;
+ 		break;
+ 	}
+@@ -240,6 +263,12 @@
+ 	case svn_wc_notify_state_unchanged:
+ 		return org_tigris_subversion_javahl_Notify_Status_unchanged;
+ 
++	case svn_wc_notify_state_missing:
++		return org_tigris_subversion_javahl_Notify_Status_missing;
++
++	case svn_wc_notify_state_obstructed:
++		return org_tigris_subversion_javahl_Notify_Status_obstructed;
++
+ 	case svn_wc_notify_state_changed:
+ 		return org_tigris_subversion_javahl_Notify_Status_changed;
+ 
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/native/org_tigris_subversion_javahl_SVNClient.cpp subversion-0.29.0/subversion/bindings/java/javahl/native/org_tigris_subversion_javahl_SVNClient.cpp
+--- subversion-0.29.0/subversion/bindings/java/javahl/native/org_tigris_subversion_javahl_SVNClient.cpp	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/native/org_tigris_subversion_javahl_SVNClient.cpp	2003-09-26 00:22:45.000000000 +0300
+@@ -128,10 +128,10 @@
+ /*
+  * Class:     org_tigris_subversion_javahl_SVNClient
+  * Method:    status
+- * Signature: (Ljava/lang/String;ZZ)[Lorg/tigris/subversion/javahl/Status;
++ * Signature: (Ljava/lang/String;ZZZ)[Lorg/tigris/subversion/javahl/Status;
+  */
+ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_status
+-  (JNIEnv* env, jobject jthis, jstring jpath, jboolean jrecurse, jboolean jonServer)
++  (JNIEnv* env, jobject jthis, jstring jpath, jboolean jrecurse, jboolean jonServer, jboolean jgetAll)
+ {
+ 	JNIEntry(SVNClient, status);
+ 	SVNClient *cl = SVNClient::getCppObject(jthis);
+@@ -144,13 +144,13 @@
+ 	{
+ 		return NULL;
+ 	}
+-	return cl->status(path, jrecurse ? true: false, jonServer ? true:false);
++	return cl->status(path, jrecurse ? true: false, jonServer ? true:false, jgetAll ? true:false);
+ }
+ 
+ /*
+  * Class:     org_tigris_subversion_javahl_SVNClient
+  * Method:    singleStatus
+- * Signature: (Ljava/lang/String;Z)Lorg/tigris/subversion/javahl/Status;
++ * Signature: (Ljava/lang/String;ZZ)Lorg/tigris/subversion/javahl/Status;
+  */
+ JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_singleStatus
+   (JNIEnv* env, jobject jthis, jstring jpath, jboolean jonServer)
+@@ -332,7 +332,7 @@
+  * Signature: (Ljava/lang/String;Ljava/lang/String;Z)V
+  */
+ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_remove
+-  (JNIEnv *env, jobject jthis, jstring jpath, jstring jmessage, jboolean jforce)
++  (JNIEnv* env, jobject jthis, jobjectArray jtargets, jstring jmessage, jboolean jforce)
+ {
+ 	JNIEntry(SVNClient, remove);
+ 	SVNClient *cl = SVNClient::getCppObject(jthis);
+@@ -341,17 +341,13 @@
+ 		JNIUtil::throwError("bad c++ this");
+ 		return;
+ 	}
+-	JNIStringHolder path(jpath);
+-	if(JNIUtil::isExceptionThrown())
+-	{
+-		return;
+-	}
++	Targets targets(jtargets);
+ 	JNIStringHolder message(jmessage);
+ 	if(JNIUtil::isExceptionThrown())
+ 	{
+ 		return;
+ 	}
+-	cl->remove(path, message, jforce ? true : false);
++	cl->remove(targets, message, jforce ? true : false);
+ }
+ 
+ /*
+@@ -534,7 +530,7 @@
+  * Signature: (Ljava/lang/String;Ljava/lang/String;)V
+  */
+ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_mkdir
+-  (JNIEnv* env, jobject jthis, jstring jpath, jstring jmessage)
++  (JNIEnv* env, jobject jthis, jobjectArray jtargets, jstring jmessage)
+ {
+ 	JNIEntry(SVNClient, mkdir);
+ 	SVNClient *cl = SVNClient::getCppObject(jthis);
+@@ -543,17 +539,13 @@
+ 		JNIUtil::throwError("bad c++ this");
+ 		return;
+ 	}
+-	JNIStringHolder path(jpath);
+-	if(JNIUtil::isExceptionThrown())
+-	{
+-		return;
+-	}
++	Targets targets(jtargets);
+ 	JNIStringHolder message(jmessage);
+ 	if(JNIUtil::isExceptionThrown())
+ 	{
+ 		return;
+ 	}
+-	cl->mkdir(path, message);
++	cl->mkdir(targets, message);
+ }
+ 
+ /*
+@@ -608,7 +600,7 @@
+  * Signature: (Ljava/lang/String;Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;)V
+  */
+ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_doExport
+-  (JNIEnv* env, jobject jthis, jstring jsrcPath, jstring jdestPath, jobject jrevision)
++  (JNIEnv* env, jobject jthis, jstring jsrcPath, jstring jdestPath, jobject jrevision,jboolean jforce)
+ {
+ 	JNIEntry(SVNClient, doExport);
+ 	SVNClient *cl = SVNClient::getCppObject(jthis);
+@@ -632,7 +624,7 @@
+ 	{
+ 		return;
+ 	}
+-	cl->doExport(srcPath, destPath, revision);
++	cl->doExport(srcPath, destPath, revision, jforce ? true : false);
+ }
+ 
+ /*
+@@ -674,7 +666,7 @@
+  * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V
+  */
+ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_doImport
+-  (JNIEnv* env, jobject jthis, jstring jpath, jstring jurl, jstring jnewEntry, jstring jmessage, jboolean jrecurse)
++  (JNIEnv* env, jobject jthis, jstring jpath, jstring jurl, jstring jmessage, jboolean jrecurse)
+ {
+ 	JNIEntry(SVNClient, doImport);
+ 	SVNClient *cl = SVNClient::getCppObject(jthis);
+@@ -693,17 +685,12 @@
+ 	{
+ 		return;
+ 	}
+-	JNIStringHolder newEntry(jnewEntry);
+-	if(JNIUtil::isExceptionThrown())
+-	{
+-		return;
+-	}
+ 	JNIStringHolder message(jmessage);
+ 	if(JNIUtil::isExceptionThrown())
+ 	{
+ 		return;
+ 	}
+-	cl->doImport(path, url, newEntry, message, jrecurse ? true : false);
++	cl->doImport(path, url, message, jrecurse ? true : false);
+ }
+ 
+ /*
+@@ -899,6 +886,7 @@
+ 	cl->propertyCreate(path, name, value, jrecurse ? true:false);
+ }
+ 
++
+ /*
+  * Class:     org_tigris_subversion_javahl_SVNClient
+  * Method:    propertyCreate
+@@ -965,6 +953,79 @@
+ }
+   /*
+  * Class:     org_tigris_subversion_javahl_SVNClient
++ * Method:    propertyGet
++ * Signature: (Ljava/lang/String;Ljava/lang/String;)Lorg/tigris/subversion/javahl/PropertyData;
++ */
++JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_propertyGet
++  (JNIEnv *env, jobject jthis, jstring jpath, jstring jname)
++{
++	JNIEntry(SVNClient, propertyGet);
++	SVNClient *cl = SVNClient::getCppObject(jthis);
++	if(cl == NULL)
++	{
++		JNIUtil::throwError("bad c++ this");
++		return NULL;
++	}
++	JNIStringHolder path(jpath);
++	if(JNIUtil::isExceptionThrown())
++	{
++		return NULL;
++	}
++	JNIStringHolder name(jname);
++	if(JNIUtil::isExceptionThrown())
++	{
++		return NULL;
++	}
++	return cl->propertyGet(jthis, path, name);
++}
++
++
++  /*
++ * Class:     org_tigris_subversion_javahl_SVNClient
++ * Method:    diff
++ * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Ljava/lang/String;Z)V
++ */
++JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diff
++  (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1, jstring jtarget2, jobject jrevision2, jstring joutfileName,jboolean jrecurse)
++{
++	JNIEntry(SVNClient, propertyGet);
++	SVNClient *cl = SVNClient::getCppObject(jthis);
++	if(cl == NULL)
++	{
++		JNIUtil::throwError("bad c++ this");
++		return;
++	}
++	JNIStringHolder target1(jtarget1);
++	if(JNIUtil::isExceptionThrown())
++	{
++		return;
++	}
++	Revision revision1(jrevision1);
++	if(JNIUtil::isExceptionThrown())
++	{
++		return;
++	}
++	JNIStringHolder target2(jtarget2);
++	if(JNIUtil::isExceptionThrown())
++	{
++		return;
++	}	
++	Revision revision2(jrevision2);
++	if(JNIUtil::isExceptionThrown())
++	{
++		return;
++	}
++	JNIStringHolder outfileName(joutfileName);
++	if(JNIUtil::isExceptionThrown())
++	{
++		return;
++	}	
++	cl->diff(target1, revision1, target2, revision2, outfileName,jrecurse ? true:false);
++}
++
++
++  /*
++ * Class:     org_tigris_subversion_javahl_SVNClient
+  * Method:    fileContent
+  * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;)[B
+  */
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/native/Prompter.cpp subversion-0.29.0/subversion/bindings/java/javahl/native/Prompter.cpp
+--- subversion-0.29.0/subversion/bindings/java/javahl/native/Prompter.cpp	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/native/Prompter.cpp	2003-09-26 00:24:20.000000000 +0300
+@@ -416,7 +416,7 @@
+     int failure;
+     int failures_in =
+         (int) apr_hash_get (parameters,
+-                        SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN,
++                        SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
+                         APR_HASH_KEY_STRING);
+ 
+     svn_stringbuf_t *buf = svn_stringbuf_create
+@@ -454,7 +454,7 @@
+ 	if(that->askYesNo(realmstring, buf->data, false))
+     {
+         cred = (svn_auth_cred_server_ssl_t*)apr_palloc (pool, sizeof(*cred));
+-        cred->failures_allow = failures_in;
++        cred->accepted_failures = failures_in;
+         *credentials = cred;
+     }
+     else
+@@ -464,16 +464,15 @@
+     *iter_baton = NULL;
+     return SVN_NO_ERROR;
+ }
++
+ svn_error_t *Prompter::firstCreds_client_ssl (void **credentials, void **iter_baton, 
+ 							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool)
+ {
+ 	Prompter *that = (Prompter*)provider_baton;
+   const char *cert_file = NULL, *key_file = NULL;
+-  size_t cert_file_len;
+-  const char *extension;
+   svn_auth_cred_client_ssl_t *cred;
+ 
+-  svn_auth_ssl_cert_type_t cert_type;
++
+   cert_file = that->askQuestion(realmstring, "client certificate filename: ", true);
+   
+   if ((cert_file == NULL) || (cert_file[0] == 0))
+@@ -481,55 +480,13 @@
+       return NULL;
+     }
+ 
+-  cert_file_len = strlen(cert_file);
+-  extension = cert_file + cert_file_len - 4;
+-  if ((strcmp (extension, ".p12") == 0) || 
+-      (strcmp (extension, ".P12") == 0))
+-    {
+-      cert_type = svn_auth_ssl_pkcs12_cert_type;
+-    }
+-  else if ((strcmp (extension, ".pem") == 0) || 
+-           (strcmp (extension, ".PEM") == 0))
+-    {
+-      cert_type = svn_auth_ssl_pem_cert_type;
+-    }
+-  else
+-    {
+-      const char *type = NULL;
+-	  type = that->askQuestion(realmstring, "cert type ('pem' or 'pkcs12'): ", true);
+-      if (type != NULL && (strcmp(type, "pkcs12") == 0) ||
+-          (strcmp(type, "PKCS12") == 0))
+-        {
+-          cert_type = svn_auth_ssl_pkcs12_cert_type;
+-        }
+-      else if (type != NULL && (strcmp (type, "pem") == 0) || 
+-               (strcmp (type, "PEM") == 0))
+-        {
+-          cert_type = svn_auth_ssl_pem_cert_type;
+-        }
+-      else
+-        {
+-          return svn_error_createf (SVN_ERR_INCORRECT_PARAMS, NULL,
+-                                    "unknown ssl certificate type '%s'", type);
+-        }
+-    }
+-  
+-  if (cert_type == svn_auth_ssl_pem_cert_type)
+-    {
+-	  key_file = that->askQuestion(realmstring, "optional key file: ", true);
+-    }
+-  if (key_file && key_file[0] == 0)
+-    {
+-      key_file = 0;
+-    }
+   cred = (svn_auth_cred_client_ssl_t*)apr_palloc (pool, sizeof(*cred));
+   cred->cert_file = cert_file;
+-  cred->key_file = key_file;
+-  cred->cert_type = cert_type;
+   *credentials = cred;
+   *iter_baton = NULL;
+   return SVN_NO_ERROR;
+ }
++
+ svn_error_t *Prompter::firstCreds_client_ssl_pass (void **credentials, void **iter_baton, 
+ 							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool)
+ {
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/native/Prompter.cpp~ subversion-0.29.0/subversion/bindings/java/javahl/native/Prompter.cpp~
+--- subversion-0.29.0/subversion/bindings/java/javahl/native/Prompter.cpp~	1970-01-01 02:00:00.000000000 +0200
++++ subversion-0.29.0/subversion/bindings/java/javahl/native/Prompter.cpp~	2003-09-26 00:23:57.000000000 +0300
+@@ -0,0 +1,508 @@
++/**
++ * @copyright
++ * ====================================================================
++ * Copyright (c) 2003 CollabNet.  All rights reserved.
++ *
++ * This software is licensed as described in the file COPYING, which
++ * you should have received as part of this distribution.  The terms
++ * are also available at http://subversion.tigris.org/license-1.html.
++ * If newer versions of this license are posted there, you may use a
++ * newer version instead, at your option.
++ *
++ * This software consists of voluntary contributions made by many
++ * individuals.  For exact contribution history, see the revision
++ * history and logs, available at http://subversion.tigris.org/.
++ * ====================================================================
++ * @endcopyright
++ */
++// Prompter.cpp: implementation of the Prompter class.
++//
++//////////////////////////////////////////////////////////////////////
++
++#include "Prompter.h"
++#include "Pool.h"
++#include "JNIUtil.h"
++#include "JNIStringHolder.h"
++#include <svn_client.h>
++//////////////////////////////////////////////////////////////////////
++// Construction/Destruction
++//////////////////////////////////////////////////////////////////////
++
++Prompter::Prompter(jobject jprompter)
++{
++	m_prompter = jprompter;
++}
++
++Prompter::~Prompter()
++{
++	if(m_prompter!= NULL)
++	{
++		JNIEnv *env = JNIUtil::getEnv();
++		env->DeleteGlobalRef(m_prompter);
++	}
++}
++
++Prompter *Prompter::makeCPrompter(jobject jpromper)
++{
++	if(jpromper == NULL)
++	{
++		return NULL;
++	}
++	JNIEnv *env = JNIUtil::getEnv();
++	jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return NULL;
++	}
++	if(!env->IsInstanceOf(jpromper, clazz))
++	{
++		env->DeleteLocalRef(clazz);
++		return NULL;
++	}
++	env->DeleteLocalRef(clazz);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return NULL;
++	}
++	jobject myPrompt = env->NewGlobalRef(jpromper);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return NULL;
++	}
++	return new Prompter(myPrompt);
++}
++
++jstring Prompter::username()
++{
++	static jmethodID mid = 0;
++	JNIEnv *env = JNIUtil::getEnv();
++	if(mid == 0)
++	{
++		jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
++		if(JNIUtil::isJavaExceptionThrown())
++		{
++			return NULL;
++		}
++		mid = env->GetMethodID(clazz, "getUsername", "()Ljava/lang/String;");
++		if(JNIUtil::isJavaExceptionThrown() || mid == 0)
++		{
++			return NULL;
++		}
++		env->DeleteLocalRef(clazz);
++		if(JNIUtil::isJavaExceptionThrown())
++		{
++			return false;
++		}
++	}
++
++	return  static_cast<jstring>(env->CallObjectMethod(m_prompter, mid));
++}
++
++jstring Prompter::password()
++{
++	static jmethodID mid = 0;
++	JNIEnv *env = JNIUtil::getEnv();
++	if(mid == 0)
++	{
++		jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
++		if(JNIUtil::isJavaExceptionThrown())
++		{
++			return NULL;
++		}
++		mid = env->GetMethodID(clazz, "getPassword", "()Ljava/lang/String;");
++		if(JNIUtil::isJavaExceptionThrown() || mid == 0)
++		{
++			return NULL;
++		}
++		env->DeleteLocalRef(clazz);
++		if(JNIUtil::isJavaExceptionThrown())
++		{
++			return false;
++		}
++	}
++
++	return  static_cast<jstring>(env->CallObjectMethod(m_prompter, mid));
++}
++bool Prompter::askYesNo(const char *realm, const char *question, bool yesIsDefault)
++{
++	static jmethodID mid = 0;
++	JNIEnv *env = JNIUtil::getEnv();
++	if(mid == 0)
++	{
++		jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
++		if(JNIUtil::isJavaExceptionThrown())
++		{
++			return false;
++		}
++		mid = env->GetMethodID(clazz, "askYesNo", "(Ljava/lang/String;Ljava/lang/String;Z)Z");
++		if(JNIUtil::isJavaExceptionThrown() || mid == 0)
++		{
++			return false;
++		}
++		env->DeleteLocalRef(clazz);
++		if(JNIUtil::isJavaExceptionThrown())
++		{
++			return false;
++		}
++	}
++
++	jstring jrealm = JNIUtil::makeJString(realm);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	jstring jquestion = JNIUtil::makeJString(question);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm, jquestion, yesIsDefault ? JNI_TRUE : JNI_FALSE);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	env->DeleteLocalRef(jquestion);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	env->DeleteLocalRef(jrealm);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	return ret ? true:false;
++}
++const char *Prompter::askQuestion(const char *realm, const char *question, bool showAnswer)
++{
++	static jmethodID mid = 0;
++	JNIEnv *env = JNIUtil::getEnv();
++	if(mid == 0)
++	{
++		jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
++		if(JNIUtil::isJavaExceptionThrown())
++		{
++			return false;
++		}
++		mid = env->GetMethodID(clazz, "askQuestion", "(Ljava/lang/String;Ljava/lang/String;Z)Ljava/lang/String;");
++		if(JNIUtil::isJavaExceptionThrown() || mid == 0)
++		{
++			return false;
++		}
++		env->DeleteLocalRef(clazz);
++		if(JNIUtil::isJavaExceptionThrown())
++		{
++			return false;
++		}
++	}
++
++	jstring jrealm = JNIUtil::makeJString(realm);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	jstring jquestion = JNIUtil::makeJString(question);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	jstring janswer = static_cast<jstring>(env->CallObjectMethod(m_prompter, mid, jrealm, jquestion, showAnswer ? JNI_TRUE : JNI_FALSE));
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	env->DeleteLocalRef(jquestion);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	env->DeleteLocalRef(jrealm);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	JNIStringHolder answer(janswer);
++	if(answer != NULL)
++	{
++		m_answer = answer;
++	}
++	else
++	{
++		m_answer = "";
++	}
++	return m_answer.c_str();
++}
++bool Prompter::prompt(const char *realm, const char *username)
++{
++	static jmethodID mid = 0;
++	JNIEnv *env = JNIUtil::getEnv();
++	if(mid == 0)
++	{
++		jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
++		if(JNIUtil::isJavaExceptionThrown())
++		{
++			return false;
++		}
++		mid = env->GetMethodID(clazz, "prompt", "(Ljava/lang/String;Ljava/lang/String;)Z");
++		if(JNIUtil::isJavaExceptionThrown() || mid == 0)
++		{
++			return false;
++		}
++		env->DeleteLocalRef(clazz);
++		if(JNIUtil::isJavaExceptionThrown())
++		{
++			return false;
++		}
++	}
++
++	jstring jrealm = JNIUtil::makeJString(realm);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	jstring jusername = JNIUtil::makeJString(username);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm, jusername);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	env->DeleteLocalRef(jusername);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	env->DeleteLocalRef(jrealm);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return false;
++	}
++	return ret ? true:false;
++}
++svn_auth_provider_object_t *Prompter::getProvider(Prompter *that)
++{
++	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
++    svn_auth_provider_object_t *prompt_provider = (svn_auth_provider_object_t *)apr_pcalloc (pool, sizeof(*prompt_provider));
++	svn_auth_provider_t *vtable = (svn_auth_provider_t *)apr_pcalloc (pool, sizeof(svn_auth_provider_t));
++	vtable->cred_kind = SVN_AUTH_CRED_SIMPLE;
++	vtable->first_credentials = firstCreds;
++	vtable->next_credentials = nextCreds;
++	vtable->save_credentials = NULL;
++	prompt_provider->vtable = vtable;
++	prompt_provider->provider_baton = that;
++	return prompt_provider;
++}
++svn_auth_provider_object_t *Prompter::getProviderServerSSL(Prompter *that)
++{
++	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
++    svn_auth_provider_object_t *prompt_provider = (svn_auth_provider_object_t *)apr_pcalloc (pool, sizeof(*prompt_provider));
++	svn_auth_provider_t *vtable = (svn_auth_provider_t *)apr_pcalloc (pool, sizeof(svn_auth_provider_t));
++	vtable->cred_kind = SVN_AUTH_CRED_SERVER_SSL;
++	vtable->first_credentials = firstCreds_server_ssl;
++	vtable->next_credentials = NULL;
++	vtable->save_credentials = NULL;
++	prompt_provider->vtable = vtable;
++	prompt_provider->provider_baton = that;
++	return prompt_provider;
++}
++svn_auth_provider_object_t *Prompter::getProviderClientSSL(Prompter *that)
++{
++	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
++    svn_auth_provider_object_t *prompt_provider = (svn_auth_provider_object_t *)apr_pcalloc (pool, sizeof(*prompt_provider));
++	svn_auth_provider_t *vtable = (svn_auth_provider_t *)apr_pcalloc (pool, sizeof(svn_auth_provider_t));
++	vtable->cred_kind = SVN_AUTH_CRED_CLIENT_SSL;
++	vtable->first_credentials = firstCreds_client_ssl;
++	vtable->next_credentials = NULL;
++	vtable->save_credentials = NULL;
++	prompt_provider->vtable = vtable;
++	prompt_provider->provider_baton = that;
++	return prompt_provider;
++}
++svn_auth_provider_object_t *Prompter::getProviderClientSSLPass(Prompter *that)
++{
++	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
++    svn_auth_provider_object_t *prompt_provider = (svn_auth_provider_object_t *)apr_pcalloc (pool, sizeof(*prompt_provider));
++	svn_auth_provider_t *vtable = (svn_auth_provider_t *)apr_pcalloc (pool, sizeof(svn_auth_provider_t));
++	vtable->cred_kind = SVN_AUTH_CRED_CLIENT_PASS_SSL;
++	vtable->first_credentials = firstCreds_client_ssl_pass;
++	vtable->next_credentials = NULL;
++	vtable->save_credentials = NULL;
++	prompt_provider->vtable = vtable;
++	prompt_provider->provider_baton = that;
++	return prompt_provider;
++}
++svn_error_t *Prompter::firstCreds (void **credentials, void **iter_baton,
++							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool)
++{
++	Prompter *that = (Prompter*)provider_baton;
++
++	svn_auth_cred_simple_t *creds = (svn_auth_cred_simple_t *)apr_pcalloc (pool, sizeof(*creds));
++	  /* run-time parameters */
++	const char *username
++		= (const char *)apr_hash_get (parameters, SVN_AUTH_PARAM_DEFAULT_USERNAME,
++					APR_HASH_KEY_STRING);
++	const char *password
++		= (const char *)apr_hash_get (parameters, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
++					APR_HASH_KEY_STRING);
++	if(username != NULL)
++		creds->username = username;
++	else
++		creds->username = "";
++	if(password != NULL)
++		creds->password = password;
++	else
++		creds->password = "";
++    *credentials = creds;
++
++	*iter_baton = that;
++
++	if(that != NULL)
++	{
++		that->m_retry = 0;
++		if(realmstring != NULL)
++			that->m_realm = realmstring;
++		else
++			that->m_realm = "";
++	}
++	return SVN_NO_ERROR;
++}
++svn_error_t *Prompter::nextCreds (void **credentials, void *iter_baton,
++                          apr_hash_t *parameters, apr_pool_t *pool)
++{
++	Prompter *that = (Prompter*)iter_baton;
++	if(that->m_retry >= 2 || that == NULL)
++	{
++		credentials = NULL;
++		return SVN_NO_ERROR;
++	}
++
++	const char *username
++		= (const char *)apr_hash_get (parameters, SVN_AUTH_PARAM_DEFAULT_USERNAME,
++						APR_HASH_KEY_STRING);
++
++	if(!that->prompt(that->m_realm.c_str(), username))
++	{
++		credentials = NULL;
++		return SVN_NO_ERROR;
++	}
++
++	jstring juser = that->username();
++	jstring jpass = that->password();
++	JNIStringHolder user(juser);
++	JNIStringHolder pass(jpass);
++	if(user != NULL)
++		that->m_userName = user;
++	else
++		that->m_userName = "";
++	if(pass != NULL)
++		that->m_passWord = pass;
++	else
++		that->m_passWord = "";
++	svn_auth_cred_simple_t *creds = (svn_auth_cred_simple_t *)apr_pcalloc (pool, sizeof(*creds));
++    creds->username = that->m_userName.c_str();
++    creds->password = that->m_passWord.c_str();
++    *credentials = creds;
++	return SVN_NO_ERROR;
++}
++svn_error_t *Prompter::firstCreds_server_ssl (void **credentials, void **iter_baton, 
++							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool)
++{
++	Prompter *that = (Prompter*)provider_baton;
++    svn_boolean_t previous_output = FALSE;
++    svn_auth_cred_server_ssl_t *cred;
++    int failure;
++    int failures_in =
++        (int) apr_hash_get (parameters,
++                        SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
++                        APR_HASH_KEY_STRING);
++
++    svn_stringbuf_t *buf = svn_stringbuf_create
++        ("Error validating server certificate: ", pool);
++
++    failure = failures_in & SVN_AUTH_SSL_UNKNOWNCA;
++    if (failure)
++	{
++        svn_stringbuf_appendcstr (buf, "Unknown certificate issuer");
++        previous_output = TRUE;
++    }
++
++    failure = failures_in & SVN_AUTH_SSL_CNMISMATCH;
++    if (failure)
++    {
++        if (previous_output)
++        {
++            svn_stringbuf_appendcstr (buf, ", ");
++        }
++        svn_stringbuf_appendcstr (buf, "Hostname mismatch");
++        previous_output = TRUE;
++    } 
++    failure = failures_in & (SVN_AUTH_SSL_EXPIRED | SVN_AUTH_SSL_NOTYETVALID);
++    if (failure)
++	{
++        if (previous_output)
++        {
++            svn_stringbuf_appendcstr (buf, ", ");
++        }
++        svn_stringbuf_appendcstr (buf, "Certificate expired or not yet valid");
++        previous_output = TRUE;
++    }
++
++    svn_stringbuf_appendcstr (buf, ". Accept? (y/N): ");
++	if(that->askYesNo(realmstring, buf->data, false))
++    {
++        cred = (svn_auth_cred_server_ssl_t*)apr_palloc (pool, sizeof(*cred));
++        cred->failures_allow = failures_in;
++        *credentials = cred;
++    }
++    else
++    {
++        *credentials = NULL;
++    }
++    *iter_baton = NULL;
++    return SVN_NO_ERROR;
++}
++
++svn_error_t *Prompter::firstCreds_client_ssl (void **credentials, void **iter_baton, 
++							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool)
++{
++  Prompter *that = (Prompter*)provider_baton;
++  const char *cert_file = NULL, *key_file = NULL;
++  svn_auth_cred_client_ssl_t *cred;
++
++
++  cert_file = that->askQuestion(realmstring, "client certificate filename: ", true);
++  
++  if ((cert_file == NULL) || (cert_file[0] == 0))
++  {
++	return NULL;
++  }
++
++  cred = (svn_auth_cred_client_ssl_t*)apr_palloc (pool, sizeof(*cred));
++  cred->cert_file = cert_file;
++  *credentials = cred;
++  *iter_baton = NULL;
++  return SVN_NO_ERROR;
++}
++
++svn_error_t *Prompter::firstCreds_client_ssl_pass (void **credentials, void **iter_baton, 
++							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool)
++{
++	Prompter *that = (Prompter*)provider_baton;
++  const char *info = NULL;
++  info = that->askQuestion(realmstring, "client certificate passphrase: ", false);
++  if (info && info[0])
++    {
++      svn_auth_cred_client_ssl_pass_t *cred = (svn_auth_cred_client_ssl_pass_t*)apr_palloc (pool, sizeof(*cred));
++      cred->password = info;
++      *credentials = cred;
++    }
++  else
++    {
++      *credentials = NULL;
++    }
++  *iter_baton = NULL;
++	return SVN_NO_ERROR;
++}
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/native/SVNClient.cpp subversion-0.29.0/subversion/bindings/java/javahl/native/SVNClient.cpp
+--- subversion-0.29.0/subversion/bindings/java/javahl/native/SVNClient.cpp	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/native/SVNClient.cpp	2003-09-26 00:22:45.000000000 +0300
+@@ -35,6 +35,7 @@
+ #include <svn_path.h>
+ #include "org_tigris_subversion_javahl_Status_Kind.h"
+ #include "org_tigris_subversion_javahl_Revision.h"
++#include "org_tigris_subversion_javahl_NodeKind.h"
+ #include <vector>
+ #include <iostream>
+ //////////////////////////////////////////////////////////////////////
+@@ -126,6 +127,9 @@
+ 	return m_lastPath.c_str();
+ }
+ 
++/**
++ * List directory entries of a URL
++ */
+ jobjectArray SVNClient::list(const char *url, Revision &revision, bool recurse)
+ {
+ 	Pool subPool;
+@@ -189,17 +193,48 @@
+ 	}
+ 	else
+ 	{
+-		JNIUtil::handleSVNError(Err, NULL);
++		JNIUtil::handleSVNError(Err);
+ 		return NULL;
+ 	}
+ }
+ 
+-jobjectArray SVNClient::status(const char *path, bool descend, bool onServer)
++
++struct status_entry
+ {
++	const char *path;
++	svn_wc_status_t *status;
++};
++
++struct status_baton
++{
++	std::vector<status_entry> statusVect;
++	apr_pool_t *pool;
++};
++
++
++/** 
++ * callback for svn_client_status (used by status and singleStatus)
++ */
++void SVNClient::statusReceiver(void *baton, const char *path, svn_wc_status_t *status)
++{
++	if(JNIUtil::isJavaExceptionThrown())
++		return;
++	
++	// we don't create here java Status object as we don't want too many local references
++	status_baton *statusBaton = (status_baton*)baton;
++	status_entry statusEntry;
++	statusEntry.path = apr_pstrdup(statusBaton->pool,path);
++	statusEntry.status = svn_wc_dup_status(status,statusBaton->pool);
++	statusBaton->statusVect.push_back(statusEntry);
++}
++
++
++jobjectArray SVNClient::status(const char *path, bool descend, bool onServer, bool getAll)
++{
++	status_baton statusBaton;
+     Pool subPool;
+-    apr_hash_t *status_hash;
+-//	svn_client_auth_baton_t *auth_baton = NULL;
+ 	svn_revnum_t youngest = SVN_INVALID_REVNUM;
++	svn_opt_revision_t rev;
+ 
+ 	svn_client_ctx_t *ctx = getContext(NULL);
+ 	if(ctx == NULL)
+@@ -207,25 +242,27 @@
+ 		return NULL;
+ 	}
+ 
+-    svn_error_t *Err = svn_client_status (&status_hash, &youngest, path, descend, TRUE,
++	rev.kind = svn_opt_revision_unspecified;
++	statusBaton.pool = subPool.pool();
++
++    svn_error_t *Err = svn_client_status (
++							 &youngest, path, &rev, statusReceiver, &statusBaton/*&statusVect*/, 
++							 descend ? TRUE : FALSE,
++							 getAll ? TRUE : FALSE,
+ 							 onServer ? TRUE : FALSE,     //update
+                              FALSE,     //no_ignore,
+ 							 ctx,
+                              subPool.pool());
+     if (Err == NULL)
+     {
+-		apr_array_header_t *statusarray =
+-		 apr_hash_sorted_keys (status_hash, svn_sort_compare_items_as_paths,
+-							   subPool.pool());
+-		int i;
+-
+ 		JNIEnv *env = JNIUtil::getEnv();
++		int size = statusBaton.statusVect.size();
+ 		jclass clazz = env->FindClass(JAVA_PACKAGE"/Status");
+ 		if(JNIUtil::isJavaExceptionThrown())
+ 		{
+ 			return NULL;
+ 		}
+-		jobjectArray ret = env->NewObjectArray(statusarray->nelts, clazz, NULL);
++		jobjectArray ret = env->NewObjectArray(size, clazz, NULL);
+ 		if(JNIUtil::isJavaExceptionThrown())
+ 		{
+ 			return NULL;
+@@ -235,43 +272,38 @@
+ 		{
+ 			return NULL;
+ 		}
+-		for (i = 0; i < statusarray->nelts; i++)
+-		{
+-			const svn_item_t *item;
+-			svn_wc_status_t *status = NULL;
+ 
+-			item = &APR_ARRAY_IDX (statusarray, i, const svn_item_t);
+-			status = (svn_wc_status_t *) item->value;
++		for(int i = 0; i < size; i++)
++		{
++			status_entry statusEntry = statusBaton.statusVect[i];
+ 
+-			jobject obj = createJavaStatus((const char *)item->key, status);
+-			env->SetObjectArrayElement(ret, i, obj);
++			jobject jStatus = createJavaStatus(statusEntry.path, statusEntry.status);
++			env->SetObjectArrayElement(ret, i, jStatus);
+ 			if(JNIUtil::isJavaExceptionThrown())
+ 			{
+ 				return NULL;
+ 			}
+-			env->DeleteLocalRef(obj);
++			env->DeleteLocalRef(jStatus);
+ 			if(JNIUtil::isJavaExceptionThrown())
+ 			{
+ 				return NULL;
+ 			}
+ 		}
+-
+ 		return ret;
+ 	}
+ 	else
+ 	{
+-		JNIUtil::handleSVNError(Err, NULL);
++		JNIUtil::handleSVNError(Err);
+ 		return NULL;
+ 	}
+ }
+ 
+ jobject SVNClient::singleStatus(const char *path, bool onServer)
+ {
+-	//JNIUtil::logMessage("entering singleStatus");
+-	//JNIUtil::logMessage(path);
++	status_baton statusBaton;
+     Pool subPool;
+-    apr_hash_t *status_hash;
+ 	svn_revnum_t youngest = SVN_INVALID_REVNUM;
++	svn_opt_revision_t rev;
+ 
+ 	svn_client_ctx_t *ctx = getContext(NULL);
+ 	if(ctx == NULL)
+@@ -279,30 +311,40 @@
+ 		return NULL;
+ 	}
+ 
+-	//JNIUtil::logMessage("after getContext");
+-    svn_error_t *Err = svn_client_status (&status_hash, &youngest, path, false, TRUE,
++
++	rev.kind = svn_opt_revision_unspecified;
++	statusBaton.pool = subPool.pool();
++
++    svn_error_t *Err = svn_client_status (&youngest, path, &rev, statusReceiver, &statusBaton,
++							 FALSE, 
++							 TRUE,  // get_All
+ 							 onServer ? TRUE : FALSE,     //update
+                              FALSE,     //no_ignore,
+ 							 ctx,
+                              subPool.pool());
+-	//JNIUtil::logMessage("after svn_client_status");
+     if(Err == NULL)
+     {
+-      apr_array_header_t *statusarray =
+-         apr_hash_sorted_keys (status_hash, svn_sort_compare_items_as_paths,
+-                               subPool.pool());
+-      const svn_item_t *item;
+-      svn_wc_status_t *status = NULL;
++		int size = statusBaton.statusVect.size();
++		if (size == 0)
++			return NULL;
++		
++		// when svn_client_status is used with a directory, the status of the directory itself and 
++		// the status of all its direct children are returned
++		// we just want the status of the directory (ie the status of the element with the shortest path)
++		int j = 0;
++		for (int i = 0; i < size; i++)
++		{
++			if (strlen(statusBaton.statusVect[i].path) < strlen(statusBaton.statusVect[j].path))
++				j = i;
++		}
+ 
+-      item = &APR_ARRAY_IDX (statusarray, 0, const svn_item_t);
+-      status = (svn_wc_status_t *) item->value;
++		jobject jStatus = createJavaStatus(statusBaton.statusVect[j].path, statusBaton.statusVect[j].status);
+ 
+-	  //JNIUtil::logMessage("before createJavaStatus");
+-      return createJavaStatus((const char *) item->key, status);
++		return jStatus;
+     }
+     else
+     {
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 		return NULL;
+ 	}
+ }
+@@ -383,7 +425,7 @@
+ 	}
+     else
+     {
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 		return NULL;
+ 	}
+ }
+@@ -409,7 +451,7 @@
+                                  apr_pool);
+ 
+     if(Err != NULL)
+-		JNIUtil::handleSVNError(Err, NULL);
++		JNIUtil::handleSVNError(Err);
+ 
+ }
+ 
+@@ -419,24 +461,22 @@
+ 	m_notify = notify;
+ }
+ 
+-void SVNClient::remove(const char *path, const char *message, bool force)
++void SVNClient::remove(Targets &targets, const char *message, bool force)
+ {
+     svn_client_commit_info_t *commit_info = NULL;
+     Pool subPool;
+     apr_pool_t * apr_pool = subPool.pool ();
+-    m_lastPath = path;
++//    m_lastPath = path;
+ 	svn_client_ctx_t *ctx = getContext(message);
+ 	if(ctx == NULL)
+ 	{
+ 		return;
+ 	}
+ 
+-	Targets targets(path);
+-
+-    svn_error_t *Err = svn_client_delete (&commit_info, targets.array(subPool), force,
++    svn_error_t *Err = svn_client_delete (&commit_info, (apr_array_header_t *)targets.array(subPool), force,
+ 								ctx, apr_pool);
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 
+ }
+ 
+@@ -453,7 +493,7 @@
+ 	svn_error_t *Err = svn_client_revert (m_lastPath.c_str (), recurse, ctx, apr_pool);
+ 
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 
+ }
+ 
+@@ -471,7 +511,7 @@
+     svn_error_t *Err = svn_client_add (m_lastPath.c_str (), recurse, ctx, apr_pool);
+ 
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 
+ 
+ }
+@@ -492,7 +532,7 @@
+ 							   ctx,
+                                apr_pool);
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 
+ }
+ 
+@@ -512,13 +552,12 @@
+ 							   targets.array (subPool),
+                                !recurse, ctx, apr_pool);
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 
+     if(commit_info && SVN_IS_VALID_REVNUM (commit_info->revision))
+       return commit_info->revision;
+ 
+     return -1;
+-	return -1;
+ }
+ 
+ void SVNClient::copy(const char *srcPath, const char *destPath, const char *message, Revision &revision)
+@@ -539,11 +578,10 @@
+                              sourcePath.c_str (),
+                              revision.revision(),
+                              m_lastPath.c_str (),
+-                             NULL,
+ 							 ctx,
+                              apr_pool);
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 
+ }
+ 
+@@ -569,29 +607,28 @@
+ 							 ctx,
+                              apr_pool);
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ }
+ 
+-void SVNClient::mkdir(const char *path, const char *message)
++void SVNClient::mkdir(Targets &targets, const char *message)
+ {
+     Pool subPool;
+     apr_pool_t * apr_pool = subPool.pool ();
+     svn_client_commit_info_t *commit_info = NULL;
+-    m_lastPath = path;
++//    m_lastPath = path;
+    	svn_client_ctx_t *ctx = getContext(message);
+ 	if(ctx == NULL)
+ 	{
+ 		return;
+ 	}
+ 
+-	Targets targets(path);
+     svn_error_t *Err = svn_client_mkdir (&commit_info,
+-                              targets.array(subPool),
++                              (apr_array_header_t *)targets.array(subPool),
+ 							  ctx,
+                               apr_pool);
+ 
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 
+ }
+ 
+@@ -608,7 +645,7 @@
+     svn_error_t *Err = svn_client_cleanup (m_lastPath.c_str (), ctx, apr_pool);
+ 
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 
+ }
+ 
+@@ -628,11 +665,11 @@
+                                 apr_pool);
+ 
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 
+ }
+ 
+-void SVNClient::doExport(const char *srcPath, const char *destPath, Revision &revision)
++void SVNClient::doExport(const char *srcPath, const char *destPath, Revision &revision,bool force)
+ {
+     Pool subPool;
+     apr_pool_t * apr_pool = subPool.pool ();
+@@ -647,12 +684,12 @@
+                                m_lastPath.c_str (),
+                                const_cast<svn_opt_revision_t*>(
+                                  revision.revision ()),
+-							   false, // force
++							   force,	
+ 							   ctx,
+                                apr_pool);
+ 
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 
+ 
+ }
+@@ -676,10 +713,10 @@
+                                apr_pool);
+ 
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ }
+ 
+-void SVNClient::doImport(const char *path, const char *url, const char *newEntry, const char *message, bool recurse)
++void SVNClient::doImport(const char *path, const char *url, const char *message, bool recurse)
+ {
+     Pool subPool;
+     apr_pool_t * apr_pool = subPool.pool ();
+@@ -694,13 +731,12 @@
+     svn_error_t *Err = svn_client_import (&commit_info,
+                                m_lastPath.c_str (),
+                                url,
+-                               //newEntry,
+                                !recurse,
+ 							   ctx,
+                                apr_pool);
+ 
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 
+ }
+ 
+@@ -723,17 +759,60 @@
+                               revision2.revision (),
+                               localPath,
+                               recurse,
++							  FALSE,   // ignore_ancestry
+                               force,
+                               FALSE,
+-							  FALSE,
+ 						      ctx,
+                               apr_pool);
+ 
+     if(Err != NULL)
+- 		JNIUtil::handleSVNError(Err, NULL);
++ 		JNIUtil::handleSVNError(Err);
+ 
+ }
+ 
++/**
++ * Get a property
++ */
++jobject SVNClient::propertyGet(jobject jthis, const char *path, const char *name)
++{
++  Pool subPool;
++  apr_pool_t * apr_pool = subPool.pool ();
++  m_lastPath = path;
++	
++  Revision rev(Revision::START);
++  svn_client_ctx_t *ctx = getContext(NULL);
++  if(ctx == NULL)
++  {
++	return NULL;
++  }
++  
++  apr_hash_t *props;
++  svn_error_t *Err = svn_client_propget(&props, 
++	                name,
++                    m_lastPath.c_str(),
++                    rev.revision(),
++                    false, 
++					ctx, 
++					apr_pool);
++
++  if(Err != NULL)
++  {
++ 	JNIUtil::handleSVNError(Err);
++	return NULL;
++  }
++
++  apr_hash_index_t *hi;
++  hi = apr_hash_first (apr_pool, props); // only one element since we disabled recurse
++  if (hi == NULL)
++	  return NULL; // no property with this name
++
++  const char *filename; 
++  svn_string_t *propval;
++  apr_hash_this (hi, (const void **)&filename, NULL, (void**)&propval);
++
++  return createJavaProperty(jthis, path, name, propval);
++}
++
+ jobjectArray SVNClient::properties(jobject jthis, const char *path)
+ {
+   apr_array_header_t * props;
+@@ -748,7 +827,6 @@
+ 	return NULL;
+   }
+ 
+-
+   svn_error_t *Err = svn_client_proplist (&props,
+                                m_lastPath.c_str (),
+                                rev.revision(), 
+@@ -757,7 +835,7 @@
+                                apr_pool);
+   if(Err != NULL)
+   {
+- 	JNIUtil::handleSVNError(Err, NULL);
++ 	JNIUtil::handleSVNError(Err);
+     return NULL;
+   }
+ 
+@@ -849,6 +927,66 @@
+ 	propertySet(path, name, val, recurse);
+ }
+ 
++
++void SVNClient::diff(const char *target1, Revision &revision1, 
++					const char *target2, Revision &revision2,
++					const char *outfileName,bool recurse)
++{
++	Pool pool;
++	svn_error_t *err = NULL;
++	apr_array_header_t *options;
++
++	svn_client_ctx_t *ctx = getContext(NULL);
++	if(ctx == NULL)
++		return;
++
++	apr_file_t *outfile = NULL;
++	apr_status_t rv;
++	rv = apr_file_open(&outfile, outfileName,
++                       APR_CREATE|APR_WRITE|APR_TRUNCATE , APR_OS_DEFAULT,
++                       pool.pool());
++	if (rv != APR_SUCCESS) 
++	{
++		err = svn_error_create(rv, NULL,"Cannot open file.");
++ 		JNIUtil::handleSVNError(err);
++		return;
++	}
++
++	// we don't use any options
++	options = svn_cstring_split ("", " \t\n\r", TRUE, pool.pool());
++
++    svn_error_t *Err = svn_client_diff (
++							options,    // options
++							target1,
++							revision1.revision(),
++							target2,
++							revision2.revision(),
++							recurse ? TRUE : FALSE,
++                            TRUE,  // ignore_ancestry
++                            FALSE, // no_diff_deleted
++                            outfile,
++                            NULL,  // errFile (not needed when using default diff)
++                            ctx,
++                            pool.pool());
++
++	rv = apr_file_close(outfile);
++	if (rv != APR_SUCCESS) 
++	{
++		err = svn_error_create(rv, NULL,"Cannot close file.");
++ 		JNIUtil::handleSVNError(err);
++		return;
++	}
++
++	if(Err != NULL)
++	{
++ 		JNIUtil::handleSVNError(Err);
++		return;
++	}
++
++
++}
++
++
+ svn_client_ctx_t * SVNClient::getContext(const char *message)
+ {
+ 	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
+@@ -918,22 +1056,24 @@
+       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
+                              m_passWord.c_str());
+ 
++
+ 	ctx->auth_baton = ab;
+-	ctx->prompt_func = NULL;
+-	ctx->prompt_baton = NULL;
+ 	ctx->notify_func = Notify::notify;
+ 	ctx->notify_baton = m_notify;
+ 	ctx->log_msg_func = getCommitMessage;
+ 	ctx->log_msg_baton = getCommitMessageBaton(message);
++	ctx->cancel_func = NULL;
++	ctx->cancel_baton = NULL;
+ 	svn_error_t *err = NULL;
+-    if (( err = svn_config_get_config (&(ctx->config), JNIUtil::getRequestPool()->pool())))
++    if (( err = svn_config_get_config (&(ctx->config), NULL, JNIUtil::getRequestPool()->pool())))
+     {
+-		JNIUtil::handleSVNError(err, NULL);
++		JNIUtil::handleSVNError(err);
+         return NULL;
+     }
+ 
+ 	return ctx;
+ }
++
+ svn_error_t *SVNClient::getCommitMessage(const char **log_msg, const char **tmp_file,
+                                 apr_array_header_t *commit_items, void *baton,
+                                 apr_pool_t *pool)
+@@ -964,6 +1104,7 @@
+ 	}
+ 	return NULL;
+ }
++
+ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
+ {
+ 	JNIEnv *env = JNIUtil::getEnv();
+@@ -972,45 +1113,43 @@
+ 	{
+ 		return NULL;
+ 	}
+-	//JNIUtil::logMessage("after FindClass");
+ 	static jmethodID mid = 0;
+ 	if(mid == 0)
+ 	{
+-		mid = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;ZJJLjava/lang/String;IIZZZIILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;J)V");
++		mid = env->GetMethodID(clazz, "<init>", 
++			"(Ljava/lang/String;Ljava/lang/String;IJJJLjava/lang/String;IIIIZZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;J)V");
+ 		if(JNIUtil::isJavaExceptionThrown())
+ 		{
+ 			return NULL;
+ 		}
+-		//JNIUtil::logMessage("after MethodID");
+ 	}
+ 	jstring jPath = JNIUtil::makeJString(path);
+ 	if(JNIUtil::isJavaExceptionThrown())
+ 	{
+ 		return NULL;
+ 	}
+-	//JNIUtil::logMessage("after makeJString(path)");
+ 
+-	jboolean jIsVersioned = JNI_FALSE;
+-	jboolean jIsDir = JNI_FALSE;
+-	jboolean jIsCopied = JNI_FALSE;
+-	jboolean jIsLocked = JNI_FALSE;
++	jstring jUrl = NULL;
++	jint jNodeKind = org_tigris_subversion_javahl_NodeKind_unknown;
+ 	jlong jRevision = org_tigris_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+-	jlong jLastChanged = 0;
++	jlong jLastChangedRevision = org_tigris_subversion_javahl_Revision_SVN_INVALID_REVNUM;
++	jlong jLastChangedDate = 0;
+ 	jstring jLastCommitAuthor = NULL;
+ 	jint jTextType = org_tigris_subversion_javahl_Status_Kind_none;
+ 	jint jPropType = org_tigris_subversion_javahl_Status_Kind_none;
+ 	jint jRepositoryTextType = org_tigris_subversion_javahl_Status_Kind_none;
+ 	jint jRepositoryPropType = org_tigris_subversion_javahl_Status_Kind_none;
+-	jstring jConflictNew = NULL;
++	jboolean jIsLocked = JNI_FALSE;
++	jboolean jIsCopied = JNI_FALSE;
+ 	jstring jConflictOld = NULL;
++	jstring jConflictNew = NULL;
+ 	jstring jConflictWorking = NULL;
+-	jstring jURL = NULL;
+ 	jstring jURLCopiedFrom = NULL;
+ 	jlong jRevisionCopiedFrom = org_tigris_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+ 
+ 	if(status != NULL)
+ 	{
+-		jIsVersioned = (status->text_status > svn_wc_status_unversioned) ? JNI_TRUE : JNI_FALSE;
++
+ 		jTextType = mapStatusKind(status->text_status);
+ 		jPropType = mapStatusKind(status->prop_status);
+ 		jRepositoryTextType = mapStatusKind(status->repos_text_status);
+@@ -1018,72 +1157,74 @@
+ 		jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
+ 		jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
+ 
++
+ 	    svn_wc_entry_t * entry = status->entry;
+ 		if (entry != NULL)
+ 		{
++			jUrl = JNIUtil::makeJString(entry->url);
++			if(JNIUtil::isJavaExceptionThrown())
++			{
++				return NULL;
++			}
++			jNodeKind = entry->kind;
+ 			jRevision = entry->revision;
+-			jLastChanged = entry->cmt_rev;
++			jLastChangedRevision = entry->cmt_rev;
++			jLastChangedDate = entry->cmt_date;
+ 			jLastCommitAuthor = JNIUtil::makeJString(entry->cmt_author);
+ 			if(JNIUtil::isJavaExceptionThrown())
+ 			{
+ 				return NULL;
+ 			}
+-			//JNIUtil::logMessage("after makeJString(entry->cmt_author)");
+-			jIsDir = (entry->kind == svn_node_dir) ? JNI_TRUE: JNI_FALSE;
++
+ 			jConflictNew = JNIUtil::makeJString(entry->conflict_new);
+ 			if(JNIUtil::isJavaExceptionThrown())
+ 			{
+ 				return NULL;
+ 			}
+-			//JNIUtil::logMessage("after makeJString(entry->conflict_new)");
+ 			jConflictOld = JNIUtil::makeJString(entry->conflict_old);
+ 			if(JNIUtil::isJavaExceptionThrown())
+ 			{
+ 				return NULL;
+ 			}
+-			//JNIUtil::logMessage("after makeJString(entry->conflict_old)");
+ 			jConflictWorking= JNIUtil::makeJString(entry->conflict_wrk);
+ 			if(JNIUtil::isJavaExceptionThrown())
+ 			{
+ 				return NULL;
+ 			}
+-			//JNIUtil::logMessage("after makeJString(entry->conflict_work)");
+-			jURL = JNIUtil::makeJString(entry->url);
+-			if(JNIUtil::isJavaExceptionThrown())
+-			{
+-				return NULL;
+-			}
+-			//JNIUtil::logMessage("after makeJString(entry->conflict_work)");
+ 			jURLCopiedFrom = JNIUtil::makeJString(entry->copyfrom_url);
+ 			if(JNIUtil::isJavaExceptionThrown())
+ 			{
+ 				return NULL;
+ 			}
+-			//JNIUtil::logMessage("after makeJString(entry->copyfrom_url)");
+ 			jRevisionCopiedFrom = entry->copyfrom_rev;
+ 		}
+ 	}
+ 
+-	jobject ret = env->NewObject(clazz, mid, jPath, jIsDir, jRevision, jLastChanged, jLastCommitAuthor,
+-		jTextType, jPropType, jIsVersioned, jIsLocked, jIsCopied, jRepositoryTextType, jRepositoryPropType,
+-		jConflictOld, jConflictNew, jConflictWorking, jURL, jURLCopiedFrom, jRevisionCopiedFrom);
++	jobject ret = env->NewObject(clazz, mid, jPath, jUrl, jNodeKind, jRevision, jLastChangedRevision, jLastChangedDate, jLastCommitAuthor,
++		jTextType, jPropType, jRepositoryTextType, jRepositoryPropType, jIsLocked, jIsCopied, jConflictOld, jConflictNew, jConflictWorking,
++		jURLCopiedFrom, jRevisionCopiedFrom);
+ 	if(JNIUtil::isJavaExceptionThrown())
+ 	{
+ 		return NULL;
+ 	}
+-	//JNIUtil::logMessage("NewObject");
+ 	env->DeleteLocalRef(clazz);
+ 	if(JNIUtil::isJavaExceptionThrown())
+ 	{
+ 		return NULL;
+ 	}
+-	//JNIUtil::logMessage("DeleteLocalRef(clazz)");
+ 	env->DeleteLocalRef(jPath);
+ 	if(JNIUtil::isJavaExceptionThrown())
+ 	{
+ 		return NULL;
+ 	}
+-	//JNIUtil::logMessage("DeleteLocalRef(jPath)");
++	if (jUrl != NULL)
++	{
++		env->DeleteLocalRef(jUrl);
++	if(JNIUtil::isJavaExceptionThrown())
++	{
++		return NULL;
++	}
++	}
+ 	if(jLastCommitAuthor != NULL)
+ 	{
+ 		env->DeleteLocalRef(jLastCommitAuthor);
+@@ -1091,7 +1232,6 @@
+ 		{
+ 			return NULL;
+ 		}
+-		//JNIUtil::logMessage("DeleteLocalRef(jLastCommitAuthor)");
+ 	}
+ 	if(jConflictNew != NULL)
+ 	{
+@@ -1100,7 +1240,6 @@
+ 		{
+ 			return NULL;
+ 		}
+-		//JNIUtil::logMessage("DeleteLocalRef(jConflictNew)");
+ 	}
+ 	if(jConflictOld != NULL)
+ 	{
+@@ -1109,7 +1248,6 @@
+ 		{
+ 			return NULL;
+ 		}
+-		//JNIUtil::logMessage("DeleteLocalRef(jConflictOld)");
+ 	}
+ 	if(jConflictWorking != NULL)
+ 	{
+@@ -1118,16 +1256,6 @@
+ 		{
+ 			return NULL;
+ 		}
+-		//JNIUtil::logMessage("DeleteLocalRef(jConflictWorking");
+-	}
+-	if(jURL != NULL)
+-	{
+-		env->DeleteLocalRef(jURL);
+-		if(JNIUtil::isJavaExceptionThrown())
+-		{
+-			return NULL;
+-		}
+-		//JNIUtil::logMessage("DeleteLocalRef(jURL");
+ 	}
+ 	if(jURLCopiedFrom != NULL)
+ 	{
+@@ -1136,10 +1264,10 @@
+ 		{
+ 			return NULL;
+ 		}
+-		//JNIUtil::logMessage("DeleteLocalRef(jURLCopiedFrom");
+ 	}
+ 	return ret;
+ }
++
+ jint SVNClient::mapStatusKind(int svnKind)
+ {
+ 	switch(svnKind)
+@@ -1165,8 +1293,12 @@
+ 		return org_tigris_subversion_javahl_Status_Kind_merged;
+     case svn_wc_status_conflicted:
+ 		return org_tigris_subversion_javahl_Status_Kind_conflicted;
++	case svn_wc_status_ignored:
++		return org_tigris_subversion_javahl_Status_Kind_ignored;
+     case svn_wc_status_obstructed:
+ 		return org_tigris_subversion_javahl_Status_Kind_obstructed;
++	case svn_wc_status_incomplete:
++		return org_tigris_subversion_javahl_Status_Kind_incomplete;
+ 	}
+ }
+ svn_error_t *SVNClient::messageReceiver (void *baton, apr_hash_t * changed_paths,
+@@ -1318,7 +1450,7 @@
+   svn_error_t * error = svn_client_propset (name, value, path,
+ 								recurse, JNIUtil::getRequestPool()->pool());
+   if(error != NULL)
+- 		JNIUtil::handleSVNError(error, NULL);
++ 		JNIUtil::handleSVNError(error);
+ }
+ 
+ jbyteArray SVNClient::fileContent(const char *path, Revision &revision)
+@@ -1338,7 +1470,7 @@
+                                pool.pool());
+ 		if(err != NULL)
+ 		{
+-			JNIUtil::handleSVNError(err, NULL);
++			JNIUtil::handleSVNError(err);
+ 			return NULL;
+ 		}
+ 		apr_file_t *file = NULL;
+@@ -1372,7 +1504,7 @@
+                 path, revision.revision(), ctx, pool.pool());
+ 		if(err != NULL)
+ 		{
+-			JNIUtil::handleSVNError(err, NULL);
++			JNIUtil::handleSVNError(err);
+ 			return NULL;
+ 		}
+ 		size = buf->len;
+@@ -1399,7 +1531,7 @@
+ 	if(err != NULL)
+ 	{
+ 		env->ReleaseByteArrayElements(ret, retdata, 0);
+-		JNIUtil::handleSVNError(err, NULL);
++		JNIUtil::handleSVNError(err);
+ 		return NULL;
+ 	}
+ 	env->ReleaseByteArrayElements(ret, retdata, 0);
+@@ -1412,6 +1544,9 @@
+ 	return ret;
+ }
+ 
++/**
++ * create a DirEntry java object from svn_dirent_t structure
++ */ 
+ jobject SVNClient::createJavaDirEntry(const char *path, svn_dirent_t *dirent)
+ {
+ 	JNIEnv *env = JNIUtil::getEnv();
+@@ -1489,14 +1624,14 @@
+ 
+   if(error != SVN_NO_ERROR)
+   {
+- 	JNIUtil::handleSVNError(error, NULL);
++ 	JNIUtil::handleSVNError(error);
+ 	return NULL;
+   }
+    
+   if(URL == NULL)
+   {
+ 	  JNIUtil::handleSVNError(svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+-                                "Either a URL or versioned item is required."), NULL);
++                                "Either a URL or versioned item is required."));
+ 	  return NULL;
+   }
+       
+@@ -1505,7 +1640,7 @@
+                                        &set_rev, ctx, apr_pool);
+   if(error != SVN_NO_ERROR)
+   {
+- 	JNIUtil::handleSVNError(error, NULL);
++ 	JNIUtil::handleSVNError(error);
+ 	return NULL;
+   }
+ 
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/native/SVNClient.h subversion-0.29.0/subversion/bindings/java/javahl/native/SVNClient.h
+--- subversion-0.29.0/subversion/bindings/java/javahl/native/SVNClient.h	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/native/SVNClient.h	2003-09-26 00:22:45.000000000 +0300
+@@ -38,8 +38,6 @@
+ class SVNClient
+ {
+ public:
+-	jobject revProperty(jobject jthis, const char *path, const char *name, Revision &rev);
+-	jobjectArray list(const char *url, Revision &revision, bool force);
+ 	jbyteArray fileContent(const char *path, Revision &revision);
+ 	void propertyCreate(const char *path, const char *name, JNIByteArray &value, bool recurse);
+ 	void propertyCreate(const char *path, const char *name, const char *value, bool recurse);
+@@ -48,19 +46,19 @@
+ 	void propertySet(const char *path, const char *name, const char *value, bool recurse);
+ 	jobjectArray properties(jobject jthis, const char *path);
+ 	void merge(const char *path1, Revision &revision1, const char *path2, Revision &revision2,const char *localPath, bool force, bool recurse);
+-	void doImport(const char *path, const char *url, const char *newEntry, const char *message, bool recurse);
++	void doImport(const char *path, const char *url, const char *message, bool recurse);
+ 	void doSwitch(const char *path, const char *url, Revision &revision, bool recurse);
+-	void doExport(const char *srcPath, const char *destPath, Revision &revision);
++	void doExport(const char *srcPath, const char *destPath, Revision &revision, bool force);
+ 	void resolved(const char *path, bool recurse);
+ 	void cleanup(const char *path);
+-	void mkdir(const char *path, const char *message);
++	void mkdir(Targets &targets, const char *message);
+ 	void move(const char *srcPath, const char *destPath, const char *message, Revision &revision, bool force);
+ 	void copy(const char *srcPath, const char *destPath, const char *message, Revision &revision);
+ 	jlong commit(Targets &targets, const char *message, bool recurse);
+ 	void update(const char *path, Revision &revision, bool recurse);
+ 	void add(const char *path, bool recurse);
+ 	void revert(const char *path, bool recurse);
+-	void remove(const char *path, const char *message, bool force);
++	void remove(Targets &targets, const char *message,bool force);
+ 	void notification(Notify *notify);
+ 	void checkout(const char *moduleName, const char *destPath, Revision &revision, bool recurse);
+ 	jobjectArray logMessages(const char *path, Revision &revisionStart, Revision &revisionEnd);
+@@ -68,7 +66,12 @@
+ 	void password(const char *password);
+ 	void username(const char *username);
+ 	jobject singleStatus(const char *path, bool onServer);
+-	jobjectArray status(const char *path, bool descend, bool onServer);
++	jobjectArray status(const char *path, bool descend, bool onServer, bool getAll);
++	jobjectArray list(const char *url, Revision &revision, bool recurse);
++	jobject revProperty(jobject jthis, const char *path, const char *name, Revision &rev);
++	jobject propertyGet(jobject jthis, const char *path, const char *name);
++	void diff(const char *target1, Revision &revision1, const char *target2, Revision &revision2, const char *outfileName,bool recurse);
++
+ 	const char * getLastPath();
+ 	void finalize();
+ 	void dispose(jobject jthis);
+@@ -90,11 +93,12 @@
+ 	void *getCommitMessageBaton(const char *message, const char *baseDir = NULL);
+     std::string m_userName;
+     std::string m_passWord;
+-	jobject createJavaStatus(const char *path, svn_wc_status_t *status);
+-	jint mapStatusKind(int svnKind);
++	static jobject createJavaStatus(const char *path, svn_wc_status_t *status);
++	static jint mapStatusKind(int svnKind);
+ 	static svn_error_t *messageReceiver (void *baton, apr_hash_t * changed_paths,
+                  svn_revnum_t rev, const char *author, const char *date,
+                  const char *msg, apr_pool_t * pool);
++	static void statusReceiver(void *baton, const char *path, svn_wc_status_t *status);
+ };
+ 
+ #endif // !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/native/svnjavahl.dsp subversion-0.29.0/subversion/bindings/java/javahl/native/svnjavahl.dsp
+--- subversion-0.29.0/subversion/bindings/java/javahl/native/svnjavahl.dsp	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/native/svnjavahl.dsp	2003-09-26 00:22:45.000000000 +0300
+@@ -55,7 +55,12 @@
+ # ADD BSC32 /nologo
+ LINK32=link.exe
+ # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
+-# ADD LINK32 "C:\program files\microsoft sdk\lib\shfolder.lib" ws2_32.lib Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb41.lib ../../../../../Release/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Release/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Release/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Release/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Release/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Release/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Release/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Release/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Release/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibR/apr.lib ../../../../../apr-iconv/LibR/apriconv.lib ../../../../../apr-util/LibR/aprutil.lib ../../../../../Release/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Release/subversion/libsvn_client/libsvn_client-1.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
++# ADD LINK32 ../../../../../db4-win32\lib\libdb41.lib ../../../../../Release/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Release/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Release/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Release/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Release/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Release/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Release/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Release/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Release/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibR/apr.lib ../../../../../apr-iconv/LibR/apriconv.lib ../../../../../apr-util/LibR/aprutil.lib ../../../../../Release/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Release/subversion/libsvn_client/libsvn_client-1.lib shfolder.lib Rpcrt4.lib Mswsock.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
++# Begin Special Build Tool
++SOURCE="$(InputPath)"
++PostBuild_Desc=createJar
++PostBuild_Cmds=jar cvf ../javahl.jar -C ../cls org/tigris/subversion/javahl
++# End Special Build Tool
+ 
+ !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
+ 
+@@ -81,7 +86,12 @@
+ # ADD BSC32 /nologo
+ LINK32=link.exe
+ # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
+-# ADD LINK32 Rpcrt4.lib Mswsock.lib "C:\program files\microsoft sdk\lib\shfolder.lib" ../../../../../db4-win32\lib\libdb41d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
++# ADD LINK32 ../../../../../db4-win32\lib\libdb41d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib shfolder.lib Rpcrt4.lib Mswsock.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
++# Begin Special Build Tool
++SOURCE="$(InputPath)"
++PostBuild_Desc=createJar
++PostBuild_Cmds=jar cvf ../javahl.jar -C ../cls org/tigris/subversion/javahl
++# End Special Build Tool
+ 
+ !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
+ 
+@@ -108,8 +118,13 @@
+ # ADD BSC32 /nologo
+ LINK32=link.exe
+ # ADD BASE LINK32 ws2_32.lib Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb41.lib ../../../../../Release/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Release/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Release/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Release/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Release/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Release/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Release/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Release/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Release/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibR/apr.lib ../../../../../apr-iconv/LibR/apriconv.lib ../../../../../apr-util/LibR/aprutil.lib ../../../../../Release/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Release/subversion/libsvn_client/libsvn_client-1.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
+-# ADD LINK32 "C:\program files\microsoft sdk\lib\shfolder.lib" ws2_32.lib Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb40.lib ../../../../../Release/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Release/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Release/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Release/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Release/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Release/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Release/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Release/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Release/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibR/apr.lib ../../../../../apr-iconv/LibR/apriconv.lib ../../../../../apr-util/LibR/aprutil.lib ../../../../../Release/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Release/subversion/libsvn_client/libsvn_client-1.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
++# ADD LINK32 ../../../../../db4-win32\lib\libdb40.lib ../../../../../Release/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Release/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Release/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Release/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Release/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Release/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Release/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Release/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Release/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibR/apr.lib ../../../../../apr-iconv/LibR/apriconv.lib ../../../../../apr-util/LibR/aprutil.lib ../../../../../Release/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Release/subversion/libsvn_client/libsvn_client-1.lib shfolder.lib Rpcrt4.lib Mswsock.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
+ # SUBTRACT LINK32 /pdb:none
++# Begin Special Build Tool
++SOURCE="$(InputPath)"
++PostBuild_Desc=createJar
++PostBuild_Cmds=jar cvf ../javahl.jar -C ../cls org/tigris/subversion/javahl
++# End Special Build Tool
+ 
+ !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+ 
+@@ -136,8 +151,13 @@
+ # ADD BSC32 /nologo
+ LINK32=link.exe
+ # ADD BASE LINK32 Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb41d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
+-# ADD LINK32 "C:\program files\microsoft sdk\lib\shfolder.lib" Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb40d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
++# ADD LINK32 ../../../../../db4-win32\lib\libdb40d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib shfolder.lib Rpcrt4.lib Mswsock.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
+ # SUBTRACT LINK32 /pdb:none
++# Begin Special Build Tool
++SOURCE="$(InputPath)"
++PostBuild_Desc=createJar
++PostBuild_Cmds=jar cvf ../javahl.jar -C ../cls org/tigris/subversion/javahl
++# End Special Build Tool
+ 
+ !ENDIF 
+ 
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/ClientException.java subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/ClientException.java
+--- subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/ClientException.java	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/ClientException.java	2003-09-26 00:22:45.000000000 +0300
+@@ -25,49 +25,42 @@
+ {
+     /**
+      * The constructor is only used by the native library.
+-     * @param m message
+-     * @param d description
+-     * @param s source
+-     * @param a APR error code
++     * @param message message 
++     * @param source source
++     * @param aprError APR error code
+      */
+-    ClientException(String m, String d, String s, int a)
++    ClientException(String message, String source, int aprError)
+     {
+-        super(m);
+-        de = d;
+-        so = s;
+-        ap = a;
++    	super(message);
++        this.source = source;
++		this.aprError = aprError;
+     }
+     /**
+-     * the error message
++     * the exception message
+      */
+-    private String de;
++    private String message;
++
+     /**
+      * the error source
+      */
+-    private String so;
++    private String source;
+     /**
+      * the APR error id
+      */
+-    private int ap;
+-    /**
+-     * Returns the error message.
+-     */
+-    public String getDescription()
+-    {
+-        return de;
+-    }
++    private int aprError;
++
+     /**
+      * Returns the error source.
+      */
+     public String getSource()
+     {
+-        return so;
++        return source;
+     }
+     /**
+      * Returns the APR error id.
+      */
+     public int getAprError()
+     {
+-        return ap;
++        return aprError;
+     }
+ }
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/DirEntry.java subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/DirEntry.java
+--- subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/DirEntry.java	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/DirEntry.java	2003-09-26 00:22:45.000000000 +0300
+@@ -66,9 +66,9 @@
+ 	/**
+ 	 * @return revision
+ 	 */
+-	public long getLastChangedRevision()
++	public Revision.Number getLastChangedRevision()
+ 	{
+-		return lastChangedRevision;
++		return new Revision.Number(lastChangedRevision);
+ 	}
+ 
+ 	public boolean getHasProps()
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/LogMessage.java subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/LogMessage.java
+--- subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/LogMessage.java	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/LogMessage.java	2003-09-26 00:22:45.000000000 +0300
+@@ -43,9 +43,9 @@
+         return date;
+     }
+ 
+-    public long getRevision()
++    public Revision.Number getRevision()
+     {
+-        return revision;
++        return new Revision.Number(revision);
+     }
+ 
+     public String getAuthor()
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/Notify.java subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/Notify.java
+--- subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/Notify.java	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/Notify.java	2003-09-26 00:22:45.000000000 +0300
+@@ -46,40 +46,73 @@
+     /** The type of action occuring. */
+     public static final class Action
+     {
++        /** Adding a path to revision control. */
+         public static final int add = 0;
++        
++        /** Copying a versioned path. */
+         public static final int copy = 1;
++        
++        /** Deleting a versioned path. */
+         public static final int delete =2;
++        
++        /** Restoring a missing path from the pristine text-base. */
+         public static final int restore = 3;
++        
++        /** Reverting a modified path. */
+         public static final int revert = 4;
++        
++        /** A revert operation has failed. */
+         public static final int failed_revert = 5;
++        
++        /** Resolving a conflict. */
+         public static final int resolved = 6;
+-        public static final int status = 7;
+-        public static final int skip = 8;
++
++        /** Skipping a path. */
++        public static final int skip = 7;
+ 
+         /* The update actions are also used for checkouts, switches, and merges. */
+ 
+         /** Got a delete in an update. */
+-        public static final int update_delete = 9;
++        public static final int update_delete = 8;
+ 
+         /** Got an add in an update. */
+-        public static final int update_add = 10;
++        public static final int update_add = 9;
+ 
+         /** Got any other action in an update. */
+-        public static final int update_update = 11;
++        public static final int update_update = 10;
+ 
+         /** The last notification in an update */
+-        public static final int update_completed = 12;
++        public static final int update_completed = 11;
+ 
+         /** About to update an external module, use for checkouts and switches too,
+          * end with @c svn_wc_update_completed.
+          */
+-        public static final int update_external = 13;
++        public static final int update_external = 12;
++
++        /** The last notification in a status (including status on externals). */
++        public static final int status_completed = 13;
++        
++        /** Running status on an external module. */
++        public static final int status_external = 14;        
++
++
++        /** Committing a modification. */
++        public static final int commit_modified = 15;
++        
++        /** Committing an addition. */
++        public static final int commit_added = 16;
++        
++        /** Committing a deletion. */
++        public static final int commit_deleted = 17;
++        
++        /** Committing a replacement. */
++        public static final int commit_replaced = 18;
++        
++        /** Transmitting post-fix text-delta data for a file. */
++        public static final int commit_postfix_txdelta = 19;
++        
++ 
+ 
+-        public static final int commit_modified = 14;
+-        public static final int commit_added = 15;
+-        public static final int commit_deleted = 16;
+-        public static final int commit_replaced = 17;
+-        public static final int commit_postfix_txdelta = 18;
+ 		private static final String[] actionNames =
+ 		{
+ 			"add",
+@@ -89,13 +122,14 @@
+ 			"revert",
+ 			"failed revert",
+ 			"resolved",
+-			"status",
+ 			"skip",
+ 			"update delete",
+ 			"update add",
+ 			"update modified",
+ 			"update completed",
+ 			"update external",
++            "status completed",
++            "status external",
+ 			"sending modified",
+ 			"sending added   ",
+ 			"sending deleted ",
+@@ -120,20 +154,30 @@
+         /** The state did not change. */
+         public static final int unchanged = 2;
+ 
++        /** The item wasn't present. */
++        public static final int missing = 3;
++
++        /** An unversioned item obstructed work. */
++        public static final int obstructed = 4;
++
+         /** Pristine state was modified. */
+-        public static final int changed = 3;
++        public static final int changed = 5;
+ 
+         /** Modified state had mods merged in. */
+-        public static final int merged = 4;
++        public static final int merged = 6;
+ 
+         /** Modified state got conflicting mods. */
+-        public static final int conflicted = 5;
++        public static final int conflicted = 7;
++
++
+ 
+ 		private static final String[] statusNames =
+ 		{
+ 			"inapplicable",
+ 			"unknown",
+ 			"unchanged",
++            "missing",
++            "obstructed",
+ 			"changed",
+ 			"merged",
+ 			"conflicted",
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/Revision.java subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/Revision.java
+--- subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/Revision.java	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/Revision.java	2003-09-26 00:22:45.000000000 +0300
+@@ -17,7 +17,9 @@
+  */
+ package org.tigris.subversion.javahl;
+ 
++import java.text.SimpleDateFormat;
+ import java.util.Date;
++import java.util.Locale;
+ 
+ /**
+  * Class to specify a revision in a svn command.
+@@ -38,29 +40,29 @@
+ 
+     public String toString()
+     {
+-        switch (revKind)
+-        {
+-        case Kind.unspecified:
+-            return "start revision";
+-        case Kind.committed:
+-            return "last commited revision";
+-        case Kind.previous:
+-            return "previous commited revision";
+-        case Kind.base:
+-            return "base of working revision";
+-        case Kind.working:
+-            return "working revision";
+-        case Kind.head:
+-            return "head revision";
+-        default:
+-            return "bad revision";
+-        }
++        switch(revKind) {
++            case Kind.base : return "BASE";
++            case Kind.committed : return "COMMITTED";
++            case Kind.head : return "HEAD";
++            case Kind.previous : return "PREV";
++            case Kind.working : return "WORKING";
++        }
++        return super.toString();
++    }
++
++    public boolean equals(Object target) {
++        if (this == target)
++            return true;
++        if (!(target instanceof Revision))
++            return false;
++
++        return ((Revision)target).revKind == revKind;        
+     }
+ 
+     public static final Revision HEAD = new Revision(Kind.head);
+     public static final Revision START = new Revision(Kind.unspecified);
+     public static final Revision COMMITTED = new Revision(Kind.committed);
+-    public static final Revision PREVISIOUS = new Revision(Kind.previous);
++    public static final Revision PREVIOUS = new Revision(Kind.previous);
+     public static final Revision BASE = new Revision(Kind.base);
+     public static final Revision WORKING = new Revision(Kind.working);
+     public static final int SVN_INVALID_REVNUM = -1;
+@@ -80,31 +82,44 @@
+             return revNumber;
+         }
+ 
+-        public String toString()
+-        {
+-            return "Revision number " + revNumber;
++        public String toString() {
++            return Long.toString(revNumber);
++        }
++        
++        public boolean equals(Object target) {
++            if (!super.equals(target))
++                return false;
++
++            return ((Revision.Number)target).revNumber == revNumber;        
+         }
+     }
+ 
+     public static class DateSpec extends Revision
+     {
+         protected Date revDate;
+-
+         public DateSpec(Date date)
+         {
+             super(Kind.date);
+             revDate = date;
+         }
+-
+         public Date getDate()
+         {
+             return revDate;
+         }
+ 
+-        public String toString()
+-        {
+-            return "Revision date " + revDate.toString();
++        public String toString() {
++            
++            SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z", Locale.US); 
++            return '{'+dateFormat.format(revDate)+'}';
+         }
++
++        public boolean equals(Object target) {
++            if (!super.equals(target))
++                return false;
++
++            return ((Revision.DateSpec)target).revDate.equals(revDate);        
++        }
++        
+     }
+ 
+     /** Various ways of specifying revisions.
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/Status.java subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/Status.java
+--- subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/Status.java	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/Status.java	2003-09-26 00:22:45.000000000 +0300
+@@ -16,191 +16,242 @@
+  * @endcopyright
+  */
+ package org.tigris.subversion.javahl;
+-
++import java.util.Date;
+ 
+ 
+ /**
+  * Subversion status API.
++ * @author Patrick Mayweg
++ * @author Cédric Chabanois 
++ *         <a href="mailto:cchabanois@ifrance.com">cchabanois@ifrance.com</a> 
+  */
+ public class Status
+ {
+-    Status(String p, boolean id, long r, long lc, String lca, int tt, int pt, boolean iv,
+-                   boolean il, boolean ic, int rtt, int rpt, String coo, String con, String cow, String ur, String urcf, long recf)
+-    {
+-        pa = p;
+-        idi = id;
+-        re = r;
+-        lch = lc;
+-        lcoa = lca;
+-        tty = tt;
+-        pty = pt;
+-        ive = iv;
+-        ilo = il;
+-        ico = ic;
+-        rtty = rtt;
+-        rpty = rpt;
+-        co = coo;
+-        cn = con;
+-        cw = cow;
+-        u = ur;
+-        ucf = urcf;
+-        rcf = recf;
+-    }
+-    private String pa;
+-    private boolean idi;
+-    private long re;
+-    private long lch;
+-    private String lcoa;
+-    private int tty;
+-    private int pty;
+-    private boolean ive;
+-    private boolean ilo;
+-    private boolean ico;
+-    private int rtty;
+-    private int rpty;
+-    private String cn;
+-    private String co;
+-    private String cw;
+-    private String u;
+-    private String ucf;
+-    private long rcf;
+-    /**
+-     * @return path of status entry
+-     */
+-    public String path()
+-    {
+-        return pa;
++    private String url;              // url in repository    
++    private String path;
++    private int nodeKind;                // node kind (file, dir, ...)
++    private long revision;           // base revision
++    private long lastChangedRevision;// last revision this was changed
++    private long lastChangedDate;    // last date this was changed 
++    private String lastCommitAuthor; // last commit author of this item
++    private int textStatus;
++    private int propStatus;
++    private boolean locked;
++    private boolean copied;          // in a copied state 
++    private int repositoryTextStatus;
++    private int repositoryPropStatus;
++    private String conflictNew;      // new version of conflicted file 
++    private String conflictOld;      // old version of conflicted file
++    private String conflictWorking;  // working version of conflicted file
++    private String urlCopiedFrom;
++    private long revisionCopiedFrom;
++
++    
++    public Status(String path, String url, int nodeKind, long revision, 
++        long lastChangedRevision, long lastChangedDate, String lastCommitAuthor, 
++        int textStatus, int propStatus, 
++        int repositoryTextStatus, int repositoryPropStatus,
++        boolean locked, boolean copied, 
++        String conflictOld, String conflictNew, String conflictWorking,
++        String urlCopiedFrom, long revisionCopiedFrom)
++    {
++        this.path = path;
++        this.url = url;
++        this.nodeKind = nodeKind;
++        this.revision = revision;
++        this.lastChangedRevision = lastChangedRevision;
++        this.lastChangedDate = lastChangedDate;
++        this.lastCommitAuthor = lastCommitAuthor;
++        this.textStatus = textStatus;
++        this.propStatus = propStatus;
++        this.locked = locked;
++        this.copied = copied;
++        this.repositoryTextStatus = repositoryTextStatus;
++        this.repositoryPropStatus = repositoryPropStatus;
++        this.conflictOld = conflictOld;
++        this.conflictNew = conflictNew;
++        this.conflictWorking = conflictWorking;
++        this.urlCopiedFrom = urlCopiedFrom;
++        this.revisionCopiedFrom = revisionCopiedFrom;
+     }
++
+     /**
+-     * @return true if entry is a dir
++     * @return path of status entry
+      */
+-    public boolean isDir()
++    public String getPath()
+     {
+-        return idi;
++        return path;
+     }
++
+     /**
+      * @return revision if versioned, otherwise SVN_INVALID_REVNUM
+      */
+-    public long revision()
++    public Revision.Number getRevision()
+     {
+-        return re;
++        return new Revision.Number(revision);
+     }
+     /**
+-     * Returns the last time the file was changed revision number.
++     * @return the last time the file was changed revision number.
++     * or null if not available
+      */
+-    public long lastChanged()
++    public Date getLastChangedDate()
+     {
+-        return lch;
++        if (lastChangedDate == 0)
++            return null;
++        else
++            return new Date(lastChangedDate/1000);
+     }
+     /**
+      * @return name of author if versioned, NULL otherwise
+      */
+-    public String lastCommitAuthor()
++    public String getLastCommitAuthor()
+     {
+-        return lcoa;
++        return lastCommitAuthor;
+     }
++
+     /**
+-     * @return file status of the "textual" component.
++     * @return file status property enum of the "textual" component.
+      */
+-    public String textDescription()
++    public int getTextStatus()
+     {
+-        return Kind.getDescription(tty);
++        return textStatus;
+     }
++
+     /**
+-     * @return file status property enum of the "textual" component.
++     * @return file status property enum of the "property" component.
+      */
+-    public int textType()
++    public int getPropStatus()
+     {
+-        return tty;
++        return propStatus;
+     }
++
+     /**
+-     * @return textual file status of the "property" component.
++     * @return file status property enum of the "textual" component im the repository.
+      */
+-    public String propDescription()
++    public int getRepositoryTextStatus()
+     {
+-        return Kind.getDescription(pty);
++        return repositoryTextStatus;
+     }
++
+     /**
+-     * @return file status property enum of the "property" component.
++     * @return file status property enum of the "property" component im the repository.
+      */
+-    public int propType()
++    public int getRepositoryPropStatus()
+     {
+-        return pty;
++        return repositoryPropStatus;
+     }
++
+     /**
+-     * @return file status of the "textual" component im the repository.
++     * @return true if locked
+      */
+-    public String repositoryTextDescription()
++     public boolean isLocked()
+     {
+-        return Kind.getDescription(rtty);
++        return locked;
+     }
+     /**
+-     * @return file status property enum of the "textual" component im the repository.
++     * @return true if copied
+      */
+-    public int repositoryTextType()
++    public boolean isCopied()
+     {
+-        return rtty;
++        return copied;
+     }
+-    /**
+-     * @return textual file status of the "property" component im the repository.
+-     */
+-    public String repositoryPropDescription()
++    public String getConflictNew()
++    {
++        return conflictNew;
++    }
++    public String getConflictOld()
+     {
+-        return Kind.getDescription(rpty);
++        return conflictOld;
+     }
++    public String getConflictWorking()
++    {
++        return conflictWorking;
++    }
++
+     /**
+-     * @return file status property enum of the "property" component im the repository.
++     * @return url in repository or null if not known
+      */
+-    public int repositoryPropType()
+-    {
+-        return rpty;
++    public String getUrl() {
++        return url;
+     }
++
++
+     /**
+-     * @return true if under version control
++     * @return last changed revision
+      */
+-    public boolean isVersioned()
+-    {
+-        return ive;
++    public Revision.Number getLastChangedRevision() {
++        return new Revision.Number(lastChangedRevision);
+     }
++
+     /**
+-     * @return true if locked
++     * @return the node kind
+      */
+-     public boolean isLocked()
+-    {
+-        return ilo;
++    public int getNodeKind() {
++        return nodeKind;
++    }
++
++
++    public String getUrlCopiedFrom() {
++        return urlCopiedFrom;
++    }
++    
++    public Revision.Number getRevisionCopiedFrom() {
++        return new Revision.Number(revisionCopiedFrom);
+     }
++
+     /**
+-     * @return true if copied
++     * tells if is managed by svn (added, normal, modified ...)
++     * @return
+      */
+-    public boolean isCopied()
+-    {
+-        return ico;
++    public boolean isManaged()  {
++        int textStatus = getTextStatus();
++        return ((textStatus != Status.Kind.unversioned) && 
++                (textStatus != Status.Kind.none) &&
++                (textStatus != Status.Kind.ignored));
+     }
+-    public String conflictNew()
+-    {
+-        return cn;
++    
++    /**
++     * tells if the resource has a remote counter-part
++     * @return
++     */
++    public boolean hasRemote() {
++        int textStatus = getTextStatus();
++        return ((isManaged()) && (textStatus != Status.Kind.added));
+     }
+-    public String conflictOld()
+-    {
+-        return co;
++    
++    public boolean isAdded() {
++        int textStatus = getTextStatus();
++        return textStatus == Status.Kind.added;
+     }
+-    public String conflictWorking()
+-    {
+-        return cw;
++
++    public boolean isDeleted() {
++        int textStatus = getTextStatus();
++        return textStatus == Status.Kind.deleted;        
+     }
+-    public String url()
+-    {
+-        return u;
++
++    public boolean isMerged() {
++        int textStatus = getTextStatus();
++        return textStatus == Status.Kind.merged;        
+     }
+-    public String urlCopiedFrom()
+-    {
+-        return ucf;
++
++    public boolean isIgnored() {
++        int textStatus = getTextStatus();
++        return textStatus == Status.Kind.ignored;        
+     }
+-    public long revisionCopiedFrom()
+-    {
+-        return rcf;
++    
++
++
++    /**
++     * tells if it is modified
++     * @return
++     */
++    public boolean isModified() {
++        int textStatus = getTextStatus();
++        return textStatus == Status.Kind.modified;
+     }
+ 
++
++
+     public static final class Kind
+     {
+         /** does not exist */
+@@ -236,6 +287,12 @@
+         /** an unversioned resource is in the way of the versioned resource */
+         public static final int obstructed = 10;
+ 
++        /** a resource marked as ignored */
++        public static final int ignored = 11;
++        
++        /** a directory doesn't contain a complete entries list  */
++        public static final int incomplete = 12;
++
+         public static final String getDescription(int kind)
+         {
+             switch (kind)
+@@ -258,10 +315,17 @@
+               return "merged";
+             case conflicted:
+               return "conflicted";
++            case ignored:
++              return "ignored";
++            case incomplete:
++              return "incomplete";
+             case unversioned:
+             default:
+               return "unversioned";
+             }
+         }
+     }
++
++
+ }
++
+diff -buNr subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/SVNClient.java subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/SVNClient.java
+--- subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/SVNClient.java	2003-09-25 22:48:25.000000000 +0300
++++ subversion-0.29.0/subversion/bindings/java/javahl/src/org/tigris/subversion/javahl/SVNClient.java	2003-09-26 00:22:45.000000000 +0300
+@@ -59,6 +59,15 @@
+       */
+      public native String getLastPath();
+     /**
++     * List directory entries of a URL.
++     *
++     * @param path Path to explore.
++     * @param descend Recurse into subdirectories if existant.
++     * @return Array of Status entries.
++     */
++    public native Status[]status(String path, boolean descend, boolean onServer, boolean getAll) throws ClientException;
++
++	/**
+      *
+      * @param url
+      * @param revision
+@@ -66,14 +75,7 @@
+      * @return
+      */
+     public native DirEntry[]list(String url, Revision revision, boolean recurse) throws ClientException;
+-    /**
+-     * Enumerates all files/dirs at a given path.
+-     *
+-     * @param path Path to explore.
+-     * @param descend Recurse into subdirectories if existant.
+-     * @return Array of Status entries.
+-     */
+-    public native Status[]status(String path, boolean descend, boolean onServer) throws ClientException;
++
+     /**
+      * Returns the status of a single file in the path.
+      *
+@@ -127,7 +129,7 @@
+       * Sets a file for deletion.
+       * @exception ClientException
+       */
+-    public native void remove(String path, String message, boolean force)throws ClientException;
++    public native void remove(String[] path, String message, boolean force)throws ClientException;
+     /**
+       * Reverts a file to a pristine state.
+       * @exception ClientException
+@@ -168,7 +170,7 @@
+      * Moves or renames a file.
+      * @exception ClientException
+      */
+-    public native void move(String srcPath, String destPath, String Message, Revision revision, boolean force) throws ClientException;
++    public native void move(String srcPath, String destPath, String message, Revision revision, boolean force) throws ClientException;
+     /**
+      * Creates a directory directly in a repository or creates a
+      * directory on disk and schedules it for addition. If <i>path</i>
+@@ -176,7 +178,7 @@
+      * @param message log message.
+      * @exception ClientException
+      */
+-    public native void mkdir(String path, String message) throws ClientException;
++    public native void mkdir(String[] path, String message) throws ClientException;
+     /**
+      * Recursively cleans up a local directory, finishing any
+      * incomplete operations, removing lockfiles, etc.
+@@ -196,7 +198,7 @@
+      * @exception ClientException
+      * @param destPath a destination path that must not already exist.
+      */
+-    public native void doExport(String srcPath, String destPath, Revision revision) throws ClientException;
++    public native void doExport(String srcPath, String destPath, Revision revision,boolean force) throws ClientException;
+     /**
+      * Update local copy to mirror a new url. This excapsulates the
+      * svn_client_switch() client method.
+@@ -207,16 +209,21 @@
+      * Import file or directory PATH into repository directory URL at
+      * head.  This usually requires authentication, see Auth.
+      * @param message log message.
+-     * @param newEntry new directory in which the contents of <i>path</i> are
+-     *        imported.
+      * @exception ClientException
+      */
+-    public native void doImport(String path, String url, String newEntry, String message, boolean recurse) throws ClientException;
++    public native void doImport(String path, String url, String message, boolean recurse) throws ClientException;
+     /**
+      * Merge changes from two paths into a new local path.
+      * @exception ClientException
+      */
+     public native void merge(String path1, Revision revision1, String path2, Revision revision2, String localPath, boolean force, boolean recurse) throws ClientException;
++    
++    /**
++     * diff display the differences between two paths
++     * @exception ClientException
++     */
++    public native void diff(String target1, Revision revision1, String target2, Revision revision2, String outFileName, boolean recurse) throws ClientException;
++    
+     /**
+      * Returns the number of properties found.
+      */
+@@ -228,6 +235,12 @@
+     public native void propertyCreate(String path, String name, byte[] value, boolean recurse) throws ClientException;
+     public native PropertyData revProperty(String path, String name, Revision rev) throws ClientException;
+ 
++    /**
++     * get the given property 
++     */
++    public native PropertyData propertyGet(String path, String name) throws ClientException;
++
++
+     public native byte[] fileContent(String path, Revision revision) throws ClientException;
+     public static native void enableLogging(int logLevel, String logFilePath);
+     public static native String version();

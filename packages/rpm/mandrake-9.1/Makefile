@@ -38,6 +38,10 @@
 # Docs only please
 # DOCS_ONLY := 1 
 
+# Javahl bindings if desired - must define JDK as well
+# JAVAHL := 1
+# JDK    := /usr/java/j2sdk1.4.2
+
 # No documentation please
 # NO_DOCS := 1
 
@@ -47,27 +51,29 @@
 
 # No module activation - conf.d files control modules 0/1
 # Setting this to 0 puts the modules in to httpd2.conf - ugh
-# NO_ACTIVATION := 1
+# NO_ACTIVATION := 0
 
 # No APACHE
 # Set this to one if you want to build w/o Apache
-# NO_APACHE2 := 0
+# NO_APACHE2 := 1
 
 # Require Apache? 0/1
 # Setting this to 1 causes an abort if apache2 is not found
-# REQUIRE_APACHE2 := 1
+REQUIRE_APACHE2 := 1
 
 # Official Build
 # Setting this causes the system to use the build revision
 # This can only be set to sanctioned build numbers
-# BLESSED := 6982
+BLESSED := 7201
 
 # FOP location
 # FOP := /opt/fop
 
 # FOP options
-# FOP_OPTS := -q
+# FOP_OPTIONS := -q
 
+# Automake - in case yours is different
+# AUTOMAKE=automake1.6
 
 # The specific release number
 MDK_RELEASE := 1
@@ -129,6 +135,8 @@ SRPMS_RPM_DIR  := $(RPMDIR)/SRPMS
 
 # Where the svn executable is
 SVNEXEC := $(shell which svn 2>/dev/null)
+SVNEXEC := $(if ldd $(SVNEXEC) | grep 'not found',,$(SVNEXEC))
+SVNEXEC := $(if $(BLESSED),,$(SVNEXEC))
 
 # Whether this is being compiled on the trunk
 TRUNK := $(if $(SVNEXEC),$(shell $(SVNEXEC) info . | grep Url),$(shell pwd))
@@ -161,6 +169,7 @@ SVN_VERSION_MAJOR := $(shell grep 'define SVN_VER_MAJOR' < $(VERSION_FILE) | (re
 SVN_VERSION_MINOR := $(shell grep 'define SVN_VER_MINOR' < $(VERSION_FILE) | (read one two three; echo $$three) )
 SVN_VERSION_MINOR := $(if $(TRUNK),$(shell sh increment-revision $(SVN_VERSION_MINOR)),$(SVN_VERSION_MINOR))
 SVN_VERSION_MICRO := $(shell grep 'define SVN_VER_MICRO' < $(VERSION_FILE) | (read one two three; echo $$three) )
+LONGVER := $(SVN_VERSION_MAJOR)-$(SVN_VERSION_MINOR)-$(SVN_VERSION_MICRO)
 VERSION := $(PRE)$(SVN_VERSION_MAJOR).$(SVN_VERSION_MINOR).$(SVN_VERSION_MICRO)
 
 # The relase depends on whether this is a blessed copy or not
@@ -175,8 +184,10 @@ RELEASE := $(if $(SVNEXEC),$(shell $(SVNEXEC) st -v $(SPECFILE) | cut -b 10- | (
 endif
 
 # Default values
-GE_30           := $(shell sh ge-0-30-0 $(SVN_VERSION_MAJOR) $(SVN_VERSION_MINOR) $(SVN_VERSION_MICRO))
+GE_30           := $(shell sh ge $(SVN_VERSION_MAJOR) $(SVN_VERSION_MINOR) $(SVN_VERSION_MICRO) 0-30-0)
+GE_31           := $(shell sh ge $(SVN_VERSION_MAJOR) $(SVN_VERSION_MINOR) $(SVN_VERSION_MICRO) 0-31-0)
 GE_30_EXT       := $(if $(GE_30),-ge-0-30-0,)
+GE_31_EXT       := $(if $(GE_31),-ge-0-31-0,)
 TMPDIR          := $(if $(TMPDIR),$(TMPDIR),/tmp)
 NODEPS          := $(if $(NODEPS),$(NODEPS),0)
 SILENT          := $(if $(SILENT),$(SILENT),1)
@@ -185,9 +196,16 @@ NO_DOCS         := $(if $(NO_DOCS),$(NO_DOCS),0)
 NO_ACTIVATION   := $(if $(NO_ACTIVATION),$(NO_ACTIVATION),1)
 NO_APACHE2      := $(if $(NO_APACHE2),$(NO_APACHE2),0)
 REQUIRE_APACHE2 := $(if $(REQUIRE_APACHE2),$(REQUIRE_APACHE2),1)
+AUTOMAKE_RPM    := $(if $(AUTOMAKE),$(AUTOMAKE),automake1.6)
+JAVAHL          := $(if $(JAVAHL),1,0)
+JDK             := $(if $(shell sh eq1 $(JAVAHL)),$(JDK),)
+JDK_PATH        := $(if $(JDK),\%define jdk_path $(shell echo $(JDK) | sed 's/\//\\\//g'),\%undefine jdk_path)
+DEFINE_JAVAHL   := \%define javahl $(JAVAHL)
 NEON_RPM        := $(if $(NEON),$(NEON),libneon0)
 SWIG_RPM        := $(if $(SWIG),$(SWIG),swig)
 SWIG_BUILD_RPM  := $(if $(SWIG_BUILD),$(SWIG_BUILD),swig)
+LIBXML2         := $(if $(GE_30),\%define libxml2 BuildRequires: libxml2 >= 2.5.4,\%undefine libxml2)
+IDEAS           := $(if $(GE_30),\%undefine ideas,\%define ideas IDEAS)
 SWIG_MIN        := $(if $(SWIG_MIN),$(SWIG_MIN),$(if $(GE_30),1.3.16,1.3.16))
 NEON_MIN        := $(if $(NEON_MIN),$(NEON_MIN),$(if $(GE_30),0.24.0,0.23.0))
 APACHE_MIN      := $(if $(APACHE_MIN),$(APACHE_MIN),$(if $(GE_30),2.0.47,2.0.43))
@@ -199,7 +217,7 @@ MDK_RELEASE     := $(if $(MDK_RELEASE),$(MDK_RELEASE),1)
 DOCBOOK         := $(shell rpm -q docbook-style-xsl)
 XSLT            := $(shell rpm -q libxslt-proc)
 FOP_PGM         := $(shell sh fop-installed $(FOP))
-FOP_OPTS := $(if ($FOP_OPTS),\%define fop_opts $(FOP_OPTS),\%undefine fop_opts)
+FOP_OPTS        := $(if $(strip ($FOP_OPTIONS)),\%define fop_opts $(FOP_OPTIONS),\%undefine fop_opts)
 ifeq ($(strip $(FOP_PGM)),0)
 FOP_SOURCE    := $(shell sh fop-file)
 FOP_BZ2       := $(shell sh fop-bz2 $(FOP_SOURCE))
@@ -243,11 +261,14 @@ DOCBOOK_PATH :=
 NOT_JUST_DOCS:= \%define not_just_docs 1
 MAKE_DOC     := \%undefine docbook
 FOP_PATH     := \%undefine fop
+FOP_OPTS     := \%undefine fop_opts
+BOOKPATCH    := 
 else
+BOOKPATCH    := svn-book.patch svn-book-fop$(GE_30_EXT).patch 
 ORG_DOCBOOK := $(DOCBOOK_PATH)
 DOCBOOK_PATH :=$(shell echo $(DOCBOOK_PATH)| sed 's/\//\\\//g')
 MAKE_DOC:=$(if $(DOCBOOK_PATH),\%define docbook $(DOCBOOK_PATH),\%undefine docbook)
-NOT_JUST_DOCS := \%define not_just_docs $(if $(shell sh just-docs $(DOCS_ONLY)),0,1)
+NOT_JUST_DOCS := \%define not_just_docs $(if $(shell sh eq1 $(DOCS_ONLY)),0,1)
 FOP_PATH      := $(if $(FOP),\%define fop $(FOP),\%undefine fop)
 endif
 
@@ -290,14 +311,15 @@ ifeq ($(SILENT),1)
 SILENT      := \%define silent --silent
 SILENT_FLAG := \%define silent_flag -s
 # Trunk changes the silent patch slightly
-PATCH       := svn-install.patch svn-book.patch svn-book-fop$(GE_30_EXT).patch svn-install-silent$(GE_30_EXT).patch
+PATCH       := svn-install.patch $(BOOKPATCH) svn-install-silent$(if $(GE_31_EXT),$(GE_31_EXT),$(GE_30_EXT)).patch
 SILENT_TGT  := all_silent
 else
 SILENT      := \%undefine silent
 SILENT_FLAG :=  \%undefine silent_flag
-PATCH       := svn-install.patch svn-book.patch svn-book-fop$(GE_30_EXT).patch
+PATCH       := svn-install.patch $(BOOKPATCH)
 SILENT_TGT  := all_noisy
 endif
+JAVA_PATCH  := svn-java.patch
 ifeq ($(NO_ACTIVATION),1)
 MOD_ACTIVATE := --disable-mod-activation
 else
@@ -312,9 +334,9 @@ RCFILES  := $(if $(DEFRC1),$(DEFRC1):)$(if $(DEFRC2),$(DEFRC2):)$(if $(DEFRC3),$
 
 # Define programs
 ifneq ($(NO_APACHE2),1)
-APXS          := $(shell which apxs2|sed 's/\//\\\//g')
-APR_CONFIG    := $(shell which apr-config| sed 's/\//\\\//g')
-APU_CONFIG    := $(shell which apu-config| sed 's/\//\\\//g')
+APXS          := $(shell which apxs2 2>/dev/null |sed 's/\//\\\//g')
+APR_CONFIG    := $(shell which apr-config 2>/dev/null | sed 's/\//\\\//g')
+APU_CONFIG    := $(shell which apu-config 2>/dev/null | sed 's/\//\\\//g')
 WITH_APR      := \%define with_apr $(if $(APR_CONFIG),--with-apr-config=,--without-apr-config)
 WITH_APU      := $(if $(APU_CONFIG),\%define with_apu --with-apr-util=,)
 USE_APACHE2      := \%define use_apache2 1
@@ -390,10 +412,24 @@ subversion rpm : check_release build_sources build_rpm_files
 check_release : $(RPMBITS)
 	@if [ "$(RELEASE)"x = "x" ] ; then \
 	  echo "Subversion not installed or this is not a blessed version." ; \
-	  echo "Try 'make RELEASE=XXXX' instead"; exit 1 ; \
-	else  \
-	  exit 0 ;  \
+	  echo "Try 'RELEASE=XXXX make' instead"; exit 1 ; \
+	fi 
+	@if [ "$(JAVAHL)" == "1" ] && [ "$(JDK)" == "" ] ; then \
+	  echo "JDK not defined." ; \
+	  echo "Try 'JAVAHL=1 JDK=path_to_java make' instead." ; \
+	  exit 1 ; \
 	fi
+	@if [ "$(DOCS_ONLY)" != "1" ]  && [ "`rpm -q $(NEON_RPM) | grep -v 'not installed'`" == "" ] ; then \
+	  EXPLAIN="`rpm -q -a | grep neon | grep -v 'not installed' | grep devel | cut -f1 -d-`" ; \
+	  if [ "$$EXPLAIN" == "" ] ; then \
+	    EXPLAIN="neon" ; \
+	    echo "'$(NEON_RPM)' not found."; \
+	  else \
+	    echo "'$$EXPLAIN' found instead of '$(NEON_RPM)'."; \
+	  fi ; \
+	  echo "Try 'NEON=$$EXPLAIN make' instead" ; \
+	  exit 1; \
+	fi 
 	@echo "Making $(SHORTNAME)mdk (S)RPM..."
 
 build_rpm_files : build_sources $(BUILDROOT)
@@ -406,11 +442,14 @@ build_sources: $(TARBALL) $(RPMBITS)
 	cp -f $(RCFILE) $(SOURCE_RPM_DIR)/$(RCFILE)-$(NAMEVER)
 	cat $(PATCH) > $(SOURCE_RPM_DIR)/svn-install.patch-$(NAMEVER)
 	if [ "$(DOCBOOK_PATH)" != "" ] ; then sh make-fo-patch $(ORG_DOCBOOK) >> $(SOURCE_RPM_DIR)/svn-install.patch-$(NAMEVER) ; fi
-	sh make-version-patch $(VERSION_FILE) $(RELEASE) $(MDK_RELEASE) $(BLESS) > $(SOURCE_RPM_DIR)/svn-version.patch-$(NAMEVER)
+	sh make-version-patch $(VERSION_FILE) $(RELEASE) $(MDK_RELEASE) $(LONGVER) $(BLESS) > $(SOURCE_RPM_DIR)/svn-version.patch-$(NAMEVER)
+	cat $(JAVA_PATCH) > $(SOURCE_RPM_DIR)/svn-java.patch-$(NAMEVER)
 	sed -e 's/@MDK_RELEASE@/$(MDK_RELEASE)/' \
 		-e 's/@REPOS_REV@/$(RELEASE)/' \
 		-e 's/@NAMEVER@/$(NAMEVER)/' \
 		-e 's/@RELVER@/$(RELVER)/' \
+		-e 's/@IDEAS@/$(IDEAS)/' \
+		-e 's/@LIBXML2@/$(LIBXML2)/' \
 		-e 's/@BLESSED@/$(BLESSDEF)/' \
 		-e 's/@VERSION@/$(VERSION)/' \
 		-e 's/@RPMDIR@/$(SEDRPM)/' \
@@ -432,10 +471,13 @@ build_sources: $(TARBALL) $(RPMBITS)
 		-e 's/@WITH_APXS@/$(WITH_APXS)/' \
 		-e 's/@WITH_APR@/$(WITH_APR)/' \
 		-e 's/@WITH_APU@/$(WITH_APU)/' \
+		-e 's/@JDK_PATH@/$(JDK_PATH)/' \
+		-e 's/@JAVAHL@/$(DEFINE_JAVAHL)/' \
 		-e 's/@APACHE_DIR@/$(APACHE_DIR)/' \
 		-e 's/@USE_APACHE2@/$(USE_APACHE2)/' \
 		-e 's/@APACHE_CONF@/$(APACHE_CONF)/' \
 		-e 's/@APACHE_VER@/$(APACHE_MIN)/' \
+		-e 's/@AUTOMAKE_RPM@/$(AUTOMAKE_RPM)/' \
 		-e 's/@NEON_RPM@/$(NEON_RPM)/' \
 		-e 's/@NEON_VER@/$(NEON_MIN)/' \
 		-e 's/@SWIG_VER@/$(SWIG_MIN)/' \
