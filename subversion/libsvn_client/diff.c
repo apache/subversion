@@ -670,11 +670,12 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
       svn_path_split (mine, &parent_path, NULL, merge_b->pool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
-      SVN_ERR (svn_client__delete (NULL, mine, parent_access, merge_b->force,
-                                   merge_b->ctx, subpool));
+      SVN_ERR (svn_client__wc_delete (mine, parent_access, merge_b->force,
+                                      merge_b->dry_run, merge_b->ctx, subpool));
       break;
     case svn_node_dir:
-      /* ### create a .drej conflict or something someday? */
+      /* ### Create a .drej conflict or something someday?  If force is set
+         ### should we carry out the delete? */
       return svn_error_createf (SVN_ERR_WC_NOT_FILE, NULL,
                                 "Cannot schedule file '%s' for deletion, "
                                 "because a directory by that name "
@@ -786,11 +787,12 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
       svn_path_split (path, &parent_path, NULL, merge_b->pool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
-      SVN_ERR (svn_client__delete (NULL, path, parent_access, merge_b->force,
-                                   merge_b->ctx, subpool));
+      SVN_ERR (svn_client__wc_delete (path, parent_access, merge_b->force,
+                                      merge_b->dry_run, merge_b->ctx, subpool));
       break;
     case svn_node_file:
-      /* ### create a .drej conflict or something someday? */
+      /* ### Create a .drej conflict or something someday?  If force is set
+         ### should we carry out the delete? */
       return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
                                 "Cannot schedule directory '%s' for deletion, "
                                 "because a file by that name "

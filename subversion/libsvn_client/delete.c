@@ -109,112 +109,114 @@ svn_client__can_delete (const char *path,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client__delete (svn_client_commit_info_t **commit_info,
-                    const char *path,
-                    svn_wc_adm_access_t *adm_access,
-                    svn_boolean_t force, 
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
+static svn_error_t *
+delete_url (svn_client_commit_info_t **commit_info,
+            const char *path,
+            svn_client_ctx_t *ctx,
+            apr_pool_t *pool)
 {
-  if (svn_path_is_url (path))
+  void *ra_baton, *session;
+  svn_ra_plugin_t *ra_lib;
+  const char *anchor, *target;
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  void *root_baton;
+  svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
+  const char *committed_date = NULL;
+  const char *committed_author = NULL;
+  const char *log_msg;
+  svn_node_kind_t kind;
+  const char *auth_dir;
+
+  /* Create a new commit item and add it to the array. */
+  if (ctx->log_msg_func)
     {
-      /* This is a remote removal.  */
-      void *ra_baton, *session;
-      svn_ra_plugin_t *ra_lib;
-      const char *anchor, *target;
-      const svn_delta_editor_t *editor;
-      void *edit_baton;
-      void *root_baton;
-      svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
-      const char *committed_date = NULL;
-      const char *committed_author = NULL;
-      const char *log_msg;
-      svn_node_kind_t kind;
-      const char *auth_dir;
-
-      /* Create a new commit item and add it to the array. */
-      if (ctx->log_msg_func)
-        {
-          svn_client_commit_item_t *item;
-          const char *tmp_file;
-          apr_array_header_t *commit_items 
-            = apr_array_make (pool, 1, sizeof (item));
+      svn_client_commit_item_t *item;
+      const char *tmp_file;
+      apr_array_header_t *commit_items 
+        = apr_array_make (pool, 1, sizeof (item));
           
-          item = apr_pcalloc (pool, sizeof (*item));
-          item->url = apr_pstrdup (pool, path);
-          item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
-          (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
-            = item;
+      item = apr_pcalloc (pool, sizeof (*item));
+      item->url = apr_pstrdup (pool, path);
+      item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
+      (*((svn_client_commit_item_t **) apr_array_push (commit_items))) = item;
           
-          SVN_ERR ((*ctx->log_msg_func) (&log_msg, &tmp_file, commit_items, 
-                                         ctx->log_msg_baton, pool));
-          if (! log_msg)
-            return SVN_NO_ERROR;
-        }
-      else
-        log_msg = "";
-
-      svn_path_split (path, &anchor, &target, pool);
-      target = svn_path_uri_decode (target, pool);
-
-      /* Get the RA vtable that matches URL. */
-      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor, pool));
-
-      /* Open an RA session for the URL. Note that we don't have a local
-         directory, nor a place to put temp files or store the auth
-         data, although we'll try to retrieve auth data from the
-         current directory. */
-      SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, auth_dir,
-                                            NULL, NULL, FALSE, TRUE,
-                                            ctx, pool));
-
-      /* Verify that the thing to be deleted actually exists. */
-      SVN_ERR (ra_lib->check_path (&kind, session, target, 
-                                   SVN_INVALID_REVNUM, pool));
-      if (kind == svn_node_none)
-        return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
-                                  "URL `%s' does not exist", path);
-
-      /* Fetch RA commit editor */
-      SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,
-                                          &committed_rev,
-                                          &committed_date,
-                                          &committed_author,
-                                          log_msg, pool));
-
-      /* Drive the editor to delete the TARGET. */
-      SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, pool,
-                                  &root_baton));
-      SVN_ERR (editor->delete_entry (target, SVN_INVALID_REVNUM, 
-                                     root_baton, pool));
-      SVN_ERR (editor->close_directory (root_baton, pool));
-      SVN_ERR (editor->close_edit (edit_baton, pool));
-
-      /* Fill in the commit_info structure. */
-      *commit_info = svn_client__make_commit_info (committed_rev,
-                                                   committed_author,
-                                                   committed_date,
-                                                   pool);
-
-      return SVN_NO_ERROR;
+      SVN_ERR ((*ctx->log_msg_func) (&log_msg, &tmp_file, commit_items, 
+                                     ctx->log_msg_baton, pool));
+      if (! log_msg)
+        return SVN_NO_ERROR;
     }
+  else
+    log_msg = "";
 
-  if (!force)
-    {
-      /* Verify that there are no "awkward" files */
-      SVN_ERR (svn_client__can_delete (path, adm_access, ctx, pool));
-    }
+  svn_path_split (path, &anchor, &target, pool);
+  target = svn_path_uri_decode (target, pool);
 
-  /* Mark the entry for commit deletion and perform wc deletion */
-  SVN_ERR (svn_wc_delete (path, adm_access,
-                          ctx->cancel_func, ctx->cancel_baton,
-                          ctx->notify_func, ctx->notify_baton, pool));
+  /* Get the RA vtable that matches URL. */
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor, pool));
+
+  /* Open an RA session for the URL. Note that we don't have a local
+     directory, nor a place to put temp files or store the auth
+     data, although we'll try to retrieve auth data from the
+     current directory. */
+  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, auth_dir,
+                                        NULL, NULL, FALSE, TRUE,
+                                        ctx, pool));
+
+  /* Verify that the thing to be deleted actually exists. */
+  SVN_ERR (ra_lib->check_path (&kind, session, target, 
+                               SVN_INVALID_REVNUM, pool));
+  if (kind == svn_node_none)
+    return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
+                              "URL `%s' does not exist", path);
+
+  /* Fetch RA commit editor */
+  SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,
+                                      &committed_rev,
+                                      &committed_date,
+                                      &committed_author,
+                                      log_msg, pool));
+
+  /* Drive the editor to delete the TARGET. */
+  SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, pool,
+                              &root_baton));
+  SVN_ERR (editor->delete_entry (target, SVN_INVALID_REVNUM, 
+                                 root_baton, pool));
+  SVN_ERR (editor->close_directory (root_baton, pool));
+  SVN_ERR (editor->close_edit (edit_baton, pool));
+
+  /* Fill in the commit_info structure. */
+  *commit_info = svn_client__make_commit_info (committed_rev,
+                                               committed_author,
+                                               committed_date,
+                                               pool);
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_client__wc_delete (const char *path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_boolean_t force, 
+                       svn_boolean_t dry_run, 
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *pool)
+{
+
+  if (!force)
+    /* Verify that there are no "awkward" files */
+    SVN_ERR (svn_client__can_delete (path, adm_access, ctx, pool));
+
+  if (!dry_run)
+    /* Mark the entry for commit deletion and perform wc deletion */
+    SVN_ERR (svn_wc_delete (path, adm_access,
+                            ctx->cancel_func, ctx->cancel_baton,
+                            ctx->notify_func, ctx->notify_baton, pool));
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
@@ -223,29 +225,23 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
 
   if (svn_path_is_url (path))
     {
-      adm_access = NULL;
+      delete_url (commit_info, path, ctx, pool);
     }
   else
     {
+      svn_wc_adm_access_t *adm_access;
       const char *parent_path = svn_path_dirname (path, pool);
-
       SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, FALSE,
                                 pool));
+
+      SVN_ERR (svn_client__wc_delete (path, adm_access, force, FALSE, ctx,
+                                      pool));
+
+      SVN_ERR (svn_wc_adm_close (adm_access));
     }
-
-  SVN_ERR (svn_client__delete (commit_info,
-                               path,
-                               adm_access,
-                               force,
-                               ctx,
-                               pool));
-
-  if (adm_access)
-    SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }
