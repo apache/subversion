@@ -73,5 +73,5 @@ typedef struct svn_string_t svn_string_t;
 }
 
 //%typemap(python,out) svn_string_t * {
-//    $target = PyString_FromStringAndSize($source->data, $source->len);
+//    $target = PyBuffer_FromMemory($source->data, $source->len);
 //}

@@ -36,9 +36,37 @@
 
 /* ### be nice to have all the error values and macros. there are some
    ### problems including this file, tho. SWIG isn't smart enough with some
-   ##3 of the preprocessing and thinks there is a macro redefinition */
+   ### of the preprocessing and thinks there is a macro redefinition */
 //%include apr_errno.h
 typedef int apr_status_t;
 
 /* ### seems that SWIG isn't picking up the definition of size_t */
 typedef long size_t;
+
+/* Define the time type (rather than picking up all of apr_time.h) */
+typedef apr_int64_t apr_time_t;
+
+/* -----------------------------------------------------------------------
+   handle long long values so that apr_time_t works well
+*/
+
+%typemap(python,in) long long {
+    $target = PyLong_AsLongLong($source);
+}
+
+/* 'long long *' will always be an OUTPUT parameter */
+%typemap(ignore) long long * (long long temp) {
+    $target = &temp;
+}
+%typemap(python,argout) long long * {
+    $target = t_output_helper($target, PyLong_FromLongLong($source));
+}
+
+/* -----------------------------------------------------------------------
+   create some INOUT typemaps for apr_size_t
+*/
+
+%typemap(in) apr_size_t *INOUT = long *INOUT;
+%typemap(argout) apr_size_t *INOUT = long *INOUT;
+
+/* ----------------------------------------------------------------------- */

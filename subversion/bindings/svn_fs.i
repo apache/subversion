@@ -25,7 +25,7 @@
 
 /* ----------------------------------------------------------------------- */
 
-/* 'int *' will always be an OUTPUT parameter */
+/* for the FS, 'int *' will always be an OUTPUT parameter */
 %typemap(in) int * = int *OUTPUT;
 %typemap(ignore) int * = int *OUTPUT;
 %typemap(argout) int * = int *OUTPUT;
