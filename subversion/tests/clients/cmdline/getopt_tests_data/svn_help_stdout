@@ -21,6 +21,7 @@ Available subcommands:
    import
    info
    list (ls)
+   lock
    log
    merge
    mkdir
@@ -34,6 +35,7 @@ Available subcommands:
    revert
    status (stat, st)
    switch (sw)
+   unlock
    update (up)
    version (ver)
 
