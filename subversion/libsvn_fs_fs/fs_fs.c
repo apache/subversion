@@ -201,6 +201,18 @@ hash_write (apr_hash_t *hash, svn_stream_t *stream, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+get_file_offset (apr_off_t *offset_p, apr_file_t *file, apr_pool_t *pool)
+{
+  apr_off_t offset;
+
+  offset = 0;
+  SVN_ERR (svn_io_file_seek (file, APR_CUR, &offset, pool));
+  *offset_p = offset;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs__fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
@@ -1136,8 +1148,7 @@ build_rep_list (apr_array_header_t **list,
       /* Create the rep_state for this representation. */
       rs = apr_pcalloc (pool, sizeof (*rs));
       rs->file = file;
-      rs->start = 0;
-      SVN_ERR (svn_io_file_seek (file, APR_CUR, &rs->start, pool));
+      SVN_ERR (get_file_offset (&rs->start, file, pool));
       rs->off = rs->start;
       rs->end = rs->start + rep.size;
       
@@ -1246,8 +1257,7 @@ get_combined_window (svn_txdelta_window_t **result,
   stream = svn_stream_from_aprfile (rs->file, pool);
   SVN_ERR (svn_txdelta_read_svndiff_window (&window, stream, rs->ver, pool));
   rs->chunk_index++;
-  rs->off = 0;
-  SVN_ERR (svn_io_file_seek (rs->file, APR_CUR, &rs->off, pool));
+  SVN_ERR (get_file_offset (&rs->off, rs->file, pool));
   if (rs->off > rs->end)
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                              "Reading one svndiff window read beyond the end "
@@ -1280,8 +1290,7 @@ get_combined_window (svn_txdelta_window_t **result,
       stream = svn_stream_from_aprfile (rs->file, pool);
       SVN_ERR (svn_txdelta_read_svndiff_window (&nwin, stream, rs->ver, pool));
       rs->chunk_index++;
-      rs->off = 0;
-      SVN_ERR (svn_io_file_seek (rs->file, APR_CUR, &rs->off, pool));
+      SVN_ERR (get_file_offset (&rs->off, rs->file, pool));
 
       if (rs->off > rs->end)
         return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
@@ -2451,6 +2460,7 @@ open_and_seek_representation_write (apr_file_t **file_p,
 {
   apr_file_t *file;
   const char *txn_dir;
+  apr_off_t offset;
 
   txn_dir = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
                                 apr_pstrcat (pool, id->txn_id,
@@ -2466,6 +2476,8 @@ open_and_seek_representation_write (apr_file_t **file_p,
                                                        pool),
                                  APR_APPEND | APR_WRITE | APR_CREATE,
                                  APR_OS_DEFAULT, pool));
+      offset = 0;
+      SVN_ERR (svn_io_file_seek (file, APR_END, &offset, 0));
     }
   else
     {
@@ -2560,11 +2572,7 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
   b->file = file;
   b->rep_stream = svn_stream_from_aprfile (file, pool);
   
-  SVN_ERR (svn_stream_printf (b->rep_stream, pool, "\n"));
-
-  b->rep_offset = 0;
-  
-  SVN_ERR (svn_io_file_seek (file, APR_CUR, &b->rep_offset, pool));
+  SVN_ERR (get_file_offset (&b->rep_offset, file, pool));
 
   /* If the representation is a property rep, or the contents of a
      directory, write it out in plaintext. */
@@ -2600,8 +2608,7 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
                                        pool));
 
       /* Now determine the offset of the actual svndiff data. */
-      b->delta_start = 0;
-      SVN_ERR (svn_io_file_seek (file, APR_CUR, &b->delta_start, pool));
+      SVN_ERR (get_file_offset (&b->delta_start, file, pool));
       
       /* Prepare to write the svndiff data. */
       svn_txdelta_to_svndiff (b->rep_stream, pool, &wh, &whb);
@@ -2632,8 +2639,7 @@ rep_write_contents_close (void *baton)
     SVN_ERR (svn_stream_close (b->delta_stream));
 
   /* Determine the length of the svndiff data. */
-  offset = 0;
-  SVN_ERR (svn_io_file_seek (b->file, APR_CUR, &offset, b->pool));
+  SVN_ERR (get_file_offset (&offset, b->file, b->pool));
   rep->size = offset - b->delta_start;
 
   /* Fill in the rest of the representation field. */
@@ -2848,6 +2854,8 @@ write_hash_rep (apr_size_t *size,
   /* Store the results. */
   apr_md5_final (checksum, &whb->md5_context);
   *size = whb->size;
+
+  SVN_ERR (svn_stream_printf (whb->stream, pool, "ENDREP\n"));
   
   return SVN_NO_ERROR;
 }
@@ -2915,9 +2923,7 @@ write_final_rev (const svn_fs_id_t **new_id_p,
 
           noderev->data_rep->txn_id = NULL;
           noderev->data_rep->revision = rev;
-          noderev->data_rep->offset = 0;
-          SVN_ERR (svn_io_file_seek (file, APR_CUR, &noderev->data_rep->offset,
-                                     pool));
+          SVN_ERR (get_file_offset (&noderev->data_rep->offset, file, pool));
           SVN_ERR (write_hash_rep (&noderev->data_rep->size,
                                    noderev->data_rep->checksum, file,
                                    str_entries, pool));
@@ -2944,13 +2950,9 @@ write_final_rev (const svn_fs_id_t **new_id_p,
       noderev->prop_rep->revision = rev;
     }
 
-  /* The offset won't be guaranteed to be good until we have written
-     something. */
-  SVN_ERR (svn_io_file_write_full (file, "\n", 1, NULL, pool));
   
   /* Convert our temporary ID into a permanent revision one. */
-  my_offset = 0;
-  SVN_ERR (svn_io_file_seek (file, APR_CUR, &my_offset, pool));
+  SVN_ERR (get_file_offset (&my_offset, file, pool));
   
   if (noderev->id->node_id[0] == '_')
     {
@@ -3008,9 +3010,7 @@ write_final_changed_path_info (apr_off_t *offset_p,
   apr_pool_t *iterpool = svn_pool_create (pool);
   apr_off_t offset;
   
-  SVN_ERR (svn_io_file_write_full (file, "\n", 1, NULL, pool));
-  offset = 0;
-  SVN_ERR (svn_io_file_seek (file, APR_CUR, &offset, pool));
+  SVN_ERR (get_file_offset (&offset, file, pool));
   
   txn_dir = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
                                 apr_pstrcat (pool, txn_id,
@@ -3145,7 +3145,7 @@ svn_fs__fs_commit (svn_revnum_t *new_rev_p,
   svn_revnum_t new_rev;
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_file_t *rev_file;
-  apr_off_t  changed_path_offset;
+  apr_off_t  changed_path_offset, offset;
   char *buf;
 
   /* First grab a write lock. */
@@ -3178,6 +3178,9 @@ svn_fs__fs_commit (svn_revnum_t *new_rev_p,
   /* Get a write handle on the proto revision file. */
   SVN_ERR (svn_io_file_open (&rev_file, rev_filename,
                              APR_WRITE | APR_APPEND, APR_OS_DEFAULT, subpool));
+
+  offset = 0;
+  SVN_ERR (svn_io_file_seek (rev_file, APR_END, &offset, pool));
 
   /* Write out all the node-revisions and directory contents. */
   root_id = svn_fs__create_id ("0", "0",
