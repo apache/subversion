@@ -145,9 +145,8 @@ check_status 8
 ### Make some non-overlapping changes in the same files, merge. ###
 
 ### Sleep for long enough to make the timestamps differ.
-echo "Sleeping, so we are guaranteed a different timestamp."
+echo "Sleeping, to guarantee a timestamp bump."
 sleep 1
-echo "Done sleeping."
 
 
 ### Make the changes.
