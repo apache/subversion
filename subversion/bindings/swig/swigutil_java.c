@@ -68,14 +68,13 @@ static jobject make_pointer(JNIEnv* env, void *ptr)
      (SWIG/Java knows nothing of SWIG_NewPointerObj) */
   jclass cls = JCALL1(FindClass, env, "java/lang/Long");
   return JCALL3(NewObject, env, cls,
-                        JCALL3(GetMethodID, env, cls, "<init>", "(J)V"),
-                        (jlong) ptr);
+                JCALL3(GetMethodID, env, cls, "<init>", "(J)V"), (jlong) ptr);
 }
 
 static jobject convert_hash(JNIEnv* jenv, apr_hash_t *hash,
-                            jobject  (*converter_func)(JNIEnv* env,
-														void *value,
-                                                       void *ctx),
+                            jobject (*converter_func)(JNIEnv* env,
+                                                      void *value,
+                                                      void *ctx),
                             void *ctx)
 {
   apr_hash_index_t *hi;
@@ -137,7 +136,6 @@ void svn_swig_java_add_to_map(JNIEnv* jenv, apr_hash_t *hash, jobject map)
 
 static jobject convert_to_swigtype(JNIEnv* jenv, void *value, void *ctx)
 {
-  /* ctx is a 'swig_type_info *', but this is lost entirely */
   return make_pointer(jenv, value);
 }
 
@@ -154,10 +152,9 @@ jobject svn_swig_java_prophash_to_dict(JNIEnv *jenv, apr_hash_t *hash)
   return convert_hash(jenv, hash, convert_svn_string_t, jenv);
 }
 
-jobject svn_swig_java_convert_hash(JNIEnv *jenv, apr_hash_t *hash,
-                                   swig_type_info *type)
+jobject svn_swig_java_convert_hash(JNIEnv *jenv, apr_hash_t *hash)
 {
-  return convert_hash(jenv, hash, convert_to_swigtype, type);
+  return convert_hash(jenv, hash, convert_to_swigtype, NULL);
 }
 
 jobject svn_swig_java_c_strings_to_list(JNIEnv *jenv, char **strings)

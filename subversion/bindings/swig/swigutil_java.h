@@ -39,30 +39,12 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* If this file is being included outside of a wrapper file, then need to
-   create stubs for some of the SWIG types. */
-
-/* if SWIGEXPORT is defined, then we're in a wrapper. otherwise, we need
-   the prototypes and type definitions. */
-#ifndef SWIGEXPORT
-#define SVN_NEED_SWIG_TYPES
-#endif
-
-#ifdef SVN_NEED_SWIG_TYPES
-
-typedef struct _unnamed swig_type_info;
-swig_type_info *SWIG_TypeQuery(const char *name);
-
-#endif /* SVN_NEED_SWIG_TYPES */
-
-
 /* helper function to convert an apr_hash_t* (char* -> svnstring_t*) to
    a Java Map */
 jobject svn_swig_java_prophash_to_dict(JNIEnv *jenv, apr_hash_t *hash);
 
 /* convert a hash of 'const char *' -> TYPE into a Java Map */
-jobject svn_swig_java_convert_hash(JNIEnv *jenv, apr_hash_t *hash,
-                                   swig_type_info *type);
+jobject svn_swig_java_convert_hash(JNIEnv *jenv, apr_hash_t *hash);
 
 /* add all the elements from a hash to an existing java.util.Map */
 void svn_swig_java_add_to_map(JNIEnv* jenv, apr_hash_t *hash, jobject map);
