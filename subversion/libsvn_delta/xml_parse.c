@@ -485,6 +485,9 @@ void svn_xml_DataHandler(void *userData, const char *data, int len)
   /* TODO: Check context of my_digger->delta, make sure that *data is
      relevant before we bother our data_handler() */
 
+  /* TODO: see note about data handler context optimization in
+     svn_delta.h:svn_delta_digger_t. */
+
   (* (my_digger->data_handler)) (my_digger, data, len);
 
 }
