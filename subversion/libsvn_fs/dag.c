@@ -39,9 +39,8 @@ struct dag_node_t
   /* File?  Dir?  Mollusk? */
   enum svn_node_kind kind;
 
-  /* The immutable dag node from which this node was cloned. */
-  /* kff todo: still pondering this one, but I think it will be
-     useful. */
+  /* The immutable dag node from which this node was cloned, or NULL
+     if none.  kff todo: still pondering this one. */
   dag_node_t *ancestor;
 
   /* Not yet sure exactly what gets allocated in this pool.  If I
