@@ -531,10 +531,9 @@ typedef struct svn_delta_edit_fns_t
   svn_error_t *(*close_file) (void *edit_baton,
                               void *file_baton);
 
-  /* All delta processing is done.  Call this, with the DIR_BATON for
-     the root directory of the changes. */
-  svn_error_t *(*close_edit) (void *edit_baton,
-                              void *dir_baton);
+  /* All delta processing is done.  Call this, with the EDIT_BATON for
+     the entire edit. */
+  svn_error_t *(*close_edit) (void *edit_baton);
 
 } svn_delta_edit_fns_t;
 
