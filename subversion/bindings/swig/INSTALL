@@ -24,14 +24,6 @@ Step 1:  Build & install the proper version of SWIG.
 
     * run 'make && make install'
 
-    * Now cd into the 'Runtime' subdir, and run 'make' there as well.
-      (No, don't ask me why the top-level 'make' doesn't do this
-      automatically, I have no idea.)  This will create various shared
-      glue libraries to bind to different languages.  If you get an
-      error, don't freak out:  check to see that libswigpy was created
-      (or whatever language you care about).  If it exists, you're in
-      good shape.  Go ahead and 'make install' from this area anyway.
-
     * To verify you have the goodz installed, check that these things
       were created, assuming your $PREFIX was /usr/local/lib:
 
