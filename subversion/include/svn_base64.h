@@ -22,7 +22,8 @@
 #ifndef SVN_BASE64_H
 #define SVN_BASE64_H
 
-#include "apr_md5.h"
+#include <apr_md5.h>
+
 #include "svn_io.h"
 
 #ifdef __cplusplus

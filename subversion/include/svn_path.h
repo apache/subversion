@@ -36,9 +36,9 @@
 
 #include <apr_pools.h>
 #include <apr_tables.h>
+
 #include "svn_string.h"
 #include "svn_error.h"
-#include "svn_utf.h"
 
 
 #ifdef __cplusplus

@@ -24,9 +24,10 @@
 #ifndef SVN_UTF_H
 #define SVN_UTF_H
 
-#include "svn_error.h"
-#include "svn_delta.h"
 #include <apr_xlate.h>
+
+#include "svn_error.h"
+#include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {

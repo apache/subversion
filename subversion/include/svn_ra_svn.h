@@ -25,8 +25,11 @@
 #ifndef SVN_RA_SVN_H
 #define SVN_RA_SVN_H
 
+#include <apr.h>
+#include <apr_pools.h>
 #include <apr_network_io.h>
-#include <svn_delta.h>
+
+#include "svn_delta.h"
 
 #ifdef __cplusplus
 extern "C" {
