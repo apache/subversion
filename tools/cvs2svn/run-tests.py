@@ -330,14 +330,6 @@ def show_usage():
     raise svntest.Failure
 
 
-def attr_exec():
-  "detection of the executable flag"
-  repos, wc, logs = ensure_conversion('main')
-  st = os.stat(os.path.join(wc, 'trunk', 'single-files', 'attr-exec'))
-  if not st[0] & stat.S_IXUSR:
-    raise svntest.Failure
-
-
 def bogus_tag():
   "fail on encountering an invalid symbolic name"
   ret, ign, ign = ensure_conversion('bogus-tag',
@@ -354,13 +346,11 @@ def overlapping_branch():
     raise svntest.Failure
 
 
-def tolerate_corruption():
-  "convert as much as can, despite a corrupt ,v file"
-  repos, wc, logs = ensure_conversion('corrupt', None, 1)
-  if not ((logs[1].changed_paths.get('/trunk') == 'A')
-          and (logs[1].changed_paths.get('/trunk/good') == 'A')
-          and (len(logs[1].changed_paths) == 2)):
-    print "Even the valid good,v was not converted."
+def attr_exec():
+  "detection of the executable flag"
+  repos, wc, logs = ensure_conversion('main')
+  st = os.stat(os.path.join(wc, 'trunk', 'single-files', 'attr-exec'))
+  if not st[0] & stat.S_IXUSR:
     raise svntest.Failure
 
 
@@ -369,37 +359,6 @@ def space_fname():
   repos, wc, logs = ensure_conversion('main')
   if not os.path.exists(os.path.join(wc, 'trunk', 'single-files',
                                      'space fname')):
-    raise svntest.Failure
-
-
-def ctrl_char_in_log():
-  "handle a control char in a log message"
-  # This was issue #1106.
-  repos, wc, logs = ensure_conversion('ctrl-char-in-log')
-  if not ((logs[1].changed_paths.get('/trunk') == 'A')
-          and (logs[1].changed_paths.get('/trunk/ctrl-char-in-log') == 'A')
-          and (len(logs[1].changed_paths) == 2)):
-    print "Revision 1 of 'ctrl-char-in-log,v' was not converted successfully."
-    raise svntest.Failure
-  if logs[1].msg.find('\x04') < 0:
-    print "Log message of 'ctrl-char-in-log,v' (rev 1) is wrong."
-    raise svntest.Failure
-
-
-def overdead():
-  "handle tags rooted in a redeleted revision"
-  repos, wc, logs = ensure_conversion('overdead')
-
-
-def phoenix_branch():
-  "convert a branch file rooted in a 'dead' revision"
-  repos, wc, logs = ensure_conversion('phoenix')
-  if not ((logs[4].changed_paths.get('/branches/volsung_20010721 '
-                                     '(from /trunk:2)') == 'A')
-          and (logs[4].changed_paths.get('/branches/volsung_20010721/'
-                                         'phoenix') == 'M')
-          and (len(logs[4].changed_paths) == 2)):
-    print "Revision 4 not as expected."
     raise svntest.Failure
 
 
@@ -487,33 +446,6 @@ def prune_with_care():
     if not (logs[rev].changed_paths.get(path) == 'A'):
       print "Revision %d failed to create path '%s'." % (rev, path)
       raise svntest.Failure
-
-
-def double_delete():
-  "file deleted twice, in the root of the repository"
-  # This really tests several things: how we handle a file that's
-  # removed (state 'dead') in two successive revisions; how we
-  # handle a file in the root of the repository (there were some
-  # bugs in cvs2svn's svn path construction for top-level files); and
-  # the --no-prune option.
-  repos, wc, logs = ensure_conversion('double-delete', None, 1, 1)
-  
-  path = '/trunk/twice-removed'
-
-  if not (logs[1].changed_paths.get(path) == 'A'):
-    raise svntest.Failure
-
-  if logs[1].msg.find('Initial revision') != 0:
-    raise svntest.Failure
-
-  if not (logs[2].changed_paths.get(path) == 'D'):
-    raise svntest.Failure
-
-  if logs[2].msg.find('Remove this file for the first time.') != 0:
-    raise svntest.Failure
-
-  if logs[2].changed_paths.has_key('/trunk'):
-    raise svntest.Failure
 
 
 def simple_commits():
@@ -714,6 +646,74 @@ def mixed_commit():
     raise svntest.Failure
 
 
+def tolerate_corruption():
+  "convert as much as can, despite a corrupt ,v file"
+  repos, wc, logs = ensure_conversion('corrupt', None, 1)
+  if not ((logs[1].changed_paths.get('/trunk') == 'A')
+          and (logs[1].changed_paths.get('/trunk/good') == 'A')
+          and (len(logs[1].changed_paths) == 2)):
+    print "Even the valid good,v was not converted."
+    raise svntest.Failure
+
+
+def phoenix_branch():
+  "convert a branch file rooted in a 'dead' revision"
+  repos, wc, logs = ensure_conversion('phoenix')
+  if not ((logs[4].changed_paths.get('/branches/volsung_20010721 '
+                                     '(from /trunk:2)') == 'A')
+          and (logs[4].changed_paths.get('/branches/volsung_20010721/'
+                                         'phoenix') == 'M')
+          and (len(logs[4].changed_paths) == 2)):
+    print "Revision 4 not as expected."
+    raise svntest.Failure
+
+
+def ctrl_char_in_log():
+  "handle a control char in a log message"
+  # This was issue #1106.
+  repos, wc, logs = ensure_conversion('ctrl-char-in-log')
+  if not ((logs[1].changed_paths.get('/trunk') == 'A')
+          and (logs[1].changed_paths.get('/trunk/ctrl-char-in-log') == 'A')
+          and (len(logs[1].changed_paths) == 2)):
+    print "Revision 1 of 'ctrl-char-in-log,v' was not converted successfully."
+    raise svntest.Failure
+  if logs[1].msg.find('\x04') < 0:
+    print "Log message of 'ctrl-char-in-log,v' (rev 1) is wrong."
+    raise svntest.Failure
+
+
+def overdead():
+  "handle tags rooted in a redeleted revision"
+  repos, wc, logs = ensure_conversion('overdead')
+
+
+def double_delete():
+  "file deleted twice, in the root of the repository"
+  # This really tests several things: how we handle a file that's
+  # removed (state 'dead') in two successive revisions; how we
+  # handle a file in the root of the repository (there were some
+  # bugs in cvs2svn's svn path construction for top-level files); and
+  # the --no-prune option.
+  repos, wc, logs = ensure_conversion('double-delete', None, 1, 1)
+  
+  path = '/trunk/twice-removed'
+
+  if not (logs[1].changed_paths.get(path) == 'A'):
+    raise svntest.Failure
+
+  if logs[1].msg.find('Initial revision') != 0:
+    raise svntest.Failure
+
+  if not (logs[2].changed_paths.get(path) == 'D'):
+    raise svntest.Failure
+
+  if logs[2].msg.find('Remove this file for the first time.') != 0:
+    raise svntest.Failure
+
+  if logs[2].changed_paths.has_key('/trunk'):
+    raise svntest.Failure
+
+
 def split_branch():
   "branch created from both trunk and another branch"
   # See test-data/split-branch-cvsrepos/README.
@@ -742,20 +742,20 @@ test_list = [ None,
               show_usage,
               bogus_tag,
               overlapping_branch,
-              tolerate_corruption,
-              phoenix_branch,
               attr_exec,
               space_fname,
-              ctrl_char_in_log,
-              XFail(overdead),
               two_quick,
               prune_with_care,
-              double_delete,
               simple_commits,
               interleaved_commits,
               XFail(simple_tags),
               simple_branch_commits,
               mixed_commit,
+              tolerate_corruption,
+              phoenix_branch,
+              ctrl_char_in_log,
+              XFail(overdead),
+              double_delete,
               split_branch,
               resync_misgroups,
              ]
