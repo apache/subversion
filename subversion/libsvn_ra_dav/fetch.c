@@ -749,7 +749,9 @@ static svn_error_t *fetch_file(ne_session *sess,
   err = store_vsn_url(rsrc, file_baton, editor->change_file_prop, pool);
 
  error:
-  err2 = (*editor->close_file)(file_baton, checksum->data, pool);
+  err2 = (*editor->close_file)(file_baton,
+                               (checksum ? checksum->data : NULL),
+                               pool);
   return err ? err : err2;
 }
 
