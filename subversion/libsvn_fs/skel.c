@@ -13,9 +13,8 @@
 
 #include "string.h"
 #include "svn_string.h"
-#include "fs.h"
-#include "convert-size.h"
 #include "skel.h"
+#include "convert-size.h"
 
 
 /* Parsing skeletons.  */
@@ -168,7 +167,7 @@ list (const char *data,
 
     /* Construct the return value.  */
     {
-      skel_t *s = NEW (pool, skel_t);
+      skel_t *s = apr_palloc (pool, sizeof (*s));
 
       s->is_atom = 0;
       s->data = list_start;
@@ -209,7 +208,7 @@ implicit_atom (const char *data,
     return 0;
 
   /* Allocate the skel representing this string.  */
-  s = NEW (pool, skel_t);
+  s = apr_palloc (pool, sizeof (*s));
   s->is_atom = 1;
   s->data = start;
   s->len = data - start;
@@ -248,7 +247,7 @@ explicit_atom (const char *data,
     return 0;
 
   /* Allocate the skel representing this string.  */
-  s = NEW (pool, skel_t);
+  s = apr_palloc (pool, sizeof (skel_t));
   s->is_atom = 1;
   s->data = data;
   s->len = size;
@@ -271,9 +270,9 @@ svn_fs__unparse_skel (const skel_t *skel, apr_pool_t *pool)
   svn_string_t *str;
   
   /* Allocate a string to hold the data.  */
-  str = NEW (pool, svn_string_t);
+  str = apr_palloc (pool, sizeof (*str));
   str->blocksize = estimate_unparsed_size (skel, 0) + 200;
-  str->data = NEWARRAY (pool, char, str->blocksize);
+  str->data = apr_palloc (pool, str->blocksize);
   str->len = 0;
 
   return unparse (skel, str, 0, pool);
@@ -430,7 +429,7 @@ unparse (const skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 skel_t *
 svn_fs__make_atom (const char *str, apr_pool_t *pool)
 {
-  skel_t *skel = NEW (pool, skel_t);
+  skel_t *skel = apr_palloc (pool, sizeof (*skel));
   skel->is_atom = 1;
   skel->data = str;
   skel->len = strlen (str);
@@ -442,7 +441,7 @@ svn_fs__make_atom (const char *str, apr_pool_t *pool)
 skel_t *
 svn_fs__make_empty_list (apr_pool_t *pool)
 {
-  skel_t *skel = NEW (pool, skel_t);
+  skel_t *skel = apr_palloc (pool, sizeof (*skel));
 
   skel->is_atom = 0;
   skel->children = 0;
@@ -505,12 +504,12 @@ svn_fs__list_length (skel_t *skel)
 skel_t *
 svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool)
 {
-  skel_t *copy = NEW (pool, skel_t);
+  skel_t *copy = apr_palloc (pool, sizeof (*copy));
 
   if (skel->is_atom)
     {
       apr_size_t len = skel->len;
-      char *s = NEWARRAY (pool, char, len);
+      char *s = apr_palloc (pool, len);
 
       memcpy (s, skel->data, len);
       copy->is_atom = 1;
