@@ -1212,6 +1212,9 @@ svn_error_t *svn_wc_delete (const char *path,
  *<pre> ### I think possibly the "switchover" functionality should be
  * ### broken out into a separate function, but its all intertwined in
  * ### the code right now.  Ben, thoughts?  Hard?  Easy?  Mauve?</pre>
+ *
+ * ### Update: see "###" comment in svn_wc_add_repos_file()'s doc
+ * string about this.
  */
 svn_error_t *svn_wc_add (const char *path,
                          svn_wc_adm_access_t *parent_access,
@@ -1222,6 +1225,44 @@ svn_error_t *svn_wc_add (const char *path,
                          svn_wc_notify_func_t notify_func,
                          void *notify_baton,
                          apr_pool_t *pool);
+
+
+/* Add a file to a working copy at @a dst_path, obtaining the file's
+ * contents from @a new_text_path and its properties from @a new_props,
+ * which normally come from the repository file represented by the
+ * copyfrom args, see below.  The new file will be scheduled for
+ * addition with history.
+ *
+ * Automatically remove @a new_text_path upon successful completion.
+ *
+ * @a adm_access, or an access baton in its associated set, must
+ * contain a write lock for the parent of @a dst_path.
+ *
+ * If @a copyfrom_url is non-null, then @a copyfrom_rev must be a
+ * valid revision number, and together they are the copyfrom history
+ * for the new file.
+ *
+ * Use @a pool for temporary allocations.
+ *
+ * ### This function is very redundant with svn_wc_add().  Ideally,
+ * we'd merge them, so that svn_wc_add() would just take optional
+ * new_props and optional copyfrom information.  That way it could be
+ * used for both 'svn add somefilesittingonmydisk' and for adding
+ * files from repositories, with or without copyfrom history.
+ *
+ * The problem with this Ideal Plan is that svn_wc_add() also takes
+ * care of recursive URL-rewriting.  There's a whole comment in its
+ * doc string about how that's really weird, outside its core mission,
+ * etc, etc.  So another part of the Ideal Plan is that that
+ * functionality of svn_wc_add() would move into a separate function.
+ */
+svn_error_t *svn_wc_add_repos_file (const char *dst_path,
+                                    svn_wc_adm_access_t *adm_access,
+                                    const char *new_text_path,
+                                    apr_hash_t *new_props,
+                                    const char *copyfrom_url,
+                                    svn_revnum_t copyfrom_rev,
+                                    apr_pool_t *pool);
 
 
 /** Remove entry @a name in @a adm_access from revision control.  @a name 
@@ -1484,96 +1525,6 @@ svn_error_t *svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                                        svn_wc_traversal_info_t *ti,
                                        apr_pool_t *pool);
 
-
-/** Given a @a file_path already under version control, fully "install" a
- * @a new_revision of the file.  @a adm_access is an access baton with a 
- * write lock for the directory containing @a file_path.
- *
- * By "install", we mean: the working copy library creates a new
- * text-base and prop-base, merges any textual and property changes
- * into the working file, and finally updates all metadata so that the
- * working copy believes it has a new working revision of the file.
- * All of this work includes being sensitive to eol translation,
- * keyword substitution, and performing all actions using a journaled
- * logfile.
- *
- * The caller provides a @a new_text_path which points to a temporary
- * file containing the 'new' full text of the file at revision
- * @a new_revision.  This function automatically removes @a new_text_path
- * upon successful completion.  If there is no new text, then caller
- * must set @a new_text_path to @c NULL.
- *
- * The caller also provides the new properties for the file in the
- * @a props array; if there are no new props, then caller must pass 
- * @c NULL instead.  This argument is an array of @c svn_prop_t structures, 
- * and can be interpreted in one of two ways:
- *
- *    - if @a is_full_proplist is true, then the array represents the
- *      complete list of all properties for the file.  It is the new
- *      'pristine' proplist.
- *
- *    - if @a is_full_proplist is false, then the array represents a set of
- *      *differences* against the file's existing pristine proplist.
- *      (A deletion is represented by setting an @c svn_prop_t's 'value'
- *      field to @c NULL.)  
- *
- * Note that the @a props array is expected to contain all categories of
- * props, not just 'regular' ones that the user sees.  (See <tt>enum
- * svn_prop_kind</tt>).
- *
- * If @a content_state is non-null, set @a *content_state to the state of
- * the file contents after the installation; if return error, the
- * value of @a *content_state is undefined.
- *
- * If @a prop_state is non-null, set @a *prop_state to the state of the
- * properties after the installation; if return error, the value of
- * @a *prop_state is undefined.
- *
- * If @a new_url is non-null, then this URL will be attached to the file
- * in the 'entries' file.  Otherwise, the file will simply "inherit"
- * its URL from the parent dir.
- *
- * If @a diff3_cmd is non-null, then use it as the diff3 command for
- * any merging; otherwise, use the built-in merge code.
- *
- * @a pool is used for all bookkeeping work during the installation.
- */
-svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *content_state,
-                                  svn_wc_notify_state_t *prop_state,
-                                  svn_wc_adm_access_t *adm_access,
-                                  const char *file_path,
-                                  svn_revnum_t new_revision,
-                                  const char *new_text_path,
-                                  const apr_array_header_t *props,
-                                  svn_boolean_t is_full_proplist,
-                                  const char *new_URL,
-                                  const char *diff3_cmd,
-                                  apr_pool_t *pool);
-
-
-/* A callback function type for retrieving a file's text and
- * properties.  Push the file's text at @a fstream, and set @a *props
- * to the file's properties.  Use @a baton for context.
- */
-typedef svn_error_t * (*svn_wc_add_repos_file_helper_t)
-  (svn_stream_t *fstream, apr_hash_t **props, void *baton);
-
-/*
- * Install a single file from a repository (or other source) into a
- * working copy.  This includes installing the text-base, props, and
- * prop-base.
- *
- * Use @a helper / @a helper_baton to retrieve the file's text and
- * props, and install the file at location @a dst_path, authorized by
- * the parental lock in @a adm_access.  Use @a pool for temporary
- * allocations.
- */
-svn_error_t *
-svn_wc_add_repos_file (const char *dst_path,
-                       svn_wc_adm_access_t *adm_access,
-                       svn_wc_add_repos_file_helper_t helper,
-                       void *helper_baton,
-                       apr_pool_t *pool);
 
 
 /* A word about the implementation of working copy property storage:

@@ -64,6 +64,11 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_UUID          "uuid"
 #define SVN_WC__ENTRY_ATTR_INCOMPLETE    "incomplete"
 
+/* Attribute values for 'schedule' */
+#define SVN_WC__ENTRY_VALUE_ADD        "add"
+#define SVN_WC__ENTRY_VALUE_DELETE     "delete"
+#define SVN_WC__ENTRY_VALUE_REPLACE    "replace"
+
 
 
 /* Initialize an entries file based on URL at INITIAL_REV, in the adm

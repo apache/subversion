@@ -708,29 +708,6 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   return reconcile_errors (cmt_err, unlock_err, cleanup_err, pool);
 }
 
-typedef struct 
-{
-  svn_ra_plugin_t *ra_lib;
-  void *sess;
-  svn_revnum_t src_revnum;
-  svn_revnum_t *fetched_rev;
-  apr_pool_t *pool;
-} add_repos_file_baton_t;
-
-static svn_error_t * 
-add_repos_file_helper (svn_stream_t *fstream,
-                       apr_hash_t **props,
-                       void *helper_baton)
-{
-  add_repos_file_baton_t *baton = helper_baton;
-  
-  SVN_ERR (baton->ra_lib->get_file (baton->sess, "", baton->src_revnum,
-                                    fstream, baton->fetched_rev,
-                                    props, baton->pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 static svn_error_t *
 repos_to_wc_copy (const char *src_url,
@@ -897,50 +874,20 @@ repos_to_wc_copy (const char *src_url,
           src_revnum = d_entry->revision;
         }
 
-    } /* end directory case */
-
-  else if (src_kind == svn_node_file)
-    {
-      svn_revnum_t fetched_rev;
-      add_repos_file_baton_t add_repos_file_baton;
-      add_repos_file_baton.ra_lib = ra_lib;
-      add_repos_file_baton.sess = sess;
-      add_repos_file_baton.src_revnum = src_revnum;
-      add_repos_file_baton.fetched_rev = &fetched_rev;
-      add_repos_file_baton.pool = pool;
-        
-      SVN_ERR (svn_wc_add_repos_file (dst_path, adm_access,
-                                      add_repos_file_helper,
-                                      &add_repos_file_baton,
-                                      pool));
-
-      /* Also, if SRC_REVNUM is invalid ('head'), then FETCHED_REV is now
-         equal to the revision that was actually retrieved.  This is
-         the value we want to use as 'copyfrom_rev' in the call to
-         svn_wc_add() below. */
-      if (! SVN_IS_VALID_REVNUM (src_revnum))
-        src_revnum = fetched_rev;
-    }
-  
-  /* Schedule the new item for addition, or addition-with-history.
-     
-     If the new item is a directory, the URLs will be recursively
-     rewritten, wcprops removed, and everything marked as 'copied',
-     assuming that the src and dst are from the same repository.
-     See comment in svn_wc_add()'s doc about whether svn_wc_add is the
-     appropriate place for this. */
-  if (same_repositories)
-    {
-      /* Schedule dst_path for addition in parent, with copy history.
-         (This function also recursively puts a 'copied' flag on every
-         entry) */
-      SVN_ERR (svn_wc_add (dst_path, adm_access, src_url, src_revnum,
-                           ctx->cancel_func, ctx->cancel_baton, 
-                           ctx->notify_func, ctx->notify_baton, pool));
-    }
-  else
-    {
-      if (src_kind == svn_node_dir)
+      /* Rewrite URLs recursively, remove wcprops, and mark everything
+         as 'copied' -- assuming that the src and dst are from the
+         same repository.  (It's kind of weird that svn_wc_add() is the
+         way to do this; see its doc for more about the controversy.) */
+      if (same_repositories)
+        {
+          /* Schedule dst_path for addition in parent, with copy history.
+             (This function also recursively puts a 'copied' flag on every
+             entry). */
+          SVN_ERR (svn_wc_add (dst_path, adm_access, src_url, src_revnum,
+                               ctx->cancel_func, ctx->cancel_baton, 
+                               ctx->notify_func, ctx->notify_baton, pool));
+        }
+      else  /* different repositories */
         {
           /* ### Someday, we would just call svn_wc_add(), as above,
              but with no copyfrom args.  I.e. in the
@@ -949,16 +896,48 @@ repos_to_wc_copy (const char *src_url,
              deleted, but WITHOUT any copied flags or copyfrom urls.
              Unfortunately, svn_wc_add() is such a mess that it chokes
              at the moment when we pass a NULL copyfromurl. */
-
+          
           return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                    "Source URL is from foreign repository.");
         }
-      
-      /* Recursively schedule unversioned tree for addition, sans history. */
-      SVN_ERR (svn_client__add (dst_path, TRUE /* recursive */,
-                                adm_access, ctx, pool));
-    }
+    } /* end directory case */
 
+  else if (src_kind == svn_node_file)
+    {
+      apr_file_t *fp;
+      svn_stream_t *fstream;
+      svn_revnum_t real_rev;
+      const char *new_text_path;
+      apr_hash_t *new_props;
+      apr_status_t status;
+
+      SVN_ERR (svn_io_open_unique_file
+               (&fp, &new_text_path, dst_path, ".tmp", FALSE, pool));
+
+      fstream = svn_stream_from_aprfile (fp, pool);
+      SVN_ERR (ra_lib->get_file
+               (sess, "", src_revnum, fstream, &real_rev, &new_props, pool));
+      svn_stream_close (fstream);
+
+      status = apr_file_close (fp);
+      if (status)
+        return svn_error_createf
+          (status, NULL, "failed to close file '%s'", dst_path);
+
+      /* If SRC_REVNUM is invalid (HEAD), then REAL_REV is now the
+         revision that was actually retrieved.  This is the value we
+         want to use as 'copyfrom_rev' below. */
+      if (! SVN_IS_VALID_REVNUM (src_revnum))
+        src_revnum = real_rev;
+
+      SVN_ERR (svn_wc_add_repos_file
+               (dst_path, adm_access,
+                new_text_path, new_props,
+                same_repositories ? src_url : NULL,
+                same_repositories ? src_revnum : SVN_INVALID_REVNUM,
+                pool));
+    }
+  
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
