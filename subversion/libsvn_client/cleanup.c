@@ -41,18 +41,11 @@ svn_client_cleanup (const char *dir,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
   const char *diff3_cmd;
   svn_config_t *cfg = ctx->config
     ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
                     APR_HASH_KEY_STRING)
     : NULL;
-
-  SVN_ERR (svn_io_check_path (dir, &kind, pool));
-  if (kind != svn_node_dir)
-    return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                              _("Cannot cleanup '%s': not a directory"),
-                              dir);
 
   svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                   SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
