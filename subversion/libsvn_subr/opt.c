@@ -262,7 +262,7 @@ svn_opt_subcommand_help (const char *subcommand,
  *   - For "committed" or "changed", set REVISION->kind to
  *     svn_opt_revision_committed.
  *
- * If match, return 1, else return 0 and don't touch REVISION.
+ * If match, return 0, else return -1 and don't touch REVISION.
  *
  * ### should we enforce a requirement that users write out these
  * words in full?  Actually, we probably will need to start enforcing
@@ -295,142 +295,88 @@ revision_from_word (svn_opt_revision_t *revision, const char *word)
       revision->kind = svn_opt_revision_committed;
     }
   else
-    return 0;
+    return -1;
 
-  return 1;
+  return 0;
 }
 
 
-/* Return non-zero if REV is all digits, else return 0. */
-static int
-valid_revision_number (const char *rev)
+/* Parse one revision specification.  Return pointer to character
+   after revision, or NULL if the revision is invalid.  Modifies
+   str, so make sure to pass a copy of anything precious. */
+static char *parse_one_rev (svn_opt_revision_t *revision, char *str)
 {
-  while (*rev)
+  char *end, save;
+  time_t tm;
+
+  if (*str == '{')
     {
-      if (! apr_isdigit (*rev))
-        return 0;
-
-      /* Note: Keep this increment out of the apr_isdigit call, which
-         is probably a macro, although you can supposedly #undef to
-         get the function definition... But wait, I've said too much
-         already.  Let us speak of this no more tonight, for there are
-         strange doings in the Shire of late. */
-      rev++;
+      /* Brackets denote a date. */
+      str++;
+      end = strchr (str, '}');
+      if (!end)
+        return NULL;
+      *end = '\0';
+      tm = svn_parse_date (str, NULL);
+      if (tm == -1)
+        return NULL;
+      revision->kind = svn_opt_revision_date;
+      apr_time_ansi_put (&(revision->value.date), tm);
+      return end + 1;
     }
-
-  return 1;
+  else if (apr_isdigit (*str))
+    {
+      /* It's a number. */
+      end = str + 1;
+      while (apr_isdigit (*end))
+        end++;
+      save = *end;
+      *end = '\0';
+      revision->kind = svn_opt_revision_number;
+      revision->value.number = SVN_STR_TO_REV (str);
+      *end = save;
+      return end;
+    }
+  else if (apr_isalpha (*str))
+    {
+      end = str + 1;
+      while (apr_isalpha (*end))
+        end++;
+      save = *end;
+      *end = '\0';
+      if (revision_from_word (revision, str) != 0)
+        return NULL;
+      *end = save;
+      return end;
+    }
+  else
+    return NULL;
 }
 
 
-svn_boolean_t
+int
 svn_opt_parse_revision (svn_opt_revision_t *start_revision,
                         svn_opt_revision_t *end_revision,
                         const char *arg,
                         apr_pool_t *pool)
 {
-  char *left_rev, *right_rev;
-  char *sep;
+  char *left_rev, *right_rev, *end;
 
   /* Operate on a copy of the argument. */
   left_rev = apr_pstrdup (pool, arg);
-  
-  if ((sep = strchr (arg, ':')))
+
+  right_rev = parse_one_rev (start_revision, left_rev);
+  if (right_rev && *right_rev == ':')
     {
-      /* There can only be one colon. */
-      if (strchr (sep + 1, ':'))
-        return TRUE;
-
-      *(left_rev + (sep - arg)) = '\0';
-      right_rev = (left_rev + (sep - arg)) + 1;
-
-      /* If there was a separator, both revisions must be present. */
-      if ((! *left_rev) || (! *right_rev))
-        return TRUE;
+      right_rev++;
+      end = parse_one_rev (end_revision, right_rev);
+      if (!end || *end != '\0')
+        return -1;
     }
-  else  /* no separator */
-    right_rev = NULL;
+  else if (!right_rev || *right_rev != '\0')
+    return -1;
 
-  /* Now left_rev holds N and right_rev holds M or null. */
-
-  if (! revision_from_word (start_revision, left_rev))
-    {
-      if (! valid_revision_number (left_rev))
-        return TRUE;
-
-      start_revision->kind = svn_opt_revision_number;
-      start_revision->value.number = SVN_STR_TO_REV (left_rev);
-    }
-
-  if (right_rev)
-    {
-      if (! revision_from_word (end_revision, right_rev))
-        {
-          if (! valid_revision_number (right_rev))
-            return TRUE;
-
-          end_revision->kind = svn_opt_revision_number;
-          end_revision->value.number = SVN_STR_TO_REV (right_rev);
-        }
-    }
-
-  return FALSE;
-}
-
-
-svn_boolean_t
-svn_opt_parse_date (svn_opt_revision_t *start_revision,
-                    svn_opt_revision_t *end_revision,
-                    const char *arg, apr_pool_t *pool)
-{
-  char *left_date, *right_date;
-  char *sep;
-
-  /* Operate on a copy of the argument. */
-  left_date = apr_pstrdup (pool, arg);
-
-  if ((sep = strchr (arg, ':')))
-    {
-      /* ### todo: some standard date formats contain colons.
-         Eventually, we should probably allow those, and use some
-         other syntax for expressing ranges.  But for now, I'm just
-         going to bail if see a non-separator colon, to get this up
-         and running.  -kff */
-      if (strchr (sep + 1, ':'))
-        return TRUE;
-
-      /* First, turn one string into two. */
-      *(left_date + (sep - arg)) = '\0';
-      right_date = (left_date + (sep - arg)) + 1;
-
-      /* If there was a separator, both dates must be present. */
-      if ((! *left_date) || (! *right_date))
-        return TRUE;
-    }
-  else  /* no separator */
-    right_date = NULL;
-    
-  /* Now left_date holds X and right_date holds Y or null. */
-
-  if (! revision_from_word (start_revision, left_date))
-    {
-      start_revision->kind = svn_opt_revision_date;
-      apr_time_ansi_put (&(start_revision->value.date),
-                         svn_parse_date (left_date, NULL));
-      /* ### todo: check if apr_time_t is valid? */
-    }
-
-  if (right_date)
-    {
-      if (! revision_from_word (end_revision, right_date))
-        {
-          end_revision->kind = svn_opt_revision_date;
-          apr_time_ansi_put (&(end_revision->value.date),
-                             svn_parse_date (right_date, NULL));
-          /* ### todo: check if apr_time_t is valid? */
-        }
-    }
-
-  return FALSE;
+  return 0;
 }
 
 

@@ -195,7 +195,7 @@ typedef struct svn_opt_revision_t {
  * N and/or M may be one of the special revision descriptors
  * recognized by revision_from_word().
  *
- * If ARG is invalid, return TRUE; else return FALSE.
+ * If ARG is invalid, return -1; else return 0.
  * It is invalid to omit a revision (as in, ":", "N:" or ":M").
  *
  * Note:
@@ -203,38 +203,10 @@ typedef struct svn_opt_revision_t {
  * It is typical, though not required, for *START_REVISION and
  * *END_REVISION to be svn_opt_revision_unspecified kind on entry.
  */
-svn_boolean_t svn_opt_parse_revision (svn_opt_revision_t *start_revision,
-                                      svn_opt_revision_t *end_revision,
-                                      const char *arg,
-                                      apr_pool_t *pool);
-
-
-/* Set *START_REVISION and/or *END_REVISION according to ARG, where
- * ARG is "X" or "X:Y", like so:
- * 
- *    - If ARG is "X", set *START_REVISION's kind to
- *      svn_opt_revision_date and value to the apr_time_t for X,  
- *      and leave *END_REVISION untouched.
- *
- *    - If ARG is "X:Y", set *START_REVISION's and *END_REVISION's
- *      kinds to svn_opt_revision_date and values to (apr_time_t) X
- *      and Y respectively. 
- * 
- * X and/or Y may be one of the special revision descriptors
- * recognized by revision_from_word().
- *
- * If ARG is invalid, return TRUE; else return FALSE.
- * It is invalid to omit a revision (as in, ":", "X:" or ":Y").
- *
- * Note:
- *
- * It is typical, though not required, for *START_REVISION and
- * *END_REVISION to be svn_opt_revision_unspecified kind on entry.
- */
-svn_boolean_t
-svn_opt_parse_date (svn_opt_revision_t *start_revision,
-                    svn_opt_revision_t *end_revision,
-                    const char *arg, apr_pool_t *pool);
+int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
+                            svn_opt_revision_t *end_revision,
+                            const char *arg,
+                            apr_pool_t *pool);
 
 
 

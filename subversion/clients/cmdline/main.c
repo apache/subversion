@@ -65,7 +65,6 @@ const apr_getopt_option_t svn_cl__options[] =
     {"recursive",     'R', 0, "descend recursively"},
     {"nonrecursive",  'N', 0, "operate on single directory only"},
     {"revision",      'r', 1, "specify revision number ARG (or X:Y range)"},
-    {"date",          'D', 1, "specify a date ARG (instead of a revision)"},
     {"file",          'F', 1, "read data from file ARG"},
     {"incremental",   svn_cl__incremental_opt, 0,
                       "give output suitable for concatenation"},
@@ -115,7 +114,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  be used as the destination. If multiple URLs are given each will be\n"
     "  checked out into a sub-directory of DESTINATION, with the name of the\n"
     "  sub-directory being the basename of the URL.\n",
-    {'r', 'D', 'q', 'N',
+    {'r', 'q', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
      svn_cl__xml_file_opt }  },
@@ -144,7 +143,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    WC  -> URL:  immediately commit a copy of WC to URL\n"
     "    URL -> WC:   check out URL into WC, schedule for addition\n"
     "    URL -> URL:  complete server-side copy;  used to branch & tag\n",
-    {'m', 'F', 'r', 'D', 'q',
+    {'m', 'F', 'r', 'q',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt,  svn_cl__non_interactive_opt,
      svn_cl__msg_encoding_opt} },
@@ -179,7 +178,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "   2. if alternate syntax is used, the server compares URL1 and URL2\n"
     "      at revisions N and M respectively.  If either N or M are\n"
     "      ommitted, value of HEAD is assumed.\n",
-    {'r', 'D', 'x', 'N',
+    {'r', 'x', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt} },
 
@@ -195,7 +194,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "      not under revision control will not be copied.\n\n"
     "      NOTE: If PATH is omitted, the last component of the URL is used\n"
     "      for the local directory name.\n",
-    {'r', 'D', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+    {'r', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt} },
 
   { "help", svn_cl__help, {"?", "h"},
@@ -228,7 +227,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "List directory entries of a URL.\n"
     "usage: svn list URL1 [URL2 ...]\n\n"
     "    If URL is a file, just file entry will be displayed.\n",
-    {'r', 'D', 'v', 'R', svn_cl__auth_username_opt, 
+    {'r', 'v', 'R', svn_cl__auth_username_opt, 
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
      svn_cl__non_interactive_opt} },
   
@@ -249,7 +248,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       svn log foo.c\n"
     "       svn log http://www.example.com/repo/project/foo.c\n"
     "       svn log http://www.example.com/repo/project foo.c bar.c\n",
-    {'r', 'D', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
+    {'r', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
      svn_cl__non_interactive_opt, svn_cl__strict_opt,
      svn_cl__incremental_opt, svn_cl__xml_opt} },
@@ -263,7 +262,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    N and M default to HEAD if omitted.\n\n"
     "  * WCPATH is the working-copy path that will receive the changes.\n"
     "    If omitted, a default value of '.' is assumed.\n\n",
-    {'r', 'D', 'N', 'q', svn_cl__force_opt,
+    {'r', 'N', 'q', svn_cl__force_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt} },
   
@@ -283,7 +282,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  SRC and DST can both be working copy (WC) paths or URLs:\n"
     "    WC  -> WC:   move and schedule for addition (with history)\n"
     "    URL -> URL:  complete server-side rename.\n",    
-    {'m', 'F', 'r', 'D', 'q', svn_cl__auth_username_opt,
+    {'m', 'F', 'r', 'q', svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt, 
      svn_cl__non_interactive_opt, svn_cl__force_opt,
      svn_cl__msg_encoding_opt} },
@@ -404,7 +403,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "Update working copy to mirror a new URL\n"
     "usage: switch REPOS_URL [TARGET]\n\n"
     "   Note:  this is the way to move a working copy to a new branch.\n",
-    { 'r', 'D', 'N', 'q', svn_cl__auth_username_opt,
+    { 'r', 'N', 'q', svn_cl__auth_username_opt,
       svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
       svn_cl__non_interactive_opt } },
  
@@ -412,7 +411,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "Bring changes from the repository into the working copy.\n"
     "usage: update [TARGETS]\n\n"
     "  If no revision given, bring working copy up-to-date with HEAD rev.\n"
-    "  Else synchronize working copy to revision given by -r or -D.\n"
+    "  Else synchronize working copy to revision given by -r.\n"
     "\n"
     "  For each updated item a line will start with a character reporting the\n"
     "  action taken.  These characters have the following meaning:\n"
@@ -422,7 +421,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    U  Updated\n"
     "    C  Conflict\n"
     "    G  Merged\n",
-    {'r', 'D', 'N', 'q', svn_cl__auth_username_opt,
+    {'r', 'N', 'q', svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
      svn_cl__non_interactive_opt, svn_cl__xml_file_opt} },
 
@@ -490,7 +489,6 @@ main (int argc, const char * const *argv)
   while (1)
     {
       const char *opt_arg;
-      svn_boolean_t ret;
       const char *utf8_opt_arg;
 
       /* Parse the next option. */
@@ -533,10 +531,9 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
-        ret = svn_opt_parse_revision (&(opt_state.start_revision),
-                                      &(opt_state.end_revision),
-                                      opt_arg, pool);
-        if (ret)
+        if (svn_opt_parse_revision (&(opt_state.start_revision),
+                                    &(opt_state.end_revision),
+                                    opt_arg, pool) != 0)
           {
             err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
             if (err)
@@ -547,25 +544,6 @@ main (int argc, const char * const *argv)
                                  0, NULL, pool,
                                  "Syntax error in revision argument \"%s\"",
                                  utf8_opt_arg),
-                                stderr, FALSE);
-            svn_pool_destroy (pool);
-            return EXIT_FAILURE;
-          }
-        break;
-      case 'D':
-        ret = svn_opt_parse_date (&(opt_state.start_revision),
-                                  &(opt_state.end_revision),
-                                  opt_arg, pool);
-        if (ret)
-          {
-            err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
-            if (err)
-              svn_handle_error (err, stderr, FALSE);
-            else
-              svn_handle_error (svn_error_createf
-                                (SVN_ERR_CL_ARG_PARSING_ERROR,
-                                 0, NULL, pool,
-                                 "Unable to parse \"%s\"", utf8_opt_arg),
                                 stderr, FALSE);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;

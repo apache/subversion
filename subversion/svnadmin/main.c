@@ -986,8 +986,6 @@ main (int argc, const char * const *argv)
       switch (opt_id) {
       case 'r':
         {
-          svn_boolean_t failed;
-
           if (opt_state.start_revision.kind != svn_opt_revision_unspecified)
             {
               svn_handle_error (svn_error_create
@@ -999,10 +997,9 @@ main (int argc, const char * const *argv)
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
             }
-          failed = svn_opt_parse_revision (&(opt_state.start_revision),
-                                           &(opt_state.end_revision),
-                                           opt_arg, pool);
-          if (failed)
+          if (svn_opt_parse_revision (&(opt_state.start_revision),
+                                      &(opt_state.end_revision),
+                                      opt_arg, pool) != 0)
             {
               err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg,
                                              NULL, pool);
