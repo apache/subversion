@@ -46,7 +46,7 @@ Blanket commit access:
 Commit access for specific areas:
 
           xela   Alexander Müller <alex@littleblue.de>       (Java bindings)
-       yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Ruby bindings)
+       yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Non-SWIG Ruby b.)
          david   David Summers <david@summersoft.fay.ar.us>  (RPMs)
       rassilon   Bill Tutt <rassilon@lyra.org>               (Win32 / COM)
       kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
