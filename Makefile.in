@@ -162,12 +162,12 @@ changelog:
 
 doc: doc-info doc-txt doc-html
 
-doc-info: doc/svn-design.info
-doc-dvi: doc/svn-design.dvi
-doc-txt: doc/svn-design.txt
-doc-html: doc/svn-design.html
-doc-ps: doc/svn-design.ps
-doc-pdf: doc/svn-design.pdf
+doc-info: doc/programmer/design/svn-design.info
+doc-dvi: doc/programmer/design/svn-design.dvi
+doc-txt: doc/programmer/design/svn-design.txt
+doc-html: doc/programmer/design/svn-design.html
+doc-ps: doc/programmer/design/svn-design.ps
+doc-pdf: doc/programmer/design/svn-design.pdf
 
 #
 # Implicit rules for creating outputs from input files
@@ -190,13 +190,13 @@ doc-pdf: doc/svn-design.pdf
 	$(MAKEINFO) -I $(top_srcdir)/doc -o $@ $< 
 
 .texi.dvi:
-	$(TEXI2DVI) -I $(top_srcdir)/doc $<
+	$(TEXI2DVI) -I $(top_srcdir)/doc/programmer/design $<
 
 .texi.txt:
-	$(MAKEINFO) -I $(top_srcdir)/doc --no-headers -o $@ $<
+	$(MAKEINFO) -I $(top_srcdir)/doc/programmer/design --no-headers -o $@ $<
 
 .texi.html:
-	$(MAKEINFO) -I $(top_srcdir)/doc --no-headers --html -o $@ $<
+	$(MAKEINFO) -I $(top_srcdir)/doc/programmer/design --no-headers --html -o $@ $<
 
 .dvi.ps:
 	$(DVIPS) $< -o $@
