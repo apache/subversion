@@ -327,7 +327,6 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   noderev.revision = 0;
   noderev.ancestor_rev = SVN_INVALID_REVNUM;
   SVN_ERR (svn_fs__put_node_revision (fs, root_id, &noderev, trail));
-  SVN_ERR (svn_fs__stable_node (fs, root_id, trail));
 
   /* Create a new transaction (better have an id of "0") */
   SVN_ERR (svn_fs__create_txn (&txn_id, fs, root_id, trail));

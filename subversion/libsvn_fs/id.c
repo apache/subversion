@@ -307,17 +307,6 @@ svn_fs__precede_id (svn_fs_id_t *id)
 }
 
 
-svn_fs_id_t *
-svn_fs__id_predecessor (const svn_fs_id_t *id, apr_pool_t *pool)
-{
-  svn_fs_id_t *predecessor_id;
-
-  predecessor_id = svn_fs__id_copy (id, pool);
-  svn_fs__precede_id (predecessor_id);
-
-  return predecessor_id;
-}
-
 /* --------------------------------------------------------------------- */
 
 /*** Related-ness checking */

@@ -55,18 +55,6 @@ svn_error_t *svn_fs__create_successor (const svn_fs_id_t **new_id_p,
                                        trail_t *trail);
 
 
-/* Indicate that the contents of the node ID in FS are expected to be
-   stable now, as part of TRAIL.  This suggests to the deltification
-   code that it could be effective to represent other nodes' contents
-   as deltas against this node's contents.  This does not change the
-   contents of the node.
-
-   Do any necessary temporary allocation in TRAIL->pool.  */
-svn_error_t *svn_fs__stable_node (svn_fs_t *fs,
-                                  svn_fs_id_t *id,
-                                  trail_t *trail);
-
-
 /* Delete node revision ID from FS's `nodes' table, as part of TRAIL.
    WARNING: This does not check that the node revision is mutable!
    Callers should do that check themselves.  */

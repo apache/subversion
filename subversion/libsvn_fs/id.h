@@ -121,11 +121,6 @@ int svn_fs__id_length (const svn_fs_id_t *id);
 void svn_fs__precede_id (svn_fs_id_t *id);
 
 
-/* Like svn_fs__precede_id(), but return the predecessor allocated in
-   POOL.  If no possible predecessor, still return an empty id.  */
-svn_fs_id_t *svn_fs__id_predecessor (const svn_fs_id_t *id, apr_pool_t *pool);
-
-
 /* Return non-zero iff node revision A is an ancestor of node revision B.  
    If A == B, then we consider A to be an ancestor of B.  */
 int svn_fs__id_is_ancestor (const svn_fs_id_t *a, const svn_fs_id_t *b);
