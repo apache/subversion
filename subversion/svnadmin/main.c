@@ -212,7 +212,8 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "new revisions into the repository's filesystem.  If the repository\n"
      "was previously empty, its UUID will, by default, be changed to the\n"
      "one specified in the stream.  Progress feedback is sent to stdout.\n",
-     {svnadmin__ignore_uuid, svnadmin__force_uuid, svnadmin__parent_dir} },
+     {'q', svnadmin__ignore_uuid, svnadmin__force_uuid, 
+      svnadmin__parent_dir} },
 
     {"list-dblogs", subcommand_list_dblogs, {0},
      "usage: svnadmin list-dblogs REPOS_PATH\n\n"
@@ -469,7 +470,7 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
-  svn_stream_t *stdin_stream, *stdout_stream;
+  svn_stream_t *stdin_stream, *stdout_stream = NULL;
 
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
   
@@ -478,8 +479,9 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                 apr_file_open_stdin, pool));
   
   /* Have the parser dump feedback to STDOUT. */
-  SVN_ERR (create_stdio_stream (&stdout_stream,
-                                apr_file_open_stdout, pool));
+  if (! opt_state->quiet)
+    SVN_ERR (create_stdio_stream (&stdout_stream,
+                                  apr_file_open_stdout, pool));
   
   SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream,
                               opt_state->uuid_action, opt_state->parent_dir,
