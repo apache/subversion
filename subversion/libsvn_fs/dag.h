@@ -91,13 +91,33 @@ svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
 				       apr_pool_t *pool);
 
 
-/* Mark NODE as immutable.  All nodes are created mutable; this call
+/* Make a new mutable clone of the node named NAME in PARENT, as part
+   of the Berkeley DB transaction DB_TXN.  Set *CHILD_P to a reference
+   to the new node, allocated in POOL.  PARENT must be mutable.  NAME
+   must be a single path component; it cannot be a slash-separated
+   directory path.  Do any necessary temporary allocation in POOL.
+
+   This function does not record the new clone in the `clones' table.
+   It's the caller's responsibility to do whatever clone tracking is
+   necessary.  */
+svn_error_t *svn_fs__dag_clone (dag_node_t **child_p,
+				dag_node_t *parent,
+				const char *name,
+				DB_TXN *db_txn,
+				apr_pool_t *pool);
+
+
+/* Mark the tree of mutable nodes found in FS at the Subversion
+   transaction TXN's root as immutable, as part of the Berkeley DB
+   transaction DB_TXN.  All nodes are created mutable; this call
    indicates that the node's contents will no longer change.  The
    filesystem might elect to store NODE in a more compact form, or to
    store other nodes as deltas relative to NODE.  Do any necessary
    temporary allocation in POOL.  */
-svn_error_t *svn_fs__dag_stabilize (dag_node_t *node,
-				    apr_pool_t *pool);
+svn_error_t *svn_fs__dag_stabilize_txn (svn_fs_t *fs,
+					const char *txn,
+					DB_TXN *db_txn,
+					apr_pool_t *pool);
 
 
 
@@ -136,7 +156,7 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
 				 apr_pool_t *pool);
 
 
-/* Create a new directory named NAME in PARENT, as part of the
+/* Create a new mutable directory named NAME in PARENT, as part of the
    Berkeley DB transaction DB_TXN.  Set *CHILD_P to a reference to the
    new node, allocated in POOL.  The new directory has no contents,
    and no properties.  PARENT must be mutable.  NAME must be a single
@@ -171,5 +191,20 @@ svn_error_t *svn_fs__dag_set_contents (dag_node_t *file,
 				       apr_pool_t *pool);
 
 
+/* Create a new mutable file named NAME in PARENT, as part of the
+   Berkeley DB transaction DB_TXN.  Set *CHILD_P to a reference to the
+   new node, allocated in POOL.  The new file's contents are the empty
+   string, and it has no properties.  PARENT must be mutable.  NAME
+   must be a single path component; it cannot be a slash-separated
+   directory path.  Do any temporary allocation in POOL.  */
+svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
+				    dag_node_t *parent,
+				    const char *name,
+				    DB_TXN *db_txn,
+				    apr_pool_t *pool);
+
+
+
+/* Cloning.  */
 
 #endif /* SVN_LIBSVN_FS_DAG_H */
