@@ -249,7 +249,7 @@ static svn_error_t *find_tunnel_agent(const char *hostname, const char **agent,
   svn_config_t *cfg;
   const char *server_group;
 
-  SVN_ERR( svn_config_read_servers(&cfg, pool) );
+  SVN_ERR(svn_config_read_servers(&cfg, pool));
 
   server_group = svn_config_find_group(cfg, hostname, "groups", pool);
   if (server_group)
@@ -298,7 +298,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              "Illegal svn repository URL %s", url);
 
-  SVN_ERR( find_tunnel_agent(hostname, &tunnel_agent, pool) );
+  SVN_ERR(find_tunnel_agent(hostname, &tunnel_agent, pool));
   if (tunnel_agent)
     {
       /* ### It would be nice if tunnel_agent could contain flags. */
@@ -546,13 +546,12 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
 
   apr_md5_final(digest, &md5_context);
   hex_digest = svn_md5_digest_to_cstring(digest, pool);
-  if (strcmp (hex_digest, expected_checksum) != 0)
-      return svn_error_createf
-          (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           "ra_svn_get_file: checksum mismatch for '%s':\n"
-           "   expected checksum:  %s\n"
-           "   actual checksum:    %s\n",
-           path, expected_checksum, hex_digest);
+  if (strcmp(hex_digest, expected_checksum) != 0)
+      return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
+                               "ra_svn_get_file: checksum mismatch for '%s':\n"
+                               "   expected checksum:  %s\n"
+                               "   actual checksum:    %s\n",
+                               path, expected_checksum, hex_digest);
 
   SVN_ERR(svn_stream_close(stream));
   return SVN_NO_ERROR;

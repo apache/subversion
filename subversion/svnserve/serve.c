@@ -108,10 +108,10 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   len = strlen(b->repos_url);
   if (strncmp(url, b->repos_url, len) != 0)
     {
-      err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
-                               "'%s'\n"
-                               "is not the same repository as\n"
-                               "'%s'", url, b->repos_url);
+      err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                              "'%s'\n"
+                              "is not the same repository as\n"
+                              "'%s'", url, b->repos_url);
       /* Wrap error so that it gets reported back to the client. */
       return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
     }
@@ -500,7 +500,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   if (want_contents)
     {
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
           apr_hash_this(hi, &key, NULL, &val);
           name = key;
@@ -603,10 +603,10 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   len = strlen(b->repos_url);
   if (strncmp(switch_url, b->repos_url, len) != 0)
     {
-      err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
-                               "'%s'\n"
-                               "is not the same repository as\n"
-                               "'%s'", switch_url, b->repos_url);
+      err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                              "'%s'\n"
+                              "is not the same repository as\n"
+                              "'%s'", switch_url, b->repos_url);
       /* Wrap error so that it gets reported back to the client. */
       return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
     }
@@ -684,10 +684,10 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   len = strlen(b->repos_url);
   if (strncmp(versus_url, b->repos_url, len) != 0)
     {
-      err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
-                               "'%s'\n"
-                               "is not the same repository as\n"
-                               "'%s'", versus_url, b->repos_url);
+      err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                              "'%s'\n"
+                              "is not the same repository as\n"
+                              "'%s'", versus_url, b->repos_url);
       /* Wrap error so that it gets reported back to the client. */
       return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
     }
