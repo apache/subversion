@@ -5,6 +5,17 @@ TODO for locking
 MUST HAVE
 ---------
 
+* extended structure issues:
+
+   - add svn_lock_create(), make sure it's being used   (lundblad)
+
+   - create svn_wc_status2_t() and svn_wc_create_status()
+
+   - ?? create svn_wc_entry2_t() ??  or deliberately not?
+
+   - ?? is it really necessary to cache lock info separately from entry_t?
+
+
 These are in the format of
 
 * FILENAME:LINE NUMBER
