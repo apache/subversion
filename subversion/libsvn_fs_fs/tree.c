@@ -48,6 +48,7 @@
 #include "dag.h"
 #include "tree.h"
 #include "revs-txns.h"
+#include "fs_fs.h"
 
 /* The following defines are to handle the remaining cases of trail
    usage.  They can be removed once all the uses are cleaned up. */
@@ -3271,49 +3272,17 @@ svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
 
 /* Finding Changes */
 
-struct paths_changed_args
-{
-  apr_hash_t *changes;
-  svn_fs_root_t *root;
-};
-
-
-static svn_error_t *
-txn_body_paths_changed (void *baton,
-                        apr_pool_t *pool)
-{
-  /* WARNING: This is called *without* the protection of a Berkeley DB
-     transaction.  If you modify this function, keep that in mind. */
-
-  struct paths_changed_args *args = baton;
-  const char *txn_id;
-  svn_fs_t *fs = svn_fs_root_fs (args->root);
-
-  /* Get the transaction ID from ROOT. */
-  if (svn_fs_is_revision_root (args->root))
-    SVN_ERR (svn_fs__rev_get_txn_id 
-             (&txn_id, fs, svn_fs_revision_root_revision (args->root), pool));
-  else
-    txn_id = svn_fs_txn_root_name (args->root, pool);
-
-  abort ();
-  /*
-  return svn_fs__bdb_changes_fetch (&(args->changes), fs, txn_id, trail);
-  */
-}
-
-
 svn_error_t *
 svn_fs_paths_changed (apr_hash_t **changed_paths_p,
                       svn_fs_root_t *root,
                       apr_pool_t *pool)
 {
-  struct paths_changed_args args;
-  args.root = root;
-  args.changes = NULL;
-  SVN_ERR (svn_fs__retry (svn_fs_root_fs (root), txn_body_paths_changed,
-                          &args, pool));
-  *changed_paths_p = args.changes;
+  apr_hash_t *changed_paths;
+
+  SVN_ERR (svn_fs__fs_paths_changed (&changed_paths, root->fs, root->rev,
+                                     pool));
+  
+  *changed_paths_p = changed_paths;
   return SVN_NO_ERROR;
 }
 

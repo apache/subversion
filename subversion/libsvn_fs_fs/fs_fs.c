@@ -606,12 +606,16 @@ get_fs_id_at_offset (svn_fs_id_t **id_p,
 
 
 /* Given an open revision file REV_FILE, locate the trailer that
-   specifies the offset to the root node-id.  Store this offset in
-   *ROOT_OFFSET.  Allocate temporary variables from POOL. */
+   specifies the offset to the root node-id and to the changed path
+   information.  Store the root node offset in *ROOT_OFFSET and the
+   changed path offset in *CHANGES_OFFSET.  If either of these
+   pointers is NULL, do nothing with it. Allocate temporary variables
+   from POOL. */
 static svn_error_t *
-get_root_offset (apr_off_t *root_offset,
-                 apr_file_t *rev_file,
-                 apr_pool_t *pool)
+get_root_changes_offset (apr_off_t *root_offset,
+                         apr_off_t *changes_offset,
+                         apr_file_t *rev_file,
+                         apr_pool_t *pool)
 {
   apr_off_t offset;
   apr_size_t num_bytes;
@@ -647,7 +651,21 @@ get_root_offset (apr_off_t *root_offset,
                                 "characters.");
     }
 
-  *root_offset = apr_atoi64 (&buf[i]);
+  if (root_offset)
+    *root_offset = apr_atoi64 (&buf[i]);
+
+  /* find the next space */
+  for ( ; i < (num_bytes - 3) ; i++)
+    if (buf[i] == ' ') break;
+
+  if (i == (num_bytes - 2))
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Final line in revision file missing space.");
+
+  i++;
+
+  if (changes_offset)
+    *changes_offset = apr_atoi64 (&buf[i]);
 
   return SVN_NO_ERROR;
 }
@@ -673,7 +691,7 @@ svn_fs__fs_rev_get_root (svn_fs_id_t **root_id_p,
                                                  NULL),
                              APR_READ, APR_OS_DEFAULT, pool));
 
-  SVN_ERR (get_root_offset (&root_offset, revision_file, pool));
+  SVN_ERR (get_root_changes_offset (&root_offset, NULL, revision_file, pool));
 
   SVN_ERR (get_fs_id_at_offset (&root_id, revision_file, root_offset, pool));
 
@@ -1123,4 +1141,318 @@ svn_fs__fs_rep_copy (svn_fs__representation_t *rep,
   memcpy (rep_new, rep, sizeof (*rep_new));
   
   return rep_new;
+}
+
+/* Merge the internal-use-only CHANGE into a hash of public-FS
+   svn_fs_path_change_t CHANGES, collapsing multiple changes into a
+   single summarical (is that real word?) change per path. */
+static svn_error_t *
+fold_change (apr_hash_t *changes,
+             const svn_fs__change_t *change)
+{
+  apr_pool_t *pool = apr_hash_pool_get (changes);
+  svn_fs_path_change_t *old_change, *new_change;
+  const char *path;
+
+  if ((old_change = apr_hash_get (changes, change->path, APR_HASH_KEY_STRING)))
+    {
+      /* This path already exists in the hash, so we have to merge
+         this change into the already existing one. */
+
+      /* Since the path already exists in the hash, we don't have to
+         dup the allocation for the path itself. */
+      path = change->path;
+      /* Sanity check:  only allow NULL node revision ID in the
+         `reset' case. */
+      if ((! change->noderev_id) && (change->kind != svn_fs_path_change_reset))
+                return svn_error_create
+                  (SVN_ERR_FS_CORRUPT, NULL,
+                   "Missing required node revision ID");
+
+      /* Sanity check: we should be talking about the same node
+         revision ID as our last change except where the last change
+         was a deletion. */
+      if (change->noderev_id
+          && (! svn_fs__id_eq (old_change->node_rev_id, change->noderev_id))
+          && (old_change->change_kind != svn_fs_path_change_delete))
+                return svn_error_create
+                  (SVN_ERR_FS_CORRUPT, NULL,
+                   "Invalid change ordering: new node revision ID without delete");
+
+      /* Sanity check: an add, replacement, or reset must be the first
+         thing to follow a deletion. */
+      if ((old_change->change_kind == svn_fs_path_change_delete)
+          && (! ((change->kind == svn_fs_path_change_replace)
+                 || (change->kind == svn_fs_path_change_reset)
+                 || (change->kind == svn_fs_path_change_add))))
+                return svn_error_create
+                  (SVN_ERR_FS_CORRUPT, NULL,
+                   "Invalid change ordering: non-add change on deleted path");
+
+      /* Now, merge that change in. */
+      switch (change->kind)
+        {
+        case svn_fs_path_change_reset:
+          /* A reset here will simply remove the path change from the
+             hash. */
+          old_change = NULL;
+          break;
+
+        case svn_fs_path_change_delete:
+          if (old_change->change_kind == svn_fs_path_change_add)
+            {
+              /* If the path was introduced in this transaction via an
+                 add, and we are deleting it, just remove the path
+                 altogether. */
+              old_change = NULL;
+            }
+          else
+            {
+              /* A deletion overrules all previous changes. */
+              old_change->change_kind = svn_fs_path_change_delete;
+              old_change->text_mod = change->text_mod;
+              old_change->prop_mod = change->prop_mod;
+            }
+          break;
+
+        case svn_fs_path_change_add:
+        case svn_fs_path_change_replace:
+          /* An add at this point must be following a previous delete,
+             so treat it just like a replace. */
+          old_change->change_kind = svn_fs_path_change_replace;
+          old_change->node_rev_id = svn_fs__id_copy (change->noderev_id, pool);
+          old_change->text_mod = change->text_mod;
+          old_change->prop_mod = change->prop_mod;
+          break;
+
+        case svn_fs_path_change_modify:
+        default:
+          if (change->text_mod)
+            old_change->text_mod = TRUE;
+          if (change->prop_mod)
+            old_change->prop_mod = TRUE;
+          break;
+        }
+
+      /* Point our new_change to our (possibly modified) old_change. */
+      new_change = old_change;
+    }
+  else
+    {
+      /* This change is new to the hash, so make a new public change
+         structure from the internal one (in the hash's pool), and dup
+         the path into the hash's pool, too. */
+      new_change = apr_pcalloc (pool, sizeof (*new_change));
+      new_change->node_rev_id = svn_fs__id_copy (change->noderev_id, pool);
+      new_change->change_kind = change->kind;
+      new_change->text_mod = change->text_mod;
+      new_change->prop_mod = change->prop_mod;
+      path = apr_pstrdup (pool, change->path);
+    }
+
+  /* Add (or update) this path. */
+  apr_hash_set (changes, path, APR_HASH_KEY_STRING, new_change);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Read the next line in the changes record from file FILE and store
+   the resulting change in *CHANGE_P.  If there is no next record,
+   store NULL there.  Perform all allocations from POOL. */
+svn_error_t *
+read_change (svn_fs__change_t **change_p,
+             apr_file_t *file,
+             apr_pool_t *pool)
+{
+  char buf[4096];
+  apr_size_t len = sizeof (buf);
+  svn_fs__change_t *change;
+  char *str, *last_str;
+
+  SVN_ERR (svn_io_read_length_line (file, buf, &len, pool));
+
+  /* Check for a blank line. */
+  if (strlen (buf) == 0)
+    {
+      *change_p = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  change = apr_pcalloc (pool, sizeof (*change));
+
+  /* Get the node-id of the change. */
+  str = apr_strtok (buf, " ", &last_str);
+  if (str == NULL)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Invalid changes line in rev-file");
+
+  change->noderev_id = svn_fs_parse_id (str, strlen (str), pool);
+
+  /* Get the change type. */
+  str = apr_strtok (NULL, " ", &last_str);
+  if (str == NULL)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Invalid changes line in rev-file");
+
+  if (strcmp (str, SVN_FS_FS__ACTION_MODIFY) == 0)
+    {
+      change->kind = svn_fs_path_change_modify;
+    }
+  else if (strcmp (str, SVN_FS_FS__ACTION_ADD) == 0)
+    {
+      change->kind = svn_fs_path_change_add;
+    }
+  else if (strcmp (str, SVN_FS_FS__ACTION_DELETE) == 0)
+    {
+      change->kind = svn_fs_path_change_delete;
+    }
+  else if (strcmp (str, SVN_FS_FS__ACTION_REPLACE) == 0)
+    {
+      change->kind = svn_fs_path_change_replace;
+    }
+  else if (strcmp (str, SVN_FS_FS__ACTION_RESET) == 0)
+    {
+      change->kind = svn_fs_path_change_reset;
+    }
+  else
+    {
+      return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                               "Invalid change kind in rev file");
+    }
+
+  /* Get the text-mod flag. */
+  str = apr_strtok (NULL, " ", &last_str);
+  if (str == NULL)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Invalid changes line in rev-file");
+
+  if (strcmp (str, SVN_FS_FS__TRUE) == 0)
+    {
+      change->text_mod = TRUE;
+    }
+  else if (strcmp (str, SVN_FS_FS__FALSE) == 0)
+    {
+      change->text_mod = FALSE;
+    }
+  else
+    {
+      return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                               "Invalid text-mod flag in rev-file");
+    }
+
+  /* Get the prop-mod flag. */
+  str = apr_strtok (NULL, " ", &last_str);
+  if (str == NULL)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Invalid changes line in rev-file");
+
+  if (strcmp (str, SVN_FS_FS__TRUE) == 0)
+    {
+      change->prop_mod = TRUE;
+    }
+  else if (strcmp (str, SVN_FS_FS__FALSE) == 0)
+    {
+      change->prop_mod = FALSE;
+    }
+  else
+    {
+      return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                               "Invalid prop-mod flag in rev-file");
+    }
+
+  /* Get the changed path. */
+  change->path = apr_pstrdup (pool, last_str);
+
+  *change_p = change;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_paths_changed (apr_hash_t **changed_paths_p,
+                          svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          apr_pool_t *pool)
+{
+  char *revision_filename;
+  apr_off_t changes_offset;
+  apr_hash_t *changed_paths;
+  svn_fs__change_t *change;
+  apr_file_t *revision_file;
+  apr_pool_t *iterpool = svn_pool_create (pool);
+  
+  revision_filename = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+
+  SVN_ERR (svn_io_file_open (&revision_file,
+                             svn_path_join_many (pool, 
+                                                 fs->fs_path,
+                                                 SVN_FS_FS__REVS_DIR,
+                                                 revision_filename,
+                                                 NULL),
+                             APR_READ, APR_OS_DEFAULT, pool));
+
+  SVN_ERR (get_root_changes_offset (NULL, &changes_offset, revision_file,
+                                    pool));
+
+  SVN_ERR (svn_io_file_seek (revision_file, APR_SET, &changes_offset, pool));
+
+  changed_paths = apr_hash_make (pool);
+  
+  /* Read in the changes one by one, folding them into our local hash
+     as necessary. */
+  
+  SVN_ERR (read_change (&change, revision_file, pool));
+
+  while (change)
+    {
+      SVN_ERR (fold_change (changed_paths, change));
+
+      /* Now, if our change was a deletion or replacement, we have to
+         blow away any changes thus far on paths that are (or, were)
+         children of this path.
+         ### i won't bother with another iteration pool here -- at
+             most we talking about a few extra dups of paths into what
+             is already a temporary subpool.
+      */
+
+      if ((change->kind == svn_fs_path_change_delete)
+          || (change->kind == svn_fs_path_change_replace))
+        {
+          apr_hash_index_t *hi;
+
+          for (hi = apr_hash_first (iterpool, changed_paths);
+               hi;
+               hi = apr_hash_next (hi))
+            {
+              /* KEY is the path. */
+              const void *hashkey;
+              apr_ssize_t klen;
+              apr_hash_this (hi, &hashkey, &klen, NULL);
+
+              /* If we come across our own path, ignore it. */
+              if (strcmp (change->path, hashkey) == 0)
+                continue;
+
+              /* If we come across a child of our path, remove it. */
+              if (svn_path_is_child (change->path, hashkey, iterpool))
+                apr_hash_set (changed_paths, hashkey, klen, NULL);
+            }
+        }
+
+      SVN_ERR (read_change (&change, revision_file, pool));
+
+      /* Clear the per-iteration subpool. */
+      svn_pool_clear (iterpool);
+    }
+
+  /* Destroy the per-iteration subpool. */
+  svn_pool_destroy (iterpool);
+
+  /* Close the revision file. */
+  SVN_ERR (svn_io_file_close (revision_file, pool));
+
+  *changed_paths_p = changed_paths;
+
+  return SVN_NO_ERROR;
 }
