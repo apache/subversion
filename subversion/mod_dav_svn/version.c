@@ -512,24 +512,28 @@ dav_error *dav_svn_checkout(dav_resource *resource,
                                          resource->info->repos_path,
                                          resource->pool)))
                 {
-                  return dav_new_error_tag
+                  err = dav_new_error_tag
                     (resource->pool, HTTP_CONFLICT, serr->apr_err,
                      "Unable to fetch the node revision id of the version "
                      "resource within the transaction.",
                      SVN_DAV_ERROR_NAMESPACE,
                      SVN_DAV_ERROR_TAG);
+                  svn_error_clear(serr);
+                  return err;
                 }
               if ((serr = svn_fs_node_id(&url_noderev_id,
                                          resource->info->root.root,
                                          resource->info->repos_path,
                                          resource->pool)))
                 {
-                  return dav_new_error_tag
+                  err = dav_new_error_tag
                     (resource->pool, HTTP_CONFLICT, serr->apr_err,
                      "Unable to fetch the node revision id of the version "
                      "resource within the revision.",
                      SVN_DAV_ERROR_NAMESPACE,
                      SVN_DAV_ERROR_TAG);
+                  svn_error_clear(serr);
+                  return err;
                 }
               if (svn_fs_compare_ids(url_noderev_id, txn_noderev_id) != 0)
                 {
