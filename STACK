@@ -103,7 +103,8 @@ Greg:
       - liveprop hooks:
 	core: getcontentlength, creationdate, getetag,
 	      getlastmodified, resourcetype
-	deltav: target, activity-collection-set, version-name
+	deltav: checked-in, version-name, label-name-set, baseline-collection
+      - OPTIONS handling: activity-collection-set
 
       - vsn hooks: ???  REPORT and MKACTIVITY first
         REPORT: need the SVN:status-report
