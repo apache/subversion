@@ -362,16 +362,17 @@
       <para>Subversion, CVS og andre versjonskontrollsystemer bruker en 
         modell av typen <firstterm>kopier-rediger-flett</firstterm> som 
         et alternativ til l&#229;sing.
-        I denne modellen kontakter klienten til hver bruker og lager en 
-        personlig <firstterm>arbeidskopi</firstterm> &#8212; et lokalt speil 
-        av depotets filer og kataloger.
+        I denne modellen kontakter klienten til hver bruker 
+        prosjektdepotet og lager en personlig 
+        <firstterm>arbeidskopi</firstterm> &#8212; et lokalt speil av depotets 
+        filer og kataloger.
         Brukere arbeider s&#229; parallelt ved &#229; modifisere deres private 
         kopier.
         Til slutt blir de private kopiene flettet inn i en ny, endelig 
         versjon.
         Versjonskontrollsystemet hjelper ofte til med flettingen, men 
-        til slutt er det et menneske som er ansvarlig for &#229; la det skje 
-        skikkelig.</para>
+        til syvende og sist er det et menneske som er ansvarlig for &#229; la 
+        det skje skikkelig.</para>
       
       <!-- @ENGLISH {{{
       <para>Here's an example.  Say that Harry and Sally each create
@@ -446,7 +447,7 @@
         Hva da?
         Denne situasjonen kalles en <firstterm>konflikt</firstterm>, og 
         er vanligvis ikke mye til problem.
-        N&#229;r Harry ber klienten hans om &#229; flette sammen de nyeste 
+        N&#229;r Harry ber klienten sin om &#229; flette sammen de nyeste 
         forandringene i depotet inn i hans arbeidskopi, blir det vist at 
         hans kopi av fil A er i konflikt:
         Han vil v&#230;re i stand til &#229; se begge settene av konfliktskapende 
@@ -742,7 +743,7 @@ Makefile  integer.c  button.c  .svn/
                   <literal>svnserve</literal> server</entry>
                 @ENGLISH }}} -->
                 <entry>tilgang gjennom en tilpasset protokoll til en 
-                <literal>svnserve</literal>-tjener</entry>
+                  <literal>svnserve</literal>-tjener</entry>
               </row>
               <row>
                 <entry><literal>svn+ssh://</literal></entry>
@@ -943,7 +944,7 @@ U button.c
       <para>Utdataene fra kommandoen <command>svn update</command> 
         indikerer at Subversion oppdaterte innholdet av 
         <filename>button.c</filename>.
-        Legg merke til at Sally trengte ikke &#229; spesifisere hvilke filer 
+        Legg merke til at Sally ikke trengte &#229; spesifisere hvilke filer 
         som skulle oppdateres, Subversion bruker informasjonen i 
         <filename>.svn</filename>-katalogen sammen med annen informasjon 
         i depotet for &#229; bestemme hvilke filer som trenger en 
@@ -1003,7 +1004,7 @@ U button.c
         <firstterm>revisjon</firstterm>.
         Hver revisjon blir tildelt et unikt naturlig tall, ett st&#248;rre 
         enn nummeret p&#229; den forrige revisjonen.
-        Den f&#248;rste revisjonen i et nyopprettet depot er nummerert null, 
+        Den f&#248;rste revisjonen i et nyopprettet depot har nummeret null, 
         og inneholder ingenting annet enn en tom rotkatalog.</para>
       
       <!-- @ENGLISH {{{
@@ -1210,14 +1211,16 @@ calc/Makefile:6
           and an <command>svn update</command> of the file will do
           nothing.</para></listitem>
           @ENGLISH }}} -->
-          <term>Uforandret, og oppdatert</term>
+          <term>Uforandret og oppdatert</term>
 
-          <listitem><para>Filen er uforandret i arbeidskopien, og ingen 
-          forandringer til denne filen er blitt lagt inn i depotet siden 
-          siden arbeidskopien ble lagt inn.
-          En <command>svn commit</command> p&#229; filen vil ikke gj&#248;re noe, 
-          og en <command>svn update</command> p&#229; filen vil heller ikke 
-          gj&#248;re noe.</para></listitem>
+          <listitem>
+            <para>Filen er uforandret i arbeidskopien, og ingen 
+              forandringer til denne filen er blitt lagt inn i depotet 
+              siden siden arbeidskopien ble lagt inn.
+              En <command>svn commit</command> p&#229; filen vil ikke gj&#248;re 
+              noe, og en <command>svn update</command> p&#229; filen vil 
+              heller ikke gj&#248;re noe.</para>
+          </listitem>
         </varlistentry>
         
         <varlistentry>
@@ -1234,14 +1237,16 @@ calc/Makefile:6
           @ENGLISH }}} -->
           <term>Forandret lokalt og samtidig gjeldende</term>
 
-          <listitem><para>Filen er blitt forandret i arbeidskopien, og 
-          ingen forandringer i denne filen er blitt lagt inn i 
-          depotet siden stamrevisjonen.
-          Det er lokale forandringer som ikke er blitt lagt inn i 
-          depotet, s&#229; en <command>svn commit</command> av filen vil 
-          lykkes i &#229; publisere forandringene dine, og en <command>svn 
-          update</command> p&#229; filen vil ikke gj&#248;re noen 
-          ting.</para></listitem>
+          <listitem>
+            <para>Filen er blitt forandret i arbeidskopien, og ingen 
+              forandringer i denne filen er blitt lagt inn i depotet 
+              siden stamrevisjonen.
+              Det er lokale forandringer som ikke er blitt lagt inn i 
+              depotet, s&#229; en <command>svn commit</command> av filen vil 
+              lykkes i &#229; publisere forandringene dine, og en 
+              <command>svn update</command> p&#229; filen vil ikke gj&#248;re noen 
+              ting.</para>
+          </listitem>
         </varlistentry>
         
         <varlistentry>
@@ -1258,14 +1263,16 @@ calc/Makefile:6
           @ENGLISH }}} -->
           <term>Uforandret og utdatert</term>
 
-          <listitem><para>Filen er ikke blitt forandret i arbeidskopien, 
-          men har forandret seg i depotet.
-          Filen m&#229; etterhvert bli oppdatert, for &#229; <!-- &#164; -->gj&#248;re den 
-          gjeldende med den offentlige revisjonen.
-          En <command>svn commit</command> p&#229; filen vil ikke gj&#248;re noe, 
-          og en <command>svn update</command> p&#229; filen vil legge de 
-          seneste forandringene inn i arbeidskopien 
-          din.</para></listitem>
+          <listitem>
+            <para>Filen er ikke blitt forandret i arbeidskopien, men har 
+              forandret seg i depotet.
+              Filen m&#229; etterhvert bli oppdatert, for &#229; <!-- &#164; -->gj&#248;re 
+              den gjeldende med den offentlige revisjonen.
+              En <command>svn commit</command> p&#229; filen vil ikke gj&#248;re 
+              noe, og en <command>svn update</command> p&#229; filen vil 
+              legge de seneste forandringene inn i arbeidskopien 
+              din.</para>
+          </listitem>
         </varlistentry>
         
         <varlistentry>
@@ -1284,16 +1291,18 @@ calc/Makefile:6
           @ENGLISH }}} -->
           <term>Forandret lokalt og samtidig utdatert</term>
 
-          <listitem><para>Filen er blitt forandret b&#229;de i arbeidskopien 
-          og depotet.
-          En <command>svn commit</command> av filen vil feile med en 
-          <quote>out-of-date</quote>-feilmelding.
-          Filen m&#229; oppdateres f&#248;rst; en <command>svn 
-          update</command>-kommando vil pr&#248;ve &#229; flette inn de offentlige 
-          forandringene med de lokale forandringene.
-          Hvis Subversion ikke kan fullf&#248;re flettingen automatisk p&#229; en 
-          skikkelig m&#229;te, blir det opp til brukeren &#229; l&#248;se 
-          konflikten.</para></listitem>
+          <listitem>
+            <para>Filen er blitt forandret b&#229;de i arbeidskopien og 
+              depotet.
+              En <command>svn commit</command> av filen vil feile med en 
+              <quote>out-of-date</quote>-feilmelding.
+              Filen m&#229; oppdateres f&#248;rst; en <command>svn 
+              update</command>-kommando vil pr&#248;ve &#229; flette inn de 
+              offentlige forandringene med de lokale forandringene.
+              Hvis Subversion ikke kan fullf&#248;re flettingen automatisk p&#229; 
+              en skikkelig m&#229;te, blir det opp til brukeren &#229; l&#248;se 
+              konflikten.</para>
+          </listitem>
         </varlistentry>
       </variablelist>
       
