@@ -778,10 +778,6 @@ def resync_misgroups():
 
 def tagged_branch_and_trunk():
   "allow tags with mixed trunk and branch sources"
-  # See test-data/resync-misgroups-cvsrepos/README.
-  #
-  # The conversion will fail if the bug is present, and
-  # ensure_conversion would raise svntest.Failure.
   repos, wc, logs = ensure_conversion('tagged-branch-n-trunk')
   a_path = os.path.join(wc, 'tags', 'some-tag', 'a.txt')
   b_path = os.path.join(wc, 'tags', 'some-tag', 'b.txt')
@@ -805,6 +801,23 @@ def enroot_race():
           and (logs[6].changed_paths.get('/trunk/proj/b.txt') == 'M')):
     raise svntest.Failure
 
+
+def branch_delete_first():
+  "correctly handle deletion as initial branch action"
+  # See test-data/branch-delete-first-cvsrepos/README.
+  #
+  # The conversion will fail if the bug is present, and
+  # ensure_conversion would raise svntest.Failure.
+  repos, wc, logs = ensure_conversion('branch-delete-first')
+
+  # 'file' was deleted from branch-1 and branch-2, but not branch-3
+  if os.path.exists(os.path.join(wc, 'branches', 'branch-1', 'file')):
+    raise svntest.Failure
+  if os.path.exists(os.path.join(wc, 'branches', 'branch-2', 'file')):
+    raise svntest.Failure
+  if not os.path.exists(os.path.join(wc, 'branches', 'branch-3', 'file')):
+    raise svntest.Failure
+  
 
 #----------------------------------------------------------------------
 
@@ -835,6 +848,7 @@ test_list = [ None,
               resync_misgroups,
               tagged_branch_and_trunk,
               enroot_race,
+              branch_delete_first,
              ]
 
 if __name__ == '__main__':
