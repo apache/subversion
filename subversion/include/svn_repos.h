@@ -958,7 +958,8 @@ svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
  *
  * Like @c svn_fs_get_locks(), but use @a authz_read_func and @a
  * authz_read_baton to "screen" all returned locks.  That is: do not
- * return any locks on unreadable paths, just silently omit them.
+ * return any locks on any paths that are unreadable in HEAD, just
+ * silently omit them.
  */
 svn_error_t *svn_repos_fs_get_locks (apr_hash_t **locks,
                                      svn_repos_t *repos,

@@ -122,6 +122,46 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
 
 
 
+/* Helper func:  invoke mod_dav_svn's authz_read callback on
+   PATH in HEAD revision, return the readability result in *READABLE. */
+static dav_error *
+check_readability(svn_boolean_t *readable,
+                  request_rec *r,
+                  const dav_svn_repos *repos,
+                  const char *path,
+                  apr_pool_t *pool)
+{
+  svn_error_t *serr;
+  svn_fs_root_t *headroot;
+  svn_revnum_t headrev;
+  dav_svn_authz_read_baton arb;
+
+  arb.r = r;
+  arb.repos = repos;
+
+  serr = svn_fs_youngest_rev(&headrev, repos->fs, pool);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Failed to get youngest filesystem revision.",
+                               pool);
+
+  serr = svn_fs_revision_root(&headroot, repos->fs, headrev, pool);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Failed to open revision root for HEAD.",
+                               pool);
+
+  serr = dav_svn_authz_read(readable, headroot, path, &arb, pool);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Failed to check readability of a path.",
+                               pool);
+  return 0;
+}
+
+
+/* ---------------------------------------------------------------- */
+/* mod_dav locking vtable starts here: */
 
 
 /* Return the supportedlock property for a resource */
@@ -325,7 +365,9 @@ dav_svn_get_locks(dav_lockdb *lockdb,
                   dav_lock **locks)
 {
   svn_error_t *serr;
+  dav_error *derr;
   svn_lock_t *slock;
+  svn_boolean_t readable = FALSE;
   dav_lock *lock = NULL;
 
   /* We only support exclusive locks, not shared ones.  So this
@@ -333,10 +375,18 @@ dav_svn_get_locks(dav_lockdb *lockdb,
      NULL list.  The 'calltype' arg is also meaningless, since we
      don't support locks on collections.  */
   
-  /* ### TODO: call authz_read callback here.  If the resource is
-     unreadable, we don't want to say anything about locks attached to
-     it.*/
-  
+  /* If the resource's fs path is unreadable, we don't want to say
+     anything about locks attached to it.*/
+  derr = check_readability(&readable,
+                           resource->info->r, resource->info->repos,
+                           resource->info->repos_path, resource->pool);
+  if (derr)
+    return derr;
+  if (! readable)
+    return dav_new_error(resource->pool, HTTP_FORBIDDEN,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Path is not accessible.");
+
   serr = svn_fs_get_lock_from_path(&slock,
                                    resource->info->repos->fs,
                                    resource->info->repos_path,
@@ -375,13 +425,23 @@ dav_svn_find_lock(dav_lockdb *lockdb,
                   dav_lock **lock)
 {
   svn_error_t *serr;
+  dav_error *derr;
   svn_lock_t *slock;
   dav_lock *dlock;
+  svn_boolean_t readable = FALSE;
   
-  /* ### TODO: call authz_read callback here.  If the resource is
-     unreadable, we don't want to say anything about locks attached to
-     it.*/
-  
+  /* If the resource's fs path is unreadable, we don't want to say
+     anything about locks attached to it.*/
+  derr = check_readability(&readable,
+                           resource->info->r, resource->info->repos,
+                           resource->info->repos_path, resource->pool);
+  if (derr)
+    return derr;
+  if (! readable)
+    return dav_new_error(resource->pool, HTTP_FORBIDDEN,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Path is not accessible.");
+
   serr = svn_fs_get_lock_from_token(&slock,
                                     resource->info->repos->fs,
                                     locktoken->uuid_str,
@@ -419,12 +479,22 @@ dav_svn_has_locks(dav_lockdb *lockdb,
                   int *locks_present)
 {
   svn_error_t *serr;
+  dav_error *derr;
   svn_lock_t *slock;
+  svn_boolean_t readable = FALSE;
 
-  /* ### TODO: call authz_read callback here.  If the resource is
-     unreadable, we don't want to say anything about locks attached to
-     it.*/
-  
+  /* If the resource's fs path is unreadable, we don't want to say
+     anything about locks attached to it.*/
+  derr = check_readability(&readable,
+                           resource->info->r, resource->info->repos,
+                           resource->info->repos_path, resource->pool);
+  if (derr)
+    return derr;
+  if (! readable)
+    return dav_new_error(resource->pool, HTTP_FORBIDDEN,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Path is not accessible.");
+
   serr = svn_fs_get_lock_from_path(&slock,
                                    resource->info->repos->fs,
                                    resource->info->repos_path,
@@ -460,9 +530,22 @@ dav_svn_append_locks(dav_lockdb *lockdb,
   svn_lock_t *slock;
   svn_error_t *serr;
   dav_error *derr;
+  svn_boolean_t readable = FALSE;
 
   /* ### TODO:  somehow get {current_rev, force flag, creation_date}
      from ra_dav into this function.  Probably via the dav_lockdb context. */
+
+  /* If the resource's fs path is unreadable, we don't allow a lock to
+     be created on it. */
+  derr = check_readability(&readable,
+                           resource->info->r, resource->info->repos,
+                           resource->info->repos_path, resource->pool);
+  if (derr)
+    return derr;
+  if (! readable)
+    return dav_new_error(resource->pool, HTTP_FORBIDDEN,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Path is not accessible.");
 
   if (lock->next)
     return dav_new_error(resource->pool, HTTP_BAD_REQUEST,
@@ -507,8 +590,23 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
                     const dav_locktoken *locktoken)
 {
   svn_error_t *serr;
+  dav_error *derr;
+  svn_boolean_t readable = FALSE;
 
   /* ### TODO:  marshall the RA->unlock() 'force' flag in here?? */
+
+
+  /* If the resource's fs path is unreadable, we don't allow a lock to
+     be removed from it. */
+  derr = check_readability(&readable,
+                           resource->info->r, resource->info->repos,
+                           resource->info->repos_path, resource->pool);
+  if (derr)
+    return derr;
+  if (! readable)
+    return dav_new_error(resource->pool, HTTP_FORBIDDEN,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Path is not accessible.");
 
   if (locktoken == NULL)
     {
@@ -586,12 +684,22 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
      lock per resource. */
   dav_locktoken *token = ltl->locktoken;
   svn_error_t *serr;
+  dav_error *derr;
   svn_lock_t *slock;
   dav_lock *dlock;
+  svn_boolean_t readable = FALSE;
 
-  /* ### TODO: call authz_read callback here.  If the resource is
-     unreadable, we don't want to say anything about locks attached to
-     it.*/
+  /* If the resource's fs path is unreadable, we don't want to say
+     anything about locks attached to it.*/
+  derr = check_readability(&readable,
+                           resource->info->r, resource->info->repos,
+                           resource->info->repos_path, resource->pool);
+  if (derr)
+    return derr;
+  if (! readable)
+    return dav_new_error(resource->pool, HTTP_FORBIDDEN,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Path is not accessible.");
 
   /* Convert the token into an svn_lock_t. */
   serr = svn_fs_get_lock_from_token(&slock,
@@ -628,37 +736,6 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
 
   return 0;
 }
-
-
-
-/*
-** Look up the resource associated with a particular locktoken.
-**
-** The search begins at the specified <start_resource> and the lock
-** specified by <locktoken>.
-**
-** If the resource/token specifies an indirect lock, then the direct
-** lock will be looked up, and THAT resource will be returned. In other
-** words, this function always returns the resource where a particular
-** lock (token) was asserted.
-**
-** NOTE: this function pointer is allowed to be NULL, indicating that
-**       the provider does not support this type of functionality. The
-**       caller should then traverse up the repository hierarchy looking
-**       for the resource defining a lock with this locktoken.
-*/
-
-  /* ### no reason to implement this func, see docstring. */
-
-/* static dav_error *
-   dav_svn_lookup_resource(dav_lockdb *lockdb,
-                           const dav_locktoken *locktoken,
-                           const dav_resource *start_resource,
-                           const dav_resource **resource)
-  {
-    return 0;
-  }
-*/
 
 
 
