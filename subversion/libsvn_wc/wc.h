@@ -191,6 +191,16 @@ svn_error_t * svn_wc__adm_retrieve_internal (svn_wc_adm_access_t **adm_access,
 /* Return the working copy format version number for ADM_ACCESS. */
 int svn_wc__adm_wc_format (svn_wc_adm_access_t *adm_access);
 
+/* Ensure ADM_ACCESS has a write lock and that it is still valid.  Returns
+ * the error SVN_ERR_WC_NOT_LOCKED if this is not the case.  Compared to
+ * the function svn_wc_adm_locked, this function is run-time expensive as
+ * it does additional checking to verify the physical lock.  It is used
+ * when the library expects a write lock, and where it is an error for the
+ * lock not to be present.  Applications are not expected to call it.
+ */
+svn_error_t *svn_wc__adm_write_check (svn_wc_adm_access_t *adm_access);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

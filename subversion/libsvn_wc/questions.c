@@ -36,6 +36,7 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "questions.h"
+#include "entries.h"
 
 
 
@@ -281,6 +282,21 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
                                             adm_access,
                                             textbase_filename,
                                             subpool));
+
+  /* It is quite legitimate for modifications to the working copy to
+     produce a timestamp variation with no text variation. If it turns out
+     that there are no differences then we might be able to "repair" the
+     text-time in the entries file and so avoid the expensive file contents
+     comparison in the future. */
+  if (! *modified_p && svn_wc_adm_locked (adm_access))
+    {
+      svn_wc_entry_t tmp;
+      SVN_ERR (svn_io_file_affected_time (&tmp.text_time, filename, pool));
+      SVN_ERR (svn_wc__entry_modify (adm_access,
+                                     svn_path_basename (filename, pool),
+                                     &tmp, SVN_WC__ENTRY_MODIFY_TEXT_TIME, TRUE,
+                                     pool));
+    }
 
  cleanup:
   svn_pool_destroy (subpool);
