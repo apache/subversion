@@ -41,7 +41,7 @@ public class DateTests extends TestCase
     public void testDateCreateValidDate()
 	{
 	    Date date=NativeWrapper.dateCreate(0);
-	    assertTrue(date != null);
+	    assertNotNull( date );
 	}
 
     /**
@@ -61,9 +61,31 @@ public class DateTests extends TestCase
 	    Date date=NativeWrapper.dateCreate(time);
 
 	    //Now lets see. Do the dates match?
-	    assertTrue(now.equals(date));
+	    assertEquals( time, date.getTime() );
+	}
+    
+    /**
+     * test case to ensure the method creates a valid date
+     */
+    public void testDateCreateFromAprTimeT()
+	{
+	    Date date = NativeWrapper.dateCreateFromAprTimeT(0);
+
+	    assertNotNull(date);
+	}
+
+    /**
+     * test case to ensure the conversions produce
+     * valid results (microseconds -> milliseconds)
+     */
+    public void testDateCreateFromAprTimeTIntegrity()
+	{
+	    Date now = new Date();
+	    long milliseconds = now.getTime();
+	    long microseconds = milliseconds * 1000;
+	    Date date = NativeWrapper.dateCreateFromAprTimeT(microseconds);
+	
+	    assertEquals(milliseconds, date.getTime());
 	}
 }
-
-
 

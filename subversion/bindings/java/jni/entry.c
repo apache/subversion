@@ -217,8 +217,9 @@ entry__create_from_svn_wc_entry_t(JNIEnv *env, jboolean *hasException,
       // member: text_time
       if( !_hasException )
         {
-          jobject text_time = date__create(env, &_hasException, 
-                                           entry->text_time);
+          jobject text_time = 
+            date__create_from_apr_time_t(env, &_hasException, 
+                                         entry->text_time);
 
           if( !_hasException )
             {
@@ -231,8 +232,8 @@ entry__create_from_svn_wc_entry_t(JNIEnv *env, jboolean *hasException,
       if( !_hasException )
         {
           jobject prop_time = 
-            date__create(env, &_hasException,
-                         entry->prop_time);
+            date__create_from_apr_time_t(env, &_hasException,
+                                         entry->prop_time);
 
           if( !_hasException )
             {

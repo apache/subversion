@@ -55,9 +55,14 @@ public class NativeWrapper
     /**
      * Create a new date from a long value.
      *
-     * @param date milliseconds since Januar 1, 1970 00:00
+     * @param date milliseconds since Januar 1, 1970 00:00:00
      */
     public static native Date dateCreate(long date);
+
+    /**
+     * wrapper for function "date__create_from_apr_time_t" (date.h)
+     */
+    public static native Date dateCreateFromAprTimeT(long time);
 
     /**
      * wrapper for function "entry__create" (entry.h)
