@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.31 $ of this document.)
+              ($Revision: 1.32 $ of this document.)
 
 * Introduction
 
@@ -709,14 +709,14 @@ server crashes (todo: can we implement that efficiently?)
 
   1. Lock the nodes you're committing new versions for (if you're
      adding a new file then there's no node to lock, though).  These
-     primary locks will last throughout the commit.  Wait for all
-     locks while you wait for any, so your commit will be atomic.
+     primary locks will last throughout the commit.  Block on all
+     locks while you block on any, so your commit will be atomic.
 
   2. Create the new, unattached nodes that will hold the new versions.
      Fill them up with the new contents.  Create the back-links.
 
   3. Lock the parents of the nodes you're committing (call these
-     "secondary locks").  Again, wait for all while you wait for any.
+     "secondary locks").  Again, block on all while block on any.
 
   4. Set dir_entries in the locked parents to point at the newly
      created child nodes.  Although this cannot be atomic if there are
@@ -730,13 +730,14 @@ server crashes (todo: can we implement that efficiently?)
      number and hook it up to the root node, but put a special
      "negative lock" on the version number first.
 
-     (The negative lock has the same id number as all the other locks in
-     this commit; its point is to invalidate the other locks while
-     they're being removed -- the idea is that if you would block on a
-     lock, first check if there's a corresponding negative lock on a
-     version number somewhere.  If there is, then you don't have to
-     block on the original lock, because all the important parts of
-     its commit are complete, except for lock removal.)
+     This "negative lock" has the same id number as all the other
+     locks in this commit, but it is interpreted differently.  Its
+     point is to invalidate the other locks while they're being
+     removed -- the idea is that if you would block on a lock, first
+     check if there's a corresponding negative lock on a version
+     number somewhere.  If there is, then you don't have to block on
+     the original lock, because all the important parts of its commit
+     are complete, except for lock removal. 
 
 Now, we could actually stop right there.  The commit is done; all the
 information is in the right place in the repository.  Removing the
