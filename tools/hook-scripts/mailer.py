@@ -47,6 +47,7 @@ def main(pool, config_fname, repos_dir, rev):
   changelist = editor.changes.items()
   changelist.sort()
 
+  ### hunh. this code isn't actually needed for StandardOutput. refactor?
   # collect the set of groups and the unique sets of params for the options
   groups = { }
   for path, change in changelist:
@@ -76,29 +77,71 @@ def determine_output(cfg, repos, changelist):
   return cls(cfg, repos, changelist)
 
 
-def mail_subject(cfg, repos, changelist):
-  ### process the changelist to get the set of changed dirs
-  subject = 'rev %d - DIRS-GO-HERE' % repos.rev
-
-  ### we need the group and params here
-  prefix = cfg.get('subject_prefix', None, { })
-  if prefix:
-    return prefix + ' ' + subject
-  return subject
-
-
 class MailedOutput:
   def __init__(self, cfg, repos, changelist):
     self.cfg = cfg
-    self.subject = mail_subject(cfg, repos, changelist)
+
+    # figure out the changed directories
+    dirs = { }
+    for path, change in changelist:
+      if change.item_type == ChangeCollector.DIR:
+        dirs[path] = None
+      else:
+        idx = string.rfind(path, '/')
+        if idx == -1:
+          dirs[''] = None
+        else:
+          dirs[path[:idx]] = None
+
+    dirlist = dirs.keys()
+
+    # figure out the common portion of all the dirs. note that there is
+    # no "common" if only a single dir was changed, or the root was changed.
+    if len(dirs) == 1 or dirs.has_key(''):
+      commondir = ''
+    else:
+      common = string.split(dirlist.pop(), '/')
+      for d in dirlist:
+        parts = string.split(d, '/')
+        for i in range(len(common)):
+          if i == len(parts) or common[i] != parts[i]:
+            del common[i:]
+            break
+      commondir = string.join(common, '/')
+      if commondir:
+        l = len(commondir) + 1
+        dirlist = [ ]
+        for d in dirs.keys():
+          if d == commondir:
+            dirlist.append('.')
+          else:
+            dirlist.append(d[l:])
+      else:
+        dirlist = dirs.keys()
+
+    # compose the basic subject line. later, we can prefix it.
+    dirlist.sort()
+    dirlist = string.join(dirlist)
+    if commondir:
+      self.subject = 'rev %d - in %s: %s' % (repos.rev, commondir, dirlist)
+    else:
+      self.subject = 'rev %d - %s' % (repos.rev, dirlist)
+
+  def start(self, group, params):
+    self.to_addr = self.cfg.get('to_addr', group, params)
+    self.from_addr = self.cfg.get('from_addr', group, params)
 
   def mail_headers(self, group, params):
-    return 'From: %s\n' \
-           'To: %s\n' \
+    prefix = self.cfg.get('subject_prefix', group, params)
+    if prefix:
+      subject = prefix + ' ' + self.subject
+    else:
+      subject = self.subject
+    return 'From: %s\n'    \
+           'To: %s\n'      \
            'Subject: %s\n' \
-           % (self.cfg.get('from_addr', group, params),
-              self.cfg.get('to_addr', group, params),
-              self.subject)
+           '\n'            \
+           % (self.from_addr, self.to_addr, subject)
 
 
 class SMTPOutput(MailedOutput):
@@ -108,14 +151,12 @@ class SMTPOutput(MailedOutput):
     MailedOutput.__init__(self, cfg, repos, changelist)
 
   def start(self, group, params):
-    self.to_addr = self.cfg.get('from_addr', group, params)
-    self.from_addr = self.cfg.get('to_addr', group, params)
+    MailedOutput.start(self, group, params)
 
     self.buffer = cStringIO.StringIO()
     self.write = self.buffer.write
 
     self.write(self.mail_headers(group, params))
-    self.write('\n')
 
   def run_diff(self, cmd):
     # we're holding everything in memory, so we may as well read the
@@ -177,7 +218,9 @@ class PipeOutput(MailedOutput):
     self.null = os.open('/dev/null', os.O_RDONLY)
 
   def start(self, group, params):
-    cmd = self.cmd + [ self.cfg.get('to_addr', group, params) ]
+    MailedOutput.start(self, group, params)
+
+    cmd = self.cmd + [ self.to_addr ]
 
     # construct the pipe for talking to the mailer
     self.pipe = popen2.Popen3(cmd)
@@ -188,7 +231,6 @@ class PipeOutput(MailedOutput):
 
     # start writing out the mail message
     self.write(self.mail_headers(group, params))
-    self.write('\n')
 
   def run_diff(self, cmd):
     # flush the buffers that write to the mailer. we're about to fork, and
