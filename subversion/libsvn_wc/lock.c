@@ -410,9 +410,7 @@ do_open (svn_wc_adm_access_t **adm_access,
       if (depth > 0)
         depth--;
       
-      /* Ask for the deleted entries because most operations request them
-         at some stage, getting them now avoids a second file parse. */
-      SVN_ERR (svn_wc_entries_read (&entries, lock, TRUE, subpool));
+      SVN_ERR (svn_wc_entries_read (&entries, lock, FALSE, subpool));
 
       /* Use a temporary hash until all children have been opened. */
       if (associated)
@@ -428,10 +426,7 @@ do_open (svn_wc_adm_access_t **adm_access,
 
           apr_hash_this (hi, NULL, NULL, &val);
           entry = val;
-          if ((entry->deleted
-               && (entry->schedule != svn_wc_schedule_add)
-               && (entry->schedule != svn_wc_schedule_replace))
-              || entry->kind != svn_node_dir
+          if (entry->kind != svn_node_dir
               || ! strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
             continue;
           entry_path = svn_path_join (lock->path, entry->name, subpool);
