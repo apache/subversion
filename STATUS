@@ -9,6 +9,13 @@ Status of 1.1.0:
 
 Candidate changes:
 
+  * r10926
+    Fix pool lifetime bug in rev-hunt.c.
+    Justification:
+      Memory bugs are bad; could result in incorrect behavior.
+    Votes:
+      +1: ghudson
+
 Status of 1.1.1:
 ================
 
