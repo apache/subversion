@@ -52,6 +52,8 @@ open(LOGDATA, $open_string) or
 my $this_entry_accum = "";
 my $this_rev = -1;
 my $this_lines = 0;
+my $seen_blank_line;  # A blank line separates headers from body.
+
 while (<LOGDATA>)
 {
   if (/^rev ([0-9]+):  [^\|]+ \| [^\|]+ \| ([0-9]+) (line|lines)$/)
@@ -74,6 +76,7 @@ while (<LOGDATA>)
     }
 
     # Reset accumulators.
+    $seen_blank_line = 0;
     $this_entry_accum = "";
     $this_rev = -1;
   }
@@ -81,10 +84,19 @@ while (<LOGDATA>)
   {
     die "$0: line weirdness parsing log.\n";
   }
-  else   # Must be inside a message, continue accumulating.
+  else   # Just continue accumulating.
   {
     $this_entry_accum .= $_;
-    $this_lines--;
+
+    if ($seen_blank_line)
+    {
+      $this_lines--;
+    }
+    elsif (/^$/)
+    {
+      $seen_blank_line = 1;
+      $this_lines--;
+    }
   }
 }
 
