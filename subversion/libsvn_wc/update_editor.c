@@ -623,11 +623,11 @@ delete_entry (const char *path,
   struct dir_baton *pb = parent_baton;
   apr_status_t apr_err;
   apr_file_t *log_fp = NULL;
-  const char *base_name;
+  const char *base_name = svn_path_basename (path, pool);
   const char *tgt_rev_str = NULL;
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t kind;
-  const char *full_path = svn_path_join (pb->path, path, pool);
+  const char *full_path = svn_path_join (pb->path, base_name, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
   SVN_ERR (svn_io_check_path (full_path, &kind, pool));
@@ -645,7 +645,6 @@ delete_entry (const char *path,
      That's all fine and well, but our log-system requires that all
      log commands talk *only* about paths relative (and below)
      pb->path, i.e. where the log is being executed.  */
-  base_name = svn_path_basename (path, pool);
 
   svn_xml_make_open_tag (&log_item,
                          pool,
