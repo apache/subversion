@@ -628,29 +628,53 @@ process_subdirectory (svn_string_t *path,
 
 
 
+
+/*** Closing commits. ***/
+
+/* Intended as the USER_DATA argument to close_commit(). */
+struct close_commit_baton
+{
+  svn_string_t *root_dir;    /* Top of commit in working copy. */
+  int cid;                   /* Working copy's token for this commit. */
+  apr_pool_t *pool;          /* What would life be like without a pool? */
+};
+
+
+/* An implementation of `svn_wc_close_commit_fn_t'. */
+static svn_error_t *
+close_commit (void *user_data, svn_vernum_t new_version)
+{
+#if 0
+  struct close_commit_baton *cb = (struct close_commit_baton *) user_data;
+#endif /* 0 */
+
+  /* kff todo: walk down from root, updating adm areas with the
+     version number of the successful commit. */ 
+
+  return SVN_NO_ERROR;
+}
+
 
 /*------------------------------------------------------------------*/
-/* Public interface.
-
-   Do a depth-first crawl of the local changes in a working copy,
-   beginning at ROOT_DIRECTORY (absolute path).  Communicate all local
-   changes (both textual and tree) to the supplied EDIT_FNS object
-   (coupled with the supplied EDIT_BATON).
-
-   (Presumably, the client library will someday grab EDIT_FNS and
-   EDIT_BATON from libsvn_ra, and then pass it to this routine.  This
-   is how local changes in the working copy are ultimately translated
-   into network requests.)  */
-
 svn_error_t *
 svn_wc_crawl_local_mods (svn_string_t *root_directory,
                          svn_delta_edit_fns_t *edit_fns,
                          void *edit_baton,
+                         svn_wc_close_commit_fn_t **close_commit_fn,
+                         void **close_commit_baton,
                          apr_pool_t *pool)
 {
   svn_error_t *err;
-
   struct stack_object *stack_bottom = NULL;
+  struct close_commit_baton *close_baton;
+
+  /* Set up a closure function and baton, for close_edit() to call. */
+  close_baton = apr_palloc (pool, sizeof (*close_baton));
+  close_baton->root_dir = root_directory;
+  close_baton->cid = 0;
+  close_baton->pool = pool;
+  *close_commit_fn = close_commit;
+  *close_commit_baton = close_baton;
 
   /* Start the crawler! */
 
@@ -684,11 +708,6 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-
 
 
 

@@ -58,6 +58,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
+#include "svn_wc.h"
 
 #include "ra_session.h"
 
@@ -67,6 +68,8 @@ typedef struct
   svn_ra_session_t *ras;
   const char *activity_url;
   apr_hash_t *workrsrc;         /* PATH -> WORKING RESOURCE */
+  svn_wc_close_commit_fn_t *close_fn;
+  void *close_baton;
 
 } commit_ctx_t;
 
@@ -195,6 +198,23 @@ commit_close_file (void *file_baton)
   return NULL;
 }
 
+static svn_error_t *
+commit_close_edit (void *edit_baton)
+{
+  commit_ctx_t *cc = (commit_ctx_t *) edit_baton;
+  svn_error_t *err;
+  svn_vernum_t new_version = SVN_INVALID_VERNUM;
+
+  /* todo: here, set new_version according to response from server. */
+
+  err = (* (cc->close_fn)) (cc->close_baton, new_version);
+  if (err)
+    return err;
+
+  /* ### nothing? */
+  return NULL;
+}
+
 /*
 ** This structure is used during the commit process. An external caller
 ** uses these callbacks to describe all the changes in the working copy
@@ -212,11 +232,13 @@ static const svn_delta_edit_fns_t commit_editor = {
   commit_apply_txdelta,
   commit_change_file_prop,
   commit_close_file,
-  NULL   /* commit_close_edit, someday */
+  commit_close_edit
 };
 
 svn_error_t *
 svn_ra_get_commit_editor(svn_ra_session_t *ras,
+                         svn_wc_close_commit_fn_t ***close_commit_fn,
+                         void ***close_commit_baton,
                          const svn_delta_edit_fns_t **editor,
                          void **edit_baton)
 {
@@ -228,12 +250,17 @@ svn_ra_get_commit_editor(svn_ra_session_t *ras,
   if (err)
     return err;
 
+  /* Tell caller where to set up the commit closure func and baton. */
+  *close_commit_fn = &(cc->close_fn);
+  *close_commit_baton = &(cc->close_baton);
+
   *edit_baton = cc;
 
   *editor = &commit_editor;
 
   return NULL;
 }
+
 
 
 /* 
