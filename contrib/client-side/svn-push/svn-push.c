@@ -21,13 +21,14 @@
 #include <svn_ra.h>
 #include <svn_delta.h>
 #include <svn_config.h>
+#include <svn_cmdline.h>
 
 static svn_error_t *
 my_commit_callback (svn_revnum_t new_revision,
 		    const char *date, const char *author, void *baton)
 {
-  printf ("Commiting Rev. %i at date \"%s\", by author \"%s\"",
-	  new_revision, date, author);
+  printf ("Commiting Rev. %" SVN_REVNUM_T_FMT " at date \"%s\", by "
+          "author \"%s\"", new_revision, date, author);
 
   return SVN_NO_ERROR;
 }
@@ -42,7 +43,7 @@ svn_error_t *(*old_change_dir_prop) (void *dir_baton,
 				     const svn_string_t * value,
 				     apr_pool_t * pool);
 
-svn_error_t *
+static svn_error_t *
 new_change_file_prop (void *file_baton,
 		      const char *name,
 		      const svn_string_t * value, apr_pool_t * pool)
@@ -56,7 +57,7 @@ new_change_file_prop (void *file_baton,
     return old_change_file_prop (file_baton, name, value, pool);
 }
 
-svn_error_t *
+static svn_error_t *
 new_change_dir_prop (void *dir_baton,
 		     const char *name,
 		     const svn_string_t * value, apr_pool_t * pool)
@@ -77,16 +78,19 @@ do_job (apr_pool_t * pool, const char *src_url, const char *dest_url,
 {
   svn_ra_plugin_t *ra_src, *ra_dest;
   void *ra_src_sess_baton, *ra_dest_sess_baton;
-  svn_delta_editor_t *delta_editor;
+  const svn_delta_editor_t *delta_editor;
+  svn_delta_editor_t my_delta_editor;
   void *edit_baton;
   void *ra_baton;
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   apr_hash_t *config;
   svn_ra_callbacks_t dest_callbacks;
-  svn_ra_callbacks_t src_callbacks;
+
+#if 0
   svn_auth_baton_t *ab;
   apr_array_header_t *providers;
+#endif 
 
   SVN_ERR (svn_config_get_config (&config, NULL, pool));
 
@@ -119,19 +123,20 @@ do_job (apr_pool_t * pool, const char *src_url, const char *dest_url,
 				       "Hello World!",
 				       my_commit_callback, NULL, pool));
 
-  old_change_dir_prop = delta_editor->change_dir_prop;
-  delta_editor->change_dir_prop = new_change_dir_prop;
+  my_delta_editor = *delta_editor;
 
-  old_change_file_prop = delta_editor->change_file_prop;
-  delta_editor->change_file_prop = new_change_file_prop;
+  old_change_dir_prop = my_delta_editor.change_dir_prop;
+  my_delta_editor.change_dir_prop = new_change_dir_prop;
 
+  old_change_file_prop = my_delta_editor.change_file_prop;
+  my_delta_editor.change_file_prop = new_change_file_prop;
 
   SVN_ERR (ra_src->do_diff (ra_src_sess_baton,
 			    &reporter,
 			    &report_baton,
 			    end_rev,
 			    NULL,
-			    1, 1, src_url, delta_editor, edit_baton, pool));
+			    1, 1, src_url, &my_delta_editor, edit_baton, pool));
 
   SVN_ERR (reporter->set_path (report_baton, "", start_rev, 0, pool));
 
@@ -146,7 +151,7 @@ main (int argc, char *argv[])
   apr_pool_t *top_pool;
   svn_error_t *error = NULL;
   int start_rev, end_rev;
-  char *src_url, *dest_url, *s;
+  char *src_url, *dest_url;
 
 
   /* Initialize the app.  Send all error messages to 'stderr'.  */
