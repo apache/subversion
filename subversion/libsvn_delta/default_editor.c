@@ -57,6 +57,15 @@ single_baton_func (void *baton,
 
 
 static svn_error_t *
+absent_xxx_func (const char *path,
+                 void *baton,
+                 apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 open_root (void *edit_baton,
            svn_revnum_t base_revision,
            apr_pool_t *dir_pool,
@@ -133,11 +142,13 @@ static const svn_delta_editor_t default_editor =
   open_item,
   change_prop,
   single_baton_func,
+  absent_xxx_func,
   add_item,
   open_item,
   apply_textdelta,
   change_prop,
   close_file,
+  absent_xxx_func,
   single_baton_func,
   single_baton_func
 };

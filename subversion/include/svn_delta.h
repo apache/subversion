@@ -629,6 +629,15 @@ typedef struct
                                    apr_pool_t *pool);
 
 
+  /** In the directory represented by @a parent_baton, indicate that
+   * @a path is present as a subdirectory in the edit source, but
+   * cannot be conveyed to the edit consumer (perhaps because of
+   * authorization restrictions).
+   */
+  svn_error_t *(*absent_directory) (const char *path,
+                                    void *parent_baton,
+                                    apr_pool_t *pool);
+
   /** We are going to add a new file named @a path.  The callback can
    * store a baton for this new file in @a **file_baton; whatever value
    * it stores there should be passed through to @c apply_textdelta.
@@ -721,6 +730,15 @@ typedef struct
   svn_error_t *(*close_file) (void *file_baton,
                               const char *text_checksum,
                               apr_pool_t *pool);
+
+  /** In the directory represented by @a parent_baton, indicate that
+   * @a path is present as a file in the edit source, but cannot be
+   * conveyed to the edit consumer (perhaps because of authorization
+   * restrictions).
+   */
+  svn_error_t *(*absent_file) (const char *path,
+                               void *parent_baton,
+                               apr_pool_t *pool);
 
   /** All delta processing is done.  Call this, with the @a edit_baton for
    * the entire edit.

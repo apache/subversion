@@ -958,6 +958,8 @@ svn_repos_dump_fs (svn_repos_t *repos,
           SVN_ERR (svn_repos_dir_delta (from_root, "/", NULL, 
                                         to_root, "/",
                                         dump_editor, dump_edit_baton,
+                                        NULL,
+                                        NULL,
                                         FALSE, /* don't send text-deltas */
                                         TRUE, /* recurse */
                                         FALSE, /* don't send entry props */

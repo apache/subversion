@@ -89,8 +89,8 @@ To be fixed by sussman:
     also document the log-encoding and use-commit-times variables in
     the [miscellany] section
 
-  - document mod_authz_svn!  and don't forget to mention it in the
-    'svnserve vs. apache' comparison section of ch05.
+  - need big new section on authorization:  document
+    mod_auth_svn and svnserve.  they now share the same authz file format!
 
   - appA should mention no $Log$ keyword.  Or maybe it should mention
     what keywords *do* exist as well.

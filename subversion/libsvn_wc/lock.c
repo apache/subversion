@@ -64,10 +64,10 @@ struct svn_wc_adm_access_t
   apr_hash_t *set;
 
   /* ENTRIES is the cached entries for PATH, without those in state
-     deleted. ENTRIES_DELETED is the cached entries including those in
-     state deleted. Either may be NULL. */
+     deleted. ENTRIES_HIDDEN is the cached entries including those in
+     state deleted or state absent. Either may be NULL. */
   apr_hash_t *entries;
-  apr_hash_t *entries_deleted;
+  apr_hash_t *entries_hidden;
 
   /* POOL is used to allocate cached items, they need to persist for the
      lifetime of this access baton */
@@ -84,9 +84,57 @@ static svn_wc_adm_access_t missing;
 static svn_error_t *
 do_close (svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock);
 
+
+/* Maybe upgrade the working copy directory represented by ADM_ACCESS
+   to the latest 'SVN_WC__VERSION'.  ADM_ACCESS must contain a write
+   lock.  Use POOL for all temporary allocation.
+
+   Not all upgrade paths are necessarily supported.  For example,
+   upgrading a version 1 working copy results in an error.
+
+   Sometimes the format file can contain "0" while the administrative
+   directory is being constructed; calling this on a format 0 working
+   copy has no effect and returns no error. */
+static svn_error_t *
+maybe_upgrade_format (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+{
+  if (adm_access->wc_format == 1)
+    {
+      return svn_error_createf
+        (SVN_ERR_WC_FORMAT_UPGRADE, NULL,
+         "working copy format 1 is too old to upgrade, in '%s';\n"
+         "please check out your working copy again",
+         adm_access->path);
+    }
+  else if (adm_access->wc_format == 2)
+    {
+      const char *path = svn_wc__adm_path (adm_access->path, FALSE, pool,
+                                           SVN_WC__ADM_FORMAT, NULL);
+
+      SVN_ERR (svn_io_write_version_file (path, SVN_WC__VERSION, pool));
+      adm_access->wc_format = SVN_WC__VERSION;
+    }
+  else if (adm_access->wc_format > SVN_WC__VERSION)
+    {
+      return svn_error_createf
+        (SVN_ERR_WC_FORMAT_UPGRADE, NULL,
+         "this client is much too old to work with working copy '%s';\n"
+         "please get a newer Subversion client",
+         adm_access->path);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Create a physical lock file in the admin directory for ADM_ACCESS. Wait
    up to WAIT_FOR seconds if the lock already exists retrying every
-   second. */
+   second. 
+
+   Note: most callers of this function determine the wc_format for the
+   lock soon afterwards.  We recommend calling maybe_upgrade_format()
+   as soon as you have the wc_format for a lock, since that's a good
+   opportunity to drag old working directories into the modern era. */
 static svn_error_t *
 create_lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
 {
@@ -182,7 +230,7 @@ adm_access_alloc (enum svn_wc__adm_access_type type,
   svn_wc_adm_access_t *lock = apr_palloc (pool, sizeof (*lock));
   lock->type = type;
   lock->entries = NULL;
-  lock->entries_deleted = NULL;
+  lock->entries_hidden = NULL;
   lock->wc_format = 0;
   lock->set = NULL;
   lock->lock_exists = FALSE;
@@ -255,8 +303,11 @@ svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
       apr_hash_set (lock->set, lock->path, APR_HASH_KEY_STRING, lock);
     }
 
+  /* We have a write lock.  If the working copy has an old
+     format, this is the time to upgrade it. */
   SVN_ERR (svn_wc_check_wc (path, &lock->wc_format, pool));
-
+  SVN_ERR (maybe_upgrade_format (lock, pool));
+  
   lock->lock_exists = TRUE;
   *adm_access = lock;
   return SVN_NO_ERROR;
@@ -326,8 +377,12 @@ do_open (svn_wc_adm_access_t **adm_access,
     {
       lock = adm_access_alloc (svn_wc__adm_access_unlocked, path, pool);
     }
+
   if (! under_construction)
-    lock->wc_format = wc_format;
+    {
+      lock->wc_format = wc_format;
+      SVN_ERR (maybe_upgrade_format (lock, pool));
+    }
 
   if (tree_lock)
     {
@@ -796,13 +851,13 @@ static void
 prune_deleted (svn_wc_adm_access_t *adm_access,
                apr_pool_t *pool)
 {
-  if (! adm_access->entries && adm_access->entries_deleted)
+  if (! adm_access->entries && adm_access->entries_hidden)
     {
       apr_hash_index_t *hi;
 
       /* I think it will be common for there to be no deleted entries, so
          it is worth checking for that case as we can optimise it. */
-      for (hi = apr_hash_first (pool, adm_access->entries_deleted);
+      for (hi = apr_hash_first (pool, adm_access->entries_hidden);
            hi;
            hi = apr_hash_next (hi))
         {
@@ -810,20 +865,21 @@ prune_deleted (svn_wc_adm_access_t *adm_access,
           const svn_wc_entry_t *entry;
           apr_hash_this (hi, NULL, NULL, &val);
           entry = val;
-          if (entry->deleted && entry->schedule != svn_wc_schedule_add)
+          if ((entry->deleted && (entry->schedule != svn_wc_schedule_add))
+              || entry->absent)
             break;
         }
 
       if (! hi)
         {
           /* There are no deleted entries, so we can use the full hash */
-          adm_access->entries = adm_access->entries_deleted;
+          adm_access->entries = adm_access->entries_hidden;
           return;
         }
 
       /* Construct pruned hash without deleted entries */
       adm_access->entries = apr_hash_make (adm_access->pool);
-      for (hi = apr_hash_first (pool, adm_access->entries_deleted);
+      for (hi = apr_hash_first (pool, adm_access->entries_hidden);
            hi;
            hi = apr_hash_next (hi))
         {
@@ -833,8 +889,12 @@ prune_deleted (svn_wc_adm_access_t *adm_access,
 
           apr_hash_this (hi, &key, NULL, &val);
           entry = val;
-          if (! entry->deleted || entry->schedule == svn_wc_schedule_add)
-            apr_hash_set (adm_access->entries, key, APR_HASH_KEY_STRING, entry);
+          if (((entry->deleted == FALSE) && (entry->absent == FALSE))
+              || (entry->schedule == svn_wc_schedule_add))
+            {
+              apr_hash_set (adm_access->entries, key,
+                            APR_HASH_KEY_STRING, entry);
+            }
         }
     }
 }
@@ -842,11 +902,11 @@ prune_deleted (svn_wc_adm_access_t *adm_access,
 
 void
 svn_wc__adm_access_set_entries (svn_wc_adm_access_t *adm_access,
-                                svn_boolean_t show_deleted,
+                                svn_boolean_t show_hidden,
                                 apr_hash_t *entries)
 {
-  if (show_deleted)
-    adm_access->entries_deleted = entries;
+  if (show_hidden)
+    adm_access->entries_hidden = entries;
   else
     adm_access->entries = entries;
 }
@@ -854,16 +914,16 @@ svn_wc__adm_access_set_entries (svn_wc_adm_access_t *adm_access,
 
 apr_hash_t *
 svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
-                            svn_boolean_t show_deleted,
+                            svn_boolean_t show_hidden,
                             apr_pool_t *pool)
 {
-  if (! show_deleted)
+  if (! show_hidden)
     {
       prune_deleted (adm_access, pool);
       return adm_access->entries;
     }
   else
-    return adm_access->entries_deleted;
+    return adm_access->entries_hidden;
 }
 
 

@@ -187,9 +187,11 @@ static const svn_ra_dav__xml_elm_t report_elements[] =
      "replace-" elements here to "open-" and upgrade the server.  -kff */  
   { SVN_XML_NAMESPACE, "replace-directory", ELEM_open_directory, 0 },
   { SVN_XML_NAMESPACE, "add-directory", ELEM_add_directory, 0 },
+  { SVN_XML_NAMESPACE, "absent-directory", ELEM_absent_directory, 0 },
   { SVN_XML_NAMESPACE, "open-file", ELEM_open_file, 0 },
   { SVN_XML_NAMESPACE, "replace-file", ELEM_open_file, 0 },
   { SVN_XML_NAMESPACE, "add-file", ELEM_add_file, 0 },
+  { SVN_XML_NAMESPACE, "absent-file", ELEM_absent_file, 0 },
   { SVN_XML_NAMESPACE, "delete-entry", ELEM_delete_entry, 0 },
   { SVN_XML_NAMESPACE, "fetch-props", ELEM_fetch_props, 0 },
   { SVN_XML_NAMESPACE, "remove-prop", ELEM_remove_prop, 0 },
@@ -1276,8 +1278,10 @@ static int validate_element(void *userdata,
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_open_directory:
-      if (child == ELEM_open_directory
+      if (child == ELEM_absent_directory
+          || child == ELEM_open_directory
           || child == ELEM_add_directory
+          || child == ELEM_absent_file
           || child == ELEM_open_file
           || child == ELEM_add_file
           || child == ELEM_fetch_props
@@ -1290,7 +1294,9 @@ static int validate_element(void *userdata,
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_add_directory:
-      if (child == ELEM_add_directory
+      if (child == ELEM_absent_directory
+          || child == ELEM_add_directory
+          || child == ELEM_absent_file
           || child == ELEM_add_file
           || child == ELEM_SVN_prop
           || child == ELEM_checked_in)
@@ -1391,6 +1397,32 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       CHKERR( (*rb->editor->set_target_revision)(rb->edit_baton,
                                                  SVN_STR_TO_REV(att),
                                                  rb->ras->pool) );
+      break;
+
+    case ELEM_absent_directory:
+      name = get_attr(atts, "name");
+      /* ### verify we got it. punt on error. */
+
+      parent_dir = &TOP_DIR(rb);
+      pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, parent_dir->pool);
+      svn_path_add_component(pathbuf, name);
+
+      CHKERR( (*rb->editor->absent_directory)(pathbuf->data,
+                                              parent_dir->baton,
+                                              parent_dir->pool) );
+      break;
+
+    case ELEM_absent_file:
+      name = get_attr(atts, "name");
+      /* ### verify we got it. punt on error. */
+
+      parent_dir = &TOP_DIR(rb);
+      pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, parent_dir->pool);
+      svn_path_add_component(pathbuf, name);
+
+      CHKERR( (*rb->editor->absent_file)(pathbuf->data,
+                                         parent_dir->baton,
+                                         parent_dir->pool) );
       break;
 
     case ELEM_resource:

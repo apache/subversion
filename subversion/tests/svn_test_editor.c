@@ -376,11 +376,52 @@ test_close_directory (void *dir_baton,
 
 
 static svn_error_t *
+absent_file_or_dir (const char *path,
+                    void *baton,
+                    svn_boolean_t is_dir,
+                    apr_pool_t *pool)
+{
+  struct node_baton *nb = baton;
+  struct edit_baton *eb = nb->edit_baton;
+  svn_stringbuf_t *str;
+
+  str = svn_stringbuf_createf (pool,
+                               "[%s] absent_%s (%s)\n",
+                               eb->editor_name, 
+                               is_dir ? "directory" : "file",
+                               nb->path);
+  SVN_ERR (print (eb, nb->indent_level, str));
+  if (eb->verbose)
+    SVN_ERR (newline (eb));
+
+  return SVN_NO_ERROR;    
+}
+
+
+static svn_error_t *
+test_absent_directory (const char *path,
+                       void *baton,
+                       apr_pool_t *pool)
+{
+  return absent_file_or_dir (path, baton, TRUE, pool);
+}
+
+
+static svn_error_t *
 test_close_file (void *file_baton,
                  const char *text_checksum,
                  apr_pool_t *pool)
 {
   return close_file_or_dir (file_baton, FALSE, pool);
+}
+
+
+static svn_error_t *
+test_absent_file (const char *path,
+                  void *baton,
+                  apr_pool_t *pool)
+{
+  return absent_file_or_dir (path, baton, FALSE, pool);
 }
 
 
@@ -522,9 +563,11 @@ svn_test_get_editor (const svn_delta_editor_t **editor,
   my_editor->add_directory       = test_add_directory;
   my_editor->open_directory      = test_open_directory;
   my_editor->close_directory     = test_close_directory;
+  my_editor->absent_directory    = test_absent_directory;
   my_editor->add_file            = test_add_file;
   my_editor->open_file           = test_open_file;
   my_editor->close_file          = test_close_file;
+  my_editor->absent_file         = test_absent_file;
   my_editor->apply_textdelta     = test_apply_textdelta;
   my_editor->change_file_prop    = test_change_file_prop;
   my_editor->change_dir_prop     = test_change_dir_prop;

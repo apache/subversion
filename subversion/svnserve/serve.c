@@ -338,7 +338,7 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
                                      b->fs_path, target, tgt_path, text_deltas,
                                      recurse, ignore_ancestry, editor,
-                                     edit_baton, pool));
+                                     edit_baton, NULL, NULL, pool));
 
   rb.sb = b;
   rb.repos_url = b->repos_url;

@@ -76,6 +76,10 @@ typedef struct svn_repos_report_baton_t
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton; 
 
+  /* Authz callback for svn_repos_dir_delta.  These may be NULL. */
+  svn_repos_authz_read_func_t authz_read_func;
+  void *authz_read_baton;
+
   /* This hash contains any `linked paths', and what they were linked
      from. */
   apr_hash_t *linked_paths;
@@ -473,6 +477,8 @@ finish_report (void *report_baton)
                                 tgt_path,
                                 rbaton->update_editor,
                                 rbaton->update_edit_baton,
+                                rbaton->authz_read_func,
+                                rbaton->authz_read_baton,
                                 rbaton->text_deltas,
                                 rbaton->recurse,
                                 TRUE,
@@ -530,6 +536,8 @@ svn_repos_begin_report (void **report_baton,
                         svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
+                        svn_repos_authz_read_func_t authz_read_func,
+                        void *authz_read_baton,
                         apr_pool_t *pool)
 {
   svn_repos_report_baton_t *rbaton;
@@ -545,6 +553,8 @@ svn_repos_begin_report (void **report_baton,
   rbaton->recurse = recurse;
   rbaton->ignore_ancestry = ignore_ancestry;
   rbaton->pool = pool;
+  rbaton->authz_read_func = authz_read_func;
+  rbaton->authz_read_baton = authz_read_baton;
 
   /* Copy these since we're keeping them past the end of this function call.
      We don't know what the caller might do with them after we return... */
