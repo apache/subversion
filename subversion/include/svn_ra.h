@@ -377,24 +377,19 @@ typedef struct svn_ra_plugin_t
                              const svn_delta_edit_fns_t *status_editor,
                              void *status_baton);
 
-  /* Return the log messages for revisions START to END, by invoking
-   * RECEIVER with RECEIVER_BATON on each one.
+  /* Invoke RECEIVER with RECEIVER_BATON on each log message from
+   * START to END.  START may be greater or less than END; this just
+   * controls whether the log messages are processed in descending or
+   * ascending revision number order.
    *
-   *    - If START and END are the same valid revision number, then
-   *      just return the message for that revision,
-   *    - Else if START is less than END, return messages in that
-   *      range (inclusive) from older to younger,
-   *    - Else if START is greater than END, do the same from younger
-   *      to older.
+   * If START or END is SVN_INVALID_REVNUM, it defaults to youngest.
    *
-   * If START is SVN_INVALID_REVNUM, it defaults to youngest, and if
-   * END is SVN_INVALID_REVNUM, it defaults to oldest.
-   *
-   * If PATHS is non-null, then only show revisions in which at least
-   * one key of PATHS was changed (i.e., if file, text or props
-   * changed; if dir, props changed or an entry was added or
-   * deleted).  The keys are full paths in the repository, without
-   * leading slashes.
+   * If PATHS is non-null and has one or more elements, then only show
+   * revisions in which at least one of PATHS was changed (i.e., if
+   * file, text or props changed; if dir, props changed or an entry
+   * was added or deleted).  Each path is an svn_stringbuf_t *,
+   * relative to the session's common parent.
+   * ### todo: Above paragraph not yet implemented.
    *
    * If DISCOVER_CHANGED_PATHS, then each call to receiver passes a
    * `const apr_hash_t *' for the receiver's CHANGED_PATHS argument;
@@ -410,7 +405,7 @@ typedef struct svn_ra_plugin_t
    * See also the documentation for `svn_ra_log_message_receiver_t'.
    */
   svn_error_t *(*get_log) (void *session_baton,
-                           apr_hash_t *paths,
+                           apr_array_header_t *paths,
                            svn_revnum_t start,
                            svn_revnum_t end,
                            svn_boolean_t discover_changed_paths,

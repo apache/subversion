@@ -110,7 +110,7 @@ svn_error_t * svn_ra_dav__do_status(
 
 svn_error_t * svn_ra_dav__get_log(
   void *session_baton,
-  apr_hash_t *paths,
+  apr_array_header_t *paths,
   svn_revnum_t start,
   svn_revnum_t end,
   svn_boolean_t discover_changed_paths,

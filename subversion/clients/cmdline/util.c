@@ -47,9 +47,9 @@
 /* Hmm. This should probably find its way into libsvn_subr -Fitz */
 /* Create a SVN string from the char* and add it to the array */
 static void 
-array_push_svn_string (apr_array_header_t *array,
-                       const char *str,
-                       apr_pool_t *pool)
+array_push_svn_stringbuf (apr_array_header_t *array,
+                          const char *str,
+                          apr_pool_t *pool)
 {
   (*((svn_stringbuf_t **) apr_array_push (array)))
     = svn_stringbuf_create (str, pool);
@@ -84,7 +84,7 @@ svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
                                   apr_pool_t *pool)
 {
   if (targets->nelts == 0)
-    array_push_svn_string (targets, ".", pool);
+    array_push_svn_stringbuf (targets, ".", pool);
   assert (targets->nelts);
 }
 
@@ -112,7 +112,7 @@ svn_cl__parse_num_args (apr_getopt_t *os,
           return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 
                                    0, 0, pool, "");
         }
-      array_push_svn_string (opt_state->args, os->argv[os->ind++], pool);
+      array_push_svn_stringbuf (opt_state->args, os->argv[os->ind++], pool);
     }
 
   return SVN_NO_ERROR;
@@ -138,7 +138,7 @@ svn_cl__parse_all_args (apr_getopt_t *os,
 
   while (os->ind < os->argc)
     {
-      array_push_svn_string (opt_state->args, os->argv[os->ind++], pool);
+      array_push_svn_stringbuf (opt_state->args, os->argv[os->ind++], pool);
     }
 
   return SVN_NO_ERROR;

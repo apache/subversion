@@ -356,10 +356,25 @@ svn_client_status (apr_hash_t **statushash,
                    apr_pool_t *pool);
 
 
-/* ### todo document this */
+/* Invoke RECEIVER with RECEIVER_BATON on each log message from START
+ * to END in turn.  
+ *
+ * PATHS contains all the working copy paths (as svn_stringbuf_t *'s)
+ * for which log messages are desired; the common prefix of PATHS
+ * determines the repository and auth info.  RECEIVER is invoked only
+ * on messages whose revisions involved a change to some path in
+ * PATHS.
+ *
+ * ### todo: the above paragraph is not fully implemented yet.
+ *
+ * If DISCOVER_CHANGED_PATHS is set, then the `changed_paths' argument
+ * to RECEIVER will be passed on each invocation.
+ *
+ * Use POOL for any temporary allocation.
+ */
 svn_error_t *
 svn_client_log (svn_client_auth_baton_t *auth_baton,
-                apr_hash_t *paths,
+                apr_array_header_t *targets,
                 svn_revnum_t start,
                 svn_revnum_t end,
                 svn_boolean_t discover_changed_paths,

@@ -68,9 +68,7 @@ svn_cl__log (apr_getopt_t *os,
              svn_cl__opt_state_t *opt_state,
              apr_pool_t *pool)
 {
-  apr_hash_t *paths = apr_hash_make (pool);
   apr_array_header_t *targets;
-  int i;
   svn_client_auth_baton_t *auth_baton;
 
   targets = svn_cl__args_to_target_array (os, pool);
@@ -81,20 +79,11 @@ svn_cl__log (apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target(targets, pool);
 
-  for (i = 0; i < targets->nelts; i++)
-    {
-      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-      apr_hash_set (paths, target->data, target->len, (void *) 1);
-    }
-
-  /* ### todo: having built a path hash, we then ignore it, as no one
-     is using it yet. */
-
   SVN_ERR (svn_client_log (auth_baton,
-                           paths,
+                           targets,
                            opt_state->start_revision,
                            opt_state->end_revision,
-                           0,   /* discover_changed_paths, ignored for now */
+                           0,   /* `discover_changed_paths' ignored for now */
                            log_message_receiver,
                            NULL,  /* no receiver baton right now */
                            pool));

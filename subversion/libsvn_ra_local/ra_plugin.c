@@ -349,7 +349,7 @@ do_status (void *session_baton,
 
 static svn_error_t *
 get_log (void *session_baton,
-         apr_hash_t *paths,
+         apr_array_header_t *paths,
          svn_revnum_t start,
          svn_revnum_t end,
          svn_boolean_t discover_changed_paths,
@@ -364,10 +364,14 @@ get_log (void *session_baton,
     SVN_ERR (svn_fs_youngest_rev (&start, sbaton->fs, sbaton->pool));
 
   if (end == SVN_INVALID_REVNUM)
-      end = 0;  /* always the oldest revision */
+    SVN_ERR (svn_fs_youngest_rev (&end, sbaton->fs, sbaton->pool));
+
+  /* ### todo: ignore `sbaton->fs_path' and `paths' for
+     now.  Probably want to convert them to a single hash containing
+     absolute paths first.  */
 
   for (this_rev = start;
-       ((start >= end) ? (this_rev >= end) : (this_rev <= start));
+       ((start >= end) ? (this_rev >= end) : (this_rev <= end));
        ((start >= end) ? this_rev-- : this_rev++))
     {
       svn_stringbuf_t *author, *date, *message;
