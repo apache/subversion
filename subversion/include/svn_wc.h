@@ -1412,11 +1412,54 @@ enum svn_wc_status_kind
     svn_wc_status_incomplete
 };
 
-/** Structure for holding the "status" of a working copy item. 
+/** @since New in 1.2. 
+ *
+ * Structure for holding the "status" of a working copy item. 
  *
  * The item's entry data is in @a entry, augmented and possibly shadowed
  * by the other fields.  @a entry is @c NULL if this item is not under
  * version control.
+ */
+typedef struct svn_wc_status2_t
+{
+  /** Can be @c NULL if not under version control. */
+  svn_wc_entry_t *entry;
+  
+  /** The status of the entries text. */
+  enum svn_wc_status_kind text_status;
+
+  /** The status of the entries properties. */
+  enum svn_wc_status_kind prop_status;
+
+  /** a directory can be 'locked' if a working copy update was interrupted. */
+  svn_boolean_t locked;
+
+  /** a file or directory can be 'copied' if it's scheduled for 
+   * addition-with-history (or part of a subtree that is scheduled as such.).
+   */
+  svn_boolean_t copied;
+
+  /** a file or directory can be 'switched' if the switch command has been 
+   * used.
+   */
+  svn_boolean_t switched;
+
+  /** The entry's text status in the repository. */
+  enum svn_wc_status_kind repos_text_status;
+
+  /** The entry's property status in the repository. */
+  enum svn_wc_status_kind repos_prop_status;
+
+  /* The entry's lock in the repository, if any. */
+  svn_lock_t *repos_lock;
+
+} svn_wc_status2_t;
+
+
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ *  Same as svn_wc_status2_t, but without the svn_lock_t 'repos_lock' field.
  */
 typedef struct svn_wc_status_t
 {
@@ -1448,20 +1491,30 @@ typedef struct svn_wc_status_t
   /** The entry's property status in the repository. */
   enum svn_wc_status_kind repos_prop_status;
 
-  /** @since New in 1.2.
-   * The entry's lock in the repository, if any. */
-  svn_lock_t *repos_lock;
 } svn_wc_status_t;
 
 
-/** Return a deep copy of the @a orig_stat status structure, allocated
+
+/** @since New in 1.2. 
+ *
+ * Return a deep copy of the @a orig_stat status structure, allocated
  * in @a pool.
+ */
+svn_wc_status2_t *svn_wc_dup_status2 (svn_wc_status2_t *orig_stat,
+                                      apr_pool_t *pool);
+
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Same as svn_wc_dup_status2(), but for older svn_wc_status_t structures.
  */
 svn_wc_status_t *svn_wc_dup_status (svn_wc_status_t *orig_stat,
                                     apr_pool_t *pool);
 
 
-/** Fill @a *status for @a path, allocating in @a pool, with the exception 
+/** @since New in 1.2.
+ *
+ * Fill @a *status for @a path, allocating in @a pool, with the exception 
  * of the @c repos_rev field, which is normally filled in by the caller.
  * @a adm_access must be an access baton for @a path.
  *
@@ -1486,6 +1539,16 @@ svn_wc_status_t *svn_wc_dup_status (svn_wc_status_t *orig_stat,
  * straightforward in their meanings.  See the comments on the
  * @c svn_wc_status_kind structure above for some hints.
  */
+svn_error_t *svn_wc_status2 (svn_wc_status2_t **status, 
+                             const char *path, 
+                             svn_wc_adm_access_t *adm_access,
+                             apr_pool_t *pool);
+
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ *  Same as svn_wc_status2(), but for older svn_wc_status_t structures.
+ */
 svn_error_t *svn_wc_status (svn_wc_status_t **status, 
                             const char *path, 
                             svn_wc_adm_access_t *adm_access,
@@ -1494,10 +1557,20 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
 
 
 
-/** A callback for reporting a @a status about @a path. 
+/** @since New in 1.2. 
+ * 
+ * A callback for reporting a @a status about @a path. 
  *
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.
+ */
+typedef void (*svn_wc_status_func2_t) (void *baton,
+                                       const char *path,
+                                       svn_wc_status2_t *status);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ *  Same as svn_wc_status_func2_t(), but for older svn_wc_status_t structures.
  */
 typedef void (*svn_wc_status_func_t) (void *baton,
                                       const char *path,
@@ -1507,7 +1580,7 @@ typedef void (*svn_wc_status_func_t) (void *baton,
 /** @since New in 1.2.
  *
  * Set @a *editor and @a *edit_baton to an editor that generates @c
- * svn_wc_status_t structures and sends them through @a status_func /
+ * svn_wc_status2_t structures and sends them through @a status_func /
  * @a status_baton.  @a anchor is an access baton, with a tree lock,
  * for the local path to the working copy which will be used as the
  * root of our editor.  If @a target is not empty, it represents an
@@ -1563,17 +1636,18 @@ svn_error_t *svn_wc_get_status_editor2 (const svn_delta_editor_t **editor,
                                         svn_boolean_t recurse,
                                         svn_boolean_t get_all,
                                         svn_boolean_t no_ignore,
-                                        svn_wc_status_func_t status_func,
+                                        svn_wc_status_func2_t status_func,
                                         void *status_baton,
                                         svn_cancel_func_t cancel_func,
                                         void *cancel_baton,
                                         svn_wc_traversal_info_t *traversal_info,
                                         apr_pool_t *pool);
 
+
 /** @deprecated Provided for backwards compatibility with the 1.1 API.
  *
  * Same as svn_wc_get_status_editor2, but with @a set_locks_baton set
- * to @c NULL. */
+ * to @c NULL, and taking a deprecated svn_wc_status_func_t argument. */
 svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_revnum_t *edit_revision,
@@ -1589,6 +1663,7 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        void *cancel_baton,
                                        svn_wc_traversal_info_t *traversal_info,
                                        apr_pool_t *pool);
+
 
 /** @since New in 1.2.
  *

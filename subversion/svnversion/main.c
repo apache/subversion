@@ -44,7 +44,7 @@ struct status_baton
 static void
 analyze_status (void *baton,
                 const char *path,
-                svn_wc_status_t *status)
+                svn_wc_status2_t *status)
 {
   struct status_baton *sb = baton;
   
@@ -325,8 +325,8 @@ main(int argc, const char *argv[])
   ctx.cancel_func = cancel;
   ctx.cancel_baton = &sb;
 
-  err = svn_client_status (NULL, wc_path, &rev, analyze_status, 
-                           &sb, TRUE, TRUE, FALSE, FALSE, &ctx, pool);
+  err = svn_client_status2 (NULL, wc_path, &rev, analyze_status, 
+                            &sb, TRUE, TRUE, FALSE, FALSE, FALSE, &ctx, pool);
   if (err && (err->apr_err == SVN_ERR_CANCELLED))
     svn_error_clear (err);
   else

@@ -8,14 +8,10 @@ CODING TASKS:
    - Slog through Julian Foad's 1.2 API Review email.  (fitz,
      cmpilato, sussman)
 
-   - create svn_wc_status2_t() and svn_wc_create_status() (sussman)
-
    - finish Dan Berlin's streamy-blame stuff;  make it work with libsvn_diff.
      (sander, philip, dberlin?)
 
-   - build system:
-        - any changes maxb wants to make?
-        - verify mod_dav_svn build on win32 with httpd-trunk patch.
+   - get win32 build working and passing tests.
 
 
 BUGS:

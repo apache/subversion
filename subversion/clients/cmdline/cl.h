@@ -248,7 +248,7 @@ svn_error_t *svn_cl__print_commit_info (svn_client_commit_info_t *commit_info,
    When DETAILED is set, and REPOS_LOCKS is set, treat missing repository locks
    as broken WC locks. */
 svn_error_t *svn_cl__print_status (const char *path,
-                                   svn_wc_status_t *status,
+                                   svn_wc_status2_t *status,
                                    svn_boolean_t detailed,
                                    svn_boolean_t show_last_committed,
                                    svn_boolean_t skip_unrecognized,

@@ -814,7 +814,7 @@ svn_error_t *
 svn_client_status2 (svn_revnum_t *result_rev,
                     const char *path,
                     svn_opt_revision_t *revision,
-                    svn_wc_status_func_t status_func,
+                    svn_wc_status_func2_t status_func,
                     void *status_baton,
                     svn_boolean_t recurse,
                     svn_boolean_t get_all,
@@ -824,11 +824,13 @@ svn_client_status2 (svn_revnum_t *result_rev,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
+
 /**
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
  * Similar to svn_client_status2(), but with the @a ignore_externals
- * parameter always set to @c FALSE.
+ * parameter always set to @c FALSE, and taking a deprecated
+ * svn_wc_status_func_t argument.
  */
 svn_error_t *
 svn_client_status (svn_revnum_t *result_rev,
@@ -842,7 +844,6 @@ svn_client_status (svn_revnum_t *result_rev,
                    svn_boolean_t no_ignore,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
-
 
 /** 
  * @since New in 1.2.
