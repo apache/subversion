@@ -87,13 +87,13 @@
 %include svn_error_codes.h
 
 /* ----------------------------------------------------------------------- 
-   Include svn_types.h early. other .i files will import svn_types.i which
-   then includes svn_types.h, making further includes get skipped. we want
-   to actually generate wrappers, so manage svn_types.h right here.
+   Include svn_types.i early. Other .i files will import svn_types.i which
+   then includes svn_types.h, making further includes get skipped. We want
+   to actually generate wrappers for svn_types.h, so do an _include_ right
+   now, before any _import_ has happened.
 */
 
-%typemap(ruby, out) svn_boolean_t "$result = $1 ? Qtrue : Qfalse;";
-%include svn_types.h
+%include svn_types.i
 
 
 /* ----------------------------------------------------------------------- 
