@@ -103,6 +103,17 @@
 */
 %apply long *OUTPUT { svn_revnum_t * };
 
+/* ----------------------------------------------------------------------- */
+
+/* Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll
+   treat it as a 'long' even if that isn't entirely correct...  */
+
+%typemap(python,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
+    "$1 = &temp;";
+
+%typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
+    "$result = t_output_helper($result,PyInt_FromLong((long) (*$1)));";
+
 /* -----------------------------------------------------------------------
    Define a general ptr/len typemap. This takes a single script argument
    and expands it into a ptr/len pair for the native call.
