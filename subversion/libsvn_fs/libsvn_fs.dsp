@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "Release\obj"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /I "$(SVN_DB3_WIN32)\include" /I "..\.." /D "NDEBUG" /D "_WINDOWS" /D alloca=_alloca /D "WIN32" /D "APR_DECLARE_EXPORT" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /I "$(SVN_DB3_WIN32)\include" /I "..\.." /D "NDEBUG" /D "APR_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS" /D alloca=_alloca /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "NDEBUG"
 # ADD RSC /l 0x424 /d "NDEBUG"
@@ -65,7 +65,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "Debug\obj"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /I "$(SVN_DB3_WIN32)\include" /I "..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "_WINDOWS" /D alloca=_alloca /D "WIN32" /D "APR_DECLARE_EXPORT" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /I "$(SVN_DB3_WIN32)\include" /I "..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "APR_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS" /D alloca=_alloca /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "_DEBUG"
 # ADD RSC /l 0x424 /d "_DEBUG"
@@ -130,12 +130,12 @@ SOURCE=.\id.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\nodes-table.c
+SOURCE=.\node.c
+# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
-SOURCE=.\node.c
-# PROP Exclude_From_Build 1
+SOURCE=".\nodes-table.c"
 # End Source File
 # Begin Source File
 
@@ -144,7 +144,7 @@ SOURCE=.\rep.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\rev-table.c
+SOURCE=".\rev-table.c"
 # End Source File
 # Begin Source File
 
@@ -165,7 +165,7 @@ SOURCE=.\tree.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\txn-table.c
+SOURCE=".\txn-table.c"
 # End Source File
 # Begin Source File
 
@@ -213,7 +213,7 @@ SOURCE=.\id.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\node-rev.h
+SOURCE=".\node-rev.h"
 # End Source File
 # Begin Source File
 
@@ -221,11 +221,11 @@ SOURCE=.\node.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\nodes-table.h
+SOURCE=".\nodes-table.h"
 # End Source File
 # Begin Source File
 
-SOURCE=.\rev-table.h
+SOURCE=".\rev-table.h"
 # End Source File
 # Begin Source File
 
@@ -245,7 +245,7 @@ SOURCE=.\tree.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\txm-table.h
+SOURCE=".\txm-table.h"
 # End Source File
 # Begin Source File
 

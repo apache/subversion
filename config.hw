@@ -20,6 +20,20 @@
 #ifndef CONFIG_HW
 #define CONFIG_HW
 
+/* Signal that we're compiling Win32. Some bits might need this. */
+#define SVN_WIN32 1
+
+
+/* Paths to configuration files */
+/*#define SVN_CLIENT_GLOBAL_CONF "/etc/svn.conf"*/
+/*#define SVN_CLIENT_USER_CONF "~/.svnrc"*/
+#define SVN_CLIENT_GLOBAL_CONF "REG:/HKLM/Software/CollabNet/Subversion"
+#define SVN_CLIENT_USER_CONF "REG:/HKCU/Software/CollabNet/Subversion"
+
+
+/* FIXME: */
+#define SVN_CLIENT_DIFF "c:\\progra~1\\cygnus\\cygwin\\bin\\diff.exe"
+#define SVN_CLIENT_PATCH "c:\\progra~1\\cygnus\\cygwin\\bin\\patch.exe"
 
 /* Diff program */
 #ifndef SVN_CLIENT_DIFF
