@@ -103,7 +103,7 @@ text_modified_p (VALUE self, VALUE aFilename)
               pool);
 
   SVN_RB_ERR (svn_wc_text_modified_p (&modified_p, StringValuePtr (aFilename), 
-                                      adm_access, pool),
+                                      FALSE, adm_access, pool),
               pool);
 
   if (modified_p)
