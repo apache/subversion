@@ -148,11 +148,12 @@ static svn_error_t * svn_ra_get_authenticator (const void **authenticator,
 #if 0
   /* #### enable this block for debugging output on stderr. */
   ne_debug_init(stderr, NE_DBG_HTTP|NE_DBG_HTTPBODY);
-
-  /* persistent connection problems in Apache 2.0?  seeing some "Could
-   * not read status line" errors. */
-  ne_set_persist(sess, 0);
 #endif
+
+  /* ### persistent connection problems in Apache 2.0?  seeing some
+   * "Could not read status line" errors, and connections being closed
+   * prematurely, etc. Turn them off for now. */
+  ne_set_persist(sess, 0);
 
   /* make sure we will eventually destroy the session */
   apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
