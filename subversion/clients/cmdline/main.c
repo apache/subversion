@@ -51,6 +51,8 @@ const apr_getopt_option_t svn_cl__options[] =
     {"destination",   'd', 1, "put results in new directory ARG"}, 
     {"force",         svn_cl__force_opt, 0, "force operation to run"},
     {"help",          'h', 0, "show help on a subcommand"},
+    /* ### APR is broken. we can't pass NULL for the name, as the doc says */
+    {"--eek--",       '?', 0, "show help on a subcommand"},
     {"message",       'm', 1, "specify commit message \"ARG\""},
     {"quiet",         'q', 0, "print as little as possible"},
     {"recursive",     svn_cl__recursive_opt, 0, "descend recursively"},
@@ -64,7 +66,6 @@ const apr_getopt_option_t svn_cl__options[] =
     {"verbose",       'v', 0, "print extra information"},
     {"very-verbose",  'V', 0, "print maxmimum information"},
     {"show-updates",  'u', 0, "display update information"},
-    /* Here begin authentication args, add more as needed: */
     {"username",      svn_cl__auth_username_opt, 1, "specify a username ARG"},
     {"password",      svn_cl__auth_password_opt, 1, "specify a password ARG"},
     {"extensions",    'x', 1, "pass \"ARG\" as bundled options to GNU diff"},
@@ -632,7 +633,7 @@ valid_revision_number (const char *rev)
 }
 
 
-int
+svn_boolean_t
 svn_cl__parse_revision (svn_cl__opt_state_t *os,
                         const char *arg,
                         apr_pool_t *pool)
@@ -647,14 +648,14 @@ svn_cl__parse_revision (svn_cl__opt_state_t *os,
     {
       /* There can only be one colon. */
       if (strchr (sep + 1, ':'))
-        return 1;
+        return TRUE;
 
       *(left_rev + (sep - arg)) = '\0';
       right_rev = (left_rev + (sep - arg)) + 1;
 
       /* If there was a separator, both revisions must be present. */
       if ((! *left_rev) || (! *right_rev))
-        return 1;
+        return TRUE;
     }
   else  /* no separator */
     right_rev = NULL;
@@ -664,7 +665,7 @@ svn_cl__parse_revision (svn_cl__opt_state_t *os,
   if (! revision_from_word (&(os->start_revision), left_rev))
     {
       if (! valid_revision_number (left_rev))
-        return 1;
+        return TRUE;
 
       os->start_revision.kind = svn_client_revision_number;
       os->start_revision.value.number = SVN_STR_TO_REV (left_rev);
@@ -675,14 +676,14 @@ svn_cl__parse_revision (svn_cl__opt_state_t *os,
       if (! revision_from_word (&(os->end_revision), right_rev))
         {
           if (! valid_revision_number (right_rev))
-            return 1;
+            return TRUE;
 
           os->end_revision.kind = svn_client_revision_number;
           os->end_revision.value.number = SVN_STR_TO_REV (right_rev);
         }
     }
 
-  return SVN_NO_ERROR;
+  return FALSE;
 }
 
 
@@ -700,7 +701,7 @@ svn_cl__parse_revision (svn_cl__opt_state_t *os,
  * X and/or Y may be one of the special revision descriptors
  * recognized by revision_from_word().
  *
- * If ARG is invalid, return non-zero; else return zero.
+ * If ARG is invalid, return TRUE; else return FALSE.
  * It is invalid to omit a revision (as in, ":", "X:" or ":Y").
  *
  * Note:
@@ -709,7 +710,7 @@ svn_cl__parse_revision (svn_cl__opt_state_t *os,
  * and OPT_STATE->end_revision to be svn_client_revision_unspecified
  * kind on entry.
  */
-static int
+static svn_boolean_t
 parse_date (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
 {
   char *left_date, *right_date;
@@ -726,7 +727,7 @@ parse_date (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
          going to bail if see a non-separator colon, to get this up
          and running.  -kff */
       if (strchr (sep + 1, ':'))
-        return 1;
+        return TRUE;
 
       /* First, turn one string into two. */
       *(left_date + (sep - arg)) = '\0';
@@ -734,7 +735,7 @@ parse_date (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
 
       /* If there was a separator, both dates must be present. */
       if ((! *left_date) || (! *right_date))
-        return 1;
+        return TRUE;
     }
   else  /* no separator */
     right_date = NULL;
@@ -760,7 +761,7 @@ parse_date (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
         }
     }
 
-  return SVN_NO_ERROR;
+  return FALSE;
 }
 
 
@@ -770,12 +771,9 @@ parse_date (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
 int
 main (int argc, const char * const *argv)
 {
-  int ret;
-  apr_status_t apr_err;
   svn_error_t *err;
   apr_pool_t *pool;
   int opt_id;
-  const char *opt_arg;
   apr_getopt_t *os;  
   svn_cl__opt_state_t opt_state;
   int received_opts[SVN_CL__MAX_OPTS];
@@ -818,6 +816,10 @@ main (int argc, const char * const *argv)
   os->interleave = 1;
   while (1)
     {
+      apr_status_t apr_err;
+      const char *opt_arg;
+      svn_boolean_t ret;
+
       /* Parse the next option. */
       apr_err = apr_getopt_long (os, svn_cl__options, &opt_id, &opt_arg);
       if (APR_STATUS_IS_EOF (apr_err))
@@ -1030,19 +1032,30 @@ main (int argc, const char * const *argv)
      so call it.  But first check that it wasn't passed any
      inappropriate options. */
   for (i = 0; i < num_opts; i++)
-    if (! subcommand_takes_option (subcommand, received_opts[i]))
-      {
-        const char *optstr;
-        const apr_getopt_option_t *badopt = 
-          svn_cl__get_option_from_enum (received_opts[i], svn_cl__options);
-        format_option (&optstr, badopt, FALSE, pool);
-        fprintf (stderr,
-                 "\nError: subcommand '%s' doesn't accept option '%s'\n\n",
-                 subcommand->name, optstr);
-        svn_cl__subcommand_help (subcommand->name, pool);
-        svn_pool_destroy(pool);
-        return EXIT_FAILURE;
-      }
+    {
+      opt_id = received_opts[i];
+
+      /* All commands implicitly accept --help, so just skip over this
+         when we see it. Note that we don't want to include this option
+         in their "accepted options" list because it would be awfully
+         redundant to display it in every commands' help text. */
+      if (opt_id == 'h' || opt_id == '?')
+        continue;
+
+      if (! subcommand_takes_option (subcommand, opt_id))
+        {
+          const char *optstr;
+          const apr_getopt_option_t *badopt = 
+            svn_cl__get_option_from_enum (opt_id, svn_cl__options);
+          format_option (&optstr, badopt, FALSE, pool);
+          fprintf (stderr,
+                   "\nError: subcommand '%s' doesn't accept option '%s'\n\n",
+                   subcommand->name, optstr);
+          svn_cl__subcommand_help (subcommand->name, pool);
+          svn_pool_destroy(pool);
+          return EXIT_FAILURE;
+        }
+    }
 
   if (subcommand->cmd_func == svn_cl__commit)
     {
