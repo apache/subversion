@@ -380,9 +380,10 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  * baton global to the entire delta edit.  If there is a target
  * revision that needs to be set for this operation, the producer
  * should called the @c set_target_revision function at this point.
- * Next, the producer should pass this @a edit_baton to the @c open_root
- * function, to get a baton representing root of the tree being
- * edited.
+ *
+ * Next, if there are any tree deltas to express, the producer should
+ * pass the @a edit_baton to the @c open_root function, to get a baton
+ * representing root of the tree being edited.
  *
  * Most of the callbacks work in the obvious way:
  *
