@@ -682,9 +682,28 @@ svn_wc__entry_merge_sync (svn_string_t *path,
 
 
 
+#if 0
 /*** Recursion on entries. ***/
 
-/* Recurse on the versioned parts of a working copy tree, starting at
+/* todo: this is the right idea, but it doesn't handle two situations
+ * well right now.  Superdirectories are problematic:
+ *
+ *   svn commit ../../foo.c ../baz/bar/blah.c
+ *
+ * and sibling files can result in redundant descents:
+ *
+ *   svn commit bar/baz/blim.c bar/baz/bloo.c
+ *
+ * The fix, especially for the latter, involves returning something
+ * other than just a hash of paths.  Instead, we'll have to turn the
+ * hash into a hash of directory paths, where a null value means
+ * recurse on everyone in the directory, and a non-null value is a
+ * list/hash of filenames *in that directory* to care about.
+ *
+ * Fairly easy to turn the below into that, luckily.
+ *
+ * -------------------------------------------------------------------
+ * Recurse on the versioned parts of a working copy tree, starting at
  * PATH.
  *
  * Each time a directory is entered, ENTER_DIR is called with the
@@ -747,19 +766,9 @@ svn_wc__entry_merge_sync (svn_string_t *path,
  *        [LEAVE_DIR is called on the first/second/third component of P]
  *      [LEAVE_DIR is called on the first/second component of P]
  *    LEAVE_DIR is called on the first component of P
- *
- * todo: currently, the code does not handle gracefully the case of
- * paths refering to superdirectories (i.e., "svn ci ../../foo.c").
- *
- * todo: fix algorithm for case
- *
- *   svn commit bar/baz/blim.c bar/baz/bloo.c
  */
-
-/* See documentation in wc.h for svn_wc__entries_recurse(), it
-   explains what this does. */ 
 static void
-compose_paths (apr_hash_t *paths, apr_pool_t *pool)
+svn_wc_compose_paths (apr_hash_t *paths, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 
@@ -805,7 +814,7 @@ compose_paths (apr_hash_t *paths, apr_pool_t *pool)
       }
     }
 }
-
+#endif /* 0 */
 
 
 /* 
