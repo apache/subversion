@@ -34,13 +34,16 @@ send_file_contents (svn_fs_root_t *root,
   void *handler_baton;
   svn_txdelta_stream_t *delta_stream;
   svn_txdelta_window_t *window;
+  
+  /* Get a subpool for local allocations.  */
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Get a readable stream of the file's contents. */
-  SVN_ERR (svn_fs_file_contents (&contents, root, path->data, pool));  
+  SVN_ERR (svn_fs_file_contents (&contents, root, path->data, subpool));  
 
   /* Create a delta stream which converts an *empty* bytestream into the
      file's contents bytestream. */
-  svn_txdelta (&delta_stream, svn_stream_empty (pool), contents, pool);
+  svn_txdelta (&delta_stream, svn_stream_empty (subpool), contents, subpool);
 
   /* Get an editor func that wants to consume the delta stream. */
   SVN_ERR (editor->apply_textdelta (file_baton, &handler, &handler_baton));
@@ -53,6 +56,9 @@ send_file_contents (svn_fs_root_t *root,
       if (window)
         svn_txdelta_free_window (window);
     } while (window);
+
+  /* Cleanup our subpool */
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
