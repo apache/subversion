@@ -312,7 +312,7 @@ if test "$enable_nls" = "yes"; then
 fi
 
 AH_BOTTOM(
-#define N_(x) (x)
+#define N_(x) x
 #ifdef ENABLE_NLS
 #include <locale.h>
 #include <libintl.h>
