@@ -253,7 +253,7 @@ static svn_error_t * upd_delete_entry(svn_stringbuf_t *name,
   const char *qname;
 
   qname = apr_xml_quote_string(parent->pool, name->data, 1);
-  send_xml(parent->uc, "<S:delete-entry name=\"%s\"/>" DEBUG_CR, name->data);
+  send_xml(parent->uc, "<S:delete-entry name=\"%s\"/>" DEBUG_CR, qname);
 
   return NULL;
 }
