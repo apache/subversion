@@ -37,9 +37,10 @@ Candidate changes:
     Votes:
       +1: pmayweg
 
-  * r9883
+  * r9883, r9905
     Fix for crash in javahl binding. If the first parameter of SVNClient.list
-    is null, the jvm will crash.
+    is null, the jvm will crash. r9905 is the result of a scan of the binding
+    code searching for this problem in all possible places.
     Justifcation: javahl binding only fix to prevent a crash
     Votes:
       +1: pmayweg
