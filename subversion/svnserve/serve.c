@@ -966,6 +966,45 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *stat(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                         apr_array_header_t *params, void *baton)
+{
+  server_baton_t *b = baton;
+  svn_revnum_t rev;
+  const char *path, *full_path, *cdate;
+  svn_fs_root_t *root;
+  svn_dirent_t *dirent;
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)", &path, &rev));
+  path = svn_path_canonicalize(path, pool);
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+  if (!SVN_IS_VALID_REVNUM(rev))
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+  full_path = svn_path_join(b->fs_path, path, pool);
+  SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
+  SVN_CMD_ERR(svn_repos_stat(&dirent, root, full_path, pool));
+
+  /* Need to return the equivalent of "(?l)", since that's what the
+     client is reading.  */
+
+  if (dirent == NULL)
+    {
+      SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "()"));
+      return SVN_NO_ERROR;
+    }
+
+  cdate = (dirent->time == (time_t) -1) ? NULL
+    : svn_time_to_cstring(dirent->time, pool);
+
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "((wnbr(?c)(?c)))",
+                                        kind_word(dirent->kind),
+                                        (apr_uint64_t) dirent->size,
+                                        dirent->has_props, dirent->created_rev,
+                                        cdate, dirent->last_author));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   apr_array_header_t *params, void *baton)
 {
@@ -1153,6 +1192,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "diff",            diff },
   { "log",             log_cmd },
   { "check-path",      check_path },
+  { "stat",            stat },
   { "get-locations",   get_locations },
   { "get-file-revs",   get_file_revs },
   { NULL }

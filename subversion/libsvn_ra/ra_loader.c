@@ -442,6 +442,15 @@ svn_error_t *svn_ra_check_path (svn_ra_session_t *session,
   return session->vtable->check_path (session, path, revision, kind, pool);
 }
 
+svn_error_t *svn_ra_stat (svn_ra_session_t *session,
+                          const char *path,
+                          svn_revnum_t revision,
+                          svn_dirent_t **dirent,
+                          apr_pool_t *pool)
+{
+  return session->vtable->stat (session, path, revision, dirent, pool);
+}
+
 svn_error_t *svn_ra_get_uuid (svn_ra_session_t *session,
                               const char **uuid,
                               apr_pool_t *pool)

@@ -151,6 +151,11 @@ typedef struct svn_ra__vtable_t {
                               svn_revnum_t revision,
                               svn_node_kind_t *kind,
                               apr_pool_t *pool);
+  svn_error_t *(*stat) (svn_ra_session_t *session,
+                        const char *path,
+                        svn_revnum_t revision,
+                        svn_dirent_t **dirent,
+                        apr_pool_t *pool);
   svn_error_t *(*get_uuid) (svn_ra_session_t *session,
                             const char **uuid,
                             apr_pool_t *pool);

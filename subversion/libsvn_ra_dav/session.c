@@ -870,6 +870,7 @@ static const svn_ra__vtable_t dav_vtable = {
   svn_ra_dav__do_diff,
   svn_ra_dav__get_log,
   svn_ra_dav__do_check_path,
+  svn_ra_dav__do_stat,
   svn_ra_dav__do_get_uuid,
   svn_ra_dav__get_repos_root,
   svn_ra_dav__get_locations,

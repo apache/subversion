@@ -692,6 +692,35 @@ svn_ra_local__do_check_path (svn_ra_session_t *session,
 }
 
 
+static svn_error_t *
+svn_ra_local__stat (svn_ra_session_t *session,
+                    const char *path,
+                    svn_revnum_t revision,
+                    svn_dirent_t **dirent,
+                    apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sbaton = session->priv;
+  svn_fs_root_t *root;
+  const char *abs_path = sbaton->fs_path;
+  
+  /* ### see note above in __do_check_path() */
+  if (abs_path[0] == '\0')
+    abs_path = "/";
+
+  if (path)
+    abs_path = svn_path_join (abs_path, path, pool);
+
+  if (! SVN_IS_VALID_REVNUM (revision))
+    SVN_ERR (svn_fs_youngest_rev (&revision, sbaton->fs, pool));
+  SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, pool));
+
+  SVN_ERR (svn_repos_stat (dirent, root, abs_path, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 static svn_error_t *
 get_node_props (apr_hash_t **props,
@@ -957,6 +986,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__do_diff,
   svn_ra_local__get_log,
   svn_ra_local__do_check_path,
+  svn_ra_local__stat,
   svn_ra_local__get_uuid,
   svn_ra_local__get_repos_root,
   svn_ra_local__get_locations,

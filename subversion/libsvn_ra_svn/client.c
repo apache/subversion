@@ -1116,6 +1116,50 @@ static svn_error_t *ra_svn_check_path(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *ra_svn_stat(svn_ra_session_t *session,
+                                const char *path, svn_revnum_t rev,
+                                svn_dirent_t **dirent, apr_pool_t *pool)
+{
+  ra_svn_session_baton_t *sess_baton = session->priv;
+  svn_ra_svn_conn_t *conn = sess_baton->conn;
+  apr_array_header_t *list = NULL;
+  const char *kind, *cdate, *cauthor;
+  svn_revnum_t crev;
+  svn_boolean_t has_props;
+  apr_uint64_t size;
+  svn_dirent_t *the_dirent;
+
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "stat", "c(?r)", path, rev));
+  SVN_ERR(handle_auth_request(sess_baton, pool));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &list));
+
+  if (! list)
+    {
+      *dirent = NULL;
+    }
+  else
+    {
+      SVN_ERR(svn_ra_svn_parse_tuple(list, pool, "wnbr(?c)(?c)",
+                                     &kind, &size, &has_props,
+                                     &crev, &cdate, &cauthor));
+      
+      the_dirent = apr_palloc(pool, sizeof(*the_dirent));
+      SVN_ERR(interpret_kind(kind, pool, &the_dirent->kind));
+      the_dirent->size = size;/* FIXME: svn_filesize_t */
+      the_dirent->has_props = has_props;
+      the_dirent->created_rev = crev;
+      SVN_ERR(svn_time_from_cstring(&the_dirent->time, cdate, pool));
+      the_dirent->last_author = cauthor;
+
+      *dirent = the_dirent;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
                                          apr_hash_t **locations,
                                          const char *path,
@@ -1308,6 +1352,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_diff,
   ra_svn_log,
   ra_svn_check_path,
+  ra_svn_stat,
   ra_svn_get_uuid,
   ra_svn_get_repos_root,
   ra_svn_get_locations,
