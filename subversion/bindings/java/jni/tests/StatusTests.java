@@ -70,6 +70,16 @@ public class StatusTests extends TestCase
 	    assertTrue( status.getPropStatus().equals(prop_status) );
 	}
 
+    public void testStatusSetCopied()
+	{
+	    Status status = new Status();
+	    boolean copied = true;
+
+	    NativeWrapper.statusSetCopied(status, copied);
+
+	    assertTrue(status.getCopied() == copied);
+	}
+
     public void testStatusSetLocked()
 	{
 	    Status status = new Status();

@@ -23,6 +23,7 @@ public class Status
     private Revision reposRev = null;
     private StatusKind textStatus = null;
     private StatusKind propStatus = null;
+    private boolean copied = false;
     private boolean locked = false;
     private StatusKind reposTextStatus = null;
     private StatusKind reposPropStatus = null;
@@ -84,6 +85,16 @@ public class Status
     public StatusKind getPropStatus()
         {
             return propStatus;
+        }
+
+    public void setCopied(boolean _copied)
+        {
+            copied = _copied;
+        }
+
+    public boolean getCopied()
+        {
+            return copied;
         }
 
     public void setLocked(boolean _locked)

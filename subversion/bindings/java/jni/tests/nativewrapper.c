@@ -22,6 +22,7 @@
 #include "../entry.h"
 #include "../hashtable.h"
 #include "../misc.h"
+#include "../status.h"
 #include "../string.h"
 
 JNIEXPORT jobject JNICALL 
@@ -49,9 +50,7 @@ JNIEXPORT jobject JNICALL
 Java_NativeWrapper_entryCreate
 (JNIEnv *env, jclass clazz)
 {
-  misc__throw_exception_by_name(env,
-                                "org/tigris/subversion/ToBeDoneException",
-                                NULL);
+  return entry__create(env, NULL);
 }
 
 JNIEXPORT void JNICALL 
@@ -164,9 +163,7 @@ JNIEXPORT jobject JNICALL
 Java_NativeWrapper_statusCreate
 (JNIEnv *env, jclass clazz)
 {
-  misc__throw_exception_by_name(env,
-                                "org/tigris/subversion/ToBeDoneException",
-                                NULL);
+  return status__create(env, NULL);
 }
 
 JNIEXPORT void JNICALL 
@@ -188,6 +185,13 @@ Java_NativeWrapper_statusSetPropStatus
 (JNIEnv *env, jclass clazz, jobject status, jint prop_status)
 {
   status__set_prop_status(env, NULL, status, prop_status);
+}
+
+JNIEXPORT void JNICALL 
+Java_NativeWrapper_statusSetCopied
+(JNIEnv *env, jclass clazz, jobject status, jboolean copied)
+{
+  status__set_copied(env, NULL, status, copied);
 }
 
 JNIEXPORT void JNICALL 

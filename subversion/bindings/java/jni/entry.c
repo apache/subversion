@@ -52,35 +52,22 @@
 
 /*** Code ***/
 jobject
-entry__create(JNIEnv *env, jboolean *hasException,
-	      svn_wc_entry_t *entry)
+entry__create(JNIEnv *env, jboolean *hasException)
 {
   jobject result = NULL;
   jboolean _hasException = JNI_FALSE;
 
 #ifdef SVN_JNI__DEBUG_ENTRY
-  fprintf(stderr, ">>>entry__create(");
-  SVN_JNI__DEBUG_PTR(entry);
-  if( entry != NULL )
-    {
-      SVN_JNI__DEBUG_STR(entry->url);
-    }
-  fprintf(stderr, ")\n");
+  fprintf(stderr, ">>>entry__create()\n");
 #endif
 
   /*
    * needed references:
-   * -entryClass
-   * -entryConstructor
-   * -jurl
-   * -jtext_time
-   * -jprop_time
-   * -jattributes
    * -result
-   * = 7
+   * = 1
    */
     
-  if( (*env)->PushLocalFrame(env, 7) < 0 )
+  if( (*env)->PushLocalFrame(env, 1) < 0 )
     {
       _hasException = JNI_TRUE;
     }
@@ -88,37 +75,7 @@ entry__create(JNIEnv *env, jboolean *hasException,
     {
       jclass entryClass = NULL;
       jmethodID entryConstructor = NULL;
-      jstring jurl = NULL;
-      jobject jtexttime = NULL;
-      jobject jproptime = NULL;
-      jobject jattributes = NULL;
-      
-      jurl = string__c_to_j(env, (char*)entry->url->data, 
-                            &_hasException);
-            
-      if( !_hasException )
-        {
-          jtexttime = date__create(env, &_hasException, 
-                                   entry->text_time);
-        }
-      
-      if( !_hasException )
-        {
-          jproptime = date__create(env, &_hasException,
-                                   entry->prop_time);
-        }
-      
-      if( !_hasException )
-        {
-          jattributes = hashtable__create(env, &_hasException);
-          
-          /* 
-           * TODO: conversion of the apr_hashtable with the
-           * attributes to a java hashtable
-           * NOW THERE IS ONLY AN EMPTY HASHTABLE!!!!
-           */
-        }
-      
+     
       if( !_hasException )
         {
           entryClass = j__get_class(env, &_hasException,
@@ -143,70 +100,171 @@ entry__create(JNIEnv *env, jboolean *hasException,
 
         }
 
+      (*env)->PopLocalFrame(env, result);
+    }
+
 #ifdef SVN_JNI__DEBUG_ENTRY
-      SVN_JNI__DEBUG_PTR(result);
+  SVN_JNI__DEBUG_BOOL(_hasException);
+  SVN_JNI__DEBUG_PTR(result);
+  if( _hasException )
+  fprintf(stderr, "\n<<<entry__create\n");
 #endif
+ 
+  if( (hasException != NULL) && _hasException )
+    {
+      *hasException = JNI_TRUE;
+    }
+            
+  return result;
+}
+
+jobject
+entry__create_from_svn_wc_entry_t(JNIEnv *env, jboolean *hasException,
+                                  svn_wc_entry_t *entry)
+{
+  jboolean _hasException = JNI_FALSE;
+  jobject result = NULL;
+
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, ">>>entry__create_from_wc_entry_t(");
+  SVN_JNI__DEBUG_PTR(entry);
+  if( entry != NULL )
+    {
+      SVN_JNI__DEBUG_STR(entry->url);
+    }
+  fprintf(stderr, ")\n");
+#endif
+
+  /*
+   * needed references:
+   * -result
+   * -url
+   * -text_time
+   * -prop_time
+   * -attributes
+   * -result
+   * = 6
+   */
+    
+  if( (*env)->PushLocalFrame(env, 6) < 0 )
+    {
+      _hasException = JNI_TRUE;
+    }
+  else
+    {
+      /*
+       * create the instance of the
+       * java class Entry
+       */
+
+      result = entry__create(env, &_hasException);
       
+       /*
+        * convert the structure members to the
+        * corresponding java types
+        */
+
+      // member: revision
       if( !_hasException )
         {
           entry__set_revision(env, &_hasException,
                               result, entry->revision);
         }
-
+      
+      // member: url
       if( !_hasException )
         {
-          entry__set_url(env, &_hasException, 
-                         result, jurl);
+          jstring url = 
+            string__c_to_j(env, (char*)entry->url->data, 
+                           &_hasException);
+
+          if( !_hasException )
+            {
+              entry__set_url(env, &_hasException, 
+                             result, url);
+            }
         }
 
+      // member: kind
       if( !_hasException )
         {
           entry__set_nodekind(env, &_hasException,
                               result, entry->kind);
         }
 
+      // member: schedule
       if( !_hasException )
         {
           entry__set_schedule(env, &_hasException,
                               result, entry->schedule);
         }
 
+
+      // member: conflicted
       if( !_hasException )
         {
           entry__set_conflicted(env, &_hasException,
                                 result, entry->conflicted);
         }
 
+      // member: copied
       if( !_hasException )
         {
           entry__set_copied(env, &_hasException,
                             result, entry->copied);
         }
 
+      // member: text_time
       if( !_hasException )
         {
-          entry__set_texttime(env, &_hasException,
-                              result, jtexttime);
-        }
+          jobject text_time = date__create(env, &_hasException, 
+                                           entry->text_time);
 
-      if( !_hasException )
-        {
-          entry__set_proptime(env, &_hasException,
-                              result, jproptime);
-        }
+          if( !_hasException )
+            {
+              entry__set_texttime(env, &_hasException,
+                                  result, text_time);
+            }
+       }
 
+      // member: prop_time
       if( !_hasException )
         {
-          entry__set_attributes(env, &_hasException,
-                                result, jattributes);
+          jobject prop_time = 
+            date__create(env, &_hasException,
+                         entry->prop_time);
+
+          if( !_hasException )
+            {
+              entry__set_proptime(env, &_hasException,
+                                  result, prop_time);
+            }
         }
       
-      (*env)->PopLocalFrame(env, result);
+      // member: attributes
+      if( !_hasException )
+        {
+          jobject attributes = hashtable__create(env, &_hasException);
+          
+          /* 
+           * TODO: conversion of the apr_hashtable with the
+           * attributes to a java hashtable
+           * NOW THERE IS ONLY AN EMPTY HASHTABLE!!!!
+           */
+
+          if( !_hasException )
+            {
+              entry__set_attributes(env, &_hasException,
+                                    result, attributes);
+            }
+        }
+
+      (*env)->PopLocalFrame(env, NULL);
     }
 #ifdef SVN_JNI__DEBUG_ENTRY
   SVN_JNI__DEBUG_BOOL(_hasException);
   if( _hasException )
-  fprintf(stderr, "\n<<<entry__create\n");
+  fprintf(stderr, "\n<<<entry__create_from_wc_entry_t\n");
 #endif
  
   if( (hasException != NULL) && _hasException )

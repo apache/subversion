@@ -26,8 +26,11 @@
 
 /*** Functions ***/
 jobject
-entry__create(JNIEnv *env, jboolean *hasException,
-	      svn_wc_entry_t *entry);
+entry__create(JNIEnv *env, jboolean *hasException);
+
+jobject
+entry__create_from_svn_wc_entry_t(JNIEnv *env, jboolean *hasException,
+                                  svn_wc_entry_t *entry);
 
 void 
 entry__set_url(JNIEnv *env, jboolean *hasException,

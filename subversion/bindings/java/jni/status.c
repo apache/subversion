@@ -34,6 +34,8 @@
 #define SVN_JNI_STATUS__SET_TEXT_STATUS_SIG "(I)V"
 #define SVN_JNI_STATUS__SET_PROP_STATUS "setPropStatus"
 #define SVN_JNI_STATUS__SET_PROP_STATUS_SIG "(I)V"
+#define SVN_JNI_STATUS__SET_COPIED "setCopied"
+#define SVN_JNI_STATUS__SET_COPIED_SIG "(Z)V"
 #define SVN_JNI_STATUS__SET_LOCKED "setLocked"
 #define SVN_JNI_STATUS__SET_LOCKED_SIG "(Z)V"
 #define SVN_JNI_STATUS__SET_REPOS_TEXT_STATUS "setReposTextStatus"
@@ -50,15 +52,81 @@
 
 /*** Code ***/
 jobject
-status__create(JNIEnv *env, svn_wc_status_t *status, 
-               jboolean *hasException)
+status__create(JNIEnv *env, jboolean *hasException)
 {
-  jobject jstatus = NULL;
-  jobject jentry = NULL;
+  jobject result = NULL;
   jboolean _hasException = JNI_FALSE;
 
 #ifdef SVN_JNI__DEBUG_STATUS
-  fprintf(stderr, ">>>status__create(");
+  fprintf(stderr, ">>>status__create()\n");
+#endif
+
+  /* 
+   * needed references:
+   * - status
+   * = 1
+   */
+  if( (*env)->PushLocalFrame(env, 4) >= 0 )
+    {
+      jclass statusClass = NULL;
+      jmethodID statusConstructor = NULL;
+
+      statusClass = j__get_class(env, &_hasException,
+                                 SVN_JNI_STATUS__CLASS);
+
+      if( !_hasException )
+	{
+	  statusConstructor = 
+            j__get_method(env, &_hasException,
+                          statusClass, "<init>", 
+                          SVN_JNI_STATUS__SIG);
+
+	  if( statusConstructor == NULL )
+	  {
+	      _hasException = JNI_TRUE;
+	  }
+	}
+
+      if( !_hasException )
+        {
+          result = (*env)->NewObject(env, statusClass,
+                                     statusConstructor);
+          
+          _hasException = (*env)->ExceptionCheck(env);
+        }
+
+#ifdef SVN_JNI__DEBUG_STATUS
+      SVN_JNI__DEBUG_PTR(statusClass);
+      SVN_JNI__DEBUG_PTR(statusConstructor);
+#endif
+      
+      (*env)->PopLocalFrame(env, result);
+    }
+
+#ifdef SVN_JNI__DEBUG_STATUS
+  SVN_JNI__DEBUG_PTR(result);
+  SVN_JNI__DEBUG_BOOL(_hasException);
+  fprintf(stderr, "\n<<<status__create\n");
+#endif
+
+  if( (hasException != NULL) && _hasException )
+    {
+      *hasException = JNI_TRUE;
+    }
+
+  return result;
+}
+
+jobject
+status__create_from_svn_wc_status_t(JNIEnv *env, 
+                                    jboolean *hasException,
+                                    svn_wc_status_t *status)
+{
+  jobject result = NULL;
+  jboolean _hasException = JNI_FALSE;
+
+#ifdef SVN_JNI__DEBUG_STATUS
+  fprintf(stderr, ">>>status__create_from_svn_wc_status_t(");
   SVN_JNI__DEBUG_PTR(status);
   if( status != NULL )
     {
@@ -69,97 +137,80 @@ status__create(JNIEnv *env, svn_wc_status_t *status,
 
   /* 
    * needed references:
-   * - statusClass
-   * - statusConstructor
-   * - jentry
-   * - jstatus
-   * = 4
+   * - entry
+   * - status
+   * = 2
    */
-  if( (*env)->PushLocalFrame(env, 4) >= 0 )
+  if( (*env)->PushLocalFrame(env, 2) >= 0 )
     {
-      jclass statusClass = NULL;
-      jmethodID statusConstructor = NULL;
+      result = status__create(env, &_hasException);
 
-      /* create java Entry from status->entry */
-      jentry = entry__create(env, &_hasException,
-                                 status->entry);
+      // member: entry
+      if( !_hasException )
+        {
+          /* create java Entry from status->entry */
+          jobject entry =
+            entry__create_from_svn_wc_entry_t(env, &_hasException,
+                                              status->entry);
+
+          if( !_hasException )
+            {
+              status__set_entry(env, &_hasException, 
+                                result, entry);
+            }
+        }
       
-      if( !_hasException )
-        {
-          statusClass = j__get_class(env, &_hasException,
-                                     SVN_JNI_STATUS__CLASS);
-        }
-
-      if( !_hasException )
-	{
-	  statusConstructor = j__get_method(env, &_hasException,
-                                            statusClass,
-                                            "<init>", 
-                                            SVN_JNI_STATUS__SIG);
-
-	  if( statusConstructor == NULL )
-	  {
-	      _hasException = JNI_TRUE;
-	  }
-	}
-
-      if( !_hasException )
-        {
-          jstatus = (*env)->NewObject(env, statusClass,
-                                      statusConstructor);
-          
-          _hasException = (*env)->ExceptionCheck(env);
-        }
-
-      if( !_hasException )
-        {
-          status__set_entry(env, &_hasException, 
-                            jstatus, jentry);
-        }
-
+      // member: text_status
       if( !_hasException )
         {
           status__set_text_status(env, &_hasException,
-                                  jstatus, status->text_status);
+                                  result, status->text_status);
         }
 
+      // member: prop_status
       if( !_hasException )
         {
           status__set_prop_status(env, &_hasException,
-                                  jstatus, status->prop_status);
+                                  result, status->prop_status);
         }
 
+      // member: locked
       if( !_hasException )
         {
           status__set_locked(env, &_hasException,
-                             jstatus, status->locked);
+                             result, status->locked);
         }
 
+      // member: copied
+      if( !_hasException )
+        {
+          status__set_copied(env, &_hasException,
+                             result, status->copied);
+        }
+
+      // member: repos_text_status
       if( !_hasException )
         {
           status__set_repos_text_status(env, &_hasException,
-                                        jstatus, 
+                                        result, 
                                         status->repos_text_status);
         }
 
+      // member: repos_prop_status
       if( !_hasException )
         {
           status__set_repos_prop_status(env, &_hasException,
-                                        jstatus,
+                                        result,
                                         status->repos_prop_status);
         }
-#ifdef SVN_JNI__DEBUG_STATUS
-      SVN_JNI__DEBUG_PTR(statusClass);
-      SVN_JNI__DEBUG_PTR(statusConstructor);
-      SVN_JNI__DEBUG_PTR(jstatus);
-#endif
 
-      (*env)->PopLocalFrame(env, jstatus);
+      (*env)->PopLocalFrame(env, result);
     }
 
 #ifdef SVN_JNI__DEBUG_STATUS
+  SVN_JNI__DEBUG_PTR(result);
   SVN_JNI__DEBUG_BOOL(_hasException);
-  fprintf(stderr, "\n<<<status__create\n");
+  fprintf(stderr, "\n<<<status__create_from_svn_wc_status_t\n");
 #endif
 
   if( (hasException != NULL) && _hasException )
@@ -167,7 +218,7 @@ status__create(JNIEnv *env, svn_wc_status_t *status,
       *hasException = JNI_TRUE;
     }
 
-  return jstatus;
+  return result;
 }
 
 void
@@ -225,6 +276,25 @@ status__set_prop_status(JNIEnv *env, jboolean *hasException,
              jstatus, jprop_status);
 #ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_prop_status\n");
+#endif
+}
+
+void
+status__set_copied(JNIEnv *env, jboolean *hasException,
+                   jobject jstatus, jboolean copied)
+{
+#ifdef SVN_JNI__DEBUG_STATUS
+  fprintf(stderr, ">>>status__set_copied(");
+  SVN_JNI__DEBUG_PTR(jstatus);
+  SVN_JNI__DEBUG_DEC(copied);
+  fprintf(stderr, ")\n");
+#endif
+  j__set_boolean(env, hasException,
+                 SVN_JNI_STATUS__CLASS,
+                 SVN_JNI_STATUS__SET_COPIED,
+                 jstatus, copied);
+#ifdef SVN_JNI__DEBUG_STATUS
+  fprintf(stderr, "\n<<<status__set_copied\n");
 #endif
 }
 
