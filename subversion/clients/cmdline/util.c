@@ -390,7 +390,9 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
     return svn_error_create 
       (SVN_ERR_CL_NO_EXTERNAL_EDITOR, 0, NULL, pool,
        "Could not find an external text editor in the usual environment "
-       "variables (searched SVN_EDITOR, EDITOR, VISUAL, in that order)");
+       "variables;\n"
+       "searched SVN_EDITOR, EDITOR, VISUAL, in that order.  If you set\n"
+       "one of them, check if you also need to `export' it.\n");
 
   /* By now, we had better have an EDITOR to work with. */
   assert (editor);
