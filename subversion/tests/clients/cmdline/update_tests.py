@@ -739,7 +739,7 @@ def update_delete_modified_files(sbox):
 
 #----------------------------------------------------------------------
 
-# Issue 847.  Doing an add followed by a remove for a file in state
+# Issue 847.  Doing an add followed by a remove for an item in state
 # "deleted" caused the "deleted" state to get forgotten
 
 def update_after_add_rm_deleted(sbox):
@@ -749,54 +749,69 @@ def update_after_add_rm_deleted(sbox):
     return 1
   wc_dir = sbox.wc_dir
 
-  # Delete a file from WC
+  # Delete a file and directory from WC
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  outlines, errlines = svntest.main.run_svn(None, 'rm', alpha_path)
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  outlines, errlines = svntest.main.run_svn(None, 'rm', alpha_path, F_path)
   if errlines:
     return 1
 
   # Commit deletion
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E/alpha' : Item(verb='Deleting'),
+    'A/B/F'       : Item(verb='Deleting'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.remove('A/B/E/alpha')
+  expected_status.remove('A/B/F')
   if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                            expected_status, None,
                                            None, None, None, None, wc_dir):
     return 1
 
-  # alpha is now in state "deleted", next we add a new alpha
+  # alpha and F are now in state "deleted", next we add a new ones
   svntest.main.file_append(alpha_path, "new alpha")
   outlines, errlines = svntest.main.run_svn(None, 'add', alpha_path)
   if errlines:
     return 1
+  outlines, errlines = svntest.main.run_svn(None, 'mkdir', F_path)
+  if errlines:
+    return 1
 
-  # New alpha should be in add state A
+  # New alpha and F should be in add state A
   expected_status.add({
     'A/B/E/alpha' : Item(status='A ', wc_rev=0, repos_rev=2),
+    'A/B/F'       : Item(status='A ', wc_rev=0, repos_rev=2),
     })
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
   
   # Forced removal of new alpha must restore "deleted" state
-  outlines, errlines = svntest.main.run_svn(None, 'rm', '--force', alpha_path)
+  outlines, errlines = svntest.main.run_svn(None, 'rm', '--force',
+                                            alpha_path, F_path)
   if errlines:
     return 1
 
+  # Physically delete F
+  svntest.main.remove_wc(F_path)
+
   # "deleted" state is not visible in status
-  expected_status.remove('A/B/E/alpha')
+  expected_status.remove('A/B/E/alpha', 'A/B/F')
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
   # Although parent dir is already at rev 1, the "deleted" state will cause
-  # alpha to be restored in the WC when updated to rev 1
+  # alpha and F to be restored in the WC when updated to rev 1
   outlines, errlines = svntest.main.run_svn(None, 'up', '-r1', wc_dir)
-  if errlines or not os.path.exists(alpha_path):
-    print "alpha not restored"
+  if errlines:
     return 1
-  
+  expected_status.add({
+    'A/B/E/alpha' : Item(status='_ ', wc_rev=1, repos_rev=2),
+    'A/B/F'       : Item(status='_ ', wc_rev=1, repos_rev=2),
+    })
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
 
 ########################################################################
 # Run the tests
