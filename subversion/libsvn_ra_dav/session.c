@@ -109,6 +109,38 @@ static int request_auth(void *userdata, const char *realm, int attempt,
 }
 
 
+static const int neon_failure_map[][2] =
+{
+  { NE_SSL_NOTYETVALID,        SVN_AUTH_SSL_NOTYETVALID },
+  { NE_SSL_EXPIRED,            SVN_AUTH_SSL_EXPIRED },
+  { NE_SSL_IDMISMATCH,         SVN_AUTH_SSL_CNMISMATCH },
+  { NE_SSL_UNTRUSTED,          SVN_AUTH_SSL_UNKNOWNCA }
+};
+
+/* Convert neon's SSL failure mask to our own failure mask. */
+static int
+convert_neon_failures(int neon_failures)
+{
+  int i, svn_failures = 0;
+
+  for (i = 0; i < sizeof(neon_failure_map) / (2 * sizeof(int)); ++i)
+    {
+      if (neon_failures & neon_failure_map[i][0])
+        {
+          svn_failures |= neon_failure_map[i][1];
+          neon_failures &= ~neon_failure_map[i][0];
+        }
+    }
+
+  /* Map any remaining neon failure bits to our OTHER bit. */
+  if (neon_failures)
+    {
+      svn_failures |= SVN_AUTH_SSL_OTHER;
+    }
+
+  return svn_failures;
+}
+
 /* A neon-session callback to validate the SSL certificate when the CA
    is unknown or there are other SSL certificate problems. */
 static int
@@ -136,7 +168,7 @@ server_ssl_callback(void *userdata,
 
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
-                         (void*)failures);
+                         (void*)convert_neon_failures(failures));
 
   /* Extract the info from the certificate */
   cert_info.hostname = ne_ssl_cert_identity(cert);
