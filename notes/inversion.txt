@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.38 $ of this document.)
+              ($Revision: 1.39 $ of this document.)
 
 * Introduction
 
@@ -203,9 +203,9 @@ to an empty message.  Maybe there can be a per-project configuration
 option, requiring non-empty log messages for commits *in that project
 only*, though I have doubts about even the usefulness of that.
 
-(CVS tries to require log messages, but fails: we've all seen
-thousands of empty log messages in CVS, meaning the user committed
-with deliberately empty quotes, so let's please stop the madness now.)
+(CVS tries to require log messages, but fails: we've all seen empty
+log messages in CVS, where the user committed with deliberately empty
+quotes, so let's please stop the madness now.)
 
 ** Conflicts are handled as in CVS, but a little better
 
