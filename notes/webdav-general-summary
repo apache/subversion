@@ -6,7 +6,7 @@ Ben's Quick Summary of WebDAV and DeltaV
   servers behave as traditional fileservers, complete with a locking
   model and meta-data properties.
 
-* DeltaV: RFC 3256.  Adds more HTTP methods to WebDAV, introducing
+* DeltaV: RFC 3253.  Adds more HTTP methods to WebDAV, introducing
   versioning concepts.  Provides a number of flexible versioning
   models that servers can support, and some backwards-compatibility
   modes for older WebDAV or HTTP/1.1 clients.

@@ -1286,7 +1286,7 @@ if __name__ == '__main__':
       web into a read/write medium, instead of the basically read-only
       medium that exists today.  The theory is that directories and
       files can be shared&mdash;as both readable and writable
-      objects&mdash;over the web.  RFCs 2518 and 3256 describe the
+      objects&mdash;over the web.  RFCs 2518 and 3253 describe the
       WebDAV/DeltaV extensions to HTTP, and are available (along with
       a lot of other useful information) at <systemitem
       class="url">http://www.webdav.org/</systemitem>.</para>
