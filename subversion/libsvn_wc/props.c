@@ -176,7 +176,9 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
 /*** Detecting a property conflict ***/
 
 
-/* Given two propchange objects, return TRUE iff they conflict. */
+/* Given two propchange objects, return TRUE iff they conflict.  If
+   there's a conflict, DESCRIPTION will contain an english description
+   of the problem. */
 
 /* For note, here's the table being implemented:
 
@@ -191,33 +193,54 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
 
 */
 svn_boolean_t
-svn_wc__conflicting_propchanges_p (svn_propdelta_t *change1,
-                                   svn_propdelta_t *change2)
+svn_wc__conflicting_propchanges_p (svn_string_t **description,
+                                   svn_propdelta_t *local,
+                                   svn_propdelta_t *update,
+                                   apr_pool_t *pool)
 {
   /* We're assuming that whoever called this routine has already
-     deduced that change1 and change2 affect the same property name.
+     deduced that local and change2 affect the same property name.
      (After all, if they affect different property names, how can they
      possibly conflict?)  But still, let's make this routine
      `complete' by checking anyway. */
-  if (! svn_string_compare (change1->name, change2->name))
+  if (! svn_string_compare (local->name, update->name))
     return FALSE;  /* no conflict */
 
   /* If one change wants to delete a property and the other wants to
      set it, this is a conflict.  This check covers two bases of our
      chi-square. */
-  if ( ((change1->value != NULL) && (change2->value == NULL))
-       || ((change1->value == NULL) && (change2->value != NULL)) )
-    return TRUE;  /* conflict */
+  if ((local->value != NULL) && (update->value == NULL))
+    {
+      *description =
+        svn_string_createf
+        (pool, "property `%s': user set value, and update deletes it.",
+         local->name->data);
+      return TRUE;  /* conflict */
+    }
+  if ((local->value == NULL) && (update->value != NULL))
+    {
+      *description =
+        svn_string_createf
+        (pool, "property `%s': user deleted, and update sets it.",
+         local->name->data);
+      return TRUE;  /* conflict */
+    }
 
   /* If both changes delete the same property, there's no conflict.
      It's an implicit merge.  :)  */
-  if ((change1->value == NULL) && (change2->value == NULL))
+  if ((local->value == NULL) && (update->value == NULL))
     return FALSE;  /* no conflict */
 
   /* If both changes set the property, it's a conflict iff the values
      are different */
-  if (! svn_string_compare (change1->value, change2->value))
-    return TRUE;  /* conflict */
+  else if (! svn_string_compare (local->value, update->value))
+    {
+      *description =
+        svn_string_createf
+        (pool, "property `%s': user and update set to different values.",
+         local->name->data);
+      return TRUE;  /* conflict */
+    }
   else
     /* values are the same, so another implicit merge. */
     return FALSE;  /* no conflict */
@@ -318,6 +341,67 @@ svn_wc__save_prop_file (svn_string_t *propfile_path,
 }
 
 
+/*---------------------------------------------------------------------*/
+
+/*** Misc ***/
+
+/* Assuming FP is a filehandle already open for appending, write
+   CONFLICT_DESCRIPTION to file. */
+static svn_error_t *
+svn_wc__append_prop_conflict (apr_file_t *fp,
+                              svn_string_t *conflict_description,
+                              apr_pool_t *pool)
+{
+  /* TODO:  someday, perhaps prefix each conflict_description with a
+     timestamp or something? */
+  apr_size_t written;
+  apr_status_t status;
+
+  status = apr_full_write (fp, conflict_description->data,
+                           conflict_description->len, &written);
+  if (status)
+    return svn_error_create (status, 0, NULL, pool,
+                             "append_prop_conflict: apr_full_write failed.");
+  return SVN_NO_ERROR;
+}
+
+
+/* Look up the entry NAME within PATH and see if it has a `current'
+   reject file describing a state of conflict.  If such a file exists,
+   return the name of the file in REJECT_FILE.  If no such file exists,
+   return (REJECT_FILE = NULL). */
+svn_error_t *
+svn_wc__get_existing_reject_file (svn_string_t **reject_file,
+                                  svn_string_t *path,
+                                  svn_string_t *name,
+                                  apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_hash_t *entries, *atts;
+  svn_wc__entry_t *the_entry;
+
+  err = svn_wc__entries_read (&entries, path, pool);
+  if (err) return err;
+
+  the_entry = 
+    (svn_wc__entry_t *) apr_hash_get (entries, name->data, name->len);
+  
+  if (the_entry == NULL)
+    return svn_error_createf
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "get_existing_reject_path: can't find entry '%s' in '%s'",
+       name->data, path->data);
+
+  atts = the_entry->attributes;
+  
+  *reject_file = 
+    (svn_string_t *) apr_hash_get (atts, SVN_WC__ENTRIES_ATTR_REJFILE,
+                                   APR_HASH_KEY_STRING);
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /*---------------------------------------------------------------------*/
 
@@ -329,7 +413,9 @@ svn_wc__save_prop_file (svn_string_t *propfile_path,
 
 /* Given PATH/NAME (represting a node of type KIND) and an array of
    PROPCHANGES, merge the changes into the working copy.  Necessary
-   log entries will be appended to ENTRY_ACCUM.  */
+   log entries will be appended to ENTRY_ACCUM.  
+
+   Note that `merging' here means dealing with conflicts too.  */
 svn_error_t *
 svn_wc__do_property_merge (svn_string_t *path,
                            const svn_string_t *name,
@@ -340,7 +426,7 @@ svn_wc__do_property_merge (svn_string_t *path,
 {
   int i;
   svn_error_t *err;
-
+  
   /* Zillions of pathnames to compute!  yeargh!  */
   svn_string_t *base_propfile_path, *local_propfile_path;
   svn_string_t *base_prop_tmp_path, *local_prop_tmp_path;
@@ -352,6 +438,14 @@ svn_wc__do_property_merge (svn_string_t *path,
                                             has made since last update */
   apr_hash_t *localhash;   /* all `working' properties */
   apr_hash_t *basehash;    /* all `pristine' properties */
+
+  /* For writing conflicts to a .prej file */
+  apr_file_t *reject_fp = NULL;           /* the real conflicts file */
+  svn_string_t *reject_path = NULL;
+
+  apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
+  svn_string_t *reject_tmp_path = NULL;
+
 
   /* Decide which areas of SVN/ are relevant */
   if (kind == svn_node_file)
@@ -397,11 +491,12 @@ svn_wc__do_property_merge (svn_string_t *path,
                                        localhash, basehash, pool);
   if (err) return err;
   
-  /* Looping over the array of propchanges we want to apply: */
+  /* Looping over the array of `update' propchanges we want to apply: */
   for (i = 0; i < propchanges->nelts; i++)
     {
       int j;
       int found_match = 0;          
+      svn_string_t *conflict_description;
       svn_propdelta_t *update_change, *local_change;
       
       update_change = (((svn_propdelta_t **)(propchanges)->elts)[i]);
@@ -431,17 +526,46 @@ svn_wc__do_property_merge (svn_string_t *path,
       
       if (found_match)
         /* Now see if the two changes actually conflict */
-        if (svn_wc__conflicting_propchanges_p (update_change,
-                                               local_change))
+        if (svn_wc__conflicting_propchanges_p (&conflict_description,
+                                               local_change,
+                                               update_change,
+                                               pool))
           {
-            /* TODO:  write log:  mark entry as conflicted
-               TODO:  write log:  append english to some .prej
-               file */
+            /* Found a conflict! */
+            
+            if (! reject_tmp_fp)
+              {
+                /* This is the very first prop conflict found on this
+                   node. */
+                svn_string_t *tmparea;
+
+                /* Open a unique .prej file in the tmp/props/ area */
+                tmparea = svn_wc__adm_path (svn_string_create ("", pool),
+                                            TRUE, 
+                                            pool,
+                                            PROPS,
+                                            name->data,
+                                            NULL);
+                
+                err = svn_io_open_unique_file (&reject_tmp_fp,
+                                               &reject_tmp_path,
+                                               tmparea,
+                                               ".prej",
+                                               pool);
+                if (err) return err;
+              }
+
+            /* Append the conflict to the open tmp/PROPS/---.prej file */
+            err = svn_wc__append_prop_conflict (reject_tmp_fp,
+                                                conflict_description,
+                                                pool);
+            if (err) return err;
+
             continue;  /* skip to the next update_change */
           }
       
-      /* If we get here, there's no conflict and we safely apply
-         the update_change to our working property hash */
+      /* If we reach this point, there's no conflict, so we can safely
+         apply the update_change to our working property hash. */
       apr_hash_set (localhash,
                     update_change->name->data,
                     update_change->name->len,
@@ -453,7 +577,8 @@ svn_wc__do_property_merge (svn_string_t *path,
      hashes.  Now we write them to temporary files.  Notice that
      the paths computed are ABSOLUTE pathnames.  */
   
-  /* Write the merged pristine prop hash to SVN/tmp/prop-base/ */
+  /* Write the merged pristine prop hash to either
+     SVN/tmp/prop-base/filename or SVN/tmp/dir-prop-base */
   base_prop_tmp_path = svn_wc__adm_path (path,
                                          TRUE, /* tmp area */
                                          pool,
@@ -464,7 +589,8 @@ svn_wc__do_property_merge (svn_string_t *path,
   err = svn_wc__save_prop_file (base_prop_tmp_path, basehash, pool);
   if (err) return err;
   
-  /* Write the merged local prop hash to SVN/tmp/props/ */
+  /* Write the merged local prop hash to SVN/tmp/props/filename or
+     SVN/tmp/dir-props */
   local_prop_tmp_path = svn_wc__adm_path (path,
                                           TRUE, /* tmp area */
                                           pool,
@@ -526,6 +652,85 @@ svn_wc__do_property_merge (svn_string_t *path,
                          SVN_WC__LOG_ATTR_DEST,
                          real_props,
                          NULL);
+
+
+  if (reject_tmp_fp)
+    {
+      /* There's a .prej file sitting in SVN/tmp/ somewhere.  Deal
+         with the conflicts.  */
+
+      /* First, _close_ this temporary conflicts file.  We've been
+         appending to it all along. */
+      apr_status_t status;
+      status = apr_close (reject_tmp_fp);
+      if (status)
+        return svn_error_createf (status, 0, NULL, pool,
+                                  "do_property_merge: can't close '%s'",
+                                  reject_tmp_path->data);
+                                  
+      /* Now try to get the name of a pre-existing .prej file from the
+         entries file */
+      err = svn_wc__get_existing_reject_file (&reject_path, path,
+                                              name, pool);
+      if (err) return err;
+
+      if (! reject_path)
+        {
+          /* Reserve a new .prej file *above* the SVN/ directory by
+             opening and closing it. */
+          err = svn_io_open_unique_file (&reject_fp,
+                                         &reject_path,
+                                         name,
+                                         ".prej",
+                                         pool);
+          if (err) return err;
+
+          status = apr_close (reject_fp);
+          if (status)
+            return svn_error_createf (status, 0, NULL, pool,
+                                      "do_property_merge: can't close '%s'",
+                                      reject_path->data);
+          
+          /* This file will be overwritten when the log is run; that's
+             ok, because at least now we have a reservation on disk. */
+        }
+
+      /* We've now guaranteed that some kind of .prej file exists
+         above the SVN/ dir.  We write log entries to append our
+         conflicts to it. */      
+      svn_xml_make_open_tag (entry_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_APPEND,
+                             SVN_WC__LOG_ATTR_NAME,
+                             reject_tmp_path,
+                             SVN_WC__LOG_ATTR_DEST,
+                             reject_path,
+                             NULL);
+
+      /* And of course, delete the temporary reject file. */
+      svn_xml_make_open_tag (entry_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_DELETE_ENTRY,
+                             SVN_WC__LOG_ATTR_NAME,
+                             reject_tmp_path,
+                             NULL);
+      
+
+      /* Mark entry as "conflicted" with a particular .prej file. */
+      svn_xml_make_open_tag (entry_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MODIFY_ENTRY,
+                             SVN_WC__LOG_ATTR_NAME,
+                             name,
+                             SVN_WC__ENTRIES_ATTR_CONFLICT,
+                             svn_string_create ("true", pool),
+                             SVN_WC__ENTRIES_ATTR_REJFILE,
+                             reject_path,
+                             NULL);
+    }  
   
   /* At this point, we need to write log entries that bump revision
      number and set new entry timestamps.  The caller of this function
