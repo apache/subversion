@@ -72,7 +72,8 @@ static svn_opt_subcommand_t
 /* Option codes and descriptions. */
 enum 
   { 
-    svnlook__show_ids = SVN_OPT_FIRST_LONGOPT_ID,
+    svnlook__version = SVN_OPT_FIRST_LONGOPT_ID,
+    svnlook__show_ids,
     svnlook__no_diff_deleted
   };
 
@@ -89,6 +90,9 @@ static const apr_getopt_option_t options_table[] =
 
     {NULL,            '?', 0,
      "show help on a subcommand"},
+
+    {"version",       svnlook__version, 0,
+     "show version information"},
 
     {"revision",      'r', 1,
      "specify revision number ARG"},
@@ -148,7 +152,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"help", subcommand_help, {"?", "h"},
      "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
      "Display this usage message.\n",
-     {0} },
+     {svnlook__version} },
 
     {"info", subcommand_info, {0},
      "usage: svnlook info REPOS_PATH\n\n"
@@ -198,10 +202,11 @@ struct svnlook_opt_state
   const char *arg2;        /* Usually an fs path or NULL. */
   svn_revnum_t rev;
   const char *txn;
-  svn_boolean_t show_ids;
-  svn_boolean_t help;
-  svn_boolean_t no_diff_deleted;
-  svn_boolean_t verbose;   /* Verbose output. */
+  svn_boolean_t version;          /* --version */
+  svn_boolean_t show_ids;         /* --show-ids */
+  svn_boolean_t help;             /* --help */
+  svn_boolean_t no_diff_deleted;  /* --no-diff-deleted */
+  svn_boolean_t verbose;          /* --verbose */
 };
 
 
@@ -1368,6 +1373,7 @@ subcommand_dirschanged (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 static svn_error_t *
 subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
+  struct svnlook_opt_state *opt_state = baton;
   const char *header =
     "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
     "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -1377,7 +1383,9 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     "\n"
     "Available subcommands:\n";
 
-  SVN_ERR (svn_opt_print_help (os, "svnlook", FALSE, FALSE, NULL,
+  SVN_ERR (svn_opt_print_help (os, "svnlook", 
+                               opt_state ? opt_state->version : FALSE, 
+                               FALSE, NULL,
                                header, cmd_table, options_table, NULL,
                                pool));
   
@@ -1568,6 +1576,11 @@ main (int argc, const char * const *argv)
 
         case 'h':
         case '?':
+          opt_state.help = TRUE;
+          break;
+
+        case svnlook__version:
+          opt_state.version = TRUE;
           opt_state.help = TRUE;
           break;
 
