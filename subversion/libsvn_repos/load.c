@@ -428,12 +428,13 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
 /** vtable for doing commits to a fs **/
 
-/* ### right now, this vtable does nothing but stupid printf's. */
 
 struct parse_baton
 {
   svn_repos_t *repos;
   svn_fs_t *fs;
+
+  svn_boolean_t use_history;
 };
 
 struct revision_baton
@@ -445,6 +446,8 @@ struct revision_baton
 
   const svn_string_t *datestamp;
 
+  apr_int32_t rev_offset;
+
   struct parse_baton *pb;
   apr_pool_t *pool;
 };
@@ -454,6 +457,9 @@ struct node_baton
   const char *path;
   enum svn_node_kind kind;
   enum svn_node_action action;
+
+  svn_revnum_t copyfrom_rev;
+  const char *copyfrom_path;
 
   struct revision_baton *rb;
   apr_pool_t *pool;
@@ -500,6 +506,14 @@ make_node_baton (apr_hash_t *headers,
         nb->action = svn_node_action_replace;
     }
 
+  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
+                           APR_HASH_KEY_STRING)))
+      nb->copyfrom_rev = (svn_revnum_t) atoi (val);
+
+  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
+                           APR_HASH_KEY_STRING)))
+      nb->copyfrom_path = apr_pstrdup (pool, val);
+  
   /* What's cool about this dump format is that the parser just
      ignores any unrecognized headers.  :-)  */
 
@@ -535,13 +549,17 @@ new_revision_record (void **revision_baton,
   struct parse_baton *pb = parse_baton;
   struct revision_baton *rb;
   svn_revnum_t head_rev;
-  
+
   rb = make_revision_baton (headers, pb, pool);
+  SVN_ERR (svn_fs_youngest_rev (&head_rev, pb->fs, pool));
+
+  /* Calculate the revision 'offset' for finding copyfrom sources.
+     It might be positive or negative. */
+  rb->rev_offset = (rb->rev) - (head_rev + 1);
 
   if (rb->rev > 0)
     {
       /* Create a new fs txn. */
-      SVN_ERR (svn_fs_youngest_rev (&head_rev, pb->fs, pool));
       SVN_ERR (svn_fs_begin_txn (&(rb->txn), pb->fs, head_rev, pool));
       SVN_ERR (svn_fs_txn_root (&(rb->txn_root), rb->txn, pool));
       
@@ -557,6 +575,48 @@ new_revision_record (void **revision_baton,
   *revision_baton = rb;
   return SVN_NO_ERROR;
 }
+
+
+
+/* Factorized helper func for new_node_record() */
+static svn_error_t *
+maybe_add_with_history (struct node_baton *nb,
+                        struct revision_baton *rb,
+                        apr_pool_t *pool)
+{
+  struct parse_baton *pb = rb->pb;
+
+  if ((nb->copyfrom_path == NULL) || (! pb->use_history))
+    {
+      /* Add empty file or dir, without history. */
+      if (nb->kind == svn_node_file)
+        SVN_ERR (svn_fs_make_file (rb->txn_root, nb->path, pool));
+
+      else if (nb->kind == svn_node_dir)
+        SVN_ERR (svn_fs_make_dir (rb->txn_root, nb->path, pool));
+    }
+  else
+    {
+      /* Hunt down the source revision in this fs. */
+      svn_fs_root_t *copy_root;
+      svn_revnum_t src_rev = nb->copyfrom_rev - rb->rev_offset;
+
+      if (! SVN_IS_VALID_REVNUM(src_rev))
+        return svn_error_createf (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL, pool,
+                                  "Relative copyfrom_rev %" SVN_REVNUM_T_FMT
+                                  " is not available in current repository.",
+                                  src_rev);
+
+      SVN_ERR (svn_fs_revision_root (&copy_root, pb->fs, src_rev, pool));
+      SVN_ERR (svn_fs_copy (copy_root, nb->copyfrom_path,
+                            rb->txn_root, nb->path, pool));
+
+      printf ("COPIED...");
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 
 static svn_error_t *
@@ -585,10 +645,7 @@ new_node_record (void **node_baton,
       {
         printf ("     * adding path : %s ...", nb->path);
 
-        if (nb->kind == svn_node_file)
-          SVN_ERR (svn_fs_make_file (rb->txn_root, nb->path, pool));
-        else if (nb->kind == svn_node_dir)
-          SVN_ERR (svn_fs_make_dir (rb->txn_root, nb->path, pool));
+        SVN_ERR (maybe_add_with_history (nb, rb, pool));
         break;
       }
     case svn_node_action_replace:
@@ -597,10 +654,7 @@ new_node_record (void **node_baton,
 
         SVN_ERR (svn_fs_delete_tree (rb->txn_root, nb->path, pool));
 
-        if (nb->kind == svn_node_file)
-          SVN_ERR (svn_fs_make_file (rb->txn_root, nb->path, pool));
-        else if (nb->kind == svn_node_dir)
-          SVN_ERR (svn_fs_make_dir (rb->txn_root, nb->path, pool));
+        SVN_ERR (maybe_add_with_history (nb, rb, pool));
         break;
       }
     default:
@@ -725,6 +779,7 @@ static svn_error_t *
 get_parser (const svn_repos_parser_fns_t **parser_callbacks,
             void **parse_baton,
             svn_repos_t *repos,
+            svn_boolean_t use_history,
             apr_pool_t *pool)
 {
   svn_repos_parser_fns_t *parser = apr_pcalloc (pool, sizeof(*parser));
@@ -740,6 +795,7 @@ get_parser (const svn_repos_parser_fns_t **parser_callbacks,
 
   pb->repos = repos;
   pb->fs = svn_repos_fs (repos);
+  pb->use_history = use_history;
 
   *parser_callbacks = parser;
   *parse_baton = pb;
@@ -762,7 +818,7 @@ svn_repos_load_fs (svn_repos_t *repos,
   
   /* This is really simple. */  
 
-  SVN_ERR (get_parser (&parser, &parse_baton, repos, pool));
+  SVN_ERR (get_parser (&parser, &parse_baton, repos, TRUE, pool));
 
   SVN_ERR (svn_repos_parse_dumpstream (stream, parser, parse_baton, pool));
 
