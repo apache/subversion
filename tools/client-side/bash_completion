@@ -107,7 +107,7 @@ _svn()
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
-		         $pOpts --notice-ancestry"
+		         $pOpts --ignore-ancestry"
 		;;
 	mkdir)
 		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts"
