@@ -131,6 +131,7 @@ static const ne_propname fetch_props[] =
 
 static const ne_propname log_message_prop = { SVN_DAV_PROP_NS_SVN, "log" };
 
+/* perform a deep copy of BASE into POOL, and return the result. */
 static resource_t * dup_resource(resource_t *base, apr_pool_t *pool)
 {
   resource_t *rsrc = apr_pcalloc(pool, sizeof(*rsrc));
