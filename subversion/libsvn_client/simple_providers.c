@@ -43,115 +43,34 @@ typedef struct
 {
   /* cache:  realmstring which identifies the credentials file */
   const char *realmstring;
-
-  /* values retrieved from cache. */
-  const char *username;
-  const char *password;
 } provider_baton_t;
 
 
 
-/* Fetch username and password from @a parameters or from disk cache,
- * and store in @a *username and @a *password.  Try the parameters
- * first, then try fetching from the auth system.
- *
- * If fetched creds from disk, set @a pb->username and @a pb->password
- * accordingly, so save_creds() can avoid writing out unchanged data
- * to disk.
- *
- * Return TRUE if both username and password were found, else FALSE.
- */
-static svn_boolean_t
-get_creds (const char **username,
-           const char **password,
-           provider_baton_t *pb,
-           apr_hash_t *parameters,
-           apr_pool_t *pool)
+/* Get the username from the OS */
+static const char *
+get_os_username (apr_pool_t *pool)
 {
-  apr_hash_t *creds_hash = NULL;
-  svn_string_t *susername = NULL, *spassword = NULL;
-  const char *def_username = apr_hash_get (parameters, 
-                                           SVN_AUTH_PARAM_DEFAULT_USERNAME,
-                                           APR_HASH_KEY_STRING);
-  const char *def_password = apr_hash_get (parameters, 
-                                           SVN_AUTH_PARAM_DEFAULT_PASSWORD,
-                                           APR_HASH_KEY_STRING);
-  const char *config_dir;
+  const char *username_utf8;
+  char *username;
+  apr_uid_t uid;
+  apr_gid_t gid;
 
-  config_dir = apr_hash_get (parameters,
-                             SVN_AUTH_PARAM_CONFIG_DIR,
-                             APR_HASH_KEY_STRING);
-
-  /* Try to load credentials from a file on disk, based on the
-     realmstring.  Don't throw an error, though: if something went
-     wrong reading the file, no big deal.  What really matters is that
-     we failed to get the creds, so allow the auth system to try the
-     next provider. */
-  svn_error_clear (svn_config_read_auth_data (&creds_hash,
-                                              SVN_AUTH_CRED_SIMPLE,
-                                              pb->realmstring, config_dir,
-                                              pool));
-  if (creds_hash != NULL)
+  if (apr_uid_current (&uid, &gid, pool) == APR_SUCCESS &&
+      apr_uid_name_get (&username, uid, pool) == APR_SUCCESS)
     {
-      if (! def_username)
-        susername = apr_hash_get (creds_hash,
-                                  SVN_CLIENT__AUTHFILE_USERNAME_KEY,
-                                  APR_HASH_KEY_STRING);
-
-      if (! def_password)
-        spassword = apr_hash_get (creds_hash,
-                                  SVN_CLIENT__AUTHFILE_PASSWORD_KEY,
-                                  APR_HASH_KEY_STRING);
+      svn_error_t *err;
+      err = svn_utf_cstring_to_utf8 (&username_utf8, username, pool);
+      svn_error_clear (err);
+      if (! err)
+        return username_utf8;
     }
 
-  /* If we read values from disk, we want to remember those, so
-     we can avoid writing unchanged values back out again (not a
-     correctness point, just about efficiency). */
-  if (susername && susername->data)
-    pb->username = susername->data;
-  if (spassword && spassword->data)
-    pb->password = spassword->data;
-      
-  *username = def_username ? def_username : susername ? susername->data : NULL;
-  *password = def_password ? def_password : spassword ? spassword->data : NULL;
-
-  return *username && *password;
+  return NULL;
 }
 
 
-static svn_boolean_t
-save_creds (provider_baton_t *pb,
-            const char *username,
-            const char *password,
-            const char *config_dir,
-            apr_pool_t *pool)
-{
-  svn_error_t *err;
-  apr_hash_t *creds_hash = NULL;
-
-  /* If the creds are already in our baton cache, do not store again */
-  if (pb->username && strcmp (username, pb->username) == 0 &&
-      pb->password && strcmp (password, pb->password) == 0)
-    {
-      return TRUE;
-    }
-
-  creds_hash = apr_hash_make (pool);
-  apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_USERNAME_KEY,
-                APR_HASH_KEY_STRING,
-                svn_string_create (username, pool));
-  apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_PASSWORD_KEY,
-                APR_HASH_KEY_STRING,
-                svn_string_create (password, pool));
-
-  /* ...and write to disk. */
-  err = svn_config_write_auth_data (creds_hash, SVN_AUTH_CRED_SIMPLE,
-                                    pb->realmstring, config_dir, pool);
-  svn_error_clear (err);
-  return ! err;
-}
-
-
+
 static svn_error_t *
 simple_first_creds (void **credentials,
                     void **iter_baton,
@@ -161,25 +80,75 @@ simple_first_creds (void **credentials,
                     apr_pool_t *pool)
 {
   provider_baton_t *pb = provider_baton;
-  const char *username, *password;
+  const char *config_dir = apr_hash_get (parameters,
+                                         SVN_AUTH_PARAM_CONFIG_DIR,
+                                         APR_HASH_KEY_STRING);
+  const char *username = apr_hash_get (parameters,
+                                       SVN_AUTH_PARAM_DEFAULT_USERNAME,
+                                       APR_HASH_KEY_STRING);
+  const char *password = apr_hash_get (parameters,
+                                       SVN_AUTH_PARAM_DEFAULT_PASSWORD,
+                                       APR_HASH_KEY_STRING);
+  svn_boolean_t may_save = username || password;
+  svn_error_t *err;
 
   if (realmstring)
     pb->realmstring = apr_pstrdup (pool, realmstring);
 
-  if (get_creds (&username, &password, pb, parameters, pool))
+  /* If we don't have a usename and a password yet, we try the auth cache */
+  if (! (username && password))
+    {
+      apr_hash_t *creds_hash = NULL;
+
+      /* Try to load credentials from a file on disk, based on the
+         realmstring.  Don't throw an error, though: if something went
+         wrong reading the file, no big deal.  What really matters is that
+         we failed to get the creds, so allow the auth system to try the
+         next provider. */
+      err = svn_config_read_auth_data (&creds_hash, SVN_AUTH_CRED_SIMPLE,
+                                       realmstring, config_dir, pool);
+      svn_error_clear (err);
+      if (! err && creds_hash)
+        {
+          svn_string_t *str;
+          if (! username)
+            {
+              str = apr_hash_get (creds_hash,
+                                  SVN_CLIENT__AUTHFILE_USERNAME_KEY,
+                                  APR_HASH_KEY_STRING);
+              if (str && str->data)
+                username = str->data;
+            }
+
+          if (! password)
+            {
+              str = apr_hash_get (creds_hash,
+                                  SVN_CLIENT__AUTHFILE_PASSWORD_KEY,
+                                  APR_HASH_KEY_STRING);
+              if (str && str->data)
+                password = str->data;
+            }
+        }
+    }
+
+  /* Ask the OS for the username if we have a password but no
+     username. */
+  if (password && ! username)
+    username = get_os_username (pool);
+
+  if (username && password)
     {
       svn_auth_cred_simple_t *creds = apr_pcalloc (pool, sizeof(*creds));
       creds->username = username;
       creds->password = password;
-      creds->may_save = FALSE;
+      creds->may_save = may_save;
       *credentials = creds;
     }
   else
-    {
-      *credentials = NULL;
-    }
+    *credentials = NULL;
 
   *iter_baton = NULL;
+
   return SVN_NO_ERROR;
 }
 
@@ -193,7 +162,11 @@ simple_save_creds (svn_boolean_t *saved,
 {
   svn_auth_cred_simple_t *creds = credentials;
   provider_baton_t *pb = provider_baton;
+  apr_hash_t *creds_hash = NULL;
   const char *config_dir;
+  svn_error_t *err;
+
+  *saved = FALSE;
 
   if (! creds->may_save)
     return SVN_NO_ERROR;
@@ -201,8 +174,20 @@ simple_save_creds (svn_boolean_t *saved,
   config_dir = apr_hash_get (parameters,
                              SVN_AUTH_PARAM_CONFIG_DIR,
                              APR_HASH_KEY_STRING);
-  
-  *saved = save_creds (pb, creds->username, creds->password, config_dir, pool);
+
+  /* Put the credentials in a hash and save it to disk */
+  creds_hash = apr_hash_make (pool);
+  apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_USERNAME_KEY,
+                APR_HASH_KEY_STRING,
+                svn_string_create (creds->username, pool));
+  apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_PASSWORD_KEY,
+                APR_HASH_KEY_STRING,
+                svn_string_create (creds->password, pool));
+  err = svn_config_write_auth_data (creds_hash, SVN_AUTH_CRED_SIMPLE,
+                                    pb->realmstring, config_dir, pool);
+  svn_error_clear (err);
+  *saved = ! err;
+
   return SVN_NO_ERROR;
 }
 
@@ -277,26 +262,18 @@ prompt_for_simple_creds (svn_auth_cred_simple_t **cred_p,
      so. */
   if (first_time)
     {
-      def_username = apr_hash_get (parameters, 
+      def_username = apr_hash_get (parameters,
                                    SVN_AUTH_PARAM_DEFAULT_USERNAME,
                                    APR_HASH_KEY_STRING);
 
       /* No default username?  Try the UID. */
       if (! def_username)
-        {
-          char *un;
-          apr_uid_t uid;
-          apr_gid_t gid;
-         
-          if (! apr_uid_current (&uid, &gid, pool)
-              && ! apr_uid_name_get (&un, uid, pool))
-            SVN_ERR (svn_utf_cstring_to_utf8 (&def_username, un, pool));
-        }
+        def_username = get_os_username (pool);
 
-      def_password = apr_hash_get (parameters, 
+      def_password = apr_hash_get (parameters,
                                    SVN_AUTH_PARAM_DEFAULT_PASSWORD,
                                    APR_HASH_KEY_STRING);
-    }    
+    }
 
   /* If we have defaults, just build the cred here and return it.
    *
@@ -309,6 +286,7 @@ prompt_for_simple_creds (svn_auth_cred_simple_t **cred_p,
       *cred_p = apr_palloc (pool, sizeof (**cred_p));
       (*cred_p)->username = apr_pstrdup (pool, def_username);
       (*cred_p)->password = apr_pstrdup (pool, def_password);
+      (*cred_p)->may_save = TRUE;
     }
   else
     {
@@ -332,7 +310,7 @@ simple_prompt_first_creds (void **credentials_p,
 {
   simple_prompt_provider_baton_t *pb = provider_baton;
   simple_prompt_iter_baton_t *ibaton = apr_pcalloc (pool, sizeof (*ibaton));
-  const char *no_auth_cache = apr_hash_get (parameters, 
+  const char *no_auth_cache = apr_hash_get (parameters,
                                             SVN_AUTH_PARAM_NO_AUTH_CACHE,
                                             APR_HASH_KEY_STRING);
 
@@ -358,7 +336,7 @@ simple_prompt_next_creds (void **credentials_p,
                           apr_pool_t *pool)
 {
   simple_prompt_iter_baton_t *ib = iter_baton;
-  const char *no_auth_cache = apr_hash_get (parameters, 
+  const char *no_auth_cache = apr_hash_get (parameters,
                                             SVN_AUTH_PARAM_NO_AUTH_CACHE,
                                             APR_HASH_KEY_STRING);
 
