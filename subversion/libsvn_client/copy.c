@@ -652,6 +652,8 @@ repos_to_wc_copy (const char *src_url,
   svn_node_kind_t src_kind, dst_kind;
   svn_revnum_t src_revnum;
   svn_wc_adm_access_t *adm_access;
+  apr_hash_t *props = NULL;
+  apr_hash_index_t *hi;
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -776,8 +778,6 @@ repos_to_wc_copy (const char *src_url,
       svn_stream_t *fstream;
       apr_file_t *fp;
       svn_revnum_t fetched_rev = 0;
-      apr_hash_t *props;
-      apr_hash_index_t *hi;
       
       /* Open DST_PATH for writing. */
       SVN_ERR_W (svn_io_file_open (&fp, dst_path,
@@ -793,24 +793,6 @@ repos_to_wc_copy (const char *src_url,
          already the full URL to the file. */         
       SVN_ERR (ra_lib->get_file (sess, "", src_revnum, fstream, 
                                  &fetched_rev, &props));
-
-      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi)) 
-        {
-          const void *key;
-          void *val;
-          enum svn_prop_kind kind;
-
-          apr_hash_this (hi, &key, NULL, &val);
-
-          /* We only want to set 'normal' props.  For now, we're
-             ignoring any wc props (they're not needed when we commit
-             an addition), and we're ignoring entry props (they're
-             written to the entries file as part of the post-commit
-             processing).  */
-          kind = svn_property_kind (NULL, key);
-          if (kind == svn_prop_regular_kind)
-            SVN_ERR (svn_wc_prop_set (key, val, dst_path, pool));
-        }
 
       /* Close the file. */
       status = apr_file_close (fp);
@@ -855,6 +837,29 @@ repos_to_wc_copy (const char *src_url,
                               
   SVN_ERR (svn_wc_add (dst_path, adm_access, src_url, src_revnum,
                        notify_func, notify_baton, pool));
+
+  /* If any properties were fetched (in the file case), apply those
+     changes now. */
+  if (props)
+    {
+      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi)) 
+        {
+          const void *key;
+          void *val;
+          enum svn_prop_kind kind;
+          
+          apr_hash_this (hi, &key, NULL, &val);
+          
+          /* We only want to set 'normal' props.  For now, we're
+             ignoring any wc props (they're not needed when we commit
+             an addition), and we're ignoring entry props (they're
+             written to the entries file as part of the post-commit
+             processing).  */
+          kind = svn_property_kind (NULL, key);
+          if (kind == svn_prop_regular_kind)
+            SVN_ERR (svn_wc_prop_set (key, val, dst_path, pool));
+        }
+    }
 
   if (! optional_adm_access)
     SVN_ERR (svn_wc_adm_close (adm_access));
