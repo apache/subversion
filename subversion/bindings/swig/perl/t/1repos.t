@@ -78,7 +78,5 @@ cmp_ok($fs->youngest_rev, '==', 3);
 
 END {
 diag "cleanup";
-print `svn cat file://$repospath/trunk/filea`;
-print `svn log -v file://$repospath`;
 rmtree($repospath);
 }
