@@ -128,6 +128,10 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#digest-auth">Why doesn't HTTP Digest auth work?</a></li>
 <li><a href="#xlc-compile">Compiling with xlc on AIX, I get compilation
     errors.  What's wrong?</a></li>
+<li><a href="#nonrecursive-checkout">I checked out a directory
+    non-recursively (with -N), and now I want to make certain
+    subdirectories "appear".  But <tt>svn up subdir</tt> doesn't
+    work.</a></li>
 
 
 
@@ -1787,6 +1791,23 @@ compile without error.  See
 its associated thread for more details.
 </p>
  
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="nonrecursive-checkout">I checked out a directory non-recursively
+    (with -N), and now I want to make certain subdirectories
+    "appear".  But <tt>svn up subdir</tt> doesn't work.</a></h3>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=695">issue
+695</a>.  The current implementation of <tt>svn checkout -N</tt> is
+quite broken.  It results in a working copy which has missing entries,
+yet is ignorant of its "incompleteness".  Apparently a whole bunch of
+CVS users are fairly dependent on this paradigm, but none of the
+Subversion developers were.  For now, there's really no workaround
+other than to change your process: try checking out separate
+subdirectories of the repository and manually nesting your working
+copies.</p>
+
 
 <![CDATA[=========================================================]]>
 
