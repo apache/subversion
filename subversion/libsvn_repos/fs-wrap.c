@@ -25,6 +25,7 @@
 #include "svn_props.h"
 #include "svn_repos.h"
 #include "repos.h"
+#include "svn_private_config.h"
 
 
 /*** Commit wrappers ***/
@@ -52,7 +53,7 @@ svn_repos_fs_commit_txn (const char **conflict_p,
   if ((err = svn_repos__hooks_post_commit (repos, *new_rev, pool)))
     return svn_error_create
       (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
-       "Commit succeeded, but post-commit hook failed");
+       _("Commit succeeded, but post-commit hook failed"));
 
   return SVN_NO_ERROR;
 }
@@ -151,8 +152,8 @@ validate_prop (const char *name,
   if (kind != svn_prop_regular_kind)
     return svn_error_createf 
       (SVN_ERR_REPOS_BAD_ARGS, NULL,
-       "Storage of non-regular property '%s' is disallowed through the "
-       "repository interface, and could indicate a bug in your client", 
+       _("Storage of non-regular property '%s' is disallowed through the "
+         "repository interface, and could indicate a bug in your client"), 
        name);
   return SVN_NO_ERROR;
 }
@@ -290,7 +291,7 @@ svn_repos_fs_change_rev_prop2 (svn_repos_t *repos,
     {
       return svn_error_createf 
         (SVN_ERR_AUTHZ_UNREADABLE, NULL,
-         "Write denied:  not authorized to read all of revision %ld.", rev);
+         _("Write denied:  not authorized to read all of revision %ld."), rev);
     }
 
   return SVN_NO_ERROR;
