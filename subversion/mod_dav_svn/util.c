@@ -17,6 +17,7 @@
  */
 
 #include <apr_xml.h>
+#include <apr_errno.h>
 #include <apr_uri.h>
 #include <mod_dav.h>
 
@@ -50,6 +51,12 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
         break;
         /* add other mappings here */
       }
+
+    /* dav_new_error_tag will record errno but Subversion makes no attempt
+       to ensure that it is valid.  We reset it to avoid putting incorrect
+       information into the error log, at the expense of possibly removing
+       valid information. */
+    errno = 0;
 
     derr = dav_new_error_tag(pool, status,
                              serr->apr_err, apr_pstrdup(pool, serr->message),
