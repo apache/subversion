@@ -95,6 +95,8 @@ def setup_working_copy(wc_dir):
   
   global author_rev_unexp_path
   global author_rev_exp_path
+  global url_unexp_path
+  global url_exp_path
   global bogus_keywords_path
   global embd_author_rev_unexp_path
   global embd_author_rev_exp_path
@@ -103,10 +105,12 @@ def setup_working_copy(wc_dir):
   # NOTE: Only using author and revision keywords in tests for now,
   # since they return predictable substitutions.
 
-  # Unexpanded, expanded, and bogus keywords; first as the only
-  # contents of the files, then embedded in non-keyword content.
+  # Unexpanded, expanded, and bogus keywords; sometimes as the only
+  # content of the files, sometimes embedded in non-keyword content.
   author_rev_unexp_path = os.path.join(wc_dir, 'author_rev_unexp')
   author_rev_exp_path = os.path.join(wc_dir, 'author_rev_exp')
+  url_unexp_path = os.path.join(wc_dir, 'url_unexp')
+  url_exp_path = os.path.join(wc_dir, 'url_exp')
   bogus_keywords_path = os.path.join(wc_dir, 'bogus_keywords')
   embd_author_rev_unexp_path = os.path.join(wc_dir, 'embd_author_rev_unexp')
   embd_author_rev_exp_path = os.path.join(wc_dir, 'embd_author_rev_exp')
@@ -114,6 +118,8 @@ def setup_working_copy(wc_dir):
 
   svntest.main.file_append (author_rev_unexp_path, "$Author$\n$Rev$")
   svntest.main.file_append (author_rev_exp_path, "$Author: blah $\n$Rev: 0 $")
+  svntest.main.file_append (url_unexp_path, "$URL$")
+  svntest.main.file_append (url_exp_path, "$URL: blah $")
   svntest.main.file_append (bogus_keywords_path, "$Arthur$\n$Rev0$")
   svntest.main.file_append (embd_author_rev_unexp_path,
                             "one\nfish\n$Author$ two fish\n red $Rev$\n fish")
@@ -161,6 +167,8 @@ def keywords_from_birth(sbox):
   expected_status.add({
     'author_rev_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
     'author_rev_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'url_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'url_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
     'bogus_keywords' : Item(status='A ', wc_rev=0, repos_rev=1),
     'embd_author_rev_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
     'embd_author_rev_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
@@ -169,6 +177,8 @@ def keywords_from_birth(sbox):
 
   svntest.main.run_svn (None, 'add', author_rev_unexp_path)
   svntest.main.run_svn (None, 'add', author_rev_exp_path)
+  svntest.main.run_svn (None, 'add', url_unexp_path)
+  svntest.main.run_svn (None, 'add', url_exp_path)
   svntest.main.run_svn (None, 'add', bogus_keywords_path)
   svntest.main.run_svn (None, 'add', embd_author_rev_unexp_path)
   svntest.main.run_svn (None, 'add', embd_author_rev_exp_path)
@@ -178,12 +188,16 @@ def keywords_from_birth(sbox):
 
   # Add the keyword properties.
   keywords_on (author_rev_unexp_path)
+  keywords_on (url_unexp_path)
+  keywords_on (url_exp_path)
   keywords_on (embd_author_rev_exp_path)
 
   # Commit.
   expected_output = svntest.wc.State(wc_dir, {
     'author_rev_unexp' : Item(verb='Adding'),
     'author_rev_exp' : Item(verb='Adding'),
+    'url_unexp' : Item(verb='Adding'),
+    'url_exp' : Item(verb='Adding'),
     'bogus_keywords' : Item(verb='Adding'),
     'embd_author_rev_unexp' : Item(verb='Adding'),
     'embd_author_rev_exp' : Item(verb='Adding'),
@@ -194,6 +208,24 @@ def keywords_from_birth(sbox):
                                             None, None,
                                             None, None, None, None, wc_dir):
     return 1
+
+  # Make sure the unexpanded URL keyword got expanded correctly.
+  fp = open(url_unexp_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (re.match("\$URL: (http://|file://)", lines[0]))):
+    print "URL expansion failed for", url_unexp_path
+    return 1
+  fp.close()
+
+  # Make sure the preexpanded URL keyword got reexpanded correctly.
+  fp = open(url_exp_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (re.match("\$URL: (http://|file://)", lines[0]))):
+    print "URL expansion failed for", url_exp_path
+    return 1
+  fp.close()
 
   return 0
 
