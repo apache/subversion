@@ -448,27 +448,29 @@ Changed paths:
     </sect2>
 
     <sect2 id="svn-ch-4-sect-2.3">
-      <title>The Key Concepts Behind Branches</title> 
+      <title>Conceptos clave sobre las ramas</title>
 
-      <para>There are two important lessons that you should remember
-      from this section.</para>
+      <para>Hay dos lecciones importantes que debería recordar
+        de esta sección.</para>
 
       <orderedlist>
         <listitem>
-          <para>Unlike many other version control systems,
-            Subversion's branches exist as <emphasis>normal filesystem
-            directories</emphasis> in the repository, not in an extra
-            dimension.  These directories just happen to carry some
-            extra historical information.</para>
+          <para>A diferencia de muchos otros sistemas de control
+            de versiones, las ramas de Subversion existen
+            como <emphasis>directorios normales del sistema de
+            archivos</emphasis> en el repositorio, no en una
+            dimensión extra. Estos directorios simplemente llevan
+            información histórica adicional.</para>
         </listitem>
         <listitem>
-          <para>Subversion has no internal concept of a
-          branch&mdash;only copies.  When you copy a directory, the
-          resulting directory is only a <quote>branch</quote> because
-          <emphasis>you</emphasis> attach that meaning to it.  You may
-          think of the directory differently, or treat it differently,
-          but to Subversion it's just an ordinary directory that
-          happens to have been created by copying.</para>
+          <para>Subversion no tiene un concepto interno de
+            rama&mdash;sólo copias.  Cuando copia un directorio, el
+            nuevo directorio sólo es una <quote>rama</quote> porque
+            <emphasis>usted</emphasis> añade esa connotación. Puede
+            considerar el directorio de forma diferente, o tratarlo
+            de manera diferente, pero para Subversion no es más que
+            un directorio ordinario que simplemente fue creado como
+            resultado de una operación de copiado.</para>
         </listitem>
       </orderedlist>
 
