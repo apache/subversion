@@ -256,7 +256,7 @@ install: external-install local-install revision-install
 
 @INCLUDE_OUTPUTS@
 
-local-all: @BUILD_RULES@ @SWIG_BUILD_RULES@
+local-all: @BUILD_RULES@
 
 locale-gnu-pot:
 	(cd $(abs_srcdir)/subversion/ ; \
@@ -304,7 +304,7 @@ local-clean: fast-clean check-clean @SWIG_CLEAN_RULES@
 # clean everything, including test output.
 local-distclean: fast-distclean check-clean
 
-local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
+local-install: @INSTALL_RULES@
 
 ### HACK!! Find a better way to do this
 revision-install:

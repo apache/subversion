@@ -123,9 +123,6 @@ AC_DEFUN(SVN_FIND_SWIG,
 
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_python" = "yes"; then
       AC_MSG_NOTICE("Configuring python swig binding")
-      SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-py-lib"
-      SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-py-lib"
-
       AC_CACHE_CHECK([if swig needs -L for its libraries],
         [ac_cv_swig_ldflags],[
         # The swig libraries are one directory above the
@@ -157,10 +154,6 @@ AC_DEFUN(SVN_FIND_SWIG,
     fi
 
     if test "$JDK" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_java" = "yes"; then
-      ### TODO: enable when functional
-#      SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-java-lib"
-#      SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-java-lib"
-
       dnl For now, use the compile and link from python as a base.
       SWIG_JAVA_COMPILE="$SWIG_PY_COMPILE"
       dnl To relink our generated native binding libraries against
@@ -177,8 +170,6 @@ AC_DEFUN(SVN_FIND_SWIG,
       PERL_VERSION="`$PERL -e 'q([[); print $]] * 1000000,$/;'`"
       AC_MSG_RESULT([$PERL_VERSION])
       if test "$PERL_VERSION" -ge "5008000"; then
-        SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-pl"
-        SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-pl"
         SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-pl" 
         SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
       else
@@ -187,8 +178,6 @@ AC_DEFUN(SVN_FIND_SWIG,
     fi
 
   fi
-  AC_SUBST(SWIG_BUILD_RULES)
-  AC_SUBST(SWIG_INSTALL_RULES)
   AC_SUBST(SWIG_CLEAN_RULES)
   AC_SUBST(SWIG_NORUNTIME_FLAG)
   AC_SUBST(SWIG_PY_INCLUDES)
