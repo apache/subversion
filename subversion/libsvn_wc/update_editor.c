@@ -1164,7 +1164,8 @@ apply_textdelta (void *file_baton,
       */
 
       /* Before applying incoming svndiff data to text base, make sure
-         text base hasn't been corrupted. */
+         text base hasn't been corrupted, and that its checksum
+         matches the expected base checksum. */
       {
         svn_wc_adm_access_t *adm_access;
         const svn_wc_entry_t *ent;
@@ -1190,6 +1191,20 @@ apply_textdelta (void *file_baton,
             SVN_ERR (svn_io_file_checksum (digest, tb, subpool));
             hex_digest = svn_md5_digest_to_cstring (digest, pool);
             
+            /* Compare the base_checksum here, rather than in the
+               window handler, because there's no guarantee that the
+               handler will see every byte of the base file. */
+            if (base_checksum)
+              {
+                if (strcmp (hex_digest, base_checksum) != 0)
+                  return svn_error_createf
+                    (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                     "apply_textdelta: checksum mismatch for '%s':\n"
+                     "   expected checksum:  %s\n"
+                     "   actual checksum:    %s\n",
+                     tb, base_checksum, hex_digest);
+              }
+
             if (strcmp (hex_digest, ent->checksum) != 0)
               {
                 /* Compatibility hack: working copies created before
@@ -1249,7 +1264,8 @@ apply_textdelta (void *file_baton,
   /* Prepare to apply the delta.  */
   svn_txdelta_apply (svn_stream_from_aprfile (hb->source, subpool),
                      svn_stream_from_aprfile (hb->dest, subpool),
-                     subpool, &hb->apply_handler, &hb->apply_baton);
+                     result_checksum, subpool,
+                     &hb->apply_handler, &hb->apply_baton);
   
   hb->pool = subpool;
   hb->fb = fb;
