@@ -1035,7 +1035,7 @@ def commit_uri_unsafe(sbox):
 
   wc_dir = sbox.wc_dir
 
-  # Note: on Windows, files can't have angle brachets in them, so we
+  # Note: on Windows, files can't have angle brackets in them, so we
   # don't tests that case.
   if svntest.main.windows:
     angle_name = '$angle$'
