@@ -28,6 +28,8 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
+SVNAnyOutput = svntest.SVNAnyOutput
+
 #----------------------------------------------------------------------
 
 def svnversion_test(sbox):
@@ -37,22 +39,21 @@ def svnversion_test(sbox):
   repo_url = sbox.repo_url
 
   # Unmodified
-  output, errput = svntest.main.run_svnversion(wc_dir, repo_url)
-  if errput or output != [ "1\n" ]:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svnversion("Unmodified working copy",
+                                            wc_dir, repo_url,
+                                            [ "1\n" ], None)
 
   # Unmodified, whole wc switched
-  output, errput = svntest.main.run_svnversion(wc_dir, "some/other/url")
-  if errput or output != [ "1S\n" ]:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svnversion("Unmodified switched working copy",
+                                            wc_dir, "some/other/url",
+                                            [ "1S\n" ], None)
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append (mu_path, 'appended mu text')
 
   # Text modified
-  output, errput = svntest.main.run_svnversion(wc_dir, repo_url)
-  if errput or output != [ "1M\n" ]:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svnversion("Modified text", wc_dir, repo_url,
+                                            [ "1M\n" ], None)
 
   expected_output = wc.State(wc_dir, {'A/mu' : Item(verb='Sending')})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
@@ -65,18 +66,18 @@ def svnversion_test(sbox):
     raise svntest.Failure
 
   # Unmodified, mixed
-  output, errput = svntest.main.run_svnversion(wc_dir, repo_url)
-  if errput or output != [ "1:2\n" ]:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svnversion("Unmodified mixed working copy",
+                                            wc_dir, repo_url,
+                                            [ "1:2\n" ], None)
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'blue', 'azul',
                                      os.path.join(wc_dir, 'A', 'mu'))
 
   # Prop modified, mixed
-  output, errput = svntest.main.run_svnversion(wc_dir, repo_url)
-  if errput or output != [ "1:2M\n" ]:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svnversion("Property modified mixed wc",
+                                            wc_dir, repo_url,
+                                            [ "1:2M\n" ], None)
 
   iota_path = os.path.join(wc_dir, 'iota')
   gamma_url = svntest.main.current_repo_url + '/A/D/gamma'
@@ -96,29 +97,28 @@ def svnversion_test(sbox):
     raise svntest.Failure
 
   # Prop modified, mixed, part wc switched
-  output, errput = svntest.main.run_svnversion(wc_dir, repo_url)
-  if errput or output != [ "1:2MS\n" ]:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svnversion("Prop-mod mixed partly switched",
+                                            wc_dir, repo_url,
+                                            [ "1:2MS\n" ], None)
 
   # Plain (exported) directory that is a direct subdir of a versioned dir
   Q_path = os.path.join(wc_dir, 'Q')
   os.mkdir(Q_path)
-  output, errput = svntest.main.run_svnversion(Q_path, repo_url)
-  if errput or output != [ "exported\n" ]:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svnversion("Exported subdirectory",
+                                            Q_path, repo_url,
+                                            [ "exported\n" ], None)
 
   # Plain (exported) directory that is not a direct subdir of a versioned dir
   R_path = os.path.join(Q_path, 'Q')
   os.mkdir(R_path)
-  output, errput = svntest.main.run_svnversion(R_path, repo_url)
-  if errput or output != [ "exported\n" ]:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svnversion("Exported directory",
+                                            R_path, repo_url,
+                                            [ "exported\n" ], None)
 
   # No directory generates an error
-  output, errput = svntest.main.run_svnversion(os.path.join(wc_dir, 'Q', 'X'),
-                                               repo_url)
-  if not errput or output:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svnversion("None existent directory",
+                                            os.path.join(wc_dir, 'Q', 'X'),
+                                            repo_url, None, SVNAnyOutput)
 
 
 ########################################################################
