@@ -32,9 +32,8 @@ SVN_FS_LIB_LINK = @SVN_FS_LIB_LINK@
 
 DESIGN_DIR = doc/programmer/design
 BOOK_TOP = doc/book
-BOOK_DIR = ${BOOK_TOP}/book
 MDOCS_DIR = ${BOOK_TOP}/misc-docs
-DOC_DIRS = $(DESIGN_DIR) $(BOOK_DIR) $(MDOCS_DIR) 
+DOC_DIRS = $(DESIGN_DIR) $(MDOCS_DIR) 
 
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
@@ -456,17 +455,16 @@ external-extraclean:
 # DOCUMENTATION RULES
 
 # Every single document in every format.
-doc: doc-design doc-book doc-misc-docs
+doc: doc-design doc-misc-docs
 
 # Build all types of a certain doc.
-doc-book: doc-book-html doc-book-pdf doc-book-ps
 doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
 doc-design: doc-design-info doc-design-html doc-design-txt
 
 # Build all docs of a certain type.
-doc-all-html: doc-design-html doc-book-html doc-misc-docs-html
-doc-all-pdf: doc-design-pdf doc-book-pdf dock-misc-docs-pdf
-doc-all-ps: doc-design-ps doc-book-ps dock-misc-docs-ps
+doc-all-html: doc-design-html doc-misc-docs-html
+doc-all-pdf: doc-design-pdf dock-misc-docs-pdf
+doc-all-ps: doc-design-ps dock-misc-docs-ps
 doc-all-info: doc-design-info
 
 # Different outputs for the 'design' document, written in texinfo.
@@ -477,15 +475,6 @@ doc-design-txt: doc/programmer/design/svn-design.txt
 doc-design-dvi: doc/programmer/design/svn-design.dvi
 doc-design-ps: doc/programmer/design/svn-design.ps
 doc-design-pdf: doc/programmer/design/svn-design.pdf
-
-# Different outputs for the main Subversion 'book', written in docbook.
-# Assumes you have {xsltproc, fop, stylesheets} installed.
-doc-book-html:
-	cd ${BOOK_TOP} && $(MAKE) book-html
-doc-book-pdf:
-	cd ${BOOK_TOP} && $(MAKE) book-pdf
-doc-book-ps:
-	cd ${BOOK_TOP} && $(MAKE) book-ps
 
 # Different outputs for the misc docs.
 # Assumes you have {xsltproc, fop, stylesheets} installed.
