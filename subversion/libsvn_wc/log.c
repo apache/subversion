@@ -174,7 +174,7 @@ replace_text_base (svn_stringbuf_t *path,
       
       SVN_ERR (svn_io_open_unique_file (&ignored,
                                         &tmp_wfile,
-                                        tmp_wfile,
+                                        tmp_wfile->data,
                                         SVN_WC__TMP_EXT,
                                         FALSE,
                                         pool));

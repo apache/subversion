@@ -1702,7 +1702,7 @@ svn_wc_install_file (const char *file_path,
                                         basename->data, NULL);
                   SVN_ERR (svn_io_open_unique_file (&received_diff_file,
                                                     &received_diff_filename,
-                                                    tmp_loc,
+                                                    tmp_loc->data,
                                                     SVN_WC__DIFF_EXT,
                                                     FALSE,
                                                     pool));
@@ -1715,11 +1715,13 @@ svn_wc_install_file (const char *file_path,
                   
                   SVN_ERR (svn_io_open_unique_file (&tr_txtb_fp,
                                                     &tr_txtb,
-                                                    tmp_loc, SVN_WC__BASE_EXT,
+                                                    tmp_loc->data,
+                                                    SVN_WC__BASE_EXT,
                                                     FALSE, pool));
                   SVN_ERR (svn_io_open_unique_file (&tr_tmp_txtb_fp,
                                                     &tr_tmp_txtb,
-                                                    tmp_loc, SVN_WC__BASE_EXT,
+                                                    tmp_loc->data,
+                                                    SVN_WC__BASE_EXT,
                                                     FALSE, pool));
 
                   /* Copy *LF-translated* text-base files to these
@@ -1788,7 +1790,7 @@ svn_wc_install_file (const char *file_path,
                   /* kff todo: code dup with above, abstract it? */
                   SVN_ERR (svn_io_open_unique_file (&reject_file,
                                                     &reject_filename,
-                                                    file_path_str,
+                                                    file_path_str->data,
                                                     SVN_WC__TEXT_REJ_EXT,
                                                     FALSE,
                                                     pool));
@@ -1843,7 +1845,7 @@ svn_wc_install_file (const char *file_path,
                       /* Reserve a temporary working file. */
                       SVN_ERR (svn_io_open_unique_file (&tmp_fp,
                                                         &tmp_working,
-                                                        tmp_loc,
+                                                        tmp_loc->data,
                                                         SVN_WC__TMP_EXT,
                                                         FALSE,
                                                         pool));
@@ -1944,7 +1946,7 @@ svn_wc_install_file (const char *file_path,
               /* Rename the working file. */
               SVN_ERR (svn_io_open_unique_file (&renamed_fp,
                                                 &renamed_path,
-                                                file_path_str,
+                                                file_path_str->data,
                                                 ".orig",
                                                 FALSE,
                                                 pool));

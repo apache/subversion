@@ -256,9 +256,7 @@ open_tmp_file (apr_file_t **fp, void *p)
 
   Data_Get_Struct (self, svn_ruby_ra_t, ra);
   SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
-                                    svn_stringbuf_create ("/tmp/svn", ra->pool),
-                                    ".tmp", TRUE,
-                                    ra->pool));
+                                    "/tmp/svn", ".tmp", TRUE, ra->pool));
   return SVN_NO_ERROR;
 }
 
