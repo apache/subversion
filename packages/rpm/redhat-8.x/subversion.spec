@@ -93,6 +93,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat May 24 2003 David Summers <david@summersoft.fay.ar.us> 0.20.0-6036
+- Track changes to Python SWIG build.
+
 * Thu May 15 2003 David Summers <david@summersoft.fay.ar.us> 0.22.2-5943
 - The subversion package now requires python 2 because cvs2svn has been
   unswigified and just depends on python 2.
@@ -344,7 +347,7 @@ sed -e 's;#!/usr/bin/env python;#!/usr/bin/env python2;' < $RPM_BUILD_DIR/%{name
 chmod a+x $RPM_BUILD_ROOT/usr/bin/cvs2svn
 mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 cp -r tools/cvs2svn/rcsparse $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages/rcsparse
-mv $RPM_BUILD_ROOT/usr/lib/svn-python/svn $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
 cp $RPM_BUILD_DIR/subversion-%{version}/tools/cvs2svn/cvs2svn.1 $RPM_BUILD_ROOT/usr/share/man/man1
 
@@ -437,6 +440,7 @@ rm -rf $RPM_BUILD_ROOT
 %files python
 %defattr(-,root,root)
 /usr/lib/python2.2/site-packages/svn
+/usr/lib/python2.2/site-packages/libsvn
 /usr/lib/libsvn_swig_py*so*
 
 %files tools
