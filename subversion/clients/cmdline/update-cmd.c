@@ -61,10 +61,6 @@ svn_cl__update (apr_getopt_t *os,
                                          targets,
                                          pool));
 
-  if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
-                          FALSE, pool);
-
   for (i = 0; i < condensed_targets->nelts; i++)
     {
       const char *target = ((const char **) (condensed_targets->elts))[i];
@@ -72,6 +68,10 @@ svn_cl__update (apr_getopt_t *os,
 
       svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
+
+      if (! opt_state->quiet)
+        svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
+                              FALSE, subpool);
 
       err = svn_client_update (NULL, target,
                                &(opt_state->start_revision),
