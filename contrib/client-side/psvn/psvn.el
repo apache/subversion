@@ -102,9 +102,6 @@
 ;;   unfortunately `read-directory-name' doesn't exist in Emacs 21.3
 ;; * Add repository browser
 ;; * Improve support for svn blame
-;; * Support for editing the log file entries, e.g.:
-;;   svn propedit --revprop -r9821 svn:log
-;; * Better logview mode (allow to show the changeset for a given entry)
 
 ;; Overview over the implemented/not (yet) implemented svn sub-commands:
 ;; * add                       implemented
@@ -2396,6 +2393,7 @@ Commands:
   (easy-menu-add svn-log-edit-mode-menu)
   (setq major-mode 'svn-log-edit-mode)
   (setq mode-name "svn-log-edit")
+  (setq svn-log-edit-update-log-entry nil)
   (run-hooks 'svn-log-edit-mode-hook))
 
 (defun svn-log-edit-abort ()
@@ -2411,18 +2409,29 @@ Commands:
     (when svn-log-edit-insert-files-to-commit
       (svn-log-edit-remove-comment-lines))
     (set-buffer-file-coding-system 'undecided-unix nil)
-    (write-region (point-min) (point-max)
-                  (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix) nil 1))
-  (when svn-status-files-to-commit ; there are files to commit
-    (setq svn-status-operated-on-dot (and (= 1 (length svn-status-files-to-commit))
-         (string= "." (svn-status-line-info->filename (car svn-status-files-to-commit)))))
-    (svn-status-create-arg-file svn-status-temp-arg-file ""
-                                svn-status-files-to-commit "")
-    (setq svn-status-files-to-commit nil)
-    (setq svn-status-temp-file-to-remove (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix))
-    (svn-run-svn t t 'commit "commit" "--targets" svn-status-temp-arg-file
-                 "-F" svn-status-temp-file-to-remove))
-  (set-window-configuration svn-status-pre-commit-window-configuration))
+    (when (or svn-log-edit-update-log-entry svn-status-files-to-commit)
+      (setq svn-status-temp-file-to-remove
+            (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix))
+      (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1)))
+  (if svn-log-edit-update-log-entry
+      (when (y-or-n-p "Update the log entry? ")
+        ;;   svn propset svn:log --revprop -r11672 -F file
+        (svn-run-svn nil t 'propset "propset" "svn:log" "--revprop"
+                     (concat "-r" svn-log-edit-update-log-entry)
+                     "-F" svn-status-temp-file-to-remove)
+        (save-excursion
+          (set-buffer "*svn-process*")
+          (message (buffer-substring (point-min) (- (point-max) 1)))))
+    (when svn-status-files-to-commit ; there are files to commit
+      (setq svn-status-operated-on-dot
+            (and (= 1 (length svn-status-files-to-commit))
+                 (string= "." (svn-status-line-info->filename (car svn-status-files-to-commit)))))
+      (svn-status-create-arg-file svn-status-temp-arg-file ""
+                                  svn-status-files-to-commit "")
+      (setq svn-status-files-to-commit nil)
+      (svn-run-svn t t 'commit "commit" "--targets" svn-status-temp-arg-file
+                   "-F" svn-status-temp-file-to-remove)))
+    (set-window-configuration svn-status-pre-commit-window-configuration))
 
 (defun svn-log-edit-svn-diff (arg)
   "Show the diff we are about to commit.
@@ -2490,11 +2499,14 @@ If ARG then show diff between some other version of the selected files."
   (define-key svn-log-view-mode-map (kbd "p") 'svn-log-view-prev)
   (define-key svn-log-view-mode-map (kbd "n") 'svn-log-view-next)
   (define-key svn-log-view-mode-map (kbd "=") 'svn-log-view-diff)
+  (define-key svn-log-view-mode-map (kbd "e") 'svn-log-edit-log-entry)
   (define-key svn-log-view-mode-map (kbd "q") 'bury-buffer))
+
 (easy-menu-define svn-log-view-mode-menu svn-log-view-mode-map
 "'svn-log-view-mode' menu"
                   '("SVN-LogView"
-                    ["Show Changeset" svn-log-view-diff t]))
+                    ["Show Changeset" svn-log-view-diff t]
+                    ["Edit log message" svn-log-edit-log-entry t]))
 
 (defvar svn-log-view-font-lock-keywords
   '(("^r.+" . font-lock-keyword-face)
@@ -2539,6 +2551,23 @@ When called with a prefix argument, ask the user for the revision."
       (set-buffer "*svn-process*")
       (diff-mode)
       (font-lock-fontify-buffer))))
+
+(defun svn-log-edit-log-entry ()
+  "Edit the given log entry."
+  (interactive)
+  (let ((rev (svn-log-revision-at-point))
+        (log-message))
+    (svn-run-svn nil t 'propget-parse "propget" "--revprop" (concat "-r" rev) "svn:log")
+    (save-excursion
+      (set-buffer "*svn-process*")
+      (setq log-message (if (> (point-max) 1)
+                            (buffer-substring (point-min) (- (point-max) 1))
+                          "")))
+    (svn-status-pop-to-commit-buffer)
+    (delete-region (point-min) (point-max))
+    (insert log-message)
+    (goto-char (point-min))
+    (setq svn-log-edit-update-log-entry rev)))
 
 ;; --------------------------------------------------------------------------------
 ;; svn status persistent options
