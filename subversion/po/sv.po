@@ -45,7 +45,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-09 21:29+0200\n"
-"PO-Revision-Date: 2004-09-12 15:58+0200\n"
+"PO-Revision-Date: 2004-09-12 21:44+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -288,7 +288,6 @@ msgid "(no date)"
 msgstr "(datum saknas)"
 
 #: clients/cmdline/log-cmd.c:239
-#, fuzzy
 msgid "Changed paths:\n"
 msgstr "Ändrade sökvägar:\n"
 
@@ -1329,9 +1328,8 @@ msgstr ""
 "  medan uppdateringar av filens egenskaper visas i den andra kolumnen.\n"
 
 #: clients/cmdline/main.c:675
-#, fuzzy
 msgid "Print client version info\n"
-msgstr "skriv versionsinformation för klienten"
+msgstr "skriv versionsinformation för klienten\n"
 
 #: clients/cmdline/main.c:729 svnadmin/main.c:75
 msgid "Caught signal"
@@ -1690,9 +1688,9 @@ msgid "Set new value for property '%s' on revision %ld\n"
 msgstr "Satte nytt värde på egenskapen \"%s\" i revision %ld\n"
 
 #: clients/cmdline/propedit-cmd.c:145
-#, fuzzy, c-format
+#, c-format
 msgid "No changes to property '%s' on revision %ld\n"
-msgstr "Inga ändringar av egenskapen \"%s\" i revision %ld"
+msgstr "Inga ändringar av egenskapen \"%s\" i revision %ld\n"
 
 #: clients/cmdline/propedit-cmd.c:153
 #, c-format
@@ -3709,22 +3707,20 @@ msgid "Unable to open repository '%s'"
 msgstr "Kunde inte öppna databasen \"%s\""
 
 #: libsvn_ra_svn/client.c:137
-#, fuzzy, c-format
+#, c-format
 msgid "Unknown hostname '%s'"
-msgstr "Okänd filsystemstyp \"%s\""
+msgstr "Okänt värdnamn \"%s\""
 
 #: libsvn_ra_svn/client.c:148
-#, fuzzy
 msgid "Can't create socket"
-msgstr "Kan inte läsa från standard in"
+msgstr "Kan inte skapa uttag (socket)"
 
 #: libsvn_ra_svn/client.c:152
-#, fuzzy, c-format
+#, c-format
 msgid "Can't connect to host '%s'"
-msgstr "Kan inte göra chmod på \"%s\""
+msgstr "Kan inte ansluta till värden \"%s\""
 
 #: libsvn_ra_svn/client.c:173
-#, fuzzy
 msgid "Proplist element not a list"
 msgstr "Element med egenskapsskillnader är ingen lista"
 
@@ -3733,96 +3729,89 @@ msgid "Prop diffs element not a list"
 msgstr "Element med egenskapsskillnader är ingen lista"
 
 #: libsvn_ra_svn/client.c:218
-#, fuzzy, c-format
+#, c-format
 msgid "Unrecognized node kind '%s' from server"
-msgstr "Okänd nodtyp: \"%s\""
+msgstr "Okänd nodtyp \"%s\" från servern"
 
 #: libsvn_ra_svn/client.c:263 libsvn_ra_svn/client.c:317
-#, fuzzy, c-format
+#, c-format
 msgid "Authentication error from server: %s"
-msgstr "Autentiseringsregion (realm): %s\n"
+msgstr "Autentiseringsfel från servern: %s\n"
 
 #: libsvn_ra_svn/client.c:266 libsvn_ra_svn/cram.c:196
 #: libsvn_ra_svn/cram.c:214
 msgid "Unexpected server response to authentication"
-msgstr ""
+msgstr "Oväntat svar från servern på autentisiering"
 
 #: libsvn_ra_svn/client.c:324
-#, fuzzy
 msgid "Cannot negotiate authentication mechanism"
-msgstr "cacha inte autentiseringsinformation"
+msgstr "Kan inte förhandla om autentiseringsmekanism"
 
 #: libsvn_ra_svn/client.c:451
-#, fuzzy, c-format
+#, c-format
 msgid "Undefined tunnel scheme '%s'"
-msgstr "Okänt URL-schema \"%s\""
+msgstr "Odefinierat tunnel-schema \"%s\""
 
 #: libsvn_ra_svn/client.c:468
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
-msgstr ""
+msgstr "Tunnel-schemat %s kräver att miljövariabeln %s är definierad"
 
 #: libsvn_ra_svn/client.c:479
-#, fuzzy, c-format
+#, c-format
 msgid "Can't tokenize command '%s'"
-msgstr "Kan inte flytta filpositionen i \"%s\""
+msgstr "Kan inte dela upp kommandosträngen \"%s\""
 
 #: libsvn_ra_svn/client.c:508
 #, c-format
 msgid "Error in child process: %s"
-msgstr ""
+msgstr "Fel i barnprocess: %s"
 
 #: libsvn_ra_svn/client.c:531
-#, fuzzy
 msgid "Can't create tunnel"
-msgstr "Kan inte läsa från standard in"
+msgstr "Kan inte skapa tunnel"
 
 #: libsvn_ra_svn/client.c:575
-#, fuzzy, c-format
+#, c-format
 msgid "Illegal svn repository URL '%s'"
-msgstr "Kunde inte öppna databasen \"%s\""
+msgstr "Ogiltig svn-databas-URL \"%s\""
 
 #: libsvn_ra_svn/client.c:594
 #, c-format
 msgid "Server requires minimum version %d"
-msgstr ""
+msgstr "Servern kräver minst version %d"
 
 #: libsvn_ra_svn/client.c:641
-#, fuzzy
 msgid "impossibly long repository root from server"
-msgstr "Databasargument saknas"
+msgstr "för lång databasrot från servern"
 
 #: libsvn_ra_svn/client.c:705
 msgid "Server did not send repository root"
-msgstr ""
+msgstr "Servern sände ingen databasrot"
 
 #: libsvn_ra_svn/client.c:826
 msgid "Non-string as part of file contents"
-msgstr ""
+msgstr "Icke-sträng var del av filinnehåll"
 
 #: libsvn_ra_svn/client.c:895
-#, fuzzy
 msgid "Dirlist element not a list"
-msgstr "Element med egenskapsskillnader är ingen lista"
+msgstr "Element med kataloglista är ingen lista"
 
 #: libsvn_ra_svn/client.c:1046
-#, fuzzy
 msgid "Log entry not a list"
-msgstr "Revisionsposten är ej en lista"
+msgstr "Loggposten är ej en lista"
 
 #: libsvn_ra_svn/client.c:1059
-#, fuzzy
 msgid "Changed-path entry not a list"
-msgstr "Revisionsposten är ej en lista"
+msgstr "Post med ändrade sökvägar är ingen lista"
 
 #: libsvn_ra_svn/client.c:1131
 msgid "get-locations not implemented"
 msgstr "get-locations ej implementerad"
 
 #: libsvn_ra_svn/client.c:1144
-#, fuzzy
 msgid "Location entry not a list"
-msgstr "Revisionsposten är ej en lista"
+msgstr "Post med information om plats är ingen lista"
 
 #: libsvn_ra_svn/client.c:1196
 msgid "get-file-revs not implemented"
@@ -3841,81 +3830,78 @@ msgid "The get-file-revs command didn't return any revisions"
 msgstr "get-file-revs-kommandot returnerade inga revisioner"
 
 #: libsvn_ra_svn/client.c:1271
-#, fuzzy
 msgid "Module for accessing a repository using the svn network protocol."
-msgstr "Modul för åtkomst av databas via protokollet WebDAV (DeltaV)."
+msgstr "Modul för åtkomst av databas över nätverk via protokollet svn."
 
 #: libsvn_ra_svn/client.c:1307
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
-msgstr ""
-"ABI-versionen för insticksmodulen för databasåtkomst (%d) för ra_dav stöds ej"
+msgstr "ABI-versionen för insticksmodulen för databasåtkomst (%d) för ra_svn stöds ej"
 
 #: libsvn_ra_svn/editor.c:384 libsvn_ra_svn/editorp.c:419
 msgid "Invalid file or dir token during edit"
-msgstr ""
+msgstr "Ogiltigt fil- eller katalogtoken vid editering"
 
 #: libsvn_ra_svn/editor.c:608
 msgid "Non-string as part of text delta"
-msgstr ""
+msgstr "Icke-sträng var del av textdelta"
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
-msgstr ""
+msgstr "Status för lyckad editering returnerades för tidigt"
 
 #: libsvn_ra_svn/editorp.c:601
 msgid "Apply-textdelta already active"
-msgstr ""
+msgstr "Apply-textdelta redan aktiv"
 
 #: libsvn_ra_svn/editorp.c:623 libsvn_ra_svn/editorp.c:641
 msgid "Apply-textdelta not active"
-msgstr ""
+msgstr "Apply-textdelta inte aktiv"
 
 #: libsvn_ra_svn/editorp.c:789 libsvn_ra_svn/marshal.c:809
-#, fuzzy, c-format
+#, c-format
 msgid "Unknown command '%s'"
-msgstr "Okänt kommando: \"%s\"\n"
+msgstr "Okänt kommando \"%s\""
 
 #: libsvn_ra_svn/marshal.c:78
+#, fuzzy
 msgid "Capability entry is not a word"
-msgstr ""
+msgstr "Capability-post är inte ett ord"
 
 #: libsvn_ra_svn/marshal.c:160
-#, fuzzy
 msgid "Can't write to connection"
-msgstr "Kan inte skriva till \"%s\""
+msgstr "Kan inte skriva till nätverksanslutningen"
 
 #: libsvn_ra_svn/marshal.c:250
-#, fuzzy
 msgid "Can't read from connection"
-msgstr "Kan inte läsa från standard in"
+msgstr "Kan inte läsa från nätverksanslutningen"
 
 #: libsvn_ra_svn/marshal.c:253
-#, fuzzy
 msgid "Connection closed unexpectedly"
-msgstr "Nätverksuppkoppling stängdes oväntat"
+msgstr "Nätverksanslutningen stängdes oväntat"
 
 #: libsvn_ra_svn/marshal.c:497
+#, fuzzy
 msgid "String length larger than maximum"
-msgstr ""
+msgstr "Stränglängden är större än max"
 
 #: libsvn_ra_svn/marshal.c:545
+#, fuzzy
 msgid "Number is larger than maximum"
-msgstr ""
+msgstr "Talet är större än max"
 
 #: libsvn_ra_svn/marshal.c:758
 msgid "Empty error list"
-msgstr ""
+msgstr "Tom fellista"
 
 #: libsvn_ra_svn/marshal.c:765
-#, fuzzy
 msgid "Malformed error list"
-msgstr "Felaktig nätverksdata"
+msgstr "Felaktig list med information om fel"
 
 #: libsvn_ra_svn/marshal.c:780
 #, c-format
 msgid "Unknown status '%s' in command response"
-msgstr ""
+msgstr "Okänd status \"%s\" i kommandorespons"
 
 #: libsvn_repos/dump.c:416
 #, c-format
@@ -5157,9 +5143,9 @@ msgstr ""
 "Skriv \"svnadmin help %s\" för användning.\n"
 
 #: svndumpfilter/main.c:363
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid copy source path '%s'"
-msgstr "Ogiltig syntax för sökväg i filsystem"
+msgstr "Ogiltig sökväg som källa för kopiering \"%s\""
 
 #: svndumpfilter/main.c:414
 msgid "Node with dropped parent sneaked in"
@@ -5167,7 +5153,7 @@ msgstr ""
 
 #: svndumpfilter/main.c:586
 msgid "This is an empty revision for padding."
-msgstr ""
+msgstr "Detta är en tom revision för att fylla ut."
 
 #: svndumpfilter/main.c:641
 #, c-format
@@ -5181,19 +5167,19 @@ msgstr "Revision %ld hoppades över.\n"
 
 #: svndumpfilter/main.c:707
 msgid "Do not display filtering statistics."
-msgstr ""
+msgstr "Visa inte filtreringsstatistik."
 
 #: svndumpfilter/main.c:709
 msgid "Remove revisions emptied by filtering."
-msgstr ""
+msgstr "Ta bort revisioner som har blivit tomma på grund av filtrering."
 
 #: svndumpfilter/main.c:711
 msgid "Renumber revisions left after filtering."
-msgstr ""
+msgstr "Numrera om de revisioner som finns kvar efter filtrering."
 
 #: svndumpfilter/main.c:713
 msgid "Don't filter revision properties."
-msgstr ""
+msgstr "Filtrera inte revisionsegenskaper."
 
 #: svndumpfilter/main.c:724
 msgid ""
@@ -5208,43 +5194,41 @@ msgid ""
 msgstr ""
 
 #: svndumpfilter/main.c:736
-#, fuzzy
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: svndumpfilter help [SUBCOMMAND...]\n"
 msgstr ""
 "Visa hur detta program eller dess underkommandon används.\n"
-"användning: help [SUBCOMMAND...]\n"
+"användning: svndumpfilter help [SUBCOMMAND...]\n"
 
 #: svndumpfilter/main.c:799
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type \"svndumpfilter help <subcommand>\" for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"allmän användning: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-"Skriv \"svnadmin help <SUBCOMMAND>\" för att få hjälp om ett specifikt\n"
+"allmän användning: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+"Skriv \"svndumpfilter help <SUBCOMMAND>\" för att få hjälp om ett specifikt\n"
 "underkommando.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
 #: svndumpfilter/main.c:854
 msgid "Excluding (and dropping empty revisions for) prefixes:\n"
-msgstr ""
+msgstr "Utesluter (och tar bort tomma revisioner för) prefix:\n"
 
 #: svndumpfilter/main.c:856
 msgid "Excluding prefixes:\n"
-msgstr ""
+msgstr "Utesluter prefix:\n"
 
 #: svndumpfilter/main.c:858
 msgid "Including (and dropping empty revisions for) prefixes:\n"
-msgstr ""
+msgstr "Tar med (och tar bort tomma revisioner för) prefix:\n"
 
 #: svndumpfilter/main.c:860
 msgid "Including prefixes:\n"
-msgstr ""
+msgstr "Tar med prefix:\n"
 
 #: svndumpfilter/main.c:887
 #, c-format
@@ -5275,7 +5259,7 @@ msgid "Dropped %d node(s):\n"
 msgstr "Tog bort %d nod(er):\n"
 
 #: svndumpfilter/main.c:1128
-#, fuzzy, c-format
+#, c-format
 msgid "unknown command: '%s'\n"
 msgstr "Okänt kommando: \"%s\"\n"
 
@@ -5671,9 +5655,3 @@ msgstr "exporterad\n"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är inte versionshanterad eller exporterad\n"
-
-#~ msgid "Can't create directory '%s'"
-#~ msgstr "Kan inte skapa katalogen \"%s\""
-
-#~ msgid "Impossibly long relative URL"
-#~ msgstr "Orimligt lång relativ URL"
