@@ -1,0 +1,36 @@
+@node Future
+@chapter Future
+
+Put blue-sky requests here...
+
+* Content knowledge allows better conflict resolution strategies
+
+TODO: this is a plugin now
+
+Certain kinds of conflicts can be resolved without human intervention.
+For example, files like /etc/passwd just need to keep lines unique by
+username and user ID.  
+
+Right now, merging new repository data into a modified working copy of
+a passwd file can result in a textual conflict even when there's no
+"semantic conflict".  But if the Subversion client knew something
+about the format of passwd files, then it could merge without flagging
+a conflict.
+
+A similar rule could be used for ChangeLogs, based on the dates in the
+header lines.  And so on.
+
+These features may not be in the first release of Subversion, but let's
+keep them in mind.
+
+* Digital signatures.
+
+     A few people have mentioned cryptographic signing of changes.
+     It's a cool idea, and we should leave the door open for it.  BUT,
+     it isn't a priority for the first release(s), because change
+     history can never be lost -- therefore, any change can be backed
+     out.  So the risk is not of someone damaging the project, but of
+     someone damaging the project and no one else *noticing*.  That
+     would have to be a pretty lax project. :-)
+
+* import/export format?  (Jason mentioned this.)

@@ -1,0 +1,30 @@
+### Convert texinfo files to Info, HTML, PostScript, etc.
+
+default: html
+
+all: txt info html dvi ps
+
+txt: 
+	makeinfo --no-headers --no-validate svn-design.texi > svn-design.txt
+
+info: 
+	makeinfo svn-design.texi
+
+html: 
+	makeinfo --no-headers --no-validate --html svn-design.texi \
+                 > svn-design.html
+
+dvi: 
+	tex svn-design.texi 
+
+ps: dvi
+	dvips svn-design.dvi -o svn-design.ps
+
+log:
+	cvs2cl.pl -r -t
+
+texclean: 
+	rm -f *~ *.aux *.cp *.cps *.dvi *.fn *.ky *.log *.pg *.toc *.tp *.vr
+
+clean: texclean
+	rm -f *.info *.html *.ps *.pdf *.tar *.gz *.zip
