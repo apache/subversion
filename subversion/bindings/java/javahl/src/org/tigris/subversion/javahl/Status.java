@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -437,10 +437,10 @@ public class Status
      */
     public boolean isManaged()
     {
-        int textStatus = getTextStatus();
-        return ((textStatus != Status.Kind.unversioned) &&
-                (textStatus != Status.Kind.none) &&
-                (textStatus != Status.Kind.ignored));
+        int status = getTextStatus();
+        return (status != Status.Kind.unversioned &&
+                status != Status.Kind.none &&
+                status != Status.Kind.ignored);
     }
 
     /**
@@ -449,8 +449,7 @@ public class Status
      */
     public boolean hasRemote()
     {
-        int textStatus = getTextStatus();
-        return ((isManaged()) && (textStatus != Status.Kind.added));
+        return (isManaged() && getTextStatus() != Status.Kind.added);
     }
 
     /**
@@ -459,8 +458,7 @@ public class Status
      */
     public boolean isAdded()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.added;
+        return getTextStatus() == Status.Kind.added;
     }
 
     /**
@@ -469,8 +467,7 @@ public class Status
      */
     public boolean isDeleted()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.deleted;
+        return getTextStatus() == Status.Kind.deleted;
     }
 
     /**
@@ -479,8 +476,7 @@ public class Status
      */
     public boolean isMerged()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.merged;
+        return getTextStatus() == Status.Kind.merged;
     }
 
     /**
@@ -490,8 +486,7 @@ public class Status
      */
     public boolean isIgnored()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.ignored;
+        return getTextStatus() == Status.Kind.ignored;
     }
 
     /**
@@ -500,8 +495,7 @@ public class Status
      */
     public boolean isModified()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.modified;
+        return getTextStatus() == Status.Kind.modified;
     }
 
     /**
@@ -572,35 +566,34 @@ public class Status
         {
             switch (kind)
             {
-            case none:
+            case StatusKind.none:
                 return "non-svn";
-            case normal:
+            case StatusKind.normal:
                 return "normal";
-            case added:
+            case StatusKind.added:
                 return "added";
-            case missing:
+            case StatusKind.missing:
                 return "missing";
-            case deleted:
+            case StatusKind.deleted:
                 return "deleted";
-            case replaced:
+            case StatusKind.replaced:
                 return "replaced";
-            case modified:
+            case StatusKind.modified:
                 return "modified";
-            case merged:
+            case StatusKind.merged:
                 return "merged";
-            case conflicted:
+            case StatusKind.conflicted:
                 return "conflicted";
-            case ignored:
+            case StatusKind.ignored:
                 return "ignored";
-            case incomplete:
+            case StatusKind.incomplete:
                 return "incomplete";
-            case external:
+            case StatusKind.external:
                 return "external";
-            case unversioned:
+            case StatusKind.unversioned:
             default:
                 return "unversioned";
             }
         }
     }
 }
-
