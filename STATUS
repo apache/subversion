@@ -122,13 +122,14 @@ Bindings changes that affect the build system:
      Justification: Shouldn't require in tree apr or apache.
      Votes:
       +1: breser (for 8280, concept +1 for 8279)
-      +1: mbk, epg
+      +1: mbk, epg, kfogel
 
     * r8290
      Applying r8279 + r8290 for javahl
      Breaks bindings if base is applied, javahl local change, low risk.
      Votes:
       +1: patrick (if above is applied)
+      +1 (concept): kfogel
 
     * Issue #1690
      Support SWIG 1.3.20 and newer.
@@ -138,10 +139,5 @@ Bindings changes that affect the build system:
       +1: breser
      
 Bindings changes that don't affect the build system:
-Already approved:
-
-   [none pending right now]
-
-Not yet approved:
 
    [none pending right now]
