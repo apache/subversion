@@ -1,5 +1,4 @@
 #!/usr/bin/python
-### from __future__ import generators
 import commands
 import sys, os
 import getopt
@@ -67,13 +66,15 @@ class Config:
         return self._sections_dict.get(option.lower(), default)
 
     def walk(self, section, option=None):
+        ret = []
         if option:
             option = option.lower()
         for sectname, options in self._sections_list:
             if sectname == section:
                 for optname, value in options:
                     if not option or optname == option:
-                        yield (optname, value)
+                        ret.append((optname, value))
+        return ret
 
 
 class Permission:
