@@ -111,15 +111,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: david, ghudson
 
-  * r11047 (Issue #2032)
-    Always call mkdir-init, even if we're not in a VPATH setup.
-    Justification:
-      Allows users to install JavaHL without manually creating
-      directories to work around Issue #2032.
-    Votes:
-      +1: dlr, ghudson, maxb
-      Nominated by: David James <james82@gmail.com>
-
   * r11451, r11630
     Fix pool usage and stalled object reference counts in Perl bindings.
     Justification:
