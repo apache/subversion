@@ -697,7 +697,7 @@ class RepositoryMirror:
 
       # If we can't reach the dest, then we don't need to do anything.
       if not parent.has_key(component):
-        return None, ()
+        return None, [], []
 
       # Otherwise continue downward, dropping breadcrumbs.
       this_entry_key = parent[component]
