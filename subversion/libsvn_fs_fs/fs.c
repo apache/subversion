@@ -92,7 +92,7 @@ svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool)
 svn_error_t *
 svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 {
-  abort ();
+  SVN_ERR (svn_fs__fs_create (fs, path, fs->pool));
 
   return SVN_NO_ERROR;
 }

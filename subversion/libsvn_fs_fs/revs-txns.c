@@ -175,7 +175,13 @@ svn_fs__set_rev_prop (svn_fs_t *fs,
                       const svn_string_t *value,
                       apr_pool_t *pool)
 {
-  abort ();
+  apr_hash_t *table;
+
+  SVN_ERR (svn_fs__fs_revision_proplist (&table, fs, rev, pool));
+
+  apr_hash_set (table, name, APR_HASH_KEY_STRING, value);
+
+  SVN_ERR (svn_fs__fs_set_revision_proplist (fs, rev, table, pool));
 
   return SVN_NO_ERROR;
 }

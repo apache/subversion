@@ -75,6 +75,13 @@ svn_error_t *svn_fs__fs_get_proplist (apr_hash_t **proplist,
                                       svn_fs__node_revision_t *noderev,
                                       apr_pool_t *pool);
 
+/* Set the revision property list of revision REV in filesystem FS to
+   PROPLIST.  Use POOL for temporary allocations. */
+svn_error_t *svn_fs__fs_set_revision_proplist (svn_fs_t *fs,
+                                               svn_revnum_t rev,
+                                               apr_hash_t *proplist,
+                                               apr_pool_t *pool);
+
 /* Set *PROPLIST to be an apr_hash_t containing the property list of
    revision REV as seen in filesystem FS.  Use POOL for temporary
    allocations. */
@@ -224,7 +231,34 @@ svn_error_t *svn_fs__fs_commit (svn_revnum_t *new_rev_p,
                                 svn_fs_t *fs,
                                 svn_fs_txn_t *txn,
                                 apr_pool_t *pool);
-                                
+
+/* Return the next available copy_id in *COPY_ID for the transaction
+   TXN_ID in filesystem FS.  Allocate space in POOL. */
+svn_error_t *svn_fs__fs_reserve_copy_id (const char **copy_id,
+                                         svn_fs_t *fs,
+                                         const char *txn_id,
+                                         apr_pool_t *pool);
+
+/* Create a fs_fs fileysystem referenced by FS at path PATH.  Get any
+   temporary allocations from POOL. */
+svn_error_t *svn_fs__fs_create (svn_fs_t *fs,
+                                const char *path,
+                                apr_pool_t *pool);
+
+/* Store the uuid of the repository FS in *UUID.  Allocate space in
+   POOL. */
+svn_error_t *svn_fs__fs_get_uuid (const char **uuid,
+                                  svn_fs_t *fs,
+                                  apr_pool_t *pool);
+
+/* Set the uuid of repository FS to UUID.  Perform temporary
+   allocations in POOL. */
+svn_error_t *svn_fs__fs_set_uuid (svn_fs_t *fs,
+                                  const char *uuid,
+                                  apr_pool_t *pool);
+
+/* Write out the zeroth revision for filesystem FS. */
+svn_error_t *svn_fs__fs_write_revision_zero (svn_fs_t *fs);
 
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
