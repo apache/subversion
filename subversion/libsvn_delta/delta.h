@@ -50,6 +50,10 @@
 /* ==================================================================== */
 
 
+#ifndef DELTA_H
+#define DELTA_H
+
+
 /* Return a vcdiff parser object, PARSER.  If we're receiving a
    vcdiff-format byte stream, one block of bytes at a time, we can
    pass each block in succession to svn_vcdiff_parse, with PARSER as
@@ -59,7 +63,8 @@
    HANDLER_BATON.  */
 extern svn_vcdiff_parser_t *svn_make_vcdiff_parser (svn_delta_handler_t
                                                     * handler,
-                                                    void *handler_baton);
+                                                    void *handler_baton,
+                                                    apr_pool_t *pool);
 
 /* Parse another block of bytes in the vcdiff-format stream managed by
    PARSER.  When we've accumulated enough data for a complete window,
@@ -190,7 +195,7 @@ typedef struct svn_delta_digger_t
 
 
 
-
+#endif  /* DELTA_H */
 
 
 

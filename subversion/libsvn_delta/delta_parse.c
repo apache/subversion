@@ -739,6 +739,17 @@ xml_handle_end (void *userData, const char *name)
       return;
     }
 
+  /* INTERNAL EVENT: when we get a </text-delta>, tell the
+     vcdiff-parser to send off any remaining bytes it may still have
+     buffered.  */
+  if (strcmp (name, "text-delta") == 0)
+    {
+      err = svn_vcdiff_flush_buffer (my_digger->vcdiff_parser);
+      if (err)
+        signal_expat_bailout (err, my_digger);
+    }
+
+
   /* This is a void expat callback, don't return anything. */
 }
 
@@ -775,7 +786,7 @@ xml_handle_data (void *userData, const char *data, int len)
     {
       svn_error_t *err;
       
-      /* Do we have a vcdiff parser to deal with this data? */
+      /* Check that we have a vcdiff parser to deal with this data. */
       if (! digger->vcdiff_parser)
         return;
 
