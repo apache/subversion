@@ -49,7 +49,7 @@ static char int_to_hex(int v)
   return (v < 10) ? '0' + v : 'a' + (v - 10);
 }
 
-static svn_boolean_t hex_decode(char *hashval, const char *hexval)
+static svn_boolean_t hex_decode(unsigned char *hashval, const char *hexval)
 {
   int i, h1, h2;
 
@@ -75,7 +75,7 @@ static void hex_encode(char *hexval, const char *hashval)
     }
 }
 
-static void compute_digest(char *digest, const char *challenge,
+static void compute_digest(unsigned char *digest, const char *challenge,
                            const char *password)
 {
   unsigned char secret[64];
@@ -134,7 +134,7 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_status_t status;
   apr_uint64_t nonce;
   char hostbuf[APRMAXHOSTLEN + 1];
-  char cdigest[APR_MD5_DIGESTSIZE], sdigest[APR_MD5_DIGESTSIZE];
+  unsigned char cdigest[APR_MD5_DIGESTSIZE], sdigest[APR_MD5_DIGESTSIZE];
   const char *challenge, *sep, *password;
   svn_ra_svn_item_t *item;
   svn_string_t *resp;
