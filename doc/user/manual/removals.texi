@@ -1,0 +1,96 @@
+@node Removals
+@chapter Removals
+
+This section describes how the Subversion client deals with removals of
+files and directories.  Many of these behaviors are newly invented,
+because they follow from the fact that Subversion is versioning
+directories.  (In other words, the CVS model hasn't had to deal with
+these scenarios before.)
+
+@menu
+* Removing items::              How to remove items from your working copy.
+* Committing removals::         How to remove items from the repository.
+* Update removals::             When 'update' tries to remove items.
+@end menu
+
+
+@c ------------------------------------------------------------------
+@node Removing items
+@section Removing items
+
+The @code{svn rm} subcommand is used to mark items in your working copy
+for removal from the repository.  Notice the word "mark": as a general
+mantra, please remember that the repository is @emph{never} modified
+until you run @code{svn commit}.
+
+Also, please notice that there two different ways to interpret the
+phrase "remove an item".  In the simplest case, the item is removed from
+revision control (i.e. no longer tracked by the client), but not from
+your working copy.  In the more severe case, the item is removed
+@emph{both} from revision control and disk.
+
+Normally, @code{svn rm} only removes an item from revision control.
+However, the @code{-f} flag (@code{--force}) can be given, which will
+forcibly delete the item from disk.
+
+@itemize
+@item To remove a file:  @code{svn rm foo.c}
+
+This will schedule @file{foo.c} to be deleted from the repository.
+The file is still tracked in the administrative directory until the user
+commits;  afterwards, the client will no longer track the file.
+
+@item To recursively remove a directory: @code{svn rm dirname}
+
+This will recursively schedule every item below directory @file{dirname}
+to be deleted from the repository.
+
+@item To undo a deletion before committing:  @code{svn undel item}
+
+This subcommand will "unmark" a file or directory that is scheduled for
+removal.
+
+@end itemize
+
+When an item has been scheduled for removal, but not yet committed, the
+client more-or-less treats the item as if it were gone.  Although the
+item will still show up in the @code{svn status} command with a @code{D}
+flag next to it, the client will now allow the user to add a @emph{new}
+item of the same name -- which is not normally possible.  In this case,
+the @code{svn status} output will describe the item as @dfn{replaced}
+(with an @code{R} flag).
+
+This scenario is made even more complicated when the item in question is
+a directory.  If a directory is recursively marked for deletion, and
+then a directory of the same name is added with @code{svn add}, the user
+can continue to add (or replace) items in the newly added directory.
+The @code{svn status} command would then show the parent directory as
+"replaced", and items inside the directory as a mixture of items that
+are scheduled to be "deleted", "added", and "replaced".
+
+(cmpilato, is the above paragraph correct?)
+
+(perhaps we should show some examples here!)
+
+(gee, maybe we should have an @code{svn replace} command, which is a
+shorthand for a delete and add?)
+
+
+@c ------------------------------------------------------------------
+@node Committing removals
+@section Comitting removals
+
+
+When the user runs @code{svn commit}, and items are scheduled for
+removal, the items are first removed from the repository.  If there are
+conflicts, then as usual an error message will return that explains that
+the working copy is out-of-date.
+
+After the items are removed from the repository, all tracking
+information about the items are removed from the w
+
+
+
+
+
+

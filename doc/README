@@ -1,29 +1,40 @@
-Documentation for Subversion is here, in texinfo format.
+                      Documentation for Subversion
+                      ============================
 
-The auto-generated 'Makefile' knows how to build the following targets:
+Subversion's preferred documentation system is texinfo.  The online
+documentation for texinfo is at
 
-   info  (the default target)
-   dvi
-   ps
-   pdf
-   txt
-   html
-   everything:  info dvi ps pdf txt html
-
-
-   ... and also standard "log, install, etc."  The "www" rule
-automatically copies all necessary docs to ../www for web-site updates.
+  http://www.gnu.org/manual/texinfo-4.0/html_chapter/texinfo_toc.html
 
 To build particular things, you'll need one or more of:
 
   * the `makeinfo' from ftp://ftp.gnu.org/pub/gnu/texinfo/texinfo-4.0.tar.gz
-  * Karl Fogel's `cvs2cl.pl' script, which creates a ChangeLog from CVS.
   * the `dvipdf' script from Ghostscript (pipes dvi | ps | Ghostscript)
 
 
+A rough guide:
+
+  programmer/
+                             Documents for Subversion programmers
+  programmer/design/
+                             The Design of Subversion
+  programmer/WritingChangeLogs.txt
+                             A longer version of the info in HACKING
+  user/
+                             Documents for Subversion users
+  user/manual
+                             A manual for users.
 
 
--------------- DOC NOTES ---------------------------------------------------
+In general, as we define theoretical client behaviors, please try to
+drop your scratch notes into the user manual.  This document will be a
+"central" place for what will someday end up as a kind of functional
+spec.
+
+
+
+
+-------------- NOTES on Texinfo usage -----------------------------
 
 -------------
 JimB fixed up a lot of our Texinfo problems, here's what he says:

@@ -91,9 +91,9 @@ unrelated reasons: keyword expansion, and line-end conversion.
 @*
 @itemize @bullet
 @item
-@dfn{Keyword expansion} is when CVS expands "$Revision$" into "$Revision
-1.1$", for example.  There are a number of keywords in CVS: "$Author$",
-"$Date$", and so on.
+@dfn{Keyword expansion} is when CVS expands "$Revision: 1.1 $" into "$Revision
+1.1$", for example.  There are a number of keywords in CVS: "$Author: sussman $",
+"$Date: 2001-06-04 22:00:52 $", and so on.
 @*
 @item
 @dfn{Line-end conversion} is when CVS gives plaintext files the

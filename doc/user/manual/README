@@ -1,0 +1,12 @@
+
+This directory contains (the beginnings) of a user manual for the
+Subversion command-line client.
+
+As Subversion matures, its exact behaviors become more well-defined.
+This directory should be a central place to write up descriptions of
+these behaviors -- instead of spreading them among far-flung notes and
+emails.
+
+Eventually, these descriptions should be assembled into real user
+documentation!
+
