@@ -22,13 +22,6 @@ Candidate changes:
       +1: jszakmeister, dionisos
       +0: kfogel
 
-  * r11527
-    Fix blame calculation algorithm.
-    Justification:
-      Correctness issue.
-    Votes:
-      +1: mbk, jpieper, dionisos, kfogel
-
   * r11215, r11264
     SVN has needed a good packaging script for Win32 since forever.
     Justification:
