@@ -51,11 +51,14 @@
    of structures.  Also, use the RA session to fill in the "youngest
    revnum" field in each structure.
 
+   Set *YOUNGEST to the youngest revision in the repository.
+
    If DESCEND is zero, only immediate children of PATH will be edited
    or added to the hash.  Else, the dry-run update will be fully
    recursive. */
 static svn_error_t *
 add_update_info_to_status_hash (apr_hash_t *statushash,
+                                svn_revnum_t *youngest,
                                 svn_stringbuf_t *path,
                                 svn_client_auth_baton_t *auth_baton,
                                 svn_boolean_t descend,
@@ -104,7 +107,8 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
      repos_status_ fields and repos_rev fields in each status struct. */
 
   SVN_ERR (svn_wc_get_status_editor (&status_editor, &edit_baton,
-                                     path, descend, statushash, pool));
+                                     path, descend, statushash,
+                                     youngest, pool));
   if (ra_lib->do_status (session,
                          &reporter, &report_baton,
                          target, descend,
@@ -134,6 +138,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
 
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
+                   svn_revnum_t *youngest,
                    svn_stringbuf_t *path,
                    svn_client_auth_baton_t *auth_baton,
                    svn_boolean_t descend,
@@ -158,7 +163,7 @@ svn_client_status (apr_hash_t **statushash,
     /* Add "dry-run" update information to our existing structures.
        (Pass the DESCEND flag here, since we may want to ignore update
        info that is below PATH.)  */
-    SVN_ERR (add_update_info_to_status_hash (hash, path,
+    SVN_ERR (add_update_info_to_status_hash (hash, youngest, path,
                                              auth_baton, descend, pool));
 
 

@@ -498,7 +498,7 @@ cl_status (VALUE self, VALUE aPath,
   pool = svn_pool_create (NULL);
   path = svn_stringbuf_create (StringValuePtr (aPath), pool);
 
-  err = svn_client_status (&statushash, path, auth_baton,
+  err = svn_client_status (&statushash, fooo youngest, path, auth_baton,
                            RTEST (descend), RTEST (get_all),
                            RTEST (update), pool);
 

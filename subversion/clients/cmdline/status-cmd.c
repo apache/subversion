@@ -42,6 +42,7 @@ svn_cl__status (apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
   svn_client_auth_baton_t *auth_baton;
+  svn_revnum_t youngest = SVN_INVALID_REVNUM;
 
   targets = svn_cl__args_to_target_array (os, pool);
 
@@ -61,7 +62,7 @@ svn_cl__status (apr_getopt_t *os,
          svn_client_status directly understands the three commandline
          switches (-n, -u, -v) : */
 
-      SVN_ERR (svn_client_status (&statushash, target, auth_baton,
+      SVN_ERR (svn_client_status (&statushash, &youngest, target, auth_baton,
                                   opt_state->nonrecursive ? 0 : 1,
                                   opt_state->verbose,
                                   opt_state->update,
@@ -71,6 +72,7 @@ svn_cl__status (apr_getopt_t *os,
          The flag we pass indicates whether to use the 'detailed'
          output format or not. */
       svn_cl__print_status_list (statushash, 
+                                 youngest,
                                  (opt_state->verbose | opt_state->update),
                                  opt_state->quiet,
                                  pool);
