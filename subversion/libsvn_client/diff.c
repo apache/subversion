@@ -27,6 +27,7 @@
 #include <apr_hash.h>
 #include "svn_wc.h"
 #include "svn_delta.h"
+#include "svn_diff.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -35,6 +36,7 @@
 #include "svn_io.h"
 #include "svn_utf.h"
 #include "svn_pools.h"
+#include "svn_config.h"
 #include "client.h"
 #include <assert.h>
 
@@ -186,6 +188,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
                    void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  const char *diff_cmd = NULL;
   const char **args = NULL;
   int nargs, exitcode;
   apr_file_t *outfile = diff_cmd_baton->outfile;
@@ -206,11 +209,6 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
         }
       assert (i == nargs);
     }
-
-  /* Print out the diff header. */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
-  SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
-                               path_native, equal_string));
 
   if (rev1 == rev2)
     {
@@ -259,13 +257,48 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       label2 = diff_label (path, rev2, subpool);
     }
 
-  SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
-                            tmpfile1, tmpfile2, 
-                            &exitcode, outfile, errfile, 
-                            diff_cmd_baton->config, subpool));
+  /* Find out if we need to run an external diff */
+  if (diff_cmd_baton->config)
+    {
+      svn_config_t *cfg = apr_hash_get (diff_cmd_baton->config,
+                                        SVN_CONFIG_CATEGORY_CONFIG,
+                                        APR_HASH_KEY_STRING);
+      svn_config_get (cfg, &diff_cmd, "helpers", "diff-cmd", NULL);
+    }
 
-  /* ### todo: Handle exit code == 2 (i.e. errors with diff) here */
-  
+  if (diff_cmd)
+    {
+      /* Print out the diff header. */
+      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
+      SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
+                                   path_native, equal_string));
+
+      SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
+                                tmpfile1, tmpfile2, 
+                                &exitcode, outfile, errfile,
+                                diff_cmd_baton->config,
+                                subpool));
+    }
+  else
+    {
+      svn_diff_t *diff;
+
+      SVN_ERR (svn_diff_file (&diff, tmpfile1, tmpfile2, subpool));
+      if (svn_diff_contains_diffs (diff))
+        {
+          /* Print out the diff header. */
+          SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
+          SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
+                                       path_native, equal_string));
+
+          /* Output the actual diff */
+          SVN_ERR(svn_diff_file_output_unified(outfile, diff,
+                                               tmpfile1, tmpfile2,
+                                               label1, label2,
+                                               subpool));
+        }
+    }
+
   /* ### todo: someday we'll need to worry about whether we're going
      to need to write a diff plug-in mechanism that makes use of the
      two paths, instead of just blindly running SVN_CLIENT_DIFF.  */
