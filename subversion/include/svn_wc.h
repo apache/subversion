@@ -1685,7 +1685,7 @@ svn_error_t *svn_wc_delete2 (const char *path,
                              void *notify_baton,
                              apr_pool_t *pool);
 
-/** @deprecated Provided for backwards compatibility with the 1.2 API.
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
  *
  * Similar to @c svn_wc_delete2, but takes an @c svn_wc_notify_func_t instead.
  */

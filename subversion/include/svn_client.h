@@ -361,6 +361,7 @@ typedef struct svn_client_ctx_t
   svn_auth_baton_t *auth_baton;
 
   /** @deprecated Provided for backwards compatibility with the 1.1 API.
+    
       notification callback function.
       This will be called by @c notify_func2 by default. */
   svn_wc_notify_func_t notify_func;
@@ -388,7 +389,8 @@ typedef struct svn_client_ctx_t
   /** a baton to pass to the cancellation callback. */
   void *cancel_baton;
 
-  /** @cinew New in 1.2.
+  /** @since New in 1.2.
+    
       notification function, defaulting to a function that forwards
       to @c notify_func. */
   svn_wc_notify_func2_t notify_func2;
