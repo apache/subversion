@@ -367,9 +367,9 @@ This function returns a status of either 0 (no differences found), or
   (let* ((diff-switches-list
           ;; In Emacs 21.3.50 or so, the `vc-diff-switches-list' macro
           ;; started requiring its symbol argument to be quoted.
-          (condition-case ignored
+          (condition-case nil
               (vc-diff-switches-list svn)
-            ('void-variable (vc-diff-switches-list 'SVN))))
+            (void-variable (vc-diff-switches-list 'SVN))))
          (status (vc-svn-run-status file))
          (local (elt status 1))
          (changed (elt status 2))
