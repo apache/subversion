@@ -199,15 +199,15 @@ svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
 /**
  * @since New in 1.2.
  *
- * Open access batons for @c path and return in @c *anchor_access and
- * @c *target the anchor and target required to drive an editor.  Return
- * in @c *target_access the access baton for the target, which may be the
- * same as @c *anchor_access.  All the access batons will be in the
- * @c *anchor_access set.
+ * Open access batons for @a path and return in @a *anchor_access and
+ * @a *target the anchor and target required to drive an editor.  Return
+ * in @a *target_access the access baton for the target, which may be the
+ * same as @a *anchor_access.  All the access batons will be in the
+ * @a *anchor_access set.
  *
- * @c depth determines the depth used when opening @c path if @c path is a
- * versioned directory, @c depth is ignored otherwise.  If @c write_lock is
- * @c TRUE the access batons will hold write locks.
+ * @a depth determines the depth used when opening @a path if @a path is a
+ * versioned directory, @a depth is ignored otherwise.  If @a write_lock is
+ * @a TRUE the access batons will hold write locks.
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
@@ -1603,7 +1603,7 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
  * finished.
  */
 svn_error_t *
-svn_wc_status_set_repos_locks (void *set_Locks_baton,
+svn_wc_status_set_repos_locks (void *set_locks_baton,
                                apr_hash_t *locks,
                                const char *repos_root,
                                apr_pool_t *pool);

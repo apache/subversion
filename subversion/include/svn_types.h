@@ -408,9 +408,9 @@ typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
 
 
 
-/* @since New in 1.2 */
-
-/** A lock object, for client & server to share.
+/** @since New in 1.2 
+ *
+ * A lock object, for client & server to share.
  *
  * A lock represents the exclusive right to add, delete, or modify a
  * path.  A lock is created in a repository, wholly controlled by the

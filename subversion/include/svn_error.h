@@ -226,7 +226,11 @@ void svn_handle_warning (FILE *stream, svn_error_t *error);
  * @since New in 1.2.  
  *
  * Return TRUE if @a err is an error specifically related to locking a
- * path in the repository, FALSE otherwise. */
+ * path in the repository, FALSE otherwise. 
+ *
+ * SVN_ERR_FS_OUT_OF_DATE is in here because it's a non-fatal error
+ * that can be thrown when attempting to lock an item.
+ */
 #define SVN_ERR_IS_LOCK_ERROR(err)                          \
   (err->apr_err == SVN_ERR_FS_PATH_LOCKED ||                \
    err->apr_err == SVN_ERR_FS_OUT_OF_DATE)                  \

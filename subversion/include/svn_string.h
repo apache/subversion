@@ -323,7 +323,7 @@ svn_boolean_t svn_cstring_match_glob_list (const char *str,
 /** @since New in 1.2.
  *
  * Return the number of line breaks in @a msg, allowing any kind of newline
- * termination (CR, CRLF, or LFCR), even inconsistent.
+ * termination (CR, LF, CRLF, or LFCR), even inconsistent.
  */
 int svn_cstring_count_newlines (const char *msg);
 
