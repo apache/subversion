@@ -76,16 +76,17 @@ typedef struct svn_string_t svn_string_t;
 
 /* const svn_string_t * is always an input parameter */
 %typemap(python,in) const svn_string_t * (svn_string_t value) {
-    if (!PyString_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "not a string");
-        return NULL;
+    if ($input == Py_None)
+        $1 = NULL;
+    else {
+        if (!PyString_Check($input)) {
+            PyErr_SetString(PyExc_TypeError, "not a string");
+            return NULL;
+        }
+        value.data = PyString_AS_STRING($input);
+        value.len = PyString_GET_SIZE($input);
+        $1 = &value;
     }
-    value.data = PyString_AS_STRING($input);
-    value.len = PyString_GET_SIZE($input);
-    $1 = &value;
-}
-%typemap(default) const svn_string_t * {
-    $1 = NULL;
 }
 
 /* when storing an svn_string_t* into a structure, we must allocate the
