@@ -146,7 +146,7 @@ static int add_to_hash(void *userdata, const ne_propname *pname,
 static void process_results(void *userdata, const char *uri,
                             const ne_prop_result_set *rset)
 {
-  prop_ctx_t *pc = userdata;
+  /*  prop_ctx_t *pc = userdata; */
   svn_ra_dav_resource_t *r = ne_propset_private(rset);
 
   /* ### should use ne_propset_status(rset) to determine whether the
@@ -307,7 +307,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                    "(%s, port %d).",
                                    ras->root.host, ras->root.port);
         case NE_AUTH:
-          return svn_error_create(SVN_ERR_NOT_AUTHORIZED, 0, NULL, 
+          return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL, 
                                   pool,
                                   "Authentication failed on server.");
         default:

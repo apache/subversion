@@ -371,7 +371,8 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                apr_array_header_t *condensed_targets,
                svn_stringbuf_t *url,        /* null unless importing */
                svn_stringbuf_t *new_entry,  /* null except when importing */
-               const char *user,
+               svn_client_auth_info_callback_t callback,
+               void *callback_baton,
                svn_stringbuf_t *log_msg,
                svn_stringbuf_t *xml_dst,
                svn_revnum_t revision,
@@ -464,10 +465,6 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
           url = entry->ancestor;
         }
       
-      /* Make sure our user at least exists, even if empty. */
-      if (! user)
-        user = "";
-      
       /* Make sure our log message at least exists, even if empty. */
       if (! log_msg)
         log_msg = svn_stringbuf_create ("", pool);
@@ -477,13 +474,13 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url->data, pool));
       
       /* Open an RA session to URL */
-      SVN_ERR (ra_lib->open (&session, url, pool));
+      SVN_ERR (svn_client_authenticate (&session, ra_lib, url, 
+                                        callback, callback_baton, pool));
       
       /* Fetch RA commit editor, giving it svn_wc_set_revision(). */
       SVN_ERR (ra_lib->get_commit_editor
                (session,
                 &editor, &edit_baton,
-                user,
                 log_msg,
                 /* wc prop fetching routine */
                 is_import ? NULL : svn_wc_get_wc_prop,
@@ -573,7 +570,9 @@ svn_error_t *
 svn_client_import (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
-                   void *after_edit_baton,                   
+                   void *after_edit_baton,
+                   svn_client_auth_info_callback_t callback,
+                   void *callback_baton,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *url,
                    svn_stringbuf_t *new_entry,
@@ -587,7 +586,7 @@ svn_client_import (const svn_delta_edit_fns_t *before_editor,
                           after_editor, after_edit_baton,                   
                           path, NULL,
                           url, new_entry,
-                          user,
+                          callback, callback_baton,
                           log_msg,
                           xml_dst, revision,
                           pool));
@@ -600,9 +599,10 @@ svn_error_t *
 svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
-                   void *after_edit_baton,                   
+                   void *after_edit_baton, 
+                   svn_client_auth_info_callback_t callback,
+                   void *callback_baton,                  
                    const apr_array_header_t *targets,
-                   const char *user,
                    svn_stringbuf_t *log_msg,
                    svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,
@@ -651,7 +651,8 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                           base_dir,
                           condensed_targets,
                           NULL, NULL,  /* NULLs because not importing */
-                          user,
+                          callback,
+                          callback_baton,
                           log_msg,
                           xml_dst, revision,
                           pool));

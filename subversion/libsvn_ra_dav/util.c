@@ -96,7 +96,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
           goto error;
 
         case NE_AUTH:
-          err = svn_error_create(SVN_ERR_NOT_AUTHORIZED, 0, NULL, pool,
+          err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL, pool,
                                  "Authentication failed on server.");
           goto error;
 

@@ -191,6 +191,24 @@ svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
    specific to the command-line client. */
 void svn_cl__init_feedback_vtable (apr_pool_t *top_pool);
 
+
+/* Our implementation of the 'auth info callback' routine, 
+   as defined in svn_client.h.   This callback is passed to any
+   libsvn_client routine that needs to authenticate against a
+   repository. */
+
+/* Display PROMPT to the user, and read a reply back from stdin,
+   allocated in POOL and returned in *RESULT.  If HIDE is set, the
+   reply will not be echoed to the screen.  BATON is ignored (but
+   required by the definition of svn_client_auth_info_callback_t.) */
+svn_error_t *
+svn_cl__prompt_user (char **result,
+                     char *prompt,
+                     svn_boolean_t hide,
+                     void *baton,
+                     apr_pool_t *pool);
+
+
 
 
 #endif /* SVN_CL_H */

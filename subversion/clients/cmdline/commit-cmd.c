@@ -98,8 +98,8 @@ svn_cl__commit (apr_getopt_t *os,
   /* Commit. */
   SVN_ERR (svn_client_commit (NULL, NULL,
                               trace_editor, trace_edit_baton,
+                              svn_cl__prompt_user, NULL,
                               targets,
-                              "",   /* ### todo: pass author */
                               message,
                               opt_state->xml_file,
                               opt_state->revision,

@@ -44,6 +44,8 @@ svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_stringbuf_t *path,
                    svn_boolean_t descend,
+                   svn_client_auth_info_callback_t callback,
+                   void *callback_baton,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -86,8 +88,9 @@ svn_client_status (apr_hash_t **statushash,
           svn_revnum_t latest_revnum;
 
           /* Open an RA session to URL, get latest revnum, close session. */
-          SVN_ERR (ra_lib->open (&session, svn_stringbuf_create (URL, pool),
-                                 pool));
+          SVN_ERR (svn_client_authenticate (&session, ra_lib,
+                                            svn_stringbuf_create (URL, pool),
+                                            callback, callback_baton, pool));
           SVN_ERR (ra_lib->get_latest_revnum (session, &latest_revnum));
           SVN_ERR (ra_lib->close (session));
 

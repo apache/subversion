@@ -35,6 +35,25 @@ static apr_status_t cleanup_session(void *sess)
   return APR_SUCCESS;
 }
 
+static svn_error_t * svn_ra_get_authenticator (void **authenticator,
+                                               svn_stringbuf_t *repos_URL,
+                                               apr_uint64_t method,
+                                               apr_pool_t *pool)
+{
+  /* ### need to write this.  see below. */
+
+  return SVN_NO_ERROR;
+}
+
+/* ### This routine needs to be rewritten (split up, really) into
+   multiple routines:   
+ 
+         get_authenticator()
+         authenticator->set_username()
+         authenticator->set_password()
+         authenticator->authorize()
+*/
+#if 0
 static svn_error_t * svn_ra_open (void **session_baton,
                                   svn_stringbuf_t *repository_name,
                                   apr_pool_t *pool)
@@ -114,6 +133,7 @@ static svn_error_t * svn_ra_open (void **session_baton,
 
   return NULL;
 }
+#endif
 
 static svn_error_t *svn_ra_close (void *session_baton)
 {
@@ -126,7 +146,8 @@ static svn_error_t *svn_ra_close (void *session_baton)
 static const svn_ra_plugin_t dav_plugin = {
   "ra_dav",
   "Module for accessing a repository via WebDAV (DeltaV) protocol.",
-  svn_ra_open,
+  (apr_uint64_t) (SVN_RA_AUTH_USERNAME | SVN_RA_AUTH_SIMPLE_PASSWORD),
+  svn_ra_get_authenticator,
   svn_ra_close,
   svn_ra_dav__get_latest_revnum,
   svn_ra_dav__get_dated_revision,

@@ -36,6 +36,9 @@ typedef struct svn_ra_local__session_baton_t
   /* A `file://' URL containing a local repository and path. */
   svn_stringbuf_t *repository_URL;
 
+  /* The user accessing the repository. */
+  char *username;
+
   /* The URL above, split into two components. */
   svn_stringbuf_t *repos_path;
   svn_stringbuf_t *fs_path;

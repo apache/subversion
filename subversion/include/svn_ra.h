@@ -29,9 +29,11 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-
-
+/*----------------------------------------------------------------------*/
 
+/* Misc. declarations */
+
+
 /* A function type which allows the RA layer to fetch WC properties
    during a commit.  */
 typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *close_baton,
@@ -55,6 +57,9 @@ typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *close_baton,
                                                     svn_stringbuf_t *path,
                                                     svn_revnum_t new_rev);
 
+/*----------------------------------------------------------------------*/
+
+/* The update Reporter */
 
 /* A vtable structure which allows a working copy to describe a
    subset (or possibly all) of its working-copy to an RA layer. */
@@ -84,7 +89,80 @@ typedef struct svn_ra_reporter_t
 
 } svn_ra_reporter_t;
 
+/*----------------------------------------------------------------------*/
+
+/* Authentication Methods */
 
+/* Different RA implementations are free to implement whatever
+   authentication protocols they choose.  They must define them here,
+   however, so that all clients are aware of their existence.  Client
+   may choose to support them or not.
+
+   Each protocol requires the definition of an "authenticator" vtable
+   here.  This vtable has routines for getting/setting information;
+   the client is assumed to know the protocol and the proper use of
+   these routines.
+
+   Once information has been exchanged, the client calls
+   authenticate().  Every authenticator has a final authenticate()
+   routine that is defined to return either a session_baton (a
+   repository handle) or another authenticator object (only for those
+   protocols that use multi-phase challenges.) */
+
+
+/* List all known authenticator objects (protocols) here. */
+#define SVN_RA_AUTH_USERNAME                       0x0001
+#define SVN_RA_AUTH_SIMPLE_PASSWORD                0x0002
+
+
+
+
+/* A protocol which only needs a username.  (like ra_local) */
+typedef struct svn_ra_username_authenticator_t
+{
+  /* Private baton;  pass to all routines below. */
+  void *pbaton;
+
+  /* Set the username to USERNAME. */
+  svn_error_t *(*set_username) (char *username, void *pbaton);
+
+  /* Authenticate the set username, passing the private PBATON field.
+     If successful, return a valid session handle in *SESSION_BATON.
+     If authentication fails, SVN_ERR_RA_NOT_AUTHORIZED is
+     returned. */
+  svn_error_t *(*authenticate) (void **session_baton, void *pbaton);
+
+} svn_ra_username_authenticator_t;
+
+
+
+
+/* A protocol which only needs a name and password.  (like ra_dav) */
+typedef struct svn_ra_simple_password_authenticator_t
+{
+  /* Private baton;  pass to all routines below. */
+  void *pbaton;
+
+  /* Set the username to USERNAME. */
+  svn_error_t *(*set_username) (char *username, void *pbaton);
+  
+  /* Set the password to PASSWORD. */
+  svn_error_t *(*set_password) (char *password, void *pbaton);
+
+  /* Authenticate the set username & password, passing the private
+     PBATON field.  If successful, return a valid session handle in
+     *SESSION_BATON.  If authentication fails,
+     SVN_ERR_RA_NOT_AUTHORIZED is returned. */
+  svn_error_t *(*authenticate) (void **session_baton, void *pbaton);
+
+} svn_ra_simple_password_authenticator_t;
+
+
+
+
+/*----------------------------------------------------------------------*/
+
+/* The RA Library */
 
 
 /* A vtable structure which encapsulates all the functionality of a
@@ -98,20 +176,29 @@ typedef struct svn_ra_reporter_t
 
 typedef struct svn_ra_plugin_t
 {
-  const char *name;         /* The name of the ra library,
-                                 e.g. "ra_dav" or "ra_local" */
+  /* The proper name of the ra library, (e.g. "ra_dav" or "ra_local") */
+  const char *name;         
+  
+  /* Short doc string printed out by `svn -v` */
+  const char *description;
 
-  const char *description;  /* Short documentation string */
+  /* Flags that describe all supported authentication methods */
+  apr_uint64_t auth_methods;
 
   /* The vtable hooks */
   
-  /* Open a "session" with a repository at URL.  *SESSION_BATON is
-     returned and then used (opaquely) for all further interactions
-     with the repository. */
-  svn_error_t *(*open) (void **session_baton,
-                        svn_stringbuf_t *repository_URL,
-                        apr_pool_t *pool);
+  /* Begin an RA session to REPOS_URL, using authentication method
+     METHOD.  Return a vtable structure in *AUTHENTICATOR that handles
+     the method. If authenticator object is driven successfully, the
+     reward will be a session_baton. (See previous auth section.)
 
+     POOL will be the place where the authenticator and session_baton
+     are allocated, as well as the storage area used by further calls
+     to RA routines. */
+  svn_error_t *(*get_authenticator) (void **authenticator,
+                                     svn_stringbuf_t *repos_URL,
+                                     apr_uint64_t method,
+                                     apr_pool_t *pool);
 
   /* Close a repository session.  This frees any memory used by the
      session baton.  (To free the session baton itself, simply free
@@ -128,10 +215,9 @@ typedef struct svn_ra_plugin_t
                                       svn_revnum_t *revision,
                                       apr_time_t tm);
 
-  /* Begin a commit against `rev:path' using USER as the author and
-     LOG_MSG as the log message.  `rev' is the argument that will be
-     passed to replace_root(), and `path' is built into the
-     SESSION_BATON's URL.
+  /* Begin a commit against `rev:path' using LOG_MSG as the log
+     message.  `rev' is the argument that will be passed to
+     replace_root(), and `path' is built into the SESSION_BATON's URL.
      
      RA returns an *EDITOR and *EDIT_BATON capable of transmitting a
      commit to the repository, which is then driven by the client.
@@ -154,7 +240,6 @@ typedef struct svn_ra_plugin_t
   svn_error_t *(*get_commit_editor) (void *session_baton,
                                      const svn_delta_edit_fns_t **editor,
                                      void **edit_baton,
-                                     const char *user,
                                      svn_stringbuf_t *log_msg,
                                      svn_ra_get_wc_prop_func_t get_func,
                                      svn_ra_set_wc_prop_func_t set_func,
@@ -247,7 +332,7 @@ svn_error_t * svn_ra_local_init (int abi_version,
                                  apr_hash_t *hash);
 
 
-
+/*----------------------------------------------------------------------*/
 
 /*** Public Interfaces ***/
 

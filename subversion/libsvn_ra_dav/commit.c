@@ -885,7 +885,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_edit_fns_t **editor,
   void **edit_baton,
-  const char *user,
   svn_stringbuf_t *log_msg,
   svn_ra_get_wc_prop_func_t get_func,
   svn_ra_set_wc_prop_func_t set_func,
@@ -904,7 +903,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc->set_func = set_func;
   cc->close_func = close_func;
   cc->close_baton = close_baton;
-  cc->user = user;
   cc->log_msg = log_msg;
 
   cc->deleted = apr_array_make(ras->pool, 10, sizeof(const char *));
