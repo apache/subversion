@@ -2243,9 +2243,10 @@ M      somedir/foo.c
     <sect2 id="svn-ch-3-sect-7.3">
       <title><command>svn import</command></title>
 
-      <para>The <command>svn import</command> command is a quick way
-        to copy an unversioned tree of files into a repository,
-        creating intermediate directories as necessary.</para>
+      <para>El comando <command>svn import</command> es una manera
+        rápida de copiar un árbol de ficheros sin versionar en el
+        repositorio, creando directorios intermedios como sea
+        necesario.</para>
 
       <screen>
 $ svnadmin create /usr/local/svn/newrepos
@@ -2269,10 +2270,13 @@ foo.c
 subdir/
 </screen>
 
-      <para>Note that after the import is finished, the original tree
-        is <emphasis>not</emphasis> converted into a working copy.  To
-        start working, you still need to <command>svn
-        checkout</command> a fresh working copy of the tree.</para>
+      <para>Observe que después de que la importación esté acabada, el
+        árbol original <emphasis>no</emphasis> se convierte en una
+        copia de trabajo. Para empezar a trabajar, usted todavía
+        necesita hacer <command>svn checkout</command><!--TODO:
+        you still need to <command>svn checkout</command> a fresh
+        working copy of the tree--> en una copia de trabajo fresca
+        del árbol.</para>
 
     </sect2>
 
@@ -2282,16 +2286,19 @@ subdir/
   <!-- ======================== SECTION 8 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-3-sect-8">
-    <title>Summary</title>
+    <title>Sumario</title>
         
-      <para>Now we've covered most of the Subversion client
-          commands.  Notable exceptions are those dealing with
-          branching and merging (see <xref linkend="svn-ch-4"/>) and
-          properties (see <xref linkend="svn-ch-7-sect-2"/>).
-          However, you may want to take a moment to skim through <xref
-          linkend="svn-ch-9"/> to get an idea of all the many
-          different commands that Subversion has&mdash;and how you can
-          use them to make your work easier.</para>
+      <para>Ahora hemos cubierto<!--TODO:Now we've covered--> la
+        mayoría de los comandos del cliente de Subversion. Las
+        excepciones notables son ésas que se ocupan de la ramificación
+        y de la combinación (vea <xref linkend="svn-ch-4"/>) y
+        de las propiedadas (vea <xref linkend="svn-ch-7-sect-2"/>).
+        Sin embargo, usted puede querer tomarse un momento para <!--TODO:
+        to skim through... no sé lo que es skim, asi que pongo lo que
+        creo que es--> hechar un ojo a <xref linkend="svn-ch-9"/>
+        para tener una idea de todos los muchos<!--TODO:of all the many-->
+        comandos diferentes que tiene Subversion&mdash;y cómo puede usarlos
+        para hacer su trabajo más facil.</para>
 
   </sect1>
 
