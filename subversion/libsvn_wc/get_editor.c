@@ -866,7 +866,7 @@ close_file (void *file_baton)
   svn_xml_make_open_tag (&entry_accum,
                          fb->pool,
                          svn_xml_self_closing,
-                         SVN_WC__LOG_SET_ENTRY,
+                         SVN_WC__LOG_SET_VERSION,
                          SVN_WC__LOG_ATTR_NAME,
                          fb->name,
                          SVN_WC__LOG_ATTR_VERSION,
