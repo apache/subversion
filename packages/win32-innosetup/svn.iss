@@ -66,7 +66,9 @@ Source: {#= path_svnversion}\svnversion.exe; DestDir: {app}\bin; Flags: ignoreve
 Source: {#= path_svndumpfilter}\svndumpfilter.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_brkdb_dll}\{#= libdb_dll}; DestDir: {app}\bin
 Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Flags: ignoreversion
-
+#ifdef inc_locale
+Source: {#= path_locale}\*.*; DestDir: {app}\share\locale; Flags: ignoreversion recursesubdirs
+#endif
 Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}
 Source: {#= path_setup_in}\doc\svn-doc.chm; DestDir: {app}\doc
 
@@ -74,7 +76,7 @@ Source: {#= path_setup_in}\doc\svn-doc.chm; DestDir: {app}\doc
 Source: {#= path_libapr_dll}\libapr.dll; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_libaprutil_dll}\libaprutil.dll; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_libapriconv_dll}\libapriconv.dll; DestDir: {app}\bin; Flags: ignoreversion
-Source: {#= path_iconv_dll}\iconv.dll; DestDir: {app}\bin; Flags: ignoreversion
+;Source: {#= path_iconv_dll}\iconv.dll; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_intl_dll}\intl.dll; DestDir: {app}\bin; Flags: ignoreversion
 
 ; VC7 Runtime
