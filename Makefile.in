@@ -382,8 +382,10 @@ doc-clean:
                    *.dvi *.txt *.html *.ps *.pdf *.fo);     \
         done
 
-### Migrate to build-outputs.mk when needed to build other pure Java
-### code.
+
+### Migrate Java build targets to build-outputs.mk when needed to
+### build other pure Java code.
+
 JAVA_API_DIR = $(abs_srcdir)/subversion/bindings/java
 JAVA_API_SOURCES = org/tigris/subversion/*.java \
                    org/tigris/subversion/auth/*.java \
@@ -394,11 +396,27 @@ JAVA_API_SOURCES = org/tigris/subversion/*.java \
 java-api:
 	@if [ ! -d $(JAVA_API_DIR)/build ]; then mkdir $(JAVA_API_DIR)/build; fi
 	cd $(JAVA_API_DIR) && \
-    $(JAVAC) -g -d $(JAVA_API_DIR)/build $(JAVA_API_SOURCES)
-	$(JAR) cf $(JAVA_API_DIR)/build/svn-api.jar -C $(JAVA_API_DIR)/build/org .
+      $(JAVAC) -g -d $(JAVA_API_DIR)/build $(JAVA_API_SOURCES)
+	$(JAR) cf $(JAVA_API_DIR)/build/svn-api.jar -C $(JAVA_API_DIR)/build org
 
 java-api-clean:
 	@rm -rf $(JAVA_API_DIR)/build
+
+
+SWIG_JAVA_DIR = $(abs_srcdir)/subversion/bindings/swig/java
+SWIG_JAVA_SOURCES = org/tigris/subversion/client/*.java \
+                    org/tigris/subversion/swig/*.java \
+                    org/tigris/subversion/util/*.java
+
+swig-java-jar:
+	@if [ ! -d $(SWIG_JAVA_DIR)/build ]; then \
+        mkdir $(SWIG_JAVA_DIR)/build; \
+    fi
+	cd $(SWIG_JAVA_DIR) && \
+    $(JAVAC) -classpath $(JAVA_API_DIR)/build/svn-api.jar -g \
+      -d $(SWIG_JAVA_DIR)/build $(SWIG_JAVA_SOURCES)
+	$(JAR) cf $(SWIG_JAVA_DIR)/build/svn-swig.jar \
+      -C $(SWIG_JAVA_DIR)/build/org .
 
 #
 # Implicit rules for creating outputs from input files
