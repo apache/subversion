@@ -19,19 +19,18 @@ every tag that contains the the specific file.
 Why?
 ===
 
-Why does Subversion index data this way?  There are two reasons the
-designers chose to do this.
+Why does Subversion index data this way?  There are a few reasons the
+designers chose to do this.  Having branches and tags in normal
+directory space makes it easy to browse them, easy to do access
+control on them, and (of course) they're automatically versioned.
 
-First, it's very nice to have branches and tags in normal directory
-space.  It makes them more "browseable" to users, and allows
-branch-level access control.
-
-Second, the designers believe that it will result in less waiting time
-overall.  Organizations tend to create branches and tags quite
-frequently -- much, much more frequently than asking the question
-"which tags contain a specific file?"  So if you have to wait a while
-for either one operation or the other, it's preferable to make tagging
-the instantaneous action.
+Also, the designers thought this would be optimizing the right
+operations.  Organizations tend to create branches and tags quite
+frequently -- much more frequently than asking the question "which
+tags contain a specific file?"  So if you can only make one of these
+operations O(1), you want it to be tagging.  (Of course, if we knew a
+way to make them *both* cheap, that would be the best solution!  But
+we haven't found a way yet.)
 
 
 
@@ -66,6 +65,13 @@ Subversion-1.0 uses BerkeleyDB.  The only reason 'svn log' shows
 predecessor nodes easily is because each node contains a back-pointer
 to its predecessor.  It would be extremely painful to search BDB for
 successors;  BDB is mostly a glorified hashtable with transactions.
+
+   [Note from kfogel: Is there some reason we can't store successor
+   nodes at commit time?  That is if N is a director successor of M,
+   then when we create N, we add it to M's "successors list".  Then we
+   could track forward as well as backward... Nothing against having
+   an SQL backend someday, of course, just pointing out that this
+   particular problem can be solved simply in Berkeley DB.]
 
 Post-1.0 Subversion, however, will be able to use a SQL backend, and
 then it will be very quick and easy to query for node successors.  At
