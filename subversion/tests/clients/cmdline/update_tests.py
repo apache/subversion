@@ -512,10 +512,10 @@ def detect_conflict_files(node, extra_files):
     mo = re.match(pattern, node.name)
     if mo:
       extra_files.pop(extra_files.index(pattern)) # delete pattern from list
-      return 0
-
-  print "Found unexpected disk object:", node.name
-  raise svntest.main.SVNTreeUnequal
+      break
+  else:
+    print "Found unexpected disk object:", node.name
+    raise svntest.main.SVNTreeUnequal
 
 def update_to_resolve_text_conflicts(sbox):
   "delete files and update to resolve text conflicts"
@@ -635,9 +635,10 @@ def expect_extra_files(node, extra_files):
     mo = re.match(pattern, node.name)
     if mo:
       extra_files.pop(extra_files.index(pattern))
-      return 0
-  print "Found unexpected disk object:", node.name
-  raise svntest.main.SVNTreeUnequal
+      break
+  else:
+    print "Found unexpected disk object:", node.name
+    raise svntest.main.SVNTreeUnequal
 
 def update_delete_modified_files(sbox):
   "update that deletes modified files"

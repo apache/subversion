@@ -1771,24 +1771,20 @@ def commit_out_of_date_deletions(sbox):
   # out-of-dateness error.
   outlines, errlines = svntest.main.run_svn(1, 'commit', '-m', 'blah',
                                             omega_path)
-  out_of_date_error = 0
   for line in errlines:
     if re.match(".*out of date.*", line):
-      out_of_date_error = 1;
-
-  if out_of_date_error == 0:
+      break
+  else:
     raise svntest.Failure
 
   # Attempt to delete directory C.  This should return an (expected)
   # out-of-dateness error.
   outlines, errlines = svntest.main.run_svn(1, 'commit', '-m', 'blah',
                                             C_path)
-  out_of_date_error = 0
   for line in errlines:
     if re.match(".*out of date.*", line):
-      out_of_date_error = 1;
-
-  if out_of_date_error == 0:
+      break
+  else:
     raise svntest.Failure
 
 def commit_with_bad_log_message(sbox):
