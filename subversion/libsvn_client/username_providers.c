@@ -99,7 +99,7 @@ get_creds (const char **username,
       
   *username = def_username ? def_username : susername ? susername->data : NULL;
 
-  return !!*username;
+  return !! *username;
 }
 
 
@@ -127,7 +127,7 @@ save_creds (provider_baton_t *pb,
   err = svn_config_write_auth_data (creds_hash, SVN_AUTH_CRED_USERNAME,
                                     pb->realmstring, config_dir, pool);
   svn_error_clear (err);
-  return !err;
+  return ! err;
 }
 
 
@@ -151,6 +151,7 @@ username_first_creds (void **credentials,
     {
       svn_auth_cred_simple_t *creds = apr_pcalloc (pool, sizeof(*creds));
       creds->username = username;
+      creds->may_save = FALSE;
       *credentials = creds;
     }
   else
@@ -173,6 +174,9 @@ username_save_creds (svn_boolean_t *saved,
   svn_auth_cred_simple_t *creds = credentials;
   provider_baton_t *pb = provider_baton;
   const char *config_dir;
+
+  if (! creds->may_save)
+    return SVN_NO_ERROR;
 
   config_dir = apr_hash_get (parameters,
                              SVN_AUTH_PARAM_CONFIG_DIR,
@@ -242,6 +246,7 @@ prompt_for_username_creds (svn_auth_cred_username_t **cred_p,
                            apr_hash_t *parameters,
                            const char *realmstring,
                            svn_boolean_t first_time,
+                           svn_boolean_t may_save,
                            apr_pool_t *pool)
 {
   const char *def_username = NULL;
@@ -281,7 +286,8 @@ prompt_for_username_creds (svn_auth_cred_username_t **cred_p,
     }
   else
     {
-      SVN_ERR (pb->prompt_func (cred_p, pb->prompt_baton, realmstring, pool));
+      SVN_ERR (pb->prompt_func (cred_p, pb->prompt_baton, realmstring,
+                                may_save, pool));
     }
 
   return SVN_NO_ERROR;
@@ -300,10 +306,13 @@ username_prompt_first_creds (void **credentials_p,
 {
   username_prompt_provider_baton_t *pb = provider_baton;
   username_prompt_iter_baton_t *ibaton = apr_pcalloc (pool, sizeof (*ibaton));
+  const char *no_auth_cache = apr_hash_get (parameters, 
+                                            SVN_AUTH_PARAM_NO_AUTH_CACHE,
+                                            APR_HASH_KEY_STRING);
 
   SVN_ERR (prompt_for_username_creds
-           ((svn_auth_cred_username_t **) credentials_p,
-            pb, parameters, realmstring, TRUE, pool));
+           ((svn_auth_cred_username_t **) credentials_p, pb,
+            parameters, realmstring, ! no_auth_cache, TRUE, pool));
 
   ibaton->retries = 0;
   ibaton->pb = pb;
@@ -324,6 +333,9 @@ username_prompt_next_creds (void **credentials_p,
                             apr_pool_t *pool)
 {
   username_prompt_iter_baton_t *ib = iter_baton;
+  const char *no_auth_cache = apr_hash_get (parameters, 
+                                            SVN_AUTH_PARAM_NO_AUTH_CACHE,
+                                            APR_HASH_KEY_STRING);
 
   if (ib->retries >= ib->pb->retry_limit)
     {
@@ -334,8 +346,8 @@ username_prompt_next_creds (void **credentials_p,
   ib->retries++;
 
   SVN_ERR (prompt_for_username_creds
-           ((svn_auth_cred_username_t **) credentials_p,
-            ib->pb, parameters, ib->realmstring, FALSE, pool));
+           ((svn_auth_cred_username_t **) credentials_p, ib->pb,
+            parameters, ib->realmstring, FALSE, ! no_auth_cache, pool));
 
   return SVN_NO_ERROR;
 }
