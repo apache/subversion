@@ -396,6 +396,48 @@ def update_missing():
                                                mu_path, rho_path,
                                                E_path, H_path)
 
+#----------------------------------------------------------------------
+
+def update_ignores_added():
+  "ensure update is not reporting additions"
+
+  sbox = sandbox(update_ignores_added)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # Create a new file, 'zeta', and schedule it for addition.
+  zeta_path = os.path.join(wc_dir, 'A', 'B', 'zeta')
+  svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
+  svntest.main.run_svn(None, 'add', zeta_path)
+
+  # Now update.  "zeta at revision 0" should *not* be reported.
+
+  # Create expected output tree for an update of the wc_backup.
+  output_list = []
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree for the update.
+  my_greek_tree = svntest.main.copy_greek_tree()
+  my_greek_tree.append(['A/B/zeta', "This is the file 'zeta'.", {}, {}])
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+
+  # Create expected status tree for the update.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  status_list.append([zeta_path, None, {},
+                      {'status' : 'A ',
+                       'locked' : ' ',
+                       'wc_rev' : '0',
+                       'repos_rev' : '1'}])
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  
+  # Do the update and check the results in three ways.
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree)
+  
 
 ########################################################################
 # Run the tests
@@ -405,7 +447,8 @@ def update_missing():
 test_list = [ None,
               update_binary_file,
               update_binary_file_2,
-             # update_missing
+              update_ignores_added,
+              # update_missing
              ]
 
 if __name__ == '__main__':
