@@ -2530,14 +2530,12 @@ msgid "Read access denied for root of edit"
 msgstr "Lesetilgang er nektet for redigeringens opphav"
 
 #: include/svn_error_codes.h:774
-#, fuzzy
 msgid "Item is not readable"
-msgstr "Element er ikke lesbart."
+msgstr "Element er ikke lesbart"
 
 #: include/svn_error_codes.h:779
-#, fuzzy
 msgid "Item is partially readable"
-msgstr "Element er delvis lesbart."
+msgstr "Element er delvis lesbart"
 
 #: include/svn_error_codes.h:786
 msgid "Svndiff data has invalid header"
@@ -2802,9 +2800,8 @@ msgid "'%s' is already a working copy for a different URL"
 msgstr "«%s» er allerede en arbeidskopi, for en annen URL"
 
 #: libsvn_client/checkout.c:154
-#, fuzzy
 msgid "; run 'svn update' to complete it"
-msgstr "; kjør «svn update» for å fullføre den."
+msgstr "; kjør «svn update» for å fullføre den"
 
 #: libsvn_client/checkout.c:163
 #, c-format
@@ -3226,7 +3223,6 @@ msgid "Entry '%s' has no URL"
 msgstr "Posten «%s» mangler nettadresse"
 
 #: libsvn_client/log.c:321
-#, fuzzy
 msgid "No commits in repository"
 msgstr "Ingen innsendinger i depotet"
 
@@ -4967,9 +4963,9 @@ msgstr ""
 "og kan tyde på en feil i klienten din"
 
 #: libsvn_repos/fs-wrap.c:296
-#, fuzzy, c-format
+#, c-format
 msgid "Write denied:  not authorized to read all of revision %ld"
-msgstr "Skriving nektet: Er ikke autorisert til å lese alt i revisjon %ld."
+msgstr "Skriving nektet: Er ikke autorisert til å lese alt i revisjon %ld"
 
 #: libsvn_repos/fs-wrap.c:481
 #, c-format
@@ -5262,9 +5258,8 @@ msgid "Invalid end revision %ld"
 msgstr "Ugyldig sluttrevisjon %ld"
 
 #: libsvn_repos/rev_hunt.c:314
-#, fuzzy
 msgid "Unreadable path encountered; access denied"
-msgstr "Uleselig sti funnet; tilgang nektes."
+msgstr "Uleselig sti funnet; tilgang nektes"
 
 #: libsvn_subr/config.c:632
 #, c-format
@@ -5413,11 +5408,11 @@ msgid "Can't set file '%s' read-write"
 msgstr "Kan ikke gjøre «%s» skrivbar"
 
 #: libsvn_subr/io.c:1015
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error)"
 msgstr ""
 "Klarer ikke å få tak i standard filrettigheter for filen i «%s» («file stat»-"
-"feil"
+"feil)"
 
 #: libsvn_subr/io.c:1021
 #, c-format
@@ -7589,9 +7584,8 @@ msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "Valget --tunnel-user er bare gyldig i tunnelmodus.\n"
 
 #: svnserve/main.c:369
-#, fuzzy
 msgid "You must specify exactly one of -d, -i, -t or -X.\n"
-msgstr "En av disse må spesifiseres: -d, -i, -t eller -X.\n"
+msgstr "Nøyaktig én av disse må spesifiseres: -d, -i, -t eller -X.\n"
 
 #: svnserve/main.c:410
 #, c-format
