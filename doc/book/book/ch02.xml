@@ -60,6 +60,10 @@
 
   <sect1 id="svn-ch-2-sect-2">
     <title>Versioning Models</title>
+
+    <para>The core mission of a version control system is to enable
+      collaborative editing and sharing of data.  But different
+      systems use different strategies to achieve this.</para>
     
     <sect2 id="svn-ch-2-sect-2.1">
       <title>The Problem of File-Sharing</title>
@@ -240,6 +244,10 @@
   <sect1 id="svn-ch-2-sect-3">
     <title>Subversion in Action</title>
     
+    <para>It's time to move from the abstract to the concrete.  In
+      this section, we'll show real examples of Subversion being
+      used.</para>
+
     <sect2 id="svn-ch-2-sect-3.1">
       <title>Working Copies</title>
       

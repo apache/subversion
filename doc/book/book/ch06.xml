@@ -1381,6 +1381,14 @@ ssl-client-cert-password = somepassword
     <sect2 id="svn-ch-6-sect-4.4">
       <title>Authorization Options</title>
 
+      <para>At this point, you've configured authentication, but not
+        authorization.  Apache is able to challenge clients and
+        confirm identities, but it still needs to
+        <emphasis>do</emphasis> something with that information.
+        After all, the whole point of having a username is to decide
+        what the user can or cannot do.  This section describes two
+        strategies for controlling access to your repositories.</para>
+
       <sect3 id="svn-ch-6-sect-4.4.1">
         <title>Blanket Access Control</title>
 
@@ -1734,6 +1742,10 @@ jane = r
 
     <sect2 id="svn-ch-6-sect-4.5">
       <title>Extra Goodies</title>
+
+      <para>We've covered most the of authentication and authorization
+        options for Apache and mod_dav_svn.  But there are a few other
+        nice features that come with Apache.</para>
 
       <sect3 id="svn-ch-6-sect-4.5.1">
         <title>Repository Browsing</title>
