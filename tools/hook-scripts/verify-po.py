@@ -82,7 +82,7 @@ class ChangeReceiver(delta.Editor):
           writer.write(data)
         if not checker.close():
           sys.exit("PO format check failed for '" + path + "'")
-      except UnicodeDecodeError:
+      except UnicodeError:
         sys.exit("PO file is not in UTF-8: '" + path + "'")
     finally:
       core.svn_pool_destroy(subpool)
