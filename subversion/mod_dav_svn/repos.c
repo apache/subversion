@@ -253,7 +253,7 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
      ### version to ask for.
   */
 #if 0
-  serr = svn_fs_youngest_rev(&repos->root_rev);
+  serr = svn_fs_youngest_rev(repos->fs, &repos->root_rev);
 #else
   /* ### svn_fs_youngest_rev() is not in the library (yet) */
   serr = NULL;
@@ -343,6 +343,10 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
 
   /* ### look up the object, set .exists and .collection flags */
   comb->res.exists = TRUE;
+
+  /* ### if the node (path) does not exist, then see if the parent exists.
+     ### this is needed for PUT, MKCOL, and COPY to create new resources.
+  */
 
   return NULL;
 }
@@ -611,6 +615,19 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
   svn_error_t *serr;
 #endif
 
+  if (mode == DAV_MODE_WRITE_TRUNC || mode == DAV_MODE_WRITE_SEEKABLE)
+    {
+      if (resource->type != DAV_RESOURCE_TYPE_WORKING)
+        {
+          return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                               "Resource body changes may only be made to "
+                               "working resources [at this time].");
+        }
+    }
+  else
+    {
+    }
+
   /* start building the stream structure */
   *stream = apr_pcalloc(resource->pool, sizeof(**stream));
   (*stream)->res = resource;
@@ -663,6 +680,8 @@ static dav_error * dav_svn_read_stream(dav_stream *stream, void *buf,
 static dav_error * dav_svn_write_stream(dav_stream *stream, const void *buf,
                                         apr_size_t bufsize)
 {
+  /* ### svn_fs_apply_textdelta */
+
   /* ### fill this in */
   return NULL;
 }
@@ -737,7 +756,30 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 
 static dav_error * dav_svn_create_collection(dav_resource *resource)
 {
-  /* ### fill this in */
+  svn_error_t *serr;
+  svn_fs_node_t *parent;
+
+  if (resource->type != DAV_RESOURCE_TYPE_WORKING)
+    {
+      return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                           "Collections can only be created within a working "
+                           "collection [at this time].");
+    }
+
+  /* ### note that the parent was checked out at some point, and this
+     ### is being preformed relative to the working rsrc for that parent */
+
+  /* ### fix the parent. wait for new path-based FS API */
+  parent = NULL;
+
+  if ((serr = svn_fs_make_dir(parent, resource->info->object_name,
+                              resource->pool)) != NULL)
+    {
+      /* ### need a better error */
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "Could not create the collection.");
+    }
+
   return NULL;
 }
 
@@ -746,7 +788,12 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
                                          int depth,
                                          dav_response **response)
 {
-  /* ### fill this in */
+  /* ### source must be from a collection under baseline control. the
+     ### baseline will (implicitly) indicate the source revision, and the
+     ### path will be derived simply from the URL path */
+
+  /* ### the destination's parent must be a working collection */
+
   return NULL;
 }
 
@@ -754,6 +801,9 @@ static dav_error * dav_svn_move_resource(dav_resource *src,
                                          dav_resource *dst,
                                          dav_response **response)
 {
+  /* NOTE: Subversion does not use the MOVE method. Strictly speaking,
+     we do not need to implement this repository function. */
+
   /* ### fill this in */
   return NULL;
 }
@@ -761,6 +811,37 @@ static dav_error * dav_svn_move_resource(dav_resource *src,
 static dav_error * dav_svn_remove_resource(dav_resource *resource,
                                            dav_response **response)
 {
+  svn_error_t *serr;
+  svn_fs_node_t *parent;
+
+  if (resource->type != DAV_RESOURCE_TYPE_WORKING)
+    {
+      return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                           "Resources can only be deleted from within a "
+                           "working collection [at this time].");
+    }
+
+  /* ### note that the parent was checked out at some point, and this
+     ### is being preformed relative to the working rsrc for that parent */
+
+  /* NOTE: strictly speaking, we cannot determine whether the parent was
+     ever checked out, and that this working resource is relative to that
+     checked out parent. It is entirely possible the client checked out
+     the target resource and just deleted it. Subversion doesn't mind, but
+     this does imply we are not enforcing the "checkout the parent, then
+     delete from within" semantic. */
+
+  /* ### fix this. wait for new FS APIs */
+  parent = NULL;
+
+  if ((serr = svn_fs_delete_tree(parent, resource->info->object_name,
+                                 resource->pool)) != NULL)
+    {
+      /* ### need a better error */
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "Could not delete the resource.");
+    }
+
   /* ### fill this in */
   return NULL;
 }
