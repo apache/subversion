@@ -1,25 +1,29 @@
 Version 0.10
 
  User-visible changes:
+ * fewer out-of-memory errors:  (see "memory consumption" below)
  * clearer user errors:  
        - detailed marshalling of server errors to client
+       - better errors from ra_dav
        - better commandline-client-specific error messages
- * fewer out-of-memory errors:  (see "memory consumption" below)
  * 'svn log' now works on single paths correctly
  * show locked directories in 'svn status'
  * 'svnadmin lstxns' improvements, and new --long switch
  * commits show "Replacing" instead of "Deleting/Adding" (#571)
+ * commits show progress on postfix txdeltas.
 
  Developer-visible changes:
  * reduced memory consumption
       - new Editor interface that manages pools automatically
-      - conversion of many existing editors to new system
+      - conversion of most existing editors to new system
       - have libsvn_fs write data to DB streamily
       - reduce DB logfile growth via 'duplicate keys'
       - stop using one pool for post-commit processing
+      - stop using one pool for sending all textdeltas
+      - many, many other pool-usage improvements in libsvn_wc, ra_dav, etc.
  * start of work on 'svn merge": issue 504, and diff3 integration
  * start of work on disjoint-url detection:  issue 575
- * new path functions that use const char *
+ * start removing stringbuf path library funcs; use new const char * funcs
  * better python 2.X detection in test suite
  * svnlook uses single tempdir
  * build system evolution

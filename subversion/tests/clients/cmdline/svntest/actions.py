@@ -221,7 +221,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   output, errput = main.run_svn(error_re_string, 'ci', '-m', '"log msg"',*args)
 
   if (error_re_string):
-    rm = re.compile (error_re_string)
+    rm = re.compile(error_re_string)
     for line in errput:
       match = rm.search(line)
       if match:
@@ -235,13 +235,27 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   if len(output):
     lastline = string.strip(output.pop())
     
-    cm = re.compile ("(Committed|Imported) revision [0-9]+.")
-    match = cm.search (lastline)
+    cm = re.compile("(Committed|Imported) revision [0-9]+.")
+    match = cm.search(lastline)
     if not match:
       print "ERROR:  commit did not succeed."
       print "The final line from 'svn ci' was:"
       print lastline
       return 1
+
+  # The new 'final' line in the output is either a regular line that
+  # mentions {Adding, Deleting, Sending, ...}, or it could be a line
+  # that says "Transmitting file data ...".  If the latter case, we
+  # want to remove the line from the output; it should be ignored when
+  # building a tree.
+  if len(output):
+    lastline = output.pop()
+
+    tm = re.compile("Transmitting file data.+")
+    match = tm.search(lastline)
+    if not match:
+      # whoops, it was important output, put it back.
+      output.append(lastline)
     
   # Convert the output into a tree.
   expected_tree = tree.build_tree_from_commit (output)
