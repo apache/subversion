@@ -69,7 +69,7 @@ static void dav_svn_get_vsn_options(apr_pool_t *p, ap_text_header *phdr)
      on the DAV: header */
 
   ap_text_append(p, phdr,
-                 "version-control,checkout,version-history,working-resource");
+                 "version-control,checkout,working-resource");
   ap_text_append(p, phdr,
                  "merge,baseline,activity,version-controlled-collection");
 
