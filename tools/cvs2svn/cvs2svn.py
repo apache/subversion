@@ -408,6 +408,9 @@ class CollectData(rcsparse.Sink):
     if not self.metadata_db.has_key(digest):
       self.metadata_db[digest] = (author, log)
 
+def run_command(command):
+  if os.system(command):
+    sys.exit('Command failed: "%s"' % command)
 
 def make_path(ctx, path, branch_name = None, tag_name = None):
   """Return the trunk path, branch path, or tag path for PATH.
@@ -1034,7 +1037,7 @@ class Dumper:
       self.init_dumpfile()
     elif ctx.create_repos:
       print "creating repos '%s'" % (self.target)
-      os.system('%s create %s' % (self.svnadmin, self.target))
+      run_command('%s create %s' % (self.svnadmin, self.target))
 
     
   def init_dumpfile(self):
@@ -1054,8 +1057,8 @@ class Dumper:
       return
     self.dumpfile.close()
     print "loading revision %d into '%s'" % (self.revision, self.target)
-    os.system('%s load -q %s < %s'
-              % (self.svnadmin, self.target, self.dumpfile_path))
+    run_command('%s load -q %s < %s'
+                % (self.svnadmin, self.target, self.dumpfile_path))
     os.remove(self.dumpfile_path)
   
   def start_revision(self, props):
@@ -1255,8 +1258,8 @@ class Dumper:
     ### use it to set svn:mime-type.
 
     basename = os.path.basename(rcs_file[:-2])
-    pipe = os.popen('co -q -p%s %s'
-                    % (cvs_rev, escape_shell_arg(rcs_file)), 'r')
+    pipe_cmd = 'co -q -p%s %s' % (cvs_rev, escape_shell_arg(rcs_file))
+    pipe = os.popen(pipe_cmd, 'r')
 
     # You might think we could just test
     #
@@ -1298,7 +1301,8 @@ class Dumper:
       length = length + len(buf)
       self.dumpfile.write(buf)
       buf = pipe.read()
-    pipe.close()
+    if pipe.close() is not None:
+      sys.exit('%s: Command failed: "%s"' % (error_prefix, pipe_cmd))
 
     # Go back to patch up the length and checksum headers:
     self.dumpfile.seek(pos, 0)
@@ -2337,8 +2341,8 @@ def pass2(ctx):
 
 def pass3(ctx):
   # sort the log files
-  os.system('sort %s > %s' % (ctx.log_fname_base + CLEAN_REVS_SUFFIX,
-                              ctx.log_fname_base + SORTED_REVS_SUFFIX))
+  run_command('sort %s > %s' % (ctx.log_fname_base + CLEAN_REVS_SUFFIX,
+                                ctx.log_fname_base + SORTED_REVS_SUFFIX))
 
 
 def pass4(ctx):
