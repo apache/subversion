@@ -143,6 +143,9 @@ generate_delta_tree (svn_repos_node_t **tree,
                                   base_root, root, pool, edit_pool));
   
   /* Drive our editor. */
+  /* ### Change the last FALSE to TRUE to get the copyfrom behavior.
+     But don't do it yet, unless you're debugging, since not all cases
+     are handled perfectly a.t.m. */
   SVN_ERR (svn_repos_dir_delta (base_root, "", NULL, src_revs, root, "",
                                 editor, edit_baton, FALSE, TRUE, FALSE, FALSE,
                                 edit_pool));
@@ -403,10 +406,10 @@ print_diff_tree (svn_fs_root_t *root,
                  svn_fs_root_t *base_root,
                  svn_repos_node_t *node, 
                  svn_stringbuf_t *path,
+                 svn_stringbuf_t *base_path,
                  apr_pool_t *pool)
 {
   svn_repos_node_t *tmp_node;
-  svn_stringbuf_t *full_path;
   svn_stringbuf_t *orig_path = NULL, *new_path = NULL;
   apr_file_t *fh1, *fh2;
       
@@ -415,6 +418,31 @@ print_diff_tree (svn_fs_root_t *root,
 
   /* Print the node. */
   tmp_node = node;
+
+  /* Print copyfrom history for the top node of a copied tree. */
+  if ((SVN_IS_VALID_REVNUM (tmp_node->copyfrom_rev))
+      && (tmp_node->copyfrom_path != NULL))
+    {
+      /* Propagate the new base.  Copyfrom paths usually start with a
+         slash; we remove it for consistency with the target path.
+         ### Yes, it would be *much* better for something in the path
+             library to be taking care of this! */
+      if (tmp_node->copyfrom_path[0] == '/')
+        base_path = svn_stringbuf_create (tmp_node->copyfrom_path + 1, pool);
+      else
+        base_path = svn_stringbuf_create (tmp_node->copyfrom_path, pool);
+
+      /* However, here we use leading slashes, because this output
+         doesn't have to be feedable into diff, and the slashes help
+         clarify that these are paths, especially when there's only
+         one component (as in a top-level copy). */
+      printf ("Copied /%s (from rev %" SVN_REVNUM_T_FMT ", /%s)\n\n",
+              tmp_node->name, tmp_node->copyfrom_rev, base_path->data);
+
+      SVN_ERR (svn_fs_revision_root (&base_root,
+                                     svn_fs_root_fs (base_root),
+                                     tmp_node->copyfrom_rev, pool));
+    }
 
   /* First, we'll just print file content diffs. */
   if (tmp_node->kind == svn_node_file)
@@ -450,7 +478,8 @@ print_diff_tree (svn_fs_root_t *root,
 
           SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path->data,
                                             NULL, FALSE, pool));
-          SVN_ERR (dump_contents (fh2, base_root, path, pool));
+          SVN_ERR (dump_contents
+                   (fh2, base_root, base_path, pool));
           apr_file_close (fh2);
         }
       if (tmp_node->action == 'A')
@@ -461,6 +490,7 @@ print_diff_tree (svn_fs_root_t *root,
           SVN_ERR (dump_contents (fh1, root, path, pool));
           apr_file_close (fh1);
 
+          /* Create an empty file. */
           SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path->data,
                                             NULL, FALSE, pool));
           apr_file_close (fh2);
@@ -474,7 +504,8 @@ print_diff_tree (svn_fs_root_t *root,
 
           SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path->data,
                                             NULL, FALSE, pool));
-          SVN_ERR (dump_contents (fh2, base_root, path, pool));
+          SVN_ERR (dump_contents
+                   (fh2, base_root, base_path, pool));
           apr_file_close (fh2);
         }
     }
@@ -504,7 +535,7 @@ print_diff_tree (svn_fs_root_t *root,
           (apr_err, 0, NULL, pool,
            "print_diff_tree: can't open handle to stdout");
 
-      label = apr_psprintf (pool, "%s\t(original)", path->data);
+      label = apr_psprintf (pool, "%s\t(original)", base_path->data);
       SVN_ERR (svn_path_get_absolute (&abs_path, orig_path, pool));
       SVN_ERR (svn_io_run_diff (SVNLOOK_TMPDIR, NULL, 0, label,
                                 abs_path->data, path->data, 
@@ -528,15 +559,21 @@ print_diff_tree (svn_fs_root_t *root,
     return SVN_NO_ERROR;
 
   /* Recursively handle the node's children. */
-  full_path = svn_stringbuf_dup (path, pool);
-  svn_path_add_component_nts (full_path, tmp_node->name);
-  SVN_ERR (print_diff_tree (root, base_root, tmp_node, full_path, pool));
+  svn_path_add_component_nts (path, tmp_node->name);
+  svn_path_add_component_nts (base_path, tmp_node->name);
+  SVN_ERR (print_diff_tree (root, base_root, tmp_node, path, base_path, pool));
+  svn_path_remove_component (path);
+  svn_path_remove_component (base_path);
+
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
-      svn_stringbuf_set (full_path, path->data);
-      svn_path_add_component_nts (full_path, tmp_node->name);
-      SVN_ERR (print_diff_tree (root, base_root, tmp_node, full_path, pool));
+      svn_path_add_component_nts (path, tmp_node->name);
+      svn_path_add_component_nts (base_path, tmp_node->name);
+      SVN_ERR (print_diff_tree (root, base_root, tmp_node, path,
+                                base_path, pool));
+      svn_path_remove_component (path);
+      svn_path_remove_component (base_path);
     }
 
   return SVN_NO_ERROR;
@@ -822,8 +859,9 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (tree)
     {
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
-      SVN_ERR (print_diff_tree 
-               (root, base_root, tree, svn_stringbuf_create ("", pool), pool));
+      SVN_ERR (print_diff_tree
+               (root, base_root, tree, svn_stringbuf_create ("", pool),
+                svn_stringbuf_create ("", pool), pool));
       apr_dir_remove_recursively (SVNLOOK_TMPDIR, pool);
     }
   return SVN_NO_ERROR;

@@ -231,13 +231,13 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
    propchange editor calls that relay special "entry props" (this
    is typically used only for working copy updates).
 
-   If USE_COPY_HISTORY is TRUE, then when recursing on a node with
-   copy history, express differences as against the node referred to
-   by that copy history.  Else if USE_COPY_HISTORY is FALSE, then
+   If USE_COPY_HISTORY is TRUE, then when copy history is present on
+   an added node, pass it through to EDITOR, and express differences
+   as against the node referred to by that copy history.  Else if
+   USE_COPY_HISTORY is FALSE, then never pass copyfrom history, and
    express differences as full adds (i.e., all directory entries are
    reported as adds, and text deltas are sent against the empty
-   string).  Either way, pass `copyfrom' arguments through to the
-   EDITOR's add_file and add_directory when copy history is present.
+   string).
 
    Before completing successfully, this function calls EDITOR's
    close_edit(), so the caller should expect its EDIT_BATON to be

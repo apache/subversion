@@ -37,9 +37,9 @@
 
 /* Parameters which remain constant throughout a delta traversal.
    At the top of the recursion, we initialize one of these structures.
-   Then, we pass it down, unchanged, to every call.  This way,
-   functions invoked deep in the recursion can get access to this
-   traversal's global parameters, without using global variables.  */
+   Then we pass it down to every call.  This way, functions invoked
+   deep in the recursion can get access to this traversal's global
+   parameters, without using global variables.  */
 struct context {
   const svn_delta_edit_fns_t *editor;
   svn_fs_root_t *source_root;
@@ -711,10 +711,12 @@ add_file_or_dir (struct context *c, void *dir_baton,
 {
   int is_dir;
   svn_stringbuf_t *target_full_path;
-  svn_revnum_t base_revision = SVN_INVALID_REVNUM;
+  svn_revnum_t copied_from_revision = SVN_INVALID_REVNUM;
+  const char *copied_from_path = NULL;
 
-  /* ### change the delta interface */
+  /* ### Upgrade this driver to the svn_delta_editor_t interface! */
   svn_stringbuf_t *namebuf;
+  svn_stringbuf_t *copied_path_buf = NULL;
 
   if (!target_parent || !target_entry)
     abort();
@@ -729,14 +731,39 @@ add_file_or_dir (struct context *c, void *dir_baton,
 
   namebuf = svn_stringbuf_create (target_entry, pool);
 
+  if (c->use_copy_history)
+    {
+      SVN_ERR (svn_fs_copied_from (&copied_from_revision,
+                                   &copied_from_path,
+                                   c->target_root,
+                                   target_full_path->data,
+                                   pool));
+    }
+
+  if ((SVN_IS_VALID_REVNUM (copied_from_revision)) && copied_from_path)
+    {
+      struct context *new_context
+        = apr_palloc (pool, sizeof (*new_context));
+      
+      *new_context = *c;
+      SVN_ERR (svn_fs_revision_root (&(c->source_root),
+                                     svn_fs_root_fs (c->target_root),
+                                     copied_from_revision, pool));
+      c = new_context;
+      
+      /* ### Also deal with legacy interface. */
+      copied_path_buf = svn_stringbuf_create (copied_from_path, pool);
+    }
+
   if (is_dir)
     {
       void *subdir_baton;
 
       SVN_ERR (c->editor->add_directory 
-               (namebuf, dir_baton, NULL, base_revision, &subdir_baton));
+               (namebuf, dir_baton,
+                copied_path_buf, copied_from_revision, &subdir_baton));
       SVN_ERR (delta_dirs (c, subdir_baton,
-                           NULL, target_full_path->data, pool));
+                           copied_from_path, target_full_path->data, pool));
       SVN_ERR (c->editor->close_directory (subdir_baton));
     }
   else
@@ -744,9 +771,10 @@ add_file_or_dir (struct context *c, void *dir_baton,
       void *file_baton;
 
       SVN_ERR (c->editor->add_file 
-               (namebuf, dir_baton, NULL, base_revision, &file_baton));
+               (namebuf, dir_baton,
+                copied_path_buf, copied_from_revision, &file_baton));
       SVN_ERR (delta_files (c, file_baton,
-                            NULL, target_full_path->data, pool));
+                            copied_from_path, target_full_path->data, pool));
       SVN_ERR (c->editor->close_file (file_baton));
     }
 
