@@ -443,14 +443,14 @@ write_and_read_file (const char **msg,
   svn_fs_root_t *txn_root;
   svn_stream_t *rstream;
   svn_stringbuf_t *rstring;
-  svn_stringbuf_t *wstring = svn_stringbuf_create ("Wicki wild, wicki wicki wild.",
-                                             pool);
+  svn_stringbuf_t *wstring;
 
   *msg = "write and read a file's contents";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
+  wstring = svn_stringbuf_create ("Wicki wild, wicki wicki wild.", pool);
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-read-and-write-file", pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));

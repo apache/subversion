@@ -176,9 +176,12 @@ FILE: how files are represented.
 If a NODE-REVISION's header's KIND is "file", then the node-revision
 skel represents a file, and has the form:
 
-    (HEADER PROP-KEY REP-KEY)
+    (HEADER PROP-KEY DATA-KEY [EDIT-DATA-KEY])
 
-where REP-KEY identifies the representation for the file's contents.
+where DATA-KEY identifies the representation for the file's current
+contents, and EDIT-DATA-KEY identifies the a representation currently
+available for receiving new contents for the file.
+
 See discussion of representations later.
 
 
@@ -188,9 +191,9 @@ DIR: how directories are represented.
 If the header's KIND is "dir", then the node-revision skel
 represents a directory, and has the form:
 
-    (HEADER PROP-KEY REP-KEY)
+    (HEADER PROP-KEY ENTRIES-KEY)
 
-where REP-KEY identifies the representation for the directory's
+where ENTRIES-KEY identifies the representation for the directory's
 entries list (see discussion of representations later).  An entries
 list has the form
 
@@ -669,7 +672,7 @@ Node revisions:
 
 
           NODE-REVISION ::= FILE | DIR ;
-                   FILE ::= (HEADER PROP-KEY DATA-KEY) ;
+                   FILE ::= (HEADER PROP-KEY DATA-KEY [EDIT-DATA-KEY]) ;
                     DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ;
                   ENTRY ::= (NAME ID) ;
                    NAME ::= atom ;

@@ -185,6 +185,7 @@ is_valid_option (skel_t *skel)
   return 0;
 }
 
+
 static int
 is_valid_header (skel_t *skel, skel_t **kind_p)
 {
@@ -212,6 +213,13 @@ is_valid_header (skel_t *skel, skel_t **kind_p)
 
 
 static int
+is_mutable_header (skel_t *skel)
+{
+  return ((skel->children->next->len == 0) ? 1 : 0);
+}
+
+
+static int
 is_valid_node_revision (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
@@ -223,12 +231,26 @@ is_valid_node_revision (skel_t *skel)
 
       if (is_valid_header (header, &kind))
         {
-          if ((svn_fs__matches_atom (kind, "file")
-               || svn_fs__matches_atom (kind, "dir"))
+          if (svn_fs__matches_atom (kind, "dir")
               && len == 3
               && header->next->is_atom
               && header->next->next->is_atom)
             return 1;
+          
+          if (svn_fs__matches_atom (kind, "file")
+              && len >= 3
+              && header->next->is_atom
+              && header->next->next->is_atom)
+            {
+              if ((len == 3) && (! header->next->next->next))
+                return 1;
+
+              /* edit-data-key can only exist on mutable file nodes. */
+              if ((len == 4) 
+                  && is_mutable_header (header)
+                  && header->next->next->next->is_atom)
+                return 1;
+            }
         }
     }
 

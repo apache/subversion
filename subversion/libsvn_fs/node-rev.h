@@ -36,6 +36,9 @@
 /* Access the DATA-KEY (or ENTRIES-KEY) of a node revision skel. */
 #define SVN_FS__NR_DATA_KEY(node_rev) ((node_rev)->children->next->next)
 
+/* Access the EDIT-DATA-KEY of a `file' node revision skel. */
+#define SVN_FS__NR_EDIT_KEY(node_rev) ((node_rev)->children->next->next->next)
+
 /* Access the KIND skel of a node revision header.
    NOTE: takes a header skel, not a node-revision skel.  */
 #define SVN_FS__NR_HDR_KIND(header) ((header)->children)

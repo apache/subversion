@@ -376,12 +376,19 @@ svn_error_t *svn_fs__dag_get_contents (svn_stream_t **contents,
                                        trail_t *trail);
 
 
-/* Set the contents of FILE to CONTENTS, as part of TRAIL.  (Yes, this
-   interface will need to be revised to handle large files; let's get
-   things working first.)  */
-svn_error_t *svn_fs__dag_set_contents (dag_node_t *file,
-                                       svn_stringbuf_t *contents,
-                                       trail_t *trail);
+/* Return a generic writable stream in *CONTENTS with which to set the
+   contents of FILE as part of TRAIL.  Allocate the stream in
+   POOL, which may or may not be TRAIL->pool.  */
+svn_error_t *svn_fs__dag_get_edit_stream (svn_stream_t **contents,
+                                          dag_node_t *file,
+                                          apr_pool_t *pool,
+                                          trail_t *trail);
+
+
+/* Signify the completion of edits to FILE made using the stream
+   returned by svn_fs__dag_get_edit_stream, as part of TRAIL.  */
+svn_error_t *svn_fs__dag_finalize_edits (dag_node_t *file,
+                                         trail_t *trail);
 
 
 /* Set *LENGTH to the length of the contents of FILE, as part of TRAIL. */
