@@ -48,6 +48,21 @@ def export_empty_directory(sbox):
   if not os.path.exists(export_target):
     raise svntest.Failure
 
+def export_greek_tree(sbox):
+  "export the greek tree"
+  sbox.build()
+
+  svntest.main.safe_rmtree(sbox.wc_dir)
+  export_target = sbox.wc_dir
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = sbox.wc_dir
+  expected_output.desc[''] = Item()
+  expected_output.tweak(contents=None, status='A ')
+
+  svntest.actions.run_and_verify_export(svntest.main.current_repo_url,
+                                        export_target,
+                                        expected_output,
+                                        svntest.main.greek_state.copy())
 
 ########################################################################
 # Run the tests
@@ -56,6 +71,7 @@ def export_empty_directory(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               export_empty_directory,
+              export_greek_tree,
              ]
 
 if __name__ == '__main__':
