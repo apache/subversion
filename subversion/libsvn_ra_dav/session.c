@@ -45,6 +45,13 @@ static apr_status_t cleanup_session(void *sess)
   return APR_SUCCESS;
 }
 
+/* a cleanup routine attached to the pool that contains the RA session
+   root URI. */
+static apr_status_t cleanup_uri(void *uri)
+{
+  ne_uri_free(uri);
+  return APR_SUCCESS;
+}
 
 /* A neon-session callback to 'pull' authentication data when
    challenged.  In turn, this routine 'pulls' the data from the client
@@ -465,12 +472,15 @@ svn_ra_dav__open (void **session_baton,
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
   ras->url = apr_pstrdup (pool, repos_URL);
-  ras->root = uri; /* copies uri pointer members, they get free'd in __close. */
+  ras->root = uri;
   ras->sess = sess;
   ras->sess2 = sess2;  
   ras->callbacks = callbacks;
   ras->callback_baton = callback_baton;
   ras->compression = compression;
+
+  /* make sure we eventually destroy the uri */
+  apr_pool_cleanup_register(pool, &ras->root, cleanup_uri, apr_pool_cleanup_null);
 
   /* note that ras->username and ras->password are still NULL at this
      point. */
@@ -486,17 +496,6 @@ svn_ra_dav__open (void **session_baton,
   return SVN_NO_ERROR;
 }
 
-
-
-static svn_error_t *svn_ra_dav__close (void *session_baton)
-{
-  svn_ra_session_t *ras = session_baton;
-
-  (void) apr_pool_cleanup_run(ras->pool, ras->sess, cleanup_session);
-  (void) apr_pool_cleanup_run(ras->pool, ras->sess2, cleanup_session);
-  ne_uri_free(&ras->root);
-  return NULL;
-}
 
 
 static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
@@ -523,7 +522,6 @@ static const svn_ra_plugin_t dav_plugin = {
   "ra_dav",
   "Module for accessing a repository via WebDAV (DeltaV) protocol.",
   svn_ra_dav__open,
-  svn_ra_dav__close,
   svn_ra_dav__get_latest_revnum,
   svn_ra_dav__get_dated_revision,
   svn_ra_dav__change_rev_prop,

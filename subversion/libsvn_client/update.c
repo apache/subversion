@@ -149,9 +149,6 @@ svn_client__update_internal (const char *path,
           return err;
         }
       *use_sleep = TRUE;
-
-      /* Close the RA session. */
-      SVN_ERR (ra_lib->close (session));
     }      
   
   /* We handle externals after the update is complete, so that

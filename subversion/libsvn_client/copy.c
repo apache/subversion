@@ -435,8 +435,6 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                                                committed_date,
                                                pool);
 
-  SVN_ERR (ra_lib->close (sess));
-
   return SVN_NO_ERROR;
 }
 
@@ -578,11 +576,6 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                                svn_path_uri_decode (target, pool),
                                SVN_INVALID_REVNUM));
   
-  /* Close the RA session.  We'll re-open it after we've figured out
-     the right URL to open. */
-  SVN_ERR (ra_lib->close (session));
-  session = NULL;
-
   /* BASE_URL defaults to DST_URL. */
   base_url = apr_pstrdup (pool, dst_url);
   if (dst_kind == svn_node_none)
@@ -666,10 +659,6 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* Abort the commit if it is still in progress. */
   if (commit_in_progress)
     editor->abort_edit (edit_baton, pool); /* ignore return value */
-
-  /* We were committing to RA, so close the session. */
-  if (session)
-    ra_lib->close (session);
 
   /* ### Under what conditions should we remove the locks? */
   unlock_err = svn_wc_adm_close (adm_access);
@@ -875,9 +864,6 @@ repos_to_wc_copy (const char *src_url,
         src_revnum = fetched_rev;
     }
 
-  /* Free the RA session. */
-  SVN_ERR (ra_lib->close (sess));
-      
   /* Schedule the new item for addition-with-history.
 
      If the new item is a directory, the URLs will be recursively

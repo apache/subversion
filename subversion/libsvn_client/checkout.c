@@ -123,9 +123,6 @@ svn_client__checkout_internal (const char *URL,
           return err;
         }
       *use_sleep = TRUE;
-
-      /* Close the RA session. */
-      SVN_ERR (ra_lib->close (session));
     }      
   
   /* We handle externals after the initial checkout is complete, so

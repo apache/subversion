@@ -167,9 +167,6 @@ svn_client_revprop_set (const char *propname,
   /* The actual RA call. */
   SVN_ERR (ra_lib->change_rev_prop (session, *set_rev, propname, propval));
 
-  /* All done. */
-  SVN_ERR (ra_lib->close(session));
-
   return SVN_NO_ERROR;
 }
 
@@ -522,9 +519,6 @@ svn_client_propget (apr_hash_t **props,
           return svn_error_create
             (SVN_ERR_CLIENT_BAD_REVISION, NULL, "unknown revision kind");
         }
-
-      /* Close the RA session. */
-      SVN_ERR (ra_lib->close (session));
     }
   else  /* working copy path */
     {
@@ -609,9 +603,6 @@ svn_client_revprop_get (const char *propname,
 
   /* The actual RA call. */
   SVN_ERR (ra_lib->rev_prop (session, *set_rev, propname, propval));
-
-  /* All done. */
-  SVN_ERR (ra_lib->close(session));
 
   return SVN_NO_ERROR;
 }
@@ -910,9 +901,6 @@ svn_client_proplist (apr_array_header_t **props,
           return svn_error_create
             (SVN_ERR_CLIENT_BAD_REVISION, NULL, "unknown revision kind");
         }
-
-      /* Close the RA session. */
-      SVN_ERR (ra_lib->close (session));
     }
   else  /* working copy path */
     {
@@ -992,9 +980,6 @@ svn_client_revprop_list (apr_hash_t **props,
       apr_hash_this (hi, &key, &klen, &val);
       apr_hash_set (proplist, key, klen, val);
     } 
-
-  /* All done. */
-  SVN_ERR (ra_lib->close(session));
   
   *props = proplist;
   return SVN_NO_ERROR;

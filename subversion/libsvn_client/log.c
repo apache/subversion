@@ -289,8 +289,5 @@ svn_client_log (const apr_array_header_t *targets,
       }
   }
   
-  /* We're done with the RA session. */
-  SVN_ERR (ra_lib->close (session));
-
   return err;
 }
