@@ -45,6 +45,22 @@ path_index = svntest.actions.path_index
   
 
 ######################################################################
+#
+# The Plan:
+#
+# Get a repository, commit about 6 or 7 revisions to it, each
+# involving different kinds of operations.  Make sure to have some
+# add, del, mv, cp, as well as file modifications, and make sure that
+# some files are modified more than once.
+#
+# Give each commit a recognizeable log message.  Test all combinations
+# of -r options, including none.  Then test with -v, which will
+# (presumably) show changed paths as well.
+#
+######################################################################
+
+
+######################################################################
 # Utilities
 #
 
