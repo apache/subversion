@@ -2351,6 +2351,62 @@ def merge_file_with_space_in_its_name(sbox):
   finally:
     os.chdir(saved_cwd)
 
+#----------------------------------------------------------------------
+# A merge between two branches using no revision number with the dir being
+# created already existing as an unversioned directory.
+# Tests for Issue #2222
+  
+def merge_dir_branches(sbox):
+  "merge between branches (Issue #2222)"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  F_url = svntest.main.current_repo_url + '/A/B/F'
+  C_url = svntest.main.current_repo_url + '/A/C'
+
+  # Create foo in F
+  foo_path = os.path.join(F_path, 'foo')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
+
+  expected_output = wc.State(wc_dir, {
+    'A/B/F/foo' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/foo'    : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Create an unversioned foo
+  foo_path = os.path.join(wc_dir, 'foo')
+  os.mkdir(foo_path)
+
+  # Merge from C to F onto the wc_dir
+  # We can't use run_and_verify_merge because it doesn't support this
+  # syntax of the merge command.  
+  # XXX: Change this if run_and_verify_merge ever gets fixed
+  expected_output = ["A  " + foo_path + "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', C_url, F_url, wc_dir)
+
+  # Run info to check the copied rev to make sure it's right
+  expected_output = ["Path: " + foo_path + "\n",
+                     "URL: " + svntest.main.current_repo_url + "/foo\n",
+                     "Revision: 2\n",
+                     "Node Kind: directory\n",
+                     "Schedule: add\n",
+                     "Copied From URL: " + F_url + "/foo\n",
+                     "Copied From Rev: 2\n", "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'info', foo_path)
+  
 
 ########################################################################
 # Run the tests
@@ -2379,6 +2435,7 @@ test_list = [ None,
               merge_prop_change_to_deleted_target,
               merge_dir_replace,
               merge_file_with_space_in_its_name,
+              merge_dir_branches,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.

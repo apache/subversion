@@ -15,8 +15,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_FS_H
-#define SVN_LIBSVN_FS_FS_H
+#ifndef SVN_LIBSVN_FS_BASE_H
+#define SVN_LIBSVN_FS_BASE_H
 
 #define APU_WANT_DB
 #include <apu_want.h>
@@ -32,6 +32,11 @@ extern "C" {
 
 
 /*** The filesystem structure.  ***/
+
+/* The format number of this filesystem.
+   This is independent of the repository format number, and
+   independent of any other FS back ends. */
+#define SVN_FS_BASE__FORMAT_NUMBER   1
 
 #define BDB_ERRCALL_BATON_ERRPFX_STRING "svn (bdb): "
 typedef struct
@@ -83,6 +88,10 @@ typedef struct
 
   /* A baton for collecting detailed errors from Berkeley DB. */
   bdb_errcall_baton_t *errcall_baton;
+
+  /* The format number of this FS. */
+  int format;
+
 } base_fs_data_t;
 
 
@@ -319,4 +328,4 @@ typedef struct
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_FS_H */
+#endif /* SVN_LIBSVN_FS_BASE_H */

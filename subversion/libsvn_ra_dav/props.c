@@ -530,7 +530,8 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                           set_parser, propfind_elements, 
                                           validate_element, 
                                           start_element, end_element, 
-                                          &pc, extra_headers, NULL, pool);
+                                          &pc, extra_headers, NULL, FALSE, 
+                                          pool);
 
   ne_buffer_destroy(body);
   *results = pc.props;

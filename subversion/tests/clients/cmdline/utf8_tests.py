@@ -110,19 +110,35 @@ except:
 
 # Check to see if the locale uses ISO-8859-1 encoding.  The regex is necessary
 # because some systems ommit the first hyphen or use lowercase letters for ISO.
-localeenc = locale.getlocale()[1]
-if localeenc:
-  localeregex = re.compile('^ISO-?8859-1$', re.I)
-  localematch = localeregex.search(localeenc)
-  try:
-    svntest.actions.run_and_verify_svn("",svntest.SVNAnyOutput, None,"help")
-  except:
-    # We won't be able to run the client; this might be because the
-    # system does not support the iso-8859-1 locale. Anyhow, it makes
-    # no sense to run the test.
-    localematch = None
+if sys.platform == 'win32':
+  localematch = 1
 else:
-  localematch = None
+  localeenc = locale.getlocale()[1]
+  if localeenc:
+    localeregex = re.compile('^ISO-?8859-1$', re.I)
+    localematch = localeregex.search(localeenc)
+    try:
+      svntest.actions.run_and_verify_svn("",svntest.SVNAnyOutput, None,"help")
+    except:
+      # We won't be able to run the client; this might be because the
+      # system does not support the iso-8859-1 locale. Anyhow, it makes
+      # no sense to run the test.
+      localematch = None
+  else:
+    localematch = None
+
+# Also check that the environment contains the expected locale settings
+# either by default, or because we set them above.
+if localematch:
+  localeregex = re.compile('^en_US\.ISO-?8859-1$', re.I)
+  for env in [ 'LC_ALL', 'LC_CTYPE', 'LANG' ]:
+    env_value = os.getenv(env)
+    if env_value:
+      if localeregex.search(env_value):
+        break
+      else:
+        localematch = None
+        break
 
 # list all tests here, starting with None:
 test_list = [ None,

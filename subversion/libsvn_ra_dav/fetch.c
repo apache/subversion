@@ -193,6 +193,9 @@ typedef struct {
      it's not really updating the top level directory. */
   const char *target;
 
+  /* Use an intermediate tmpfile for the REPORT response. */
+  svn_boolean_t spool_response;
+
   /* A modern server will understand our "send-all" attribute on the
      update report request, and will put a "send-all" attribute on
      its response.  If we see that attribute, we set this to true,
@@ -202,11 +205,6 @@ typedef struct {
   svn_error_t *err;
 
 } report_baton_t;
-
-static const char report_head[]
-   = "<S:update-report send-all=\"true\" xmlns:S=\""
-      SVN_XML_NAMESPACE "\">" DEBUG_CR;
-static const char report_tail[] = "</S:update-report>" DEBUG_CR;
 
 static const svn_ra_dav__xml_elm_t report_elements[] =
 {
@@ -1106,7 +1104,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (svn_ra_session_t *session,
                                           drev_report_elements,
                                           drev_validate_element,
                                           drev_start_element, drev_end_element,
-                                          revision, NULL, NULL, pool);
+                                          revision, NULL, NULL, FALSE, pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err, _("Server does not support date-based "
                                        "operations"));
@@ -1248,7 +1246,7 @@ svn_ra_dav__get_locations(svn_ra_session_t *session,
                                    request_body->data, NULL, NULL,
                                    gloc_start_element, NULL, NULL,
                                    &request_baton, NULL, &status_code,
-                                   pool);
+                                   FALSE, pool);
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */
@@ -1578,6 +1576,7 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
                                    &baton,
                                    NULL, /* extra headers */
                                    &status_code,
+                                   FALSE,
                                    pool);
   if (baton.err)
     return baton.err;
@@ -2749,10 +2748,13 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   const char *vcc;
   int http_status;
 
+#define SVN_RA_DAV__REPORT_TAIL  "</S:update-report>" DEBUG_CR
   /* write the final closing gunk to our request body. */
   SVN_ERR( svn_io_file_write_full(rb->tmpfile,
-                                  report_tail, sizeof(report_tail) - 1,
+                                  SVN_RA_DAV__REPORT_TAIL, 
+                                  sizeof(SVN_RA_DAV__REPORT_TAIL) - 1,
                                   NULL, rb->ras->pool) );
+#undef SVN_RA_DAV__REPORT_TAIL
 
   /* get the editor process prepped */
   rb->dirs = apr_array_make(rb->ras->pool, 5, sizeof(dir_item_t));
@@ -2777,7 +2779,8 @@ static svn_error_t * reporter_finish_report(void *report_baton,
                                    cdata_handler,
                                    end_element,
                                    rb,
-                                   NULL, &http_status, rb->ras->pool);
+                                   NULL, &http_status, 
+                                   rb->spool_response, rb->ras->pool);
 
   /* we're done with the file */
   (void) apr_file_close(rb->tmpfile);
@@ -2812,8 +2815,40 @@ static const svn_ra_reporter2_t ra_dav_reporter = {
 };
 
 
-/* Make a generic reporter/baton for reporting the state of the
-   working copy during updates or status checks. */
+/* Make a generic REPORTER / REPORT_BATON for reporting the state of
+   the working copy against REVISION during updates or status checks.
+   The server will drive EDITOR / EDIT_BATON to indicate how to
+   transform the working copy into the requested target.
+
+   SESSION is the RA session in use.  TARGET is an optional single
+   path component will restrict the scope of the operation to an entry
+   in the directory represented by the SESSION's URL, or empty if the
+   entire directory is meant to be the target.
+
+   If RECURSE is set, the operation will be recursive (intead of
+   "depth 1").
+
+   If IGNORE_ANCESTRY is set, the server will transmit real diffs
+   between the working copy and the target even if those objects are
+   not historically related.  Otherwise, the response will generally
+   look like a giant delete followed by a giant add.
+
+   RESOURCE_WALK controls whether to ask the DAV server to supply an
+   entire tree's worth of version-resource-URL working copy cache
+   updates.
+
+   FETCH_CONTENT is used by the REPORT response parser to determine
+   whether it should bother getting the contents of files represented
+   in the delta response (of if a directory delta is all that is of
+   interest).
+
+   If SEND_ALL is set, the server will be asked to embed contents into
+   the main response.
+
+   If SPOOL_RESPONSE is set, the REPORT response will be cached to
+   disk in a tmpfile (in full), then read back and parsed.
+ 
+   Oh, and do all this junk in POOL.  */
 static svn_error_t *
 make_reporter (svn_ra_session_t *session,
                const svn_ra_reporter2_t **reporter,
@@ -2827,6 +2862,8 @@ make_reporter (svn_ra_session_t *session,
                const svn_delta_editor_t *editor,
                void *edit_baton,
                svn_boolean_t fetch_content,
+               svn_boolean_t send_all,
+               svn_boolean_t spool_response,
                apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
@@ -2844,6 +2881,7 @@ make_reporter (svn_ra_session_t *session,
   rb->is_switch = dst_path ? TRUE : FALSE;
   rb->target = target;
   rb->receiving_all = FALSE;
+  rb->spool_response = spool_response;
   rb->whandler = NULL;
   rb->whandler_baton = NULL;
   rb->svndiff_decoder = NULL;
@@ -2870,8 +2908,10 @@ make_reporter (svn_ra_session_t *session,
      ### with an error. */
 
   /* prep the file */
-  SVN_ERR( svn_io_file_write_full(rb->tmpfile, report_head,
-                                  sizeof(report_head) - 1, NULL, pool) );
+  s = apr_psprintf(pool, "<S:update-report send-all=\"%s\" xmlns:S=\""
+                   SVN_XML_NAMESPACE "\">" DEBUG_CR, 
+                   send_all ? "true" : "false");
+  SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
 
   /* always write the original source path.  this is part of the "new
      style" update-report syntax.  if the tmpfile is used in an "old
@@ -2969,6 +3009,8 @@ svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
                         wc_update,
                         wc_update_baton,
                         TRUE, /* fetch_content */
+                        TRUE, /* send_all */
+                        FALSE, /* spool_response */
                         pool);
 }
 
@@ -2995,6 +3037,8 @@ svn_error_t * svn_ra_dav__do_status(svn_ra_session_t *session,
                         wc_status,
                         wc_status_baton,
                         FALSE, /* fetch_content */
+                        TRUE, /* send_all */
+                        FALSE, /* spool_response */
                         pool);
 }
 
@@ -3023,6 +3067,8 @@ svn_error_t * svn_ra_dav__do_switch(svn_ra_session_t *session,
                         wc_update,
                         wc_update_baton,
                         TRUE, /* fetch_content */
+                        TRUE, /* send_all */
+                        FALSE, /* spool_response */
                         pool);
 }
 
@@ -3051,5 +3097,7 @@ svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
                         wc_diff,
                         wc_diff_baton,
                         TRUE, /* fetch_content */
+                        FALSE, /* send_all */
+                        TRUE, /* spool_response */
                         pool);
 }

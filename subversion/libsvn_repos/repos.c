@@ -1451,7 +1451,7 @@ create_repos_structure (svn_repos_t *repos,
   /* Write the top-level FORMAT file. */
   SVN_ERR (svn_io_write_version_file 
            (svn_path_join (path, SVN_REPOS__FORMAT, pool),
-            SVN_REPOS__VERSION, pool));
+            SVN_REPOS__FORMAT_NUMBER, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1533,35 +1533,36 @@ check_repos_path (const char *path,
 }
 
 
-/* Verify that the repository's 'format' file is a suitable version. */
+/* Verify that REPOS's's format is suitable; possibly upgrade it. 
+   Use POOL for temporary allocation. */
 static svn_error_t *
-check_repos_version (svn_repos_t *repos,
+check_repos_format (svn_repos_t *repos,
                      apr_pool_t *pool)
 {
-  int version;
+  int format;
   const char *format_path;
 
   format_path = svn_path_join (repos->path, SVN_REPOS__FORMAT, pool);
-  SVN_ERR (svn_io_read_version_file (&version, format_path, pool));
+  SVN_ERR (svn_io_read_version_file (&format, format_path, pool));
 
-  if (version == 3 && SVN_REPOS__VERSION == 4)
+  if (format == 3 && SVN_REPOS__FORMAT_NUMBER == 4)
     {
       /* Silently upgrade repository format 3 to 4, since libsvn_repos
          will automatically do the right things for that. */
-      version = 4;
+      format = 4;
       SVN_ERR (svn_io_write_version_file
                (svn_path_join (repos->path, SVN_REPOS__FORMAT, pool),
-                version, pool));
+                format, pool));
     }
-  else if (version != SVN_REPOS__VERSION)
+  else if (format != SVN_REPOS__FORMAT_NUMBER)
     {
       return svn_error_createf 
         (SVN_ERR_REPOS_UNSUPPORTED_VERSION, NULL,
-         _("Expected version '%d' of repository; found version '%d'"), 
-         SVN_REPOS__VERSION, version);
+         _("Expected format '%d' of repository; found format '%d'"), 
+         SVN_REPOS__FORMAT_NUMBER, format);
     }
 
-  repos->format = version;
+  repos->format = format;
 
   return SVN_NO_ERROR;
 }
@@ -1592,7 +1593,7 @@ get_repos (svn_repos_t **repos_p,
   init_repos_dirs (repos, path, pool);
 
   /* Verify the validity of our repository format. */
-  SVN_ERR (check_repos_version (repos, pool));
+  SVN_ERR (check_repos_format (repos, pool));
 
   /* Locking. */
   {
