@@ -1467,7 +1467,9 @@ svn_error_t *svn_wc_process_committed (const char *path,
  * will be restored from the administrative directory's cache. For each
  * file restored, the @a notify_func function will be called with the
  * @a notify_baton and the path of the restored file. @a notify_func may
- * be @c NULL if this notification is not required.
+ * be @c NULL if this notification is not required.  If @a
+ * use_commit_times is true, then set restored files' timestamps to
+ * their last-commit-times.
  *
  * If @a traversal_info is non-null, then record pre-update traversal
  * state in it.  (Caller should obtain @a traversal_info from
@@ -1480,6 +1482,7 @@ svn_wc_crawl_revisions (const char *path,
                         void *report_baton,
                         svn_boolean_t restore_files,
                         svn_boolean_t recurse,
+                        svn_boolean_t use_commit_times,
                         svn_wc_notify_func_t notify_func,
                         void *notify_baton,
                         svn_wc_traversal_info_t *traversal_info,

@@ -189,7 +189,7 @@ svn_client_switch (const char *path,
      update, and therefore we don't want to handle any externals
      except the ones directly affected by the switch. */ 
   err = svn_wc_crawl_revisions (path, adm_access, reporter, report_baton,
-                                TRUE, recurse,
+                                TRUE, recurse, use_commit_times,
                                 ctx->notify_func, ctx->notify_baton,
                                 NULL, /* no traversal info */
                                 pool);

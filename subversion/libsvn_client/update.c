@@ -167,7 +167,7 @@ svn_client__update_internal (const char *path,
          PATH.  When we call reporter->finish_report, the
          update_editor will be driven by svn_repos_dir_delta. */
       err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
-                                    TRUE, recurse,
+                                    TRUE, recurse, use_commit_times,
                                     ctx->notify_func, ctx->notify_baton,
                                     traversal_info, pool);
       
