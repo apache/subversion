@@ -743,7 +743,8 @@ check_locations (svn_fs_t *fs, struct locations_info *info,
   for (iter = info; iter->rev != 0; ++iter)
     *(svn_revnum_t *) apr_array_push (a) = iter->rev;
 
-  SVN_ERR (svn_repos_trace_node_locations (fs, &h, path, peg_revision, a, pool));
+  SVN_ERR (svn_repos_trace_node_locations (fs, &h, path, peg_revision, a,
+                                           pool));
   SVN_ERR (check_locations_info (h, info));
 
   return SVN_NO_ERROR;
@@ -782,7 +783,8 @@ node_locations (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
     struct locations_info info[] =
       {
         { 1, "/A/mu" },
-        { 2, "/mu.new" }
+        { 2, "/mu.new" },
+        { 0 }
       };
     SVN_ERR (check_locations (fs, info, "/mu.new", 2, pool));
   }
