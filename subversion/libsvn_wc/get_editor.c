@@ -1713,6 +1713,8 @@ svn_wc_get_actual_target (svn_stringbuf_t *path,
      probably also make sure that the parent directory is versioned in
      the same repository as PATH!  */
   svn_path_split (path, &dirname, &basename, svn_path_local_style, pool);
+  if (svn_path_is_empty (dirname, svn_path_local_style))
+    svn_stringbuf_set (dirname, ".");
   SVN_ERR (svn_wc_check_wc (dirname, &is_wc, pool));
 
   if (! is_wc)
