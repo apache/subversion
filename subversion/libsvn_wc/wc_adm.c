@@ -60,63 +60,9 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_hash.h"
+#include "svn_path.h"
 #include "svn_wc.h"
 #include "wc.h"
-
-
-
-/*** A path manipulation library. ***/
-
-/* kff todo: this little path manipulation library will want to live
-   somewhere else eventually, and handle more than just Unix-style
-   paths. */
-
-#define SVN_DIR_SEPARATOR '/'
-
-/* Helper for svn_wc__path_add_component_*, which see. */
-static void
-path_add_component_internal (svn_string_t *path,
-                             const char *component,
-                             size_t len,
-                             apr_pool_t *pool)
-{
-  char dirsep = SVN_DIR_SEPARATOR;
-
-  if (! svn_string_isempty (path))
-    svn_string_appendbytes (path, &dirsep, 1, pool);
-
-  svn_string_appendbytes (path, component, len, pool);
-}
-
-
-/* Like svn_wc__path_add_component(), but COMPONENT is a null-terminated
-   c-string ("nts").  Not public until there's a need for it to be. */
-static void
-svn_wc__path_add_component_nts (svn_string_t *path, 
-                               char *component,
-                               apr_pool_t *pool)
-{
-  path_add_component_internal (path, component, strlen (component), pool);
-}
-
-
-/* Extend PATH with new COMPONENT, destructively. */
-void
-svn_wc__path_add_component (svn_string_t *path, 
-                            svn_string_t *component,
-                            apr_pool_t *pool)
-{
-  path_add_component_internal (path, component->data, component->len, pool);
-}
-
-
-/* Remove PATH's deepest COMPONENT, destructively. */
-void
-svn_wc__path_remove_component (svn_string_t *path)
-{
-  if (! svn_string_chop_back_to_char (path, SVN_DIR_SEPARATOR))
-    svn_string_setempty (path);
-}
 
 
 
@@ -147,8 +93,8 @@ extend_with_admin_name (svn_string_t *path,
                         char *adm_file,
                         apr_pool_t *pool)
 {
-  svn_wc__path_add_component     (path, svn_wc__adm_subdir (pool), pool);
-  svn_wc__path_add_component_nts (path, adm_file, pool);
+  svn_path_add_component     (path, svn_wc__adm_subdir (pool), pool);
+  svn_path_add_component_nts (path, adm_file, pool);
 }
 
 
@@ -156,8 +102,8 @@ extend_with_admin_name (svn_string_t *path,
 static void
 chop_admin_name (svn_string_t *path)
 {
-  svn_wc__path_remove_component (path);
-  svn_wc__path_remove_component (path);
+  svn_path_remove_component (path);
+  svn_path_remove_component (path);
 }
 
 
@@ -171,14 +117,14 @@ make_adm_subdir (svn_string_t *path, apr_pool_t *pool)
   svn_error_t *err = NULL;
   apr_status_t apr_err = 0;
 
-  svn_wc__path_add_component (path, svn_wc__adm_subdir (pool), pool);
+  svn_path_add_component (path, svn_wc__adm_subdir (pool), pool);
 
   apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
   if (apr_err)
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Restore path to its original state no matter what. */
-  svn_wc__path_remove_component (path);
+  svn_path_remove_component (path);
 
   return err;
 }
@@ -361,9 +307,7 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
 svn_error_t *
 svn_wc__unlock (svn_string_t *path, apr_pool_t *pool)
 {
-  /* kff todo: in progress */
-
-  return 0;
+  return remove_adm_thing (path, SVN_WC__ADM_LOCK, pool);
 }
 
 

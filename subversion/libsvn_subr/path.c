@@ -1,5 +1,5 @@
 /*
- * wc.h :  shared stuff internal to the svn_wc library.
+ * paths.c:   a path manipulation library
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -49,52 +49,57 @@
 
 
 
-/* Lock the working copy administrative area.
-   Wait for WAIT seconds if encounter another lock, trying again every
-   second, then return 0 if success or an SVN_ERR_ENCOUNTERED_LOCK
-   error if failed to obtain the lock. */
-svn_error_t *svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool);
-svn_error_t *svn_wc__unlock (svn_string_t *path, apr_pool_t *pool);
-
-/* Return temporary working name based on PATH.
-   For a given PATH, the working name is the same every time. */
-svn_string_t *svn_wc__working_name (svn_string_t *path, apr_pool_t *pool);
-
-/* Create DIR as a working copy directory. */
-svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
-                                     svn_string_t *ancestor_path,
-                                     svn_vernum_t ancestor_vernum,
-                                     apr_pool_t *pool);
+#include "svn_string.h"
+#include "svn_path.h"
 
 
 
-/* kff todo: these #defines have to be protected as though they're in
-   the global namespace, right?  Because they'd silently override any
-   other #define with the same name. */
+/*** A path manipulation library. ***/
 
-/* Default name for working copy administrative subdirectories, but
-   never use this raw, use svn_wc__adm_subdir() instead, since that
-   will incorporate user preferences. */
-#define SVN_WC__ADM_DIR_DEFAULT   "SVN"
+/* kff todo: this will need to handle escaping/unescaping, for files
+   that have slashes in their names. */
 
-/* The files within the administrative subdir. */
-#define SVN_WC__ADM_VERSIONS      "versions"
-#define SVN_WC__ADM_PROPERTIES    "properties"
-#define SVN_WC__ADM_TREE_EDITS    "tree-edits"
-#define SVN_WC__ADM_PROP_EDITS    "prop-edits"
-#define SVN_WC__ADM_LOCK          "lock"
-#define SVN_WC__ADM_TMP           "tmp"
-#define SVN_WC__ADM_TEXT_BASE     "text-base"
-#define SVN_WC__ADM_PROP_BASE     "prop-base"
+/* Helper for svn_path_path_add_component_*, which see. */
+static void
+add_component_internal (svn_string_t *path,
+                        const char *component,
+                        size_t len,
+                        apr_pool_t *pool)
+{
+  char dirsep = SVN_PATH_SEPARATOR;
 
-/* Return a string containing the admin subdir name. */
-svn_string_t *svn_wc__adm_subdir (apr_pool_t *pool);
+  if (! svn_string_isempty (path))
+    svn_string_appendbytes (path, &dirsep, sizeof (dirsep), pool);
+
+  svn_string_appendbytes (path, component, len, pool);
+}
 
 
-
-/* 
- * local variables:
- * eval: (load-file "../svn-dev.el")
- * end:
- */
+/* Like svn_path_path_add_component(), but COMPONENT is a null-terminated
+   c-string ("nts"). */
+void
+svn_path_add_component_nts (svn_string_t *path, 
+                            char *component,
+                            apr_pool_t *pool)
+{
+  add_component_internal (path, component, strlen (component), pool);
+}
 
+
+/* Extend PATH with new COMPONENT, destructively. */
+void
+svn_path_add_component (svn_string_t *path, 
+                        svn_string_t *component,
+                        apr_pool_t *pool)
+{
+  add_component_internal (path, component->data, component->len, pool);
+}
+
+
+/* Remove PATH's deepest COMPONENT, destructively. */
+void
+svn_path_remove_component (svn_string_t *path)
+{
+  if (! svn_string_chop_back_to_char (path, SVN_PATH_SEPARATOR))
+    svn_string_setempty (path);
+}

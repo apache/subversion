@@ -67,6 +67,7 @@
 #include <string.h>
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_path.h"
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "apr_strings.h"
@@ -165,35 +166,80 @@ XML_validation_error (apr_pool_t *pool,
    FRAME and examining parents, so it is important that frame has
    _already_ been linked into the digger's stack. */
 static void
-derive_ancestry (svn_delta__stackframe_t *youngest)
+maybe_derive_ancestry (svn_delta__stackframe_t *first_frame,
+                       svn_delta__stackframe_t *dest_frame,
+                       apr_pool_t *pool)
 {
-  svn_delta__stackframe_t *p = youngest->previous;
+  svn_delta__stackframe_t *p = dest_frame->previous;
 
-  if ((youngest->tag != svn_delta__XML_dir) 
-      && (youngest->tag != svn_delta__XML_file))
+  if ((dest_frame->tag != svn_delta__XML_dir) 
+      && (dest_frame->tag != svn_delta__XML_file))
     {
+      /* This is not the kind of frame that needs ancestry information. */
       return;
     }
-  else if (youngest->ancestor_path
-           && (youngest->ancestor_version >= 0))
+  else if (dest_frame->ancestor_path
+           && (dest_frame->ancestor_version >= 0))
     {
+      /* It is the kind of frame that needs ancestry information, but
+         all its ancestry information is already set. */
       return;
     }
-  else  /* okay, we know we need to derive some information from above */
+  else
     {
+      svn_string_t *derived_ancestor_path = NULL;
+      svn_string_t *this_name = NULL;
+
       while (p)
         {
-          /* kff todo: this ancestor is only a basename, not a path.
-             It would be nice if users of this library could count on
-             it always being a full path... or would it? */
-          if ((! youngest->ancestor_path) && (p->name))
-            youngest->ancestor_path = p->name;
+          /* Since we're walking up from youngest, we catch and hang
+             onto the name attribute before seeing any ancestry. */
+          if ((! this_name) && p->name)
+            this_name = p->name;
 
-          if ((youngest->ancestor_version < 0) && (p->ancestor_version >= 0))
-            youngest->ancestor_version = p->ancestor_version;
+          if ((p->ancestor_path) && (! dest_frame->ancestor_path))
+            {
+              /* Why are we setting derived_ancestry_path according to
+               * the nearest previous ancestor_path, instead of
+               * nearest previous name?
+               *
+               * I'm glad you asked.
+               *
+               * It's because ancestry needs to be an absolute
+               * path in existing repository version.  There's no
+               * guarantee that the `name' fields we've seen so far
+               * are actually in the repository, and even if they
+               * were, there's no guarantee that the first frame with
+               * a name represents a name at the _top_ of the
+               * repository.  Following ancestry solves these
+               * problems.
+               *
+               * kff todo: sleep on above reasoning.
+               *
+               * Remember that if any of the directories in the
+               * chain has changed its name, then we wouldn't be
+               * here anyway, because the delta should have set
+               * ancestry attributes explicitly for everything
+               * under that change.
+               */
+
+              derived_ancestor_path = svn_string_dup (p->ancestor_path, pool);
+              svn_path_add_component (derived_ancestor_path, this_name, pool);
+              dest_frame->ancestor_path = derived_ancestor_path;
+            }
+
+          /* If ancestor_version not set, and see it here, then set it. */
+          if ((dest_frame->ancestor_version < 0) && (p->ancestor_version >= 0))
+            dest_frame->ancestor_version = p->ancestor_version;
 
           p = p->previous;
         }
+
+      /* We don't check that an ancestor was actually found.  It's not
+         this function's job to determine if an ancestor is necessary,
+         only to find and set one if available. */
+      if (! dest_frame->ancestor_path)
+        dest_frame->ancestor_path = derived_ancestor_path;
     }
 }
 
@@ -299,7 +345,7 @@ do_stack_append (svn_delta__digger_t *digger,
   new_frame->previous = youngest_frame;
 
   /* Set up any unset ancestry information. */
-  derive_ancestry (new_frame);
+  maybe_derive_ancestry (digger->stack, new_frame, pool);
 
   return SVN_NO_ERROR;
 }
