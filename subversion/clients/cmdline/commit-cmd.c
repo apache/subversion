@@ -207,25 +207,23 @@ get_log_msg (svn_stringbuf_t **log_msg,
             {
               char letter = apr_tolower (reply[0]);
 
+              /* If the user chooses to abort, we exit the loop with a
+                 NULL message. */
               if ('a' == letter)
-                {
-                  printf ("*** Commit aborted!\n");
-                  return SVN_NO_ERROR;
-                }
-              else if ('c' == letter) 
                 break;
 
-              /* anything else will cause a loop and have the editor
-                 restarted! */
+              /* If the user chooses to continue, we make an empty
+                 message, which will cause us to exit the loop. */
+              if ('c' == letter) 
+                message = svn_stringbuf_create ("", pool);
+
+              /* If the user chooses anything else, the loop will
+                 continue on the NULL message. */
             }
         }
     }
-
-  if (message)
-    *log_msg = svn_stringbuf_dup (message, pool);
-  else
-    *log_msg = NULL;
-
+  
+  *log_msg = message ? svn_stringbuf_dup (message, pool) : NULL;
   return SVN_NO_ERROR;
 }
 
