@@ -271,13 +271,15 @@ txn_body_replace_directory (void *rargs, trail_t *trail)
     return err;
 
   if (! svn_fs__dag_is_directory (repl_args->new_node))
-    return svn_error_createf (SVN_ERR_FS_NOT_DIRECTORY,
-                              0,
-                              NULL,
-                              trail->pool,
-                              "trying to replace directory, but %s "
-                              "is not a directory",
-                              repl_args->name->data);
+    {
+      return svn_error_createf (SVN_ERR_FS_NOT_DIRECTORY,
+                                0,
+                                NULL,
+                                trail->pool,
+                                "trying to replace directory, but %s "
+                                "is not a directory",
+                                repl_args->name->data);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -317,6 +319,10 @@ replace_directory (svn_string_t *name,
 static svn_error_t *
 close_directory (void *dir_baton)
 {
+  /* todo: should this toggle mutability?  And then other funcs would
+     check mutability before working?  Hmm, might be a good sanity
+     check... */
+
   return SVN_NO_ERROR;
 }
 
@@ -324,6 +330,10 @@ close_directory (void *dir_baton)
 static svn_error_t *
 close_file (void *file_baton)
 {
+  /* todo: should this toggle mutability?  And then other funcs would
+     check mutability before working?  Hmm, might be a good sanity
+     check... */
+
   return SVN_NO_ERROR;
 }
 
@@ -395,16 +405,55 @@ add_file (svn_string_t *name,
 
 
 static svn_error_t *
+txn_body_replace_file (void *rargs, trail_t *trail)
+{
+  svn_error_t *err;
+  struct add_repl_args *repl_args = rargs;
+
+  err = svn_fs__dag_clone_child (&(repl_args->new_node),
+                                 repl_args->parent->node,
+                                 repl_args->name->data,
+                                 trail);
+  if (err)
+    return err;
+  
+  if (! svn_fs__dag_is_file (repl_args->new_node))
+    {
+      return svn_error_createf (SVN_ERR_FS_NOT_DIRECTORY,
+                                0,
+                                NULL,
+                                trail->pool,
+                                "trying to replace directory, but %s "
+                                "is not a directory",
+                                repl_args->name->data);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
               svn_revnum_t base_revision,
               void **file_baton)
 {
+  svn_error_t *err;
   struct dir_baton *pb = parent_baton;
   struct file_baton *fb = apr_pcalloc (pb->edit_baton->pool, sizeof (*fb));
+  struct add_repl_args repl_args;
+
+  repl_args.parent = pb;
+  repl_args.name   = name;
+
+  err = svn_fs__retry_txn (pb->edit_baton->fs, txn_body_replace_file,
+                           &repl_args, pb->edit_baton->pool);
+  if (err)
+    return err;
 
   fb->parent = pb;
   fb->name = svn_string_dup (name, pb->edit_baton->pool);
+  fb->node = repl_args.new_node;
 
   *file_baton = fb;
   return SVN_NO_ERROR;
