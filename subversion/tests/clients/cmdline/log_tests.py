@@ -2,14 +2,6 @@
 #
 #  log_tests.py:  testing "svn log"
 #
-#  ######################################################################
-#  ###                                                                ###
-#  ###  YO!  THIS FILE DOESN'T WORK YET.  DON'T TRY TO RUN IT.  THIS  ###
-#  ###  ISN'T A PROBLEM BECAUSE WE HAVEN'T ADDED IT TO THE TESTS LIST ###
-#  ###  IN BUILD.CONF YET.                                            ###
-#  ###                                                                ###
-#  ######################################################################
-#
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.
 #    
@@ -368,6 +360,65 @@ def plain_log():
   os.chdir (was_cwd)
   return 0
 
+
+def versioned_log_message():
+  "'svn commit -F foo' when foo is a versioned file"
+
+  global wc_path
+
+  sbox = "versioned_log_message"
+ 
+  if svntest.actions.make_repo_and_wc (sbox): return 1
+
+  wc_path    = os.path.join (svntest.main.general_wc_dir, sbox)
+  was_cwd = os.getcwd ()
+  os.chdir (wc_path)
+
+  iota_path = os.path.join ('iota')
+  mu_path = os.path.join ('A', 'mu')
+  log_path = os.path.join ('A', 'D', 'H', 'omega')
+
+  svntest.main.file_append (iota_path, "2")
+
+  # try to check in a change using a versioned file as your log entry.
+  stdout_lines, stderr_lines = svntest.main.run_svn (1, 'ci', '-F', log_path)
+
+  # make sure we failed.
+  if (len(stderr_lines) <= 0):
+    os.chdir (was_cwd)
+    return 1
+
+  # force it.  should not produce any errors.
+  stdout_lines, stderr_lines = \
+    svntest.main.run_svn (None, 'ci', '-F', log_path, '--force')
+
+  if (len(stderr_lines) != 0):
+    os.chdir (was_cwd)
+    return 1
+
+  svntest.main.file_append (mu_path, "2")
+
+  # try the same thing, but specifying the file to commit explicitly.
+  stdout_lines, stderr_lines = \
+    svntest.main.run_svn (1, 'ci', '-F', log_path, mu_path)
+
+  # make sure it failed.
+  if (len(stderr_lines) <= 0):
+    os.chdir (was_cwd)
+    return 1
+
+  # force it...  should succeed.
+  stdout_lines, stderr_lines = \
+    svntest.main.run_svn (None, 'ci', '-F', log_path, '--force', mu_path)
+
+  if (len(stderr_lines) != 0):
+    os.chdir (was_cwd)
+    return 1
+
+  os.chdir (was_cwd)
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -375,6 +426,7 @@ def plain_log():
 # list all tests here, starting with None:
 test_list = [ None,
               plain_log,
+              versioned_log_message,
              ]
 
 if __name__ == '__main__':

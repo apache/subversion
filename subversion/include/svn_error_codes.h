@@ -359,6 +359,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CL_ADM_DIR_RESERVED,
               "Attempted command in administrative dir")
 
+  SVN_ERRDEF (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE,
+              "The log message file is under version control.")
+
   /* END Client errors */
   
 

@@ -362,6 +362,7 @@ main (int argc, const char * const *argv)
   apr_getopt_t *os;
   svn_cl__opt_state_t opt_state;
   const svn_cl__cmd_desc_t *subcommand = NULL;
+  svn_boolean_t log_under_version_control = FALSE;
 
   static const apr_getopt_option_t options[] =
   {
@@ -489,6 +490,14 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        /* Find out if log message file is under revision control. */
+        {
+          svn_wc_entry_t *e;
+
+          err = svn_wc_entry (&e, svn_stringbuf_create (opt_arg, pool), pool);
+          if ((err == SVN_NO_ERROR) && e)
+            log_under_version_control = TRUE;
+        }
         break;
       case 'M':
         opt_state.modified = TRUE;
@@ -578,6 +587,21 @@ main (int argc, const char * const *argv)
               return EXIT_FAILURE;
             }
         }
+    }
+
+  /* If the log message file is under revision control, that's
+     probably not what the user intended. */
+  if (log_under_version_control && (! opt_state.force))
+    {
+      svn_handle_error
+        (svn_error_create
+         (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, 0, NULL, 
+          pool,
+          "Log message file is a versioned file; use `--force' to override."),
+         stderr,
+         FALSE);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
     }
 
   /* If we made it this far, then we definitely have the subcommand,
