@@ -29,7 +29,7 @@
 struct apr_pool_t;
 struct svn_error;
 class JNIMutex;
-class SVNClient;
+class SVNBase;
 class Pool;
 #include <jni.h>
 #include <fstream>
@@ -56,7 +56,7 @@ public:
 	static void setEnv(JNIEnv *);
 	static bool isExceptionThrown();
 	static void handleAPRError(int error, const char *op);
-	static void putFinalizedClient(SVNClient *cl);
+	static void putFinalizedClient(SVNBase *cl);
 	static void handleSVNError(svn_error_t *err);
 	static void throwError(const char *message);
 	static apr_pool_t * getPool();
@@ -69,7 +69,7 @@ private:
 	static int g_logLevel;
 	static void setExceptionThrown();
 	static apr_pool_t* g_pool;
-	static std::list<SVNClient*> g_finalizedObjects;
+	static std::list<SVNBase*> g_finalizedObjects;
 	static JNIMutex *g_finalizedObjectsMutex;
 	static JNIMutex *g_logMutex;
 	static bool g_initException;

@@ -3,7 +3,7 @@ package org.tigris.subversion.javahl;
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,7 +17,6 @@ package org.tigris.subversion.javahl;
  * ====================================================================
  * @endcopyright
  */
-
 /**
  * This is the main interface class. All subversion operations
  * are implemented in this class. This class is not threadsafe
@@ -31,7 +30,18 @@ public class SVNClient implements SVNClientInterface
      */
     static
     {
-        System.loadLibrary("svnjavahl-1");
+        /*
+         * first try to load the library by the new name.
+         * if that fails, try to load the library by the old name.
+         */
+        try
+        {
+            System.loadLibrary("svnjavahl-1");
+        }
+        catch(UnsatisfiedLinkError ex)
+        {
+            System.loadLibrary("svnjavahl");
+        }
     }
 
     /**
@@ -69,11 +79,28 @@ public class SVNClient implements SVNClientInterface
      *
      * @param path Path to explore.
      * @param descend Recurse into subdirectories if existant.
+     * @param onServer Request status information from server.
+     * @param getAll get status for uninteristing files (unchanged).
      * @return Array of Status entries.
      */
-    public native Status[]status(String path, boolean descend, boolean onServer, boolean getAll) throws ClientException;
+    public Status[]status(String path, boolean descend, boolean onServer, boolean getAll) throws ClientException
+    {
+        return status(path, descend, onServer, getAll, false);
+    }
 
-	/**
+    /**
+     * List directory entries of a URL.
+     *
+     * @param path Path to explore.
+     * @param descend Recurse into subdirectories if existant.
+     * @param onServer Request status information from server.
+     * @param getAll get status for uninteristing files (unchanged).
+     * @param noIgnore get status for normaly ignored files and directories.
+     * @return Array of Status entries.
+     */
+    public native Status[] status(String path, boolean descend, boolean onServer, boolean getAll, boolean noIgnore) throws ClientException;
+
+    /**
      *
      * @param url
      * @param revision
@@ -236,7 +263,7 @@ public class SVNClient implements SVNClientInterface
     public native PropertyData[] properties(String path) throws ClientException;
     public native void propertySet(String path, String name, String value, boolean recurse) throws ClientException;
     public native void propertySet(String path, String name, byte[] value, boolean recurse) throws ClientException;
-    native void propertyRemove(String path, String name, boolean recurse) throws ClientException;
+    public native void propertyRemove(String path, String name, boolean recurse) throws ClientException;
     public native void propertyCreate(String path, String name, String value, boolean recurse) throws ClientException;
     public native void propertyCreate(String path, String name, byte[] value, boolean recurse) throws ClientException;
     public native PropertyData revProperty(String path, String name, Revision rev) throws ClientException;
@@ -254,6 +281,10 @@ public class SVNClient implements SVNClientInterface
     public native byte[] blame(String path, Revision revisionStart, Revision revisionEnd) throws ClientException;
 
     public native void blame(String path, Revision revisionStart, Revision revisionEnd, BlameCallback callback) throws ClientException;
+
+    public native void setConfigDirectory(String configDir) throws ClientException;
+
+    public native String getConfigDirectory() throws ClientException;
 
     public static native void enableLogging(int logLevel, String logFilePath);
     public static native String version();

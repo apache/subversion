@@ -3,7 +3,7 @@ package org.tigris.subversion.javahl;
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -70,6 +70,14 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             return worker.status(path, descend, onServer, getAll);
+        }
+    }
+
+    public Status[] status(String path, boolean descend, boolean onServer, boolean getAll, boolean noIgnore) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.status(path, descend, onServer, getAll, noIgnore);
         }
     }
 
@@ -431,6 +439,14 @@ public class SVNClientSynchronized implements SVNClientInterface
         }
     }
 
+    public void propertyRemove(String path, String name, boolean recure) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.propertyRemove(path, name, recure);
+        }
+    }
+
     public PropertyData revProperty(String path, String name, Revision rev) throws ClientException
     {
         synchronized(clazz)
@@ -479,6 +495,22 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             worker.blame(path, revisionStart, revisionEnd, callback);
+        }
+    }
+
+    public void setConfigDirectory(String configDir) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.setConfigDirectory(configDir);
+        }
+    }
+
+    public String getConfigDirectory() throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.getConfigDirectory();
         }
     }
 
