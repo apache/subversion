@@ -44,9 +44,11 @@ svn_cl__diff (apr_getopt_t *os,
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
   svn_client_auth_baton_t *auth_baton;
+  apr_file_t *outfile, *errfile;
+  apr_status_t status;
   int i;
 
-  options = svn_cl__stringlist_to_array(opt_state->extensions, pool);
+  options = svn_cl__stringlist_to_array (opt_state->extensions, pool);
 
   targets = svn_cl__args_to_target_array (os, pool);
   svn_cl__push_implicit_dot_target (targets, pool);
@@ -62,6 +64,13 @@ svn_cl__diff (apr_getopt_t *os,
   if (opt_state->end_revision.kind == svn_client_revision_unspecified)
     opt_state->end_revision.kind = svn_client_revision_working;
 
+  /* Get an apr_file_t representing stdout and stderr, which is where
+     we'll have the diff program print to. */
+  if ((status = apr_file_open_stdout (&outfile, pool)))
+    return svn_error_create (status, 0, NULL, pool, "can't open stdout");
+  if ((status = apr_file_open_stderr (&errfile, pool)))
+    return svn_error_create (status, 0, NULL, pool, "can't open stderr");
+
   for (i = 0; i < condensed_targets->nelts; ++i)
     {
       svn_stringbuf_t *target
@@ -73,6 +82,8 @@ svn_cl__diff (apr_getopt_t *os,
                                 &(opt_state->end_revision),
                                 target,
                                 opt_state->nonrecursive ? FALSE : TRUE,
+                                outfile,
+                                errfile,
                                 pool));
     }
 

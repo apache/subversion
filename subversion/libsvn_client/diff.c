@@ -40,6 +40,8 @@
 struct diff_cmd_baton {
   const apr_array_header_t *options;
   apr_pool_t *pool;
+  apr_file_t *outfile;
+  apr_file_t *errfile;
 };
 
 /* This is an svn_wc_diff_cmd_t callback */
@@ -50,64 +52,43 @@ diff_cmd (svn_stringbuf_t *path1,
           void *baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = baton;
-  apr_status_t status;
-  const char **args;
-  int i, nargs, exitcode;
-  apr_file_t *outhandle, *errhandle;
-
-  /* Use a subpool here because the pool comes right through from the top
-     level.*/
+  const char **args = NULL;
+  int nargs, exitcode;
+  apr_file_t *outfile = diff_cmd_baton->outfile;
+  apr_file_t *errfile = diff_cmd_baton->errfile;
   apr_pool_t *subpool = svn_pool_create (diff_cmd_baton->pool);
 
-  /* Get an apr_file_t representing stdout and stderr, which is where we'll
-     have the diff program print to. */
-  status = apr_file_open_stdout (&outhandle, subpool);
-  if (status)
-    return svn_error_create (status, 0, NULL, subpool,
-                             "error: can't open handle to stdout");
-  status = apr_file_open_stderr (&errhandle, subpool);
-  if (status)
-    return svn_error_create (status, 0, NULL, subpool,
-                             "error: can't open handle to stderr");
-
   /* Execute local diff command on these two paths, print to stdout. */
-
   nargs = diff_cmd_baton->options->nelts;
   if (nargs)
-    args = apr_palloc(subpool, nargs*sizeof(char*));
-  else 
-    args = NULL;
-
-  i = 0;
-  if (diff_cmd_baton->options->nelts)
     {
-      /* Add the user specified diff options to the diff command line. */
-      int j;
-      for (j = 0; j < diff_cmd_baton->options->nelts; ++j)
-        args[i++]
-          = ((svn_stringbuf_t **)(diff_cmd_baton->options->elts))[j]->data;
+      int i;
+      args = apr_palloc (subpool, nargs * sizeof (char *));
+      for (i = 0; i < diff_cmd_baton->options->nelts; i++)
+        {
+          args[i] = 
+            ((svn_stringbuf_t **)(diff_cmd_baton->options->elts))[i]->data;
+        }
+      assert (i == nargs);
     }
-  assert (i==nargs);
 
-  /* ### TODO: This printf is NOT "my final answer" -- placeholder for
-     real work to be done. */ 
-  if (label)
-    apr_file_printf (outhandle, "Index: %s\n", label->data);
-  else
-    apr_file_printf (outhandle, "Index: %s\n", path1->data);
-  apr_file_printf (outhandle, "===================================================================\n");
+  /* Print out the diff header. */
+  apr_file_printf (outfile, "Index: %s\n", label ? label->data : path1->data);
+  apr_file_printf (outfile, 
+     "===================================================================\n");
 
-  SVN_ERR(svn_io_run_diff 
-    (".", args, nargs, label ? label->data : NULL, path1->data, path2->data, 
-     &exitcode, outhandle, errhandle, subpool));
+  SVN_ERR (svn_io_run_diff (".", args, nargs, 
+                            label ? label->data : NULL, 
+                            path1->data, path2->data, 
+                            &exitcode, outfile, errfile, subpool));
 
-  /* TODO: Handle exit code == 2 (i.e. errors with diff) here */
+  /* ### todo: Handle exit code == 2 (i.e. errors with diff) here */
   
-  /* TODO: someday we'll need to worry about whether we're going to need to
-     write a diff plug-in mechanism that makes use of the two paths,
-     instead of just blindly running SVN_CLIENT_DIFF.
-  */
+  /* ### todo: someday we'll need to worry about whether we're going
+     to need to write a diff plug-in mechanism that makes use of the
+     two paths, instead of just blindly running SVN_CLIENT_DIFF.  */
 
+  /* Destroy the subpool. */
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
@@ -150,6 +131,8 @@ svn_client_diff (const apr_array_header_t *diff_options,
                  const svn_client_revision_t *end,
                  svn_stringbuf_t *path,
                  svn_boolean_t recurse,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
                  apr_pool_t *pool)
 {
   svn_revnum_t start_revnum, end_revnum;
@@ -178,6 +161,8 @@ svn_client_diff (const apr_array_header_t *diff_options,
 
   diff_cmd_baton.options = diff_options;
   diff_cmd_baton.pool = pool;
+  diff_cmd_baton.outfile = outfile;
+  diff_cmd_baton.errfile = errfile;
 
   /* Determine if the target we have been given is a path or an URL */
   path_str.data = path->data;
@@ -208,21 +193,8 @@ svn_client_diff (const apr_array_header_t *diff_options,
     {
       /* This is the 'quick' diff that does not contact the repository
          and simply uses the text base. */
-      return svn_wc_diff (anchor,
-                          target,
-                          diff_cmd, &diff_cmd_baton,
-                          recurse,
-                          pool);
-      /* ### todo: see comments issue #422 about how libsvn_client's
-         diff implementation prints to stdout.  Apparently same is
-         true for libsvn_wc!  Both will need adjusting; strongly
-         suspect that the callback abstraction will be exactly what is
-         needed to make merge share code -- that is, the same library
-         functions will be called, but with different callbacks that
-         Do The Right Thing.  Random Thought: these callbacks probably
-         won't be svn_delta_edit_fns_t, because there's no depth-first
-         requirement and no need to tweak .svn/ metadata.  Can be a
-         lot simpler than an editor, therefore */
+      return svn_wc_diff (anchor, target, diff_cmd, &diff_cmd_baton,
+                          recurse, pool);
     }
 
   /* Else we must contact the repository. */
