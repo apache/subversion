@@ -669,16 +669,17 @@ II.   INSTALLATION
 
           Unzip the Apache source, copy the w32locatedb.pl script to the
           srclib\apr-util\build directory, and run it to prepare the
-          apr-util sources. Copy the Apache apr, apr-util, and
-          apr-iconv directories from the Apache httpd-2.0.48\srclib
-          directory to the top-level Subversion directory.
+          apr-util sources.
 
           Open the Apache.dsw file and build the Apache source. If you
           don't compile Apache, mod_dav_svn will not build.
 
           Run "python gen-make.py -t dsp --with-httpd=<path-to-httpd>"
           to generate the Visual C++ 6.x project files. If you don't
-          want to build mod_dav_svn, omit the --with-httpd option.
+          want to build mod_dav_svn, omit the --with-httpd option. In
+          this case, you will have to tell the generator where to find
+          the APR libraries; the options are --with-apr, --with-apr-util
+          and --with-apr-iconv.
           Run "python gen-make.py -help" to see other options.
 
           Open the subversion_msvc.dsw file gen-make creates in the
@@ -700,9 +701,6 @@ II.   INSTALLATION
       C:\SVN> unzip httpd_2.0.48-win32-src.zip
       C:\SVN> copy w32locatedb.pl httpd-2.0.48\srclib\apr-util\build
       C:\SVN> perl httpd-2.0.48\srclib\apr-util\build\w32locatedb.pl dll src\db4-win32\include src\db4-win32\lib
-      C:\SVN> xcopy /S httpd-2.0.48\srclib\apr src\apr
-      C:\SVN> xcopy /S httpd-2.0.48\srclib\apr-util src\apr-util
-      C:\SVN> xcopy /S httpd-2.0.48\srclib\apr-iconv src\apr-iconv
       C:\SVN> msdev httpd-2.0.48\apache.dsw /MAKE "BuildBin - Win32 Debug"
       C:\SVN> cd src
       C:\SVN\src> python gen-make.py -t dsp --with-httpd=..\httpd-2.0.48

@@ -64,13 +64,24 @@ def _usage_exit():
   print
   print "  Windows-specific options:"
   print
+  print "  --with-apr=DIR"
+  print "           The APR sources are in DIR"
+  print
+  print "  --with-apr-util=DIR"
+  print "           The APR-Util sources are in DIR"
+  print
+  print "  --with-apr-iconv=DIR"
+  print "           The APR-Iconv sources are in DIR"
+  print
   print "  --with-berkeley-db=DIR"
   print "           look for Berkley DB headers and libs in"
   print "           DIR"
   print
   print "  --with-httpd=DIR"
   print "           the httpd sources and binaries required"
-  print "           for building mod_dav_svn are in DIR"
+  print "           for building mod_dav_svn are in DIR;"
+  print "           implies --with-apr{-util, -iconv}, but"
+  print "           you can override them"
   print
   print "  --with-openssl=DIR"
   print "           tell neon to look for OpenSSL headers"
@@ -91,10 +102,26 @@ def _usage_exit():
   print "           add support for Quantify instrumentation"
   sys.exit(0)
 
+
+class Options:
+  def __init__(self):
+    self.list = []
+    self.dict = {}
+
+  def add(self, opt, val):
+    if self.dict.has_key(opt):
+      self.list[self.dict[opt]] = (opt, val)
+    else:
+      self.dict[opt] = len(self.list)
+      self.list.append((opt, val))
+
 if __name__ == '__main__':
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'st:',
-                               ['with-berkeley-db=',
+                               ['with-apr=',
+                                'with-apr-util=',
+                                'with-apr-iconv=',
+                                'with-berkeley-db=',
                                 'with-httpd=',
                                 'with-openssl=',
                                 'with-zlib=',
@@ -110,7 +137,7 @@ if __name__ == '__main__':
   conf = 'build.conf'
   skip = 0
   gentype = 'make'
-  rest = []
+  rest = Options()
 
   if args:
     conf = args[0]
@@ -121,12 +148,23 @@ if __name__ == '__main__':
     elif opt == '-t':
       gentype = val
     else:
-      rest.append((opt, val))
+      rest.add(opt, val)
+      if opt == '--with-httpd':
+        rest.add('--with-apr', os.path.join(val, 'srclib', 'apr'))
+        rest.add('--with-apr-util', os.path.join(val, 'srclib', 'apr-util'))
+        rest.add('--with-apr-iconv', os.path.join(val, 'srclib', 'apr-iconv'))
+
+  # Remember all options so other scripts can use them
+  opt_conf = open('gen-make.opts', 'w')
+  print >> opt_conf, "[options]"
+  for opt, val in rest.list:
+    print >> opt_conf, opt, '=', val
+  opt_conf.close()
 
   if gentype not in gen_modules.keys():
     _usage_exit()
 
-  main(conf, gentype, skip_depends=skip, other_options=rest)
+  main(conf, gentype, skip_depends=skip, other_options=rest.list)
 
 
 ### End of file.

@@ -28,8 +28,18 @@ class GeneratorBase:
     parser = ConfigParser.ConfigParser()
     parser.read(fname)
 
+    if not hasattr(self, 'apr_path'):
+      self.apr_path = 'apr'
+    if not hasattr(self, 'apr_util_path'):
+      self.apr_util_path = 'apr-util'
+    if not hasattr(self, 'apr_iconv_path'):
+      self.apr_iconv_path = 'apr-iconv'
+
     self.cfg = Config()
     self.cfg.swig_lang = string.split(parser.get('options', 'swig-languages'))
+    self.cfg.apr_path = self.apr_path
+    self.cfg.apr_util_path =  self.apr_util_path
+    self.cfg.apr_iconv_path = self.apr_iconv_path
 
     # Version comes from a header file since it is used in the code.
     try:
@@ -61,9 +71,9 @@ class GeneratorBase:
         raise GenError('ERROR: unknown build type: ' + type)
 
       section = target_class.Section(options, target_class)
-      
+
       self.sections[section_name] = section
-      
+
       section.create_targets(self.graph, section_name, self.cfg,
                              self._extension_map)
 
@@ -294,6 +304,7 @@ class Target(DependencyNode):
     self.desc = options.get('description')
     self.path = options.get('path', '')
     self.add_deps = options.get('add-deps', '')
+    self.msvc_name = options.get('msvc-name') # override project name
 
     # true if several targets share the same directory, as is the case
     # with SWIG bindings.
@@ -344,6 +355,17 @@ class TargetLinked(Target):
     self.external_lib = options.get('external-lib')
     self.external_project = options.get('external-project')
     self.msvc_libs = string.split(options.get('msvc-libs', ''))
+
+    if self.external_project:
+      if self.external_project[:9] == 'apr-iconv':
+        self.external_project = cfg.apr_iconv_path \
+                                + self.external_project[9:]
+      elif self.external_project[:8] == 'apr-util':
+        self.external_project = cfg.apr_util_path \
+                                + self.external_project[8:]
+      elif self.external_project[:3] == 'apr':
+        self.external_project = cfg.apr_path \
+                                + self.external_project[3:]
 
   def add_dependencies(self, graph, cfg, extmap):
     if self.external_lib or self.external_project:
