@@ -369,10 +369,9 @@ do_stack_append (svn_delta__digger_t *digger,
 
 
 /* Decide if an xml closure TAGNAME is valid, by examining the
-   youngest frame in DIGGER's stack.  If so, remove YOUNGEST_FRAME
-   from the stack.  If not, return a validity error. */
+   youngest frame in DIGGER's stack. */
 static svn_error_t *
-do_stack_remove (svn_delta__digger_t *digger, const char *tagname)
+do_stack_check_remove (svn_delta__digger_t *digger, const char *tagname)
 {
   apr_pool_t *pool = digger->pool;
   svn_delta__stackframe_t *youngest_frame = digger->stack;
@@ -386,17 +385,7 @@ do_stack_remove (svn_delta__digger_t *digger, const char *tagname)
      TAGNAME. */
   if (strcmp (tagname, svn_delta__tagmap[youngest_frame->tag]))
     return XML_validation_error (pool, tagname, TRUE);
-  
-  /* Do the removal: lose the pointer to the youngest frame. */
-  if (youngest_frame->previous) {
-    digger->stack = youngest_frame->previous;
-    digger->stack->next = NULL;
-  }
-  
-
-  else  /* we must be removing the only frame in the stack */
-    digger->stack = NULL;
-      
+        
   return SVN_NO_ERROR;
 }
 
@@ -607,17 +596,13 @@ do_finish_directory (svn_delta__digger_t *digger)
   if (! (digger->walker->finish_directory))
     return SVN_NO_ERROR;
 
-  /* Drop the current directory baton */
-  digger->dir_baton = NULL;
-
-  /* Now: xml_handle_end() has just called do_stack_remove() on the
-     youngest frame in the stack, which means the only place to find
-     the old dir_baton is stashed inside digger! */
-
   /* Nothing to do but caller the walker's callback, methinks. */
-  err = (* (digger->walker->finish_directory)) (digger->dir_baton);
+  err = (* (digger->walker->finish_directory)) (digger->stack->baton);
   if (err)
     return err;
+
+  /* Drop the current directory baton */
+  digger->dir_baton = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -629,24 +614,20 @@ do_finish_file (svn_delta__digger_t *digger)
 {
   svn_error_t *err;
 
+  /* Only proceed further if the walker callback exists. */
+  if (! (digger->walker->finish_file))
+    return SVN_NO_ERROR;
+
+  /* Call the walker's callback. */
+  err = (* (digger->walker->finish_file)) (digger->stack->file_baton);
+  if (err)
+    return err;
+
   /* Drop the current parsers! */
   digger->vcdiff_parser = NULL;
 
   /* Drop the current file baton */
   digger->file_baton = NULL;
-
-  /* Only proceed further if the walker callback exists. */
-  if (! (digger->walker->finish_file))
-    return SVN_NO_ERROR;
-
-  /* Now: xml_handle_end() has just called do_stack_remove() on the
-     youngest frame in the stack, which means the only place to find
-     the old file_baton is stashed inside digger! */
-
-  /* Call the walker's callback. */
-  err = (* (digger->walker->finish_file)) (digger->file_baton);
-  if (err)
-    return err;
 
   return SVN_NO_ERROR;
 }
@@ -710,21 +691,39 @@ do_begin_propdelta (svn_delta__digger_t *digger)
     case svn_delta__XML_file:
       {
         digger->current_propdelta->kind = svn_propdelta_file;
+        /* Get the name of the file, too. */
+        if (youngest_frame->previous->previous)
+          digger->current_propdelta->entity_name = 
+            svn_string_dup (youngest_frame->previous->previous->name,
+                            digger->pool);
         break;
       }
     case svn_delta__XML_dir:
       {
         digger->current_propdelta->kind = svn_propdelta_dir;
+        /* Get the name of the dir, too. */
+        if (youngest_frame->previous->previous)
+          digger->current_propdelta->entity_name = 
+            svn_string_dup (youngest_frame->previous->previous->name,
+                            digger->pool);
         break;
       }
     case svn_delta__XML_new:
       {
         digger->current_propdelta->kind = svn_propdelta_dirent;
+        /* Get the name of the dirent, too. */
+        digger->current_propdelta->entity_name = 
+            svn_string_dup (youngest_frame->previous->name,
+                            digger->pool);
         break;
       }
     case svn_delta__XML_replace:
       {
         digger->current_propdelta->kind = svn_propdelta_dirent;
+        /* Get the name of the dirent, too. */
+        digger->current_propdelta->entity_name = 
+            svn_string_dup (youngest_frame->previous->name,
+                            digger->pool);
         break;
       }
     default:
@@ -821,7 +820,7 @@ do_prop_delta_callback (svn_delta__digger_t *digger)
         if (digger->walker->change_dirent_prop)
           err = (*(digger->walker->change_dirent_prop)) 
             (digger->walk_baton, digger->dir_baton,
-             NULL,
+             digger->current_propdelta->entity_name,
              digger->current_propdelta->name,
              digger->current_propdelta->value);
         break;
@@ -1016,13 +1015,15 @@ xml_handle_end (void *userData, const char *name)
   svn_error_t *err;
 
   /* Resurrect our digger structure */
-  svn_delta__digger_t *my_digger = (svn_delta__digger_t *) userData;
+  svn_delta__digger_t *digger = (svn_delta__digger_t *) userData;
+  svn_delta__stackframe_t *youngest_frame = digger->stack;
 
-  /*  Remove youngest frame from stack, validating in the process. */
-  err = do_stack_remove (my_digger, name);
+  /* Validity check: is it going to be ok to remove the youngest frame
+      in our stack?  */
+  err = do_stack_check_remove (digger, name);
   if (err) {
     /* Uh-oh, invalid XML, bail out */
-    signal_expat_bailout (err, my_digger);
+    signal_expat_bailout (err, digger);
     return;
   }
   
@@ -1032,55 +1033,62 @@ xml_handle_end (void *userData, const char *name)
   /* EVENT:  When we get a </dir> pass back the dir_baton. */
   if (strcmp (name, "dir") == 0)
     {
-      err = do_finish_directory (my_digger);
+      err = do_finish_directory (digger);
       if (err)
-        signal_expat_bailout (err, my_digger);
-      return;
+        signal_expat_bailout (err, digger);
     }      
 
   /* EVENT: when we get a </file>, drop our digger's parsers. */
   if (strcmp (name, "file") == 0)
     {
-      err = do_finish_file (my_digger);
+      err = do_finish_file (digger);
       if (err)
-        signal_expat_bailout (err, my_digger);
-      return;
+        signal_expat_bailout (err, digger);
     }
 
   /* EVENT: when we get a </text-delta>, let the vcdiff parser know! */
   if (strcmp (name, "text-delta") == 0)
     {
-      if (! my_digger->vcdiff_parser)
-        return;
-
-      /* (length = 0) implies that we're done parsing vcdiff stream.
-         Let the parser flush it's buffer, clean up, whatever it wants
-         to do. */
-      err = svn_vcdiff_parse (my_digger->vcdiff_parser, NULL, 0);
-      if (err)
-        signal_expat_bailout (err, my_digger);
-      return;
+      if (digger->vcdiff_parser)
+        {     
+          /* (length = 0) implies that we're done parsing vcdiff stream.
+             Let the parser flush it's buffer, clean up, whatever it wants
+             to do. */
+          err = svn_vcdiff_parse (digger->vcdiff_parser, NULL, 0);
+          if (err)
+            signal_expat_bailout (err, digger);
+        }
     }
 
 
   /* EVENT: when we get a </set>, send off the prop-delta. */
   if (strcmp (name, "set") == 0)
     {
-      err = do_prop_delta_callback (my_digger);
+      err = do_prop_delta_callback (digger);
       if (err)
-        signal_expat_bailout (err, my_digger);
+        signal_expat_bailout (err, digger);
     }
 
   /* EVENT: when we get a prop-delta </delete>, send it off. */
   if ( (strcmp (name, "delete") == 0)
-       && (my_digger->stack->tag == svn_delta__XML_propdelta) )
+       && (digger->stack->tag == svn_delta__XML_propdelta) )
     {
-      err = do_prop_delta_callback (my_digger);
+      err = do_prop_delta_callback (digger);
       if (err)
-        signal_expat_bailout (err, my_digger);
+        signal_expat_bailout (err, digger);
     }
 
 
+  /* After checking for above events, do the stackframe removal. */
+
+  /* Lose the pointer to the youngest frame. */
+  if (youngest_frame->previous) {
+    digger->stack = youngest_frame->previous;
+    digger->stack->next = NULL;
+  }
+  else
+    digger->stack = NULL;  /* we just removed the last frame */
+  
 
   /* This is a void expat callback, don't return anything. */
 }
