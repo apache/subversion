@@ -171,8 +171,8 @@ svn_cl__propget (apr_getopt_t *os,
               /* If this is a special Subversion property, it is stored as
                  UTF8, so convert to the native format. */
               if (svn_prop_needs_translation (pname_utf8))
-              SVN_ERR (svn_subst_detranslate_string (&propval, propval,
-                                                     pool));
+                SVN_ERR (svn_subst_detranslate_string (&propval, propval,
+                                                       pool));
 
               if (print_filenames) 
                 {
