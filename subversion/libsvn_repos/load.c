@@ -66,7 +66,7 @@ read_header_block (svn_stream_t *stream,
         /* Read the next line into a stringbuf in subpool. */
         SVN_ERR (svn_stream_readline (stream, &header_str, subpool));
       
-      if (svn_stringbuf_isempty (header_str))
+      if ((header_str == NULL) || (svn_stringbuf_isempty (header_str)))
         break;    /* end of header block */
 
       /* Find the next colon in the stringbuf. */
@@ -111,6 +111,7 @@ read_header_block (svn_stream_t *stream,
    If IS_NODE is true and content exists beyond the properties, push
    the remaining content at a write-stream obtained from
    PARSE_FNS->set_fulltext, and then close the write-stream.
+   Use BUFFER/BUFLEN to push the fulltext in "chunks".
 
    Use pool for all allocations.
 */
@@ -123,6 +124,8 @@ parse_content_block (svn_stream_t *stream,
                                          const char *val,
                                          apr_pool_t *pool),
                      svn_boolean_t is_node,
+                     char *buffer,
+                     apr_size_t buflen,
                      apr_pool_t *pool)
 {
   svn_stringbuf_t *strbuf;
@@ -231,31 +234,29 @@ parse_content_block (svn_stream_t *stream,
   remaining_bytes = content_length - bytes_sucked;
   if (remaining_bytes > 0) 
     {
+      apr_size_t rlen, wlen, i, iterations, remainder;
       svn_stream_t *text_stream;
 
       if (! is_node)
-        goto stream_malformed;
+        goto stream_malformed;  /* revisions don't have text! */
       
       SVN_ERR (parse_fns->set_fulltext (&text_stream, record_baton));
-      if (text_stream != NULL)
+
+      remainder = remaining_bytes % buflen;
+      iterations = remaining_bytes / buflen;
+
+      for (i = 0; i < iterations; i++)
         {
-          char buffer[SVN_STREAM_CHUNK_SIZE];
-          apr_size_t buflen = SVN_STREAM_CHUNK_SIZE;
-          apr_size_t rlen, wlen, i, iterations, remainder;
-
-          iterations = remaining_bytes % buflen;
-          remainder = remaining_bytes - (buflen * iterations);
-
-          for (i = 0; i < iterations; i++)
+          /* read a maximum number of bytes from the stream. */
+          rlen = buflen; 
+          SVN_ERR (svn_stream_read (stream, buffer, &rlen));
+          
+          if (rlen != buflen)
+            /* Uh oh, didn't read all buflen bytes. */
+            goto stream_ran_dry;
+          
+          if (text_stream != NULL)
             {
-              /* read a maximum number of bytes from the stream. */
-              rlen = buflen; 
-              SVN_ERR (svn_stream_read (stream, buffer, &rlen));
-
-              if (rlen != buflen)
-                /* Uh oh, didn't read all buflen bytes. */
-                goto stream_ran_dry;
-
               /* write however many bytes you read. */
               wlen = rlen;
               SVN_ERR (svn_stream_write (text_stream, buffer, &wlen));
@@ -265,16 +266,19 @@ parse_content_block (svn_stream_t *stream,
                   svn_error_create (SVN_ERR_UNEXPECTED_EOF, 0, NULL, pool,
                                     "Error pushing textual contents.");
             }
-
-          /* push 'remainder' bytes */
-          rlen = remainder;
-          SVN_ERR (svn_stream_read (stream, buffer, &rlen));
-
-          if (rlen != buflen)
-            /* Uh oh, didn't read all remainder bytes. */
-            goto stream_ran_dry;
-          
+        }
+      
+      /* push 'remainder' bytes */
+      rlen = remainder;
+      SVN_ERR (svn_stream_read (stream, buffer, &rlen));
+      
+      if (rlen != remainder)
+        /* Uh oh, didn't read all remainder bytes. */
+        goto stream_ran_dry;
+      
           /* write however many bytes you read. */
+      if (text_stream != NULL)
+        {
           wlen = rlen;
           SVN_ERR (svn_stream_write (text_stream, buffer, &wlen));
           if (wlen != rlen)
@@ -282,13 +286,13 @@ parse_content_block (svn_stream_t *stream,
             return
               svn_error_create (SVN_ERR_UNEXPECTED_EOF, 0, NULL, pool,
                                 "Error pushing textual contents.");
-          
+
           /* done pushing text, close the stream. */
           SVN_ERR (svn_stream_close (text_stream));
-        }
-    }
-  
-  
+        }   
+   
+    } /* done slurping all the fulltext */
+    
   /* Everything good, mission complete. */
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -326,6 +330,8 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 {
   svn_stringbuf_t *linebuf;
   void *current_rev_baton = NULL;
+  char *buffer = apr_pcalloc (pool, SVN_STREAM_CHUNK_SIZE);
+  apr_size_t buflen = SVN_STREAM_CHUNK_SIZE;
   apr_pool_t *linepool = svn_pool_create (pool);
   apr_pool_t *revpool = svn_pool_create (pool);
   apr_pool_t *nodepool = svn_pool_create (pool);
@@ -358,7 +364,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
       if (linebuf == NULL)
         break;   /* end of stream, go home. */
 
-      if (! apr_isspace (linebuf->data[0]))
+      if ((linebuf->len > 0) && (! apr_isspace (linebuf->data[0])))
         {
           /* Found the beginning of a new record. */ 
           apr_hash_t *headers;
@@ -414,7 +420,8 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                             found_node ? 
                                               node_baton : current_rev_baton,
                                             svn_pack_bytestring,
-                                            found_node, 
+                                            found_node,
+                                            buffer, buflen,
                                             found_node ?
                                               nodepool : revpool));
             }
@@ -483,13 +490,41 @@ make_node_baton (apr_hash_t *headers,
                  apr_pool_t *pool)
 {
   struct node_baton *nb = apr_pcalloc (pool, sizeof(*nb));
+  const char *val;
 
+  /* Start with sensible defaults. */
   nb->rb = rb;
   nb->pool = pool;
+  nb->kind = svn_node_unknown;
 
-  /* ### parse the headers into a node_baton struct */
+  /* Then add info from the headers.  */
+  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
+                           APR_HASH_KEY_STRING)))
+    nb->path = apr_pstrdup (pool, val);
 
-  return NULL;
+  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_KIND,
+                           APR_HASH_KEY_STRING)))
+    {
+      if (! strcmp (val, "file"))
+        nb->kind = svn_node_file;
+      else if (! strcmp (val, "dir"))
+        nb->kind = svn_node_dir;
+    }
+
+  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_ACTION,
+                           APR_HASH_KEY_STRING)))
+    {
+      if (! strcmp (val, "change"))
+        nb->kind = svn_node_action_change;
+      else if (! strcmp (val, "add"))
+        nb->kind = svn_node_action_add;
+      else if (! strcmp (val, "delete"))
+        nb->kind = svn_node_action_delete;
+      else if (! strcmp (val, "replace"))
+        nb->kind = svn_node_action_replace;
+    }
+
+  return nb;
 }
 
 static struct revision_baton *
@@ -498,13 +533,18 @@ make_revision_baton (apr_hash_t *headers,
                      apr_pool_t *pool)
 {
   struct revision_baton *rb = apr_pcalloc (pool, sizeof(*rb));
-  
+  const char *val;
+
   rb->pb = pb;
   rb->pool = pool;
+  rb->rev = SVN_INVALID_REVNUM;
 
-  /* ### parse the headers into a revision_baton struct */
+  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
+                           APR_HASH_KEY_STRING)))
+    rb->rev = (svn_revnum_t) atoi (val);
 
-  return NULL;
+
+  return rb;
 }
 
 
@@ -515,12 +555,13 @@ new_revision_record (void **revision_baton,
                      apr_pool_t *pool)
 {
   struct parse_baton *pb = parse_baton;
-  *revision_baton = make_revision_baton (headers, pb, pool);
+  struct revision_baton *rb =  make_revision_baton (headers, pb, pool);
 
-  printf ("Got a new revision record.\n");
+  printf ("<<< Got new record for revision %" SVN_REVNUM_T_FMT "\n", rb->rev);
 
-  /* ### Create a new *revision_baton->txn, using pb->fs. */
+  /* ### Create a new rb->txn someday, using pb->fs. */
 
+  *revision_baton = rb;
   return SVN_NO_ERROR;
 }
 
@@ -532,9 +573,11 @@ new_node_record (void **node_baton,
                  apr_pool_t *pool)
 {
   struct revision_baton *rb = revision_baton;
-  printf ("Got a new node record.\n");
+  struct node_baton *nb =  make_node_baton (headers, rb, pool);
 
-  *node_baton = make_node_baton (headers, rb, pool);
+  printf ("   [[[ Got new record for node path : %s\n", nb->path);
+
+  *node_baton = nb;
   return SVN_NO_ERROR;
 }
 
@@ -544,7 +587,7 @@ set_revision_property (void *baton,
                        const char *name,
                        const svn_string_t *value)
 {
-  printf("Got a revision prop.\n");
+  printf (" Set revision property '%s' to '%s'\n", name, value->data);
 
   return SVN_NO_ERROR;
 }
@@ -554,7 +597,7 @@ set_node_property (void *baton,
                    const char *name,
                    const svn_string_t *value)
 {
-  printf("Got a node prop.\n");
+  printf ("        Set node property '%s' to '%s'\n", name, value->data);
 
   return SVN_NO_ERROR;
 }
@@ -564,7 +607,7 @@ static svn_error_t *
 set_fulltext (svn_stream_t **stream,
               void *node_baton)
 {
-  printf ("Not interested in fulltext.\n");
+  printf ("        Sorry, not interested in node's fulltext.\n");
   *stream = NULL;
   return SVN_NO_ERROR;
 }
@@ -573,7 +616,8 @@ set_fulltext (svn_stream_t **stream,
 static svn_error_t *
 close_node (void *baton)
 {
-  printf ("End of node\n");
+  struct node_baton *nb = baton;
+  printf ("       End of node path : %s ]]]\n\n", nb->path);
   return SVN_NO_ERROR;
 }
 
@@ -581,9 +625,11 @@ close_node (void *baton)
 static svn_error_t *
 close_revision (void *baton)
 {
+  struct revision_baton *rb = baton;
+  printf ("End of revision %" SVN_REVNUM_T_FMT " >>>\n\n", rb->rev);
+
   /* ### someday commit a txn here. */
 
-  printf ("End of revision\n");
   return SVN_NO_ERROR;
 }
 
