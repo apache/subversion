@@ -349,16 +349,11 @@ class TreeMirror:
       parent_dir_key = parent_dir[component]
       parent_dir = marshal.loads(self.db[parent_dir_key])
 
-    # Save the target, as it may have its own subtree.
+    # Remove subtree, if any, then remove this entry from its parent.
     basename = components[-1]
-    child_key = parent_dir[basename]
-
-    # Delete the target from its parent.
+    self._delete_tree(parent_dir[basename])
     del parent_dir[basename]
     self.db[parent_dir_key] = marshal.dumps(parent_dir)
-
-    # Remove the subtree (if any) from the mirror.
-    self._delete_tree(child_key)
     
     return path
 
