@@ -41,7 +41,8 @@
               <entry>C++</entry>
               <entry>Yes, native widgets</entry>
               <entry>Apache-style</entry>
-              <entry>http://rapidsvn.tigris.org/</entry>
+              <entry><systemitem
+              class="url">http://rapidsvn.tigris.org/</systemitem></entry>
             </row>
 
             <row>
@@ -49,7 +50,8 @@
               <entry>Python</entry>
               <entry>Unix only, non-native widgets</entry>
               <entry>GPL</entry>
-              <entry>http://gsvn.tigris.org/</entry>
+              <entry><systemitem
+              class="url">http://gsvn.tigris.org/</systemitem></entry>
             </row>
 
             <row>
@@ -57,7 +59,8 @@
               <entry>C++</entry>
               <entry>Win32 only</entry>
               <entry>GPL</entry>
-              <entry>http://tortoisesvn.tigris.org/</entry>
+              <entry><systemitem
+              class="url">http://tortoisesvn.tigris.org/</systemitem></entry>
             </row>
 
             <row>
@@ -65,7 +68,8 @@
               <entry>Java, JNI bindings</entry>
               <entry>Yes</entry>
               <entry>GPL</entry>
-              <entry>http://www.qint.de/svnup.html</entry>
+              <entry><systemitem
+              class="url">http://www.qint.de/svnup.html</systemitem></entry>
             </row>
       
             <row>
@@ -73,7 +77,8 @@
               <entry>Java, wrapping the svn command-line client</entry>
               <entry>Yes</entry>
               <entry>Academic Free License</entry>
-              <entry>http://www.alternatecomputing.com/jsvn/index.php3</entry>
+              <entry><systemitem
+              class="url">http://www.alternatecomputing.com/jsvn/index.php3</systemitem></entry>
             </row>
           </tbody>
         </tgroup>
