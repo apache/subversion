@@ -974,7 +974,7 @@ close_file (void *file_baton)
          0. fooo
          1. receive svndiff data D
          2. svnpatch SVN/text-base/F < D > SVN/tmp/text-base/F
-         3. gdiff -u SVN/text-base/F SVN/tmp/text-base/F > SVN/tmp/F.blah.tmp
+         3. gdiff -c SVN/text-base/F SVN/tmp/text-base/F > SVN/tmp/F.blah.tmp
          4. cp SVN/tmp/text-base/F SVN/text-base/F
          5. gpatch F < SVN/tmp/F.tmpfile
               ==> possibly producing F.blah.rej
@@ -986,7 +986,7 @@ close_file (void *file_baton)
          0. Write file_baton->properties to SVN/tmp/prop
 
          1. Discover and save local mods (right now, this means do a
-            GNU diff -u on ./SVN/text-base/F vs ./F, and save
+            GNU diff -c on ./SVN/text-base/F vs ./F, and save
             the result somewhere).
 
          2. Write out the following SVN/log entries, omitting any that
@@ -1051,16 +1051,22 @@ close_file (void *file_baton)
       err = svn_io_check_path (fb->path, &wfile_status, fb->pool);
       if (err)
         return err;
-
+      
       if (wfile_status == svn_node_file)
         {
           /* To preserve local changes dominantly over received
              changes, we record the received changes as a diff, to be
              applied over the working file.  Rejected hunks will be from
              the received changes, not the user's changes. */
+          
+          /* diff -c SVN/text-base/F SVN/tmp/text-base/F > SVN/tmp/F.blah.diff
+           */
+          
+          /* kff todo: need to handle non-text formats here, and support
+             other merge programs.  And quote the arguments like civilized
+             programmers. */
+          
           apr_file_t *received_diff_file;
-          svn_string_t *diff_cmd;
-          int diff_status;
           svn_string_t *tmp_txtb_full_path
             = svn_wc__text_base_path (fb->path, 1, fb->pool);
           svn_string_t *txtb_full_path
@@ -1068,7 +1074,7 @@ close_file (void *file_baton)
           svn_string_t *tmp_loc
             = svn_wc__adm_path (fb->dir_baton->path, 1, fb->pool, 
                                 fb->name->data, NULL);
-
+          
           err = svn_io_open_unique_file (&received_diff_file,
                                          &received_diff_filename,
                                          tmp_loc,
@@ -1076,40 +1082,103 @@ close_file (void *file_baton)
                                          fb->pool);
           if (err)
             return err;
-          else
-            {
-              apr_status_t apr_err;
-              apr_err = apr_close (received_diff_file);
-              if (apr_err)
-                return svn_error_createf (apr_err, 0, NULL, fb->pool,
-                                          "close_file: error closing %s",
-                                          received_diff_filename->data);
-            }
           
-          /* kff todo: need to handle non-text formats here, and support
-             other merge programs.  And quote the arguments like civilized
-             programmers. */
-          
-          /* Preserve any local modifications:
-             diff -u SVN/text-base/F SVN/tmp/text-base/F > SVN/tmp/F.blah.diff
-             kff todo: wish diff took a --output option.  Redirection
-             isn't very portable.  What to do? 
-             Greg Stein answered: apr_thread_proc.h :-) */
-          diff_cmd = svn_string_create ("diff -c -- ", fb->pool);
-          svn_string_appendstr (diff_cmd, txtb_full_path);
-          svn_string_appendcstr (diff_cmd, " ");
-          svn_string_appendstr (diff_cmd, tmp_txtb_full_path);
-          svn_string_appendcstr (diff_cmd, " > ");
-          svn_string_appendstr (diff_cmd, received_diff_filename);
-          diff_status = system (diff_cmd->data);
-          if (diff_status & 255)
-            return svn_error_createf
-              (0, diff_status, NULL, fb->pool,
-               "close_file: error diffing %s with %s, outputting to %s",
-               tmp_txtb_full_path->data, txtb_full_path->data,
-               received_diff_filename->data);
+
+          /* Replace 0 with 1 when things are working.  Until then, we
+             continue to use the old style, in which `diff' is driven
+             by a call to system() and the redirection is done through
+             the shell. */
+#if 0
+          {
+            /* kff todo: trying to drive diff the apr way */
+            apr_proc_t diff_proc;
+            apr_procattr_t *diffproc_attr;
+            char *diff_args[6]; /* "diff" "-c" "--" "f1" "f2" null */
+            
+            /* Create the process attributes. */
+            apr_err = apr_createprocattr_init (&diffproc_attr, fb->pool); 
+            if (! APR_STATUS_IS_SUCCESS (apr_err))
+              return svn_error_create 
+                (apr_err, 0, NULL, fb->pool,
+                 "close_file: error creating diff process attributes");
+            
+            /* Set io style. */
+            apr_err = apr_setprocattr_io (diffproc_attr, 0, 
+                                          APR_CHILD_BLOCK, APR_CHILD_BLOCK);
+            if (! APR_STATUS_IS_SUCCESS (apr_err))
+              return svn_error_create
+                (apr_err, 0, NULL, fb->pool,
+                 "close_file: error setting diff process io attributes");
+            
+            /* Tell it to send output to the diff file. */
+            apr_err = apr_setprocattr_childout (diffproc_attr,
+                                                received_diff_file,
+                                                NULL);
+            if (! APR_STATUS_IS_SUCCESS (apr_err))
+              return svn_error_create 
+                (apr_err, 0, NULL, fb->pool,
+                 "close_file: error setting diff process child output");
+            
+            /* Build the diff command. */
+            diff_args[0] = "diff";
+            diff_args[1] = "-c";
+            diff_args[2] = "--";
+            diff_args[3] = txtb_full_path->data;
+            diff_args[4] = tmp_txtb_full_path->data;
+            diff_args[5] = NULL;
+            
+            /* Start the diff command. */
+            apr_err = apr_create_process (&diff_proc,
+                                          "diff",
+                                          diff_args,
+                                          NULL,
+                                          diffproc_attr,
+                                          fb->pool);
+            if (! APR_STATUS_IS_SUCCESS (apr_err))
+              return svn_error_createf 
+                (apr_err, 0, NULL, fb->pool,
+                 "close_file: error starting diff process");
+            
+            /* Wait for the diff command to finish. */
+            apr_err = apr_wait_proc (&diff_proc, APR_WAIT);
+            if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
+              return svn_error_createf
+                (apr_err, 0, NULL, fb->pool,
+                 "close_file: error waiting for diff process");
+            
+            /* fooo; Have a beer. */
+            
+          }
+#else /* old-style diff -- invoke a shell line via system() */
+          {
+            svn_string_t *diff_cmd;
+            int diff_status;
+            
+            /* Needs an empty, closed diff file to start out with. */
+            apr_err = apr_close (received_diff_file);
+            if (apr_err)
+              return svn_error_createf (apr_err, 0, NULL, fb->pool,
+                                        "close_file: error closing %s",
+                                        received_diff_filename->data);
+            
+            /* Build and run the diff command. */
+            diff_cmd = svn_string_create ("diff -c -- ", fb->pool);
+            svn_string_appendstr (diff_cmd, txtb_full_path);
+            svn_string_appendcstr (diff_cmd, " ");
+            svn_string_appendstr (diff_cmd, tmp_txtb_full_path);
+            svn_string_appendcstr (diff_cmd, " > ");
+            svn_string_appendstr (diff_cmd, received_diff_filename);
+            diff_status = system (diff_cmd->data);
+            if (diff_status & 255)
+              return svn_error_createf
+                (0, diff_status, NULL, fb->pool,
+                 "close_file: error diffing %s with %s, outputting to %s",
+                 tmp_txtb_full_path->data, txtb_full_path->data,
+                 received_diff_filename->data);
+          }
+#endif /* 1/0 */
         }
-          
+      
       /* Move new text base over old text base. */
       svn_xml_make_open_tag (&entry_accum,
                              fb->pool,
