@@ -1179,9 +1179,9 @@ C  sandwich.txt
 Updated to revision 2.
 $ ls -1
 sandwich.txt                       
-sandwich.txt.59528.00001.r2        
-sandwich.txt.59524.00001.r1
-sandwich.txt.59532.00001.mine
+sandwich.txt.r2        
+sandwich.txt.r1
+sandwich.txt.mine
 $
       </screen>
       <!-- ###TODO What happens if the revnum is gt 99999?-->
@@ -1344,8 +1344,8 @@ $ svn update
 C  sandwich.txt
 Updated to revision 2.
 $ ls sandwich.*
-sandwich.txt  sandwich.txt.53180.00001.mine  sandwich.txt.53184.00001.r2  sandwich.txt.53188.00001.r1
-$ cp sandwich.txt.53184.00001.r2 sandwich.txt
+sandwich.txt  sandwich.txt.mine  sandwich.txt.r2  sandwich.txt.r1
+$ cp sandwich.txt.r2 sandwich.txt
 $ svn resolve
 $ svn commit -m "Go ahead and use Sally's sandwich, discarding my edits."
         </screen>
