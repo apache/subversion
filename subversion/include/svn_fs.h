@@ -86,35 +86,6 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
                               svn_fs_warning_callback_t warning,
                               void *warning_baton);
 
-
-/** 
- * @since New in 1.2.
- *
- * The type of a lock-token callback function.  When the filesystem
- * needs a lock-token to change a locked path, it calls this callback
- * to retrieve it.
- *
- * Set @a *token to a lock-token representing a lock on @a path.  If
- * no token for the path is available, then set @a *token to NULL.
- *
- * @a baton is the value specified in the call to @c
- * svn_fs_set_lock_token_func; the filesystem passes it through to the
- * callback.
- */
-typedef void (*svn_fs_lock_token_callback_t) (svn_lock_token_t **token,
-                                              const char *path,
-                                              void *baton);
-
-
-/** Provide a callback function, @a token_func, that @a fs should use
- * to retrieve lock-tokens.  If no such callback is registered with @a
- * fs, then lock-tokens cannot be retrieved, most likely resulting in
- * the inability of any fs routine to validate or work with locks.
- */
-void svn_fs_set_lock_token_func (svn_fs_t *fs,
-                                 svn_fs_lock_token_callback_t token_func,
-                                 void *warning_baton);
-
 
 
 /**
@@ -300,51 +271,63 @@ svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path,
 /** @} */
 
 
-/** Filesystem Users.   (@since New in 1.2.)
+/** Filesystem Access Contexts.   (@since New in 1.2.)
  * 
  */
 
-/** An opaque object representing a user. */
-typedef struct svn_fs_user_t svn_fs_user_t;
+/** At certain times, filesystem functions need access to temporary
+    user data.  For example, which user is changing a file?  If the
+    file is locked, has an appropriate lock-token been supplied?
 
-/**
- * ### Note: this paves the way for future ACL stuff; someday a user
- * object can contain information about group membership, and so on.
- * Because it's an opaque type, we can easily add new fields and
- * create new accessor and setter functions.
+    This temporary user data is stored in an "access context" object,
+    and the access context is then connected to the filesystem object.
+    Whenever a filesystem function requires information, it can pull
+    things out of the context as needed.
+*/
+
+/** An opaque object representing temporary user data. */
+typedef struct svn_fs_access_t svn_fs_access_t;
+
+
+/** Set @a *access to a new @c svn_fs_access_t object representing @a
+ *  username, allocated in @a pool.  Presumably @a username has
+ *  already been authenticated by the caller.
  */
-
-/** Set @a *user to a new @c svn_fs_user_t object representing @a
- *  username, allocated in @a pool.
- */
-svn_error_t *svn_fs_create_user (svn_fs_user_t **user,
-                                 const char *username,
-                                 apr_pool_t *pool);
+svn_error_t *svn_fs_create_access (svn_fs_access_t **access,
+                                   const char *username,
+                                   apr_pool_t *pool);
 
 
-/** Set @a *username to the name represented by @a user. */
-svn_error_t *svn_fs_get_username (const char **username,
-                                  svn_fs_user_t *user);
-
-
-/** Associate @a user with an open @a fs.  Presumably this represents
- * a user that has already been authenticated by the caller.
+/** Associate @a access with an open @a fs.
  *
  * This function can be run multiple times on the same open
- * filesystem, in order to change the filesystem user for different
- * filesystem operations.  Pass a NULL value for @a user to
- * disassociate the current user from the filesystem.
+ * filesystem, in order to change the filesystem access context for
+ * different filesystem operations.  Pass a NULL value for @a access
+ * to disassociate the current access context from the filesystem.
  */
-svn_error_t *svn_fs_set_user (svn_fs_t *fs,
-                              svn_fs_user_t *user);
+svn_error_t *svn_fs_set_access (svn_fs_t *fs,
+                                svn_fs_access_t *access);
 
 
-/** Set @a *user to the current @a fs user, or NULL if there is no
- * current fs user. 
+/** Set @a *context to the current @a fs access context, or NULL if
+ * there is no current fs access context.
  */
-svn_error_t *svn_fs_get_user (svn_fs_user_t **user,
-                              svn_fs_t *fs);
+svn_error_t *svn_fs_get_access (svn_fs_access_t **access,
+                                svn_fs_t *fs);
 
+
+/** Accessors for the access context: */
+
+/** Set @a *username to the name represented by @a access. */
+svn_error_t *svn_fs_access_get_username (const char **username,
+                                         svn_fs_access_t *access);
+
+
+/** Push a lock-token @a token into the context @a access.  The
+    context remembers all tokens it receives, and makes them available
+    to fs functions. */
+svn_error_t *svn_fs_access_set_lock_token (svn_fs_access_t *access,
+                                           const svn_lock_token_t *token);
 
 
 
