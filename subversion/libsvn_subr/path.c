@@ -56,10 +56,26 @@
 
 /*** A path manipulation library. ***/
 
-/* kff todo: this will need to handle escaping/unescaping, for files
-   that have slashes in their names. */
+static void
+canonicalize (svn_string_t *path, int style)
+{
+  /* kff todo: `style' ignored presently. */
 
-/* Helper for svn_path_path_add_component_*, which see. */
+  /* At some point this could eliminiate redundant components.
+     For now, it just makes sure there is no trailing slash. */
+
+  /* kff todo: maybe should be implemented with a new routine in
+     libsvn_string. */
+
+  while ((path->len > 0)
+         && (path->data[(path->len - 1)] == SVN_PATH_REPOS_SEPARATOR))
+    {
+      path->data[(path->len - 1)] = '\0';
+      path->len--;
+    }
+}
+
+
 static void
 add_component_internal (svn_string_t *path,
                         const char *component,
@@ -86,6 +102,9 @@ svn_path_add_component_nts (svn_string_t *path,
                             int style,
                             apr_pool_t *pool)
 {
+  /* kff todo: does not call canonicalize().  It doesn't really need
+     to, given who its callers are, but it's kind of inconsistent.
+     Hmmm. */
   add_component_internal (path, component, strlen (component), style, pool);
 }
 
@@ -97,6 +116,7 @@ svn_path_add_component (svn_string_t *path,
                         int style,
                         apr_pool_t *pool)
 {
+  canonicalize (component, style);
   add_component_internal (path, component->data, component->len, style, pool);
 }
 
@@ -107,6 +127,8 @@ svn_path_remove_component (svn_string_t *path, int style)
 {
   /* kff todo: `style' ignored presently. */
 
+  canonicalize (path, style);
+
   if (! svn_string_chop_back_to_char (path, SVN_PATH_REPOS_SEPARATOR))
     svn_string_setempty (path);
 }
@@ -114,9 +136,13 @@ svn_path_remove_component (svn_string_t *path, int style)
 
 /* Duplicate and return PATH's last component, w/o separator. */
 svn_string_t *
-svn_path_last_component (svn_string_t *path, apr_pool_t *pool)
+svn_path_last_component (svn_string_t *path, int style, apr_pool_t *pool)
 {
+  /* kff todo: `style' ignored presently. */
+
   apr_off_t i;
+
+  canonicalize (path, style);
 
   i = svn_string_find_char_backward (path, SVN_PATH_REPOS_SEPARATOR);
 
@@ -130,8 +156,11 @@ svn_path_last_component (svn_string_t *path, apr_pool_t *pool)
 }
 
 
-int svn_path_isempty (svn_string_t *path)
+int
+svn_path_isempty (svn_string_t *path, int style)
 {
+  /* kff todo: `style' ignored presently. */
+
   char buf[3];
   buf[0] = '.';
   buf[0] = SVN_PATH_REPOS_SEPARATOR;
