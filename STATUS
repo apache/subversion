@@ -40,7 +40,7 @@ Candidate changes:
     Update status documentation to add missing flags and alphabetize.
     Justification: Documentation correctness.
     Votes:
-      +1: bliss, sussman
+      +1: bliss, sussman, dlr
 
 Status of 1.0.1:
 ================
