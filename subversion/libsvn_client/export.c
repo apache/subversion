@@ -780,7 +780,6 @@ svn_client_export3 (svn_revnum_t *result_rev,
 
       if (kind == svn_node_file)
         {
-          svn_stream_t *tmp_stream;
           apr_hash_t *props;
           apr_hash_index_t *hi;
           struct file_baton *fb = apr_pcalloc (pool, sizeof(*fb));
