@@ -20,6 +20,7 @@
 #endif
 
 #include <winres.h>
+#include "../../../apr/include/apr_version.h"
 #include "../../include/svn_version.h"
 
 #ifndef _DEBUG
@@ -53,11 +54,11 @@ BEGIN
     BLOCK "040904B0"
     BEGIN
       VALUE "CompanyName", "http://subversion.tigris.org/\0"
-       VALUE "FileDescription", SVN_VER_STRINGIFY(SVN_FILE_DESCRIPTION) "\0"
+       VALUE "FileDescription", APR_STRINGIFY(SVN_FILE_DESCRIPTION) "\0"
        VALUE "FileVersion", SVN_VER_NUMBER "\0"
        VALUE "InternalName", "SVN\0"
        VALUE "LegalCopyright", "Copyright 2000-2001 CollabNet\0"
-       VALUE "OriginalFilename", SVN_VER_STRINGIFY(SVN_FILE_NAME) "\0"
+       VALUE "OriginalFilename", APR_STRINGIFY(SVN_FILE_NAME) "\0"
        VALUE "ProductName", "Subversion\0"
        VALUE "ProductVersion", SVN_VERSION "\0"
      END

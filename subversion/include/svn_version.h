@@ -18,7 +18,9 @@
 #ifndef SVN_VERSION_H
 #define SVN_VERSION_H
 
+#ifndef APR_STRINGIFY
 #include <apr_version.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
