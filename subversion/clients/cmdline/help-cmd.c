@@ -93,7 +93,7 @@ svn_cl__help (apr_getopt_t *os,
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
     svn_cl__print_generic_help (pool, stdout);  
   else                                       /* unknown option or cmd */
-    svn_cl__print_generic_help (pool, stderr);
+    fprintf (stderr, "Type `svn help' for help on Subversion usage.\n");
 
   return SVN_NO_ERROR;
 }
