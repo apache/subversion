@@ -1309,7 +1309,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   /* If something is scheduled for replacement, we do *not* want to
      pay attention to any base-props;  they might be residual from the
      old deleted file. */
-  SVN_ERR (svn_wc_entry (&entry, path, TRUE, pool));  
+  SVN_ERR (svn_wc_entry (&entry, path, TRUE, subpool));  
   if (entry 
       && ((entry->schedule == svn_wc_schedule_replace)
           || (entry->schedule == svn_wc_schedule_add)))
