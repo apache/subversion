@@ -228,12 +228,14 @@ deltify (svn_fs_id_t *target_id,
      top-level IDEAS file for leads on other things we could do here,
      though... */
 
-  source_stream
-    = svn_fs__rep_read_stream (fs, source_dkey, 0, trail, trail->pool);
-  target_stream
-    = svn_fs__rep_read_stream (fs, target_dkey, 0, trail, trail->pool);
+  source_stream = svn_fs__rep_contents_read_stream (fs, source_dkey, 0,
+                                                    trail, trail->pool);
+
+  target_stream = svn_fs__rep_contents_read_stream (fs, target_dkey, 0,
+                                                    trail, trail->pool);
 
   svn_txdelta (&txdelta_stream, source_stream, target_stream, trail->pool);
+
   svn_txdelta_to_svndiff (new_target_stream,
                           trail->pool,
                           &new_target_handler,
