@@ -1,5 +1,16 @@
 Emacs, please be in -*-text-*- mode.  Danke!
 
+=====================================================================
+This file is woefully out of date--we're well on our way to milestone
+4. This document (which is primarily notes for programmers) will be
+eventually phased out.
+
+Check out the /doc directory in your subversion tree for real
+documentation. 
+
+-Fitz
+=====================================================================
+
 What the client looks like right now:
 =====================================
 
