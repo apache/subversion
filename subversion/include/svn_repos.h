@@ -1605,27 +1605,36 @@ svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
  */
 typedef struct svn_repos_parse_fns_t
 {
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*new_revision_record) (void **revision_baton,
                                        apr_hash_t *headers,
                                        void *parse_baton,
                                        apr_pool_t *pool);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*uuid_record) (const char *uuid,
                                void *parse_baton,
                                apr_pool_t *pool);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*new_node_record) (void **node_baton,
                                    apr_hash_t *headers,
                                    void *revision_baton,
                                    apr_pool_t *pool);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*set_revision_property) (void *revision_baton,
                                          const char *name,
                                          const svn_string_t *value);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*set_node_property) (void *node_baton,
                                      const char *name,
                                      const svn_string_t *value);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*remove_node_props) (void *node_baton);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*set_fulltext) (svn_stream_t **stream,
                                 void *node_baton);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*close_node) (void *node_baton);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*close_revision) (void *revision_baton);
 } svn_repos_parser_fns_t;
 
