@@ -1,5 +1,5 @@
 /*
- * svn_client.h :  public interface for libsvn_client
+ * status.c:  return the status of a working copy dirent
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -47,81 +47,61 @@
  * individuals on behalf of CollabNet.
  */
 
+/* ==================================================================== */
+
 
 
-/*** Includes ***/
+/*** Includes. ***/
 
-/* 
- * Requires:  The working copy library.
- * Provides:  Broad wrappers around working copy library functionality.
- * Used By:   Client programs.
- */
-
-#ifndef SVN_CLIENT_H
-#define SVN_CLIENT_H
-
-#include <apr_tables.h>
-#include "svn_types.h"
+#include <apr_strings.h>
+#include <apr_pools.h>
+#include <apr_hash.h>
 #include "svn_wc.h"
+#include "svn_delta.h"
+#include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
-
+#include "svn_path.h"
+#include "svn_test.h"
+#include "svn_io.h"
 
 
 
 
-/*** Milestone 1 Interfaces ***/
+/*** Public Interface. ***/
 
-/* These interfaces are very basic for milestone 1.  They will
-   probably be changed significantly soon. */
-
-svn_error_t *
-svn_client_checkout (svn_string_t *path,
-                     svn_string_t *xml_src,
-                     svn_string_t *ancestor_path,
-                     svn_vernum_t ancestor_version,
-                     apr_pool_t *pool);
-
-
-svn_error_t *
-svn_client_update (svn_string_t *path,
-                   svn_string_t *xml_src,
-                   svn_vernum_t ancestor_version,
-                   apr_pool_t *pool);
-
-
-svn_error_t *
-svn_client_add (svn_string_t *file,
-                apr_pool_t *pool);
-
-
-svn_error_t *
-svn_client_delete (svn_string_t *file,
-                   svn_boolean_t force,
-                   apr_pool_t *pool);
-
-
-svn_error_t *
-svn_client_commit (svn_string_t *path,
-                   svn_string_t *xml_dst,
-                   svn_vernum_t version,  /* this param is temporary */
-                   apr_pool_t *pool);
-
-
+/* Given PATH to a working copy directory or file, return a STATUS
+   structure describing the object's status. */
 svn_error_t *
 svn_client_status (svn_wc__status_t **status,
                    svn_string_t *path,
-                   apr_pool_t *pool);
+                   apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_wc__status_t *statstruct;
+
+  err = svn_wc_get_status (&statstruct, path, pool);
+  if (err) return err;
+
+  /* TODO: statstruct now has all fields filled in *except* the
+     repos_ver field.  Once libsvn_ra works, we'll need to query the
+     repository for this information.  For now, the field is just
+     SVN_INVALID_VERNUM.  */
+
+  *status = statstruct;
+  
+  return SVN_NO_ERROR;
+}
 
 
 
 
-
-#endif  /* SVN_CLIENT_H */
+
+
+
+
 
 /* --------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end: 
- */
-
+ * end: */
