@@ -98,7 +98,8 @@ EXEEXT = @EXEEXT@
 
 SHELL = @SHELL@
 LIBTOOL = @SVN_LIBTOOL@
-LTFLAGS = --silent
+LTFLAGS = @SVN_LT_CCTAG@ --silent
+LTCXXFLAGS = @SVN_LT_CXXTAG@ --silent
 LT_LDFLAGS = @LT_LDFLAGS@
 LT_NO_UNDEFINED = @LT_NO_UNDEFINED@
 LT_CXX_LIBADD = @LT_CXX_LIBADD@
@@ -156,7 +157,7 @@ COMPILE_SWIG_JAVA = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFL
 COMPILE_SWIG_PL = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_PL_INCLUDES) $(INCLUDES) -o $@ -c
 
 # special compilation for files destined for javahl (i.e. C++)
-COMPILE_JAVAHL_CXX = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE_CXX) $(JAVAHL_INCLUDES) -o $@ -c
+COMPILE_JAVAHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX) $(JAVAHL_INCLUDES) -o $@ -c
 COMPILE_JAVAHL_JAVAC = $(JAVAC) $(JAVAC_FLAGS)
 COMPILE_JAVAHL_JAVAH = $(JAVAH)
 
@@ -181,7 +182,7 @@ COMPILE_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_JAVA_COMPILE)
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
 LINK_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_JAVA_LINK) $(SWIG_LDFLAGS) -rpath $(swig_javadir) -avoid-version -module
 
-LINK_JAVAHL_CXX = $(LIBTOOL) $(LTFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) $(LT_CXX_LIBADD) -rpath $(libdir)
+LINK_JAVAHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) $(LT_CXX_LIBADD) -rpath $(libdir)
 
 INSTALL = @INSTALL@
 INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
