@@ -23,6 +23,7 @@
 #include <apr_file_io.h>
 #include <apr_time.h>
 #include <apr_strings.h>
+#include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -121,14 +122,13 @@ timestamps_equal_p (svn_boolean_t *equal_p,
                     const enum svn_wc__timestamp_kind timestamp_kind,
                     apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_time_t wfile_time, entrytime;
   svn_stringbuf_t *dirpath, *entryname;
   apr_hash_t *entries = NULL;
   struct svn_wc_entry_t *entry;
   enum svn_node_kind kind;
 
-  svn_io_check_path (path, &kind, pool);
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
   if (kind == svn_node_dir)
     {
       dirpath = path;
@@ -138,9 +138,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
     svn_path_split (path, &dirpath, &entryname, svn_path_local_style, pool);
 
   /* Get the timestamp from the entries file */
-  err = svn_wc_entries_read (&entries, dirpath, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc_entries_read (&entries, dirpath, pool));
   entry = apr_hash_get (entries, entryname->data, entryname->len);
 
   /* Can't compare timestamps for an unversioned file. */
@@ -152,9 +150,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   /* Get the timestamp from the working file and the entry */
   if (timestamp_kind == svn_wc__text_time)
     {
-      err = svn_io_file_affected_time (&wfile_time, path, pool);
-      if (err) return err;
-
+      SVN_ERR (svn_io_file_affected_time (&wfile_time, path, pool));
       entrytime = entry->text_time;
     }
   
@@ -162,12 +158,8 @@ timestamps_equal_p (svn_boolean_t *equal_p,
     {
       svn_stringbuf_t *prop_path;
 
-      err = svn_wc__prop_path (&prop_path, path, 0, pool);
-      if (err) return err;
-
-      err = svn_io_file_affected_time (&wfile_time, prop_path, pool);
-      if (err) return err;      
-
+      SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
+      SVN_ERR (svn_io_file_affected_time (&wfile_time, prop_path, pool));
       entrytime = entry->prop_time;
     }
 
@@ -256,13 +248,15 @@ contents_identical_p (svn_boolean_t *identical_p,
   apr_file_t *file1_h = NULL;
   apr_file_t *file2_h = NULL;
 
-  status = apr_file_open (&file1_h, file1->data, APR_READ, APR_OS_DEFAULT, pool);
+  status = apr_file_open (&file1_h, file1->data, 
+                          APR_READ, APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf
       (status, 0, NULL, pool,
        "contents_identical_p: apr_file_open failed on `%s'", file1->data);
 
-  status = apr_file_open (&file2_h, file2->data, APR_READ, APR_OS_DEFAULT, pool);
+  status = apr_file_open (&file2_h, file2->data, APR_READ, 
+                          APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf
       (status, 0, NULL, pool,
@@ -275,13 +269,15 @@ contents_identical_p (svn_boolean_t *identical_p,
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
-           "contents_identical_p: apr_file_read_full() failed on %s.", file1->data);
+           "contents_identical_p: apr_file_read_full() failed on %s.", 
+           file1->data);
 
       status = apr_file_read_full (file2_h, buf2, sizeof(buf2), &bytes_read2);
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
-           "contents_identical_p: apr_file_read_full() failed on %s.", file2->data);
+           "contents_identical_p: apr_file_read_full() failed on %s.", 
+           file2->data);
       
       if ((bytes_read1 != bytes_read2)
           || (memcmp (buf1, buf2, bytes_read1)))
@@ -293,15 +289,15 @@ contents_identical_p (svn_boolean_t *identical_p,
 
   status = apr_file_close (file1_h);
   if (status)
-    return svn_error_createf (status, 0, NULL, pool,
-                             "contents_identical_p: apr_file_close failed on %s.",
-                              file1->data);
+    return svn_error_createf 
+      (status, 0, NULL, pool,
+       "contents_identical_p: apr_file_close failed on %s.", file1->data);
 
   status = apr_file_close (file2_h);
   if (status)
-    return svn_error_createf (status, 0, NULL, pool,
-                             "contents_identical_p: apr_file_close failed on %s.",
-                             file2->data);
+    return svn_error_createf 
+      (status, 0, NULL, pool,
+       "contents_identical_p: apr_file_close failed on %s.", file2->data);
 
   return SVN_NO_ERROR;
 }
@@ -344,96 +340,84 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
                         apr_pool_t *pool)
 {
   svn_boolean_t identical_p;
-  svn_error_t *err;
   svn_stringbuf_t *textbase_filename;
   svn_boolean_t different_filesizes, equal_timestamps;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  enum svn_node_kind kind;
 
   /* Sanity check:  if the path doesn't exist, return FALSE. */
-  enum svn_node_kind kind;
-  err = svn_io_check_path (filename, &kind, pool);
-  if (err) return err;
+  SVN_ERR (svn_io_check_path (filename, &kind, subpool));
   if (kind != svn_node_file)
     {
       *modified_p = FALSE;
-      return SVN_NO_ERROR;
+      goto cleanup;
     }              
 
   /* Get the full path of the textbase revision of filename */
-  textbase_filename = svn_wc__text_base_path (filename, 0, pool);
-
-  err = svn_io_check_path (textbase_filename, &kind, pool);
-  if (err) return err;
+  textbase_filename = svn_wc__text_base_path (filename, 0, subpool);
 
   /* Simple case:  if there's no text-base revision of the file, all we
      can do is look at timestamps.  */
+  SVN_ERR (svn_io_check_path (textbase_filename, &kind, subpool));
   if (kind != svn_node_file)
     {
-      err = timestamps_equal_p (&equal_timestamps, filename,
-                                svn_wc__text_time, pool);
-      if (err) return err;
-
+      SVN_ERR (timestamps_equal_p (&equal_timestamps, filename,
+                                   svn_wc__text_time, subpool));
       if (equal_timestamps)
         *modified_p = FALSE;
       else
         *modified_p = TRUE;
-
-      return SVN_NO_ERROR;
+      goto cleanup;
     }
   
   /* Better case:  we have a text-base revision of the file, so there
      are at least three tests we can try in succession. */
-  else
-    {     
-      /* Easy-answer attempt #1:  */
-      
-      /* Check if the the local and textbase file have *definitely*
-         different filesizes. */
-      err = filesizes_definitely_different_p (&different_filesizes,
-                                              filename, textbase_filename,
-                                              pool);
-      if (err) return err;
-      
-      if (different_filesizes) 
-        {
-          *modified_p = TRUE;
-          return SVN_NO_ERROR;
-        }
-      
-      /* Easy-answer attempt #2:  */
-      
-      /* See if the local file's timestamp is the same as the one recorded
-         in the administrative directory.  */
-      err = timestamps_equal_p (&equal_timestamps, filename,
-                                svn_wc__text_time, pool);
-      if (err) return err;
-      
-      if (equal_timestamps)
-        {
-          *modified_p = FALSE;
-          return SVN_NO_ERROR;
-        }
-      
-      /* Last ditch attempt:  */
 
-      /* If we get here, then we know that the filesizes are the same,
-         but the timestamps are different.  That's still not enough
-         evidence to make a correct decision.  So we just give up and
-         get the answer the hard way -- a brute force, byte-for-byte
-         comparison. */
-      err = contents_identical_p (&identical_p,
-                                  filename,
-                                  textbase_filename,
-                                  pool);
-      if (err)
-        return err;
+  /* Easy-answer attempt #1:  */
       
-      if (identical_p)
-        *modified_p = FALSE;
-      else
-        *modified_p = TRUE;
-      
-      return SVN_NO_ERROR;
+  /* Check if the the local and textbase file have *definitely*
+     different filesizes. */
+  SVN_ERR (filesizes_definitely_different_p (&different_filesizes,
+                                             filename, textbase_filename,
+                                             subpool));
+  if (different_filesizes) 
+    {
+      *modified_p = TRUE;
+      goto cleanup;
     }
+      
+  /* Easy-answer attempt #2:  */
+      
+  /* See if the local file's timestamp is the same as the one recorded
+     in the administrative directory.  */
+  SVN_ERR (timestamps_equal_p (&equal_timestamps, filename,
+                               svn_wc__text_time, subpool));
+  if (equal_timestamps)
+    {
+      *modified_p = FALSE;
+      goto cleanup;
+    }
+      
+  /* Last ditch attempt:  */
+
+  /* If we get here, then we know that the filesizes are the same, but
+     the timestamps are different.  That's still not enough evidence
+     to make a correct decision.  So we just give up and get the
+     answer the hard way -- a brute force, byte-for-byte
+     comparison. */
+  SVN_ERR (contents_identical_p (&identical_p,
+                                 filename,
+                                 textbase_filename,
+                                 subpool));
+  if (identical_p)
+    *modified_p = FALSE;
+  else
+    *modified_p = TRUE;
+
+ cleanup:
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -445,18 +429,18 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
                          apr_pool_t *pool)
 {
   enum svn_node_kind wkind, bkind;
-  svn_error_t *err;
   svn_stringbuf_t *prop_path;
   svn_stringbuf_t *prop_base_path;
   svn_boolean_t different_filesizes, equal_timestamps;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /* First, get the paths of the working and 'base' prop files. */
-  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
-  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, 0, pool));
+  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, subpool));
+  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, 0, subpool));
 
   /* See if either of the paths exist. */
-  SVN_ERR (svn_io_check_path (prop_path, &wkind, pool));
-  SVN_ERR (svn_io_check_path (prop_base_path, &bkind, pool));
+  SVN_ERR (svn_io_check_path (prop_path, &wkind, subpool));
+  SVN_ERR (svn_io_check_path (prop_base_path, &bkind, subpool));
 
   /* Easy out:  if the base file is missing, we know the answer
      immediately. */
@@ -466,13 +450,13 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
         {
           /* base is missing, but working exists */
           *modified_p = TRUE;
-          return SVN_NO_ERROR;
+          goto cleanup;
         }
       else
         {
           /* base and working are both missing */
           *modified_p = FALSE;
-          return SVN_NO_ERROR;
+          goto cleanup;
         }
     }
 
@@ -481,7 +465,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
     {
       /* base exists, working is missing */
       *modified_p = TRUE;
-      return SVN_NO_ERROR;
+      goto cleanup;
     }
 
   /* At this point, we know both files exists.  Therefore we have no
@@ -493,29 +477,25 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   
   /* Check if the the local and prop-base file have *definitely*
      different filesizes. */
-  err = filesizes_definitely_different_p (&different_filesizes,
-                                          prop_path, prop_base_path,
-                                          pool);
-  if (err) return err;
-  
+  SVN_ERR (filesizes_definitely_different_p (&different_filesizes,
+                                             prop_path, prop_base_path,
+                                             subpool));
   if (different_filesizes) 
     {
       *modified_p = TRUE;
-      return SVN_NO_ERROR;
+      goto cleanup;
     }
   
   /* Easy-answer attempt #2:  */
       
   /* See if the local file's prop timestamp is the same as the one
      recorded in the administrative directory.  */
-  err = timestamps_equal_p (&equal_timestamps, path,
-                            svn_wc__prop_time, pool);
-  if (err) return err;
-  
+  SVN_ERR (timestamps_equal_p (&equal_timestamps, path,
+                               svn_wc__prop_time, subpool));
   if (equal_timestamps)
     {
       *modified_p = FALSE;
-      return SVN_NO_ERROR;
+      goto cleanup;
     }
   
   /* Last ditch attempt:  */
@@ -534,27 +514,24 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
      svn_wc__get_local_propchanges(). */
   {
     apr_array_header_t *local_propchanges;
-    apr_hash_t *localprops = apr_hash_make (pool);
-    apr_hash_t *baseprops = apr_hash_make (pool);
+    apr_hash_t *localprops = apr_hash_make (subpool);
+    apr_hash_t *baseprops = apr_hash_make (subpool);
 
-    err = svn_wc__load_prop_file (prop_path, localprops, pool);
-    if (err) return err;
-
-    err = svn_wc__load_prop_file (prop_base_path, baseprops, pool);
-    if (err) return err;
-
-    err = svn_wc__get_local_propchanges (&local_propchanges,
-                                         localprops,
-                                         baseprops,
-                                         pool);
-    if (err) return err;
+    SVN_ERR (svn_wc__load_prop_file (prop_path, localprops, subpool));
+    SVN_ERR (svn_wc__load_prop_file (prop_base_path, baseprops, subpool));
+    SVN_ERR (svn_wc__get_local_propchanges (&local_propchanges,
+                                            localprops,
+                                            baseprops,
+                                            subpool));
                                          
     if (local_propchanges->nelts > 0)
       *modified_p = TRUE;
     else
       *modified_p = FALSE;
   }
-
+ 
+ cleanup:
+  svn_pool_destroy (subpool);
   
   return SVN_NO_ERROR;
 }
@@ -571,9 +548,9 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                      svn_wc_entry_t *entry,
                      apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_stringbuf_t *rej_file, *prej_file;
   svn_stringbuf_t *rej_path, *prej_path;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Note:  it's assumed that ENTRY is a particular entry inside
      DIR_PATH's entries file. */
@@ -604,13 +581,11 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
 
           if (rej_file)
             {
-              rej_path = svn_stringbuf_dup (dir_path, pool);
+              rej_path = svn_stringbuf_dup (dir_path, subpool);
               svn_path_add_component (rej_path, rej_file,
                                       svn_path_local_style);
 
-              err = svn_io_check_path (rej_path, &kind, pool);
-              if (err) return err;
-
+              SVN_ERR (svn_io_check_path (rej_path, &kind, subpool));
               if (kind == svn_node_file)
                 /* The textual conflict file is still there. */
                 *text_conflicted_p = TRUE;
@@ -624,12 +599,11 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
 
           if (prej_file)
             {
-              prej_path = svn_stringbuf_dup (dir_path, pool);
+              prej_path = svn_stringbuf_dup (dir_path, subpool);
               svn_path_add_component (prej_path, prej_file,
                                       svn_path_local_style);
 
-              err = svn_io_check_path (prej_path, &kind, pool);
-              if (err) return err;
+              SVN_ERR (svn_io_check_path (prej_path, &kind, subpool));
 
               if (kind == svn_node_file)
                 /* The property conflict file is still there. */
@@ -651,6 +625,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
       *prop_conflicted_p = FALSE;
     }
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -664,14 +639,15 @@ svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
                         apr_pool_t *pool)
 {
   svn_stringbuf_t *name, *value, *vpath;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /* The heuristic here is simple;  a file is of type `binary' iff it
      has the `svn:mime-type' property and its value does *not* start
      with `text/'. */
 
-  vpath = svn_stringbuf_dup (path, pool);
-  name = svn_stringbuf_create (SVN_PROP_MIME_TYPE, pool);
-  SVN_ERR (svn_wc_prop_get (&value, name, vpath, pool));
+  vpath = svn_stringbuf_dup (path, subpool);
+  name = svn_stringbuf_create (SVN_PROP_MIME_TYPE, subpool);
+  SVN_ERR (svn_wc_prop_get (&value, name, vpath, subpool));
  
   if (value
       && (value->len > 5) 
@@ -680,6 +656,7 @@ svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
   else
     *has_binary_prop = FALSE;
   
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
