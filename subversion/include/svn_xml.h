@@ -53,6 +53,7 @@
 
 #include "xmlparse.h"
 #include "svn_error.h"
+#include "svn_delta.h"
 
 
 #define SVN_XML_NAMESPACE "http://subversion.tigris.org/xmlns/"
