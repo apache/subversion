@@ -77,16 +77,46 @@ assemble_status (svn_wc_status_t *status,
   /* Copy info from entry struct to status struct */
   status->entry = entry;
   status->repos_rev = SVN_INVALID_REVNUM;  /* caller fills in */
-  status->flag = svn_wc_status_none;       /* default to no status. */
+  status->text_status = svn_wc_status_none;       /* default to no
+                                                     status. */
+  status->prop_status = svn_wc_status_none;       /* default to no status. */
 
   if (status->entry)
     {
       if (entry->flags & SVN_WC_ENTRY_ADD)
-        status->flag = svn_wc_status_added;
+        {
+          status->text_status = svn_wc_status_added;
+        }
       else if (entry->flags & SVN_WC_ENTRY_DELETE)
-        status->flag = svn_wc_status_deleted;
+        status->text_status = svn_wc_status_deleted;
       else if (entry->flags & SVN_WC_ENTRY_CONFLICT)
-        status->flag = svn_wc_status_conflicted;
+        {
+          /* We must decide to mark 0, 1, or 2 status flags as
+             "conflicted", based on whether reject files are mentioned
+             and/or continue to exist.  Luckily, we have a function to do
+             this.  :)  */          
+          svn_boolean_t text_conflict_p, prop_conflict_p;
+          svn_string_t *parent_dir;
+          
+          if (entry->kind == svn_node_file)
+            {
+              parent_dir = svn_string_dup (path, pool);
+              svn_path_remove_component (parent_dir, svn_path_local_style);
+            }
+          else if (entry->kind == svn_node_dir)
+            parent_dir = path;
+
+          /*          svn_boolean_t conflicted_p; */
+          /* See if the user has resolved the conflict before we
+             report the entry's status. */
+          /*          err = svn_wc__conflicted_p (&conflicted_p, path,
+                                      entry, pool);
+          if (err) return err;
+          
+          if (conflicted_p)*/
+            status->text_status = svn_wc_status_conflicted;
+            status->prop_status = svn_wc_status_conflicted;
+        }
       else 
         {
           if (entry->kind == svn_node_file)
@@ -97,7 +127,7 @@ assemble_status (svn_wc_status_t *status,
               if (err) return err;
               
               if (modified_p)
-                status->flag = svn_wc_status_modified;
+                status->text_status = svn_wc_status_modified;
             }
         }
     }
