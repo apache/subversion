@@ -280,6 +280,7 @@ substitute_and_verify (const char *test_name,
   keywords.date     = date   ? svn_string_create (date, pool)   : NULL;
   keywords.author   = author ? svn_string_create (author, pool) : NULL;
   keywords.url      = url    ? svn_string_create (url, pool)    : NULL;
+  keywords.id       = NULL;
 
   err = svn_subst_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
                                       &keywords, expand, pool);
@@ -307,7 +308,10 @@ substitute_and_verify (const char *test_name,
              src_fname, buf);
         }
       else
-        return SVN_NO_ERROR;
+        {
+          svn_error_clear (err);
+          return SVN_NO_ERROR;
+        }
 
     }
   else if (err)

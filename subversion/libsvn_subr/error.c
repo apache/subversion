@@ -66,7 +66,9 @@ svn_error__locate (const char *file, long line)
 #if defined(SVN_DEBUG_ERROR)
 static apr_status_t err_abort (void *data)
 {
+  svn_error_t *err = data;  /* For easy viewing in a debugger */
   abort();
+  err = err; /* Fake a use for the variable */
 }
 #endif
 
@@ -85,9 +87,6 @@ make_error_internal (apr_status_t apr_err,
     {
       if (apr_pool_create (&pool, NULL))
         abort ();
-#if defined(SVN_DEBUG_ERROR)
-      apr_pool_cleanup_register(pool, NULL, err_abort, NULL);
-#endif
     }
 
   /* Create the new error structure */
@@ -100,6 +99,11 @@ make_error_internal (apr_status_t apr_err,
   new_error->file    = error_file;
   new_error->line    = error_line;
   /* XXX TODO: Unlock mutex here */
+
+#if defined(SVN_DEBUG_ERROR)
+  if (! child)
+      apr_pool_cleanup_register(pool, new_error, err_abort, NULL);
+#endif
 
   return new_error;
 }
@@ -161,6 +165,11 @@ svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
   while (chain->child)
     chain = chain->child;
 
+#if defined(SVN_DEBUG_ERROR)
+  /* Kill existing handler since the end of the chain is going to change */
+  apr_pool_cleanup_kill (pool, chain, err_abort);
+#endif
+
   /* Copy the new error chain into the old chain's pool. */
   while (new_err)
     {
@@ -169,13 +178,18 @@ svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
       *chain = *new_err;
       chain->message = apr_pstrdup (pool, new_err->message);
       chain->pool = pool;
+#if defined(SVN_DEBUG_ERROR)
+      if (! new_err->child)
+        apr_pool_cleanup_kill (oldpool, new_err, err_abort);
+#endif
       new_err = new_err->child;
     }
 
-  /* Destroy the new error chain. */
 #if defined(SVN_DEBUG_ERROR)
-  apr_pool_cleanup_kill (oldpool, NULL, err_abort);
+  apr_pool_cleanup_register (pool, chain, err_abort, NULL);
 #endif
+
+  /* Destroy the new error chain. */
   apr_pool_destroy (oldpool);
 }
 
@@ -186,7 +200,9 @@ svn_error_clear (svn_error_t *err)
   if (err)
     {
 #if defined(SVN_DEBUG_ERROR)
-      apr_pool_cleanup_kill (err->pool, NULL, err_abort);
+      while (err->child)
+        err = err->child;
+      apr_pool_cleanup_kill (err->pool, err, err_abort);
 #endif
       apr_pool_destroy (err->pool);
     }
