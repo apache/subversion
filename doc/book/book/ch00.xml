@@ -25,9 +25,9 @@
       But like many tools, CVS is starting to show its age.
       Subversion is a relatively new version control system designed
       to be the successor to CVS.  The designers set out to win the
-      hearts of CVS users in two ways: by creating a open-source
-      version control system with a similar design (and "look and
-      feel") as CVS, and by attempting to fix most of CVS's noticeable
+      hearts of CVS users in two ways: by creating an open-source
+      version control system with a design (and "look and feel")
+      similar to CVS, and by attempting to fix most of CVS's noticeable
       flaws.  While the result isn't necessarily the next great
       evolution in version control design, Subversion
       <emphasis>is</emphasis> very powerful, very useable, and very
