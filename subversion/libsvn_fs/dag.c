@@ -295,7 +295,7 @@ svn_fs__dag_get_revision (svn_revnum_t *rev,
   if (rev_str->len)
     {
       rev_cstr = apr_pstrndup (trail->pool, rev_str->data, rev_str->len);
-      *rev = atoi (rev_cstr);
+      *rev = (svn_revnum_t) atol (rev_cstr);
     }
   else
     *rev = SVN_INVALID_REVNUM;
@@ -1703,7 +1703,7 @@ svn_fs__dag_copied_from (svn_revnum_t *rev_p,
                                     copy_skel->children->next->data,
                                     copy_skel->children->next->len);
 
-      *rev_p = (svn_revnum_t) atoi (rev_str);
+      *rev_p = (svn_revnum_t) atol (rev_str);
       *path_p = apr_pstrndup (trail->pool,
                               copy_skel->children->next->next->data,
                               copy_skel->children->next->next->len);

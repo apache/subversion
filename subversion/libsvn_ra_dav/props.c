@@ -621,7 +621,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
                                   "DAV:version-name was not present on the "
                                   "baseline resource.");
         }
-      *latest_rev = atol(vsn_name);
+      *latest_rev = (svn_revnum_t) atol(vsn_name);
     }
 
   return SVN_NO_ERROR;

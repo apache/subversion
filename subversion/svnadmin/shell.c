@@ -401,7 +401,7 @@ parse_input (int *finished,
     return cd (state, shcxt, pool);
   
   else if (! strcmp(subcommand, "cr"))
-    return cr ((svn_revnum_t) atoi(state), shcxt, pool);
+    return cr ((svn_revnum_t) atol(state), shcxt, pool);
 
   else if (! strcmp(subcommand, "ls"))
     return ls (shcxt, state, pool);

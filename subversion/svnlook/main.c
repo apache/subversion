@@ -948,7 +948,7 @@ main (int argc, const char * const *argv)
       else if (! strcmp (argv[2], "rev")) /* revision */
         {
           c.is_revision = TRUE;
-          c.rev_id = atoi (argv[3]);
+          c.rev_id = (svn_revnum_t) atol (argv[3]);
           if (c.rev_id < 1)
             {
               do_usage (argv[0], 1);

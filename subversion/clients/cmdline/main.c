@@ -587,12 +587,12 @@ parse_revision (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
   if ((left_rev[0] == 'h') || (left_rev[0] == 'H') || (left_rev[0] == '\0'))
     os->start_revision = SVN_INVALID_REVNUM;
   else
-    os->start_revision = (svn_revnum_t) atoi (left_rev);
+    os->start_revision = (svn_revnum_t) atol (left_rev);
 
   if ((right_rev[0] == 'h') || (right_rev[0] == 'H') || (right_rev[0] == '\0'))
     os->end_revision = SVN_INVALID_REVNUM;
   else
-    os->end_revision = (svn_revnum_t) atoi (right_rev);
+    os->end_revision = (svn_revnum_t) atol (right_rev);
 
   return SVN_NO_ERROR;
 }
