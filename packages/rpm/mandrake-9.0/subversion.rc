@@ -1,0 +1,4 @@
+buildarchtranslate: i386: i586
+buildarchtranslate: i486: i586
+buildarchtranslate: i586: i586
+buildarchtranslate: i686: i586
