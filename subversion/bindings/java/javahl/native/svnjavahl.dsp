@@ -4,7 +4,7 @@
 
 # TARGTYPE "Win32 (x86) Dynamic-Link Library" 0x0102
 
-CFG=svnjavahl - Win32 Debug DB40
+CFG=svnjavahl - Win32 Debug DB42
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
@@ -13,7 +13,7 @@ CFG=svnjavahl - Win32 Debug DB40
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "svnjavahl.mak" CFG="svnjavahl - Win32 Debug DB40"
+!MESSAGE NMAKE /f "svnjavahl.mak" CFG="svnjavahl - Win32 Debug DB42"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
@@ -21,6 +21,8 @@ CFG=svnjavahl - Win32 Debug DB40
 !MESSAGE "svnjavahl - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE "svnjavahl - Win32 Release DB40" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE "svnjavahl - Win32 Debug DB40" (based on "Win32 (x86) Dynamic-Link Library")
+!MESSAGE "svnjavahl - Win32 Debug DB42" (based on "Win32 (x86) Dynamic-Link Library")
+!MESSAGE "svnjavahl - Win32 Release DB42" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE 
 
 # Begin Project
@@ -136,7 +138,65 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb41d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 "C:\programme\microsoft sdk\lib\shfolder.lib" Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb40d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../apr-util/xml/expat/lib/libD/xml.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib ../../../../../neon/libneonD.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
+# ADD LINK32 "C:\program files\microsoft platform sdk\lib\shfolder.lib" Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb40d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../apr-util/xml/expat/lib/libD/xml.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib ../../../../../neon/libneonD.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
+# SUBTRACT LINK32 /pdb:none
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 1
+# PROP BASE Output_Dir "svnjavahl___Win32_Debug_DB42"
+# PROP BASE Intermediate_Dir "svnjavahl___Win32_Debug_DB42"
+# PROP BASE Ignore_Export_Lib 0
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 1
+# PROP Output_Dir "svnjavahl___Win32_Debug_DB42"
+# PROP Intermediate_Dir "svnjavahl___Win32_Debug_DB42"
+# PROP Ignore_Export_Lib 0
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\..\..\..\..\apr\include" /I "..\..\..\..\..\apr-util\include" /I "..\..\..\..\include" /D "APR_DECLARE_STATIC" /D "APU_DECLARE_STATIC" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "SVNJAVAHL_EXPORTS" /YX /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\..\..\..\..\apr\include" /I "..\..\..\..\..\apr-util\include" /I "..\..\..\..\include" /D "APR_DECLARE_STATIC" /D "APU_DECLARE_STATIC" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "SVNJAVAHL_EXPORTS" /YX /FD /GZ /c
+# ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
+# ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
+# ADD BASE RSC /l 0x409 /d "_DEBUG"
+# ADD RSC /l 0x409 /d "_DEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LINK32=link.exe
+# ADD BASE LINK32 "C:\program files\microsoft platform sdk\lib\shfolder.lib" Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb40d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../apr-util/xml/expat/lib/libD/xml.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib ../../../../../neon/libneonD.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
+# SUBTRACT BASE LINK32 /pdb:none
+# ADD LINK32 shfolder.lib Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb42d.lib ../../../../../Debug/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Debug/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Debug/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Debug/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Debug/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Debug/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Debug/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Debug/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibD/apr.lib ../../../../../apr-iconv/LibD/apriconv.lib ../../../../../apr-util/LibD/aprutil.lib ../../../../../apr-util/xml/expat/lib/libD/xml.lib ../../../../../Debug/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Debug/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Debug/subversion/libsvn_client/libsvn_client-1.lib ../../../../../neon/libneonD.lib ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
+# SUBTRACT LINK32 /pdb:none
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 0
+# PROP BASE Output_Dir "svnjavahl___Win32_Release_DB42"
+# PROP BASE Intermediate_Dir "svnjavahl___Win32_Release_DB42"
+# PROP BASE Ignore_Export_Lib 0
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 0
+# PROP Output_Dir "svnjavahl___Win32_Release_DB42"
+# PROP Intermediate_Dir "svnjavahl___Win32_Release_DB42"
+# PROP Ignore_Export_Lib 0
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /MD /W3 /GX /O2 /I "..\..\..\..\..\apr\include" /I "..\..\..\..\..\apr-util\include" /I "..\..\..\..\include" /D "APR_DECLARE_STATIC" /D "APU_DECLARE_STATIC" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "SVNJAVAHL_EXPORTS" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\..\..\..\..\apr\include" /I "..\..\..\..\..\apr-util\include" /I "..\..\..\..\include" /D "APR_DECLARE_STATIC" /D "APU_DECLARE_STATIC" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "SVNJAVAHL_EXPORTS" /YX /FD /c
+# ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
+# ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
+# ADD BASE RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /d "NDEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LINK32=link.exe
+# ADD BASE LINK32 "C:\programme\microsoft sdk\lib\shfolder.lib" ws2_32.lib Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb40.lib ../../../../../Release/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Release/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Release/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Release/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Release/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Release/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Release/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Release/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Release/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibR/apr.lib ../../../../../apr-iconv/LibR/apriconv.lib ../../../../../apr-util/LibR/aprutil.lib ../../../../../apr-util/xml/expat/lib/libR/xml.lib ../../../../../Release/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Release/subversion/libsvn_client/libsvn_client-1.lib ../../../../../neon/libneon.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
+# SUBTRACT BASE LINK32 /pdb:none
+# ADD LINK32 shfolder.lib ws2_32.lib Rpcrt4.lib Mswsock.lib ../../../../../db4-win32\lib\libdb42.lib ../../../../../Release/subversion/libsvn_fs/libsvn_fs-1.lib ../../../../../Release/subversion/libsvn_diff/libsvn_diff-1.lib ../../../../../Release/subversion/libsvn_repos/libsvn_repos-1.lib ../../../../../Release/subversion/libsvn_delta/libsvn_delta-1.lib ../../../../../Release/subversion/libsvn_ra_dav/libsvn_ra_dav-1.lib ../../../../../Release/subversion/libsvn_ra_svn/libsvn_ra_svn-1.lib ../../../../../Release/subversion/libsvn_ra_local/libsvn_ra_local-1.lib ../../../../../Release/subversion/libsvn_ra/libsvn_ra-1.lib ../../../../../Release/subversion/libsvn_wc/libsvn_wc-1.lib ../../../../../apr/LibR/apr.lib ../../../../../apr-iconv/LibR/apriconv.lib ../../../../../apr-util/LibR/aprutil.lib ../../../../../apr-util/xml/expat/lib/libR/xml.lib ../../../../../Release/subversion/libsvn_subr/libsvn_subr-1.lib ../../../../../Release/subversion/libsvn_client/libsvn_client-1.lib ../../../../../neon/libneon.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
 # SUBTRACT LINK32 /pdb:none
 
 !ENDIF 
@@ -147,6 +207,8 @@ LINK32=link.exe
 # Name "svnjavahl - Win32 Debug"
 # Name "svnjavahl - Win32 Release DB40"
 # Name "svnjavahl - Win32 Debug DB40"
+# Name "svnjavahl - Win32 Debug DB42"
+# Name "svnjavahl - Win32 Release DB42"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
@@ -330,6 +392,26 @@ InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
 
 # End Custom Build
 
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
+
+"..\cls\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\ClientException.java
+
+"..\cls\org\tigris\subversion\javahl\ClientException.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/ClientException.java
+
+# End Custom Build
+
 !ENDIF 
 
 # End Source File
@@ -368,6 +450,26 @@ InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
+
+"..\cls\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
+
+"..\cls\org\tigris\subversion\javahl\DirEntry.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/DirEntry.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\DirEntry.java
@@ -424,6 +526,26 @@ InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
 
 # End Custom Build
 
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
+
+"..\cls\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\JNIError.java
+
+"..\cls\org\tigris\subversion\javahl\JNIError.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/JNIError.java
+
+# End Custom Build
+
 !ENDIF 
 
 # End Source File
@@ -471,6 +593,26 @@ InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
 
 # End Custom Build
 
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
+
+"..\cls\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\LogMessage.java
+
+"..\cls\org\tigris\subversion\javahl\LogMessage.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/LogMessage.java
+
+# End Custom Build
+
 !ENDIF 
 
 # End Source File
@@ -509,6 +651,26 @@ InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
+
+"..\cls\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
+
+"..\cls\org\tigris\subversion\javahl\NodeKind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/NodeKind.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\NodeKind.java
@@ -597,6 +759,42 @@ BuildCmds= \
    $(BuildCmds)
 # End Custom Build
 
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\Notify.java
+
+BuildCmds= \
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
+
+"..\cls\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\Notify$Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\Notify$Action.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\Notify.java
+
+BuildCmds= \
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Notify.java
+
+"..\cls\org\tigris\subversion\javahl\Notify.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\Notify$Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\Notify$Action.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+# End Custom Build
+
 !ENDIF 
 
 # End Source File
@@ -635,6 +833,26 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
+
+"..\cls\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
+
+"..\cls\org\tigris\subversion\javahl\PromptUserPassword.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword.java
@@ -691,6 +909,26 @@ InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
 
 # End Custom Build
 
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
+
+"..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\PromptUserPassword2.java
+
+"..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PromptUserPassword2.java
+
+# End Custom Build
+
 !ENDIF 
 
 # End Source File
@@ -729,6 +967,26 @@ InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
+
+"..\cls\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
+
+"..\cls\org\tigris\subversion\javahl\PropertyData.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/PropertyData.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\PropertyData.java
@@ -829,6 +1087,48 @@ BuildCmds= \
    $(BuildCmds)
 # End Custom Build
 
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\Revision.java
+
+BuildCmds= \
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
+
+"..\cls\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\Revision$Kind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\Revision$Number.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\Revision$DateSpec.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\Revision.java
+
+BuildCmds= \
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Revision.java
+
+"..\cls\org\tigris\subversion\javahl\Revision.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\Revision$Kind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\Revision$Number.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\Revision$DateSpec.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+# End Custom Build
+
 !ENDIF 
 
 # End Source File
@@ -882,6 +1182,36 @@ BuildCmds= \
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\Status.java
+
+BuildCmds= \
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
+
+"..\cls\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\Status$Kind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\Status.java
+
+BuildCmds= \
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/Status.java
+
+"..\cls\org\tigris\subversion\javahl\Status.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\Status$Kind.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
 InputPath=..\src\org\tigris\subversion\javahl\Status.java
@@ -963,6 +1293,36 @@ BuildCmds= \
    $(BuildCmds)
 # End Custom Build
 
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
+
+BuildCmds= \
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
+
+"..\cls\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\SVNClient$LogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\SVNClient.java
+
+BuildCmds= \
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/SVNClient.java
+
+"..\cls\org\tigris\subversion\javahl\SVNClient.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"..\cls\org\tigris\subversion\javahl\SVNClient$LogLevel.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+# End Custom Build
+
 !ENDIF 
 
 # End Source File
@@ -1005,6 +1365,26 @@ InputPath=..\cls\org\tigris\subversion\javahl\NodeKind.class
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath=..\cls\org\tigris\subversion\javahl\NodeKind.class
+
+"org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.NodeKind
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\cls\org\tigris\subversion\javahl\NodeKind.class
+
+"org_tigris_subversion_javahl_NodeKind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.NodeKind
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
 InputPath=..\cls\org\tigris\subversion\javahl\NodeKind.class
@@ -1061,6 +1441,26 @@ InputPath="..\cls\org\tigris\subversion\javahl\Notify$Action.class"
 
 # End Custom Build
 
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath="..\cls\org\tigris\subversion\javahl\Notify$Action.class"
+
+"org_tigris_subversion_javahl_Notify_Action.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.Notify$Action
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# Begin Custom Build
+InputPath="..\cls\org\tigris\subversion\javahl\Notify$Action.class"
+
+"org_tigris_subversion_javahl_Notify_Action.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.Notify$Action
+
+# End Custom Build
+
 !ENDIF 
 
 # End Source File
@@ -1099,6 +1499,26 @@ InputPath="..\cls\org\tigris\subversion\javahl\Notify$Status.class"
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath="..\cls\org\tigris\subversion\javahl\Notify$Status.class"
+
+"org_tigris_subversion_javahl_Notify_Status.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.Notify$Status
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath="..\cls\org\tigris\subversion\javahl\Notify$Status.class"
+
+"org_tigris_subversion_javahl_Notify_Status.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.Notify$Status
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
 InputPath="..\cls\org\tigris\subversion\javahl\Notify$Status.class"
@@ -1155,6 +1575,26 @@ InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
 
 # End Custom Build
 
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+
+"org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# Begin Custom Build
+InputPath=..\cls\org\tigris\subversion\javahl\PromptUserPassword2.class
+
+"org_tigris_subversion_javahl_PromptUserPassword2.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.PromptUserPassword2
+
+# End Custom Build
+
 !ENDIF 
 
 # End Source File
@@ -1193,6 +1633,26 @@ InputPath="..\cls\org\tigris\subversion\javahl\Revision$Kind.class"
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath="..\cls\org\tigris\subversion\javahl\Revision$Kind.class"
+
+"org_tigris_subversion_javahl_Revision_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.Revision$Kind
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath="..\cls\org\tigris\subversion\javahl\Revision$Kind.class"
+
+"org_tigris_subversion_javahl_Revision_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.Revision$Kind
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
 InputPath="..\cls\org\tigris\subversion\javahl\Revision$Kind.class"
@@ -1249,6 +1709,26 @@ InputPath=..\cls\org\tigris\subversion\javahl\Revision.class
 
 # End Custom Build
 
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\cls\org\tigris\subversion\javahl\Revision.class
+
+"org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.Revision
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# Begin Custom Build
+InputPath=..\cls\org\tigris\subversion\javahl\Revision.class
+
+"org_tigris_subversion_javahl_Revision.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.Revision
+
+# End Custom Build
+
 !ENDIF 
 
 # End Source File
@@ -1287,6 +1767,26 @@ InputPath="..\cls\org\tigris\subversion\javahl\Status$Kind.class"
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath="..\cls\org\tigris\subversion\javahl\Status$Kind.class"
+
+"org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.Status$Kind
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath="..\cls\org\tigris\subversion\javahl\Status$Kind.class"
+
+"org_tigris_subversion_javahl_Status_Kind.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.Status$Kind
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
 InputPath="..\cls\org\tigris\subversion\javahl\Status$Kind.class"
@@ -1343,6 +1843,26 @@ InputPath="..\cls\org\tigris\subversion\javahl\SVNClient$LogLevel.class"
 
 # End Custom Build
 
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath="..\cls\org\tigris\subversion\javahl\SVNClient$LogLevel.class"
+
+"org_tigris_subversion_javahl_SVNClient_LogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClient$LogLevel
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# Begin Custom Build
+InputPath="..\cls\org\tigris\subversion\javahl\SVNClient$LogLevel.class"
+
+"org_tigris_subversion_javahl_SVNClient_LogLevel.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClient$LogLevel
+
+# End Custom Build
+
 !ENDIF 
 
 # End Source File
@@ -1381,6 +1901,26 @@ InputPath=..\cls\org\tigris\subversion\javahl\SVNClient.class
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath=..\cls\org\tigris\subversion\javahl\SVNClient.class
+
+"org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClient
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\cls\org\tigris\subversion\javahl\SVNClient.class
+
+"org_tigris_subversion_javahl_SVNClient.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javah -force -classpath ../cls org.tigris.subversion.javahl.SVNClient
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
 
 # Begin Custom Build
 InputPath=..\cls\org\tigris\subversion\javahl\SVNClient.class
