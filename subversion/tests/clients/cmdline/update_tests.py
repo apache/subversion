@@ -956,6 +956,84 @@ def update_receive_illegal_name(sbox):
     return 1
   
 
+#----------------------------------------------------------------------
+def prop_update_on_scheduled_delete(sbox):
+  "receive a property update to a file scheduled for deletion"
+  
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  other_wc = wc_dir + '-other'
+
+  # Make the "other" working copy.
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  other_iota_path = os.path.join(other_wc, 'iota')
+
+  svntest.main.run_svn (None, 'propset', 'foo', 'bar', iota_path)
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('iota', wc_rev=2, repos_rev=2)
+
+  # Commit the change, creating revision 2.
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None,
+                                           None, None, None, None, wc_dir):
+    return 1
+
+
+  print "KFF:", other_wc
+  sys.exit(0)
+
+  svntest.main.run_svn (None, 'rm', other_iota_path)
+
+  # Expected output tree for update of other_wc.
+  expected_output = svntest.wc.State(other_wc, {
+    'iota' : Item(status='G '),
+    })
+
+  # Expected disk tree for the update.
+  expected_disk = svntest.main.greek_state.copy()
+
+  # Expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(other_wc, 2)
+  expected_status.tweak('iota', status='DM')
+  
+  # Do the update and check the results in three ways.
+  return svntest.actions.run_and_verify_update(other_wc,
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status)
+  return 0
+
+
+def update_receive_illegal_name(sbox):
+  "bail when receive a file or dir named .svn"
+  if sbox.build():
+    return 1
+
+  # This tests the revision 4334 fix for issue #1068.
+  wc_dir = sbox.wc_dir
+  illegal_url = os.path.join(svntest.main.current_repo_url,
+                             'A', 'D', 'G', '.svn')
+  outlines, errlines = svntest.main.run_svn(None, 'mkdir', '-m', 'log msg',
+                                            illegal_url)
+  out, err = svntest.main.run_svn(1, 'up', wc_dir)
+
+  if err:
+    return 0
+  else:
+    return 1
+
 
 ########################################################################
 # Run the tests
@@ -974,6 +1052,7 @@ test_list = [ None,
               update_missing,
               update_replace_dir,
               update_single_file,
+              prop_update_on_scheduled_delete,
               update_receive_illegal_name,
              ]
 
