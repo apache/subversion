@@ -308,7 +308,7 @@ main (int argc, char **argv)
         apr_hash_t *statushash;
         err = svn_client_status (&statushash, target, pool);
         if (! err) 
-          svn_cl__print_status (statushash, pool);
+          svn_cl__print_statuses (statushash, pool);
         break;
       }
     default:

@@ -118,7 +118,7 @@ void svn_path_split (const svn_string_t *path,
    directory -- that is, if it is NULL or if prepending it as a
    component to an existing path would result in no meaningful
    change. */
-int svn_path_isempty (const svn_string_t *path, enum svn_path_style style);
+int svn_path_is_empty (const svn_string_t *path, enum svn_path_style style);
 
 
 /* Remove trailing slashes that don't affect the meaning of the path.

@@ -490,8 +490,9 @@ svn_wc_entry (svn_wc_entry_t **entry,
 {
   svn_error_t *err;
   enum svn_node_kind kind;
-  svn_wc_entry_t *e = NULL;
   apr_hash_t *entries = apr_make_hash (pool);
+
+  *entry = NULL;
 
   err = svn_io_check_path (path, &kind, pool);
   if (err)
@@ -506,18 +507,43 @@ svn_wc_entry (svn_wc_entry_t **entry,
 
   if (kind == svn_node_dir)
     {
+      err = svn_wc__check_wc (path, pool);
+      if (err)
+        return err;
+
       err = svn_wc__entries_read (&entries, path, pool);
-      e = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
+      if (err)
+        return err;
+
+      *entry
+        = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
     }
 
-  if (entry)
-    *entry = e;
-  else   /* try it as a non-directory. */
+  if (! *entry)
     {
+      /* Maybe we're here because PATH is a directory, and we've
+         already tried and failed to retrieve its revision information
+         (we could have failed because PATH is under rev control as a
+         file, not a directory, i.e., the user rm'd the file and
+         created a dir there).
+         
+         Or maybe we're here because PATH is a regular file.
+         
+         Either way, if PATH is a versioned entity, it is versioned as
+         a file.  So look split and look in parent for entry info. */
+
       svn_string_t *dir, *basename;
       svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
       
-      /* to be continued */
+      err = svn_wc__check_wc (dir, pool);
+      if (err)
+        return err;
+      
+      err = svn_wc__entries_read (&entries, dir, pool);
+      if (err)
+        return err;
+      
+      *entry = apr_hash_get (entries, basename->data, basename->len);
     }
 
   return SVN_NO_ERROR;

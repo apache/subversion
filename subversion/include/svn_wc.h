@@ -130,17 +130,20 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
 
 
 
+/*** Status. ***/
+
 /* Structure for holding the "status" of a working copy item. 
    The item's entry data is in ENTRY, augmented and possibly shadowed
-   by the other fields. */
+   by the other fields.  ENTRY is null if this item is not under
+   version control. */
 typedef struct svn_wc_status_t
 {
-  svn_wc_entry_t *entry;
-  svn_revnum_t repos_rev;
+  svn_wc_entry_t *entry;     /* Can be NULL if not under vc. */
+  svn_revnum_t repos_rev;    /* Likewise, can be SVN_INVALID_REVNUM */
   
   /* Mutually exclusive states. One of these will always be set. */
   enum {
-    svn_wc_status_none = 1,
+    svn_wc_status_none = 1,  /* Among other things, indicates not under vc. */
     svn_wc_status_added,
     svn_wc_status_deleted,
     svn_wc_status_modified,
@@ -151,19 +154,18 @@ typedef struct svn_wc_status_t
 } svn_wc_status_t;
 
 
+/* Fill *STATUS for PATH, allocating in POOL, with the exception of
+   the repos_rev field, which is normally filled in by the caller. */
+svn_error_t *svn_wc_status (svn_wc_status_t **status,
+                            svn_string_t *path,
+                            apr_pool_t *pool);
+
 /* Under PATH, fill STATUSHASH to map paths to svn_wc_status_t
    structures.  For each struct, all fields will be filled in except
    for repos_rev; this would presumably be filled in by the caller. */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_string_t *path,
                               apr_pool_t *pool);
-
-
-/* Fill *STATUS for PATH, allocating in POOL, with the exception of
-   the repos_rev field, which is normally filled in by the caller. */
-svn_error_t *svn_wc_status (svn_wc_status_t **status,
-                            svn_string_t *path,
-                            apr_pool_t *pool);
 
 
 

@@ -63,8 +63,9 @@
 
 
 /* Fill in STATUS with ENTRY.
-   ENTRY's pool must not be shorter-lived than STATUS's, since ENTRY
-   will be stored directly, not copied. */
+   ENTRY may be null, for non-versioned entities.
+   Else, ENTRY's pool must not be shorter-lived than STATUS's, since
+   ENTRY will be stored directly, not copied. */
 static svn_error_t *
 assemble_status (svn_wc_status_t *status,
                  svn_string_t *path,
@@ -76,31 +77,30 @@ assemble_status (svn_wc_status_t *status,
   /* Copy info from entry struct to status struct */
   status->entry = entry;
   status->repos_rev = SVN_INVALID_REVNUM;  /* caller fills in */
+  status->flag = svn_wc_status_none;       /* default to no status. */
 
-  if (entry->flags & SVN_WC_ENTRY_ADD)
-    status->flag = svn_wc_status_added;
-  else if (entry->flags & SVN_WC_ENTRY_DELETE)
-    status->flag = svn_wc_status_deleted;
-  else if (entry->flags & SVN_WC_ENTRY_CONFLICT)
-    status->flag = svn_wc_status_conflicted;
-  else 
+  if (status->entry)
     {
-      if (entry->kind == svn_node_file)
+      if (entry->flags & SVN_WC_ENTRY_ADD)
+        status->flag = svn_wc_status_added;
+      else if (entry->flags & SVN_WC_ENTRY_DELETE)
+        status->flag = svn_wc_status_deleted;
+      else if (entry->flags & SVN_WC_ENTRY_CONFLICT)
+        status->flag = svn_wc_status_conflicted;
+      else 
         {
-          svn_boolean_t modified_p;
-
-          err = svn_wc__file_modified_p (&modified_p, path, pool);
-          if (err) return err;
-
-          if (modified_p)
-            status->flag = svn_wc_status_modified;
+          if (entry->kind == svn_node_file)
+            {
+              svn_boolean_t modified_p;
+              
+              err = svn_wc__file_modified_p (&modified_p, path, pool);
+              if (err) return err;
+              
+              if (modified_p)
+                status->flag = svn_wc_status_modified;
+            }
         }
     }
-
-  /* At this point, if the object is neither (M)odified nor marked
-     for (D)eletion or (A)ddition, then set the flag blank. */
-  if (! status->flag)
-    status->flag = svn_wc_status_none;
 
   return SVN_NO_ERROR;
 }
