@@ -50,6 +50,14 @@ i386-unknown-freebsd4.2:
 
      Notes:
 
+i386-unknown-freebsd4.3:
+     Client:     Build OK, Check OK
+     Filesystem: Build OK, Check OK
+     Last Check: 7 June 2001
+     Porter:     Ben Collins-Sussman <sussman@collab.net>
+
+     Notes:
+
 i686-pc-linux-gnu:
      Client:     Build OK, Check OK.
      Filesystem: ?
