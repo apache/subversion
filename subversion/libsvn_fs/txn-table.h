@@ -18,6 +18,15 @@
 #include "trail.h"
 
 
+/* Create a new transaction in FS as part of TRAIL, with an initial
+   root and base root ID of ROOT_ID.  Set *TXN_ID_P to the ID of the new
+   transaction.  */
+svn_error_t *svn_fs__create_txn (char **txn_id_p,
+				 svn_fs_t *fs,
+				 const svn_fs_id_t *root_id,
+				 trail_t *trail);
+
+
 /* Retrieve information about the Subversion transaction SVN_TXN from
    the `transactions' table of FS, as part of TRAIL.
    Set *ROOT_ID_P to the ID of the transaction's root directory.

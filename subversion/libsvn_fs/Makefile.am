@@ -10,7 +10,8 @@ libsvn_fs_la_SOURCES = convert-size.c		\
 		       nodes-table.c		\
 		       skel.c			\
 		       trail.c			\
-		       tree.c
+		       tree.c			\
+		       txn.c
 
 # Set aside for the moment:
 #		       delta.c			\
@@ -18,7 +19,6 @@ libsvn_fs_la_SOURCES = convert-size.c		\
 #		       file.c			\
 #		       node.c			\
 #		       rep.c			\
-#		       txn.c			\
 #		       revision.c
 
 libsvn_fs_la_LIBADD = -ldb
