@@ -171,7 +171,7 @@ static svn_boolean_t parse_authz_line(const char *name, const char *value,
 static int parse_authz_lines(svn_config_t *cfg,
                              const char *repos_name, const char *repos_path,
                              const char *user,
-                             int required_access, int *access,
+                             int required_access, int *granted_access,
                              apr_pool_t *pool)
 {
     const char *qualified_repos_path;
@@ -186,8 +186,8 @@ static int parse_authz_lines(svn_config_t *cfg,
                                        NULL);
     svn_config_enumerate(cfg, qualified_repos_path,
                          parse_authz_line, &baton);
-    *access = !(baton.deny & required_access)
-              || (baton.allow & required_access);
+    *granted_access = !(baton.deny & required_access)
+                      || (baton.allow & required_access);
 
     if ((baton.deny & required_access)
         || (baton.allow & required_access))
@@ -195,8 +195,8 @@ static int parse_authz_lines(svn_config_t *cfg,
 
     svn_config_enumerate(cfg, repos_path,
                          parse_authz_line, &baton);
-    *access = !(baton.deny & required_access)
-              || (baton.allow & required_access);
+    *granted_access = !(baton.deny & required_access)
+                      || (baton.allow & required_access);
 
     return (baton.deny & required_access)
            || (baton.allow & required_access);
@@ -259,7 +259,7 @@ static int check_access(svn_config_t *cfg, const char *repos_name,
 {
     const char *base_name;
     const char *original_repos_path = repos_path;
-    int access;
+    int granted_access;
 
     if (!repos_path) {
         /* XXX: Check if the user has 'required_access' _anywhere_ in the
@@ -271,7 +271,7 @@ static int check_access(svn_config_t *cfg, const char *repos_name,
 
     base_name = repos_path;
     while (!parse_authz_lines(cfg, repos_name, repos_path,
-                              user, required_access, &access,
+                              user, required_access, &granted_access,
                               pool)) {
         if (base_name[0] == '/' && base_name[1] == '\0') {
             /* By default, deny access */
@@ -281,15 +281,15 @@ static int check_access(svn_config_t *cfg, const char *repos_name,
         svn_path_split(repos_path, &repos_path, &base_name, pool);
     }
 
-    if (access && (required_access & AUTHZ_SVN_RECURSIVE) != 0) {
+    if (granted_access && (required_access & AUTHZ_SVN_RECURSIVE) != 0) {
         /* Check access on entries below the current repos path */
-        access = parse_authz_sections(cfg,
-                                      repos_name, original_repos_path,
-                                      user, required_access,
-                                      pool);
+        granted_access = parse_authz_sections(cfg,
+					      repos_name, original_repos_path,
+					      user, required_access,
+					      pool);
     }
 
-    return access;
+    return granted_access;
 }
 
 /* Check if the current request R is allowed.  Upon exit *REPOS_PATH_REF
