@@ -1019,8 +1019,16 @@ base_hotcopy (const char *src_path,
      used by BDB.  See sleepycat docs for details, or svn issue #1818. */
 #ifdef DB_LOG_AUTOREMOVE
   SVN_ERR (get_db_pagesize (&pagesize, src_path, pool));
+  if (pagesize < SVN_STREAM_CHUNK_SIZE)
+    {
+      /* use the largest multiple of BDB pagesize we can. */
+      int multiple = SVN_STREAM_CHUNK_SIZE / pagesize;
+      pagesize *= multiple;
+    }
 #else
-  pagesize = 4096;
+  /* default to 128K chunks, which should be safe.
+     BDB almost certainly uses a power-of-2 pagesize. */
+  pagesize = (4096 * 32); 
 #endif
 
   /* Copy the databases.  */
