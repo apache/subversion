@@ -225,7 +225,7 @@ class CollectData(rcsparse.Sink):
     return self.branchlist.get(revision, [])
 
   def define_tag(self, name, revision):
-    """Record a bidirectional mapping between symbolic NAME and REVISION
+    """Record a bidirectional mapping between symbolic NAME and REVISION.
     REVISION is an unprocessed revision number from the RCS file's
     header, for example: '1.7', '1.7.0.2', or '1.1.1' or '1.1.1.1'.
     This function will determine what kind of symbolic name it is by
@@ -280,7 +280,7 @@ class CollectData(rcsparse.Sink):
 
     # Check for unlabeled branches, record them.  We tried to collect
     # all branch names when we parsed the symbolic name header
-    # earlier, of course, but that doesn't catch unlabeled branches.
+    # earlier, of course, but that didn't catch unlabeled branches.
     # If a branch is unlabeled, this is our first encounter with it,
     # so we have to record its data now.
     if not trunk_rev.match(revision):
