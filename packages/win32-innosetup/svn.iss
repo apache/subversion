@@ -1,7 +1,7 @@
 [Setup]
 ;# Version parameters #########################################################
-#define svn_version "0.17.1"
-#define svn_release "4503"
+#define svn_version "0.18.0"
+#define svn_release "4973"
 #define svn_cpr "Copyright ©2000-2003 CollabNet"
 
 ;# paths_inno_src.iss ##########################################################
@@ -35,7 +35,6 @@ InfoBeforeFile=Pre.txt
 DisableStartupPrompt=true
 UseSetupLdr=false
 InternalCompressLevel=0
-DiskSpanning=false
 AppVersion={#= svn_version}-r{#= svn_release}
 WizardImageFile=images\wiz-164x314x24.bmp
 WizardSmallImageFile=images\wiz-55x55x24.bmp
@@ -49,13 +48,18 @@ Name: quicklaunchicon; Description: Create &Quick Launch icon for the Subversion
 
 [Files]
 ; Subversion files --------------------------------------------------------------
+Source: in\subversion\Readme.dist; DestDir: {app}; DestName: Readme.txt
+Source: W32notes.txt; DestDir: {app}
+Source: {#= path_svnclient}\README.txt; DestDir: {app}; Components: main; DestName: Buildnotes.txt
 Source: {#= path_setup_in}\subversion\svn-proxy-template.reg; DestDir: {app}; Components: main; Flags: ignoreversion
-Source: {#= path_svnclient}\README.txt; DestDir: {app}; Components: main
 Source: {#= path_svnclient}\svn.exe; DestDir: {app}; Components: main; Flags: ignoreversion
 Source: {#= path_svnadmin}\svnadmin.exe; DestDir: {app}; Components: main; Flags: ignoreversion
 Source: {#= path_svnlook}\svnlook.exe; DestDir: {app}; Components: main; Flags: ignoreversion
+Source: {#= path_svnserve}\svnserve.exe; DestDir: {app}; Components: main; Flags: ignoreversion
+Source: {#= path_svnversion}\svnversion.exe; DestDir: {app}; Components: main; Flags: ignoreversion
 Source: {#= path_davsvn}\mod_dav_svn.so; DestDir: {app}\apache2\modules; Components: main; Flags: ignoreversion
 Source: {#= path_svnclient}\libdb40.dll; DestDir: {app}; Components: main
+Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Components: main; Flags: ignoreversion
 Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}; Components: main
 Source: {#= path_setup_in}\doc\svn-doc.chm; DestDir: {app}\doc; Components: main
 
@@ -77,12 +81,6 @@ Source: {#= path_brkdb_lib}\libdb4*.lib; DestDir: {app}\lib\berkeley; Components
 
 ; Helpers ---------------------------------------------------------------------
 Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Components: main; Flags: ignoreversion
-; Cygwin Diffutils
-Source: {#= path_diffutls_bin}\diff.exe; DestDir: {app}\helpers\cygdiff; Flags: ignoreversion
-Source: {#= path_diffutls_bin}\diff3.exe; DestDir: {app}\helpers\cygdiff; Flags: ignoreversion
-Source: {#= path_diffutls_bin}\cygwin1.dll; DestDir: {app}\helpers\cygdiff; Flags: ignoreversion
-Source: {#= path_diffutls_bin}\cygintl-1.dll; DestDir: {app}\helpers\cygdiff; Flags: ignoreversion
-Source: {#= path_setup_in}\licenses\GPL2.txt; DestDir: {app}; Components: main
 
 ;; shfolder.dll stuff ----------------------------------------------------------
 ;Source: in\helpers\isxdl.dll; DestDir: {tmp}; Flags: dontcopy
@@ -92,7 +90,6 @@ Source: {#= path_setup_in}\licenses\GPL2.txt; DestDir: {app}; Components: main
 ; Internet Shortcuts ----------------------------------------------------------
 Source: svn.url; DestDir: {app}
 
-
 [INI]
 Filename: {app}\svn.url; Section: InternetShortcut; Key: URL; String: http://subversion.tigris.org/
 
@@ -100,17 +97,17 @@ Filename: {app}\svn.url; Section: InternetShortcut; Key: URL; String: http://sub
 Name: {group}\Subversion on the Web; Filename: {app}\svn.url; Components: main
 Name: {group}\Uninstall Subversion; Filename: {uninstallexe}; Components: main
 Name: {group}\Licenses\Subversion; Filename: {app}\SubversionLicense.txt; Components: main
-Name: {group}\Licenses\GPL 2; Filename: {app}\GPL2.txt; Components: main
 Name: {group}\Licenses\Berkeley DB Licence; Filename: {app}\BerkeleyLicense.txt; Components: main
 Name: {group}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Components: main; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0
 Name: {userdesktop}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Components: main; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0; Tasks: desktopicon
 Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Components: main; Comment: The standard Subversion Documentation; IconFilename: {app}\svn.exe; IconIndex: 0; MinVersion: 4.01.1998,5.00.2195; Tasks: quicklaunchicon
+Name: {group}\Read Me; Filename: {app}\Readme.txt
 
 [UninstallDelete]
 Type: files; Name: {app}\svn.url
 
 [_ISTool]
-EnableISX=true
+EnableISX=false
 
 [Types]
 Name: full; Description: Full installation
@@ -126,15 +123,13 @@ Root: HKCU; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe;
 Root: HKCU; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueName: Path; ValueData: {app}; Flags: uninsdeletekeyifempty uninsdeletevalue
 Root: HKCU; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Version; ValueData: {#= svn_version}; Flags: uninsdeletekeyifempty uninsdeletevalue
 Root: HKCU; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Revision; ValueData: {#= svn_release}; Flags: uninsdeletekeyifempty uninsdeletevalue
-Root: HKCU; SubKey: SOFTWARE\Tigris.org\Subversion\Config\Helpers; ValueType: string; ValueName: diff-cmd; ValueData: {code:Diff2Cmd}; Flags: uninsdeletekeyifempty uninsdeletevalue noerror
-Root: HKCU; SubKey: SOFTWARE\Tigris.org\Subversion\Config\Helpers; ValueType: string; ValueName: diff3-cmd; ValueData: {code:Diff3Cmd}; Flags: uninsdeletekeyifempty uninsdeletevalue noerror
+Root: HKCU; Subkey: Environment; ValueType: string; ValueName: APR_ICONV_PATH; ValueData: {app}\iconv; Flags: uninsdeletevalue noerror
 
 Root: HKLM; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueData: {app}\svn.exe; Flags: noerror uninsdeletekeyifempty uninsdeletevalue
 Root: HKLM; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueName: Path; ValueData: {app}; Flags: uninsdeletekeyifempty uninsdeletevalue noerror
 Root: HKLM; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Version; ValueData: {#= svn_version}; Flags: noerror uninsdeletekey
 Root: HKLM; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Revision; ValueData: {#= svn_release}; Flags: uninsdeletevalue noerror uninsdeletekeyifempty
-Root: HKLM; SubKey: SOFTWARE\Tigris.org\Subversion\Config\Helpers; ValueType: string; ValueName: diff-cmd; ValueData: {code:Diff2Cmd}; Flags: uninsdeletekeyifempty uninsdeletevalue noerror
-Root: HKLM; SubKey: SOFTWARE\Tigris.org\Subversion\Config\Helpers; ValueType: string; ValueName: diff3-cmd; ValueData: {code:Diff3Cmd}; Flags: uninsdeletekeyifempty uninsdeletevalue noerror
+Root: HKLM; Subkey: SYSTEM\CurrentControlSet\Control\Session Manager\Environment; ValueType: string; ValueName: APR_ICONV_PATH; ValueData: {app}\iconv; Flags: uninsdeletevalue noerror
 
 [Run]
 Filename: {app}\helpers\svnpath.exe; Parameters: "add ""{app}"""
@@ -142,7 +137,7 @@ Filename: {app}\helpers\svnpath.exe; Parameters: "add ""{app}"""
 [UninstallRun]
 Filename: {app}\helpers\svnpath.exe; Parameters: "remove ""{app}"""
 
-[Code]
-#include "isx_globals.pas"
-#include "isx_main.pas"
+;[Code]
+;#include "isx_globals.pas"
+;#include "isx_main.pas"
 
