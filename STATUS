@@ -22,10 +22,12 @@ Candidate changes:
       +1: sussman, jszakmeister
       +0: dlr, gstein
 
-  * r8616
+  * r8616,r8912
     Improved warnings from svnlook and svnadmin.
     Justification: greatly increased admin-friendliness.
     Votes:
+      +1: julianfoad
+    Old votes (for r8616 alone):
       +1: cmpilato, dlr, sussman
       -1: julianfoad (memory leak and inappropriate verbosity; see the dev@
             mailing list thread "r8616: candidate for 1.0.1: Improved warnings
