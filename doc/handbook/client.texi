@@ -370,7 +370,7 @@ something.
 A final reminder:  all three of these commands (@command{svn status},
 @command{svn diff}, @command{svn revert}) can be used without any
 network access (except for the @samp{-u} switch to status).  This
-makes it easy to manage your changes-in-progress while travelling on
+makes it easy to manage your changes-in-progress while traveling on
 an airplane, etc.
 
 @subsection Merge others' changes  (conflict resolution)
@@ -465,7 +465,7 @@ covered in this section.
 @node History
 @section History
 
-As we mentioned eariler, the repository is like a time machine.  It
+As we mentioned earlier, the repository is like a time machine.  It
 remembers every revision ever committed, and allows you to explore
 this history.
 
@@ -860,7 +860,7 @@ _M   foo.c
 @end example
 
 Notice that a 2nd column has appeared in the status output; the
-leading undescore indicates that you've not made any textual changes,
+leading underscore indicates that you've not made any textual changes,
 but the 'M' means you've modified the properties.  @command{svn
 status} tries to hide the 2nd 'property' column when an item has no
 properties at all; this was a design choice, to ease new users into
@@ -944,7 +944,7 @@ $LastChangedDate$
 Cumulus clouds are appearing more frequently as summer approaches.
 @end example
 
-Subversion is able subsitute the @samp{$LastChangedDate$} string with
+Subversion is able substitute the @samp{$LastChangedDate$} string with
 the actual date in which this file last changed:
 
 @example
