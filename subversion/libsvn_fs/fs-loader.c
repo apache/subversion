@@ -31,6 +31,12 @@
 
 #include "fs-loader.h"
 
+/* This is defined by configure on platforms which use configure, but
+   we need to define a fallback for Windows. */
+#ifndef DEFAULT_FS_TYPE
+#define DEFAULT_FS_TYPE "bdb"
+#endif
+
 #define FS_TYPE_FILENAME "fs-type"
 
 /* The implementation of this library is deliberately not separated
