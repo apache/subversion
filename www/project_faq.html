@@ -53,6 +53,8 @@
 <p>
 <strong>References:</strong>
 </p>
+<li><a href="#http-methods">What are all the HTTP methods Subversion 
+    uses?</a></li>
 <li><a href="#bikeshed">What's a 'bikeshed'?</a></li> 
 </ol>
 
@@ -281,6 +283,10 @@ software.  For Squid, the config option is</p>
 
 <p>(Squid 2.4 and later already knows about PROPFIND.)</p>
 
+<p>See also "<a href="#http-methods">What are all the HTTP methods
+Subversion uses?</a>" for advice on additional HTTP methods to allow
+through your proxy.</p>
+
 <p>If it's difficult or impossible to get the proxy to allow
 Subversion traffic, but you want to check out the Subversion sources,
 you may be able to go around the proxy.  Some proxies that filter port
@@ -477,6 +483,65 @@ to the <tt>dav/</tt> directory (and to <tt>db/</tt>, of course).  </p>
 <p>
 <h2>References:</h2>
 <p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="http-methods">What are all the HTTP methods Subversion
+    uses?</a></h3>
+
+<p>The following email says it all.  As the author points out,
+Subversion does not actually use all of these WebDAV/DeltaV methods
+yet, but it probably will someday, so if you're configuring a proxy,
+you might as well allow all of them:</p>
+
+<p>
+<blockquote>
+<pre>
+From: Nuutti Kotivuori &lt;naked@iki.fi&gt;
+Subject: Re: list of HTTP messages used by svn?
+To: "Hamilton Link" &lt;helink@sandia.gov&gt;
+Cc: dev@subversion.tigris.org
+Date: Sat, 10 Aug 2002 13:51:52 +0300
+
+Hamilton Link wrote:
+&gt; Is there a full list of the HTTP methods svn uses somewhere, that
+&gt; someone could piont me to? From the documentation I can find (in
+&gt; particular project_faq.html and INSTALL), the list of methods svn
+&gt; uses include at least the following:
+&gt;
+&gt; GET, PROPFIND, REPORT, OPTIONS, MERGE, MKACTIVITY, and CHECKOUT
+&gt;
+&gt; But since the lists I can find are only partial lists and nowhere
+&gt; does it suggest these are all the ones used, I'm reluctant to make
+&gt; any assumptions.
+&gt;
+&gt; If I had a complete list, I could go to the corp. proxy guy once
+&gt; instead of many times, and reduce the risk of pissing him off and
+&gt; being left with inadequate svn support in the proxy.
+
+<a href="http://www.webdav.org/deltav/WWW10/deltav-intro.htm">http://www.webdav.org/deltav/WWW10/deltav-intro.htm</a>
+
+A list copied from there:
+
+HTTP/1.1: GET, HEAD, POST, PUT, DELETE, OPTIONS, TRACE, CONNECT
+
+WebDAV: LOCK, UNLOCK, PROPFIND, PROPPATCH, COPY, MOVE, MKCOL
+
+DeltaV: CHECKIN, CHECKOUT, UNCHECKOUT, VERSION-CONTROL, REPORT,
+UPDATE, LABEL, MERGE, MKWORKSPACE, BASELINE-CONTROL, MKACTIVITY
+
+Subversion uses no methods outside these. It doesn't use all of them
+either, but it's better to support the full WebDAV/DeltaV than just
+some arbitrary subset. If the proxy being configured is a recent
+Squid, it probably has everything from HTTP/1.1 and WebDAV - and then
+it only needs the DeltaV extensions added.
+
+You can give that list to your corp. proxy guy and explain to him that
+he can check the RFC's for further information.
+</pre>
+</blockquote>
+
+</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
