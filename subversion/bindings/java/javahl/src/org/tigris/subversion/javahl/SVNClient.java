@@ -481,6 +481,15 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      */
     public native void cancelOperation() throws ClientException;
+
+    /**
+     * Retrieves the working copy information for an item
+     * @param path  path of the item
+     * @return      the information object
+     * @throws ClientException
+     */
+    public native Info info(String path) throws ClientException;
+
     /**
      * Enable logging in the JNI-code
      * @param logLevel      the level of information to log (See

@@ -409,4 +409,12 @@ public interface SVNClientInterface
      * @throws ClientException
      */
     void cancelOperation() throws ClientException;
+
+    /**
+     * Retrieves the working copy information for an item
+     * @param path  path of the item
+     * @return      the information object
+     * @throws ClientException
+     */
+    Info info(String path) throws ClientException;
 }

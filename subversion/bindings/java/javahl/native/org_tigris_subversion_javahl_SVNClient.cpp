@@ -1356,3 +1356,26 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_cancelOperati
         return;
     }
 }
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    info
+ * Signature: (Ljava/lang/String;)Lorg/tigris/subversion/javahl/Info;
+ */
+JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_info
+  (JNIEnv *env, jobject jthis, jstring jpath)
+{
+    JNIEntry(SVNClient, info);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if(cl == NULL)
+    {
+        JNIUtil::throwError("bad c++ this");
+        return NULL;
+    }
+    
+    JNIStringHolder path(jpath);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return NULL;
+    }
+    return cl->info(path);
+}
