@@ -220,7 +220,7 @@ sub doFetchLog
     print "<h2>New log message:</h2>\n";
     print "<blockquote>\n";
     print "<textarea cols=\"80\" rows=\"25\" wrap=\"off\" name=\"log\">\n";
-    print $log;
+    print $escaped_log;
     print "</textarea><br />\n";
     print "<input type=\"hidden\" name=\"rev\" value=\"$rev\">\n";
     print "<input type=\"submit\" name=\"action\" value=\"Commit Changes\">\n";
