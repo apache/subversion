@@ -76,6 +76,7 @@ Summary: Apache server module for Subversion server.
 Requires: apr >= %{apr_version}
 Requires: apr-util >= %{apr_version}
 Requires: subversion = %{version}-%{release}
+Requires: httpd >= %{apache_version}
 BuildPreReq: httpd-devel >= %{apache_version}
 %description server
 The subversion-server package adds the Subversion server Apache module to
