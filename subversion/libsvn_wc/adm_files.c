@@ -1033,24 +1033,11 @@ init_adm (svn_string_t *path,
     return err;
 
 
-  /* SVN_WC__ADM_ANCESTOR */
-  err = init_adm_file (path, SVN_WC__ADM_ANCESTOR, ancestor_path, pool);
-  if (err)
-    return err;
-
-
   /* SVN_WC__ADM_ENTRIES */
   err = svn_wc__entries_init (path, pool);
   if (err)
     return err;
 
-
-  /* SVN_WC__ADM_DELTA_HERE */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DELTA_HERE,
-                                svn_file_kind, 0, pool);
-  if (err)
-    return err;
-  
 
   /* SVN_WC__ADM_PROPERTIES */
   err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPERTIES,

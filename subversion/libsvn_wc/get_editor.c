@@ -52,6 +52,7 @@
 #include <stdio.h>       /* temporary, for printf() */
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_file_io.h>
@@ -73,8 +74,13 @@
 struct edit_baton
 {
   svn_string_t *dest_dir;
-  svn_string_t *repository;
   svn_vernum_t target_version;
+
+  /* These used only in checkouts. */
+  svn_boolean_t is_checkout;
+  svn_string_t *ancestor_path;
+  svn_string_t *repository;
+
   apr_pool_t *pool;
 };
 
@@ -429,27 +435,25 @@ replace_root (void *edit_baton,
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *d;
   svn_error_t *err;
-  svn_vernum_t ancestor_version;
   svn_string_t *ancestor_path;
+  svn_vernum_t ancestor_version;
 
   *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->pool);
 
-  err = svn_wc__entry_get_ancestry (d->path,
-                                    NULL,
-                                    &ancestor_path,
-                                    &ancestor_version,
-                                    eb->pool);
-  if (err)
-    return err;
-
-  err = prep_directory (d->path,
-                        eb->repository,
-                        ancestor_path,
-                        ancestor_version,
-                        1, /* force */
-                        d->pool);
-  if (err)
-    return err;
+  if (eb->is_checkout)
+    {
+      ancestor_path = eb->ancestor_path;
+      ancestor_version = eb->target_version;
+      
+      err = prep_directory (d->path,
+                            eb->repository,
+                            ancestor_path,
+                            ancestor_version,
+                            1, /* force */
+                            d->pool);
+      if (err)
+        return err;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -641,7 +645,7 @@ apply_textdelta (void *file_baton,
   hb->source = NULL;
   hb->dest = NULL;
   err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ, subpool);
-  if (err != SVN_NO_ERROR)
+  if (err && (err->apr_err != APR_ENOENT))
     goto error;
 
   /* Open the text base for writing (this will get us a temporary file).  */
@@ -913,6 +917,8 @@ close_edit (void *edit_baton)
 
 
 
+/*** Returning editors. ***/
+
 static const svn_delta_edit_fns_t tree_editor =
 {
   replace_root,
@@ -931,13 +937,16 @@ static const svn_delta_edit_fns_t tree_editor =
 };
 
 
-svn_error_t *
-svn_wc_get_update_editor (svn_string_t *dest,
-                          svn_string_t *repos,
-                          svn_vernum_t target_version,
-                          const svn_delta_edit_fns_t **editor,
-                          void **edit_baton,
-                          apr_pool_t *pool)
+/* Helper for the two public editor-supplying functions. */
+static svn_error_t *
+make_editor (svn_string_t *dest,
+             svn_vernum_t target_version,
+             svn_boolean_t is_checkout,
+             svn_string_t *repos,
+             svn_string_t *ancestor_path,
+             const svn_delta_edit_fns_t **editor,
+             void **edit_baton,
+             apr_pool_t *pool)
 {
   struct edit_baton *eb;
   apr_pool_t *subpool = svn_pool_create (pool, NULL);
@@ -946,15 +955,52 @@ svn_wc_get_update_editor (svn_string_t *dest,
 
   *editor = &tree_editor;
 
+  if (is_checkout)
+    {
+      assert (ancestor_path != NULL);
+      assert (repos != NULL);
+    }
+
   eb = apr_pcalloc (subpool, sizeof (*edit_baton));
-  eb->dest_dir       = dest;   /* Remember, DEST might be null. */
-  eb->repository     = repos;
+  eb->dest_dir       = dest;
   eb->pool           = subpool;
+  eb->is_checkout    = is_checkout;
+  eb->ancestor_path  = ancestor_path;
+  eb->repository     = repos;
   eb->target_version = target_version;
 
   *edit_baton = eb;
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_get_update_editor (svn_string_t *dest,
+                          svn_vernum_t target_version,
+                          const svn_delta_edit_fns_t **editor,
+                          void **edit_baton,
+                          apr_pool_t *pool)
+{
+  return
+    make_editor (dest, target_version,
+                 1, NULL, NULL,
+                 editor, edit_baton, pool);
+}
+
+
+svn_error_t *
+svn_wc_get_checkout_editor (svn_string_t *dest,
+                            svn_string_t *repos,
+                            svn_string_t *ancestor_path,
+                            svn_vernum_t target_version,
+                            const svn_delta_edit_fns_t **editor,
+                            void **edit_baton,
+                            apr_pool_t *pool)
+{
+  return make_editor (dest, target_version,
+                      1, repos, ancestor_path,
+                      editor, edit_baton, pool);
 }
 
 
