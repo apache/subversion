@@ -45,11 +45,16 @@ having separate global versus command-local option namespaces is
 confusing.  So Subversion has one option namespace, and all options
 come after the subcommand.
 
-   svn [<subcommand>] [<option|argument> ...]
+   svn  [<subcommand>]  [<option> ...]  [<argument> ...]
 
-(The subcommand is marked as optional because there are a few cases where
-Subversion can do something meaningful without the command -- for
-example, "svn --help".)
+Notes: the subcommand is marked as optional because there are a few
+cases where Subversion can do something meaningful without the
+command, for example, "svn --help".
+
+Also, it would be nice for options and arguments to be mixable, but
+it's not necessary (CVS doesn't permit this, for example).  We
+shouldn't block on that functionality right now, as it can always be
+added later without breaking backwards-compatibility.
   
 
 
