@@ -60,19 +60,6 @@ svn_cl__cat (apr_getopt_t *os,
   /* Build an authentication baton to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
-  /* Use APR's stdout, not the C library's.  Why?  Ryan Bloom says:
-   *
-   *    I can shed some light on this.  :-) The only reason that the
-   *    apr_file_open_std* functions exist is that you may not always
-   *    have a stderr/out/in on Windows.  This is generally a problem
-   *    with newer versions of Windows and services.
-   * 
-   *    The other problem is that the C library functions generally
-   *    work differently on Windows and Unix.  So, by using
-   *    apr_file_open_std* functions, you can get a handle to an APR
-   *    struct that works with the APR functions which are supposed to
-   *    work identically on all platforms.
-   */
   status = apr_file_open_stdout (&std_out, pool);
   if (!APR_STATUS_IS_SUCCESS (status))
     return svn_error_create (status, NULL, "Error opening stdout.");
