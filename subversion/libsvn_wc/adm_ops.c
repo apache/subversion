@@ -249,7 +249,7 @@ svn_wc_set_revision (void *baton,
                 svn_node_none, 
                 svn_wc_schedule_normal,
                 svn_wc_existence_normal,
-                FALSE,
+                FALSE, FALSE,
                 0, 
                 0, 
                 NULL, NULL,
@@ -399,12 +399,13 @@ svn_wc_rename (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
 
 
 /* Recursively mark a tree DIR for with a SCHEDULE and/or EXISTENCE
-   flag, depending on the state of MODIFY_FLAGS. */
+   flag and/or COPIED flag, depending on the state of MODIFY_FLAGS. */
 static svn_error_t *
 mark_tree (svn_stringbuf_t *dir, 
            apr_uint16_t modify_flags,
            enum svn_wc_schedule_t schedule,
-           enum svn_wc_existence_t existence,           
+           enum svn_wc_existence_t existence,   
+           svn_boolean_t copied,
            apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -443,7 +444,7 @@ mark_tree (svn_stringbuf_t *dir,
       /* If this is a directory, recurse. */
       if (entry->kind == svn_node_dir)
         SVN_ERR (mark_tree (fullpath, modify_flags,
-                            schedule, existence, subpool));
+                            schedule, existence, copied, subpool));
 
       /* Mark this entry. */
       SVN_ERR (svn_wc__entry_modify
@@ -452,7 +453,7 @@ mark_tree (svn_stringbuf_t *dir,
                 SVN_INVALID_REVNUM, entry->kind,
                 schedule,
                 existence,
-                FALSE, 0, 0, NULL, NULL, subpool, NULL));
+                FALSE, TRUE, 0, 0, NULL, NULL, subpool, NULL));
 
       if (fbtable && (schedule == svn_wc_schedule_delete))
         {
@@ -479,7 +480,9 @@ mark_tree (svn_stringbuf_t *dir,
             SVN_INVALID_REVNUM, svn_node_dir,
             schedule,
             existence,
-            FALSE, 0, 0, NULL, NULL, pool, NULL));
+            FALSE,
+            TRUE,
+            0, 0, NULL, NULL, pool, NULL));
   
   /* Destroy our per-iteration pool. */
   svn_pool_destroy (subpool);
@@ -515,7 +518,7 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
         /* Recursively mark a whole tree for deletion. */
         SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_SCHEDULE,
                             svn_wc_schedule_delete,
-                            svn_wc_existence_normal, pool));
+                            svn_wc_existence_normal, FALSE, pool));
     }
 
   /* Deleting a directory that has been added but not yet
@@ -543,7 +546,7 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
                 SVN_INVALID_REVNUM, entry->kind,
                 svn_wc_schedule_delete,
                 svn_wc_existence_normal,
-                FALSE, 0, 0, NULL, NULL, pool, NULL));
+                FALSE, FALSE, 0, 0, NULL, NULL, pool, NULL));
     }
 
   /* Now, call our client feedback function. */
@@ -642,15 +645,17 @@ add_to_revision_control (svn_stringbuf_t *path,
   SVN_ERR (svn_wc__entry_modify
            (parent_dir, basename,
             (SVN_WC__ENTRY_MODIFY_SCHEDULE
-             | (ancestor_path ? SVN_WC__ENTRY_MODIFY_EXISTENCE : 0)
+             | (ancestor_path ? SVN_WC__ENTRY_MODIFY_COPIED : 0)
              | ((is_replace || ancestor_path) ?
                   0 : SVN_WC__ENTRY_MODIFY_REVISION)
              | SVN_WC__ENTRY_MODIFY_KIND
              | SVN_WC__ENTRY_MODIFY_ATTRIBUTES),
             0, kind,
             svn_wc_schedule_add,
-            ancestor_path ? svn_wc_existence_copied : svn_wc_existence_normal,
-            FALSE, 0, 0, NULL,
+            svn_wc_existence_normal,
+            FALSE,
+            ancestor_path ? TRUE : FALSE, 
+            0, 0, NULL,
             atts,  /* may or may not contain copyfrom args */
             pool, NULL));
 
@@ -696,7 +701,7 @@ add_to_revision_control (svn_stringbuf_t *path,
       
       /* Things we plan to change in this_dir. */
       flags = (SVN_WC__ENTRY_MODIFY_SCHEDULE
-               | (ancestor_path ? SVN_WC__ENTRY_MODIFY_EXISTENCE : 0)
+               | (ancestor_path ? SVN_WC__ENTRY_MODIFY_COPIED : 0)
                | ((is_replace || ancestor_path)
                      ? 0 : SVN_WC__ENTRY_MODIFY_REVISION)
                | SVN_WC__ENTRY_MODIFY_KIND
@@ -710,9 +715,10 @@ add_to_revision_control (svn_stringbuf_t *path,
                 flags,
                 0, svn_node_dir,
                 is_replace ? svn_wc_schedule_replace : svn_wc_schedule_add,
-                ancestor_path ?
-                    svn_wc_existence_copied : svn_wc_existence_normal,
-                FALSE, 0, 0,
+                svn_wc_existence_normal,
+                FALSE,
+                ancestor_path ? TRUE : FALSE,
+                0, 0,
                 NULL,
                 atts,  /* may or may not contain copyfrom args */
                 pool, NULL));
@@ -735,9 +741,9 @@ add_to_revision_control (svn_stringbuf_t *path,
           SVN_ERR (svn_wc__recursively_rewrite_ancestry (path, url, pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
-          SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_EXISTENCE,
-                              svn_wc_schedule_normal,
-                              svn_wc_existence_copied, pool));
+          SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_COPIED,
+                              svn_wc_schedule_normal, svn_wc_existence_normal,
+                              TRUE, pool));
         }
     }
   
@@ -1050,6 +1056,7 @@ svn_wc_revert (svn_stringbuf_t *path,
                     svn_wc_schedule_normal,
                     svn_wc_existence_normal,
                     entry->conflicted,
+                    entry->copied,
                     entry->text_time,
                     entry->prop_time,
                     NULL, entry->attributes,
@@ -1084,7 +1091,7 @@ svn_wc_revert (svn_stringbuf_t *path,
                     svn_node_none,
                     svn_wc_schedule_normal,
                     svn_wc_existence_normal,
-                    FALSE,
+                    FALSE, FALSE,
                     0,
                     0,
                     NULL, NULL,

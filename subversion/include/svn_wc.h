@@ -112,8 +112,7 @@ enum svn_wc_existence_t
 {
   svn_wc_existence_normal = 0,  /* Nothing unusual here */
   svn_wc_existence_added,       /* Added to revision control */  
-  svn_wc_existence_deleted,     /* Deleted from revision control */
-  svn_wc_existence_copied       /* Added -with history- to revision control */
+  svn_wc_existence_deleted     /* Deleted from revision control */
 };
 
 /* A working copy entry -- that is, revision control information about
@@ -132,6 +131,7 @@ typedef struct svn_wc_entry_t
   enum svn_wc_schedule_t schedule;
   enum svn_wc_existence_t existence;
   svn_boolean_t conflicted;
+  svn_boolean_t copied;
 
   apr_time_t text_time;        /* When the file's text was last
                                   up-to-date.  (Zero means not
@@ -156,6 +156,7 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_ATTR_SCHEDULE    "schedule"
 #define SVN_WC_ENTRY_ATTR_EXISTENCE   "existence"
 #define SVN_WC_ENTRY_ATTR_CONFLICTED  "conflicted"
+#define SVN_WC_ENTRY_ATTR_COPIED      "copied"
 #define SVN_WC_ENTRY_ATTR_URL         "url"
 #define SVN_WC_ENTRY_ATTR_REJFILE     "text-reject-file"
 #define SVN_WC_ENTRY_ATTR_PREJFILE    "prop-reject-file"
@@ -168,7 +169,6 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_VALUE_REPLACE    "replace"
 #define SVN_WC_ENTRY_VALUE_ADDED      "added"
 #define SVN_WC_ENTRY_VALUE_DELETED    "deleted"
-#define SVN_WC_ENTRY_VALUE_COPIED     "copied"
 
 /* How an entries file's owner dir is named in the entries file. */
 #define SVN_WC_ENTRY_THIS_DIR  "svn:this_dir"

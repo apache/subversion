@@ -513,6 +513,9 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
    - CONFLICTED reflects whether or not this entry stands in a state
      of conflict with the repository.
 
+   - COPIED indicates if the entry was (possibly implicitly) scheduled
+     for addition by being part of a 'copied' subtree.
+
    - TEXT_TIME is the entry's textual timestamp.
 
    - PROP_TIME is the entry's property timestamp.
@@ -535,10 +538,11 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_SCHEDULE      0x0004
 #define SVN_WC__ENTRY_MODIFY_EXISTENCE     0x0008
 #define SVN_WC__ENTRY_MODIFY_CONFLICTED    0x0010
-#define SVN_WC__ENTRY_MODIFY_TEXT_TIME     0x0020
-#define SVN_WC__ENTRY_MODIFY_PROP_TIME     0x0040
-#define SVN_WC__ENTRY_MODIFY_URL           0x0080
-#define SVN_WC__ENTRY_MODIFY_ATTRIBUTES    0x0100
+#define SVN_WC__ENTRY_MODIFY_COPIED        0x0020
+#define SVN_WC__ENTRY_MODIFY_TEXT_TIME     0x0040
+#define SVN_WC__ENTRY_MODIFY_PROP_TIME     0x0080
+#define SVN_WC__ENTRY_MODIFY_URL           0x0100
+#define SVN_WC__ENTRY_MODIFY_ATTRIBUTES    0x0200
 
 /* or perhaps this to mean all of those above... */
 #define SVN_WC__ENTRY_MODIFY_ALL           0x7FFF
@@ -555,6 +559,7 @@ svn_error_t *svn_wc__entry_modify (svn_stringbuf_t *path,
                                    enum svn_wc_schedule_t schedule,
                                    enum svn_wc_existence_t existence,
                                    svn_boolean_t conflicted,
+                                   svn_boolean_t copied,
                                    apr_time_t text_time,
                                    apr_time_t prop_time,
                                    svn_stringbuf_t *ancestor,

@@ -1058,7 +1058,7 @@ report_single_mod (const char *name,
      for addition or deletion, we -might- need to do an
      add-with-history if it has a different working rev than its
      parent. */
-  if ((entry->existence == svn_wc_existence_copied)
+  if ((entry->copied)
       && (entry->schedule == svn_wc_schedule_normal)
       && (entry->revision != (*stack)->this_dir->revision))
     {
@@ -1464,7 +1464,7 @@ crawl_dir (svn_stringbuf_t *path,
          scheduled for addition, or is part of a 'copied' subtree. */
       if ((current_entry->existence == svn_wc_existence_deleted)
           && (current_entry->schedule != svn_wc_schedule_add)
-          && (current_entry->existence != svn_wc_existence_copied))
+          && (! current_entry->copied))
         continue;
       
       /* Report mods for a single entry. */
