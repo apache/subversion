@@ -43,6 +43,40 @@ void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src)
   uri_free(&parsed_url);
 }
 
+svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
+                                       const char *context,
+                                       int retcode,
+                                       apr_pool_t *pool)
+{
+  int errcode = SVN_ERR_RA_REQUEST_FAILED;
+  const char *msg;
+
+  /* Convert the return codes. */
+  switch (retcode) 
+    {
+    case NE_AUTH:
+      errcode = SVN_ERR_RA_NOT_AUTHORIZED;
+      msg = "authorization failed";
+      break;
+      
+    case NE_CONNECT:
+      msg = "could not connect to server";
+      break;
+
+    case NE_TIMEOUT:
+      msg = "timed out waiting for server";
+      break;
+
+    default:
+      /* Get the error string from neon. */
+      msg = ne_get_error (sess);
+      break;
+    }
+
+  return svn_error_createf (errcode, 0, NULL, pool,
+                            "%s: %s", context, msg);
+  
+}
 
 svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                                         const char *method,
