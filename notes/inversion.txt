@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.13 $ of this document.)
+              ($Revision: 1.14 $ of this document.)
 
 * Introduction
 
@@ -205,8 +205,8 @@ Suppose we have a new project, at version 1, that looks like this:
    U myproj/B
    U myproj/A
    U myproj/A/subA
-   U myproj/A/subA/subA2
-   U myproj/A/subA/subA2/foo
+   U myproj/A/subA/fish
+   U myproj/A/subA/fish/foo
    prompt$
 
 (Only the file `foo' is a regular file, everything else in myproj is a
@@ -216,13 +216,14 @@ Now we'll see what myproj looks like as an abstract data structure in
 the repository, and how that structure works in various operations
 (such as update, commit, and branch).  
 
-In the diagrams that follow, horizontal lines represent time (that is,
-the progression of versions), and vertical or slanted lines represent
-parent-child connections in a directory hierarchy.  Boxes are "nodes".
-A node is either a file or a directory -- a letter in the upper left
-indicates which, and next to the letter is the node's name.  The name
-is printed just as a reminder in these diagrams, but the name might
-not really be stored in the node itself, but rather just the parent.
+In the diagrams that follow, lines with arrowheads represent time
+(that is, the progression of versions), and any other lines represent
+parent-to-child connections in a directory hierarchy.  Boxes are
+"nodes".  A node is either a file or a directory -- a letter in the
+upper left indicates which kind, and next to the letter is the node's
+name.  The name is printed just as a reminder in these diagrams; in
+actual implementation, a node's name would probably only be stored in
+its parent, not in the node itself.
 
 A file node has a byte-string for its content, whereas directory nodes
 have a list of dir_entries, eaching pointing to another node.
@@ -233,7 +234,10 @@ index 1 points to anything; it points to the root node of version 1 of
 the project:
 
 
-                    (myproj's version array)
+      Figure 1: The `myproj' repository at version 1.
+
+
+                    (<--- myproj's version array ---> )
        ______________________________________________________
       |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
           |
@@ -258,12 +262,12 @@ the project:
                       ___\____
                      |D subA  |
                      |        |
-                     | subA2  |   /* One dir_entry, `subA2'. */
+                     | fish   |   /* One dir_entry, `fish'. */
                      |___\____|
                           \
                            \
                          ___\____
-                        |D subA2 |
+                        |D fish  |
                         |        |
                         | foo    |  /* One dir_entry, `foo'. */
                         |___\____|
@@ -278,10 +282,16 @@ the project:
 
 What happens when we modify `foo' and commit?  First, we make a new
 `foo' node, containing the diff from version 2 of foo to version 1.
+Let's use ":N" to express version relationships; so, this diff is the
+result of:
+
+   diff foo:2 foo:1
+
 Note the the order there: this is a reverse diff.  The idea is that
-version 2 will hold the full text of this new version, and version 1
-will become a diff (this is done to save space, it does not affect the
-semantics of the implementation).
+foo:2 will hold the full text of this new version, and foo:1 will
+become a diff.  This is done to save space, it does not affect the
+semantics of the implementation.  (Also note that we're assuming a
+diff program that can handle binary data!)
 
 The new node is not connected to anything yet, it's just hanging out
 there in space:
@@ -292,13 +302,18 @@ there in space:
                         |        |
                         |________|
 
-The new node does not say what version it belongs to; we'll get to
-that in a moment.
+It doesn't even say what version it belongs to; we'll get to that in a
+moment.
 
 Next, link the new node into the tree, where the previous node was,
 and create a "cross-link" (I forgot to tell you, nodes have a
-cross-link field) from the new node to the old node:
+cross-link field) from the new node to the old node.  Cross-links are
+shown as parenthesized numbers with an arrow leading to the older
+node:
 
+      Figure 2: The `myproj' repository, in an intermediate state
+                during the commit of version 2 (a modification to
+                the file `foo').
 
        ______________________________________________________
       |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
@@ -324,12 +339,12 @@ cross-link field) from the new node to the old node:
                       ___\____
                      |D subA  |
                      |        |
-                     | subA2  |
+                     | fish   |
                      |___\____|
                           \
                            \
                          ___\____
-                        |D subA2 |
+                        |D fish  |
                         |        |
                         | foo    |
                         |___\____|
@@ -345,18 +360,20 @@ cross-link field) from the new node to the old node:
                            |________|          |________|
 
 
-A cross-link consists of a version number and a pointer into the past.
-The version number tells you the version of what it's pointing to, not
-where it's pointing from.  So if you're looking for version N of a
-file, and when you get a node for that file you find a cross-link
-pointing to a version >=N, then you know you must follow that link.
+A cross-link is a version number attached to a pointer into the past.
+The version number tells you the version of what the links points to,
+not what it points from.  So if you're looking for FILE:N, and when
+you get a node for that file you find a cross-link pointing to a
+version >=N, then you know you must follow that link.
 
-But I digress.  Right now, we're learning how to commit version 2 of
-`foo', and there's one more step needed to complete that commit:
-register the new version at the top of the repository, thus making it
-externally visible.  That's done by making entry 2 in the version
-array point to something:
+But I digress.  Right now, we're learning how to commit foo:2, and
+there's one more step needed to complete that commit -- register the
+new version at the top of the repository, thus making it externally
+visible.  That's done by making entry 2 in the version array point to
+something:
 
+
+      Figure 3: The `myproj' repository, after commit of version 2. 
 
        ______________________________________________________
       |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
@@ -382,12 +399,12 @@ array point to something:
                       ___\____
                      |D subA  |
                      |        |
-                     | subA2  |
+                     | fish   |
                      |___\____|
                           \
                            \
                          ___\____
-                        |D subA2 |
+                        |D fish  |
                         |        |
                         | foo    |
                         |___\____|
@@ -408,26 +425,166 @@ why not?  That node (a directory) hasn't changed at all.  Nor has its
 child, nor has anything until you get all the way down to foo.
 
 That's why nodes don't store version numbers -- the exact same node
-may be used in many different versions.
+may appear in many different versions.
 
-Here's how to retrieve a version N of `foo':
+Here's how to retrieve foo:N, in general:
 
    1. Go to the version table, find version N.
 
-   2. Walk down the tree, starting from the root node N points to.
+   2. Walk down the tree in the obvious way, starting from the root
+      node N points to.  As you walk, anytime you get to a node with a
+      cross-link >=N, follow the link before continuing downward.
+      (Follow this rule even when you get to a node for `foo'.)
 
-   3. When you reach `foo', see if it has any cross-links numbered N
-      or greater.  If not, the node you're at is for version N.  Else,
-      the node you're at right now is for a version greater than N, so
-      follow cross-links until you're at a node that either has no
-      cross-link leaving it, or whose cross-link's number is less
-      than N.  This node is the droid you're looking for.
+   3. When you have nowhere else to go, this is the droid you're
+      looking for.
 
-Now watch what happens when we add a new file or directory into
-`subA2' (i.e., as a sibling of `foo').  Here's the resultant tree, the
-intermediate steps are not shown:
+Now watch what happens when we add a new file `bar' into `fish'
+(i.e., bar will be a sibling of `foo').  Here's the new tree, the
+intermediate steps not being shown:
 
-  [in progress]
+      Figure 4: The `myproj' repository, after commit of version 3
+                (the addition of a sibling to `fish/foo').
+
+       ______________________________________________________
+      |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
+          |       |       /
+          |      /       /
+       ___|_____/       /
+      |D myproj |______/
+      |         |
+      |   A     |
+      |    \    |
+      |   B \   | 
+      |__/___\__|
+        /     \
+       |       \
+       |        \
+    ___|____     \ ________
+   |D  B    |     |D  A    |
+   |        |     |        |
+   |  subB  |     | subA   |
+   |________|     |___\____|
+                       \
+                        \
+                      ___\____
+                     |D subA  |
+                     |        |
+                     | fish   |
+                     |___\____|
+                          \
+                           \
+                         ___\____        ________
+                        |D fish  |      |D fish  |
+                        |        |      |        |
+                        |  (2)--------->|        |
+                        |        |      |  foo   |
+                        |        |      |___/____|
+                        |        |         /    ________
+                        |        |        /    |F  bar  |
+                        | bar -----------/-----|        |
+                        |        |      /      |        |
+                        | foo    |     /       |        |
+                        |___\____|    /        |________|
+                             \       /
+                              \     /
+                             __\___/_            ________
+                            |F  foo  |          |F  foo  |
+                            |        |          |        |
+                            |  (1)------------->|        |
+                            |        |          |        |
+                            | full   |          | diffy  |
+                            |contents|          |contents|
+                            |________|          |________|
+
+
+Trace various retrievals in the above structure, and you will see that
+
+   + fish:2 and fish:1 are the same node, which they should be.
+
+   + But fish:3 is different from them, which is also as it should be.
+
+   + foo:3 and foo:2 are the same node, which they should be.
+
+   + But foo:1 is different from them, which is also as it should be.
+
+Thus, the traversal cost of retrieving version N of something is equal
+to its depth in the tree plus the number of changes it or its
+ancestors have undergone.  Unchanged entities cost nothing.
+
+Whether fish:2 is stored as some sort of diff from fish:3 is an
+implementation detail.  We could do it that way, but it may not be
+necessary, since new directory nodes would only be created when a new
+file or directory is added to the project, or a name is changed.  Most
+commits tend to be edits to existing files.
+
+Just to drive the point mercilessly home, and explore the theoretical
+limits of ASCII diagrams, here is myproj:4 (a commit which added a
+README to the project's top level directory):
+
+      Figure 5: The `myproj' repository, with new top-level README:
+
+       ______________________________________________________
+      |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
+          |      /       /         /
+          |     /       /         /
+      ____|____/       /         /               _________
+     |D myproj |______/         /               |D myproj |
+     |         |               /                |         |
+     |   (3)------------------/---------------->|         |
+     |         |             /             _____|__ B     |
+     | README  |____________/             /     |         |
+     |      |  |                         /      |   A     |
+     |   B  |  |            ____________/       |___|_____|
+     |  /   |__|_________  /                        |
+     | /  A    |         \/       _________         |
+     |_|___\___|         /\      |F README |        |
+       |    \_______    /  \_____|         |        |
+       |            |  /         |         |        |
+       |            | /          |         |        |
+       |            |/           |_________|        |
+       |            /                               |
+       |           /|                               |
+       |   _______/ |                               |
+       |  |         |                               |
+       |  |         |                               |
+    ___|__|_       _|______                         |
+   |D  B    |     |D  A    |                        |
+   |        |     |        |________________________|
+   |  subB  |     | subA   |
+   |________|     |___\____|
+                       \
+                        \
+                      ___\____
+                     |D subA  |
+                     |        |
+                     | fish   |
+                     |___\____|
+                          \
+                           \
+                         ___\____        ________
+                        |D fish  |      |D fish  |
+                        |        |      |        |
+                        |  (2)--------->|        |
+                        |        |      |  foo   |
+                        |        |      |___/____|
+                        |        |         /    ________
+                        |        |        /    |F  bar  |
+                        | bar -----------/-----|        |
+                        |        |      /      |        |
+                        | foo    |     /       |        |
+                        |___\____|    /        |________|
+                             \       /
+                              \     /
+                             __\___/_            ________
+                            |F  foo  |          |F  foo  |
+                            |        |          |        |
+                            |  (1)------------->|        |
+                            |        |          |        |
+                            | full   |          | diffy  |
+                            |contents|          |contents|
+                            |________|          |________|
+
 
 
 ** Natively client/server.
