@@ -447,7 +447,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%doc BUGS CHANGES COMMITTERS COPYING HACKING IDEAS INSTALL README
+%doc BUGS CHANGES COMMITTERS COPYING HACKING INSTALL README
 %doc subversion/LICENSE
 %doc book
 /usr/bin/cvs2svn
