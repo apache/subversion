@@ -518,9 +518,7 @@ import (const char *path,
 
 
 static svn_error_t *
-get_ra_editor (void **ra_baton, 
-               void **session,
-               svn_ra_plugin_t **ra_lib,
+get_ra_editor (svn_ra_session_t **ra_session,
                svn_revnum_t *latest_rev,
                const svn_delta_editor_t **editor,
                void **edit_baton,
@@ -536,13 +534,8 @@ get_ra_editor (void **ra_baton,
 {
   void *commit_baton;
 
-  /* Get the RA vtable that matches URL. */
-  SVN_ERR (svn_ra_init_ra_libs (ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (ra_lib, *ra_baton, 
-                                  base_url, pool));
-  
   /* Open an RA session to URL. */
-  SVN_ERR (svn_client__open_ra_session (session, *ra_lib,
+  SVN_ERR (svn_client__open_ra_session (ra_session,
                                         base_url, base_dir, base_access,
                                         commit_items,
                                         is_commit, !is_commit,
@@ -554,8 +547,8 @@ get_ra_editor (void **ra_baton,
     {
       svn_node_kind_t kind;
 
-      SVN_ERR ((*ra_lib)->check_path (*session, "", SVN_INVALID_REVNUM,
-                                      &kind, pool));
+      SVN_ERR (svn_ra_check_path (*ra_session, "", SVN_INVALID_REVNUM,
+                                  &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
                                   _("Path '%s' does not exist"),
@@ -564,13 +557,13 @@ get_ra_editor (void **ra_baton,
 
   /* Fetch the latest revision if requested. */
   if (latest_rev)
-    SVN_ERR ((*ra_lib)->get_latest_revnum (*session, latest_rev, pool));
+    SVN_ERR (svn_ra_get_latest_revnum (*ra_session, latest_rev, pool));
   
   /* Fetch RA commit editor. */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  return (*ra_lib)->get_commit_editor (*session, editor, edit_baton, log_msg,
-                                       svn_client__commit_callback,
-                                       commit_baton, pool);
+  return svn_ra_get_commit_editor (*ra_session, editor, edit_baton, log_msg,
+                                   svn_client__commit_callback,
+                                   commit_baton, pool);
 }
 
 
@@ -588,8 +581,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   const char *log_msg = "";
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
   apr_hash_t *excludes = apr_hash_make (pool);
   svn_node_kind_t kind;
   const char *base_dir = path;
@@ -660,7 +652,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
           url = temp;
         }
     }
-  while ((err = get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
+  while ((err = get_ra_editor (&ra_session, NULL,
                                &editor, &edit_baton, ctx, url, base_dir,
                                NULL, log_msg, NULL, commit_info,
                                FALSE, subpool)));
@@ -1049,9 +1041,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 {
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  void *ra_baton, *session;
+  svn_ra_session_t *ra_session;
   const char *log_msg;
-  svn_ra_plugin_t *ra_lib;
   const char *base_dir;
   const char *base_url;
   const char *target;
@@ -1323,7 +1314,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                                     pool)))
     goto cleanup;
 
-  if ((cmt_err = get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
+  if ((cmt_err = get_ra_editor (&ra_session, NULL,
                                 &editor, &edit_baton, ctx,
                                 base_url, base_dir, base_dir_access,
                                 log_msg, commit_items, commit_info,

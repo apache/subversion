@@ -114,8 +114,7 @@ delete_urls (svn_client_commit_info_t **commit_info,
              svn_client_ctx_t *ctx,
              apr_pool_t *pool)
 {
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   void *commit_baton;
@@ -159,13 +158,9 @@ delete_urls (svn_client_commit_info_t **commit_info,
   else
     log_msg = "";
 
-  /* Get the RA vtable that matches URL. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, common, pool));
-
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, common, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, common, NULL,
                                         NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
 
@@ -177,8 +172,8 @@ delete_urls (svn_client_commit_info_t **commit_info,
       const char *path = APR_ARRAY_IDX (targets, i, const char *);
       path = svn_path_uri_decode (path, pool);
       APR_ARRAY_IDX (targets, i, const char *) = path;
-      SVN_ERR (ra_lib->check_path (session, path, SVN_INVALID_REVNUM,
-                                   &kind, pool));
+      SVN_ERR (svn_ra_check_path (ra_session, path, SVN_INVALID_REVNUM,
+                                  &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
                                   "URL '%s' does not exist",
@@ -187,9 +182,9 @@ delete_urls (svn_client_commit_info_t **commit_info,
 
   /* Fetch RA commit editor */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,
-                                      log_msg, svn_client__commit_callback,
-                                      commit_baton, pool));
+  SVN_ERR (svn_ra_get_commit_editor (ra_session, &editor, &edit_baton,
+                                     log_msg, svn_client__commit_callback,
+                                     commit_baton, pool));
 
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver (editor, edit_baton, SVN_INVALID_REVNUM, 

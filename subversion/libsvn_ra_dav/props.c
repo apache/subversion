@@ -36,6 +36,7 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_props.h"
+#include "../libsvn_ra/ra_loader.h"
 
 #include "svn_private_config.h"
 
@@ -1086,13 +1087,13 @@ svn_ra_dav__do_proppatch (svn_ra_dav__session_t *ras,
 
 
 svn_error_t *
-svn_ra_dav__do_check_path(void *session_baton,
+svn_ra_dav__do_check_path(svn_ra_session_t *session,
                           const char *path,
                           svn_revnum_t revision,
                           svn_node_kind_t *kind,
                           apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   const char *url = ras->url;
   svn_error_t *err;
   svn_boolean_t is_dir;

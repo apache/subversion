@@ -281,8 +281,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   apr_array_header_t *paths = apr_array_make (pool, 2, sizeof (const char *));
   const char *top_url, *src_rel, *dst_rel, *message;
   svn_revnum_t youngest;
-  void *ra_baton, *sess;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
   svn_node_kind_t src_kind, dst_kind;
   const svn_delta_editor_t *editor;
   void *edit_baton;
@@ -327,12 +326,15 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                               _("Cannot move URL '%s' into itself"), src_url);
 
-  /* Get the RA vtable that matches URL. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  err = svn_ra_get_ra_library (&ra_lib, ra_baton, top_url, pool);
+  /* Open an RA session for the URL. Note that we don't have a local
+     directory, nor a place to put temp files. */
+  err = svn_client__open_ra_session (&ra_session, top_url,
+                                     NULL,
+                                     NULL, NULL, FALSE, TRUE, 
+                                     ctx, pool);
 
   /* If the two URLs appear not to be in the same repository, then
-     top_url will be empty and the call to svn_ra_get_ra_library()
+     top_url will be empty and the call to svn_ra_open()
      above will have failed.  Below we check for that, and propagate a
      descriptive error back to the user.
    
@@ -362,26 +364,21 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
         return err;
     }
 
-  /* Open an RA session for the URL. Note that we don't have a local
-     directory, nor a place to put temp files. */
-  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url,
-                                        NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        ctx, pool));
   /* Pass NULL for the path, to ensure error if trying to get a
      revision based on the working copy. */
   SVN_ERR (svn_client__get_revision_number
-           (&src_revnum, ra_lib, sess, src_revision, NULL, pool));
+           (&src_revnum, ra_session, src_revision, NULL, pool));
   
   /* Fetch the youngest revision. */
-  SVN_ERR (ra_lib->get_latest_revnum (sess, &youngest, pool));
+  SVN_ERR (svn_ra_get_latest_revnum (ra_session, &youngest, pool));
 
   /* Use YOUNGEST for copyfrom args if not provided. */
   if (! SVN_IS_VALID_REVNUM (src_revnum))
     src_revnum = youngest;
   
   /* Verify that SRC_URL exists in the repository. */
-  SVN_ERR (ra_lib->check_path (sess, src_rel, src_revnum, &src_kind, pool));
+  SVN_ERR (svn_ra_check_path (ra_session, src_rel, src_revnum, &src_kind,
+                              pool));
   if (src_kind == svn_node_none)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, NULL,
@@ -389,7 +386,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
        src_url, src_revnum);
 
   /* Figure out the basename that will result from this operation. */
-  SVN_ERR (ra_lib->check_path (sess, dst_rel, youngest, &dst_kind, pool));
+  SVN_ERR (svn_ra_check_path (ra_session, dst_rel, youngest, &dst_kind, pool));
   if (dst_kind == svn_node_none)
     {
       /* do nothing */
@@ -410,8 +407,8 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
       bname = svn_path_uri_decode (svn_path_basename (src_url, pool), pool);
       dst_rel = svn_path_join (dst_rel, bname, pool);
-      SVN_ERR (ra_lib->check_path (sess, dst_rel, youngest,
-                                   &attempt_kind, pool));
+      SVN_ERR (svn_ra_check_path (ra_session, dst_rel, youngest,
+                                  &attempt_kind, pool));
       if (attempt_kind != svn_node_none)
         return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
                                   _("Path '%s' already exists"), dst_rel);
@@ -453,9 +450,9 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Fetch RA commit editor. */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  SVN_ERR (ra_lib->get_commit_editor (sess, &editor, &edit_baton, message,
-                                      svn_client__commit_callback,
-                                      commit_baton, pool));
+  SVN_ERR (svn_ra_get_commit_editor (ra_session, &editor, &edit_baton, message,
+                                     svn_client__commit_callback,
+                                     commit_baton, pool));
 
   /* Setup our PATHS for the path-based editor drive. */
   APR_ARRAY_PUSH (paths, const char *) = dst_rel;
@@ -587,8 +584,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                   apr_pool_t *pool)
 {
   const char *anchor, *target, *base_name, *message;
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   svn_node_kind_t src_kind, dst_kind;
@@ -614,18 +610,14 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* Split the DST_URL into an anchor and target. */
   svn_path_split (dst_url, &anchor, &target, pool);
 
-  /* Get the RA vtable that matches URL. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor, pool));
-
   /* Open an RA session for the anchor URL. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, anchor,
                                         svn_wc_adm_access_path (adm_access),
                                         adm_access, NULL, TRUE, TRUE, 
                                         ctx, pool));
 
   /* Figure out the basename that will result from this operation. */
-  SVN_ERR (ra_lib->check_path (session, svn_path_uri_decode (target, pool),
+  SVN_ERR (svn_ra_check_path (ra_session, svn_path_uri_decode (target, pool),
                                SVN_INVALID_REVNUM, &dst_kind, pool));
   
   /* BASE_URL defaults to DST_URL. */
@@ -701,7 +693,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     goto cleanup;
 
   /* Open an RA session to BASE_URL. */
-  if ((cmt_err = svn_client__open_ra_session (&session, ra_lib, base_url,
+  if ((cmt_err = svn_client__open_ra_session (&ra_session, base_url,
                                               NULL, NULL, commit_items,
                                               FALSE, FALSE,
                                               ctx, pool)))
@@ -709,10 +701,10 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Fetch RA commit editor. */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  if ((cmt_err = ra_lib->get_commit_editor (session, &editor, &edit_baton, 
-                                            message,
-                                            svn_client__commit_callback,
-                                            commit_baton, pool)))
+  if ((cmt_err = svn_ra_get_commit_editor (ra_session, &editor, &edit_baton, 
+                                           message,
+                                           svn_client__commit_callback,
+                                           commit_baton, pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */
@@ -754,8 +746,7 @@ repos_to_wc_copy (const char *src_url,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  void *ra_baton, *sess;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
   svn_node_kind_t src_kind, dst_kind;
   svn_revnum_t src_revnum;
   svn_wc_adm_access_t *adm_access;
@@ -763,17 +754,13 @@ repos_to_wc_copy (const char *src_url,
   svn_boolean_t same_repositories;
   svn_opt_revision_t revision;
 
-  /* Get the RA vtable that matches URL. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, src_url, pool));
-
   /* Open a repository session to the given URL. We do not (yet) have a
      working copy, so we don't have a corresponding path and tempfiles
      cannot go into the admin area. */
-  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, src_url, NULL,
                                         NULL, NULL, FALSE, TRUE, 
                                         ctx, pool));
-      
+  
   /* Pass null for the path, to ensure error if trying to get a
      revision based on the working copy.  And additionally, we can't
      pass an 'unspecified' revnum to the update reporter;  assume HEAD
@@ -784,10 +771,10 @@ repos_to_wc_copy (const char *src_url,
     revision.kind = svn_opt_revision_head;
 
   SVN_ERR (svn_client__get_revision_number
-           (&src_revnum, ra_lib, sess, &revision, NULL, pool));
+           (&src_revnum, ra_session, &revision, NULL, pool));
 
   /* Verify that SRC_URL exists in the repository. */
-  SVN_ERR (ra_lib->check_path (sess, "", src_revnum, &src_kind, pool));
+  SVN_ERR (svn_ra_check_path (ra_session, "", src_revnum, &src_kind, pool));
   if (src_kind == svn_node_none)
     {
       if (SVN_IS_VALID_REVNUM (src_revnum))
@@ -870,7 +857,7 @@ repos_to_wc_copy (const char *src_url,
     const char *parent;
    
     /* Get the repository uuid of SRC_URL */
-    src_err = ra_lib->get_uuid (sess, &src_uuid, pool);
+    src_err = svn_ra_get_uuid (ra_session, &src_uuid, pool);
     if (src_err && src_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
       return src_err;
 
@@ -968,8 +955,8 @@ repos_to_wc_copy (const char *src_url,
                (&fp, &new_text_path, dst_path, ".tmp", FALSE, pool));
 
       fstream = svn_stream_from_aprfile (fp, pool);
-      SVN_ERR (ra_lib->get_file
-               (sess, "", src_revnum, fstream, &real_rev, &new_props, pool));
+      SVN_ERR (svn_ra_get_file (ra_session, "", src_revnum, fstream, &real_rev,
+                                &new_props, pool));
       SVN_ERR (svn_stream_close (fstream));
       SVN_ERR (svn_io_file_close (fp, pool));
 

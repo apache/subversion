@@ -63,8 +63,7 @@ svn_client_switch (svn_revnum_t *result_rev,
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *URL, *anchor, *target;
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access, *dir_access;
@@ -117,16 +116,12 @@ svn_client_switch (svn_revnum_t *result_rev,
   else
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
-  /* Get the RA vtable that matches working copy's current URL. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-
   /* Open an RA session to 'source' URL */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor, 
+  SVN_ERR (svn_client__open_ra_session (&ra_session, URL, anchor, 
                                         adm_access, NULL, TRUE, FALSE, 
                                         ctx, pool));
   SVN_ERR (svn_client__get_revision_number
-           (&revnum, ra_lib, session, revision, path, pool));
+           (&revnum, ra_session, revision, path, pool));
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
@@ -140,10 +135,10 @@ svn_client_switch (svn_revnum_t *result_rev,
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
-  SVN_ERR (ra_lib->do_switch (session, &reporter, &report_baton, revnum,
-                              target, recurse, switch_url,
-                              switch_editor, switch_edit_baton, pool));
-      
+  SVN_ERR (svn_ra_do_switch (ra_session, &reporter, &report_baton, revnum,
+                             target, recurse, switch_url,
+                             switch_editor, switch_edit_baton, pool));
+
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
      will be driven by svn_repos_dir_delta.

@@ -72,17 +72,16 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
   URL = svn_path_canonicalize (url, pool);
 
     {
-      void *session;
-      svn_ra_plugin_t *ra_lib;
+      svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
       const char *uuid;
 
       /* Get the RA connection. */
-      SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
+      SVN_ERR (svn_client__ra_session_from_path (&ra_session, &revnum,
                                              &URL, url, peg_revision,
                                              revision, ctx, pool));
       
-      SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
+      SVN_ERR (svn_ra_check_path (ra_session, "", revnum, &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                                   _("URL '%s' doesn't exist"), URL);
@@ -92,7 +91,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
            _("URL '%s' refers to a file, not a directory"), URL);
 
       /* Get the repos UUID. */
-      SVN_ERR (ra_lib->get_uuid (session, &uuid, pool));
+      SVN_ERR (svn_ra_get_uuid (ra_session, &uuid, pool));
 
       SVN_ERR (svn_io_check_path (path, &kind, pool));
 

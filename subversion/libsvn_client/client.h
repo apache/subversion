@@ -37,21 +37,21 @@ extern "C" {
 /* Set *REVNUM to the revision number identified by REVISION.
  *
  * If REVISION->kind is svn_opt_revision_number, just use
- * REVISION->value.number, ignoring PATH, RA_LIB, and SESSION.
+ * REVISION->value.number, ignoring PATH and RA_SESSION.
  *
  * Else if REVISION->kind is svn_opt_revision_committed,
  * svn_opt_revision_previous, or svn_opt_revision_base, or
  * svn_opt_revision_working, then the revision can be identified
  * purely based on the working copy's administrative information for
- * PATH, so RA_LIB and SESSION are ignored.  If PATH is not under
- * revision control, return SVN_ERR_UNVERSIONED_RESOURCE, or if PATH
- * is null, return SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED.
+ * PATH, so RA_SESSION is ignored.  If PATH is not under revision
+ * control, return SVN_ERR_UNVERSIONED_RESOURCE, or if PATH is null,
+ * return SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED.
  * 
  * Else if REVISION->kind is svn_opt_revision_date or
- * svn_opt_revision_head, then RA_LIB and SESSION are used to
- * retrieve the revision from the repository (using
- * REVISION->value.date in the former case), and PATH is ignored.  If
- * RA_LIB or SESSION is null, return SVN_ERR_CLIENT_RA_ACCESS_REQUIRED. 
+ * svn_opt_revision_head, then RA_SESSION is used to retrieve the
+ * revision from the repository (using REVISION->value.date in the
+ * former case), and PATH is ignored.  If RA_SESSION is null,
+ * return SVN_ERR_CLIENT_RA_ACCESS_REQUIRED. 
  *
  * Else if REVISION->kind is svn_opt_revision_unspecified, set
  * *REVNUM to SVN_INVALID_REVNUM.  
@@ -62,8 +62,7 @@ extern "C" {
  */
 svn_error_t *
 svn_client__get_revision_number (svn_revnum_t *revnum,
-                                 svn_ra_plugin_t *ra_lib,
-                                 void *session,
+                                 svn_ra_session_t *ra_session,
                                  const svn_opt_revision_t *revision,
                                  const char *path,
                                  apr_pool_t *pool);
@@ -135,10 +134,6 @@ svn_error_t *svn_client__prev_log_path (const char **prev_path_p,
  *
  * @a ctx is the client context baton.
  *
- * @a ra_lib is required; it represents an already-open RA library.  A
- * temporary RA session is created and destroyed for the purpose of
- * this function.
- *
  * Use @a pool for all allocations.
  */
 svn_error_t *
@@ -150,7 +145,6 @@ svn_client__repos_locations (const char **start_url,
                              const svn_opt_revision_t *revision,
                              const svn_opt_revision_t *start,
                              const svn_opt_revision_t *end,
-                             svn_ra_plugin_t *ra_lib,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
@@ -163,25 +157,23 @@ svn_client__repos_locations (const char **start_url,
    that it is the same node in both PEG_REVISION and REVISON.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
-   The resulting ra_plugin is stored in *RA_LIB_P along with its
-   session baton in *SESSION_P.  The actual revision number of the
-   object is stored in *REV_P and the final resulting url is stored in
-   *URL_P.
+   The resulting ra_session is stored in *RA_SESSION_P.  The actual
+   revision number of the object is stored in *REV_P and the final
+   resulting url is stored in *URL_P.
 
    Use authentication baton cached in CTX to authenticate against the
    repository.
 
    Use POOL for all allocations. */
 svn_error_t *
-svn_client__ra_lib_from_path (svn_ra_plugin_t **ra_lib_p,
-                              void **session_p,
-                              svn_revnum_t *rev_p,
-                              const char **url_p,
-                              const char *path_or_url,
-                              const svn_opt_revision_t *peg_revision,
-                              const svn_opt_revision_t *revision,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *pool);
+svn_client__ra_session_from_path (svn_ra_session_t **ra_session_p,
+                                  svn_revnum_t *rev_p,
+                                  const char **url_p,
+                                  const char *path_or_url,
+                                  const svn_opt_revision_t *peg_revision,
+                                  const svn_opt_revision_t *revision,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------- */
@@ -213,8 +205,7 @@ typedef struct
 } svn_client__callback_baton_t;
 
 
-/* Open an RA session, returning the session baton in SESSION_BATON. The
-   RA library to use is specified by RA_LIB.
+/* Open an RA session, returning it in RA_SESSION.
 
    The root of the session is specified by BASE_URL and BASE_DIR.
    BASE_ACCESS is an access baton for BASE_DIR administrative data.
@@ -237,8 +228,7 @@ typedef struct
 
    The calling application's authentication baton is provided in CTX,
    and allocations related to this session are performed in POOL.  */
-svn_error_t * svn_client__open_ra_session (void **session_baton,
-                                           const svn_ra_plugin_t *ra_lib,
+svn_error_t * svn_client__open_ra_session (svn_ra_session_t **ra_session,
                                            const char *base_url,
                                            const char *base_dir,
                                            svn_wc_adm_access_t *base_access,
@@ -373,7 +363,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
  *
  * DRY_RUN is set if this is a dry-run merge. It is not relevant for diff.
  *
- * RA_LIB/RA_SESSION define the additional RA session for requesting file
+ * RA_SESSION defines the additional RA session for requesting file
  * contents.
  *
  * REVISION is the start revision in the comparison.
@@ -390,8 +380,7 @@ svn_client__get_diff_editor (const char *target,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
                              svn_boolean_t dry_run,
-                             svn_ra_plugin_t *ra_lib,
-                             void *ra_session, 
+                             svn_ra_session_t *ra_session, 
                              svn_revnum_t revision,
                              svn_wc_notify_func_t notify_func,
                              void *notify_baton,

@@ -35,7 +35,6 @@
 
 struct validator_baton_t
 {
-  void *ra_baton;
   svn_client_ctx_t *ctx;
   const char *path;
   apr_hash_t *url_uuids;
@@ -61,8 +60,7 @@ validator_func (void *baton,
                 const char *uuid, 
                 const char *url)
 {
-  svn_ra_plugin_t *ra_lib;
-  void *sess;
+  svn_ra_session_t *ra_session;
   struct validator_baton_t *b = baton;
   const char *ra_uuid;
 
@@ -99,11 +97,10 @@ validator_func (void *baton,
      repository at the new URL so we can force the RA session to close
      by destroying the subpool. */
   subpool = svn_pool_create (pool); 
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, b->ra_baton, url, subpool));
-  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, url, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, url, NULL,
                                         NULL, NULL, FALSE, TRUE,
                                         b->ctx, subpool));
-  SVN_ERR (ra_lib->get_uuid (sess, &ra_uuid, subpool));
+  SVN_ERR (svn_ra_get_uuid (ra_session, &ra_uuid, subpool));
   ra_uuid = apr_pstrdup (pool, ra_uuid);
   svn_pool_destroy (subpool);
 
@@ -132,7 +129,6 @@ svn_client_relocate (const char *path,
                                    TRUE, recurse ? -1 : 0, pool));
 
   /* Now, populate our validator callback baton, and call the relocate code. */
-  SVN_ERR (svn_ra_init_ra_libs (&(vb.ra_baton), pool));
   vb.ctx = ctx;
   vb.path = path;
   vb.url_uuids = apr_hash_make (pool);
