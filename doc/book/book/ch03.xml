@@ -549,10 +549,11 @@ Updated to revision 2.
               repository.  When you next commit,
               <filename>foo</filename> will become a child of its
               parent directory.  Note that if <filename>foo</filename>
-              is a directory, only the directory itself will be
-              scheduled for addition.  If you want to add its contents
-              as well, pass the <option>--recursive</option>
-              (<option>-R</option>) switch.</para>
+              is a directory, everything underneath <filename>foo</filename>
+              will be scheduled for addition.  If you only want to
+              schedule <filename>foo</filename> itself, pass the
+              <option>--nonrecursive</option> (<option>-N</option>)
+              switch.</para>
           </listitem>
         </varlistentry>
 

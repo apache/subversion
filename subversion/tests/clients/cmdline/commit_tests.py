@@ -520,8 +520,8 @@ def nested_dir_replacements(sbox):
 
   # Delete and re-add A/D (a replacement), and A/D/H (another replace).
   svntest.main.run_svn(None, 'rm', os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn(None, 'add', os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn(None, 'add', os.path.join(wc_dir, 'A', 'D', 'H'))
+  svntest.main.run_svn(None, 'add', '-N', os.path.join(wc_dir, 'A', 'D'))
+  svntest.main.run_svn(None, 'add', '-N', os.path.join(wc_dir, 'A', 'D', 'H'))
                        
   # For kicks, add new file A/D/bloo.
   svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'bloo'), "hi")
@@ -1182,7 +1182,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
 
   os.mkdir(Q_path)
   svntest.main.file_append(bloo_path, "New contents.")
-  svntest.main.run_svn(None, 'add', '--recursive', Q_path)
+  svntest.main.run_svn(None, 'add', Q_path)
   
   # Commit a regular added thing inside an added directory,
   # expecting a specific error to occur!
