@@ -74,6 +74,11 @@ is defined as follows:
 The interpretation of parameters in a successful command response is
 context-dependent.
 
+URLs and repository paths are represented as strings.  They should be in
+canonical form when sent over the protocol.  However, as a matter of input
+validation, an implementation should always canonicalize received paths if it
+needs them in canonicalized form.
+
 2. Connection establishment and protocol setup
 ----------------------------------------------
 
