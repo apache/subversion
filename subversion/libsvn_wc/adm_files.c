@@ -354,21 +354,18 @@ svn_wc__sync_adm_file (svn_string_t *path,
   apr_status_t apr_err;
   svn_error_t *err;
   int components_added;
-
-  /* kff todo: K&R (2nd edition, p. 155) semi-implies that a va_list
-     can only be used once.  Can it really be true? */
-  va_list ap1, ap2;
+  va_list ap;
   
   /* Extend real name. */
-  va_start (ap1, num_vaparams);
+  va_start (ap, num_vaparams);
   components_added
-    = v_extend_with_adm_name (path, 0, pool, num_vaparams, ap1);
-  va_end (ap1);
+    = v_extend_with_adm_name (path, 0, pool, num_vaparams, ap);
+  va_end (ap);
   
   /* Extend tmp name. */
-  va_start (ap2, num_vaparams);
-  v_extend_with_adm_name (tmp_path, 1, pool, num_vaparams, ap2);
-  va_end (ap2);
+  va_start (ap, num_vaparams);
+  v_extend_with_adm_name (tmp_path, 1, pool, num_vaparams, ap);
+  va_end (ap);
   
   /* Rename. */
   apr_err = apr_rename_file (tmp_path->data, path->data, pool);
@@ -425,20 +422,16 @@ open_adm_file (apr_file_t **handle,
         {
           svn_string_t *opath, *tmp_path;  /* just keep it all local */
 
-          /* kff todo: K&R (2nd edition, p. 155) semi-implies that a
-             va_list can only be used once.  Can it really be true? */
-          va_list ap1, ap2;
-
           opath    = svn_string_dup (path, pool);
           tmp_path = svn_string_dup (path, pool);
 
-          va_start (ap1, num_vaparams);
-          v_extend_with_adm_name (opath, 0, pool, num_vaparams, ap1);
-          va_end (ap1);
+          va_start (ap, num_vaparams);
+          v_extend_with_adm_name (opath, 0, pool, num_vaparams, ap);
+          va_end (ap);
 
-          va_start (ap2, num_vaparams);
-          v_extend_with_adm_name (tmp_path, 1, pool, num_vaparams, ap2);
-          va_end (ap2);
+          va_start (ap, num_vaparams);
+          v_extend_with_adm_name (tmp_path, 1, pool, num_vaparams, ap);
+          va_end (ap);
 
           /* Copy the original thing to the tmp location. */
           err = copy_file (opath, tmp_path, pool);
@@ -515,20 +508,16 @@ close_adm_file (apr_file_t *fp,
       svn_error_t *err;
       int components_added;
       
-      /* kff todo: K&R (2nd edition, p. 155) semi-implies that a va_list
-         can only be used once.  Can it really be true? */
-      va_list ap1, ap2;
-      
       /* Extend real name. */
-      va_start (ap1, num_vaparams);
+      va_start (ap, num_vaparams);
       components_added
-        = v_extend_with_adm_name (path, 0, pool, num_vaparams, ap1);
-      va_end (ap1);
+        = v_extend_with_adm_name (path, 0, pool, num_vaparams, ap);
+      va_end (ap);
       
       /* Extend tmp name. */
-      va_start (ap2, num_vaparams);
-      v_extend_with_adm_name (tmp_path, 1, pool, num_vaparams, ap2);
-      va_end (ap2);
+      va_start (ap, num_vaparams);
+      v_extend_with_adm_name (tmp_path, 1, pool, num_vaparams, ap);
+      va_end (ap);
       
       /* Rename. */
       apr_err = apr_rename_file (tmp_path->data, path->data, pool);
