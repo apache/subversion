@@ -23,13 +23,6 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r10546
-    When a commit fails on inconsistent-EOL file, say *which* file failed.
-    Justification:
-      Tiny patch; creates a useful error message where none existed (#1988)
-    Votes:
-      +1: sussman, ghudson, lundblad
-
   * r10608
     Fix issue 1674: "svnadmin load" crashes on contentful rev 0.
     Justification:
@@ -47,10 +40,3 @@ Candidate changes:
     Votes:
       +1: ghudson
 
-  * r10546
-    Improve 'svn commit' errormsg when inconsistent line-endings are found.
-    Justification:
-      Without this, the mysterious error "Commit failed (details follow)",
-      with no following details, is produced. Trivial fix for serious UI wart.
-    Votes:
-      +1: maxb
