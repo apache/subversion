@@ -194,30 +194,30 @@ def parse_log_output(log_lines):
   # Here's some log output to look at while writing this function:
   
   # ------------------------------------------------------------------------
-  # rev 5:  kfogel | Tue 6 Nov 2001 17:18:19 | 1 line
+  # r5 | kfogel | Tue 6 Nov 2001 17:18:19 | 1 line
   # 
   # Log message for revision 5.
   # ------------------------------------------------------------------------
-  # rev 4:  kfogel | Tue 6 Nov 2001 17:18:18 | 1 line
+  # r4 | kfogel | Tue 6 Nov 2001 17:18:18 | 1 line
   # 
   # Log message for revision 4.
   # ------------------------------------------------------------------------
-  # rev 3:  kfogel | Tue 6 Nov 2001 17:18:17 | 1 line
+  # r3 | kfogel | Tue 6 Nov 2001 17:18:17 | 1 line
   # 
   # Log message for revision 3.
   # ------------------------------------------------------------------------
-  # rev 2:  kfogel | Tue 6 Nov 2001 17:18:16 | 1 line
+  # r2 | kfogel | Tue 6 Nov 2001 17:18:16 | 1 line
   # 
   # Log message for revision 2.
   # ------------------------------------------------------------------------
-  # rev 1:  foo | Tue 6 Nov 2001 15:27:57 | 1 line
+  # r1 | foo | Tue 6 Nov 2001 15:27:57 | 1 line
   # 
   # Log message for revision 1.
   # ------------------------------------------------------------------------
 
   # Regular expression to match the header line of a log message, with
   # these groups: (revision number), (author), (date), (num lines).
-  header_re = re.compile ('^rev ([0-9]+):  ' \
+  header_re = re.compile ('^r([0-9]+) \| ' \
                           + '([^|]*) \| ([^|]*) \| ([0-9]+) lines?')
 
   # The log chain to return.

@@ -224,7 +224,7 @@ $ svn checkout --revision {"yesterday"}
       <screen>
 $ svn log --revision {11/28/2002}
 ------------------------------------------------------------------------
-rev 12:  ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
+r12 | ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
 &hellip;
       </screen>
         
@@ -1676,15 +1676,15 @@ $
       <screen>
 $ svn log
 ------------------------------------------------------------------------
-rev 3:  sally | Mon, 15 Jul 2002 18:03:46 -0500 | 1 line
+r3 | sally | Mon, 15 Jul 2002 18:03:46 -0500 | 1 line
 
 Added include lines and corrected # of cheese slices.
 ------------------------------------------------------------------------
-rev 2:  harry | Mon, 15 Jul 2002 17:47:57 -0500 | 1 line
+r2 | harry | Mon, 15 Jul 2002 17:47:57 -0500 | 1 line
 
 Added main() methods.
 ------------------------------------------------------------------------
-rev 1:  sally | Mon, 15 Jul 2002 17:40:08 -0500 | 2 lines
+r1 | sally | Mon, 15 Jul 2002 17:40:08 -0500 | 2 lines
 
 Initial import
 ------------------------------------------------------------------------
@@ -1732,7 +1732,7 @@ $ svn log http://foo.com/svn/trunk/code/foo.c
       <screen>
 $ svn log -r 8 -v
 ------------------------------------------------------------------------
-rev 8:  sally | 2002-07-14 08:15:29 -0500 | 1 line
+r8 | sally | 2002-07-14 08:15:29 -0500 | 1 line
 Changed paths:
 U /trunk/code/foo.c
 U /trunk/code/bar.h
