@@ -1,0 +1,14 @@
+This directly used to contain a set of Ruby bindings which were
+hand-built. They became completely stale and confused people by
+their presence, so the bindings were removed in revision 6485.
+
+If you want to see them and try working with them, then pull
+them from a previous release. See extconf.rb in this directory
+for building the old bindings.
+
+For the future, it is highly recommended that a Ruby developer
+work on developing SWIG-based bindings. The SWIG-based bindings
+have been able to stay *much* more up to date with much less
+human intervention.
+
+(July 16, 2003)
