@@ -228,11 +228,11 @@
       new repository, just run:</para>
           
     <screen>
-$ svnadmin create path/to/repos
+$ svnadmin create /path/to/repos
 </screen>
           
     <para>This creates a new repository in the directory
-      <filename>path/to/repos</filename>.  This new repository begins
+      <filename>/path/to/repos</filename>.  This new repository begins
       life at revision 0, which is defined to consist of nothing but
       the top-level root (<filename>/</filename>) filesystem
       directory.  Initially, revision 0 also has a single revision
@@ -700,7 +700,7 @@ $ svnlook youngest /path/to/repos
           of the <literal>info</literal> subcommand:</para>
 
         <screen>
-$ svnlook info path/to/repos
+$ svnlook info /path/to/repos
 sally
 2002-11-04 09:29:13 -0600 (Mon, 04 Nov 2002)
 27
@@ -751,7 +751,7 @@ Greek tree.
           users).</para>
 
         <screen>
-$ svnlook tree path/to/repos --show-ids
+$ svnlook tree /path/to/repos --show-ids
 / &lt;0.0.1&gt;
  A/ &lt;2.0.1&gt;
   B/ &lt;4.0.1&gt;
