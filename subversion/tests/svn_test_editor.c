@@ -29,9 +29,13 @@
 struct edit_baton
 {
   svn_string_t *root_path;
-  apr_pool_t *pool;
-  int indentation;
+  svn_string_t *editor_name;
   svn_stream_t *out_stream;
+  apr_pool_t *pool;
+  enum svn_path_style style;
+  int indentation;
+  svn_boolean_t verbose;
+  svn_string_t *newline;
 };
 
 
@@ -51,6 +55,21 @@ struct file_baton
 };
 
 
+/* Initialize EB->newline if it hasn't already been initialized, then
+   print EB->newline to EB->outstream.  */
+static svn_error_t *
+newline (struct edit_baton *eb)
+{
+  apr_size_t len;
+
+  if (! eb->newline)
+    eb->newline = svn_string_create ("\n", eb->pool);
+
+  len = eb->newline->len;
+  return svn_stream_write (eb->out_stream, eb->newline->data, &len);
+}
+
+ 
 /* Print EB->indentation * LEVEL spaces, followed by STR,
    to EB->out_stream.  */
 static svn_error_t *
@@ -79,73 +98,91 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
   int i;
   struct file_baton *fb = (struct file_baton *) baton;
   apr_pool_t *pool = fb->dir_baton->edit_baton->pool;
-  svn_string_t *str = svn_string_create ("CALLED window_handler\n", pool);
+  svn_string_t *str;
 
-  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level + 1, str));
+  /* We're done if non-verbose */
+  if (! fb->dir_baton->edit_baton->verbose)
+    return SVN_NO_ERROR;
 
-  if (! window)
+  if (window)
+    str = svn_string_createf (pool,
+                              "[%s] window_handler (%ld ops)\n",
+                              fb->dir_baton->edit_baton->editor_name->data,
+                              (long int) window->num_ops);
+  else
+    str = svn_string_createf (pool,
+                              "[%s] window_handler (EOT)\n",
+                              fb->dir_baton->edit_baton->editor_name->data);
+    
+  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level + 2, str));
+
+  if (window)
     {
-      str = svn_string_create ("end\n\n", pool);
-      SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level + 1, str));
-
-      return SVN_NO_ERROR;
-    }
-
-  /* Delve into the vcdiff window and print the data. */
-  for (i = 0; i < window->num_ops; i++)
-    {
-      switch (window->ops[i].action_code)
+      /* Delve into the vcdiff window and print the data. */
+      for (i = 1; i <= window->num_ops; i++)
         {
-        case svn_txdelta_new:
-          {
-            str = svn_string_createf (pool,
-                                      "new text: length %ld\n\n", 
-                                      (long int) (window->ops[i].length));
+          switch (window->ops[i].action_code)
+            {
+            case svn_txdelta_new:
+              {
+                str = svn_string_createf 
+                  (pool,
+                   "(%ld) new text: length %ld\n",
+                   (long int) i,
+                   (long int) (window->ops[i].length));
             
-            SVN_ERR (print (fb->dir_baton->edit_baton,
-                            fb->indent_level + 1,
-                            str));
-            break;
-          }
-        case svn_txdelta_source:
-          {
-            str = svn_string_createf 
-              (pool,
-               "source text: offset %ld, length %ld\n\n",
-               (long int) window->ops[i].offset,
-               (long int) window->ops[i].length);
+                SVN_ERR (print (fb->dir_baton->edit_baton,
+                                fb->indent_level + 2,
+                                str));
+                break;
+              }
+            case svn_txdelta_source:
+              {
+                str = svn_string_createf 
+                  (pool,
+                   "(%ld) source text: offset %ld, length %ld\n",
+                   (long int) i,
+                   (long int) window->ops[i].offset,
+                   (long int) window->ops[i].length);
 
-            SVN_ERR (print (fb->dir_baton->edit_baton,
-                            fb->indent_level + 1,
-                            str));
+                SVN_ERR (print (fb->dir_baton->edit_baton,
+                                fb->indent_level + 2,
+                                str));
 
-            break;
-          }
-        case svn_txdelta_target:
-          {
-            str = svn_string_createf
-              (pool,
-               "target text: offset %ld, length %ld\n\n",
-               (long int) window->ops[i].offset,
-               (long int) window->ops[i].length);
+                break;
+              }
+            case svn_txdelta_target:
+              {
+                str = svn_string_createf
+                  (pool,
+                   "(%ld) target text: offset %ld, length %ld\n",
+                   (long int) i,
+                   (long int) window->ops[i].offset,
+                   (long int) window->ops[i].length);
             
-            SVN_ERR (print (fb->dir_baton->edit_baton,
-                            fb->indent_level + 1,
-                            str));
+                SVN_ERR (print (fb->dir_baton->edit_baton,
+                                fb->indent_level + 2,
+                                str));
 
-            break;
-          }
-        default:
-          {
-            str = svn_string_create ("unknown window type\n\n", pool);
+                break;
+              }
+            default:
+              {
+                str = svn_string_createf
+                  (pool,
+                   "(%ld) unknown window type\n",
+                   (long int) i);
             
-            SVN_ERR (print (fb->dir_baton->edit_baton,
-                            fb->indent_level + 1,
-                            str));
-            break;
-          }
+                SVN_ERR (print (fb->dir_baton->edit_baton,
+                                fb->indent_level + 2,
+                                str));
+                break;
+              }
+            }
         }
     }
+
+  SVN_ERR (newline (fb->dir_baton->edit_baton));
 
   return SVN_NO_ERROR;
 }
@@ -156,14 +193,19 @@ static svn_error_t *
 test_delete_entry (svn_string_t *filename, void *parent_baton)
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
-  svn_string_t *str = svn_string_create ("CALLED delete_entry\n",
-                                         d->edit_baton->pool);
+  svn_string_t *path;
+  svn_string_t *str;
 
-  SVN_ERR (print (d->edit_baton, d->indent_level, str));
-
+  path = svn_string_dup (d->path, d->edit_baton->pool);
+  svn_path_add_component (path, filename, d->edit_baton->style);
   str = svn_string_createf (d->edit_baton->pool,
-                            "name: %s\n\n", filename->data);
-  SVN_ERR (print (d->edit_baton, d->indent_level, str));
+                            "[%s] delete_entry (%s)\n",
+                            d->edit_baton->editor_name->data,
+                            path->data);
+  SVN_ERR (print (d->edit_baton, d->indent_level + 1, str));
+
+  if (d->edit_baton->verbose)
+    SVN_ERR (newline (d->edit_baton));
 
   return SVN_NO_ERROR;         
 }
@@ -174,14 +216,16 @@ test_set_target_revision (void *edit_baton,
                           svn_revnum_t target_revision)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  svn_string_t *str;
 
-  svn_string_t *str
-    = svn_string_create ("CALLED set_target_revision\n", eb->pool);
-  SVN_ERR (print (eb, 0, str));
-
-  str = svn_string_createf (eb->pool, "target_revision: %ld\n\n",
+  str = svn_string_createf (eb->pool,
+                            "[%s] set_target_revision (%ld)\n",
+                            eb->editor_name->data,
                             (long int) target_revision);
   SVN_ERR (print (eb, 0, str));
+
+  if (eb->verbose)
+    SVN_ERR (newline (eb));
 
   return SVN_NO_ERROR;
 }
@@ -198,18 +242,24 @@ test_replace_root (void *edit_baton,
 
   d->path = (svn_string_t *) svn_string_dup (eb->root_path, eb->pool);
   d->edit_baton = eb;
-  d->indent_level = 1;
+  d->indent_level = 0;
   *root_baton = d;
 
-  str = svn_string_create ("CALLED replace_root\n", eb->pool);
+  str = svn_string_createf (eb->pool,
+                            "[%s] replace_root (%s)\n",
+                            eb->editor_name->data,
+                            eb->root_path->data);
   SVN_ERR (print (eb, d->indent_level, str));
 
-  str = svn_string_createf (eb->pool, "path: %s\n", eb->root_path->data);
-  SVN_ERR (print (eb, d->indent_level, str));
+  /* We're done if non-verbose */
+  if (! eb->verbose)
+    return SVN_NO_ERROR;
 
-  str = svn_string_createf (eb->pool, "base_revision: %ld\n\n",
+  str = svn_string_createf (eb->pool, 
+                            "base_revision: %ld\n",
                             (long int) base_revision);
   SVN_ERR (print (eb, d->indent_level, str));
+  SVN_ERR (newline (eb));
 
   return SVN_NO_ERROR;
 }
@@ -224,33 +274,31 @@ add_or_replace_dir (svn_string_t *name,
                     const char *pivot_string)
 {
   struct dir_baton *pd = (struct dir_baton *) parent_baton;
-  const char *Aname = name ? name->data : "(unknown)";
-  struct dir_baton *d;
-  svn_string_t *str
-    = svn_string_createf (pd->edit_baton->pool,
-                          "CALLED %s_directory\n",
-                          pivot_string);
+  struct dir_baton *d = apr_pcalloc (pd->edit_baton->pool, sizeof (*d));
+  svn_string_t *str;
 
   /* Set child_baton to a new dir baton. */
-  d = apr_pcalloc (pd->edit_baton->pool, sizeof (*d));
   d->path = svn_string_dup (pd->path, pd->edit_baton->pool);
-  svn_path_add_component (d->path,
-                          svn_string_create (Aname, pd->edit_baton->pool),
-                          svn_path_local_style);
+  svn_path_add_component (d->path, name, pd->edit_baton->style);
   d->edit_baton = pd->edit_baton;
   d->indent_level = (pd->indent_level + 1);
   *child_baton = d;
 
+  str = svn_string_createf (pd->edit_baton->pool,
+                            "[%s] %s_directory (%s)\n",
+                            pd->edit_baton->editor_name->data,
+                            pivot_string,
+                            d->path->data);
+
   SVN_ERR (print (d->edit_baton, d->indent_level, str));
+
+  /* We're done if non-verbose */
+  if (! pd->edit_baton->verbose)
+    return SVN_NO_ERROR;
 
   str = svn_string_createf (pd->edit_baton->pool,
                             "parent: %s\n", pd->path->data);
   SVN_ERR (print (d->edit_baton, d->indent_level, str));
-  
-  str = svn_string_createf (pd->edit_baton->pool,
-                            "name: %s\n", name->data);
-  SVN_ERR (print (d->edit_baton, d->indent_level, str));
-  
 
   if (strcmp (pivot_string, "add") == 0)
     {
@@ -260,7 +308,7 @@ add_or_replace_dir (svn_string_t *name,
       SVN_ERR (print (d->edit_baton, d->indent_level, str));
 
       str = svn_string_createf (pd->edit_baton->pool,
-                                "copyfrom_revision: %ld\n\n",
+                                "copyfrom_revision: %ld\n",
                                 (long int) base_revision);
       SVN_ERR (print (d->edit_baton, d->indent_level, str));
 
@@ -268,10 +316,12 @@ add_or_replace_dir (svn_string_t *name,
   else
     {
       str = svn_string_createf (pd->edit_baton->pool,
-                                "base_revision: %ld\n\n",
+                                "base_revision: %ld\n",
                                 (long int) base_revision);
       SVN_ERR (print (d->edit_baton, d->indent_level, str));
     }
+
+  SVN_ERR (newline (d->edit_baton));
 
   return SVN_NO_ERROR;
 }
@@ -312,14 +362,16 @@ static svn_error_t *
 test_close_directory (void *dir_baton)
 {
   struct dir_baton *d = (struct dir_baton *) dir_baton;
-
-  svn_string_t *str = svn_string_create ("CALLED close_directory\n",
-                                         d->edit_baton->pool);
-  SVN_ERR (print (d->edit_baton, d->indent_level, str));
+  svn_string_t *str;
 
   str = svn_string_createf (d->edit_baton->pool,
-                            "path: %s\n\n", d->path->data);
+                            "[%s] close_directory (%s)\n",
+                            d->edit_baton->editor_name->data,
+                            d->path->data);
   SVN_ERR (print (d->edit_baton, d->indent_level, str));
+
+  if (d->edit_baton->verbose)
+    SVN_ERR (newline (d->edit_baton));
 
   return SVN_NO_ERROR;    
 }
@@ -329,14 +381,16 @@ static svn_error_t *
 test_close_file (void *file_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
-
-  svn_string_t *str = svn_string_create ("CALLED close_file\n",
-                                         fb->dir_baton->edit_baton->pool);
-  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
+  svn_string_t *str;
 
   str = svn_string_createf (fb->dir_baton->edit_baton->pool,
-                            "path: %s\n\n", fb->path->data);
+                            "[%s] close_file (%s)\n",
+                            fb->dir_baton->edit_baton->editor_name->data,
+                            fb->path->data);
   SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
+
+  if (fb->dir_baton->edit_baton->verbose)
+    SVN_ERR (newline (fb->dir_baton->edit_baton));
 
   return SVN_NO_ERROR;    
 }
@@ -346,9 +400,15 @@ static svn_error_t *
 test_close_edit (void *edit_baton)
 {
   struct edit_baton *eb = edit_baton;
+  svn_string_t *str;
 
-  svn_string_t *str = svn_string_create ("CALLED close_edit\n\n", eb->pool);
+  str = svn_string_createf (eb->pool,
+                            "[%s] close_edit\n",
+                            eb->editor_name->data);
   SVN_ERR (print (eb, 0, str));
+
+  if (eb->verbose)
+    SVN_ERR (newline (eb));
 
   return SVN_NO_ERROR;
 }
@@ -360,18 +420,20 @@ test_apply_textdelta (void *file_baton,
                       void **handler_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
-
-  svn_string_t *str = svn_string_create ("CALLED apply_textdelta\n",
-                                         fb->dir_baton->edit_baton->pool);
-  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
-
-  str = svn_string_createf (fb->dir_baton->edit_baton->pool,
-                            "path: %s\n\n", fb->path->data);
-  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
+  svn_string_t *str;
 
   /* Set the value of HANDLER and HANDLER_BATON here */
   *handler        = my_vcdiff_windoweater;
   *handler_baton  = fb;
+
+  str = svn_string_createf (fb->dir_baton->edit_baton->pool,
+                            "[%s] apply_textdelta (%s)\n",
+                            fb->dir_baton->edit_baton->editor_name->data,
+                            fb->path->data);
+  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level + 1, str));
+
+  if (fb->dir_baton->edit_baton->verbose)
+    SVN_ERR (newline (fb->dir_baton->edit_baton));
 
   return SVN_NO_ERROR;
 }
@@ -386,27 +448,30 @@ add_or_replace_file (svn_string_t *name,
                      const char *pivot_string)
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
-  struct file_baton *fb;
-
-  svn_string_t *str
-    = svn_string_createf (d->edit_baton->pool,
-                          "CALLED %s_file\n", pivot_string);
+  struct file_baton *fb = apr_pcalloc (d->edit_baton->pool, sizeof (*fb));
+  svn_string_t *str;
 
   /* Put the filename in file_baton */
-  fb = apr_pcalloc (d->edit_baton->pool, sizeof (*fb));
   fb->dir_baton = d;
-  fb->path = (svn_string_t *) svn_string_dup (name, d->edit_baton->pool);
+  fb->path = (svn_string_t *) svn_string_dup (d->path, d->edit_baton->pool);
+  svn_path_add_component (fb->path, name, d->edit_baton->style);
   fb->indent_level = (d->indent_level + 1);
   *file_baton = fb;
+ 
+  str = svn_string_createf (d->edit_baton->pool,
+                            "[%s] %s_file (%s)\n", 
+                            d->edit_baton->editor_name->data,
+                            pivot_string,
+                            fb->path->data);
 
   SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
+
+  /* We're done if non-verbose */
+  if (! d->edit_baton->verbose)
+    return SVN_NO_ERROR;
 
   str = svn_string_createf (d->edit_baton->pool,
                             "parent: %s\n", d->path->data);
-  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
-
-  str = svn_string_createf (d->edit_baton->pool,
-                            "name: %s\n", name->data);
   SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
 
   if (strcmp (pivot_string, "add") == 0)
@@ -417,17 +482,19 @@ add_or_replace_file (svn_string_t *name,
       SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
 
       str = svn_string_createf (d->edit_baton->pool,
-                                "copyfrom_revision: %ld\n\n",
+                                "copyfrom_revision: %ld\n",
                                 (long int) base_revision);
       SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
     }
   else
     {
       str = svn_string_createf (d->edit_baton->pool,
-                                "base_revision: %ld\n\n",
+                                "base_revision: %ld\n",
                                 (long int) base_revision);
       SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
     }
+
+  SVN_ERR (newline (fb->dir_baton->edit_baton));
 
   return SVN_NO_ERROR;
 }
@@ -469,23 +536,29 @@ test_change_file_prop (void *file_baton,
                        svn_string_t *name, svn_string_t *value)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
-  svn_string_t *str
-    = svn_string_create ("CALLED change_file_prop\n",
-                         fb->dir_baton->edit_baton->pool);
-
-  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
+  svn_string_t *str;
 
   str = svn_string_createf (fb->dir_baton->edit_baton->pool,
-                            "path: %s\n", fb->path->data);
-  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
+                            "[%s] change_file_prop (%s)\n",
+                            fb->dir_baton->edit_baton->editor_name->data,
+                            fb->path->data);
+  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level + 1, str));
+
+  /* We're done if non-verbose */
+  if (! fb->dir_baton->edit_baton->verbose)
+    return SVN_NO_ERROR;
 
   str = svn_string_createf (fb->dir_baton->edit_baton->pool,
-                            "name: %s\n", name->data);
-  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
+                            "name: %s\n", 
+                            name->data);
+  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level + 1, str));
 
   str = svn_string_createf (fb->dir_baton->edit_baton->pool,
-                            "value: %s\n\n", value ? value->data : "(null)");
-  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
+                            "value: %s\n", 
+                            value ? value->data : "(null)");
+  SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level + 1, str));
+
+  SVN_ERR (newline (fb->dir_baton->edit_baton));
 
   return SVN_NO_ERROR;
 }
@@ -496,22 +569,29 @@ test_change_dir_prop (void *parent_baton,
                       svn_string_t *name, svn_string_t *value)
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
-  svn_string_t *str
-    = svn_string_create ("CALLED change_dir_prop\n", d->edit_baton->pool);
-
-  SVN_ERR (print (d->edit_baton, d->indent_level, str));
+  svn_string_t *str;
 
   str = svn_string_createf (d->edit_baton->pool,
-                            "path: %s\n", d->path->data);
-  SVN_ERR (print (d->edit_baton, d->indent_level, str));
+                            "[%s] change_dir_prop (%s)\n",
+                            d->edit_baton->editor_name->data,
+                            d->path->data);
+  SVN_ERR (print (d->edit_baton, d->indent_level + 1, str));
+
+  /* We're done if non-verbose */
+  if (! d->edit_baton->verbose)
+    return SVN_NO_ERROR;
 
   str = svn_string_createf (d->edit_baton->pool,
-                            "name: %s\n", name->data);
-  SVN_ERR (print (d->edit_baton, d->indent_level, str));
+                            "name: %s\n", 
+                            name->data);
+  SVN_ERR (print (d->edit_baton, d->indent_level + 1, str));
 
   str = svn_string_createf (d->edit_baton->pool,
-                            "value: %s\n\n", value ? value->data : "(null)");
-  SVN_ERR (print (d->edit_baton, d->indent_level, str));
+                            "value: %s\n", 
+                            value ? value->data : "(null)");
+  SVN_ERR (print (d->edit_baton, d->indent_level + 1, str));
+
+  SVN_ERR (newline (d->edit_baton));
 
   return SVN_NO_ERROR;
 }
@@ -525,9 +605,12 @@ test_change_dir_prop (void *parent_baton,
 svn_error_t *
 svn_test_get_editor (const svn_delta_edit_fns_t **editor,
                      void **edit_baton,
+                     svn_string_t *editor_name,
                      svn_stream_t *out_stream,
                      int indentation,
+                     svn_boolean_t verbose,
                      svn_string_t *path,
+                     enum svn_path_style style,
                      apr_pool_t *pool)
 {
   svn_delta_edit_fns_t *my_editor;
@@ -552,9 +635,13 @@ svn_test_get_editor (const svn_delta_edit_fns_t **editor,
   /* Set up the edit baton. */
   my_edit_baton = apr_pcalloc (pool, sizeof (*my_edit_baton));
   my_edit_baton->root_path = svn_string_dup (path, pool);
+  my_edit_baton->editor_name = svn_string_dup (editor_name, pool);
   my_edit_baton->pool = pool;
+  my_edit_baton->style = style;
   my_edit_baton->indentation = indentation;
+  my_edit_baton->verbose = verbose;
   my_edit_baton->out_stream = out_stream;
+  my_edit_baton->newline = NULL; /* allocated when first needed */
 
   *editor = my_editor;
   *edit_baton = my_edit_baton;

@@ -72,9 +72,16 @@ main (int argc, char *argv[])
   out_stream = svn_stream_from_stdio (stdout, globalpool);
 
   /* Grab the "test" editor and baton */
-  err = svn_test_get_editor (&editor, &edit_baton,
-                             out_stream, 3,
-                             base_path, globalpool);
+  err = svn_test_get_editor (&editor, 
+                             &edit_baton,
+                             svn_string_create ("DELTAPARSE-TEST", 
+                                                globalpool),
+                             out_stream, 
+                             3, 
+                             TRUE,
+                             base_path, 
+                             svn_path_repos_style,
+                             globalpool);
   
   /* Fire up the XML parser */
   err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (file, globalpool),
