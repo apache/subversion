@@ -122,15 +122,15 @@ PYTHON_DISTUTIL = setup.py                                               \
                   -S$(SWIG_SRC_DIR)                                      \
                   -s"$(SWIG)"                                            \
                   -L$(SVN_APR_PREFIX)/lib                                \
-                  -L../../../libsvn_client/.libs                         \
-                  -L../../../libsvn_delta/.libs                          \
-                  -L../../../libsvn_fs/.libs                             \
-                  -L../../../libsvn_ra/.libs                             \
-                  -L../../../libsvn_repos/.libs                          \
-                  -L../../../libsvn_wc/.libs                             \
-                  -L../../../libsvn_subr/.libs                           \
-                  -L../../../bindings/swig/.libs                         \
-                  $(SWIG_PY_SETUP_LDFLAGS)
+                  -L$(abs_builddir)/subversion/libsvn_client/.libs       \
+                  -L$(abs_builddir)/subversion/libsvn_delta/.libs        \
+                  -L$(abs_builddir)/subversion/libsvn_fs/.libs           \
+                  -L$(abs_builddir)/subversion/libsvn_ra/.libs           \
+                  -L$(abs_builddir)/subversion/libsvn_repos/.libs        \
+                  -L$(abs_builddir)/subversion/libsvn_wc/.libs           \
+                  -L$(abs_builddir)/subversion/libsvn_subr/.libs         \
+                  -L$(abs_builddir)/subversion/bindings/swig/.libs       \
+                  $(SWIG_LDFLAGS)
 
 all: external-all local-all
 clean: external-clean local-clean
@@ -308,7 +308,7 @@ swig-assert-available:
 swig-clean: swig-py-ext-clean swig-java-ext-clean
 
 swig-py-ext: swig-assert-available
-	cd $(SWIG_SRC_DIR)/python; \
+	cd $(SWIG_BUILD_DIR)/python; \
         $(PYTHON) $(PYTHON_DISTUTIL) build
 
 install-swig-py-ext: swig-assert-available
