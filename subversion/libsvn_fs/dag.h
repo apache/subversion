@@ -58,14 +58,14 @@ svn_error_t *svn_fs__dag_init_fs (svn_fs_t *fs);
 typedef struct dag_node_t dag_node_t;
 
 
-/* Allocate (from TRAIL->pool) and return a new dag_node_t structure
-   *NODE, initialized with the values ID and FS, and setting
-   *NODE->pool to TRAIL->pool. */
+/* Fill *NODE with a dag_node_t representing node revision ID in FS,
+   allocating in TRAIL->pool.  */
 svn_error_t *
 svn_fs__dag_get_node (dag_node_t **node,
                       svn_fs_t *fs,
                       svn_fs_id_t *id,
                       trail_t *trail);
+
 
 /* Return a new dag_node_t object referring to the same node as NODE,
    allocated in TRAIL->pool.  If you're trying to build a structure in

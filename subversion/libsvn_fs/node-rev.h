@@ -90,6 +90,13 @@ svn_error_t *svn_fs__stable_node (svn_fs_t *fs,
                                   trail_t *trail);
 
 
+/* Delete node revision ID from FS's `nodes' table, as part of TRAIL.
+   WARNING: This does not check that the node revision is mutable!
+   Callers should do that check themselves.  */
+svn_error_t *svn_fs__delete_node_revision (svn_fs_t *fs,
+                                           const svn_fs_id_t *id,
+                                           trail_t *trail);
+
 #endif /* SVN_LIBSVN_FS_NODE_REV_H */
 
 

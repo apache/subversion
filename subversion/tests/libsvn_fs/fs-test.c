@@ -1134,8 +1134,11 @@ abort_txn (const char **msg)
   svn_fs_t *fs;
   svn_fs_txn_t *txn1, *txn2;
   svn_fs_root_t *txn1_root, *txn2_root;
+  const char *txn1_name, *txn2_name;
 
-  *msg = "abort a transaction (INCOMPLETE TEST)";
+  *msg = "abort a transaction";
+
+  /* kff todo: test that txn IDs don't get reused. */
 
   /* Prepare two txns to receive the Greek tree. */
   SVN_ERR (create_fs_and_repos (&fs, "test-repo-abort-txn"));
@@ -1143,16 +1146,23 @@ abort_txn (const char **msg)
   SVN_ERR (svn_fs_begin_txn (&txn2, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn1_root, txn1, pool));
   SVN_ERR (svn_fs_txn_root (&txn2_root, txn2, pool));
+
+  /* Save their names for later. */
+  SVN_ERR (svn_fs_txn_name (&txn1_name, txn1, pool));
+  SVN_ERR (svn_fs_txn_name (&txn2_name, txn2, pool));
   
   /* Create greek trees in them. */
   SVN_ERR (greek_tree_under_root (txn1_root));
   SVN_ERR (greek_tree_under_root (txn2_root));
 
-  /* We abort txn2, while leaving txn1.
+  /* The test is to abort txn2, while leaving txn1.
    *
    * After we abort txn2, we make sure that a) all of its nodes
    * disappeared from the database, and b) none of txn1's nodes
    * disappeared.
+   *
+   * Finally, we create a third txn, and check that the name it got is
+   * different from the names of txn1 and txn2.
    */
 
   {
@@ -1232,8 +1242,6 @@ abort_txn (const char **msg)
      * are gone, but all of the ones in txn1 are still there. 
      */
 
-#if 0  /* Until svn_fs_abort_txn works */
-
     /* Check the standard files in t2. */
     SVN_ERR (check_id_absent (fs, t2_root_id));
     SVN_ERR (check_id_absent (fs, t2_iota_id));
@@ -1257,8 +1265,6 @@ abort_txn (const char **msg)
     SVN_ERR (check_id_absent (fs, t2_rho_id));
     SVN_ERR (check_id_absent (fs, t2_tau_id));
     
-#endif /* 0 */
-
     /* Check the standard files in t1. */
     SVN_ERR (check_id_present (fs, t1_root_id));
     SVN_ERR (check_id_present (fs, t1_iota_id));
@@ -1281,6 +1287,43 @@ abort_txn (const char **msg)
     SVN_ERR (check_id_present (fs, t1_pi_id));
     SVN_ERR (check_id_present (fs, t1_rho_id));
     SVN_ERR (check_id_present (fs, t1_tau_id));
+  }
+
+  /* Test that txn2 is gone, by trying to open it. */
+  {
+    svn_fs_txn_t *txn2_again;
+    svn_error_t *err;
+
+    err = svn_fs_open_txn (&txn2_again, fs, txn2_name, pool);
+    if (err && (err->apr_err != SVN_ERR_FS_NO_SUCH_TRANSACTION))
+      {
+        return svn_error_create
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "opening non-existent txn got wrong error");
+      }
+    else if (! err)
+      {
+        return svn_error_create
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "opening non-existent txn failed to get error");
+      }
+  }
+
+  /* Test that txn names are not recycled, by opening a third txn.  */
+  {
+    svn_fs_txn_t *txn3;
+    const char *txn3_name;
+
+    SVN_ERR (svn_fs_begin_txn (&txn3, fs, 0, pool));
+    SVN_ERR (svn_fs_txn_name (&txn3_name, txn3, pool));
+
+    if ((strcmp (txn3_name, txn2_name) == 0)
+        || (strcmp (txn3_name, txn1_name) == 0))
+      {
+        return svn_error_createf
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "txn name \"%s\" was recycled", txn3_name);
+      }
   }
 
   /* Close the transaction and fs. */

@@ -147,6 +147,18 @@ svn_fs__stable_node (svn_fs_t *fs,
 
 
 
+/* Deleting a node revision. */
+
+svn_error_t *
+svn_fs__delete_node_revision (svn_fs_t *fs,
+                              const svn_fs_id_t *id,
+                              trail_t *trail)
+{
+  return svn_fs__delete_nodes_entry (fs, id, trail);
+}
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
