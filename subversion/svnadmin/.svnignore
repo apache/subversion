@@ -1,0 +1,8 @@
+svnadmin
+Debug
+Release
+.libs
+*.o
+*~
+.*~
+.*.ra_dav

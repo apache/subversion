@@ -1,0 +1,7 @@
+repositories
+working_copies
+*.pyc
+*.o
+*~
+.*~
+.*.ra_dav

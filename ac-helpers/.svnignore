@@ -1,0 +1,9 @@
+config.guess
+config.sub
+ltconfig
+ltmain.sh
+libtool.m4
+*.o
+*~
+.*~
+.*.ra_dav

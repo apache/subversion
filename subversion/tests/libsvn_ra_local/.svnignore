@@ -1,0 +1,7 @@
+.libs
+ra-local-test
+test-repo-*
+*.o
+*~
+.*~
+.*.ra_dav

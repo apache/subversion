@@ -1,0 +1,10 @@
+Debug
+Release
+.libs
+repos-test
+test-repo-*
+md5args
+*.o
+*~
+.*~
+.*.ra_dav

@@ -1,0 +1,9 @@
+Debug
+Release
+*.lo
+*.la
+.libs
+*.o
+*~
+.*~
+.*.ra_dav
