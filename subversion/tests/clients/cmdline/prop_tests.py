@@ -740,8 +740,8 @@ def revprop_change(sbox):
 
 #----------------------------------------------------------------------
 
-def strip_or_add_whitespace(sbox):
-  "some svn: properties should have whitespace stripped or added"
+def prop_value_conversions(sbox):
+  "some svn: properties should be converted"
 
   # Bootstrap
   if sbox.build():
@@ -749,7 +749,10 @@ def strip_or_add_whitespace(sbox):
 
   wc_dir = sbox.wc_dir
   A_path = os.path.join(wc_dir, 'A')
+  B_path = os.path.join(wc_dir, 'A', 'B')
   iota_path = os.path.join(wc_dir, 'iota')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   # We'll use a file to set the prop values, so that weird characters
   # in the props don't confuse the shell.
@@ -765,71 +768,98 @@ def strip_or_add_whitespace(sbox):
 
   # Leading and trailing whitespace should be stripped
   set_prop('svn:mime-type', ' text/html\n\n', iota_path)
+  set_prop('svn:mime-type', 'text/html', mu_path)
 
   # Leading and trailing whitespace should be stripped
   set_prop('svn:eol-style', '\nnative\n', iota_path)
+  set_prop('svn:eol-style', 'native', mu_path)
 
   # A trailing newline should be added
   set_prop('svn:ignore', '*.o\nfoo.c', A_path)
+  set_prop('svn:ignore', '*.o\nfoo.c\n', B_path)
 
   # A trailing newline should be added
   set_prop('svn:externals', 'foo http://foo.com/repos', A_path)
+  set_prop('svn:externals', 'foo http://foo.com/repos\n', B_path)
 
   # Leading and trailing whitespace should be stripped, but not internal
   # whitespace
   set_prop('svn:keywords', ' Rev Date \n', iota_path)
+  set_prop('svn:keywords', 'Rev  Date', mu_path)
+
+  # svn:executable value should be forced to a '*'
+  set_prop('svn:executable', 'foo', iota_path)
+  set_prop('svn:executable', '', lambda_path)
+  set_prop('svn:executable', '      ', mu_path)
+
+  # Anything else should be untouched
+  set_prop('svn:some-prop', 'bar', lambda_path)
+  set_prop('svn:some-prop', ' bar baz', mu_path)
+  set_prop('svn:some-prop', 'bar\n', iota_path)
+  set_prop('some-prop', 'bar', lambda_path)
+  set_prop('some-prop', ' bar baz', mu_path)
+  set_prop('some-prop', 'bar\n', iota_path)
 
   # Close and remove the prop value file
   propval_file.close()
   os.unlink(propval_path)
 
-  # Check svn:mime-type
-  out, err = svntest.main.run_svn(None, 'pg', 'svn:mime-type', iota_path)
-  exp_out = ['text/html\n']
-  if out != exp_out:
-    print "svn pg svn:mime-type output does not match expected."
-    print "Expected standard output: ", exp_out, "\n"
-    print "Actual standard output: ", out, "\n"
-    return 1
+  # NOTE: When writing out multi-line prop values in svn:* props, the
+  # client converts to local encoding and local eoln style.
+  # Therefore, the expected output must contain the right kind of eoln
+  # strings. That's why we use os.linesep in the tests below, not just
+  # plain '\n'. The _last_ \n is also from the client, but it's not
+  # part of the prop value and it doesn't get converted in the pipe.
 
-  # Check svn:eol-style
-  out, err = svntest.main.run_svn(None, 'pg', 'svn:eol-style', iota_path)
-  exp_out = ['native\n']
-  if out != exp_out:
-    print "svn pg svn:eol-style output does not match expected."
-    print "Expected standard output: ", exp_out, "\n"
-    print "Actual standard output: ", out, "\n"
-    return 1
+  class PropError:
+    pass
 
-  # Check svn:ignore
-  # FIXME: Temporarily disabled on Windows due to \r\n vs. \n issues
-  if not svntest.main.windows:
-    out, err = svntest.main.run_svn(None, 'pg', 'svn:ignore', A_path)
-    exp_out = ['*.o\n', 'foo.c\n', '\n']
+  def check_prop(name, path, exp_out):
+    out, err = svntest.main.run_svn(None, 'pg', name, path)
     if out != exp_out:
-      print "svn pg svn:ignore output does not match expected."
+      print "svn pg", name, "output does not match expected."
       print "Expected standard output: ", exp_out, "\n"
       print "Actual standard output: ", out, "\n"
-      return 1
+      raise PropError()
 
-  # Check svn:externals
-  # FIXME: Temporarily disabled on Windows due to \r\n vs. \n issues
-  if not svntest.main.windows:
-    out, err = svntest.main.run_svn(None, 'pg', 'svn:externals', A_path)
-    exp_out = ['foo http://foo.com/repos\n', '\n']
-    if out != exp_out:
-      print "svn pg svn:externals output does not match expected."
-      print "Expected standard output: ", exp_out, "\n"
-      print "Actual standard output: ", out, "\n"
-      return 1
+  try:
+    # Check svn:mime-type
+    check_prop('svn:mime-type', iota_path, ['text/html\n'])
+    check_prop('svn:mime-type', mu_path, ['text/html\n'])
 
-  # Check svn:keywords
-  out, err = svntest.main.run_svn(None, 'pg', 'svn:keywords', iota_path)
-  exp_out = ['Rev Date\n']
-  if out != exp_out:
-    print "svn pg svn:keywords output does not match expected."
-    print "Expected standard output: ", exp_out, "\n"
-    print "Actual standard output: ", out, "\n"
+    # Check svn:eol-style
+    check_prop('svn:eol-style', iota_path, ['native\n'])
+    check_prop('svn:eol-style', mu_path, ['native\n'])
+
+    # Check svn:ignore
+    check_prop('svn:ignore', A_path,
+               ['*.o'+os.linesep, 'foo.c'+os.linesep, '\n'])
+    check_prop('svn:ignore', B_path,
+               ['*.o'+os.linesep, 'foo.c'+os.linesep, '\n'])
+
+    # Check svn:externals
+    check_prop('svn:externals', A_path,
+               ['foo http://foo.com/repos'+os.linesep, '\n'])
+    check_prop('svn:externals', B_path,
+               ['foo http://foo.com/repos'+os.linesep, '\n'])
+
+    # Check svn:keywords
+    check_prop('svn:keywords', iota_path, ['Rev Date\n'])
+    check_prop('svn:keywords', mu_path, ['Rev  Date\n'])
+
+    # Check svn:executable
+    check_prop('svn:executable', iota_path, ['*\n'])
+    check_prop('svn:executable', lambda_path, ['*\n'])
+    check_prop('svn:executable', mu_path, ['*\n'])
+
+    # Check other props
+    check_prop('svn:some-prop', lambda_path, ['bar\n'])
+    check_prop('svn:some-prop', mu_path, [' bar baz\n'])
+    check_prop('svn:some-prop', iota_path, ['bar'+os.linesep, '\n'])
+    check_prop('some-prop', lambda_path, ['bar\n'])
+    check_prop('some-prop', mu_path,[' bar baz\n'])
+    check_prop('some-prop', iota_path, ['bar\n', '\n'])
+  except PropError:
     return 1
 
   return 0
@@ -855,7 +885,7 @@ test_list = [ None,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
               Skip(revprop_change, (os.name != 'posix')),
-              strip_or_add_whitespace,
+              prop_value_conversions,
              ]
 
 if __name__ == '__main__':
