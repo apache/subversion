@@ -156,27 +156,31 @@ suggests a way to perform the various steps:
   1. Overwrite the po file on the branch with a unmodified version from
      trunk, by using standard cp/copy or "svn cat [trunkfile] >xx.po".
      This is the same as if all not-yet-merged revisions from trunk are
-     merged to the branch. 2. Run "make locale-gnu-po-update" on the
-     branch. 3. If no fuzzy messages are generated and no untranslated
-     messages occur, everything is fine.  This means that the po file
-     contains all the new messages and changes from trunk.  You can
-     safely repeat step 1 and commit this file. 4. If any fuzzy messages
-     shows up, it means some messages have been merged that should not
-     be part of the merge.  These messages have changed on trunk, but
-     the changes have not yet been merged into the branch. 5. Locate the
-     fuzzy messages and messages that shows up as untranslated.  Revert
-     these messages in the .po file on trunk so they match the version
-     on the branch. 6. Copy the locally modified trunk version to the
-     branch and run "make locale-gnu-po-update".  Repeat step 5 and 6
-     until all fuzzy and untranslated messages on the trunk are gone. 7.
-     Commit the trunk version. 8. Revert the commit done in step 7 and
-     do a new commit.  You now have two revisions, let's call them
-     revision A and B.  Revision A is the one committed in step 7.  This
-     is the revision which should be merged to the branch, and revision
-     B contains messages that have changed on trunk, but haven't been
-     merged into the branch yet. This will be merged to the branch later
-     when the new features on trunk are merged from trunk. 9. Merge
-     revision A from trunk to the branch and commit.
+     merged to the branch.
+  2. Run "make locale-gnu-po-update" on the branch.
+  3. If no fuzzy messages are generated and no untranslated messages
+     occur, everything is fine.  This means that the po file contains
+     all the new messages and changes from trunk.  You can safely repeat
+     step 1 and commit this file.
+  4. If any fuzzy messages shows up, it means some messages have been
+     merged that should not be part of the merge.  These messages have
+     changed on trunk, but the changes have not yet been merged into the
+     branch.
+  5. Locate the fuzzy messages and messages that shows up as
+     untranslated.  Revert these messages in the .po file on trunk so
+     they match the version on the branch.
+  6. Copy the locally modified trunk version to the branch and run "make
+     locale-gnu-po-update".  Repeat step 5 and 6 until all fuzzy and
+     untranslated messages on the trunk are gone.
+  7. Commit the trunk version.
+  8. Revert the commit done in step 7 and do a new commit.  You now have
+     two revisions, let's call them revision A and B.  Revision A is the
+     one committed in step 7.  This is the revision which should be
+     merged to the branch, and revision B contains messages that have
+     changed on trunk, but haven't been merged into the branch yet.
+     This will be merged to the branch later when the new features on
+     trunk are merged from trunk.
+  9. Merge revision A from trunk to the branch and commit.
 
 A result of getting everything from trunk is that the po file on the
 branch will contain many messages which are not used, but this will have
