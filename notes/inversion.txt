@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.36 $ of this document.)
+              ($Revision: 1.37 $ of this document.)
 
 * Introduction
 
@@ -82,18 +82,20 @@ revision number.  There are a number of keywords in CVS: "$ Author$",
 
 Line-end conversion is when CVS gives plaintext files in the working
 copy the appropriate line-ending conventions (LF, CRLF, or CR) for
-that platform.  To do this requires knowing that the file is
-plaintext, of course -- doing line-end conversion on an image file or
-other binary would only mess it up.
+that platform (the repository always stores text files in Unix LF
+format).  Line-end conversion requires knowing that the file is
+plaintext, of course -- doing it on an image file or other binary
+would only mess things up.
 
-Both transformations are possible only with plain text files.  CVS
-only recognizes two file types anyway: plain text, and binary.
+Both keyword substitution and line-end conversion are possible only
+with plain text files.  CVS only recognizes two file types anyway:
+plain text, and binary.  CVS assumes files are plain text unless you
+tell it otherwise.
+
 Inversion, for its initial release at least, will recognize the same
 two types (later, it may learn to do keyword substitution inside
-word-processor formats, etc).
-
-The question is, how does Inversion determine whether a file is plain
-text or not?
+word-processor formats, etc).  The question is, how does Inversion
+determine whether a file is plain text or not?
 
 Experience with CVS suggests that assuming text unless told otherwise
 is a losing strategy -- people frequently forget to mark images and
@@ -105,7 +107,7 @@ text extension (.c, .h, .pl, .html, .txt, and so on), or if a user
 explicitly marks the file as being texty.  In addition to a
 pre-defined list of text extensions, each project can have a custom
 extension list as well.  Also, of course, a user can choose to mark a
-file as binary no matter what its extension.
+file as text or binary no matter what its extension.
 
 Text files undergo line-end conversion by default.  Users can turn
 conversion on or off per project, or per file pattern, or per file.
@@ -121,10 +123,10 @@ of course, and usually easily remedied, so I'm not entirely convinced
 that defaulting to `on' would be all that bad either... thoughts?)
 
 By the way, any of the above properties attached to a file are really
-attached to its first version, and then each new version inherits from
-the previous version, except when told otherwise.  Thus changes to
-file type are recorded like any other historical data (in practice,
-the type will probably be stored in the entity's property list, see
+attached to a particular version, and each new version inherits from
+the previous version except when told otherwise.  Thus type changes
+are recorded like any other historical data (in practice, the type
+will probably be stored in the entity's property list, see
 implementation discussions farther down).
 
 ** I18N/Multilingual support: non-ASCII encodings can be treated as text.
@@ -262,8 +264,9 @@ alternate (or additional) difference viewers even for text.
 
 ** The basic repository structure
 
-[This design is drawn from Jim Blandy's "Subversion" spec, with minor
-optimizations from Ben and Karl.]
+[This design is drawn from Jim Blandy's "Subversion" spec, but with
+some changes from Ben and Karl (i.e., Jim is not to be held
+responsible for everything you read below :-) ).]
 
 Suppose we have a new project, at version 1, looking like this (pardon
 the CVS syntax):
@@ -288,10 +291,10 @@ accomplish permanent storage is an implementation detail, (probably
 involving DBM files of some sort).
 
 In the diagrams that follow, straight horizontal lines with arrowheads
-represent backwards time-flow (that is, the regression of versions),
-and any other kind of path represents a parent-to-child connection in
-a directory hierarchy.  Boxes are "nodes".  A node is either a file or
-a directory -- a letter in the upper left indicates which kind.  A
+represent backwards time-flow (the regression of versions), and any
+other kind of path represents a parent-to-child connection in a
+directory hierarchy.  Boxes are "nodes".  A node is either a file or a
+directory -- a letter in the upper left indicates which kind.  A
 node's name is stored in the node's parent, not in the node itself,
 for reasons that will become obvious.
 
@@ -662,9 +665,8 @@ We want to make repository changes in a such way that the repository
 is in a "sane" (unambiguous and readable) state at every step.  
 
 At the same time, we want to keep locking to a minimum: no operation
-should ever lock out readers, no read-only operation should ever lock
-out anyone, and write operations should lock out other writers for as
-little time as possible.
+locks out readers, no read-only operation locks out anyone, and write
+operations lock out other writers for as little time as possible.
 
 These two issues are not directly related, but they must be
 synchronized with each other.  This is complex, so instead of
