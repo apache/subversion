@@ -10,7 +10,7 @@
         <new name="B">
           <dir ancestor="/A/B">
             <tree-delta>
-              <new>
+              <new name="lambda">
                 <file ancestor="/A/B/lambda">
                   <text-delta>This is the file 'lambda'.</text-delta>
                 </file>
