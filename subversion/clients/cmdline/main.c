@@ -125,7 +125,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "add", svn_cl__add, {0},
     "Put files and directories under revision control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
-    "usage: svn add [OPTIONS] [TARGETS]\n", 
+    "usage: svn add [TARGETS]\n", 
     {svn_cl__targets_opt, 'R', 'q'} },
 
   { "checkout", svn_cl__checkout, {"co"},
@@ -239,21 +239,22 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
  
   { "list", svn_cl__ls, {"ls"},
     "List directory entries of a URL.\n"
-    "usage: svn list [-v] [-r REV] URL1 [URL2 ...]\n\n"
+    "usage: svn list URL1 [URL2 ...]\n\n"
     "    If URL is a file, just file entry will be displayed.\n",
     {'r', 'D', 'v'} },
   
   { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"
     "usage: svn log [URL] [PATH1 [PATH2] ...] \n"
-    "    Either get the log messages for local PATHs or PATHs at the\n"
-    "    URL.  If URL is given by itself, then log messages are output for\n"
-    "    that specific path.  The -v option will include a list of affected\n"
-    "    files for each log message.  By default, the resultant collection\n"
-    "    of log messages for a given path will include logs for all the\n"
-    "    revisions in which that path's node was modified, spanning copy\n"
-    "    history where such exists.  This can be disabled by using the\n"
-    "    --strict option.  Examples are:\n"
+    "    Print the log messages for local PATHs, or for PATHs under\n"
+    "    URL, if URL is given.  If URL is given by itself, then print log\n"
+    "    messages for everything under it.  With -v, also print all affected\n"
+    "    paths with each log message.\n"
+    "\n"
+    "    Each log message is printed just once, even if more than one of the\n"
+    "    affected paths for that revision were explicitly requested.  Logs\n"
+    "    cross copy history by default; use --strict to disable this.\n"
+    "    For example:\n"
     "\n"
     "       svn log\n"
     "       svn log foo.c\n"
@@ -376,7 +377,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Decoding --verbose output:\n"
     "Status| Out-of-date? | Local Rev | Last changed info |  Path\n"
     "    _                    965       938     kfogel      ./autogen.sh\n"
-    "    _      *             965       970    sussman      ./build.conf\n"
+    "    _      *             965       922    sussman      ./build.conf\n"
     "    M                    965       687        joe      ./buildcheck.sh\n",
     { 'u', 'v', 'N', 'q',
       svn_cl__auth_username_opt, svn_cl__auth_password_opt,
