@@ -405,7 +405,7 @@
           size is a bit smaller.</para>
 
         <para>FSFS has different performance characteristics too.
-          When committing a directory with huge numbers a files, FSFS
+          When committing a directory with a huge number of files, FSFS
           uses a O(N) algorithm to append entries, while Berkeley DB
           uses an O(N^2) algorithm to rewrite the whole directory.  On
           the other hand, FSFS writes the latest version of a file as
