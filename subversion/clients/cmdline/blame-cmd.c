@@ -94,15 +94,28 @@ svn_cl__blame (apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
+      svn_error_t *err;
       const char *target = ((const char **) (targets->elts))[i];
       svn_pool_clear (subpool);
-      SVN_ERR (svn_client_blame (target,
-                                 &opt_state->start_revision,
-                                 &opt_state->end_revision,
-                                 blame_receiver,
-                                 out,
-                                 ctx,
-                                 subpool));
+      err = svn_client_blame (target,
+                              &opt_state->start_revision,
+                              &opt_state->end_revision,
+                              blame_receiver,
+                              out,
+                              ctx,
+                              subpool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_CLIENT_IS_BINARY_FILE)
+            {
+              printf ("Skipping binary file: '%s'\n", target);
+              svn_error_clear (err);
+            }
+          else
+            {
+              return err;
+            }
+        }
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
     }
   svn_pool_destroy (subpool);

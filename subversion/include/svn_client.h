@@ -742,7 +742,9 @@ svn_client_log (const apr_array_header_t *targets,
  * as the default source of all blame. 
  *
  * If @a start->kind or @a end->kind is @c svn_opt_revision_unspecified,
- * return the error @c SVN_ERR_CLIENT_BAD_REVISION.
+ * return the error @c SVN_ERR_CLIENT_BAD_REVISION.  If any of the
+ * revisions of @a path_or_url have a binary mime-type, return the
+ * error @c SVN_ERR_CLIENT_IS_BINARY_FILE.
  *
  * Use @a pool for any temporary allocation.
  */

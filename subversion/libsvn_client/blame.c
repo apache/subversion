@@ -488,6 +488,8 @@ svn_client_blame (const char *target,
       apr_pool_t *currpool = iterpool;
       const char *tmp;
       const char *temp_dir;
+      apr_hash_t *props;
+      svn_string_t *mimetype;
       
       apr_pool_clear (currpool);
       SVN_ERR (svn_io_temp_dir (&temp_dir, currpool));
@@ -500,9 +502,21 @@ svn_client_blame (const char *target,
 
       stream = svn_stream_from_aprfile (file, currpool);
       SVN_ERR (ra_lib->get_file (session, rev->path + 1, rev->revision,
-                                 stream, NULL, NULL, currpool));
+                                 stream, NULL, &props, currpool));
       SVN_ERR (svn_stream_close (stream));
       SVN_ERR (svn_io_file_close (file, currpool));
+
+      /* If this file has a non-textual mime-type, bail out. */
+      if (props && 
+          ((mimetype = apr_hash_get (props, SVN_PROP_MIME_TYPE, 
+                                     sizeof (SVN_PROP_MIME_TYPE) - 1))))
+        {
+          if (svn_mime_type_is_binary (mimetype->data))
+            return svn_error_createf 
+              (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
+               "Cannot calculate blame information for binary file '%s'",
+               target);
+        }
 
       if (ctx->notify_func)
         ctx->notify_func (ctx->notify_baton,

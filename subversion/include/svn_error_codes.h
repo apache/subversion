@@ -721,7 +721,9 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 3,
               "Attempting to commit to a URL more than once")
 
-  /* UNUSED error slot:                    + 4 */
+  SVN_ERRDEF (SVN_ERR_CLIENT_IS_BINARY_FILE,
+              SVN_ERR_CLIENT_CATEGORY_START + 4,
+              "Operation does not apply to binary file")
 
   SVN_ERRDEF (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION,
               SVN_ERR_CLIENT_CATEGORY_START + 5,
