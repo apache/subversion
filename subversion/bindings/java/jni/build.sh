@@ -19,7 +19,7 @@ fi
 COMMON_LIBS="-lapr -ldl -lmm -lcrypt -lpthread -lsvn_subr -lneon -lsvn_delta -lexpat -lsvn_client -lsvn_wc -lsvn_ra"
 COMMON_INCLUDE="-I$JAVA_HOME/include -I$JAVA_HOME/include/linux -I../../../include"
 COMMON_ARGS="-pthread -shared"
-COMMON_OBJS="date.c misc.c status.c hashtable.c string.c j.c entry.c vector.c"
+COMMON_OBJS="date.c misc.c status.c hashtable.c string.c j.c entry.c vector.c schedule.c revision.c nodekind.c statuskind.c"
 
 #first, compile the main library
 LIBS="$COMMON_LIBS"
