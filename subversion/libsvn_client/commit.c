@@ -908,8 +908,10 @@ adjust_rel_targets (const char **pbase_dir,
       target = APR_ARRAY_IDX (rel_targets, i, const char *);
 
       if (target[0] == '\0')
-        anchor_one_up = TRUE;
-        break;
+        {
+          anchor_one_up = TRUE;
+          break;
+        }
     }
 
   /* Default to not doing anything */
