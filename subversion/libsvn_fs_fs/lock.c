@@ -298,13 +298,13 @@ read_digest_file (apr_hash_t **children_p,
       /* Create our lock and load it up. */
       lock = apr_pcalloc (pool, sizeof (*lock));
       lock->path = path;
-      lock->token = hash_fetch (hash, TOKEN_KEY, pool);
-      lock->owner = hash_fetch (hash, OWNER_KEY, pool);
-      lock->comment = hash_fetch (hash, COMMENT_KEY, pool);
-      
-      if (! (lock->token && lock->owner && lock->comment))
+
+      if (! ((lock->token = hash_fetch (hash, TOKEN_KEY, pool))))
         return svn_fs_fs__err_corrupt_lockfile (fs, path);
-        
+
+      if (! ((lock->owner = hash_fetch (hash, OWNER_KEY, pool))))
+        return svn_fs_fs__err_corrupt_lockfile (fs, path);
+
       if (! ((val = hash_fetch (hash, IS_XML_COMMENT_KEY, pool))))
         return svn_fs_fs__err_corrupt_lockfile (fs, path);
       lock->xml_comment = (val[0] == '1') ? TRUE : FALSE;
@@ -315,6 +315,8 @@ read_digest_file (apr_hash_t **children_p,
 
       if ((val = hash_fetch (hash, EXPIRATION_DATE_KEY, pool)))
         SVN_ERR (svn_time_from_cstring (&(lock->expiration_date), val, pool));
+
+      lock->comment = hash_fetch (hash, COMMENT_KEY, pool);
 
       *lock_p = lock;
     }
