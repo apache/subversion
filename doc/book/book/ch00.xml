@@ -224,8 +224,8 @@
           <listitem>
             <para>Covers the history of
               <productname>Subversion</productname> as well as its
-              features, architecture architecture, components, and
-              install methods.</para>
+              features, architecture, components, and install
+              methods.</para>
           </listitem>
         </varlistentry>
 
@@ -338,8 +338,7 @@
           <listitem>
             <para>Describes the details of WebDAV and DeltaV, and how
             you can configure your Subversion repository to be mounted
-            read/write as a DAV share with any changes you make are
-            automatically committed to the repository.</para>
+            read/write as a DAV share.</para>
           </listitem>
         </varlistentry>
 
