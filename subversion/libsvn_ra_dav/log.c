@@ -399,11 +399,3 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

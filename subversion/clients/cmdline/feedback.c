@@ -243,11 +243,3 @@ svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
   *notify_func_p = notify;
   *notify_baton_p = nb;
 }
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

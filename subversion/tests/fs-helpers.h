@@ -158,10 +158,3 @@ svn_test__create_greek_tree (svn_fs_root_t *txn_root,
 #endif /* __cplusplus */
 
 #endif  /* SVN_TEST__FS_HELPERS_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

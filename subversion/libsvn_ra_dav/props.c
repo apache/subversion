@@ -861,10 +861,3 @@ svn_ra_dav__do_check_path(svn_node_kind_t *kind,
 
   return err;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

@@ -1562,7 +1562,3 @@ sub DESTROY
   print "Cleaning up $temp_dir\n";
   File::Path::rmtree([$temp_dir], 0, 0);
 }
-
-# local variables:
-# eval: (load-file "../dev/svn-dev.el")
-# end:

@@ -199,10 +199,3 @@ random_range_index_test (const char **msg,
 
 
 #endif /* SVN_RANGE_INDEX_TEST_H */
-
-
-/*
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

@@ -145,13 +145,3 @@ svn_client_ls (apr_hash_t **dirents,
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-
-
-/* --------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

@@ -327,11 +327,3 @@ svn_base64_decode_string (svn_stringbuf_t *str, apr_pool_t *pool)
   decode_bytes (decoded, str->data, str->len, ingroup, &ingrouplen, &done);
   return decoded;
 }
-
-
-
-/* --------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

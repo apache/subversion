@@ -56,11 +56,3 @@
 #define SVN_LIBSVN_CLIENT_LINKS_RA_DAV
 
 #endif /* CONFIG_HW */
-
-
-/*
- * local variables:
- * mode: C
- * eval: (load-file "tools/dev/svn-dev.el")
- * end:
- */

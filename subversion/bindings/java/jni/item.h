@@ -38,9 +38,3 @@ item__create(JNIEnv *env, jobject jpath, jobject jstatus,
 #endif /* __cplusplus */
 
 #endif
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */

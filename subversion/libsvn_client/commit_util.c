@@ -1397,10 +1397,3 @@ get_test_editor (const svn_delta_editor_t **editor,
   return SVN_NO_ERROR;
 }
 #endif /* SVN_CLIENT_COMMIT_DEBUG */
-  
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */
-

@@ -63,11 +63,3 @@ svn_error_t *svn_wc__do_update_cleanup (const char *path,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_WC_ADM_OPS_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
-

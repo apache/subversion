@@ -60,10 +60,3 @@ time_t svn_parse_date (char *text, struct getdate_time *now);
 #endif /* __cplusplus */
 
 #endif /* SVN_TIME_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -146,9 +146,3 @@ const char *svn_utf_utf8_to_native (const char *utf8_string,
 #endif /* __cplusplus */
 
 #endif /* SVN_XML_H */
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: 
- */

@@ -171,11 +171,3 @@ apr_hash_t *svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_WC_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
-

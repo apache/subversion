@@ -230,11 +230,3 @@ main (int argc, char *argv[])
   exit (got_error);
   return got_error;
 }
-
-
-
-/* --------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -166,10 +166,3 @@ void svn_handle_warning (apr_pool_t *pool, void *data, const char *fmt, ...);
 #endif /* __cplusplus */
 
 #endif /* SVN_ERROR_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

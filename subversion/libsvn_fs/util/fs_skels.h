@@ -163,10 +163,3 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_FS_SKELS_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

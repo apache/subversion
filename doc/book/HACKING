@@ -103,3 +103,7 @@ Miscellaneous
 - Anything that needs attention or fixing should be marked with
   ###TODO so that it's easy to find. Also, please add your userid to
   any inline comments to facilitate discussion 'in the code.'
+
+- Do you want to mention svnbook.el in here?  Note that it's already
+  mentioned in the top-level HACKING file.  Maybe this HACKING file
+  should be merged into that one?  I dunno, you guys make the call.

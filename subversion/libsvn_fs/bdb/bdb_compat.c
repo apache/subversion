@@ -27,11 +27,3 @@ svn_bdb__check_version (void)
     return DB_OLD_VERSION;
   return 0;
 }
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

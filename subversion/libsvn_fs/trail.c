@@ -184,11 +184,3 @@ svn_fs__record_completion (trail_t *trail,
 {
   record_undo (trail, func, baton, undo_on_success | undo_on_failure);
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

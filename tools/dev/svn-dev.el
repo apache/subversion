@@ -1,17 +1,5 @@
 ;;;; Emacs Lisp help for writing Subversion code. ;;;;
 
-;;; In C files, put something like this to load this file automatically:
-;;
-;;   /* -----------------------------------------------------------------
-;;    * local variables:
-;;    * eval: (load-file "../svn-dev.el")
-;;    * end:
-;;    */
-;;
-;; (note: make sure to get the path right in the argument to load-file).
-
-
-
 ;; Later on, there will be auto-detection of svn files, modeline
 ;; status, and a whole library of routines to interface with the
 ;; command-line client.  For now, there's this, at Ben's request.

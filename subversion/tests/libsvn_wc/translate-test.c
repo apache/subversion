@@ -1514,12 +1514,3 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (mixed_to_crlf_unexpand_author_date_rev_url),
     SVN_TEST_NULL
   };
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */
-

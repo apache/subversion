@@ -267,10 +267,3 @@ svn_mime_type_is_binary (const char *mime_type);
 #endif /* __cplusplus */
 
 #endif /* SVN_TYPES_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

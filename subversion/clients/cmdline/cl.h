@@ -314,11 +314,3 @@ svn_cl__get_url_from_target (const char **URL,
 #endif /* __cplusplus */
 
 #endif /* SVN_CL_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end: 
- */
-

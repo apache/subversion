@@ -144,11 +144,3 @@ svn_cl__prompt_user (char **result,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end: 
- */

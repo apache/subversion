@@ -756,10 +756,3 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
 #endif /* __cplusplus */
 
 #endif /* SVN_REPOS_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

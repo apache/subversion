@@ -156,10 +156,3 @@ svn_config__user_config_path (const char **path_p,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_SUBR_CONFIG_IMPL_H */
-
-
-/*
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

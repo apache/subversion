@@ -1113,12 +1113,3 @@ svn_wc__maybe_set_executable (svn_boolean_t *did_set,
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

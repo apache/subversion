@@ -453,17 +453,3 @@ jobject j__get_object(JNIEnv *env, jboolean *hasException,
 
   return result;
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */
-
-
-
-
-
-
-
-

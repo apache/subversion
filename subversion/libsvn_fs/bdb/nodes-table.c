@@ -235,11 +235,3 @@ svn_fs__put_node_revision (svn_fs_t *fs,
                                   svn_fs__skel_to_dbt (&value, skel, pool),
                                   0));
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

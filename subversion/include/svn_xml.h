@@ -276,9 +276,3 @@ void svn_xml_make_close_tag (svn_stringbuf_t **str,
 #endif /* __cplusplus */
 
 #endif /* SVN_XML_H */
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: 
- */

@@ -2237,11 +2237,3 @@ svn_wc_get_actual_target (const char *path,
 
   return SVN_NO_ERROR;
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: 
- */
-

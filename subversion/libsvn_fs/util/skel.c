@@ -611,11 +611,3 @@ svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool)
 
   return copy;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

@@ -99,9 +99,3 @@ svn_error_t * svn_auth_save_credentials(const char *cred_kind,
 
 
 #endif /* SVN_AUTH_H */
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

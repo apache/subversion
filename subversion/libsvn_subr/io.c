@@ -2040,10 +2040,3 @@ svn_io_read_version_file (int *version,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

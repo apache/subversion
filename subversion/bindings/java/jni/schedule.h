@@ -53,8 +53,3 @@ schedule__create_from_svn_wc_schedule_t(JNIEnv *env, jboolean *hasException,
 #endif /* __cplusplus */
 
 #endif
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */

@@ -316,9 +316,3 @@ Java_NativeWrapper_statuskindCreate
 {
   return statuskind__create(env, NULL, kind);
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../../tools/dev/svn-dev.el")
- * end: 
- */

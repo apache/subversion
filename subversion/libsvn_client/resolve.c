@@ -44,13 +44,3 @@ svn_client_resolve (const char *path,
   return svn_wc_resolve_conflict (path, TRUE, TRUE, recursive,
                                   notify_func, notify_baton, pool);
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */
-
-
-

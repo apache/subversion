@@ -55,22 +55,3 @@ else { fprintf(stderr, "'%s';", (char*)str); } \
 #endif /* __cplusplus */
 
 #endif
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */
-
-
-
-
-
-
-
-
-
-
-
-
-

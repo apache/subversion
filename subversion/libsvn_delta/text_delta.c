@@ -582,12 +582,3 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

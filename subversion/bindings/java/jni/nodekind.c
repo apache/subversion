@@ -116,10 +116,3 @@ nodekind__create_from_svn_node_kind(JNIEnv *env, jboolean *hasException,
   return nodekind__create(env, hasException, (jint)nodekind);
 
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */

@@ -1926,13 +1926,3 @@ svn_wc_set_auth_file (svn_wc_adm_access_t *adm_access,
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -300,9 +300,3 @@ Java_org_tigris_subversion_lib_ClientImpl_status
 
   return vector;
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */

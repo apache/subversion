@@ -48,10 +48,3 @@ svn_stringbuf_t *svn_quoprint_decode_string (svn_stringbuf_t *str, apr_pool_t *p
 #endif /* __cplusplus */
 
 #endif /* SVN_QUOPRINT_H */
-
-
-/* --------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

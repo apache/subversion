@@ -182,10 +182,3 @@ svn_error_t *svn_test_get_editor (const svn_delta_editor_t **editor,
 #endif /* __cplusplus */
      
 #endif /* SVN_TEST_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

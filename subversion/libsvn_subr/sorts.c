@@ -208,13 +208,3 @@ svn_categorize_props (const apr_array_header_t *proplist,
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

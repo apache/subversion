@@ -47,10 +47,3 @@ svn_stringbuf_t *svn_base64_decode_string (svn_stringbuf_t *str, apr_pool_t *poo
 #endif /* __cplusplus */
 
 #endif /* SVN_BASE64_H */
-
-
-/* --------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

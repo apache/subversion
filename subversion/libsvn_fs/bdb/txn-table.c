@@ -303,11 +303,3 @@ svn_error_t *svn_fs__get_txn_list (apr_array_header_t **names_p,
   *names_p = names;
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

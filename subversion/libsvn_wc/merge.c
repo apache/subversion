@@ -358,11 +358,3 @@ svn_wc_merge (const char *left,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

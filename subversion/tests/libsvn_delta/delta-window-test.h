@@ -113,10 +113,3 @@ delta_window_print (const svn_txdelta_window_t *window,
 
 
 #endif /* SVN_DELTA_WINDOW_TEST_H */
-
-
-/*
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

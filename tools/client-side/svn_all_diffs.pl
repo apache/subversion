@@ -102,7 +102,3 @@ sub read_from_process
       return @output;
     }
 }
-
-# local variables:
-# eval: (load-file "../dev/svn-dev.el")
-# end:

@@ -71,10 +71,3 @@ svn_mime_type_is_binary (const char *mime_type)
              && (mime_type[3] == 't')
              && (mime_type[4] == '/')));
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

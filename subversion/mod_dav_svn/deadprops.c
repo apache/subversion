@@ -536,10 +536,3 @@ const dav_hooks_propdb dav_svn_hooks_propdb = {
   dav_svn_db_get_rollback,
   dav_svn_db_apply_rollback,
 };
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

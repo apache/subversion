@@ -1142,10 +1142,3 @@ svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
 #endif /* __cplusplus */
 
 #endif /* SVN_FS_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -222,9 +222,3 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
 
   return SVN_NO_ERROR;
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

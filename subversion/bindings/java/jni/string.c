@@ -232,17 +232,3 @@ string__svn_stringbuf_to_j(JNIEnv *env,
 
   return result;
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */
-
-
-
-
-
-
-
-

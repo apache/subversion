@@ -676,10 +676,3 @@ entry__get_attributes(JNIEnv *env, jboolean *hasException,
 #endif
   return result;
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */

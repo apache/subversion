@@ -492,11 +492,3 @@ svn_fs__string_copy (svn_fs_t *fs,
   return DB_WRAP (fs, "closing string-reading cursor", 
                   cursor->c_close (cursor));
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

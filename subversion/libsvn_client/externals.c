@@ -568,11 +568,3 @@ svn_client__handle_externals (svn_wc_traversal_info_t *traversal_info,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: 
- */

@@ -170,10 +170,3 @@ svn_error_t *svn_config_ensure (apr_pool_t *pool);
 #endif /* __cplusplus */
 
 #endif /* SVN_CONFIG_H */
-
-
-/* --------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -518,10 +518,3 @@ svn_error_t *svn_fs__dag_is_parent (int *is_ancestor,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_DAG_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

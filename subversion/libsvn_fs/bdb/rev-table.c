@@ -197,11 +197,3 @@ svn_fs__youngest_rev (svn_revnum_t *youngest_p,
   *youngest_p = recno - 1;
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

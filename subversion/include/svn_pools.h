@@ -72,10 +72,3 @@ void svn_pool_clear_debug (apr_pool_t *p,
 #endif /* __cplusplus */
 
 #endif /* SVN_ERROR_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

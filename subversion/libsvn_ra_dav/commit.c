@@ -1274,11 +1274,3 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   *edit_baton = cc;
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

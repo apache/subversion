@@ -2506,12 +2506,3 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                         wc_diff_baton,
                         TRUE); /* fetch_content */
 }
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

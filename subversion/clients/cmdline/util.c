@@ -547,12 +547,3 @@ svn_cl__get_url_from_target (const char **URL,
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end: 
- */

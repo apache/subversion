@@ -124,10 +124,3 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *py_receiver,
 #endif /* __cplusplus */
 
 #endif  /* SVN_SWIG_SWIGUTIL_PY_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

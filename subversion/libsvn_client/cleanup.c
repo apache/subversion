@@ -48,10 +48,3 @@ svn_client_cleanup (const char *dir,
 
   return svn_wc_cleanup (dir, NULL, pool);
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

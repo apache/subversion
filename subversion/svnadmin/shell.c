@@ -475,13 +475,3 @@ svnadmin_run_shell (svn_fs_t *fs, apr_pool_t *pool)
   printf ("\n");
   return SVN_NO_ERROR;
 }
-
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

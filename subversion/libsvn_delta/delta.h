@@ -114,11 +114,3 @@ svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
 #endif /* __cplusplus */
 
 #endif  /* SVN_LIBSVN_DELTA_H */
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

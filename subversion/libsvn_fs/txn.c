@@ -371,11 +371,3 @@ apr_pool_t *svn_fs__txn_pool (svn_fs_txn_t *txn)
 {
   return txn->pool;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

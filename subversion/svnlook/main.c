@@ -1146,12 +1146,3 @@ main (int argc, const char * const *argv)
 
   return was_success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

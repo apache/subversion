@@ -1446,10 +1446,3 @@ svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

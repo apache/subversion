@@ -79,9 +79,3 @@
   &colo;
 
   </book>
-
-<!--
-local variables: 
-eval: (load-file "../tools/svnbook.el")
-end:
--->

@@ -90,10 +90,3 @@ svn_error_t *svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_WC_QUESTIONS_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -345,11 +345,3 @@ struct svn_test_descriptor_t test_funcs[] =
   };
 
 #undef NOT_FIXED_YET
-
-
-
-/* -----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

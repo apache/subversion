@@ -264,13 +264,3 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
   
   return SVN_NO_ERROR;
 }
-      
-
-  
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

@@ -186,11 +186,3 @@ svn_fs__get_copy (svn_fs__copy_t **copy_p,
   *copy_p = copy;
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

@@ -78,20 +78,3 @@ string__c_to_stringbuf(JNIEnv *env,
 #endif /* __cplusplus */
 
 #endif
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */
-
-
-
-
-
-
-
-
-
-
-

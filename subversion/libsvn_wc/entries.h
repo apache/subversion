@@ -168,11 +168,3 @@ svn_wc__tweak_entry (apr_hash_t *entries,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_WC_ENTRIES_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
-

@@ -581,10 +581,3 @@ svn_error_t * svn_ra_dav__merge_activity(
 
   return NULL;
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

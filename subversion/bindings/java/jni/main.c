@@ -143,9 +143,3 @@ Java_org_tigris_subversion_lib_ClientImpl_cleanup
   printf("doing nothing at all\n");
 
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */

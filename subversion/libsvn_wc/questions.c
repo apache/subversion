@@ -447,13 +447,3 @@ svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
-
-
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

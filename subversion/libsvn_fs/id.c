@@ -178,11 +178,3 @@ svn_fs_compare_ids (const svn_fs_id_t *a,
     return 0;
   return (svn_fs_check_related (a, b) ? 1 : -1);
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

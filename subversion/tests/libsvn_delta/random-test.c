@@ -456,11 +456,3 @@ struct svn_test_descriptor_t test_funcs[] =
 #endif
     SVN_TEST_NULL
   };
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

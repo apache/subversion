@@ -90,11 +90,3 @@ svn_fs__delete_node_revision (svn_fs_t *fs,
 
   return svn_fs__delete_nodes_entry (fs, id, trail);
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

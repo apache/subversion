@@ -734,10 +734,3 @@ svn_error_t *svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
 #endif /* __cplusplus */
 
 #endif  /* SVN_RA_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -91,9 +91,3 @@ svn_cl__print_prop_names (apr_hash_t *prop_hash,
     } 
   return SVN_NO_ERROR;
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end: */

@@ -579,13 +579,3 @@ svn_cstring_split (const char *input,
   svn_cstring_split_append (a, input, sep_chars, chop_whitespace, pool);
   return a;
 }
-
-
-
-
-/* --------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
-

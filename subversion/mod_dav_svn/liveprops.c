@@ -624,10 +624,3 @@ void dav_svn_register_uris(apr_pool_t *p)
     /* register the namespace URIs */
     dav_register_liveprop_group(p, &dav_svn_liveprop_group);
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

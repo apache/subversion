@@ -82,10 +82,3 @@ misc__make_auth_baton(JNIEnv *env, jobject jobj)
 
   return NULL;
 } 
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */

@@ -63,10 +63,3 @@ int svn_bdb__check_version (void);
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_BDB_COMPAT_H */
-
-
-/*
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

@@ -244,7 +244,3 @@ Steps:
    % rm -fr repos
    % tar xvf repos_backup.tar
    % /opt/i386-linux/apache-2.0/bin/apachectl start
-
-# local variables:
-# eval: (load-file "../dev/svn-dev.el")
-# end:

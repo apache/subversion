@@ -80,10 +80,3 @@ svn_error_t *svn_fs__get_copy (svn_fs__copy_t **copy_p,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_COPIES_TABLE_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

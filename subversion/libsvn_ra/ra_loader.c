@@ -272,11 +272,3 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/* --------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */
-

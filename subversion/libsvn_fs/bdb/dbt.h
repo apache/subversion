@@ -106,10 +106,3 @@ DBT *svn_fs__str_to_dbt (DBT *dbt, char *str);
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_DBT_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

@@ -399,9 +399,3 @@ status__set_repos_prop_status(JNIEnv *env, jboolean *hasException,
   fprintf(stderr, "\n<<<status__set_repos_prop_status\n");
 #endif
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */

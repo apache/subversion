@@ -203,9 +203,3 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 
   return err;
 }
-
-
-/* --------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */
