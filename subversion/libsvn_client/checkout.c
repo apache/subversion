@@ -60,7 +60,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
 
   /* Sanity check.  Without these, the checkout is meaningless. */
   assert (path != NULL);
-  assert (URL != NULL);
+  assert (url != NULL);
 
   /* Fulfill the docstring promise of svn_client_checkout: */
   if ((revision->kind != svn_opt_revision_number)
