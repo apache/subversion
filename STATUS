@@ -18,9 +18,6 @@ synchronized between the trunk and 1.0 lines, before we roll a 1.0 tarball:
 
      - www/ area
 
-     - all the cvs2svn.py stuff.
-
-
 Candidate changes:
 
   * r8637
