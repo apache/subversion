@@ -32,4 +32,4 @@ Candidate changes:
     files.  This can cause svn to abort when checking out/updating a
     symlink pointing to a non-existant path.
     Votes:
-      +1: jpieper, ghudson
+      +1: jpieper, ghudson, epg
