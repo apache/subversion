@@ -861,6 +861,8 @@ svn_ra_local__get_dir (svn_ra_session_t *session,
           svn_fs_dirent_t *fs_entry;
           svn_dirent_t *entry = apr_pcalloc (pool, sizeof(*entry));
 
+          svn_pool_clear (subpool);
+
           apr_hash_this (hi, &key, NULL, &val);
           entryname = (const char *) key;
           fs_entry = (svn_fs_dirent_t *) val;
@@ -892,9 +894,8 @@ svn_ra_local__get_dir (svn_ra_session_t *session,
           
           /* Store. */
           apr_hash_set (*dirents, entryname, APR_HASH_KEY_STRING, entry);
-          
-          svn_pool_clear (subpool);
         }
+      svn_pool_destroy (subpool);
     }
 
   /* Handle props if requested. */

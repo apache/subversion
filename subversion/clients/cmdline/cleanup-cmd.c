@@ -59,9 +59,9 @@ svn_cl__cleanup (apr_getopt_t *os,
     {
       const char *target = ((const char **) (targets->elts))[i];
 
+      svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       SVN_ERR (svn_client_cleanup (target, ctx, subpool));
-      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);

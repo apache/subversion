@@ -1591,11 +1591,11 @@ deltify_mutable (svn_fs_t *fs,
           /* KEY will be the entry name, VAL the dirent (about
              which we really don't care) */
           const void *key;
+          svn_pool_clear (subpool);
           apr_hash_this (hi, &key, NULL, NULL);
           SVN_ERR (deltify_mutable (fs, root,
                                     svn_path_join (path, key, subpool),
                                     txn_id, subpool));
-          svn_pool_clear (subpool);
         }
 
       svn_pool_destroy (subpool);

@@ -959,6 +959,9 @@ delta_dirs (struct context *c,
       const char *s_fullpath;
       svn_node_kind_t tgt_kind;
 
+      /* Clear out our subpool for the next iteration... */
+      svn_pool_clear (subpool);
+
       /* KEY is the entry name in target, VAL the dirent */
       apr_hash_this (hi, &key, &klen, &val);
       t_entry = val;
@@ -1017,9 +1020,6 @@ delta_dirs (struct context *c,
                                         e_fullpath, tgt_kind, subpool));
             }
         }
-
-      /* Clear out our subpool for the next iteration... */
-      svn_pool_clear (subpool);
     }
 
   /* All that is left in the source entries hash are things that need
@@ -1035,6 +1035,9 @@ delta_dirs (struct context *c,
           const char *e_fullpath;
           svn_node_kind_t src_kind;
           
+          /* Clear out our subpool for the next iteration... */
+          svn_pool_clear (subpool);
+
           /* KEY is the entry name in source, VAL the dirent */
           apr_hash_this (hi, &key, &klen, &val);
           s_entry = val;
@@ -1044,9 +1047,6 @@ delta_dirs (struct context *c,
           /* Do we actually want to delete the dir if we're non-recursive? */
           if (c->recurse || (src_kind != svn_node_dir))
             SVN_ERR (delete (c, dir_baton, e_fullpath, subpool));
-
-          /* Clear out our subpool for the next iteration... */
-          svn_pool_clear (subpool);
         }
     }
 

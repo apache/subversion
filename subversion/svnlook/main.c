@@ -1067,12 +1067,12 @@ print_tree (svn_fs_root_t *root,
       void *val;
       svn_fs_dirent_t *entry;
 
+      svn_pool_clear (subpool);
       apr_hash_this (hi, &key, &keylen, &val);
       entry = val;
       SVN_ERR (print_tree (root, svn_path_join (path, entry->name, pool),
                            entry->id, (entry->kind == svn_node_dir),
                            indentation + 1, show_ids, subpool));
-      svn_pool_clear (subpool);
     }
   svn_pool_destroy (subpool);
 

@@ -96,6 +96,8 @@ svn_client_revert (const apr_array_header_t *paths,
     {
       const char *path = APR_ARRAY_IDX (paths, i, const char *);
 
+      svn_pool_clear (subpool);
+
       /* See if we've been asked to cancel this operation. */
       if ((ctx->cancel_func) 
           && ((err = ctx->cancel_func (ctx->cancel_baton))))
@@ -122,14 +124,12 @@ svn_client_revert (const apr_array_header_t *paths,
           else
             goto errorful;
         }
-
-      svn_pool_clear (subpool);
     }
-  
-  svn_pool_destroy (subpool);
   
  errorful:
 
+  svn_pool_destroy (subpool);
+  
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps ();
 

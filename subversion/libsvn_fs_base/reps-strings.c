@@ -1365,6 +1365,9 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
       new_target_baton.size = 0;
       new_target_baton.key = NULL;
 
+      /* Free the window. */
+      svn_pool_clear (wpool);
+
       /* Fetch the next window of txdelta data. */
       SVN_ERR (svn_txdelta_next_window (&window, txdelta_stream, wpool));
 
@@ -1383,9 +1386,6 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
           /* Update our recordkeeping variables. */
           tview_off += window->tview_len;
           diffsize += ww->svndiff_len;
-
-          /* Free the window. */
-          svn_pool_clear (wpool);
         }
 
     } while (window);
