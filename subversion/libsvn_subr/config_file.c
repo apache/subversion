@@ -466,7 +466,7 @@ svn_config_ensure (apr_pool_t *pool)
       if (apr_err)
         return SVN_NO_ERROR;
     }
-  else if (kind != svn_node_dir)
+  else
     return SVN_NO_ERROR;
 
   /* Else, there's a configuration directory. */
