@@ -132,17 +132,7 @@ svn_fs__write_new_rep (const char **key,
   DBT query, result;
   int db_err;
   apr_size_t len;
-  char next_key[200];    /* This will be a problem if the number of
-                            representations in a filesystem ever
-                            exceeds 1821797716821872825139468712408937
-                            126733897152817476066745969754933395997209
-                            053270030282678007662838673314795994559163
-                            674524215744560596468010549540621501770423
-                            499988699078859474399479617124840673097380
-                            736524850563115569208508785942830080999927
-                            310762507339484047393505519345657439796788
-                            24151197232629947748581376.  Somebody warn
-                            my grandchildren. */
+  char next_key[SVN_FS__MAX_KEY_SIZE];
   
   /* ### todo: see issue #409 for why bumping the key as part of this
      trail is problematic. */
