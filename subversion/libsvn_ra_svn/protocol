@@ -186,7 +186,7 @@ The main command set corresponds to the svn_ra interfaces.
     params:   ( logmsg:string )
     response: ( )
     Upon receiving response, client switches to editor command set.
-    Upon completion of edit, server sends commit-info.
+    Upon successful completion of edit, server sends commit-info.
     commit-info: ( new-rev:number date:string author:string )
 
   get-file
@@ -205,37 +205,38 @@ The main command set corresponds to the svn_ra interfaces.
 
   update
     params:   ( [ rev:number ] target:string recurse:bool )
+    Client switches to report command set.
+    Upon finish-report, server switches to editor command set.
     response: ( )
-    Upon receiving response, client switches to report command set.
-    Upon completion of report, server switches to editor command set.
 
   switch
     params:   ( [ rev:number ] target:string recurse:bool url:string )
+    Client switches to report command set.
+    Upon finish-report, server switches to editor command set.
     response: ( )
-    Upon receiving response, client switches to report command set.
-    Upon completion of report, server switches to editor command set.
 
   status
     params:   ( target:string recurse:bool )
+    Client switches to report command set.
+    Upon finish-report, server switches to editor command set.
     response: ( )
-    Upon receiving response, client switches to report command set.
-    Upon completion of report, server switches to editor command set.
 
   diff
     params:   ( [ rev:number ] target:string recurse:bool url:string )
+    Client switches to report command set.
+    Upon finish-report, server switches to editor command set.
     response: ( )
-    Upon receiving response, client switches to report command set.
-    Upon completion of report, server switches to editor command set.
 
   log
     params:   ( ( target-path:string ... ) [ start-rev:number ]
                 [ end-rev:number ] changed-paths:bool strict-node:bool )
-    response: ( )
-    After sending response, server sends log entries
+    Before sending response, server sends log entries, ending with "done".
     log-entry: ( ( change:changed-path-entry ... ) rev:number
                  [ author:string ] [ date:string ] [ message:string ] )
+             | done
     changed-path-entry: ( path:string A|D|R|M [ copy-path:string ]
                           [ copy-rev:number ] )
+    response: ( )
 
 3.1.2. Editor Command Set
 
@@ -301,25 +302,25 @@ The main command set corresponds to the svn_ra interfaces.
 
 3.1.3. Report Command Set
 
+To allow for pipelining, report commands do not return responses.  Any
+errors resulting from a report call will be returned to the client by
+the command which invoked the report (following an abort-edit call).
+Errors resulting from an abort-report call are ignored.
+
   set-path:
     params: ( path:string rev:number )
-    response: ( )
 
   delete-path:
     params: ( path:string )
-    response: ( )
 
   link-path:
     params: ( path:string url:string rev:number )
-    response: ( )
 
   finish-report:
     params: ( )
-    response: ( )
 
   abort-report
     params: ( )
-    response: ( )
 
 4. Extensibility
 

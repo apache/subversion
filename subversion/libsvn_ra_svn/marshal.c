@@ -612,17 +612,17 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
 svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool,
                                         const svn_ra_svn_cmd_entry_t *commands,
-                                        void *baton,
-                                        svn_boolean_t pass_through_errors)
+                                        void *baton)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *cmdname;
   int i;
-  svn_error_t *err;
+  svn_error_t *err, *write_err;
   apr_array_header_t *params;
 
   while (1)
     {
+      apr_pool_clear(subpool);
       SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmdname, &params));
       for (i = 0; commands[i].cmdname; i++)
         {
@@ -630,35 +630,23 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
             break;
         }
       if (commands[i].cmdname)
-        {
-          err = (*commands[i].handler)(conn, subpool, params, baton);
-          if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
-            err = err->child;
-          else if (err)
-            return err;
-        }
+        err = (*commands[i].handler)(conn, subpool, params, baton);
       else
-        err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
-                                "Unknown command '%s'", cmdname);
-      if (err)
         {
-          svn_error_t *err2 = svn_ra_svn_write_cmd_failure(conn, subpool, err);
-          /* Flush so that error gets written whatever the caller does next */
-          if (!err2)
-            err2 = svn_ra_svn_flush(conn, subpool);
-          if (pass_through_errors)
-            {
-              svn_error_clear(err2);
-              return err;
-            }
-          if (err2)
-            {
-              svn_error_clear(err);
-              return err2;
-            }
+          err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
+                                  "Unknown command '%s'", cmdname);
+          err = svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
         }
-      svn_error_clear(err);
-      apr_pool_clear(subpool);
+
+      if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
+        {
+          write_err = svn_ra_svn_write_cmd_failure(conn, subpool, err->child);
+          svn_error_clear(err);
+          if (write_err)
+            return write_err;
+        }
+      else if (err)
+        return err;
 
       if (commands[i].terminate)
         break;

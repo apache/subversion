@@ -263,7 +263,9 @@ svn_error_t *svn_repos_delete_path (void *report_baton,
 
 /** Make the filesystem compare the transaction to a revision and have
  * it drive an update editor (using @c svn_repos_delta_dirs()), then
- * abort the transaction.
+ * abort the transaction.  If an error occurs during the driving of
+ * the editor, we do NOT abort the edit; that responsibility belongs
+ * to the caller, if it happens at all.
  */
 svn_error_t *svn_repos_finish_report (void *report_baton);
 
