@@ -44,25 +44,6 @@ extern "C" {
 
 /* Rename these types and constants to abstract from Neon */
 
-#ifdef NE_XML_VALID /* Neon 0.23.9 */
-
-#define SVN_RA_DAV__XML_VALID   NE_XML_VALID
-#define SVN_RA_DAV__XML_INVALID NE_XML_INVALID
-#define SVN_RA_DAV__XML_DECLINE NE_XML_DECLINE
-
-#define SVN_RA_DAV__XML_CDATA   NE_XML_CDATA
-#define SVN_RA_DAV__XML_COLLECT NE_XML_COLLECT
-
-typedef ne_xml_elmid       svn_ra_dav__xml_elmid;
-typedef struct ne_xml_elm  svn_ra_dav__xml_elm_t;
-typedef ne_xml_validate_cb svn_ra_dav__xml_validate_cb;
-typedef ne_xml_startelm_cb svn_ra_dav__xml_startelm_cb;
-typedef ne_xml_endelm_cb   svn_ra_dav__xml_endelm_cb;
-
-#else /* Neon 0.24 (definitions repeated after Neon 0.23.9) */
-
-#define SVN_RA_DAV__NEED_NEON_SHIM
-
 #define SVN_RA_DAV__XML_VALID   (0)
 #define SVN_RA_DAV__XML_INVALID (-1)
 #define SVN_RA_DAV__XML_DECLINE (-2)
@@ -129,7 +110,6 @@ typedef int svn_ra_dav__xml_endelm_cb(void *userdata,
                                       const svn_ra_dav__xml_elm_t *elm,
                                       const char *cdata);
 
-#endif /* Neon version */
 
 /** Push an XML handler onto Neon's handler stack.
  *
@@ -557,21 +537,6 @@ svn_ra_dav__parsed_request(ne_session *sess,
 /* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
 enum {
   /* Redefine Neon elements */
-#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
-  ELEM_unknown = NE_ELM_unknown,
-  ELEM_root = NE_ELM_root,
-  ELEM_UNUSED = NE_ELM_UNUSED,
-  ELEM_207_first = NE_ELM_207_first,
-  ELEM_multistatus = NE_ELM_multistatus,
-  ELEM_response = NE_ELM_response,
-  ELEM_responsedescription = NE_ELM_responsedescription,
-  ELEM_href = NE_ELM_href,
-  ELEM_propstat = NE_ELM_propstat,
-  ELEM_prop = NE_ELM_prop, /* `prop' tag in the DAV namespace */
-  ELEM_status = NE_ELM_status,
-  ELEM_207_UNUSED = NE_ELM_207_UNUSED,
-  ELEM_PROPS_UNUSED = NE_ELM_PROPS_UNUSED,
-#else /* Neon 0.24 (definitions repeated after Neon 0.23.9, except `unknown') */
   /* With the new API, we need to be able to use element id also as a return
    * value from the new `startelm' callback, hence all element ids must be
    * positive. Root element id is the only id that is not positive, it's zero.
@@ -590,7 +555,6 @@ enum {
   ELEM_status = ELEM_207_first + 6,
   ELEM_207_UNUSED = ELEM_UNUSED + 100,
   ELEM_PROPS_UNUSED = ELEM_207_UNUSED + 100,
-#endif /* Neon version */
 
   /* DAV elements */
   ELEM_activity_coll_set = ELEM_207_UNUSED,

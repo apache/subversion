@@ -35,22 +35,6 @@
 
 
 
-#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
-
-void svn_ra_dav__xml_push_handler(ne_xml_parser *p,
-                                  const svn_ra_dav__xml_elm_t *elements,
-                                  svn_ra_dav__xml_validate_cb validate_cb,
-                                  svn_ra_dav__xml_startelm_cb startelm_cb,
-                                  svn_ra_dav__xml_endelm_cb endelm_cb,
-                                  void *userdata,
-                                  apr_pool_t *pool)
-{
-  ne_xml_push_handler(p, elements, validate_cb, startelm_cb, endelm_cb,
-                      userdata);
-}
-
-#else /* Neon 0.24 */
-
 typedef struct {
   apr_pool_t *pool;                          /* pool on which this is alloc-d */
   void *original_userdata;                   /* userdata for callbacks */
@@ -238,8 +222,6 @@ void svn_ra_dav__xml_push_handler(ne_xml_parser *p,
 
   ne_xml_push_handler(p, shim_startelm, shim_cdata, shim_endelm, baton);
 }
-
-#endif /* Neon version */
 
 
 
