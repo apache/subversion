@@ -214,6 +214,13 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
                                              const ne_propname *which_props,
                                              apr_pool_t *pool);
 
+/* fetch a single resource's starting props from the server. */
+svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
+                                             ne_session *sess,
+                                             const char *url,
+                                             const char *label,
+                                             apr_pool_t *pool);
+
 /* fetch a single property from a single resource */
 svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
                                        ne_session *sess,

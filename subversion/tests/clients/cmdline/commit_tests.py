@@ -1286,6 +1286,66 @@ def commit_rmd_and_deleted_file(sbox):
 
   return 0
 
+#----------------------------------------------------------------------
+
+# Issue #644 which failed over ra_dav.
+def commit_add_file_twice(sbox):
+  "issue 644 attempt to add a file twice"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Create a file
+  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo') 
+  svntest.main.file_append(gloo_path, "hello")
+  svntest.main.run_svn(None, 'add', gloo_path)
+
+  # Create expected output tree.
+  output_list = [ [gloo_path, None, {}, {'verb' : 'Adding' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Created expected status tree.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  status_list.append([gloo_path, None, {},
+                      {'status' : 'A ',
+                       'wc_rev' : '0',
+                       'repos_rev' : '1'}]) # pre-commit status
+  for item in status_list:
+    item[3]['repos_rev'] = '2'     # post-commit status
+    if (item[0] == gloo_path):
+      item[3]['wc_rev'] = '2'
+      item[3]['status'] = '_ '
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit should succeed
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None,
+                                            None, None,
+                                            None, None,
+                                            wc_dir):
+    return 1
+
+  # Update to state before commit
+  svntest.main.run_svn(None, 'up', '-r1', wc_dir)
+
+  # Create the file again
+  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo') 
+  svntest.main.file_append(gloo_path, "hello")
+  svntest.main.run_svn(None, 'add', gloo_path)
+
+  # Commit and *expect* a failure:
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                None,
+                                                None,
+                                                "already exists",
+                                                None, None,
+                                                None, None,
+                                                wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1311,6 +1371,7 @@ test_list = [ None,
               commit_deleted_edited,
               commit_in_dir_scheduled_for_addition,
               commit_rmd_and_deleted_file,
+              commit_add_file_twice,
              ]
 
 if __name__ == '__main__':

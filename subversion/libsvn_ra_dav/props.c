@@ -446,6 +446,16 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
   return SVN_NO_ERROR;
 }
 
+svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
+                                             ne_session *sess,
+                                             const char *url,
+                                             const char *label,
+                                             apr_pool_t *pool)
+{
+  return svn_ra_dav__get_props_resource(rsrc, sess, url, label, starting_props,
+                                        pool);
+}
+
 svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
                                            svn_string_t *bc_url,
                                            svn_string_t *bc_relative,
@@ -503,8 +513,8 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
 
     while (! svn_path_is_empty (path_s))
       {
-        err = svn_ra_dav__get_props_resource(&rsrc, sess, path_s->data,
-                                             NULL, starting_props, pool);
+        err = svn_ra_dav__get_starting_props(&rsrc, sess, path_s->data,
+                                             NULL, pool);
         if (! err)
           break;   /* found an existing parent! */
 
