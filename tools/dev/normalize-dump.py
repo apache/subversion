@@ -22,12 +22,15 @@ class NodePath:
 
 
 def dump_revision(rev, nodepaths):
+    sys.stderr.write('* Normalizing revision ' + rev + '...')
     print 'Revision ' + rev
     paths = nodepaths.keys()
     paths.sort()
     for path in paths:
         nodepath = nodepaths[path]
         nodepath.dump()
+    sys.stderr.write('done\n')
+    
         
 
 def parse_header_block(fp):
