@@ -359,16 +359,54 @@ svn_io_append_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool
 }
 
 
+/*** Helpers for svn_io_copy_and_translate ***/
+
+#if 0
+/* Return an SVN error for status ERR, using VERB and PATH to describe
+   the error, and allocating the svn_error_t in POOL.  */
 static svn_error_t *
 translate_err (apr_status_t err, 
                const char *verb, 
                const char *path,
                apr_pool_t *pool)
 {
-  return svn_error_createf (err, 0, NULL, pool,
-                            "svn_io_convert_eol: error %s `%s'", verb, path);
+  return svn_error_createf 
+    (err, 0, NULL, pool,
+     "svn_io_copy_and_translate: error %s `%s'", verb, path);
 }
 
+/* Write out LEN bytes of BUF into FILE (whose path is PATH), using
+   POOL to allocate any svn_error_t errors that might occur along the
+   way. */
+static svn_error_t *
+translate_write (apr_file_t *file,
+                 const char *path,
+                 const void *buf,
+                 apr_size_t len,
+                 apr_pool_t *pool)
+{
+  apr_size_t wrote = len;
+  apr_status_t write_err = apr_file_write (file, buf, &wrote);
+  if ((write_err) || (len != wrote))
+    return translate_err (write_err, "writing", path, pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Parse BUF (whose length is LEN) for Subversion keywords.  */
+static svn_boolean_t
+translate_keyword (const char *buf,
+                   apr_size_t len,
+                   svn_boolean_t expand,
+                   const char *revision,
+                   const char *date,
+                   const char *author,
+                   const char *url)
+{
+  abort();
+  return FALSE;
+}
+#endif /* 0 */
 
 svn_error_t *
 svn_io_copy_and_translate (const char *src,
@@ -381,21 +419,23 @@ svn_io_copy_and_translate (const char *src,
                            const char *url,
                            apr_pool_t *pool)
 {
+  /* For now, just do a copy and return. */
+  return svn_io_copy_file (svn_stringbuf_create (src, pool), 
+                           svn_stringbuf_create (dst, pool),
+                           pool);
+
+#if 0
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   apr_status_t apr_err;
   svn_error_t *err = SVN_NO_ERROR;
   apr_status_t read_err, write_err;
   char c;
-
-  /*
-  char newline_buf[3] = { 0 };
-  int  newline_off = 0;
-  char keyword_buf[SVN_IO_MAX_KEYWORD_LEN] = { 0 };
-  int  keyword_off = 0;
-  char src_format[3] = { 0 };
-  */
-
-  abort(); /* don't use this function yet, it's not finished! */
+  apr_size_t len;
+  char       src_format[3] = { 0 };
+  char       newline_buf[3] = { 0 };
+  apr_size_t newline_off = 0;
+  char       keyword_buf[SVN_KEYWORD_MAX_LEN] = { 0 };
+  apr_size_t keyword_off = 0;
 
   /* Open source file. */
   apr_err = apr_file_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
@@ -427,10 +467,7 @@ svn_io_copy_and_translate (const char *src,
          states that we cannot *both* read bytes AND get an error
          while doing so (include APR_EOF).  Since apr_file_getc is simply a
          wrapper around apr_file_read, we know that if we get any
-         error at all, we haven't read any bytes.  This gives us the
-         ability to handle the error here without worrying about
-         losing the last character of the file simply because we
-         recieved an APR_EOF read error.  */
+         error at all, we haven't read any bytes.  */
       if (read_err)
         {
           if (!APR_STATUS_IS_EOF(read_err))
@@ -441,7 +478,18 @@ svn_io_copy_and_translate (const char *src,
             }
           else
             {
-              /* We've reached the end of the file.  Close up shop.  */
+              /* We've reached the end of the file.  Close up shop.
+                 This means flushing our temporary streams.  Since we
+                 shouldn't have data in *both* temporary streams,
+                 order doesn't matter here.  */
+              if (((len = newline_off)) && 
+                  ((err = translate_write (d, dst, newline_buf, len, pool))))
+                goto cleanup;
+              if (((len = keyword_off)) && 
+                  ((err = translate_write (d, dst, keyword_buf, len, pool))))
+                goto cleanup;
+
+              /* Close the source and destination files. */
               apr_err = apr_file_close (s);
               if (apr_err)
                 {
@@ -463,36 +511,53 @@ svn_io_copy_and_translate (const char *src,
          Part of a keyword?  */
       switch (c)
         {
-        case '\n':
-        case '\r':
-
         case '$':
           /* If we are currently in the middle of tracking a possible
              keyword expansion, then this is its terminator.  Else,
              this is the beginning of a new possible keyword. */
+          if (keyword_off)
+            {
+              keyword_buf[keyword_off++] = c;
+              
+          
+          break;
+
+        case '\n':
+        case '\r':
+          /* Newline character.  If we currently bagging up a keyword
+             string, this pretty much puts an end to that.  Flush the
+             keyword buffer, then handle the newline. */
+          if (((len = keyword_off)) && 
+              ((err = translate_write (d, dst, keyword_buf, len, pool))))
+            goto cleanup;
+
+#if HANDLING_NEWLINES
+          if (eol_str)
+            {
+              /* Handle this as a translatable newline */
+              break;
+            }
+#endif
+          /* Write out this character. */
+          if ((err = translate_write (d, dst, (const void *)&c, 1, pool)))
+            goto cleanup;
+          break;
+
         default:
-          ;
-        }
+          /* Nothing special about this character.  Well, except that:
 
-      /* ### TODO:  Here's the real meat.  Things to keep in mind:
+             - if we're currently bagging up a keyword string, we'll
+               add this character to the keyword buffer.  
 
-         - It's not enough to only replace instances of SRC's EOL
-           string with the EOL string requested.  We need to scan for
-           all known EOL strings, because if we find one that *isn't*
-           STR's EOL format, we have to decide whether to repair that
-           (by replacing it, too) or bail out (complaining that SRC is
-           inconsistent). 
-           
-         - Don't even *think* about removing the abort() at the top if
-           this function until you've written good tests for it! >:-(
-      */
+             - if we're in a potential newline separator, this
+               character terminates that search, so we need to flush
+               our 
+          */
 
-      /* Write out our (possibly tweaked) data. */
-      write_err = apr_file_putc (c, d);
-      if (write_err)
-        {
-          err = translate_err (write_err, "writing", dst, pool);
-          goto cleanup;
+          /* Write out this character. */
+          if ((err = translate_write (d, dst, (const void *)&c, 1, pool)))
+            goto cleanup;
+          break; 
         }
     }
   return SVN_NO_ERROR;
@@ -504,6 +569,7 @@ svn_io_copy_and_translate (const char *src,
     apr_file_close (d); /* toss */
   apr_file_remove (dst, pool); /* toss */
   return err;
+#endif /* 0 */
 }
 
 
