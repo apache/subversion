@@ -1,0 +1,39 @@
+head     1.1;
+branch   1.1.1;
+access   ;
+symbols  vtag-1:1.1.1.1 vbranchA:1.1.1;
+locks    ; strict;
+comment  @# @;
+
+
+1.1
+date     2004.02.12.22.01.44;  author kfogel;  state Exp;
+branches 1.1.1.1;
+next     ;
+
+1.1.1.1
+date     2004.02.12.22.01.44;  author kfogel;  state dead;
+branches ;
+next     ;
+
+
+desc
+@@
+
+
+
+1.1
+log
+@Initial revision
+@
+text
+@Import vtag-1 on vbranchA.
+@
+
+
+1.1.1.1
+log
+@First vendor branch revision.
+@
+text
+@@
