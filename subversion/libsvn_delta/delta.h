@@ -131,9 +131,11 @@ svn_delta__vcdiff_flush_buffer (svn_delta__vcdiff_parser_t *parser);
  * callback to be invoked, to figure out what to do next.
  */
 
+
+/* Types of XML tags we'll encounter */
 typedef enum svn_delta__XML_t
 {
-  svn_delta__XML_treedelta = 1,
+  svn_delta__XML_treedelta,
   svn_delta__XML_new,
   svn_delta__XML_delete,
   svn_delta__XML_replace,
@@ -142,7 +144,11 @@ typedef enum svn_delta__XML_t
   svn_delta__XML_textdelta,
   svn_delta__XML_propdelta,
   svn_delta__XML_set
+
 } svn_delta__XML_t;
+
+
+
 
 
 typedef struct svn_delta__stackframe_t
@@ -191,11 +197,13 @@ typedef struct svn_delta__stackframe_t
 
 typedef struct svn_delta__digger_t
 {
-  /* Pool to do allocations from */
+  /* Pool to do allocations from. */
   apr_pool_t *pool;
 
   /* A mirror of the stack we're getting from the XML structure, used
-     for storing XML attributes and for XML validation.  */
+     for storing XML attributes and for XML validation. 
+     
+     NOTE that this is the *YOUNGEST* frame on the stack, not the oldest! */
   svn_delta__stackframe_t *stack;
 
   /* Callbacks to use when we discover interesting XML events */
