@@ -64,7 +64,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
   svn_boolean_t update = jupdate == JNI_TRUE;
   apr_hash_t *statushash = NULL;
   svn_client_auth_baton_t *auth_baton = NULL;
-  svn_error_t *error = NULL;
+  svn_error_t *error = SVN_NO_ERROR;
   apr_pool_t *pool = NULL;
   svn_revnum_t youngest;
 

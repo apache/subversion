@@ -430,7 +430,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 {
   struct handler_baton *hb = baton;
   struct file_baton *fb = hb->fb;
-  svn_error_t *err = NULL, *err2 = NULL;
+  svn_error_t *err = SVN_NO_ERROR, *err2 = SVN_NO_ERROR;
 
   /* Apply this window.  We may be done at that point.  */
   err = hb->apply_handler (window, hb->apply_baton);

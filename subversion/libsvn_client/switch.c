@@ -65,7 +65,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   svn_revnum_t revnum;
-  svn_error_t *err = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access;
 
   /* Sanity check.  Without these, the switch is meaningless. */

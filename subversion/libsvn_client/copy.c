@@ -529,7 +529,9 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   apr_hash_t *committables, *tempfiles = NULL;
   svn_wc_adm_access_t *adm_access, *dir_access;
   apr_array_header_t *commit_items;
-  svn_error_t *cmt_err = NULL, *unlock_err = NULL, *cleanup_err = NULL;
+  svn_error_t *cmt_err = SVN_NO_ERROR;
+  svn_error_t *unlock_err = SVN_NO_ERROR;
+  svn_error_t *cleanup_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
   const char *base_path;
   const char *base_url;

@@ -1016,7 +1016,7 @@ svn_wc__entries_write (apr_hash_t *entries,
                        svn_wc_adm_access_t *adm_access,
                        apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
   svn_stringbuf_t *bigstr = NULL;
   apr_file_t *outfile = NULL;
   apr_status_t apr_err;

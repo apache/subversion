@@ -166,7 +166,7 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
   apr_file_t *f = NULL;
   apr_status_t apr_err = 0;
   const char *path;
@@ -481,7 +481,7 @@ open_adm_file (apr_file_t **handle,
                apr_pool_t *pool,
                ...)
 {
-  svn_error_t *err = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
   va_list ap;
 
   /* If we're writing, always do it to a tmp file. */
@@ -937,7 +937,7 @@ check_adm_exists (svn_boolean_t *exists,
                   svn_revnum_t revision,
                   apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
   svn_node_kind_t kind;
   svn_boolean_t dir_exists = FALSE, wc_exists = FALSE;
   const char *tmp_path;
@@ -1054,7 +1054,7 @@ init_adm_file (const char *path,
                const char *contents,
                apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
   apr_status_t apr_err;
   apr_file_t *f = NULL;
 
