@@ -172,22 +172,31 @@ svn_cl__propget (apr_getopt_t *os,
               /* If this is a special Subversion property, it is stored as
                  UTF8, so convert to the native format. */
               if (svn_prop_needs_translation (pname_utf8))
-                SVN_ERR (svn_subst_detranslate_string (&propval, propval,
-                                                       TRUE, subpool));
+                {
+                  SVN_ERR (svn_subst_detranslate_string (&propval, propval,
+                                                         TRUE, subpool));
+                }
               
               if (print_filenames) 
                 {
                   const char *filename_stdout;
+
                   if (! is_url)
-                    SVN_ERR (svn_cmdline_path_local_style_from_utf8
-                             (&filename_stdout, filename, subpool));
+                    {
+                      SVN_ERR (svn_cmdline_path_local_style_from_utf8
+                               (&filename_stdout, filename, subpool));
+                    }
                   else
-                    SVN_ERR (svn_cmdline_cstring_from_utf8
-                             (&filename_stdout, filename, subpool));
+                    {
+                      SVN_ERR (svn_cmdline_cstring_from_utf8
+                               (&filename_stdout, filename, subpool));
+                    }
+
                   SVN_ERR (stream_write (out, filename_stdout,
                                          strlen (filename_stdout)));
                   SVN_ERR (stream_write (out, " - ", 3));
-                } 
+                }
+
               SVN_ERR (stream_write (out, propval->data, propval->len));
               if (! opt_state->strict)
                 SVN_ERR (stream_write (out, "\n", 1));

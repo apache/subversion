@@ -127,14 +127,20 @@ svn_cl__proplist (apr_getopt_t *os,
             {
               svn_client_proplist_item_t *item 
                 = ((svn_client_proplist_item_t **)props->elts)[j];
-              const char *node_name_stdout;
+              const char *name_stdout;
+
               if (! is_url)
-                SVN_ERR (svn_cmdline_path_local_style_from_utf8
-                         (&node_name_stdout, item->node_name->data, subpool));
+                {
+                  SVN_ERR (svn_cmdline_path_local_style_from_utf8
+                           (&name_stdout, item->node_name->data, subpool));
+                }
               else
-                SVN_ERR (svn_cmdline_cstring_from_utf8
-                         (&node_name_stdout, item->node_name->data, subpool));
-              printf("Properties on '%s':\n", node_name_stdout);
+                {
+                  SVN_ERR (svn_cmdline_cstring_from_utf8
+                           (&name_stdout, item->node_name->data, subpool));
+                }
+
+              printf("Properties on '%s':\n", name_stdout);
               SVN_ERR (svn_cl__print_prop_hash
                        (item->prop_hash, (! opt_state->verbose), subpool));
             }
