@@ -403,7 +403,11 @@ int main(int argc, const char *const *argv)
 
   /* svn_cmdline_init() sets up the locale, but when we serve clients, we
      always want the "C" locale for messages. */
+  /* ### LC_MESSAGES isn't available on all platforms. TEMPORARILY disable
+     this call on those platforms. ### */
+#ifdef LC_MESSAGES
   setlocale (LC_MESSAGES, "C");
+#endif
 
 #if APR_HAS_FORK
   if (run_mode != run_mode_listen_once && !foreground)
