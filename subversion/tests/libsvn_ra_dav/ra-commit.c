@@ -66,7 +66,7 @@ main (int argc, char **argv)
      ### and tossing svn_wc_close_commit */
 
   err = (*plugin->get_commit_editor)(session_baton, &editor, &edit_baton,
-                                     NULL, NULL, NULL, NULL);
+                                     -1, NULL, NULL, NULL, NULL);
   if (err)
     goto error;
 
