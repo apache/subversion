@@ -24,6 +24,7 @@
 # deltification           差分化
 # destination             コピー先 / 移動先
 # dumpstream              ダンプストリーム
+# end                     途切れる
 # end revision            終了リビジョン
 # entry                   エントリ
 # error ...ing            〜する際にエラーが発生しました / 〜中にエラーが
@@ -36,6 +37,7 @@
 # help                    ヘルプ
 # import                  インポート
 # in the way              妨害して
+# insn                    インストラクション
 # item                    項目
 # last changed            最終変更
 # last updated            最終更新
@@ -48,6 +50,7 @@
 # node revision id        ノードリビジョン識別番号
 # null                    空の
 # out of date             リポジトリ側と比べて古くなった
+# overflow                溢れる
 # post-commit hook        post-commit フック
 # post-revprop-change hook    post-revprop-change フック
 # pre-commit hook         pre-commit フック
@@ -75,13 +78,14 @@
 # transaction             トランザクション
 # unversioned             バージョン管理されていない
 # versioned               バージョン管理された
+# view                    ビュー
 # working copy            作業コピー
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-02-19 13:52+0900\n"
-"PO-Revision-Date: 2005-02-19 12:11+0900\n"
+"POT-Creation-Date: 2005-02-19 16:58+0900\n"
+"PO-Revision-Date: 2005-02-19 16:55+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2548,7 +2552,7 @@ msgstr "svndiff データに不正なヘッダがあります"
 # ? corrupt window
 #: include/svn_error_codes.h:702
 msgid "Svndiff data contains corrupt window"
-msgstr "snvdiff データに壊れた window が含まれています"
+msgstr "svndiff データに壊れた window が含まれています"
 
 #: include/svn_error_codes.h:706
 msgid "Svndiff data contains backward-sliding source view"
@@ -2560,7 +2564,7 @@ msgstr "svndiff データに不正な命令が含まれています"
 
 #: include/svn_error_codes.h:714
 msgid "Svndiff data ends unexpectedly"
-msgstr "svndiff データが突然終わりました"
+msgstr "svndiff データが予想外に途切れました"
 
 #: include/svn_error_codes.h:720
 msgid "Apache has no path to an SVN filesystem"
@@ -3301,6 +3305,72 @@ msgstr "リポジトリ '%s' の UUID は '%s' ですが、作業コピーのも
 #, c-format
 msgid "Unrecognized revision type requested for '%s'"
 msgstr "'%s' に要求されたリビジョン形式を認識できません"
+
+#: libsvn_delta/svndiff.c:350
+#, c-format
+msgid "Invalid diff stream: insn %d cannot be decoded"
+msgstr "diff ストリームが不正です: インストラクション %d をデコードできません"
+
+#: libsvn_delta/svndiff.c:354
+#, c-format
+msgid "Invalid diff stream: insn %d has non-positive length"
+msgstr ""
+"diff ストリームが不正です: インストラクション %d の長さが正でありません"
+
+#: libsvn_delta/svndiff.c:358
+#, c-format
+msgid "Invalid diff stream: insn %d overflows the target view"
+msgstr ""
+"diff ストリームが不正です: インストラクション %d が対象のビューから溢れていま"
+"す"
+
+#: libsvn_delta/svndiff.c:367
+#, c-format
+msgid "Invalid diff stream: [src] insn %d overflows the source view"
+msgstr ""
+"diff ストリームが不正です: [ソース] インストラクション %d がソースビューから"
+"溢れています"
+
+#: libsvn_delta/svndiff.c:374
+#, c-format
+msgid ""
+"Invalid diff stream: [tgt] insn %d starts beyond the target view position"
+msgstr ""
+"diff ストリームが不正です: [対象] インストラクション %d が対象ビューの位置を"
+"超えています"
+
+#: libsvn_delta/svndiff.c:381
+#, c-format
+msgid "Invalid diff stream: [new] insn %d overflows the new data section"
+msgstr ""
+"diff ストリームが不正です: [新規] インストラクション %d が新規データセクショ"
+"ンから溢れています"
+
+#: libsvn_delta/svndiff.c:391
+msgid "Delta does not fill the target window"
+msgstr "delta が対象の window を満たしていません"
+
+#: libsvn_delta/svndiff.c:394
+msgid "Delta does not contain enough new data"
+msgstr "delta が新しいデータを十分に含んでいません"
+
+#: libsvn_delta/svndiff.c:471
+msgid "Svndiff has invalid header"
+msgstr "svndiff に不正なヘッダがあります"
+
+# ? corrupt window
+#: libsvn_delta/svndiff.c:526 libsvn_delta/svndiff.c:681
+msgid "Svndiff contains corrupt window header"
+msgstr "svndiff に壊れた window ヘッダが含まれています"
+
+#: libsvn_delta/svndiff.c:535
+msgid "Svndiff has backwards-sliding source views"
+msgstr "svndiff に、逆方向にスライドするソースビューが含まれています"
+
+#: libsvn_delta/svndiff.c:583 libsvn_delta/svndiff.c:630
+#: libsvn_delta/svndiff.c:703
+msgid "Unexpected end of svndiff input"
+msgstr "svndiff 入力が予想外に途切れました"
 
 #: libsvn_diff/diff_file.c:1169
 #, c-format
@@ -4309,7 +4379,7 @@ msgstr "ダンプストリーム中に不正なヘッダブロックが見つか
 
 #: libsvn_repos/load.c:185
 msgid "Premature end of content data in dumpstream"
-msgstr "ダンプストリーム中のデータが途中で終わっています"
+msgstr "ダンプストリーム中のデータが途中で途切れています"
 
 #: libsvn_repos/load.c:192
 msgid "Dumpstream data appears to be malformed"
@@ -4568,7 +4638,7 @@ msgstr "要求された日時を計算できません"
 msgid "Can't expand time"
 msgstr "時刻を人間の読める形に変換できません"
 
-#: libsvn_subr/error.c:290
+#: libsvn_subr/error.c:292
 msgid "Can't recode error string from APR"
 msgstr "APR からのエラー文字列を再エンコードできません"
 
@@ -5047,28 +5117,18 @@ msgstr ""
 "ASCII 以外の文字 (コード %d) が検出されました。この文字は UTF-8 へは、\n"
 "あるいは UTF-8 からは、変換できません"
 
-#: libsvn_subr/utf.c:432
+#: libsvn_subr/utf.c:455
+#, c-format
 msgid ""
 "Valid UTF-8 data\n"
-"(hex:"
+"(hex:%s)\n"
+"followed by invalid UTF-8 sequence\n"
+"(hex:%s)"
 msgstr ""
 "正しい UTF-8 のデータ\n"
-"(16 進数:"
-
-#: libsvn_subr/utf.c:445
-msgid ""
-")\n"
-"followed by invalid UTF-8 sequence\n"
-"(hex:"
-msgstr ""
-")\n"
+"(16 進数:%s)\n"
 "の後に不正な UTF-8 文字列\n"
-"(16 進数:"
-
-#: libsvn_subr/utf.c:454
-msgid ")"
-msgstr ""
-")\n"
+"(16 進数:%s)\n"
 "があります"
 
 #: libsvn_subr/validate.c:48
@@ -6907,6 +6967,27 @@ msgstr "エクスポートされたものです%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
+
+#~ msgid ")"
+#~ msgstr ""
+#~ ")\n"
+#~ "があります"
+
+#~ msgid ""
+#~ ")\n"
+#~ "followed by invalid UTF-8 sequence\n"
+#~ "(hex:"
+#~ msgstr ""
+#~ ")\n"
+#~ "の後に不正な UTF-8 文字列\n"
+#~ "(16 進数:"
+
+#~ msgid ""
+#~ "Valid UTF-8 data\n"
+#~ "(hex:"
+#~ msgstr ""
+#~ "正しい UTF-8 のデータ\n"
+#~ "(16 進数:"
 
 #~ msgid "Sorry, svn_client_diff was called in a way that is not yet supported"
 #~ msgstr ""
