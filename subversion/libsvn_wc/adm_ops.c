@@ -1669,7 +1669,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                                          adm_access, subpool));
 
       /* Remove NAME from PATH's entries file: */
-      SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
       svn_wc__entry_remove (entries, name);
       SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
 
@@ -1738,7 +1738,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
             
             SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access,
                                           parent_dir, pool));
-            SVN_ERR (svn_wc_entries_read (&entries, parent_access, FALSE,
+            SVN_ERR (svn_wc_entries_read (&entries, parent_access, TRUE,
                                           pool));
             svn_wc__entry_remove (entries, base_name);
             SVN_ERR (svn_wc__entries_write (entries, parent_access, pool));
