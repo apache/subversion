@@ -461,7 +461,6 @@ static svn_error_t * thunk_absent_directory(const char *path,
 					    apr_pool_t *pool)
 {
     item_baton *ib = parent_baton;
-    SV *result;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
 
     SVN_ERR (perl_callback_thunk (CALL_METHOD,
@@ -617,7 +616,6 @@ static svn_error_t * thunk_absent_file(const char *path,
 				       apr_pool_t *pool)
 {
     item_baton *ib = parent_baton;
-    SV *result;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
 
     SVN_ERR (perl_callback_thunk (CALL_METHOD,
