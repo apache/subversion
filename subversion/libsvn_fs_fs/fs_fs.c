@@ -1113,7 +1113,7 @@ struct rep_state
   apr_off_t off;    /* The current offset into the file. */
   apr_off_t end;    /* The end offset of the raw data. */
   int ver;          /* If a delta, what svndiff version? */
-  int chunk_index;  /* Something important I'm sure. */
+  int chunk_index;
 };
 
 /* Build an array of rep_state structures in *LIST giving the delta
@@ -1197,7 +1197,6 @@ struct rep_read_baton
   /* The plaintext state, if there is a plaintext. */
   struct rep_state *src_state;
 
-  /* Some important state to remember. */
   int chunk_index;
   char *buf;
   apr_size_t buf_pos;
@@ -2390,11 +2389,18 @@ struct rep_write_baton
   /* The FS we are writing to. */
   svn_fs_t *fs;
 
-  /* Location of the representation we are writing. */
+  /* Actual file to which we are writing. */
   svn_stream_t *rep_stream;
 
-  /* Where is this representation stored. */
+  /* A stream from the delta combiner.  Data written here gets
+     deltified, then eventually written to rep_stream. */
+  svn_stream_t *delta_stream;
+
+  /* Where is this representation header stored. */
   apr_off_t rep_offset;
+
+  /* Start of the actual data. */
+  apr_off_t delta_start;
 
   /* How many bytes have been written to this rep already. */
   svn_filesize_t rep_size;
@@ -2404,6 +2410,9 @@ struct rep_write_baton
 
   /* Is this the data representation? */
   svn_boolean_t is_data_rep;
+
+  /* Actual output file. */
+  apr_file_t *file;
 
   struct apr_md5_ctx_t md5_context;
 
@@ -2421,10 +2430,18 @@ rep_write_contents (void *baton,
   struct rep_write_baton *b = baton;
 
   apr_md5_update (&b->md5_context, data, *len);
-
-  SVN_ERR (svn_stream_write (b->rep_stream, data, len));
   b->rep_size += *len;
 
+  /* If we are writing a delta, use that stream. */
+  if (b->delta_stream)
+    {
+      SVN_ERR (svn_stream_write (b->delta_stream, data, len));
+    }
+  else
+    {
+      SVN_ERR (svn_stream_write (b->rep_stream, data, len));
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -2478,6 +2495,43 @@ open_and_seek_representation_write (apr_file_t **file_p,
   return SVN_NO_ERROR;
 }
 
+/* Given a node-revision NODEREV in filesystem FS, return the
+   representation in *REP to use as the base for a text representation
+   delta.  Perform temporary allocations in *POOL. */
+static svn_error_t *
+choose_delta_base (svn_fs__representation_t **rep,
+                   svn_fs_t *fs,
+                   svn_fs__node_revision_t *noderev,
+                   apr_pool_t *pool)
+{
+  int count, i;
+  svn_fs__node_revision_t *base;
+
+  /* If we have no predecessors, then use the empty stream as a
+     base. */
+  if (! noderev->predecessor_count)
+    {
+      *rep = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  count = noderev->predecessor_count;
+  i = 0;
+  while ((count & (1 << i)) == 0)
+    i++;
+  count &= ~(1 << i);
+
+  base = noderev;
+
+  while ((count++) < noderev->predecessor_count)
+      SVN_ERR (svn_fs__fs_get_node_revision (&base, fs,
+                                             base->predecessor_id, pool));
+
+  *rep = base->data_rep;
+  
+  return SVN_NO_ERROR;
+}
+
 /* Get a rep_write_baton and store it in *WB_P for the representation
    indicated by NODEREV and IS_DATA_REP in filesystem FS.  Perform
    allocations in POOL. */
@@ -2490,34 +2544,78 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
 {
   struct rep_write_baton *b;
   apr_file_t *file;
+  svn_boolean_t is_directory_contents;
+  svn_fs__representation_t *base_rep;
+  svn_stream_t *source;
+
+  is_directory_contents = (is_data_rep) && (noderev->kind == svn_node_dir);
 
   b = apr_pcalloc (pool, sizeof (*b));
 
   apr_md5_init (&(b->md5_context));
 
   b->fs = fs;
-  b->pool = pool;
+  b->pool = svn_pool_create (pool);
   b->rep_size = 0;
   b->is_data_rep = is_data_rep;
   b->noderev = noderev;
 
   /* Open the file we are writing to. */
   SVN_ERR (open_and_seek_representation_write (&file, fs, noderev->id,
-                                               (noderev->kind == svn_node_dir)
-                                               && is_data_rep,
-                                               pool));
+                                               is_directory_contents, pool));
 
 
+  b->file = file;
   b->rep_stream = svn_stream_from_aprfile (file, pool);
-
+  
   SVN_ERR (svn_stream_printf (b->rep_stream, pool, "\n"));
 
   b->rep_offset = 0;
+  
   SVN_ERR (svn_io_file_seek (file, APR_CUR, &b->rep_offset, pool));
 
-  /* Write out the REP line. */
-  SVN_ERR (svn_stream_printf (b->rep_stream, pool, "PLAIN\n"));
+  /* If the representation is a property rep, or the contents of a
+     directory, write it out in plaintext. */
+  if (is_directory_contents || (! is_data_rep))
+    {
+      /* Write out the REP line. */
+      SVN_ERR (svn_stream_printf (b->rep_stream, pool, "PLAIN\n"));
+    }
+  else
+    {
+      const char *header;
+      svn_txdelta_window_handler_t wh;
+      void *whb;
 
+      /* Get the base for this delta. */
+      SVN_ERR (choose_delta_base (&base_rep, fs, noderev, pool));
+      SVN_ERR (get_representation_at_offset (&source, fs, NULL, base_rep,
+                                             pool));
+
+      /* Write out the rep header. */
+      if (base_rep)
+        {
+          header = apr_psprintf (pool, SVN_FS_FS__DELTA " %" SVN_REVNUM_T_FMT
+                                 " %" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
+                                 base_rep->revision, base_rep->offset,
+                                 base_rep->size);
+        }
+      else
+        {
+          header = SVN_FS_FS__DELTA "\n";
+        }
+      SVN_ERR (svn_io_file_write_full (file, header, strlen (header), NULL,
+                                       pool));
+
+      /* Now determine the offset of the actual svndiff data. */
+      b->delta_start = 0;
+      SVN_ERR (svn_io_file_seek (file, APR_CUR, &b->delta_start, pool));
+      
+      /* Prepare to write the svndiff data. */
+      svn_txdelta_to_svndiff (b->rep_stream, pool, &wh, &whb);
+      b->delta_stream = svn_txdelta_target_push (wh, whb, source, pool);
+    }      
+      
   *wb_p = b;
 
   return SVN_NO_ERROR;
@@ -2531,34 +2629,48 @@ rep_write_contents_close (void *baton)
 {
   struct rep_write_baton *b = baton;
   svn_fs__representation_t *rep;
+  apr_off_t offset;
 
   rep = apr_pcalloc (b->pool, sizeof (*rep));
   rep->offset = b->rep_offset;
-  rep->size = b->rep_size;
+
+  /* Close our delta stream so the last bits of svndiff are written
+     out. */
+  if (b->delta_stream)
+    SVN_ERR (svn_stream_close (b->delta_stream));
+
+  /* Determine the length of the svndiff data. */
+  offset = 0;
+  SVN_ERR (svn_io_file_seek (b->file, APR_CUR, &offset, b->pool));
+  rep->size = offset - b->delta_start;
+
+  /* Fill in the rest of the representation field. */
   rep->expanded_size = b->rep_size;
   rep->txn_id = b->noderev->id->txn_id;
   rep->revision = SVN_INVALID_REVNUM;
   if ((b->noderev->kind == svn_node_dir) && b->is_data_rep)
     rep->is_directory_contents = TRUE;
 
+  /* Finalize the MD5 checksum. */
   apr_md5_final (rep->checksum, &b->md5_context);
 
+  /* Write out our cosmetic end marker. */
+  SVN_ERR (svn_stream_printf (b->rep_stream, b->pool, "ENDREP\n"));
+  
   if (b->is_data_rep)
     {
       b->noderev->data_rep = rep;
-      if (b->noderev->kind != svn_node_dir)
-        SVN_ERR (svn_stream_printf (b->rep_stream, b->pool, "END\n"));
     }
   else
     {
       b->noderev->prop_rep = rep;
     }
 
-  SVN_ERR (svn_stream_close (b->rep_stream));
-
   /* Write out the new node-rev information. */
   SVN_ERR (svn_fs__fs_put_node_revision (b->fs, b->noderev->id, b->noderev,
                                          b->pool));
+
+  svn_pool_destroy (b->pool);
 
   return SVN_NO_ERROR;
 }
