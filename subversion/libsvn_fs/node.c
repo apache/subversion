@@ -383,19 +383,6 @@ svn_fs__init_node (apr_size_t size,
 /* Creating and opening a filesystem's `nodes' table.  */
 
 
-/* Compare the keys A and B in bytewise order.  */
-static int
-compare_bytewise (const DBT *a, const DBT *b)
-{
-  int common_len = (a->size > b->size ? b->size : a->size);
-  int cmp = memcmp (a->data, b->data, common_len);
-  if (cmp)
-    return cmp;
-  else
-    return a->size - b->size;
-}
-
-
 /* Compare two node ID's, according to the rules in `structure'.  */
 static int
 compare_ids (svn_fs_id_t *a, svn_fs_id_t *b)
@@ -465,7 +452,7 @@ compare_nodes_keys (const DBT *ak, const DBT *bk)
 
   /* Is either a or b malformed?  */
   if (! a && ! b)
-    return compare_bytewise (ak, bk);
+    return svn_fs__compare_dbt (ak, bk);
   else if (! a)
     {
       free (b);
