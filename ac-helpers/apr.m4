@@ -24,13 +24,35 @@ AC_DEFUN(SVN_LIB_APR,
   dnl Get build information from APR
 
   CPPFLAGS="$CPPFLAGS `$apr_config --cppflags`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apr-config --cppflags failed])
+  fi
+
   CFLAGS="$CFLAGS `$apr_config --cflags`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apr-config --cflags failed])
+  fi
+
   LDFLAGS="$LDFLAGS `$apr_config --ldflags`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apr-config --ldflags failed])
+  fi
+
   LIBS="$LIBS `$apr_config --libs`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apr-config --libs failed])
+  fi
 
   SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES `$apr_config --includes`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apr-config --includes failed])
+  fi
 
   SVN_APR_LIBS="`$apr_config --link-libtool`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apr-config --link-libtool failed])
+  fi
+
   AC_SUBST(SVN_APR_LIBS)
 ])
 
