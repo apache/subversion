@@ -192,24 +192,6 @@ svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
 }
 
 
-svn_error_t *
-svn_wc_get_path_prop (svn_string_t **value,
-                      svn_string_t *propname,
-                      svn_string_t *path)
-{
-  /* kff todo */
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc_get_dirent_prop (svn_string_t **value,
-                        svn_string_t *propname,
-                        svn_string_t *path)
-{
-  /* kff todo */
-  return SVN_NO_ERROR;
-}
 
 
 
