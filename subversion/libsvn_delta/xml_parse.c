@@ -625,8 +625,7 @@ do_close_file (svn_xml__digger_t *digger)
     }
 
   /* Drop the current parsers and file_baton. */
-  digger->svndiff_write = NULL;
-  digger->svndiff_baton = NULL;
+  digger->svndiff_parser = NULL;
   digger->file_baton = NULL;
 
   return SVN_NO_ERROR;
@@ -670,10 +669,9 @@ do_begin_textdelta (svn_xml__digger_t *digger)
 {
   svn_error_t *err;
   svn_txdelta_window_handler_t *window_consumer = NULL;
-  svn_write_fn_t *intermediate_write;
+  svn_stream_t *intermediate;
   void *file_baton = NULL;
   void *consumer_baton = NULL;
-  void *intermediate_baton = NULL;
 
   /* Sanity check: skip everything if the editor doesn't know how to
      receive text-deltas in the first place.  */
@@ -728,9 +726,8 @@ do_begin_textdelta (svn_xml__digger_t *digger)
 
   /* Now create an svndiff parser based on the consumer/baton we got. */
   svn_txdelta_parse_svndiff (window_consumer, consumer_baton, digger->pool,
-                             &intermediate_write, &intermediate_baton);
-  svn_base64_decode (intermediate_write, intermediate_baton, digger->pool,
-                     &digger->svndiff_write, &digger->svndiff_baton);
+                             &intermediate);
+  svn_base64_decode (intermediate, digger->pool, &digger->svndiff_parser);
   
   return SVN_NO_ERROR;
 }
@@ -1197,14 +1194,13 @@ xml_handle_end (void *userData, const char *name)
   /* EVENT: when we get a </text-delta>, do major cleanup.  */
   if (strcmp (name, "text-delta") == 0)
     {
-      if (digger->svndiff_write != NULL)
+      if (digger->svndiff_parser != NULL)
         {     
           /* (length = 0) implies that we're done parsing svndiff stream.
              Let the parser flush its buffer, clean up, whatever it wants
              to do. */
           apr_size_t len = 0;
-          err = digger->svndiff_write (digger->svndiff_baton, NULL, &len,
-                                       digger->pool);
+          err = svn_stream_write (digger->svndiff_parser, NULL, &len);
           if (err)
             svn_xml_signal_bailout (err, digger->svn_parser);
         }
@@ -1301,14 +1297,13 @@ xml_handle_data (void *userData, const char *data, int len)
       svn_error_t *err;
       
       /* Check that we have an svndiff parser to deal with this data. */
-      if (digger->svndiff_write == NULL)
+      if (digger->svndiff_parser == NULL)
         return;
 
       /* Pass the data to our current svndiff parser.  When the parser
          has received enough bytes to make a "window", it pushes the
          window to the uber-caller's own window-consumer routine. */
-      err = digger->svndiff_write (digger->svndiff_baton, data, &length,
-                                   digger->pool);
+      err = svn_stream_write (digger->svndiff_parser, data, &length);
       if (err)
         {
           svn_xml_signal_bailout
@@ -1385,8 +1380,7 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   digger->rootdir_baton    = NULL;
   digger->dir_baton        = NULL;
   digger->validation_error = SVN_NO_ERROR;
-  digger->svndiff_write    = NULL;
-  digger->svndiff_baton    = NULL;
+  digger->svndiff_parser   = NULL;
   digger->postfix_hash     = apr_make_hash (main_subpool);
 
   /* Create an expat parser */

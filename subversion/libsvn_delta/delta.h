@@ -198,12 +198,11 @@ typedef struct svn_xml__digger_t
      this is done by svn_xml_signal_bailout(). */
   svn_xml_parser_t *svn_parser;  
 
-  /* An svndiff write handler, called whenever we receive binary data
-     from expat.  Specifically, this is the _current_ handler that
-     we're using for the data within the _current_ file being added or
-     replaced. */
-  svn_write_fn_t *svndiff_write;
-  void *svndiff_baton;
+  /* An writable generic stream to parse svndiff data, called whenever
+     we receive binary data from expat.  Specifically, this is the
+     _current_ handler that we're using for the data within the
+     _current_ file being added or replaced. */
+  svn_stream_t *svndiff_parser;
 
   /* A hashtable: text-delta-ref-IDs ==> file_batons.  
      Used for "postfix" text-deltas. */

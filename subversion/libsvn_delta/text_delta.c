@@ -45,8 +45,7 @@ struct svn_txdelta_stream_t {
 struct apply_baton {
   /* These are copied from parameters passed to svn_txdelta_apply.  */
   svn_stream_t *source;
-  svn_write_fn_t *target_fn;
-  void *target_baton;
+  svn_stream_t *target;
 
   /* Private data.  Between calls, SBUF contains the data from the
    * last window's source view, as specified by SBUF_OFFSET and
@@ -402,15 +401,14 @@ apply_window (svn_txdelta_window_t *window, void *baton)
 
   /* Write out the output. */
   len = window->tview_len;
-  err = ab->target_fn (ab->target_baton, ab->tbuf, &len, ab->pool);
+  err = svn_stream_write (ab->target, ab->tbuf, &len);
   return err;
 }
 
 
 void
 svn_txdelta_apply (svn_stream_t *source,
-                   svn_write_fn_t *target_fn,
-                   void *target_baton,
+                   svn_stream_t *target,
                    apr_pool_t *pool,
                    svn_txdelta_window_handler_t **handler,
                    void **handler_baton)
@@ -421,8 +419,7 @@ svn_txdelta_apply (svn_stream_t *source,
 
   ab = apr_palloc (subpool, sizeof (*ab));
   ab->source = source;
-  ab->target_fn = target_fn;
-  ab->target_baton = target_baton;
+  ab->target = target;
   ab->pool = subpool;
   ab->sbuf = NULL;
   ab->sbuf_size = 0;

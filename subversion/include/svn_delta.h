@@ -183,45 +183,41 @@ void svn_txdelta_free (svn_txdelta_stream_t *stream);
 
 
 /* Prepare to apply a text delta.  SOURCE is a readable generic stream
-   containing the source data, TARGET_FN and TARGET_BATON specify how
-   to write target data, and allocation takes place in a sub-pool of
+   yielding the source data, TARGET is a writable generic stream to
+   write target data to, and allocation takes place in a sub-pool of
    POOL.  On return, *HANDLER is set to a window handler function and
    *HANDLER_BATON is set to the value to pass as the BATON argument to
    *HANDLER.  */
 void svn_txdelta_apply (svn_stream_t *source,
-                        svn_write_fn_t *target_fn,
-                        void *target_baton,
+                        svn_stream_t *target,
                         apr_pool_t *pool,
                         svn_txdelta_window_handler_t **handler,
                         void **handler_baton);
 
 
 
-/*** Producing and consuming SVNDIFF-format text deltas.  ***/
+/*** Producing and consuming svndiff-format text deltas.  ***/
 
-/* Prepare to produce an SVNDIFF-format diff from text delta windows.
-   WRITE_FN and WRITE_BATON specify how the SVNDIFF output should be
-   written.  A zero-length write will be performed to signify the end
-   of the output.  Allocation takes place in a sub-pool of POOL.  On
-   return, *HANDLER is set to a window handler function and
-   *HANDLER_BATON is set to the value to pass as the BATON argument to
-   *HANDLER.  */
-void svn_txdelta_to_svndiff (svn_write_fn_t *write_fn,
-                             void *write_baton,
+/* Prepare to produce an svndiff-format diff from text delta windows.
+   OUTPUT is a writable generic stream to write the svndiff data to.
+   A zero-length write will be performed to signify the end of the
+   output.  Allocation takes place in a sub-pool of POOL.  On return,
+   *HANDLER is set to a window handler function and *HANDLER_BATON is
+   set to the value to pass as the BATON argument to *HANDLER.  */
+void svn_txdelta_to_svndiff (svn_stream_t *output,
                              apr_pool_t *pool,
                              svn_txdelta_window_handler_t **handler,
                              void **handler_baton);
 
-/* Prepare to parse an SVNDIFF-format string into a text delta.  On
-   return, WRITE_FN and WRITE_BATON are set to a function and baton
-   which will parse the stream, invoking HANDLER with HANDLER_BATON
-   whenever a new window is ready.  You must call write_fn with a
-   *LEN of 0 at the end of your data stream.  */
+/* Prepare to parse an svndiff-format string into a text delta.  On
+   return, *PARSE is set to a writable generic stream which will parse
+   the data, invoking HANDLER with HANDLER_BATON whenever a new window
+   is ready.  You must perform a zero-length write to *PARSE at the
+   end of your data stream.  */
 void svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
                                 void *handler_baton,
                                 apr_pool_t *pool,
-                                svn_write_fn_t **write_fn,
-                                void **write_baton);
+                                svn_stream_t **parse);
 
 
 
@@ -566,13 +562,12 @@ void svn_delta_wrap_editor (const svn_delta_edit_fns_t **new_editor,
 
 
 
-/* An editor which outputs XML delta streams.  OUTPUT and OUTPUT_BATON
-   will be used to write the output.  On return, *EDITOR and
-   *EDITOR_BATON will be set to the editor and its associate baton.
-   The editor's memory will live in a sub-pool of POOL. */
+/* Creates an editor which outputs XML delta streams to OUTPUT.  On
+   return, *EDITOR and *EDITOR_BATON will be set to the editor and its
+   associate baton.  The editor's memory will live in a sub-pool of
+   POOL. */
 svn_error_t *
-svn_delta_get_xml_editor (svn_write_fn_t *output,
-                          void *output_baton,
+svn_delta_get_xml_editor (svn_stream_t *output,
                           const svn_delta_edit_fns_t **editor,
                           void **edit_baton,
                           apr_pool_t *pool);

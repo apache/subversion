@@ -75,8 +75,8 @@ main (int argc, char *argv[])
       status = apr_open (&stdout_handle, "-", APR_WRITE,
                          APR_OS_DEFAULT, globalpool);
       
-      err = svn_delta_get_xml_editor (svn_io_file_writer,
-                                      (void *) stdout_handle,
+      err = svn_delta_get_xml_editor (svn_stream_from_aprfile (stdout_handle,
+							       globalpool),
                                       &my_editor, &my_edit_baton,
                                       globalpool);
       if (err)

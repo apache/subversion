@@ -37,17 +37,14 @@ svn_error_t *svn_fs__make_file (svn_fs_id_t *id_p,
 				apr_pool_t *pool);
 
 
-/* Change the contents of the file node ID in FS.  Set *WRITE_FN_P and
-   *WRITE_BATON_P to a `write'-like function and a baton; the data
-   written using this function and baton become the file's new
-   contents.
+/* Change the contents of the file node ID in FS.  Set *WRITER to a
+   writable generic stream which sets the file's new contents.
 
    The node must have already been cloned as part of some transaction;
    otherwise, this function may corrupt the filesystem.
 
    Do any necessary temporary allocation in POOL. */
-svn_error_t *svn_fs__write_file (svn_write_fn_t **write_fn_p,
-				 void **write_baton_p,
+svn_error_t *svn_fs__write_file (svn_stream_t **writer,
 				 svn_fs_t *fs,
 				 svn_fs_id_t *id,
 				 apr_pool_t *pool);

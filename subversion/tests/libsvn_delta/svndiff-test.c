@@ -20,61 +20,35 @@
 #include "svn_error.h"
 
 
-/* NOTE: Does no error-checking.  */
-static svn_error_t *
-read_from_file (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
-{
-  FILE *fp = baton;
-
-  if (!fp || feof (fp) || ferror (fp))
-    *len = 0;
-  else
-    *len = fread (buffer, 1, *len, fp);
-  return SVN_NO_ERROR;
-}
-
-
-/* NOTE: Does no error-checking.  */
-static svn_error_t *
-write_to_file (void *baton, const char *data, apr_size_t *len,
-               apr_pool_t *pool)
-{
-  FILE *fp = baton;
-
-  *len = fwrite (data, 1, *len, fp);
-  return SVN_NO_ERROR;
-}
-
-
 int
 main (int argc, char **argv)
 {
   FILE *source_file;
   FILE *target_file;
-  svn_txdelta_stream_t *stream;
+  svn_txdelta_stream_t *txdelta_stream;
   svn_txdelta_window_t *window;
   svn_txdelta_window_handler_t *svndiff_handler;
-  svn_write_fn_t *base64_handler;
-  void *svndiff_baton, *base64_baton;
+  svn_stream_t *base64_stream;
+  void *svndiff_baton;
 
   source_file = fopen (argv[1], "rb");
   target_file = fopen (argv[2], "rb");
 
   apr_initialize();
-  svn_txdelta (&stream, svn_stream_from_stdio (source_file, NULL),
+  svn_txdelta (&txdelta_stream, svn_stream_from_stdio (source_file, NULL),
 	       svn_stream_from_stdio (target_file, NULL), NULL);
 
-  svn_base64_encode (write_to_file, stdout, NULL,
-                     &base64_handler, &base64_baton);
-  svn_txdelta_to_svndiff (base64_handler, base64_baton, NULL,
-                          &svndiff_handler, &svndiff_baton);
+  svn_base64_encode (svn_stream_from_stdio (stdout, NULL), NULL,
+                     &base64_stream);
+  svn_txdelta_to_svndiff (base64_stream, NULL, &svndiff_handler,
+                          &svndiff_baton);
   do {
-    svn_txdelta_next_window (&window, stream);
+    svn_txdelta_next_window (&window, txdelta_stream);
     svndiff_handler (window, svndiff_baton);
     svn_txdelta_free_window (window);
   } while (window != NULL);
 
-  svn_txdelta_free (stream);
+  svn_txdelta_free (txdelta_stream);
   fclose (source_file);
   fclose (target_file);
 
