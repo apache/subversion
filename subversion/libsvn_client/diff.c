@@ -924,9 +924,9 @@ convert_to_url (const char **url,
 
 
 
-/* URL1/PATH1, URL2/PATH2, and TARGET_WCPATH all better be directories.   For
-   the single file case, the caller does the merging manually.  PATH1 and PATH2 
-   can be NULL. */
+/* URL1/PATH1, URL2/PATH2, and TARGET_WCPATH all better be
+   directories.  For the single file case, the caller does the merging
+   manually.  PATH1 and PATH2 can be NULL. */
 static svn_error_t *
 do_merge (const char *URL1,
           const char *path1,
