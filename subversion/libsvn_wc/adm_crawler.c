@@ -1155,7 +1155,7 @@ report_single_mod (const char *name,
                                             (*stack)->pool));
           if (prop_modified_p)
             SVN_ERR (do_prop_deltas (full_path, entry, editor, 
-                                     tb->editor_baton, (*stack)->pool));
+                                     new_dir_baton, (*stack)->pool));
         }
       
       /* Adding a new file: */
