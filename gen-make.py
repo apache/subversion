@@ -156,9 +156,9 @@ if __name__ == '__main__':
 
   # Remember all options so other scripts can use them
   opt_conf = open('gen-make.opts', 'w')
-  print >> opt_conf, "[options]"
+  opt_conf.write('[options]\n')
   for opt, val in rest.list:
-    print >> opt_conf, opt, '=', val
+    opt_conf.write(opt + ' = ' + val + '\n')
   opt_conf.close()
 
   if gentype not in gen_modules.keys():
