@@ -111,3 +111,11 @@ Candidate changes:
     Justification: Ease of installation; very simple change. 
     Votes:
       +1: dionisos, dlr
+
+  * r9198
+    Issue 1802: use APR_EOL_STR endings to create runtime config files.
+    Justification: win32 users see junk when opening them in notepad.exe.
+    Notes:  Pretty embarrassing.  We got it right for README.txt already,
+            how did we forget the other files in ~/.subversion/?  :-)
+    Votes:
+      +1: sussman
