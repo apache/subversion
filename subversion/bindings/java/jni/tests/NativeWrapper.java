@@ -103,6 +103,17 @@ public class NativeWrapper
      * setter for "attributes" in Entry class
      */
     public static native void entrySetAttributes(Entry entry, Hashtable attributes);
+    
+    /**
+     * wrapper for function "hashtable__create" (hashtable.h)
+     */
+    public static native Hashtable hashtableCreate();
+
+    /**
+     * wrapper for function "hashtable__put" (hashtable.h)
+     */
+    public static native void hashtablePut(Hashtable hashtable, Object key, Object value);
+
 }
 
 /* 
