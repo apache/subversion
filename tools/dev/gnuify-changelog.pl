@@ -35,19 +35,6 @@
              "rassilon"    => 'Bill Tutt <rassilon@lyra.org>',
              "kbohling"    => 'Kirby C. Bohling <kbohling@birddog.com>', );
 
-%months = ( "Jan" => "01",
-            "Feb" => "02",
-            "Mar" => "03",
-            "Apr" => "04",
-            "May" => "05",
-            "Jun" => "06",
-            "Jul" => "07",
-            "Aug" => "08",
-            "Sep" => "09",
-            "Oct" => "10",
-            "Nov" => "11",
-            "Dec" => "12", );
-
 $parse_next_line = 0;
 
 while (<>) {
@@ -64,7 +51,7 @@ while (<>) {
 
     @parts = split (/ /, $_);
 
-    print "$parts[8]-$months{$parts[7]}-$parts[6] $hackers{$parts[3]}\n";
+    print "$parts[5] $hackers{$parts[3]}\n";
   } else {
     print "\t$_";
   }
