@@ -303,11 +303,14 @@ svn_error_t *svn_client__get_auto_props (apr_hash_t **properties,
    from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
    modified the delete will fail and return an error unless FORCE is TRUE.
    If DRY_RUN is TRUE all the checks are made to ensure that the delete can
-   occur, but the working copy is not modifed. */
+   occur, but the working copy is not modifed.  The NOTIFY_FUNC is called
+   with the NOTIFY_BATON for each file or directory deleted. */
 svn_error_t * svn_client__wc_delete (const char *path,
                                      svn_wc_adm_access_t *adm_access,
                                      svn_boolean_t force,
                                      svn_boolean_t dry_run,
+                                     svn_wc_notify_func_t notify_func,
+                                     void *notify_baton,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 

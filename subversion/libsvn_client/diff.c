@@ -1054,14 +1054,12 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
       {
-        /* This is a bit ugly: we don't want svn_client__wc_delete to
-           notify because repos_diff.c:delete_item will do it for us. */
-        svn_wc_notify_func_t notify_func = merge_b->ctx->notify_func;
-        merge_b->ctx->notify_func = NULL;
-
+        /* Passing NULL for the notify_func and notify_baton because
+         * repos_diff.c:delete_item will do it for us. */
         err = svn_client__wc_delete (mine, parent_access, merge_b->force,
-                                     merge_b->dry_run, merge_b->ctx, subpool);
-        merge_b->ctx->notify_func = notify_func;
+                                     merge_b->dry_run, 
+                                     NULL, NULL,
+                                     merge_b->ctx, subpool);
       }
       if (err && state)
         {
@@ -1198,6 +1196,47 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* Struct used for as the baton for calling merge_delete_notify_func(). */
+typedef struct merge_delete_notify_baton_t
+{
+  svn_client_ctx_t *ctx;
+
+  /** path to skip */
+  const char *path_skip;
+} merge_delete_notify_baton_t;
+
+/* Notify callback function that wraps the normal callback
+ * function to remove a notification that will be sent twice
+ * and set the proper action. */
+static void
+merge_delete_notify_func (void *baton,
+                          const char *path,
+                          svn_wc_notify_action_t action,
+                          svn_node_kind_t kind,
+                          const char *mime_type,
+                          svn_wc_notify_state_t content_state,
+                          svn_wc_notify_state_t prop_state,
+                          svn_revnum_t revision)
+{
+  merge_delete_notify_baton_t *mdb = (merge_delete_notify_baton_t *) baton;
+
+  /* Skip the notification for the path we called svn_client__wc_delete() with,
+   * because it will be outputed by repos_diff.c:delete_item */  
+  if (!strcmp(path,mdb->path_skip))
+    return;
+  
+  /* svn_client__wc_delete() is written primarily for scheduling operations not
+   * update operations.  Since merges are update operations we need to alter
+   * the delete notification to show as an update not a schedule so alter 
+   * the action. */
+  if (action == svn_wc_notify_delete)
+    action = svn_wc_notify_update_delete;
+
+  if (mdb->ctx->notify_func)
+    (*mdb->ctx->notify_func) (mdb->ctx->notify_baton, path, action, kind,
+                              mime_type, content_state, prop_state, revision);
+}
+
 /* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 merge_dir_deleted (svn_wc_adm_access_t *adm_access,
@@ -1227,20 +1266,29 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_dir:
-      svn_path_split (path, &parent_path, NULL, merge_b->pool);
-      SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
-                                    merge_b->pool));
-      err = svn_client__wc_delete (path, parent_access, merge_b->force,
-                                   merge_b->dry_run, merge_b->ctx, subpool);
-      if (err && state)
-        {
-          *state = svn_wc_notify_state_obstructed;
-          svn_error_clear (err);
-        }
-      else if (state)
-        {
-          *state = svn_wc_notify_state_changed;
-        }
+      {
+        merge_delete_notify_baton_t mdb;
+
+        mdb.ctx = merge_b->ctx;
+        mdb.path_skip = path;
+
+        svn_path_split (path, &parent_path, NULL, merge_b->pool);
+        SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
+                                      merge_b->pool));
+        err = svn_client__wc_delete (path, parent_access, merge_b->force,
+                                     merge_b->dry_run,
+                                     merge_delete_notify_func, (void *) &mdb,
+                                     merge_b->ctx, subpool);
+        if (err && state)
+          {
+            *state = svn_wc_notify_state_obstructed;
+            svn_error_clear (err);
+          }
+        else if (state)
+          {
+            *state = svn_wc_notify_state_changed;
+          }
+      }
       break;
     case svn_node_file:
       if (state)
