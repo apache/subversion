@@ -748,6 +748,9 @@ svn_wc_transmit_prop_deltas (const char *path,
   apr_hash_t *localprops = apr_hash_make (pool);
   apr_hash_t *baseprops = apr_hash_make (pool);
   
+  /* Get the right access baton for the job. */
+  SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, adm_access, path, pool));
+
   /* First, get the prop_path from the original path */
   SVN_ERR (svn_wc__prop_path (&props, path, adm_access, FALSE, pool));
   
