@@ -1214,10 +1214,6 @@ close_file (void *file_baton)
                                  reject_filename,
                                  SVN_WC__LOG_ATTR_ARG_3,
                                  fb->name,
-#if 0 /* kff todo: activate quietness when development stabilizes */
-                                 SVN_WC__LOG_ATTR_ARG_4,
-                                 svn_string_create ("--quiet", fb->pool),
-#endif /* 0 */
                                  SVN_WC__LOG_ATTR_INFILE,
                                  received_diff_filename,
                                  NULL);
