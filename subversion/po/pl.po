@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-07-26 21:06+0200\n"
-"PO-Revision-Date: 2004-08-10 10:52+0200\n"
+"PO-Revision-Date: 2004-08-13 23:26+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -68,8 +68,9 @@ msgid "Can't open stderr"
 msgstr "Błąd otwarcia wyjścia błędu"
 
 #: clients/cmdline/diff-cmd.c:172
+#, fuzzy
 msgid "Target lists to diff may not contain both working copy paths and URLs"
-msgstr ""
+msgstr "Obiekty dla polecenia diff nie mogą zawierać jednocześnie ścieżki do kopii roboczej i URLa"
 
 #: clients/cmdline/export-cmd.c:79
 msgid ""
@@ -277,14 +278,14 @@ msgid "(no date)"
 msgstr "(brak daty)"
 
 #: clients/cmdline/log-cmd.c:273
-#, fuzzy, c-format
+#, c-format
 msgid "Changed paths:%s"
-msgstr "Zmodyfikowane ścieżki: %s\n"
+msgstr "Zmodyfikowane ścieżki: %s"
 
 #: clients/cmdline/log-cmd.c:290
 #, c-format
 msgid " (from %s:%ld)"
-msgstr ""
+msgstr "(z %s:%ld)"
 
 #: clients/cmdline/main.c:64
 msgid "force operation to run"
@@ -473,6 +474,10 @@ msgid ""
 "style\n"
 "                             property.  ARG may be one of 'LF', 'CR', 'CRLF'"
 msgstr ""
+"użyj innego znaku końca linii niż standardowy\n"
+"                              dla plików z natywnym svn:eol-\n"
+"style\n"
+"                                atrybutem. ARG może być jednym z 'LF', 'CR', 'CRLF'"
 
 #: clients/cmdline/main.c:171
 msgid ""
@@ -481,8 +486,8 @@ msgid ""
 "usage: add PATH...\n"
 msgstr ""
 "Obejmij podane pliki i katalogi zarządzaniem wersjami, zlecając ich\n"
-"dodanie do repozytorium. Zostaną one umieszczone w repozytorium w\n"
-"trakcie najbliższego zatwierdzania.  \n"
+"dodanie do repozytorium. Zostaną one umieszczone w repozytorium przy\n"
+"następnym zatwierdzaniu.\n"
 "Wykorzystanie: add ŚCIEŻKA...\n"
 
 #: clients/cmdline/main.c:178
@@ -501,7 +506,7 @@ msgid ""
 "Output the content of specified files or URLs.\n"
 "usage: cat TARGET...\n"
 msgstr ""
-"Wypisz treść podanych plików (wskazanych przez ścieżkę lub URL).\n"
+"Wypisz treść podanych plików (wskazanych przez ścieżki lub URLe).\n"
 "Wykorzystanie: cat OBIEKT...\n"
 
 #: clients/cmdline/main.c:189
@@ -541,7 +546,7 @@ msgid ""
 "  A log message must be provided, but it can be empty.  If it is not\n"
 "  given by a --message or --file option, an editor will be started.\n"
 msgstr ""
-"Zatwierdź zmiany dokonane w kopii roboczej zapisując je\n"
+"Zatwierdź zmiany dokonane na kopii roboczej zapisując je\n"
 "w repozytorium.\n"
 "Wykorzystanie: commit [ŚCIEŻKA...]\n"
 "\n"
@@ -564,20 +569,19 @@ msgstr ""
 "zapamiętując jego historię.\n"
 "Wykorzystanie: copy ŹRÓDŁO CEL\n"
 "\n"
-"  Tak ŹRÓDŁO, jak CEL mogą być bądź ścieżkami w ramach kopii roboczej,\n"
-"  bądź URLami, zależnie od zapisu operacja ma następującą sementykę:\n"
-"     Kopia robocza -> Kopia robocza: skopiuj ale nie zatwierdzaj zmian,\n"
-"          zmiana musi zostać zatwierdzona by trafiła do repozytorium.\n"
-"     Kopia robocza -> URL: skopiuj dane z katalogu roboczego pod\n"
-"          podany URL i natychmiast zatwierdź zmiany, zapisując je\n"
-"          w repozytorium.\n"
-"     URL -> Kopia robocza: skopiuj dane z URL do kopii roboczej ale nie\n"
-"          zatwierdzaj zmian, zmiana musi zostać zatwierdzona by trafiła\n"
-"          do repozytorium.\n"
-"     URL -> URL: kopiowanie wyłącznie po stronie repozytorium, "
-"natychmiastowo\n"
-"          zatwierdzane i nie wprowadzajace zmian w kopii roboczej;\n"
-"          zapis często używany do tworzenia odgałęzień i tagów.\n"
+"  Zarówno ŹRÓDŁO jak i CEL mogą być albo ścieżką kopii roboczej (KR)\n"
+"  albo URLem:\n"
+"     KR -> KR:  skopiuj ale nie zatwierdzaj zmian, zmiana musi zostać\n"
+"                zatwierdzona by trafiła do repozytorium\n"
+"     KR -> URL: skopiuj dane z katalogu roboczego pod podany URL i \n"
+"                natychmiast zatwierdź zmiany, zapisując je w repozytorium\n"
+"     URL -> KR: skopiuj dane z URL do kopii roboczej ale nie zatwierdzaj \n"
+"                zmian, zmiana musi zostać zatwierdzona by trafiła do \n"
+"                repozytorium\n"
+"     URL -> URL: kopiowanie wyłącznie po stronie repozytorium, \n"
+"                 natychmiastowo zatwierdzane i nie wprowadzające zmian w \n"
+"                 kopii roboczej; zapis często używany do tworzenia \n"
+"                 odgałęzień i tagów.\n"
 
 #: clients/cmdline/main.c:228
 msgid ""
@@ -599,9 +603,9 @@ msgstr ""
 "               2. delete URL...\n"
 "\n"
 "   1. Dla każdego elementu podanego w ramach ŚCIEŻKI zlecane jest\n"
-"      usunięcie przy najbliższym zatwierdzaniu. Pliki i katalogi które\n"
-"      nie były zatwierdzone są natychmiastowo usuwane z kopii\n"
-"      roboczej. Jeśli ŚCIEŻKA nie podlega zarządzaniu wersjami,\n"
+"      usunięcie przy następnym zatwierdzaniu. Pliki i katalogi, \n"
+"      które nie były zatwierdzone są natychmiastowo usuwane z \n"
+"      kopii roboczej. Jeśli ŚCIEŻKA nie podlega zarządzaniu wersjami,\n"
 "      zawiera elementy nie podlegające zarządzaniu wersjami lub\n"
 "      zawiera elementy, które zostały zmodyfikowane, nie zostanie\n"
 "      skasowana, chyba że podano opcję --force.\n"
@@ -1395,15 +1399,17 @@ msgstr ""
 #: clients/cmdline/merge-cmd.c:64
 #, fuzzy
 msgid "Second revision required"
-msgstr "Polecenie wymaga podania parametru\n"
+msgstr "Wymagane jest podanie drugiego numeru wersji\n"
 
 #: clients/cmdline/merge-cmd.c:88 clients/cmdline/merge-cmd.c:113
+#, fuzzy
 msgid "Wrong number of paths given"
-msgstr ""
+msgstr "Podano niewłaściwą ilość ścieżek"
 
 #: clients/cmdline/merge-cmd.c:131
+#, fuzzy
 msgid "A working copy merge source needs an explicit revision"
-msgstr ""
+msgstr "Do łączenia zmian między kopiami roboczymi wymagane jest podanie wprost numeru wersji"
 
 #: clients/cmdline/mkdir-cmd.c:74
 msgid "Try 'svn add' or 'svn add --non-recursive' instead?"
@@ -1449,39 +1455,39 @@ msgstr ""
 "Pobieranie zewnętrznego obiektu do '%s'\n"
 
 #: clients/cmdline/notify.c:217
-#, c-format
+#, c-format, fuzzy
 msgid "Exported external at revision %ld.\n"
-msgstr ""
+msgstr "Wyeksportowano zewnętrznie do wersji %ld.\n"
 
 #: clients/cmdline/notify.c:218
 #, c-format
 msgid "Exported revision %ld.\n"
-msgstr ""
+msgstr "Wyeksportowano wersję %ld.\n"
 
 #: clients/cmdline/notify.c:226
-#, c-format
+#, c-format, fuzzy
 msgid "Checked out external at revision %ld.\n"
-msgstr ""
+msgstr "Pobrano zewnętrznie wersję %ld."
 
 #: clients/cmdline/notify.c:227
 #, c-format
 msgid "Checked out revision %ld.\n"
-msgstr ""
+msgstr "Pobrano wersję %ld.\n"
 
 #: clients/cmdline/notify.c:237
 #, c-format
 msgid "Updated external to revision %ld.\n"
-msgstr ""
+msgstr "Uaktualniono zewnętrznie do wersji %ld.\n"
 
 #: clients/cmdline/notify.c:238
 #, c-format
 msgid "Updated to revision %ld.\n"
-msgstr ""
+msgstr "Uaktualnione do wersji %ld.\n"
 
 #: clients/cmdline/notify.c:246
 #, c-format
 msgid "External at revision %ld.\n"
-msgstr ""
+msgstr "Zewnętrznie w wersji %ld.\n"
 
 #: clients/cmdline/notify.c:247
 #, c-format
@@ -2485,7 +2491,7 @@ msgstr "Brak ścieżki do pliku uwierzytelniajacego"
 
 #: include/svn_error_codes.h:854
 msgid "Incompatible library version"
-msgstr ""
+msgstr "Niekompatybilna wersja biblioteki"
 
 #: include/svn_error_codes.h:860
 msgid "Client error in parsing arguments"
@@ -2875,7 +2881,7 @@ msgstr "'%s' nie jest obsługiwane"
 #. strings are used to tag onto a filename in case of a merge conflict
 #: libsvn_client/diff.c:659
 msgid ".working"
-msgstr ""
+msgstr ".robocza"
 
 #: libsvn_client/diff.c:661
 #, c-format
@@ -3276,7 +3282,7 @@ msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:1340
 msgid "svndiff requested position beyond end of stream"
-msgstr ""
+msgstr "Żądana pozycja svndiff jest poza końcem strumienia"
 
 #: libsvn_fs_fs/fs_fs.c:1362
 msgid "svndiff window length is corrupt"
@@ -3318,8 +3324,9 @@ msgid "Invalid prop-mod flag in rev-file"
 msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:2099
+#, fuzzy
 msgid "Copying from transactions not allowed"
-msgstr ""
+msgstr "Kopiowanie z transakcji niedozwolone"
 
 #: libsvn_fs_fs/fs_fs.c:2341 libsvn_fs_fs/fs_fs.c:2348
 msgid "next-id file corrupt"
@@ -3330,8 +3337,9 @@ msgid "Invalid change type"
 msgstr "Niewłaściwy typ zmiany"
 
 #: libsvn_fs_fs/fs_fs.c:2885
+#, fuzzy
 msgid "Can't set text contents of a directory"
-msgstr ""
+msgstr "Nie można ustawić zawartości katalogu"
 
 #: libsvn_fs_fs/fs_fs.c:2975 libsvn_fs_fs/fs_fs.c:2980
 #: libsvn_fs_fs/fs_fs.c:2987
@@ -3683,17 +3691,17 @@ msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_dav."
 #: libsvn_ra_local/split_url.c:44
 #, c-format
 msgid "Local URL '%s' does not contain 'file://' prefix"
-msgstr ""
+msgstr "Lokalny URL '%s' nie zawiera prefiksu 'file://'"
 
 #: libsvn_ra_local/split_url.c:55
 #, c-format
 msgid "Local URL '%s' contains only a hostname, no path"
-msgstr ""
+msgstr "Lokalny URL '%s' zawiera tylko nazwę hosta bez ścieżki"
 
 #: libsvn_ra_local/split_url.c:66
 #, c-format
 msgid "Local URL '%s' contains unsupported hostname"
-msgstr ""
+msgstr "Lokalny URL '%s' zawiera nie wspieraną nazwę hosta"
 
 #: libsvn_ra_local/split_url.c:108 libsvn_ra_local/split_url.c:115
 #, fuzzy, c-format
@@ -3717,7 +3725,7 @@ msgstr "Nie można pisać do '%s'"
 
 #: libsvn_ra_svn/client.c:173
 msgid "Proplist element not a list"
-msgstr ""
+msgstr "Element proplist nie jest listą"
 
 #: libsvn_ra_svn/client.c:197
 msgid "Prop diffs element not a list"
@@ -3726,12 +3734,12 @@ msgstr ""
 #: libsvn_ra_svn/client.c:218
 #, fuzzy, c-format
 msgid "Unrecognized node kind '%s' from server"
-msgstr "Nieznany rodzaj obiektu: '%s'"
+msgstr "Nieznany rodzaj obiektu: '%s' z serwera"
 
 #: libsvn_ra_svn/client.c:263 libsvn_ra_svn/client.c:317
 #, fuzzy, c-format
 msgid "Authentication error from server: %s"
-msgstr "Obszar identyfikacji: %s\n"
+msgstr "Obszar identyfikacji z serwera: %s\n"
 
 #: libsvn_ra_svn/client.c:266 libsvn_ra_svn/cram.c:196
 #: libsvn_ra_svn/cram.c:214
@@ -3746,12 +3754,12 @@ msgstr "nie zapamiętuj danych uwierzytelniających"
 #: libsvn_ra_svn/client.c:451
 #, fuzzy, c-format
 msgid "Undefined tunnel scheme '%s'"
-msgstr "Nieznany schemat URL: '%s'"
+msgstr "Nieznany tunel '%s'"
 
 #: libsvn_ra_svn/client.c:468
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
-msgstr ""
+msgstr "Tunel %s wymaga zdefiniowania zmiennej środowiskowej %s"
 
 #: libsvn_ra_svn/client.c:479
 #, fuzzy, c-format
@@ -3761,22 +3769,22 @@ msgstr "Nieznane polecenie: '%s'\n"
 #: libsvn_ra_svn/client.c:508
 #, c-format
 msgid "Error in child process: %s"
-msgstr ""
+msgstr "Błąd procesu potomnego: %s"
 
 #: libsvn_ra_svn/client.c:531
 #, fuzzy
 msgid "Can't create tunnel"
-msgstr "Błąd odczytu standardowego wejścia"
+msgstr "Nie mogę utworzyć tunelu"
 
 #: libsvn_ra_svn/client.c:575
 #, c-format
 msgid "Illegal svn repository URL '%s'"
-msgstr ""
+msgstr "Nieprawidłowy URL '%s' repozytorium svn"
 
 #: libsvn_ra_svn/client.c:594
 #, c-format
 msgid "Server requires minimum version %d"
-msgstr ""
+msgstr "Serwer wymaga wersji minimum %d"
 
 #: libsvn_ra_svn/client.c:699
 msgid "Server did not send repository root"
@@ -3787,12 +3795,14 @@ msgid "Non-string as part of file contents"
 msgstr ""
 
 #: libsvn_ra_svn/client.c:889
+#, fuzzy
 msgid "Dirlist element not a list"
-msgstr ""
+msgstr "Dirlist element nie jest listą"
 
 #: libsvn_ra_svn/client.c:1040
+#, fuzzy
 msgid "Log entry not a list"
-msgstr ""
+msgstr "Element Log nie jest listą"
 
 #: libsvn_ra_svn/client.c:1053
 msgid "Changed-path entry not a list"
@@ -3883,15 +3893,15 @@ msgstr "Nieoczekiwane przerwanie połączenia sieciowego"
 
 #: libsvn_ra_svn/marshal.c:497
 msgid "String length larger than maximum"
-msgstr ""
+msgstr "Długość łańcucha jest większa od maksimum"
 
 #: libsvn_ra_svn/marshal.c:545
 msgid "Number is larger than maximum"
-msgstr ""
+msgstr "Liczba jest większa od maksimum"
 
 #: libsvn_ra_svn/marshal.c:758
 msgid "Empty error list"
-msgstr ""
+msgstr "Pusta lista błędów"
 
 #: libsvn_ra_svn/marshal.c:765
 #, fuzzy
@@ -3901,7 +3911,7 @@ msgstr "Błędne dane z sieci"
 #: libsvn_ra_svn/marshal.c:780
 #, c-format
 msgid "Unknown status '%s' in command response"
-msgstr ""
+msgstr "Komenda zwróciła nieznany status '%s'"
 
 #: libsvn_repos/dump.c:425
 #, c-format
@@ -3919,12 +3929,12 @@ msgstr "ostatnia zmieniona a nie aktualna wersja"
 #: libsvn_repos/dump.c:960
 #, c-format
 msgid "End revision %ld is invalid (youngest revision is %ld)"
-msgstr ""
+msgstr "Końcowa wersja %ld jest niewłaściwa (najmłodszą wersją jest %ld)"
 
 #: libsvn_repos/dump.c:1069
 #, c-format
 msgid "* %s revision %ld.\n"
-msgstr ""
+msgstr "* %s wersja %ld.\n"
 
 #: libsvn_repos/load.c:801
 #, c-format
@@ -4005,7 +4015,7 @@ msgstr "URL '%s' nie jest poprawnie zakodowany"
 #: libsvn_subr/opt.c:599
 #, c-format
 msgid "URL '%s' contains a '..' element"
-msgstr ""
+msgstr "URL '%s' zawiera element '..'"
 
 #: libsvn_subr/opt.c:628
 #, c-format
@@ -4048,19 +4058,19 @@ msgid "MIME type '%s' has empty media type"
 msgstr ""
 
 #: libsvn_subr/validate.c:56
-#, fuzzy, c-format
+#, c-format
 msgid "MIME type '%s' does not contain '/'"
-msgstr "'%s' nie definiuje '%s()'"
+msgstr "Typ MIME '%s' nie zawiera '/'"
 
 #: libsvn_subr/validate.c:61
 #, c-format
 msgid "MIME type '%s' ends with non-alphanumeric character"
-msgstr ""
+msgstr "Typ MIME '%s' nie kończy się znakiem alfanumerycznym"
 
 #: libsvn_subr/version.c:67
 #, c-format
 msgid "Version mismatch in '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
-msgstr ""
+msgstr "Konflikt wersji w '%s': znaleziona %d.%d.%d%s, oczekiwana %d.%d.%d%s\""
 
 #: libsvn_wc/adm_crawler.c:374
 #, c-format
@@ -5086,14 +5096,12 @@ msgstr "Proszę czekać; odtwarzanie repozytorium może trwać długo...\n"
 msgid ""
 "\n"
 "Recovery completed.\n"
-msgstr ""
-"\n"
-"Odtwarzanie zakończone.\n"
+msgstr "\nOdtwarzanie zakończone.\n"
 
 #: svnadmin/main.c:642
 #, c-format
 msgid "The latest repos revision is %ld.\n"
-msgstr ""
+msgstr "Najnowsza wersja repozytorium to %ld.\n"
 
 #: svnadmin/main.c:750
 #, c-format
@@ -5128,19 +5136,19 @@ msgstr ""
 #: svndumpfilter/main.c:641
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
-msgstr ""
+msgstr "Wersja %ld zatwierdzona jako %ld.\n"
 
 #: svndumpfilter/main.c:649
 #, c-format
 msgid "Revision %ld skipped.\n"
-msgstr ""
+msgstr "Pominięto wersję %ld.\n"
 
 #: svndumpfilter/main.c:892
-#, c-format
+#, c-format, fuzzy
 msgid ""
 "Dropped %d revision(s).\n"
 "\n"
-msgstr ""
+msgstr "Opuszczono %d wersji.\n"
 
 #: svndumpfilter/main.c:898
 #, fuzzy
@@ -5148,25 +5156,25 @@ msgid "Revisions renumbered as follows:\n"
 msgstr "Zakres wersji jest niedozwolony w tym przypadku"
 
 #: svndumpfilter/main.c:926
-#, c-format
+#, c-format, fuzzy
 msgid "   %ld => (dropped)\n"
-msgstr ""
+msgstr "  %ld => (opuszczono)\n"
 
 #: svndumpfilter/main.c:930
 #, c-format
 msgid "   %ld => %ld\n"
-msgstr ""
+msgstr "  %ld => %ld\n"
 
 #: svndumpfilter/main.c:941
 #, c-format
 msgid "Dropped %d node(s):\n"
-msgstr ""
+msgstr "Opuszczono %d obiekt(y):\n"
 
 #: svndumpfilter/main.c:1149
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
-msgstr ""
+msgstr "\nBłąd: nie dostarczono prefiksów.\n"
 
 #: svndumpfilter/main.c:1192
 #, fuzzy, c-format
@@ -5555,7 +5563,7 @@ msgstr "ostatnia zmieniona a nie aktualna wersja"
 
 #: svnversion/main.c:287
 msgid "exported\n"
-msgstr ""
+msgstr "wyksportowano\n"
 
 #: svnversion/main.c:295
 #, c-format
