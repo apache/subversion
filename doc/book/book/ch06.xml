@@ -355,6 +355,15 @@ collabnet = svn.collab.net
             </listitem>
           </varlistentry>
           <varlistentry>
+            <term><literal>ssl-authorities-file</literal></term>
+            <listitem>
+              <para>This specifies the path of a file that contains the
+                certificates of the certificate authorities (or CAs) that
+                are accepted by the Subversion client when accessing the
+                repository over HTTPS.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
             <term><literal>svn-tunnel-agent</literal></term>
             <listitem>
               <para>This specifies the external agent program through
