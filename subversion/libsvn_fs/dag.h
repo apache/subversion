@@ -77,10 +77,6 @@ const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node);
 int svn_fs__dag_is_mutable (dag_node_t *node);
 
 
-/* Close NODE.  */
-void svn_fs__dag_close (dag_node_t *node); 
-
-
 /* Return true iff NODE is a file/directory/copy.  */
 int svn_fs__dag_is_file (dag_node_t *node);
 int svn_fs__dag_is_directory (dag_node_t *node);
