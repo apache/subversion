@@ -375,6 +375,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                apr_pool_t *pool)
 {
   apr_status_t apr_err;
+  svn_error_t *err;
   apr_file_t *dst = NULL; /* old habits die hard */
   svn_delta_edit_fns_t *track_editor;
   const svn_delta_edit_fns_t *commit_editor;
@@ -508,16 +509,32 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
   if (is_import)
     {
       /* Crawl a directory tree, importing. */
-      SVN_ERR (import (base_dir, new_entry, editor, edit_baton, pool));
+      err = import (base_dir, new_entry, editor, edit_baton, pool);
+      if (err)
+        {
+          /* ignoring the return value of this.  we're *already*
+             about to die.  we just want to give the RA layer a
+             chance to clean up the fs transaction. */
+          ra_lib->abort_commit (session, edit_baton);
+          return err;
+        }
     }
   else
     {
       /* Crawl local mods and report changes to EDITOR.  When
          close_edit() is called, revisions will be bumped. */
-      SVN_ERR (svn_wc_crawl_local_mods (base_dir,
-                                        condensed_targets,
-                                        editor, edit_baton,
-                                        pool));
+      err = svn_wc_crawl_local_mods (base_dir,
+                                     condensed_targets,
+                                     editor, edit_baton,
+                                     pool);
+      if (err)
+        {
+          /* ignoring the return value of this.  we're *already* about
+             to die.  we just want to give the RA layer a chance to
+             clean up the fs transaction. */
+          ra_lib->abort_commit (session, edit_baton);
+          return err;
+        }
     }
 
 

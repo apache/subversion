@@ -557,6 +557,7 @@ svn_repos_get_editor (svn_delta_edit_fns_t **editor,
   eb->hook_baton = hook_baton;
   eb->base_path = svn_string_dup (base_path, subpool);
   eb->fs = fs;
+  eb->txn = NULL;
 
   *edit_baton = eb;
   *editor = e;
@@ -564,6 +565,16 @@ svn_repos_get_editor (svn_delta_edit_fns_t **editor,
   return SVN_NO_ERROR;
 }
 
+
+
+
+svn_fs_txn_t *
+svn_repos_get_commit_txn (void *edit_baton)
+{
+  struct edit_baton *eb = edit_baton;
+
+  return eb->txn;
+}
 
 
 

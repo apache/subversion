@@ -57,6 +57,10 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_ra_close_commit_func_t close_func,
   void *close_baton);
 
+svn_error_t * svn_ra_dav__abort_commit(
+ void *session_baton,
+ void *edit_baton);
+
 svn_error_t * svn_ra_dav__do_checkout (
   void *session_baton,
   svn_revnum_t revision,
