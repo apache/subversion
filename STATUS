@@ -17,7 +17,8 @@ Candidate changes:
       The docstring for svn_sort_compare_paths says "New in 1.1."
       and needs to be updated to say 1.2 if this does not go in.
     Votes:
-      -0: ghudson (what's the point of putting code cleanups into 1.1?)
+      -0: ghudson, lundblad (what's the point of putting code cleanups into
+          1.1?)
       +1: cmpilato
 
   * r10674
@@ -68,7 +69,7 @@ Candidate changes:
       Unintrusive change.  Much more user friendly than store-auth-creds
       because username, SSL server cert trust, etc, is still saved.
     Votes:
-       +1: bliss, ghudson
+       +1: bliss, ghudson, lundblad
 
   * r10819
     Avoid repository corruption if executed with closed std{in,out,err}
@@ -84,7 +85,7 @@ Candidate changes:
     Justification:
       Crashes bad.
     Votes:
-      +1: ghudson
+      +1: ghudson, lundblad
 
   * r10860
     Trivial message fixes.
