@@ -1,0 +1,13 @@
+@echo off
+@rem **************************************************************************
+cd ..\..\subversion\po
+[for pofiles]echo Running msgfmt on [pofiles.po]...
+msgfmt.exe -o [pofiles.mo] [pofiles.po]
+if not errorlevel 0 goto err
+[end]
+goto end
+@rem **************************************************************************
+:err
+set exitcode=1
+:end
+exit %exitcode%

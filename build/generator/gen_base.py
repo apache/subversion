@@ -505,6 +505,7 @@ class TargetI18N(Target):
     # Let the Makefile determine this via .SUFFIXES
     self.compile_cmd = None
     self.objext = '.mo'
+    self.external_project = options.get('external-project')
 
   def add_dependencies(self, graph, cfg, extmap):
     graph.add(DT_INSTALL, self.install, self)

@@ -100,6 +100,9 @@ def _usage_exit():
   print
   print "  --enable-quantify"
   print "           add support for Quantify instrumentation"
+  print
+  print "  --enable-nls"
+  print "           add support for gettext localization"
   sys.exit(0)
 
 
@@ -128,6 +131,7 @@ if __name__ == '__main__':
                                 'enable-pool-debug',
                                 'enable-purify',
                                 'enable-quantify',
+                                'enable-nls',
                                 ])
     if len(args) > 1:
       _usage_exit()
