@@ -814,7 +814,7 @@ svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
 
   eb = make_editor_baton (anchor, target, diff_cmd, diff_cmd_baton, recurse,
                           pool);
-  tree_editor = svn_delta_default_editor (eb->pool);
+  tree_editor = svn_delta_old_default_editor (eb->pool);
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;

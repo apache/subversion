@@ -668,7 +668,7 @@ svn_delta_get_xml_editor (svn_stream_t *output,
 {
   struct edit_baton *eb;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_delta_edit_fns_t *tree_editor = svn_delta_default_editor (pool);
+  svn_delta_edit_fns_t *tree_editor = svn_delta_old_default_editor (pool);
 
   /* Construct an edit baton. */
   eb = apr_palloc (subpool, sizeof (*eb));

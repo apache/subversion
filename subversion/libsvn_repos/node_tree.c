@@ -370,7 +370,7 @@ svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
   struct edit_baton *my_edit_baton;
 
   /* Set up the editor. */
-  my_editor = svn_delta_default_editor (pool);
+  my_editor = svn_delta_old_default_editor (pool);
   my_editor->open_root           = open_root;
   my_editor->delete_entry        = delete_entry;
   my_editor->add_directory       = add_directory;

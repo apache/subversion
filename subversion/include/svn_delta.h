@@ -308,9 +308,12 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
 
 /* A structure full of callback functions the delta source will invoke
    as it produces the delta.  */
-typedef struct svn_delta_edit_fns_t
+typedef struct
 {
-  /* Here's how to use these functions to express a tree delta.
+  /*
+     FUNCTION USAGE
+
+     Here's how to use these functions to express a tree delta.
 
      The delta consumer implements the callback functions described in
      this structure, and the delta producer invokes them.  So the
@@ -379,6 +382,9 @@ typedef struct svn_delta_edit_fns_t
      ANCESTOR_PATH and ANCESTOR_REVISION indicate the ancestor of the
      resulting object.
 
+
+     FUNCTION CALL ORDERING
+
      There are six restrictions on the order in which the producer
      may use the batons:
 
@@ -413,7 +419,7 @@ typedef struct svn_delta_edit_fns_t
 
      6. When the producer calls `apply_textdelta', it must make all of
         the window handler calls (including the NULL window at the
-        end) before issuing any other edit_fns calls.
+        end) before issuing any other svn_delta_editor_t calls.
 
      So, the producer needs to use directory and file batons as if it
      is doing a single depth-first traversal of the tree, with the
@@ -424,7 +430,55 @@ typedef struct svn_delta_edit_fns_t
      generates an XML-style tree delta.  An XML tree delta mentions
      each directory once, and includes all the changes to that
      directory within the <directory> element.  However, it does allow
-     text deltas to appear at the end.  */
+     text deltas to appear at the end.
+
+
+     POOL USAGE
+
+     Many editor functions are invoked multiple times, in a sequence
+     determined by the editor "driver". The driver is responsible for
+     creating a pool for use on each iteration of the editor function,
+     and clearing that pool between each iteration. The driver passes
+     the appropriate pool on each function invocation. These "iterative"
+     functions are:
+
+         open_directory   open_file
+         add_directory    add_file
+         change_dir_prop  change_file_prop
+         delete_entry
+
+     Based on the requirement of calling the editor functions in a
+     depth-first style, it is usually customary for the driver to similar
+     nest the pools. However, this is only a safety feature to ensure
+     that pools associated with deeper items are always cleared when the
+     top-level items are also cleared. The interface does not assume, nor
+     require, any particular organization of the pools passed to these
+     functions. In fact, if "postfix deltas" are used for files, the file
+     pools definitely need to live outside the scope of their parent
+     directories' pools.
+
+     Some of the editor functions are called just once, so this interface
+     simplifies their signatures by removing a pool argument. It is
+     assumed that a pool is reachable through a baton for these functions
+     to perform their work. These functions, and pools they will
+     typically use are:
+
+         set_target_revision    EDIT_BATON holds a pool
+         close_directory        DIR_BATON holds a pool, and should be
+                                the DIR_POOL passed to the function
+                                which created DIR_BATON (open_root,
+                                open_directory, or add_directory)
+         apply_textdelta        FILE_BATON holds a pool, and should be
+                                the FILE_POOL passed to the function
+                                which created FILE_BATON (open_file
+                                or add_File)
+         close_file             FILE_BATON holds a pool, and should be
+                                the FILE_POOL passed to the function
+                                which created FILE_BATON (open_file
+                                or add_File)
+         close_edit             EDIT_BATON holds a pool
+         abort_edit             EDIT_BATON holds a pool
+  */
 
   /* Set the target revision for this edit to TARGET_REVISION.  This
      call, if used, should precede all other editor calls. */
@@ -437,9 +491,14 @@ typedef struct svn_delta_edit_fns_t
      producer should call `close_directory' on ROOT_BATON when they're
      done.  And like other open_* calls, the BASE_REVISION here is
      the current revision of the directory (before getting bumped up
-     to the new target revision set with set_target_revision). */
+     to the new target revision set with set_target_revision).
+
+     Allocations for the returned ROOT_BATON should be performed in
+     DIR_POOL. It is also typical to (possibly) save this pool for later
+     usage by close_directory. */
   svn_error_t *(*open_root) (void *edit_baton,
                              svn_revnum_t base_revision,
+                             apr_pool_t *dir_pool,
                              void **root_baton);
 
 
@@ -448,10 +507,13 @@ typedef struct svn_delta_edit_fns_t
   /* Remove the directory entry named NAME, a child of the directory
      represented by PARENT_BATON.  REVISION is used as a sanity check
      to ensure that you are removing the revision of NAME that you
-     really think you are. */
-  svn_error_t *(*delete_entry) (svn_stringbuf_t *name,
+     really think you are.
+
+     All allocations should be performed in POOL. */
+  svn_error_t *(*delete_entry) (const char *path,
                                 svn_revnum_t revision,
-                                void *parent_baton);
+                                void *parent_baton,
+                                apr_pool_t *pool);
 
 
   /* Creating and modifying directories.  */
@@ -462,34 +524,44 @@ typedef struct svn_delta_edit_fns_t
 
      If COPYFROM_PATH is non-NULL, this add has history (i.e., is a
      copy), and the origin of the copy may be recorded as
-     COPYFROM_PATH under COPYFROM_REVISION.  */
-  svn_error_t *(*add_directory) (svn_stringbuf_t *name,
+     COPYFROM_PATH under COPYFROM_REVISION.
+
+     Allocations for the returned CHILD_BATON should be performed in
+     DIR_POOL. It is also typical to (possibly) save this pool for later
+     usage by close_directory. */
+  svn_error_t *(*add_directory) (const char *path,
                                  void *parent_baton,
-                                 svn_stringbuf_t *copyfrom_path,
+                                 const char *copyfrom_path,
                                  svn_revnum_t copyfrom_revision,
+                                 apr_pool_t *dir_pool,
                                  void **child_baton);
 
   /* We are going to change the directory entry named NAME to a
      subdirectory.  The callback must store a value in *CHILD_BATON
      that should be used as the PARENT_BATON for subsequent changes in
      this subdirectory.  BASE_REVISION is the current revision of the
-     subdirectory. */
-  svn_error_t *(*open_directory) (svn_stringbuf_t *name,
+     subdirectory.
+
+     Allocations for the returned CHILD_BATON should be performed in
+     DIR_POOL. It is also typical to (possibly) save this pool for later
+     usage by close_directory. */
+  svn_error_t *(*open_directory) (const char *path,
                                   void *parent_baton,
                                   svn_revnum_t base_revision,
+                                  apr_pool_t *dir_pool,
                                   void **child_baton);
 
   /* Change the value of a directory's property.
      - DIR_BATON specifies the directory whose property should change.
      - NAME is the name of the property to change.
-     - VALUE is the new value of the property, or zero if the property
-     should be removed altogether.  
+     - VALUE is the new value of the property, or NULL if the property
+       should be removed altogether.  
 
-     ### todo (issue #406): name could be const char *, value
-     svn_string_t instead of svn_stringbuf_t.  */
+     All allocations should be performed in POOL. */
   svn_error_t *(*change_dir_prop) (void *dir_baton,
-                                   svn_stringbuf_t *name,
-                                   svn_stringbuf_t *value);
+                                   const char *name,
+                                   const svn_string_t *value,
+                                   apr_pool_t *pool);
 
   /* We are done processing a subdirectory, whose baton is DIR_BATON
      (set by add_directory or open_directory).  We won't be using
@@ -507,21 +579,31 @@ typedef struct svn_delta_edit_fns_t
 
      If COPYFROM_PATH is non-NULL, this add has history (i.e., is a
      copy), and the origin of the copy may be recorded as
-     COPYFROM_PATH under COPYFROM_REVISION.  */
-  svn_error_t *(*add_file) (svn_stringbuf_t *name,
+     COPYFROM_PATH under COPYFROM_REVISION.
+
+     Allocations for the returned FILE_BATON should be performed in
+     FILE_POOL. It is also typical to save this pool for later usage
+     by apply_textdelta and possibly close_file. */
+  svn_error_t *(*add_file) (const char *path,
                             void *parent_baton,
-                            svn_stringbuf_t *copy_path,
+                            const char *copy_path,
                             svn_revnum_t copy_revision,
+                            apr_pool_t *file_pool,
                             void **file_baton);
 
   /* We are going to change the directory entry named NAME to a file.
      The callback can store a baton for this new file in **FILE_BATON;
      whatever value it stores there should be passed through to
      apply_textdelta and/or apply_propdelta.  This file has a current
-     revision of BASE_REVISION.  */
-  svn_error_t *(*open_file) (svn_stringbuf_t *name,
+     revision of BASE_REVISION.
+
+     Allocations for the returned FILE_BATON should be performed in
+     FILE_POOL. It is also typical to save this pool for later usage
+     by apply_textdelta and possibly close_file. */
+  svn_error_t *(*open_file) (const char *path,
                              void *parent_baton,
                              svn_revnum_t base_revision,
+                             apr_pool_t *file_pool,
                              void **file_baton);
 
   /* Apply a text delta, yielding the new revision of a file.
@@ -534,7 +616,14 @@ typedef struct svn_delta_edit_fns_t
      handler; we will then call *HANDLER on successive text
      delta windows as we receive them.  The callback should set
      *HANDLER_BATON to the value we should pass as the BATON
-     argument to *HANDLER.  */
+     argument to *HANDLER.
+
+     If *HANDLER is set to NULL, then the editor is indicating to the
+     driver that it is not interested in receiving information about
+     the changes in this file. The driver can use this information to
+     avoid computing changes. Note that the editor knows the change
+     has occurred (by virtue of this function being invoked), but is
+     simply indicating that it doesn't want the details.  */
   svn_error_t *(*apply_textdelta) (void *file_baton, 
                                    svn_txdelta_window_handler_t *handler,
                                    void **handler_baton);
@@ -542,14 +631,14 @@ typedef struct svn_delta_edit_fns_t
   /* Change the value of a file's property.
      - FILE_BATON specifies the file whose property should change.
      - NAME is the name of the property to change.
-     - VALUE is the new value of the property, or zero if the property
-     should be removed altogether.
+     - VALUE is the new value of the property, or NULL if the property
+       should be removed altogether.
 
-     ### todo (issue #406): name could be const char *, value
-     svn_string_t instead of svn_stringbuf_t.  */
+     All allocations should be performed in POOL. */
   svn_error_t *(*change_file_prop) (void *file_baton,
-                                    svn_stringbuf_t *name,
-                                    svn_stringbuf_t *value);
+                                    const char *name,
+                                    const svn_string_t *value,
+                                    apr_pool_t *pool);
 
   /* We are done processing a file, whose baton is FILE_BATON (set by
      `add_file' or `open_file').  We won't be using the baton any
@@ -564,7 +653,62 @@ typedef struct svn_delta_edit_fns_t
      gracefully clean up things if it needs to. */
   svn_error_t *(*abort_edit) (void *edit_baton);
 
+} svn_delta_editor_t;  
+
+
+
+/* ### This structure is deprecated. It is the old format of the
+   ### svn_delta_editor_t interface. */
+typedef struct svn_delta_edit_fns_t
+{
+  svn_error_t *(*set_target_revision) (void *edit_baton,
+                                       svn_revnum_t target_revision);
+  svn_error_t *(*open_root) (void *edit_baton,
+                             svn_revnum_t base_revision,
+                             void **root_baton);
+  svn_error_t *(*delete_entry) (svn_stringbuf_t *name,
+                                svn_revnum_t revision,
+                                void *parent_baton);
+  svn_error_t *(*add_directory) (svn_stringbuf_t *name,
+                                 void *parent_baton,
+                                 svn_stringbuf_t *copyfrom_path,
+                                 svn_revnum_t copyfrom_revision,
+                                 void **child_baton);
+  svn_error_t *(*open_directory) (svn_stringbuf_t *name,
+                                  void *parent_baton,
+                                  svn_revnum_t base_revision,
+                                  void **child_baton);
+  svn_error_t *(*change_dir_prop) (void *dir_baton,
+                                   svn_stringbuf_t *name,
+                                   svn_stringbuf_t *value);
+  svn_error_t *(*close_directory) (void *dir_baton);
+  svn_error_t *(*add_file) (svn_stringbuf_t *name,
+                            void *parent_baton,
+                            svn_stringbuf_t *copy_path,
+                            svn_revnum_t copy_revision,
+                            void **file_baton);
+  svn_error_t *(*open_file) (svn_stringbuf_t *name,
+                             void *parent_baton,
+                             svn_revnum_t base_revision,
+                             void **file_baton);
+  svn_error_t *(*apply_textdelta) (void *file_baton, 
+                                   svn_txdelta_window_handler_t *handler,
+                                   void **handler_baton);
+  svn_error_t *(*change_file_prop) (void *file_baton,
+                                    svn_stringbuf_t *name,
+                                    svn_stringbuf_t *value);
+  svn_error_t *(*close_file) (void *file_baton);
+  svn_error_t *(*close_edit) (void *edit_baton);
+  svn_error_t *(*abort_edit) (void *edit_baton);
+
 } svn_delta_edit_fns_t;
+
+/* ### temporary function for wrapping an svn_delta_editor_t interface
+   ### into the old-form svn_delta_edit_fns_t interface. this wrapping
+   ### function enables an old-style editor driver to drive a new-style
+   ### editor. */
+svn_delta_edit_fns_t *svn_delta_compat_wrap (const svn_delta_editor_t *editor,
+                                             apr_pool_t *pool);
 
 
 /* Return a default delta editor template, allocated in POOL.
@@ -580,7 +724,10 @@ typedef struct svn_delta_edit_fns_t
  * implement -- you can rely on the template's implementation to
  * safely do nothing of consequence.
  */
-svn_delta_edit_fns_t *svn_delta_default_editor (apr_pool_t *pool);
+svn_delta_editor_t *svn_delta_default_editor (apr_pool_t *pool);
+
+/* ### create a default editor for the old-style editor */
+svn_delta_edit_fns_t *svn_delta_old_default_editor (apr_pool_t *pool);
 
 
 

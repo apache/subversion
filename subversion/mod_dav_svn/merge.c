@@ -412,7 +412,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   apr_hash_set(revs, "", APR_HASH_KEY_STRING, rev_ptr);
 
   /* set up the editor for the delta process */
-  editor = svn_delta_default_editor(pool);
+  editor = svn_delta_old_default_editor(pool);
   editor->open_root = mr_open_root;
   editor->delete_entry = mr_delete_entry;
   editor->add_directory = mr_add_directory;

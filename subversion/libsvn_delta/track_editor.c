@@ -335,7 +335,7 @@ svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                    void *bump_baton)
 {
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
-  svn_delta_edit_fns_t *track_editor = svn_delta_default_editor (pool);
+  svn_delta_edit_fns_t *track_editor = svn_delta_old_default_editor (pool);
 
   /* Set up the editor.  These functions are no-ops, so the default
      editor's implementations are used:

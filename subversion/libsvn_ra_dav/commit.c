@@ -1196,7 +1196,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   ** uses these callbacks to describe all the changes in the working copy
   ** that must be committed to the server.
   */
-  commit_editor = svn_delta_default_editor(ras->pool);
+  commit_editor = svn_delta_old_default_editor(ras->pool);
   commit_editor->open_root = commit_open_root;
   commit_editor->delete_entry = commit_delete_entry;
   commit_editor->add_directory = commit_add_dir;

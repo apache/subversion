@@ -350,7 +350,7 @@ svn_cl__get_trace_update_editor (const svn_delta_edit_fns_t **editor,
      Set it up for the directory baton we create here, which is the
      root baton. */
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
-  svn_delta_edit_fns_t *trace_editor = svn_delta_default_editor (pool);
+  svn_delta_edit_fns_t *trace_editor = svn_delta_old_default_editor (pool);
 
   /* Set up the edit context. */
   eb->pool = svn_pool_create (pool);

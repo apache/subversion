@@ -308,7 +308,7 @@ dir_delta_get_editor (const svn_delta_edit_fns_t **editor,
   struct edit_baton *my_edit_baton;
 
   /* Set up the editor. */
-  my_editor = svn_delta_default_editor (pool);
+  my_editor = svn_delta_old_default_editor (pool);
   my_editor->open_root           = test_open_root;
   my_editor->delete_entry        = test_delete_entry;
   my_editor->add_directory       = test_add_directory;
