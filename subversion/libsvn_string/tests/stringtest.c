@@ -275,8 +275,7 @@ test10()
 
 /*
    ====================================================================
-   If you add a new test to this file, make sure to update these two
-   arrays, and then add the test to the TESTS variable in Makefile.am
+   If you add a new test to this file, update these two arrays.
 
 */
 
