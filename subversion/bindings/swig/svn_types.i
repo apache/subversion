@@ -172,7 +172,7 @@
 
 /* We have to use APR_INT64_T_FMT because SWIG won't convert the
    SVN_FILESIZE_T_FMT to the actual value only APR_INT64_T_FMT */
-#if APR_INT64_T_FMT == "lld"
+#if APR_INT64_T_FMT == "lld" || APR_INT64_T_FMT == "I64d"
 
 %typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
     "$result = t_output_helper($result,
