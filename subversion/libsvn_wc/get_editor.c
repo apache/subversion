@@ -815,38 +815,44 @@ add_or_replace_file (svn_stringbuf_t *name,
 {
   struct dir_baton *parent_dir_baton = parent_baton;
   struct file_baton *fb;
+  apr_hash_t *dirents;
   svn_error_t *err;
   apr_hash_t *entries = NULL;
   svn_wc_entry_t *entry;
   svn_boolean_t is_wc;
 
-  err = svn_wc_entries_read (&entries,
-                             parent_dir_baton->path,
-                             parent_dir_baton->pool);
-  if (err)
-    return err;
+  /* ### kff todo: if file is marked as removed by user, then flag a
+     conflict in the entry and proceed.  Similarly if it has changed
+     kind.  see issuezilla task #398. */
+  
+  SVN_ERR (svn_io_get_dirents (&dirents, parent_dir_baton->path,
+                               parent_dir_baton->pool));
+  SVN_ERR (svn_wc_entries_read (&entries,
+                                parent_dir_baton->path,
+                                parent_dir_baton->pool));
 
   entry = apr_hash_get (entries, name->data, name->len);
-
-  /* kff todo: if file is marked as removed by user, then flag a
-     conflict in the entry and proceed.  Similarly if it has changed
-     kind. */
-
+  
   /* Sanity checks. */
 
-  /* ben sez:  why do we need this sanity check?  if we're trying to
-     add a file that's already in `entries', then it's probably
-     because the user deleted the working version and ran 'svn up'.
-     either way, it certainly doesn't hurt to re-add the file.  we
-     can't possibly get the entry showing up twice in `entries', since
-     it's a hash;  and we know that we won't lose any local mods. */
-  /*  if (adding && entry)
-      return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL,
-      parent_dir_baton->pool,
-      "trying to add versioned file "
-      "%s in directory %s",
-      name->data, parent_dir_baton->path->data); */
+  /* If adding, make sure there isn't already a disk entry here with the
+     same name.  This error happen if either a) the user changed the
+     filetype of the working file and ran 'update', or b) the
+     update-driver is very confused. */
+  if (adding && apr_hash_get (dirents, name->data, name->len))
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, parent_dir_baton->pool,
+       "Can't add '%s':\n object of same name already exists in '%s'",
+       name->data, parent_dir_baton->path->data);
 
+  /* ben sez: If we're trying to add a file that's already in
+     `entries' (but not on disk), that's okay.  It's probably because
+     the user deleted the working version and ran 'svn up'.  Either
+     way, it certainly doesn't hurt to re-add the file.  We can't
+     possibly get the entry showing up twice in `entries', since it's
+     a hash; and we know that we won't lose any local mods. */
+
+  /* If replacing, make sure the SVN entry already exists. */
   if ((! adding) && (! entry))
     return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL,
                               parent_dir_baton->pool,
