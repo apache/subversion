@@ -27,6 +27,7 @@ import cStringIO
 import smtplib
 import re
 import tempfile
+import types
 
 import svn.fs
 import svn.delta
@@ -53,19 +54,40 @@ def main(pool, cmd, config_fp, repos_dir, rev, author, propname, action):
   messenger.generate()
 
 
-# Minimal, incomplete, version of popen2.Popen3 for those platforms
-# for which popen2 does not provide it.
+# Minimal, incomplete, versions of popen2.Popen[34] for those platforms
+# for which popen2 does not provide them.
 try:
   Popen3 = popen2.Popen3
+  Popen4 = popen2.Popen4
 except AttributeError:
   class Popen3:
-    def __init__(self, cmd, capturestderr):
-      if type(cmd) != str:
+    def __init__(self, cmd, capturestderr = False):
+      if type(cmd) != types.StringType:
         cmd = svn.core.argv_to_command_string(cmd)
-      self.fromchild, self.tochild = popen2.popen2(cmd, mode='b')
+      if capturestderr:
+        self.fromchild, self.tochild, self.childerr \
+            = popen2.popen3(cmd, mode='b')
+      else:
+        self.fromchild, self.tochild = popen2.popen2(cmd, mode='b')
+        self.childerr = None
 
     def wait(self):
-      return self.fromchild.close() or self.tochild.close()
+      rv = self.fromchild.close()
+      rv = self.tochild.close() or rv
+      if self.childerr is not None:
+        rv = self.childerr.close() or rv
+      return rv
+
+  class Popen4:
+    def __init__(self, cmd):
+      if type(cmd) != types.StringType:
+        cmd = svn.core.argv_to_command_string(cmd)
+      self.fromchild, self.tochild = popen2.popen4(cmd, mode='b')
+
+    def wait(self):
+      rv = self.fromchild.close()
+      rv = self.tochild.close() or rv
+      return rv
 
 
 class OutputBase:
@@ -121,7 +143,8 @@ class OutputBase:
   def run(self, cmd):
     """Override this method, if the default implementation is not sufficient.
     Execute CMD, writing the stdout produced to the output representation."""
-    pipe_ob = Popen3(cmd)
+    # By default we choose to incorporate child stderr into the output
+    pipe_ob = Popen4(cmd)
 
     buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
     while buf:
