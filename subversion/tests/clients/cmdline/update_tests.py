@@ -1460,24 +1460,27 @@ def nested_in_read_only(sbox):
   # Make enclosing wc read only
   os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0555)
   
-  # Update of nested wc should still work
-  expected_output = svntest.wc.State(B_path, {
-    'E/alpha' : Item(status='D '),
-    })
-  expected_disk = wc.State('', {
-    'lambda'  : wc.StateItem("This is the file 'lambda'."),
-    'E'       : wc.StateItem(),
-    'E/beta'  : wc.StateItem("This is the file 'beta'."),
-    'F'       : wc.StateItem(),
-    })
-  expected_status.remove('E/alpha')
-  expected_status.tweak(wc_rev=2)
-  svntest.actions.run_and_verify_update(B_path,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None, 0,
-                                        '-r', '2', B_path)
+  try:
+    # Update of nested wc should still work
+    expected_output = svntest.wc.State(B_path, {
+      'E/alpha' : Item(status='D '),
+      })
+    expected_disk = wc.State('', {
+      'lambda'  : wc.StateItem("This is the file 'lambda'."),
+      'E'       : wc.StateItem(),
+      'E/beta'  : wc.StateItem("This is the file 'beta'."),
+      'F'       : wc.StateItem(),
+      })
+    expected_status.remove('E/alpha')
+    expected_status.tweak(wc_rev=2)
+    svntest.actions.run_and_verify_update(B_path,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          None, None, None, None, None, 0,
+                                          '-r', '2', B_path)
+  finally:
+    os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0777)
 
 ########################################################################
 # Run the tests
