@@ -64,7 +64,7 @@ def detect_extra_files(node, extra_files):
         extra_files.pop(extra_files.index(pair)) # delete pattern from list
         return
 
-  print "Found unexpected disk object:", node.name
+  print "Found unexpected object:", node.name
   raise svntest.main.SVNTreeUnequal
 
 
@@ -514,7 +514,7 @@ def detect_conflict_files(node, extra_files):
       extra_files.pop(extra_files.index(pattern)) # delete pattern from list
       break
   else:
-    print "Found unexpected disk object:", node.name
+    print "Found unexpected object:", node.name
     raise svntest.main.SVNTreeUnequal
 
 def update_to_resolve_text_conflicts(sbox):
@@ -627,18 +627,6 @@ Original appended text for rho>>>>>>> .r2
   svntest.actions.run_and_verify_status(wc_backup, expected_status)
 
 #----------------------------------------------------------------------
-
-def expect_extra_files(node, extra_files):
-  """singleton handler for expected singletons"""
-
-  for pattern in extra_files:
-    mo = re.match(pattern, node.name)
-    if mo:
-      extra_files.pop(extra_files.index(pattern))
-      break
-  else:
-    print "Found unexpected disk object:", node.name
-    raise svntest.main.SVNTreeUnequal
 
 def update_delete_modified_files(sbox):
   "update that deletes modified files"
