@@ -214,7 +214,9 @@
         Unix-like systems or
         <literal>%APPDATA%/Subversion/auth/</literal> on Windows.
         (The runtime area is covered in more detail in <xref
-        linkend="svn-ch-7-sect-1"/>.)</para>
+        linkend="svn-ch-7-sect-1"/>.)  Successful credentials are
+        cached on disk, keyed on a combination of hostname, port, and
+        authentication realm.</para>  
 
       <para>When the client receives an authentication challenge, it
         first looks for the appropriae credentials in the disk cache;
@@ -234,6 +236,7 @@
 
 <screen>
 $ svn commit -F log_msg.txt --no-auth-cache
+Authentication realm: &lt;svn://host.example.com:3690&gt; example realm
 Username:  joe
 Password for 'joe':
 
@@ -245,6 +248,7 @@ Committed revision 2324.
 
 $ svn rm newfile
 $ svn commit -F new_msg.txt
+Authentication realm: &lt;svn://host.example.com:3690&gt; example realm
 Username:  joe
 [...]
 </screen>
@@ -507,42 +511,222 @@ $ svn checkout svn://example.com/project1
         repository.</para></listitem>
 
         <listitem><para>The server processes the repository's
-        <filename>conf/svnserve.conf</filename> file.  The server now
-        begins to enforce any authentication and authorization
-        policies defined in that file.</para></listitem>
+        <filename>conf/svnserve.conf</filename> file, and begins to
+        enforce any authentication and authorization policies defined
+        therein.</para></listitem>
 
-        <listitem><para>If the server allows anonymous access at all,
-        the client remains "anonymous" (unauthenticated) until it
-        makes a request which requires authentication; at that moment,
-        the server issues a new authentication challenge.  If the
-        server disallows anonymous access, the authentication
-        challenge is made right at the start.</para></listitem>
+        <listitem><para>Depending on the situation and authorization
+        policies,</para>
+
+          <itemizedlist>
+            <listitem><para>the client may be allowed to make requests
+                anonymously, without ever receiving an authentication
+                challenge, OR</para></listitem>
+
+            <listitem><para>the client may be challenged for
+                authentication at any time, OR</para></listitem>
+
+            <listitem><para>if operating in "tunnel mode", the client
+                will declare itself to be already externally
+                authenticated.</para></listitem>
+          </itemizedlist>
+        </listitem>
+
       </itemizedlist>
 
-      <para>At the time of writing, the only supported authentication
-        method is CRAM-MD5 <footnote><para>See RFC
-        2195.</para></footnote>.  In essence, the server sends a bit
+      <para>At the time of writing, the server only knows how to send
+        a CRAM-MD5 <footnote><para>See RFC 2195.</para></footnote>
+        authentication challenge.  In essence, the server sends a bit
         of data to the client.  The client uses its password to
         encrypt the data with the MD5 hash algorithm, and sends it
         back.  The server performs the same computation with the
         stored password to verify that the result is identical.  At no
         point does the actual password travel over the network.</para>
 
-      <para>A repository's <filename>svnserve.conf</filename> file is
-        the central mechanism for controlling authentication and
-        authorization policies.  The first and most important part of
-        the file is ... </para>
+      <para>It's also possible, of course, for the client to be
+        externally authenticated via a tunnel agent, such as
+        <command>SSH</command>.  In that case, the server simply
+        examines the user it's running as, and uses it as the
+        authenticated username.</para>
 
+      <para>As you've already guessed, a repository's
+        <filename>svnserve.conf</filename> file is the central
+        mechanism for controlling authentication and authorization
+        policies.  The file has the same format as other configuration
+        files (see <xref linkend="svn-ch-7-sect-1"/>): section names
+        are marked by <literal>[square brackets]</literal>, comments
+        begin with "<literal>#</literal>" characters, and each section
+        contains specific variables that can be set (<literal>variable
+        = value</literal>).  Let's walk through this file and learn
+        how to use them.  </para>
 
+      <sect3 id="svn-ch-6-sect-3.2.1">
+        <title>Create a 'users' file and realm</title>
+
+        <para>For now, the <literal>[general]</literal> section of the
+          <filename>svnserve.conf</filename> has all the variables you
+          need.  Begin by defining a file which contains usernames and
+          passwords, and an authentication realm:</para>
+
+<screen>
+[general]
+password-db = userfile
+realm = example realm
+</screen>
+
+        <para>The <literal>realm</literal> is a name that you define.
+            It tells clients which sort of "authentication namespace"
+            they're connecting to; the Subversion client displays it
+            in the authentication prompt, and uses it as a key (along
+            with the server's hostname and port) for caching
+            credentials on disk (see <xref
+            linkend="svn-ch-6-sect-2.2"/>.)  The
+            <literal>password-db</literal> points to a separate file
+            that contains a list of usernames and passwords, using the
+            same familiar format.  For example:</para>
+
+<screen>
+[users]
+harry = foopassword
+sally = barpassword
+</screen>
+
+        <para>The value of <literal>password-db</literal> can be an
+          absolute or relative path to the users file.  For many
+          admins, it's easy to keep the file right in the
+          <filename>conf/</filename> area of the repository, alongside
+          <filename>svnserve.conf</filename>.  On the other hand, it's
+          possible you may want to have two or more repositories share
+          the same users file; in that case, the file should probably
+          live in a more public place.  The repositories sharing the
+          users file should also be configured to have the same realm,
+          since the list of users essentially defines an
+          authentication realm.  Whereever the file lives, be sure to
+          set the file's read and write permissions appropriately.  If
+          you know which user(s) <command>svnserve</command> will run
+          as, restrict read access to the user file as necessary.</para>
+
+      </sect3>
+
+      <sect3 id="svn-ch-6-sect-3.2.1">
+        <title>Set access controls</title>
+
+        <para>There are two more variables to set in the
+        <filename>svnserve.conf</filename> file: they determine what
+        unauthenticated (anonymous) and authenticated users are
+        allowed to do.  The variables <literal>anon-access</literal>
+        and <literal>auth-access</literal> can be set to the values
+        <literal>none</literal>, <literal>read</literal>, or
+        <literal>write</literal>.   "<literal>none</literal>"
+        restricts all access of any kind, "<literal>read</literal>"
+        allows read-only access to the repository, and
+        "<literal>write</literal>" allows complete read/write access
+        to the repository.  For example:</para>
+
+<screen>
+[general]
+password-db = userfile
+realm = example realm
+
+# anonymous users can only read the repository
+anon-access = read
+
+# authenticated users can both read and write
+auth-access = write
+</screen>
+
+        <para>The example settings are, in fact, the default values of
+          the variables, should you forget to define them.  If you
+          want to be even more conservative, you can block anonymous
+          access completely:</para>
+
+<screen>
+[general]
+password-db = userfile
+realm = example realm
+
+# anonymous users aren't allowed
+anon-access = none
+
+# authenticated users can both read and write
+auth-access = write
+</screen>
+
+        <para>Notice that <command>svnserve</command> only understands
+          "blanket" access control.  A user either has universal
+          read/write access, universal read access, or no access.
+          There is no detailed control over access to specific paths
+          within the repository.  For many projects and sites, this
+          level of access control is more than adequate.  However, if
+          you need per-directory access control, you'll need to use
+          Apache instead of <command>svnserve</command> as your server
+          process.</para>
+
+      </sect3>
 
     </sect2>
     
     <sect2 id="svn-ch-6-sect-3.3">
       <title>SSH authentication and authorization</title>
 
-      <para>uses pre-existing SSH system accounts;  authz is determined
-        soley by system permissions on the berkeleydb files;  show
-        example of using unix groups</para>
+      <para><command>svnserve</command>'s built-in authentication can
+        be very handy, because it avoids the need to create real
+        system accounts.  On the other hand, some administrators
+        already have well-established SSH authentication frameworks in
+        place.  In these situations, all of the project's users
+        already have system accounts and the ability to "SSH into" the
+        server machine.</para>
+
+      <para>It's easy to use SSH in conjunction with
+      <command>svnserve</command>.  The client simply uses the
+      <literal>svn+ssh://</literal> URL schema to connect:</para>
+
+<screen>
+$ whoami
+harry
+
+$ svn list svn+ssh://host.example.com/repos/project
+harry@host.example.com's password:  XXXXX
+
+foo
+bar
+baz
+&hellip;
+</screen>
+
+      <para>What's happening here is that the Subversion client is
+        invoking a local <command>ssh</command> process, connecting to
+        <literal>host.example.com</literal>, authenticating as user
+        'harry', then spawning a private <command>svnserve</command>
+        process on the remote machine, running as user 'harry'.  The
+        <command>svnserve</command> command is being invoked in tunnel
+        mode (<option>-t</option>) and all network protocol is being
+        "tunneled" over the encrypted connection by
+        <command>ssh</command>, the tunnel-agent.
+        <command>svnserve</command> is aware that it's running as user
+        'harry', and if the client performs a commit, the
+        authenticated username will be attributed as the author of the
+        new revision.</para>
+
+      <para>When running over a tunnel, authorization is primarily
+        controlled by operating system permissions to the repository's
+        database files; it's very much the same as if harry were
+        accessing the repository directly via a
+        <literal>file:///</literal> URL.  If multiple system users are
+        going to be accessing the repository directly, you may want to
+        place them into a common group, and you'll need to be careful
+        about umasks.  (Be sure to read <xref
+        linkend="svn-ch-6-sect-5"/>.)  But even in the case of
+        tunneling, the <filename>svnserve.conf</filename> file can
+        still be used to block access, by simply setting
+        <literal>auth-access = read</literal> or <literal>auth-access
+        = none</literal>.</para>
+      
+
+
+      <para><emphasis>.  explain how to use tunnels section of servers
+        file.  explain the nasty details around making this work in
+        win32?</emphasis></para>
 
     </sect2>
 
