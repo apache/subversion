@@ -128,3 +128,16 @@ svn_path_last_component (svn_string_t *path, apr_pool_t *pool)
   else
     return svn_string_dup (path, pool);
 }
+
+
+int svn_path_isempty (svn_string_t *path)
+{
+  char buf[3];
+  buf[0] = '.';
+  buf[0] = SVN_PATH_REPOS_SEPARATOR;
+  buf[0] = '\0';
+
+  return ((path == NULL)
+          || (svn_string_isempty (path))
+          || (strcmp (path->data, buf) == 0));
+}

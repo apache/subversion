@@ -26,7 +26,7 @@
  * permission. For written permission, please contact info@collab.net.
  * 
  * 5. Products derived from this software may not use the "Tigris" name
- * nor may "Tigris" appear in their names without prior written
+* nor may "Tigris" appear in their names without prior written
  * permission of Collab.Net.
  * 
  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -84,6 +84,30 @@ delete (svn_string_t *name, void *walk_baton, void *parent_baton)
 }
 
 
+static void
+maybe_prepend_dest (svn_string_t **name,
+                    struct w_baton *wb,
+                    svn_string_t *parent)
+{
+  /* This is a bit funky.  We need to prepend wb->dest_dir to every
+     path the delta will touch, but due to the way parent/child batons
+     are passed, we only need to do it once at the top of the delta,
+     as it will will get passed along automatically underneath that.
+     So we should only do this if parent_baton hasn't been set yet. */
+      
+  /* kff todo: the right way would be to write
+     svn_string_prepend_str(), obviating the need to pass by
+     reference.  Do that soon. */
+
+  if (wb->dest_dir && (svn_path_isempty (parent)))
+    {
+      svn_string_t *tmp = svn_string_dup (wb->dest_dir, wb->pool);
+      svn_path_add_component (tmp, *name, SVN_PATH_LOCAL_STYLE, wb->pool);
+      *name = tmp;
+    }
+}
+
+
 static svn_error_t *
 add_directory (svn_string_t *name,
                void *walk_baton, void *parent_baton,
@@ -91,24 +115,11 @@ add_directory (svn_string_t *name,
                svn_vernum_t ancestor_version,
                void **child_baton)
 {
-  /* todo: we're not yet special-casing dest_dir.  When we do, it'll be
-     like "cvs checkout -d foo bar", which produces a tree whose top
-     dir is named foo, but everything underneath is within the
-     project's namespace and appears as in the project.  This is
-     doubly important for Subversion because the root node in a
-     repository has no name, so if no subdir of the repository is
-     specified in the checkout, the client must make up a local name
-     for the root (i.e., the -d option should probably be mandatory if
-     no other name was given). 
-  */
-
-  /* todo: it's convenient under Unix, and possibly some other OS's,
-     to just store the path as a string.  But eventually we may want
-     some more general sort of path-chain.
-  */
   svn_error_t *err;
   svn_string_t *path = (svn_string_t *) parent_baton;
   struct w_baton *wb = (struct w_baton *) walk_baton;
+
+  maybe_prepend_dest (&name, wb, path);
 
   svn_path_add_component (path, name, SVN_PATH_LOCAL_STYLE, wb->pool);
   printf ("%s/    (ancestor == %s, %d)\n",
@@ -134,6 +145,10 @@ replace_directory (svn_string_t *name,
                    svn_vernum_t ancestor_version,
                    void **child_baton)
 {
+  maybe_prepend_dest (&name,
+                      (struct w_baton *) walk_baton,
+                      (svn_string_t *) parent_baton);
+
   return 0;
 }
 
@@ -202,6 +217,12 @@ add_file (svn_string_t *name,
   svn_string_t *path = (svn_string_t *) parent_baton;
   struct w_baton *wb = (struct w_baton *) walk_baton;
 
+  /* kff todo: YO!  Need to make an adm subdir for orphan files, such
+     as `iota' in checkout-1.delta. */
+  /* fooo workig here */
+
+  maybe_prepend_dest (&name, wb, path);
+
   svn_path_add_component (path, name, SVN_PATH_LOCAL_STYLE, wb->pool);
 
   printf ("%s\n   ", path->data);
@@ -216,6 +237,10 @@ replace_file (svn_string_t *name,
               svn_string_t *ancestor_path,
               svn_vernum_t ancestor_version)
 {
+  maybe_prepend_dest (&name,
+                      (struct w_baton *) walk_baton,
+                      (svn_string_t *) parent_baton);
+
   printf ("replace file \"%s\" (%s, %ld)\n",
           name->data, ancestor_path->data, ancestor_version);
   return 0;
@@ -304,12 +329,10 @@ svn_wc_apply_delta (void *delta_src,
 
           int is_working_copy = 0;
           
-          err = svn_wc__working_copy_p (&is_working_copy, dest, pool);
-
-          if (err)
-            return err;
-          else if (is_working_copy)
-            return svn_create_error (SVN_ERR_OBSTRUCTED_UPDATE, 0, dest, pool);
+          svn_wc__working_copy_p (&is_working_copy, dest, pool);
+          if (is_working_copy)
+            return svn_create_error (SVN_ERR_OBSTRUCTED_UPDATE,
+                                     0, dest->data, NULL, pool);
         }
     }
 
