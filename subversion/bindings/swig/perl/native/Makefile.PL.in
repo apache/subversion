@@ -29,8 +29,11 @@ my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 my $apr_shlib_path_var = '@SVN_APR_SHLIB_PATH_VAR@';
 my $apr_cflags = '@SVN_APR_INCLUDES@';
 my $apu_cflags = '@SVN_APRUTIL_INCLUDES@';
+
+# According to the log of r7937, the flags guarded by the conditional break
+# the build on FreeBSD if not conditionalized.
 my $apr_ldflags = '@SVN_APR_EXPORT_LIBS@' 
-   if $^O eq 'darwin';
+   if $^O eq 'darwin' or $^O eq 'cygwin';
 
 chomp $apr_shlib_path_var;
 
