@@ -104,17 +104,7 @@ typedef struct
   dag_node_t *root_dir;
 
   /* Cache structures, for mapping const char * PATH to const
-     struct dag_node_cache_t * structures.  
-
-     ### Currently this is only used for revision roots.  To be safe
-     for transaction roots, you must have the guarantee that there is
-     never more than a single transaction root per Subversion
-     transaction ever open at a given time -- having two roots open to
-     the same Subversion transaction would be a request for pain.
-     Also, you have to ensure that if a 'make_path_mutable()' fails for
-     any reason, you don't leave cached nodes for the portion of that
-     function that succeeded.  In other words, this cache must never,
-     ever, lie. */
+     struct dag_node_cache_t * structures. */
   apr_hash_t *node_cache;
   const char *node_cache_keys[SVN_FS_NODE_CACHE_MAX_KEYS];
   int node_cache_idx;
@@ -153,23 +143,16 @@ dag_node_cache_get (svn_fs_root_t *root,
   /* Assert valid input. */
   assert (*path == '/');
 
-  /* Only allow revision roots. */
-  if (root->is_txn_root)
-    return NULL;
-
   /* Look in the cache for our desired item. */
   cache_item = apr_hash_get (frd->node_cache, path, APR_HASH_KEY_STRING);
-  if (cache_item)
+  if (cache_item && cache_item->node)
     return svn_fs_fs__dag_dup (cache_item->node, pool);
 
   return NULL;
 }
 
 
-/* Add the NODE for PATH to ROOT's node cache.  Callers should *NOT*
-   call this unless they are adding a currently un-cached item to the
-   cache, or are replacing the NODE for PATH with a new (different)
-   one. */
+/* Add the NODE for PATH to ROOT's node cache. */
 static void
 dag_node_cache_set (svn_fs_root_t *root,
                     const char *path,
@@ -196,55 +179,20 @@ dag_node_cache_set (svn_fs_root_t *root,
   assert ((frd->node_cache_idx <= num_keys)
           && (num_keys <= SVN_FS_NODE_CACHE_MAX_KEYS));
 
-  /* Only allow revision roots. */
-  if (root->is_txn_root)
-    return;
-
-  /* Special case: the caller wants us to replace an existing cached
-     node with a new one.  If the callers aren't mindless, this should
-     only happen when a node is made mutable under a transaction
-     root, and that only happens once under that root.  So, we'll be a
-     little bit sloppy here, and count on callers doing the right
-     thing. */
   cache_item = apr_hash_get (frd->node_cache, path, APR_HASH_KEY_STRING);
   if (cache_item)
     {
-      /* ### This section is somehow broken.  I don't know how, but it
-         ### is.  And I don't want to spend any more time on it.  So,
-         ### callers, use only revision root and don't try to update
-         ### an already-cached thing.  -- cmpilato */
-      abort();
-
-#if 0
-      int cache_index = cache_item->idx;
-      cache_path = frd->node_cache_keys[cache_index];
-      cache_pool = cache_item->pool;
-      cache_item->node = svn_fs_fs__dag_dup (node, cache_pool);
-
-      /* Now, move the cache key reference to the end of the keys in
-         the keys array (unless it's already at the end).  ### Yes,
-         it's a memmove(), but we're not talking about pages of memory
-         here. */
-      if (cache_index != (num_keys - 1))
-        {
-          int move_num = SVN_FS_NODE_CACHE_MAX_KEYS - cache_index - 1;
-          memmove (frd->node_cache_keys + cache_index,
-                   frd->node_cache_keys + cache_index + 1,
-                   move_num * sizeof (const char *));
-          cache_index = num_keys - 1;
-          frd->node_cache_keys[cache_index] = cache_path;
-        }
-
-      /* Advance the cache pointers. */
-      cache_item->idx = cache_index;
-      frd->node_cache_idx = (cache_index + 1) % SVN_FS_NODE_CACHE_MAX_KEYS;
+      /* Reuse the existing cache item.  (In theory we should unset
+         the hash entry, clear the pool, rebuild the cache item, and
+         reset the hash entry, but it's unlikely that the same path
+         will be replaced many times in a single transaction.) */
+      cache_item->node = svn_fs_fs__dag_dup (node, cache_item->pool);
       return;
-#endif
     }
 
   /* We're adding a new cache item.  First, see if we have room for it
      (otherwise, make some room). */
-  if (apr_hash_count (frd->node_cache) == SVN_FS_NODE_CACHE_MAX_KEYS)
+  if (num_keys == SVN_FS_NODE_CACHE_MAX_KEYS)
     {
       /* No room.  Expire the oldest thing. */
       cache_path = frd->node_cache_keys[frd->node_cache_idx];
@@ -269,12 +217,33 @@ dag_node_cache_set (svn_fs_root_t *root,
   cache_path = apr_pstrdup (cache_pool, path);
   apr_hash_set (frd->node_cache, cache_path, APR_HASH_KEY_STRING, cache_item);
   frd->node_cache_keys[frd->node_cache_idx] = cache_path;
-          
+
   /* Advance the cache pointer. */
-  frd->node_cache_idx = (frd->node_cache_idx + 1) 
-    % SVN_FS_NODE_CACHE_MAX_KEYS;
+  frd->node_cache_idx = (frd->node_cache_idx + 1) % SVN_FS_NODE_CACHE_MAX_KEYS;
 }
 
+
+/* Invalidate cache entries for PATH and any of its children. */
+static void
+dag_node_cache_invalidate (svn_fs_root_t *root,
+                           const char *path)
+{
+  fs_root_data_t *frd = root->fsap_data;
+  int i, num_keys = apr_hash_count (frd->node_cache);
+  apr_size_t len = strlen (path);
+  const char *key;
+  struct dag_node_cache_t *item;
+
+  for (i = 0; i < num_keys; i++)
+    {
+      key = frd->node_cache_keys[i];
+      if (strncmp (key, path, len) == 0 && (key[len] == '/' || !key[len]))
+        {
+          item = apr_hash_get (frd->node_cache, key, APR_HASH_KEY_STRING);
+          item->node = NULL;
+        }
+    }
+}
 
 
 
@@ -861,6 +830,9 @@ make_path_mutable (svn_fs_root_t *root,
                                            copy_id, txn_id,
                                            is_parent_copyroot, 
                                            pool));
+
+      /* Update the path cache. */
+      dag_node_cache_set (root, parent_path_path (parent_path, pool), clone);
     }
   else
     {
@@ -2194,6 +2166,9 @@ fs_make_dir (svn_fs_root_t *root,
                                     txn_id,
                                     pool));
 
+  /* Add this directory to the path cache. */
+  dag_node_cache_set (root, parent_path_path (parent_path, pool), sub_dir);
+
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (root->fs, txn_id, path, svn_fs_fs__dag_get_id (sub_dir),
                        svn_fs_path_change_add, 0, 0, SVN_INVALID_REVNUM, NULL,
@@ -2228,7 +2203,10 @@ fs_delete_node (svn_fs_root_t *root,
   SVN_ERR (svn_fs_fs__dag_delete (parent_path->parent->node,
                                   parent_path->entry,
                                   txn_id, pool));
-  
+
+  /* Remove this node and any children from the path cache. */
+  dag_node_cache_invalidate (root, parent_path_path (parent_path, pool));
+
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (root->fs, txn_id, path,
                        svn_fs_fs__dag_get_id (parent_path->node),
@@ -2442,6 +2420,9 @@ fs_make_file (svn_fs_root_t *root,
                                      parent_path->entry,
                                      txn_id,
                                      pool));
+
+  /* Add this file to the path cache. */
+  dag_node_cache_set (root, parent_path_path (parent_path, pool), child);
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (root->fs, txn_id, path, svn_fs_fs__dag_get_id (child),
