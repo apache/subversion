@@ -131,6 +131,10 @@ SOURCE=.\diff.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\externals.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\log.c
 # End Source File
 # Begin Source File
