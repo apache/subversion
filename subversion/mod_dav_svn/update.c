@@ -69,6 +69,9 @@ typedef struct {
   /* True iff we've already sent the open tag for the update. */
   svn_boolean_t started_update;
 
+  /* True iff client requested all data inline in the report. */
+  svn_boolean_t send_all;
+
 } update_ctx_t;
 
 typedef struct {
@@ -526,11 +529,18 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
           send_xml(baton->uc, "<S:remove-prop name=\"%s\"/>" DEBUG_CR, qname);
         }
     }
-  if (baton->changed_props && (! baton->added))
+  if (baton->changed_props)
     {
-      /* ### for now, we will simply tell the client to fetch all the
-         props */
-      send_xml(baton->uc, "<S:fetch-props/>" DEBUG_CR);
+      if (baton->uc->send_all)
+        {
+          fooo;
+        }
+      else if (! baton->added)
+        {
+          /* ### for now, we will simply tell the client to fetch all the
+             props */
+          send_xml(baton->uc, "<S:fetch-props/>" DEBUG_CR);
+        }
     }
 
   /* Output the 3 CR-related properties right here.
@@ -571,23 +581,43 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     send_xml(baton->uc, "</S:open-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
 }
 
+
+/* Send the opening tag of the update-report if it hasn't been sent
+   already.
+
+   Note: because send_xml does not return an error, this function
+   never returns error either.  However, its prototype anticipates a
+   day when send_xml() can return error. */
+static svn_error_t * maybe_start_update_report(update_ctx_t *uc)
+{
+  if ((! uc->resource_walk) && (! uc->started_update))
+    {
+      send_xml(uc,
+               DAV_XML_HEADER DEBUG_CR
+               "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+               "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
+               "xmlns:D=\"DAV:\" %s>" DEBUG_CR,
+               uc.send_all ? "send-all=\"true\"" : "");
+
+      uc->started_update = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t * upd_set_target_revision(void *edit_baton,
                                              svn_revnum_t target_revision,
                                              apr_pool_t *pool)
 {
   update_ctx_t *uc = edit_baton;
 
+  SVN_ERR( maybe_start_update_report(uc) );
+
   if (! uc->resource_walk)
     {
-      send_xml(uc,
-               DAV_XML_HEADER DEBUG_CR
-               "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-               "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
-               "xmlns:D=\"DAV:\">" DEBUG_CR
-               "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
-               target_revision);
-
-      uc->started_update = TRUE;
+      send_xml(uc, "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>"
+               DEBUG_CR, target_revision);
     }
 
   return SVN_NO_ERROR;
@@ -612,14 +642,18 @@ static svn_error_t * upd_open_root(void *edit_baton,
 
   *root_baton = b;
 
+  SVN_ERR( maybe_start_update_report(uc) );
+
   if (uc->resource_walk)
     {
       const char *qpath = apr_xml_quote_string(pool, b->path3, 1);
       send_xml(uc, "<S:resource path=\"%s\">" DEBUG_CR, qpath);
     }
   else    
-    send_xml(uc, "<S:open-directory rev=\"%" SVN_REVNUM_T_FMT "\">"
-             DEBUG_CR, base_revision);
+    {
+      send_xml(uc, "<S:open-directory rev=\"%" SVN_REVNUM_T_FMT "\">"
+               DEBUG_CR, base_revision);
+    }
 
   send_vsn_url(b, pool);
 
@@ -842,17 +876,10 @@ static svn_error_t * upd_close_edit(void *edit_baton,
                                     apr_pool_t *pool)
 {
   update_ctx_t *uc = edit_baton;
-  
-  if (! uc->started_update)
-    {
-      send_xml(uc,
-               DAV_XML_HEADER DEBUG_CR
-               "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-               "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
-               "xmlns:D=\"DAV:\">" DEBUG_CR);
-      uc->started_update = TRUE;
-    }
-  return SVN_NO_ERROR;
+
+  /* Our driver will unconditionally close the update report... So if
+     the report hasn't even been started yet, start it now. */
+  return maybe_start_update_report(uc);
 }
 
 
@@ -874,7 +901,6 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_boolean_t recurse = TRUE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
-  svn_boolean_t send_all = FALSE; /* Send all data to client in one report? */
   struct authz_read_baton arb;
 
   /* Construct the authz read check baton. */
@@ -908,7 +934,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         if ((strcmp(this_attr->name, "send-all") == 0)
             && (strcmp(this_attr->value, "true") == 0))
           {
-            send_all = TRUE;
+            uc.send_all = TRUE;
             break;
           }
       }
@@ -1107,7 +1133,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      repos->repos, 
                                      src_path, target,
                                      dst_path,
-                                     send_all,
+                                     uc.send_all,
                                      recurse,
                                      ignore_ancestry,
                                      editor, &uc,

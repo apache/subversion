@@ -168,6 +168,12 @@ typedef struct {
      it's not really updating the top level directory. */
   const char *target;
 
+  /* A modern server will understand our "send-all" attribute on the
+     update report request, and will put a "send-all" attribute on
+     its response.  If we see that attribute, we set this to true,
+     otherwise, it stays false (i.e., it's not a modern server). */
+  svn_boolean_t receiving_all;
+
   svn_error_t *err;
 
 } report_baton_t;
@@ -1390,6 +1396,14 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
 
   switch (elm->id)
     {
+    case ELEM_update_report:
+      att = get_attr(atts, "send-all");
+
+      if (att && (strcmp(att, "true") == 0))
+        rb->receiving_all = TRUE;
+
+      break;
+
     case ELEM_target_revision:
       att = get_attr(atts, "rev");
       /* ### verify we got it. punt on error. */
@@ -2203,6 +2217,7 @@ make_reporter (void *session_baton,
   rb->fetch_content = fetch_content;
   rb->is_switch = dst_path ? TRUE : FALSE;
   rb->target = target;
+  rb->receiving_all = FALSE;
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use
