@@ -131,9 +131,9 @@ window_handler (svn_txdelta_window_t *window, void *baton)
       ip = ibuf;
       switch (op->action_code)
         {
-        case svn_txdelta_source: *ip = 0; break;
-        case svn_txdelta_target: *ip = (0x1 << 6); break;
-        case svn_txdelta_new:    *ip = (0x2 << 6); break;
+        case svn_txdelta_source: *ip = (char)0; break;
+        case svn_txdelta_target: *ip = (char)(0x1 << 6); break;
+        case svn_txdelta_new:    *ip = (char)(0x2 << 6); break;
         }
       if (op->length >> 6 == 0)
         *ip++ |= op->length;
