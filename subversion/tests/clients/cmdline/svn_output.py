@@ -23,10 +23,11 @@
 #                 and a regexp for the kind of line matching you want.
 #
 # In theory, line order shouldn't matter: we're comparing *unordered*
-# sets of lines.  Within a line, you must choose a regexp that
-# stresses match-groups with \s+ whitespace between.  The match-groups
-# are the things compared to determine if two lines match -- insuring
-# that whitespace doesn't matter.
+# sets of lines, searching for a 1-to-1 set mapping.  Within a line,
+# you must choose a regexp that stresses match-groups with \s+
+# whitespace between.  The match-groups are the things compared to
+# determine if two lines match -- insuring that whitespace doesn't
+# matter.
 
 # Useful regexp for checkout/update:  r"^(..)\s+(.+)"  ==> '_U /foo/bar'
 # Useful regexp for commit/import:    r"^(.+)\s+(.+)"  ==> "Changing /foo/bar'
@@ -75,6 +76,19 @@ def compare_line_lists(expected_lines, actual_lines, regexp):
    second, and so on.  If all pairs match, then the lines themselves
    are said to match."""
 
-  re_machine = re.compile(regexp)
-  
+  remachine = re.compile(regexp)
+  elist, alist = expected_lines, actual_lines # copy lists so we can change 'em
 
+  for eline in elist:
+    for aline in alist:  # alist will shrink each time this loop starts
+      if not compare_lines(eline, aline, remachine):
+        del alist[alist.index(aline)] # safe to delete aline, because...
+        break # we're killing this aline loop, starting over with new eline.
+    return 1  # failure:  we examined all alines, found no match for eline.
+
+  # if we get here, then every eline had an aline match.
+  # but what if alist has *extra* lines?
+  if len(alist) > 0:
+    return 1  # failure: alist had extra junk
+  else:
+    return 0  # success: we got a 1-to-1 mapping between sets.
