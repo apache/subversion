@@ -387,14 +387,15 @@ txn_body_string_append_fail (void *baton, trail_t *trail)
                            "la dee dah, la dee day...");
 }
 
-
+/* DISABLED in mainline branch! */
+#if 0
 static svn_error_t *
 txn_body_string_copy (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
   return svn_fs__string_copy (b->fs, &(b->key), b->key, trail);
 }
-
+#endif
 
 
 static const char *bigstring1 = "\
@@ -599,7 +600,8 @@ abort_string (const char **msg, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-
+/* DISABLED in mainline branch! */
+#if 0
 static svn_error_t *
 copy_string (const char **msg, apr_pool_t *pool)
 {
@@ -645,8 +647,7 @@ copy_string (const char **msg, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
-
-
+#endif
 
 
 
@@ -661,7 +662,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   delete_rep,
   test_strings,
   abort_string,
-  copy_string,
+  /*  copy_string, */ /* DISABLED in mainline branch! */
   0
 };
 
