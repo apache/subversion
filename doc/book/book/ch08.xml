@@ -109,25 +109,6 @@
       kind of "big picture" that allows you to pinpoint the location
       of certain pieces of functionality with relative ease.</para>
 
-    <para>And what could better help a developer gain a "big picture"
-      perspective than a big picture?  To help you understand
-      how the Subversion libraries fit together, see Figure 7-1, a
-      diagram of Subversion's layers.  Program flow begins at the top
-      of the diagram (initiated by the user) and flows
-      "downward".</para>
-
-    <!-- Fitz's revised graphic here (Heaven help us if he ever makes
-         another piece of graphic art ... what *will* we call it?).
-         Verify that the layers are accurately represented.  For
-         example, It might make more sense to refer to the
-         "Repository Access" layer than the "Network Layer".  Also,
-         make sure that each library also gives its libsvn_foo name. -->
-
-    <figure id="svn-ch7-sect1-dia1">
-      <title>Subversion's "Big Picture"</title>
-      <graphic fileref="images/ch07dia1.png"/>
-    </figure>
-
     <para>Another benefit of modularity is the ability to replace a
       given module with a whole new library that implements the same
       API without affecting the rest of the code base.  In some sense,
@@ -276,9 +257,9 @@
         downward motion.  Figure 7-2 shows a typical representation of
         a tree as exactly that.</para>
 
-      <figure id="svn-ch7-sect1.1-dia1">
+      <figure id="svn-ch8-sect1.1-dia1">
         <title>Files and Directories in Two Dimensions</title>
-        <graphic fileref="images/ch07dia2.png"/>
+        <graphic fileref="images/ch08dia1.png"/>
       </figure>
 
       <para>Of course, the Subversion filesystem has a nifty third
@@ -302,9 +283,9 @@
         revision history as an added dimension to the Subversion
         filesystem universe.</para>
 
-      <figure id="svn-ch7-sect1.1-dia2">
+      <figure id="svn-ch8-sect1.1-dia2">
         <title>Revisioning Time&mdash;the Third Dimension!</title>
-        <graphic fileref="images/ch07dia3.png"/>
+        <graphic fileref="images/ch08dia2.png"/>
       </figure>
 
       <!-- Perhaps dig into the DAG/tree layers a bit here, talking
