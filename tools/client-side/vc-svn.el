@@ -338,7 +338,7 @@ to be merged."
     ;; vc-cvs does something like this
     (vc-file-setprop file 'vc-checkout-time 0)
     (vc-file-setprop file 'vc-workfile-version
-		     (vc-svn-workfile-version file))))
+                     (vc-svn-workfile-version file))))
 
 
 (defun vc-svn-print-log (file)
@@ -417,13 +417,13 @@ Compared to the default implementation, this does two things:
 Handle the case of a file which has been added, but not committed, 
 and show the user when their local copy has been modified."
   (let* ((state   (vc-state file))
-	 (rev     (vc-workfile-version file)))
+         (rev     (vc-workfile-version file)))
     (cond ((string= rev "0")
            ;; A file that is added but not yet committed.
-	   "SVN:A")
+           "SVN:A")
           ((eq state 'edited)
            ;; A file we've edited locally
-	   (concat "SVN:" rev "M"))
+           (concat "SVN:" rev "M"))
           (t
            ;; A fallback for all other states.
            (concat "SVN:" rev)))))
