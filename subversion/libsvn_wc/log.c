@@ -763,20 +763,26 @@ log_do_committed (struct log_runner *loggy,
         if (! is_this_dir)
           svn_path_add_component (full_path, sname, svn_path_local_style);
         SVN_ERR (svn_wc_entry (&entry, full_path, loggy->pool));
+        if ((! is_this_dir) 
+            && (entry->kind != svn_node_file))
+          return svn_error_createf 
+            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+             "log command for directory '%s' mislocated", name);
       }
 
-      if (entry && ((entry->schedule == svn_wc_schedule_delete)
-                    || (entry->schedule == svn_wc_schedule_replace)))
+      if (entry && (entry->schedule == svn_wc_schedule_delete))
         {
-          if (entry->kind == svn_node_file)
-            SVN_ERR (svn_wc_remove_from_revision_control (loggy->path, sname,
-                                                          FALSE, loggy->pool));
-          else if (entry->kind == svn_node_dir)
-            /* Drop a 'killme' file into the adminstrative dir;
+          if (is_this_dir)
+            /* Drop a 'killme' file into my own adminstrative dir;
                this signals the svn_wc__run_log() to blow away SVN/
-               after its done with the logfile.  */
+               after its done with this logfile.  */
             SVN_ERR (svn_wc__make_adm_thing (loggy->path, SVN_WC__ADM_KILLME,
                                              svn_node_file, 0, loggy->pool));
+          else
+            /* We can safely remove files from revision control
+               without screwing something else up. */
+            SVN_ERR (svn_wc_remove_from_revision_control (loggy->path, sname,
+                                                          FALSE, loggy->pool));
         }
       else   /* entry not being deleted, so mark commited-to-date */
         {

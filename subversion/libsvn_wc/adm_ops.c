@@ -577,8 +577,22 @@ svn_wc_undelete (svn_string_t *path,
   SVN_ERR (svn_wc_entry (&entry, path, pool));
   if (entry->kind == svn_node_dir)
     {
-      /* Recursively un-mark a whole tree for addition. */
-      SVN_ERR (mark_tree (path, mark_tree_state_undelete, pool));
+      if (recursive)
+        {
+          /* Recursively un-mark a whole tree for deletion. */
+          SVN_ERR (mark_tree (path, mark_tree_state_undelete, pool));
+        }
+      else
+        {
+          /* Just mark the "this dir" entry for this directory. */
+          SVN_ERR (svn_wc__entry_modify
+                   (path, NULL,
+                    SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                    SVN_INVALID_REVNUM, svn_node_none,
+                    svn_wc_schedule_undelete,
+                    svn_wc_existence_normal,
+                    FALSE, 0, 0, NULL, pool, NULL));
+        }
     }
 
   /* We need to un-mark this entry for deletion in its parent's entries
