@@ -1,3 +1,4 @@
+\input texinfo  @c -*-texinfo-*-
 
 @c Subversion for CVS Users
 
@@ -8,9 +9,7 @@
 
 @c Browser defaults lose.  Let's go for black text on white background.
 @ifhtml
-@html
 <body bgcolor="#FFFFFF" fgcolor="#000000">
-@end html
 @end ifhtml
 
 @titlepage
@@ -28,8 +27,8 @@ A Subversion quick-start guide for CVS users.
 @menu
 * Introduction::
 * Revision numbers are different now::
-* More "disconnected" operations::
-* Distinction between 'status' and 'update'::
+* More disconnected operations::
+* Distinction between status and update::
 * Properties::
 * Directory versioning::
 * Conflicts::
@@ -69,7 +68,7 @@ commit results in an entirely new filesystem tree; in essence, the
 repository is an array of trees.  Each of these trees is labeled with
 a single revision number.  When someone talks about "revision 54",
 they're talking about a particular tree (and indirectly, the way the
-filesystem looked after the 54th commit.)
+filesystem looked after the 54th commit).
 
 Technically, it's not valid to talk about "revision 5 of foo.c".
 Instead, one would say "foo.c as it appears in revision 5".  Also, be
@@ -79,8 +78,8 @@ it's most likely that foo.c did *not* change between revisions 5 and
 6.
 
 
-@node More "disconnected" operations
-@section More "disconnected" operations
+@node More disconnected operations
+@section More disconnected operations
 
 In recent years, disk space has become outrageously cheap and
 abundant, but network bandwidth has not.  Therefore, the Subversion
@@ -108,8 +107,8 @@ work, but it blurs the purpose of updating.  And, while we're on this
 subject...
 
 
-@node Distinction between 'status' and 'update'
-@section Distinction between 'status' and 'update'
+@node Distinction between status and update
+@section Distinction between status and update
 
 In Subversion, we've tried to erase a lot of the confusion between the
 'status' and 'update' subcommands.
@@ -164,9 +163,9 @@ If you specify either the -u or -v switch, a "long" format is used:
     Head revision:   1066
 @end example
 
-In this case, two new columns appear.  The first column potentially
-contains an asterisk, which means that the file or directory is
-out-of-date.  The second column shows the working-copy's revision
+In this case, two new columns appear.  The second column
+contains an asterisk if the file or directory is
+out-of-date.  The third column shows the working-copy's revision
 number of the item.  In the example above, the asterisk indicates that
 `faces.html' would be patched if we updated, and that `bloo.png' is a
 newly added file in the repository.  (The '-' next to bloo.png means
@@ -227,7 +226,7 @@ file-contents and properties.  The first example indicates that the
 file has properties as well as text -- but that there's nothing
 special about either portion.  The second example is status's way of
 reminding you that you have some locally modified properties on a file
-(but the text is unchanged.)  The third example is update's way of
+(but the text is unchanged).  The third example is update's way of
 telling you that a file's properties were patched (but not its text).
 The fourth example means that both components were patched.
 
@@ -290,7 +289,7 @@ they may help you understand what's happening in your working copy.
 
 CVS marks conflicts with in-line "conflict markers", and prints a 'C'
 during an update.  Historically, this has caused problems.  Many users
-forget about (or don't see) the 'C' after it whizzes by their
+forget about (or don't see) the 'C' after it whizzes by on their
 terminal.  They often forget that the conflict-markers are even
 present, and then accidentally commit garbaged files.
 
@@ -317,7 +316,7 @@ deleting the .rej file.
 
 Finally, it's worth mentioning that properties can come into
 conflict.  If this happens, a description of the conflict will be
-dumped into '.prej' file instead.
+dumped into a '.prej' file instead.
 
 
 @node Binary files
@@ -325,7 +324,7 @@ dumped into '.prej' file instead.
 
 CVS users have to mark binary files with '-kb' flags, to prevent data
 from being munged (due to keyword expansion and line-ending
-translations.)  They sometimes forget to do this.
+translations).  They sometimes forget to do this.
 
 Subversion examines the "svn:mime-type" property to decide if a file
 is text or binary.  If the file has no "svn:mime-type" property,
@@ -380,11 +379,11 @@ existing nodes; new nodes are created only for changed items.
 This technique demonstrates how the filesystem is able to make
 "cheap copies" of things.  Remember that nodes are never, ever deleted
 in the filesystem; at most, they're simply unlinked from the head tree
-(and they continue to stay linked to older trees.)  These cheap copies
+(and they continue to stay linked to older trees).  These cheap copies
 are nothing more than directory entries that point to existing nodes.
 And this is the basis of tags and branches.
 
-Suppose we have a have a repository whose head tree is revision 82.  In
+Suppose we have a repository whose head tree is revision 82.  In
 this repository is a subdirectory 'mooIRC' that contains a software
 project that is ready to be tagged.  How do we tag it?  Very simple:
 make a cheap copy of this directory.  In other words, create a new
