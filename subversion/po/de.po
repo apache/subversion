@@ -10,6 +10,7 @@
 # checkout     auschecken (denglisch, ich weiß, aber akzeptabel)
 # client       Client, des Client
 # commit       übertragen
+# default      Vorgabe / Standard
 # item         Objekt
 # label        Marke / Markierung
 # lock         Sperre
@@ -49,7 +50,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2004-10-05 16:01+0100\n"
+"PO-Revision-Date: 2004-10-11 11:31+0100\n"
 "Last-Translator: Lübbe Onken <l.onken@rac.de>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -89,7 +90,7 @@ msgstr "Zielverzeichnis existiert; bitte löschen Sie das Verzeichnis oder verwe
 #: clients/cmdline/help-cmd.c:35
 msgid ""
 "usage: svn <subcommand> [options] [args]\n"
-"Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svn help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Most subcommands take file and/or directory arguments, recursing\n"
 "on the directories.  If no arguments are supplied to such a\n"
@@ -389,8 +390,8 @@ msgid "specify a password ARG"
 msgstr "Passwort PAR angeben"
 
 #: clients/cmdline/main.c:100
-msgid "pass ARG as bundled options to GNU diff"
-msgstr "PAR zusammengefasst als Optionen an GNU Diff übergeben"
+msgid "pass ARG as bundled options to diff (default: '-u')"
+msgstr "PAR zusammengefasst als Optionen an GNU Diff übergeben (Vorgabe: '-u')"
 
 #: clients/cmdline/main.c:102
 msgid "pass contents of file ARG as additional args"
@@ -410,7 +411,7 @@ msgstr "Kopien beim Durchlaufen der Historie nicht weiterverfolgen"
 
 #: clients/cmdline/main.c:108
 msgid "disregard default and svn:ignore property ignores"
-msgstr "Standard ignore und svn:ignore Eigenschaften nicht beachten"
+msgstr "Vorgabe: ignore und svn:ignore Eigenschaften nicht beachten"
 
 #: clients/cmdline/main.c:110
 msgid "do not cache authentication tokens"
@@ -492,7 +493,7 @@ msgstr ""
 msgid "maximum number of log entries"
 msgstr "Maximale Anzahl Logeinträge"
 
-#: clients/cmdline/main.c:173
+#: clients/cmdline/main.c:179
 msgid ""
 "Put files and directories under version control, scheduling\n"
 "them for addition to repository.  They will be added in next commit.\n"
@@ -503,7 +504,7 @@ msgstr ""
 "Die Übertragung findet erst beim nächsten Commit statt.\n"
 "Aufruf: add PFAD...\n"
 
-#: clients/cmdline/main.c:180
+#: clients/cmdline/main.c:186
 msgid ""
 "Output the content of specified files or\n"
 "URLs with revision and author information in-line.\n"
@@ -513,7 +514,7 @@ msgstr ""
 "den Revisons- und Autoreninformationen für jede Zeile.\n"
 "Aufruf: blame ZIEL...\n"
 
-#: clients/cmdline/main.c:186
+#: clients/cmdline/main.c:192
 msgid ""
 "Output the content of specified files or URLs.\n"
 "usage: cat TARGET...\n"
@@ -521,7 +522,7 @@ msgstr ""
 "Ausgabe des Inhaltes der angegebenen Dateien oder URLs\n"
 "Aufruf: cat ZIEL...\n"
 
-#: clients/cmdline/main.c:191
+#: clients/cmdline/main.c:197
 msgid ""
 "Check out a working copy from a repository.\n"
 "usage: checkout URL... [PATH]\n"
@@ -539,7 +540,7 @@ msgstr ""
 "  wird jede in ein Unterverzeichnis von PFAD ausgecheckt, dessen\n"
 "  Name der Basisname der URL ist.\n"
 
-#: clients/cmdline/main.c:201
+#: clients/cmdline/main.c:207
 msgid ""
 "Recursively clean up the working copy, removing locks, resuming\n"
 "unfinished operations, etc.\n"
@@ -549,7 +550,7 @@ msgstr ""
 "Wiederaufnehmen unvollständiger Operationen, etc.\n"
 "Aufruf: cleanup [PFAD...]\n"
 
-#: clients/cmdline/main.c:207
+#: clients/cmdline/main.c:213
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -564,7 +565,7 @@ msgstr ""
 "  sie nicht mittels einer --message oder --file Option übergeben, wird ein\n"
 "  Editor gestartet.\n"
 
-#: clients/cmdline/main.c:217
+#: clients/cmdline/main.c:222
 msgid ""
 "Duplicate something in working copy or repository, remembering history.\n"
 "usage: copy SRC DST\n"
@@ -587,7 +588,7 @@ msgstr ""
 "    URL -> URL:  Vollständig serverseitige Kopie. Verwendung für Verzweigen\n"
 "                 und Markieren (branch & tag)\n"
 
-#: clients/cmdline/main.c:230
+#: clients/cmdline/main.c:235
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -616,7 +617,7 @@ msgstr ""
 "  2. Jede URL wird sofort mittels einer Übertragung aus dem\n"
 "    Projektarchiv entfernt.\n"
 
-#: clients/cmdline/main.c:247
+#: clients/cmdline/main.c:251
 msgid ""
 "Display the differences between two paths.\n"
 "usage: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
@@ -666,7 +667,7 @@ msgstr ""
 "  Nutzen Sie einfach 'svn diff' um lokale Änderungen in einer\n"
 "  Arbeitskopie anzuzeigen.\n"
 
-#: clients/cmdline/main.c:287
+#: clients/cmdline/main.c:291
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL [PATH]\n"
@@ -701,7 +702,7 @@ msgstr ""
 "     die sich nicht unter Versionskontrolle befinden, werden in diesem Fall\n"
 "     auch nicht kopiert.\n"
 
-#: clients/cmdline/main.c:311
+#: clients/cmdline/main.c:315
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: help [SUBCOMMAND...]\n"
@@ -709,7 +710,7 @@ msgstr ""
 "Beschreibt die Anwendung dieses Programms und seiner Unterbefehle.\n"
 "Aufruf: help [UNTERBEFEHL...]\n"
 
-#: clients/cmdline/main.c:320
+#: clients/cmdline/main.c:324
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
 "usage: import [PATH] URL\n"
@@ -725,7 +726,7 @@ msgstr ""
 "  Ohne Angabe wird '.' als PFAD angenommen. Übergeordnete Verzeichnisse werden\n"
 "  soweit erforderlich im Projektarchiv angelegt.\n"
 
-#: clients/cmdline/main.c:331
+#: clients/cmdline/main.c:334
 msgid ""
 "Display information about a file or directory.\n"
 "usage: info [PATH...]\n"
@@ -737,7 +738,7 @@ msgstr ""
 "\n"
 "  Gib Informationen über jeden PFAD aus (Vorgabe: '.').\n"
 
-#: clients/cmdline/main.c:338
+#: clients/cmdline/main.c:341
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET...]\n"
@@ -773,7 +774,7 @@ msgstr ""
 "    Größe(in Bytes)\n"
 "    Datum und Zeit der letzten Übertragung\n"
 
-#: clients/cmdline/main.c:359
+#: clients/cmdline/main.c:362
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -825,7 +826,7 @@ msgstr ""
 "    svn log http://www.example.com/repo/project/foo.c\n"
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
-#: clients/cmdline/main.c:391
+#: clients/cmdline/main.c:394
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -872,7 +873,7 @@ msgstr ""
 "  identischen Basisnamen, der eine Datei unterhalb von '.' beschreibt.\n"
 "  In diesem Fall werden die Änderungen in die gefundene Datei geschrieben.\n"
 
-#: clients/cmdline/main.c:421
+#: clients/cmdline/main.c:424
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -902,7 +903,7 @@ msgstr ""
 "\n"
 "  In beiden Fällen müssen alle Zwischenverzeichnisse bereits exisitieren.\n"
 
-#: clients/cmdline/main.c:441
+#: clients/cmdline/main.c:444
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -922,7 +923,7 @@ msgstr ""
 "    AK  -> AK:   Verschieben und zum Hinzufügen (mit Historie) einplanen\n"
 "    URL -> URL:  Vollständig serverseitiges Verschieben.\n"
 
-#: clients/cmdline/main.c:454
+#: clients/cmdline/main.c:456
 msgid ""
 "Remove PROPNAME from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -938,7 +939,7 @@ msgstr ""
 "  1. Entfernt versionierte Eigenschaften aus der Arbeitskopie.\n"
 "  2. Entfernt nicht versionierte Eigenschaften aus dem Projektarchiv.\n"
 
-#: clients/cmdline/main.c:464
+#: clients/cmdline/main.c:466
 msgid ""
 "Edit property PROPNAME with an external editor on targets.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -954,7 +955,7 @@ msgstr ""
 "  1. Bearbeitet versionierte Eigenschaften in der Arbeitskopie.\n"
 "  2. Bearbeitet nicht versionierte Eigenschaften im Projektarchiv.\n"
 
-#: clients/cmdline/main.c:475
+#: clients/cmdline/main.c:477
 msgid ""
 "Print value of PROPNAME on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [PATH...]\n"
@@ -983,7 +984,7 @@ msgstr ""
 "  vorangestellt. Verwenden Sie die '--strict' Option um diese Formatierungen\n"
 "  abzuschalten (z.B. um Binäreigenschaften in Dateien auszulisten).\n"
 
-#: clients/cmdline/main.c:492
+#: clients/cmdline/main.c:494
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [PATH...]\n"
@@ -999,7 +1000,7 @@ msgstr ""
 "  1. Listet versionierte Eigenschaften in der Arbeitskopie.\n"
 "  2. Listet nicht versionierte Eigenschaften im Projektarchiv.\n"
 
-#: clients/cmdline/main.c:502
+#: clients/cmdline/main.c:504
 msgid ""
 "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
@@ -1075,7 +1076,7 @@ msgstr ""
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
 
-#: clients/cmdline/main.c:546
+#: clients/cmdline/main.c:548
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -1092,7 +1093,7 @@ msgstr ""
 "  Dateien und ermöglicht es somit, daß das Verzeichnis wieder übertragen \n"
 "  werden kann.\n"
 
-#: clients/cmdline/main.c:555
+#: clients/cmdline/main.c:557
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -1107,7 +1108,7 @@ msgstr ""
 "  Konfliktzustände auf. Er kann jedoch keine gelöschten Verzeichnisse wieder\n"
 "  herstellen.\n"
 
-#: clients/cmdline/main.c:565
+#: clients/cmdline/main.c:567
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1240,7 +1241,7 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    Head revision:   981\n"
 
-#: clients/cmdline/main.c:632
+#: clients/cmdline/main.c:634
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -1269,7 +1270,7 @@ msgstr ""
 "     Projektarchivs ändert (z.B. durch eine Schema- oder Hostnamenänderung),\n"
 "     während Ihre Arbeitskopie immer noch das selbe Verzeichnis im selben      Projektarchiv spiegelt.\n"
 
-#: clients/cmdline/main.c:653
+#: clients/cmdline/main.c:655
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1308,48 +1309,48 @@ msgstr ""
 "  Datei, während Aktualisierungen der Dateieigenschaften in der zweiten Spalte\n"
 "  angezeigt werden.\n"
 
-#: clients/cmdline/main.c:677
+#: clients/cmdline/main.c:679
 msgid "Print client version info\n"
 msgstr "Client Versionsinformation ausgeben\n"
 
-#: clients/cmdline/main.c:731
+#: clients/cmdline/main.c:733
 #: svnadmin/main.c:75
 msgid "Caught signal"
 msgstr "Signal empfangen"
 
-#: clients/cmdline/main.c:831
+#: clients/cmdline/main.c:833
 #: svnadmin/main.c:1006
 msgid "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr "Mehrere Revisionsparameter gefunden; bitte '-r M:N' anstelle '-r M -r N' verwenden"
 
-#: clients/cmdline/main.c:843
+#: clients/cmdline/main.c:845
 #: svnadmin/main.c:1023
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaxfehler in Revisionsparameter '%s'"
 
-#: clients/cmdline/main.c:988
-#: clients/cmdline/main.c:998
+#: clients/cmdline/main.c:990
+#: clients/cmdline/main.c:1000
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props und --no-auto-props schließen sich gegenseitig aus"
 
-#: clients/cmdline/main.c:1014
+#: clients/cmdline/main.c:1016
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Syntaxfehler im 'native-eol' Parameter '%s'"
 
-#: clients/cmdline/main.c:1057
+#: clients/cmdline/main.c:1059
 msgid "Subcommand argument required\n"
 msgstr "Unterbefehl benötigt einen Parameter\n"
 
-#: clients/cmdline/main.c:1075
+#: clients/cmdline/main.c:1077
 #: svnadmin/main.c:1143
 #: svnlook/main.c:1968
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Unbekannter Befehl: '%s'\n"
 
-#: clients/cmdline/main.c:1108
+#: clients/cmdline/main.c:1110
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1358,15 +1359,15 @@ msgstr ""
 "Unterbefehl '%s' akzeptiert die Option '%s' nicht\n"
 "Geben Sie 'svn help %s' für Hilfe ein.\n"
 
-#: clients/cmdline/main.c:1142
+#: clients/cmdline/main.c:1144
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "Die Datei für die Log-Meldung ist versioniert; verwenden Sie '--force-log', um sie zu verwenden"
 
-#: clients/cmdline/main.c:1160
+#: clients/cmdline/main.c:1162
 msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Die Log-Meldung ist ein Pfad (war -F gemeint?); verwenden Sie '--force-log', um sie zu verwenden"
 
-#: clients/cmdline/main.c:1363
+#: clients/cmdline/main.c:1365
 msgid "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
 msgstr "svn: Starten Sie 'svn cleanup', um die Sperren zu entfernen (Aufruf: 'svn help cleanup' für Details)\n"
 
@@ -1626,14 +1627,14 @@ msgid "Passphrase for '%s': "
 msgstr "Passphrase für '%s': "
 
 #: clients/cmdline/propdel-cmd.c:85
-#: clients/cmdline/propedit-cmd.c:92
+#: clients/cmdline/propedit-cmd.c:91
 #: clients/cmdline/proplist-cmd.c:79
 #: clients/cmdline/propset-cmd.c:116
 msgid "No URL target available"
 msgstr "Kein URL Ziel verfügbar"
 
 #: clients/cmdline/propdel-cmd.c:91
-#: clients/cmdline/propedit-cmd.c:98
+#: clients/cmdline/propedit-cmd.c:97
 #: clients/cmdline/proplist-cmd.c:85
 #: clients/cmdline/propset-cmd.c:121
 msgid "Either a URL or versioned item is required"
@@ -1659,48 +1660,48 @@ msgstr "Eigenschaft '%s' wurde (rekursiv) von '%s' gelöscht.\n"
 msgid "property '%s' deleted from '%s'.\n"
 msgstr "Eigenschaft '%s' wurde von '%s' gelöscht.\n"
 
-#: clients/cmdline/propedit-cmd.c:130
-#: clients/cmdline/propedit-cmd.c:259
+#: clients/cmdline/propedit-cmd.c:123
+#: clients/cmdline/propedit-cmd.c:244
 #: clients/cmdline/propset-cmd.c:87
 msgid "Bad encoding option: prop value not stored as UTF8"
 msgstr "Fehlerhafte Codierung: Eigenschaftswert ist nicht als UTF8 gespeichert"
 
-#: clients/cmdline/propedit-cmd.c:139
+#: clients/cmdline/propedit-cmd.c:132
 #, c-format
 msgid "Set new value for property '%s' on revision %ld\n"
 msgstr "Setze neuen Wert für Eigenschaft '%s' in Revision %ld\n"
 
-#: clients/cmdline/propedit-cmd.c:145
+#: clients/cmdline/propedit-cmd.c:138
 #, c-format
 msgid "No changes to property '%s' on revision %ld\n"
 msgstr "Keine Änderungen für Eigenschaft '%s' in Revision %ld\n"
 
-#: clients/cmdline/propedit-cmd.c:153
+#: clients/cmdline/propedit-cmd.c:146
 #, c-format
 msgid "Cannot specify revision for editing versioned property '%s'"
 msgstr "Kann keine Revision zum Bearbeiten der versionierten Eigenschaft '%s' spezifizieren"
 
-#: clients/cmdline/propedit-cmd.c:179
+#: clients/cmdline/propedit-cmd.c:172
 #: clients/cmdline/propset-cmd.c:179
 msgid "Explicit target argument required"
 msgstr "Expliziter Zielparameter benötigt"
 
-#: clients/cmdline/propedit-cmd.c:204
+#: clients/cmdline/propedit-cmd.c:196
 #, c-format
 msgid "Editing property on non-local target '%s' not yet supported"
 msgstr "Das Bearbeiten einer Eigenschaft für ein nicht lokales Ziel '%s' wird noch nicht unterstützt"
 
-#: clients/cmdline/propedit-cmd.c:227
+#: clients/cmdline/propedit-cmd.c:219
 #, c-format
 msgid "'%s' does not appear to be a working copy path"
 msgstr "'%s' scheint kein Pfad einer Arbeitskopie zu sein"
 
-#: clients/cmdline/propedit-cmd.c:265
+#: clients/cmdline/propedit-cmd.c:250
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
 msgstr "Setze neuen Wert für Eigenschaft '%s' auf '%s'\n"
 
-#: clients/cmdline/propedit-cmd.c:272
+#: clients/cmdline/propedit-cmd.c:257
 #, c-format
 msgid "No changes to property '%s' on '%s'\n"
 msgstr "Keine Änderungen der Eigenschaft '%s' für '%s'\n"
@@ -1748,58 +1749,58 @@ msgstr ""
 "\n"
 "Revision %ld übertragen.\n"
 
-#: clients/cmdline/util.c:125
+#: clients/cmdline/util.c:128
 msgid "None of the environment variables SVN_EDITOR, VISUAL or EDITOR is set, and no 'editor-cmd' run-time configuration option was found"
 msgstr "Es wurde weder die Option '--editor-cmd' übergeben noch eine der Umgebungsvariablen SVN_EDITOR, VISUAL or EDITOR gesetzt"
 
-#: clients/cmdline/util.c:135
+#: clients/cmdline/util.c:155
 msgid "Can't get working directory"
 msgstr "Kann Arbeitsverzeichnis nicht ermitteln"
 
-#: clients/cmdline/util.c:146
+#: clients/cmdline/util.c:166
 #, c-format
 msgid "Can't change working directory to '%s'"
 msgstr "Kann Arbeitsverzeichnis nicht nach '%s' wechseln"
 
-#: clients/cmdline/util.c:172
+#: clients/cmdline/util.c:192
 #, c-format
 msgid "Can't write to '%s'"
 msgstr "Kann nicht nach '%s' schreiben"
 
-#: clients/cmdline/util.c:187
-#: clients/cmdline/util.c:211
+#: clients/cmdline/util.c:207
+#: clients/cmdline/util.c:231
 #: libsvn_fs_fs/fs_fs.c:3334
 #: libsvn_subr/io.c:2135
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Kann Status von '%s' nicht ermitteln"
 
-#: clients/cmdline/util.c:202
+#: clients/cmdline/util.c:222
 #, c-format
 msgid "system('%s') returned %d"
 msgstr "system('%s') hat %d zurückgegeben"
 
-#: clients/cmdline/util.c:258
+#: clients/cmdline/util.c:287
 msgid "Can't restore working directory"
 msgstr "Kann Arbeitsverzeichnis nicht wieder herstellen"
 
-#: clients/cmdline/util.c:296
+#: clients/cmdline/util.c:325
 msgid "Log message contains a zero byte"
 msgstr "Log-Meldung enthält ein Null Byte"
 
-#: clients/cmdline/util.c:354
+#: clients/cmdline/util.c:383
 msgid "Your commit message was left in a temporary file:"
 msgstr "Ihre Log-Meldung wurde in einer Temporärdatei abgelegt:"
 
-#: clients/cmdline/util.c:406
+#: clients/cmdline/util.c:435
 msgid "--This line, and those below, will be ignored--"
 msgstr "--Diese und die folgenden Zeilen werden ignoriert--"
 
-#: clients/cmdline/util.c:527
+#: clients/cmdline/util.c:547
 msgid "Could not use external editor to fetch log message; consider setting the $SVN_EDITOR environment variable or using the --message (-m) or --file (-F) options"
 msgstr "Konnte keinen externen Editor zur Eingabe der Log-Meldung bestimmen. Setzten Sie entweder die $SVN_EDITOR Umgebungsvariable oder verwenden Sie die --message (-m) oder --file (-F) Optionen"
 
-#: clients/cmdline/util.c:562
+#: clients/cmdline/util.c:582
 msgid ""
 "\n"
 "Log message unchanged or not specified\n"
@@ -2736,7 +2737,7 @@ msgstr "Übertragenes Objekt '%s' ist als Kopie markiert, hat aber eine ungülti
 #: libsvn_client/copy.c:102
 #: libsvn_client/copy.c:646
 #: libsvn_client/copy.c:834
-#: libsvn_ra_dav/commit.c:869
+#: libsvn_ra_dav/commit.c:896
 #, c-format
 msgid "File '%s' already exists"
 msgstr "Datei '%s' existiert bereits"
@@ -2920,7 +2921,7 @@ msgstr "Bei einem 'angetackerten' Diff muß zumindest eine Revision nicht lokal 
 #: libsvn_client/diff.c:2268
 #: libsvn_client/diff.c:2273
 #: libsvn_client/diff.c:2384
-#: libsvn_client/export.c:729
+#: libsvn_client/export.c:737
 #: libsvn_client/ra.c:694
 #: libsvn_client/ra.c:814
 #, c-format
@@ -2932,27 +2933,27 @@ msgstr "'%s' hat keine URL"
 msgid "'%s' is not a valid EOL value"
 msgstr "'%s' ist kein gültiger EOL Wert"
 
-#: libsvn_client/export.c:137
+#: libsvn_client/export.c:143
 msgid "Destination directory exists, and will not be overwritten unless forced"
 msgstr "Zielverzeichnis existiert und kann nur mittels '--force' überschrieben werden"
 
-#: libsvn_client/export.c:264
+#: libsvn_client/export.c:272
 msgid "(local)"
 msgstr "(lokal)"
 
-#: libsvn_client/export.c:322
-#: libsvn_client/export.c:464
+#: libsvn_client/export.c:330
+#: libsvn_client/export.c:472
 #, c-format
 msgid "'%s' exists and is not a directory"
 msgstr "'%s' existiert und ist kein Verzeichnis"
 
-#: libsvn_client/export.c:325
-#: libsvn_client/export.c:468
+#: libsvn_client/export.c:333
+#: libsvn_client/export.c:476
 #, c-format
 msgid "'%s' already exists"
 msgstr "'%s' existiert bereits"
 
-#: libsvn_client/export.c:639
+#: libsvn_client/export.c:647
 #: libsvn_wc/update_editor.c:1584
 #: libsvn_wc/update_editor.c:2331
 #, c-format
@@ -3387,21 +3388,21 @@ msgstr "Unbekanntes URL Schema '%s'"
 msgid "  - handles '%s' schema\n"
 msgstr "  - behandelt '%s' Schema\n"
 
-#: libsvn_ra_dav/commit.c:150
+#: libsvn_ra_dav/commit.c:166
 #, c-format
 msgid "Could not create a request (%s '%s')"
 msgstr "Konnte keine Anfrage (%s '%s') erzeugen"
 
-#: libsvn_ra_dav/commit.c:984
+#: libsvn_ra_dav/commit.c:1017
 msgid "Could not write svndiff to temp file"
 msgstr "Konte svndiff nicht in Temporärdatei schreiben"
 
-#: libsvn_ra_dav/commit.c:1074
+#: libsvn_ra_dav/commit.c:1107
 #, c-format
 msgid "Could not create a PUT request (%s)"
 msgstr "Konnte keine PUT Anfrage (%s) erzeugen"
 
-#: libsvn_ra_dav/commit.c:1221
+#: libsvn_ra_dav/commit.c:1254
 #, c-format
 msgid "applying log message to %s"
 msgstr "wende Log-Meldung auf %s an"
@@ -3440,33 +3441,33 @@ msgstr ""
 "   Erwartet:    %s\n"
 "   Tatsächlich: %s\n"
 
-#: libsvn_ra_dav/fetch.c:1089
+#: libsvn_ra_dav/fetch.c:1087
 msgid "Server does not support date-based operations"
 msgstr "Server unterstützt keine datumsbasierten Operationen"
 
-#: libsvn_ra_dav/fetch.c:1096
+#: libsvn_ra_dav/fetch.c:1094
 msgid "Invalid server response to dated-rev request"
 msgstr "Ungültige Antwort des Servers auf datierte Revisionsanfrage"
 
-#: libsvn_ra_dav/fetch.c:1235
+#: libsvn_ra_dav/fetch.c:1233
 msgid "get-locations REPORT not implemented"
 msgstr "'get-locations' REPORT nicht implementiert"
 
-#: libsvn_ra_dav/fetch.c:1303
+#: libsvn_ra_dav/fetch.c:1301
 msgid "DAV request failed; it's possible that the repository's pre-revprop-change hook either failed or is non-existent"
 msgstr "DAV Anfrage fehlgeschlagen; möglicherweise ist entweder der pre-revprop-change Haken fehlgeschlagen oder er fehlt"
 
-#: libsvn_ra_dav/fetch.c:2018
+#: libsvn_ra_dav/fetch.c:2016
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
 msgstr "Fehler beim Schreiben nach '%s': unerwartetes EOF"
 
-#: libsvn_ra_dav/fetch.c:2155
+#: libsvn_ra_dav/fetch.c:2153
 #, c-format
 msgid "Unknown XML encoding: '%s'"
 msgstr "Unbekannte XML Codierung: '%s'"
 
-#: libsvn_ra_dav/fetch.c:2413
+#: libsvn_ra_dav/fetch.c:2411
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr "Die Abwicklung der REPORT-Antwort konnte den Editorlauf nicht vollenden."
 
@@ -3684,8 +3685,8 @@ msgstr "Lokale URL '%s' enthält nur einen Rechnernamen aber keinen Pfad"
 msgid "Local URL '%s' contains unsupported hostname"
 msgstr "Lokale URL '%s' enthält nicht unterstützten Rechnernamen"
 
-#: libsvn_ra_local/split_url.c:108
-#: libsvn_ra_local/split_url.c:115
+#: libsvn_ra_local/split_url.c:109
+#: libsvn_ra_local/split_url.c:116
 #, c-format
 msgid "Unable to open repository '%s'"
 msgstr "Projektarchiv '%s' kann nicht geöffnet werden"
@@ -5267,7 +5268,6 @@ msgid ""
 "this if you've been getting errors indicating that recovery\n"
 "ought to be run.  Recovery requires exclusive access and will\n"
 "exit if the repository is in use by another process.\n"
-"\n"
 msgstr ""
 "Aufruf: svnadmin recover ARCHIV_PFAD\n"
 "\n"
@@ -5276,7 +5276,6 @@ msgstr ""
 "auffordern. Die Wiederherstellung erfordert exklusiven Zugriff auf das Projekt-\n"
 "archiv. Der Vorgang wird nicht gestartet, falls das Projektarchiv von einem\n"
 "anderen Prozess benutzt wird.\n"
-"\n"
 
 #: svnadmin/main.c:353
 msgid ""
