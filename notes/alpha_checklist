@@ -3,65 +3,15 @@
 Issues to discuss/prioritize POST Milestone 2
 =============================================
 
+(NOT YET PRIORITIZED)
 
-A. How ACLs should work.  Do they live as filesystem props?  How
-   should authorization and authentication work in general?
 
-   We need a security architecture that:
-  
-      * will take advantage of Apache
+I. Implementation Issues
+------------------------
 
-      * fits well with the Sourcecast 2.0 framework
+A. How does svn_wc_cleanup() get used?  exposed as a user command?
 
-      * will still be present even with nothing but ra_local
-
-      * is doable in svn 1.0, providing security as good as cvs.
-
-      * has a consistent user interface for *all* present and future
-        authentication mechanisms.
-
-B. Who is going to write the cvs2svn converter (using cvs2cl's code)?
-   Who is going to write a lossy svn2cvs converter?
-
-C. Who is going to write a gui design/whitepaper?  Who will write
-   them?
-
-D. svn import?  annotate?  log?  other commands that are still missing
-   that are part of CVS?
-
-E. How will we present branches and tags to the user?  Show them as
-   subdirs, or hide them under a cvs-compatible command interface?
-
-F. Still need a perl/python external test framework.
-
-G. How does svn_wc_cleanup() get used?  exposed as a user command?
-
-H. External diff program invocation via client-side plugins.
-
-I. Hook system. need pre-post commit hooks.  Other hooks?  How will we
-   implement?  How will we make them available to users?
-
-J. svnadmin app.  What does it need to do?  who will write?
-
-K. Chris wants to talk about distributed repositories: read-only
-   repositories that have data "pushed" at them via hierarchy, while
-   only the Master repo can accept commits.
-
-L. Copy nodes (or props).  we need better history tracking when making
-   cheap copies in the fs, else we lose copy history information.
-
-M. All client commands need to accept multiple targets.
-
-N. Commands that make us *better* than CVS:
-     
-     svn mv, svn cp 
-     svn revert 
-     svn unadd, svn undel
-     
-O. 90% solution to the "repeated merge" problem?  genetic merging?
-   how much changeset metadata should we be tracking?
-
-P. Optimizations that *should* be in effect, but aren't yet:
+B. Optimizations that *should* be in effect, but aren't yet:
 
     1. need deltified storage of node-revisions in the filesystem
        (representation skels)
@@ -79,15 +29,98 @@ P. Optimizations that *should* be in effect, but aren't yet:
        Otherwise, what's the point of driving commits in "postfix
        text-delta" style?
 
-Q. Need more descriptive error messages all around.  Perhaps a table
+C. Copy nodes (or props).  we need better history tracking when making
+   cheap copies in the fs, else we lose copy history information.
+
+D. Need more descriptive error messages all around.  Perhaps a table
    that maps errnos to strings.  (We'll need this anyway once we
    internationalize.) 
 
-R. Speaking of which:  i18n plans?  Mulitlingual plans?
+E. Binary files: how do we deal with diffing/patching binary files?
+   (like, say, if someone wants to keep an MS Word file under revision
+   control.)  Let me clarify:  when the client receives a binary diff
+   from the server, the new file is reconstructed in SVN/tmp/.  How do
+   we 'patch' the visible working file so as not to lose local
+   changes?
 
-S. Need built-in patch/diff functionality, instead of relying on
+F. The Fate of ra_local: should it be relegated to "useful test
+   module", and hidden from end-users?  Or do we allow it to become
+   The Standard Method of accessing a local repos?  On the one hand,
+   it's nice to have to support one code-path (http).  On the other
+   hand, a lot of users might (and already have) objected to being
+   forced to install Apache.
+
+G  commit-methodology:  ra_dav and ra_local need to agree on one
+   methodology for performing a commit.  Right now, it looks like they
+   agree that a new fs function is needed.
+
+H. Change #6:  inverting the text-delta interface.  Should we do it?
+
+
+
+II. Missing Features (that are needed to match CVS)
+--------------------
+
+A. All client commands need to accept multiple targets.
+
+B. Authentication & authorization system.
+
+   We need a security architecture that:
+  
+      * will take advantage of Apache
+      * fits well with the Sourcecast 2.0 framework
+      * will still be present even with nothing but ra_local
+      * is doable in svn 1.0, providing security as good as cvs.
+      * has a consistent user interface for *all* present and future
+        authentication mechanisms.
+
+C. Who is going to write a gui design/whitepaper?  Who will write
+   them?
+
+D. svn import?  annotate?  log?  other commands that are still missing
+   that are part of CVS?
+
+E. How will we present branches and tags to the user?  Show them as
+   subdirs, or hide them under a cvs-compatible command interface?
+
+F. Still need a sh/perl/python external test framework of some kind.
+
+G. Hook system. need pre-post commit hooks.  Other hooks?  How will we
+   implement?  How will we make them available to users?
+
+H. Need built-in patch/diff functionality, instead of relying on
    external tools.
 
-T. Binary files: how do we deal with diffing/patching binary files?
-   (like, say, if someone wants to keep an MS Word file under revision
-   control.)
+
+
+III. Missing Features (that surpass CVS)
+---------------------
+
+A. Commands that make us *better* than CVS, need to be written:
+     
+     svn mv, svn cp 
+     svn revert 
+     svn unadd, svn undel
+
+B. External diff program invocation via client-side plugins.
+
+C. Who is going to write the cvs2svn converter (using cvs2cl's code)?
+   Who is going to write a lossy svn2cvs converter?
+
+D. svnadmin app.  What does it need to do?  who will write?
+
+E. Chris wants to talk about distributed repositories: read-only
+   repositories that have data "pushed" at them via hierarchy, while
+   only the Master repo can accept commits.
+    
+F. 90% solution to the "repeated merge" problem?  genetic merging?
+   how much changeset metadata should we be tracking?
+
+G. i18n plans?  Mulitlingual plans?
+
+
+
+
+
+ 
+
