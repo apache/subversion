@@ -89,10 +89,8 @@ dnl Configure neon --------------------------
             NEON_LIBS="$NEON_LIBS $NEON_LIBS_NEW"
             # Also find out which macros neon defines (but ignore extra include paths):
             # this will include -DNEON_SSL if neon was built with SSL support
-            changequote(<<, >>)dnl
-            CFLAGS="$CFLAGS `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-I[^ ]*//g'`"
-            SVN_NEON_INCLUDES="$SVN_NEON_INCLUDES `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-D[^ ]*//g'`"
-            changequote([, ])dnl
+            CFLAGS=["$CFLAGS `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-I[^ ]*//g'`"]
+            SVN_NEON_INCLUDES=["$SVN_NEON_INCLUDES `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-D[^ ]*//g'`"]
             svn_lib_neon="yes"
           fi
 
@@ -129,11 +127,9 @@ AC_DEFUN(SVN_NEON_CONFIG,
 
       case "$NEON_VERSION" in
         $NEON_WANTED_REGEX)
-          changequote(<<, >>)dnl
-          SVN_NEON_INCLUDES=`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`
+          SVN_NEON_INCLUDES=[`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`]
           NEON_LIBS=`$neon_config --libs`
-          CFLAGS="$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"
-          changequote([, ])dnl
+          CFLAGS=["$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"]
           svn_lib_neon="yes"
           ;;
         *)
