@@ -64,6 +64,10 @@ notify (void *baton,
   const char *path_native;
   svn_error_t *err;
 
+  /* Always print some path */
+  if (path[0] == '\0')
+    path = ".";
+
   err = svn_utf_cstring_from_utf8 (&path_native, path, subpool);
   if (err)
     {
