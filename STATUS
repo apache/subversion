@@ -38,13 +38,6 @@ Candidate changes:
     Votes:
       +1: bliss, sussman
 
-  * r11250, r11258
-    Fix #2060, make ls work when path contains non-ASCII chars over ra_dav.
-    Justification:
-      BFI, ls-R didn't work at all in this case, affects many GUI clients.
-    Votes:
-      +1: lundblad, brane, bliss
-
   * r11233, r11260
     Fix eol-style conversion for propedit.
     Justification:
