@@ -2007,9 +2007,12 @@ dependencies.</p>
     never seem to happen.</a></h3>
 
 <p>When invoking other programs from repository hook scripts, try
-using absolute paths.  The environment Subversion passes to the hooks
-is minimal, so $PATH on Unix, or %PATH% under Windows, may not have
-all the directories you expect.</p>
+using absolute paths.  The environment the hooks get when Subversion
+calls them is just the default environment of whatever user the
+Subversion server runs as, which might be different from the
+environment the hooks get when you test them by hand.  In particular,
+$PATH on Unix, or %PATH% on Windows, may not have all the directories
+you expect.</p>
 
 
 <![CDATA[=========================================================]]>
