@@ -22,6 +22,7 @@
 #include <assert.h>
 
 #include <apr_file_info.h>
+#include <apr_lib.h>
 
 #include "svn_string.h"
 #include "svn_path.h"
@@ -892,7 +893,8 @@ svn_path_uri_decode (const char *path, apr_pool_t *pool)
            * RFC 2396, section 3.3  */
           c = ' ';
         }
-      else if (c == '%')
+      else if (c == '%' && apr_isxdigit(path[i + 1])
+               && apr_isxdigit (path[i+2]))
         {
           char digitz[3];
           digitz[0] = path[++i];
