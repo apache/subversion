@@ -85,7 +85,6 @@ Greg:
 
    M3 ITEMS:
    - VERSION stuff. VPATH builds.
-   - get/set properties over the wire (Joe's doing client side)
    - cvs2svn
    - Python bindings
      - just enough for cvs2svn
@@ -97,9 +96,11 @@ Greg:
    - APR: move apr_copy_file() from SVN. and apr_append_file, etc.
    - security checks (e.g. system() usage in wc/get_editor)
 
+
 Joe:
-   - get/set properties client side.
    - implementing authentication callbacks for ra_dav/client layers
+     [ still needed? maybe this could be client certs? ]
+
 
 Working Copy:
 
