@@ -75,7 +75,7 @@ extern "C" {
  * During the distribution process, we automatically replace this text
  * with something like "r1504".
  */
-#define SVN_VER_TAG        "r6550"
+#define SVN_VER_TAG        "dev build"
 
 
 /** Number tag: a string indicating whether this is a released version.
@@ -99,7 +99,7 @@ extern "C" {
  * During the distribution process, we automatically replace it with
  * what we guess to be the correct revision number.
  */
-#define SVN_VER_REVISION   6550
+#define SVN_VER_REVISION   0
 
 
 /* Version strings composed from the above definitions. */
