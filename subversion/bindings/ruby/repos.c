@@ -31,14 +31,26 @@ typedef struct svn_ruby_repos_t
 } svn_ruby_repos_t;
 
 static void
-repos_free (void *p)
+close_repos (svn_ruby_repos_t *repos)
 {
-  svn_ruby_repos_t *repos = p;
-  long count = svn_ruby_get_refcount (repos->pool);
+  long count;
+  if (repos->closed)
+    return;
+
+  count = svn_ruby_get_refcount (repos->pool);
   if (count == 1)
     apr_pool_destroy (repos->pool);
   else
     svn_ruby_set_refcount (repos->pool, count - 1);
+
+  repos->closed = TRUE;
+}
+
+static void
+repos_free (void *p)
+{
+  svn_ruby_repos_t *repos = p;
+  close_repos (repos);
   free (repos);
 }
 
@@ -153,7 +165,7 @@ repos_close (VALUE self)
   if (repos->closed)
     rb_raise (rb_eRuntimeError, "closed repos");
 
-  repos->closed = TRUE;
+  close_repos (repos);
 
   return Qnil;
 }
