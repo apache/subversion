@@ -513,8 +513,8 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  * Allocate the new transaction in @a pool; when @a pool is freed, the new
  * transaction will be closed (neither committed nor aborted).
  *
- * @a flags determines transaction enforcement behaviors.  See the
- * comments above SVN_FS_TXN_* constants above.
+ * @a flags determines transaction enforcement behaviors, and is composed
+ * from the constants SVN_FS_TXN_* (@c SVN_FS_TXN_CHECK_OOD etc.).
  *
  *<pre>   >> Note: if you're building a txn for committing, you probably <<
  *   >> don't want to call this directly.  Instead, call            <<
@@ -788,7 +788,7 @@ typedef struct svn_fs_path_change_t
   /** node revision id of changed path */
   const svn_fs_id_t *node_rev_id;
 
-  /** kind of change (see above) */
+  /** kind of change */
   svn_fs_path_change_kind_t change_kind;
 
   /** were there text mods? */

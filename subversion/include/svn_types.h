@@ -277,11 +277,7 @@ typedef struct svn_dirent_t
 /** Short version of HeadURL */
 #define SVN_KEYWORD_URL_SHORT        "URL"
 
-/** A compressed combination of the other four keywords.
- *
- * (But see comments above about a more general solution to keyword
- * combinations.)
- */
+/** A compressed combination of the other four keywords. */
 #define SVN_KEYWORD_ID               "Id"
 
 /** @} */
@@ -317,7 +313,7 @@ typedef struct svn_log_changed_path_t
  *
  * If @a changed_paths is non-@c NULL, then it contains as keys every path
  * committed in @a revision; the values are (@c svn_log_changed_path_t *) 
- * structures (see above).
+ * structures.
  *
  * ### The only reason @a changed_paths is not qualified with `const' is
  * that we usually want to loop over it, and @c apr_hash_first() doesn't

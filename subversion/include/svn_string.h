@@ -55,7 +55,7 @@
  *
  *   2. Non-null input:
  *
- *      All the functions below assume their input data is non-null,
+ *      All the functions assume their input data is non-null,
  *      unless otherwise documented, and may seg fault if passed
  *      null.  The input data may *contain* null bytes, of course, just
  *      the data pointer itself must not be null.

@@ -70,7 +70,7 @@ const svn_version_t *svn_diff_version (void);
 
 /** An opaque type that represents a difference between either two or
  * three datasources.   This object is returned by @c svn_diff_diff(),
- * @c svn_diff_diff3() and @c svn_diff_diff4 below, and consumed by a number of
+ * @c svn_diff_diff3() and @c svn_diff_diff4, and consumed by a number of
  * other routines.
  */
 typedef struct svn_diff_t svn_diff_t;

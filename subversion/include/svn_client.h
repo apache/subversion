@@ -386,7 +386,7 @@ typedef struct svn_client_ctx_t
       This will be called by @c notify_func2 by default. */
   svn_wc_notify_func_t notify_func;
 
-  /** notification callback baton for the above */
+  /** notification callback baton for @c notify_func */
   void *notify_baton;
 
   /** log message callback function */
@@ -414,7 +414,8 @@ typedef struct svn_client_ctx_t
       notification function, defaulting to a function that forwards
       to @c notify_func. */
   svn_wc_notify_func2_t notify_func2;
-  /** notification baton for the above. */
+
+  /** notification baton for @c notify_func2. */
   void *notify_baton2;
 } svn_client_ctx_t;
 

@@ -243,7 +243,7 @@ typedef struct svn_ra_reporter2_t
                              apr_pool_t *pool);
 
   /** WC calls this when the state report is finished; any directories
-   * or files not explicitly `set' above are assumed to be at the
+   * or files not explicitly `set' are assumed to be at the
    * baseline revision originally passed into @c do_update().
    */
   svn_error_t *(*finish_report) (void *report_baton,
@@ -364,7 +364,7 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  * representing this session in @a *session_p, allocated in @a pool.
  *
  * @a callbacks/@a callback_baton is a table of callbacks provided by the
- * client; see @c svn_ra_callbacks_t above.
+ * client; see @c svn_ra_callbacks_t.
  *
  * @a config is a hash mapping <tt>const char *</tt> keys to 
  * @c svn_config_t * values.  For example, the @c svn_config_t for the 
@@ -1041,7 +1041,8 @@ svn_error_t *svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
 
 /** @deprecated Provided for backwards compatibility with the 1.1 API.
  *
- * Using this callback struct is similar to calling the public interface above.
+ * Using this callback struct is similar to calling the newer public
+ * interface that is based on @c svn_ra_session_t.
  */
 typedef struct svn_ra_plugin_t
 {

@@ -1180,7 +1180,7 @@ svn_error_t *svn_repos_fs_change_txn_prop (svn_fs_txn_t *txn,
  * changes to the repository.  @c svn_repos_dir_delta() allows for
  * differences between two trees to be described using an editor.
  *
- * By using the specific editor found below in conjunction with
+ * By using the editor obtained from @c svn_repos_node_editor() with
  * @c svn_repos_dir_delta(), the description of how to transform one tree
  * into another can be used to build an in-memory linked-list tree,
  * which each node representing a repository node that was changed as a
@@ -1469,9 +1469,9 @@ typedef struct svn_repos_parse_fns2_t
 
   /** The parser has discovered a new node record within the current
    * revision represented by @a revision_baton.  All the headers are
-   * placed in @a headers as above, allocated in @a pool.  The 
-   * @a node_baton received back is allocated in @a pool and represents 
-   * the node.
+   * placed in @a headers (as with @c new_revision_record), allocated in
+   * @a pool.  The @a node_baton received back is allocated in @a pool
+   * and represents the node.
    */
   svn_error_t *(*new_node_record) (void **node_baton,
                                    apr_hash_t *headers,
