@@ -45,12 +45,12 @@ II. COMPILING THE DOCS
   
       http://sourceforge.net/project/showfiles.php?group_id=21935
 
-   Download docbook-xsl-1.56.1.tar.gz (or later), unpack it, then
+   Download the latest version of docbook-xsl, unpack it, then
    rename the unpacked directory to tools/xsl, something like this:
 
       $ cd subversion/doc/book/tools
-      $ tar zxvf docbook-xsl-1.56.1.tar.gz
-      $ mv docbook-xsl-1.56.1 xsl
+      $ tar zxvf docbook-xsl-X.YY.Z.tar.gz
+      $ mv docbook-xsl-Z.YY.Z xsl
 
    The default build process expects to the stylesheets to be in
    tools/xsl/.  If you already have them installed elsewhere on your
