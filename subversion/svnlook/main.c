@@ -468,6 +468,7 @@ print_diff_tree (svn_fs_root_t *root,
     {
       const char *args[5];
       apr_file_t *outhandle;
+      apr_wait_t status;
       apr_status_t apr_err;
 
       printf ("%s: %s\n", 
@@ -493,8 +494,11 @@ print_diff_tree (svn_fs_root_t *root,
           (apr_err, 0, NULL, pool,
            "print_diff_tree: can't open handle to stdout");
 
-      SVN_ERR (svn_io_run_cmd (".", SVN_CLIENT_DIFF, args, 
-                               NULL, outhandle, NULL, pool));
+      SVN_ERR(svn_io_run_cmd (".", SVN_CLIENT_DIFF, args, &status,
+                              NULL, outhandle, NULL, pool));
+
+      /* TODO: Handle status == 2 (i.e. diff error) here. */
+
       printf ("\n");
       fflush (stdout);
     }
@@ -920,7 +924,7 @@ do_usage (const char *progname, int exit_code)
   do {                                             \
     svn_error_t *svn_err__temp = (expr);           \
     if (svn_err__temp) {                           \
-      svn_handle_error (svn_err__temp, stdout, 0); \
+      svn_handle_error (svn_err__temp, stderr, 0); \
       goto cleanup; }                              \
   } while (0)
 

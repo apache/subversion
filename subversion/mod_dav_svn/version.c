@@ -449,6 +449,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
   if (serr != NULL)
     {
       const char *msg;
+      svn_fs_abort_txn(txn);
 
       if (serr->apr_err == SVN_ERR_FS_CONFLICT)
         {
