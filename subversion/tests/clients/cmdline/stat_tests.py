@@ -589,7 +589,7 @@ test_list = [ None,
               status_for_nonexistent_file,
               status_file_needs_update,
               status_uninvited_parent_directory,
-              XFail(status_on_forward_deletion),
+              status_on_forward_deletion,
              ]
 
 if __name__ == '__main__':
