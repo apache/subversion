@@ -75,14 +75,3 @@ Approved changes (further review is welcome, but not required):
       svn merge -r12390:HEAD $rs/branches/1.1.x-dav-switch
     Votes:
       +1: cmpilato, kfogel, jerenkrantz
-
-  * r12100, r12111, r12114
-    Fix output of notifications when merging a deletion of a directory.
-    Justification:
-      It just looks ugly and sloppy.
-    Branch:
-      rs=http://svn.collab.net/repos/svn
-      svn merge -r12104:HEAD $rs/branches/1.1.x-r12100
-    Votes:
-      +1: breser, kfogel, maxb
-
