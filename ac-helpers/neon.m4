@@ -65,8 +65,13 @@ dnl Configure neon --------------------------
           else
             args="--disable-shared"
           fi
-  
-          SVN_SUBDIR_CONFIG(neon, $args --with-expat="$abs_srcdir/expat-lite/libexpat.la")
+
+          # If we have apr-util and it's bundled expat, we can point neon
+          # there, otherwise, neon is on its own to find expat. 
+          if test -f "$abs_builddir/apr-util/xml/expat/libexpat.la" ; then 
+            args="$args --with-expat='$abs_builddir/apr-util/xml/expat/libexpat.la'"
+          fi
+          SVN_SUBDIR_CONFIG(neon, $args)
 
           if test -f "$abs_builddir/neon/neon-config" ; then
             AC_MSG_CHECKING([for any extra libraries neon needs])
