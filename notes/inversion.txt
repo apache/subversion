@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.12 $ of this document.)
+              ($Revision: 1.13 $ of this document.)
 
 * Introduction
 
@@ -196,16 +196,239 @@ do the diff and send it back.  But that's for the future.
 
 * Implementation
 
-** Repository uses diffy storage, of course.
+** Data design
 
-The Ivn repository does diff storage like CVS, with the full-text of
-most recent version of a file, and then reverse diffs going back in
-time.  But Ivn does not use RCS format, and it uses a binary differ of
-course (XDelta?), not a text differ.
+Suppose we have a new project, at version 1, that looks like this:
 
-In order to preserve the "cvs annotate" information, line-number
-change information is stored along with the binary diff.  [Thanks
-again to Jim Blandy for this trick.]
+   prompt$ inv checkout myproj
+   U myproj/
+   U myproj/B
+   U myproj/A
+   U myproj/A/subA
+   U myproj/A/subA/subA2
+   U myproj/A/subA/subA2/foo
+   prompt$
+
+(Only the file `foo' is a regular file, everything else in myproj is a
+directory).
+
+Now we'll see what myproj looks like as an abstract data structure in
+the repository, and how that structure works in various operations
+(such as update, commit, and branch).  
+
+In the diagrams that follow, horizontal lines represent time (that is,
+the progression of versions), and vertical or slanted lines represent
+parent-child connections in a directory hierarchy.  Boxes are "nodes".
+A node is either a file or a directory -- a letter in the upper left
+indicates which, and next to the letter is the node's name.  The name
+is printed just as a reminder in these diagrams, but the name might
+not really be stored in the node itself, but rather just the parent.
+
+A file node has a byte-string for its content, whereas directory nodes
+have a list of dir_entries, eaching pointing to another node.
+
+At the top of the repository is an array of version numbers,
+stretching off to infinity.  Since the project is at version 1, only
+index 1 points to anything; it points to the root node of version 1 of
+the project:
+
+
+                    (myproj's version array)
+       ______________________________________________________
+      |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
+          |
+          |
+       ___|_____
+      |D myproj |
+      |         |
+      |   A     |                 /* Two dir_entries, `A' and `B'. */
+      |    \    |
+      |   B \   | 
+      |__/___\__|
+        /     \
+       |       \
+       |        \
+    ___|____     \ ________
+   |D  B    |     |D  A    |
+   |        |     |        |
+   |  subB  |     | subA   |      /* One dir_entry, `subA'. */
+   |________|     |___\____|
+                       \
+                        \
+                      ___\____
+                     |D subA  |
+                     |        |
+                     | subA2  |   /* One dir_entry, `subA2'. */
+                     |___\____|
+                          \
+                           \
+                         ___\____
+                        |D subA2 |
+                        |        |
+                        | foo    |  /* One dir_entry, `foo'. */
+                        |___\____|
+                             \
+                              \
+                            ___\____
+                           |F foo   |
+                           |        |
+                           |        |   /* (Contents of foo not shown.) */
+                           |________|
+
+
+What happens when we modify `foo' and commit?  First, we make a new
+`foo' node, containing the diff from version 2 of foo to version 1.
+Note the the order there: this is a reverse diff.  The idea is that
+version 2 will hold the full text of this new version, and version 1
+will become a diff (this is done to save space, it does not affect the
+semantics of the implementation).
+
+The new node is not connected to anything yet, it's just hanging out
+there in space:
+
+                         ________
+                        |F       |
+                        | foo    |
+                        |        |
+                        |________|
+
+The new node does not say what version it belongs to; we'll get to
+that in a moment.
+
+Next, link the new node into the tree, where the previous node was,
+and create a "cross-link" (I forgot to tell you, nodes have a
+cross-link field) from the new node to the old node:
+
+
+       ______________________________________________________
+      |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
+          |
+          |
+       ___|_____
+      |D myproj |
+      |         |
+      |   A     |
+      |    \    |
+      |   B \   | 
+      |__/___\__|
+        /     \
+       |       \
+       |        \
+    ___|____     \ ________
+   |D  B    |     |D  A    |
+   |        |     |        |
+   |  subB  |     | subA   |
+   |________|     |___\____|
+                       \
+                        \
+                      ___\____
+                     |D subA  |
+                     |        |
+                     | subA2  |
+                     |___\____|
+                          \
+                           \
+                         ___\____
+                        |D subA2 |
+                        |        |
+                        | foo    |
+                        |___\____|
+                             \
+                              \
+                            ___\____            ________
+                           |F foo   |          |F foo   |
+                           |        |          |        |
+                           |  (1)------------->|        |
+                           |        |          |        |
+                           | full   |          | diffy  |
+                           |contents|          |contents|
+                           |________|          |________|
+
+
+A cross-link consists of a version number and a pointer into the past.
+The version number tells you the version of what it's pointing to, not
+where it's pointing from.  So if you're looking for version N of a
+file, and when you get a node for that file you find a cross-link
+pointing to a version >=N, then you know you must follow that link.
+
+But I digress.  Right now, we're learning how to commit version 2 of
+`foo', and there's one more step needed to complete that commit:
+register the new version at the top of the repository, thus making it
+externally visible.  That's done by making entry 2 in the version
+array point to something:
+
+
+       ______________________________________________________
+      |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
+          |       |
+          |      /
+       ___|_____/
+      |D myproj |
+      |         |
+      |   A     |
+      |    \    |
+      |   B \   | 
+      |__/___\__|
+        /     \
+       |       \
+       |        \
+    ___|____     \ ________
+   |D  B    |     |D  A    |
+   |        |     |        |
+   |  subB  |     | subA   |
+   |________|     |___\____|
+                       \
+                        \
+                      ___\____
+                     |D subA  |
+                     |        |
+                     | subA2  |
+                     |___\____|
+                          \
+                           \
+                         ___\____
+                        |D subA2 |
+                        |        |
+                        | foo    |
+                        |___\____|
+                             \
+                              \
+                            ___\____            ________
+                           |F foo   |          |F foo   |
+                           |        |          |        |
+                           |  (1)------------->|        |
+                           |        |          |        |
+                           | full   |          | diffy  |
+                           |contents|          |contents|
+                           |________|          |________|
+
+
+Yes, version 2 points to exactly the same root node as version 1.  And
+why not?  That node (a directory) hasn't changed at all.  Nor has its
+child, nor has anything until you get all the way down to foo.
+
+That's why nodes don't store version numbers -- the exact same node
+may be used in many different versions.
+
+Here's how to retrieve a version N of `foo':
+
+   1. Go to the version table, find version N.
+
+   2. Walk down the tree, starting from the root node N points to.
+
+   3. When you reach `foo', see if it has any cross-links numbered N
+      or greater.  If not, the node you're at is for version N.  Else,
+      the node you're at right now is for a version greater than N, so
+      follow cross-links until you're at a node that either has no
+      cross-link leaving it, or whose cross-link's number is less
+      than N.  This node is the droid you're looking for.
+
+Now watch what happens when we add a new file or directory into
+`subA2' (i.e., as a sibling of `foo').  Here's the resultant tree, the
+intermediate steps are not shown:
+
+  [in progress]
+
 
 ** Natively client/server.
 
@@ -225,246 +448,6 @@ from server to client, but full files going the other way, thus using
 more bandwidth than necessary).  Ivn accomplishes this either by
 keeping pristine copies locally, or using the rsync algorithm; which
 way we do it is an implementation detail that hasn't been decided yet.
-
-** The server stores projects in a database
-
-It turns out that project history storage falls neatly into a
-relational model; furthermore, using a real database gives us a lot of
-the locking behavior we need for free, and allows us to speed up
-crucial read operations by creating the right indexes.
-
-In short, this is one wheel we don't want to reinvent.
-
-A database makes it easy to have multiple repositories on one machine,
-with different admins for each repository -- each repository is simply
-a database (i.e., a namespace within which one can create tables) in
-the system.  Ultimate admin permissions are obtained through the usual
-database administration entry points.
-
-** Data design
-
-So what's the "thingum" in this database, the core object (i.e, table)
-around which everything else revolves?  For lack of a better name,
-we'll call it the "entity" table, where "entity" means a file or
-directory that's under version control.
-
-A look at its table description below will make things clearer...
-
-*** The ENTITIES table
-
-     PKEY         int           Internal unique identifier for this
-                  (never null)  entity. Users never see the pkey,
-                                only people trying to debug a problem
-                                in Inversion.
-     NAME         string        The name of this file or directory (a
-                                basename). Of course, this is only
-                                the name in this version. Names are
-                                versioned like anything else.
-
-                                If null, then this version's state
-                                (see below) must be "dead" or
-                                something similar.
-     PROJECT      int [fkey]
-                  (never null)  Foreign key into the projects table.
-     VERSION      int           What version of the project this row
-                  (never null)  is associated with.
-
-                                Remember that every other entity in
-                                this commit has the same version
-                                number.
-     NEXT_VERSION int           The next different version of this
-                                entity.
-
-                                Null means there is no different
-                                future version. (?)
-     PREV_VERSION int           The previous different version of
-                                this entity (i.e., not necessarily
-                                VERSION - 1). May cross projects (see
-                                the `ancestor' column in the
-                                `projects' table).
-
-                                Null means this is the first version
-                                of this entity.
-     STATE        string        The state of this entity. This is
-                  (never null)  primarily for death and resurrection
-                                support, but may also be used to
-                                record other states, if we can think
-                                of any.
-     CONTENTS     text          The contents of this version of the
-                                entity.
-
-                                If this row is at the most recent
-                                version in the project, then this is
-                                simply the full contents of the
-                                object: in the case of a regular
-                                file, then obviously it's the file's
-                                contents; if a directory, then it's a
-                                list (format to be determined) of the
-                                entities in the directory; if a
-                                symlink, the target of the symlink;
-                                if device, the device parameters; and
-                                so on.
-
-                                If this is not the most recent
-                                version, then the "contents" are
-                                stored as a reverse binary diff from
-                                the contents of the next version. For
-                                directories, that diff is a list of
-                                adds, deletes, and renames (again,
-                                format details to be determined).
-
-                                Null means this version does not
-                                differ from the next version.
-     LINE_MODS    text          For text files, change line-numbers
-                                are recorded (as for text diffs), so
-                                that deriving "cvs annotate"
-                                information is cheap.
-
-                                Null means this information is
-                                unavailable or not applicable.
-     TYPE         string        Regular file, or directory, or
-                  (never null)  symlink, or hard link, or device,
-                                etc.
-     PROPERTIES   text          Meta-data, stored in a format to be
-                                determined (probably key=value pairs,
-                                like environment strings). This is
-                                how permission information is
-                                preserved, among other things.
-
-                                Null means there are no properties,
-                                though this is probably rare.
-     PARENT_DIR   int [pkey]    The parent entity of this entity, in
-                                this version (it had better be a
-                                directory!).
-
-                                Null means this is the root entity.
-
-                                Note: this way of recording
-                                tree-structure is questionable;
-                                certain operations (tree-building!)
-                                might be too expensive if we do
-                                things this way. Another possibility
-                                is that the `name' column is not a
-                                basename, but a complete relative
-                                path within the project. Still
-                                thinking about this issue; see the
-                                Meta-Implementation section farther
-                                down.
-     MERGE_METHOD string        The name of a merge method that
-                                Inversion understands (right now
-                                Inversion only knows how to do text
-                                merges.) Normally, merging is only
-                                possible between two versions which
-                                are of the same TYPE.
-
-                                Null means merges are not possible
-                                with this entity.
-
-*** The PROJECTS table
-
-     PKEY            int               Internal unique identifier for
-                                       this project. Users never see
-                                       the pkey, only people trying
-                                       to debug a problem in
-                                       Inversion.
-
-                                       This pkey may actually not be
-                                       necessary; if not, then note
-                                       that the `project' column in
-                                       the `entities' table (see
-                                       above) would reference
-                                       projects by name (string)
-                                       instead of fkey (int).
-     NAME            string            The name of this project.
-     DESCRIPTION     string            What's this project all about
-                                       (for anon accessors).
-     HIGHEST_VERSION int               Just what you think it is.
-                     (never null)      Also known as the "tip".
-     LOWEST_VERSION  int               Also what you think it is.
-                     (never null)      Usually 1, but could be higher
-                                       for projects with a non-null
-                                       ancestor.
-     ANCESTOR        int [fkey] or     If not null, then this project
-                     string            is a "copy" (tag or branch) of
-                                       some other project.
-
-                                       One reason to use a string
-                                       instead of an fkey would be to
-                                       allow off-site ancestors. This
-                                       would enable private,
-                                       third-party branching -- way
-                                       cool, although a few other
-                                       things in this design would
-                                       need to be tweaked to allow
-                                       for that. We'll make sure that
-                                       happens in the second design
-                                       pass; this is still a rough
-                                       draft.
-
-                                       Also, debugging gets easier
-                                       the fewer pkeys we use.
-                                       Something to keep in mind...
-     LOG_MSG_POLICY  bool              True iff log messages are
-                                       required for this project.
-     PUBLIC          bool              True iff this project allows
-                                       anon access.
-
-*** The COMMITS table
-
-          This table is the last thing to get updated in a commit -- if you
-          don't see it here, then the commit isn't done yet. (Actually, the
-          timing issues may well be handled for free, if we use built-in
-          database transaction support and the appropriately-named SQL
-          "commit" command).
-
-     PROJECT int [fkey] or string  Which project this commit belongs
-             (never null)          to.
-     VERSION int                   The version number of this commit.
-             (never null)          Initial import gets 1.
-     USER    string                Whodunnit.
-             (never null)          
-     LOG_MSG text                  The log message for this commit.
-
-
-*** The USERS table
-
-     USERNAME           string  You know what this is.
-     REALNAME           string  Same.
-     EMAIL              string  Same.
-     USE_SYSTEM         bool    Permit fall-back to system
-                                authentication or not.
-     PASSPHRASE or      ?       We're still figuring out how
-     PUBLIC_KEY                 authentication works. We know that
-                                repository users do not require
-                                system accounts, at least.
-
-*** The ACCESSES table
-
-     USER        string        A username.
-     PROJECT     int or        Projects this user is allowed to
-                 string        access, and what kind of access is
-                               allowed for each. Format to be
-                               determined. (Referenced by fkey or
-                               name? See similar discussions above.)
-     ACCESS_TYPE ?             Format and meaning to be determined.
-                               We can have anything from a simple
-                               read-only vs read-write dichotomy, all
-                               the way to listing the exact
-                               operations that are permitted.
-
-*** The INVERSION table
-
-          Records a few server-specific things about this repository. Right
-          now, we only know one column:
-
-     IVN_RELEASE ? The release number (version, in the wider sense)
-                   of the Inversion server that created or last
-                   upgraded this repository. For compatibility: if we
-                   add new columns, or new interpretations of old
-                   columns, an upgraded server can tell what it needs
-                   to do to upgrade the repository tables, for
-                   example.
-
 
 * Evaluating the Design
 

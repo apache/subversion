@@ -61,11 +61,7 @@ while (<SOURCE>)
 
   $_ = &escape_html ($_);
 
-  # Convert "*foo*" to real italics: "<i>foo</i>"
-  $_ =~ s/^\*([^*\s]+)/<i>$1/g;
-  $_ =~ s/(\s)\*([^*\s]+)/$1<i>$2/g;
-  $_ =~ s/([^*\s]+)\*$/$1<\/i>/g;
-  $_ =~ s/([^*\s]+)\*([\s\W])/$1<\/i>$2/g;
+  $_ = &intuit_italicization ($_);
 
   if ($num_stars == 1)
   {
@@ -131,11 +127,11 @@ while (<SOURCE>)
     elsif ($quoted_mail_line) {
       print DEST "<font color=red>$_</font><br>\n";
     }
-    elsif ($_ =~ /[a-zA-Z0-9]/) {
-      print DEST "$_\n";
-    }
     elsif ((! $seen_first_heading) && ($_ =~ /^\s*[-_]+\s*$/)) {
       print DEST "<p><hr><p>\n";
+    }
+    elsif ($_ =~ /\S/) {
+      print DEST "$_\n";
     }
     else {
       print DEST "\n\n<p>\n\n";
@@ -158,6 +154,18 @@ sub escape_html ()
   return $str;
 }
 
+sub intuit_italicization ()
+{
+  my $str = shift;
+
+  # Convert "*foo*" and similar things to "<i>foo</i>"
+  $str =~ s/^\*([^*\s\/]+)/<i>$1/g;
+  $str =~ s/(\s)\*([^*\s\/]+)/$1<i>$2/g;
+  $str =~ s/([^*\s\/]+)\*$/$1<\/i>/g;
+  $str =~ s/([^*\s\/]+)\*([\s\W\/])/$1<\/i>$2/g;
+
+  return $str;
+}
 
 sub count_stars ()
 {
