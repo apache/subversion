@@ -16,6 +16,9 @@ dnl   If no --with-neon option is passed look first for a neon/ subdir.
 dnl   If a neon/ subdir exists and is the wrong version exit with a 
 dnl   failure.  If no neon/ subdir is present search for a neon installed
 dnl   on the system.
+dnl
+dnl   If the search for neon fails, set svn_lib_neon to no, otherwise set 
+dnl   it to yes.
 
 AC_DEFUN(SVN_LIB_NEON,
 [
@@ -83,6 +86,7 @@ dnl Configure neon --------------------------
             CFLAGS="$CFLAGS `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-I[^ ]*//g'`"
             SVN_NEON_INCLUDES="$SVN_NEON_INCLUDES `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-D[^ ]*//g'`"
             changequote([, ])dnl
+            svn_lib_neon="yes"
           fi
 
           SVN_SUBDIRS="$SVN_SUBDIRS neon"
@@ -110,29 +114,35 @@ dnl SVN_NEON_CONFIG()
 dnl neon-config found, gather relevant information from it
 AC_DEFUN(SVN_NEON_CONFIG,
 [
-  if test "$neon_config" != ""; then
-    AC_MSG_CHECKING([neon library version])
-    NEON_VERSION=`$neon_config --version | sed -e 's/^neon //'`
-    AC_MSG_RESULT([$NEON_VERSION])
+  if test -f "$neon_config"; then
+    if test "$neon_config" != ""; then
+      AC_MSG_CHECKING([neon library version])
+      NEON_VERSION=`$neon_config --version | sed -e 's/^neon //'`
+      AC_MSG_RESULT([$NEON_VERSION])
 
-    case "$NEON_VERSION" in
-      $NEON_WANTED_REGEX)
-        changequote(<<, >>)dnl
-        SVN_NEON_INCLUDES=`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`
-        NEON_LIBS=`$neon_config --libs`
-        CFLAGS="$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"
-        changequote([, ])dnl
-        ;;
-      *)
-        echo "You have neon version $NEON_VERSION,"
-        echo "but Subversion needs neon $NEON_LATEST_WORKING_VER."
-        SVN_DOWNLOAD_NEON()
-        ;;
-    esac
+      case "$NEON_VERSION" in
+        $NEON_WANTED_REGEX)
+          changequote(<<, >>)dnl
+          SVN_NEON_INCLUDES=`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`
+          NEON_LIBS=`$neon_config --libs`
+          CFLAGS="$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"
+          changequote([, ])dnl
+          svn_lib_neon="yes"
+          ;;
+        *)
+          echo "You have neon version $NEON_VERSION,"
+          echo "but Subversion needs neon $NEON_LATEST_WORKING_VER."
+          SVN_DOWNLOAD_NEON()
+          ;;
+      esac
+    else
+      # no neon subdir, no neon-config in PATH
+      AC_MSG_RESULT([nothing])
+      echo "No suitable neon can be found."
+      SVN_DOWNLOAD_NEON()
+    fi
   else
-    # no neon subdir, no neon-config in PATH
-    AC_MSG_RESULT([nothing])
-    echo "No suitable neon can be found."
+    # user probably passed --without-neon, or --with-neon=/something/dumb
     SVN_DOWNLOAD_NEON()
   fi
 ])
@@ -141,7 +151,10 @@ dnl SVN_DOWNLOAD_NEON()
 dnl no neon found, print out a message telling the user what to do
 AC_DEFUN(SVN_DOWNLOAD_NEON,
 [
-  echo "Please either install neon ${NEON_LATEST_WORKING_VER} on this system"
+  echo ""
+  echo "An appropriate version of neon could not be found, so libsvn_ra_dav"
+  echo "will not be built.  If you want to build libsvn_ra_dav, please either"
+  echo "install neon ${NEON_LATEST_WORKING_VER} on this system"
   echo ""
   echo "or"
   echo ""
@@ -149,5 +162,7 @@ AC_DEFUN(SVN_DOWNLOAD_NEON,
   echo "    ${NEON_URL}"
   echo "unpack the archive using tar/gunzip and rename the resulting"
   echo "directory from ./neon-${NEON_LATEST_WORKING_VER}/ to ./neon/"
-  AC_MSG_ERROR([no suitable neon found])
+  echo ""
+  AC_MSG_RESULT([no suitable neon found])
+  svn_lib_neon="no"
 ])
