@@ -544,6 +544,42 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
 }
 
 
+
+
+svn_error_t *
+svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
+                                   svn_fs_t *fs,
+                                   svn_revnum_t rev,
+                                   const char *author,
+                                   apr_pool_t *pool)
+{
+  /* ### someday, we might run a read-hook here. */
+
+  /* Begin the transaction. */
+  SVN_ERR (svn_fs_begin_txn (txn_p, fs, rev, pool));
+
+  /* We pass the author to the filesystem by adding it as a property
+     on the txn. */
+  {
+    svn_string_t author_prop_name = { SVN_PROP_REVISION_AUTHOR,
+                                      sizeof(SVN_PROP_REVISION_AUTHOR) - 1};
+
+    /* User (author). */
+    {
+      svn_string_t val;
+      val.data = author;
+      val.len = strlen (author);
+      
+      SVN_ERR (svn_fs_change_txn_prop (*txn_p, &author_prop_name,
+                                       &val, pool));
+    }    
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /* 
  * local variables:

@@ -27,6 +27,9 @@ typedef struct svn_repos_report_baton_t
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
 
+  /* Which user is doing the update (building the temporary txn) */
+  const char *username;
+
   /* The location under which all reporting will happen (in the fs) */
   svn_stringbuf_t *base_path;
 
@@ -73,8 +76,11 @@ svn_repos_set_path (void *report_baton,
            "svn_repos_set_path: initial revision report was bogus.");
 
       /* Start a transaction based on REVISION. */
-      SVN_ERR (svn_fs_begin_txn (&(rbaton->txn), rbaton->fs,
-                                 revision, rbaton->pool));
+      SVN_ERR (svn_repos_fs_begin_txn_for_update (&(rbaton->txn),
+                                                  rbaton->fs,
+                                                  revision,
+                                                  rbaton->username,
+                                                  rbaton->pool));
       SVN_ERR (svn_fs_txn_root (&(rbaton->txn_root), rbaton->txn,
                                 rbaton->pool));
       
@@ -197,6 +203,7 @@ svn_repos_abort_report (void *report_baton)
 svn_error_t *
 svn_repos_begin_report (void **report_baton,
                         svn_revnum_t revnum,
+                        const char *username,
                         svn_fs_t *fs,
                         svn_stringbuf_t *fs_base,
                         const svn_delta_edit_fns_t *update_editor,
@@ -212,6 +219,7 @@ svn_repos_begin_report (void **report_baton,
   rbaton->update_edit_baton = update_baton;
   rbaton->path_rev_hash = apr_hash_make (pool);
   rbaton->fs = fs;
+  rbaton->username = username;
 
   /* Split the filesystem path given to us into an ANCHOR (which is
      the root of the report) and a TARGET (which is the target of the
