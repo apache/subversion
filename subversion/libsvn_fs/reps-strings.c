@@ -878,7 +878,10 @@ rep_read_contents (void *baton, char *buf, apr_size_t *len)
          from creating millions of unnecessary trail subpools when
          reading a big file. */
       apr_pool_t *subpool = svn_pool_create (rb->pool);
-      SVN_ERR (svn_fs__retry (rb->fs, txn_body_read_rep, &args, 1, subpool));
+      SVN_ERR (svn_fs__retry_txn (rb->fs,
+                                  txn_body_read_rep,
+                                  &args,
+                                  subpool));
       svn_pool_destroy (subpool);
     }
   return SVN_NO_ERROR;
@@ -1039,7 +1042,10 @@ rep_write_contents (void *baton,
          millions of unnecessary trail subpools when writing a big
          file. */
       apr_pool_t *subpool = svn_pool_create (wb->pool);
-      SVN_ERR (svn_fs__retry (wb->fs, txn_body_write_rep, &args, 1, subpool));
+      SVN_ERR (svn_fs__retry_txn (wb->fs,
+                                  txn_body_write_rep,
+                                  &args,
+                                  subpool));
       svn_pool_destroy (subpool);
     }
 
@@ -1094,8 +1100,10 @@ rep_write_close_contents (void *baton)
     }
   else
     {
-      SVN_ERR (svn_fs__retry (wb->fs, txn_body_write_close_rep,
-                              wb, 1, wb->pool));
+      SVN_ERR (svn_fs__retry_txn (wb->fs,
+                                  txn_body_write_close_rep,
+                                  wb,
+                                  wb->pool));
     }
 
   return SVN_NO_ERROR;

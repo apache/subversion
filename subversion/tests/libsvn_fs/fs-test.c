@@ -1113,7 +1113,7 @@ check_id (svn_fs_t *fs, const svn_fs_id_t *id, svn_boolean_t *present,
 
   args.id = id;
   args.fs = fs;
-  SVN_ERR (svn_fs__retry (fs, txn_body_check_id, &args, 1, pool));
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_check_id, &args, pool));
 
   if (args.present)
     *present = TRUE;
@@ -5407,7 +5407,7 @@ redundant_copy (const char **msg,
   args.fs = fs;
   args.txn_name = txn_name;
   args.txn = &transaction;
-  SVN_ERR (svn_fs__retry (fs, txn_body_get_txn, &args, 1, pool));
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_txn, &args, pool));
   if (transaction->copies->nelts != 1)
     return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "Expected 1 copy; got %d",
@@ -5421,7 +5421,7 @@ redundant_copy (const char **msg,
 
   /* Now, examine the transaction.  There should still only have been
      one copy operation that "took". */
-  SVN_ERR (svn_fs__retry (fs, txn_body_get_txn, &args, 1, pool));
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_txn, &args, pool));
   if (transaction->copies->nelts != 1)
     return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "Expected only 1 copy; got %d",

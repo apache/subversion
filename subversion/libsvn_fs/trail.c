@@ -90,7 +90,6 @@ struct undo {
 static svn_error_t *
 begin_trail (trail_t **trail_p,
              svn_fs_t *fs,
-             int use_txn,
              apr_pool_t *pool)
 {
   trail_t *trail = apr_pcalloc (pool, sizeof (*trail));
@@ -98,11 +97,8 @@ begin_trail (trail_t **trail_p,
   trail->pool = svn_pool_create (pool);
   trail->scratchpool = svn_pool_create (trail->pool);
   trail->undo = 0;
-
-  /* Maybe create a Berkeley DB transaction (if one exists). */
-  if (use_txn)
-    SVN_ERR (BDB_WRAP (fs, "beginning Berkeley DB transaction",
-                       fs->env->txn_begin (fs->env, 0, &trail->db_txn, 0)));
+  SVN_ERR (BDB_WRAP (fs, "beginning Berkeley DB transaction",
+                    fs->env->txn_begin (fs->env, 0, &trail->db_txn, 0)));
 
   *trail_p = trail;
   return SVN_NO_ERROR;
@@ -121,10 +117,8 @@ abort_trail (trail_t *trail,
     if (undo->when & undo_on_failure)
       undo->func (undo->baton);
 
-  /* Abort the Berkeley DB transaction (if one exists). */
-  if (trail->db_txn)
-    SVN_ERR (BDB_WRAP (fs, "aborting Berkeley DB transaction",
-                       trail->db_txn->abort (trail->db_txn)));
+  SVN_ERR (BDB_WRAP (fs, "aborting Berkeley DB transaction",
+                    trail->db_txn->abort (trail->db_txn)));
  
   svn_pool_destroy (trail->pool);
 
@@ -147,9 +141,8 @@ commit_trail (trail_t *trail,
   /* According to the example in the Berkeley DB manual, txn_commit
      doesn't return DB_LOCK_DEADLOCK --- all deadlocks are reported
      earlier.  */
-  if (trail->db_txn)
-    SVN_ERR (BDB_WRAP (fs, "committing Berkeley DB transaction",
-                       trail->db_txn->commit (trail->db_txn, 0)));
+  SVN_ERR (BDB_WRAP (fs, "committing Berkeley DB transaction",
+                    trail->db_txn->commit (trail->db_txn, 0)));
 
   /* Do a checkpoint here, if enough has gone on.
      The checkpoint parameters below are pretty arbitrary.  Perhaps
@@ -167,40 +160,36 @@ commit_trail (trail_t *trail,
 
 
 #if defined(SVN_FS__TRAIL_DEBUG)
-#undef svn_fs__retry
+#undef svn_fs__retry_txn
 
 svn_error_t *
-svn_fs__retry (svn_fs_t *fs,
-               svn_error_t *(*txn_body) (void *baton, trail_t *trail),
-               void *baton,
-               int use_txn,
-               apr_pool_t *pool)
+svn_fs__retry_txn (svn_fs_t *fs,
+                   svn_error_t *(*txn_body) (void *baton, trail_t *trail),
+                   void *baton,
+                   apr_pool_t *pool)
 {
-  return svn_fs__retry_debug (fs, txn_body, baton, use_txn, pool,
-                              "unknown", "", 0);
+  return svn_fs__retry_debug (fs, txn_body, baton, pool, "unknown", "", 0);
 }					 
 #else
 svn_error_t *
 svn_fs__retry_debug (svn_fs_t *fs,
                      svn_error_t *(*txn_body) (void *baton, trail_t *trail),
                      void *baton,
-                     int use_txn,
                      apr_pool_t *pool,
                      const char *txn_body_fn_name,
                      const char *filename,
                      int line)
 {
-  return svn_fs__retry (fs, txn_body, baton, use_txn, pool);
+  return svn_fs__retry_txn (fs, txn_body, baton, pool);
 }
 #endif
 
 #if !defined(SVN_FS__TRAIL_DEBUG)
 svn_error_t *
-svn_fs__retry (
+svn_fs__retry_txn (
   svn_fs_t *fs,
   svn_error_t *(*txn_body) (void *baton, trail_t *trail),
   void *baton,
-  int use_txn,
   apr_pool_t *pool)
 #else
 svn_error_t *
@@ -208,7 +197,6 @@ svn_fs__retry_debug (
   svn_fs_t *fs,
   svn_error_t *(*txn_body) (void *baton, trail_t *trail),
   void *baton,
-  int use_txn,
   apr_pool_t *pool,
   const char *txn_body_fn_name,
   const char *filename,
@@ -221,7 +209,7 @@ svn_fs__retry_debug (
       svn_error_t *svn_err, *err;
       int deadlocked = 0;
       
-      SVN_ERR (begin_trail (&trail, fs, use_txn, pool));
+      SVN_ERR (begin_trail (&trail, fs, pool));
 
       /* Do the body of the transaction.  */
       svn_err = (*txn_body) (baton, trail);
@@ -242,7 +230,7 @@ svn_fs__retry_debug (
           deadlocked = 1;
 
       /* Is this a real error, or do we just need to retry?  */
-      if (! deadlocked)
+      if (!deadlocked)
         {
           /* Ignore any error returns.  The first error is more valuable.  */
           svn_error_clear (abort_trail (trail, fs));
