@@ -45,7 +45,7 @@ subversion rpm : check_release build_srpm_files build_rpm_files brand_files
 check_release :
 	@if [ "$(RELEASE)"x = "x" ]; \
 	   then \
-		echo "Please specifiy RELEASE"; \
+		echo "Please specifiy RELEASE with 'make RELEASE=<number>'"; \
 		exit 1; \
 	    else \
 		exit 0; \
