@@ -19,6 +19,7 @@ struct rep_pointer
 struct entry
 {
   apr_hash_t *children;  /* NULL for files */
+  svn_boolean_t children_changed;
   apr_hash_t *props;
   apr_pool_t *props_pool;
   struct rep_pointer text_rep;
@@ -116,6 +117,7 @@ new_entry(apr_pool_t *pool)
 
   entry = apr_palloc(pool, sizeof(*entry));
   entry->children = NULL;
+  entry->children_changed = FALSE;
   entry->props = NULL;
   init_rep(&entry->text_rep);
   init_rep(&entry->props_rep);
@@ -168,7 +170,10 @@ copy_entry(struct parse_baton *pb, struct entry *new_entry,
 {
   *new_entry = *old_entry;
   if (new_entry->children)
-    new_entry->children = apr_hash_copy(pb->pool, old_entry->children);
+    {
+      new_entry->children = apr_hash_copy(pb->pool, old_entry->children);
+      new_entry->children_changed = FALSE;
+    }
   new_entry->node_rev = pb->current_rev;
   new_entry->node_off = -1;
   new_entry->pred_count = old_entry->pred_count + 1;
@@ -223,6 +228,7 @@ get_child(struct parse_baton *pb, struct entry *entry, const char *name,
 
       name = apr_pstrdup(pb->pool, name);
       apr_hash_set(entry->children, name, APR_HASH_KEY_STRING, new_child);
+      entry->children_changed = TRUE;
       child = new_child;
     }
   return child;
@@ -445,9 +451,9 @@ write_entry(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
         }
       svn_pool_destroy(subpool);
 
-      /* XXX want some way to detect if children haven't changed */
-      SVN_ERR(write_hash_rep(pb, children_to_dirmap(entry->children, pool),
-                             &entry->text_rep, pool));
+      if (entry->children_changed)
+        SVN_ERR(write_hash_rep(pb, children_to_dirmap(entry->children, pool),
+                               &entry->text_rep, pool));
     }
 
   if (entry->props)
@@ -668,9 +674,11 @@ dump_txn_node_rev(struct parse_baton *pb, struct entry *entry,
           SVN_ERR(dump_txn_node_rev(pb, val, subpool));
         }
 
-      /* XXX want some way to know if children haven't changed */
-      SVN_ERR(write_txn_dir_children(pb, entry, nrpath, pool));
-      entry->text_rep.rev = pb->current_rev;
+      if (entry->children_changed)
+        {
+          SVN_ERR(write_txn_dir_children(pb, entry, nrpath, pool));
+          entry->text_rep.rev = pb->current_rev;
+        }
     }
 
   if (entry->props)
@@ -800,6 +808,7 @@ new_revision_record(void **revision_baton, apr_hash_t *headers, void *baton,
       root->node_id = pb->next_node_id++;
       root->copy_id = pb->next_copy_id++;
       root->children = apr_hash_make(pb->pool);
+      root->children_changed = TRUE;
       root->copyroot = root;
       root->node_rev = 0;
     }
@@ -865,13 +874,17 @@ new_node_record(void **node_baton, apr_hash_t *headers, void *baton,
           entry->copy_id = parent->copy_id;
           entry->copyroot = parent->copyroot;
           if (kind == svn_node_dir)
-            entry->children = apr_hash_make(pb->pool);
+            {
+              entry->children = apr_hash_make(pb->pool);
+              entry->children_changed = TRUE;
+            }
           entry->node_rev = pb->current_rev;
           entry->node_off = -1;
         }
       entry->created_path = apr_pstrdup(pb->pool, path);
       name = apr_pstrdup(pb->pool, name);
       apr_hash_set(parent->children, name, APR_HASH_KEY_STRING, entry);
+      parent->children_changed = TRUE;
       apr_hash_set(pb->added_paths, path, APR_HASH_KEY_STRING, entry);
       pb->current_node = entry;
       break;
