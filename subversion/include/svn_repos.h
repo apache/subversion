@@ -733,7 +733,7 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 
 /* The RFC822-style headers in our dumpfile format. */
 #define SVN_REPOS_DUMPFILE_MAGIC_HEADER            "SVN-fs-dump-format-version"
-#define SVN_REPOS_DUMPFILE_FORMAT_VERSION           1
+#define SVN_REPOS_DUMPFILE_FORMAT_VERSION           2
 #define SVN_REPOS_DUMPFILE_UUID                      "UUID"
 #define SVN_REPOS_DUMPFILE_CONTENT_LENGTH            "Content-length"
 
