@@ -720,7 +720,7 @@ svn_repos_history2 (svn_fs_t *fs,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to @c svn_repos_history, but with @a authz_read_func
+ * Similar to @c svn_repos_history2, but with @a authz_read_func
  * and @a authz_read_baton always set to NULL.
  */
 svn_error_t *
@@ -851,7 +851,7 @@ svn_repos_get_logs3 (svn_repos_t *repos,
 
 /**
  * @deprecated Provided for backward compatibility with the 1.1 API.
- * Same as svn_get_logs3(), but with @a limit always set to 0.
+ * Same as svn_repos_get_logs3(), but with @a limit always set to 0.
  */
 svn_error_t *
 svn_repos_get_logs2 (svn_repos_t *repos,
@@ -869,7 +869,7 @@ svn_repos_get_logs2 (svn_repos_t *repos,
 /** 
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Same as svn_get_logs2(), but with @a authz_read_func and
+ * Same as svn_repos_get_logs2(), but with @a authz_read_func and
  * @a authz_read_baton always set to NULL.
  */
 svn_error_t *
@@ -1600,7 +1600,8 @@ svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * A vtable that is driven by @c svn_repos_parse_dumpstream.  Lacks
+ * A vtable that is driven by @c svn_repos_parse_dumpstream.
+ * Similar to svn_repos_parser_fns2_t except that it lacks
  * the delete_node_property and apply_textdelta callbacks.
  */
 typedef struct svn_repos_parse_fns_t

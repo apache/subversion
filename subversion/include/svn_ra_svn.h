@@ -107,7 +107,7 @@ typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 /** Initialize a connection structure for the given socket or
  * input/output files.
  *
- * Either @c sock or @c in_file/@c out_file must be set, not both.
+ * Either @a sock or @a in_file/@a out_file must be set, not both.
  */
 svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
                                           apr_file_t *in_file,
@@ -208,11 +208,11 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
 svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...);
 
-/** Read an item from the network into @c item. */
+/** Read an item from the network into @a *item. */
 svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   svn_ra_svn_item_t **item);
 
-/** Scan data on @c conn until we find something which looks like the
+/** Scan data on @a conn until we find something which looks like the
  * beginning of an svn server greeting (an open paren followed by a
  * whitespace character).  This function is appropriate for beginning
  * a client connection opened in tunnel mode, since people's dotfiles
