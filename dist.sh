@@ -5,27 +5,58 @@
 #
 # Run this script in the top-level of a configured working copy that
 # has apr/ and neon/ subdirs, and you'll end up with
-# subversion-X.Y.tar.gz in that top-level directory.
+# subversion-rXXX.tar.gz in that top-level directory.
 #
-# The tarball will be based on the HEAD of the repository, not on
-# whatever set of revisions are in your working copy.  However, since
-# the documentation will be produced by running "make doc" on your
-# working copy's revisions of the doc master files, it's probably
-# simplest if you just make sure your working copy is at HEAD as well.
-# Then you won't get any unexpected results.
+# Unless specified otherwise (with a single REVISION argument to this
+# script), the tarball will be based on the HEAD of the repository.
+#
+# It will *not* be based on whatever set of revisions are in your
+# working copy.  However, since 
+#
+#   - the documentation will be produced by running "make doc" 
+#     on your working copy's revisions of the doc master files, and
+#
+#   - since the APR tree included is basically copied from your working 
+#     copy, 
+#
+# it's probably simplest if you just make sure your working copy is at
+# the same revision as that of the distribution you are trying to
+# create.  Then you won't get any unexpected results.
 #
 ##########################################################################
 
 ### Rolling block.
 DIST_SANDBOX=.dist_sandbox
 
+### Estimated current version of your working copy
+WC_VERSION=`svn st -vn doc/README | awk '{print $2}'`
+
 ### The "REV" part of ${DISTNAME}-rREV.tar.gz
-VERSION=`svn st -v README | awk '{print $2}'`
+if test "X$1" != X; then
+  VERSION=$1
+else
+  VERSION=`svn st -vu README | tail -1 | awk '{print $3}'`
+fi
 
 ### The tarball's basename, also the name of the subdirectory into which
 ### it should unpack.
 DISTNAME=subversion-r${VERSION}
 echo "Distribution will be named: ${DISTNAME}"
+
+### Warn the user if their working copy looks to be out of sync with
+### their requested (or default) revision
+if test ${WC_VERSION} != ${VERSION}; then
+  echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
+  echo "*                                                             *"
+  echo "* WARNING:  The docs/ directory in your working copy does not *"
+  echo "*           appear  to  have the same revision number  as the *"
+  echo "*           distribution revision you requested.  Since these *"
+  echo "*           documents will be the ones included in your final *"
+  echo "*           tarball, please  be  sure they reflect the proper *"
+  echo "*           state.                                            *"
+  echo "*                                                             *"
+  echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
+fi
 
 ### Clean up the old docs so we're guaranteed the latest ones.
 # This is necessary only because "make clean" doesn't appear
@@ -49,9 +80,10 @@ mkdir ${DIST_SANDBOX}
 echo "Removed and recreated ${DIST_SANDBOX}"
 
 ### Export the dist tree, clean it up.
-echo "Checking out latest revision of Subversion into sandbox..."
-(cd ${DIST_SANDBOX} && svn co http://svn.collab.net/repos/svn/trunk \
-                              -d ${DISTNAME} --username none --password none)
+echo "Checking out revision ${VERSION} of Subversion into sandbox..."
+(cd ${DIST_SANDBOX} && \
+ svn co -r ${VERSION} http://svn.collab.net/repos/svn/trunk \
+        -d ${DISTNAME} --username none --password none)
 echo "Removing all .svn/ dirs from the checkout..."
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .svn -print`
 
