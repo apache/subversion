@@ -256,7 +256,7 @@ local-all: @BUILD_RULES@ @SWIG_BUILD_RULES@
 fast-clean: doc-clean
 	@list='$(BUILD_DIRS)'; for i in $$list; do                   \
             echo "Cleaning $$i ..." ;                                \
-            (cd $$i && rm -f *.o *.lo *.la *.la-a && rm -rf .libs) ; \
+            (cd $$i && rm -f *.o *.lo *.la *.la-a *.mo && rm -rf .libs) ; \
         done
 	rm -f $(CLEAN_FILES)
 
