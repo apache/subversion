@@ -11,6 +11,7 @@ lib_LTLIBRARIES = libsvn_wc.la
 libsvn_wc_la_SOURCES = get_editor.c                      \
                        adm_files.c adm_ops.c adm_parse.c \
                        lock.c util.c questions.c         \
+                       local_changes.c                   \
                        adm_crawler.c
 
 ## Build flags ---------

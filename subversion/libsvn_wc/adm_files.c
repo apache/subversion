@@ -235,7 +235,7 @@ svn_wc__make_adm_thing (svn_string_t *path,
  *      its size at the time of opening is reached.
  * @tip The dest file's permissions will be the same as the source file's.
  */
-static apr_status_t
+apr_status_t
 apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
 {
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
@@ -657,6 +657,25 @@ svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool)
                           SVN_PATH_LOCAL_STYLE, pool);
 
   return err;
+}
+
+
+svn_string_t *
+svn_wc__text_base_path (svn_string_t *path, apr_pool_t *pool)
+{
+  svn_string_t *npath = svn_string_dup (path, pool);
+  svn_string_t *last_component
+    = svn_path_last_component (npath, SVN_PATH_LOCAL_STYLE, pool);
+  svn_path_remove_component (npath, SVN_PATH_LOCAL_STYLE);
+
+  extend_with_adm_name (npath,
+                        0,
+                        pool,
+                        SVN_WC__ADM_TEXT_BASE,
+                        last_component->data,
+                        NULL);
+
+  return npath;
 }
 
 
