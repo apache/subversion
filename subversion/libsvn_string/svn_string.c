@@ -90,9 +90,10 @@ svn_string_create (const char *cstring, apr_pool_t *pool)
   /* this alloc gives us memory filled with zeros, yum. */
   new_string = (svn_string_t *) apr_palloc (pool, sizeof(svn_string_t)); 
 
-  new_string->data = (char *) apr_palloc (pool, l);
+  /* +1 to account for null byte. */
+  new_string->data = (char *) apr_palloc (pool, l + 1);
   new_string->len = l;
-  new_string->blocksize = l;
+  new_string->blocksize = l + 1;
 
   strcpy (new_string->data, cstring);
   
