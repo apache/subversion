@@ -477,12 +477,12 @@ svn_error_quick_wrap (svn_error_t *child, const char *new_msg)
 
 
 void
-svn_error_compose (svn_error_t *chain, svn_error_t *new)
+svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
 {
   while (chain->child)
     chain = chain->child;
 
-  chain->child = new;
+  chain->child = new_err;
 }
 
 

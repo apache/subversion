@@ -33,6 +33,9 @@ Package=<4>
     Project_Dep_Name svnadmin
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name svnlook
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name svn_com
     End Project Dependency
 }}}
