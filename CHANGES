@@ -1,10 +1,40 @@
-Version ? (released ? ? ?, revision ?)
+Version 0.16.1 (released 6 Jan 2003, revision ?)
 
  User-visible changes:
- * working-copy to repository copies now work
- * --non-recursive replaces --nonrecursive
- * svn now handles Windows config file paths containing non-ascii characters
-   (#968, #1048, part of #872)
+ * ra_svn network layer (apache alternative) now tested & ssh-tunnelable
+ * new (experimental) mod_dav_svn autoversioning feature (SVNAutoversioning)
+ * reorganization of the ~/.subversion/ run-time config files.
+ * more entry caching: approx. 3x speedup on checkouts & updates.
+ * option rename: --non-recursive instead of --nonrecursive
+ * new 'svn log --quiet'
+ * fix keyword expansion behaviors ($keyword:$ / $keyword$ / $keyword: $)
+ * handle win32 non-ascii config-file paths (#968, #1048, part of #872)
+
+ Developer-visible changes:
+ * most public header files now using doxygen markup
+ * new (untested) internal difflib (#405)
+ * neon debugging now tweakable via run-time config file
+ * more progress on Subversion Book rewrite.
+ * new ./configure --with-diffutils
+ * begin work on client/server checksums (#649)
+ * regression tests now depend on svnadmin dump/load
+ * lose src_err field of svn_error_t
+ * many fs function renames:  begins fs database back-end abstraction.
+ * new libsvn_repos prop-validating wrappers
+ * lots of work on build-system dependency graph generation (for SWIG building)
+ * swig binding work:
+    - python svn calls can now run as independent threads
+    - new java-binding build system
+    - improved swig building features:  --prefix, LDFLAGS behaviors
+ * many, many bug fixes: wc->repos copies (#1029), #943 followup
+   (#1023), copies of copies (#830), 'svn resolve' cleans up entries
+   file (#1021), prop merging (#1012), segfault fixes (#1027, #1055),
+   autoconf 2.5X (#886), O(1) copies (#717), new 'failed revert'
+   signal (#714), detect missing schedule-add conflicts (#899, #863),
+   begin dav namespace switchover (#840), status bugs, url auth
+   inference (#1038), log bug (#1028), newline prompt (#1039),
+   svnadmin errorchecking, url syntax errors (#1057, #1058), apr/utf8
+   work (start #872), and many more.
 
 
 Version 0.16 (released 4 Dec 2002, revision 3987)
