@@ -59,7 +59,7 @@ typedef struct svn_item_t {
 typedef long int svn_revnum_t;
 
 /* Valid revision numbers begin at 0 */
-#define SVN_IS_VALID_REVNUM (n) (n >= 0)
+#define SVN_IS_VALID_REVNUM(n) (n >= 0)
 #define SVN_INVALID_REVNUM (-1) /* The 'official' invalid revision num */
 #define SVN_IGNORED_REVNUM (-2) /* Not really invalid...just
                                    unimportant */
