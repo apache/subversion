@@ -1,5 +1,5 @@
 /*
- * proplist-cmd.c -- Display status information in current directory
+ * proplist-cmd.c -- List properties of files/dirs
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
