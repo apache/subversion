@@ -10,7 +10,8 @@ lib_LTLIBRARIES = libsvn_client.la
 ## Sources needed to build each library (names canonicalized)
 libsvn_client_la_SOURCES = checkout.c update.c apply_edits.c \
                            add.c delete.c                    \
-                           commit.c status.c diff.c          \
+                           import.c commit.c                 \
+                           status.c diff.c                   \
                            client.h
 
 ## Build flags ---------
