@@ -108,7 +108,7 @@ AC_DEFUN(SVN_FIND_SWIG,
 
     if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes"; then
       SWIG_PL_INCLUDES="`$PERL -MExtUtils::Embed -e ccopts`"
-      SWIG_PL_COMPILE="`$PERL -MConfig -e 'print $Config{cc}'` $(SWIG_PL_INCLUDES)"
+      SWIG_PL_COMPILE="`$PERL -MConfig -e 'print $Config{cc}'` \$(SWIG_PL_INCLUDES)"
       SWIG_PL_LINK="`$PERL -MConfig -e 'print $Config{ld}'` `$PERL -MConfig -e 'print $Config{lddlflags}'` `$PERL -MExtUtils::Embed -e ldopts`"
     fi
 
