@@ -1,12 +1,16 @@
-<!-- This chapter is slated for mass rewriting.  If you're adding
-     content or fixing things, please understand that your changes,
-     while certainly influencing the resultant chapter, might
-     themselves get lost in the mix. -->
 <chapter id="svn-ch-1">
 
   <title>Introduction</title>
 
-  <simplesect>### WRITE ME</simplesect>
+  <simplesect>
+    <para>Version control is the art of managing changes to
+      information.  It has long been a critical tool to programmers,
+      who typically spend their time making small changes to software
+      and then undoing those changes the next day.  Imagine a team of
+      these programmers working concurrently, and you can see why a
+      good version control system is needed to manage the potential
+      chaos.</para>
+  </simplesect>
 
 
   <!-- ================================================================= -->
@@ -16,25 +20,27 @@
 
     <title>What is Subversion?</title>
       
-    <para>Subversion is a free/open-source <firstterm>version control
-        system</firstterm>.  That is, Subversion manages files over
-      time.  The files are placed into a central
-      <firstterm>repository</firstterm>.  The repository is much
-      like an ordinary file server, except that it remembers every
-      change ever made to your files.  This allows you to recover
-      older versions of your files, or browse the history of how
-      your files changed.  Many people think of a version control
-      system as a sort of ``time machine.''</para>
+    <para>Subversion is a free/open-source version control system.
+      That is, Subversion manages files and directories over time.
+      The tree of files are placed into a central
+      <firstterm>repository</firstterm>.  The repository is much like
+      an ordinary file server, except that it remembers every change
+      ever made to your files and directories.  This allows you to
+      recover older versions of your tree, or examine the history of
+      how your data changed.  In this regard, many people think of a
+      version control system as a sort of ``time machine.''</para>
     
-    <para>Some version control systems are also <firstterm>software
-        configuration management</firstterm> (SCM) systems.  These
-      systems are specifically tailored to manage trees of source
-      code, and have many features that are specific to software
-      development (such as natively understanding programming
-      languages).  Subversion, however, is not one of these
-      systems; it is a general system that can be used to manage
-      <emphasis>any</emphasis> sort of collection of files,
-      including source code.</para>
+    <!-- ### something about subversion facilitating communication
+    between developers?? -->
+
+    <para>Some version control systems are also software configuration
+      management (SCM) systems.  These systems are specifically
+      tailored to manage trees of source code, and have many features
+      that are specific to software development (such as natively
+      understanding programming languages).  Subversion, however, is
+      not one of these systems; it is a general system that can be
+      used to manage <emphasis>any</emphasis> sort of collection of
+      files, including source code.</para>
 
   </sect1>
 
@@ -45,35 +51,40 @@
 
     <title>Subversion's History</title>
 
-    <para>Where did Subversion come from?</para>
-    
-    <para>Subversion aims to be the successor to the
-      <firstterm>Concurrent Versions System</firstterm> (CVS). You
-      can find more information about CVS at <systemitem
-        class="url">http://www.cvshome.org/</systemitem>.</para>
-    
-    <para>At the time of writing, CVS is the standard Free version
-      control system used by the open-source community.  It has a
-      hard-earned, well-deserved reputation as stable and useful
-      software, and has a design that makes it perfect for
-      open-source development.  However, it also has a number of
-      problems that are difficult to fix.</para>
-    
-    <para>Subversion's original designers settled on a few simple
-      goals.  First, it was decided that Subversion should be a
-      functional replacement for CVS.  That is, it should do
-      everything that CVS does, preserving the same development
-      model while fixing the most obvious flaws.  Secondly, with
-      existing CVS users as the first target audience, Subversion
-      should be written such that any CVS user should be able to
-      start using it with little effort.</para>
-    
-    <para>CollabNet <systemitem
-        class="url">http://www.collab.net/</systemitem> provided the
-      initial funding in 2000 to begin development work, and the
-      effort has now blossomed into a large, open-source project
-      backed by a community of free software developers.</para>
-    
+    <para>In 1995, Karl Fogel and Jim Blandy founded Cyclic Software,
+      a company for commercially supporting and improving the
+      Concurrent Versions Sysetm (CVS).  Cyclic made the first public
+      release of a network-enabled CVS (contributed by Cygnus
+      software.)  In 1999, Karl Fogel published a book about CVS and
+      the open-source development model it enables.  Karl and Jim had
+      long talked about writing a replacement for CVS; Jim had even
+      drafted a new, theoretical repository design, and come up with a
+      good name.  Finally, in February of 2000, Brian Behlendorf of
+      CollabNet (http://www.collab.net) offered Karl a full-time job
+      to write a CVS replacement.  Karl gathered a team together and
+      work began in May.  Because Subversion was developed openly
+      under a free license, it quickly attracted a community of
+      developers.</para>
+
+    <para>The original design team settled on a few simple goals.
+      First, it was decided that Subversion should be a functional
+      replacement for CVS.  That is, it should do everything that CVS
+      does, preserving the same development model while fixing the
+      most obvious flaws.  Secondly, with existing CVS users as the
+      first target audience, Subversion should be written such that
+      any CVS user should be able to start using it with little
+      effort.</para>
+
+    <para>While CollabNet can be credited with initiating and funding
+      a very large chunk of the work (it pays the salaries of a few
+      full-time Subversion developers), the project is still a typical
+      open-source project, governed by the usual meritocratic rules.
+      CollabNet owns the copyright on the code, but that copyright is
+      an Apache/BSD-style license which is fully compliant with the
+      Debian Free Software Guidelines. In other words, anyone is free
+      to download, modify, and redistribute Subversion as he pleases;
+      no permission from CollabNet or anyone else is required.</para>
+
   </sect1>
 
   <!-- ================================================================= -->
