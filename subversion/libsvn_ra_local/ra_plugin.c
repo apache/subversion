@@ -525,8 +525,8 @@ svn_ra_local__get_commit_editor (svn_ra_session_t *session,
     }
               
   /* Get the repos commit-editor */     
-  SVN_ERR (svn_repos_get_commit_editor
-           (editor, edit_baton, sess_baton->repos,
+  SVN_ERR (svn_repos_get_commit_editor2
+           (editor, edit_baton, sess_baton->repos, NULL,
             svn_path_uri_decode (sess_baton->repos_url, pool),
             sess_baton->fs_path,
             sess_baton->username, log_msg,

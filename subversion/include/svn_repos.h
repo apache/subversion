@@ -557,13 +557,24 @@ svn_repos_replay (svn_fs_root_t *root,
 
 /* Making commits. */
 
-/** Return an @a editor and @a edit_baton to commit changes to @a session->fs,
- * beginning at location 'rev:@a base_path', where "rev" is the argument
- * given to @c open_root().  Store @a user as the author of the commit and
- * @a log_msg as the commit message.
+/**
+ * @since New in 1.2.
  *
- * @a repos is a previously opened repository.  @a repos_url is the decoded
- * URL to the base of the repository, and is used to check copyfrom paths.
+ * Return an @a editor and @a edit_baton to commit changes to @a session->fs,
+ * beginning at location 'rev:@a base_path', where "rev" is the argument
+ * given to @c open_root().
+ *
+ * @a repos is a previously opened repository.  @a repos_url is the
+ * decoded URL to the base of the repository, and is used to check
+ * copyfrom paths.  @a txn is a filesystem transaction object to use
+ * during the commit, or @c NULL to indicate that this function should
+ * create (and fully manage) a new transaction.
+ *
+ * Iff @a user is not @c NULL, store it as the author of the commit
+ * transaction.
+ *
+ * Iff @a log_msg is not @c NULL, store it as the log message
+ * associated with the commit transaction.
  *
  * Calling @a (*editor)->close_edit completes the commit.  Before
  * @c close_edit returns, but after the commit has succeeded, it will
@@ -573,6 +584,30 @@ svn_repos_replay (svn_fs_root_t *root,
  * error will be returned from @c close_edit, otherwise if there was a
  * post-commit hook failure, then that error will be returned and will
  * have code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
+ *
+ * Calling @a (*editor)->abort_edit aborts the commit, and will also
+ * abort the commit transaction unless @a txn was supplied (not @c
+ * NULL).  Callers who supply their own transactions are responsible
+ * for cleaning them up (either by committing them, or aborting them).
+ */
+svn_error_t *svn_repos_get_commit_editor2 (const svn_delta_editor_t **editor,
+                                           void **edit_baton,
+                                           svn_repos_t *repos,
+                                           svn_fs_txn_t *txn,
+                                           const char *repos_url,
+                                           const char *base_path,
+                                           const char *user,
+                                           const char *log_msg,
+                                           svn_commit_callback_t callback,
+                                           void *callback_baton,
+                                           apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_repos_get_commit_editor2, but with @a txn_name
+ * always set to @c NULL.
  */
 svn_error_t *svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                                           void **edit_baton,
@@ -584,7 +619,6 @@ svn_error_t *svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                                           svn_commit_callback_t callback,
                                           void *callback_baton,
                                           apr_pool_t *pool);
-
 
 /* ---------------------------------------------------------------*/
 
