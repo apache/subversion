@@ -306,10 +306,11 @@ report_revisions (svn_wc_adm_access_t *adm_access,
              recreate it locally, so report as missing and move
              along.  Again, don't bother if we're reporting
              everything, because the dir is already missing on the server. */
-          if (missing && (! report_everything))
+          if (missing)
             {
-              SVN_ERR (reporter->delete_path (report_baton, this_path,
-                                              iterpool));
+              if (! report_everything)
+                SVN_ERR (reporter->delete_path (report_baton, this_path,
+                                                iterpool));
               continue;
             }
           
