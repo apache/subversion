@@ -65,7 +65,14 @@ const apr_getopt_option_t svn_cl__options[] =
     {"recursive",     'R', 0, "descend recursively"},
     {"nonrecursive",  'N', 0, "operate on single directory only"},
     {"revision",      'r', 1,
-                  "revision ARG, X:Y range ({ARG}, {X}:{Y} for dates)"},
+                  "revision X or X:Y range.  X or Y can be one of:\n"
+     "                             {DATE}      date instead of revision number\n"
+     "                             \"HEAD\"      latest in repository\n"
+     "                             \"BASE\"      base revision of item's working copy\n"
+     "                             \"COMMITTED\" revision of item's last commit\n"
+     "                             \"PREV\"      revision before item's last commit"
+     /* spacing corresponds to svn_opt_format_option */
+    },
     {"file",          'F', 1, "read data from file ARG"},
     {"incremental",   svn_cl__incremental_opt, 0,
                       "give output suitable for concatenation"},
