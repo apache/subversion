@@ -159,7 +159,7 @@ Candidate changes:
       A simple API clensing; we don't want svn 1.1 to have this
       junk.  If it does, we'll have to support it until 2.0.
     Votes:
-      +1: sussman, ghudson
+      +1: sussman, ghudson, cmpilato
 
   * r10507,r10508,r10509
     Perform checksum verification in FSFS (r10507) and verify file
