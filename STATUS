@@ -34,12 +34,6 @@ Candidate changes:
     Votes: (9439, 9808):
       +1: breser
 
-  * r9551
-    Fix RPM build for Fedora and WBEL3/RHEL3.
-    Justification: This fixes the RPM build to work without patching.
-    Votes:
-      +1: david, breser
-
   * r9589
     Fix nasty pool usage problems in 'svnlook diff/changed/dirs-changed'.
     Justification: commit-email.pl uses 'svnlook diff', and 'svnlook
