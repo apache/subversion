@@ -14,21 +14,15 @@ dnl symbol holding the correct version number. AC_INIT() requires the
 dnl version number at m4-time, rather than when ./configure is run, so
 dnl all this must happen as part of m4, not as part of the shell code
 dnl contained in ./configure.
-define([subversion_version],
-       [esyscmd(python build/getversion.py subversion/include/svn_version.h)])
-AC_INIT(subversion, subversion_version, [http://subversion.tigris.org/])
-undefine([subversion_version])
+AC_INIT([subversion],
+        [esyscmd(python build/getversion.py subversion/include/svn_version.h)],
+        [http://subversion.tigris.org/])
 
 dnl AC_CONFIG_SRCDIR is *required*;  sanity-checks that our src dir exists.
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
 AC_CONFIG_AUX_DIR(ac-helpers)
 
-dnl What version of Subversion are we configuring?
-# Note: this could be different from PACKAGE_VERSION. That symbol gets
-# defined at M4 evaluation time, but only for GNU M4. Other M4
-# implementations might end up with just "0.x"
-svn_version="`$srcdir/build/getversion.py $srcdir/subversion/include/svn_version.h`"
-echo "Configuring Subversion $svn_version"
+AC_MSG_NOTICE([Configuring Subversion ]AC_PACKAGE_VERSION)
 
 abs_srcdir="`cd $srcdir && pwd`"
 abs_builddir="`pwd`"
