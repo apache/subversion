@@ -694,6 +694,9 @@ III.  BUILDING A SUBVERSION SERVER
   C.  Configuring Apache for Subversion
       ---------------------------------
 
+      The following assumes you have already created a repository.
+      For documentation on how to do that, see README.
+
       Add this to the *bottom* of /usr/local/apache2/conf/httpd.conf:
 
       <Location /svn/repos>
