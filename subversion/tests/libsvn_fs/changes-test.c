@@ -160,7 +160,7 @@ changes_add (const char **msg,
 {
   svn_fs_t *fs;
 
-  *msg = "Add changes to the changes table.";
+  *msg = "add changes to the changes table";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -186,7 +186,7 @@ changes_fetch_raw (const char **msg,
   int cur_change_index = 0;
   struct changes_args args;
 
-  *msg = "Fetch raw changes from the changes table.";
+  *msg = "fetch raw changes from the changes table";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -293,7 +293,7 @@ changes_delete (const char **msg,
   int num_txns = sizeof (standard_txns) / sizeof (const char *);
   struct changes_args args;
 
-  *msg = "Delete changes from the changes table.";
+  *msg = "delete changes from the changes table";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -486,7 +486,7 @@ changes_fetch (const char **msg,
   int i;
   int num_txns = sizeof (standard_txns) / sizeof (const char *);
   struct changes_args args;
-  *msg = "Fetch compressed changes from the changes table.";
+  *msg = "fetch compressed changes from the changes table";
 
   if (msg_only)
     return SVN_NO_ERROR;
