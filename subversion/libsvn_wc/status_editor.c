@@ -130,9 +130,7 @@ tweak_statushash (void *edit_baton,
           statstruct->entry->revision = SVN_INVALID_REVNUM;
           statstruct->entry->kind = svn_node_unknown; /* who cares? */
           statstruct->entry->schedule = svn_wc_schedule_normal;
-          statstruct->entry->existence = svn_wc_existence_added;
         }
-
       else
         /* If this PATH isn't 'added', it must already exist in the
            working copy.  Use the public API to get a statstruct: */
@@ -404,6 +402,7 @@ static svn_error_t *
 delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
 {
   struct dir_baton *db = parent_baton;
+  apr_hash_t *entries;
 
   /* Note:  when something is deleted, it's okay to tweak the
      statushash immediately.  No need to wait until close_file or
@@ -413,11 +412,20 @@ delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
   /* Mark the deleted object as such. */
   svn_stringbuf_t *deleted_path = svn_stringbuf_dup (db->path, db->pool);
   svn_path_add_component (deleted_path, name, svn_path_local_style);
-  SVN_ERR (tweak_statushash (db->edit_baton,
-                             deleted_path->data,
-                             svn_wc_status_deleted, 0));
 
-  /* Mark the parent dir as having changed too;  it lost an entry. */
+  /* Read the parent's entries file.  If the deleted thing is not
+     versioned in this working copy, it was probably deleted via this
+     working copy.  No need to report such a thing. */
+  SVN_ERR (svn_wc_entries_read (&entries, db->path, db->pool));
+  if (apr_hash_get (entries, name->data, name->len))
+    {
+      SVN_ERR (tweak_statushash (db->edit_baton,
+                                 deleted_path->data,
+                                 svn_wc_status_deleted, 0));
+
+    }
+
+  /* Mark the parent dir regardless -- it lost an entry. */
   SVN_ERR (tweak_statushash (db->edit_baton,
                              db->path->data,
                              svn_wc_status_modified, 0));

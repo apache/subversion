@@ -327,7 +327,6 @@ log_do_detect_conflict (struct log_runner *loggy,
          SVN_INVALID_REVNUM,
          svn_node_none,
          svn_wc_schedule_normal,
-         svn_wc_existence_normal,
          TRUE, FALSE,
          0,
          0,
@@ -428,7 +427,6 @@ log_do_modify_entry (struct log_runner *loggy,
                               entry->revision,
                               entry->kind,
                               entry->schedule,
-                              entry->existence,
                               entry->conflicted,
                               entry->copied,
                               entry->text_time,
@@ -464,8 +462,8 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
 
   if (! entry)
     /* Hmm....this entry is already absent from the revision control
-       system...this is odd.  TODO:  Figure out if this is the result
-       of a bug. */
+       system.  Chances are good that this item was removed via a
+       commit from this working copy.  */
     return SVN_NO_ERROR;
 
   /* Remove the object from revision control -- whether it's a
@@ -556,7 +554,6 @@ conflict_if_rejfile (svn_stringbuf_t *parent_dir,
                     SVN_INVALID_REVNUM,
                     svn_node_none,
                     svn_wc_schedule_normal,
-                    svn_wc_existence_normal,
                     FALSE, FALSE,
                     0,
                     0,
@@ -580,7 +577,6 @@ conflict_if_rejfile (svn_stringbuf_t *parent_dir,
                     SVN_INVALID_REVNUM,
                     svn_node_none,
                     svn_wc_schedule_normal,
-                    svn_wc_existence_normal,
                     TRUE, FALSE,
                     0,
                     0,
@@ -675,101 +671,21 @@ log_do_committed (struct log_runner *loggy,
       /* What to do if the committed entry was scheduled for deletion: */
       if (entry && (entry->schedule == svn_wc_schedule_delete))
         {
-          svn_stringbuf_t *parent;
-          svn_wc_entry_t *parent_entry;
-
-          /* Check if the entry's new bumped-revision number is
-             different than its parent's revision. */
           if (is_this_dir)
-            {
-              parent = svn_stringbuf_dup (loggy->path, loggy->pool);
-              svn_path_remove_component (parent, svn_path_local_style);
-            }
-          else 
-            parent = loggy->path;
-
-          SVN_ERR (svn_wc_entry (&parent_entry, parent, loggy->pool));
-
-          if ((parent_entry->revision != atoi(revstr)) && (! entry->copied))
-            {
-              /* Mark item's existence as "deleted" */
-
-              if (is_this_dir) /* mark in two places */
-                {
-                  svn_stringbuf_t *child = 
-                    svn_path_last_component (loggy->path, 
-                                             svn_path_local_style,
-                                             loggy->pool);
-
-                  SVN_ERR (svn_wc__entry_modify 
-                           (parent, child,  /* mark in parent dir */
-                            (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                             | SVN_WC__ENTRY_MODIFY_EXISTENCE
-                             | SVN_WC__ENTRY_MODIFY_FORCE
-                             | SVN_WC__ENTRY_MODIFY_REVISION),
-                            atoi(revstr), 
-                            svn_node_none, /* ignored */
-                            svn_wc_schedule_normal,
-                            svn_wc_existence_deleted,
-                            0, 0, 0, 0, NULL, NULL, /* ignored */
-                            loggy->pool, NULL));
-
-                  SVN_ERR (svn_wc__entry_modify 
-                           (loggy->path,    /* mark THIS_DIR */
-                            svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, 
-                                                  loggy->pool),
-                            (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                             | SVN_WC__ENTRY_MODIFY_EXISTENCE
-                             | SVN_WC__ENTRY_MODIFY_FORCE
-                             | SVN_WC__ENTRY_MODIFY_REVISION),
-                            atoi(revstr), 
-                            svn_node_none, /* ignored */
-                            svn_wc_schedule_normal,
-                            svn_wc_existence_deleted,
-                            0, 0, 0, 0, NULL, NULL, /* ignored */
-                            loggy->pool, NULL));
-                }
-              else
-                SVN_ERR (svn_wc__entry_modify 
-                         (loggy->path, sname,  /* mark file */
-                          (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                           | SVN_WC__ENTRY_MODIFY_EXISTENCE
-                           | SVN_WC__ENTRY_MODIFY_FORCE
-                           | SVN_WC__ENTRY_MODIFY_REVISION),
-                          atoi(revstr), 
-                          svn_node_none, /* ignored */
-                          svn_wc_schedule_normal,
-                          svn_wc_existence_deleted,
-                          0, 0, 0, 0, NULL, NULL, /* ignored */
-                          loggy->pool, NULL));
-            }
-          else  
-            {
-              /* Revisions match, so it's safe to remove the committed
-                 entry from revision control altogether. */
- 
-              /* Interesting note: this `else' clause will *only*
-                 happen when commit involves a propchange on a parent
-                 dir and a deletion of child.  There's no other case
-                 where both parent & child will be reported as
-                 committed together. */
-
-              if (is_this_dir)
-                /* Drop a 'killme' file into my own adminstrative dir;
-                   this signals the svn_wc__run_log() to blow away .svn/
-                   after its done with this logfile.  */
-                SVN_ERR (svn_wc__make_adm_thing (loggy->path,
-                                                 SVN_WC__ADM_KILLME,
-                                                 svn_node_file, 
-                                                 APR_OS_DEFAULT,
-                                                 0,
-                                                 loggy->pool));
-              else
-                /* We can safely remove files from revision control
-                   without screwing something else up. */
-                SVN_ERR (svn_wc_remove_from_revision_control
-                         (loggy->path, sname, FALSE, loggy->pool));
-            }
+            /* Drop a 'killme' file into my own adminstrative dir;
+               this signals the svn_wc__run_log() to blow away .svn/
+               after its done with this logfile.  */
+            SVN_ERR (svn_wc__make_adm_thing (loggy->path,
+                                             SVN_WC__ADM_KILLME,
+                                             svn_node_file, 
+                                             APR_OS_DEFAULT,
+                                             0,
+                                             loggy->pool));
+          else
+            /* We can safely remove files from revision control
+               without screwing something else up. */
+            SVN_ERR (svn_wc_remove_from_revision_control
+                     (loggy->path, sname, FALSE, loggy->pool));
         }
                
       else   /* entry not deleted, so mark commited-to-date */
@@ -978,7 +894,6 @@ log_do_committed (struct log_runner *loggy,
              atoi (revstr),
              svn_node_none,
              svn_wc_schedule_normal,
-             svn_wc_existence_normal,
              FALSE,
              FALSE,
              text_time,
@@ -1029,7 +944,6 @@ log_do_committed (struct log_runner *loggy,
                      SVN_INVALID_REVNUM,
                      svn_node_dir,
                      svn_wc_schedule_normal,
-                     svn_wc_existence_normal,
                      FALSE,
                      FALSE,
                      0,

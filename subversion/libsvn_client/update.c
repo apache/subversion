@@ -95,10 +95,6 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
        "svn_client_update: %s is not under revision control", anchor->data);
-  if (entry->existence == svn_wc_existence_deleted)
-    return svn_error_createf
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "svn_client_update: entry '%s' has been deleted", anchor->data);
   if (! entry->url)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool,

@@ -108,12 +108,6 @@ enum svn_wc_schedule_t
   svn_wc_schedule_replace,      /* Slated for replacement (delete + add) */
 };
 
-enum svn_wc_existence_t
-{
-  svn_wc_existence_normal = 0,  /* Nothing unusual here */
-  svn_wc_existence_added,       /* Added to revision control */  
-  svn_wc_existence_deleted     /* Deleted from revision control */
-};
 
 /* A working copy entry -- that is, revision control information about
    one versioned entity. */
@@ -129,7 +123,6 @@ typedef struct svn_wc_entry_t
 
   /* State information. */
   enum svn_wc_schedule_t schedule;
-  enum svn_wc_existence_t existence;
   svn_boolean_t conflicted;
   svn_boolean_t copied;
 
@@ -154,7 +147,6 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_ATTR_PROP_TIME   "prop-time"
 #define SVN_WC_ENTRY_ATTR_CHECKSUM    "checksum"
 #define SVN_WC_ENTRY_ATTR_SCHEDULE    "schedule"
-#define SVN_WC_ENTRY_ATTR_EXISTENCE   "existence"
 #define SVN_WC_ENTRY_ATTR_CONFLICTED  "conflicted"
 #define SVN_WC_ENTRY_ATTR_COPIED      "copied"
 #define SVN_WC_ENTRY_ATTR_URL         "url"
@@ -174,10 +166,7 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_THIS_DIR  "svn:this_dir"
 
 
-/* Get the ENTRY structure for PATH, allocating from POOL. 
-
-   Warning to callers:  remember to check whether entry->existence is
-   `deleted'.  If it is, you probably want to ignore it. */
+/* Get the ENTRY structure for PATH, allocating from POOL. */
 svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
                            svn_stringbuf_t *path,
                            apr_pool_t *pool);
@@ -191,10 +180,7 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
    structures representing subdirs have only the `kind' and `state'
    fields filled in.  If you want info on a subdir, you must use this
    routine to open its PATH and read the SVN_WC_ENTRY_THIS_DIR
-   structure, or call svn_wc_get_entry on its PATH. 
-
-   Warning to callers: remember to check whether each entry->existence
-   is `deleted'.  If it is, you probably want to ignore it. */
+   structure, or call svn_wc_get_entry on its PATH. */
 svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
                                   svn_stringbuf_t *path,
                                   apr_pool_t *pool);
@@ -317,9 +303,6 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * If DESCEND is non-zero, statushash will contain statuses for PATH
  * and everything below it, including subdirectories.  In other
  * words, a full recursion.
- *
- * If any children of PATH are marked with existence `deleted', they
- * will NOT be returned in the hash.
  */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_stringbuf_t *path,

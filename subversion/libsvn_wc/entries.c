@@ -237,32 +237,6 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       }
   }   
   
-  /* Look for an existence attribute */
-  {
-    svn_stringbuf_t *existencestr
-      = apr_hash_get (entry->attributes,
-                      SVN_WC_ENTRY_ATTR_EXISTENCE, APR_HASH_KEY_STRING);
-    
-    entry->existence = svn_wc_existence_normal;
-    if (existencestr)
-      {
-        if (! strcmp (existencestr->data, SVN_WC_ENTRY_VALUE_ADDED))
-          entry->existence = svn_wc_existence_added;
-        else if (! strcmp (existencestr->data, SVN_WC_ENTRY_VALUE_DELETED))
-          entry->existence = svn_wc_existence_deleted;
-        else if (! strcmp (existencestr->data, ""))
-          entry->existence = svn_wc_existence_normal;
-        else
-          return svn_error_createf 
-            (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
-             "Entry '%s' has invalid '%s' value",
-             (name ? name->data : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC_ENTRY_ATTR_EXISTENCE);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_EXISTENCE;
-      }
-  }
-
   /* Is this entry in a state of mental torment (conflict)? */
   {
     svn_stringbuf_t *conflictstr
@@ -562,27 +536,6 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
 
   apr_hash_set (entry->attributes,
                 SVN_WC_ENTRY_ATTR_SCHEDULE, APR_HASH_KEY_STRING,
-                valuestr);
-
-  /* Existence */
-  switch (entry->existence)
-    {
-    case svn_wc_existence_added:
-      valuestr = svn_stringbuf_create (SVN_WC_ENTRY_VALUE_ADDED, pool);
-      break;
-
-    case svn_wc_existence_deleted:
-      valuestr = svn_stringbuf_create (SVN_WC_ENTRY_VALUE_DELETED, pool);
-      break;
-
-    case svn_wc_existence_normal:
-    default:
-      valuestr = NULL;
-      break;
-    }
-
-  apr_hash_set (entry->attributes,
-                SVN_WC_ENTRY_ATTR_EXISTENCE, APR_HASH_KEY_STRING,
                 valuestr);
 
   /* Conflicted */
@@ -1065,7 +1018,6 @@ fold_entry (apr_hash_t *entries,
             svn_revnum_t revision,
             enum svn_node_kind kind,
             enum svn_wc_schedule_t schedule,
-            enum svn_wc_existence_t existence,
             svn_boolean_t conflicted,
             svn_boolean_t copied,
             apr_time_t text_time,
@@ -1094,10 +1046,6 @@ fold_entry (apr_hash_t *entries,
   /* Schedule */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     entry->schedule = schedule;
-
-  /* Existence */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_EXISTENCE)
-    entry->existence = existence;
 
   /* Conflicted */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICTED)
@@ -1195,7 +1143,6 @@ fold_state_changes (apr_hash_t *entries,
                     svn_stringbuf_t *name,
                     apr_uint16_t *modify_flags,
                     enum svn_wc_schedule_t *schedule,
-                    enum svn_wc_existence_t existence,
                     apr_pool_t *pool)
 {
   svn_wc_entry_t *entry, *this_dir_entry;
@@ -1206,11 +1153,6 @@ fold_state_changes (apr_hash_t *entries,
 
   /* Get the current entry */
   entry = apr_hash_get (entries, name->data, name->len);
-
-  /* If we're not about to modify the existence, we'll use the
-     existence of the current entry (if one it exists -- ha!) */
-  if ((! (*modify_flags & SVN_WC__ENTRY_MODIFY_EXISTENCE)) && (entry))
-    existence = entry->existence;
 
   /* If we're not merging in changes, only the _add, _delete, _replace
      and _normal schedules are allowed. */
@@ -1236,7 +1178,7 @@ fold_state_changes (apr_hash_t *entries,
 
   /* The only operation valid on an item not already in revision
      control is addition. */
-  if ((! entry) || (existence == svn_wc_existence_deleted))
+  if (! entry)
     {
       if (*schedule == svn_wc_schedule_add)
         return SVN_NO_ERROR;
@@ -1304,14 +1246,12 @@ fold_state_changes (apr_hash_t *entries,
 
         case svn_wc_schedule_add:
           /* You can't add something that's already been added to
-             revision control, unless it has subsequently been
-             deleted. */
-          if (entry->existence != svn_wc_existence_deleted)
-            return 
-              svn_error_createf 
-              (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-               "fold_state_changes: Entry '%s' already under revision control",
-               name->data);
+             revision control. */
+          return 
+            svn_error_createf 
+            (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+             "fold_state_changes: Entry '%s' already under revision control",
+             name->data);
         }
       break;
 
@@ -1412,7 +1352,6 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
                       svn_revnum_t revision,
                       enum svn_node_kind kind,
                       enum svn_wc_schedule_t schedule,
-                      enum svn_wc_existence_t existence,
                       svn_boolean_t conflicted,
                       svn_boolean_t copied,
                       apr_time_t text_time,
@@ -1444,7 +1383,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
       
       /* Now, go interpret the changes. */
       SVN_ERR (fold_state_changes (entries, name, &modify_flags,
-                                   &schedule, existence, pool));
+                                   &schedule, pool));
 
       /* Special case:  fold_state_changes() may have actually REMOVED
          the entry in question!  If so, don't try to fold_entry, as
@@ -1457,7 +1396,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
   /* Fold changes into (or create) the entry. */
   if (! entry_was_deleted_p)
     fold_entry (entries, name, modify_flags, revision, kind, 
-                schedule, existence, conflicted, copied, text_time,
+                schedule, conflicted, copied, text_time,
                 prop_time, url, attributes, pool, ap);
 
   SVN_ERR (svn_wc__entries_write (entries, path, pool));
@@ -1477,7 +1416,6 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->url      = svn_stringbuf_dup (entry->url, pool);
   dupentry->kind       = entry->kind;
   dupentry->schedule   = entry->schedule;
-  dupentry->existence  = entry->existence;
   dupentry->conflicted = entry->conflicted;
   dupentry->text_time  = entry->text_time;
   dupentry->prop_time  = entry->prop_time;
@@ -1539,7 +1477,7 @@ svn_wc__recursively_rewrite_urls (svn_stringbuf_t *dirpath,
                            APR_HASH_KEY_STRING);
   fold_entry (entries, svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, subpool),
               SVN_WC__ENTRY_MODIFY_URL,
-              SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0, 0,
+              SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0,
               url, NULL, subpool, NULL);
 
   /* Recursively loop over all children. */
@@ -1568,7 +1506,7 @@ svn_wc__recursively_rewrite_urls (svn_stringbuf_t *dirpath,
       if (current_entry->kind == svn_node_file)
         fold_entry (entries, svn_stringbuf_create (name, subpool),
                     SVN_WC__ENTRY_MODIFY_URL,
-                    SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0, 0,
+                    SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0,
                     child_url, NULL, subpool, NULL);
 
       /* If a dir, recurse. */

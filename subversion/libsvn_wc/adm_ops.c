@@ -118,50 +118,14 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
         svn_path_add_component (full_entry_path, current_entry_name,
                                 svn_path_local_style);
 
-      /* If the entry's existence is `deleted', remove the entry
-         altogether.  (If, during the update, the repository didn't
-         re-add this entry, then it must not exist in the new
-         revision!) */
-      if (current_entry->existence == svn_wc_existence_deleted)
-        {
-          svn_stringbuf_t *thisdir_str = 
-            svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, subpool);
-
-          /* THIS_DIR is deleted. */
-          if (! current_entry_name)
-            {
-              SVN_ERR(svn_wc_remove_from_revision_control
-                      (dir_path, thisdir_str, TRUE, subpool));
-
-              /* don't bother to finish this entries loop... the whole
-                 directory is blasted! */
-              break;
-            }
-
-          /* a child subdirectory is deleted. */
-          if ((current_entry->kind == svn_node_dir) && current_entry_name)
-            {
-              SVN_ERR(svn_wc_remove_from_revision_control
-                      (full_entry_path, thisdir_str, TRUE, subpool));
-            }
-          
-          /* a child file is deleted */
-          if (current_entry->kind == svn_node_file)
-            {
-              SVN_ERR(svn_wc_remove_from_revision_control
-                      (dir_path, current_entry_name, TRUE, subpool));
-            }
-        }
-
-
       /* If the entry is a file or SVN_WC_ENTRY_THIS_DIR, and it has a
          different rev than REVISION, fix it.  (But ignore the entry
          if it's scheduled for addition or replacement.) */
-      else if (((current_entry->kind == svn_node_file)
-                || (! current_entry_name))
-               && (current_entry->revision != revision)
-               && (current_entry->schedule != svn_wc_schedule_add)
-               && (current_entry->schedule != svn_wc_schedule_replace))
+      if (((current_entry->kind == svn_node_file)
+           || (! current_entry_name))
+          && (current_entry->revision != revision)
+          && (current_entry->schedule != svn_wc_schedule_add)
+          && (current_entry->schedule != svn_wc_schedule_replace))
         SVN_ERR (svn_wc_set_revision (cbaton, full_entry_path, FALSE,
                                       revision));
       
@@ -244,7 +208,6 @@ set_revision (svn_stringbuf_t *path,
                 new_revnum,
                 svn_node_none, 
                 svn_wc_schedule_normal,
-                svn_wc_existence_normal,
                 FALSE, FALSE,
                 0, 
                 0, 
@@ -421,7 +384,6 @@ static svn_error_t *
 mark_tree (svn_stringbuf_t *dir, 
            apr_uint16_t modify_flags,
            enum svn_wc_schedule_t schedule,
-           enum svn_wc_existence_t existence,   
            svn_boolean_t copied,
            apr_pool_t *pool)
 {
@@ -454,14 +416,10 @@ mark_tree (svn_stringbuf_t *dir,
       basename = svn_stringbuf_create ((const char *) key, subpool);
       svn_path_add_component (fullpath, basename, svn_path_local_style);
 
-      /* If the entry's existence is `deleted', skip it. */
-      if (entry->existence == svn_wc_existence_deleted)
-        continue;
-
       /* If this is a directory, recurse. */
       if (entry->kind == svn_node_dir)
         SVN_ERR (mark_tree (fullpath, modify_flags,
-                            schedule, existence, copied, subpool));
+                            schedule, copied, subpool));
 
       /* Mark this entry. */
       SVN_ERR (svn_wc__entry_modify
@@ -469,7 +427,6 @@ mark_tree (svn_stringbuf_t *dir,
                 modify_flags,
                 SVN_INVALID_REVNUM, entry->kind,
                 schedule,
-                existence,
                 FALSE, TRUE, 0, 0, NULL, NULL, subpool, NULL));
 
       if (fbtable && (schedule == svn_wc_schedule_delete))
@@ -496,7 +453,6 @@ mark_tree (svn_stringbuf_t *dir,
             modify_flags,
             SVN_INVALID_REVNUM, svn_node_dir,
             schedule,
-            existence,
             FALSE,
             TRUE,
             0, 0, NULL, NULL, pool, NULL));
@@ -521,11 +477,6 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
        "'%s' does not appear to be under revision control", path->data);
     
-  if (entry->existence == svn_wc_existence_deleted)
-    return svn_error_createf
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "entry '%s' has already been deleted", path->data);
-
   if (entry->kind == svn_node_dir)
     {
       /* Special case, delete of a newly added dir. */
@@ -534,8 +485,7 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
       else
         /* Recursively mark a whole tree for deletion. */
         SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                            svn_wc_schedule_delete,
-                            svn_wc_existence_normal, FALSE, pool));
+                            svn_wc_schedule_delete, FALSE, pool));
     }
 
   /* Deleting a directory that has been added but not yet
@@ -562,7 +512,6 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
                 SVN_WC__ENTRY_MODIFY_SCHEDULE,
                 SVN_INVALID_REVNUM, entry->kind,
                 svn_wc_schedule_delete,
-                svn_wc_existence_normal,
                 FALSE, FALSE, 0, 0, NULL, NULL, pool, NULL));
     }
 
@@ -626,16 +575,15 @@ svn_wc_add (svn_stringbuf_t *path,
   if (svn_wc_entry (&orig_entry, path, pool))
     orig_entry = NULL;
 
-  /* You can only add something that is a) not in revision control, or
-     b) slated for deletion from revision control, or c) already
-     `deleted' from revision control.   Unless, of course, you're
-     specifying an addition with -history-;  then it's okay for the
-     object to be under version control already;  it's not really new.  */
+  /* You can only add something that is not in revision control, or
+     that is slated for deletion from revision control, unless, of
+     course, you're specifying an addition with -history-; then it's
+     okay for the object to be under version control already; it's not
+     really new.  */
   if (orig_entry)
     {
       if ((! copyfrom_url)
-          && (orig_entry->schedule != svn_wc_schedule_delete)
-          && (orig_entry->existence != svn_wc_existence_deleted))
+          && (orig_entry->schedule != svn_wc_schedule_delete))
         {
           return svn_error_createf 
             (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
@@ -686,7 +634,6 @@ svn_wc_add (svn_stringbuf_t *path,
              | SVN_WC__ENTRY_MODIFY_ATTRIBUTES),
             0, kind,
             svn_wc_schedule_add,
-            svn_wc_existence_normal,
             FALSE,
             copyfrom_url ? TRUE : FALSE, 
             0, 0, NULL,
@@ -749,7 +696,6 @@ svn_wc_add (svn_stringbuf_t *path,
                 flags,
                 0, svn_node_dir,
                 is_replace ? svn_wc_schedule_replace : svn_wc_schedule_add,
-                svn_wc_existence_normal,
                 FALSE,
                 copyfrom_url ? TRUE : FALSE,
                 0, 0,
@@ -776,8 +722,7 @@ svn_wc_add (svn_stringbuf_t *path,
 
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_COPIED,
-                              svn_wc_schedule_normal, svn_wc_existence_normal,
-                              TRUE, pool));
+                              svn_wc_schedule_normal, TRUE, pool));
 
           /* Clean out the now-obsolete wcprops. */
           SVN_ERR (svn_wc__remove_wcprops (path, pool));
@@ -1072,7 +1017,6 @@ svn_wc_revert (svn_stringbuf_t *path,
                     SVN_INVALID_REVNUM,
                     entry->kind,
                     svn_wc_schedule_normal,
-                    svn_wc_existence_normal,
                     entry->conflicted,
                     entry->copied,
                     entry->text_time,
@@ -1108,7 +1052,6 @@ svn_wc_revert (svn_stringbuf_t *path,
                     SVN_INVALID_REVNUM,
                     svn_node_none,
                     svn_wc_schedule_normal,
-                    svn_wc_existence_normal,
                     FALSE, FALSE,
                     0,
                     0,
@@ -1424,11 +1367,6 @@ svn_wc_set_auth_file (svn_stringbuf_t *path,
             {              
               svn_stringbuf_t *childpath; 
               
-              /* If the entry's existence is `deleted', skip it. */
-              if ((entry->existence == svn_wc_existence_deleted)
-                  && (entry->schedule != svn_wc_schedule_add))
-                continue;
-
               childpath = svn_stringbuf_dup (path, pool);
               svn_path_add_component (childpath, 
                                       svn_stringbuf_create (basename, pool),

@@ -355,13 +355,7 @@ svn_wc__get_existing_prop_reject_file (svn_stringbuf_t **reject_file,
   the_entry = 
     (svn_wc_entry_t *) apr_hash_get (entries, name->data, name->len);
 
-  if (the_entry->existence == svn_wc_existence_deleted)
-    return svn_error_createf
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "get_existing_reject_prop_reject_file: entry '%s' in '%s' is deleted",
-       name->data, path->data);
-  
-  if (the_entry == NULL)
+  if (! the_entry)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
        "get_existing_reject_prop_reject_file: can't find entry '%s' in '%s'",

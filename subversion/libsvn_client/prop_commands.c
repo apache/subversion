@@ -77,8 +77,7 @@ svn_client_propset (svn_stringbuf_t *propname,
               svn_path_add_component (full_entry_path, current_entry_name,
                                       svn_path_local_style);
 
-          if (current_entry->schedule != svn_wc_schedule_delete
-              && current_entry->existence != svn_wc_existence_deleted)
+          if (current_entry->schedule != svn_wc_schedule_delete)
             {
               if (current_entry->kind == svn_node_dir && current_entry_name)
                 {
@@ -137,8 +136,7 @@ recursive_propget (apr_hash_t *props,
           svn_path_add_component (full_entry_path, current_entry_name,
                                   svn_path_local_style);
 
-      if (current_entry->schedule != svn_wc_schedule_delete
-          && current_entry->existence != svn_wc_existence_deleted)
+      if (current_entry->schedule != svn_wc_schedule_delete)
         {
           if (current_entry->kind == svn_node_dir && current_entry_name)
             {
@@ -250,8 +248,7 @@ recursive_proplist (apr_array_header_t *props,
           svn_path_add_component (full_entry_path, current_entry_name,
                                   svn_path_local_style);
 
-      if (current_entry->schedule != svn_wc_schedule_delete
-          && current_entry->existence != svn_wc_existence_deleted)
+      if (current_entry->schedule != svn_wc_schedule_delete)
         {
           if (current_entry->kind == svn_node_dir && current_entry_name)
               SVN_ERR (recursive_proplist (props, full_entry_path, pool));

@@ -754,10 +754,6 @@ verify_tree_deletion (svn_stringbuf_t *dir,
       entry = (svn_wc_entry_t *) val;
       is_this_dir = strcmp (key, SVN_WC_ENTRY_THIS_DIR) == 0;
 
-      /* If the entry's existence is `deleted', skip it. */
-      if (entry->existence == svn_wc_existence_deleted)
-        continue;
-
       /* Construct the fullpath of this entry. */
       if (! is_this_dir)
         svn_path_add_component_nts (fullpath, key, svn_path_local_style);
@@ -1031,8 +1027,7 @@ report_single_mod (const char *name,
   
   entry_name = svn_stringbuf_create (name, (*stack)->pool);
   
-  /* This entry gets deleted if marked for deletion or replacement,
-     or was already 'deleted' in an earlier commit. */
+  /* This entry gets deleted if marked for deletion or replacement. */
   if (! adds_only)
     if ((entry->schedule == svn_wc_schedule_delete)
         || (entry->schedule == svn_wc_schedule_replace))
@@ -1118,8 +1113,7 @@ report_single_mod (const char *name,
       /* If this entry is a directory, we do a sanity check and make
          sure that all the directory's children are also marked for
          deletion.  If not, we're in a screwy state. */
-      if ((entry->kind == svn_node_dir) 
-          && (entry->existence != svn_wc_existence_deleted))
+      if (entry->kind == svn_node_dir) 
         SVN_ERR (verify_tree_deletion (full_path, entry->schedule, 
                                        (*stack)->pool));
 
@@ -1472,13 +1466,6 @@ crawl_dir (svn_stringbuf_t *path,
       /* Get the entry for this file or directory. */
       current_entry = (svn_wc_entry_t *) val;
 
-      /* If the entry's existence is `deleted', skip it... unless it's
-         scheduled for addition, or is part of a 'copied' subtree. */
-      if ((current_entry->existence == svn_wc_existence_deleted)
-          && (current_entry->schedule != svn_wc_schedule_add)
-          && (! current_entry->copied))
-        continue;
-      
       /* If we're looking at a subdir entry, the structure has
          incomplete information.  In particular, the revision is
          undefined (-1).  This is bad, because report_single_mod is
@@ -1710,11 +1697,6 @@ crawl_local_mods (svn_stringbuf_t *parent_dir,
               apr_pool_t *subpool = svn_pool_create (pool);
               svn_stringbuf_t *basename;
               
-              if (tgt_entry->existence == svn_wc_existence_deleted)
-                return svn_error_createf
-                  (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-                   "entry '%s' has already been deleted", target->data);
-
               basename = svn_path_last_component (target,
                                                   svn_path_local_style, 
                                                   pool);
@@ -1969,17 +1951,7 @@ report_revisions (svn_stringbuf_t *wc_path,
 
       /* The Big Tests: */
       
-      /* 1. If the entry is `deleted' already, then we *must* report
-         it as missing.  Otherwise, the server may tell us to
-         re-remove it (remember that the `deleted' flag means that the
-         item is deleted in a later revision of the parent dir.) */
-      if (current_entry->existence == svn_wc_existence_deleted)
-        {
-          SVN_ERR (reporter->delete_path (report_baton, full_entry_path));
-          continue;  /* move on to next entry */
-        }
-
-      /* 2. Is the entry on disk?  Set a flag if not. */
+      /* Is the entry on disk?  Set a flag if not. */
       dirent_kind = (enum svn_node_kind *) apr_hash_get (dirents, key, klen);
       if (! dirent_kind)
         missing = TRUE;
@@ -2313,7 +2285,6 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
          condensed_targets->elt_size,
          svn_sort_compare_strings_as_paths);
 
-
   /* Now pass the locked_dirs hash into the *real* routine that does
      the work. */
   err = crawl_local_mods (parent_dir,
@@ -2371,8 +2342,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
                                svn_stringbuf_create ("", pool),
                                base_rev));
 
-  if (entry->existence != svn_wc_existence_deleted
-      && entry->schedule != svn_wc_schedule_delete)
+  if (entry->schedule != svn_wc_schedule_delete)
     {
       apr_finfo_t info;
       apr_status_t apr_err;

@@ -638,15 +638,16 @@ def hudson_part_1():
     return 1
 
   # Now gamma should be marked as `deleted' under the hood.  When we
-  # update, we should see NO output at all, and a perfect, virginal
-  # status list at revision 2.  (The `deleted' entry should be removed.)
+  # update, we should see a no-op removal of gamma, and a perfect,
+  # virginal status list at revision 2.  (The `deleted' entry should
+  # be removed.)
   
   # Expected output of update:  nothing.
-  expected_output_tree = svntest.tree.build_generic_tree([])
+  expected_output_tree = svntest.tree.build_generic_tree(\
+    [ [gamma_path, None, {}, {'status' : 'D ' }] ])
 
-  # Expected disk tree:  everything but gamma.
+  # Expected disk tree:  everything.
   my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree.pop(11)  # removing gamma
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
   
   # Expected status after update:  totally clean revision 2, minus gamma.
@@ -657,7 +658,9 @@ def hudson_part_1():
   return svntest.actions.run_and_verify_update(wc_dir,
                                                expected_output_tree,
                                                expected_disk_tree,
-                                               expected_status_tree)
+                                               expected_status_tree,
+                                               None, None, None, None,
+                                               0, "--quiet")
 
 #----------------------------------------------------------------------
 
@@ -700,18 +703,15 @@ def hudson_part_1_variation_1():
     return 1
 
   # Now H should be marked as `deleted' under the hood.  When we
-  # update, we should see NO output at all, and a perfect, virginal
+  # update, we should see a no-op removal of H, and a perfect, virginal
   # status list at revision 2.  (The `deleted' entry should be removed.)
   
-  # Expected output of update:  nothing.
-  expected_output_tree = svntest.tree.build_generic_tree([])
+  # Expected output of update:  H gets a no-op deletion.
+  expected_output_tree = svntest.tree.build_generic_tree(\
+    [ [H_path, None, {}, {'status' : 'D ' }] ])
 
-  # Expected disk tree:  everything but H and its contents.
+  # Expected disk tree:  everything.
   my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree.pop(16)  # removing H
-  my_greek_tree.pop(16)  # removing H/chi
-  my_greek_tree.pop(16)  # removing H/psi  
-  my_greek_tree.pop(16)  # removing H/omega
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
 
   # Expected status after update:  totally clean revision 2, minus H.
@@ -725,7 +725,9 @@ def hudson_part_1_variation_1():
   return svntest.actions.run_and_verify_update(wc_dir,
                                                expected_output_tree,
                                                expected_disk_tree,
-                                               expected_status_tree)
+                                               expected_status_tree,
+                                               None, None, None, None,
+                                               0, "--quiet")
 
 #----------------------------------------------------------------------
 
@@ -977,7 +979,9 @@ def merge_mixed_revisions():
   if svntest.actions.run_and_verify_update (H_path,
                                             expected_output_tree,
                                             expected_disk_tree,
-                                            expected_status_tree):
+                                            expected_status_tree,
+                                            None, None, None, None,
+                                            0, "--quiet"):
     return 1
 
 
