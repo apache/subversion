@@ -760,7 +760,7 @@ typedef struct svn_ra_plugin_t
    *
    * NOTE: This functionality is not available in pre-1.1 servers.  If the
    * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
-   * returned. */
+   * returned.
    */
   svn_error_t *(*get_locations) (void *session_baton,
                                  apr_hash_t **locations,
