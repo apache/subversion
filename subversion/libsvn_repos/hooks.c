@@ -228,8 +228,9 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
     }
     
     /* Log message. */
-    SVN_ERR (svn_fs_change_txn_prop (*txn_p, &log_prop_name,
-                                     log_msg, pool));
+    if (log_msg != NULL)
+      SVN_ERR (svn_fs_change_txn_prop (*txn_p, &log_prop_name,
+                                       log_msg, pool));
   }
 
   return SVN_NO_ERROR;

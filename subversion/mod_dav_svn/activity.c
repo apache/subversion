@@ -22,6 +22,7 @@
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_fs.h"
+#include "svn_repos.h"
 
 #include "dav_svn.h"
 
@@ -117,7 +118,8 @@ dav_error *dav_svn_create_activity(const dav_svn_repos *repos,
                                  "could not determine youngest revision");
     }
 
-  serr = svn_fs_begin_txn(&txn, repos->fs, rev, pool);
+  serr = svn_repos_fs_begin_txn_for_commit(&txn, repos->fs, rev,
+                                           repos->username, NULL, pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
