@@ -22,7 +22,7 @@ print '#!/bin/sh'
 for i in range(COUNT):
     n = random.randrange(1, MAXFILES+1)
     l = [ ]
-    print "--- begin commit #%d -----------------------------------" % (i+1,)
+    print "echo '--- begin commit #%d -----------------------------------'" % (i+1,)
     for j in range(n):
         fname = random.choice(files)[:-1]	# strip trailing newline
         print "echo 'part of change #%d' >> %s" % (i+1, fname)
