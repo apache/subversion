@@ -171,9 +171,11 @@ rm -f "$vsn_file.unq"
 # be able to extract the resulting tar file.  Use pax to produce POSIX.1
 # tar files.
 echo "Rolling $DISTNAME.tar.gz ..."
-(cd "$DIST_SANDBOX" && pax -w "$DISTNAME") | gzip -9c > "$DISTNAME.tar.gz"
+(cd "$DIST_SANDBOX" 2>&1 > /dev/null && pax -x ustar -w "$DISTNAME") | \
+  gzip -9c > "$DISTNAME.tar.gz"
 echo "Rolling $DISTNAME.tar.bz2 ..."
-(cd "$DIST_SANDBOX" && pax -w "$DISTNAME") | bzip2 -9c > "$DISTNAME.tar.bz2"
+(cd "$DIST_SANDBOX" 2>&1 > /dev/null && pax -x ustar -w "$DISTNAME") | \
+  bzip2 -9c > "$DISTNAME.tar.bz2"
 
 echo "Removing sandbox..."
 rm -rf "$DIST_SANDBOX"
