@@ -430,28 +430,33 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart, R
 	}
 }
 
-void SVNClient::checkout(const char *moduleName, const char *destPath, Revision &revision, bool recurse)
+jlong SVNClient::checkout(const char *moduleName, const char *destPath, Revision &revision, bool recurse)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
     m_lastPath = destPath;
+    svn_revnum_t retval;
 
     if(m_notify == NULL)
-      return;
+      return -1;
 	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
 	{
-		return ;
+		return -1;
 	}
 
-    svn_error_t *Err = svn_client_checkout (moduleName,
+    svn_error_t *Err = svn_client_checkout (&retval, moduleName,
                                  m_lastPath.c_str (),
                                  revision.revision (),
                                  recurse, ctx,
                                  apr_pool);
 
     if(Err != NULL)
+	{
 		JNIUtil::handleSVNError(Err);
+		return -1;
+	}
+    return retval;
 
 }
 
@@ -516,23 +521,29 @@ void SVNClient::add(const char *path, bool recurse)
 
 }
 
-void SVNClient::update(const char *path, Revision &revision, bool recurse)
+jlong SVNClient::update(const char *path, Revision &revision, bool recurse)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
     m_lastPath = path;
    	svn_client_ctx_t *ctx = getContext(NULL);
+    svn_revnum_t retval;
 	if(ctx == NULL)
 	{
-		return;
+		return -1;
 	}
-    svn_error_t *Err = svn_client_update (m_lastPath.c_str (),
+    svn_error_t *Err = svn_client_update (&retval, m_lastPath.c_str (),
                                revision.revision (),
                                recurse,
 							   ctx,
                                apr_pool);
     if(Err != NULL)
+	{
  		JNIUtil::handleSVNError(Err);
+		return -1;
+	}
+
+    return retval;
 
 }
 
@@ -669,18 +680,19 @@ void SVNClient::resolved(const char *path, bool recurse)
 
 }
 
-void SVNClient::doExport(const char *srcPath, const char *destPath, Revision &revision,bool force)
+jlong SVNClient::doExport(const char *srcPath, const char *destPath, Revision &revision,bool force)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
     Path sourcePath = srcPath;
     m_lastPath = destPath;
+    svn_revnum_t retval;
    	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
 	{
-		return;
+		return -1;
 	}
-    svn_error_t *Err = svn_client_export (sourcePath.c_str (),
+    svn_error_t *Err = svn_client_export (&retval, sourcePath.c_str (),
                                m_lastPath.c_str (),
                                const_cast<svn_opt_revision_t*>(
                                  revision.revision ()),
@@ -689,23 +701,27 @@ void SVNClient::doExport(const char *srcPath, const char *destPath, Revision &re
                                apr_pool);
 
     if(Err != NULL)
+	{
  		JNIUtil::handleSVNError(Err);
+		return -1;
+	}
 
+    return retval;
 
 }
 
-void SVNClient::doSwitch(const char *path, const char *url, Revision &revision, bool recurse)
+jlong SVNClient::doSwitch(const char *path, const char *url, Revision &revision, bool recurse)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
     m_lastPath = path;
-
+    svn_revnum_t retval;
    	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
 	{
-		return;
+		return -1;
 	}
-    svn_error_t *Err = svn_client_switch (m_lastPath.c_str (),
+    svn_error_t *Err = svn_client_switch (&retval, m_lastPath.c_str (),
                                url,
                                revision.revision (),
                                recurse,
@@ -713,7 +729,11 @@ void SVNClient::doSwitch(const char *path, const char *url, Revision &revision, 
                                apr_pool);
 
     if(Err != NULL)
+	{
  		JNIUtil::handleSVNError(Err);
+		return -1;
+	}
+    return retval;
 }
 
 void SVNClient::doImport(const char *path, const char *url, const char *message, bool recurse)
@@ -1273,8 +1293,8 @@ jint SVNClient::mapStatusKind(int svnKind)
 		return org_tigris_subversion_javahl_Status_Kind_normal;
     case svn_wc_status_added:
 		return org_tigris_subversion_javahl_Status_Kind_added;
-    case svn_wc_status_absent:
-		return org_tigris_subversion_javahl_Status_Kind_absent;
+    case svn_wc_status_missing:
+		return org_tigris_subversion_javahl_Status_Kind_missing;
     case svn_wc_status_deleted:
 		return org_tigris_subversion_javahl_Status_Kind_deleted;
     case svn_wc_status_replaced:
@@ -1678,7 +1698,7 @@ blame_receiver (void *baton,
   return svn_stream_printf (out, pool, "%6"SVN_REVNUM_T_FMT" %10s %s\n",
                             revision, author, line);
 }
-jbyteArray SVNClient::blame(const char *path, Revision &revisionStart, Revision &revisionEnd, bool strict)
+jbyteArray SVNClient::blame(const char *path, Revision &revisionStart, Revision &revisionEnd)
 {
   Pool subPool;
   apr_pool_t * apr_pool = subPool.pool ();
@@ -1694,7 +1714,6 @@ jbyteArray SVNClient::blame(const char *path, Revision &revisionStart, Revision 
   svn_error_t * error = svn_client_blame (path,
                                  revisionStart.revision(),
                                  revisionEnd.revision(),
-                                 strict,
                                  blame_receiver,
 								 read_stream,
                                  ctx,

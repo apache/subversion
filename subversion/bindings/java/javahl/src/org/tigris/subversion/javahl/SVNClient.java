@@ -122,7 +122,7 @@ public class SVNClient implements SVNClientInterface
      * @param recurse whether you want it to checkout files recursively.
      * @exception ClientException
      */
-    public native void checkout(String moduleName, String destPath, Revision revision, boolean recurse) throws ClientException;
+    public native long checkout(String moduleName, String destPath, Revision revision, boolean recurse) throws ClientException;
     /**
      * Sets the notification function and baton that the C library
      * uses to send processing information back to the calling program.
@@ -155,7 +155,7 @@ public class SVNClient implements SVNClientInterface
      * @param recurse recursively update.
      * @exception ClientException
      */
-    public native void update(String path, Revision revision, boolean recurse) throws ClientException;
+    public native long update(String path, Revision revision, boolean recurse) throws ClientException;
     /**
      * Commits changes to the repository. This usually requires
      * authentication, see Auth.
@@ -204,13 +204,13 @@ public class SVNClient implements SVNClientInterface
      * @exception ClientException
      * @param destPath a destination path that must not already exist.
      */
-    public native void doExport(String srcPath, String destPath, Revision revision,boolean force) throws ClientException;
+    public native long doExport(String srcPath, String destPath, Revision revision,boolean force) throws ClientException;
     /**
      * Update local copy to mirror a new url. This excapsulates the
      * svn_client_switch() client method.
      * @exception ClientException
      */
-    public native void doSwitch(String path, String url, Revision revision, boolean recurse) throws ClientException;
+    public native long doSwitch(String path, String url, Revision revision, boolean recurse) throws ClientException;
     /**
      * Import file or directory PATH into repository directory URL at
      * head.  This usually requires authentication, see Auth.
@@ -251,7 +251,7 @@ public class SVNClient implements SVNClientInterface
 
     public native void relocate(String from, String to, String path, boolean recurse) throws ClientException;
 
-    public native byte[] blame(String path, Revision revisionStart, Revision revisionEnd, boolean strict) throws ClientException;
+    public native byte[] blame(String path, Revision revisionStart, Revision revisionEnd) throws ClientException;
 
     public static native void enableLogging(int logLevel, String logFilePath);
     public static native String version();

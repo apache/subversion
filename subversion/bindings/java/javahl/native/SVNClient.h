@@ -38,7 +38,7 @@ class Prompter;
 class SVNClient
 {
 public:
-	jbyteArray blame(const char *path, Revision& revisionStart, Revision &revisionEnd, bool strict);
+	jbyteArray blame(const char *path, Revision& revisionStart, Revision &revisionEnd);
 	void relocate(const char *from, const char *to, const char *path, bool recurse);
 	jbyteArray fileContent(const char *path, Revision &revision);
 	void propertyCreate(const char *path, const char *name, JNIByteArray &value, bool recurse);
@@ -49,20 +49,20 @@ public:
 	jobjectArray properties(jobject jthis, const char *path);
 	void merge(const char *path1, Revision &revision1, const char *path2, Revision &revision2,const char *localPath, bool force, bool recurse);
 	void doImport(const char *path, const char *url, const char *message, bool recurse);
-	void doSwitch(const char *path, const char *url, Revision &revision, bool recurse);
-	void doExport(const char *srcPath, const char *destPath, Revision &revision, bool force);
+	jlong doSwitch(const char *path, const char *url, Revision &revision, bool recurse);
+	jlong doExport(const char *srcPath, const char *destPath, Revision &revision, bool force);
 	void resolved(const char *path, bool recurse);
 	void cleanup(const char *path);
 	void mkdir(Targets &targets, const char *message);
 	void move(const char *srcPath, const char *destPath, const char *message, Revision &revision, bool force);
 	void copy(const char *srcPath, const char *destPath, const char *message, Revision &revision);
 	jlong commit(Targets &targets, const char *message, bool recurse);
-	void update(const char *path, Revision &revision, bool recurse);
+	jlong update(const char *path, Revision &revision, bool recurse);
 	void add(const char *path, bool recurse);
 	void revert(const char *path, bool recurse);
 	void remove(Targets &targets, const char *message,bool force);
 	void notification(Notify *notify);
-	void checkout(const char *moduleName, const char *destPath, Revision &revision, bool recurse);
+	jlong checkout(const char *moduleName, const char *destPath, Revision &revision, bool recurse);
 	jobjectArray logMessages(const char *path, Revision &revisionStart, Revision &revisionEnd);
 	void setPrompt(Prompter *prompter);
 	void password(const char *password);
