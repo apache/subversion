@@ -1,5 +1,5 @@
 /*
- * split_url.c : divide a file:/ URL into repository and path
+ * checkout.c : read a repository and drive a checkout editor.
  *
  * ====================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.

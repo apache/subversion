@@ -8,7 +8,7 @@
 lib_LTLIBRARIES = libsvn_ra_local.la
 
 ## Sources needed to build each library (names canonicalized)
-libsvn_ra_local_la_SOURCES = ra_plugin.c split_url.c
+libsvn_ra_local_la_SOURCES = ra_plugin.c split_url.c checkout.c
 
 ## Build flags ---------
 
