@@ -672,7 +672,7 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
      overwrite the working file with the 'right' side of the merge. */
   if ((! has_local_mods)
       && ((mimetype1 && svn_mime_type_is_binary (mimetype1))
-          || (mimetype2 && svn_mime_type_is_binary (mimetype1))))
+          || (mimetype2 && svn_mime_type_is_binary (mimetype2))))
     {
       svn_boolean_t same_contents;
       /* ### someday, we should just be able to compare
