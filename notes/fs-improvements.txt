@@ -1,4 +1,4 @@
-Last updated: $Date: 2001-05-03 21:35:07 $
+Last updated: $Date: 2001-05-04 10:22:33 $
 
 [Note: much of this was thought up by Jim Blandy, or developed in
 conversation with him.  Please review, folks; I'm planning to start on
@@ -415,7 +415,7 @@ just say that it follows from the above that
 
     T = B(S'), where S' = A(S)
 
-A small note here: Every delta is actually an n-tuple delta
+A small note here: Every delta is actually an n-tuple of delta
 opserations, represented by what I'll call the delta operators [n]
 (for new data), [s] (for source copies) and [t] (for target
 copies). [s] and [t] create bits of the target stream by operating on
@@ -448,12 +448,12 @@ fix this by doing exactly the opposite transformation than A->A': by
 transforming [s] ops from B into [t] ops. We do this by recording the
 source and target of each copy from A' to AB and, whenever the [s]
 from B describes a range in T that was already defined, converting
-that into a [t] instead [==]. Unlike the A->A' transform, we can't remove
+that into a [t] instead [**]. Unlike the A->A' transform, we can't remove
 all copies from A' to AB (we can only do that when AB doesn't refer to
 S at all), but we can significantly reduce the number of such copies.
 
-Finally, the resulting AB will usually not be the optimal delta from S
-to T, because we will never actually look at S while constructing AB.
+The resulting AB will usually not be the optimal delta from S to T,
+because we will never actually look at S while constructing AB.
 
 
 Summarizing the above, we get the following delta composition
@@ -474,7 +474,7 @@ algorithm:
             copy OP' to AB
           else
 [**]        copy OP's equivalent in O to AB
-        insert [Y, OP.length] into X
+        insert S'[OP.offset, OP.length]->[Y, OP.length] into X
 
 
 This algorithm ignores details such as op splitting and merging,
