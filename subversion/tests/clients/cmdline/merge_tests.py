@@ -1084,7 +1084,7 @@ def merge_one_file(sbox):
 # This is a regression for the enhancement added in issue #785.
 
 def merge_with_implicit_target (sbox):
-  "merging a file with no explicitly target path"
+  "merging a file with no explicit target path"
 
   sbox.build()
 
