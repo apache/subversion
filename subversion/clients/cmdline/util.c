@@ -48,7 +48,7 @@
 #define DEFAULT_ARRAY_SIZE 5
 
 
-/* Create a SVN string from the char* and add it to the array.  
+/* Copy STR into POOL and push the copy onto ARRAY.
    ### todo: Hmm. This should probably find its way into libsvn_subr -Fitz */
 static void 
 array_push_str (apr_array_header_t *array,
@@ -65,9 +65,6 @@ array_push_str (apr_array_header_t *array,
 }
 
 
-/* Some commands take an implicit "." string argument when invoked
- * with no arguments. Those commands make use of this function to
- * add "." to the target array if the user passes no args */
 void
 svn_cl__push_implicit_dot_target (apr_array_header_t *targets, 
                                   apr_pool_t *pool)
@@ -77,14 +74,10 @@ svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
   assert (targets->nelts);
 }
 
-/* Parse a given number of non-target arguments from the
- * command line args passed in by the user. Put them
- * into the opt_state args array */
+
 svn_error_t *
 svn_cl__parse_num_args (apr_array_header_t **args_p,
                         apr_getopt_t *os,
-                        svn_cl__opt_state_t *opt_state,
-                        const char *subcommand,
                         int num_args,
                         apr_pool_t *pool)
 {
@@ -107,14 +100,9 @@ svn_cl__parse_num_args (apr_array_header_t **args_p,
   return SVN_NO_ERROR;
 }
 
-/* Parse all of the arguments from the command line args
- * passed in by the user. Put them into the opt_state
- * args array */
 svn_error_t *
 svn_cl__parse_all_args (apr_array_header_t **args_p,
                         apr_getopt_t *os,
-                        svn_cl__opt_state_t *opt_state,
-                        const char *subcommand,
                         apr_pool_t *pool)
 {
   apr_array_header_t *args 
@@ -190,9 +178,6 @@ parse_path (svn_client_revision_t *rev,
 }
 
 
-/* Create a targets array and add all the remaining arguments
- * to it. We also process arguments passed in the --target file, if
- * specified, just as if they were passed on the command line.  */
 svn_error_t *
 svn_cl__args_to_target_array (apr_array_header_t **targets_p, 
                               apr_getopt_t *os,

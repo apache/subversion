@@ -165,17 +165,15 @@ void svn_cl__push_svn_string (apr_array_header_t *array,
                               const char *str,
                               apr_pool_t *pool);
 
-/* Subcommands call this to pull any args left into the array of targets.
-   This includes any extra args passed in the file specified by --targets.
+/* Pull remaining target arguments from OS into *TARGETS_P, including
+   targets stored in OPT_STATE->targets (that is, passed via the
+   "--targets" command line option), converting them to UTF-8.
 
    If EXTRACT_REVISIONS is set, then this function will attempt to
    look for trailing "@rev" syntax on the paths.  If one @rev is
-   found, it will overwrite the value of opt_state->start_revision.
-   If a second one is found, it will overwrite opt_state->end_revision.  
-   (Extra revisions beyond that are ignored.)
-
-   The items in the array of targets *TARGETS_P will be in UTF-8
-   format. */
+   found, it will overwrite the value of OPT_STATE->start_revision.
+   If a second one is found, it will overwrite OPT_STATE->end_revision.  
+   (Extra revisions beyond that are ignored.)  */
 svn_error_t *
 svn_cl__args_to_target_array (apr_array_header_t **targets_p,
                               apr_getopt_t *os,
@@ -184,31 +182,32 @@ svn_cl__args_to_target_array (apr_array_header_t **targets_p,
                               apr_pool_t *pool);
 
 
-/* If no targets exist in *TARGETS, add `.' as the lone target. */
+/* If no targets exist in *TARGETS, add `.' as the lone target.
+ *
+ * (Some commands take an implicit "." string argument when invoked
+ * with no arguments. Those commands make use of this function to
+ * add "." to the target array if the user passes no args.)
+ */
 void svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
                                        apr_pool_t *pool);
 
 
-/* Parse NUM_ARGS arguments from the list of arguments stored in
-   OS->argv, returning them in an array *ARGS_P of const char * non-UTF8
-   values. */
+/* Parse NUM_ARGS non-target arguments from the list of arguments in
+   OS->argv, return them as `const char *' in *ARGS_P, without doing
+   any UTF-8 conversion.  Allocate *ARGS_P and its values in POOL. */
 svn_error_t *
 svn_cl__parse_num_args (apr_array_header_t **args_p,
                         apr_getopt_t *os,
-                        svn_cl__opt_state_t *opt_state,
-                        const char *subcommand,
                         int num_args,
                         apr_pool_t *pool);
 
 
-/* Parse all remaining arguments from the list of arguments stored in
-   OS->argv, returning them in an array *ARGS_P of const char * non-UTF8
-   values. */
+/* Parse all remaining arguments from OS->argv, return them as
+   `const char *' in *ARGS_P, without doing any UTF-8 conversion.
+   Allocate *ARGS_P and its values in POOL. */
 svn_error_t *
 svn_cl__parse_all_args (apr_array_header_t **args_p,
                         apr_getopt_t *os,
-                        svn_cl__opt_state_t *opt_state,
-                        const char *subcommand,
                         apr_pool_t *pool);
 
 
