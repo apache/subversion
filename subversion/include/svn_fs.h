@@ -176,7 +176,7 @@ typedef struct svn_fs_dir_t svn_fs_dir_t;
 
    If POOL is zero, allocate DIR in FS's pool; it will be freed when
    the filesystem is closed.  If POOL is non-zero, it must be a pool
-   returned by `svn_fs_subpool'; do allocation there.  */
+   returned by `svn_fs_*subpool'; do allocation there.  */
 svn_error_t *svn_fs_open_root (svn_fs_dir_t **dir,
 			       svn_fs_t *fs,
 			       svn_vernum_t v,
@@ -188,7 +188,7 @@ svn_error_t *svn_fs_open_root (svn_fs_dir_t **dir,
 
    If POOL is zero, allocate CHILD_DIR in the filesystem's pool; it
    will be freed when the filesystem is closed.  If POOL is non-zero,
-   it must be a pool returned by `svn_fs_subpool'; do allocation
+   it must be a pool returned by `svn_fs_*subpool'; do allocation
    there.  */
 svn_error_t *svn_fs_open_subdir (svn_fs_dir_t **child_dir,
 				 svn_fs_dir_t *parent_dir,
@@ -199,7 +199,7 @@ svn_error_t *svn_fs_open_subdir (svn_fs_dir_t **child_dir,
 /* Create a new subpool of the pool used by the directory DIR.  This
    pool will be freed whenever DIR is closed, but could also be freed
    earlier, if you like.  */
-apr_pool_t *svn_dir_subpool (svn_fs_dir_t *dir);
+apr_pool_t *svn_fs_dir_subpool (svn_fs_dir_t *dir);
 
 
 /* Free the directory object DIR.  */
@@ -251,16 +251,17 @@ typedef struct svn_fs_file_t svn_fs_file_t;
 
    If POOL is zero, allocate FILE in the filesystem's pool; it will be
    freed when the filesystem is closed.  If POOL is non-zero, it must
-   be a pool returned by `svn_fs_subpool'; do allocation there.  */
+   be a pool returned by `svn_fs_*subpool'; do allocation there.  */
 svn_error_t *svn_fs_open_file (svn_fs_file_t **file,
 			       svn_fs_dir_t *dir,
-			       svn_string_t *name);
+			       svn_string_t *name,
+			       apr_pool_t *pool);
 
 
 /* Create a new subpool of the pool used by FILE.  This pool will be
    freed when FILE is closed, but could also be freed earlier, if
    you like.  */
-apr_pool_t *svn_file_subpool (svn_fs_file_t *file);
+apr_pool_t *svn_fs_file_subpool (svn_fs_file_t *file);
 
 
 /* Free the file object FILE.  */
@@ -373,9 +374,7 @@ svn_error_t *svn_fs_proplist_table (apr_hash_t *table,
 /* Committing changes to Subversion filesystems.  */
 
 
-/* [[Comments on the below would be so welcome.]]  
-
-   To make a change to the Subversion filesystem:
+/* To make a change to the Subversion filesystem:
    - Create a transaction object, using `svn_fs_begin_txn'.
    - Create a new root directory object, using `svn_fs_replace_root'.
    - Make whatever changes you like to that directory tree, using
@@ -466,9 +465,21 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
 
 
 /* Begin a new transaction on the filesystem FS; when committed, this
-   transaction will create a new version.  Set *TXN_P to a pointer to
-   an object representing the new transaction.  */
-svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **TXN_P, svn_fs_t *FS);
+   transaction will create a new version.  Set *TXN to a pointer to
+   an object representing the new transaction.
+
+   If POOL is zero, allocate *TXN in the filesystem's pool; it will be
+   freed when the filesystem is closed.  If POOL is non-zero, it must
+   be a pool returned by `svn_fs_*subpool'; do allocation there.  */
+svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn,
+			       svn_fs_t *fs,
+			       apr_pool_t *pool);
+
+
+/* Create a new subpool of the pool used by the transaction TXN.  This
+   pool will be freed whenever TXN is committed or aborted, but could
+   also be freed earlier, if you like.  */
+apr_pool_t *svn_fs_txn_subpool (svn_fs_txn_t *txn);
 
 
 /* Commit the transaction TXN.  If the transaction conflicts with
@@ -476,7 +487,9 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **TXN_P, svn_fs_t *FS);
    SVN_ERR_FS_CONFLICT error.  Otherwise, create a new filesystem
    version containing the changes made in TXN, and return zero.
 
-   This call frees TXN, and any temporary resources it holds.  */
+   This call frees TXN, and any temporary resources it holds.
+   [[Would it be useful to have transactions live on if the commit
+   fails?  You could tweak things and try again.]]  */
 svn_error_t *svn_fs_commit_txn (svn_fs_txn_t *txn);
 
 
@@ -511,12 +524,18 @@ svn_error_t *svn_fs_delete (svn_fs_dir_t *dir, svn_string_t *name);
 
    The new directory will be based on the directory named BASE_NAME in
    BASE_VERSION.  If BASE_NAME is zero, the directory is completely
-   new.  */
+   new.
+
+   If POOL is zero, allocate *CHILD in the transaction's pool; it will
+   be freed when the transaction is committed or aborted.  If POOL is
+   non-zero, it must be a subpool of the transaction's pool; do
+   allocation there.  */
 svn_error_t *svn_fs_add_dir (svn_fs_dir_t **child,
 			     svn_fs_dir_t *parent,
 			     svn_string_t *name,
 			     svn_string_t *base_name,
-			     svn_vernum_t base_version);
+			     svn_vernum_t base_version,
+			     apr_pool_t *pool);
 
 
 /* Change the subdirectory of PARENT named NAME.  PARENT must be
@@ -526,12 +545,18 @@ svn_error_t *svn_fs_add_dir (svn_fs_dir_t **child,
    The new directory will be based on the directory named BASE_NAME in
    BASE_VERSION.  If BASE_NAME is zero, the directory is completely
    new.  If BASE_NAME is `svn_fs_default_base', then the new directory
-   is based on the existing directory named NAME in PARENT.  */
+   is based on the existing directory named NAME in PARENT.
+
+   If POOL is zero, allocate *CHILD in the transaction's pool; it will
+   be freed when the transaction is committed or aborted.  If POOL is
+   non-zero, it must be a subpool of the transaction's pool; do
+   allocation there.  */
 svn_error_t *svn_fs_replace_dir (svn_fs_dir_t **child,
 				 svn_fs_dir_t *parent,
 				 svn_string_t *name,
 				 svn_string_t *base_name,
-				 svn_vernum_t base_version);
+				 svn_vernum_t base_version,
+				 apr_pool_t *pool);
 
 
 /* Change a directory's property's value, or add/delete a property.
@@ -562,12 +587,18 @@ svn_error_t *svn_fs_change_dirent_prop (svn_fs_dir_t *dir,
 
    The new file will be based on the file named BASE_NAME in
    BASE_VERSION.  If BASE_NAME is zero, the file is completely
-   new.  */
+   new.
+
+   If POOL is zero, allocate *FILE in the transaction's pool; it will
+   be freed when the transaction is committed or aborted.  If POOL is
+   non-zero, it must be a subpool of the transaction's pool; do
+   allocation there.  */
 svn_error_t *svn_fs_add_file (svn_fs_file_t **file,
 			      svn_fs_dir_t *dir,
 			      svn_string_t *name,
 			      svn_string_t *base_name,
-			      svn_vernum_t base_version);
+			      svn_vernum_t base_version,
+			      apr_pool_t *pool);
 
 
 /* Replace the entry named NAME in the mutable directory DIR with a
@@ -577,12 +608,18 @@ svn_error_t *svn_fs_add_file (svn_fs_file_t **file,
    The file will be based on the file named BASE_NAME in BASE_VERSION.
    If BASE_NAME is zero, the file is completely new.  If BASE_NAME is
    `svn_fs_default_base', then the new file is based on the existing
-   file named NAME in DIR.  */
+   file named NAME in DIR.
+
+   If POOL is zero, allocate *FILE in the transaction's pool; it will
+   be freed when the transaction is committed or aborted.  If POOL is
+   non-zero, it must be a subpool of the transaction's pool; do
+   allocation there.  */
 svn_error_t *svn_fs_replace_file (svn_fs_file_t **file,
 				  svn_fs_dir_t *dir,
 				  svn_string_t *name,
 				  svn_string_t *base_name,
-				  svn_vernum_t base_version);
+				  svn_vernum_t base_version,
+				  apr_pool_t *pool);
 
 
 /* Apply a text delta to the mutable file FILE.
@@ -612,6 +649,57 @@ svn_error_t *svn_fs_change_file_prop (svn_fs_file_t *file,
    what they mean.  */
 svn_string_t *svn_fs_default_base;
 
+
+
+/* Transactions are persistent.  */
+
+/* Transactions are actually persistent objects, stored in the
+   database.  You can open a filesystem, begin a transaction, and
+   close the filesystem, and then a separate process could open the
+   filesystem, pick up the same transaction, and continue work on it.
+   When a transaction is successfully committed, it is removed from
+   the database.
+
+   Every transaction is assigned a name.  You can open a transaction
+   by name, and resume work on it, or find out the name of an existing
+   transaction.  You can also list all the transactions currently
+   present in the database.  */
+
+
+/* Set *NAME to the name of the transaction TXN.
+
+   If POOL is zero, allocate NAME in the transaction's pool; it will
+   be freed when the transaction is committed or aborted.  If POOL is
+   non-zero, do allocation there.  */
+svn_error_t *svn_fs_txn_name (svn_string_t **name,
+			      svn_fs_txn_t *txn,
+			      apr_pool_t *pool);
+
+
+/* Open the transaction named NAME in the filesystem FS.  Set *TXN to
+   the transaction.
+
+   If POOL is zero, allocate NAME in the filesystem's pool; it will be
+   freed when the transaction is committed or aborted.  If POOL is
+   non-zero, it must be a subpool of the filesystem's pool; do
+   allocation there.  */
+svn_error_t *svn_fs_open_txn (svn_fs_txn_t **txn,
+			      svn_fs_t *fs,
+			      svn_string_t *name,
+			      apr_pool_t *pool);
+
+
+/* Set *NAMES to a null-terminated array of pointers to strings,
+   containing the names of all the currently active transactions in
+   the filesystem FS.
+
+   If POOL is zero, allocate NAME in the filesystem's pool; it will be
+   freed when the transaction is committed or aborted.  If POOL is
+   non-zero, it must be a subpool of the filesystem's pool; do
+   allocation there.  */
+svn_error_t *svn_fs_list_transactions (svn_string_t ***names,
+				       svn_fs_t *fs,
+				       apr_pool_t *pool);
 
 
 /* Non-historical properties.  */
