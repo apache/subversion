@@ -81,12 +81,21 @@ svn_cl__checkout (svn_cl__opt_state_t *opt_state,
    */
   for (i = 0; i < opt_state->args->nelts; i++)
     {
+      svn_string_t *local_dir;
       svn_string_t *repos_url
         = ((svn_string_t **) (opt_state->args->elts))[0];
+
+      /* Ensure that we have a default dir to checkout into. */
+      if (! opt_state->target)
+        local_dir = svn_path_last_component (repos_url,
+                                             svn_path_local_style,
+                                             pool);
+      else
+        local_dir = opt_state->target;
       
       err = svn_cl__get_trace_update_editor (&trace_editor,
                                              &trace_edit_baton,
-                                             opt_state->target,
+                                             local_dir,
                                              pool);
       if (err)
         return err;
@@ -95,7 +104,7 @@ svn_cl__checkout (svn_cl__opt_state_t *opt_state,
       err = svn_client_checkout (NULL, NULL,
                                  trace_editor, trace_edit_baton,
                                  repos_url,
-                                 opt_state->target,
+                                 local_dir,
                                  opt_state->revision,
                                  opt_state->xml_file,
                                  pool);
