@@ -42,7 +42,7 @@ class SVNLook:
       getattr(self, 'cmd_' + cmd)()
     finally:
       if self.txn_ptr:
-        fs.close_txn(txn_ptr)
+        fs.close_txn(self.txn_ptr)
 
   def cmd_default(self):
     self.cmd_info()
