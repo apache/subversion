@@ -282,44 +282,49 @@
         individuales de ficheros y directorios son las cadenas
         con rutas como <filename>/foo/bar</filename>, igual que si
         estuviese tratando con ficheros y directorios a través de
-        su programa favorito de línea de comando.  Añade nuevos
+        su programa favorito de línea de comando.  Añada nuevos
         ficheros y directorios pasando sus futuras rutas a las
-        funciones correctas de la API. Obtiene información sobre
+        funciones correctas de la API. Obtenga información sobre
         ellos usando el mismo mecanismo.</para>
 
-      <para>Unlike most filesystems, though, a path alone is not
-        enough information to identify a file or directory in
-        Subversion.  Think of a directory tree as a two-dimensional
-        system, where a node's siblings represent a sort of
-        left-and-right motion, and descending into subdirectories a
-        downward motion.  <xref linkend="svn-ch-8-dia-1"/> shows
-        a typical representation of a tree as exactly that.</para>
+      <para>No obstante, a diferencia de la mayoría de los
+        sistemas de ficheros, una ruta sola no es información
+        suficiente para identificar un fichero o directorio
+        en Subversion. Piense que el árbol de directorios
+        es un sistema bidimensional, donde los nodos hermanos
+        representan una especie de movimiento izquierda-derecha, y
+        descender en subdirectorios un movimiento hacia abajo. <xref
+        linkend="svn-ch-8-dia-1"/> muestra una representación típica
+        de un árbol justo de ese modo.</para>
 
       <figure id="svn-ch-8-dia-1">
-        <title>Files and directories in two dimensions</title>
+        <title>Ficheros y directorios en dos dimensiones</title>
         <graphic fileref="images/ch08dia1.png"/>
       </figure>
 
-      <para>Of course, the Subversion filesystem has a nifty third
-        dimension that most filesystems do not have&mdash;Time!
+      <para>Por supuesto, el sistema de ficheros de Subversion
+        tiene una genial tercera dimensión que muchos sistemas de
+        ficheros no tienen&mdash;¡El tiempo!
         <footnote>
-          <para>We understand that this may come as a shock to sci-fi
-            fans who have long been under the impression that Time was
-            actually the <emphasis>fourth</emphasis> dimension, and we
-            apologize for any emotional trauma induced by our
-            assertion of a different theory.</para>
+          <para>Entendemos que esto pueda ser un jarro de agua fría
+            a todos los fans de la ciencia ficción, quienes
+            durante mucho tiempo han considerado el tiempo como
+            la <emphasis>cuarta</emphasis> dimensión, y pedimos
+            disculpas si provocamos algún trauma emocional con
+            nuestra aserción de una teoría diferente.</para>
         </footnote>
-        In the filesystem interface, nearly every function that has a
-        <parameter>path</parameter> argument also expects a
-        <parameter>root</parameter> argument.  This
-        <structname>svn_fs_root_t</structname> argument describes
-        either a revision or a Subversion transaction (which is
-        usually just a revision-to-be), and provides that
-        third-dimensional context needed to understand the difference
-        between <filename>/foo/bar</filename> in revision 32, and the
-        same path as it exists in revision 98.  <xref
-        linkend="svn-ch-8-dia-2"/> shows revision history as an
-        added dimension to the Subversion filesystem universe.</para>
+        En la interfaz del sistema de ficheros, casi toda función
+        que tiene un parámetro de <parameter>ruta</parameter>
+        espera también un parámetro <parameter>raíz</parameter>.
+        Este parámetro <structname>svn_fs_root_t</structname>
+        describe una revisión o una transacción de Subversion (la
+        cual es normalmente una futura revisión), y proporciona
+        ese contexto tridimensional necesario para entender la
+        diferencia entre <filename>/foo/bar</filename> de la revisión
+        32, y la misma ruta tal y como existe en la revisión 98.
+        <xref linkend="svn-ch-8-dia-2"/> muestra la historia de
+        versiones como una dimensión añadida al universo del sistema
+        de ficheros de Subversion.</para>
 
       <figure id="svn-ch-8-dia-2">
         <title>Versioning time&mdash;the third dimension!</title>
