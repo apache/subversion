@@ -97,9 +97,15 @@ class Generator(gen_win.WinGeneratorBase):
     return guid
 
   def move_proj_file(self, path, name):
+    ### Move our slightly templatized pre-built project files into place --
+    ### these projects include apr, neon, locale, config, etc.
+
     dest_file = os.path.join(path, name)
-    source_file = os.path.join('build', 'win32', name + '.in')
-    self.write_file_if_changed(dest_file, open(source_file, 'rb').read())
+    source_template = name + '.ezt'
+    data = {
+      'version' : self.vsnet_proj_ver,
+      }
+    self.write_with_template(dest_file, source_template, data)
 
   def write(self, oname):
     "Write a Solution (.sln)"
@@ -117,6 +123,9 @@ class Generator(gen_win.WinGeneratorBase):
                         'gen_uri_delims.vcproj')
     self.move_proj_file(os.path.join(self.apr_util_path,'xml', 'expat',
                         'lib'), 'xml.vcproj')
+    self.move_proj_file(os.path.join('build', 'win32'), 'svn_config.vcproj')
+    self.move_proj_file(os.path.join('build', 'win32'), 'svn_locale.vcproj')
+    self.move_proj_file(os.path.join('build', 'win32'), 'neon.vcproj')
 
     install_targets = self.get_install_targets()
 
