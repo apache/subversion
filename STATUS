@@ -9,3 +9,8 @@ Status of 1.1.0:
 
 Candidate changes:
 
+  * r10249
+    Fix FSFS bug loading cvs2svn-produced dumpfiles
+    Justification: Small fix, work-stopping bug
+    Votes:
+      +1: ghudson
