@@ -20,31 +20,32 @@ my $fs = $repos->fs;
 cmp_ok($fs->youngest_rev, '==', 0,
        "new repository start with rev 0");
 
-my $txn = SVN::Fs::begin_txn($fs, $fs->youngest_rev);
+my $txn = $fs->begin_txn($fs->youngest_rev);
 
 my $txns = $fs->list_transactions;
 ok(eq_array($fs->list_transactions, [$txn->name]), 'list transaction');
 
-SVN::Fs::make_dir($txn->root, 'trunk');
+$txn->root->make_dir('trunk');
 
 my $path = 'trunk/filea';
 my $text = "this is just a test\n";
-SVN::Fs::make_file($txn->root, 'trunk/filea');
+$txn->root->make_file('trunk/filea');
 {
-my $stream = SVN::Fs::apply_text($txn->root, 'trunk/filea', undef);
+my $stream = $txn->root->apply_text('trunk/filea', undef);
 print $stream $text;
 close $stream;
 }
-SVN::Fs::commit_txn($txn);
+$txn->commit;
 
 cmp_ok($fs->youngest_rev, '==', 1, 'revision increased');
 
 my $root = $fs->revision_root ($fs->youngest_rev);
 
-cmp_ok(SVN::Fs::check_path($root, $path), '==', $SVN::Core::node_file);
-
+cmp_ok($root->check_path($path), '==', $SVN::Node::file);
+ok (!$root->is_dir($path));
+ok ($root->is_file($path));
 {
-my $stream = SVN::Fs::file_contents($root, $path);
+my $stream = $root->file_contents ($path);
 local $/;
 is(<$stream>, $text, 'content verified');
 }
