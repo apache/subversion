@@ -40,7 +40,6 @@
 /* Names of special lock directories in the fs_fs filesystem. */
 #define LOCK_ROOT_DIR "locks"
 #define LOCK_LOCK_DIR "locks"
-#define LOCK_TOKEN_DIR "lock-tokens"
 
 /* Names of hash keys used to store a lock for writing to disk. */
 #define PATH_KEY "path"
@@ -137,21 +136,6 @@ base_path_to_lock_file (const char **base_path,
   SVN_ERR (merge_paths (base_path, *base_path, LOCK_LOCK_DIR, pool));
   /* ###TODO create a 1 or 2 char subdir to spread the love across
      many directories (and take the hash as an optional arg. */
-
-  return SVN_NO_ERROR;
-}
-
-/* Set ABS_PATH to the absolute path to the lock token file named
-   TOKEN in fs. */
-static svn_error_t *
-abs_path_to_lock_token_file (const char **abs_path,
-                             svn_fs_t *fs,
-                             const char *token,
-                             apr_pool_t *pool)
-{
-  SVN_ERR (merge_paths (abs_path, fs->path, LOCK_ROOT_DIR, pool));
-  SVN_ERR (merge_paths (abs_path, *abs_path, LOCK_TOKEN_DIR, pool));
-  SVN_ERR (merge_paths (abs_path, *abs_path, (char *)token, pool));
 
   return SVN_NO_ERROR;
 }
@@ -408,53 +392,6 @@ write_lock_to_file (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Store the lock token in the OS level filesystem in a file under
-   repos/db/locks/lock-tokens.  The file's name is lock->token, and
-   the file's contents is lock->path. */
-static svn_error_t *
-write_lock_token_to_file (svn_fs_t *fs,
-                          svn_lock_t *lock,
-                          apr_pool_t *pool)
-{
-  apr_status_t status;
-  apr_file_t *fd;
-  const char *abs_path, *dir;
-
-  SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, lock->token, pool));
-
-  /* Make sure that the directory exists before we create the lock file. */
-  dir = svn_path_dirname (abs_path, pool);
-
-  status = apr_dir_make_recursive (dir, APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_wrap_apr (status, 
-                               _("Can't create lock token directory '%s'"),
-                               dir);
-
-  SVN_ERR (svn_io_file_open (&fd, abs_path, APR_WRITE | APR_CREATE,
-                             APR_OS_DEFAULT, pool));
-  
-  /* The token file contains only the relative path to the lock file. */
-  SVN_ERR (svn_io_file_write_full (fd, lock->path, 
-                                   strlen (lock->path), NULL, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-save_lock (svn_fs_t *fs,
-           svn_lock_t *lock, 
-           apr_pool_t *pool)
-{
-
-  SVN_ERR (write_lock_to_file (fs, lock, pool));
-
-  SVN_ERR (write_lock_token_to_file (fs, lock, pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 /* Join all items in COMPONENTS with directory separators to create
    PATH. */
@@ -525,10 +462,6 @@ delete_lock (svn_fs_t *fs,
   SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
   SVN_ERR (svn_io_remove_file (abs_path, pool));
 
-  /* Delete lock from tokens area */
-  SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, lock->token, pool));
-  SVN_ERR (svn_io_remove_file (abs_path, pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -559,38 +492,6 @@ generate_new_lock (svn_lock_t **lock_p,
   return SVN_NO_ERROR;
 }
 
-
-static svn_error_t *
-read_path_from_lock_token_file(svn_fs_t *fs, 
-                               char **path_p,
-                               const char *token, 
-                               apr_pool_t *pool)
-{
-  const char *abs_path;
-  const char *abs_path_utf8;
-  apr_status_t status;
-  apr_finfo_t finfo;
-  svn_stringbuf_t *buf;
-
-  SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, token, pool));
-
-  status = apr_stat (&finfo, abs_path, APR_FINFO_TYPE, pool);
-
-  /* If token file doesn't exist, then there's no lock, so return
-     immediately. */
-  if (APR_STATUS_IS_ENOENT (status))
-    {
-      *path_p = NULL;
-      return svn_fs_fs__err_bad_lock_token (fs, token);
-    }      
-
-  SVN_ERR (svn_utf_cstring_to_utf8 (&abs_path_utf8, abs_path, pool));
-  
-  SVN_ERR (svn_stringbuf_from_file (&buf, abs_path_utf8, pool));
-
-  *path_p = buf->data;         
-  return SVN_NO_ERROR;
-}
 
 /* Read lock from file in FS at ABS_PATH into LOCK_P.  If open FD is
    non-NULL, use FD instead of opening a new file. FD will be closed
@@ -877,7 +778,7 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
   /* Create a new lock, and add it to the tables. */    
   SVN_ERR (generate_new_lock (&new_lock, fs, path, fs->access_ctx->username,
                               comment, timeout, pool));
-  SVN_ERR (save_lock (fs, new_lock, pool));
+  SVN_ERR (write_lock_to_file (fs, new_lock, pool));
   *lock_p = new_lock;
 
   return SVN_NO_ERROR;
@@ -957,7 +858,7 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
         }          
     }
 
-  save_lock (fs, lock, pool);
+  SVN_ERR (write_lock_to_file (fs, lock, pool));
 
   return SVN_NO_ERROR;
 }
@@ -984,35 +885,6 @@ svn_fs_fs__generate_token (const char **token,
 }
 
 
-/* Static helper func.
-
-   If TOKEN points to a lock in FS, set *LOCK to an svn_lock_t which
-   represents the lock, allocated in POOL.  If TOKEN doesn't point to
-   a lock, return SVN_ERR_FS_BAD_LOCK_TOKEN.  If TOKEN points to a
-   lock that has expired, then return SVN_ERR_FS_LOCK_EXPIRED.
-*/
-static svn_error_t *
-get_lock_from_token (svn_lock_t **lock_p,
-                     svn_fs_t *fs,
-                     const char *token,
-                     apr_pool_t *pool)
-{
-  svn_lock_t *lock;
-  char *path;
-
-  /* Read lock token from disk */
-  SVN_ERR (read_path_from_lock_token_file(fs, &path, token, pool));
-
-  SVN_ERR (get_lock_from_path (&lock, fs, path, pool));
-
-  /* Get lock back, check for null */
-  if (!lock)
-    return svn_fs_fs__err_no_such_lock (fs, path);
-  *lock_p = lock;
-  return SVN_NO_ERROR;
-}
-
-
 
 svn_error_t *
 svn_fs_fs__unlock (svn_fs_t *fs,
@@ -1029,7 +901,7 @@ svn_fs_fs__unlock (svn_fs_t *fs,
   
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or
      SVN_ERR_FS_LOCK_EXPIRED. */
-  SVN_ERR (get_lock_from_token(&existing_lock, fs, token, pool));
+  SVN_ERR (get_lock_from_path_helper(fs, &existing_lock, path, pool));
   
   /* Sanity check:  the incoming path should match existing_lock->path. */
   if (strcmp(path, existing_lock->path) != 0)
