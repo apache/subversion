@@ -74,10 +74,28 @@
 svn_edit_t * 
 svn_create_edit (apr_pool_t *pool, int action, char **atts)
 {
-  /* TODO:  fill in fields from atts */
-  svn_edit_t *new_edit = apr_pcalloc (pool, sizeof (svn_edit_t *));
+  svn_edit_t *this_edit = apr_pcalloc (pool, sizeof (svn_edit_t *));
+
+  this_edit->kind = action;
+
+  /* Fill in structure's fields from  **atts */
+  while (*atts)
+    {
+      char *attr_name = *atts++;
+      char *attr_value = *atts++;
+      
+      if (strcmp (attr_name, "name") == 0)
+        {
+          this_edit->name
+            = svn_string_create (attr_value, my_digger->pool);
+        }
+      else
+        {
+          /* TODO: unknown tag attribute, ignore for now.  */
+        }
+    }
   
-  return new_edit;
+  return this_edit;
 }
 
 
@@ -85,10 +103,12 @@ svn_create_edit (apr_pool_t *pool, int action, char **atts)
 svn_edit_t * 
 svn_create_edit_content (apr_pool_t *pool, int kind, char **atts)
 {
-  /* TODO:  fill in fields from atts */
-  svn_edit_t *new_content = apr_pcalloc (pool, sizeof (svn_edit_content_t *));
+  svn_edit_content_t *this_edit_content 
+    = apr_pcalloc (pool, sizeof (svn_edit_content_t *));
 
-  /* Build an ancestor object out of **atts */
+  this_edit_content->kind = kind;
+
+  /* Fill in structure's fields from  **atts */
   while (*atts)
     {
       char *attr_name = *atts++;
@@ -110,12 +130,11 @@ svn_create_edit_content (apr_pool_t *pool, int kind, char **atts)
         }
       else
         {
-          /* TODO: unknown tag attribute, return error */
+          /* TODO: unknown tag attribute, ignore for now.  */
         }
     }
   
-  
-  return new_content;
+  return this_edit_content;
 }
 
 
