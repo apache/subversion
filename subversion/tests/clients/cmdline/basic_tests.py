@@ -1620,6 +1620,11 @@ def basic_history(sbox):
   # rename pi to rho.  commit r3.
   svntest.main.run_svn(None, 'mv', pi_path, rho_path)
 
+  # svn cat -r1 rho  --> should show pi's contents.
+  svntest.actions.run_and_verify_svn (None,
+                                      [ "This is the file 'pi'."], None,
+                                      'cat',  '-r', '1', rho_path)
+  
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/pi' : Item(verb='Deleting'),
     'A/D/G/rho' : Item(verb='Adding')

@@ -1468,14 +1468,7 @@ def diff_renamed_file(sbox):
                                    os.path.join('A', 'D', 'pi2'))
 
   # Repos->WC diff of the file
-  # Since peg revision calculation of schedule-adds is broken, we
-  # need to specify the total path+revision for now.
-  diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                 '--old',
-                                                 os.path.join(sbox.repo_url,
-                                                              'A', 'D', 'G',
-                                                              'pi@1'),
-                                                 '--new',
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
                                                  os.path.join('A', 'D', 'pi2'))
 
   if check_diff_output(diff_output,

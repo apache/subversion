@@ -1268,14 +1268,6 @@ do_merge (const char *initial_URL1,
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
-      void *sessionpeg;
-
-      /* Open an RA session to the peg URL. */
-      SVN_ERR (svn_client__open_ra_session (&sessionpeg, ra_lib,
-                                            initial_URL2, NULL,
-                                            NULL, NULL, FALSE, TRUE,
-                                            ctx, pool));
-
       SVN_ERR (svn_client__repos_locations (&URL1, &revision1,
                                             &URL2, &revision2,
                                             initial_path2 ? initial_path2
@@ -1283,8 +1275,7 @@ do_merge (const char *initial_URL1,
                                             peg_revision,
                                             initial_revision1,
                                             initial_revision2,
-                                            ra_lib, sessionpeg,
-                                            ctx, pool));
+                                            ra_lib, ctx, pool));
 
       merge_b->url = URL2;
       path1 = NULL;
@@ -1426,16 +1417,9 @@ do_single_file_merge (const char *initial_URL1,
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
       svn_ra_plugin_t *ra_lib;
-      void *sessionpeg;
 
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, initial_URL2, pool));
       
-      /* Open an RA session to the peg URL. */
-      SVN_ERR (svn_client__open_ra_session (&sessionpeg, ra_lib,
-                                            initial_URL2, NULL,
-                                            NULL, NULL, FALSE, TRUE,
-                                            merge_b->ctx, pool));
-
       SVN_ERR (svn_client__repos_locations (&URL1, &revision1,
                                             &URL2, &revision2,
                                             initial_path2 ? initial_path2
@@ -1443,8 +1427,7 @@ do_single_file_merge (const char *initial_URL1,
                                             peg_revision,
                                             initial_revision1,
                                             initial_revision2,
-                                            ra_lib, sessionpeg,
-                                            merge_b->ctx, pool));
+                                            ra_lib, merge_b->ctx, pool));
 
       merge_b->url = URL2;
       merge_b->path = NULL;
@@ -1685,28 +1668,17 @@ diff_repos_repos (const apr_array_header_t *options,
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
-      void *sessionpeg;
       svn_opt_revision_t *start_ignore, *end_ignore;
       
-      /* Open an RA session to the peg URL. */
-      SVN_ERR (svn_client__open_ra_session (&sessionpeg, ra_lib, url2, NULL,
-                                            NULL, NULL, FALSE, TRUE,
-                                            ctx, temppool));
-
       SVN_ERR (svn_client__repos_locations (&url1, &start_ignore,
                                             &url2, &end_ignore,
                                             path2,
                                             peg_revision,
                                             revision1, revision2,
-                                            ra_lib, sessionpeg,
-                                            ctx, temppool));
+                                            ra_lib, ctx, pool));
 
-      url1 = apr_pstrdup (pool, url1);
-      url2 = apr_pstrdup (pool, url2);
       callback_baton->orig_path_1 = url1;
       callback_baton->orig_path_2 = url2;
-      
-      svn_pool_clear (temppool);
     }
   
   /* Open temporary RA sessions to each URL. */
@@ -1840,7 +1812,6 @@ diff_repos_wc (const apr_array_header_t *options,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
-  apr_pool_t *temppool = svn_pool_create (pool);
 
   /* Assert that we have valid input. */
   assert (! svn_path_is_url (path2));
@@ -1886,28 +1857,20 @@ diff_repos_wc (const apr_array_header_t *options,
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
-      void *sessionpeg;
       svn_opt_revision_t *start_ignore, *end_ignore, end;
       const char *url_ignore;
 
       end.kind = svn_opt_revision_unspecified;
-
-      SVN_ERR (svn_client__open_ra_session (&sessionpeg, ra_lib, anchor_url,
-                                            NULL, NULL, NULL, FALSE, TRUE,
-                                            ctx, temppool));
 
       SVN_ERR (svn_client__repos_locations (&url1, &start_ignore,
                                             &url_ignore, &end_ignore,
                                             path1,
                                             peg_revision,
                                             revision1, &end,
-                                            ra_lib, sessionpeg,
-                                            ctx, temppool));
+                                            ra_lib, ctx, pool));
 
-      url1 = apr_pstrdup (pool, url1);
       callback_baton->orig_path_1 = url1;
       callback_baton->orig_path_2 = svn_path_join (anchor_url, target, pool);
-      svn_pool_clear (temppool);
     }
   
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor_url,
