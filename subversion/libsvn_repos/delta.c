@@ -342,6 +342,15 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
 
  cleanup:
 
+#if 1
+  /*** Temporary kludge for compatibility with older ra_dav clients
+       while they learn that it's okay to have an editor drive with no
+       open_root().  This should be sometime after the 0.25 release
+       (See issue #1159). ***/
+  if (! root_baton)
+    SVN_ERR (editor->open_root (edit_baton, rootrev, pool, &root_baton));
+#endif 
+
   /* Make sure we close the root directory if we opened one above. */
   if (root_baton)
     SVN_ERR (editor->close_directory (root_baton, pool));
