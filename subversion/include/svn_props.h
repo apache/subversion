@@ -182,6 +182,12 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
 /** The value to force the executable property to when set */
 #define SVN_PROP_EXECUTABLE_VALUE "*"
 
+/** Set if the file should be treated as a special file. */
+#define SVN_PROP_SPECIAL  SVN_PROP_PREFIX "special"
+
+/** The value to force the special property to when set. */
+#define SVN_PROP_SPECIAL_VALUE "*"
+
 /** Describes external items to check out into this directory. 
  *
  * The format is a series of lines, such as:

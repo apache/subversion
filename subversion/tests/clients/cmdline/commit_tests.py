@@ -1507,24 +1507,6 @@ def commit_multiple_wc(sbox):
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
 
-def commit_symlink(sbox):
-  "committing a symlink should fail"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  newfile_path = os.path.join(wc_dir, 'newfile')
-  linktarget_path = os.path.join(wc_dir, 'linktarget')
-  svntest.main.file_append(newfile_path, 'this is a new file')
-  svntest.main.file_append(linktarget_path, 'this is just a link target')
-  svntest.main.run_svn(None, 'add', newfile_path)
-  os.remove(newfile_path)
-  os.symlink('linktarget', newfile_path)
-
-  svntest.actions.run_and_verify_svn("Output on stderr expected",
-                                     None, SVNAnyOutput,
-                                     'ci', '-m', 'log msg', wc_dir)
-
 def commit_nonrecursive(sbox):
   "commit named targets with -N (issues #1195, #1239)"
   
@@ -1892,7 +1874,6 @@ test_list = [ None,
               commit_multiple_wc,
               commit_nonrecursive,
               failed_commit,
-              Skip(commit_symlink, (os.name != 'posix')),
               commit_out_of_date_deletions,
               commit_with_bad_log_message,
               from_wc_top_with_bad_editor,

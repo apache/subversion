@@ -59,6 +59,16 @@ svn_error_t *svn_io_check_path (const char *path,
                                 svn_node_kind_t *kind,
                                 apr_pool_t *pool);
 
+/**
+ * @since New in 1.1.
+ *
+ * Like svn_io_check_path(), but return the actual node type for any
+ * special files.
+ */
+svn_error_t *svn_io_check_special_path (const char *path,
+                                        svn_node_kind_t *kind,
+                                        apr_pool_t *pool);
+
 /** Like svn_io_check_path(), but resolve symlinks.  This returns the
     same varieties of @a kind as svn_io_check_path(). */ 
 svn_error_t *svn_io_check_resolved_path (const char *path,
@@ -118,6 +128,29 @@ svn_error_t *svn_io_open_unique_file (apr_file_t **f,
                                       const char *suffix,
                                       svn_boolean_t delete_on_close,
                                       apr_pool_t *pool);
+
+/**
+ * @since New in 1.1.
+ *
+ * Like svn_io_open_unique_file, except that instead of creating a
+ * file, a symlink is generated that references the path @a dest.
+ */
+svn_error_t *svn_io_create_unique_link (const char **unique_name_p,
+                                        const char *path,
+                                        const char *dest,
+                                        const char *suffix,
+                                        apr_pool_t *pool);
+
+
+/**
+ * @since New in 1.1.
+ *
+ * Set @a dest to the path that the symlink at @a path references.
+ * Allocate the string from @a pool.
+ */
+svn_error_t *svn_io_read_link (svn_string_t **dest,
+                               const char *path,
+                               apr_pool_t *pool);
 
 
 /** Set @a dir to a directory path (allocated in @a pool) deemed

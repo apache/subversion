@@ -69,6 +69,7 @@ restore_file (const char *file_path,
   apr_time_t tstamp;
   const char *bname;
   apr_uint32_t modify_flags = 0;
+  svn_boolean_t special;
 
   text_base_path = svn_wc__text_base_path (file_path, FALSE, pool);
   tmp_text_base_path = svn_wc__text_base_path (file_path, TRUE, pool);
@@ -80,17 +81,20 @@ restore_file (const char *file_path,
   SVN_ERR (svn_wc__get_eol_style (NULL, &eol, file_path, adm_access, pool));
   SVN_ERR (svn_wc__get_keywords (&keywords,
                                  file_path, adm_access, NULL, pool));
+  SVN_ERR (svn_wc__get_special (&special, file_path, adm_access, pool));
+                                
   
   /* When copying the tmp-text-base out to the working copy, make
      sure to do any eol translations or keyword substitutions,
      as dictated by the property values.  If these properties
      are turned off, then this is just a normal copy. */
-  SVN_ERR (svn_subst_copy_and_translate (tmp_text_base_path,
-                                         file_path,
-                                         eol, FALSE, /* don't repair */
-                                         keywords,
-                                         TRUE, /* expand keywords */
-                                         pool));
+  SVN_ERR (svn_subst_copy_and_translate2 (tmp_text_base_path,
+                                          file_path,
+                                          eol, FALSE, /* don't repair */
+                                          keywords,
+                                          TRUE, /* expand keywords */
+                                          special,
+                                          pool));
   
   SVN_ERR (svn_io_remove_file (tmp_text_base_path, pool));
 

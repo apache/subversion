@@ -1245,23 +1245,26 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
              file. */
           svn_subst_keywords_t *keywords;
           const char *eol;
+          svn_boolean_t special;
           
           SVN_ERR (svn_wc__get_eol_style (NULL, &eol, fullpath, adm_access,
                                           pool));
           SVN_ERR (svn_wc__get_keywords (&keywords, fullpath, adm_access, NULL,
                                          pool));
+          SVN_ERR (svn_wc__get_special (&special, fullpath, adm_access, pool));
 
           /* When copying the text-base out to the working copy, make
              sure to do any eol translations or keyword substitutions,
              as dictated by the property values.  If these properties
              are turned off, then this is just a normal copy. */
-          if ((err = svn_subst_copy_and_translate (base_thing,
-                                                   fullpath,
-                                                   eol, 
-                                                   FALSE, /* don't repair */
-                                                   keywords,
-                                                   TRUE, /* expand keywords */
-                                                   pool)))
+          if ((err = svn_subst_copy_and_translate2 (base_thing,
+                                                    fullpath,
+                                                    eol, 
+                                                    FALSE, /* don't repair */
+                                                    keywords,
+                                                    TRUE, /* expand keywords */
+                                                    special,
+                                                    pool)))
             return svn_error_quick_wrap 
               (err, apr_psprintf (pool, _("Error restoring text for '%s'"),
                                   fullpath));

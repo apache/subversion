@@ -163,8 +163,28 @@ svn_subst_translate_stream (svn_stream_t *src,
                             svn_boolean_t expand);
 
 
-/** Convenience routine: a variant of @c svn_subst_translate_stream which
- * operates on files.  (See previous docstring for details.)
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Similar to svn_subst_copy_and_translate2 except that @a special is
+ * always set to @c FALSE.
+ */
+svn_error_t *
+svn_subst_copy_and_translate (const char *src,
+                              const char *dst,
+                              const char *eol_str,
+                              svn_boolean_t repair,
+                              const svn_subst_keywords_t *keywords,
+                              svn_boolean_t expand,
+                              apr_pool_t *pool);
+
+/**
+ * @since New in 1.1.
+ *
+ * Convenience routine: a variant of @c svn_subst_translate_stream
+ * which operates on files.  (See previous docstring for details.)  In
+ * addition, it will create/detranslate a special file if @a special
+ * is @c TRUE.
  *
  * Copy the contents of file-path @a src to file-path @a dst atomically,
  * either creating @a dst (or overwriting @a dst if it exists), possibly
@@ -177,13 +197,14 @@ svn_subst_translate_stream (svn_stream_t *src,
  * copy.
  */
 svn_error_t *
-svn_subst_copy_and_translate (const char *src,
-                              const char *dst,
-                              const char *eol_str,
-                              svn_boolean_t repair,
-                              const svn_subst_keywords_t *keywords,
-                              svn_boolean_t expand,
-                              apr_pool_t *pool);
+svn_subst_copy_and_translate2 (const char *src,
+                               const char *dst,
+                               const char *eol_str,
+                               svn_boolean_t repair,
+                               const svn_subst_keywords_t *keywords,
+                               svn_boolean_t expand,
+                               svn_boolean_t special,
+                               apr_pool_t *pool);
 
 /** Convenience routine: a variant of @c svn_subst_translate_stream which
  * operates on cstrings.  (See previous docstring for details.)

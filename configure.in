@@ -364,7 +364,10 @@ AC_FUNC_MEMCMP
 dnl svn_error's default warning handler uses vfprintf()
 AC_FUNC_VPRINTF
 
+dnl check for functions needed in special file handling
+AC_CHECK_FUNCS(symlink readlink)
 
+	
 dnl Process some configuration options ----------
 
 AC_ARG_ENABLE(debug,
