@@ -108,8 +108,8 @@ read_chunk(apr_file_t *file, const char *path,
   /* XXX: The final offset may not be the one we asked for.
    * XXX: Check.
    */
-  SVN_ERR (svn_io_file_seek (file, APR_SET, &offset, pool));
-  SVN_ERR (svn_io_file_read_full (file, buffer, length, NULL, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
+  SVN_ERR(svn_io_file_read_full(file, buffer, length, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -140,8 +140,8 @@ map_or_read_file(apr_file_t **file,
 
   *buffer = NULL;
 
-  SVN_ERR (svn_io_file_open (file, path, APR_READ, APR_OS_DEFAULT, pool));
-  SVN_ERR (svn_io_file_info_get (&finfo, APR_FINFO_SIZE, *file, pool));
+  SVN_ERR(svn_io_file_open(file, path, APR_READ, APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, *file, pool));
 
 #if APR_HAS_MMAP
   if (finfo.size > APR_MMAP_THRESHOLD)
@@ -162,12 +162,12 @@ map_or_read_file(apr_file_t **file,
     {
       *buffer = apr_palloc(pool, finfo.size);
 
-      SVN_ERR (svn_io_file_read_full (*file, *buffer, finfo.size, NULL, pool));
+      SVN_ERR(svn_io_file_read_full(*file, *buffer, finfo.size, NULL, pool));
 
       /* Since we have the entire contents of the file we can
        * close it now.
        */
-      SVN_ERR (svn_io_file_close(*file, pool));
+      SVN_ERR(svn_io_file_close(*file, pool));
 
       *file = NULL;
     }
@@ -193,11 +193,11 @@ svn_diff__file_datasource_open(void *baton,
 
   idx = svn_diff__file_datasource_to_index(datasource);
 
-  SVN_ERR( svn_io_file_open (&file_baton->file[idx], file_baton->path[idx],
-                             APR_READ, APR_OS_DEFAULT, file_baton->pool));
+  SVN_ERR(svn_io_file_open(&file_baton->file[idx], file_baton->path[idx],
+                           APR_READ, APR_OS_DEFAULT, file_baton->pool));
 
-  SVN_ERR (svn_io_file_info_get (&finfo, APR_FINFO_SIZE, 
-                                 file_baton->file[idx], file_baton->pool));
+  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, 
+                               file_baton->file[idx], file_baton->pool));
 
   file_baton->size[idx] = finfo.size;
   length = finfo.size > CHUNK_SIZE ? CHUNK_SIZE : finfo.size;
@@ -211,8 +211,8 @@ svn_diff__file_datasource_open(void *baton,
   file_baton->buffer[idx] = file_baton->curp[idx] = curp;
   file_baton->endp[idx] = endp;
 
-  SVN_ERR (read_chunk (file_baton->file[idx], file_baton->path[idx],
-                       curp, length, 0, file_baton->pool));
+  SVN_ERR(read_chunk(file_baton->file[idx], file_baton->path[idx],
+                     curp, length, 0, file_baton->pool));
 
   return SVN_NO_ERROR;
 }
@@ -721,8 +721,8 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
 
   /* Output the hunk content */
   hunk_len = baton->hunk->len;
-  SVN_ERR (svn_stream_write(baton->output_stream, baton->hunk->data,
-                            &hunk_len));
+  SVN_ERR(svn_stream_write(baton->output_stream, baton->hunk->data,
+                           &hunk_len));
 
   /* Prepare for the next hunk */
   baton->hunk_length[0] = 0;
@@ -853,8 +853,8 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
 
       for (i = 0; i < 2; i++)
         {
-          SVN_ERR (svn_io_file_open (&baton.file[i], baton.path[i],
-                                     APR_READ, APR_OS_DEFAULT, pool) );
+          SVN_ERR(svn_io_file_open(&baton.file[i], baton.path[i],
+                                   APR_READ, APR_OS_DEFAULT, pool) );
         }
 
       if (original_header == NULL)
@@ -880,7 +880,7 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
 
       for (i = 0; i < 2; i++)
         {
-	  SVN_ERR (svn_io_file_close (baton.file[i], pool));
+	  SVN_ERR(svn_io_file_close(baton.file[i], pool));
         }
     }
 
@@ -1172,7 +1172,7 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
 
       if (file[idx])
         {
-          SVN_ERR (svn_io_file_close (file[idx], pool));
+          SVN_ERR(svn_io_file_close(file[idx], pool));
         }
     }
 
