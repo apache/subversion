@@ -1205,14 +1205,52 @@ $
 </screen>
 
         <para>Both of <command>svndumpfilter</command>'s subcommands
-          accept options for controlling the output.  ### TODO ###
-        </para>
+          accept options for controlling the output, all revolving
+          around what to do with <quote>empty</quote> revisions.  If a
+          given revision contained only changes to paths that were
+          filtered out, that now-empty revision could be considered
+          uninteresting or even unwanted.  So to give the user control
+          over what to do with those revisions,
+          <command>svndumpfilter</command> provides the following
+          command-line options:</para>
 
-        <para>Unfortunately, there are a couple of gotchas.  First,
-          <command>svndumpfilter</command> is overly sensitive to path
-          semantics.  Pay attention to whether paths in your dumpfile
-          are specified with or without leading slashes.  You'll want
-          to look at the <literal>Node-path</literal> and
+        <variablelist>
+          <varlistentry>
+            <term><option>--drop-empty-revs</option></term>
+            <listitem>
+              <para>Do not generate empty revisions at all&mdash;just
+                omit them.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><option>--renumber-revs</option></term>
+            <listitem>
+              <para>If empty revisions are dropped (using the
+                <option>--drop-empty-revs</option> option), change the
+                revision numbers of the remaining revisions so that
+                there are no gaps in the numeric sequence.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><option>--preserve-revprops</option></term>
+            <listitem>
+              <para>If empty revisions are not dropped, preserve the
+                revision properties (log message, author, date, custom
+                properties, etc.) for those empty revisions.
+                Otherwise, empty revisions will only contain the
+                original datestamp, and a generated log message that
+                indicates that this revision was emptied by
+                <command>svndumpfilter</command>.</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+        
+        <para>While <command>svndumpfilter</command> can be very
+          useful, and a huge timesaver, there are unfortunately a
+          couple of gotchas.  First, this utility is overly sensitive
+          to path semantics.  Pay attention to whether paths in your
+          dumpfile are specified with or without leading slashes.
+          You'll want to look at the <literal>Node-path</literal> and
           <literal>Copyfrom-path</literal> headers.</para>
 
         <screen>
