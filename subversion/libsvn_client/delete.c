@@ -38,6 +38,7 @@
 svn_error_t *
 svn_client__can_delete (const char *path,
                         svn_wc_adm_access_t *adm_access,
+                        svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
   apr_hash_t *hash = apr_hash_make (pool);
@@ -52,7 +53,7 @@ svn_client__can_delete (const char *path,
     dir_access = adm_access;
 
   SVN_ERR (svn_wc_statuses (hash, path, dir_access, TRUE, FALSE, FALSE,
-                            NULL, NULL, pool));
+                            NULL, NULL, ctx->config, pool));
   for (hi = apr_hash_first (pool, hash); hi; hi = apr_hash_next (hi))
     {
       const void *key;
@@ -209,7 +210,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
   if (!force)
     {
       /* Verify that there are no "awkward" files */
-      SVN_ERR (svn_client__can_delete (path, adm_access, pool));
+      SVN_ERR (svn_client__can_delete (path, adm_access, ctx, pool));
     }
 
   /* Mark the entry for commit deletion and perform wc deletion */

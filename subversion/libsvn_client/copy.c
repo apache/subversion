@@ -130,7 +130,7 @@ wc_to_wc_copy (const char *src_path,
 
       if (!force)
         /* Ensure there are no "awkward" files. */
-        SVN_ERR_W (svn_client__can_delete (src_path, src_access, pool),
+        SVN_ERR_W (svn_client__can_delete (src_path, src_access, ctx, pool),
                    "Pass --force to override this restriction");
     }
   else if (! optional_adm_access)

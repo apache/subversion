@@ -939,6 +939,8 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * and its entries.  Else if @a descend is true, @a statushash will contain
  * statuses for @a path and everything below it, including
  * subdirectories.  In other words, a full recursion.
+ *
+ * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c svn_config_t's.
  */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               const char *path,
@@ -948,6 +950,7 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_boolean_t no_ignore,
                               svn_wc_notify_func_t notify_func,
                               void *notify_baton,
+                              apr_hash_t *config,
                               apr_pool_t *pool);
 
 
@@ -2054,11 +2057,12 @@ svn_error_t *svn_wc_transmit_prop_deltas (const char *path,
                                           apr_pool_t *pool);
 
 
-/** Get the run-time configured list of ignore patterns, and store
- * them in @a *patterns.  Allocate @a *patterns and its contents in
- * @a pool.
+/** Get the run-time configured list of ignore patterns from the 
+ * @c svn_config_t's in the @a config hash, and store them in @a *patterns.
+ * Allocate @a *patterns and its contents in @a pool.
  */
 svn_error_t *svn_wc_get_default_ignores (apr_array_header_t **patterns,
+                                         apr_hash_t *config,
                                          apr_pool_t *pool);
 
 

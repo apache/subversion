@@ -189,7 +189,7 @@ import_dir (apr_hash_t *files,
 
   SVN_ERR (svn_io_dir_open (&dir, path, pool));
 
-  SVN_ERR (svn_wc_get_default_ignores (&ignores, pool));
+  SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
 
   for (err = svn_io_dir_read (&finfo, flags, dir, subpool);
        err == SVN_NO_ERROR;
@@ -367,7 +367,7 @@ import (const char *path,
 
   if (kind == svn_node_file)
     {
-      SVN_ERR (svn_wc_get_default_ignores (&ignores, pool));
+      SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
       if (!svn_cstring_match_glob_list (path, ignores))
         {
           if (! new_entry)

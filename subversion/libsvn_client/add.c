@@ -57,7 +57,7 @@ add_dir_recursive (const char *dirname,
 
   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, dirname, pool));
 
-  SVN_ERR (svn_wc_get_default_ignores (&ignores, pool));
+  SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
 
   /* Create a subpool for iterative memory control. */
   subpool = svn_pool_create (pool);
