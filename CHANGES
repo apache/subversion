@@ -1,3 +1,56 @@
+Version 1.1.2
+(? December 2004, from /branches/1.1.2)
+http://svn.collab.net/repos/svn/tags/1.1.2
+
+ User-visible-changes:
+  - Client:
+    * fixed: 'svn switch' interruption can break working copy (issue #1826)
+    * fixed: 'svn switch' memleak over ra_dav (issue #2106)
+    * fixed: 'svn blame' algorithm bug (r11527)
+    * fixed: invoke external diff/diff3 with local-style paths (r11689)
+    * fixed: 'svn status' handling of missing subdirs (r11936)
+    * fixed: 'svn ls -v' encoding bug (r11740)
+    * fixed: 'svn ls "file with space"' bug (r12273, r12393)
+    * fixed: 'svn merge' should URI-encode copyfrom URLs (issue #1905)
+    * fixed: 'svn merge' deletion output formatting (r12100, r12111, r12114)
+    * fixed: 'svnversion --version .' crash (r11438)
+    * fixed: UNC paths on Cygwin (issue #2108)
+    * fixed: win98 iconv bug -- uninitialized variable (issue #2091)
+    * improved 'svn status' performance:
+        - do fewer check_path calls (r11592)
+        - 'svn status file' shouldn't recursively lock tree (r11439, r11669)
+    * translation updates for localized client messages.
+
+  - Server:
+    * fixed: 'svnadmin load' race condition (r12327)
+    * fixed: fsfs memleak in commit finalization (r11706)
+    * fixed: fsfs memleak in inefficient directory removal (r11701)
+    * fixed: fsfs commits use insert-only perms on db/revs/ (r11665)        
+    * fixed: fsfs creates lockfile at creation time, not at 1st commit (r12172)
+    * fixed: svndumpfilter mislabeling output as version 3 (issue #2142)
+    * fixed: 'svnserve -h' encoding bug (part of issue #1997)
+    * fixed: prevent cross-repository copies (r12003)
+    * fixed: increase log-region max size in default DB_CONFIG (issue #2159)
+
+  - Both:
+    * fixed: 'svn switch' quietly corrupting working copy (issue #2124)
+    * fixed: canonicalize paths sent by ra_svn/svnserve (issue #2119)
+    * fixed: memleak into UTF8 translation routines (r11689)
+
+ Developer-visible-changes:
+ * add support for BerkeleyDB 4.3
+ * add support for any apr/apr-util 1.X
+ * disallow incompatible SWIG versions (r12450)
+ * fixed: slight API/ABI incompatibility between 1.0.9 and 1.1.x (r12102)
+ * fixed: perl bindings pool usage & object refcounts (r11451, r11630)
+ * fixed: perl bindings pool usage and potential memleak (r12397)
+ * fixed: javahl crash trying to fetch nonexistent property (r12184)
+ * fixed: javahl build can fail due to missing dirs (issue #2032)
+ * fixed: RPM build breakage (issue #2111)
+ * fixed: i18n issues for windows installer (r11685)
+ * allow build system to update single .po file (r11763)
+ 
+
 Version 1.1.1
 (22 October 2004, from /branches/1.1.1)
 http://svn.collab.net/repos/svn/tags/1.1.1
