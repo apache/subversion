@@ -66,11 +66,9 @@ Please either remove that subdir or don't use the --with-apr option.])
 
   if test -d $abs_srcdir/apr ; then
     echo "Using apr found in source directory"
-    APR_INCLUDES='$(abs_srcdir)/apr/include'
-    APR_LIBS='$(abs_srcdir)/apr'
+    APR_INCLUDES='$(abs_builddir)/apr/include'
+    APR_LIBS='$(abs_builddir)/apr'
     APRVARS=$abs_builddir/apr/APRVARS
-    echo "Creating config files for APR..."
-    (cd $abs_srcdir/apr; ./buildconf)  # this is apr's equivalent of autogen.sh
     SVN_SUBDIR_CONFIG(apr)
     APR_SUBDIR=apr
   else
@@ -94,8 +92,8 @@ Please either remove that subdir or don't use the --with-apr option.])
   dnl APR
   if test -n "$APR_INCLUDES" ; then
     SVN_APR_INCLUDES="-I$APR_INCLUDES"
-    if test "$abs_srcdir" != "$abs_builddir" ; then
-      SVN_APR_INCLUDES="-I$APR_INCLUDES $SVN_APR_INCLUDES"
+    if test "$abs_srcdir" != "$abs_builddir" && test -d $abs_srcdir/apr ; then
+      SVN_APR_INCLUDES="-I$abs_srcdir/apr/include $SVN_APR_INCLUDES"
     fi
   fi
   AC_SUBST(SVN_APR_INCLUDES)

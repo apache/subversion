@@ -30,7 +30,7 @@ dnl
 dnl Note that this code is a direct copy of that which is found in 
 dnl the apr project's build/apr_common.m4.
 AC_DEFUN(SVN_SUBDIR_CONFIG, [
-  if test $enable_subdir_config = "yes" ; then
+  if test "$do_subdir_config" = "yes" ; then
     # save our work to this point; this allows the sub-package to use it
     AC_CACHE_SAVE
 
@@ -65,5 +65,7 @@ AC_DEFUN(SVN_SUBDIR_CONFIG, [
 
     # grab any updates from the sub-package
     AC_CACHE_LOAD
+  else
+    AC_MSG_WARN(not running configure in $1)
   fi
 ])dnl
