@@ -9,6 +9,7 @@ main ()
 {
   ap_hash_t *configdata;
   ap_pool_t *pool;
+  svn_error_t *error;
 
   /* Initialize APR (Apache pools) */
   if (ap_initialize () != APR_SUCCESS)
@@ -25,7 +26,12 @@ main ()
 
   /* Parse the file "./configfile" */
 
-  configdata = svn_parse (svn_string_create ("configfile", pool), pool);
+  error = 
+    svn_parse (&configdata, svn_string_create ("configfile", pool), pool);
+
+  if (error) {
+    svn_handle_error (error);
+  }
 
 
   /* Print out our configdata uber-hash */

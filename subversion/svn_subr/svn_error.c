@@ -77,6 +77,14 @@ svn_create_error (ap_status_t err,
 
 
 
+/* Very dumb "default" error handler that anyone can use if they wish.
+
+   Just prints out error, quits if the fatal flag is set.
+
+ */
+
+
+
 void
 svn_handle_error (svn_error_t *err)
 {

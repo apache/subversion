@@ -61,12 +61,14 @@
 
 
 /* 
-   Returns a hash of hashes.
+   General Utility -- reads a config file, returns a hash of hashes.
 
    For file format, see `notes/svn-config-files'
 */
 
-ap_hash_t * svn_parse (svn_string_t *filename, ap_pool_t *pool);
+svn_error_t * svn_parse (ap_hash_t **returnhash, 
+                         svn_string_t *filename, 
+                         ap_pool_t *pool);
 
 
 /* Prints a hash, assuming all keys/vals are (svn_string_t *) */
