@@ -321,6 +321,44 @@ svn_path_remove_component (svn_stringbuf_t *path)
 }
 
 
+char *
+svn_path_basename (const char *path, apr_pool_t *pool)
+{
+  apr_size_t len = strlen (path);
+  const char *p;
+
+  /* if an empty is passed, then return an empty string */
+  if (len == 0)
+    return apr_pcalloc (pool, 1);
+
+  /* "remove" trailing slashes */
+  while (len && path[len - 1] == '/')
+    --len;
+
+  /* if there is nothing left, then the path was 'root' (possibly as
+     multiple slashes). just return a copy of "/".  */
+  if (len == 0)
+    return apr_pmemdup (pool, "/", 2);
+
+  /* back up to find the previous slash character.
+
+     note that p can actually end up at (path-1), but we make sure to not
+     deref that (the location may not be mapped; it is even possible that
+     some systems cannot compute path-1, but I don't know any).
+
+     the point is that we have to distinguish between stopping the loop
+     at *p == '/' or stopping because we hit the start of the string. it
+     is easiest to say we stop "one character before the start of the
+     resulting basename."  */
+  p = path + len - 1;
+  while (p >= path && *p != '/')
+    --p;
+
+  /* copy the substring and null-terminate it */
+  return apr_pstrmemdup (pool, p + 1, len - 1 - (p - path));
+}
+
+
 svn_stringbuf_t *
 svn_path_last_component (const svn_stringbuf_t *path,
                          apr_pool_t *pool)
