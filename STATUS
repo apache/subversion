@@ -9,6 +9,12 @@ Status of 1.1.2:
 
 Candidate changes:
 
+  * r12133 (Issue #2106)
+    Client-side memory leak when doing 'svn switch' over http://.
+    Justification: Scalability bug, very small & simple fix.
+    Votes:
+      +1: cmpilato, kfogel
+
   * r11483, r12072 (Issue #2091)
     Unitialized variable on Win98.
     Justification:
