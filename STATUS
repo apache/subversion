@@ -58,7 +58,7 @@ Candidate changes:
     Justification: The paths are for URLS they should be copyable for use on
     repo URLS.
     Votes:
-      +1: breser, sussman
+      +1: breser, sussman, kfogel
 
   * r9212, r9231
     Added VC7 support and defines for including debug symbol files.
