@@ -485,7 +485,8 @@ svn_wc_add_directory (svn_string_t *dir, apr_pool_t *pool)
              | SVN_WC__ENTRY_MODIFY_KIND
              | SVN_WC__ENTRY_MODIFY_FORCE),
             0, svn_node_dir,
-            svn_wc_schedule_add,
+            ((orig_entry && orig_entry->schedule == svn_wc_schedule_delete) 
+             ? svn_wc_schedule_replace : svn_wc_schedule_add),
             svn_wc_existence_normal,
             FALSE, 0, 0, NULL, pool, NULL));
 

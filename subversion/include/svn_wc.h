@@ -234,6 +234,7 @@ enum svn_wc_status_kind
     svn_wc_status_none = 1,  /* Among other things, indicates not under vc. */
     svn_wc_status_added,
     svn_wc_status_deleted,
+    svn_wc_status_replaced,
     svn_wc_status_modified,
     svn_wc_status_merged,
     svn_wc_status_conflicted
