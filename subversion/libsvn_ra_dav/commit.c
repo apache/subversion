@@ -1108,12 +1108,14 @@ svn_error_t * svn_ra_dav__get_commit_editor(
      which will keep track of which targets should get their revisions
      and wcprops set after the commit.  Thus we avoid overzealously
      bumping directories on commit. */
-  const svn_delta_edit_fns_t *tracking_editor;
+  const svn_delta_editor_t *tracking_editor;
   void *tracking_baton;
 
   /* ### temporary, until we can use the new-style editor directly */
   const svn_delta_edit_fns_t *wrapped_editor;
   void *wrapped_baton;
+  const svn_delta_edit_fns_t *wrapped_trk_editor;
+  void *wrapped_trk_baton;
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(ras->pool, sizeof(*cc));
@@ -1182,9 +1184,15 @@ svn_error_t * svn_ra_dav__get_commit_editor(
                                              NULL,
                                              NULL) );
 
+  /* ### temporary: wrap our commit editor */
+  svn_delta_compat_wrap(&wrapped_trk_editor, &wrapped_trk_baton,
+                        tracking_editor, tracking_baton,
+                        ras->pool);
+
+
   /* Compose the two editors, returning the composition by reference. */
   svn_delta_compose_editors(editor, edit_baton,
-                            tracking_editor, tracking_baton,
+                            wrapped_trk_editor, wrapped_trk_baton,
                             wrapped_editor, wrapped_baton,
                             ras->pool);
 
