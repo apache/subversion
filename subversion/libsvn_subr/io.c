@@ -40,6 +40,7 @@
 #include "svn_utf.h"
 #include "svn_config.h"
 
+#include "svn_private_config.h" /* For SVN_WIN32 */
 
 
 
