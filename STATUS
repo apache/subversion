@@ -9,13 +9,6 @@ Status of 1.0.2:
 
 Candidate changes:
 
-  * r9150, r9166
-    Fix a SEGFAULT that occurs when trying to remotely delete the
-    svn:author property from a revision.
-    Justification: Maybe you missed the part where I said, "SEGFAULT" ?
-    Votes:
-      +1: cmpilato, naked, dlr
-
   * r9045
     Fix bug in the changes table change-folding code.
     Justification: Historical correctness issue.
@@ -82,30 +75,6 @@ Candidate changes:
     repo URLS.
     Votes:
       +1: breser
-
-  * r9077, r9200
-    Fix issue #1786: mod_dav_svn accepts multiple authors, only records one.
-    Justification: without this fix, the author will be set to whomever was
-    authenticated on the MKACTIVITY request, which includes anonymous.
-    This would lead to (no author) commits, while most of the commit may
-    actually have an authenticated user associated with it.  Also, changes
-    of author during a single commit is prevented.
-    Votes:
-      +1: striker, dlr, gstein
-
-  * r9099
-    Issue 1794: recursive propset can corrupt the entries file
-    Justification: very hard for the user to recover
-    Votes:
-      +1: philip, gstein, striker
-
-  * r9198
-    Issue 1802: use APR_EOL_STR endings to create runtime config files.
-    Justification: win32 users see junk when opening them in notepad.exe.
-    Notes:  Pretty embarrassing.  We got it right for README.txt already,
-            how did we forget the other files in ~/.subversion/?  :-)
-    Votes:
-      +1: sussman, dlr, striker, dionisos
 
   * r9212
     Added VC7 support and defines for including debug symbol files.
