@@ -744,6 +744,8 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        opt_state.parent_dir = svn_path_internal_style (opt_state.parent_dir,
+                                                        pool);
         break;
       case svnadmin__bdb_txn_nosync:
         opt_state.bdb_txn_nosync = TRUE;
