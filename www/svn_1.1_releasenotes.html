@@ -29,9 +29,9 @@ new features and fixes many smaller bugs.</p>
 <ul>
 
 <li><p><em>Database schema</em>: if upgrading to Subversion 1.1, there
-          is <strong>no need</strong> to dump and load your
-          repository.  There will be no database schema-changes until
-          Subversion 2.0.</p></li>
+        is <strong>no need</strong> to dump and load your repository.
+        There will be no changes requiring dump/load before Subversion
+        2.0.</p></li>
 
 <li><p><em>Client/server compatibility</em>: a 1.X client and 1.Y
         server are always interoperable.  However, the latest features
@@ -51,11 +51,17 @@ new features and fixes many smaller bugs.</p>
 <h3>Non-database repositories</h3>
 
 <p>It's now possible to create repositories that don't use a
-    BerkeleyDB database.  These "fsfs" repositories (created by the
-    new libsvn_fs_fs) store data in ordinary files.  Note that these
-    files are still binary files, and are not human editable!</p>
+   BerkeleyDB database.  Instead, these new repositories store data in
+   the ordinary filesystem.  Because Subversion developers often refer
+   to the repository as "The Filesystem", we have adopted the rather
+   confusing habit of referring to these new repositories as "fsfs"
+   repositories... that is, a Filesystem implementation that uses the
+   OS filesystem to store data.</p>
 
-<p>Why would someone choose an "fsfs" repoistory over BerkeleyDB?  The
+<p>Note that the data files created by fsfs repositories are still in
+   a binary format, and are not human editable!</p>
+
+<p>Why would someone choose an fsfs repository over BerkeleyDB?  The
    immediate and obvious advantages are the ability to access a
    repository over a network filesystem, and no more database "wedges"
    needing recovery.  You can read the full list of
@@ -77,7 +83,10 @@ new features and fixes many smaller bugs.</p>
     property attached.  When the client sees this property during
     checkouts and updates, the repository file is translated back into
     a symlink within the working copy.  On win32 systems, the client
-    does no translation, and the user sees just an ordinary file.</p>
+    does no translation, and the user sees just an ordinary file.
+    (But a win32 user can hand-edit the contents of this file, which
+    will still have an affect of changing the symlink on a *nix
+    system.)</p>
 
 
 <h3>Client follows renames</h3>
