@@ -293,7 +293,7 @@ check_no_fs_error (svn_error_t *err)
        "checking not opened filesystem got wrong error");
   else if (! err)
     return svn_error_create
-      (SVN_ERR_FS_GENERAL, err,
+      (SVN_ERR_FS_GENERAL, NULL,
        "checking not opened filesytem failed to get error");
   else
     svn_error_clear (err);
