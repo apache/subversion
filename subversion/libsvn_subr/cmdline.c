@@ -58,8 +58,7 @@ static const char *output_encoding = NULL;
 
 
 int
-svn_cmdline_init2 (const char *progname, FILE *error_stream,
-                   svn_boolean_t server_mode)
+svn_cmdline_init (const char *progname, FILE *error_stream)
 {
   apr_status_t status;
   apr_pool_t *pool;
@@ -103,13 +102,12 @@ svn_cmdline_init2 (const char *progname, FILE *error_stream,
   /* C programs default to the "C" locale. But because svn is supposed
      to be i18n-aware, it should inherit the default locale of its
      environment.  */
-  if (!setlocale(server_mode ? LC_CTYPE : LC_ALL, ""))
+  if (!setlocale(LC_ALL, ""))
     {
       if (error_stream)
         {
           const char *env_vars[] = { "LC_ALL", "LC_CTYPE", "LANG", NULL };
-          const char **env_var = &env_vars[server_mode ? 1 : 0];
-          const char *env_val = NULL;
+          const char **env_var = &env_vars[0], *env_val = NULL;
           while (*env_var)
             {
               env_val = getenv(*env_var);
@@ -126,11 +124,10 @@ svn_cmdline_init2 (const char *progname, FILE *error_stream,
             }
 
           fprintf(error_stream,
-                  "%s: error: cannot set %s locale\n"
+                  "%s: error: cannot set LC_ALL locale\n"
                   "%s: error: environment variable %s is %s\n"
                   "%s: error: please check that your locale name is correct\n",
-                  progname, server_mode ? "LC_CTYPE" : "LC_ALL",
-                  progname, *env_var, env_val, progname);
+                  progname, progname, *env_var, env_val, progname);
         }
       return EXIT_FAILURE;
     }
@@ -228,13 +225,6 @@ svn_cmdline_init2 (const char *progname, FILE *error_stream,
 #endif
 
   return EXIT_SUCCESS;
-}
-
-
-int
-svn_cmdline_init (const char *progname, FILE *error_stream)
-{
-  return svn_cmdline_init2 (progname, error_stream, FALSE);
 }
 
 
