@@ -1,8 +1,8 @@
 import os, sys, string, shutil
 
 ### Fix these paths!
-python = 'C:/home/Python/python.exe'
-shell =  'C:/PROGRA~1/cygwin/bin/bash.exe'
+python = 'C:/PROGRA~1/Python/python.exe'
+shell =  'C:/PROGRA~1/Cygnus/cygwin/bin/bash.exe'
 
 tests = ['subversion/tests/libsvn_subr/path-test.exe',
          'subversion/tests/libsvn_delta/random-test.exe',
@@ -12,7 +12,7 @@ tests = ['subversion/tests/libsvn_subr/path-test.exe',
          'subversion/tests/clients/cmdline/xmltests/svn-test.sh',
          'subversion/tests/clients/cmdline/xmltests/svn-test2.sh',
          'subversion/tests/libsvn_subr/target-test.sh',
-         'subversion/tests/libsvn_subr/time-test.sh']
+         'subversion/tests/libsvn_subr/time-test.exe']
 
 fs_tests = ['subversion/tests/libsvn_fs/run-fs-tests.sh',
             'subversion/tests/libsvn_repos/run-repos-tests.sh']
