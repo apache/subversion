@@ -488,17 +488,6 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
 }
 
 
-svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
-                               dag_node_t *parent,
-                               const char *name,
-                               trail_t *trail)
-{
-  abort();
-  /* NOTREACHED */
-  return NULL;
-}
-
-
 
 svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
                                  const char *name,
@@ -767,6 +756,80 @@ svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
   /* Call our little helper function */
   return make_entry (child_p, parent, name, TRUE, trail);
 }
+
+
+/* THE LAND OF CMPILATO */
+/* cmpilato todo:  all this stuff down here. */
+
+/* Return a new dag_node_t object referring to the same node as NODE,
+   allocated in TRAIL->pool.  */
+dag_node_t *svn_fs__dag_dup (dag_node_t *node,
+                             trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+
+/* Open the node named NAME in the directory PARENT, as part of TRAIL.
+   Set *CHILD_P to the new node, allocated in TRAIL->pool.  NAME must be a
+   single path component; it cannot be a slash-separated directory
+   path.  */
+svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
+                               dag_node_t *parent,
+                               const char *name,
+                               trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+
+
+/* Create a link to CHILD in PARENT named NAME, as part of TRAIL.
+   PARENT must be mutable.  NAME must be a single path component; it
+   cannot be a slash-separated directory path.  */
+svn_error_t *svn_fs__dag_link (dag_node_t *parent,
+                               dag_node_t *child,
+                               const char *name,
+                               trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+
+/* Create a copy node named NAME in PARENT which refers to SOURCE_PATH
+   in SOURCE_REVISION, as part of TRAIL.  Set *CHILD_P to a reference
+   to the new node, allocated in TRAIL->pool.  PARENT must be mutable.
+   NAME must be a single path component; it cannot be a slash-
+   separated directory path.  */
+svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
+                                    dag_node_t *parent,
+                                    const char *name,
+                                    svn_revnum_t source_revision,
+                                    const char *source_path,
+                                    trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+
+
+/* Set *REV_P and *PATH_P to the revision and path of NODE, which must
+   be a copy node, as part of TRAIL.  Allocate *PATH_P in TRAIL->pool.  */
+svn_error_t *svn_fs__dag_get_copy (svn_revnum_t *rev_p,
+                                   char **path_p,
+                                   dag_node_t *node,
+                                   trail_t *trail)
+{
+  abort();
+  /* NOTREACHED */
+  return NULL;
+}
+
+/* OTALIPMC FO DNAL EHT */
 
 
 /* 
