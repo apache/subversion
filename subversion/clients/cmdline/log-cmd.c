@@ -478,7 +478,6 @@ svn_cl__log (apr_getopt_t *os,
          doesn't seem worth it, however.  */
 
       opt_state->end_revision.kind = opt_state->start_revision.kind;
-
       opt_state->end_revision.value = opt_state->start_revision.value;
 
       opt_state->end_revision.value.number
@@ -489,7 +488,14 @@ svn_cl__log (apr_getopt_t *os,
     }
   else if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
     {
-      opt_state->start_revision.kind = svn_opt_revision_head;
+      const char *target = APR_ARRAY_IDX (targets, 0, const char *);
+
+      /* If the first target is a URL, then we default to HEAD:1.
+         Otherwise, the default is BASE:1. */
+      if (svn_path_is_url (target))
+        opt_state->start_revision.kind = svn_opt_revision_head;
+      else
+        opt_state->start_revision.kind = svn_opt_revision_base;
 
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         {
