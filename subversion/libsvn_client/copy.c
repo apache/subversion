@@ -523,19 +523,19 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   const char *committed_date = NULL;
   const char *committed_author = NULL;
   apr_hash_t *committables, *tempfiles = NULL;
-  svn_wc_adm_access_t *adm_access;
+  svn_wc_adm_access_t *adm_access, *dir_access;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = NULL, *unlock_err = NULL, *cleanup_err = NULL;
   svn_boolean_t commit_in_progress = FALSE;
   const char *base_path;
   const char *base_url;
 
-  /* Check the SRC_PATH. */
-  SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
+  /* The commit process uses absolute paths, so we need to open the access
+     baton using absolute paths, and so we really need to use absolute
+     paths everywhere. */
+  SVN_ERR (svn_path_get_absolute (&base_path, src_path, pool));
 
-  /* Split the SRC_PATH into a parent and basename. */
-  svn_path_split (src_path, &parent, &base_name, pool);
-
+  svn_path_split (base_path, &parent, &base_name, pool);
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, FALSE, TRUE, pool));
 
   /* Split the DST_URL into an anchor and target. */
@@ -581,14 +581,16 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                                 "file `%s' already exists.", dst_url);
     }
 
-  /* Get the absolute path of the WC path. */
-  SVN_ERR (svn_path_get_absolute (&base_path, src_path, pool));
-
   /* Crawl the working copy for commit items. */
+  SVN_ERR (svn_io_check_path (base_path, &src_kind, pool));
+  if (src_kind == svn_node_dir)
+    SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, base_path, pool));
+  else
+    dir_access = adm_access;
   if ((cmt_err = svn_client__get_copy_committables (&committables, 
                                                     base_url,
                                                     base_path,
-                                                    adm_access,
+                                                    dir_access,
                                                     pool)))
     goto cleanup;
 
@@ -610,8 +612,8 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Open an RA session to BASE_URL. */
   if ((cmt_err = svn_client__open_ra_session (&session, ra_lib, base_url, NULL,
-                                              NULL, commit_items, TRUE, TRUE,
-                                              TRUE, auth_baton, pool)))
+                                              NULL, commit_items, FALSE, FALSE,
+                                              FALSE, auth_baton, pool)))
     goto cleanup;
 
   /* Fetch RA commit editor. */
