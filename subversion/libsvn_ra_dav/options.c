@@ -25,11 +25,6 @@
 #include "ra_dav.h"
 
 
-enum {
-  ELEM_activity_coll_set = DAV_ELM_207_UNUSED,
-  ELEM_options_response
-};
-
 static const struct hip_xml_elm options_elements[] =
 {
   { "DAV:", "activity-collection-set", ELEM_activity_coll_set, 0 },
