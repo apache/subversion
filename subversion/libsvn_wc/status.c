@@ -61,14 +61,65 @@
 #include "wc.h"   
 
 
-/* Given a PATH to a working copy files
-e or dir, return a STATUS
-   structure describing it.  All fields will be filled in _except_ for
-   the field containing the current repository version; this will be
-   filled in by svn_client_status(), the primary caller of this
-   routine. */
+
+/* Given an ENTRY object representing PATH, build a status structure
+   and store it in STATUSHASH.  */
+static svn_error_t *
+add_status_structure (apr_hash_t *statushash,
+                      svn_string_t *path,
+                      svn_wc__entry_t *entry,
+                      apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_wc__status_t *statstruct = apr_pcalloc (pool,
+                                              sizeof(*statstruct));
+
+  /* Copy info from entry struct to status struct */
+  statstruct->local_ver = entry->version;
+  statstruct->repos_ver = SVN_INVALID_VERNUM;  /* svn_client_status()
+                                                  will fill this in */
+  
+  if (entry->flags & SVN_WC__ENTRY_ADD)
+    statstruct->flag = svn_wc_status_added;
+  else if (entry->flags & SVN_WC__ENTRY_DELETE)
+    statstruct->flag = svn_wc_status_deleted;
+  else if (entry->flags & SVN_WC__ENTRY_CONFLICT)
+    statstruct->flag = svn_wc_status_conflicted;
+  else 
+    {
+      if (entry->kind == svn_file_kind)
+        {
+          svn_boolean_t modified_p;
+
+          err = svn_wc__file_modified_p (&modified_p, path, pool);
+          if (err) return err;
+
+          if (modified_p)
+            statstruct->flag = svn_wc_status_modified;
+        }
+    }
+
+  /* At this point, if the object is neither (M)odified nor marked
+     for (D)eletion or (A)ddition, then set the flag blank. */
+  if (! statstruct->flag)
+    statstruct->flag = svn_wc_status_none;
+
+  apr_hash_set (statushash, path->data, path->len, statstruct);
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
+/* Given a PATH to a working copy files or dir, return a STATUSHASH
+   which maps names to status structures.  For each struct, all fields
+   will be filled in _except_ for the field containing the current
+   repository version; this will be filled in by svn_client_status(),
+   the primary caller of this routine. */
 svn_error_t *
-svn_wc_get_status (svn_wc__status_t **status,
+svn_wc_get_status (apr_hash_t *statushash,
                    svn_string_t *path,
                    apr_pool_t *pool)
 {
@@ -76,73 +127,79 @@ svn_wc_get_status (svn_wc__status_t **status,
   enum svn_node_kind kind;
   apr_hash_t *entries;
   svn_wc__entry_t *entry;
-  svn_string_t *dirpath, *basename;
   void *value;
-  char *key;
-
-  svn_wc__status_t *statstruct = apr_pcalloc (pool,
-                                                  sizeof(*statstruct));
   
   /* Is PATH a directory or file? */
   err = svn_io_check_path (path, &kind, pool);
   if (err) return err;
   
+  /* Read the appropriate entries file */
+  
+  /* If path points to only one file, return just one status structure
+     in the STATUSHASH */
   if (kind == svn_file_kind)
     {
+      svn_string_t *dirpath, *basename;
+
+      /* Figure out file's parent dir */
       svn_path_split (path, &dirpath, &basename,
-                      svn_path_local_style, pool);
-      
-      key  = basename->data;
+                      svn_path_local_style, pool);      
+
+      /* Load entries file for file's parent */
+      err = svn_wc__entries_read (&entries, dirpath, pool);
+      if (err) return err;
+
+      /* Get the entry by looking up file's basename */
+      value = apr_hash_get (entries, basename->data, APR_HASH_KEY_STRING);
+
+      if (value)  
+        entry = (svn_wc__entry_t *) value;
+      else
+        return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
+                                  "svn_wc_get_status:  bogus path `%s'",
+                                  path->data);
+
+      /* Convert the entry into a status structure, store in the hash */
+      err = add_status_structure (statushash, path, entry, pool);
+      if (err) return err;
     }
-  
-  else /* kind == svn_dir_kind */
+
+
+  /* Fill the hash with a status structure for *each* entry in PATH */
+  else if (kind == svn_dir_kind)
     {
-      dirpath = path;
-      
-      key = SVN_WC__ENTRIES_THIS_DIR;
-    }
+      apr_hash_index_t *hi;
 
+      /* Load entries file for the directory */
+      err = svn_wc__entries_read (&entries, path, pool);
+      if (err) return err;
 
-  /* Read the appropriate entries file */
-  err = svn_wc__entries_read (&entries, dirpath, pool);
-  if (err) return err;
-  
-  /* Get correct entry structure */
-  value = apr_hash_get (entries, key, APR_HASH_KEY_STRING);
-  if (value)  
-    entry = (svn_wc__entry_t *) value;
-  else
-    return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
-                              "svn_wc_get_status:  bogus path `%s'", key);
-                              
-
-  /* Copy info from entry struct to status struct */
-  statstruct->local_ver = entry->version;
-  statstruct->repos_ver = SVN_INVALID_VERNUM;  /* svn_client_status()
-                                                  will fill this in */
-
-  if (entry->flags & SVN_WC__ENTRY_ADD)
-    statstruct->flag = svn_wc_status_added;
-  else if (entry->flags & SVN_WC__ENTRY_DELETE)
-    statstruct->flag = svn_wc_status_deleted;
-  else 
-    {
-      if (kind == svn_file_kind)
+      /* Loop over entries hash, calling add_status_structure() on
+         each entry */
+      for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
         {
-          svn_boolean_t modified_p;
-          err = svn_wc__file_modified_p (&modified_p, path, pool);
-          if (modified_p)
-            statstruct->flag = svn_wc_status_modified;
-        }
+          const void *key;
+          void *val;
+          const char *basename;
+          apr_size_t keylen;
+          svn_string_t *fullpath = svn_string_dup (path, pool);
+
+          apr_hash_this (hi, &key, &keylen, &val);
+          basename = (const char *) key;
+          svn_path_add_component_nts (fullpath, basename,
+                                      svn_path_local_style);
+          entry = (svn_wc__entry_t *) val;
+
+          /* Convert the entry into a status structure, store in the
+             hash */
+          if ((entry->kind == svn_file_kind)
+              || (! strcmp (basename, SVN_WC__ENTRIES_THIS_DIR)))
+            {
+              err = add_status_structure (statushash, fullpath, entry, pool);
+              if (err) return err;         
+            }
+        }      
     }
-
-  /* At thisp point, if the object is neither (M)odified nor marked
-     for (D)eletion or (A)ddition, then set the flag blank. */
-  if (! statstruct->flag)
-    statstruct->flag = svn_wc_status_none;
-
-
-  *status = statstruct;
 
   return SVN_NO_ERROR;
 }

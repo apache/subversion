@@ -52,44 +52,66 @@
 
 
 /*** Includes. ***/
+#include <apr_hash.h>
 #include "svn_wc.h"
 #include "svn_string.h"
 #include "cl.h"
 
 
 void
-svn_cl__print_status (svn_wc__status_t *status, svn_string_t *name)
+svn_cl__print_status (apr_hash_t *statushash)
 {
   char statuschar;
+  apr_hash_index_t *hi;
 
-  switch (status->flag)
+  /* TODO: perhaps we should guarantee that the parent dir always
+     prints first?  Or perhaps we should sort these hash entries??
+     Sure wish we had perl or python here.  :) */
+
+  /* Loop over hash, printing each name/status-structure */
+  for (hi = apr_hash_first (statushash); hi; hi = apr_hash_next (hi))
     {
-    case svn_wc_status_none:
-      statuschar = '-';
-      break;
-    case svn_wc_status_added:
-      statuschar = 'A';
-      break;
-    case svn_wc_status_deleted:
-      statuschar = 'D';
-      break;
-    case svn_wc_status_modified:
-      statuschar = 'M';
-      break;
-    default:
-      statuschar = '?';
-      break;
-    }
+      const void *key;
+      apr_size_t keylen;
+      void *value;
+      const char *path;
+      svn_wc__status_t *status;
+      
+      apr_hash_this (hi, &key, &keylen, &value);
+      path = (const char *) key;
+      status = (svn_wc__status_t *) value;
 
-  if (status->local_ver == SVN_INVALID_VERNUM)
-    printf ("none    (r%6.0ld)  %c  %s\n",
-            status->repos_ver, statuschar, name->data);
-  else if (status->repos_ver == SVN_INVALID_VERNUM)
-    printf ("%-6.0ld  (r  none)  %c  %s\n",
-            status->local_ver,  statuschar, name->data);
-  else
-    printf ("%-6.0ld  (r%6.0ld)  %c  %s\n",
-            status->local_ver, status->repos_ver, statuschar, name->data);
+      switch (status->flag)
+        {
+        case svn_wc_status_none:
+          statuschar = '-';
+          break;
+        case svn_wc_status_added:
+          statuschar = 'A';
+          break;
+        case svn_wc_status_deleted:
+          statuschar = 'D';
+          break;
+        case svn_wc_status_modified:
+          statuschar = 'M';
+          break;
+        case svn_wc_status_conflicted:
+          statuschar = 'C';
+        default:
+          statuschar = '?';
+          break;
+        }
+      
+      if (status->local_ver == SVN_INVALID_VERNUM)
+        printf ("%c  none    (r%6.0ld)   %s\n",
+                statuschar, status->repos_ver, path);
+      else if (status->repos_ver == SVN_INVALID_VERNUM)
+        printf ("%c  %-6.0ld  (r  none)  %s\n",
+                statuschar, status->local_ver, path);
+      else
+        printf ("%c  %-6.0ld  (r%6.0ld)  %s\n",
+                statuschar, status->local_ver, status->repos_ver, path);
+    }
 }
 
 

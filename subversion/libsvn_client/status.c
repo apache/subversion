@@ -70,25 +70,25 @@
 
 /*** Public Interface. ***/
 
-/* Given PATH to a working copy directory or file, return a STATUS
-   structure describing the object's status. */
+/* Given PATH to a working copy directory or file, allocate and return
+   a STATUSHASH structure containing the stati of all entries.  */
 svn_error_t *
-svn_client_status (svn_wc__status_t **status,
+svn_client_status (apr_hash_t **statushash,
                    svn_string_t *path,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_wc__status_t *statstruct;
+  apr_hash_t *hash = apr_make_hash (pool);
 
-  err = svn_wc_get_status (&statstruct, path, pool);
+  err = svn_wc_get_status (hash, path, pool);
   if (err) return err;
 
-  /* TODO: statstruct now has all fields filled in *except* the
-     repos_ver field.  Once libsvn_ra works, we'll need to query the
-     repository for this information.  For now, the field is just
-     SVN_INVALID_VERNUM.  */
+  /* TODO: each status structure in the hash now has all fields filled
+     in *except* the repos_ver field.  Once libsvn_ra works, we'll
+     need to query the repository for this information.  For now, the
+     field is just SVN_INVALID_VERNUM.  */
 
-  *status = statstruct;
+  *statushash = hash;
   
   return SVN_NO_ERROR;
 }

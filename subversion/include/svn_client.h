@@ -113,7 +113,7 @@ svn_client_commit (svn_string_t *path,
 
 
 svn_error_t *
-svn_client_status (svn_wc__status_t **status,
+svn_client_status (apr_hash_t **statushash,
                    svn_string_t *path,
                    apr_pool_t *pool);
 

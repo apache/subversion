@@ -60,9 +60,10 @@
 
 
 
-/* Print a status_t to stdout for human consumption. */
-void svn_cl__print_status (svn_wc__status_t *status,
-                           svn_string_t *name);
+/* Print a hash that maps names to status-structs to stdout for human
+   consumption. */
+void svn_cl__print_status (apr_hash_t *statushash);
+
 
 
 /* Returns an editor that prints out events in an update or checkout. */

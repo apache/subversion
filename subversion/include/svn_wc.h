@@ -110,10 +110,9 @@ typedef struct svn_wc__status_t
    the field containing the current repository version; this will be
    filled in by svn_client_status(), the primary caller of this
    routine. */
-svn_error_t *
-svn_wc_get_status (svn_wc__status_t **status,
-                   svn_string_t *path,
-                   apr_pool_t *pool);
+svn_error_t *svn_wc_get_status (apr_hash_t *statushash,
+                                svn_string_t *path,
+                                apr_pool_t *pool);
 
 
 

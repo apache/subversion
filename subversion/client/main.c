@@ -303,10 +303,10 @@ main (int argc, char **argv)
       break;
     case status_command:
       {
-        svn_wc__status_t *status;
-        err = svn_client_status (&status, target, pool);
+        apr_hash_t *statushash;
+        err = svn_client_status (&statushash, target, pool);
         if (! err) 
-          svn_cl__print_status (status, target);
+          svn_cl__print_status (statushash);
         break;
       }
     default:
