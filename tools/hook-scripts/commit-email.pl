@@ -141,7 +141,7 @@ close (INPUT);
 # mail headers
 my $dirlist = join (' ', @dirschanged);
 my $userlist = join (' ', @email_addrs); 
-my $subject = "commit: revision $rev - $dirlist";
+my $subject = "rev $rev - $dirlist";
 if ($subject_prefix =~ /\w/)
 {
     $subject = "$subject_prefix $subject";
