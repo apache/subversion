@@ -54,9 +54,10 @@ check_already_open (svn_fs_t *fs)
      ### refactored to go elsewhere. note that svn_fs_new() doesn't return
      ### an error, so it isn't quite suitable. */
   db_version (&major, &minor, &patch);
-  if (major < SVN_FS_WANT_DB_MAJOR
-      || minor < SVN_FS_WANT_DB_MINOR
-      || patch < SVN_FS_WANT_DB_PATCH)
+  if ((major < SVN_FS_WANT_DB_MAJOR)
+      || (major == SVN_FS_WANT_DB_MAJOR && minor < SVN_FS_WANT_DB_MINOR)
+      || (major == SVN_FS_WANT_DB_MAJOR && minor == SVN_FS_WANT_DB_MINOR
+          && patch < SVN_FS_WANT_DB_PATCH))
     return svn_error_createf (SVN_ERR_FS_GENERAL, 0, 0, fs->pool,
                               "bad database version: %d.%d.%d",
                               major, minor, patch);
