@@ -87,11 +87,11 @@ class Generator(gen_win.WinGeneratorBase):
     "Write a Workspace (.dsw)"
 
     # Generate a fake depaprutil project
-    self.targets['depsubr'] = gen_base.TargetUtility('depsubr',
+    self.targets['depsubr'] = gen_base.TargetUtility('depsubr', None,
                                                      'build/win32',
                                                      None, None, self.cfg,
                                                      None)
-    self.targets['depdelta'] = gen_base.TargetUtility('depdelta',
+    self.targets['depdelta'] = gen_base.TargetUtility('depdelta', None,
                                                       'build/win32',
                                                       None, None, self.cfg,
                                                       None)
