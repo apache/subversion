@@ -216,7 +216,7 @@ def textual_merges_galore(sbox):
 
   # Do the first merge, revs 1:3.  This tests all the cases except
   # case 4, which we'll handle in a second pass.
-  expected_output = wc.State(other_wc, {'A/mu'       : Item(status='_ '),
+  expected_output = wc.State(other_wc, {'A/mu'       : Item(status='  '),
                                         'A/B/lambda' : Item(status='U '),
                                         'A/D/G/rho'  : Item(status='U '),
                                         'A/D/G/pi'   : Item(status='G '),
@@ -342,7 +342,7 @@ def textual_merges_galore(sbox):
                       )
 
   expected_status = wc.State(os.path.join(other_wc, 'A', 'D', 'G'),
-                             { ''     : Item(wc_rev=1, status='_ '),
+                             { ''     : Item(wc_rev=1, status='  '),
                                'rho'  : Item(wc_rev=2, status='G '),
                                'pi'   : Item(wc_rev=1, status='G '),
                                'tau'  : Item(wc_rev=1, status='C '),
@@ -397,9 +397,9 @@ def add_with_history(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/B/F/Q'     : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/B/F/Q/bar' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/B/F/foo'   : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/F/Q'     : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/F/Q/bar' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/F/foo'   : Item(status='  ', wc_rev=2, repos_rev=2),
     })
   if svntest.actions.run_and_verify_commit(wc_dir,
                                            expected_output,
@@ -422,11 +422,11 @@ def add_with_history(sbox):
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(C_path, {
-    ''       : Item(status='_ ', wc_rev=1, repos_rev=2),
+    ''       : Item(status='  ', wc_rev=1, repos_rev=2),
     'Q'      : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
     # FIXME: This doesn't seem right. How can Q/bar be copied and not added?
     #        Can't close issue #838 until this is resolved.
-    'Q/bar'  : Item(status='_ ', wc_rev='-', copied='+', repos_rev=2),
+    'Q/bar'  : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
     'foo'    : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
     })
 
@@ -466,12 +466,12 @@ def add_with_history(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/B/F/Q'     : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/B/F/Q/bar' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/B/F/foo'   : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B/F/Q'     : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/F/Q/bar' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/F/foo'   : Item(status='  ', wc_rev=2, repos_rev=2),
     'A/C/Q'       : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
     # FIXME: See fixme above, related to issue #838.
-    'A/C/Q/bar'   : Item(status='_ ', wc_rev='-', copied='+', repos_rev=2),
+    'A/C/Q/bar'   : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
     'A/C/foo'     : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
     })
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
@@ -488,12 +488,12 @@ def add_with_history(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/B/F/Q'     : Item(status='_ ', wc_rev=2, repos_rev=3),
-    'A/B/F/Q/bar' : Item(status='_ ', wc_rev=2, repos_rev=3),
-    'A/B/F/foo'   : Item(status='_ ', wc_rev=2, repos_rev=3),
-    'A/C/Q'       : Item(status='_ ', wc_rev=3, repos_rev=3),
-    'A/C/Q/bar'   : Item(status='_ ', wc_rev=3, repos_rev=3),
-    'A/C/foo'     : Item(status='_ ', wc_rev=3, repos_rev=3),
+    'A/B/F/Q'     : Item(status='  ', wc_rev=2, repos_rev=3),
+    'A/B/F/Q/bar' : Item(status='  ', wc_rev=2, repos_rev=3),
+    'A/B/F/foo'   : Item(status='  ', wc_rev=2, repos_rev=3),
+    'A/C/Q'       : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/C/Q/bar'   : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/C/foo'     : Item(status='  ', wc_rev=3, repos_rev=3),
     })
   if svntest.actions.run_and_verify_commit(wc_dir,
                                            expected_output,
@@ -531,12 +531,12 @@ def delete_file_and_dir(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/B2'         : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/B2/E'       : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/B2/E/alpha' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/B2/E/beta'  : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/B2/F'       : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/B2/lambda'  : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B2'         : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B2/E'       : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B2/E/alpha' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B2/E/beta'  : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B2/F'       : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B2/lambda'  : Item(status='  ', wc_rev=2, repos_rev=2),
     })
   if svntest.actions.run_and_verify_commit(wc_dir,
                                            expected_output,

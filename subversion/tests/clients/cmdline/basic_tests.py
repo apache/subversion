@@ -99,7 +99,7 @@ def basic_checkout(sbox):
 
   # lambda is restored, modifications remain, deletes remain scheduled
   # for deletion although files are restored to the filesystem
-  expected_output.tweak('A/B/lambda', status='_ ')
+  expected_output.tweak('A/B/lambda', status='  ')
   if svntest.actions.run_and_verify_status (wc_dir, expected_output):
     print "Status check 2 failed"
     return 1
@@ -804,9 +804,9 @@ def basic_switch(sbox):
                          'A/D/H/omega',
                          'A/D/H/psi')
   expected_status.add({
-    'A/D/H/pi'  : Item(status='_ ', wc_rev=1, repos_rev=1),
-    'A/D/H/rho' : Item(status='_ ', wc_rev=1, repos_rev=1),
-    'A/D/H/tau' : Item(status='_ ', wc_rev=1, repos_rev=1),
+    'A/D/H/pi'  : Item(status='  ', wc_rev=1, repos_rev=1),
+    'A/D/H/rho' : Item(status='  ', wc_rev=1, repos_rev=1),
+    'A/D/H/tau' : Item(status='  ', wc_rev=1, repos_rev=1),
     })
 
   # Do the switch and check the results in three ways.
@@ -877,7 +877,7 @@ def basic_delete(sbox):
   # check status
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.tweak('A/D/H/chi', status='M ')
-  expected_output.tweak('A/D/G/rho', 'A/B/F', status='_M')
+  expected_output.tweak('A/D/G/rho', 'A/B/F', status=' M')
 #  expected_output.tweak('A/C/sigma', status='? ')
   expected_output.add({
     'A/B/X' : Item(status='A ', wc_rev=0, repos_rev=1),
@@ -1267,11 +1267,11 @@ def basic_import(sbox):
   # Newly imported file should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'all_exe' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'none_exe' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'user_exe' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'group_exe' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'other_exe' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'all_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'none_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'user_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'group_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'other_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
 
   # Create expected output tree for the update.
@@ -1288,7 +1288,7 @@ def basic_import(sbox):
     expected_disk.tweak('all_exe', 'user_exe', props={ 
       'svn:executable' : '' 
       })
-    expected_status.tweak('all_exe', 'user_exe', status='__')
+    expected_status.tweak('all_exe', 'user_exe', status='  ')
 
   # do update and check three ways
   return svntest.actions.run_and_verify_update(wc_dir,

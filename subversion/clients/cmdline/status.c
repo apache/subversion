@@ -33,9 +33,8 @@
 /* Fill in the first four characters of STR_STATUS with status code
    characters, based on TEXT_STATUS, PROP_STATUS, LOCKED, and COPIED.
 
-   This function is also used by commit-cmd.c
 */
-void
+static void
 svn_cl__generate_status_codes (char *str_status,
                                enum svn_wc_status_kind text_status,
                                enum svn_wc_status_kind prop_status,
@@ -50,7 +49,7 @@ svn_cl__generate_status_codes (char *str_status,
       text_statuschar = ' ';
       break;
     case svn_wc_status_normal:
-      text_statuschar = '_';
+      text_statuschar = ' ';
       break;
     case svn_wc_status_added:
       text_statuschar = 'A';
@@ -85,10 +84,8 @@ svn_cl__generate_status_codes (char *str_status,
   switch (prop_status)
     {
     case svn_wc_status_none:
-      prop_statuschar = ' ';
-      break;
     case svn_wc_status_normal:
-      prop_statuschar = '_';
+      prop_statuschar = ' ';
       break;
     case svn_wc_status_added:
       prop_statuschar = 'A';

@@ -97,7 +97,7 @@ def update_binary_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='__', wc_rev=2, repos_rev=2),
+    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
 
   # Commit the new binary file, creating revision 2.
@@ -124,7 +124,7 @@ def update_binary_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='__', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
     })
 
   # Commit original working copy again, creating revision 3.
@@ -155,7 +155,7 @@ def update_binary_file(sbox):
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
   expected_status.add({
-    'A/theta' : Item(status='C_', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='C ', wc_rev=3, repos_rev=3),
     })
 
   # Extra 'singleton' files we expect to exist after the update.
@@ -235,8 +235,8 @@ def update_binary_file_2(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='__', wc_rev=2, repos_rev=2),
-    'A/zeta' : Item(status='__', wc_rev=2, repos_rev=2),
+    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
 
   # Commit the new binary filea, creating revision 2.
@@ -261,8 +261,8 @@ def update_binary_file_2(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='__', wc_rev=3, repos_rev=3),
-    'A/zeta' : Item(status='__', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/zeta' : Item(status='  ', wc_rev=3, repos_rev=3),
     })
 
   # Commit original working copy again, creating revision 3.
@@ -291,8 +291,8 @@ def update_binary_file_2(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=2)
   expected_status.add({
-    'A/theta' : Item(status='__', wc_rev=2, repos_rev=3),
-    'A/zeta' : Item(status='__', wc_rev=2, repos_rev=3),
+    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=3),
+    'A/zeta' : Item(status='  ', wc_rev=2, repos_rev=3),
     })
 
   # Do an update from revision 2 and make sure that our binary file
@@ -577,7 +577,7 @@ def update_to_revert_text_conflicts(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('A/mu', wc_rev=2)
-  expected_status.tweak('A/D/G/rho', wc_rev=2, status='__')
+  expected_status.tweak('A/D/G/rho', wc_rev=2, status='  ')
 
   # Commit.
   if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -648,7 +648,7 @@ Original appended text for rho>>>>>>> .r2
 
   # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
-  expected_status.tweak('A/D/G/rho', status='_C')
+  expected_status.tweak('A/D/G/rho', status=' C')
 
   return svntest.actions.run_and_verify_status (wc_backup,
                                                 expected_status)

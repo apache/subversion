@@ -377,12 +377,12 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "\n"
     "Decoding the status output, each column is one character wide:\n"
     "   1st column: Add or delete file or directory, or change file contents\n"
-    "     '_' or ' ' no modifications, 'A' Added, 'D' Deleted, 'M' Modified\n"
+    "     ' ' no modifications, 'A' Added, 'D' Deleted, 'M' Modified\n"
     "     '?' file or directory is not under revision control\n"
     "     '!' file or directory is missing and was removed via non-svn command\n"
     "     '~' versioned as directory, but is file, or vice versa\n"
     "   Second column: Modifications of a file's or directory's properties\n"
-    "     '_' or ' ' no modifications, 'M' Modified\n"
+    "     ' ' no modifications, 'M' Modified\n"
     "   Third column: A svn process has a lock in '.svn' for the file or directory\n"
     "     ' ' no lock held, 'L' lock being held\n"
     "   Fourth column: Scheduled commit will contain addition-with-history\n"
@@ -391,8 +391,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "\n"
     "Decoding --verbose output:\n"
     "Status| Out-of-date? | Local Rev | Last changed info |  Path\n"
-    "    _                    965       938     kfogel      ./autogen.sh\n"
-    "    _      *             965       922    sussman      ./build.conf\n"
+    "                         965       938     kfogel      ./autogen.sh\n"
+    "           *             965       922    sussman      ./build.conf\n"
     "    M                    965       687        joe      ./buildcheck.sh\n",
     { 'u', 'v', 'N', 'q',
       svn_cl__auth_username_opt, svn_cl__auth_password_opt,

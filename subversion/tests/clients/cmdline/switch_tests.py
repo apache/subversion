@@ -55,9 +55,9 @@ def get_routine_status_state(wc_dir):
   state = svntest.actions.get_virginal_state(wc_dir, 1)
   state.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
   state.add({
-    'A/D/H/pi' : Item(status='_ ', wc_rev=1, repos_rev=1),
-    'A/D/H/tau' : Item(status='_ ', wc_rev=1, repos_rev=1),
-    'A/D/H/rho' : Item(status='_ ', wc_rev=1, repos_rev=1),
+    'A/D/H/pi' : Item(status='  ', wc_rev=1, repos_rev=1),
+    'A/D/H/tau' : Item(status='  ', wc_rev=1, repos_rev=1),
+    'A/D/H/rho' : Item(status='  ', wc_rev=1, repos_rev=1),
     })
 
   return state
@@ -210,10 +210,10 @@ def commit_routine_switching(wc_dir, verify):
   expected_status = get_routine_status_state(wc_dir)
   expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', 'A/B/E/alpha', 'A/D/H/pi',
-                        wc_rev=2, status='_ ')
+                        wc_rev=2, status='  ')
   expected_status.add({
-    'A/D/G/Z' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/D/G/Z/zeta' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/D/G/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
 
   # Commit should succeed
@@ -330,10 +330,10 @@ def full_update(sbox):
   expected_status = get_routine_status_state(wc_dir)
   expected_status.tweak(repos_rev=2, wc_rev=2)
   expected_status.add({
-    'A/D/G/Z' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/D/G/Z/zeta' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/D/H/Z' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/D/H/Z/zeta' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/D/G/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
 
   return svntest.actions.run_and_verify_update(wc_dir,
@@ -450,8 +450,8 @@ def update_switched_things(sbox):
   expected_status.tweak('A/D/H', 'A/D/H/pi', 'A/D/H/rho', 'A/D/H/tau', 'iota',
                         wc_rev=2)
   expected_status.add({
-    'A/D/H/Z' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/D/H/Z/zeta' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/D/H/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
 
   return svntest.actions.run_and_verify_update(wc_dir,
@@ -521,8 +521,8 @@ def rev_update_switched_things(sbox):
   expected_status.tweak('A/D/H', 'A/D/H/pi', 'A/D/H/rho', 'A/D/H/tau', 'iota',
                         wc_rev=1)
   expected_status.add({
-    'A/D/G/Z' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/D/G/Z/zeta' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/D/G/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
 
   return svntest.actions.run_and_verify_update(wc_dir,

@@ -57,8 +57,8 @@ def make_local_props(sbox):
 
   # Make sure they show up as local mods in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/mu', status='_M')
-  expected_status.tweak('A/D/G', status='_M')
+  expected_status.tweak('A/mu', status=' M')
+  expected_status.tweak('A/D/G', status=' M')
 
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
@@ -107,7 +107,7 @@ def commit_props(sbox):
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(repos_rev=2)
-  expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='__')
+  expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='  ')
 
   # Commit the one file.
   return svntest.actions.run_and_verify_commit (wc_dir,
@@ -148,7 +148,7 @@ def update_props(sbox):
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(repos_rev=2)
-  expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='__')
+  expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='  ')
 
   # Commit the one file.
   if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -164,8 +164,8 @@ def update_props(sbox):
   
   # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
-    'A/mu' : Item(status='_U'),
-    'A/D/H' : Item(status='_U'),
+    'A/mu' : Item(status=' U'),
+    'A/D/H' : Item(status=' U'),
     })
   
   # Create expected disk tree for the update.
@@ -175,7 +175,7 @@ def update_props(sbox):
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
-  expected_status.tweak('A/mu', 'A/D/H', status='__')
+  expected_status.tweak('A/mu', 'A/D/H', status='  ')
 
   # Do the update and check the results in three ways... INCLUDING PROPS
   return svntest.actions.run_and_verify_update(wc_backup,
@@ -209,7 +209,7 @@ def downdate_props(sbox):
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(repos_rev=2)
-  expected_status.tweak('iota', wc_rev=2, status='__')
+  expected_status.tweak('iota', wc_rev=2, status='  ')
 
   # Commit the one file.
   if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -229,8 +229,8 @@ def downdate_props(sbox):
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(repos_rev=3)
-  expected_status.tweak('iota', wc_rev=2, status='__')
-  expected_status.tweak('A/mu', wc_rev=3, status='_ ')
+  expected_status.tweak('iota', wc_rev=2, status='  ')
+  expected_status.tweak('A/mu', wc_rev=3, status='  ')
 
   # Commit the one file.
   if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -241,7 +241,7 @@ def downdate_props(sbox):
   
   # Create expected output tree for an update.
   expected_output = svntest.wc.State(wc_dir, {
-    'iota' : Item(status='_U'),
+    'iota' : Item(status=' U'),
     'A/mu' : Item(status='U '),
     })
   
@@ -289,7 +289,7 @@ def remove_props(sbox):
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(repos_rev=3)
-  expected_status.tweak('iota', wc_rev=3, status='_ ')
+  expected_status.tweak('iota', wc_rev=3, status='  ')
 
   # Commit the one file.
   if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -344,8 +344,8 @@ def update_conflict_props(sbox):
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/mu' : Item(status='_C'),
-    'A' : Item(status='_C'),
+    'A/mu' : Item(status=' C'),
+    'A' : Item(status=' C'),
     })
 
   # Create expected disk tree for the update.
@@ -355,7 +355,7 @@ def update_conflict_props(sbox):
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/mu', 'A', status='_C')
+  expected_status.tweak('A/mu', 'A', status=' C')
 
   extra_files = ['mu.*\.prej', 'dir_conflicts.*\.prej']
   # Do the update and check the results in three ways... INCLUDING PROPS
@@ -377,7 +377,7 @@ def update_conflict_props(sbox):
   svntest.main.run_svn(None, 'resolve', A_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/mu', 'A', status='_M')
+  expected_status.tweak('A/mu', 'A', status=' M')
 
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
@@ -444,7 +444,7 @@ def commit_replacement_props(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(repos_rev=3)
   expected_status.tweak('iota', wc_rev=3)
-  expected_status.tweak('A/B/lambda', wc_rev=3, status='__')
+  expected_status.tweak('A/B/lambda', wc_rev=3, status='  ')
 
   return svntest.actions.run_and_verify_commit (wc_dir, expected_output,
                                                 expected_status,
@@ -509,8 +509,8 @@ def revert_replacement_props(sbox):
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('iota', status='__')
-  expected_status.tweak('A/B/lambda', status='__')
+  expected_status.tweak('iota', status='  ')
+  expected_status.tweak('A/B/lambda', status='  ')
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota', props={'cash-sound' : 'cha-ching!'})
@@ -586,7 +586,7 @@ def inappropriate_props(sbox):
   if errlines:
     return 1
 
-  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='_M')
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status=' M')
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
