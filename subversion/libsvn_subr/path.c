@@ -235,9 +235,9 @@ svn_path_get_longest_ancestor (const svn_string_t *path1,
   
   while (path1->data[i] == path2->data[i])
     {
-      i++;
-      if ((i > path1->len) || (i > path2->len))
+      if ((i == path1->len) || (i == path2->len))
         break;
+      i++;
     }
 
   /* i is now the offset of the first _non_-matching byte. */
