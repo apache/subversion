@@ -21,8 +21,6 @@ MUST HAVE
 * subversion/libsvn_wc/status.c:982
     /* ### lundblad TODO: Make sure lock info is added. */ (lundblad)
 
-* in svn_wc_entry_t, rename lock_crt_date to lock_creation_date.
-
 NICE TO HAVE
 ------------
 

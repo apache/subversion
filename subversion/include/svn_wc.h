@@ -1131,7 +1131,7 @@ typedef struct svn_wc_entry_t
   const char *lock_comment;
   /** @since New in 1.2
    *  Lock creation date or 0 if not locked in this WC */
-  apr_time_t lock_crt_date;
+  apr_time_t lock_creation_date;
 
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup to see
      if you need to extend that as well. */

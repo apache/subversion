@@ -97,7 +97,7 @@ build_info_from_entry (svn_info_t **info,
       tmpinfo->lock->token      = entry->lock_token;
       tmpinfo->lock->owner      = entry->lock_owner;
       tmpinfo->lock->comment    = entry->lock_comment;
-      tmpinfo->lock->creation_date = entry->lock_crt_date;
+      tmpinfo->lock->creation_date = entry->lock_creation_date;
     }
 
   *info = tmpinfo;

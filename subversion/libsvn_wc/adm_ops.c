@@ -2214,13 +2214,13 @@ svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
   newentry.lock_token = lock->token;
   newentry.lock_owner = lock->owner;
   newentry.lock_comment = lock->comment;
-  newentry.lock_crt_date = lock->creation_date;
+  newentry.lock_creation_date = lock->creation_date;
 
   SVN_ERR (svn_wc__entry_modify (adm_access, entry->name, &newentry,
                                  SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
                                  | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
                                  | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
-                                 | SVN_WC__ENTRY_MODIFY_LOCK_CRT_DATE,
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
                                  TRUE, pool));
 
   { /* if svn:needs-lock is present, then make the file read-write. */
@@ -2249,12 +2249,12 @@ svn_error_t *svn_wc_remove_lock(const char *path,
                               _("'%s' is not under version control"), path);
 
   newentry.lock_token = newentry.lock_owner = newentry.lock_comment = NULL;
-  newentry.lock_crt_date = 0;
+  newentry.lock_creation_date = 0;
   SVN_ERR (svn_wc__entry_modify (adm_access, entry->name, &newentry,
                                  SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
                                  | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
                                  | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
-                                 | SVN_WC__ENTRY_MODIFY_LOCK_CRT_DATE,
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
                                  TRUE, pool));
 
   { /* if svn:needs-lock is present, then make the file read-only. */

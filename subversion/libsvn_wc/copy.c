@@ -374,11 +374,11 @@ post_copy_cleanup (svn_wc_adm_access_t *adm_access,
           entry->lock_token = NULL;
           entry->lock_owner = NULL;
           entry->lock_comment = NULL;
-          entry->lock_crt_date = 0;
+          entry->lock_creation_date = 0;
           flags |= (SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
                     | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
                     | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
-                    | SVN_WC__ENTRY_MODIFY_LOCK_CRT_DATE);
+                    | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE);
         }
       
       /* If we meaningfully modified the flags, we must be wanting to
