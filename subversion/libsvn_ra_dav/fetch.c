@@ -263,6 +263,29 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
   SVN_ERR( svn_ra_dav__get_props(&dirents, ras->sess, url, NE_DEPTH_ONE, NULL,
                                  NULL /* allprop */, pool) );
 
+  /* ### This question is from Karl:
+   *
+   * I don't understand the implementation of this function.  The
+   * first thing we do is fetch all properties for a URL, and store
+   * them in a hash named `dirents'.  That's where I get confused --
+   * sure, if url is a directory, then its entries will show up as
+   * properties, but couldn't there be various other properties that
+   * are not entries in the dir?  Or is it guaranteed that the *only*
+   * properties we'd get above are the directory entries, and no other
+   * properties are possible?
+   *
+   * The rest of the function is just more in the same vein -- it
+   * makes sense if and only if that guarantee is present.  But I'd
+   * just be very surprised to learn that entries are the *only*
+   * possible properties one could ever get from a successful PROPFIND
+   * with depth 1 on a url.  Is it really true?
+   *
+   * Anyway, regardless of the above, svn_ra_dav__get_props() needs to
+   * get properly documented in ra_dav.h, along with
+   * svn_ra_dav__get_props_resource() and svn_ra_dav__get_one_prop().
+   * :-)
+   */
+
   uri_parse(url, &parsed_url, NULL);
 
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
