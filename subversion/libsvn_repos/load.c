@@ -434,7 +434,7 @@ struct parse_baton
   svn_repos_t *repos;
   svn_fs_t *fs;
 
-  svn_boolean_t use_history;
+  svn_boolean_t require_copy_source;
   svn_stream_t *outstream;
 };
 
@@ -449,6 +449,8 @@ struct revision_baton
 
   apr_int32_t rev_offset;
 
+  apr_array_header_t *copied_paths;
+
   struct parse_baton *pb;
   apr_pool_t *pool;
 };
@@ -461,6 +463,8 @@ struct node_baton
 
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
+
+  svn_boolean_t inside_copied_tree;
 
   struct revision_baton *rb;
   apr_pool_t *pool;
@@ -479,6 +483,7 @@ make_node_baton (apr_hash_t *headers,
   nb->rb = rb;
   nb->pool = pool;
   nb->kind = svn_node_unknown;
+  nb->inside_copied_tree = FALSE;
 
   /* Then add info from the headers.  */
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
@@ -532,6 +537,7 @@ make_revision_baton (apr_hash_t *headers,
   rb->pb = pb;
   rb->pool = pool;
   rb->rev = SVN_INVALID_REVNUM;
+  rb->copied_paths = apr_array_make (pool, 1, sizeof(const char *));
 
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
                            APR_HASH_KEY_STRING)))
@@ -570,7 +576,7 @@ new_revision_record (void **revision_baton,
                            SVN_REVNUM_T_FMT "\n", rb->rev);
     }
 
-  /* If we're parsing revision 0, only the revision are (possibly)
+  /* If we're parsing revision 0, only the revision props are (possibly)
      interesting to us: when loading the stream into an empty
      filesystem, then we want new filesystem's revision 0 to have the
      same props.  Otherwise, we just ignore revision 0 in the stream. */
@@ -588,9 +594,33 @@ maybe_add_with_history (struct node_baton *nb,
                         apr_pool_t *pool)
 {
   struct parse_baton *pb = rb->pb;
+  int i;
 
-  if ((nb->copyfrom_path == NULL) || (! pb->use_history))
+  if ((nb->copyfrom_path == NULL) || (! pb->require_copy_source))
     {
+      /* First check that the path to "add" is not a descendant of
+         some already svn_fs_copy()'ed path. */
+      for (i = 0; i < rb->copied_paths->nelts; i++)
+        {
+          const char *copied_path =
+            APR_ARRAY_IDX(rb->copied_paths, i, const char *);
+          
+          if (svn_path_is_child (copied_path, nb->path, pool))
+            {
+              if (pb->outstream)
+                {
+                  apr_size_t len = 34;
+                  svn_stream_write (pb->outstream,
+                                    "SKIPPED: child of previous copy...",
+                                    &len);
+                }
+              
+              nb->inside_copied_tree = TRUE;
+                   
+              return SVN_NO_ERROR;
+            }
+        }
+
       /* Add empty file or dir, without history. */
       if (nb->kind == svn_node_file)
         SVN_ERR (svn_fs_make_file (rb->txn_root, nb->path, pool));
@@ -619,6 +649,11 @@ maybe_add_with_history (struct node_baton *nb,
           apr_size_t len = 9;
           svn_stream_write (pb->outstream, "COPIED...", &len);
         }
+      
+      /* Place the path into a list of copied_paths within the
+         revision baton, for future comparisons.  */
+      *((const char **) apr_array_push (rb->copied_paths)) = 
+        apr_pstrdup (rb->pool, nb->path);
     }
 
   return SVN_NO_ERROR;
@@ -724,9 +759,10 @@ set_node_property (void *baton,
 {
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
-
-  SVN_ERR (svn_fs_change_node_prop (rb->txn_root, nb->path,
-                                    name, value, nb->pool));
+  
+  if (! nb->inside_copied_tree)
+    SVN_ERR (svn_fs_change_node_prop (rb->txn_root, nb->path,
+                                      name, value, nb->pool));
   
   return SVN_NO_ERROR;
 }
@@ -738,6 +774,14 @@ set_fulltext (svn_stream_t **stream,
 {
   struct node_baton *nb = node_baton;
   struct revision_baton *rb = nb->rb;
+
+  if (nb->inside_copied_tree)
+    {
+      *stream = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* else... */
 
   return svn_fs_apply_text (stream,
                             rb->txn_root, nb->path,
@@ -809,7 +853,7 @@ svn_error_t *
 svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
                                void **parse_baton,
                                svn_repos_t *repos,
-                               svn_boolean_t use_history,
+                               svn_boolean_t require_copy_source,
                                svn_stream_t *outstream,
                                apr_pool_t *pool)
 {
@@ -826,7 +870,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
 
   pb->repos = repos;
   pb->fs = svn_repos_fs (repos);
-  pb->use_history = use_history;
+  pb->require_copy_source = require_copy_source;
   pb->outstream = outstream;
 
   *parser_callbacks = parser;
