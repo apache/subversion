@@ -16,9 +16,7 @@
  */
 
 #include <string.h>
-#include <assert.h>
 
-#include "svn_pools.h"
 #include "bdb_compat.h"
 #include "../fs.h"
 #include "../err.h"
@@ -91,30 +89,6 @@ put_copy (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__bdb_next_copy_id (const char **id_p,
-                          svn_fs_t *fs,
-                          trail_t *trail)
-{
-  DBT query, result;
-
-  svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
-
-  /* Get the current value associated with the `next-id' key in the
-     copies table.  */
-  SVN_ERR (BDB_WRAP (fs, "reading `copies' table (getting `next-key')",
-                    fs->copies->get (fs->copies, trail->db_txn,
-                                     &query, svn_fs__result_dbt (&result), 
-                                     0)));
-  svn_fs__track_dbt (&result, trail->pool);
-
-  /* Set our return value. */
-  *id_p = apr_pstrmemdup (trail->pool, result.data, result.size);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_fs__bdb_reserve_copy_id (const char **id_p,
                              svn_fs_t *fs,
                              trail_t *trail)
@@ -124,11 +98,22 @@ svn_fs__bdb_reserve_copy_id (const char **id_p,
   char next_key[SVN_FS__MAX_KEY_SIZE];
   int db_err;
 
-  SVN_ERR (svn_fs__bdb_next_copy_id (id_p, fs, trail));
+  svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
+
+  /* Get the current value associated with the `next-id' key in the
+     copies table.  */
+  SVN_ERR (BDB_WRAP (fs, "allocating new copy ID (getting `next-key')",
+                    fs->copies->get (fs->copies, trail->db_txn,
+                                     &query, svn_fs__result_dbt (&result), 
+                                     0)));
+  svn_fs__track_dbt (&result, trail->pool);
+
+  /* Set our return value. */
+  *id_p = apr_pstrmemdup (trail->pool, result.data, result.size);
 
   /* Bump to future key. */
-  len = strlen (*id_p);
-  svn_fs__next_key (*id_p, &len, next_key);
+  len = result.size;
+  svn_fs__next_key (result.data, &len, next_key);
   db_err = fs->copies->put (fs->copies, trail->db_txn,
                             svn_fs__str_to_dbt (&query, 
                                                 (char *) svn_fs__next_key_key),
@@ -202,4 +187,3 @@ svn_fs__bdb_get_copy (svn_fs__copy_t **copy_p,
   *copy_p = copy;
   return SVN_NO_ERROR;
 }
-
