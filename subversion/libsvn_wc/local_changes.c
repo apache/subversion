@@ -176,9 +176,6 @@ svn_wc__string_to_time (svn_string_t *tstr)
   
   exploded_time.tm_year -= 1900;
   exploded_time.tm_yday -= 1;
-
-  /* I highly doubt these matter to apr_implode_time(), but we'll
-     convert them just to be safe. */
   exploded_time.tm_wday = find_matching_string (wday, apr_day_snames);
   exploded_time.tm_mon = find_matching_string (month, apr_month_snames);
 
