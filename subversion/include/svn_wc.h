@@ -986,14 +986,12 @@ svn_error_t *svn_wc_ensure_adm (const char *path,
  * become cumbersome: you'd have to roll through a hash to find one
  * lone status.
  * 
- * So we have @c svn_wc_status() for depth 0, and @c svn_wc_statuses() for
- * depths 1 and 2, since the latter two involve multiple return
- * values.
+ * So we have @c svn_wc_status() for depth 0, and 
+ * @c svn_wc_get_status_editor() for depths 1 and 2, since the latter
+ * two involve multiple return values.
  *
- * NOTE:  Status structures returned by @c svn_wc_status() or found in
- * the hash created by @c svn_wc_statuses() may contain a @c NULL ->entry
- * field.  This indicates an item that is not versioned in the working
- * copy.
+ * NOTE:  The status structures may contain a @c NULL ->entry field.
+ * This indicates an item that is not versioned in the working copy.
  */
 
 enum svn_wc_status_kind
