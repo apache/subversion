@@ -287,26 +287,27 @@ REGEDIT4
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-7-sect-1.3">
-      <title>Configuration Options</title>
+      <title>Opciones de configuración</title>
       
-      <para>In this section, we will discuss the specific
-        run-time configuration options that are currently supported
-        by Subversion.</para>
+      <para>En esta sección discutiremos las opciones específicas de
+        parámetros de ejecución soportados actualmente por
+        Subversion.</para>
 
       <sect3 id="svn-ch-7-sect-1.3.1">
         <title>Servers</title>
 
-        <para>The <filename>servers</filename> file contains
-          Subversion configuration options related to the network
-          layers.  There are two special section names in this
-          file&mdash;<literal>groups</literal> and
-          <literal>global</literal>.  The <literal>groups</literal>
-          section is essentially a cross-reference table.  The keys in
-          this section are the names of other sections in the file;
-          their values are <firstterm>globs</firstterm>&mdash;textual
-          tokens which possibly contain wildcard
-          characters&mdash;that are compared against the hostnames of
-          the machine to which Subversion requests are sent.</para>
+        <para>El fichero <filename>servers</filename> contiene
+          opcione de configuración de Subversion relacionadas con
+          las capas de red. Hay dos nombres de sección especiales
+          en este fichero&mdash;<literal>groups</literal>
+          y <literal>global</literal>.  La sección
+          <literal>groups</literal> es esencialmente una tabla
+          de referencias cruzadas. Las claves en esta sección son
+          nombres de otras secciones en el fichero; sus valores son
+          <firstterm>máscaras</firstterm>&mdash;palabras textuales
+          que posiblemente contienen carácteres comodines&mdash;que
+          son comparadas contra los nombres de la máquina a la que
+          se envían peticiones Subversion.</para>
 
         <programlisting>
 [groups]
