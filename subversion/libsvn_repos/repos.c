@@ -1261,3 +1261,36 @@ svn_repos_recover (const char *path,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *svn_repos_db_logfiles (apr_array_header_t **logfiles,
+                                    const char *path,
+                                    svn_boolean_t only_unused,
+                                    apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  int log;
+
+  SVN_ERR (get_repos (&repos, path,
+                      APR_FLOCK_SHARED,
+                      FALSE,     /* Do not open fs. */
+                      pool));
+
+  SVN_ERR (svn_fs_berkeley_logfiles (logfiles,
+                                    svn_repos_db_env (repos, pool),
+                                    only_unused,
+                                    pool));
+
+  if (logfiles == NULL)
+    {
+      return SVN_NO_ERROR;
+    }
+
+  /* Loop, printing log files. */
+  for (log = 0; log < (*logfiles)->nelts; log++)
+    {
+      const char ** log_file = &(APR_ARRAY_IDX (*logfiles, log, const char *));
+      *log_file = svn_path_join(SVN_REPOS__DB_DIR, *log_file, pool);
+    }
+
+  return SVN_NO_ERROR;
+}
