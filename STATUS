@@ -36,7 +36,7 @@ Candidate changes:
     Fix slow "svn st" where the targets are files by not locking the whole
     anchor tree.
     Votes:
-      +1: lundblad
+      +1: lundblad, dionisos
       (r11439 nominated by): Steve King
 
   * r11665
@@ -60,7 +60,7 @@ Candidate changes:
     Justification:
       Leak introduced in 1.1.1.
     Votes:
-      +1: lundblad
+      +1: lundblad, dionisos
 
   * r11047 (Issue #2032)
     Always call mkdir-init, even if we're not in a VPATH setup.
@@ -94,14 +94,14 @@ Candidate changes:
       Without this, 'svn diff --diff-cmd' and 'svn merge --diff3-cmd' are
       broken on the Windows platform.
     Votes:
-      +1: jszakmeister, lundblad
+      +1: jszakmeister, lundblad, dionisos
 
   * r11701
     Fix pool usage in svn_io_remove_dir.
     Justification:
       Saves at least 100 MB on large fsfs commits.
     Votes:
-      +1: epg, lundblad
+      +1: epg, lundblad, dionisos
 
   * r11706
     Fix pool usage in finalizng a transaction into a revision in the
@@ -109,7 +109,7 @@ Candidate changes:
     Justification:
       Saves 35 MB on large fsfs commits.
     Votes:
-      +1: epg, lundblad
+      +1: epg, lundblad, dionisos
 
   * r11451, r11630
     Fix pool usage and stalled object reference counts in Perl bindings.
