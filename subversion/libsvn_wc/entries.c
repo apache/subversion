@@ -990,7 +990,7 @@ svn_wc__entries_write (apr_hash_t *entries,
    those properties described by the set of changes. */
 static void
 fold_entry (apr_hash_t *entries,
-            svn_stringbuf_t *name,
+            const svn_stringbuf_t *name,
             apr_uint16_t modify_flags,
             svn_revnum_t revision,
             enum svn_node_kind kind,
@@ -999,7 +999,7 @@ fold_entry (apr_hash_t *entries,
             svn_boolean_t copied,
             apr_time_t text_time,
             apr_time_t prop_time,
-            svn_stringbuf_t *url,
+            const svn_stringbuf_t *url,
             apr_hash_t *atts,
             apr_pool_t *pool,
             va_list ap)

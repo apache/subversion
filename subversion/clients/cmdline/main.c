@@ -29,6 +29,7 @@
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>
+#include <apr_lib.h>
 
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -523,25 +524,25 @@ svn_cl__subcommand_help (const char* subcommand,
 static int
 revision_from_word (svn_client_revision_t *revision, const char *word)
 {
-  if (apr_strnatcasecmp (word, "head") == 0)
+  if (strcasecmp (word, "head") == 0)
     {
       revision->kind = svn_client_revision_head;
     }
-  else if (apr_strnatcasecmp (word, "first") == 0)
+  else if (strcasecmp (word, "first") == 0)
     {
       revision->kind = svn_client_revision_number;
       revision->value.number = 0;
     }
-  else if (apr_strnatcasecmp (word, "prev") == 0)
+  else if (strcasecmp (word, "prev") == 0)
     {
       revision->kind = svn_client_revision_previous;
     }
-  else if (apr_strnatcasecmp (word, "base") == 0)
+  else if (strcasecmp (word, "base") == 0)
     {
       revision->kind = svn_client_revision_base;
     }
-  else if ((apr_strnatcasecmp (word, "committed") == 0)
-           || (apr_strnatcasecmp (word, "changed") == 0))
+  else if ((strcasecmp (word, "committed") == 0)
+           || (strcasecmp (word, "changed") == 0))
     {
       revision->kind = svn_client_revision_committed;
     }
@@ -556,10 +557,18 @@ revision_from_word (svn_client_revision_t *revision, const char *word)
 static int
 valid_revision_number (const char *rev)
 {
-  while (*rev) {
-    if ((*rev < '0') || (*rev++ > '9'))
-      return 0;
-  }
+  while (*rev)
+    {
+      if (! apr_isdigit (*rev))
+        return 0;
+
+      /* Note: Keep this increment out of the apr_isdigit call, which
+         is probably a macro, although you can supposedly #undef to
+         get the function definition... But wait, I've said too much
+         already.  Let us speak of this no more tonight, for there are
+         strange doings in the Shire of late. */
+      rev++;
+    }
 
   return 1;
 }
