@@ -29,29 +29,29 @@ Commit the object to the repository.
 This section describes the first phase.
 
 @table @b
-@item To add a file:  @command{svn add foo.c}
+@item To add a file:  @samp{svn add foo.c}
 
 The file @file{foo.c} is now tracked by your working copy.  The
-@command{svn status} command will show the file with status code
+@samp{svn status} command will show the file with status code
 @code{A} and at local revision 0 (because it is not yet part of any
 repository revision.)
 
-@item To add a directory: @command{svn add dirname}
+@item To add a directory: @samp{svn add dirname}
 
 The directory @file{dirname} will be added, but not recursively.  If you
 want to add everything within @file{dirname}, then you can pass the
-@command{--recursive} flag to @command{svn add}.  Everything added will
+@samp{--recursive} flag to @samp{svn add}.  Everything added will
 have status code @code{A} and be at revision 0.
 
 (Note that unlike CVS, adding a directory does @emph{not} effect an
 immediate change in the repository!)
 
-@item To undo an addittion: @command{svn unadd} or @command{svn rm}
+@item To undo an addittion: @samp{svn unadd} or @samp{svn rm}
 
 Because the item has not yet been committed to the repository, it's easy
 to make your working copy "forget" that you want to add something.  The
 two commands above will de-schedule items for addition.  The
-@command{svn status} command will no longer show them at all.
+@samp{svn status} command will no longer show them at all.
 
 @end table
 
@@ -60,12 +60,12 @@ There are two important exceptions which will @emph{prevent} something
 from being scheduled for addition.
 
 First, you can't schedule an item to be added if it doesn't exist.  The
-@command{svn add foo} command will check that @file{foo} is an actual
+@samp{svn add foo} command will check that @file{foo} is an actual
 file or directory before succeeding.
 
 Second, you can't schedule an item to be added if any of its parent
 directories are scheduled for deletion.  This is a sanity check
-performed by @command{svn add};  it makes no sense to add an item within
+performed by @samp{svn add};  it makes no sense to add an item within
 a directory that will be destroyed at commit-time. 
 
 
@@ -74,7 +74,7 @@ a directory that will be destroyed at commit-time.
 @section Committing additions
 
 If your working copy contains items scheduled for addition and you
-@command{svn commit} them, they will be copied into the repository and
+@samp{svn commit} them, they will be copied into the repository and
 become a permanent part of your tree's history.
 
 As usual, your commit will be rejected if any server-side conflicts
@@ -124,7 +124,7 @@ A   0       (     1)  ./fonts/font2.ttf
 @end example
 
 So what happens if we try to commit only @file{font1.ttf}?  The command
-@command{svn commit fonts/font1.ttf} will fail, because it attempts to
+@samp{svn commit fonts/font1.ttf} will fail, because it attempts to
 copy a file to the @file{fonts} directory on the repository -- and no
 such directory exists there!
 
@@ -185,8 +185,8 @@ R   1       (     1)  ./foo.c
 @end example
 
 At this point, the replaced item acts like any other kind of addition.
-You can undo the replacement by running @command{svn unadd foo.c} or
-@command{svn rm foo.c} -- and the file's status code will revert back to
+You can undo the replacement by running @samp{svn unadd foo.c} or
+@samp{svn rm foo.c} -- and the file's status code will revert back to
 @code{D}.  If the replaced item is a directory, you can schedule items
 within it for addition as well.
 

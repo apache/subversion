@@ -76,16 +76,16 @@
 
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} 2001 Collab.Net, Inc. @*
+Copyright @copyright{} 2001 CollabNet, Inc. @*
 See @xref{License} for details. @*
 First version: June 2001.  @*
-Last updated:  $Date: 2001-06-05 22:11:53 $
+Last updated:  $Date: 2001-06-06 17:53:39 $
 
 @end titlepage
 @c -----------------------------------------------------------------
 
-@summarycontents
-@contents
+@c @summarycontents
+@c @contents
 
 @node Top
 @top
@@ -105,10 +105,12 @@ This manual describes the behavior of the Subversion command-line client.
 * Model::                     The versioning model used by Subversion.
 * Adds::                      How file and directory additions work.
 * Removals::                  How file and directory removals work.
+* License::                   You may modify and redistribute this document.
 @end menu
 
 @include model.texi
 @include adds.texi
 @include removals.texi
+@include license.texi
 
 @bye
