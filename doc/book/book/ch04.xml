@@ -1468,10 +1468,10 @@ Committed revision 1390.
           projects use branches to an extreme: no change is
           <emphasis>ever</emphasis> committed to the trunk directly.
           Even the most trivial changes are created on a short-lived
-          branch, carefully reviewed, then merged to the trunk and
-          deleted.  This system guarantees an exceptionally stable and
-          usable trunk at all times, but at the cost of tremendous
-          process overhead.</para>
+          branch, carefully reviewed and merged to the trunk.  Then
+          the branch is deleted.  This system guarantees an
+          exceptionally stable and usable trunk at all times, but at
+          the cost of tremendous process overhead.</para>
 
         <para>Most projects take a middle-of-the-road approach.  They
           commonly insist that <filename>/trunk</filename> compile and
