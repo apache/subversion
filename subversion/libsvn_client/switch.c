@@ -136,7 +136,7 @@ svn_client_switch (svn_revnum_t *result_rev,
          itself, and thus PATH's name will never change, which is
          exactly what we want. */
       anchor = path;
-      target = NULL;
+      target = "";
       session_entry = entry;
     }
 

@@ -221,8 +221,8 @@ const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos,
  * Specifically, the report will create a transaction made by @a username, 
  * relative to @a fs_base in the filesystem.  @a target is a single path 
  * component, used to limit the scope of the report to a single entry of 
- * @a fs_base, or @c NULL if all of @a fs_base itself is the main subject 
- * of the report.
+ * @a fs_base, or "" if all of @a fs_base itself is the main subject of
+ * the report.
  *
  * @a tgt_path and @a revnum is the fs path/revision pair that is the
  * "target" of @c dir_delta.  In other words, a tree delta will be
@@ -350,13 +350,13 @@ svn_error_t *svn_repos_abort_report (void *report_baton,
 /** Use the provided @a editor and @a edit_baton to describe the changes
  * necessary for making a given node (and its descendants, if it is a
  * directory) under @a src_root look exactly like @a tgt_path under
- * @a tgt_root.  @a src_entry is the node to update, and is either @c NULL 
- * or a single path component.  If @a src_entry is @c NULL, then compute 
- * the difference between the entire tree anchored at @a src_parent_dir 
- * under @a src_root and @a tgt_path under @a target_root.  Else, describe 
- * the changes needed to update only that entry in @a src_parent_dir.
- * Typically, callers of this function will use a @a tgt_path that is the
- * concatenation of @a src_parent_dir and @a src_entry.
+ * @a tgt_root.  @a src_entry is the node to update.  If @a src_entry
+ * is empty, then compute the difference between the entire tree
+ * anchored at @a src_parent_dir under @a src_root and @a tgt_path
+ * under @a target_root.  Else, describe the changes needed to update
+ * only that entry in @a src_parent_dir.  Typically, callers of this
+ * function will use a @a tgt_path that is the concatenation of @a
+ * src_parent_dir and @a src_entry.
  *
  * @a src_root and @a tgt_root can both be either revision or transaction
  * roots.  If @a tgt_root is a revision, @a editor's @c set_target_revision()

@@ -998,7 +998,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   const char *src_path = NULL;
   const char *dst_path = NULL;
   const dav_svn_repos *repos = resource->info->repos;
-  const char *target = NULL;
+  const char *target = "";
   svn_boolean_t recurse = TRUE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
@@ -1195,7 +1195,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   uc.pathmap = NULL;
   if (dst_path) /* we're doing a 'switch' */
     {      
-      if (target) 
+      if (*target)
         {
           /* if the src is split into anchor/target, so must the
              telescoping dst_path be. */
@@ -1307,10 +1307,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               {
                 const char *this_path
                   = svn_path_join_many(resource->pool, 
-                                       src_path,
-                                       target ? target : path,
-                                       target ? path : NULL,
-                                       NULL);
+                                       src_path, target, path, NULL);
                 if (! uc.pathmap)
                   uc.pathmap = apr_hash_make(resource->pool);
                 add_to_path_map(uc.pathmap, this_path, linkpath);
@@ -1379,7 +1376,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
              revision 0.  This should result in nothing but 'add' calls
              to the editor. */
           serr = svn_repos_dir_delta(/* source is revision 0: */
-                                     zero_root, "", NULL,
+                                     zero_root, "", "",
                                      /* target is 'switch' location: */
                                      uc.rev_root, dst_path,
                                      /* re-use the editor */

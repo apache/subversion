@@ -317,7 +317,7 @@ dir_deltas (const char **msg,
           SVN_ERR (svn_fs_revision_root (&revision_root, fs, j, subpool)); 
           SVN_ERR (svn_repos_dir_delta (txn_root,
                                         "",
-                                        NULL,
+                                        "",
                                         revision_root,
                                         "",
                                         editor,

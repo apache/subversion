@@ -1217,7 +1217,7 @@ delete_entry (const char *path,
   /* Mark the parent dir -- it lost an entry (unless that parent dir
      is the root node and we're not supposed to report on the root
      node).  */
-  if ((db->parent_baton) && (! eb->target))
+  if (db->parent_baton && (! *eb->target))
     SVN_ERR (tweak_statushash (db->parent_baton->statii, eb->adm_access,
                                db->path, kind == svn_node_dir,
                                svn_wc_status_modified, 0));
@@ -1336,7 +1336,7 @@ close_directory (void *dir_baton,
     {
       /* If this is the top-most directory, and the operation had a
          target, we should only report the target. */
-      if (eb->target)
+      if (*eb->target)
         {
           svn_wc_status_t *tgt_status;
           const char *path = svn_path_join (eb->anchor, eb->target, pool);

@@ -751,8 +751,6 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb", &rev, &target,
                                  &recurse));
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  if (svn_path_is_empty(target))
-    target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
@@ -772,8 +770,6 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc", &rev, &target,
                                  &recurse, &switch_url));
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  if (svn_path_is_empty(target))
-    target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   SVN_CMD_ERR(get_fs_path(b->repos_url, switch_url, &switch_path, pool));
@@ -794,8 +790,6 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb?(?r)",
                                  &target, &recurse, &rev));
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  if (svn_path_is_empty(target))
-    target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   return accept_report(conn, pool, b, rev, target, NULL, FALSE, recurse,
@@ -814,8 +808,6 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbc", &rev, &target,
                                  &recurse, &ignore_ancestry, &versus_url));
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  if (svn_path_is_empty(target))
-    target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   SVN_CMD_ERR(get_fs_path(b->repos_url, versus_url, &versus_path, pool));

@@ -251,7 +251,7 @@ make_dir_baton (const char *path,
          another target). */
       if (! pb)
         {
-          if (eb->target) /* the anchor is also the target */
+          if (*eb->target) /* anchor is also target */
             d->new_URL = apr_pstrdup (pool, eb->switch_url);
           else
             d->new_URL = svn_path_dirname (eb->switch_url, pool);
@@ -324,7 +324,7 @@ complete_directory (struct edit_baton *eb,
 
   /* If this is the root directory and there is a target, we can't
      mark this directory complete. */
-  if (is_root_dir && eb->target)
+  if (is_root_dir && *eb->target)
     return SVN_NO_ERROR;
 
   /* All operations are on the in-memory entries hash. */
@@ -718,7 +718,7 @@ open_root (void *edit_baton,
   eb->root_opened = TRUE;
 
   *dir_baton = d = make_dir_baton (NULL, eb, NULL, FALSE, pool);
-  if (! eb->target)
+  if (! *eb->target)
     {
       /* For an update with a NULL target, this is equivalent to open_dir(): */
       svn_wc_adm_access_t *adm_access;
@@ -850,8 +850,7 @@ do_entry_deletion (struct edit_baton *eb,
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that parent can give
      accurate reports about itself in the future. */
-  if (eb->target
-      && (strcmp (path, eb->target) == 0))
+  if (strcmp (path, eb->target) == 0)
     {
       tgt_rev_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
                                   *(eb->target_revision));
@@ -2333,14 +2332,13 @@ close_edit (void *edit_baton,
             apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  const char *target_path = svn_path_join_many (pool, eb->anchor, 
-                                                eb->target, NULL);
+  const char *target_path = svn_path_join (eb->anchor, eb->target, pool);
 
   /* If there is a target and that target is missing, then it
      apparently wasn't re-added by the update process, so we'll
      pretend that the editor deleted the entry.  The helper function
      do_entry_deletion() will take care of the necessary steps.  */
-  if ((eb->target) && (svn_wc__adm_missing (eb->adm_access, target_path)))
+  if ((*eb->target) && (svn_wc__adm_missing (eb->adm_access, target_path)))
     SVN_ERR (do_entry_deletion (eb, eb->anchor, eb->target, pool));
 
   /* The editor didn't even open the root; we have to take care of
@@ -2727,13 +2725,11 @@ svn_wc_get_actual_target (const char *path,
   if ((! is_wc_root) || (kind == svn_node_file))
     {
       svn_path_split (path, anchor, target, pool);
-      if ((*anchor)[0] == '\0')
-        *anchor = "";
     }
   else
     {
       *anchor = apr_pstrdup (pool, path);
-      *target = NULL;
+      *target = "";
     }
 
   return SVN_NO_ERROR;
