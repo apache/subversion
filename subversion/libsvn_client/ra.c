@@ -241,8 +241,6 @@ svn_client__open_ra_session (void **session_baton,
 {
   svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
   svn_client__callback_baton_t *cb = apr_pcalloc (pool, sizeof(*cb));
-  svn_auth_cred_simple_t *default_simple_creds 
-    = svn_client_ctx_get_default_simple_creds (ctx);
   svn_client_prompt_t prompt_func;
   void *prompt_baton;
   const svn_auth_provider_t *provider;
@@ -254,7 +252,7 @@ svn_client__open_ra_session (void **session_baton,
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
   cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
   cbtable->invalidate_wc_props = read_only_wc ? NULL : invalidate_wc_props;
-  cbtable->auth_baton = svn_client_ctx_get_auth_baton (ctx); /* new-style */
+  cbtable->auth_baton = ctx->auth_baton; /* new-style */
 
   /* Only register a WC provider if we have a base directory.  But
      register a prompt provider regardless (if there is no base
@@ -264,38 +262,35 @@ svn_client__open_ra_session (void **session_baton,
   if (base_dir)
     {
       /* Get and register the WC provider. */
-      svn_wc_get_simple_wc_provider (&provider, &provider_baton,
-                                     base_dir, base_access,
-                                     default_simple_creds ?
-                                       default_simple_creds->username : NULL,
-                                     default_simple_creds ?
-                                       default_simple_creds->password : NULL,
-                                     pool);
+      svn_wc_get_simple_wc_provider
+        (&provider, &provider_baton, base_dir, base_access,
+         ctx->default_simple_creds ? ctx->default_simple_creds->username : NULL,
+         ctx->default_simple_creds ? ctx->default_simple_creds->password : NULL,
+         pool);
+
       svn_auth_register_provider (cbtable->auth_baton, FALSE, /* prepend */
                                   provider, provider_baton, pool);
     }
 
   /* Get and register the prompt provider. */
-  svn_client_ctx_get_prompt_func (&prompt_func, &prompt_baton, ctx);
-  if (prompt_func)
+  if (ctx->prompt_func)
     {
       svn_client__get_simple_prompt_provider 
-        (&provider, &provider_baton, prompt_func, prompt_baton,
+        (&provider, &provider_baton, ctx->prompt_func, ctx->prompt_baton,
          2, /* retry limit */
-         default_simple_creds ? default_simple_creds->username : NULL,
-         default_simple_creds ? default_simple_creds->password : NULL,
+         ctx->default_simple_creds ? ctx->default_simple_creds->username : NULL,
+         ctx->default_simple_creds ? ctx->default_simple_creds->password : NULL,
          base_dir, base_access, pool);
       svn_auth_register_provider (cbtable->auth_baton, FALSE, /* prepend */
                                   provider, provider_baton, pool);
     }
-  cb->auth_baton = svn_client_ctx_get_old_auth_baton (ctx); /* old-style */
+  cb->auth_baton = ctx->old_auth_baton; /* old-style */
   cb->base_dir = base_dir;
   cb->base_access = base_access;
   cb->do_store = do_store;
   cb->pool = pool;
   cb->commit_items = commit_items;
-  cb->got_new_auth_info = svn_client_ctx_get_default_simple_creds (ctx)
-                          ? TRUE : FALSE;
+  cb->got_new_auth_info = ctx->default_simple_creds ? TRUE : FALSE;
 
   SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, pool));
 

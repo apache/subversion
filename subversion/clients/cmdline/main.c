@@ -512,6 +512,7 @@ main (int argc, const char * const *argv)
   int opt_id, err2;
   apr_getopt_t *os;  
   svn_cl__opt_state_t opt_state;
+  svn_client_ctx_t ctx;
   int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
   const svn_opt_subcommand_desc_t *subcommand = NULL;
@@ -549,7 +550,10 @@ main (int argc, const char * const *argv)
   memset (&opt_state, 0, sizeof (opt_state));
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
-  
+ 
+  /* Clear out our context. */
+  memset (&ctx, 0, sizeof (ctx));
+
   /* No args?  Show usage. */
   if (argc <= 1)
     {
@@ -880,26 +884,25 @@ main (int argc, const char * const *argv)
 
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
-  command_baton.ctx = svn_client_ctx_create (pool);
+  command_baton.ctx = &ctx;
 
   /* Build an authentication baton to give to libsvn_client. */
   svn_auth_open (&ab, pool);
-  svn_client_ctx_set_auth_baton (command_baton.ctx,
-                                 svn_cl__make_auth_baton (&opt_state, pool),
-                                 ab);
-  
-  /* Add the prompt function and baton. */
-  svn_client_ctx_set_prompt_func (command_baton.ctx, 
-                                  svn_cl__prompt_user, NULL);
-  
+
+  ctx.old_auth_baton = svn_cl__make_auth_baton (&opt_state, pool);
+  ctx.auth_baton = ab;
+
+  ctx.prompt_func = svn_cl__prompt_user; 
+  ctx.prompt_baton = NULL;
+
   /* Place any default --username or --password credentials into the cxt. */
   if (opt_state.auth_username || opt_state.auth_password)
     {
       default_creds = apr_pcalloc (pool, sizeof(*default_creds));
       default_creds->username = opt_state.auth_username;
       default_creds->password = opt_state.auth_password;
-      svn_client_ctx_set_default_simple_creds (command_baton.ctx,
-                                               default_creds);
+
+      ctx.default_simple_creds = default_creds;
     }
 
   err = (*subcommand->cmd_func) (os, &command_baton, pool);

@@ -117,50 +117,26 @@ typedef struct svn_client_auth_baton_t
  * batons, serves as a cache for configuration options, and other various 
  * and sundry things.
  */
-typedef struct svn_client_ctx_t svn_client_ctx_t;
+typedef struct svn_client_ctx_t
+{
+  /** old-style auth baton, soon to die. */
+  svn_client_auth_baton_t *old_auth_baton;
 
-/** create a new, empty @c svn_client_ctx_t, allocated in @a pool. */
-svn_client_ctx_t *svn_client_ctx_create (apr_pool_t *pool);
+  /** main auth baton. */
+  svn_auth_baton_t *auth_baton;
 
-/** Set the cached authentication batons in @a ctx to @a
-    old_auth_baton and @a auth_baton. */
-void
-svn_client_ctx_set_auth_baton (svn_client_ctx_t *ctx,
-                               svn_client_auth_baton_t *old_auth_baton,
-                               svn_auth_baton_t *auth_baton);
+  /** if the application has a 'default' username or password, it's in
+   * this structure, if @c NULL, then no defaults exist.
+   */
+  svn_auth_cred_simple_t *default_simple_creds;
 
-/** Return the old-style cached auth baton in @a ctx, or @c NULL if
-    there is none. */
-svn_client_auth_baton_t *
-svn_client_ctx_get_old_auth_baton (svn_client_ctx_t *ctx);
+  /** prompt callback function */
+  svn_client_prompt_t prompt_func;
 
-/** Return the cached auth baton in @a ctx, or @c NULL if there is none. */
-svn_auth_baton_t *
-svn_client_ctx_get_auth_baton (svn_client_ctx_t *ctx);
+  /** prompt callback baton */
+  void *prompt_baton;
 
-/** Set the cached default simple credentials in @a ctx to @a creds. */
-void
-svn_client_ctx_set_default_simple_creds (svn_client_ctx_t *ctx,
-                                         svn_auth_cred_simple_t *creds);
-
-/** Return the default simple credentials in @ ctx, or @c NULL if
-    there is none. */
-svn_auth_cred_simple_t *
-svn_client_ctx_get_default_simple_creds (svn_client_ctx_t *ctx);
-
-/** Set the prompt callback function and baton in @a ctx to @a
-    prompt_func and @a prompt_baton, respectively. */
-void
-svn_client_ctx_set_prompt_func (svn_client_ctx_t *ctx,
-                                svn_client_prompt_t prompt_func,
-                                void *prompt_baton);
-
-/* Return the prompt callback function and baton from @a ctx in @a
-   *prompt_func and @a *prompt_baton, respectively. */
-void
-svn_client_ctx_get_prompt_func (svn_client_prompt_t *prompt_func,
-                                void **prompt_baton,
-                                svn_client_ctx_t *ctx);
+} svn_client_ctx_t;
 
 
 /** This is a structure which stores a filename and a hash of property
