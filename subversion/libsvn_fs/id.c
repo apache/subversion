@@ -283,38 +283,38 @@ svn_fs__id_copy (const svn_fs_id_t *id, apr_pool_t *pool)
 
 /* Predecessor ID's. */
 
-/* ### kff todo: might it be a good thing to abstract out the
-   successor logic from svn_fs__new_successor_id() and put it in a
-   function here, svn_fs_successor_id(), to match
-   svn_fs__id_predecessor()?  Investigate. */
+void
+svn_fs__precede_id (svn_fs_id_t *id)
+{
+  int len = svn_fs__id_length (id);
+
+  id->digits[len - 1]--;
+  
+  if (id->digits[len - 1] > 0)
+    {
+      /* Decrementing the last digit still resulted in a valid node
+         revision number, so that must be the predecessor of ID. */
+      return;
+    }
+  
+  /* Else decrementing the last digit still resulted in a branch
+     number, so the predecessor is the node revision on which the
+     branch itself is based. */
+  if (len > 2)
+    id->digits[len - 2] = -1;
+  else
+    id->digits[0] = -1;
+}
+
 
 svn_fs_id_t *
 svn_fs__id_predecessor (const svn_fs_id_t *id, apr_pool_t *pool)
 {
   svn_fs_id_t *predecessor_id;
-  int len;
 
-  len = svn_fs__id_length (id);
   predecessor_id = svn_fs__id_copy (id, pool);
+  svn_fs__precede_id (predecessor_id);
 
-  predecessor_id->digits[len - 1]--;
-
-  if (predecessor_id->digits[len - 1] > 0)
-    {
-      /* Decrementing the last digit still resulted in a valid node
-         revision number, so that must be the predecessor of ID.
-         Return the predecessor. */
-      return predecessor_id;
-    }
-
-  /* Else decrementing the last digit still resulted in a branch
-     number, so the predecessor is the node revision on which the
-     branch itself is based. */
-  if (len > 2)
-    predecessor_id->digits[len - 2] = -1;
-  else
-    predecessor_id = NULL;
-  
   return predecessor_id;
 }
 
@@ -377,7 +377,6 @@ svn_fs_check_related (int *related,
       svn_fs_root_t *root;
       svn_stringbuf_t *id_str = svn_fs_unparse_id (tmp_id, pool);
       svn_fs_id_t *copy_id;
-      int len = svn_fs__id_length (tmp_id);
 
       /* See if OLDER is a copy of another node. */
       svn_fs_id_root (&root, fs, pool);
@@ -391,10 +390,7 @@ svn_fs_check_related (int *related,
             return SVN_NO_ERROR;
         }
 
-      /* Hack up TMP_ID so that it represents its own predecessor. */
-      tmp_id->digits[len - 1]--;
-      if (tmp_id->digits[len - 1] == 0)
-        tmp_id->digits[len - 2] = -1;
+      svn_fs__precede_id (tmp_id);
     }
   while (tmp_id->digits[0] != -1);
 
