@@ -22,8 +22,6 @@
 
 #include <apr_pools.h>
 #include "svn_types.h"
-#include "svn_string.h"
-#include "svn_error.h"
 
 #ifdef __cplusplus
 extern "C" {
