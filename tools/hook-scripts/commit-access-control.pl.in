@@ -30,7 +30,7 @@ use Config::IniFiles 2.27;
 # Configuration section.
 
 # Svnlook path.
-my $svnlook = "@prefix@/bin/svnlook";
+my $svnlook = "@SVN_BINDIR@/svnlook";
 
 # Since the path to svnlook depends upon the local installation
 # preferences, check that the required program exists to insure that

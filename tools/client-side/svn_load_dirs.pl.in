@@ -22,7 +22,7 @@ use URI          1.17;
 $Text::Wrap::columns = 72;
 
 # Specify the location of the svn command.
-my $svn = '@prefix@/bin/svn';
+my $svn = '@SVN_BINDIR@/svn';
 
 # Process the command line options.
 
