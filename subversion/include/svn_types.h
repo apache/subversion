@@ -422,7 +422,7 @@ typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
 typedef struct svn_lock_t
 {
   const char *path;             /* the path this lock applies to */
-  const char *uuid;             /* unique identifier ("lock-token") */
+  const char *token;            /* UUID of the lock */
   const char *owner;            /* the username which owns the lock */
   apr_time_t creation_date;     /* when lock was made */
   apr_time_t expiration_date;   /* (optional) when lock will expire;
