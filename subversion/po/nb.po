@@ -1908,15 +1908,15 @@ msgstr "Blokkert oppdatering"
 
 #: include/svn_error_codes.h:278
 msgid "Mismatch popping the WC unwind stack"
-msgstr ""
+msgstr "Feil ved opprulling av arbeidskopistabelen"
 
 #: include/svn_error_codes.h:282
 msgid "Attempt to pop empty WC unwind stack"
-msgstr ""
+msgstr "Forsøk på å rulle opp tom arbeidskopistabel"
 
 #: include/svn_error_codes.h:286
 msgid "Attempt to unlock with non-empty unwind stack"
-msgstr ""
+msgstr "Forsøk på å låse opp med ikke-tom opprullingsstabel"
 
 #: include/svn_error_codes.h:290
 msgid "Attempted to lock an already-locked dir"
@@ -4032,17 +4032,17 @@ msgstr "Kan ikke sette prosessens '%s'-katalog"
 #: libsvn_subr/io.c:1617
 #, c-format
 msgid "Can't set process '%s' child input"
-msgstr ""
+msgstr "Kan ikke sette '%s'-inndata for barneprosess"
 
 #: libsvn_subr/io.c:1624
 #, c-format
 msgid "Can't set process '%s' child outfile"
-msgstr ""
+msgstr "Kan ikke sette '%s'-utfil for barneprosess"
 
 #: libsvn_subr/io.c:1631
 #, c-format
 msgid "Can't set process '%s' child errfile"
-msgstr ""
+msgstr "Kan ikke sette '%s'-feilfil for barneprosess"
 
 #: libsvn_subr/io.c:1655
 #, c-format
