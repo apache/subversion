@@ -71,7 +71,7 @@ def basic_checkout(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   os.remove(lambda_path)
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', G_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', G_path)
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
   for item in status_list:
     if item[0] == mu_path:
