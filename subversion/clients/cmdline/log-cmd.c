@@ -284,8 +284,7 @@ log_message_receiver_xml (void *baton,
           apr_hash_this(hi, (void *) &path, NULL, &val);
           action = (char) ((int) val);
 
-          actionstr = apr_psprintf (pool, "%c",
-                                    (action == 'R' ? 'U' : action));
+          actionstr = apr_psprintf (pool, "%c", action);
           /* <path action="X">xxx</path> */
           svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
                                  "action", actionstr, NULL);
