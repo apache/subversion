@@ -77,7 +77,9 @@ def get_trees(repo_dir, revision_p = 0):
     output_lines, errput_lines = svntest.main.run_svnadmin("lsrevs", repo_dir)
     rm = re.compile("^Revision\s+(.+)")
   else:
-    output_lines, errput_lines = svntest.main.run_svnadmin("lstxns", repo_dir)
+    output_lines, errput_lines = svntest.main.run_svnadmin("lstxns",
+                                                           repo_dir,
+                                                           "long")
     rm = re.compile("^Txn\s+(.+):")
 
   for line in output_lines:

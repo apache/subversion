@@ -137,8 +137,9 @@ usage (const char *progname, int exit_code)
      "      If just LOWER_REV is given, that revision tree is printed.\n"
      "      If two revisions are given, that range is printed, inclusive.\n"
      "\n"
-     "   lstxns    REPOS_PATH\n"
-     "      Print all txns and their trees.\n"
+     "   lstxns    REPOS_PATH [long]\n"
+     "      Print all txn names and, if \"long\" is specified, their\n"
+     "      metadata and trees.\n"
      "\n"
 #if 0 
 /* see TODO below at next `#if 0' */
@@ -300,7 +301,18 @@ main (int argc, const char * const *argv)
       {
         char **txns;
         char *txn_name;
-        
+        svn_boolean_t show_extra = FALSE;
+
+        if (argc >= 4) 
+          {
+            if (strcmp (argv[3], "long"))
+              {
+                usage (argv[0], 1);
+                return EXIT_FAILURE;
+              }
+            show_extra = TRUE;
+          }
+
         INT_ERR (svn_repos_open (&repos, path, pool));
         fs = svn_repos_fs (repos);
         INT_ERR (svn_fs_list_transactions(&txns, fs, pool));
@@ -313,36 +325,40 @@ main (int argc, const char * const *argv)
             svn_string_t *datestamp;
             svn_string_t *author;
             svn_string_t *log;
-            apr_pool_t *this_pool = svn_pool_create (pool);
-            
-            INT_ERR (svn_fs_open_txn (&txn, fs, txn_name, this_pool));
-            INT_ERR (svn_fs_txn_root (&this_root, txn, this_pool));
-            INT_ERR (svn_fs_txn_prop (&datestamp, txn,
-                                      SVN_PROP_REVISION_DATE, 
-                                      this_pool));
-            INT_ERR (svn_fs_txn_prop (&author, txn,
-                                      SVN_PROP_REVISION_AUTHOR, 
-                                      this_pool));
-            if ((! datestamp) || (! datestamp->data))
-              datestamp = svn_string_create ("", this_pool);
-            if ((! author) || (! author->data))
-              author = svn_string_create ("", this_pool);
-            INT_ERR (svn_fs_txn_prop (&log, txn,
-                                      SVN_PROP_REVISION_LOG, 
-                                      this_pool));
-            if (! log)
-              log = svn_string_create ("", this_pool);
-          
-            printf ("Txn %s:\n", txn_name);
-            printf ("Created: %s\n", datestamp->data);
-            printf ("Author: %s\n", author->data);
-            printf ("Log (%lu bytes):\n%s\n",
-                    (unsigned long int) log->len, log->data);
-            printf ("==========================================\n");
-            print_tree (this_root, "", 1, this_pool);
-            printf ("\n");
 
-            svn_pool_destroy (this_pool);
+            if (show_extra)
+              {
+                apr_pool_t *this_pool = svn_pool_create (pool);
+                INT_ERR (svn_fs_open_txn (&txn, fs, txn_name, this_pool));
+                INT_ERR (svn_fs_txn_root (&this_root, txn, this_pool));
+                INT_ERR (svn_fs_txn_prop (&datestamp, txn,
+                                          SVN_PROP_REVISION_DATE, 
+                                          this_pool));
+                INT_ERR (svn_fs_txn_prop (&author, txn,
+                                          SVN_PROP_REVISION_AUTHOR, 
+                                          this_pool));
+                if ((! datestamp) || (! datestamp->data))
+                  datestamp = svn_string_create ("", this_pool);
+                if ((! author) || (! author->data))
+                  author = svn_string_create ("", this_pool);
+                INT_ERR (svn_fs_txn_prop (&log, txn,
+                                          SVN_PROP_REVISION_LOG, 
+                                          this_pool));
+                if (! log)
+                  log = svn_string_create ("", this_pool);
+                
+                printf ("Txn %s:\n", txn_name);
+                printf ("Created: %s\n", datestamp->data);
+                printf ("Author: %s\n", author->data);
+                printf ("Log (%lu bytes):\n%s\n",
+                        (unsigned long int) log->len, log->data);
+                printf ("==========================================\n");
+                print_tree (this_root, "", 1, this_pool);
+                printf ("\n");
+                svn_pool_destroy (this_pool);
+              }
+            else
+              printf ("%s\n", txn_name);
           }
       }
       break;
