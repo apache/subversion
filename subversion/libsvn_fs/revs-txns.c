@@ -453,7 +453,7 @@ svn_fs_txn_proplist (apr_hash_t **table_p,
   SVN_ERR (svn_fs__check_fs (fs));
 
   args.table_p = &table;
-  svn_fs_txn_name (&args.id, txn, pool);
+  SVN_ERR (svn_fs_txn_name (&args.id, txn, pool));
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_txn_proplist, &args, pool));
 
   *table_p = table ? table : apr_hash_make (pool);
@@ -475,7 +475,7 @@ svn_fs_txn_prop (svn_string_t **value_p,
 
   /* Get the proplist. */
   args.table_p = &table;
-  svn_fs_txn_name (&args.id, txn, pool);
+  SVN_ERR (svn_fs_txn_name (&args.id, txn, pool));
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_txn_proplist, &args, pool));
 
   /* And then the prop from that list (if there was a list). */
@@ -544,7 +544,7 @@ svn_fs_change_txn_prop (svn_fs_txn_t *txn,
 
   SVN_ERR (svn_fs__check_fs (fs));
 
-  svn_fs_txn_name (&args.id, txn, pool);
+  SVN_ERR (svn_fs_txn_name (&args.id, txn, pool));
   args.name = name;
   args.value = value;
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_change_txn_prop, &args, pool));

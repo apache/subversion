@@ -3527,9 +3527,9 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
   if ((! window) || (tb->target_string->len > SVN_FS_WRITE_BUFFER_SIZE))
     {
       apr_size_t len = tb->target_string->len;
-      svn_stream_write (tb->target_stream,
-                        tb->target_string->data,
-                        &len);
+      SVN_ERR (svn_stream_write (tb->target_stream,
+                                 tb->target_string->data,
+                                 &len));
       svn_stringbuf_set (tb->target_string, "");
     }
 

@@ -976,9 +976,9 @@ svn_repos_dump_fs (svn_repos_t *repos,
       /* Reuse all memory consumed by the dump of this one revision. */
       svn_pool_clear (subpool);
       if (feedback_stream)
-        svn_stream_printf (feedback_stream, pool,
-                           "* %s revision %" SVN_REVNUM_T_FMT ".\n",
-                           stream ? "Dumped" : "Verified", to_rev);
+        SVN_ERR (svn_stream_printf (feedback_stream, pool,
+                                    "* %s revision %" SVN_REVNUM_T_FMT ".\n",
+                                    stream ? "Dumped" : "Verified", to_rev));
     }
 
   svn_pool_destroy (subpool);

@@ -323,7 +323,7 @@ static svn_error_t *ra_svn_close_edit(void *edit_baton, apr_pool_t *pool)
   err = svn_ra_svn_read_cmd_response(eb->conn, pool, "");
   if (err)
     {
-      svn_ra_svn_write_cmd(eb->conn, pool, "abort-edit", "");
+      svn_error_clear(svn_ra_svn_write_cmd(eb->conn, pool, "abort-edit", ""));
       return err;
     }
   if (eb->callback)

@@ -684,8 +684,8 @@ svn_subst_translate_cstring (const char *src,
                                     eol_str, repair, keywords, expand);
   if (err)
     {
-      svn_stream_close (src_stream);
-      svn_stream_close (dst_stream);      
+      svn_error_clear (svn_stream_close (src_stream));
+      svn_error_clear (svn_stream_close (dst_stream));
       return err;
     }
 

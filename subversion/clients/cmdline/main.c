@@ -1218,10 +1218,11 @@ main (int argc, const char * const *argv)
     /* There are two different ways the user can disable disk caching
        of credentials:  either via --no-auth-cache, or in the config
        file ('store-auth-creds = no'). */
-    svn_config_get_bool (cfg, &store_password_val,
-                         SVN_CONFIG_SECTION_AUTH,
-                         SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
-                         TRUE);
+    if ((err = svn_config_get_bool (cfg, &store_password_val,
+                                    SVN_CONFIG_SECTION_AUTH,
+                                    SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
+                                    TRUE)))
+      svn_handle_error (err, stderr, TRUE);
     if (opt_state.no_auth_cache || !store_password_val)
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE,
                              (void *) "");

@@ -1629,7 +1629,8 @@ apply_textdelta (void *file_baton,
   if (err)
     {
       if (hb->dest)
-        svn_wc__close_text_base (hb->dest, fb->path, 0, handler_pool);
+        svn_error_clear (svn_wc__close_text_base (hb->dest, fb->path, 0,
+                                                  handler_pool));
       svn_pool_destroy (handler_pool);
       return err;
     }

@@ -78,10 +78,12 @@ main (int argc, char **argv)
   encoder = svn_base64_encode (stdout_stream, pool);
 #endif
   svn_txdelta_to_svndiff (encoder, pool, &svndiff_handler, &svndiff_baton);
-  svn_txdelta_send_txstream (txdelta_stream,
-                             svndiff_handler,
-                             svndiff_baton,
-                             pool);
+  err = svn_txdelta_send_txstream (txdelta_stream,
+                                   svndiff_handler,
+                                   svndiff_baton,
+                                   pool);
+  if (err)
+    svn_handle_error (err, stdout, TRUE);
 
   apr_file_close (source_file);
   apr_file_close (target_file);

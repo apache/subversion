@@ -531,8 +531,8 @@ delta_proplists (struct context *c,
       svn_string_t *last_author = NULL;
       
       /* Get the CR and two derivative props. ### check for error returns. */
-      svn_fs_node_created_rev (&committed_rev, c->target_root, 
-                               target_path, subpool);
+      SVN_ERR (svn_fs_node_created_rev (&committed_rev, c->target_root,
+                                        target_path, subpool));
       if (SVN_IS_VALID_REVNUM (committed_rev))
         {
           svn_fs_t *fs = svn_fs_root_fs (c->target_root);
@@ -545,8 +545,8 @@ delta_proplists (struct context *c,
                               cr_str, subpool));
 
           /* Transmit the committed-date. */
-          svn_fs_revision_prop (&committed_date, fs, committed_rev, 
-                                SVN_PROP_REVISION_DATE, subpool);
+          SVN_ERR (svn_fs_revision_prop (&committed_date, fs, committed_rev,
+                                         SVN_PROP_REVISION_DATE, subpool));
           if (committed_date || source_path)
             {
               SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_COMMITTED_DATE, 
@@ -554,8 +554,8 @@ delta_proplists (struct context *c,
             }
 
           /* Transmit the last-author. */
-          svn_fs_revision_prop (&last_author, fs, committed_rev, 
-                                SVN_PROP_REVISION_AUTHOR, subpool);
+          SVN_ERR (svn_fs_revision_prop (&last_author, fs, committed_rev,
+                                         SVN_PROP_REVISION_AUTHOR, subpool));
           if (last_author || source_path)
             {
               SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_LAST_AUTHOR,
@@ -563,7 +563,7 @@ delta_proplists (struct context *c,
             }
 
           /* Transmit the UUID. */
-          svn_fs_get_uuid (fs, &uuid, subpool);
+          SVN_ERR (svn_fs_get_uuid (fs, &uuid, subpool));
           if (uuid || source_path)
             {
               SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_UUID,

@@ -1249,9 +1249,9 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
 
     err = svn_io_file_read (f, buf, &buf_len, pool);
     if (err && !APR_STATUS_IS_EOF(err->apr_err))
-      svn_error_createf (err->apr_err, err,
-                         "Error reading administrative log file in '%s'",
-                         svn_wc_adm_access_path (adm_access));
+      return svn_error_createf (err->apr_err, err,
+                                "Error reading administrative log file in '%s'",
+                                svn_wc_adm_access_path (adm_access));
 
     SVN_ERR (svn_xml_parse (parser, buf, buf_len, 0));
 

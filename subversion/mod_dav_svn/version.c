@@ -815,6 +815,7 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
   apr_time_t tm = (apr_time_t) -1;
   svn_revnum_t rev;
   apr_bucket_brigade *bb;
+  svn_error_t *err;
 
   /* Find the DAV:creationdate element and get the requested time from it. */
   ns = dav_svn_find_ns(doc->namespaces, "DAV:");
@@ -824,9 +825,10 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
         {
           if (child->ns != ns || strcmp(child->name, "creationdate") != 0)
             continue;
-          /* If this fails, we'll notice below. */
-          svn_time_from_cstring(&tm, child->first_cdata.first->text,
-                                resource->pool);
+          /* If this fails, we'll notice below, so ignore any error for now. */
+          svn_error_clear(svn_time_from_cstring(&tm,
+                                                child->first_cdata.first->text,
+                                                resource->pool));
         }
     }
 
@@ -838,9 +840,10 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
     }
 
   /* Do the actual work of finding the revision by date. */
-  if (svn_repos_dated_revision(&rev, resource->info->repos->repos, tm,
-                               resource->pool) != SVN_NO_ERROR)
+  if ((err = svn_repos_dated_revision(&rev, resource->info->repos->repos, tm,
+                                      resource->pool)) != SVN_NO_ERROR)
     {
+      svn_error_clear (err);
       return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                            "Could not access revision times.");
     }

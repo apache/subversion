@@ -619,12 +619,13 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
 
   /* Write however many bytes were passed in by neon. */
   wlen = len;
-  svn_stream_write(stream, buf, &wlen);
+  svn_error_clear(svn_stream_write(stream, buf, &wlen));
 
 #if 0
   /* Neon's callback won't let us return error.  Joe knows this is a
      bug in his API, so this section can be reactivated someday. */
 
+  SVN_ERR(svn_stream_write(stream, buf, &wlen));
   if (wlen != len)
     {
       /* Uh oh, didn't write as many bytes as neon gave us. */

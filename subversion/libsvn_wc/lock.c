@@ -436,7 +436,7 @@ do_open (svn_wc_adm_access_t **adm_access,
               if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
                 {
                   /* This closes all the children in temporary hash as well */
-                  svn_wc_adm_close (lock);
+                  svn_error_clear (svn_wc_adm_close (lock));
                   svn_pool_destroy (subpool);
                   return err;
                 }
