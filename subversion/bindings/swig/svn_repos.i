@@ -32,9 +32,13 @@
 };
 
 /* -----------------------------------------------------------------------
-   dir_delta's src_entry parameter needs to be NULL sometimes
+   Some of the various parameters need to be NULL sometimes
 */
-%typemap(python,in,parse="z") const char *src_entry "";
+%apply const char *MAY_BE_NULL {
+    const char *src_entry,
+    const char *on_disk_template,
+    const char *in_repos_template
+};
 
 /* -----------------------------------------------------------------------
    get_logs takes a callback function, so we have to thunk it

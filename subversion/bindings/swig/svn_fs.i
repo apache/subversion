@@ -49,6 +49,14 @@
    ### incompatible. */
 
 /* -----------------------------------------------------------------------
+   These parameters may be NULL.
+*/
+%apply const char *MAY_BE_NULL {
+    const char *base_checksum,
+    const char *result_checksum
+};
+
+/* -----------------------------------------------------------------------
    for the FS, 'int *' will always be an OUTPUT parameter
 */
 %apply int *OUTPUT { int * };

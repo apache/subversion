@@ -37,6 +37,11 @@
 }
 
 /* -----------------------------------------------------------------------
+   Create a typemap for specifying string args that may be NULL.
+*/
+%typemap(python, in, parse="z") const char *MAY_BE_NULL "";
+
+/* -----------------------------------------------------------------------
    Define a more refined 'varin' typemap for 'const char *' members. This
    is used in place of the 'char *' handler defined automatically.
 
