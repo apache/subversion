@@ -78,7 +78,7 @@ svn_svr_load_plugin (svn_svr_policies_t *policy,
 
 
 
-/*  svr__load_plugins :  NOT EXPORTED
+/*  svn__svr_load_all_plugins :  NOT EXPORTED
 
     Loops through hash of plugins, loads each using APR's DSO
     routines.  Each plugin ultimately registers (appends) itself into
@@ -86,7 +86,7 @@ svn_svr_load_plugin (svn_svr_policies_t *policy,
 */
 
 svn_error_t *
-svr__load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
+svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
 {
   ap_hash_index_t *hash_index;
   void *key, *val;
@@ -222,7 +222,7 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
             
             printf ("svr_init(): loading list of plugins...\n");
             
-            svr__load_all_plugins ((ap_hash_t *) val, my_policies);
+            svn__svr_load_all_plugins ((ap_hash_t *) val, my_policies);
 
           }
 

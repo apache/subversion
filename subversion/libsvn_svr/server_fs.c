@@ -69,7 +69,7 @@
 
 
 
-/* svr__expand_repos_name : NOT EXPORTED.
+/* svn__svr_expand_repos_name : NOT EXPORTED.
 
    Input: a policy and a repository name.  Repository name *might* be
    an abbreviated nickname (listed in `svn.conf' and in the policy
@@ -80,7 +80,7 @@
  */
 
 svn_string_t *
-svr__expand_repos_name (svn_svr_policy_t *policy,
+svn__svr_expand_repos_name (svn_svr_policy_t *policy,
                         svn_string_t *repos)
 {
  /* Loop through policy->repos_aliases hash.
@@ -160,7 +160,7 @@ svn_svr_plugin_authorize (svn_svr_policies_t *policy,
 }
 
 
-/* svr__policy_authorize()
+/* svn_svr_policy_authorize()
 
    See if general server `policy' allows an action.
 
@@ -243,7 +243,7 @@ svn_svr_latest (svn_ver_t **latest_ver,
                 svn_user_t *user)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_svr_action_t my_action = svn_action_latest;
@@ -270,7 +270,7 @@ svn_svr_get_ver_prop (svn_svr_policies_t *policy,
                       svn_string_t *propname)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -307,7 +307,7 @@ svn_svr_get_ver_proplist (svn_svr_policies_t *policy,
                           unsigned long ver)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -347,7 +347,7 @@ svn_svr_get_ver_propnames (svn_svr_policies_t *policy,
                            unsigned long ver)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -395,7 +395,7 @@ svn_svr_read (svn_svr_policies_t *policy,
               svn_string_t *path)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -435,7 +435,7 @@ svn_svr_get_node_prop (svn_svr_policies_t *policy,
 
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -474,7 +474,7 @@ svn_svr_get_dirent_prop (svn_svr_policies_t *policy,
                          svn_string_t *propname)
 {
     /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -513,7 +513,7 @@ svn_svr_get_node_proplist (svn_svr_policies_t *policy,
                            svn_string_t *path)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -552,7 +552,7 @@ svn_svr_get_dirent_proplist (svn_svr_policies_t *policy,
                              svn_string_t *path)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -590,7 +590,7 @@ svn_svr_get_node_propnames (svn_svr_policies_t *policy,
                             svn_string_t *path)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -628,7 +628,7 @@ svn_svr_get_dirent_propnames (svn_svr_policies_t *policy,
                               svn_string_t *path)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -676,7 +676,7 @@ svn_svr_submit (svn_svr_policies_t *policy,
                 svn_skelta_t *skelta)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -716,7 +716,7 @@ svn_svr_write (svn_svr_policies_t *policy,
                svn_token_t token)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -760,7 +760,7 @@ svn_svr_abandon (svn_svr_policies_t *policy,
                  svn_token_t token)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -814,7 +814,7 @@ svn_svr_get_delta (svn_svr_policies_t *policy,
                    svn_string_t *path2)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
@@ -859,7 +859,7 @@ svn_svr_get_diff (svn_svr_policies_t *policy,
                   svn_string_t *path2)
 {
   /* Convert "repos" into real pathname */
-  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
