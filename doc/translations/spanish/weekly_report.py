@@ -145,7 +145,7 @@ def main():
 
     commiters, file_status = parse_file(input_lines)
 
-    date = time.strftime("%d del %m del %Y", time.localtime())
+    date = time.strftime("día %d del mes %m del %Y", time.localtime())
     print "Estado de la traducción, a %s\n" % date
 
     show_commiter_info(commiters)
