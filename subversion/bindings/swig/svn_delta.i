@@ -79,10 +79,6 @@ void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
 #include "swigutil_py.h"
 #endif
 
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
-#endif
-
 #ifdef SWIGPERL
 #include "swigutil_pl.h"
 #endif

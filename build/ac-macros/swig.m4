@@ -12,7 +12,7 @@ AC_DEFUN(SVN_CHECK_SWIG,
                                [Build swig bindings for LIST targets only. 
                                 LIST is a comma separated list of targets
                                 or 'all' for all available targets; currently
-                                (java,) perl and python are supported
+                                perl and python are supported
                                 (default=all)]),
   [
     case "$enableval" in
@@ -58,7 +58,7 @@ AC_DEFUN(SWIG_BINDINGS_ENABLE,
   bindings=$1
 
   if test "$bindings" = "all"; then
-    bindings="perl,python,java,ruby"
+    bindings="perl,python,ruby"
   fi
 
   for binding in `echo "$bindings" | sed -e "s/,/ /g"`; do
@@ -217,16 +217,6 @@ AC_DEFUN(SVN_FIND_SWIG,
                          [ for apr_int64_t])
     fi
 
-    if test "$JDK" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_java" = "yes"; then
-      dnl For now, use the compile and link from python as a base.
-      SWIG_JAVA_COMPILE="$SWIG_PY_COMPILE"
-      dnl To relink our generated native binding libraries against
-      dnl libsvn_swig_java, we must include the latter's library path.
-      dnl ### Eventually reference somewhere under $(DESTDIR)?
-      SWIG_JAVA_LINK="$SWIG_PY_LINK -L\$(SWIG_BUILD_DIR)/.libs"
-      SWIG_JAVA_INCLUDES="$JNI_INCLUDES"
-    fi
-
     if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_perl" = "yes"; then
       AC_MSG_CHECKING([perl version])
       dnl Note that the q() bit is there to avoid unbalanced brackets
@@ -296,9 +286,6 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_PY_COMPILE)
   AC_SUBST(SWIG_PY_LINK)
   AC_SUBST(SWIG_PY_LIBS)
-  AC_SUBST(SWIG_JAVA_INCLUDES)
-  AC_SUBST(SWIG_JAVA_COMPILE)
-  AC_SUBST(SWIG_JAVA_LINK)
   AC_SUBST(SWIG_PL_INCLUDES)
   AC_SUBST(SWIG_RB_LINK)
   AC_SUBST(SWIG_RB_INCLUDES)

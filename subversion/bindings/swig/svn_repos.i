@@ -32,14 +32,6 @@
 %import svn_delta.i
 %import svn_fs.i
 
-#ifdef SWIGJAVA
-/* Redefine this function pointer type because its swig string representation
-   approaches the maximum path length on windows, causing swig to crash when
-   it outputs a java wrapper class for it. */
-typedef void * svn_repos_file_rev_handler_t;
-%ignore svn_repos_file_rev_handler_t;
-#endif
-
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
@@ -174,10 +166,6 @@ typedef void * svn_repos_file_rev_handler_t;
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
-#endif
-
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
 #endif
 
 #ifdef SWIGPERL

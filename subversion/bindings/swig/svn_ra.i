@@ -37,18 +37,6 @@
 %ignore svn_ra_local_init;
 %ignore svn_ra_dav_init;
 
-#ifdef SWIGJAVA
-/* Ignore these function pointer members because swig's string
-   representations of their types approach the maximum path
-   length on windows, causing swig to crash when it outputs 
-   java wrapper classes for them. */
-%ignore svn_ra_plugin_t::do_diff;
-%ignore svn_ra_plugin_t::do_switch;
-%ignore svn_ra_plugin_t::do_status;
-%ignore svn_ra_plugin_t::do_update;
-%ignore svn_ra_plugin_t::get_log;
-#endif
-
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
@@ -107,10 +95,6 @@
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
-#endif
-
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
 #endif
 
 #ifdef SWIGPERL

@@ -138,21 +138,6 @@
   }
 }
 
-%typemap(java,in) (svn_client_get_commit_log_t log_msg_func, 
-                   void *log_msg_baton) {
-
-  $1 = svn_swig_java_get_commit_log_func;
-  $2 = (void*)$input; /* our function is the baton. */
-}
-
-%typemap(jni) svn_client_get_commit_log_t "jobject"
-%typemap(jtype) svn_client_get_commit_log_t "org.tigris.subversion.client.ClientPrompt"
-%typemap(jstype) svn_client_get_commit_log_t "org.tigris.subversion.client.ClientPrompt"
-%typemap(javain) svn_client_get_commit_log_t "$javainput"
-%typemap(javaout) svn_client_get_commit_log_t {
-    return $jnicall;
-  }
-
 /* -----------------------------------------------------------------------
    Callback: svn_client_blame_receiver_t
    svn_client_blame()
@@ -435,10 +420,6 @@
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
-#endif
-
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
 #endif
 
 #ifdef SWIGPERL

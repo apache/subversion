@@ -304,12 +304,7 @@ class WinGeneratorBase(GeneratorBase):
         if not target.include_runtime:
           swig_options.append("-c")
 
-      if target.lang == "java":
-        swig_options.append("-package org.tigris.subversion.swig")
-        swig_options.append("-outdir " + self.path("subversion/bindings/swig"
-                                                   "/java/org/tigris"
-                                                   "/subversion/swig"))
-      elif target.lang == "perl":
+      if target.lang == "perl":
         if self.swig_vernum >= 103020:
           swig_options.append("-noproxy")
         swig_options.append("-nopm")
@@ -580,8 +575,6 @@ class WinGeneratorBase(GeneratorBase):
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
       fakedefines.append(self.swig_defines)
-      if target.lang == 'java':
-        fakedefines.append('SWIGJAVA')
 
     if isinstance(target, gen_base.TargetSWIGLib):
       fakedefines.append(self.swig_defines)
