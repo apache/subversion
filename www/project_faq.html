@@ -69,6 +69,9 @@
 <p>
 <strong>Troubleshooting:</strong>
 </p>
+<li><a href="#permissions">My repository seems to get stuck all the
+          time, giving me errors about needing recovery
+          (DB_RUNRECOVERY).  What could be the cause?</a></li>
 <li><a href="#wedged-repos">Every time I try to access
     my repository, the process just hangs.  Is my repository
     corrupt?</a></li>
@@ -1090,6 +1093,55 @@ $ svn merge file:///home/repos/tags/branch_traces/bar_last_merge \
 <p>
 <h2>Troubleshooting:</h2>
 <p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="permissions">My repository seems to get stuck all the
+time, giving me errors about needing recovery (DB_RUNRECOVERY).  What
+could be the cause?</a></h3>
+
+<p>The BerkeleyDB database in your repository is susceptible to
+interruptions.  If a process accessing the database exits without
+"cleanly" closing the environment, then the database is left in an
+inconsistent state.  Common causes of this include:</p>
+
+<ul>
+  <li>the process crashing/segfaulting</li>
+  <li>the process being forcibly killed</li>
+  <li>the process exiting when it hits a permission problem</li>
+</ul>
+
+<p>To make the repository function again, simply run "svnadmin
+recover".  This rewinds the repository back to a consistent state.
+(See <a href="#wedged-repos">this question</a> for more
+information.)</p>
+
+<p>The <strong>best</strong> way to prevent this problem is to get
+your repository permissions and ownership set up correctly.  Segfaults
+and forced killings are pretty rare; far and away, this problem almost
+always results from one process accessing the repository and
+accidentally changing ownership or permissions.  Then another process
+tries to access and chokes on the permissions.</p>
+
+<p>Here are our recommendations:</p>
+
+<ul>
+ <li>Try to have as <em>few</em> users access the repository as
+    possible.  For example, run apache or 'svnserve -d' as a specific
+    user, and make the repository wholly owned by that user.  Don't
+    allow any other users to access the repository via
+    <tt>file:///</tt> urls, and be sure to run 'svnlook' and
+    'svnadmin' only as the user which owns the repository.</li>
+
+ <li>If your clients are accessing via <tt>file:///</tt> or
+    <tt>svn+ssh://</tt>, then there's no way to avoid access by
+    multiple users.  In that case, read <a href="
+    http://svnbook.red-bean.com/html-chunk/ch06s05.html">the last
+    section in chapter 6</a>, and pay particular attention to the
+    "checklist" sidebar at the bottom.  It outlines a number of steps
+    to make this scenario safer.</li>
+</ul>
+
 
 <![CDATA[-----------------------------------------------------------]]>
 
