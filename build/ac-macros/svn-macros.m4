@@ -17,8 +17,15 @@ AC_DEFUN(SVN_CONFIG_NICE,[
 
 EOF
 
-  for arg in [$]0 "[$]@"; do
-    echo "\"[$]arg\" \\" >> $1
+  echo "exec \"[$]0\" \\" >> $1
+  for arg in "[$]@"; do
+    case $arg in
+      --no-create) ;;
+      --no-recursion) ;;
+      *)
+        echo "\"$arg\" \\" >> $1
+      ;;
+    esac
   done
   echo '"[$]@"' >> $1
   chmod +x $1
