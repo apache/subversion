@@ -61,10 +61,10 @@ Java_org_tigris_subversion_lib_ClientImpl_status
 	  "Java_org_tigris_subversion_lib_ClientImpl_status(...)\n");
 #endif
 
-  /* create a new subpool from mainpool
+  /* create a new pool
    * lifetime is the scope of this function
    */
-  apr_pool_create(&pool, NULL);
+  pool = svn_pool_create(NULL);
 
   /* HERE COMES SOME DEBUGGING CODE
      IF YOU DONT WANT TO USE IT, JUST LEAVE
@@ -289,7 +289,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
   /* destroy the local pool */
   if( pool != NULL )
     {
-      apr_pool_destroy(pool);
+      svn_pool_destroy(pool);
     }
 
   return hashtable;
