@@ -163,8 +163,6 @@ class Generator(gen_base.GeneratorBase):
         if isinstance(nonlib, gen_base.TargetLinked):
           if not nonlib.external_lib:
             deps.append(nonlib.filename)
-            print "%s: %s" % (target_ob.name,
-                getattr(nonlib,'filename',repr(nonlib)))
 
       targ_varname = string.replace(target, '-', '_')
       objnames = string.join(build_path_strip(path, objects))
