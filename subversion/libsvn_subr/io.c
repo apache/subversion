@@ -910,6 +910,9 @@ svn_io_get_dirents (apr_hash_t **dirents,
  * ARGS is a list of (const char *)'s, terminated by NULL.
  * ARGS[0] is the name of the program, though it need not be the same
  * as CMD.
+ *
+ * INHERIT sets whether the invoked program shall inherit its environment or
+ * run "clean".
  */
 svn_error_t *
 svn_io_run_cmd (const char *path,
@@ -917,6 +920,7 @@ svn_io_run_cmd (const char *path,
                 const char *const *args,
                 int *exitcode,
                 apr_exit_why_e *exitwhy,
+                svn_boolean_t inherit,
                 apr_file_t *infile,
                 apr_file_t *outfile,
                 apr_file_t *errfile,
@@ -935,7 +939,8 @@ svn_io_run_cmd (const char *path,
        cmd);
 
   /* Make sure we invoke cmd directly, not through a shell. */
-  apr_err = apr_procattr_cmdtype_set (cmdproc_attr, APR_PROGRAM);
+  apr_err = apr_procattr_cmdtype_set (cmdproc_attr,
+                                      inherit?APR_PROGRAM_PATH:APR_PROGRAM);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf 
       (apr_err, 0, NULL, pool,
@@ -1062,8 +1067,8 @@ svn_io_run_diff (const char *dir,
 
   assert (i == nargs);
 
-  SVN_ERR(svn_io_run_cmd (dir, SVN_CLIENT_DIFF, args, pexitcode, NULL, NULL, 
-                          outfile, errfile, subpool));
+  SVN_ERR (svn_io_run_cmd (dir, SVN_CLIENT_DIFF, args, pexitcode, NULL, FALSE, 
+                           NULL, outfile, errfile, subpool));
 
   if (*pexitcode < 0 || *pexitcode > 2)
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, subpool, 

@@ -301,12 +301,16 @@ svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
    EXITWHY will indicate why the process terminated.
 
    ARGS is a list of (const char *)'s, terminated by NULL.  ARGS[0] is
-   the name of the program, though it need not be the same as CMD.  */
+   the name of the program, though it need not be the same as CMD.
+
+   INHERIT sets whether the invoked program shall inherit its environment or
+   run "clean". */
 svn_error_t *svn_io_run_cmd (const char *path,
                              const char *cmd,
                              const char *const *args,
                              int *exitcode,
                              apr_exit_why_e *exitwhy,
+                             svn_boolean_t inherit,
                              apr_file_t *infile,
                              apr_file_t *outfile,
                              apr_file_t *errfile,

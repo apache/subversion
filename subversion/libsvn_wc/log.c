@@ -304,7 +304,7 @@ log_do_run_cmd (struct log_runner *loggy,
                                   "error opening %s", errfile_path->data);
     }
   
-  err = svn_io_run_cmd (loggy->path->data, name, args, NULL, NULL,
+  err = svn_io_run_cmd (loggy->path->data, name, args, NULL, NULL, FALSE,
                         infile, outfile, errfile, loggy->pool);
   if (err)
      return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
