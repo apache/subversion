@@ -8,7 +8,7 @@ $LastChangedDate$
 "Is Subversion stable enough for me to use for my own projects?"
 
 We think so!  Read the full FAQ answer on the website:
-  http://subversion.tigris.org/project_faq.html#stable
+  http://subversion.tigris.org/faq.html#stable
 
 
 Contents:
@@ -1210,7 +1210,7 @@ IV.   PLATFORM-SPECIFIC ISSUES
 
       And there's an item about this in the Subversion FAQ:
 
-          http://subversion.tigris.org/project_faq.html#windows-xp-server
+          http://subversion.tigris.org/faq.html#windows-xp-server
 
       The only known workaround for now is to update to Windows XP
       SP1 (or higher).
