@@ -472,15 +472,17 @@ svn_client_blame (const char *target,
   stream = svn_stream_from_aprfile (file, pool);
   for (walk = db.blame; walk; walk = walk->next)
     {
-      int i;
-      for (i = walk->start; !walk->next || i < walk->next->start; i++)
+      apr_off_t line_no;
+      for (line_no = walk->start;
+           !walk->next || line_no < walk->next->start;
+           ++line_no)
         {
           svn_stringbuf_t *sb;
           apr_pool_clear (iterpool);
           SVN_ERR (svn_stream_readline (stream, &sb, iterpool));
           if (! sb)
             break;
-          SVN_ERR (receiver (receiver_baton, i, walk->rev->revision,
+          SVN_ERR (receiver (receiver_baton, line_no, walk->rev->revision,
                              walk->rev->author, walk->rev->date,
                              sb->len ? sb->data : "", iterpool));
         }
