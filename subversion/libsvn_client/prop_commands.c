@@ -171,8 +171,9 @@ svn_client_propget (apr_table_t **props,
 
   SVN_ERR (svn_wc_entry(&node, target, pool));
   if (!node)
-    return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-                              "'%s' -- not a versioned resource", target->data);
+    return svn_error_createf
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "'%s' -- not a versioned resource", target->data);
 
 
   if (recurse && node->kind == svn_node_dir)
