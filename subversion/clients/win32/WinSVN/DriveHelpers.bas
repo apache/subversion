@@ -131,3 +131,10 @@ Public Function PathSkipRoot(s As String) As String
     PathSkipRoot = Mid(s, InStr(1, s, "\") + 1)
 End Function
 
+Public Function PathSkipTail(s As String) As String
+    PathSkipTail = Left(s, InStrRev(s, "\") - 1)
+End Function
+
+Public Function PathGetTail(s As String) As String
+    PathGetTail = Mid(s, InStrRev(s, "\") + 1)
+End Function
