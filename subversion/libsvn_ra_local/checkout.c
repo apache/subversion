@@ -103,18 +103,15 @@ set_any_props (svn_fs_root_t *root,
     {
       const void *key;
       void *val;
-      apr_ssize_t klen;
-      const char *name;
       svn_string_t *value;
 
-      apr_hash_this (hi, &key, &klen, &val);
-      name = apr_pstrndup (pool, key, klen);
+      apr_hash_this (hi, &key, NULL, &val);
       value = val;
       
       if (is_dir)
-        SVN_ERR (editor->change_dir_prop (object_baton, name, value, pool));
+        SVN_ERR (editor->change_dir_prop (object_baton, key, value, pool));
       else
-        SVN_ERR (editor->change_file_prop (object_baton, name, value, pool));  
+        SVN_ERR (editor->change_file_prop (object_baton, key, value, pool));  
     }
 
   return SVN_NO_ERROR;
