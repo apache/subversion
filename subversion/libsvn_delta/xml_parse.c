@@ -91,6 +91,17 @@ svn_create_edit (apr_pool_t *pool, svn_XML_elt_t action, char **atts)
 */
 
 void
+svn_walk_delta (svn_delta_t *delta,
+                fish see-prototype-for-callback,
+                void *user_data)
+{
+  /* kff todo: finish this, then implement svn_find_delta_bottom()
+     with it. */
+}
+
+
+
+void
 svn_find_delta_bottom (void **bottom_obj,
                        svn_XML_elt_t *bottom_kind, 
                        void **penult_obj,

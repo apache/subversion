@@ -228,6 +228,13 @@ typedef struct svn_delta_digger_t
 
 
 /* Creates a parser with the common callbacks and userData registered. */
+void svn_walk_delta (svn_delta_t *delta,
+                     ((svn_error_t *user_callback) *)
+                     (void *delta_component, int kind, void *user_data),
+                     void *user_data);
+
+
+/* Creates a parser with the common callbacks and userData registered. */
 XML_Parser svn_delta_make_xml_parser (svn_delta_digger_t *diggy);
 
 

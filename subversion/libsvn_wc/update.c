@@ -100,16 +100,25 @@ check_existence (svn_string_t path, apr_status_t err_to_report)
 
 
 static svn_error_t *
-update_data_handler (svn_digger_t *diggy, const char *data, int len)
+update_data_handler (svn_digger_t *diggy, svn_edit_content_t *eddy);
 {
   /* kff todo */
 }
 
 
 static svn_error_t *
-update_dir_handler (svn_digger_t *diggy, const char *data, int len)
+update_dir_handler (svn_digger_t *diggy, svn_edit_content_t *eddy);
 {
-  /* kff todo */
+  svn_delta_t *delta = diggy->delta;
+  svn_string_t *dir  = delta_to_path (delta);  /* kff todo */
+
+  if (! dir)
+    {
+      /* kff todo: implement delta_to_path() in terms of
+         svn_walk_delta(), after finishing same. */
+    }
+  fooo working here;
+ 
 }
 
 
