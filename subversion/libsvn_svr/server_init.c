@@ -105,10 +105,10 @@ void
 svn_svr_register_plugin (svn_svr_policies_t *policy,
                          svn_svr_plugin_t *new_plugin)
 {
-  /* just need to push the new plugin structure onto the policy's
-     array of plugins.  */
+  /* just need to push the new plugin pointer onto the policy's
+     array of plugin pointers.  */
 
-  *(svn_svr_plugin_t *) ap_push_array (policy->plugins) = new_plugin;
+  *(svn_svr_plugin_t **) ap_push_array (policy->plugins) = new_plugin;
 
 }
 
