@@ -120,6 +120,9 @@ section for approved changes.)
       Justification: Without this the compile and RPM build breaks.
       Votes:
        +1: david
+       -1: breser (See thread at: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=54911
+                   Message ID: 20040119001028.GQ25614@occipital.brain.org)
+
 
 
 Core changes that already have three +1 votes and no vetos.  (If you
@@ -172,7 +175,9 @@ Bindings changes that affect the build system:
      Justification: An increasingly common version of SWIG that we need
                     to support.
      Votes:
-      +1: breser, clkao
+      +1: clkao
+      -1: breser (See thread at: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=54911
+                  Message ID: 20040119001028.GQ25614@occipital.brain.org)
      
 Bindings changes that don't affect the build system:
 
