@@ -1361,7 +1361,7 @@ test_list = [ None,
               diff_deleted_in_head,
               diff_targets,
               diff_branches,
-              XFail(diff_repos_and_wc),
+              diff_repos_and_wc,
               diff_file_urls,
               ]
 

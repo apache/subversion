@@ -1472,10 +1472,15 @@ diff_repos_wc (const apr_array_header_t *options,
   /* Possibly split up PATH2 into anchor/target.  If we do so, then we
      must split URL1 as well. */
   anchor1 = url1;
+  anchor2 = path2;
   target1 = NULL;
-  SVN_ERR (svn_wc_get_actual_target (path2, &anchor2, &target2, pool));
-  if (target2)
-    svn_path_split (url1, &anchor1, &target1, pool);
+  target2 = NULL;
+  SVN_ERR (svn_io_check_path (path2, &kind, pool));
+  if (kind == svn_node_file)
+    {
+      svn_path_split (path2, &anchor2, &target2, pool);
+      svn_path_split (url1, &anchor1, &target1, pool);
+    }
 
   /* Establish RA session to URL1's anchor */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -1486,10 +1491,8 @@ diff_repos_wc (const apr_array_header_t *options,
                                         ctx, pool));
       
   /* Set up diff editor according to path2's anchor/target. */
-  SVN_ERR (svn_io_check_path (path2, &kind, pool));
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor2, FALSE,
                             (recurse && (! target2)), pool));
-
   if (target2 && (kind == svn_node_dir))
     {
       /* Associate a potentially tree-locked access baton for the
@@ -1519,7 +1522,7 @@ diff_repos_wc (const apr_array_header_t *options,
   SVN_ERR (ra_lib->do_update (session,
                               &reporter, &report_baton,
                               rev,
-                              svn_path_uri_decode (target2, pool),
+                              svn_path_uri_decode (target1, pool),
                               recurse, 
                               diff_editor, diff_edit_baton, pool));
 
