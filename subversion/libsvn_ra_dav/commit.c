@@ -1156,7 +1156,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   ne_proppatch_operation po[2] = { { 0 } };
   int rv;
   svn_stringbuf_t *xml_data;
-  svn_error_t *err;
+  svn_error_t *err = NULL;
   int retry_count = 5;
 
   /* ### this whole sequence can/should be replaced with an expand-property
@@ -1170,6 +1170,9 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
      ### retrieval of the baseline */
 
   do {
+
+    svn_error_clear(err);
+
     /* Get the latest baseline from VCC's DAV:checked-in property.
        This should give us the HEAD revision of the moment. */
     SVN_ERR( svn_ra_dav__get_one_prop(&baseline_url, cc->ras->sess,
@@ -1197,7 +1200,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
 
   /* Yikes, if we couldn't hold onto HEAD after a few retries, throw a
      real error.*/
-  if (retry_count == 0)
+  if (err)
     return err;
 
   /* XML-Escape the log message. */
