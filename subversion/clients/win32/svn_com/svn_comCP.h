@@ -10,8 +10,8 @@
  * ====================================================================
  */
 
-#ifndef _SVN_COMCP_H_
-#define _SVN_COMCP_H_
+#ifndef WINSVN_COMCP_H_
+#define WINSVN_COMCP_H_
 #pragma once
 
 #include "MarshalArray.h"

@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Developer Studio generated include file.
-// Used by COM.rc
+// Used by SVNCOM.rc
 //
 #define IDS_PROJNAME                    100
 #define IDR_SVN                         101

@@ -12,8 +12,8 @@
 	
 // SVN.h : Declaration of the CSVNWorkingCopy
 
-#ifndef __SVN_H_
-#define __SVN_H_
+#ifndef WINSVN_H_
+#define WINSVN_H_
 #pragma once
 
 #include "resource.h"       // main symbols

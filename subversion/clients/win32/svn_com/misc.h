@@ -9,8 +9,8 @@
  * newer version instead, at your option.
  * ====================================================================
  */
-#ifndef __SVN_COM_MISC_H_
-#define __SVN_COM_MISC_H_
+#ifndef WINSVN_COM_MISC_H_
+#define WINSVN_COM_MISC_H_
 #pragma once
 
 const UINT k_uicbINTAsDecimalString = sizeof("-2147483648") - 1;
