@@ -1302,6 +1302,7 @@ merge (svn_stringbuf_t *conflict_p,
   apr_hash_t *s_entries, *t_entries, *a_entries;
   apr_hash_index_t *hi;
   svn_fs_t *fs;
+  apr_pool_t *iterpool;
 
   /* Make sure everyone comes from the same filesystem. */
   fs = svn_fs_fs__dag_get_fs (ancestor);
@@ -1490,6 +1491,7 @@ merge (svn_stringbuf_t *conflict_p,
   a_entries = svn_fs_fs__copy_dir_entries (a_entries, pool);
 
   /* for each entry E in a_entries... */
+  iterpool = svn_pool_create (pool);
   for (hi = apr_hash_first (pool, a_entries); 
        hi; 
        hi = apr_hash_next (hi))
@@ -1500,6 +1502,8 @@ merge (svn_stringbuf_t *conflict_p,
       void *val;
       apr_ssize_t klen;
           
+      svn_pool_clear (iterpool);
+
       /* KEY will be the entry name in ancestor, VAL the dirent */
       apr_hash_this (hi, &key, &klen, &val);
       a_entry = val;
@@ -1534,13 +1538,13 @@ merge (svn_stringbuf_t *conflict_p,
               else
                 {
                   SVN_ERR (id_check_ancestor (&a_ancestorof_t, fs, a_entry->id,
-                                              t_entry->id, pool));
+                                              t_entry->id, iterpool));
                   if (a_ancestorof_t)
                     {
                       /* this is an &&, so we need both ancestor checks. */
                       SVN_ERR (id_check_ancestor (&t_ancestorof_s, fs, 
                                                   t_entry->id, s_entry->id, 
-                                                  pool));
+                                                  iterpool));
                       if (t_ancestorof_s)
                         {
                           /* This is Case 1.  */
@@ -1554,7 +1558,7 @@ merge (svn_stringbuf_t *conflict_p,
                 {
                   SVN_ERR (id_check_ancestor (&s_ancestorof_t, fs, 
                                               s_entry->id, t_entry->id, 
-                                              pool));
+                                              iterpool));
                   if (! s_ancestorof_t)
                     {
                       /* This is Case 2. */
@@ -1577,7 +1581,7 @@ merge (svn_stringbuf_t *conflict_p,
 
                   SVN_ERR (svn_fs_fs__dag_set_entry
                            (target, t_entry->name, s_entry->id, s_entry->kind,
-                            txn_id, pool));
+                            txn_id, iterpool));
                 }
               /* or if target entry is different from both and
                  unrelated to source, and all three entries are
@@ -1590,11 +1594,11 @@ merge (svn_stringbuf_t *conflict_p,
                   svn_node_kind_t s_kind, t_kind, a_kind;
                       
                   SVN_ERR (svn_fs_fs__dag_get_node (&s_ent_node, fs,
-                                                    s_entry->id, pool));
+                                                    s_entry->id, iterpool));
                   SVN_ERR (svn_fs_fs__dag_get_node (&t_ent_node, fs,
-                                                    t_entry->id, pool));
+                                                    t_entry->id, iterpool));
                   SVN_ERR (svn_fs_fs__dag_get_node (&a_ent_node, fs,
-                                                    a_entry->id, pool));
+                                                    a_entry->id, iterpool));
 
                   s_kind = svn_fs_fs__dag_node_kind (s_ent_node);
                   t_kind = svn_fs_fs__dag_node_kind (t_ent_node);
@@ -1607,19 +1611,19 @@ merge (svn_stringbuf_t *conflict_p,
                       return conflict_err (conflict_p,
                                            svn_path_join (target_path,
                                                           a_entry->name,
-                                                          pool));
+                                                          iterpool));
                     }
 
                   /* ... just recurse. */
                   new_tpath = svn_path_join (target_path, t_entry->name,
-                                             pool);
+                                             iterpool);
                   SVN_ERR (merge (conflict_p, new_tpath,
                                   t_ent_node, s_ent_node, a_ent_node,
-                                  txn_id, pool));
+                                  txn_id, iterpool));
 
                   SVN_ERR (svn_fs_fs__dag_get_predecessor_count (&pred_count,
                                                                  s_ent_node,
-                                                                 pool));
+                                                                 iterpool));
 
                   /* If target is an immediate descendant of ancestor,
                      and source is also a descendant of ancestor, we
@@ -1627,7 +1631,7 @@ merge (svn_stringbuf_t *conflict_p,
                      source. */
                   SVN_ERR (update_ancestry (fs, s_entry->id,
                                             t_entry->id, txn_id, 
-                                            new_tpath, pred_count, pool));
+                                            new_tpath, pred_count, iterpool));
                 }
               /* Else target entry has changed since ancestor entry,
                  but it changed either to source entry or to a
@@ -1645,7 +1649,7 @@ merge (svn_stringbuf_t *conflict_p,
               return conflict_err (conflict_p,
                                    svn_path_join (target_path,
                                                   a_entry->name,
-                                                  pool));
+                                                  iterpool));
             }
 
           /* Else if E did not change between ancestor and source,
@@ -1668,7 +1672,7 @@ merge (svn_stringbuf_t *conflict_p,
                    "Unexpected immutable node at '%s'", target_path);
               
               SVN_ERR (svn_fs_fs__dag_delete (target, t_entry->name, 
-                                              txn_id, pool));
+                                              txn_id, iterpool));
 
               /* Seems cleanest to remove it from the target entries
                  hash now, even though no code would break if we
@@ -1690,7 +1694,7 @@ merge (svn_stringbuf_t *conflict_p,
               return conflict_err (conflict_p,
                                    svn_path_join (target_path,
                                                   t_entry->name,
-                                                  pool));
+                                                  iterpool));
             }
           else
             {
@@ -1700,8 +1704,8 @@ merge (svn_stringbuf_t *conflict_p,
                  this change. */
               SVN_ERR (undelete_change (fs, svn_path_join (target_path, 
                                                            t_entry->name, 
-                                                           pool),
-                                        txn_id, pool));
+                                                           iterpool),
+                                        txn_id, iterpool));
             }
         }
       /* E exists in neither target nor source */
@@ -1712,8 +1716,8 @@ merge (svn_stringbuf_t *conflict_p,
              for that change. */
           SVN_ERR (undelete_change (fs, svn_path_join (target_path, 
                                                        a_entry->name, 
-                                                       pool),
-                                    txn_id, pool));
+                                                       iterpool),
+                                    txn_id, iterpool));
 
           /* ### kff todo: what about the rename case? */
         }
@@ -1736,6 +1740,8 @@ merge (svn_stringbuf_t *conflict_p,
       apr_ssize_t klen;
       svn_boolean_t s_ancestorof_t = FALSE;
 
+      svn_pool_clear (iterpool);
+
       apr_hash_this (hi, &key, &klen, &val);
       s_entry = val;
       t_entry = apr_hash_get (t_entries, key, klen);
@@ -1749,7 +1755,7 @@ merge (svn_stringbuf_t *conflict_p,
       if (t_entry)
         {
           SVN_ERR (id_check_ancestor (&s_ancestorof_t, fs, s_entry->id,
-                                      t_entry->id, pool));
+                                      t_entry->id, iterpool));
         }
 
       /* E does not exist in target */
@@ -1763,7 +1769,7 @@ merge (svn_stringbuf_t *conflict_p,
               
           SVN_ERR (svn_fs_fs__dag_set_entry
                    (target, s_entry->name, s_entry->id, s_entry->kind,
-                    txn_id, pool));
+                    txn_id, iterpool));
         }
       /* E exists in target but is different from E in source */
       else if (! s_ancestorof_t)
@@ -1771,7 +1777,7 @@ merge (svn_stringbuf_t *conflict_p,
           return conflict_err (conflict_p,
                                svn_path_join (target_path,
                                               t_entry->name,
-                                              pool));
+                                              iterpool));
 
           /* The remaining case would be: E exists in target and is
            * same as in source.  This implies a twin add, so target
@@ -1779,7 +1785,8 @@ merge (svn_stringbuf_t *conflict_p,
            */
         }
     }
-      
+  apr_pool_destroy (iterpool);
+
   /* All entries in ancestor and source have been accounted for.
    *
    * Any entry E in target that does not exist in ancestor or source

@@ -61,7 +61,7 @@ Candidate changes:
       +1: maxb
 
   * r13222, r13223, r13232
-    Rewrite libsvn_fs_fs's auto-merge algorithm (requires r13193 first)
+    Rewrite libsvn_fs_fs's auto-merge algorithm
     Justification:
       unacceptable performance (>50 minutes for a small commit) in
       a repository with 300,000 revisions
@@ -113,13 +113,6 @@ Approved changes (further review is welcome, but not required):
       1.1.x-r13358 (1.1.x@13358 1.1.x-r13358@HEAD)
     Votes:
       +1: breser, philip, maxb
-
-  * r13193
-    Fix runaway memory usage when auto-merging a large tree (fsfs).
-    Justification:
-      currently dumps core on our 27k rev / 70k files tree
-    Votes:
-      +1: epg, ghudson, maxb
 
   * r13218, r13465, r13468
     Fix runaway memory usage in svnadmin hotcopy (fsfs).
