@@ -119,10 +119,7 @@ typedef struct svn_txdelta_op_t {
 } svn_txdelta_op_t;
 
 
-/** A structure describing how to produce the next stretch of the target 
- * string. 
- *
- * An @c svn_txdelta_window_t object describes how to reconstruct a
+/** An @c svn_txdelta_window_t object describes how to reconstruct a
  * contiguous section of the target string (the "target view") using a
  * specified contiguous region of the source string (the "source
  * view").  It contains a series of instructions which assemble the
@@ -170,9 +167,7 @@ typedef struct svn_txdelta_window_t {
 } svn_txdelta_window_t;
 
 
-/** A consumer of delta windows.
- *
- * A typedef for functions that consume a series of delta windows, for
+/** A typedef for functions that consume a series of delta windows, for
  * use in caller-pushes interfaces.  Such functions will typically
  * apply the delta windows to produce some file, or save the windows
  * somewhere.  At the end of the delta window stream, you must call
@@ -182,9 +177,7 @@ typedef svn_error_t * (*svn_txdelta_window_handler_t)
                       (svn_txdelta_window_t *window, void *baton);
 
 
-/** A delta stream.
- *
- * A delta stream --- this is the hat from which we pull a series of
+/** A delta stream --- this is the hat from which we pull a series of
  * svn_txdelta_window_t objects, which, taken in order, describe the
  * entire target string.  This type is defined within libsvn_delta, and
  * opaque outside that library.
@@ -192,9 +185,7 @@ typedef svn_error_t * (*svn_txdelta_window_handler_t)
 typedef struct svn_txdelta_stream_t svn_txdelta_stream_t;
 
 
-/** Get the next @a window from the @a stream.
- *
- * Set @a *window to a pointer to the next window from the delta stream
+/** Set @a *window to a pointer to the next window from the delta stream
  * @a stream.  When we have completely reconstructed the target string,
  * set @a *window to zero.
  *
@@ -205,18 +196,14 @@ svn_error_t *svn_txdelta_next_window (svn_txdelta_window_t **window,
                                       apr_pool_t *pool);
 
 
-/** Get the @a md5 digest for the fulltext deltified by @a stream.
- *
- * Return the @a md5 digest for the complete fulltext deltified by
+/** Return the @a md5 digest for the complete fulltext deltified by
  * @a stream, or @c NULL if @a stream has not yet returned its final 
  * @c NULL window.  The digest is allocated in the same memory as @a 
  * STREAM.
  */
 const unsigned char *svn_txdelta_md5_digest (svn_txdelta_stream_t *stream);
 
-/** Create a txdelta stream from @a source and @a target.
- *
- * Set @a *stream to a pointer to a delta stream that will turn the byte
+/** Set @a *stream to a pointer to a delta stream that will turn the byte
  * string from @a source into the byte stream from @a target.
  *
  * @a source and @a target are both readable generic streams.  When we call
@@ -231,9 +218,7 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
                   apr_pool_t *pool);
 
 
-/** Send @a string to the window-handler @a handler/@a baton.
- *
- * Send the contents of @a string to window-handler @a handler/@a baton. 
+/** Send the contents of @a string to window-handler @a handler/@a baton. 
  * This is effectively a 'copy' operation, resulting in delta windows that 
  * make the target equivalent to the value of @a string.
  *
@@ -244,9 +229,7 @@ svn_error_t *svn_txdelta_send_string (const svn_string_t *string,
                                       void *handler_baton,
                                       apr_pool_t *pool);
 
-/** Send @a stream to the window-handler @a handler/@a baton.
- *
- * Send the contents of @a stream to window-handler @a handler/@a baton. 
+/** Send the contents of @a stream to window-handler @a handler/@a baton. 
  * This is effectively a 'copy' operation, resulting in delta windows that 
  * make the target equivalent to the stream.
  *
@@ -262,9 +245,7 @@ svn_error_t *svn_txdelta_send_stream (svn_stream_t *stream,
                                       unsigned char *digest,
                                       apr_pool_t *pool);
 
-/** Send @a txstream to the window-handler @a handler/@a baton.
- *
- * Send the contents of @a txstream to window-handler @a handler/@a baton. 
+/** Send the contents of @a txstream to window-handler @a handler/@a baton. 
  * Windows will be extracted from the stream and delivered to the handler.
  *
  * All temporary allocation is performed in @a pool.
@@ -275,9 +256,7 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
                                         apr_pool_t *pool);
 
 
-/** Prepare to apply a text delta.
- *
- * Prepare to apply a text delta.  @a source is a readable generic stream
+/** Prepare to apply a text delta.  @a source is a readable generic stream
  * yielding the source data, @a target is a writable generic stream to
  * write target data to, and allocation takes place in a sub-pool of
  * @a pool.  On return, @a *handler is set to a window handler function and
@@ -309,9 +288,7 @@ void svn_txdelta_apply (svn_stream_t *source,
 
 /*** Producing and consuming svndiff-format text deltas.  ***/
 
-/** Prepare to produce an svndiff diff from text delta windows.
- *
- * Prepare to produce an svndiff-format diff from text delta windows.
+/** Prepare to produce an svndiff-format diff from text delta windows.
  * @a output is a writable generic stream to write the svndiff data to.
  * Allocation takes place in a sub-pool of @a pool.  On return, @a *handler
  * is set to a window handler function and @a *handler_baton is set to
@@ -322,9 +299,7 @@ void svn_txdelta_to_svndiff (svn_stream_t *output,
                              svn_txdelta_window_handler_t *handler,
                              void **handler_baton);
 
-/** Return a stream which parses svndiff data into a text delta.
- *
- * Return a writable generic stream which will parse svndiff-format
+/** Return a writable generic stream which will parse svndiff-format
  * data into a text delta, invoking @a handler with @a handler_baton
  * whenever a new window is ready.  If @a error_on_early_close is @c 
  * TRUE, attempting to close this stream before it has handled the entire
@@ -548,18 +523,14 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  */
 typedef struct
 {
-  /** Set the target revision for this edit.
-   *
-   * Set the target revision for this edit to @a target_revision.  This
+  /** Set the target revision for this edit to @a target_revision.  This
    * call, if used, should precede all other editor calls.
    */
   svn_error_t *(*set_target_revision) (void *edit_baton,
                                        svn_revnum_t target_revision,
                                        apr_pool_t *pool);
 
-  /** Open the root of the edit.
-   *
-   * Set @a *root_baton to a baton for the top directory of the change.
+  /** Set @a *root_baton to a baton for the top directory of the change.
    * (This is the top of the subtree being changed, not necessarily
    * the root of the filesystem.)  Like any other directory baton, the
    * producer should call @c close_directory on @a root_baton when they're
@@ -577,9 +548,7 @@ typedef struct
                              void **root_baton);
 
 
-  /** Delete an entry.
-   *
-   * Remove the directory entry named @a path, a child of the directory
+  /** Remove the directory entry named @a path, a child of the directory
    * represented by @a parent_baton.  If @a revision is set, it is used as a
    * sanity check to ensure that you are removing the revision of @a path
    * that you really think you are.
@@ -592,9 +561,7 @@ typedef struct
                                 apr_pool_t *pool);
 
 
-  /** Add a directory.
-   *
-   * We are going to add a new subdirectory named @a path.  We will use
+  /** We are going to add a new subdirectory named @a path.  We will use
    * the value this callback stores in @a *child_baton as the
    * @a parent_baton for further changes in the new subdirectory.  
    *
@@ -613,9 +580,7 @@ typedef struct
                                  apr_pool_t *dir_pool,
                                  void **child_baton);
 
-  /** Open a directory.
-   *
-   * We are going to make changes in a subdirectory (of the directory
+  /** We are going to make changes in a subdirectory (of the directory
    * identified by @a parent_baton). The subdirectory is specified by
    * @a path. The callback must store a value in @a *child_baton that 
    * should be used as the @a parent_baton for subsequent changes in this
@@ -632,9 +597,7 @@ typedef struct
                                   apr_pool_t *dir_pool,
                                   void **child_baton);
 
-  /**  Change a directory's property.
-   *
-   * Change the value of a directory's property.
+  /** Change the value of a directory's property.
    * - @a dir_baton specifies the directory whose property should change.
    * - @a name is the name of the property to change.
    * - @a value is the new value of the property, or @c NULL if the property
@@ -647,9 +610,7 @@ typedef struct
                                    const svn_string_t *value,
                                    apr_pool_t *pool);
 
-  /** Close a directory.
-   *
-   * We are done processing a subdirectory, whose baton is @a dir_baton
+  /** We are done processing a subdirectory, whose baton is @a dir_baton
    * (set by @c add_directory or @c open_directory).  We won't be using
    * the baton any more, so whatever resources it refers to may now be
    * freed.
@@ -658,9 +619,7 @@ typedef struct
                                    apr_pool_t *pool);
 
 
-  /** Add a file.
-   *
-   * We are going to add a new file named @a path.  The callback can
+  /** We are going to add a new file named @a path.  The callback can
    * store a baton for this new file in @a **file_baton; whatever value
    * it stores there should be passed through to @c apply_textdelta.
    *
@@ -679,9 +638,7 @@ typedef struct
                             apr_pool_t *file_pool,
                             void **file_baton);
 
-  /** Open a file.
-   *
-   * We are going to make change to a file named @a path, which resides
+  /** We are going to make change to a file named @a path, which resides
    * in the directory identified by @a parent_baton.
    *
    * The callback can store a baton for this new file in @a **file_baton;
@@ -735,8 +692,6 @@ typedef struct
                                    void **handler_baton);
 
   /** Change the value of a file's property.
-   *
-   * Change the value of a file's property.
    * - @a file_baton specifies the file whose property should change.
    * - @a name is the name of the property to change.
    * - @a value is the new value of the property, or @c NULL if the property
@@ -749,9 +704,7 @@ typedef struct
                                     const svn_string_t *value,
                                     apr_pool_t *pool);
 
-  /** Close a file.
-   *
-   * We are done processing a file, whose baton is @a file_baton (set by
+  /** We are done processing a file, whose baton is @a file_baton (set by
    * @c add_file or @c open_file).  We won't be using the baton any
    * more, so whatever resources it refers to may now be freed.
    *
@@ -766,17 +719,13 @@ typedef struct
                               const char *text_checksum,
                               apr_pool_t *pool);
 
-  /** Finish an edit.
-   *
-   * All delta processing is done.  Call this, with the @a edit_baton for
+  /** All delta processing is done.  Call this, with the @a edit_baton for
    * the entire edit.
    */
   svn_error_t *(*close_edit) (void *edit_baton, 
                               apr_pool_t *pool);
 
-  /** Abort an edit.
-   *
-   * The editor-driver has decided to bail out.  Allow the editor to
+  /** The editor-driver has decided to bail out.  Allow the editor to
    * gracefully clean up things if it needs to.
    */
   svn_error_t *(*abort_edit) (void *edit_baton,

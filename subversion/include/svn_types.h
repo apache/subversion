@@ -112,7 +112,7 @@ typedef long int svn_revnum_t;
 /** The size of a file in the Subversion FS. */
 typedef apr_uint64_t svn_filesize_t;
 
-/** The 'official' invalid file size constant. **/
+/** The 'official' invalid file size constant. */
 #define SVN_INVALID_FILESIZE ((svn_filesize_t) -1)
 
 /** In @c printf()-style functions, format file sizes using this. */
@@ -332,9 +332,7 @@ svn_error_t *svn_mime_type_validate (const char *mime_type,
                                      apr_pool_t *pool);
 
 
-/** Determine if @a mime_type is binary.
- *
- * Return false iff @a mime_type is a textual type.
+/** Return false iff @a mime_type is a textual type.
  *
  * All mime types that start with "text/" are textual, plus some special 
  * cases (for example, "image/x-xbitmap").

@@ -59,11 +59,8 @@ extern "C" {
 /* Diffs. */
 
 /** An opaque type that represents a difference between either two or
- * three datasources.
- *
- * An opaque type that represents a difference between either two or
- * three datasources.   This object is returned by @c svn_diff(),
- * @c svn_diff3() and @c svn_diff4 below, and consumed by a number of
+ * three datasources.   This object is returned by @c svn_diff_diff(),
+ * @c svn_diff_diff3() and @c svn_diff_diff4 below, and consumed by a number of
  * other routines.
  */
 typedef struct svn_diff_t svn_diff_t;
@@ -109,9 +106,6 @@ typedef struct svn_diff_fns_t
                                              svn_diff_datasource_e datasource);
 
   /** A function for ordering the tokens with the same interface as
-   * 'strcmp'.
-   *
-   * A function for ordering the tokens with the same interface as
    * 'strcmp': If @a ltoken and @a rtoken are "equal", return 0.  If 
    * @a ltoken is "less than" @a rtoken, return a number < 0.  If @a ltoken 
    * is "greater than" @a rtoken, return a number > 0.  [The diff algorithm
@@ -132,10 +126,7 @@ typedef struct svn_diff_fns_t
 
 /* The Main Events */
 
-/** Return a diff that represents the differences between an original and 
- * modified datasource.
- *
- * Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
+/** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
  * return a diff object in @a *diff that represents a difference between
  * an "original" and "modified" datasource.  Do all allocation in @a pool.
  */
@@ -144,9 +135,7 @@ svn_error_t *svn_diff_diff(svn_diff_t **diff,
                            const svn_diff_fns_t *diff_fns,
                            apr_pool_t *pool);
 
-/** Return a diff that represents the difference between three datasources.
- *
- * Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
+/** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
  * return a diff object in @a *diff that represents a difference between
  * three datasources: "original", "modified", and "latest".  Do all
  * allocation in @a pool.
@@ -156,9 +145,7 @@ svn_error_t *svn_diff_diff3(svn_diff_t **diff,
                             const svn_diff_fns_t *diff_fns,
                             apr_pool_t *pool);
 
-/** Return a diff that represents the difference between four datasources.
- *
- * Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
+/** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
  * return a diff object in @a *diff that represents a difference between
  * two datasources: "original" and "latest", adjusted to become a full
  * difference between "original", "modified" and "latest" using "ancestor".
@@ -172,9 +159,7 @@ svn_error_t *svn_diff_diff4(svn_diff_t **diff,
 
 /* Utility functions */
 
-/** Determine if a diff object contains conflicts.
- *
- * Determine if a diff object contains conflicts.  If it does, return
+/** Determine if a diff object contains conflicts.  If it does, return
  * @c TRUE, else return @c FALSE.
  */
 svn_boolean_t
@@ -182,9 +167,6 @@ svn_diff_contains_conflicts(svn_diff_t *diff);
 
 
 /** Determine if a diff object contains actual differences between the
- * datasources.
- *
- * Determine if a diff object contains actual differences between the
  * datasources.  If so, return @c TRUE, else return @c FALSE.
  */
 svn_boolean_t
@@ -197,7 +179,6 @@ svn_diff_contains_diffs(svn_diff_t *diff);
 
 /** A vtable for displaying (or consuming) differences between datasources.
  *
- * A vtable for displaying (or consuming) differences between datasources.
  * Differences, similarities, and conflicts are described by lining up
  * "ranges" of data.
  *  
@@ -275,9 +256,7 @@ typedef struct svn_diff_output_fns_t
                                      apr_off_t latest_start,
                                      apr_off_t latest_length);
 
-  /** All three datasources have conflicting data ranges.
-   *
-   * All three datasources have conflicting data ranges.  The range
+  /** All three datasources have conflicting data ranges.  The range
    * @a latest_start, @a latest_length in the "latest" datasource conflicts 
    * with the range @a original_start, @a original_length in the "original" 
    * datasource, and also conflicts with the range @a modified_start, 

@@ -34,7 +34,6 @@ extern "C" {
 
 /** Valid states for 'svn:eol-style' property.
  *
- * Valid states for 'svn:eol-style' property.  
  * Property nonexistence is equivalent to 'none'.
  */
 typedef enum svn_subst_eol_style
@@ -55,9 +54,6 @@ typedef enum svn_subst_eol_style
 
 /** Set @a *style to the appropriate @c svn_subst_eol_style_t and @a *eol to 
  * the appropriate cstring for a given svn:eol-style property value.
- *
- * Set @a *style to the appropriate @c svn_subst_eol_style_t and @a *eol to the 
- * appropriate cstring for a given svn:eol-style property value.
  *
  * Set @a *eol to
  *
@@ -90,11 +86,9 @@ typedef struct svn_subst_keywords_t
 
 /** Return @c TRUE if @a a and @a b do not hold the same keywords.
  *
- * Return @a TRUE if @a a and @a b do not hold the same keywords.
- *
  * If @a compare_values is @c TRUE, "same" means that the @a a and @a b 
  * contain exactly the same set of keywords, and the values of corresponding
- * keywords match as well.  Else if @a compare_values is FALSE, then
+ * keywords match as well.  Else if @a compare_values is @c FALSE, then
  * "same" merely means that @a a and @a b hold the same set of keywords,
  * although those keywords' values might differ.
  *
@@ -107,9 +101,7 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
                            svn_boolean_t compare_values);
 
 
-/** Copy and translate the data in stream @a src into stream @a dst.
- *
- * Copy and translate the data in stream @a src into stream @a dst.  It is
+/** Copy and translate the data in stream @a src into stream @a dst.  It is
  * assumed that @a src is a readable stream and @a dst is a writable stream.
  *
  * If @a eol_str is non-@c NULL, replace whatever bytestring @a src uses to
@@ -150,9 +142,7 @@ svn_subst_translate_stream (svn_stream_t *src,
                             svn_boolean_t expand);
 
 
-/** A variant of @c svn_subst_translate_stream which operates on files.
- *
- * Convenience routine: a variant of @c svn_subst_translate_stream which
+/** Convenience routine: a variant of @c svn_subst_translate_stream which
  * operates on files.  (See previous docstring for details.)
  *
  * Copy the contents of file-path @a src to file-path @a dst atomically,
@@ -174,9 +164,7 @@ svn_subst_copy_and_translate (const char *src,
                               svn_boolean_t expand,
                               apr_pool_t *pool);
 
-/** A variant of @c svn_subst_translate_stream which operates on cstrings.
- *
- * Convenience routine: a variant of @c svn_subst_translate_stream which
+/** Convenience routine: a variant of @c svn_subst_translate_stream which
  * operates on cstrings.  (See previous docstring for details.)
  *
  * Return a new string in @a *dst, allocated in @a pool, by copying the
@@ -199,9 +187,6 @@ svn_subst_translate_cstring (const char *src,
 /* Eol conversion and character encodings */
 
 /** Translate the data in @a value (assumed to be in encoded in charset
- * @a encoding) to UTF8 and LF line-endings.
- *
- * Translate the data in @a value (assumed to be in encoded in charset
  * @a encoding) to UTF8 and LF line-endings.  If @a encoding is @c NULL, 
  * then assume that @a value is in the system-default language encoding.
  * Return the translated data in @a *new_value, allocated in @a pool.  
@@ -212,9 +197,6 @@ svn_error_t *svn_subst_translate_string (svn_string_t **new_value,
                                          apr_pool_t *pool);
 
 /** Translate the data in @a value from UTF8 and LF line-endings into
- * native locale and native line-endings.
- *
- * Translate the data in @a value from UTF8 and LF line-endings into
  * native locale and native line-endings.  Return the translated data
  * in @a *new_value, allocated in @a pool.  
  */

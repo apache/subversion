@@ -57,7 +57,7 @@ typedef struct svn_fs_t svn_fs_t;
  * specific to the filesystem back-end.
  *
  * @note The lifetime of @a fs_config must not be shorter than @a
- * pool's. It's a good idea to allocate @ fs_config from @a pool or
+ * pool's. It's a good idea to allocate @a fs_config from @a pool or
  * one of its ancestors.
  *
  * @note You probably don't want to use this directly, especially not
@@ -135,7 +135,7 @@ svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *path);
 
 
 /** Return the utf8-encoded path to @a fs's repository, allocated in
- * @a POOL.  Note: this is just what was passed to
+ * @a pool.  Note: this is just what was passed to
  * @c svn_fs_create_berkeley() or @a svn_fs_open_berkeley() -- might be
  * absolute, might not.
  */
@@ -1076,7 +1076,7 @@ svn_error_t *svn_fs_file_length (svn_filesize_t *length_p,
 
 
 /** Put the MD5 checksum of file @a path into @a digest, which points
- * to MD5_DIGESTSIZE bytes of storage.  Use @a pool only for temporary
+ * to @c MD5_DIGESTSIZE bytes of storage.  Use @a pool only for temporary
  * allocations.
  *
  * If the filesystem does not have a prerecorded checksum for @a path,
@@ -1161,7 +1161,7 @@ svn_error_t *svn_fs_make_file (svn_fs_root_t *root,
  * checksum of the base text against which svndiff data is being
  * applied; if not, svn_fs_apply_textdelta or the @a *contents_p call
  * which detects the mismatch will return the error
- * SVN_ERR_CHECKSUM_MISMATCH (if there is no base text, there may
+ * @c SVN_ERR_CHECKSUM_MISMATCH (if there is no base text, there may
  * still be an error if @a base_checksum is neither null nor the
  * checksum of the empty string).
  *
@@ -1169,7 +1169,7 @@ svn_error_t *svn_fs_make_file (svn_fs_root_t *root,
  * results from this delta application.  It is ignored if null, but if
  * not null, it must match the checksum of the result; if it does not,
  * then the @a *contents_p call which detects the mismatch will return
- * the error SVN_ERR_CHECKSUM_MISMATCH.
+ * the error @c SVN_ERR_CHECKSUM_MISMATCH.
  *
  * Do temporary allocation in @a pool.
  */
@@ -1197,7 +1197,7 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
  * written to the stream.  It is ignored if null, but if not null, it
  * must match the checksum of the result; if it does not, then the @a
  * *contents_p call which detects the mismatch will return the error
- * SVN_ERR_CHECKSUM_MISMATCH.
+ * @c SVN_ERR_CHECKSUM_MISMATCH.
  *
  * Do any necessary temporary allocation in @a pool.
  *

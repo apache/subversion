@@ -47,9 +47,7 @@ extern "C" {
  * @{
  */
 
-/** Read a hash table from a file.
- *
- * Read a hash table from @a srcfile, storing the resultants names and
+/** Read a hash table from @a srcfile, storing the resultants names and
  * values in @a hash.  Use a @a pool for all allocations.  @a hash will 
  * have <tt>const char *</tt> keys and <tt>svn_string_t *</tt> values.  
  */
@@ -57,9 +55,7 @@ apr_status_t svn_hash_read (apr_hash_t *hash,
                             apr_file_t *srcfile,
                             apr_pool_t *pool);
 
-/** Write a hash to a file.
- *
- * Dump @a hash to @a destfile.  Use @a pool for all allocations.  @a hash 
+/** Dump @a hash to @a destfile.  Use @a pool for all allocations.  @a hash 
  * has <tt>const char *</tt> keys and <tt>svn_string_t *</tt> values.  
  */
 apr_status_t svn_hash_write (apr_hash_t *hash, 

@@ -77,18 +77,15 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_TEMPLATE_ROOT             "template-root"
 
 
-/** Read configuration information from the standard sources and
- * return it in the hash @a *cfg_hash.
- *
- * Read configuration information from the standard sources and merge
+/** Read configuration information from the standard sources and merge
  * it into the hash @a *cfg_hash.  That is, first read any system-wide
  * configurations (from a file or from the registry), then merge in
  * personal configurations (again from file or registry).  The hash
  * and all its data are allocated in @a pool.
  *
  * @a *cfg_hash is a hash whose keys are @c const char * configuration
- * categories (SVN_CONFIG_CATEGORY_SERVERS,
- * SVN_CONFIG_CATEGORY_CONFIG, etc.) and whose values are the @c
+ * categories (@c SVN_CONFIG_CATEGORY_SERVERS,
+ * @c SVN_CONFIG_CATEGORY_CONFIG, etc.) and whose values are the @c
  * svn_config_t * items representing the configuration values for that
  * category.  
  */
@@ -96,9 +93,7 @@ svn_error_t *svn_config_get_config (apr_hash_t **cfg_hash,
                                     apr_pool_t *pool);
 
 
-/** Read configuration data from a @a file.
- *
- * Read configuration data from @a file (a file or registry path) into
+/** Read configuration data from @a file (a file or registry path) into
  * @a *cfgp, allocated in @a pool.
  *
  * If @a file does not exist, then if @a must_exist, return an error,
@@ -109,9 +104,7 @@ svn_error_t *svn_config_read (svn_config_t **cfgp,
                               svn_boolean_t must_exist,
                               apr_pool_t *pool);
 
-/** Merge config data from a @a file into an @c svn_config_t.
- *
- * Like @c svn_config_read, but merge the configuration data from @a file 
+/** Like @c svn_config_read, but merges the configuration data from @a file 
  * (a file or registry path) into @a *cfg, which was previously returned
  * from @c svn_config_read.  This function invalidates all value
  * expansions in @a cfg, so that the next @c svn_option_get takes the
@@ -122,9 +115,7 @@ svn_error_t *svn_config_merge (svn_config_t *cfg,
                                svn_boolean_t must_exist);
 
 
-/** Find a config option's setting.
- *
- * Find the value of a (@a section, @a option) pair in @a cfg, set @a 
+/** Find the value of a (@a section, @a option) pair in @a cfg, set @a 
  * *valuep to the value.
  *
  * If @a cfg is @c NULL, just sets @a *valuep to @a default_value. If
@@ -140,9 +131,7 @@ void svn_config_get (svn_config_t *cfg, const char **valuep,
                      const char *section, const char *option,
                      const char *default_value);
 
-/** Set a config option.
- *
- * Add or replace the value of a (@a section, @a option) pair in @a cfg with 
+/** Add or replace the value of a (@a section, @a option) pair in @a cfg with 
  * @a value.
  *
  * This function invalidates all value expansions in @a cfg.
@@ -159,10 +148,7 @@ void svn_config_set (svn_config_t *cfg,
 typedef svn_boolean_t (*svn_config_enumerator_t)
        (const char *name, const char *value, void *baton);
 
-/** Enumerate the options in @a section by calling @a callback and passing 
- * it @a baton for each of them.
- *
- * Enumerate the options in @a section, passing @a baton and the current
+/** Enumerate the options in @a section, passing @a baton and the current
  * option's name and value to @a callback.  Continue the enumeration if
  * @a callback returns @c TRUE.  Return the number of times @a callback 
  * was called.
@@ -173,7 +159,7 @@ typedef svn_boolean_t (*svn_config_enumerator_t)
  *     from @c svn_config_enumerate.  What's the use case for
  *     @c svn_config_enumerate?  Is it more likely to need to break out
  *     of an enumeration early, with no error, than an invocation of
- *     CALLBACK is likely to need to return an error? ###
+ *     @a callback is likely to need to return an error? ###
  *
  * @a callback's @a name and @a name parameters are only valid for the
  * duration of the call.
@@ -218,10 +204,7 @@ svn_error_t *svn_config_get_server_setting_int(svn_config_t *cfg,
                                                apr_pool_t *pool);
 
 
-/** Ensure that the user's ~/.subversion/ area exists, and create no-op 
- * template files for any absent config files.
- *
- * Try to ensure that the user's ~/.subversion/ area exists, and create no-op
+/** Try to ensure that the user's ~/.subversion/ area exists, and create no-op
  * template files for any absent config files.  Use @a pool for any
  * temporary allocation.  
  *
@@ -239,11 +222,16 @@ svn_error_t *svn_config_ensure (apr_pool_t *pool);
 
 
 
-/** Accessing cached authentication data in the user config area  */
+/** Accessing cached authentication data in the user config area.
+ *
+ * @defgroup cached_authentication_data cached authentication data.
+ * @{
+ */
 
 
-/* A hash-key pointing to a realmstring.  Every file containing
-   authentication data should have this key.  */
+/** A hash-key pointing to a realmstring.  Every file containing
+ * authentication data should have this key.
+ */
 #define SVN_CONFIG_REALMSTRING_KEY  "svn:realmstring"
 
 /** Use @a cred_kind and @a realmstring to locate a file within the
@@ -279,6 +267,7 @@ svn_error_t * svn_config_write_auth_data (apr_hash_t *hash,
                                           const char *realmstring,
                                           apr_pool_t *pool);
 
+/** @} */
 
 #ifdef __cplusplus
 }

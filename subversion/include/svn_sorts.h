@@ -48,9 +48,7 @@ typedef struct {
 } svn_item_t;
 
 
-/** Compare two @c svn_item_t's.
- *
- * Compare two @c svn_item_t's, returning an integer greater than,
+/** Compare two @c svn_item_t's, returning an integer greater than,
  * equal to, or less than 0, according as @a a is greater than, equal to,
  * or less than @a b.
  * 
@@ -68,9 +66,7 @@ typedef struct {
 int svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b);
 
 
-/** Compare two @c svn_revnum_t's.
- *
- * Compare two @c svn_revnum_t's, returning an integer greater than, equal
+/** Compare two @c svn_revnum_t's, returning an integer greater than, equal
  * to, or less than 0, according as @a b is greater than, equal to, or less
  * than @a a. Note that this sorts newest revision to oldest (IOW, descending
  * order).
@@ -83,9 +79,7 @@ int svn_sort_compare_revisions (const void *a, const void *b);
 
 
 #ifndef apr_hash_sorted_keys
-/** Sort a hashtable according to it's keys and return an array.
- *
- * Sort @a ht according to its keys, return an @c apr_array_header_t
+/** Sort @a ht according to its keys, return an @c apr_array_header_t
  * containing @c svn_item_t structures holding those keys and values
  * (i.e. for each @c svn_item_t @a item in the returned array, @a item->key
  * and is the @a item->size are the hash key, and @a item->data points to
@@ -108,9 +102,7 @@ apr_hash_sorted_keys (apr_hash_t *ht,
 #endif /* apr_hash_sorted_keys */
 
 #ifndef apr_array_prepend
-/** Add a new element to the head of an array.
- * 
- * Return a pointer to an empty slot at the head of array @a arr.
+/** Return a pointer to an empty slot at the head of array @a arr.
  *
  * Note that if your application does not strictly need the new
  * element to be at the head of the array, consider using the much
