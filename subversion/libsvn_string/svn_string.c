@@ -118,7 +118,6 @@ svn_string_create (const char *cstring, apr_pool_t *pool)
 }
 
 
-
 /* Overwrite bytestring STR with a character C. */
 void 
 svn_string_fillchar (svn_string_t *str, const unsigned char c)
@@ -160,14 +159,20 @@ svn_string_isempty (const svn_string_t *str)
 }
 
 
-static void
-ensure_block_capacity (svn_string_t *str, 
-                       apr_size_t minimum_size,
-                       apr_pool_t *pool)
+void
+svn_string_ensure (svn_string_t *str, 
+                   apr_size_t minimum_size,
+                   apr_pool_t *pool)
 {
   /* Keep doubling capacity until have enough. */
-  while (str->blocksize < minimum_size)
-    str->blocksize *= 2;
+  if (str->blocksize < minimum_size)
+    {
+      if (str->blocksize == 0)
+        str->blocksize = minimum_size;
+      else
+        while (str->blocksize < minimum_size)
+          str->blocksize *= 2;
+    }
 
   str->data = (char *) my__realloc (str->data, 
                                     str->len,
@@ -193,7 +198,7 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
   total_len = str->len + count;  /* total size needed */
 
   /* +1 for null terminator. */
-  ensure_block_capacity (str, (total_len + 1), pool);
+  svn_string_ensure (str, (total_len + 1), pool);
 
   /* get address 1 byte beyond end of original bytestring */
   start_address = (str->data + str->len);
