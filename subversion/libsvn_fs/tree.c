@@ -1256,7 +1256,11 @@ svn_fs_check_path (svn_node_kind_t *kind_p,
       svn_error_clear (err);
       *kind_p = svn_node_none;
     }
-  return err;
+  else if (err)
+    {
+      return err;
+    }
+  return SVN_NO_ERROR;
 }
 
 
