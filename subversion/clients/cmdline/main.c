@@ -512,7 +512,7 @@ main (int argc, const char * const *argv)
   apr_pool_t *pool;
   int opt_id, err2;
   apr_getopt_t *os;  
-  svn_cl__opt_state_t opt_state = { 0 };
+  svn_cl__opt_state_t opt_state = { { 0 }, { 0 }, 0 };
   svn_client_ctx_t ctx = { 0 };
   int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
