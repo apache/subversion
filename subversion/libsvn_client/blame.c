@@ -245,18 +245,25 @@ log_message_receiver (void *baton,
   rev->next = lmb->eldest;
   lmb->eldest = rev;
 
-  /* This path was either explicitly changed, or part of a directory
-     operation.  In the former case, it will have a changed_paths
-     entry of its own.  Otherwise, it gets a little messy; we need
-     to figure out which parent directory was involved. */
+
+  /* See if the path was explicitly changed in this revision.  If so,
+     we'll either use the path, or, if was copied, use its
+     copyfrom_path. */
   change = apr_hash_get (changed_paths, lmb->path, APR_HASH_KEY_STRING);
-  if (change != NULL)
+  if (change)
     {
       if (change->copyfrom_path)
         lmb->path = apr_pstrdup (lmb->pool, change->copyfrom_path);
+
+      return SVN_NO_ERROR;
     }
   else
     {
+      /* The path was not explicitly changed in this revision.  The
+         fact that we're hearing about this revision implies, then,
+         that the path was a child of some copied directory.  We need
+         to find that directory, and effective "re-base" our path on
+         that directory's copyfrom_path. */
       apr_hash_index_t *hi;
 
       for (hi = apr_hash_first (pool, changed_paths); hi;
@@ -269,25 +276,33 @@ log_message_receiver (void *baton,
           apr_hash_this (hi, &key, &klen, &val);
           change = val;
 
+          /* See if our path is the child of this change's path. */
           if ((strncmp (key, lmb->path, klen) == 0)
-              && (lmb->path[klen] == '/')
-              && (change->copyfrom_path))
+              && (lmb->path[klen] == '/'))
             {
-              lmb->path = svn_path_join (change->copyfrom_path, 
-                                         lmb->path + klen + 1,
-                                         lmb->pool);
+              /* Yes!  If this change was copied, we just need to
+                 apply the portion of our path that is relative to
+                 this change's path, to the change's copyfrom path.  */
+              if (change->copyfrom_path)
+                {
+                  lmb->path = svn_path_join (change->copyfrom_path, 
+                                             lmb->path + klen + 1,
+                                             lmb->pool);
+                  return SVN_NO_ERROR;
+                }
+
+              /* We didn't find what we expected here.  Stop looking,
+                 and fall through to an errorful return. */
               break;
             }
         }
-
-      if (! change || ! change->copyfrom_path)
-        return svn_error_createf (APR_EGENERAL, NULL,
-                                  "Missing changed-path information for "
-                                  "revision %" SVN_REVNUM_T_FMT " of '%s'",
-                                  rev->revision, rev->path);
     }
 
-  return SVN_NO_ERROR;
+  /* We didn't find what we expected to find. */
+  return svn_error_createf (APR_EGENERAL, NULL,
+                            "Missing changed-path information for "
+                            "revision %" SVN_REVNUM_T_FMT " of '%s'",
+                            rev->revision, rev->path);
 }
 
 svn_error_t *
