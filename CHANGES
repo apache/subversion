@@ -7,11 +7,13 @@ Version 0.18.0 (released 19 Feb 2003, revision 4959)
  * symlinked hook scripts now run
  * read-only access flag (-R) for svnserve
  * quiet flag (--quiet) for svnadmin dump
+ * --ignore-uuid and --force-uuid for svnadmin load
  * miscellaneous performance improvements
  * more work on the Book
 
  Developer-visible changes:
  * new authentication library libsvn_auth (#724)
+ * new bdb table uuids
  * client context object in libsvn_client
  * more work on java and other language bindings
  * test framework now has a quiet option (-q)
@@ -26,6 +28,7 @@ Version 0.18.0 (released 19 Feb 2003, revision 4959)
    status on uncontrolled directory (#1124), commit message eol
    characters (#1126), cat -r PREV (#1134), ra_dav wcprops (#1136)
    split XML cdata/attribute encoding (#1118)
+
 
 Version 0.17.1 (released 22 Jan 2003, revision 4503)
 
