@@ -1150,6 +1150,8 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   svn_boolean_t modified_p;
   svn_error_t *err;
   apr_time_t tstamp;
+  apr_array_header_t *propchanges;
+  svn_boolean_t magic_props_changed = FALSE;
 
   /* Build the full path of the thing we're reverting. */
   fullpath = svn_wc_adm_access_path (adm_access);
@@ -1162,6 +1164,28 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
     {
       svn_node_kind_t working_props_kind;
 
+      /* Get the full list of property changes and see if any magic
+         properties were changed. */
+      SVN_ERR (svn_wc_get_prop_diffs (&propchanges, NULL, name ? name : "",
+                                      adm_access, pool));
+      
+      /* Determine if any of the propchanges are the "magic" ones that
+         might require changing the working file. */
+      {
+        int i;
+        for (i = 0; i < propchanges->nelts; i++)
+          {
+            svn_prop_t *propchange
+              = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
+            
+            if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
+                || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
+                || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE))
+                || (! strcmp (propchange->name, SVN_PROP_SPECIAL)))
+              magic_props_changed = TRUE;
+          }
+      }
+  
       SVN_ERR (svn_wc__prop_path (&thing, fullpath, adm_access, FALSE, pool)); 
       SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, adm_access, FALSE,
                                        pool));
@@ -1235,9 +1259,10 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
       base_thing = svn_wc__text_base_path (fullpath, 0, pool);
 
-      SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, TRUE,
-                                       adm_access, pool));
-      if ((modified_p) || (kind == svn_node_none))
+      if (! magic_props_changed)
+        SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, TRUE,
+                                         adm_access, pool));
+      if ((modified_p) || (kind == svn_node_none) || (magic_props_changed))
         {
           /* If there are textual mods (or if the working file is
              missing altogether), copy the text-base out into

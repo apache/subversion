@@ -1962,7 +1962,8 @@ install_file (svn_wc_notify_state_t *content_state,
             
             if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
                 || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
-                || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE)))
+                || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE))
+                || (! strcmp (propchange->name, SVN_PROP_SPECIAL)))
               magic_props_changed = TRUE;
           }
       }

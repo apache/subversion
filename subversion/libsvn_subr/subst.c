@@ -818,7 +818,7 @@ detranslate_special_file (const char *src,
        contents. */
     SVN_ERR (svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
                                APR_OS_DEFAULT, pool));
-    src_stream = svn_stream_from_aprfile (d, pool);
+    src_stream = svn_stream_from_aprfile (s, pool);
 
     SVN_ERR (svn_stream_copy (src_stream, dst_stream, pool));
     break;
@@ -857,11 +857,14 @@ svn_subst_copy_and_translate2 (const char *src,
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   svn_error_t *err;
   apr_pool_t *subpool;
+  svn_node_kind_t kind;
 
-  if (special)
+  SVN_ERR (svn_io_check_special_path (src, &kind, pool));
+
+  /* If this is a 'special' file, we may need to create it or
+     detranslate it. */
+  if (special || (kind == svn_node_special))
     {
-      /* If this is a 'special' file, we may need to create it or
-         detranslate it. */
       if (expand)
         SVN_ERR (create_special_file (src, dst, pool));
       else
