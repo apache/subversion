@@ -6,106 +6,14 @@ import os
 import md5
 import string
 
+try:
+  from cStringIO import StringIO
+except ImportError:
+  from StringIO import StringIO
+
 import gen_base
 import gen_win
-
-
-# In retrospect, I shouldn't have used an XML library
-# to write the project files, VS.NET doesn't really read
-# XML files, only things that sort of look like them...
-from xml.dom.minidom import Document,Element,_write_data
-
-#Don't even get me started about this hack
-ms_sucks_royally=[
-  "ProjectType",
-  "Version",
-  "Name",
-  "OutputDirectory",
-  "IntermediateDirectory",
-  "ConfigurationType",
-  "WholeProgramOptimization",
-  "Optimization",
-  "GlobalOptimizations",
-  "InlineFunctionExpansion",
-  "EnableIntrinsicFunctions",
-  "FavorSizeOrSpeed",
-  "OmitFramePointers",
-  "AdditionalIncludeDirectories",
-  "PreprocessorDefinitions",
-  "MinimalRebuild",
-  "StringPooling",
-  "RuntimeLibrary",
-  "BufferSecurityCheck",
-  "EnableFunctionLevelLinking",
-  "WarningLevel",
-  "Detect64BitPortabilityProblems",
-  "DebugInformationFormat",
-  "CompileAsManaged",
-  "CompileAs",
-  "AdditionalDependencies",
-  "OutputFile",
-  "LinkIncremental",
-  "AdditionalLibraryDirectories",
-  "GenerateDebugInformation",
-  "ProgramDatabaseFile",
-  "OptimizeReferences",
-  "EnableCOMDATFolding",
-  "ImportLibrary",
-]
-def ms_blows_donkey_chunks(a,b):
-  # Since the MS project parser can't cope with alphabetical
-  # ordering of XML attributes, I'm going to hold its hand
-  if a in ms_sucks_royally:
-    if b not in ms_sucks_royally:
-      return -1
-    ia=ms_sucks_royally.index(a)
-    ib=ms_sucks_royally.index(b)
-    if ia<ib:
-      return -1
-    if ia>ib:
-      return 1
-    return 0
-  if b in ms_sucks_royally:
-    return 1
-
-  if a<b:
-    return -1
-  if a>b:
-    return 1
-  return 0
-
-class VisualStudioNETblowsElement(Element):
-  def writexml(self, writer, indent="", addindent="", newl=""):
-      writer.write(indent+"<" + self.tagName)
-      attrs = self._get_attributes()
-      a_names = attrs.keys()
-      if len(a_names):
-        a_names.sort(ms_blows_donkey_chunks)
-        for a_name in a_names:
-            writer.write("%s%s%s%s=\"" % (newl,indent,addindent, a_name))
-            _write_data(writer, attrs[a_name].value)
-            writer.write("\"")
-      #Make a /File appear even if one is not needed
-      majorhack=0
-      if self.tagName in ("File","Globals","Files"):
-        majorhack=1
-      if self.childNodes or majorhack:
-          writer.write(">%s"%newl)
-          for node in self.childNodes:
-              node.writexml(writer,indent+addindent,addindent,newl)
-          writer.write("%s</%s>%s" % (indent,self.tagName,newl))
-      else:
-          writer.write("/>%s"%(newl))
-
-class VisualStudioNETblowsDocument(Document):
-  def createElement(self, tagName):
-      e = VisualStudioNETblowsElement(tagName)
-      e.ownerDocument = self
-      return e
-  def writexml(self, writer, indent="", addindent="", newl=""):
-      writer.write('<?xml version="1.0" encoding = "Windows-1252"?>\n')
-      for node in self.childNodes:
-          node.writexml(writer, indent, addindent, newl)
+import ezt
 
 
 class Generator(gen_win.WinGeneratorBase):
@@ -120,27 +28,8 @@ class Generator(gen_win.WinGeneratorBase):
   def default_output(self, oname):
     return 'subversion_vcnet.sln'
 
-  def newElement(self, parent, name, attribs={}):
-    "Helper function for createElement"
-    newel = self.doc.createElement(name)
-    for a,b in attribs.items():
-      newel.setAttribute(a,b)
-    if parent:
-      parent.appendChild(newel)
-    return newel
-
   def writeProject(self, target_ob, fname, rootpath):
     "Write a Project (.vcproj)"
-
-    self.doc = VisualStudioNETblowsDocument()
-    root = self.newElement(self.doc, "VisualStudioProject", {
-      "ProjectType":"Visual C++",
-      "Version":"7.00",
-      "Name":target_ob.name
-    })
-
-    platforms = self.newElement(root, "Platforms")
-    self.newElement(platforms, "Platform", {"Name":"Win32"})
 
     if isinstance(target_ob, gen_base.TargetExe):
       #EXE
@@ -158,121 +47,65 @@ class Generator(gen_win.WinGeneratorBase):
       print `target_ob`
       assert 0
 
-    configs = self.newElement(root, "Configurations")
+    configs = [ ]
     for cfg in self.configs:
-      defines=string.join(self.get_win_defines(target_ob, cfg), ';')
+      ### oof. would be nice to avoid stuff like this. config somehow?
+      ### hmm. maybe move this logic into get_win_libs()? gen_msvc_dsp
+      ### didn't do this...
+      if cfg == 'Debug':
+        libs = [ ]
+        for lib in self.get_win_libs(target_ob):
+          if lib == 'libdb40.lib':
+            lib = 'libdb40d.lib'
+          libs.append(lib)
+      else:
+        libs = self.get_win_libs(target_ob)
 
-      for plat in self.platforms:
-        config_params={
-          "Name":"%s|%s"%(cfg, plat),
-          "OutputDirectory":"$(SolutionDir)\\%s" % cfg,
-          "IntermediateDirectory":cfg,
-          "ConfigurationType":"%d"%(config_type),
-        }
-        if cfg=='Release':
-          config_params.update({
-            "WholeProgramOptimization":"TRUE",
-          })
-        config = self.newElement(configs, "Configuration", config_params)
+      ### except for 'libs', this is the same as msvc_dsp
+      configs.append(_item(name=cfg,
+                           lower=string.lower(cfg),
+                           defines=self.get_win_defines(target_ob, cfg),
+                           libdirs=self.get_win_lib_dirs(target_ob, rootpath,
+                                                         cfg),
+                           libs=libs,
+                           ))
 
-        includes=string.join(self.get_win_includes(target_ob, rootpath), ';')
-        compiler_params={
-          "Name":"VCCLCompilerTool",
-          "AdditionalIncludeDirectories":includes,
-          "PreprocessorDefinitions":defines,
-          "WarningLevel":"3", # level 4 is a mess
-          "Detect64BitPortabilityProblems":"TRUE",
-          "CompileAsManaged":"0",
-          "CompileAs":"0",
-        }
-        if cfg=='Debug':
-          compiler_params.update({
-            "Optimization":"0",
-            "GlobalOptimizations":"FALSE",
-            "MinimalRebuild":"TRUE",
-            "RuntimeLibrary":"3",
-            "BufferSecurityCheck":"TRUE",
-            "EnableFunctionLevelLinking":"TRUE",
-            "DebugInformationFormat":"4",
-          })
-        elif cfg=='Release':
-          compiler_params.update({
-            "Optimization":"2",
-            "GlobalOptimizations":"TRUE",
-            "BufferSecurityCheck":"FALSE",
-	    "GlobalOptimizations":"TRUE",
-            "InlineFunctionExpansion":"2",
-            "EnableIntrinsicFunctions":"TRUE",
-            "FavorSizeOrSpeed":"1",
-	    "OmitFramePointers":"TRUE",
-	    "StringPooling":"TRUE",
-            "RuntimeLibrary":"2",
-            "BufferSecurityCheck":"FALSE",
-          })
-          if isinstance(target_ob, gen_base.TargetExe):
-            compiler_params.update({"OptimizeForWindowsApplication":"TRUE"})
-        self.newElement(config, 'Tool', compiler_params)
-
-        self.newElement(config, 'Tool', {"Name":"VCCustomBuildTool"})
-
-        libs=string.join(self.get_win_libs(target_ob), ' ')
-        link_params={
-          "Name":"VCLinkerTool",
-          "AdditionalDependencies":libs,
-          "AdditionalLibraryDirectories":"%s\\db4-win32\\lib" % rootpath,
-          "ProgramDatabaseFile":"$(OutDir)\\$(ProjectName).pdb",
-#          "SubSystem":"2",
-        }
-        if config_type==1:
-          link_params.update({
-            "OutputFile":"$(OutDir)\\$(ProjectName).exe",
-          })
-        elif config_type==2:
-          link_params.update({
-            "OutputFile":"$(OutDir)\\$(ProjectName).dll",
-            "ImportLibrary":"$(OutDir)\\$(ProjectName).lib",
-          })
-        if cfg=='Debug':
-          link_params.update({
-            "AdditionalDependencies":string.replace(libs, "libdb40", "libdb40d"), #Little hacky-hacky
-            "LinkIncremental":"2",
-            "GenerateDebugInformation":"TRUE",
-            "OptimizeReferences":"0",
-          })
-        elif cfg=='Release':
-          link_params.update({
-            "LinkIncremental":"1",
-            "GenerateDebugInformation":"FALSE",
-            "OptimizeReferences":"2",
-            "EnableCOMDATFolding":"2",
-          })
-        self.newElement(config, 'Tool', link_params)
-
-        if config_type==4:
-          self.newElement(config, 'Tool', {"Name":"VCLibrarianTool","OutputFile":"$(OutDir)\$(ProjectName).lib"})
-
-        self.newElement(config, 'Tool', {"Name":"VCMIDLTool"})
-        self.newElement(config, 'Tool', {"Name":"VCPostBuildEventTool"})
-        self.newElement(config, 'Tool', {"Name":"VCPreBuildEventTool"})
-        self.newElement(config, 'Tool', {"Name":"VCPreLinkEventTool"})
-        self.newElement(config, 'Tool', {"Name":"VCResourceCompilerTool"})
-        self.newElement(config, 'Tool', {"Name":"VCWebServiceProxyGeneratorTool"})
-        self.newElement(config, 'Tool', {"Name":"VCWebDeploymentTool"})
-
-    files = self.newElement(root, "Files")
-
+    ### this is very different from msvc_dsp
+    sources = [ ]
     for obj in self.graph.get_sources(gen_base.DT_LINK, target_ob):
       for src in self.graph.get_sources(gen_base.DT_OBJECT, obj):
-        rsrc=string.replace(string.replace(src, target_ob.path+os.sep, ''),
-                            os.sep, '\\')
-        file = self.newElement(files, "File", {"RelativePath":rsrc})
+        rsrc = string.replace(string.replace(src, target_ob.path + os.sep, ''),
+                              os.sep, '\\')
+        sources.append(rsrc)
 
-    globals = self.newElement(root, "Globals")
+    data = {
+      'target' : target_ob,
+      'target_type' : config_type,
+#      'target_number' : targval,
+      'rootpath' : rootpath,
+      'platforms' : self.platforms,
+      'configs' : configs,
+      'includes' : self.get_win_includes(target_ob, rootpath),
+#      'libs' : self.get_win_libs(target_ob),
+      'sources' : sources,
+#      'default_platform' : self.platforms[0],
+#      'default_config' : configs[0].name,
+      'is_exe' : ezt.boolean(isinstance(target_ob, gen_base.TargetExe)),
+#      'is_external' : ezt.boolean(isinstance(target_ob,
+#                                             gen_base.TargetExternal)),
+#      'is_utility' : ezt.boolean(isinstance(target_ob,
+#                                            gen_base.TargetUtility)),
+#      'is_apache_mod' : ezt.boolean(target_ob.install == 'apache-mod'),
+      }
 
-    self.doc.writexml(open(fname,'w'), "", "\t", "\n")
+    fout = StringIO()
 
-    #Dependencies don't go in the project, they go in the workspace
-    return
+    template = ezt.Template(compress_whitespace = 0)
+    template.parse_file(os.path.join('build', 'generator', 'vcnet_vcproj.ezt'))
+    template.generate(fout, data)
+
+    if self.write_file_if_changed(fname, fout.getvalue()):
+      print "Wrote %s" % fname
 
   def makeguid(self, data):
     "Generate a windows style GUID"
@@ -374,3 +207,8 @@ class Generator(gen_win.WinGeneratorBase):
 
     self.ofile.write("EndGlobal\n")
 
+
+
+class _item:
+  def __init__(self, **kw):
+    vars(self).update(kw)
