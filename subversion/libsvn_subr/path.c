@@ -795,14 +795,9 @@ svn_path_is_uri_safe (const char *path)
 
   for (i = 0; path[i]; i++)
     {
-      /* Allow '%%' or '%XX' (where each X is a hex digit) */
+      /* Allow '%XX' (where each X is a hex digit) */
       if (path[i] == '%')
         {
-          if (path[i + 1] == '%')
-            {
-              i += 1;
-              continue;
-            }
           if ((((path[i + 1] >= '0') && (path[i + 1] <= '9'))
                || ((path[i + 1] >= 'a') && (path[i + 1] <= 'f'))
                || ((path[i + 1] >= 'A') && (path[i + 1] <= 'F')))
