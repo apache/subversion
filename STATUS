@@ -96,7 +96,7 @@ Candidate changes:
     Justification: users (especially on win32) have reported this.
     Notes:  whoops, we forgot to uri-encode the root_path.  duh.
     Votes:
-      +1: sussman, dlr, bliss
+      +1: sussman, dlr, bliss, philip
 
   * r8431
     Bugfix to commits: allow deletions below schedule-add-with-history dirs.
@@ -111,7 +111,7 @@ Candidate changes:
     Justification:  already bit kfogel;  his dir_conflicts.prej looked awful.
     Notes:  just adds some newlines to printed strings.
     Votes:
-      +1: sussman, dlr
+      +1: sussman, dlr, philip
 
   * r8564
     Adjust contrib/client-side/search-svnlog.pl for new 'svn log' output.
@@ -131,14 +131,14 @@ Candidate changes:
     Justification:  severeal users have noticed this --dry-run bug already.
     Notes:  a one-line logic fix, plus new regression test.
     Votes:
-      +1: sussman
+      +1: sussman, philip
       +0: dlr
 
   * r8618
     Fix segfault in mod_dav_svn.
     Justification: it's a seg fault, and the fix is simple.
     Votes:
-      +1: cmpilato, dlr, sussman
+      +1: cmpilato, dlr, sussman, philip
 
   * r8617
     Fix improper cursor shutdown in libsvn_fs leading to wedgitude.
@@ -158,7 +158,7 @@ Candidate changes:
                     which then hoses checkouts.
     Notes:  This has the potential to burn a whole lot of new users.
     Votes:
-      +1: sussman, brane
+      +1: sussman, brane, philip
       +0: dlr
 
   * r8681
@@ -167,3 +167,9 @@ Candidate changes:
       "Canada/Newfoundland".
     Votes:
       +1: julianfoad, dlr
+
+  * r8672
+    Fix svn_io_dir_walk 'dot-first' ordering required by 'svnadmin hotcopy'
+    Justification: 'svnadmin hotcopy' can fail on ext3/Linux-2.6 (and XFS?)
+    Votes:
+      +1: philip
