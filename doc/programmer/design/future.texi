@@ -18,7 +18,7 @@ really want to achieve the goal of creating a compelling replacement for
 CVS.
 
 The lists below are a bit dated; the best list of items can be seen by
-examining the 'post-1.0' items in the project issue-database.
+examining the 'post-1.0' items in the project issue database.
 
 
 @menu
@@ -58,7 +58,7 @@ can be found in @file{tools/cvs2svn/}.
 
 These are features we'd like to see in Subversion someday, but aren't
 critical for a 1.0 release.  Again, a much more recent list of
-brainstorms can be seen in the issuetracker as 'post-1.0' items.
+brainstorms can be seen in the issue tracker as 'post-1.0' items.
 
 
 @menu
