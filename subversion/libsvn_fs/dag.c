@@ -832,23 +832,26 @@ svn_fs__dag_get_proplist (skel_t **proplist_p,
                           trail_t *trail)
 {
   skel_t *node_rev;
-  skel_t *rep;
+  skel_t *rep_key_skel, *rep;
+  const char *rep_key;
   svn_string_t propstr;
   
   /* Go get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, node, trail));
 
-  /* Get rep for properties. */
-  rep = node_rev->children->next;
+  /* Get rep_key_skel for properties. */
+  rep_key_skel = node_rev->children->next;
 
   /* Get the string associated with the property rep, parsing it as a
      skel. */
-  if (rep->len == 0)
+  if (rep_key_skel->len == 0)
     {
       *proplist_p = svn_fs__make_empty_list (trail->pool);
       return SVN_NO_ERROR;
     }
 
+  rep_key = apr_pstrndup (trail->pool, rep_key_skel->data, rep_key_skel->len);
+  SVN_ERR (svn_fs__read_rep (&rep, node->fs, rep_key, trail));
   SVN_ERR (svn_fs__string_from_rep (&propstr, node->fs, rep, trail));
   *proplist_p = svn_fs__parse_skel ((char *) propstr.data,
                                     propstr.len,
@@ -865,7 +868,7 @@ svn_fs__dag_set_proplist (dag_node_t *node,
 {
   skel_t *node_rev;
   skel_t *rep;
-  const char *rep_key, *mutable_rep_key, *str_key;
+  const char *orig_rep_key, *mutable_rep_key, *str_key;
   svn_stringbuf_t *unparsed_props;
   
   /* Sanity check: this node better be mutable! */
@@ -884,36 +887,20 @@ svn_fs__dag_set_proplist (dag_node_t *node,
       }
   }
 
-  /* Well-formed tests:  make sure the incoming proplist is of the
-     form:
-               PROPLIST ::= (PROP ...) ;
-                   PROP ::= atom atom ;                     */
-  {
-    skel_t *this;
-    int len = svn_fs__list_length (proplist);
-
-    /* Does proplist contain an even number of elements? (If proplist
-       isn't a list in the first place, list_length will return -1,
-       which will still fail the test.) */
-    if (len % 2 != 0)
-      abort ();
-    
-    /* Is each element an atom? */
-    for (this = proplist->children; this; this = this->next)
-      {
-        if (! this->is_atom)
-          abort ();
-      }
-  }
+  /* Make sure it's a valid proplist. */
+  if (! svn_fs__is_valid_proplist (proplist))
+    return svn_error_create
+      (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+       "svn_fs__dag_set_proplist: Malformed property list.");
   
   /* Go get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, node, trail));
-  rep_key = apr_pstrndup (trail->pool,
-                          node_rev->children->next->data,
-                          node_rev->children->next->len);
+  orig_rep_key = apr_pstrndup (trail->pool,
+                               node_rev->children->next->data,
+                               node_rev->children->next->len);
 
   /* Get a mutable version of this rep. */
-  SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, rep_key,
+  SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, orig_rep_key,
                                     node->fs, trail));
 
   /* Now, get the key to the string our mutable rep points to. */
@@ -927,6 +914,15 @@ svn_fs__dag_set_proplist (dag_node_t *node,
                                   unparsed_props->len, 
                                   unparsed_props->data, 
                                   trail));
+
+  /* If we made a new rep, record it in the node revision. */
+  if (strcmp (mutable_rep_key, orig_rep_key) != 0)
+    {
+      node_rev->children->next->data = mutable_rep_key;
+      node_rev->children->next->len = strlen (mutable_rep_key);
+      SVN_ERR (svn_fs__put_node_revision (node->fs, node->id,
+                                          node_rev, trail));
+    }
 
   return SVN_NO_ERROR;
 }
