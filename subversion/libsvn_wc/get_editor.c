@@ -129,23 +129,6 @@ struct handler_baton
   struct file_baton *fb;
 };
 
-
-/* kff todo debugging */
-static void
-debug_dir_baton (struct dir_baton *d, const char *msg)
-{
-#if 0
-  struct dir_baton *tmp;
-
-  printf ("*** %s:\n", msg);
-  for (tmp = d; tmp; tmp = tmp->parent_baton)
-    printf ("   %s (%d), pool %p, baton itself %p\n",
-            tmp->path->data, tmp->ref_count, tmp->pool, tmp);
-  printf ("\n");
-#endif /* 0/1 */
-}
-
-
 /* Create a new dir_baton for subdir NAME in PARENT_PATH with
  * EDIT_BATON, using a new subpool of POOL.
  *
@@ -180,8 +163,6 @@ make_dir_baton (svn_string_t *name,
   if (parent_baton)
     parent_baton->ref_count++;
 
-  debug_dir_baton (d, "make_dir_baton");
-
   return d;
 }
 
@@ -206,10 +187,8 @@ free_dir_baton (struct dir_baton *dir_baton)
   if (err)
     return err;
 
-  debug_dir_baton (dir_baton, "free_dir_baton (before)");
   /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
   apr_destroy_pool (dir_baton->pool);
-  debug_dir_baton (parent, "free_dir_baton (parent, after dir destroyed)");
 
   /* We've declared this directory done, so decrement its parent's ref
      count too. */ 
@@ -290,8 +269,6 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_string_t *name)
 
   parent_dir_baton->ref_count++;
 
-  debug_dir_baton (parent_dir_baton, "make_file_baton");
-
   return f;
 }
 
@@ -309,11 +286,8 @@ free_file_baton (struct file_baton *fb)
 
      Changing svn_error.c:svn_pool_create() to use apr_make_sub_pool()
      instead of apr_create_pool() has not solved this. */
-#if 0
   apr_destroy_pool (fb->pool);
-#endif /* 0/1 */
 
-  debug_dir_baton (parent, "free_file_baton (before)");
   return decrement_ref_count (parent);
 }
 
