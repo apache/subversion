@@ -29,7 +29,7 @@ Step 1:  Build & install the proper version of SWIG (which is
            - /usr/local/bin/swig
 
 
-Step 2:  Build Subversion.
+Step 2:  Build and Install Subversion.
 
   See Subversion's own INSTALL file for details.
 
@@ -37,32 +37,32 @@ Step 2:  Build Subversion.
   It tries to detect SWIG near the very end of its output.
 
 
-
 SPECIFIC LANGUAGE BINDINGS
 
 
 *  Python
 
-   1.  cd subversion/bindings/swig/python
+   1.  On Unix systems, run 'make swig-py-ext' from the top of the
+       Subversion source tree.  This will invoke SWIG on the *.i
+       files, resulting in a collection of .c source files.  It will
+       then compile those .c files into Python libraries.
 
-   2.  python setup.py build
+       On Windows, ???
 
-       Note that the 'setup.py' script has some hardcoded paths at the
-       top; you might need to edit them so that your installed svn
-       libraries and headers can be found.
+   2.  On Unix systems, run 'make install-swig-py-ext' (as root,
+       typically) from the top of the Subversion source tree.  This
+       will copy your new Python libraries into the appropriate system
+       location.
 
-   3.  python setup.py install [--prefix PREFIX]
+       On Windows, ???
 
-       If you specified '--with-prefix' to subversion's configure
-       script, you'll need to use it again here.
-
-   4.  Verify that an 'svn' package has been created.  It should be
+   3.  Verify that an 'svn' package has been created.  It should be
        sitting right in the current directory:  a subdir containing
        .py files and an __init__.py.  Also verify that the package was
        installed to a public area.  (For example, some place like
        /usr/local/lib/python2.2/site-packages/svn)
 
-   5.  Try some demo programs.  From the top of your svn working copy,
+   4.  Try some demo programs.  From the top of your svn working copy,
        cd tools/examples/, and try running 'svnlook.py'.
 
 
