@@ -16,12 +16,13 @@ _svn()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	cmds='add blame annotate ann cat checkout co cleanup commit ci \
-              copy cp delete del remove rm diff di export import info  \
-              ? h help list ls log merge mkdir move mv rename ren      \
-              propdel pdel propedit pedit pe propget pget pg           \
-              proplist plist pl propset pset ps revert resolved        \
-              status stat st switch sw update up --version'
+	# Possible expansions, without unambiguous abbreviations such as "up".
+	cmds='add blame annotate cat checkout co cleanup commit ci \
+              copy cp delete remove rm diff export help ? import info \
+              list ls log merge mkdir move mv rename \
+              propdel pdel propedit pedit propget pget \
+              proplist plist propset pset resolved revert \
+              status switch update --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -59,13 +60,13 @@ _svn()
 	add)
 		cmdOpts="--auto-props --no-auto-props --targets $nOpts $qOpts"
 		;;
-	blame)
+	blame|annotate|ann)
 		cmdOpts="$rOpts $pOpts --strict"
 		;;
 	cat)
 		cmdOpts="$rOpts $pOpts"
 		;;
-	checkout|co|get)
+	checkout|co)
 		cmdOpts="$rOpts $qOpts $nOpts $pOpts"
 		;;
 	cleanup)
@@ -114,7 +115,7 @@ _svn()
 	move|mv|rename|ren)
 		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts"
 		;;
-	propdel|pdel)
+	propdel|pdel|pd)
 		cmdOpts="$qOpts -R --recursive $rOpts --revprop $pOpts"
 		;;
 	propedit|pedit|pe)
@@ -132,10 +133,10 @@ _svn()
 		cmdOpts="-F --file $qOpts --targets -R --recursive --revprop \
 		         --encoding $pOpts $rOpts --force"
 		;;
-	revert)
+	resolved)
 		cmdOpts="--targets -R --recursive $qOpts"
 		;;
-	resolved)
+	revert)
 		cmdOpts="--targets -R --recursive $qOpts"
 		;;
 	status|stat|st)
