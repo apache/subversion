@@ -325,9 +325,10 @@ Makefile  integer.c  button.c  .svn/
         <title>Repository URLs</title>
 
         <para>Subversion repositories can be accessed through many
-          different methods: on local disk, or through various network
-          protocols.  A repository location, however, is always a URL.
-          The URL schema indicates the access method:</para>
+          different methods&mdash;on local disk, or through various
+          network protocols.  A repository location, however, is
+          always a URL.  The URL schema indicates the access
+          method:</para>
 
         <table id="svn-ch-02-table-1">
           <title>Repository Access URLs</title>
@@ -340,27 +341,60 @@ Makefile  integer.c  button.c  .svn/
             </thead>
             <tbody>
               <row>
-                <entry>file:///</entry>
+                <entry><literal>file://</literal></entry>
                 <entry>direct repository access (on local disk)</entry>
               </row>
               <row>
-                <entry>http://</entry>
+                <entry><literal>http://</literal></entry>
                 <entry>access via WebDAV protocol to Subversion-aware
                   Apache server</entry>
               </row>
               <row>
-                <entry>https://</entry>
-                <entry>same as http://, but with SSL encryption.</entry>
+                <entry><literal>https://</literal></entry>
+                <entry>same as <literal>http://</literal>, but with
+                  SSL encryption.</entry>
               </row>
               <row>
-                <entry>svn://</entry>
+                <entry><literal>svn://</literal></entry>
                 <entry>access via custom TCP/IP protocol to an
                   <quote>svnserve</quote> server</entry>
               </row>
             </tbody>
           </tgroup>
         </table>
+ 
+        <para>For the most part, Subversion's URLs use the standard
+          syntax, allowing for server names and port numbers to be
+          specified as part of the URL.  There are a couple of
+          interesting digressions from the standard though.  First,
+          <literal>file:</literal> access method is valid only for
+          locations on the same server as the client&mdash;in fact,
+          the server name portion of the URL is required to be either
+          absent or <literal>localhost</literal>:</para>
+ 
+        <screen>
+$ svn co file:///path/to/repos
+&hellip;
+$ svn co file://localhost/path/to/repos
+&hellip;
+</screen>
 
+        <para>Also, Windows users of the <literal>file:</literal>
+          scheme will need to use an unofficially
+          <quote>standard</quote> syntax for accessing repositories
+          that are on the same machine, but on a different drive, than
+          the client's current working drive.  Either of the two
+          following URL path syntaxes will work where
+          <literal>X</literal> is the drive on which the repository
+          resides:</para>
+
+        <screen>
+$ svn co file:///X:/path/to/repos
+&hellip;
+$ svn co file:///X|/path/to/repos
+&hellip;
+</screen>
+ 
       </sidebar>
 
       <para>Suppose you make changes to <filename>button.c</filename>.
