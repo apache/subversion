@@ -808,8 +808,97 @@ $ svn status
           <command>svn merge -r9237:9238</command> would merge
           changeset #9238 into your working copy.</para>
       </sidebar>
-      
+
       <sect3 id="svn-ch-4-sect-3.2.3">
+        <title>Merge Conflicts</title>
+
+        <para>Just like the <command>svn update</command> command,
+          <command>svn merge</command> applies changes to your working
+          copy.  And therefore it's also capable of creating
+          conflicts.  The conflicts produced by <command>svn
+          merge</command>, however, are sometimes different, and this
+          section explains those differences.</para>
+
+        <para>To begin with, assume that your working copy has no
+          local edits.  When you <command>svn update</command> to a
+          particular revision, the changes sent by the server will
+          always apply <quote>cleanly</quote> to your working copy.
+          The server produces the delta by comparing two trees: a
+          virtual snapshot of your working copy, and the revision tree
+          you're interested in.  Because the left-hand side of the
+          comparison is exactly equal to what you already have, the
+          delta is guaranteed to correctly convert your working copy
+          into the right-hand tree.</para>
+
+        <para>But <command>svn merge</command> has no such guarantees
+          and can be much more chaotic: the user can ask the server to
+          compare <emphasis>any</emphasis> two trees at all, even ones
+          that are unrelated to the working copy!  This means there's
+          large potential for human error.  Users will sometimes
+          compare the wrong two trees, creating a delta that doesn't
+          apply cleanly.  <command>svn merge</command> will do its
+          best to apply has much of the delta as possible, but some
+          parts may be impossible.  Just like the Unix
+          <command>patch</command> command sometimes complains about
+          <quote>failed hunks</quote>, <command>svn merge</command>
+          will complain about <quote>skipped targets</quote>:</para>
+
+<screen>
+$ svn merge -r 1288:1351 http://svn.example.com/repos/branch
+U  foo.c
+U  bar.c
+Skipped missing target: 'baz.c'
+U  glub.c
+C  glorb.h
+
+$
+</screen>
+
+        <para>In the previous example it might be the case that
+          <filename>baz.c</filename> exists in both snapshots of the
+          branch being compared, and the resulting delta wants to
+          change the file's contents, but the file doesn't exist in
+          the working copy.  Whatever the case, the
+          <quote>skipped</quote> message means that the user is most
+          likely comparing the wrong two trees; they're the classic
+          sign of driver error.  When this happens, it's easy to
+          recursively revert all the changes created by the merge
+          (<command>svn revert --recursive</command>), delete any
+          unversioned files or directories left behind after the
+          revert, and re-run <command>svn merge</command> with
+          different arguments.</para>
+
+        <para>Also notice that the previous example shows a conflict
+          happening on <filename>glorb.h</filename>.  We already
+          stated that the working copy has no local edits: how can a
+          conflict possibly happen?  Again, because the user can use
+          <command>svn merge</command> to define and apply any old
+          delta to the working copy, that delta may contain textual
+          changes that don't cleanly apply to a working file, even if
+          the file has no local modifications.</para>
+
+        <para>Another small difference between <command>svn
+          update</command> and <command>svn merge</command> are the
+          names of the full-text files created when a conflict
+          happens.  In <xref linkend="svn-ch-3-sect-5.4"/>, we saw
+          that an update produces files named
+          <filename>filename.mine</filename>,
+          <filename>filename.rOLDREV</filename>, and
+          <filename>filename.NEWREV</filename>.  When <command>svn
+          merge</command> produces a conflict, though, it creates
+          three files named <filename>filename.working</filename>,
+          <filename>filename.left</filename>, and
+          <filename>filename.right</filename>.  In this case, the
+          terms <quote>left</quote> and <quote>right</quote> are
+          describing which side of the double-tree comparison the file
+          came from.  In any case, these differing names will help you
+          distnguish between conflicts that happened as a result of an
+          update versus ones that happened as a result of a
+          merge.</para>
+
+      </sect3>
+      
+      <sect3 id="svn-ch-4-sect-3.2.4">
         <title>Noticing or Ignoring Ancestry</title>
 
         <para>When conversing with a Subversion developer, you might
@@ -878,9 +967,9 @@ $ svn status
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-4">
-    <title>Common Use-Cases for Merging</title>
+    <title>Common Use-Cases</title>
 
-    <para>There are many different uses for <command>svn
+    <para>There are many different uses for branching and <command>svn
       merge</command>, and this section describes the most common ones
       you're likely to run into.</para>
 
@@ -1252,6 +1341,212 @@ Committed revision 1390.
       <para>Although our example shows us resurrecting a file, note
         that these same techniques work just as well for resurrecting
         deleted directories.</para>
+
+    </sect2>
+
+    <sect2 id="svn-ch-4-sect-4.4">
+      <title>Common Branching Patterns</title>
+
+      <para>Version control is most often used for software
+        development, so here's a quick peek at two of the most common
+        branching/merging patterns used by teams of programmers.  If
+        you're not using Subversion for software development, feel
+        free to skip this section.  If you're a software developer
+        using version control for the first time, pay close attention,
+        as these patterns are often considered best practices by
+        experienced folk.  These processes aren't specific to
+        Subversion; they're applicable to any version control system.
+        Still, it may help to see them described in Subversion
+        terms.</para>
+      
+      <sect3 id="svn-ch-4-sect-4.4.1">
+        <title>Release Branches</title>
+      
+        <para>Most software has a typical lifecycle: code, test,
+          release, repeat.  There are two problems with this process.
+          First, developers need to keep writing new features while
+          quality-assurance teams take time to test supposedly-stable
+          versions of the software.  New work cannot halt while the
+          software is tested.  Second, the team almost always needs to
+          support older, released versions of software; if a bug is
+          discovered in the latest code, it most likely exists in
+          released versions as well, and customers will want to get
+          that bugfix without having to wait for a major new
+          release.</para>
+
+        <para>Here's where version control can help.  The typical
+          procedure looks like this:</para>
+
+      <itemizedlist>
+
+        <listitem>
+          <para><emphasis>Developers commit all new work to the
+                trunk.</emphasis>
+
+              Day-to-day changes are committed to
+              <filename>/trunk</filename>: new features, bugfixes, and
+              so on.</para>
+        </listitem>
+
+        <listitem>
+          <para><emphasis>The trunk is copied to a
+                <quote>release</quote> branch.</emphasis>
+
+              When the team thinks the software is ready for release
+              (say, a 1.0 release), then <filename>/trunk</filename>
+              might be copied to
+              <filename>/branches/1.0</filename>.</para>
+        </listitem>
+
+        <listitem>
+          <para><emphasis>Teams continue to work in parallel.</emphasis>
+
+              One team begins rigorous testing of the release branch,
+              while another team continues new work (say, for version
+              2.0) on <filename>/trunk</filename>.  If bugs are
+              discovered in either location, fixes are ported back and
+              forth as necessary.  At some point, however, even that
+              process stops.  The branch is <quote>frozen</quote> for
+              final testing right before a release.</para>
+        </listitem>
+          
+        <listitem>
+          <para><emphasis>The branch is tagged and released.</emphasis>
+
+              When testing is complete,
+              <filename>/branches/1.0</filename> is copied to
+              <filename>/tags/1.0.0</filename> as a reference
+              snapshot.  The tag is packaged and released to
+              customers.</para>
+        </listitem>
+
+        <listitem>
+          <para><emphasis>The branch is maintained over time.</emphasis>
+
+              While work continues on <filename>/trunk</filename> for
+              version 2.0, bugfixes continue to be ported from
+              <filename>/trunk</filename> to
+              <filename>/branches/1.0</filename>.  When enough
+              bugfixes have accumulated, management may decide to do a
+              1.0.1 release: <filename>/branches/1.0</filename> is
+              copied to <filename>/tags/1.0.1</filename>, and the tag
+              is packaged and released.</para>
+        </listitem>
+
+        </itemizedlist>
+
+        <para>This entire process repeats as the software matures:
+          when the 2.0 work is complete, a new 2.0 release branch is
+          created, tested, tagged, and eventually released.  After
+          some years, the repository ends up with a number of release
+          branches in <quote>maintenance</quote> mode , and a number
+          of tags representing final shipped versions.</para>
+
+      </sect3>
+
+      <sect3 id="svn-ch-4-sect-4.4.2">
+        <title>Feature Branches</title>
+      
+        <para>A <firstterm>feature branch</firstterm> is the sort of
+          branch that's been the dominant example in this chapter, the
+          one you've been working on while Sally continues to work on
+          <filename>/trunk</filename>.  It's a temporary branch
+          created to work on a complex change without interfering with
+          the stability of <filename>/trunk</filename>.  Unlike
+          release branches (which may need to be supported forever),
+          feature branches are born, used for a while, merged back to
+          the trunk, then ultimately deleted.  They have a finite span
+          of usefulness.</para>
+
+        <para>Again, project policies vary widely concerning exactly
+          when it's appropriate to create a feature branch.  Some
+          projects never use feature branches at all: commits to
+          <filename>/trunk</filename> are a free-for-all.  The
+          advantage to this system is that it's simple&mdash;nobody
+          needs to learn about branching or merging.  The disadvantage
+          is that the trunk code is often unstable or unusable.  Other
+          projects use branches to an extreme: no change is
+          <emphasis>ever</emphasis> committed to the trunk directly.
+          Even the most trivial changes are created on a short-lived
+          branch, carefully reviewed, then merged to the trunk and
+          deleted.  This system guarantees an exceptionally stable and
+          usable trunk at all times, but at the cost of tremendous
+          process overhead.</para>
+
+        <para>Most projects take a middle-of-the-road approach.  They
+          commonly insist that <filename>/trunk</filename> compile and
+          pass regression tests at all times.  A feature branch is
+          only required when a change requires a large number of
+          destabilizing commits.  A good rule of thumb is to ask this
+          question: if the developer worked for days in isolation and
+          then committed the large change all at once (so that
+          <filename>/trunk</filename> were never destabilized), would
+          it be too large a change to review?  If the answer to that
+          question is <quote>yes</quote>, then the change should be
+          developed on a feature branch.  As the developer commits
+          incremental changes to the branch, they can be easily
+          reviewed by peers.</para>
+
+        <para>Finally, there's the issue of how to best keep a feature
+          branch in <quote>sync</quote> with the trunk as work
+          progresses.  As we mentioned earlier, there's a great risk
+          to working on a branch for weeks or months; trunk changes
+          may continue to pour in, to the point where the two lines of
+          development differ so greatly that it may become a nightmare
+          trying to merge the branch back to the trunk.</para>
+
+        <para>This situation is best avoided by regularly merging
+          trunk changes to the branch.  Make up a policy: once a week,
+          merge the last week's worth of trunk changes to the branch.
+          Take care when doing this; the merging needs to be
+          hand-tracked to avoid the problem of repeated merges (as
+          described in <xref linkend="svn-ch-4-sect-3.2.1"/>).  You'll
+          need to write careful log messages detailing exactly which
+          revision ranges have been been merged already (as
+          demonstrated in <xref linkend="svn-ch-4-sect-4.1"/>.)  It
+          may sound intimidating, but it's actually pretty easy to
+          do.</para>
+
+        <para>At some point, you'll be ready to merge the
+          <quote>synchronized</quote> feature branch back to the
+          trunk.  To do this, begin by doing a final merge of the
+          latest trunk changes to the branch.  When that's done, the
+          latest versions of branch and trunk will be absolutely
+          identical except for your branch changes.  So in this
+          special case, you would merge by comparing the branch with
+          the trunk:</para>
+
+<screen>
+$ cd trunk-working-copy
+
+$ svn update
+At revision 1910.
+
+$ svn merge http://svn.example.com/repos/calc/mybranch@1910 \
+            http://svn.example.com/repos/calc/trunk@1910 \
+U  real.c
+U  integer.c
+A  newdirectory
+A  newdirectory/newfile
+&hellip;
+</screen>
+
+        <para>By comparing the <literal>HEAD</literal> revision of the
+          branch with the <literal>HEAD</literal> revision of the
+          trunk, you're defining a delta that describes only the
+          changes you made to the branch; both lines of development
+          already have all of the trunk changes.</para>
+
+        <para>Another way of thinking about this pattern is that your
+          weekly sync of trunk to branch is analogous to running
+          <command>svn update</command> in a working copy, while the
+          final merge step is analogous to running <command>svn
+          commit</command> from a working copy.  After all, what else
+          <emphasis>is</emphasis> a working copy but a very shallow
+          private branch?  It's a branch that's only capable of
+          storing one change at a time.</para>
+
+      </sect3>
 
     </sect2>
 
