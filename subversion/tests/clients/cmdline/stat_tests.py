@@ -33,8 +33,8 @@ Item = svntest.wc.StateItem
 
 #----------------------------------------------------------------------
 
-def stat_unversioned_file_in_current_dir(sbox):
-  "stat an unversioned file in the current directory"
+def status_unversioned_file_in_current_dir(sbox):
+  "run status on an unversioned file in the current directory"
 
   if sbox.build():
     return 1
@@ -129,7 +129,7 @@ def status_update_with_nested_adds(sbox):
 
 # svn status -vN should include all entries in a directory
 def status_shows_all_in_current_dir(sbox):
-  "stat -vN and test if all items in the current directory show up"
+  "status -vN and test if all items in the current directory show up"
 
   if sbox.build():
     return 1
@@ -140,6 +140,9 @@ def status_shows_all_in_current_dir(sbox):
   os.chdir(wc_dir)
 
   stat_output, err_output = svntest.main.run_svn(None, 'stat', '-vN')
+  if err_output:
+    return 1
+
   entries_in_wc = len(os.listdir("."))
 
   os.chdir(was_cwd)
@@ -150,6 +153,32 @@ def status_shows_all_in_current_dir(sbox):
   return 0
 
 
+def status_missing_file(sbox):
+  "status with a versioned file missing"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  was_cwd = os.getcwd()
+
+  os.chdir(wc_dir)
+
+  os.remove('iota')
+
+  # ### todo: passing expected err output here, just so we don't get
+  # ### stderr printed when we run the test.  But when the bug is
+  # ### fixed, we should pass None as the first arg to run_svn, and
+  # ### check that stat_output has a `!' line for the missing file.
+  stat_output, err_output = svntest.main.run_svn \
+                            ('iota: No such file or directory', 'status')
+  if err_output:
+    return 1
+
+  os.chdir(was_cwd)
+
+  return 0
+
 
 ########################################################################
 # Run the tests
@@ -157,9 +186,10 @@ def status_shows_all_in_current_dir(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              stat_unversioned_file_in_current_dir,
+              status_unversioned_file_in_current_dir,
               status_update_with_nested_adds,
               status_shows_all_in_current_dir,
+              (status_missing_file, svntest.main.XFAIL),
              ]
 
 if __name__ == '__main__':
