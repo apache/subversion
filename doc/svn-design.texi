@@ -82,6 +82,9 @@ See @xref{License} for details.
 @end titlepage
 @c -----------------------------------------------------------------
 
+@summarycontents
+@contents
+
 @node Top
 @top
 
@@ -90,9 +93,6 @@ This manual describes the design of the Subversion version control
 system.
 
 @end ifinfo
-
-@summarycontents
-@contents
 
 @menu
 * Goals::                        The goals of the Subversion project.
