@@ -27,7 +27,7 @@ svn_ra_local__set_path (void *report_baton,
   svn_string_t *from_path;
   svn_ra_local__report_baton_t *rbaton 
     = (svn_ra_local__report_baton_t *) report_baton;
-  svn_revnum_t *rev_ptr = apr_pcalloc (rbaton->pool, sizeof(*rev_ptr));
+  svn_revnum_t *rev_ptr = apr_palloc (rbaton->pool, sizeof(*rev_ptr));
 
   /* If this is the very first call, no txn exists yet. */
   if (! rbaton->txn)
