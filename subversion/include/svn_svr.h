@@ -74,23 +74,32 @@
 #include <svn_types.h>
 
 
+/* Makes the server library re-load `/etc/svn.conf'.  Network layers
+   *must* call this routine when first loaded!  
+
+   Returns failure (NULL) or success (non-NULL).
+*/
+
+char svn_svr_init (svn_string_t *config_file);
+
+
 
 /* For reading history */
 
 svn_ver_t * svn_svr_latest (svn_string_t *repos, 
-                            svn_string_t *user);
+                            svn_user_t *user);
 
 svn_string_t * svn_svr_get_ver_prop (svn_string_t *repos, 
-                                     svn_string_t *user, 
+                                     svn_user_t *user, 
                                      svn_ver_t *ver, 
                                      svn_string_t *propname);
 
 svn_proplist_t * svn_svr_get_ver_proplist (svn_string_t *repos, 
-                                           svn_string_t *user, 
+                                           svn_user_t *user, 
                                            svn_ver_t *ver);
 
 svn_proplist_t * svn_svr_get_ver_propnames (svn_string_t *repos, 
-                                            svn_string_t *user, 
+                                            svn_user_t *user, 
                                             svn_ver_t *ver);
  
 
@@ -98,18 +107,18 @@ svn_proplist_t * svn_svr_get_ver_propnames (svn_string_t *repos,
 /* For reading nodes */
 
 svn_node_t * svn_svr_read (svn_string_t *repos, 
-                           svn_string_t *user, 
+                           svn_user_t *user, 
                            svn_ver_t *ver, 
                            svn_string_t *path);
 
 svn_string_t * svn_svn_svr_get_node_prop (svn_string_t *repos, 
-                                          svn_string_t *user, 
+                                          svn_user_t *user, 
                                           svn_ver_t *ver, 
                                           svn_string_t *path, 
                                           svn_string_t *propname);
 
 svn_string_t * svn_svr_get_dirent_prop (svn_string_t *repos, 
-                                        svn_string_t *user, 
+                                        svn_user_t *user, 
                                         svn_ver_t *ver, 
                                         svn_string_t *path, 
                                         svn_string_t *propname);
@@ -119,17 +128,17 @@ svn_proplist_t * svn_svr_get_node_proplist (svn_string_t *repos,
                                             svn_string_t *path);
  
 svn_proplist_t * svn_svr_get_dirent_proplist (svn_string_t *repos, 
-                                              svn_string_t *user, 
+                                              svn_user_t *user, 
                                               svn_ver_t *ver, 
                                               svn_string_t *path);
  
 svn_proplist_t * svn_svr_get_node_propnames (svn_string_t *repos, 
-                                             svn_string_t *user, 
+                                             svn_user_t *user, 
                                              svn_ver_t *ver, 
                                              svn_string_t *path);
  
 svn_proplist_t * svn_svr_get_dirent_propnames (svn_string_t *repos, 
-                                               svn_string_t *user, 
+                                               svn_user_t *user, 
                                                svn_ver_t *ver, 
                                                svn_string_t *path); 
 
@@ -138,30 +147,30 @@ svn_proplist_t * svn_svr_get_dirent_propnames (svn_string_t *repos,
 /* For writing */
 
 svn_token_t svn_svr_submit (svn_string_t *repos, 
-                            svn_string_t *user, 
+                            svn_user_t *user, 
                             svn_skelta_t *skelta);
  
 svn_ver_t * svn_svr_write (svn_string_t *repos, 
-                           svn_string_t *user, 
+                           svn_user_t *user, 
                            svn_delta_t *delta, 
                            svn_token_t token);
  
 int svn_svr_abandon (svn_string_t *repos, 
-                     svn_string_t *user, 
+                     svn_user_t *user, 
                      svn_token_t token);   /* returns success or failure */ 
 
 
 /* For difference queries */
 
 svn_delta_t * svn_svr_get_delta (svn_string_t *repos, 
-                                 svn_string_t *user, 
+                                 svn_user_t *user, 
                                  svn_ver_t *ver1, 
                                  svn_string_t *path1, 
                                  svn_ver_t *ver2, 
                                  svn_string_t *path2);
  
 svn_diff_t * svn_svr_get_diff (svn_string_t *repos, 
-                               svn_string_t *user, 
+                               svn_user_t *user, 
                                svn_ver_t *ver1, 
                                svn_string_t *path1, 
                                svn_ver_t *ver2, 
@@ -174,11 +183,11 @@ calls to svn_fs_cmp() and svn_fs_get_delta() respectively (see
 <svn_fs.h>) */
 
 svn_skelta_t * svn_svr_get_status (svn_string_t *repos, 
-                                   svn_string_t *user, 
+                                   svn_user_t *user, 
                                    svn_skelta_t *skelta);
  
 svn_delta_t * svn_svr_get_update (svn_string_t *repos, 
-                                  svn_string_t *user, 
+                                  svn_user_t *user, 
                                   svn_skelta_t *skelta); 
 
 
