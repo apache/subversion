@@ -111,14 +111,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: david, ghudson
 
-  * r11740
-    Fix encoding bug in svn ls -v.
-    Justification:
-      Encoding bugs look ugly, especially in Asian languages.  Simple fix.
-    Votes:
-      +1: lundblad, kfogel, maxb
-      +0: nori
-
   * r11862, r11921, r12061 (part of issue #1997)
     Fix encoding bug in svnserve -h.
     Justification:
