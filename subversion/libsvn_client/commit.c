@@ -944,7 +944,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                    &tempfiles, ctx, pool);
 
   /* Handle a successful commit. */
-  if (! cmt_err)
+  if ((! cmt_err)
+      || (cmt_err->apr_err == SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED))
     {
       apr_pool_t *subpool = svn_pool_create (pool);
 
