@@ -66,6 +66,7 @@ svn_cl__blame (apr_getopt_t *os,
 
   if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
     {
+      opt_state->start_revision.kind = svn_opt_revision_number;
       opt_state->start_revision.value.number = 1;
     }
 
