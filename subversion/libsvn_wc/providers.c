@@ -63,8 +63,10 @@ get_creds (const char **username,
 
   /* Set the default return values. */
   *got_creds = FALSE;
-  *username = NULL;
-  *password = NULL;
+  if (username)
+    *username = NULL;
+  if (password)
+    *password = NULL;
 
   /* No base dir?  No creds. */
   if (! pb->base_dir)
