@@ -103,6 +103,15 @@ restore_file (const char *file_path,
    DIR_REV.  If so, report this fact to REPORTER.  If an entry is
    missing from disk, report its absence to REPORTER.  
 
+   If RECURSE, and TRAVERSAL_INFO is non-null, record this directory's
+   value of svn:externals in both TRAVERSAL_INFO->externals_old and
+   TRAVERSAL_INFO->externals_new, using wc_path + dir_path as the key,
+   and the raw (unparsed) value of the property as the value.  NOTE:
+   We set the value in both places, because its absence in just one or
+   the other place signals that the property was added or deleted;
+   thus, storing it in both places signals that it is present and, by
+   default, unchanged.
+
    If RESTORE_FILES is set, then unexpectedly missing working files
    will be restored from text-base and NOTIFY_FUNC/NOTIFY_BATON
    will be called to report the restoration. */
@@ -116,6 +125,7 @@ report_revisions (const char *wc_path,
                   void *notify_baton,
                   svn_boolean_t restore_files,
                   svn_boolean_t recurse,
+                  svn_wc_traversal_info_t *traversal_info,
                   apr_pool_t *pool)
 {
   apr_hash_t *entries, *dirents;
@@ -296,12 +306,36 @@ report_revisions (const char *wc_path,
                                          this_path,
                                          subdir_entry->revision));
 
+          if (traversal_info)
+            {
+              const svn_string_t *val_s;
+              const char *dup_path = apr_pstrdup (traversal_info->pool,
+                                                  this_full_path);
+
+              SVN_ERR (svn_wc_prop_get
+                       (&val_s, SVN_PROP_EXTERNALS, this_full_path, pool));
+            
+              if (val_s)
+                {
+                  const char *dup_val = apr_pstrmemdup (traversal_info->pool,
+                                                        val_s->data,
+                                                        val_s->len);
+
+                  apr_hash_set (traversal_info->externals_old,
+                                dup_path, APR_HASH_KEY_STRING, dup_val);
+                  
+                  apr_hash_set (traversal_info->externals_new,
+                                dup_path, APR_HASH_KEY_STRING, dup_val);
+                }
+            }
+
           /* Recurse. */
           SVN_ERR (report_revisions (wc_path, this_path,
                                      subdir_entry->revision,
                                      reporter, report_baton,
                                      notify_func, notify_baton,
                                      restore_files, recurse,
+                                     traversal_info,
                                      subpool));
         } /* end directory case */
 
@@ -328,6 +362,7 @@ svn_wc_crawl_revisions (const char *path,
                         svn_boolean_t recurse,
                         svn_wc_notify_func_t notify_func,
                         void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
                         apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -392,7 +427,9 @@ svn_wc_crawl_revisions (const char *path,
                                   base_rev,
                                   reporter, report_baton,
                                   notify_func, notify_baton,
-                                  restore_files, recurse, pool);
+                                  restore_files, recurse,
+                                  traversal_info,
+                                  pool);
           if (err)
             {
               /* Clean up the fs transaction. */

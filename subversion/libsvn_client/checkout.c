@@ -52,7 +52,7 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
 {
   const svn_delta_editor_t *checkout_editor;
   void *checkout_edit_baton;
-  svn_wc_traversal_info_t *traversal_info;
+  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
   svn_error_t *err;
   svn_revnum_t revnum;
 
@@ -81,7 +81,7 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
                                        notify_baton,
                                        &checkout_editor,
                                        &checkout_edit_baton,
-                                       &traversal_info,
+                                       traversal_info,
                                        pool));
 
   /* if using an RA layer */
@@ -166,10 +166,11 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
   /* We handle externals after the initial checkout is complete, so
      that fetching external items (and any errors therefrom) doesn't
      delay the primary checkout.  */
-  SVN_ERR (svn_client__handle_externals_changes
+  SVN_ERR (svn_client__handle_externals
            (traversal_info,
             notify_func, notify_baton,
             auth_baton,
+            FALSE,
             pool));
 
   return SVN_NO_ERROR;

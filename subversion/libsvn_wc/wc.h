@@ -42,6 +42,27 @@ extern "C" {
 
 
 
+/*** Update traversals. ***/
+
+struct svn_wc_traversal_info_t
+{
+  /* The pool in which this structure and everything inside it is
+     allocated. */
+  apr_pool_t *pool;
+
+  /* The before and after values of the SVN_PROP_EXTERNALS property,
+   * for each directory on which that property changed.  These have
+   * the same layout as those returned by svn_wc_edited_externals(). 
+   *
+   * The hashes, their keys, and their values are allocated in the
+   * above pool.
+   */
+  apr_hash_t *externals_old;
+  apr_hash_t *externals_new;
+};
+
+
+
 /*** Timestamps. ***/
 
 /* A special timestamp value which means "use the timestamp from the

@@ -55,7 +55,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
   const char *URL, *anchor, *target;
   svn_error_t *err;
   svn_revnum_t revnum;
-  svn_wc_traversal_info_t *traversal_info;
+  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path && (path[0] != '\0'));
@@ -91,7 +91,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
                                      recurse,
                                      notify_func, notify_baton,
                                      &update_editor, &update_edit_baton,
-                                     &traversal_info,
+                                     traversal_info,
                                      pool));
 
   /* ### todo:  This is a TEMPORARY wrapper around our editor so we
@@ -133,7 +133,8 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
          update_editor will be driven by svn_repos_dir_delta. */
       err = svn_wc_crawl_revisions (path, reporter, report_baton,
                                     TRUE, recurse,
-                                    notify_func, notify_baton, pool);
+                                    notify_func, notify_baton,
+                                    traversal_info, pool);
       
       /* Sleep for one second to ensure timestamp integrity. */
       apr_sleep (APR_USEC_PER_SEC * 1);
@@ -182,10 +183,11 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
-  SVN_ERR (svn_client__handle_externals_changes
+  SVN_ERR (svn_client__handle_externals
            (traversal_info,
             notify_func, notify_baton,
             auth_baton,
+            TRUE,  /* update unchanged externals */
             pool));
 
   return SVN_NO_ERROR;
