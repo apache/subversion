@@ -122,7 +122,7 @@ void svn_string_fillchar (svn_string_t *str, const unsigned char c);
    nothing else is. */
 void svn_string_appendbytes (svn_string_t *targetstr,
                              const char *bytes, 
-                             const size_t count);
+                             const apr_size_t count);
 void svn_string_appendstr (svn_string_t *targetstr, 
                            const svn_string_t *appendstr);
 void svn_string_appendcstr (svn_string_t *targetstr,

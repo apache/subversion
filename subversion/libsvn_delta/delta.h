@@ -75,7 +75,7 @@ void svn_txdelta__insert_op (svn_txdelta_window_t *window,
 
 /* Create a vdelta window. Allocate temporary data from `pool'. */
 void svn_txdelta__vdelta (svn_txdelta_window_t *window,
-                          const char *const start,
+                          const char *start,
                           apr_size_t source_len,
                           apr_size_t target_len,
                           apr_pool_t *pool);
