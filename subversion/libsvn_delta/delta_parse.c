@@ -129,7 +129,7 @@ svn_find_delta_bottom (svn_delta_stackframe_t *frame)
   if (frame->next == NULL)
     return frame;
   else
-    return svn_find_delta_bottom (frame);
+    return svn_find_delta_bottom (frame->next);
 }
 
 
