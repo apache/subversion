@@ -805,7 +805,7 @@ def hudson_part_2(sbox):
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 None,
                                                 None,
-                                                "not up-to-date",
+                                                "out.of.date",
                                                 None, None,
                                                 None, None,
                                                 wc_dir)
