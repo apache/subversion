@@ -308,14 +308,46 @@ const apr_array_header_t *svn_swig_java_strings_to_array(JNIEnv *jenv,
   return temp;
 }
 
-static svn_error_t * convert_java_error(JNIEnv *jenv, apr_pool_t *pool)
+/* Convert a Java exception into a svn_error_t.
+   This function may only be called if there is
+   a pending exception. */
+static svn_error_t * convert_exception(JNIEnv *jenv, apr_pool_t *pool)
 {
-    /* ### need to fetch the Java error and map it to an svn_error_t
-       ### ... use something like the (relatively) new
-       ### SVN_ERR_SWIG_PY_EXCEPTION_SET */
+  svn_error_t *result;
+  apr_status_t status;
+  char *msg;
+  jthrowable exc;
 
-  return svn_error_create(APR_EGENERAL, NULL,
-                          "the Java callback raised an exception");
+  /* Fetch the exception */
+  exc = JCALL0(ExceptionOccurred, jenv);
+
+#ifdef SVN_DEBUG
+  /* Print the pending exception to stderr */
+  JCALL0(ExceptionDescribe, jenv);
+#endif
+
+  /* Clear the exception */
+  JCALL0(ExceptionClear, jenv);
+
+  /* Interpret the exception:
+     java.lang.OutOfMemoryError -> APR_ENOMEM
+     other -> APR_EGENERAL */
+  /* ### Add other exceptions; use a table? */
+  if (JCALL2(IsInstanceOf, jenv, exc, svn_swig_java_cls_outofmemoryerror))
+    {
+      status = APR_ENOMEM;
+      msg = "JVM raised OutOfMemoryError";
+    }
+  else
+    {
+      status = APR_EGENERAL;
+      msg = "the Java callback raised an exception";
+    }
+  result = svn_error_create(status, NULL, msg);
+
+  /* Free the local reference */
+  JCALL1(DeleteLocalRef, jenv, exc);
+  return result;
 }
 
 static item_baton * make_baton(JNIEnv *jenv, apr_pool_t *pool,
@@ -363,7 +395,7 @@ static svn_error_t * close_baton(void *baton, const char *method)
     }
 
   if (result == NULL)
-      return convert_java_error(ib->jenv, ib->pool);
+      return convert_exception(ib->jenv, ib->pool);
 
   /* there is no return value, so just toss this object */
   JCALL1(DeleteGlobalRef, ib->jenv, result);
@@ -396,7 +428,7 @@ static svn_error_t * thunk_set_target_revision(void *edit_baton,
   if ((result = PyObject_CallMethod(ib->editor, (char *)"set_target_revision",
                                     (char *)"l", target_revision)) == NULL)
     {
-      return convert_java_error(ib->jenv, pool);
+      return convert_exception(ib->jenv, pool);
     }
   */
 
@@ -419,7 +451,7 @@ static svn_error_t * thunk_open_root(void *edit_baton,
                                     (char *)"lO&", base_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      return convert_java_error(ib->jenv, dir_pool);
+      return convert_exception(ib->jenv, dir_pool);
     }
   */
 
@@ -442,7 +474,7 @@ static svn_error_t * thunk_delete_entry(const char *path,
                                     (char *)"slOO&", path, revision, ib->baton,
                                     make_ob_pool, pool)) == NULL)
     {
-      return convert_java_error(ib->jenv, pool);
+      return convert_exception(ib->jenv, pool);
     }
   */
 
@@ -468,7 +500,7 @@ static svn_error_t * thunk_add_directory(const char *path,
                                     copyfrom_path, copyfrom_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      return convert_java_error(ib->jenv, dir_pool);
+      return convert_exception(ib->jenv, dir_pool);
     }
   */
 
@@ -493,7 +525,7 @@ static svn_error_t * thunk_open_directory(const char *path,
                                     base_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      return convert_java_error(ib->jenv, dir_pool);
+      return convert_exception(ib->jenv, dir_pool);
     }
   */
 
@@ -517,7 +549,7 @@ static svn_error_t * thunk_change_dir_prop(void *dir_baton,
                                     value->data, value->len,
                                     make_ob_pool, pool)) == NULL)
     {
-      return convert_java_error(ib->jenv, pool);
+      return convert_exception(ib->jenv, pool);
     }
   */
 
@@ -548,7 +580,7 @@ static svn_error_t * thunk_add_file(const char *path,
                                     copyfrom_path, copyfrom_revision,
                                     make_ob_pool, file_pool)) == NULL)
     {
-      return convert_java_error(ib->jenv, file_pool);
+      return convert_exception(ib->jenv, file_pool);
     }
   */
 
@@ -573,7 +605,7 @@ static svn_error_t * thunk_open_file(const char *path,
                                     base_revision,
                                     make_ob_pool, file_pool)) == NULL)
     {
-      return convert_java_error(ib->jenv, file_pool);
+      return convert_exception(ib->jenv, file_pool);
     }
   */
 
@@ -612,7 +644,7 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
     }
 
   if (result == NULL)
-    return convert_java_error(hb->jenv, hb->pool);
+    return convert_exception(hb->jenv, hb->pool);
 
   /* there is no return value, so just toss this object */
   JCALL1(DeleteGlobalRef, hb->jenv, result);
@@ -635,7 +667,7 @@ static svn_error_t * thunk_apply_textdelta(
   if ((result = PyObject_CallMethod(ib->editor, (char *)"apply_textdelta",
                                     (char *)"O", ib->baton)) == NULL)
     {
-      return convert_java_error(ib->jenv, pool);
+      return convert_exception(ib->jenv, pool);
     }
   */
 
@@ -678,7 +710,7 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
                                     value->data, value->len,
                                     make_ob_pool, pool)) == NULL)
     {
-      return convert_java_error(ib->jenv, pool);
+      return convert_exception(ib->jenv, pool);
     }
   */
 
@@ -833,21 +865,47 @@ svn_error_t *svn_swig_java_client_prompt_func(const char **info,
   jstring jresult;
   jboolean jhide;
   const char *c_str;
+  svn_error_t *result;
 
-  /* ### Add error checking */
   callback_baton = (callback_baton_t *) baton;
   jenv = callback_baton->jenv;
   callback = callback_baton->callback;
+
+  /* Create a new local reference frame. Exit immediately
+     if functions fails. */
+  if (JCALL1(PushLocalFrame, jenv, 2) < 0)
+    {
+      return convert_exception(jenv, callback_baton->pool);
+    }
+
   jprompt = JCALL1(NewStringUTF, jenv, prompt);
+  if (!jprompt) 
+    {
+      goto error;
+    }
   jhide = hide ? JNI_TRUE : JNI_FALSE;
   jresult = JCALL4(CallObjectMethod, jenv, callback, 
                    svn_swig_java_mid_clientprompt_prompt, jprompt, jhide);
+  if (!jresult)
+    {
+      goto error;
+    }
+
   c_str = JCALL2(GetStringUTFChars, jenv, jresult, NULL);
+  if (!c_str)
+    {
+      goto error;
+    }
+
   *info = apr_pstrdup(pool, c_str);
   JCALL2(ReleaseStringUTFChars, jenv, jresult, c_str);
-  JCALL1(DeleteLocalRef, jenv, jresult);
-  JCALL1(DeleteLocalRef, jenv, jprompt);
+  JCALL1(PopLocalFrame, jenv, NULL);
   return SVN_NO_ERROR;
+
+error:
+  result = convert_exception(jenv, callback_baton->pool);
+  JCALL1(PopLocalFrame, jenv, NULL);
+  return result;
 }
 
 

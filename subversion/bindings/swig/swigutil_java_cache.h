@@ -94,6 +94,7 @@ SVN_SWIG_JAVA_CACHE_START
 
 SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_long,"java/lang/Long")
 SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_string,"java/lang/String")
+SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_outofmemoryerror,"java/lang/OutOfMemoryError")
 SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_outputstream,"java/io/OutputStream")
 SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_inputstream,"java/io/InputStream")
 SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_list,"java/util/ArrayList")
