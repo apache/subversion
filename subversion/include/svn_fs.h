@@ -720,6 +720,14 @@ svn_error_t *svn_fs_node_id (svn_fs_id_t **id_p,
                              const char *path,
                              apr_pool_t *pool);
 
+/* Set *REVISION to the revision in which PATH under ROOT was created.
+   Use POOL for any temporary allocations.  *REVISION will be set to
+   SVN_INVALID_REVNUM for uncommitted nodes (i.e. modified nodes under
+   a transaction root).  */
+svn_error_t *svn_fs_node_created_rev (svn_revnum_t *revision,
+                                      svn_fs_root_t *root,
+                                      const char *path,
+                                      apr_pool_t *pool);
 
 /* Set *VALUE_P to the value of the property named PROPNAME of PATH in
    ROOT.  If the node has no property by that name, set *VALUE_P to

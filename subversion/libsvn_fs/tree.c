@@ -646,6 +646,44 @@ svn_fs_node_id (svn_fs_id_t **id_p,
   return SVN_NO_ERROR;
 }
 
+
+struct node_created_rev_args {
+  svn_revnum_t revision;
+  svn_fs_root_t *root;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_node_created_rev (void *baton, trail_t *trail)
+{
+  struct node_created_rev_args *args = baton;
+  dag_node_t *node;
+
+  SVN_ERR (get_dag (&node, args->root, args->path, trail));
+  SVN_ERR (svn_fs__dag_get_revision (&(args->revision), node, trail));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_node_created_rev (svn_revnum_t *revision,
+                         svn_fs_root_t *root,
+                         const char *path,
+                         apr_pool_t *pool)
+{
+  struct node_created_rev_args args;
+
+  args.revision = SVN_INVALID_REVNUM;
+  args.root = root;
+  args.path = path;
+  SVN_ERR (svn_fs__retry_txn 
+           (root->fs, txn_body_node_created_rev, &args, pool));
+  *revision = args.revision;
+  return SVN_NO_ERROR;
+}
+
+
 struct node_kind_args {
   svn_fs_root_t *root;
   const char *path;
