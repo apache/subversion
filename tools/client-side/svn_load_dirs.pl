@@ -1,5 +1,11 @@
 #!/usr/bin/perl -w
 
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
+$| = 1;
+
 use strict;
 use Carp;
 use Cwd;
@@ -13,8 +19,6 @@ use Text::Wrap;
 use URI          1.17;
 
 $Text::Wrap::columns = 72;
-
-my $VERSION = 0.02;
 
 # Process the command line options.
 
@@ -40,8 +44,14 @@ my $opt_import_tag_location;
 # in the tag directory path from the path itself.
 my $REGEX_SEP_CHAR = '@';
 
-GetOptions('tag_location=s' => \$opt_import_tag_location) or
-  &usage;
+# This specifies a configuration file that contains a list of regular
+# expressions to check against a file and the properties to set on
+# matching files.
+my $property_config_filename;
+
+GetOptions('property_cfg_filename=s' => \$property_config_filename,
+           'tag_location=s'          => \$opt_import_tag_location)
+  or &usage;
 &usage("$0: too few arguments") if @ARGV < 3;
 
 $repos_base_url      = shift;
@@ -85,6 +95,16 @@ if ($repos_load_rel_path ne '.' and -d $repos_load_rel_path) {
   die "$0: import_dir `$repos_load_rel_path' is a directory.\n";
 }
 
+# Determine the native end of line style for this system.  Do this the
+# most portable way, by writing a file with a single \n in non-binary
+# mode and then reading the file in binary mode.
+my $native_eol = &determine_native_eol;
+print "Native EOL on this system is ";
+for (my $i=0; $i<length($native_eol); ++$i) {
+  printf "\\%03o", ord(substr($native_eol, $i, 1));
+}
+print ".\n";
+
 # The remaining command line arguments should be directories.  Check
 # that they all exist and that there are no duplicates.
 my @load_dirs = @ARGV;
@@ -104,10 +124,6 @@ my @load_dirs = @ARGV;
     }
     $dirs{$dir} = 1;
   }
-}
-
-sub die_when_called {
-  die $_[0];
 }
 
 # Create the tag locations and print them for the user to review.
@@ -152,6 +168,64 @@ if (defined $opt_import_tag_location) {
                                "acceptable? (Y/N) ");
 }
 
+# Load the property configuration filename, if one was specified, into
+# an array of hashes, where each hash contains a regular expression
+# and a property to apply to the file if the regular expression
+# matches.
+my @property_settings;
+if (defined $property_config_filename and length $property_config_filename) {
+  open(CFG, $property_config_filename)
+    or die "$0: cannot open `$property_config_filename' for reading: $!\n";
+
+  my $ok = 1;
+
+  while (my $line = <CFG>) {
+    next if $line =~ /^\s*$/;
+    next if $line =~ /^\s*#/;
+
+    # Split the input line into words taking into account that single
+    # or double quotes may define a single word with whitespace in it.
+    # The format for the file is
+    # regex control property_name property_value
+    my @line = &split_line($line);
+    next if @line == 0;
+
+    unless (@line == 2 or @line == 4) {
+      warn "$0: line $. of `$property_config_filename' has to have 2 or 4 ",
+           "columns.\n";
+      $ok = 0;
+      next;
+    }
+    my ($regex, $control, $property_name, $property_value) = @line;
+
+    unless ($control eq 'break' or $control eq 'cont') {
+      warn "$0: line $. of `$property_config_filename' has illegal value for ",
+           "column 3 `$control', must be `break' or `cont'.\n";
+      $ok = 0;
+      next;
+    }
+
+    # Compile the regular expression.
+    my $re;
+    eval { $re = qr/$regex/ };
+    if ($@) {
+      warn "$0: line $. of `$property_config_filename' regex `$regex' does ",
+           "not compile:\n$@\n";
+      $ok = 0;
+      next;
+    }
+
+    push(@property_settings, {name    => $property_name,
+                              value   => $property_value,
+                              control => $control,
+                              re      => $re});
+  }
+  close(CFG) or
+    warn "$0: error in closing `$property_config_filename' for reading: $!\n";
+
+  exit 1 unless $ok;
+}
+
 # Check that the svn base URL works by running svn log on it.
 read_from_process('svn', 'log', $repos_base_uri);
 
@@ -192,8 +266,12 @@ if ($repos_root_uri) {
 }
 
 # Create a temporary directory for svn to work in.
-my $temp_template = '/tmp/svn_load_dirs_XXXXXXXXXX';
-my $temp_dir      = tempdir($temp_template);
+my $temp_dir = $ENV{TMPDIR};
+unless (defined $temp_dir and length $temp_dir) {
+  $temp_dir = '/tmp';
+}
+my $temp_template = "$temp_dir/svn_load_dirs_XXXXXXXXXX";
+$temp_dir         = tempdir($temp_template);
 
 # Create an object that when DESTROY'ed will delete the temporary
 # directory.  The CLEANUP flag to tempdir should do this, but they
@@ -213,11 +291,11 @@ read_from_process('svn', 'co', $repos_base_uri, $checkout_dir_name);
 # Change into the top level directory of the repository and record the
 # absolute path to this location because the script will come back
 # here.
-chdir($checkout_dir_name) or
-  die "$0: cannot chdir `$checkout_dir_name': $!\n";
+chdir($checkout_dir_name)
+  or die "$0: cannot chdir `$checkout_dir_name': $!\n";
 my $wc_top_dir_cwd = cwd;
 
-# Check if all the directories exist to load the diretories into the
+# Check if all the directories exist to load the directories into the
 # repository.  If not, ask if they should be created.  For tags, do
 # not create the tag directory itself, that is done on the svn cp.
 {
@@ -227,8 +305,11 @@ my $wc_top_dir_cwd = cwd;
 
   # Assume that the last portion of the tag directory contains the
   # version number and remove it from the directories to create,
-  # because the directory will be created by svn cp.
+  # because the tag directory will be created by svn cp.
   foreach my $load_tag (@load_tags) {
+    # Skip this tag if there is only one segment in its name.
+    next unless $load_tag =~ m#/#;
+
     # Copy $load_tag otherwise the s/// will modify @load_tags.
     my $l =  $load_tag;
     $l    =~ s#/[^/]*$##;
@@ -258,8 +339,8 @@ my $wc_top_dir_cwd = cwd;
     my $message = "Create directories to load project into.\n\n";
 
     foreach my $dir (@dirs_to_create) {
-      mkdir($dir) or
-        die "$0: cannot mkdir `$dir': $!\n";
+      mkdir($dir)
+        or die "$0: cannot mkdir `$dir': $!\n";
       if (length $repos_base_path_segment) {
         $message .= "* $repos_base_path_segment/$dir: New directory.\n";
       } else {
@@ -324,7 +405,7 @@ while (@load_dirs) {
     # directory will be deleted from the hash using the list of files
     # and directories in the source directory, leaving the files and
     # directories that need to be deleted.
-    %del_files = &recusurive_ls_and_hash($wc_import_dir_cwd);
+    %del_files = &recursive_ls_and_hash($wc_import_dir_cwd);
 
     # This anonymous subroutine finds all the files and directories in
     # the directory to load.  It notes the file type and for each file
@@ -359,10 +440,10 @@ while (@load_dirs) {
     # First change to the original directory where this script was run
     # so that if the specified directory is a relative directory path,
     # then the script can change into it.
-    chdir($orig_cwd) or
-      die "$0: cannot chdir `$orig_cwd': $!\n";
-    chdir($load_dir) or
-      die "$0: cannot chdir `$load_dir': $!\n";
+    chdir($orig_cwd)
+      or die "$0: cannot chdir `$orig_cwd': $!\n";
+    chdir($load_dir)
+      or die "$0: cannot chdir `$load_dir': $!\n";
 
     find({no_chdir   => 1,
           preprocess => sub { sort { $b cmp $a } @_ },
@@ -385,8 +466,8 @@ while (@load_dirs) {
 
     # Now change into the working copy directory in case any renames
     # need to be performed.
-    chdir($wc_import_dir_cwd) or
-      die "$0: cannot chdir `$wc_import_dir_cwd': $!\n";
+    chdir($wc_import_dir_cwd)
+      or die "$0: cannot chdir `$wc_import_dir_cwd': $!\n";
 
     # Only do renames if there are both added and deleted files and
     # directories.
@@ -571,9 +652,11 @@ while (@load_dirs) {
   # add to the working copy and %del_files starts with all the files
   # already in the working copy and gets files removed that are in the
   # imported directory, which results in a list of files that should
-  # be deleted.
+  # be deleted.  %upd_files holds the list of files that have been
+  # updated.
   my %add_files;
-  my %del_files = &recusurive_ls_and_hash($wc_import_dir_cwd);
+  my %del_files = &recursive_ls_and_hash($wc_import_dir_cwd);
+  my %upd_files;
 
   # This anonymous subroutine copies files from the source directory
   # to the working copy directory.
@@ -602,23 +685,74 @@ while (@load_dirs) {
         my $new_digest = &digest_hash_file($source_path);
         if ($new_digest ne $del_digest) {
           print "U   $source_path\n";
+          $upd_files{$source_path} = $del_info;
         }
       }
     } else {
       print "A   $source_path\n";
       $add_files{$source_path}{type} = $source_type;
+
+      # Create an array reference to hold the list of properties to
+      # apply to this object.
+      unless (defined $add_files{$source_path}{properties}) {
+        $add_files{$source_path}{properties} = [];
+      }
+
+      # Go through the list of properties for a match on this file or
+      # directory and if there is a match, then apply the property to
+      # it.
+      foreach my $property (@property_settings) {
+        my $re = $property->{re};
+        if ($source_path =~ $re) {
+          my $property_name  = $property->{name};
+          my $property_value = $property->{value};
+
+          # The property value may not be set in the configuration
+          # file, since the user may just want to set the control
+          # flag.
+          if (defined $property_name and defined $property_value) {
+            # Ignore properties that do not apply to directories.
+            if ($source_type eq 'd') {
+              if ($property_name eq 'svn:eol-style' or
+                  $property_name eq 'svn:executable' or
+                  $property_name eq 'svn:keywords' or
+                  $property_name eq 'svn:mime-type') {
+                next;
+              }
+            }
+
+            # Ignore properties that do not apply to files.
+            if ($source_type eq 'f') {
+              if ($property_name eq 'svn:externals' or
+                  $property_name eq 'svn:ignore') {
+                next;
+              }
+            }
+
+            print "Adding to $source_path property `$property_name' with ",
+                  "value `$property_value'.\n";
+
+            push(@{$add_files{$source_path}{properties}}, $property);
+          }
+
+          last if $property->{control} eq 'break';
+        }
+      }
     }
 
     # Now make sure the file or directory in the source directory
     # exists in the repository.
     if ($source_type eq 'd') {
       if ($dest_type eq '0') {
-        mkdir($dest_path) or
-          die "$0: cannot mkdir `$dest_path': $!\n";
+        mkdir($dest_path)
+          or die "$0: cannot mkdir `$dest_path': $!\n";
       }
     } elsif ($source_type eq 'f') {
-      copy($source_path, $dest_path) or
-        die "$0: copy `$source_path' to `$dest_path': $!\n";
+      # Only copy the file if the digests do not match.
+      if ($add_files{$source_path} or $upd_files{$source_path}) {
+        copy($source_path, $dest_path)
+          or die "$0: copy `$source_path' to `$dest_path': $!\n";
+      }
     } else {
       die "$0: does not handle copying files of type `$source_type'.\n";
     }
@@ -628,10 +762,10 @@ while (@load_dirs) {
   # First change to the original directory where this script was run
   # so that if the specified directory is a relative directory path,
   # then the script can change into it.
-  chdir($orig_cwd) or
-    die "$0: cannot chdir `$orig_cwd': $!\n";
-  chdir($load_dir) or
-    die "$0: cannot chdir `$load_dir': $!\n";
+  chdir($orig_cwd)
+    or die "$0: cannot chdir `$orig_cwd': $!\n";
+  chdir($load_dir)
+    or die "$0: cannot chdir `$load_dir': $!\n";
 
   find({no_chdir   => 1,
         preprocess => sub { sort { $b cmp $a } @_ },
@@ -692,16 +826,67 @@ while (@load_dirs) {
   }
 
   # Now change back to the trunk directory and run the svn commands.
-  chdir($wc_import_dir_cwd) or
-    die "$0: cannot chdir `$wc_import_dir_cwd': $!\n";
+  chdir($wc_import_dir_cwd)
+    or die "$0: cannot chdir `$wc_import_dir_cwd': $!\n";
+
+  # If any of the added files have the svn:eol-style property set,
+  # then pass -b to diff, otherwise diff may fail because the end of
+  # lines have changed and the source file and file in the repository
+  # will not be identical.
+  my @diff_ignore_space_changes;
 
   if (keys %add_files) {
     my @add_files = sort {length($a) <=> length($b) || $a cmp $b}
                     keys %add_files;
     read_from_process('svn', 'add', @add_files);
+
+    # Add properties on the added files.
+    foreach my $add_file (@add_files) {
+      foreach my $property (@{$add_files{$add_file}{properties}}) {
+        my $property_name  = $property->{name};
+        my $property_value = $property->{value};
+
+        if ($property_name eq 'svn:eol-style') {
+          @diff_ignore_space_changes = ('-b');
+        }
+
+        read_from_process('svn', 'propset',
+                          $property_name,
+                          $property_value,
+                          $add_file);
+      }
+    }
   }
   if (@del_files) {
     read_from_process('svn', 'rm', @del_files);
+  }
+
+  # Go through the list of updated files and check the svn:eol-style
+  # property.  If it is set to native, then convert all CR, CRLF and
+  # LF's in the file to the native end of line characters.  Also,
+  # modify diff's command line so that it will ignore the change in
+  # end of line style.
+  if (keys %upd_files) {
+    my @upd_files = sort {length($a) <=> length($b) || $a cmp $b}
+                    keys %upd_files;
+    foreach my $upd_file (@upd_files) {
+      my @command = ('svn', 'propget', 'svn:eol-style', $upd_file);
+      my @lines = read_from_process(@command);
+      next unless @lines;
+      if (@lines > 1) {
+        warn "$0: `@command' returned more than one line of output: ",
+             "`@lines'.\n";
+        next;
+      }
+
+      my $eol_style = $lines[0];
+      if ($eol_style eq 'native') {
+        @diff_ignore_space_changes = ('-b');
+        if (&convert_file_to_native_eol($upd_file)) {
+          print "Native eol-style conversion modified $upd_file.\n";
+        }
+      }
+    }
   }
 
   my $message = wrap('', '', "Load $load_dir into $repos_load_abs_path.\n");
@@ -730,17 +915,17 @@ while (@load_dirs) {
 
   # Finally, go to the top of the svn checked out tree and do an
   # update to pick up the new tag in the working copy.
-  chdir($wc_top_dir_cwd) or
-    die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
+  chdir($wc_top_dir_cwd)
+    or die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
 
   read_from_process(qw(svn update));
 
   # Now run a recursive diff between the original source directory and
   # the tag for a consistency check.
   if (defined $load_tag) {
-    chdir($orig_cwd) or
-      die "$0: cannot chdir `$orig_cwd': $!\n";
-    read_from_process('diff',
+    chdir($orig_cwd)
+      or die "$0: cannot chdir `$orig_cwd': $!\n";
+    read_from_process('diff', '-u', @diff_ignore_space_changes,
                       '-x', '.svn',
                       '-r', $load_dir, $wc_tag_dir_cwd);
   }
@@ -750,7 +935,10 @@ exit 0;
 
 sub usage {
   warn "@_\n" if @_;
-  die "usage: $0 [-t tag_dir] svn_url import_dir dir_v1 [dir_v2 [..]]\n";
+  die "usage: $0 [options] svn_url import_dir dir_v1 [dir_v2 [..]]\n",
+      "options are\n",
+      "  -p filename  config listing properties to apply to matching files\n",
+      "  -t tag_dir   create a tag in tag_dir, which is relative to svn_url\n";
 }
 
 sub file_type {
@@ -776,10 +964,10 @@ sub safe_read_from_pipe {
     die "$0: cannot fork: $!\n";
   }
   unless ($pid) {
-    open(STDERR, ">&STDOUT") or
-      die "$0: cannot dup STDOUT: $!\n";
-    exec(@_) or
-      die "$0: cannot exec `@_': $!\n";
+    open(STDERR, ">&STDOUT")
+      or die "$0: cannot dup STDOUT: $!\n";
+    exec(@_)
+      or die "$0: cannot exec `@_': $!\n";
   }
   my @output;
   while (<SAFE_READ>) {
@@ -821,9 +1009,9 @@ sub read_from_process {
 
 # Get a list of all the files and directories in the specified
 # directory, the type of file and a digest hash of file types.
-sub recusurive_ls_and_hash {
+sub recursive_ls_and_hash {
   unless (@_ == 1) {
-    croak "$0: recusurive_ls_and_hash passed incorrect number of ",
+    croak "$0: recursive_ls_and_hash passed incorrect number of ",
           "arguments.\n";
   }
 
@@ -835,8 +1023,8 @@ sub recusurive_ls_and_hash {
   # directory.
   my $return_cwd = cwd;
 
-  chdir($dir) or
-    die "$0: cannot chdir `$dir': $!\n";
+  chdir($dir)
+    or die "$0: cannot chdir `$dir': $!\n";
 
   my %files;
 
@@ -856,8 +1044,8 @@ sub recusurive_ls_and_hash {
         wanted     => $wanted
        }, '.');
 
-  chdir($return_cwd) or
-    die "$0: cannot chdir `$return_cwd': $!\n";
+  chdir($return_cwd)
+    or die "$0: cannot chdir `$return_cwd': $!\n";
 
   %files;
 }
@@ -892,12 +1080,12 @@ sub commit_renames {
   # Change to the top of the working copy so that any
   # directories will also be updated.
   my $cwd = cwd;
-  chdir($wc_top_dir_cwd) or
-    die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
+  chdir($wc_top_dir_cwd)
+    or die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
   read_from_process('svn', 'commit', '-m', $message);
   read_from_process('svn', 'update');
-  chdir($cwd) or
-    die "$0: cannot chdir `$cwd': $!\n";
+  chdir($cwd)
+    or die "$0: cannot chdir `$cwd': $!\n";
 
   # Some versions of subversion have a bug where renamed files
   # or directories are not deleted after a commit, so do that
@@ -999,6 +1187,158 @@ sub get_yes_or_no {
     $line = '' unless defined $line;
   } until $line =~ /[yn]/i;
   $line =~ /y/i;
+}
+
+# Determine the native end of line on this system by writing a \n in
+# non-binary mode to an empty file and reading the same file back in
+# binary mode.
+sub determine_native_eol {
+  my $filename = "svn_load_dirs_eol_test.$$";
+  if (-e $filename) {
+    unlink($filename)
+      or die "$0: cannot unlink `$filename': $!\n";
+  }
+  open(NL_TEST, ">$filename")
+    or die "$0: cannot open `$filename' for writing: $!\n";
+  print NL_TEST "\n";
+  close(NL_TEST) or
+    die "$0: error in closing `$filename' for writing: $!\n";
+  open(NL_TEST, $filename)
+    or die "$0: cannot open `$filename' for reading: $!\n";
+  local $/;
+  undef $/;
+  $native_eol = <NL_TEST>;
+  close(NL_TEST)
+    or die "$0: cannot close `$filename' for reading: $!\n";
+  unlink($filename) or
+    die "$0: cannot unlink `$filename': $!\n";
+
+  my $native_eol_length = length($native_eol);
+  unless ($native_eol_length) {
+    die "$0: native eol length on this system is 0.\n";
+  }
+
+  print "Native EOL on this system is ";
+  for (my $i=0; $i<$native_eol_length; ++$i) {
+    printf "\\%03o", ord(substr($native_eol, $i, 1));
+  }
+  print ".\n";
+}
+
+# Take a filename, open the file and replace all CR, CRLF and LF's
+# with the native end of line style for this system.
+sub convert_file_to_native_eol {
+  unless (@_ == 1) {
+    croak "$0: convert_file_to_native_eol passed incorrect number of ",
+          "arguments.\n";
+  }
+
+  my $filename = shift;
+  open(FILE, $filename)
+    or die "$0: cannot open `$filename' for reading: $!\n";
+  binmode FILE;
+  local $/;
+  undef $/;
+  my $in = <FILE>;
+  close(FILE)
+    or die "$0: error in closing `$filename' for reading: $!\n";
+  my $out = '';
+
+  # Go through the file and transform it byte by byte.
+  my $i = 0;
+  while ($i < length($in)) {
+    my $cc = substr($in, $i, 2);
+    if ($cc eq "\015\012") {
+      $out .= $native_eol;
+      $i += 2;
+      next;
+    }
+
+    my $c = substr($cc, 0, 1);
+    if ($c eq "\012" or $c eq "\015") {
+      $out .= $native_eol;
+    } else {
+      $out .= $c;
+    }
+    ++$i;
+  }
+
+  return 0 if $in eq $out;
+
+  my $tmp_filename = ".svn/tmp/svn_load_dirs.$$";
+  open(FILE, ">$tmp_filename")
+    or die "$0: cannot open `$tmp_filename' for writing: $!\n";
+  binmode FILE;
+  print FILE $out;
+  close(FILE)
+    or die "$0: cannot close `$tmp_filename' for writing: $!\n";
+  rename($tmp_filename, $filename)
+    or die "$0: cannot rename `$tmp_filename' to `$filename': $!\n";
+
+  return 1;
+}
+
+# Split the input line into words taking into account that single or
+# double quotes may define a single word with whitespace in it.
+sub split_line {
+  unless (@_ == 1) {
+    croak "$0: split_line passed incorrect number of arguments.\n";
+  }
+
+  my $line = shift;
+
+  # Strip leading whitespace.  Do not strip trailing whitespace which
+  # may be part of quoted text that was never closed.
+  $line =~ s/^\s+//;
+
+  my $line_length  = length $line;
+  my @words        = ();
+  my $current_word = '';
+  my $in_quote     = '';
+  my $in_protect   = '';
+  my $in_space     = '';
+  my $i            = 0;
+
+  while ($i < $line_length) {
+    my $c = substr($line, $i, 1);
+    ++$i;
+
+    if ($in_protect) {
+      if ($c eq $in_quote) {
+        $current_word .= $c;
+      } elsif ($c eq '"' or $c eq "'") {
+        $current_word .= $c;
+      } else {
+        $current_word .= "$in_protect$c";
+      }
+      $in_protect = '';
+    } elsif ($c eq '\\') {
+      $in_protect = $c;
+    } elsif ($in_quote) {
+      if ($c eq $in_quote) {
+        $in_quote = '';
+      } else {
+        $current_word .= $c;
+      }
+    } elsif ($c eq '"' or $c eq "'") {
+      $in_quote = $c;
+    } elsif ($c =~ m/^\s$/) {
+      unless ($in_space) {
+        push(@words, $current_word);
+        $current_word = '';
+      }
+    } else {
+      $current_word .= $c;
+    }
+
+    $in_space = $c =~ m/^\s$/;
+  }
+
+  # Handle any leftovers.
+  $current_word .= $in_protect if $in_protect;
+  push(@words, $current_word) if length $current_word;
+
+  @words;
 }
 
 # This package exists just to delete the temporary directory.

@@ -1,15 +1,72 @@
 This Perl script is designed to load a number of directories into
-Subversion.  This is useful if you have previously released a number
-of .zip's or tar.{Z,gz,bz}'s for a particular package and want to load
-them into Subversion.  This assumes that these packages were not
-previously in a source control system, in particular CVS, because then
-you would use another script to migrate the repository over, and in
-CVS' case, you would use cvs2svn.  This script will properly tag each
-release in the tags directory if you use the -t command line option.
+Subversion.  This is useful if you have a number of .zip's or
+tar.{Z,gz,bz2}'s for a particular package and want to load them into
+Subversion.  This assumes that these packages were not previously in a
+source control system, in particular CVS, because then you would use
+another script to migrate the repository over, and in CVS' case, you
+would use cvs2svn.  This script will properly tag each release in the
+tags directory if you use the -t command line option.
+
+The script also accepts a separate configuration file for applying
+properties to specific files and directories matching a regular
+expression that are *added* to the repository.  This script will not
+modify properties of already existing files or directories in the
+repository.  This configuration file is specified to svn_load_dirs.pl
+using the -p command line option.  The format of the file is either
+two or four columns:
+
+regular_expression  control  property_name  property_value
+
+The `regular_expression' is a Perl style regular expression.  The
+`control' must either be set to `break' or `cont'.  It is used to tell
+svn_load_dirs.pl if the following lines in the configuration file
+should be examined for a match or if all matching should stop.  If
+`control' is set to `break', then no more lines from the configuration
+file will be matched.  If `control' is set to `cont', which is short
+for continue, then more comparisons will be made.  Multiple properties
+can be set for one file or directory this way.  The last two,
+`property_name' and `property_value' are optional and are applied to
+matching files and directories.
+
+If you have whitespace in any of the `regular_expression',
+`property_name' or `property_value' columns, you must surround the
+value with either a single or double quote.  You can protect single or
+double quotes with a \ character.  The \ character is removed by this
+script *only* for whitespace and quote characters, so you do not need
+to protect any other characters, beyond what you would normally
+protect for the regular expression.
+
+This sample configuration file was used to load on a Unix box a number
+of Zip files containing Windows files with CRLF end of lines.
+
+   \.doc$              break   svn:mime-type   application/msword
+   \.ds(p|w)$          break   svn:eol-style   CRLF
+   \.ilk$              break   svn:eol-style   CRLF
+   \.ncb$              break   svn:eol-style   CRLF
+   \.opt$              break   svn:eol-style   CRLF
+   \.exe$              break   svn:mime-type   application/octet-stream
+   dos2unix-eol\.sh$   break
+   .*                  break   svn:eol-style   native
+
+In this example, all the files should be converted to the native end
+of line style, which the last line of the configuration handles.  The
+exception is dos2unix-eol.sh, which contains embedded CR's used to
+find and replace Windows CRLF end of line characters with Unix's LF
+characters.  Since svn and svn_load_dirs.pl converts all CR, CRLF and
+LF's to the native end of line style when `svn:eol-style' is set to
+`native', this file should be left untouched.  Hence, the `break' with
+no property settings.
+
+The Windows Visual C++ and Visual Studio files (*.dsp, *.dsw, etc.) 
+should retain their CRLF line endings on any operating system and any
+*.doc files are always treated as binary files, hence the
+`svn:mime-type' setting of `application/msword'.
+
+An example import follows:
 
 Steps:
 
-1) Unpack your .tar.{Z,gz,bz}'s or .zips into a directory that is not
+1) Unpack your .tar.{Z,gz,bz2}'s or .zips into a directory that is not
    in a Subversion repository.
 
    Example:
