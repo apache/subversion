@@ -524,10 +524,10 @@ svn_wc__conflicting_propchanges_p (svn_string_t **description,
    return the name of the file in REJECT_FILE.  If no such file exists,
    return (REJECT_FILE = NULL). */
 svn_error_t *
-svn_wc__get_existing_reject_file (svn_string_t **reject_file,
-                                  svn_string_t *path,
-                                  const svn_string_t *name,
-                                  apr_pool_t *pool);
+svn_wc__get_existing_prop_reject_file (svn_string_t **reject_file,
+                                       svn_string_t *path,
+                                       const svn_string_t *name,
+                                       apr_pool_t *pool);
 
 /* If PROPFILE_PATH exists (and is a file), assume it's full of
    properties and load this file into HASH.  Otherwise, leave HASH

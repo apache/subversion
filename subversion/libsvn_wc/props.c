@@ -371,10 +371,10 @@ append_prop_conflict (apr_file_t *fp,
    return the name of the file in REJECT_FILE.  If no such file exists,
    return (REJECT_FILE = NULL). */
 svn_error_t *
-svn_wc__get_existing_reject_file (svn_string_t **reject_file,
-                                  svn_string_t *path,
-                                  const svn_string_t *name,
-                                  apr_pool_t *pool)
+svn_wc__get_existing_prop_reject_file (svn_string_t **reject_file,
+                                       svn_string_t *path,
+                                       const svn_string_t *name,
+                                       apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_hash_t *entries, *atts;
@@ -389,13 +389,13 @@ svn_wc__get_existing_reject_file (svn_string_t **reject_file,
   if (the_entry == NULL)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "get_existing_reject_path: can't find entry '%s' in '%s'",
+       "get_existing_reject_prop_reject_file: can't find entry '%s' in '%s'",
        name->data, path->data);
 
   atts = the_entry->attributes;
   
   *reject_file = 
-    (svn_string_t *) apr_hash_get (atts, SVN_WC_ENTRY_ATTR_REJFILE,
+    (svn_string_t *) apr_hash_get (atts, SVN_WC_ENTRY_ATTR_PREJFILE,
                                    APR_HASH_KEY_STRING);
 
   return SVN_NO_ERROR;
@@ -682,8 +682,8 @@ svn_wc__do_property_merge (svn_string_t *path,
                                   
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
-      err = svn_wc__get_existing_reject_file (&reject_path, path,
-                                              name, pool);
+      err = svn_wc__get_existing_prop_reject_file (&reject_path, path,
+                                                   name, pool);
       if (err) return err;
 
       if (! reject_path)
@@ -749,7 +749,7 @@ svn_wc__do_property_merge (svn_string_t *path,
                              name,
                              SVN_WC_ENTRY_ATTR_CONFLICT,
                              svn_string_create ("true", pool),
-                             SVN_WC_ENTRY_ATTR_REJFILE,
+                             SVN_WC_ENTRY_ATTR_PREJFILE,
                              reject_path,
                              NULL);
     }  
