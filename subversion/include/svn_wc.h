@@ -369,8 +369,10 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_commit_replaced,
 
   /** Transmitting post-fix text-delta data for a file. */
-  svn_wc_notify_commit_postfix_txdelta
+  svn_wc_notify_commit_postfix_txdelta,
 
+  /** Processed a single revision's blame. */
+  svn_wc_notify_blame_revision
 } svn_wc_notify_action_t;
 
 
