@@ -54,7 +54,8 @@ load_ignore_file (const char *dirpath,
   /* Try to load the .svnignore file. */
   svn_stringbuf_t *path = svn_stringbuf_create (dirpath, pool);
   svn_path_add_component_nts (path, SVN_WC_SVNIGNORE, svn_path_local_style);
-  status = apr_file_open (&fp, path->data, APR_READ, APR_OS_DEFAULT, pool);
+  status = apr_file_open (&fp, path->data, APR_READ | APR_BUFFERED, 
+                          APR_OS_DEFAULT, pool);
   if (status)
     {
       *patterns = NULL;
