@@ -188,6 +188,12 @@ static svn_error_t *interpret_kind(const char *str, apr_pool_t *pool,
 
 /* --- REPORTER IMPLEMENTATION --- */
 
+/* ### These routines need to flush because the caller might fork a
+ * child process, triggering a double-flushing bug in the child (see
+ * the comment in ra_svn_open).  It's kind of sad, because our
+ * buffering isn't nearly as effective this way.
+ */
+
 static svn_error_t *ra_svn_set_path(void *baton, const char *path,
                                     svn_revnum_t rev,
                                     svn_boolean_t start_empty,
@@ -195,9 +201,9 @@ static svn_error_t *ra_svn_set_path(void *baton, const char *path,
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "crb",
-                               path, rev, start_empty));
-  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "crb", path, rev,
+                               start_empty));
+  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
   return SVN_NO_ERROR;
 }
 
@@ -207,7 +213,7 @@ static svn_error_t *ra_svn_delete_path(void *baton, const char *path,
   ra_svn_reporter_baton_t *b = baton;
 
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "delete-path", "c", path));
-  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
+  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
   return SVN_NO_ERROR;
 }
     
@@ -219,32 +225,29 @@ static svn_error_t *ra_svn_link_path(void *baton, const char *path,
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccrb",
-                               path, url, rev, start_empty));
-  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccrb", path, url,
+                               rev, start_empty));
+  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *ra_svn_finish_report(void *baton)
 {
   ra_svn_reporter_baton_t *b = baton;
-  apr_pool_t *pool = b->pool;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "finish-report", ""));
-  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
-  SVN_ERR(svn_ra_svn_drive_editor(b->conn, pool, b->editor, b->edit_baton,
-                                  TRUE, NULL));
-  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, b->pool, "finish-report", ""));
+  SVN_ERR(svn_ra_svn_drive_editor(b->conn, b->pool, b->editor, b->edit_baton,
+                                  NULL));
+  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, b->pool, ""));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *ra_svn_abort_report(void *baton)
 {
   ra_svn_reporter_baton_t *b = baton;
-  apr_pool_t *pool = b->pool;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "abort-report", ""));
-  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, b->pool, "abort-report", ""));
+  SVN_ERR(svn_ra_svn_flush(b->conn, b->pool));
   return SVN_NO_ERROR;
 }
 
@@ -711,7 +714,8 @@ static svn_error_t *ra_svn_update(void *sess,
   /* Tell the server we want to start an update. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cb", rev, target,
                                recurse));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+  /* ### Must flush in case child process forks; see comment in ra_svn_open. */
+  SVN_ERR(svn_ra_svn_flush(conn, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * update_editor upon finish_report(). */
@@ -736,7 +740,8 @@ static svn_error_t *ra_svn_switch(void *sess,
   /* Tell the server we want to start a switch. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "(?r)cbc", rev, target,
                                recurse, switch_url));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+  /* ### Must flush in case child process forks; see comment in ra_svn_open. */
+  SVN_ERR(svn_ra_svn_flush(conn, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * update_editor upon finish_report(). */
@@ -759,7 +764,8 @@ static svn_error_t *ra_svn_status(void *sess,
 
   /* Tell the server we want to start a status operation. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "cb", target, recurse));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+  /* ### Must flush in case child process forks; see comment in ra_svn_open. */
+  SVN_ERR(svn_ra_svn_flush(conn, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * status_editor upon finish_report(). */
@@ -786,7 +792,8 @@ static svn_error_t *ra_svn_diff(void *sess,
   /* Tell the server we want to start a diff. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbc", rev, target,
                                recurse, ignore_ancestry, versus_url));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+  /* ### Must flush in case child process forks; see comment in ra_svn_open. */
+  SVN_ERR(svn_ra_svn_flush(conn, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * diff_editor upon finish_report(). */

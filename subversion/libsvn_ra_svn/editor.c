@@ -701,7 +701,6 @@ static const svn_ra_svn_cmd_entry_t ra_svn_edit_commands[] = {
 svn_error_t *svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const svn_delta_editor_t *editor,
                                      void *edit_baton,
-                                     svn_boolean_t pass_through_errors,
                                      svn_boolean_t *aborted)
 {
   ra_svn_driver_state_t state;
@@ -712,6 +711,5 @@ svn_error_t *svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   state.next_token = 0;
   state.aborted = aborted;
   state.pool = pool;
-  return svn_ra_svn_handle_commands(conn, pool, ra_svn_edit_commands, &state,
-                                    pass_through_errors);
+  return svn_ra_svn_handle_commands(conn, pool, ra_svn_edit_commands, &state);
 }
