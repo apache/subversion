@@ -438,7 +438,10 @@ static int access_checker(request_rec *r)
         if (apr_table_get(r->headers_in,
                           (PROXYREQ_PROXY == r->proxyreq)
                           ? "Proxy-Authorization" : "Authorization")) {
-            return DECLINED;
+            /* Given Satisfy Any is in effect, we have to forbid access
+             * to let the auth_checker hook have a go at it.
+             */
+            return HTTP_FORBIDDEN;
         }
     }
 
