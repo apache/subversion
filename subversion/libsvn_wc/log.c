@@ -467,16 +467,17 @@ log_do_detect_conflict (struct log_runner *loggy,
   if (! rejfile)
     return 
       svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-                         "missing text-rejfile attr in %s", loggy->path->data);
+                         "log_do_detect_conflict: no text-rejfile attr in %s",
+                         loggy->path->data);
 
 
   full_path = svn_string_dup (loggy->path, loggy->pool);
-  svn_path_add_component_nts (full_path, name, svn_path_local_style);
+  svn_path_add_component_nts (full_path, rejfile, svn_path_local_style);
 
   apr_err = apr_stat (&finfo, full_path->data, loggy->pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                              "log_do_rm_if_empty: couldn't stat %s",
+                              "log_do_detect_conflict: couldn't stat %s",
                               full_path->data);
 
   if (finfo.size == 0)
