@@ -731,7 +731,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
    associated with the directory PATH). */
 static svn_error_t *
 check_entries (apr_hash_t *entries,
-               svn_string_t *path,
+               svn_stringbuf_t *path,
                apr_pool_t *pool)
 {
   svn_wc_entry_t *default_entry;
