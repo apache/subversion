@@ -112,3 +112,9 @@ Candidate changes:
     Justification:  fixes a conflict between deltaV and svn semantics.
     Notes:  this can be a problem under high commit concurrency.
       +1: sussman
+
+  * r8613, r8614
+    Fix 'svn merge --dry-run' bug on added-files with props. (issue #1738)
+    Justification:  severeal users have noticed this --dry-run bug already.
+    Notes:  a one-line logic fix, plus new regression test.
+      +1: sussman
