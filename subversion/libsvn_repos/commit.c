@@ -269,7 +269,7 @@ add_directory (const char *path,
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
         return svn_error_createf 
           (SVN_ERR_FS_GENERAL, NULL,
-           _("Source url '%s' is from different repository"), full_path);
+           _("Source url '%s' is from different repository"), copy_path);
 
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
 
@@ -403,7 +403,7 @@ add_file (const char *path,
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
             return svn_error_createf 
               (SVN_ERR_FS_GENERAL, NULL,
-               _("Source url '%s' is from different repository"), full_path);
+               _("Source url '%s' is from different repository"), copy_path);
       
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
 
