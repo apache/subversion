@@ -7,9 +7,9 @@ echo "because it needs to affect the parent's environment."
 echo ""
 
 if [ -d ${HOME}/projects/subversion ]; then
-   WC=${HOME}/projects
+   WC=${HOME}/projects/subversion
 elif [ -d ${HOME}/src/subversion ]; then
-   WC=${HOME}/src
+   WC=${HOME}/src/subversion
 else
    echo "I need to know where your working copy is."
    echo "Please modify me accordingly (subversion/subversion/svn-dev.sh)."
