@@ -345,8 +345,8 @@ def basic_corruption(sbox):
 
 
 #----------------------------------------------------------------------
-def basic_merge(sbox):
-  "basic merge"
+def basic_merging_update(sbox):
+  "receiving text merges as part of an update"
 
   if sbox.build():
     return 1
@@ -1052,7 +1052,7 @@ test_list = [ None,
               basic_commit,
               basic_update,
               basic_corruption,
-              basic_merge,
+              basic_merging_update,
               basic_conflict,
               basic_cleanup,
               basic_revert,
