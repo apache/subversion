@@ -158,8 +158,7 @@ get_file_contents (svn_fs_root_t *root,
 typedef struct tree_test_entry_t
 {
   const char *path;     /* full path of this node */
-  int is_dir;           /* is this node expected to be a directory? */
-  const char *contents; /* text contents (ignored for directories) */
+  const char *contents; /* text contents (NULL for directories) */
 }
 tree_test_entry_t;
   
@@ -223,7 +222,7 @@ validate_tree_entry (svn_fs_root_t *root,
 
   /* Verify that this is the expected type of node */
   SVN_ERR (svn_fs_is_dir (&is_dir, root, entry->path, pool));
-  if ((!is_dir && entry->is_dir) || (is_dir && !entry->is_dir))
+  if ((!is_dir && !entry->contents) || (is_dir && entry->contents))
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
        "node `%s' in tree was of unexpected node type", 
@@ -1815,26 +1814,26 @@ test_tree_node_validation (const char **msg)
   {
     tree_test_entry_t expected_entries[] = {
       /* path, is_dir, contents */
-      { "iota",        0, "This is the file 'iota'.\n" },
-      { "A",           1, "" },
-      { "A/mu",        0, "This is the file 'mu'.\n" },
-      { "A/B",         1, "" },
-      { "A/B/lambda",  0, "This is the file 'lambda'.\n" },
-      { "A/B/E",       1, "" },
-      { "A/B/E/alpha", 0, "This is the file 'alpha'.\n" },
-      { "A/B/E/beta",  0, "This is the file 'beta'.\n" },
-      { "A/B/F",       1, "" },
-      { "A/C",         1, "" },
-      { "A/D",         1, "" },
-      { "A/D/gamma",   0, "This is the file 'gamma'.\n" },
-      { "A/D/G",       1, "" },
-      { "A/D/G/pi",    0, "This is the file 'pi'.\n" },
-      { "A/D/G/rho",   0, "This is the file 'rho'.\n" },
-      { "A/D/G/tau",   0, "This is the file 'tau'.\n" },
-      { "A/D/H",       1, "" },
-      { "A/D/H/chi",   0, "This is the file 'chi'.\n" },
-      { "A/D/H/psi",   0, "This is the file 'psi'.\n" },
-      { "A/D/H/omega", 0, "This is the file 'omega'.\n" }
+      { "iota",        "This is the file 'iota'.\n" },
+      { "A",           0 },
+      { "A/mu",        "This is the file 'mu'.\n" },
+      { "A/B",         0 },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",  "This is the file 'beta'.\n" },
+      { "A/B/F",       0 },
+      { "A/C",         0 },
+      { "A/D",         0 },
+      { "A/D/gamma",   "This is the file 'gamma'.\n" },
+      { "A/D/G",       0 },
+      { "A/D/G/pi",    "This is the file 'pi'.\n" },
+      { "A/D/G/rho",   "This is the file 'rho'.\n" },
+      { "A/D/G/tau",   "This is the file 'tau'.\n" },
+      { "A/D/H",       0 },
+      { "A/D/H/chi",   "This is the file 'chi'.\n" },
+      { "A/D/H/psi",   "This is the file 'psi'.\n" },
+      { "A/D/H/omega", "This is the file 'omega'.\n" }
     };
 
     SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -1857,25 +1856,25 @@ test_tree_node_validation (const char **msg)
   {
     tree_test_entry_t expected_entries[] = {
       /* path, is_dir, contents */
-      { "iota",          0, "This is a new version of 'iota'.\n" },
-      { "A",             1, "" },
-      { "A/B",           1, "" },
-      { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
-      { "A/B/E",         1, "" },
-      { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
-      { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
-      { "A/B/F",         1, "" },
-      { "A/C",           1, "" },
-      { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
-      { "A/D",           1, "" },
-      { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
-      { "A/D/H",         1, "" },
-      { "A/D/H/chi",     0, "This is the file 'chi'.\n" },
-      { "A/D/H/psi",     0, "This is the file 'psi'.\n" },
-      { "A/D/H/omega",   0, "This is the file 'omega'.\n" },
-      { "A/D/I",         1, "" },
-      { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
-      { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+      { "iota",          "This is a new version of 'iota'.\n" },
+      { "A",             0 },
+      { "A/B",           0 },
+      { "A/B/lambda",    "This is the file 'lambda'.\n" },
+      { "A/B/E",         0 },
+      { "A/B/E/alpha",   "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",    "This is the file 'beta'.\n" },
+      { "A/B/F",         0 },
+      { "A/C",           0 },
+      { "A/C/kappa",     "This is the file 'kappa'.\n" },
+      { "A/D",           0 },
+      { "A/D/gamma",     "This is the file 'gamma'.\n" },
+      { "A/D/H",         0 },
+      { "A/D/H/chi",     "This is the file 'chi'.\n" },
+      { "A/D/H/psi",     "This is the file 'psi'.\n" },
+      { "A/D/H/omega",   "This is the file 'omega'.\n" },
+      { "A/D/I",         0 },
+      { "A/D/I/delta",   "This is the file 'delta'.\n" },
+      { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
     };
 
     SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
@@ -2189,26 +2188,26 @@ merging_commit (const char **msg)
   {
     tree_test_entry_t expected_entries[] = {
       /* path, is_dir, contents */
-      { "iota",        0, "This is the file 'iota'.\n" },
-      { "A",           1, "" },
-      { "A/mu",        0, "This is the file 'mu'.\n" },
-      { "A/B",         1, "" },
-      { "A/B/lambda",  0, "This is the file 'lambda'.\n" },
-      { "A/B/E",       1, "" },
-      { "A/B/E/alpha", 0, "This is the file 'alpha'.\n" },
-      { "A/B/E/beta",  0, "This is the file 'beta'.\n" },
-      { "A/B/F",       1, "" },
-      { "A/C",         1, "" },
-      { "A/D",         1, "" },
-      { "A/D/gamma",   0, "This is the file 'gamma'.\n" },
-      { "A/D/G",       1, "" },
-      { "A/D/G/pi",    0, "This is the file 'pi'.\n" },
-      { "A/D/G/rho",   0, "This is the file 'rho'.\n" },
-      { "A/D/G/tau",   0, "This is the file 'tau'.\n" },
-      { "A/D/H",       1, "" },
-      { "A/D/H/chi",   0, "This is the file 'chi'.\n" },
-      { "A/D/H/psi",   0, "This is the file 'psi'.\n" },
-      { "A/D/H/omega", 0, "This is the file 'omega'.\n" }
+      { "iota",        "This is the file 'iota'.\n" },
+      { "A",           0 },
+      { "A/mu",        "This is the file 'mu'.\n" },
+      { "A/B",         0 },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",  "This is the file 'beta'.\n" },
+      { "A/B/F",       0 },
+      { "A/C",         0 },
+      { "A/D",         0 },
+      { "A/D/gamma",   "This is the file 'gamma'.\n" },
+      { "A/D/G",       0 },
+      { "A/D/G/pi",    "This is the file 'pi'.\n" },
+      { "A/D/G/rho",   "This is the file 'rho'.\n" },
+      { "A/D/G/tau",   "This is the file 'tau'.\n" },
+      { "A/D/H",       0 },
+      { "A/D/H/chi",   "This is the file 'chi'.\n" },
+      { "A/D/H/psi",   "This is the file 'psi'.\n" },
+      { "A/D/H/omega", "This is the file 'omega'.\n" }
     };
     SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
     SVN_ERR (validate_tree (revision_root, expected_entries, 20));
@@ -2239,29 +2238,29 @@ merging_commit (const char **msg)
   {
     tree_test_entry_t expected_entries[] = {
       /* path, is_dir, contents */
-      { "A",             1, "" },
-      { "A/mu",          0, "This is the file 'mu'.\n" },
-      { "A/B",           1, "" },
-      { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
-      { "A/B/E",         1, "" },
-      { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
-      { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
-      { "A/B/F",         1, "" },
-      { "A/C",           1, "" },
-      { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
-      { "A/D",           1, "" },
-      { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
-      { "A/D/G",         1, "" },
-      { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
-      { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
-      { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
-      { "A/D/H",         1, "" },
-      { "A/D/H/chi",     0, "This is the file 'chi'.\n" },
-      { "A/D/H/psi",     0, "This is the file 'psi'.\n" },
-      { "A/D/H/omega",   0, "This is the file 'omega'.\n" },
-      { "A/D/I",         1, "" },
-      { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
-      { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+      { "A",             0 },
+      { "A/mu",          "This is the file 'mu'.\n" },
+      { "A/B",           0 },
+      { "A/B/lambda",    "This is the file 'lambda'.\n" },
+      { "A/B/E",         0 },
+      { "A/B/E/alpha",   "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",    "This is the file 'beta'.\n" },
+      { "A/B/F",         0 },
+      { "A/C",           0 },
+      { "A/C/kappa",     "This is the file 'kappa'.\n" },
+      { "A/D",           0 },
+      { "A/D/gamma",     "This is the file 'gamma'.\n" },
+      { "A/D/G",         0 },
+      { "A/D/G/pi",      "This is the file 'pi'.\n" },
+      { "A/D/G/rho",     "This is the file 'rho'.\n" },
+      { "A/D/G/tau",     "This is the file 'tau'.\n" },
+      { "A/D/H",         0 },
+      { "A/D/H/chi",     "This is the file 'chi'.\n" },
+      { "A/D/H/psi",     "This is the file 'psi'.\n" },
+      { "A/D/H/omega",   "This is the file 'omega'.\n" },
+      { "A/D/I",         0 },
+      { "A/D/I/delta",   "This is the file 'delta'.\n" },
+      { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
     };
     SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
     SVN_ERR (validate_tree (revision_root, expected_entries, 23));
@@ -2285,26 +2284,26 @@ merging_commit (const char **msg)
   {
     tree_test_entry_t expected_entries[] = {
       /* path, is_dir, contents */
-      { "iota",          0, "This is the new file 'iota'.\n" },
-      { "A",             1, "" },
-      { "A/mu",          0, "This is the file 'mu'.\n" },
-      { "A/B",           1, "" },
-      { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
-      { "A/B/E",         1, "" },
-      { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
-      { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
-      { "A/B/F",         1, "" },
-      { "A/C",           1, "" },
-      { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
-      { "A/D",           1, "" },
-      { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
-      { "A/D/G",         1, "" },
-      { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
-      { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
-      { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
-      { "A/D/I",         1, "" },
-      { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
-      { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+      { "iota",          "This is the new file 'iota'.\n" },
+      { "A",             0 },
+      { "A/mu",          "This is the file 'mu'.\n" },
+      { "A/B",           0 },
+      { "A/B/lambda",    "This is the file 'lambda'.\n" },
+      { "A/B/E",         0 },
+      { "A/B/E/alpha",   "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",    "This is the file 'beta'.\n" },
+      { "A/B/F",         0 },
+      { "A/C",           0 },
+      { "A/C/kappa",     "This is the file 'kappa'.\n" },
+      { "A/D",           0 },
+      { "A/D/gamma",     "This is the file 'gamma'.\n" },
+      { "A/D/G",         0 },
+      { "A/D/G/pi",      "This is the file 'pi'.\n" },
+      { "A/D/G/rho",     "This is the file 'rho'.\n" },
+      { "A/D/G/tau",     "This is the file 'tau'.\n" },
+      { "A/D/I",         0 },
+      { "A/D/I/delta",   "This is the file 'delta'.\n" },
+      { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
     };
     SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
     SVN_ERR (validate_tree (revision_root, expected_entries, 20));
@@ -2324,25 +2323,25 @@ merging_commit (const char **msg)
   {
     tree_test_entry_t expected_entries[] = {
       /* path, is_dir, contents */
-      { "A",             1, "" },
-      { "A/mu",          0, "This is the file 'mu'.\n" },
-      { "A/B",           1, "" },
-      { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
-      { "A/B/E",         1, "" },
-      { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
-      { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
-      { "A/B/F",         1, "" },
-      { "A/C",           1, "" },
-      { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
-      { "A/D",           1, "" },
-      { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
-      { "A/D/G",         1, "" },
-      { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
-      { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
-      { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
-      { "A/D/I",         1, "" },
-      { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
-      { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+      { "A",             0 },
+      { "A/mu",          "This is the file 'mu'.\n" },
+      { "A/B",           0 },
+      { "A/B/lambda",    "This is the file 'lambda'.\n" },
+      { "A/B/E",         0 },
+      { "A/B/E/alpha",   "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",    "This is the file 'beta'.\n" },
+      { "A/B/F",         0 },
+      { "A/C",           0 },
+      { "A/C/kappa",     "This is the file 'kappa'.\n" },
+      { "A/D",           0 },
+      { "A/D/gamma",     "This is the file 'gamma'.\n" },
+      { "A/D/G",         0 },
+      { "A/D/G/pi",      "This is the file 'pi'.\n" },
+      { "A/D/G/rho",     "This is the file 'rho'.\n" },
+      { "A/D/G/tau",     "This is the file 'tau'.\n" },
+      { "A/D/I",         0 },
+      { "A/D/I/delta",   "This is the file 'delta'.\n" },
+      { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
     };
     SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
     SVN_ERR (validate_tree (revision_root, expected_entries, 19));
@@ -2409,26 +2408,26 @@ merging_commit (const char **msg)
     {
       tree_test_entry_t expected_entries[] = {
         /* path, is_dir, contents */
-        { "theta",         0, "This is the file 'theta'.\n" },
-        { "A",             1, "" },
-        { "A/mu",          0, "This is the file 'mu'.\n" },
-        { "A/B",           1, "" },
-        { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
-        { "A/B/E",         1, "" },
-        { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
-        { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
-        { "A/B/F",         1, "" },
-        { "A/C",           1, "" },
-        { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
-        { "A/D",           1, "" },
-        { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
-        { "A/D/G",         1, "" },
-        { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
-        { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
-        { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
-        { "A/D/I",         1, "" },
-        { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
-        { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+        { "theta",         "This is the file 'theta'.\n" },
+        { "A",             0 },
+        { "A/mu",          "This is the file 'mu'.\n" },
+        { "A/B",           0 },
+        { "A/B/lambda",    "This is the file 'lambda'.\n" },
+        { "A/B/E",         0 },
+        { "A/B/E/alpha",   "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",    "This is the file 'beta'.\n" },
+        { "A/B/F",         0 },
+        { "A/C",           0 },
+        { "A/C/kappa",     "This is the file 'kappa'.\n" },
+        { "A/D",           0 },
+        { "A/D/gamma",     "This is the file 'gamma'.\n" },
+        { "A/D/G",         0 },
+        { "A/D/G/pi",      "This is the file 'pi'.\n" },
+        { "A/D/G/rho",     "This is the file 'rho'.\n" },
+        { "A/D/G/tau",     "This is the file 'tau'.\n" },
+        { "A/D/I",         0 },
+        { "A/D/I/delta",   "This is the file 'delta'.\n" },
+        { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
       };
       SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
       SVN_ERR (validate_tree (revision_root, expected_entries, 20));
@@ -2477,26 +2476,26 @@ merging_commit (const char **msg)
     {
       tree_test_entry_t expected_entries[] = {
         /* path, is_dir, contents */
-        { "theta",         0, "This is the file 'theta'.\n" },
-        { "A",             1, "" },
-        { "A/mu",          0, "This is the file 'mu'.\n" },
-        { "A/B",           1, "" },
-        { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
-        { "A/B/E",         1, "" },
-        { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
-        { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
-        { "A/B/F",         1, "" },
-        { "A/C",           1, "" },
-        { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
-        { "A/D",           1, "" },
-        { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
-        { "A/D/G",         1, "" },
-        { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
-        { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
-        { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
-        { "A/D/I",         1, "" },
-        { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
-        { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+        { "theta",         "This is the file 'theta'.\n" },
+        { "A",             0 },
+        { "A/mu",          "This is the file 'mu'.\n" },
+        { "A/B",           0 },
+        { "A/B/lambda",    "This is the file 'lambda'.\n" },
+        { "A/B/E",         0 },
+        { "A/B/E/alpha",   "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",    "This is the file 'beta'.\n" },
+        { "A/B/F",         0 },
+        { "A/C",           0 },
+        { "A/C/kappa",     "This is the file 'kappa'.\n" },
+        { "A/D",           0 },
+        { "A/D/gamma",     "This is the file 'gamma'.\n" },
+        { "A/D/G",         0 },
+        { "A/D/G/pi",      "This is the file 'pi'.\n" },
+        { "A/D/G/rho",     "This is the file 'rho'.\n" },
+        { "A/D/G/tau",     "This is the file 'tau'.\n" },
+        { "A/D/I",         0 },
+        { "A/D/I/delta",   "This is the file 'delta'.\n" },
+        { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
       };
       SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
       SVN_ERR (validate_tree (revision_root, expected_entries, 20));
@@ -2542,25 +2541,25 @@ merging_commit (const char **msg)
       {
         tree_test_entry_t expected_entries[] = {
           /* path, is_dir, contents */
-          { "theta",         0, "This is the file 'theta'.\n" },
-          { "A",             1, "" },
-          { "A/B",           1, "" },
-          { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
-          { "A/B/E",         1, "" },
-          { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
-          { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
-          { "A/B/F",         1, "" },
-          { "A/C",           1, "" },
-          { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
-          { "A/D",           1, "" },
-          { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
-          { "A/D/G",         1, "" },
-          { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
-          { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
-          { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
-          { "A/D/I",         1, "" },
-          { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
-          { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+          { "theta",         "This is the file 'theta'.\n" },
+          { "A",             0 },
+          { "A/B",           0 },
+          { "A/B/lambda",    "This is the file 'lambda'.\n" },
+          { "A/B/E",         0 },
+          { "A/B/E/alpha",   "This is the file 'alpha'.\n" },
+          { "A/B/E/beta",    "This is the file 'beta'.\n" },
+          { "A/B/F",         0 },
+          { "A/C",           0 },
+          { "A/C/kappa",     "This is the file 'kappa'.\n" },
+          { "A/D",           0 },
+          { "A/D/gamma",     "This is the file 'gamma'.\n" },
+          { "A/D/G",         0 },
+          { "A/D/G/pi",      "This is the file 'pi'.\n" },
+          { "A/D/G/rho",     "This is the file 'rho'.\n" },
+          { "A/D/G/tau",     "This is the file 'tau'.\n" },
+          { "A/D/I",         0 },
+          { "A/D/I/delta",   "This is the file 'delta'.\n" },
+          { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
         };
         SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
         SVN_ERR (validate_tree (revision_root, expected_entries, 19));
@@ -2586,27 +2585,27 @@ merging_commit (const char **msg)
   {
     tree_test_entry_t expected_entries[] = {
       /* path, is_dir, contents */
-      { "theta",         0, "This is the file 'theta'.\n" },
-      { "A",             1, "" },
-      { "A/mu",          0, "A new file 'mu'.\n" },
-      { "A/B",           1, "" },
-      { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
-      { "A/B/E",         1, "" },
-      { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
-      { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
-      { "A/B/F",         1, "" },
-      { "A/C",           1, "" },
-      { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
-      { "A/D",           1, "" },
-      { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
-      { "A/D/G",         1, "" },
-      { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
-      { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
-      { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
-      { "A/D/G/xi",      0, "This is the file 'xi'.\n" },
-      { "A/D/I",         1, "" },
-      { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
-      { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+      { "theta",         "This is the file 'theta'.\n" },
+      { "A",             0 },
+      { "A/mu",          "A new file 'mu'.\n" },
+      { "A/B",           0 },
+      { "A/B/lambda",    "This is the file 'lambda'.\n" },
+      { "A/B/E",         0 },
+      { "A/B/E/alpha",   "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",    "This is the file 'beta'.\n" },
+      { "A/B/F",         0 },
+      { "A/C",           0 },
+      { "A/C/kappa",     "This is the file 'kappa'.\n" },
+      { "A/D",           0 },
+      { "A/D/gamma",     "This is the file 'gamma'.\n" },
+      { "A/D/G",         0 },
+      { "A/D/G/pi",      "This is the file 'pi'.\n" },
+      { "A/D/G/rho",     "This is the file 'rho'.\n" },
+      { "A/D/G/tau",     "This is the file 'tau'.\n" },
+      { "A/D/G/xi",      "This is the file 'xi'.\n" },
+      { "A/D/I",         0 },
+      { "A/D/I/delta",   "This is the file 'delta'.\n" },
+      { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
     };
     SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
     SVN_ERR (validate_tree (revision_root, expected_entries, 21));
@@ -2660,28 +2659,28 @@ merging_commit (const char **msg)
       {
         tree_test_entry_t expected_entries[] = {
           /* path, is_dir, contents */
-          { "theta",         0, "This is the file 'theta'.\n" },
-          { "A",             1, "" },
-          { "A/mu",          0, "A new file 'mu'.\n" },
-          { "A/sigma",       0, "This is the file 'sigma'.\n" },
-          { "A/B",           1, "" },
-          { "A/B/lambda",    0, "This is the file 'lambda'.\n" },
-          { "A/B/E",         1, "" },
-          { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
-          { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
-          { "A/B/F",         1, "" },
-          { "A/C",           1, "" },
-          { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
-          { "A/D",           1, "" },
-          { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
-          { "A/D/G",         1, "" },
-          { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
-          { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
-          { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
-          { "A/D/G/xi",      0, "This is the file 'xi'.\n" },
-          { "A/D/I",         1, "" },
-          { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
-          { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+          { "theta",         "This is the file 'theta'.\n" },
+          { "A",             0 },
+          { "A/mu",          "A new file 'mu'.\n" },
+          { "A/sigma",       "This is the file 'sigma'.\n" },
+          { "A/B",           0 },
+          { "A/B/lambda",    "This is the file 'lambda'.\n" },
+          { "A/B/E",         0 },
+          { "A/B/E/alpha",   "This is the file 'alpha'.\n" },
+          { "A/B/E/beta",    "This is the file 'beta'.\n" },
+          { "A/B/F",         0 },
+          { "A/C",           0 },
+          { "A/C/kappa",     "This is the file 'kappa'.\n" },
+          { "A/D",           0 },
+          { "A/D/gamma",     "This is the file 'gamma'.\n" },
+          { "A/D/G",         0 },
+          { "A/D/G/pi",      "This is the file 'pi'.\n" },
+          { "A/D/G/rho",     "This is the file 'rho'.\n" },
+          { "A/D/G/tau",     "This is the file 'tau'.\n" },
+          { "A/D/G/xi",      "This is the file 'xi'.\n" },
+          { "A/D/I",         0 },
+          { "A/D/I/delta",   "This is the file 'delta'.\n" },
+          { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
         };
         SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
         SVN_ERR (validate_tree (revision_root, expected_entries, 22));
@@ -2706,28 +2705,28 @@ merging_commit (const char **msg)
   {
     tree_test_entry_t expected_entries[] = {
       /* path, is_dir, contents */
-      { "theta",         0, "This is the file 'theta'.\n" },
-      { "A",             1, "" },
-      { "A/mu",          0, "A new file 'mu'.\n" },
-      { "A/sigma",       0, "This is the file 'sigma'.\n" },
-      { "A/B",           1, "" },
-      { "A/B/lambda",    0, "Change to file 'lambda'.\n" },
-      { "A/B/E",         1, "" },
-      { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
-      { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
-      { "A/B/F",         1, "" },
-      { "A/C",           1, "" },
-      { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
-      { "A/D",           1, "" },
-      { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
-      { "A/D/G",         1, "" },
-      { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
-      { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
-      { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
-      { "A/D/G/xi",      0, "This is the file 'xi'.\n" },
-      { "A/D/I",         1, "" },
-      { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
-      { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+      { "theta",         "This is the file 'theta'.\n" },
+      { "A",             0 },
+      { "A/mu",          "A new file 'mu'.\n" },
+      { "A/sigma",       "This is the file 'sigma'.\n" },
+      { "A/B",           0 },
+      { "A/B/lambda",    "Change to file 'lambda'.\n" },
+      { "A/B/E",         0 },
+      { "A/B/E/alpha",   "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",    "This is the file 'beta'.\n" },
+      { "A/B/F",         0 },
+      { "A/C",           0 },
+      { "A/C/kappa",     "This is the file 'kappa'.\n" },
+      { "A/D",           0 },
+      { "A/D/gamma",     "This is the file 'gamma'.\n" },
+      { "A/D/G",         0 },
+      { "A/D/G/pi",      "This is the file 'pi'.\n" },
+      { "A/D/G/rho",     "This is the file 'rho'.\n" },
+      { "A/D/G/tau",     "This is the file 'tau'.\n" },
+      { "A/D/G/xi",      "This is the file 'xi'.\n" },
+      { "A/D/I",         0 },
+      { "A/D/I/delta",   "This is the file 'delta'.\n" },
+      { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
     };
     SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
     SVN_ERR (validate_tree (revision_root, expected_entries, 22));
@@ -2760,29 +2759,29 @@ merging_commit (const char **msg)
     {
       tree_test_entry_t expected_entries[] = {
         /* path, is_dir, contents */
-        { "theta",         0, "This is the file 'theta'.\n" },
-        { "A",             1, "" },
-        { "A/mu",          0, "A new file 'mu'.\n" },
-        { "A/sigma",       0, "This is the file 'sigma'.\n" },
-        { "A/B",           1, "" },
-        { "A/B/lambda",    0, "Change to file 'lambda'.\n" },
-        { "A/B/E",         1, "" },
-        { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
-        { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
-        { "A/B/F",         1, "" },
-        { "A/C",           1, "" },
-        { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
-        { "A/D",           1, "" },
-        { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
-        { "A/D/G",         1, "" },
-        { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
-        { "A/D/G/rho",     0, "This is the file 'rho'.\n" },
-        { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
-        { "A/D/G/xi",      0, "This is the file 'xi'.\n" },
-        { "A/D/G/nu",      0, "This is the file 'nu'.\n" },
-        { "A/D/I",         1, "" },
-        { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
-        { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+        { "theta",         "This is the file 'theta'.\n" },
+        { "A",             0 },
+        { "A/mu",          "A new file 'mu'.\n" },
+        { "A/sigma",       "This is the file 'sigma'.\n" },
+        { "A/B",           0 },
+        { "A/B/lambda",    "Change to file 'lambda'.\n" },
+        { "A/B/E",         0 },
+        { "A/B/E/alpha",   "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",    "This is the file 'beta'.\n" },
+        { "A/B/F",         0 },
+        { "A/C",           0 },
+        { "A/C/kappa",     "This is the file 'kappa'.\n" },
+        { "A/D",           0 },
+        { "A/D/gamma",     "This is the file 'gamma'.\n" },
+        { "A/D/G",         0 },
+        { "A/D/G/pi",      "This is the file 'pi'.\n" },
+        { "A/D/G/rho",     "This is the file 'rho'.\n" },
+        { "A/D/G/tau",     "This is the file 'tau'.\n" },
+        { "A/D/G/xi",      "This is the file 'xi'.\n" },
+        { "A/D/G/nu",      "This is the file 'nu'.\n" },
+        { "A/D/I",         0 },
+        { "A/D/I/delta",   "This is the file 'delta'.\n" },
+        { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
       };
       SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
       SVN_ERR (validate_tree (revision_root, expected_entries, 23));
@@ -2823,29 +2822,29 @@ merging_commit (const char **msg)
       {
         tree_test_entry_t expected_entries[] = {
           /* path, is_dir, contents */
-          { "theta",         0, "This is the file 'theta'.\n" },
-          { "A",             1, "" },
-          { "A/mu",          0, "A new file 'mu'.\n" },
-          { "A/sigma",       0, "This is the file 'sigma'.\n" },
-          { "A/B",           1, "" },
-          { "A/B/lambda",    0, "Change to file 'lambda'.\n" },
-          { "A/B/E",         1, "" },
-          { "A/B/E/alpha",   0, "This is the file 'alpha'.\n" },
-          { "A/B/E/beta",    0, "This is the file 'beta'.\n" },
-          { "A/B/F",         1, "" },
-          { "A/C",           1, "" },
-          { "A/C/kappa",     0, "This is the file 'kappa'.\n" },
-          { "A/D",           1, "" },
-          { "A/D/gamma",     0, "This is the file 'gamma'.\n" },
-          { "A/D/G",         1, "" },
-          { "A/D/G/pi",      0, "This is the file 'pi'.\n" },
-          { "A/D/G/rho",     0, "This is an irrelevant change to 'rho'.\n" },
-          { "A/D/G/tau",     0, "This is the file 'tau'.\n" },
-          { "A/D/G/xi",      0, "This is the file 'xi'.\n" },
-          { "A/D/G/nu",      0, "This is the file 'nu'.\n"},
-          { "A/D/I",         1, "" },
-          { "A/D/I/delta",   0, "This is the file 'delta'.\n" },
-          { "A/D/I/epsilon", 0, "This is the file 'epsilon'.\n" }
+          { "theta",         "This is the file 'theta'.\n" },
+          { "A",             0 },
+          { "A/mu",          "A new file 'mu'.\n" },
+          { "A/sigma",       "This is the file 'sigma'.\n" },
+          { "A/B",           0 },
+          { "A/B/lambda",    "Change to file 'lambda'.\n" },
+          { "A/B/E",         0 },
+          { "A/B/E/alpha",   "This is the file 'alpha'.\n" },
+          { "A/B/E/beta",    "This is the file 'beta'.\n" },
+          { "A/B/F",         0 },
+          { "A/C",           0 },
+          { "A/C/kappa",     "This is the file 'kappa'.\n" },
+          { "A/D",           0 },
+          { "A/D/gamma",     "This is the file 'gamma'.\n" },
+          { "A/D/G",         0 },
+          { "A/D/G/pi",      "This is the file 'pi'.\n" },
+          { "A/D/G/rho",     "This is an irrelevant change to 'rho'.\n" },
+          { "A/D/G/tau",     "This is the file 'tau'.\n" },
+          { "A/D/G/xi",      "This is the file 'xi'.\n" },
+          { "A/D/G/nu",      "This is the file 'nu'.\n"},
+          { "A/D/I",         0 },
+          { "A/D/I/delta",   "This is the file 'delta'.\n" },
+          { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
         };
         SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
         SVN_ERR (validate_tree (revision_root, expected_entries, 23));
@@ -2952,38 +2951,38 @@ copy_test (const char **msg)
   {
     tree_test_entry_t expected_entries[] = {
       /* path, is_dir, contents */
-      { "iota",        0, "This is the file 'iota'.\n" },
-      { "H2",          1, "" },
-      { "H2/chi",      0, "This is the file 'chi'.\n" },
-      { "H2/pi2",      0, "This is the file 'pi2'.\n" },
-      { "H2/psi",      0, "This is the file 'psi'.\n" },
-      { "H2/omega",    0, "This is the file 'omega'.\n" },
-      { "A",           1, "" },
-      { "A/mu",        0, "This is the file 'mu'.\n" },
-      { "A/B",         1, "" },
-      { "A/B/lambda",  0, "This is the file 'lambda'.\n" },
-      { "A/B/E",       1, "" },
-      { "A/B/E/alpha", 0, "This is the file 'alpha'.\n" },
-      { "A/B/E/beta",  0, "This is the file 'beta'.\n" },
-      { "A/B/E/B",         1, "" },
-      { "A/B/E/B/lambda",  0, "This is the file 'lambda'.\n" },
-      { "A/B/E/B/E",       1, "" },
-      { "A/B/E/B/E/alpha", 0, "This is the file 'alpha'.\n" },
-      { "A/B/E/B/E/beta",  0, "This is the file 'beta'.\n" },
-      { "A/B/E/B/F",       1, "" },
-      { "A/B/F",       1, "" },
-      { "A/C",         1, "" },
-      { "A/D",         1, "" },
-      { "A/D/gamma",   0, "This is the file 'gamma'.\n" },
-      { "A/D/G",       1, "" },
-      { "A/D/G/pi",    0, "This is the file 'pi'.\n" },
-      { "A/D/G/rho",   0, "This is the file 'rho'.\n" },
-      { "A/D/G/tau",   0, "This is the file 'tau'.\n" },
-      { "A/D/H",       1, "" },
-      { "A/D/H/chi",   0, "This is the file 'chi'.\n" },
-      { "A/D/H/pi2",   0, "This is the file 'pi2'.\n" },
-      { "A/D/H/psi",   0, "This is the file 'psi'.\n" },
-      { "A/D/H/omega", 0, "This is the file 'omega'.\n" }
+      { "iota",        "This is the file 'iota'.\n" },
+      { "H2",          0 },
+      { "H2/chi",      "This is the file 'chi'.\n" },
+      { "H2/pi2",      "This is the file 'pi2'.\n" },
+      { "H2/psi",      "This is the file 'psi'.\n" },
+      { "H2/omega",    "This is the file 'omega'.\n" },
+      { "A",           0 },
+      { "A/mu",        "This is the file 'mu'.\n" },
+      { "A/B",         0 },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",  "This is the file 'beta'.\n" },
+      { "A/B/E/B",         0 },
+      { "A/B/E/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E/B/E",       0 },
+      { "A/B/E/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/E/B/E/beta",  "This is the file 'beta'.\n" },
+      { "A/B/E/B/F",       0 },
+      { "A/B/F",       0 },
+      { "A/C",         0 },
+      { "A/D",         0 },
+      { "A/D/gamma",   "This is the file 'gamma'.\n" },
+      { "A/D/G",       0 },
+      { "A/D/G/pi",    "This is the file 'pi'.\n" },
+      { "A/D/G/rho",   "This is the file 'rho'.\n" },
+      { "A/D/G/tau",   "This is the file 'tau'.\n" },
+      { "A/D/H",       0 },
+      { "A/D/H/chi",   "This is the file 'chi'.\n" },
+      { "A/D/H/pi2",   "This is the file 'pi2'.\n" },
+      { "A/D/H/psi",   "This is the file 'psi'.\n" },
+      { "A/D/H/omega", "This is the file 'omega'.\n" }
     };
     SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
     SVN_ERR (validate_tree (revision_root, expected_entries, 32));
@@ -3271,24 +3270,24 @@ delete (const char **msg)
     svn_fs_id_t *iota_id, *gamma_id;
     tree_test_entry_t expected_entries[] = {
       /* path, is_dir, contents */
-      { "A",           1, "" },
-      { "A/mu",        0, "This is the file 'mu'.\n" },
-      { "A/B",         1, "" },
-      { "A/B/lambda",  0, "This is the file 'lambda'.\n" },
-      { "A/B/E",       1, "" },
-      { "A/B/E/alpha", 0, "This is the file 'alpha'.\n" },
-      { "A/B/E/beta",  0, "This is the file 'beta'.\n" },
-      { "A/C",         1, "" },
-      { "A/B/F",       1, "" },
-      { "A/D",         1, "" },
-      { "A/D/G",       1, "" },
-      { "A/D/G/pi",    0, "This is the file 'pi'.\n" },
-      { "A/D/G/rho",   0, "This is the file 'rho'.\n" },
-      { "A/D/G/tau",   0, "This is the file 'tau'.\n" },
-      { "A/D/H",       1, "" },
-      { "A/D/H/chi",   0, "This is the file 'chi'.\n" },
-      { "A/D/H/psi",   0, "This is the file 'psi'.\n" },
-      { "A/D/H/omega", 0, "This is the file 'omega'.\n" }
+      { "A",           0 },
+      { "A/mu",        "This is the file 'mu'.\n" },
+      { "A/B",         0 },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",  "This is the file 'beta'.\n" },
+      { "A/C",         0 },
+      { "A/B/F",       0 },
+      { "A/D",         0 },
+      { "A/D/G",       0 },
+      { "A/D/G/pi",    "This is the file 'pi'.\n" },
+      { "A/D/G/rho",   "This is the file 'rho'.\n" },
+      { "A/D/G/tau",   "This is the file 'tau'.\n" },
+      { "A/D/H",       0 },
+      { "A/D/H/chi",   "This is the file 'chi'.\n" },
+      { "A/D/H/psi",   "This is the file 'psi'.\n" },
+      { "A/D/H/omega", "This is the file 'omega'.\n" }
     };
 
     /* Check nodes revision ID is gone.  */
@@ -3420,7 +3419,7 @@ delete (const char **msg)
     {
       tree_test_entry_t expected_entries[] = {
         /* path, is_dir, contents */
-        { "iota",        0, "This is the file 'iota'.\n" } };
+        { "iota",        "This is the file 'iota'.\n" } };
       SVN_ERR (validate_tree (txn_root, expected_entries, 1));
     }
   }
@@ -3543,7 +3542,7 @@ delete (const char **msg)
     {
       tree_test_entry_t expected_entries[] = {
         /* path, is_dir, contents */
-        { "iota",        0, "This is the file 'iota'.\n" }
+        { "iota",        "This is the file 'iota'.\n" }
       };
       
       SVN_ERR (validate_tree (txn_root, expected_entries, 1));
@@ -3584,24 +3583,24 @@ delete (const char **msg)
     {
       tree_test_entry_t expected_entries[] = {
         /* path, is_dir, contents */
-        { "A",           1, "" },
-        { "A/mu",        0, "This is the file 'mu'.\n" },
-        { "A/B",         1, "" },
-        { "A/B/lambda",  0, "This is the file 'lambda'.\n" },
-        { "A/B/E",       1, "" },
-        { "A/B/E/alpha", 0, "This is the file 'alpha'.\n" },
-        { "A/B/E/beta",  0, "This is the file 'beta'.\n" },
-        { "A/B/F",       1, "" },
-        { "A/C",         1, "" },
-        { "A/D",         1, "" },
-        { "A/D/G",       1, "" },
-        { "A/D/G/pi",    0, "This is the file 'pi'.\n" },
-        { "A/D/G/rho",   0, "This is the file 'rho'.\n" },
-        { "A/D/G/tau",   0, "This is the file 'tau'.\n" },
-        { "A/D/H",       1, "" },
-        { "A/D/H/chi",   0, "This is the file 'chi'.\n" },
-        { "A/D/H/psi",   0, "This is the file 'psi'.\n" },
-        { "A/D/H/omega", 0, "This is the file 'omega'.\n" }
+        { "A",           0 },
+        { "A/mu",        "This is the file 'mu'.\n" },
+        { "A/B",         0 },
+        { "A/B/lambda",  "This is the file 'lambda'.\n" },
+        { "A/B/E",       0 },
+        { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",  "This is the file 'beta'.\n" },
+        { "A/B/F",       0 },
+        { "A/C",         0 },
+        { "A/D",         0 },
+        { "A/D/G",       0 },
+        { "A/D/G/pi",    "This is the file 'pi'.\n" },
+        { "A/D/G/rho",   "This is the file 'rho'.\n" },
+        { "A/D/G/tau",   "This is the file 'tau'.\n" },
+        { "A/D/H",       0 },
+        { "A/D/H/chi",   "This is the file 'chi'.\n" },
+        { "A/D/H/psi",   "This is the file 'psi'.\n" },
+        { "A/D/H/omega", "This is the file 'omega'.\n" }
       };
       SVN_ERR (validate_tree (txn_root, expected_entries, 18));
     }
@@ -3704,7 +3703,7 @@ delete (const char **msg)
     {
       tree_test_entry_t expected_entries[] = {
         /* path, is_dir, contents */
-        { "iota",        0, "This is the file 'iota'.\n" }
+        { "iota",        "This is the file 'iota'.\n" }
       };
       SVN_ERR (validate_tree (txn_root, expected_entries, 1));
     }
