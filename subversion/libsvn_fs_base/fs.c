@@ -73,8 +73,8 @@ check_bdb_version (void)
       || (major == SVN_FS_WANT_DB_MAJOR && minor == SVN_FS_WANT_DB_MINOR
           && patch < SVN_FS_WANT_DB_PATCH))
     return svn_error_createf (SVN_ERR_FS_GENERAL, 0,
-                              "Bad database version: got %d.%d.%d,"
-                              " should be at least %d.%d.%d",
+                              _("Bad database version: got %d.%d.%d,"
+                                " should be at least %d.%d.%d"),
                               major, minor, patch,
                               SVN_FS_WANT_DB_MAJOR,
                               SVN_FS_WANT_DB_MINOR,
@@ -84,9 +84,9 @@ check_bdb_version (void)
      the one we compiled with. */
   if (major != DB_VERSION_MAJOR || minor != DB_VERSION_MINOR)
     return svn_error_createf (SVN_ERR_FS_GENERAL, 0,
-                              "Bad database version:"
-                              " compiled with %d.%d.%d,"
-                              " running against %d.%d.%d",
+                              _("Bad database version:"
+                                " compiled with %d.%d.%d,"
+                                " running against %d.%d.%d"),
                               DB_VERSION_MAJOR,
                               DB_VERSION_MINOR,
                               DB_VERSION_PATCH,
@@ -102,7 +102,7 @@ check_already_open (svn_fs_t *fs)
 {
   if (fs->fsap_data)
     return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0,
-                             "Filesystem object already open");
+                             _("Filesystem object already open"));
   else
     return SVN_NO_ERROR;
 }
@@ -976,7 +976,7 @@ copy_db_file_safely (const char *src_dir,
                           APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,
-                              "Can't open file '%s' for reading",
+                              _("Can't open file '%s' for reading"),
                               file_src_path);
 
   /* Open destination file. */
@@ -985,7 +985,7 @@ copy_db_file_safely (const char *src_dir,
                           APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,
-                              "Can't open file '%s' for writing",
+                              _("Can't open file '%s' for writing"),
                               file_dst_path);
 
   /* Allocate our read/write buffer. */
@@ -1005,7 +1005,7 @@ copy_db_file_safely (const char *src_dir,
           apr_file_close(s);  /* toss any error */
           apr_file_close(d);  /* toss any error */
           return svn_error_createf (status, NULL,
-                                    "Error reading file '%s'",
+                                    _("Error reading file '%s'"),
                                     file_src_path);
         }
     
@@ -1016,7 +1016,7 @@ copy_db_file_safely (const char *src_dir,
           apr_file_close(s);  /* toss any error */
           apr_file_close(d);  /* toss any error */
           return svn_error_createf (status, NULL,
-                                    "Error writing file '%s'",
+                                    _("Error writing file '%s'"),
                                     file_dst_path);
         }
     
@@ -1024,11 +1024,11 @@ copy_db_file_safely (const char *src_dir,
         {
           status = apr_file_close(s);
           if (status)
-            return svn_error_createf (status, NULL, "Can't close file '%s'",
+            return svn_error_createf (status, NULL, _("Can't close file '%s'"),
                                       file_src_path);
           status = apr_file_close(d);
           if (status)
-            return svn_error_createf (status, NULL, "Can't close file '%s'",
+            return svn_error_createf (status, NULL, _("Can't close file '%s'"),
                                       file_dst_path);
 
           break;  /* got EOF on read, all files closed, all done. */

@@ -34,6 +34,8 @@
 
 #include "../libsvn_fs/fs-loader.h"
 
+#include "svn_private_config.h"
+
 
 /* Initializing a filesystem.  */
 
@@ -360,19 +362,19 @@ make_entry (dag_node_t **child_p,
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
-       "Attempted to create a node with an illegal name '%s'", name);
+       _("Attempted to create a node with an illegal name '%s'"), name);
 
   /* Make sure that parent is a directory */
   if (parent->kind != svn_node_dir)
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       "Attempted to create entry in non-directory parent");
+       _("Attempted to create entry in non-directory parent"));
 
   /* Check that the parent is mutable. */
   if (! svn_fs_fs__dag_check_mutable (parent, txn_id))
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
-       "Attempted to clone child of non-mutable node");
+       _("Attempted to clone child of non-mutable node"));
 
   /* Create the new node's NODE-REVISION */
   memset (&new_noderev, 0, sizeof (new_noderev));
@@ -416,7 +418,7 @@ svn_fs_fs__dag_dir_entries (apr_hash_t **entries,
 
   if (noderev->kind != svn_node_dir)
     return svn_error_create (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-                             "Can't get entries of non-directory");
+                             _("Can't get entries of non-directory"));
 
   return svn_fs_fs__rep_contents_dir (entries, node->fs, noderev, pool);
 }
@@ -434,13 +436,13 @@ svn_fs_fs__dag_set_entry (dag_node_t *node,
   if (node->kind != svn_node_dir)
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       "Attempted to set entry in non-directory node");
+       _("Attempted to set entry in non-directory node"));
   
   /* Check it's mutable. */
   if (! svn_fs_fs__dag_check_mutable (node, txn_id))
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       "Attempted to set entry in immutable node");
+       _("Attempted to set entry in immutable node"));
 
   return set_entry (node, entry_name, id, kind, txn_id, pool);
 }
