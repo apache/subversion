@@ -922,6 +922,41 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
                           svn_boolean_t recurse,
                           apr_pool_t *pool);
 
+
+/* Given full paths to three files, merge the differences between LEFT
+   and RIGHT into MERGE_TARGET.  MERGE_TARGET must be under version control.
+
+   LEFT and RIGHT will not be changed.  After the merge, MERGE_TARGET
+   may or may not contain conflict markers.
+
+   If no conflicts resulted, then this function simply returns without
+   error.
+
+   If conflict markers were inserted, then this function does much more:
+
+     * the conflict markers are labeled using LEFT_LABEL, RIGHT_LABEL,
+       and TARGET_LABEL.
+ 
+     * the original, unmodified MERGE_TARGET file is backed up into a
+       unique sibling file that ends with suffix '.TARGET_LABEL'.
+
+     * copies of LEFT and RIGHT are copied into unique sibling files
+       that end with suffixes '.LEFT_LABEL' and '.RIGHT_LABEL'.  
+
+     * the entry for MERGE_TARGET is marked "conflicted", and the
+       three backup files are tracked in the entry as well.
+
+    POOL is used for any memory needed to spawn processes, disk I/O, etc. 
+ */
+svn_error_t *svn_wc_merge (const char *left,
+                           const char *right,
+                           const char *merge_target,
+                           const char *left_label,
+                           const char *right_label,
+                           const char *target_label,
+                           apr_pool_t *pool);
+
+
 /* Given a PATH to a wc file, return a PRISTINE_PATH which points to a
    pristine version of the file.  This is needed so clients can do
    diffs.  If the WC has no text-base, return a NULL instead of a

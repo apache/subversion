@@ -446,45 +446,21 @@ svn_error_t *svn_wc__adm_destroy (svn_stringbuf_t *path,
 #define SVN_WC__LOG_COMMITTED           "committed"
 
 
-/* This log command requires a huge list of arguments:
+/* A log command which effectively runs svn_wc_merge().
+   See its documentation for details.
 
-         SVN_WC__LOG_ATTR_1       : the MINE file to pass to diff3
-         SVN_WC__LOG_ATTR_2       : the OLDER file to pass to diff3
-         SVN_WC__LOG_ATTR_3       : the YOURS file to pass to diff3
-         SVN_WC__LOG_ATTR_4       : the MERGED file written to by diff3
-         SVN_WC__LOG_ATTR_5       : the original OLDER file
-         SVN_WC__LOG_ATTR_6       : the original YOURS file
-         SVN_WC__LOG_ATTR_NAME    : the original MINE (working) file
-         SVN_WC__LOG_ATTR_EOL_STR : the eol-translation string, if needed
-         SVN_WC__LOG_ATTR_DATE/AUTHOR/URL/REVISION  : keywords to be expanded
+   Here is a map of entry-attributes to svn_wc_merge arguments:
 
-   The log command primarily runs:
+         SVN_WC__LOG_ATTR_1       : LEFT
+         SVN_WC__LOG_ATTR_2       : RIGHT
+         SVN_WC__LOG_ATTR_3       : MERGE_TARGET
 
-      `diff3 -Em ARG_1 ARG_2 ARG_3 > ARG_4`.
-   
-   If the diff3 command returns 0, then no conflicts were found, and
-   this log command returns normally, leaving ARG_4 behind for the
-   caller to use however it wishes.
-
-   If the diff3 command returns 1, then conflicts *were* found, and
-   this log command does much more work:
-
-       - copies the working file to a newly generated unique name
-               (LOG_ATTR_NAME ==> LOG_ATTR_NAME.####.working)
-
-       - copies both of the original old and new pristine files to
-         user-visible locations.  If translation args are provided,
-         then these files are translated during the copy.
-
-               (LOG_ATTR_ARG_5 ==> LOG_ATTR_ARG_5.####.old) 
-               (LOG_ATTR_ARG_6 ==> LOG_ATTR_ARG_6.####.new)
-
-       - all three files (.working, .old, .new) are placed into the
-         entries file for future tracking.
-
-       - entry is marked as conflicted
+   The labels are predetermined by the log function.  Of course, these
+   three attributes should be paths that are *relative* to the
+   directory in which the log is running, as with all other log
+   commands.
  */
-#define SVN_WC__LOG_RUN_DIFF3_MERGE        "run-diff3-merge"
+#define SVN_WC__LOG_MERGE        "merge"
 
 
 /** Log attributes. **/
