@@ -67,6 +67,10 @@ struct stack_object
   svn_string_t *path;   /* A working copy directory */
   void *baton;          /* An associated editor baton, if any exists yet. */
 
+  apr_hash_t *filehash; /* A place to store unclosed file batons (for
+                           postfix text-deltas); this field is always
+                           inherited as the stack grows. */
+
   struct stack_object *next;
   struct stack_object *previous;
 };
@@ -83,13 +87,35 @@ append_stack (struct stack_object **stack,
   struct stack_object *new_top =
     apr_pcalloc (pool, sizeof(struct stack_object));
 
+  /* Store path and baton in a new stack object */
   new_top->path = svn_string_dup (path, pool);
   new_top->baton = baton;
+  new_top->next = NULL;
+  new_top->previous = NULL;
 
-  (*stack)->next = new_top;
-  new_top->previous = *stack;
+  if (*stack == NULL)
+    {
+      /* This will be the very first object on the stack. */
 
-  *stack = new_top;
+      /* Create a hash that will hold pathnames that map to unclosed file
+         batons.  This hash will be available within every `stackframe' of
+         the crawl and will be used *after* the crawl to send postfix
+         text-deltas. */      
+      new_top->filehash = apr_make_hash (pool);
+
+      *stack = new_top;
+    }
+
+  else 
+    {
+      /* The stack already exists, so create links both ways, inherit
+         the hash, and new_top becomes the top of the stack.  */
+
+      new_top->filehash = (*stack)->filehash; /* directly inherited */
+      (*stack)->next = new_top;
+      new_top->previous = *stack;
+      *stack = new_top;
+    }
 }
 
 
@@ -97,6 +123,7 @@ append_stack (struct stack_object **stack,
 static void
 remove_stack (struct stack_object **stack)
 {
+  
   struct stack_object *new_top = (*stack)->previous;
 
   *stack = new_top;
@@ -148,12 +175,16 @@ set_entry_flags (svn_string_t *current_entry_name,
 
   /* Examine the hash for a "new" xml attribute.  If this attribute
      doesn't exists, then the hash value will be NULL.  */
-  value = apr_hash_get (current_entry_hash, "new", 3);
+  value = apr_hash_get (current_entry_hash,
+                        SVN_WC__ENTRIES_ATTR_NEW,
+                        strlen(SVN_WC__ENTRIES_ATTR_NEW));
   *new_p = value ? TRUE : FALSE;
 
   /* Examine the hash for a "delete" xml attribute in the same
      manner. */
-  value = apr_hash_get (current_entry_hash, "delete", 6);
+  value = apr_hash_get (current_entry_hash,
+                        SVN_WC__ENTRIES_ATTR_DELETE,
+                        strlen(SVN_WC__ENTRIES_ATTR_DELETE));
   *delete_p = value ? TRUE : FALSE;
 
   /* Call external routine to decide if this file has been locally
@@ -336,6 +367,40 @@ do_apply_textdelta (svn_string_t *filename,
 
 
 
+/* Loop over FILEHASH, calling do_apply_textdelta().  FILEHASH, if
+non-empty, contains a mapping of full file paths to still-open
+file_batons.  After sending each text-delta, close each file_baton. */
+static svn_error_t *
+do_postfix_text_deltas (apr_hash_t *filehash,
+                        svn_delta_edit_fns_t *editor,
+                        apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_hash_index_t *hi;
+  svn_string_t *filepath;
+  void *filebaton;
+  const void *key;
+  size_t keylen;
+
+  for (hi = apr_hash_first (filehash); hi; hi = apr_hash_next (hi))
+    {
+      apr_hash_this (hi, &key, &keylen, &filebaton);
+
+      filepath = svn_string_create ((char *) key, pool);
+
+      err = do_apply_textdelta (filepath, editor, filebaton, pool);
+      if (err) return err;
+
+      err = editor->close_file (filebaton);
+      if (err) return err;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 
 /* Recursive working-copy crawler.
    
@@ -352,7 +417,7 @@ process_subdirectory (svn_string_t *path,
                       void *dir_baton,
                       svn_delta_edit_fns_t *editor,
                       void *edit_baton,
-                      struct stack_object *stack,
+                      struct stack_object **stack,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -364,7 +429,7 @@ process_subdirectory (svn_string_t *path,
   /* Vars that we automatically get when fetching a directory entry */
   svn_string_t *current_entry_name;
   svn_vernum_t current_entry_version;
-  int current_entry_type;
+  enum svn_node_kind current_entry_type;
   apr_hash_t *current_entry_hash;
 
   /* Vars that we will deduce ourselves. */
@@ -373,7 +438,7 @@ process_subdirectory (svn_string_t *path,
   svn_boolean_t delete_p;
 
   /* Push the current path and baton to the top of the stack. */
-  append_stack (&stack, path, dir_baton, pool);
+  append_stack (stack, path, dir_baton, pool);
 
   /* Start looping over each entry in this directory */
   err = svn_wc__entries_start (&index, path, pool);
@@ -405,7 +470,7 @@ process_subdirectory (svn_string_t *path,
               /* Do what's necesary to get a baton for current directory */
               if (! dir_baton)
                 {
-                  err = do_dir_replaces (path, pool, &stack,
+                  err = do_dir_replaces (path, pool, stack,
                                          editor, edit_baton,
                                          &dir_baton);
                   if (err) return err;
@@ -434,11 +499,12 @@ process_subdirectory (svn_string_t *path,
           else if (current_entry_type == svn_file_kind)
             {
               void *file_baton;
+              svn_string_t *longpath = svn_string_dup (path, pool);
               
               /* Do what's necesary to get a baton for current directory */
               if (! dir_baton)
                 {
-                  err = do_dir_replaces (path, pool, &stack,
+                  err = do_dir_replaces (path, pool, stack,
                                          editor, edit_baton,
                                          &dir_baton);
                   if (err) return err;
@@ -458,15 +524,13 @@ process_subdirectory (svn_string_t *path,
                                       &file_baton);
               if (err) return err;
               
-              /* Send the text-delta to this file baton */
-              err = do_apply_textdelta (current_entry_name,
-                                        editor,
-                                        file_baton,
-                                        pool);
-              
-              /* Close the file baton. */
-              err = editor->close_file (file_baton);
-              if (err) return err;
+              /* Store the file's full pathname and filebaton for safe
+                 keeping (and to be used later for postfix
+                 text-deltas) */
+              svn_path_add_component (longpath, current_entry_name,
+                                      svn_path_local_style, pool);
+              apr_hash_set ((*stack)->filehash, longpath->data, longpath->len,
+                            file_baton);
             }
         }
       
@@ -475,7 +539,7 @@ process_subdirectory (svn_string_t *path,
           /* Do what's necesary to get a baton for current directory */
           if (! dir_baton)
             {
-              err = do_dir_replaces (path, pool, &stack,
+              err = do_dir_replaces (path, pool, stack,
                                      editor, edit_baton,
                                      &dir_baton);
               if (err) return err;
@@ -489,11 +553,12 @@ process_subdirectory (svn_string_t *path,
       else if (modified_p)
         {
           void *file_baton;
+          svn_string_t *longpath = svn_string_dup (path, pool);
 
           /* Do what's necesary to get a baton for current directory */
           if (! dir_baton)
             {
-              err = do_dir_replaces (path, pool, &stack,
+              err = do_dir_replaces (path, pool, stack,
                                      editor, edit_baton,
                                      &dir_baton);
               if (err) return err;
@@ -513,15 +578,15 @@ process_subdirectory (svn_string_t *path,
                                       &file_baton);
           if (err) return err;
 
-          /* Send the text-delta to this file baton */
-          err = do_apply_textdelta (current_entry_name, editor,
-                                    file_baton, pool);
-
-          /* Close the file baton. */
-          err = editor->close_file (file_baton);
-          if (err) return err;
+          /* Store the file's full pathname and filebaton for safe
+             keeping (and to be used later for postfix
+             text-deltas) */
+          svn_path_add_component (longpath, current_entry_name,
+                                  svn_path_local_style, pool);
+          apr_hash_set ((*stack)->filehash, longpath->data, longpath->len,
+                        file_baton);          
         }
-
+      
       else if (current_entry_type == svn_dir_kind)
         {
           /* Recurse, using a NULL dir_baton.  Why NULL?  Because that
@@ -533,24 +598,33 @@ process_subdirectory (svn_string_t *path,
 
     } while (current_entry_name);
   
-  /* If the current stackframe has a real directory baton, then we
-  must have issued an add_dir() or replace_dir() call already.  Since
-  we're now done looping through this directory's entries, we're going
-  to pop "up" our tree and thus need to close the current
-  directory. */
-  if (stack->baton)
+  /* When we arrive here, we're now done looping over this directory's
+     entries, and we're done descending into its children. */
+
+  /* Special case: watch out for the *root* stack frame.  It can only
+     be closed by close_edit(), not close_directory().  And we don't
+     want to lose this frame anyway, no sir.  This frame contains our
+     filehash, chok' full of open file batons waiting for text
+     deltas. */
+  if ((*stack)->previous == NULL)
+    /* This is the top-level frame, we're all done, get out. */
+    return SVN_NO_ERROR;
+
+  /* If the current stackframe has a non-NULL directory baton, then we
+     must have issued an add_dir() or replace_dir() call already.
+     Before we exit the function and move "up" the tree, we need to
+     close this directory baton. */
+  if ((*stack)->baton)
     {
-      err = editor->close_directory (stack->baton);
+      err = editor->close_directory ((*stack)->baton);
       if (err) return err;
     }
 
-  /* Discard top of stack*/
-  remove_stack (&stack);
+  /* Discard top of stack */
+  remove_stack (stack);
 
   return SVN_NO_ERROR;
 }
-
-
 
 
 
@@ -575,30 +649,38 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
                          apr_pool_t *pool)
 {
   svn_error_t *err;
-  struct stack_object *stack_bottom;
 
-  /* Create the bottommost stack object -- it will always have NULL
-     values in its fields.  */
-  stack_bottom = apr_pcalloc (pool, sizeof(struct stack_object));
-  
+  struct stack_object *stack_bottom = NULL;
+
   /* Start the crawler! */
 
   /* Note that the first thing the crawler will do is push a new stack
      object onto the stack with PATH="root_directory" and BATON=NULL.  */
   err = process_subdirectory (root_directory,
-                              NULL,             /* No baton to start with. */
+                              NULL,            /* No baton to start with. */
                               edit_fns,
                               edit_baton,
-                              stack_bottom,
+                              &stack_bottom,   /* NULL stack to start with. */
                               pool);
-
   if (err) return err;
 
+  /* The crawler has returned, and *stack_bottom now points to a very
+     valuable top-level stack object. */
 
-  /* TODO: if (stack_bottom.baton), that means the editor was actually
-     used, and we're looking at the remaining "root" baton.
-     Therefore, we must call the editor's `close_edit()' with this
-     baton. */
+  /* Loop through stack_bottom->filehash, and fire off any postfix
+     text-deltas that may be needed. */
+  err = do_postfix_text_deltas (stack_bottom->filehash, edit_fns, pool);
+  if (err) return err;
+
+  /* If the bottom of the stack contains a non-NULL dir baton, that
+     means the editor was actually used at some point, and we're
+     looking at the remaining "root" baton.  Therefore, we must call
+     the editor's `close_edit()'. */
+  if (stack_bottom->baton)
+    {
+      err = edit_fns->close_edit (edit_baton);
+      if (err) return err;
+    }
 
   return SVN_NO_ERROR;
 }

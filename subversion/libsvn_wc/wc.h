@@ -292,6 +292,7 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_ATTR_TIMESTAMP "timestamp"
 #define SVN_WC__ENTRIES_ATTR_CHECKSUM  "checksum"
 #define SVN_WC__ENTRIES_ATTR_NEW       "new"
+#define SVN_WC__ENTRIES_ATTR_DELETE    "delete"
 #define SVN_WC__ENTRIES_ATTR_ANCESTOR  "ancestor"
 
 /* Initialize contents of `entries' for a new adm area. */
@@ -365,7 +366,7 @@ svn_error_t *svn_wc__entries_start (struct svn_wc__entries_index **idx,
 svn_error_t *svn_wc__entries_next (struct svn_wc__entries_index *idx,
                                    svn_string_t **entryname,
                                    svn_vernum_t *version,
-                                   int *kind,
+                                   enum svn_node_kind *kind,
                                    apr_hash_t **hash);
 
 
