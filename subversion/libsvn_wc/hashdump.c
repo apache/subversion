@@ -130,7 +130,7 @@ hash_write (ap_hash_t *hash,
             ap_file_t *destfile)
 {
   ap_hash_index_t *this;      /* current hash entry */
-  ap_status_t status;
+  ap_status_t err;
   char buf[100];
 
   for (this = ap_hash_first (hash); this; this = ap_hash_next (this))
@@ -147,40 +147,40 @@ hash_write (ap_hash_t *hash,
 
       /* Output name length, then name. */
 
-      status = ap_full_write (destfile, "K ", 2, NULL);
-      if (status != SVN_NO_ERROR) return status;
+      err = ap_full_write (destfile, "K ", 2, NULL);
+      if (err) return err;
 
       sprintf (buf, "%ld%n", (long int) keylen, &bytes_used);
-      status = ap_full_write (destfile, buf, bytes_used, NULL);
-      if (status != SVN_NO_ERROR) return status;
+      err = ap_full_write (destfile, buf, bytes_used, NULL);
+      if (err) return err;
 
-      status = ap_full_write (destfile, "\n", 1, NULL);
-      if (status != SVN_NO_ERROR) return status;
+      err = ap_full_write (destfile, "\n", 1, NULL);
+      if (err) return err;
 
-      status = ap_full_write (destfile, (char *) key, keylen, NULL);
-      if (status != SVN_NO_ERROR) return status;
+      err = ap_full_write (destfile, (char *) key, keylen, NULL);
+      if (err) return err;
 
-      status = ap_full_write (destfile, "\n", 1, NULL);
-      if (status != SVN_NO_ERROR) return status;
+      err = ap_full_write (destfile, "\n", 1, NULL);
+      if (err) return err;
 
       /* Output value length, then value. */
 
       vallen = (size_t) (*unpack_func) (&valstring, val); /* secret decoder! */
-      status = ap_full_write (destfile, "V ", 2, NULL);
-      if (status != SVN_NO_ERROR) return status;
+      err = ap_full_write (destfile, "V ", 2, NULL);
+      if (err) return err;
 
       sprintf (buf, "%ld%n", (long int) vallen, &bytes_used);
-      status = ap_full_write (destfile, buf, bytes_used, NULL);
-      if (status != SVN_NO_ERROR) return status;
+      err = ap_full_write (destfile, buf, bytes_used, NULL);
+      if (err) return err;
 
-      status = ap_full_write (destfile, "\n", 1, NULL);
-      if (status != SVN_NO_ERROR) return status;
+      err = ap_full_write (destfile, "\n", 1, NULL);
+      if (err) return err;
 
-      status = ap_full_write (destfile, valstring, vallen, NULL);
-      if (status != SVN_NO_ERROR) return status;
+      err = ap_full_write (destfile, valstring, vallen, NULL);
+      if (err) return err;
 
-      status = ap_full_write (destfile, "\n", 1, NULL);
-      if (status != SVN_NO_ERROR) return status;
+      err = ap_full_write (destfile, "\n", 1, NULL);
+      if (err) return err;
     }
 
   return SVN_NO_ERROR;
