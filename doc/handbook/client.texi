@@ -1,0 +1,39 @@
+@node Client Cookbook
+@chapter Client Cookbook
+
+How to make a lovely gumbo with your Subversion client, in 11 easy steps.
+
+@menu
+* Checkout::                    
+* Basic Work Cycle::            
+* History::                     
+* Branches and Tags::           
+* Properties::                  
+* Modules::                     
+* Other Commands::              
+@end menu
+
+@c ------------------------------------------------------------------
+@node Checkout
+@section Checkout
+
+Most of the time, you will start using a Subversion repository by doing
+a @dfn{checkout} of your project. 
+
+@node Basic Work Cycle
+@section Basic Work Cycle
+
+@node History
+@section History
+
+@node Branches and Tags
+@section Branches and Tags
+
+@node Properties
+@section Properties
+
+@node Modules
+@section Modules
+
+@node Other Commands
+@section Other Commands
