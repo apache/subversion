@@ -51,7 +51,6 @@ Subversion from the bottom up.  (For full diagram, @xref{Architecture}.)
 @menu
 * Database::                  Putting the information on disk.
 * Filesystem::                The low-level Subversion Filesystem.
-* Deltas::                    Subversion's way of describing changes.
 * Locking::                   How read/write locks work in the Filesystem.
 * Main Library::              The highest-level server interface.
 * Apache::                    The actual server process.
@@ -141,6 +140,8 @@ To begin, please be sure that you're already casually familiar with
 Subversion's ideas of files, directories, and version histories.  If
 not, @xref{Model}.
 
+@subsection Definitions
+
 For completeness, we can now offer a precise, technical description of
 these terms.  Here is the schema used by svn_fs:
 
@@ -155,9 +156,9 @@ the Unicode standard.
 
 A @dfn{string of bytes} is what you'd expect.
 
-A @dfn{property list} is an ordered list of properties.  A
-@dfn{property} is a pair @code{(@var{name}, @var{value})}, where
-@var{name} is a text string, and @var{value} is a string of bytes.
+A @dfn{property list} is an unordered list of properties with unique
+names.  A @dfn{property} is a pair @code{(@var{name}, @var{value})},
+where @var{name} is a text string, and @var{value} is a string of bytes.
 
 A @dfn{file} is a property list and a string of bytes.
 
@@ -188,38 +189,10 @@ A @dfn{repository} consists of node table and a history.
 @c  </jimb> ----------------------
 
 
-@subsection Properties
+@subsection Basic Reading
 
-(expound) A note on properties:  they're stored as a bytestream that's
-simply appended to a file's text.  Need common routines to decode/encode
-them.  To fetch a list of @emph{all} of a file
-
-Also, it's important to remember that properties aren't only attached to
-files;  they're attached to directory entries and versions too.
-
-@table @code
-@item read_node_prop (version, path, propname)
-@itemx write_node_prop (version, path, propname)
- read/write a particular property of a file or directory entry
-@item read_version_prop (version, propname)
-@itemx write_version_prop (version, propname)
- read/write a particular property of a version-history (such as a log)
-@end table
-
-
-@subsection Deltas
-
-(expound) A @dfn{delta} object is a specific data structure used by the
-Subversion server and client.  It's used to do stuff.
-
-@table @code
-@item delta (versionA, pathA, versionB, pathB)
- return a delta object (which converts subtree A into subtree B)
-@end table
-
-@subsection Reading Filesystem Information
-
-Here are functions to retrieve information from the filesystem.
+Here are functions to retrieve information from the filesystem, designed
+to be fast and convenient for any process using svn_fs.
 
 @table @code
 @item latest ()
@@ -227,9 +200,52 @@ Here are functions to retrieve information from the filesystem.
 @item read (version, path)
  if path is a file, return full text (which includes property stream);@*
  if path is a directory, return list of directory entries.
+@item get_node_props (version, path)
+ return a list of all props of a file or directory entry
+@item get_version_props (version)
+ return a list of all props of a version
+@item read_node_prop (version, path, propname)
+ read a particular property of a file or directory entry
+@item read_version_prop (version, propname)
+ read a particular property of a version (such as a log)
 @end table
 
-@subsection Writing Filesystem Information
+
+@subsection Deltas
+
+A @dfn{delta} object is a specific data structure in Subversion which
+efficiently describes the difference between two file trees.  Deltas are
+absolutely critical in the communication between Subversion clients and
+servers.  For a full explanation, @xref{Protocol}. 
+
+A single basic routine is provided which asks the server to build and
+return a delta from the Subversion filesystem:
+
+@table @code
+@item request_delta (versionX, pathA, versionY, pathB)
+ return a delta object which converts subtree A:X into subtree B:Y
+@end table
+
+
+@subsection Basic Writing
+
+Anytime a process needs to modify the filesystem, it must do three
+things:
+
+@enumerate
+@item
+  Build a delta object, representing a group of changes to a base
+  revision of a tree.  (This must be done either on the client side, or
+  using a separate delta library.)
+@item
+  Request permission from the server to write the delta as a transaction.
+@item
+  If permission is granted, apply the delta.
+@end enumerate
+
+Please remember that because we're dealing with the "Big Bytestring"
+model of files, that this process includes any sort of change to a
+file's text @emph{or} properties!
 
 @table @code
 @item submit (delta)
@@ -242,12 +258,8 @@ failure)
  previous approval)
 @end table
 
-For a fuller description of write-locking, @xref{Locking}.
-
-@c ----------------------------------------------------------------
-
-@node Deltas
-@section Deltas
+For a fuller description of Subversion's write-locking mechanism,
+@xref{Locking}.
 
 
 @c ----------------------------------------------------------------
@@ -343,8 +355,105 @@ When the lock manager has no more open server connections, it dies.
 @node Main Library
 @section Main Library
 
+The Main Subversion Library (@dfn{svn_main}) provides a high-level
+server API to the Subversion client.
+
+In general, it provides an API that maps to CVS concepts whereever
+possible.
+
+@subsection Methods
+
+The Subversion server makes itself useful to clients by providing
+@dfn{methods}.  This term is used intentionally, because it lines up
+well with our initial implementation of the network layer (done with
+Apache and custom HTTP "methods", @xref{Protocol}.)
+
+@table @code
+@item available_methods ()
+  return a list of methods that the server supports 
+@end table
+
+@subsection Basic Methods
+
+These are the basic methods made available to clients.
+
+@table @code
+@item checkout (repository, version, path)
+  grab a working copy of a section of the filesystem, rooted at
+  @emph{path}
+@item commit (repository, delta)
+  check a delta object into the repository (the delta is generated by
+  the client)
+@end table
+
+@subsection Simple Filesystem Reads
+
+Here are some methods for doing quick, easy reads from the Subversion
+filesystem;  they're essentially identical to the direct Filesystem
+calls, except that they require the name of a specific repository as the
+first argument.
+
+@table @code
+@item latest (repository)
+ returns the latest global version of the repository
+@item read (repository, version, path)
+ if path is a file, return full text (which includes property stream);@*
+ if path is a directory, return list of directory entries.
+@item get_node_props (repository, version, path)
+ return a list of all props of a file or directory entry
+@item get_version_props (repository, version)
+ return a list of all props of a version
+@item read_node_prop (repository, version, path, propname)
+ read a particular property of a file or directory entry
+@item read_version_prop (repository, version, propname)
+ read a particular property of a version (such as a log)
+@end table
 
 
+@subsection Plug-Ins
+
+It's important that svn_main be extensible;  by allowing users to write
+their own server-side libraries, the server's abilities can potentially
+grow forever.
+
+We define the term @dfn{plug-in} to refer to a library designed to be
+loaded into svn_main's address space.  This term is used intentionally
+(instead of "module") so as not to be confused with Apache modules.
+Each plug-in can potentially implement a new set of server "methods"
+(@xref{Methods}.)
+
+When starting up, svn_main will read a configuration file @dfn{svn.conf}
+(much like Apache's @emph{httpd.conf}) which, among other things, will
+specify a list of available plug-ins and their actual locations on
+disk.  If and when a client requests a particular method, svn_main then
+knows which plug-in to "auto-load" as necessary.
+
+A plug-in needs access to the svn_main internals, and therefore uses
+svn_main's private header files.  Additionally, we define:
+
+@c Hand-waving this API for now, not critical to define just yet:
+
+@table @code
+@item register_method (name)
+  register a new method in svn_main's list of available methods
+@end table
 
 
+Here are some ideas for future plug-ins:
+
+@itemize @bullet
+@item
+  @strong{annotate} : provides annotation of individual files (i.e. who
+  wrote which line in which version).  This is a basic command in CVS,
+  but is not critical for Subversion's first release.  By implementing
+  it later as a plug-in, the command becomes much more customizable.
+@item
+  @strong{grep} : the ability to search the Subversion filesystem
+  quickly for text or properties
+@item
+  @strong{guile} : a plug-in which provides glue between svn_main and
+  libguile.so, thereby giving the Subversion server an extensible
+  scripting language.  (This could also be done with @strong{perl} or
+  @strong{python}.)
+@end itemize
 
