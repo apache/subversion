@@ -41,7 +41,8 @@ path_index = svntest.actions.path_index
 #
 
 def get_standard_status_list(wc_dir):
-  "Return a status list reflecting local mods made by next routine."
+  "Return a status list reflecting the local mods made by
+  make_standard_slew_of_changes()."
 
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
 
