@@ -1516,7 +1516,7 @@ def commit_symlink(sbox):
   os.remove(newfile_path)
   os.symlink('linktarget', newfile_path)
 
-  out, err = svntest.main.run_svn(None, 'ci', '-m', 'log msg', wc_dir)
+  out, err = svntest.main.run_svn(1, 'ci', '-m', 'log msg', wc_dir)
   if err:
     return 0
   else:
