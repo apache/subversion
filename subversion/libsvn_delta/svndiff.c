@@ -312,46 +312,77 @@ decode_instruction (svn_txdelta_op_t *op,
    are valid for the given window lengths.  Return -1 if the
    instructions are invalid; otherwise return the number of
    instructions.  */
-static int
-count_and_verify_instructions (const unsigned char *p,
+static svn_error_t *
+count_and_verify_instructions (int *ninst,
+                               const unsigned char *p,
                                const unsigned char *end,
                                apr_size_t sview_len,
                                apr_size_t tview_len,
-                               apr_size_t new_len)
+                               apr_size_t new_len,
+                               apr_pool_t *pool)
 {
   int n = 0;
-  svn_txdelta_op_t op;
+  svn_txdelta_op_t op = { 0 };
   apr_size_t tpos = 0, npos = 0;
 
   while (p < end)
     {
       p = decode_instruction (&op, p, end);
-      if (p == NULL || op.length < 0 || op.length > tview_len - tpos)
-        return -1;
+      if (p == NULL || op.offset < 0 || op.length <= 0
+          || op.length > tview_len - tpos)
+        {
+          if (p == NULL)
+            return svn_error_createf
+              (SVN_ERR_SVNDIFF_INVALID_OPS, 0, NULL, pool,
+               "insn %d cannot be decoded", n);
+          else if (op.offset < 0)
+            return svn_error_createf
+              (SVN_ERR_SVNDIFF_INVALID_OPS, 0, NULL, pool,
+               "insn %d has negative offset", n);
+          else if (op.length <= 0)
+            return svn_error_createf
+              (SVN_ERR_SVNDIFF_INVALID_OPS, 0, NULL, pool,
+               "insn %d has non-positive length", n);
+          else
+            return svn_error_createf
+              (SVN_ERR_SVNDIFF_INVALID_OPS, 0, NULL, pool,
+               "insn %d overflows the target view", n);
+        }
+
       switch (op.action_code)
         {
         case svn_txdelta_source:
-          if (op.offset < 0 || op.length > sview_len - op.offset)
-            return -1;
+          if (op.length > sview_len - op.offset)
+            return svn_error_createf
+              (SVN_ERR_SVNDIFF_INVALID_OPS, 0, NULL, pool,
+               "[src] insn %d overflows the source view", n);
           break;
         case svn_txdelta_target:
-          if (op.offset < 0 || op.offset >= tpos)
-            return -1;
+          if (op.offset >= tpos)
+            return svn_error_createf
+              (SVN_ERR_SVNDIFF_INVALID_OPS, 0, NULL, pool,
+               "[tgt] insn %d starts beyond the target view position", n);
           break;
         case svn_txdelta_new:
           if (op.length > new_len - npos)
-            return -1;
+            return svn_error_createf
+              (SVN_ERR_SVNDIFF_INVALID_OPS, 0, NULL, pool,
+               "[new] insn %d overflows the new data section", n);
           npos += op.length;
           break;
         }
       tpos += op.length;
-      if (tpos < 0)
-        return -1;
       n++;
     }
-  if (tpos != tview_len || npos != new_len)
-    return -1;
-  return n;
+  if (tpos != tview_len)
+    return svn_error_create (SVN_ERR_SVNDIFF_INVALID_OPS, 0, NULL, pool,
+                             "delta does not fill the target window");
+  if (npos != new_len)
+    return svn_error_create (SVN_ERR_SVNDIFF_INVALID_OPS, 0, NULL, pool,
+                             "delta does not contain enough new data");
+
+  *ninst = n;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -457,12 +488,8 @@ write_handler (void *baton,
 
       /* Count the instructions and make sure they are all valid.  */
       end = p + inslen;
-      ninst = count_and_verify_instructions (p, end, sview_len, 
-					     tview_len, newlen);
-      if (ninst == -1)
-	return svn_error_create (SVN_ERR_SVNDIFF_INVALID_OPS, 0, NULL, 
-				 db->pool, 
-				 "svndiff contains invalid instructions");
+      SVN_ERR (count_and_verify_instructions (&ninst, p, end, sview_len, 
+                                              tview_len, newlen, db->pool));
 
       /* Build the window structure.  */
       window.sview_offset = sview_offset;
@@ -473,6 +500,9 @@ write_handler (void *baton,
       npos = 0;
       for (op = ops; op < ops + ninst; op++)
 	{
+          /* FIXME: The way things stand now, every svndiff insn is decoded
+             twice. We should integrate what count_and_verify_instructions
+             does here, instead.  --xbc */
 	  p = decode_instruction (op, p, end);
 	  if (op->action_code == svn_txdelta_new)
 	    {
