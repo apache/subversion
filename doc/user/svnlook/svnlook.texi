@@ -25,9 +25,9 @@ Subcommands are:
 Default output format:
 
    AUTHOR - The author, followed by newline.
-   DATE - Timestamp in ISO8601 format ("YYYY-MM-DD hh:mm") in the revision
-          case, or the empty string in the transaction case.  In either
-          case, this will be followed by a newline.
+   DATE - Timestamp in ISO8601 format ("YYYY-MM-DD hh:mm GMT") in the 
+          revision case, or the empty string in the transaction case.  
+          In either case, this will be followed by a newline.
    LOGSIZE - Length in bytes of log message, followed by newline.
    LOG - Log message, followed by newline.
    TREE - Format is consistent with that used by svnadmin.  Once
@@ -39,7 +39,7 @@ Subcommand output formats:
    "author":
    "date":
 
-      These are trivial.
+      These are trivial.  All are followed by a newline.
 
    "dirs-changed":
 
