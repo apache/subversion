@@ -1499,22 +1499,21 @@ attempt_merge (svn_boolean_t conflict_expected,
     }
 
   /* Maybe the merge didn't flag a conflict error, but conflict
-     information got sent anyway.  That's bad.*/
-
-  if (*conflict_p != NULL)
+     information got sent anyway.  That's bad.  */
+  if (*conflict_p && (! conflict_expected))
     {
-      if (conflict_expected)
-        {
-          return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, subpool,
-             "conflict information returned, but without conflict error!");
-        }
-      else
-        {
-          return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, subpool,
-             "conflict information returned unexpectedly");
-        }
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, subpool,
+         "conflict information returned, but without conflict error!");
+    }
+
+  /* Or maybe we didn't get conflict information even though we
+     expected and got a conflict error.  */
+  if (conflict_expected && (! *conflict_p))
+    {
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, subpool,
+         "expected conflict information not received");
     }
 
   return SVN_NO_ERROR;
@@ -1547,12 +1546,17 @@ merge_trees (const char **msg)
   SVN_ERR (svn_fs_txn_root (&target_root, target_txn, pool));
   SVN_ERR (svn_fs_txn_root (&ancestor_root, ancestor_txn, pool));
 
-  /* Create greek trees. */
-  SVN_ERR (greek_tree_under_root (source_root));
-  SVN_ERR (greek_tree_under_root (target_root));
-  SVN_ERR (greek_tree_under_root (ancestor_root));
+  /* Test #1: Empty, unmodified trees should not conflict. */
+  SVN_ERR (attempt_merge (FALSE, &conflict,
+                          source_root, source_path,
+                          target_root, target_path,
+                          ancestor_root, ancestor_path,
+                          pool));
 
-  /* Test #1: Non-conflicting changes.
+  /* Test #2: Non-conflicting changes in greek trees in txns.  Should
+   * still get a conflict, because none of them are committed trees,
+   * therefore no txn's tree shares any node revision IDs with another
+   * txn tree.
    * 
    * Leave ANCESTOR alone.  In TARGET,
    *
@@ -1575,6 +1579,11 @@ merge_trees (const char **msg)
    * gone, leaving H an empty directory.
    */
   
+  /* Create greek trees. */
+  SVN_ERR (greek_tree_under_root (source_root));
+  SVN_ERR (greek_tree_under_root (target_root));
+  SVN_ERR (greek_tree_under_root (ancestor_root));
+
   /* Do some things in target. */
   SVN_ERR (svn_fs_make_file (target_root, "target_theta", pool));
   SVN_ERR (svn_fs_make_file (target_root, "A/D/target_zeta", pool));
@@ -1589,13 +1598,17 @@ merge_trees (const char **msg)
   SVN_ERR (svn_fs_delete (source_root, "A/D/H/chi", pool));
   SVN_ERR (svn_fs_delete (source_root, "A/D/H/psi", pool));
 
-  SVN_ERR (attempt_merge (FALSE, &conflict,
+  /* We attempt to merge, knowing we will get a conflict.  Even though
+     the contents of the trees are exactly the same, the node revision
+     IDs are all different, because these are three transactions.  */
+
+  SVN_ERR (attempt_merge (TRUE, &conflict,
                           source_root, source_path,
                           target_root, target_path,
                           ancestor_root, ancestor_path,
                           pool));
 
-  /* Test #2-N: should go through the cases enumerated svn_fs_merge,
+  /* Test #3-N: should go through the cases enumerated svn_fs_merge,
      cook up a scenario for each one.  But we'll need commits working
      to really do this right.  */
 
