@@ -87,31 +87,41 @@ my $rev;
 # Use the reference to the first project to populate.
 my $current_project = $project_settings_list[0];
 
+# This hash matches the command line option to the hash key in the
+# project.  If a key exists but has a false value (''), then the
+# command line option is allowed but requires special handling.
+my %opt_to_hash_key = ('--from' => 'from_address',
+                       '-h'     => 'hostname',
+                       '-l'     => 'log_file',
+                       '-m'     => '',
+                       '-r'     => 'reply_to',
+                       '-s'     => 'subject_prefix');
+
 while (@ARGV)
   {
     my $arg = shift @ARGV;
-    if (my ($opt) = $arg =~ /^-([hlmrs])/)
+    if ($arg =~ /^-/)
       {
+        my $hash_key = $opt_to_hash_key{$arg};
+        unless (defined $hash_key)
+          {
+            die "$0: command line option `$arg' is not recognized.\n";
+          }
+
         unless (@ARGV)
           {
             die "$0: command line option `$arg' is missing a value.\n";
           }
         my $value = shift @ARGV;
 
-        # This hash matches the command line option to the hash key in
-        # the project.
-        my %opt_to_hash_key = (h => 'hostname',
-                               l => 'log_file',
-                               r => 'reply_to',
-                               s => 'subject_prefix');
-        if (my $hash_key = $opt_to_hash_key{$opt})
+        if ($hash_key)
           {
             $current_project->{$hash_key} = $value;
           }
         else
           {
-            # Here handle -match.
-            unless ($opt eq 'm')
+            # Here handle -m.
+            unless ($arg eq '-m')
               {
                 die "$0: internal error: should only handle -m here.\n";
               }
@@ -179,7 +189,7 @@ unless (-d _)
       eval { $match_re = qr/$match_regex/ };
       if ($@)
         {
-          warn "$0: -match regex #$i `$match_regex' does not compile:\n$@\n";
+          warn "$0: -m regex #$i `$match_regex' does not compile:\n$@\n";
           $ok = 0;
           next;
         }
@@ -362,6 +372,7 @@ foreach my $project (@project_settings_list)
 
     my @email_addresses = @{$project->{email_addresses}};
     my $userlist        = join(' ', @email_addresses);
+    my $from_address    = $project->{from_address};
     my $hostname        = $project->{hostname};
     my $log_file        = $project->{log_file};
     my $reply_to        = $project->{reply_to};
@@ -382,7 +393,11 @@ foreach my $project (@project_settings_list)
       }
     my $mail_from = $author;
 
-    if ($hostname =~ /\w/)
+    if ($from_address =~ /\w/)
+      {
+        $mail_from = $from_address;
+      }
+    elsif ($hostname =~ /\w/)
       {
         $mail_from = "$mail_from\@$hostname";
       }
@@ -462,11 +477,12 @@ sub usage
   warn "@_\n" if @_;
   die "usage: $0 REPOS REVNUM [[-m regex] [options] [email_addr ...]] ...\n",
       "options are\n",
-      "  -h hostname        Hostname to append to author for 'From:'\n",
-      "  -l logfile         File to which mail contents should be appended\n",
-      "  -m regex           Regular expression to match committed path\n",
-      "  -r email_address   Set email Reply-To header to this email address\n",
-      "  -s subject_prefix  Subject line prefix\n",
+      "  --from email_address  Email address for 'From:' (overrides -h)\n",
+      "  -h hostname           Hostname to append to author for 'From:'\n",
+      "  -l logfile            Append mail contents to this log file\n",
+      "  -m regex              Regular expression to match committed path\n",
+      "  -r email_address      Email address for 'Reply-To:'\n",
+      "  -s subject_prefix     Subject line prefix\n",
       "\n",
       "This script supports a single repository with multiple projects,\n",
       "where each project receives email only for commits that modify that\n",
@@ -493,6 +509,7 @@ sub usage
 sub new_project
 {
   return {email_addresses => [],
+          from_address    => '',
           hostname        => '',
           log_file        => '',
           match_regex     => '.',
