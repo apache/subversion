@@ -550,7 +550,7 @@ def build_tree_from_checkout(lines):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
   
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ('^([MAGCUD_ ][MAGCUD_ ]) (.+)')
+  rm = re.compile ('^([MAGCUD_ ][MAGCUD_ ])\s+(.+)')
   
   for line in lines:
     match = rm.search(line)

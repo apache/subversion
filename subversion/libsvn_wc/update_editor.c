@@ -76,6 +76,9 @@ struct edit_baton
   /* Was the root actually opened (was this a non-empty edit)? */
   svn_boolean_t root_opened;
 
+  /* Was the update-target deleted?  This is a special situation. */
+  svn_boolean_t target_deleted;
+ 
   /* Non-null if this is a 'switch' operation. */
   const char *switch_url;
 
@@ -621,8 +624,13 @@ delete_entry (const char *path,
   apr_status_t apr_err;
   apr_file_t *log_fp = NULL;
   const char *base_name;
+  const char *tgt_rev_str = NULL;
   svn_wc_adm_access_t *adm_access;
+  svn_node_kind_t kind;
+  const char *full_path = svn_path_join (pb->path, path, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
+
+  SVN_ERR (svn_io_check_path (full_path, &kind, pool));
 
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
                                 pb->path, pool));
@@ -646,6 +654,32 @@ delete_entry (const char *path,
                          SVN_WC__LOG_ATTR_NAME,
                          base_name,
                          NULL);
+
+  /* If the thing being deleted is the *target* of this update, then
+     we need to recreate a 'deleted' entry, so that parent can give
+     accurate reports about itself in the future. */
+  if (pb->edit_baton->target
+      &&  (! strcmp(path, pb->edit_baton->target)))
+    {
+      tgt_rev_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                                  pb->edit_baton->target_revision);
+
+      svn_xml_make_open_tag (&log_item, pool, svn_xml_self_closing,
+                             SVN_WC__LOG_MODIFY_ENTRY,
+                             SVN_WC__LOG_ATTR_NAME,
+                             path,
+                             SVN_WC__ENTRY_ATTR_KIND,
+                             (kind == svn_node_file) ? 
+                                SVN_WC__ENTRIES_ATTR_FILE_STR :
+                                SVN_WC__ENTRIES_ATTR_DIR_STR,
+                             SVN_WC__ENTRY_ATTR_REVISION,
+                             tgt_rev_str,
+                             SVN_WC__ENTRY_ATTR_DELETED,
+                             "true",
+                             NULL);
+
+      pb->edit_baton->target_deleted = TRUE;
+    }
 
   apr_err = apr_file_write_full (log_fp, log_item->data, log_item->len, NULL);
   if (apr_err)
@@ -679,10 +713,6 @@ delete_entry (const char *path,
        * the log item is to remove the entry in the parent directory.
        */
 
-      svn_node_kind_t kind;
-      const char *full_path = svn_path_join (pb->path, path, pool);
-
-      SVN_ERR (svn_io_check_path (full_path, &kind, pool));
       if (kind == svn_node_dir)
         {
           svn_wc_adm_access_t *child_access;
@@ -1930,17 +1960,24 @@ close_edit (void *edit_baton,
          url.  All of this tweaking might happen recursively!  Note
          that if eb->target is NULL, that's okay (albeit "sneaky",
          some might say).  */
-
-      SVN_ERR (svn_wc__do_update_cleanup
-               (svn_path_join_many (eb->pool, eb->anchor, eb->target, NULL),
-                eb->adm_access,
-                eb->recurse,
-                eb->switch_url,
-                eb->target_revision,
-                eb->notify_func,
-                eb->notify_baton,
-                TRUE,
-                eb->pool));
+      
+      /* Extra check: if the update did nothing but make its target
+         'deleted', then do *not* run cleanup on the target, as it
+         will only remove the deleted entry!  */
+      if (! eb->target_deleted)
+        {
+          SVN_ERR (svn_wc__do_update_cleanup
+                   (svn_path_join_many (eb->pool,
+                                        eb->anchor, eb->target, NULL),
+                    eb->adm_access,
+                    eb->recurse,
+                    eb->switch_url,
+                    eb->target_revision,
+                    eb->notify_func,
+                    eb->notify_baton,
+                    TRUE,
+                    eb->pool));
+        }
     }
 
   if (eb->notify_func)
@@ -1952,7 +1989,7 @@ close_edit (void *edit_baton,
                         svn_wc_notify_state_inapplicable,
                         svn_wc_notify_state_inapplicable,
                         eb->target_revision);
-
+  
   /* The edit is over, free its pool.
      ### No, this is wrong.  Who says this editor/baton won't be used
      again?  But the change is not merely to remove this call.  We

@@ -1022,7 +1022,7 @@ def update_deleted_missing_dir(sbox):
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
   expected_status.tweak(wc_rev=1, repos_rev=2)
-  
+
   # Do the update, specifying the deleted paths explicitly. 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -1213,6 +1213,49 @@ def checkout_empty_dir(sbox):
     raise svntest.Failure
 
 
+#----------------------------------------------------------------------
+# Regression test for issue #919: "another ghudson bug".  Basically, if
+# we fore- or back-date an item until it no longer exists, we were
+# completely removing the entry, rather than marking it 'deleted'
+# (which we now do.)
+
+def update_to_deletion(sbox):
+  "update target till it's gone, then get it back"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # Update iota to rev 0, so it gets removed.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        None, None,
+                                        None, None, None, None, 0,
+                                        '-r', '0', iota_path)
+
+  # Update the wc root, so iota comes back.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        None, None,
+                                        None, None, None, None, 0,
+                                        wc_dir)
+  
+
 ########################################################################
 # Run the tests
 
@@ -1233,10 +1276,11 @@ test_list = [ None,
               prop_update_on_scheduled_delete,
               update_receive_illegal_name,
               update_deleted_missing_dir,
-              XFail(another_hudson_problem),
+              another_hudson_problem,
               new_dir_with_spaces,
               non_recursive_update,
               XFail(checkout_empty_dir),
+              update_to_deletion,
              ]
 
 if __name__ == '__main__':
