@@ -18,7 +18,6 @@
 
 
 
-#include <stdio.h>       /* for sprintf() */
 #include <stdlib.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
@@ -28,7 +27,7 @@
 #include "svn_error.h"
 #include "svn_hash.h"
 #include "svn_io.h"
-
+#include "svn_pools.h"
 
 
 
@@ -79,45 +78,52 @@ svn_hash_write (apr_hash_t *hash,
                 apr_pool_t *pool)
 {
   apr_hash_index_t *this;      /* current hash entry */
-  char buf[SVN_KEYLINE_MAXLEN];
+  apr_pool_t *iterpool;
+
+  iterpool = svn_pool_create (pool);
 
   for (this = apr_hash_first (pool, hash); this; this = apr_hash_next (this))
     {
       const void *key;
       void *val;
       apr_ssize_t keylen;
-      int bytes_used;
+      const char* buf;
       const svn_string_t *value;
+
+      svn_pool_clear (iterpool);
 
       /* Get this key and val. */
       apr_hash_this (this, &key, &keylen, &val);
 
       /* Output name length, then name. */
+      SVN_ERR (svn_io_file_write_full (destfile, "K ", 2, NULL, iterpool));
 
-      SVN_ERR (svn_io_file_write_full (destfile, "K ", 2, NULL, pool));
-
-      sprintf (buf, "%" APR_SSIZE_T_FMT "%n", keylen, &bytes_used);
-      SVN_ERR (svn_io_file_write_full (destfile, buf, bytes_used, NULL, pool));
-      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, pool));
+      buf = apr_psprintf (iterpool, "%" APR_SSIZE_T_FMT, keylen);
+      SVN_ERR (svn_io_file_write_full (destfile, 
+                                       buf, strlen (buf), NULL, iterpool));
+      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, iterpool));
 
       SVN_ERR (svn_io_file_write_full (destfile, 
                                        (const char *) key, keylen, 
-                                       NULL, pool));
-      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, pool));
+                                       NULL, iterpool));
+      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, iterpool));
 
       /* Output value length, then value. */
       value = val;
 
       SVN_ERR (svn_io_file_write_full (destfile, "V ", 2, NULL, pool));
 
-      sprintf (buf, "%" APR_SIZE_T_FMT "%n", value->len, &bytes_used);
-      SVN_ERR (svn_io_file_write_full (destfile, buf, bytes_used, NULL, pool));
-      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, pool));
+      buf = apr_psprintf (iterpool, "%" APR_SIZE_T_FMT, value->len);
+      SVN_ERR (svn_io_file_write_full (destfile, buf, 
+                                       strlen (buf), NULL, iterpool));
+      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, iterpool));
 
       SVN_ERR (svn_io_file_write_full (destfile, value->data, value->len, 
-                                       NULL, pool));
-      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, pool));
+                                       NULL, iterpool));
+      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, iterpool));
     }
+
+  svn_pool_destroy (iterpool);
 
   SVN_ERR (svn_io_file_write_full (destfile, "END\n", 4, NULL, pool));
 
