@@ -40,6 +40,158 @@ svn_cl__info_print_time (apr_time_t atime,
   printf ("%s: %s\n", desc, svn_time_to_human_nts (atime,pool));
 }
 
+
+static svn_error_t *
+print_entry (const char *target,
+             svn_wc_entry_t *entry,
+             apr_pool_t *pool)
+{
+  svn_boolean_t text_conflict = FALSE, props_conflict = FALSE;
+
+  printf ("Path: %s\n", target);
+
+  /* Note: we have to be paranoid about checking that these are
+     valid, since svn_wc_entry() doesn't fill them in if they
+     aren't in the entries file. */
+
+  if ((entry->name) 
+      && strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
+    printf ("Name: %s\n", entry->name);
+      
+  if (entry->url)
+    printf ("Url: %s\n", entry->url);
+          
+  if (entry->repos)
+    printf ("Repository: %s\n", entry->repos);
+
+  if (SVN_IS_VALID_REVNUM (entry->revision))
+    printf ("Revision: %" SVN_REVNUM_T_FMT "\n", entry->revision);
+
+  switch (entry->kind) 
+    {
+    case svn_node_file:
+      printf ("Node Kind: file\n");
+      {
+        const char *dir_name;
+        svn_path_split_nts (target, &dir_name, NULL, pool);
+        SVN_ERR (svn_wc_conflicted_p (&text_conflict, &props_conflict,
+                                      dir_name, entry, pool));
+      }
+      break;
+          
+    case svn_node_dir:
+      printf ("Node Kind: directory\n");
+      SVN_ERR (svn_wc_conflicted_p (&text_conflict, &props_conflict,
+                                    target, entry, pool));
+      break;
+          
+    case svn_node_none:
+      printf ("Node Kind: none\n");
+      break;
+          
+    case svn_node_unknown:
+    default:
+      printf ("Node Kind: unknown\n");
+      break;
+    }
+
+  switch (entry->schedule) 
+    {
+    case svn_wc_schedule_normal:
+      printf ("Schedule: normal\n");
+      break;
+          
+    case svn_wc_schedule_add:
+      printf ("Schedule: add\n");
+      break;
+          
+    case svn_wc_schedule_delete:
+      printf ("Schedule: delete\n");
+      break;
+          
+    case svn_wc_schedule_replace:
+      printf ("Schedule: replace\n");
+      break;
+          
+    default:
+      break;
+    }
+
+  if (entry->copied)
+    {
+      if (entry->copyfrom_url)
+        printf ("Copied From Url: %s\n", entry->copyfrom_url);
+
+      if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))
+        printf ("Copied From Rev: %" SVN_REVNUM_T_FMT "\n",
+                entry->copyfrom_rev);
+    }
+
+  if (entry->cmt_author)
+    printf ("Last Changed Author: %s\n", entry->cmt_author);
+
+  if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
+    printf ("Last Changed Rev: %" SVN_REVNUM_T_FMT "\n", entry->cmt_rev);
+
+  if (entry->cmt_date)
+    svn_cl__info_print_time (entry->cmt_date, "Last Changed Date", pool);
+
+  if (entry->text_time)
+    svn_cl__info_print_time (entry->text_time, "Text Last Updated", pool);
+
+  if (entry->prop_time)
+    svn_cl__info_print_time (entry->prop_time, "Properties Last Updated",
+                             pool);
+
+  if (entry->checksum)
+    printf ("Checksum: %s\n", entry->checksum);
+
+  if (text_conflict && entry->conflict_old)
+    printf ("Conflict Previous Base File: %s\n", entry->conflict_old);
+
+  if (text_conflict && entry->conflict_wrk)
+    printf ("Conflict Previous Working File: %s\n",
+            entry->conflict_wrk);
+
+  if (text_conflict && entry->conflict_new)
+    printf ("Conflict Current Base File: %s\n", entry->conflict_new);
+
+  if (props_conflict && entry->prejfile)
+    printf ("Conflict Properties File: %s\n", entry->prejfile);
+
+  /* Print extra newline separator. */
+  printf ("\n");
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+info_found_entry_callback (const char *path,
+                           svn_wc_entry_t *entry,
+                           void *walk_baton)
+{
+  apr_pool_t *pool = walk_baton;
+
+  /* We're going to receive dirents twice;  we want to ignore the
+     first one (where it's a child of a parent dir), and only print
+     the second one (where we're looking at THIS_DIR.)  */
+  if ((entry->kind == svn_node_dir) 
+      && (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR)))
+    return SVN_NO_ERROR;
+
+  return print_entry (path, entry, pool);
+}
+
+
+static const svn_wc_entry_callbacks_t 
+entry_walk_callbacks =
+  {
+    info_found_entry_callback
+  };
+
+
+
 svn_error_t *
 svn_cl__info (apr_getopt_t *os,
               svn_cl__opt_state_t *opt_state,
@@ -57,129 +209,27 @@ svn_cl__info (apr_getopt_t *os,
     {
       const char *target = ((const char **) (targets->elts))[i];
       svn_wc_entry_t *entry;
-      svn_boolean_t text_conflict = FALSE, props_conflict = FALSE;
 
-      printf ("Path: %s\n", target);
-
-      SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
+      svn_wc_entry (&entry, target, FALSE, pool);
       if (! entry)
         {
           /* Print non-versioned message and extra newline separator. */
-          printf ("(Not a versioned resource)\n\n");
+          printf ("%s:  (Not a versioned resource)\n\n", target);
           continue;
         }
 
-      /* Note: we have to be paranoid about checking that these are
-         valid, since svn_wc_entry() doesn't fill them in if they
-         aren't in the entries file. */
+      if (entry->kind == svn_node_file)
+        SVN_ERR (print_entry (target, entry, pool));
 
-      if ((entry->name) 
-          && strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
-        printf ("Name: %s\n", entry->name);
-      
-      if (entry->url)
-        printf ("Url: %s\n", entry->url);
-          
-      if (entry->repos)
-        printf ("Repository: %s\n", entry->repos);
-
-      if (SVN_IS_VALID_REVNUM (entry->revision))
-        printf ("Revision: %" SVN_REVNUM_T_FMT "\n", entry->revision);
-
-      switch (entry->kind) 
+      else if (entry->kind == svn_node_dir)
         {
-        case svn_node_file:
-          printf ("Node Kind: file\n");
-          {
-            const char *dir_name;
-            svn_path_split_nts (target, &dir_name, NULL, pool);
-            SVN_ERR (svn_wc_conflicted_p (&text_conflict, &props_conflict,
-                                          dir_name, entry, pool));
-          }
-          break;
-          
-        case svn_node_dir:
-          printf ("Node Kind: directory\n");
-          SVN_ERR (svn_wc_conflicted_p (&text_conflict, &props_conflict,
-                                        target, entry, pool));
-          break;
-          
-        case svn_node_none:
-          printf ("Node Kind: none\n");
-          break;
-          
-        case svn_node_unknown:
-        default:
-          printf ("Node Kind: unknown\n");
-          break;
+          if (opt_state->recursive)
+            /* the generic entry-walker: */
+            SVN_ERR (svn_wc_walk_entries (target, &entry_walk_callbacks, pool,
+                                          FALSE, pool));
+          else
+            SVN_ERR (print_entry (target, entry, pool));
         }
-
-      switch (entry->schedule) 
-        {
-        case svn_wc_schedule_normal:
-          printf ("Schedule: normal\n");
-          break;
-          
-        case svn_wc_schedule_add:
-          printf ("Schedule: add\n");
-          break;
-          
-        case svn_wc_schedule_delete:
-          printf ("Schedule: delete\n");
-          break;
-          
-        case svn_wc_schedule_replace:
-          printf ("Schedule: replace\n");
-          break;
-          
-        default:
-          break;
-        }
-
-      if (entry->copied)
-        {
-          if (entry->copyfrom_url)
-            printf ("Copied From Url: %s\n", entry->copyfrom_url);
-
-          if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))
-            printf ("Copied From Rev: %" SVN_REVNUM_T_FMT "\n",
-                    entry->copyfrom_rev);
-        }
-
-      if (entry->cmt_author)
-        printf ("Last Changed Author: %s\n", entry->cmt_author);
-
-      if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
-        printf ("Last Changed Rev: %" SVN_REVNUM_T_FMT "\n", entry->cmt_rev);
-
-      if (entry->cmt_date)
-        svn_cl__info_print_time (entry->cmt_date, "Last Changed Date", pool);
-
-      if (entry->text_time)
-        svn_cl__info_print_time (entry->text_time, "Text Last Updated", pool);
-
-      if (entry->prop_time)
-        svn_cl__info_print_time (entry->prop_time, "Properties Last Updated",
-                                 pool);
-
-      if (entry->checksum)
-        printf ("Checksum: %s\n", entry->checksum);
-
-      if (text_conflict && entry->conflict_old)
-        printf ("Conflict Previous Base File: %s\n", entry->conflict_old);
-
-      if (text_conflict && entry->conflict_wrk)
-        printf ("Conflict Previous Working File: %s\n",
-                entry->conflict_wrk);
-
-      if (text_conflict && entry->conflict_new)
-        printf ("Conflict Current Base File: %s\n", entry->conflict_new);
-
-      if (props_conflict && entry->prejfile)
-        printf ("Conflict Properties File: %s\n", entry->prejfile);
-
-      /* Print extra newline separator. */
-      printf ("\n");
     }
 
   return SVN_NO_ERROR;
