@@ -18,7 +18,15 @@ AC_DEFUN(SVN_CONFIG_NICE,[
 EOF
 
   for arg in [$]0 "[$]@"; do
-    echo "\"[$]arg\" \\" >> $1
+    case "[$]arg" in
+      --no-create)
+      --no-recursion)
+        # don't put these config switches into the config.nice file
+        ;;
+      *)
+        echo "\"[$]arg\" \\" >> $1
+        ;;
+    esac
   done
   echo '"[$]@"' >> $1
   chmod +x $1
