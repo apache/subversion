@@ -141,7 +141,6 @@ def unlock_file(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
-
 #----------------------------------------------------------------------
 # II.C.2.c: Lock a file in wc A as user FOO.  Attempt to unlock same
 # file in same wc as user BAR.  Should fail.
@@ -173,11 +172,10 @@ def break_lock(sbox):
                                      '-m', '', file_path)
 
   # --- Meanwhile, in our other working copy... ---
-  err_re = ".*User Sally does not own lock on path.*"
 
   svntest.main.run_svn(None, 'update', wc_b)
 
-  # attempt (and fail) to unlock file as user Sally
+  # attempt (and fail) to unlock file
 
   # This should give a "iota' is not locked in this working copy" error
   svntest.actions.run_and_verify_svn(None, None, svntest.SVNAnyOutput,
@@ -194,6 +192,8 @@ def break_lock(sbox):
                                      '-m', 'trying to break', file_path_b)
 
 
+  ### TODO attempt to break lock as a user who is not the lock owner
+
 
 #----------------------------------------------------------------------
 # II.C.2.d: Lock a file in wc A as user FOO.  Attempt to lock same
@@ -207,7 +207,44 @@ def break_lock(sbox):
 # Attempt again with --force.  Should succeed.
 def steal_lock(sbox):
   "lock a file and verify lock stealing behavior"
-  raise svntest.Failure
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a second copy of the working copy
+  wc_b = sbox.add_wc_path('_b')
+  svntest.actions.duplicate_dir(wc_dir, wc_b)
+
+  # lock a file as wc_author
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  file_path_b = os.path.join(wc_b, fname)
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', file_path)
+
+  # --- Meanwhile, in our other working copy... ---
+
+  svntest.main.run_svn(None, 'update', wc_b)
+
+  # attempt (and fail) to lock file
+
+  # This should give a "iota' is not locked in this working copy" error
+  svntest.actions.run_and_verify_svn(None, None, svntest.SVNAnyOutput,
+                                     'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'trying to break', file_path_b)
+
+  svntest.actions.run_and_verify_svn(None, None, None,
+                                     'lock', '--force',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'trying to break', file_path_b)
+
+  ### TODO attempt to steal lock as a user who is not the lock owner
 
 
 #----------------------------------------------------------------------
@@ -245,11 +282,11 @@ def enforce_lock(sbox):
 test_list = [ None,
               lock_file,
               unlock_file,
-              break_lock,
-              XFail(steal_lock),
-              XFail(examine_lock),
-              XFail(handle_defunct_lock),
-              XFail(enforce_lock),
+              XFail(break_lock),
+              steal_lock,
+              Skip(examine_lock, 1),
+              Skip(handle_defunct_lock, 1),
+              Skip(enforce_lock, 1),
              ]
 
 if __name__ == '__main__':
