@@ -48,7 +48,8 @@
  */
 
 #include <svn_string.h>  /* defines svn_string_t */
-#include <string.h>      /* memcpy and memcmp */
+#include <string.h>      /* for memcpy() and memcmp() */
+#include <stdio.h>       /* for svn_string_print() utility */
 
 
 /* create a new bytestring containing a C string (null-terminated) */
@@ -227,6 +228,28 @@ svn_string_compare (svn_string_t *str1, svn_string_t *str2)
     return TRUE;
 }
 
+
+
+/* Utility: print bytestring to stdout, assuming that the string
+   contains ASCII.  */
+
+void
+svn_string_print (svn_string_t *str)
+{
+  size_t i = 0;
+
+  if (str->len >= 0) 
+    {
+      while (i < str->len) 
+        {
+          if (putchar (str->data[i]) == EOF)
+            {
+              printf(stderr, "putchar() error at position %d !\n", i);
+            }
+          i++;
+        }
+    }
+}
 
 
 
