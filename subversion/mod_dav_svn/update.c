@@ -117,37 +117,62 @@ static svn_error_t *authz_read(svn_boolean_t *allowed,
 {
   struct authz_read_baton *arb = baton;
   request_rec *subreq = NULL;
+  const char *uri;
+  svn_revnum_t rev;
+  const char *revpath;
+
+  /* Our ultimate goal here is to create a Version Resource (VR) url,
+     which is a url that represents a path within a revision.  We then
+     send a subrequest to apache, so that any installed authz modules
+     can allow/disallow the path.
+
+     ### That means that we're assuming that any installed authz
+     module is *only* paying attention to revision-paths, not paths in
+     uncommitted transactions.  Someday we need to widen our horizons. */
 
   if (svn_fs_is_txn_root(root))
     {
-      /* ### Hack.  Updating a switched working copy will always
-         succeed right now (updates of switched working copies are the
-         only times the second root parameter to svn_repos_dir_delta
-         is a txn root instead of a revision root). */
-      *allowed = TRUE;
+      /* This means svn_repos_dir_delta is comparing two txn trees,
+         rather than a txn and revision.  It must be updating a
+         working copy that contains 'disjoint urls'.  
+
+         Because the 2nd transaction is likely to have all sorts of
+         paths linked in from random places, we need to find the
+         original (rev,path) of each txn path.  That's what needs
+         authorization.  */
+
+      SVN_ERR (svn_fs_copied_from (&rev, &revpath,
+                                   root, path, pool));
+      if ((! SVN_IS_VALID_REVNUM(rev))
+          || (! revpath))
+        {
+          rev = svn_fs_revision_root_revision(root);
+          revpath = path;          
+        }       
     }
-  else  /* root is a revision root */
+  else
     {
-      const char *uri;
-
-      /* Building a Version Resource URI to path. */
-      uri = dav_svn_build_uri(arb->repos,
-                              DAV_SVN_BUILD_URI_VERSION,
-                              svn_fs_revision_root_revision(root),
-                              path, FALSE, pool);
-
-      /* Check if GET would work against this uri. */
-      subreq = ap_sub_req_method_uri("GET", uri,
-                                     arb->r, arb->r->output_filters);
-      
-      if (subreq && (subreq->status == HTTP_OK))
-        *allowed = TRUE;
-      else
-        *allowed = FALSE;
-      
-      if (subreq)
-        ap_destroy_sub_req(subreq);
+      rev = svn_fs_revision_root_revision(root);
+      revpath = path;
     }
+
+  /* Now we have a (rev, path) pair to authorize. */
+
+  /* Build a Version Resource uri representing (rev, path). */
+  uri = dav_svn_build_uri(arb->repos, DAV_SVN_BUILD_URI_VERSION,
+                          rev, revpath, FALSE, pool);
+  
+  /* Check if GET would work against this uri. */
+  subreq = ap_sub_req_method_uri("GET", uri,
+                                 arb->r, arb->r->output_filters);
+  
+  if (subreq && (subreq->status == HTTP_OK))
+    *allowed = TRUE;
+  else
+    *allowed = FALSE;
+  
+  if (subreq)
+    ap_destroy_sub_req(subreq);
 
   return SVN_NO_ERROR;
 }
