@@ -112,3 +112,11 @@ Candidate changes:
       Perl bindings only; completeness.
     Votes:
       +1: clkao
+
+  * r10782
+    Fix FSFS changed-path handling
+    Justification:
+      Bug can cause FSFS to fail to report some changed-paths, leading to
+      data loss because those paths aren't included in a dump.
+    Votes:
+      +1: ghudson
