@@ -61,7 +61,6 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   const char *path;
   const char *URL;
   const char *base_name = NULL;
-  svn_wc_adm_access_t *adm_access;
   apr_array_header_t *condensed_targets;
   svn_revnum_t start_revnum, end_revnum;
   svn_error_t *err;
@@ -109,6 +108,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
     }
   else
     {
+      svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
 
       /* Use local working copy.  */
@@ -131,6 +131,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
           (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
           "svn_client_log: entry '%s' has no URL", base_name);
       URL = apr_pstrdup (pool, entry->url);
+      SVN_ERR (svn_wc_adm_close (adm_access));
     }
 
   /* Get the RA library that handles URL. */
@@ -142,7 +143,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
      do_auth/use_admin to open the ra_session.  */
   if (NULL != base_name)
     SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, base_name,
-                                          adm_access, NULL, TRUE, TRUE, TRUE, 
+                                          NULL, NULL, TRUE, TRUE, TRUE, 
                                           auth_baton, pool));
   else
     SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL, NULL,
@@ -199,9 +200,6 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 
   /* We're done with the RA session. */
   SVN_ERR (ra_lib->close (session));
-
-  if (base_name)
-    SVN_ERR (svn_wc_adm_close (adm_access));
 
   return err;
 }
