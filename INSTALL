@@ -197,14 +197,14 @@ I.    BUILD REQUIREMENTS
       subdirectory beneath wherever "--with-neon" is pointed.
 
 
-      6.  Berkeley DB 4.0.14
+      6.  Berkeley DB 4.2.52
 
       Berkeley DB is needed to build a Subversion server, or to access
       a repository on local disk.  If you are only interested in
       building a Subversion client that speaks to a remote (networked)
       repository, you don't need it.
 
-      You'll need Berkeley DB 4.0.14 installed on your system.  You can
+      You'll need Berkeley DB 4.2.52 installed on your system.  You can
       get it from:
 
           http://www.sleepycat.com/download/patchlogs.shtml
@@ -212,7 +212,7 @@ I.    BUILD REQUIREMENTS
       If you have Berkeley DB installed in a place not searched by default
       for includes and libraries; add this flag
 
-          --with-berkeley-db=/usr/local/BerkeleyDB.4.0
+          --with-berkeley-db=/usr/local/BerkeleyDB.4.2
 
       to your `configure' switches, and the build process will use the
       Berkeley library in the named directory.  You may need to use a
@@ -399,7 +399,8 @@ II.   INSTALLATION
 
           subversion*.i386.rpm
           apache*.i386.rpm (Version 2.0.48 or greater)
-          db*.i386.rpm     (Version 4.0.14 or greater)
+          db*.i386.rpm     (Version 4.0.14 or greater; version 4.2.52 is
+                            preferred however)
           expat            (Comes with RedHat)
           neon             (Version 0.24.4)
 
@@ -616,15 +617,16 @@ II.   INSTALLATION
           http://download.microsoft.com/download/platformsdk/Redist/5.50.4027.300/W9XNT4/EN-US/shfinst.EXE
 
       If you want to build the (local) server components, you'll also
-      need a copy of Berkeley DB, version 4.0.14 or newer.  Details are
-      in Section I.6. For your convenience, there is also a binary
-      distribution on the Subversion downloads page
+      need a copy of Berkeley DB, version 4.0.14 or newer (version 4.2.52
+      is preferred).  Details are in Section I.6. For your convenience, 
+      there is also a binary distribution on the Subversion downloads 
+      page
 
           http://subversion.tigris.org/servlets/ProjectDocumentList
 
       The file there is named
 
-          db-4.0.14-win32.zip
+          db-4.2.52-win32.zip
 
       Unpack the distribution into the root directory of the Subversion
       source tree as <SVN>\db4-win32. It's a good idea to add
@@ -637,7 +639,7 @@ II.   INSTALLATION
           to the project mailing list.]
 
       If you build Berkeley DB from the source, you will have to copy
-      the file db-4.0.14\build_win32\db.h to <SVN>\db4-win32\include,
+      the file db-4.2.52\build_win32\db.h to <SVN>\db4-win32\include,
       and all the import libraries to <SVN>\db4-win32\lib. Again, the
       DLLs should be somewhere in your path.
 
@@ -693,7 +695,7 @@ II.   INSTALLATION
       C:\SVN> cd src
       C:\SVN\src> tar -xvf ..\neon-0.24.4.tar
       C:\SVN\src> ren neon-0.24.4 neon
-      C:\SVN\src> unzip ..\db-4.0.14-win32.zip
+      C:\SVN\src> unzip ..\db-4.2.52-win32.zip
       C:\SVN\src> cd ..
       C:\SVN> unzip httpd_2.0.48-win32-src.zip
       C:\SVN> copy w32locatedb.pl httpd-2.0.48\srclib\apr-util\build
@@ -772,9 +774,9 @@ III.  BUILDING A SUBVERSION SERVER
       failures when accessing the repository through Apache.  To prevent
       this from happening, you have to tell Apache which db version to
       use and where to find db.  Add --with-dbm=db4 and
-      --with-berkeley-db=/usr/local/BerkeleyDB.4.0 to the configure
+      --with-berkeley-db=/usr/local/BerkeleyDB.4.2 to the configure
       line.  Make sure this is the same db as the one Subversion uses.
-      This note assumes you have installed Berkeley DB 4.0.14
+      This note assumes you have installed Berkeley DB 4.2.52
       at its default locations.  For more info about the db requirement,
       see section I.6.
 
