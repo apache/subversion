@@ -655,7 +655,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   if (commit_in_progress)
     editor->abort_edit (edit_baton, pool); /* ignore return value */
 
-  /* ### Under what conditions should we remove the locks? */
+  /* It's only a read lock, so unlocking is harmless. */
   unlock_err = svn_wc_adm_close (adm_access);
 
   /* Remove any outstanding temporary text-base files. */

@@ -1046,11 +1046,18 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   if (commit_in_progress)
     editor->abort_edit (edit_baton, pool); /* ignore return value */
 
-  /* ### Under what conditions should we remove the locks? */
-  unlock_err = svn_wc_adm_close (base_dir_access);
+  /* A bump error is likely to occur while running a working copy log file,
+     explicitly unlocking and removing temporary files would be wrong in
+     that case.  A commit error (cmt_err) should only occur before any
+     attempt to modify the working copy, so it doesn't prevent explict
+     clean-up. */
+  if (! bump_err)
+    {
+      unlock_err = svn_wc_adm_close (base_dir_access);
 
-  /* Remove any outstanding temporary text-base files. */
-  cleanup_err = remove_tmpfiles (tempfiles, pool);
+      if (! unlock_err)
+        cleanup_err = remove_tmpfiles (tempfiles, pool);
+    }
 
   /* Fill in the commit_info structure */
   *commit_info = svn_client__make_commit_info (committed_rev, 
