@@ -215,16 +215,17 @@ txn_body_abort_txn (void *baton, trail_t *trail)
 {
   struct abort_txn_args *args = baton;
   svn_fs_txn_t *txn = args->txn;
-  const char *txn_name;
+  const char *txn_id;
   svn_fs__transaction_t *fstxn;
 
   /* Get the transaction by its id. */
-  SVN_ERR (svn_fs_txn_name (&txn_name, txn, txn->pool));
-  SVN_ERR (svn_fs__get_txn (&fstxn, txn->fs, txn_name, trail));
+  SVN_ERR (svn_fs_txn_name (&txn_id, txn, txn->pool));
+  SVN_ERR (svn_fs__get_txn (&fstxn, txn->fs, txn_id, trail));
 
   /* Delete the mutable portion of the tree hanging from the
      transaction. */
-  SVN_ERR (svn_fs__dag_delete_if_mutable (txn->fs, fstxn->root_id, trail));
+  SVN_ERR (svn_fs__dag_delete_if_mutable (txn->fs, fstxn->root_id,
+                                          txn_id, trail));
 
   /* If any copies were made in this transaction, remove those. */
   if (fstxn->copies && fstxn->copies->nelts)

@@ -16,6 +16,7 @@
  */
 
 #include <string.h>
+#include <assert.h>
 
 #include "svn_fs.h"
 
@@ -26,8 +27,8 @@
 #include "skel.h"
 #include "fs_skels.h"
 #include "trail.h"
-#include "validate.h"
 #include "nodes-table.h"
+#include "key-gen.h"
 #include "id.h"
 
 
@@ -35,41 +36,36 @@
 /* Opening/creating the `nodes' table.  */
 
 
-/* Compare two node ID's, according to the rules in `structure'.  */
+/* Compare two node ID's, according to the rules in `structure'.  
+   We have heirarchical sorting here:
+
+      1.  by node id
+      2.  by copy id
+      3.  by txn id  
+
+   Sorting happens in ascending order. */
 static int
 compare_ids (svn_fs_id_t *a, svn_fs_id_t *b)
 {
-  int i = 0;
+  int cmp;
 
-  while (a->digits[i] == b->digits[i])
-    {
-      if (a->digits[i] == -1)
-        return 0;
-      i++;
-    }
+  /* Compare node ids. */
+  if ((cmp = svn_fs__key_compare (svn_fs__id_node_id (a), 
+                                  svn_fs__id_node_id (b))))
+    return cmp;
 
-  /* Different nodes, or different branches, are ordered by their
-     node / branch numbers.  */
-  if ((i & 1) == 0)
-    return a->digits[i] - b->digits[i];
+  /* Compare copy ids. */
+  if ((cmp = svn_fs__key_compare (svn_fs__id_copy_id (a), 
+                                  svn_fs__id_copy_id (b))))
+    return cmp;
 
-  /* This function is only prepared to handle node revision ID's.  */
-  if (a->digits[i] == -1 || b->digits[i] == -1)
-    abort ();
+  /* Compare txn ids. */
+  if ((cmp = svn_fs__key_compare (svn_fs__id_txn_id (a), 
+                                  svn_fs__id_txn_id (b))))
+    return cmp;
 
-  /* Different revisions of the same node are ordered by revision number.  */
-  if (a->digits[i + 1] == -1 && b->digits[i + 1] == -1)
-    return a->digits[i] - b->digits[i];
-
-  /* A branch off of any revision of a node comes after all revisions
-     of that node.  */
-  if (a->digits[i + 1] == -1)
-    return -1;
-  if (b->digits[i + 1] == -1)
-    return 1;
-
-  /* Branches are ordered by increasing revision number.  */
-  return a->digits[i] - b->digits[i];
+  /* These appear to be equivalent. */
+  return 0;
 }
 
 
@@ -79,19 +75,7 @@ compare_ids (svn_fs_id_t *a, svn_fs_id_t *b)
 static svn_fs_id_t *
 parse_node_revision_dbt (const DBT *d)
 {
-  svn_fs_id_t *id = svn_fs_parse_id (d->data, d->size, 0);
-
-  if (! id)
-    return 0;
-
-  /* It must be a node revision ID, not a node ID.  */
-  if (svn_fs__id_length (id) & 1)
-    {
-      free (id);
-      return 0;
-    }
-
-  return id;
+  return svn_fs_parse_id (d->data, d->size, 0);
 }
 
 
@@ -175,12 +159,19 @@ svn_fs__open_nodes_table (DB **nodes_p,
 svn_error_t *
 svn_fs__new_node_id (svn_fs_id_t **id_p,
                      svn_fs_t *fs,
+                     const char *txn_id,
                      trail_t *trail)
 {
   int db_err;
   DBC *cursor = 0;
   DBT key, value;
   svn_fs_id_t *id;
+  const char *node_id;
+  char next_key[200];
+  apr_size_t len;
+
+  /* TXN_ID is required! */
+  assert (txn_id);
 
   /* Create a database cursor.  */
   SVN_ERR (DB_WRAP (fs, "choosing new node ID (creating cursor)",
@@ -199,10 +190,10 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
          is more interesting.  */
       cursor->c_close (cursor);
 
+      /* The root directory should always be present, at least, so a
+         NOTFOUND error is badness..  */
       if (db_err == DB_NOTFOUND)
-        /* The root directory should always be present, at least.  */
-        return
-          svn_error_createf
+        return svn_error_createf
           (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
            "root directory missing from `nodes' table, in filesystem `%s'",
            fs->path);
@@ -212,8 +203,7 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
 
   /* Try to parse the key as a node revision ID.  */
   id = svn_fs_parse_id (key.data, key.size, trail->pool);
-  if (! id
-      || svn_fs__id_length (id) < 2)
+  if (! id)
     {
       cursor->c_close (cursor);
       return svn_fs__err_corrupt_nodes_key (fs);
@@ -225,66 +215,13 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
 
   /* Given the ID of the last node revision, what's the ID of the
      first revision of an entirely new node?  */
-  id->digits[0]++;
-  id->digits[1] = 1;
-  id->digits[2] = -1;
+  node_id = svn_fs__id_node_id (id);
+  len = strlen (node_id);
+  svn_fs__next_key (node_id, &len, next_key);
 
-  *id_p = id;
+  /* Create and return the new node id. */
+  *id_p = svn_fs__create_id (next_key, "0", txn_id, trail->pool);
   return SVN_NO_ERROR;
-}
-
-
-/* Find the last entry before KEY in the btree table DB.
-
-   KEY must be initialized as for any normal Berkeley DB operation.
-   The settings of KEY->flags and KEY's other members control how the
-   value is returned.
-
-   If DB_TXN is non-zero, perform the operation as part of that
-   Berkeley DB transaction.  */
-static int
-last_key_before (DB *db,
-                 DB_TXN *db_txn,
-                 DBT *key)
-{
-  int db_err;
-  DBC *cursor;
-  DBT temp_key, value;
-
-  /* Create a cursor into the table.  */
-  DB_ERR (db->cursor (db, db_txn, &cursor, 0));
-
-  /* Position CURSOR to the first table entry at or after KEY.
-     Don't bother retrieving the key or value we find there.  */
-  svn_fs__nodata_dbt (&temp_key);
-  temp_key.data = key->data;
-  temp_key.size = key->size;
-  svn_fs__nodata_dbt (&value);
-  db_err = cursor->c_get (cursor, &temp_key, &value, DB_SET_RANGE);
-  if (db_err && db_err != DB_NOTFOUND)
-    {
-      cursor->c_close (cursor);
-      return db_err;
-    }
-
-  /* If db_err == 0, we found the first table entry at or after KEY;
-     the record we want comes immediately before that.
-
-     If db_err == DB_NOTFOUND, then we couldn't find any entry at or
-     after KEY, so the record we want must be the last record in the
-     table.  */
-  db_err = cursor->c_get (cursor, key, svn_fs__nodata_dbt (&value),
-                          db_err == DB_NOTFOUND ? DB_LAST : DB_PREV);
-  if (db_err)
-    {
-      cursor->c_close (cursor);
-      return db_err;
-    }
-
-  /* We're finished with the cursor now.  */
-  DB_ERR (cursor->c_close (cursor));
-
-  return 0;
 }
 
 
@@ -292,109 +229,37 @@ svn_error_t *
 svn_fs__new_successor_id (svn_fs_id_t **successor_p,
                           svn_fs_t *fs,
                           const svn_fs_id_t *id,
+                          const char *copy_id,
+                          const char *txn_id,
                           trail_t *trail)
 {
-  int id_len = svn_fs__id_length (id);
   svn_fs_id_t *new_id;
-  apr_pool_t *pool = trail->pool;
-  DB_TXN *db_txn = trail->db_txn;
-  DBT key, value;
-  int db_err;
+  svn_error_t *err;
 
-  /* Make sure ID is really a node revision ID.  */
-  if (id_len & 1)
-    return svn_fs__err_corrupt_id (fs, id);
+  /* TXN_ID is required! */
+  assert (txn_id);
 
-  /* Set NEW_ID to the next node revision after ID.  Allocate some
-     extra room, in case we need to construct a branch ID below.  */
-  new_id = apr_palloc (pool, sizeof (*new_id));
-  new_id->digits = apr_palloc (pool, (id_len + 3) * sizeof (id->digits[0]));
-  memcpy (new_id->digits, id->digits, (id_len + 1) * sizeof (id->digits[0]));
-  new_id->digits[id_len - 1]++;         /* increment the revision number */
+  /* Create and return the new successor ID.  */
+  new_id = svn_fs__create_id (svn_fs__id_node_id (id),
+                              copy_id ? copy_id : svn_fs__id_copy_id (id),
+                              txn_id, 
+                              trail->pool);
 
-  /* Check to see if there already exists a node whose ID is NEW_ID.  */
-  db_err = fs->nodes->get (fs->nodes, db_txn,
-                           svn_fs__id_to_dbt (&key, new_id, pool),
-                           svn_fs__nodata_dbt (&value),
-                           0);
-  if (db_err == DB_NOTFOUND)
+  /* Now, make sure this NEW_ID doesn't already exist in FS. */
+  err = svn_fs__get_node_revision (NULL, fs, new_id, trail);
+  if ((! err) || (err->apr_err != SVN_ERR_FS_ID_NOT_FOUND))
     {
-      /* NEW_ID isn't currently in use, so return that.  */
-      *successor_p = new_id;
-      return SVN_NO_ERROR;
+      svn_stringbuf_t *id_str = svn_fs_unparse_id (id, trail->pool);
+      svn_stringbuf_t *new_id_str = svn_fs_unparse_id (new_id, trail->pool);
+      return svn_error_createf 
+        (SVN_ERR_FS_ALREADY_EXISTS, 0, err, trail->pool,
+         "successor id `%s' (for `%s') already exists in filesystem %s",  
+         new_id_str->data, id_str->data, fs->path);
     }
-  else
-    SVN_ERR (DB_WRAP (fs, "checking for next node revision", db_err));
 
-  /* Okay, the next revision of ID already exists, so we'll need to make
-     a new branch.  What's the next available branch number?
-
-     The sort order for the nodes table says that all revisions of a
-     node come together, followed by all branches from any revision of
-     that node; the branches are sorted by the revision they branch
-     from, and then by branch number.
-
-     So, if our node revision ID is N.V, then all its branches will
-     come immediately before the first branch from N.(V+1).  So we
-     find the last node in the table before node ID N.(V+1).1.1; that
-     node is (perhaps a branch from) the last branch from N.V.
-
-     NEW_ID is currently N.(V+1); stick on the ".1.1".  */
-  new_id->digits[id_len + 0] = 1;
-  new_id->digits[id_len + 1] = 1;
-  new_id->digits[id_len + 2] = -1;
-  SVN_ERR (DB_WRAP (fs, "checking for next node branch",
-                    last_key_before (fs->nodes, db_txn,
-                                     svn_fs__id_to_dbt (&key, new_id, pool))));
-
-  {
-    svn_fs_id_t *last_branch_id = svn_fs_parse_id (key.data, key.size, pool);
-    int last_branch_len;
-
-    if (! last_branch_id)
-      return svn_fs__err_corrupt_nodes_key (fs);
-
-    last_branch_len = svn_fs__id_length (last_branch_id);
-
-    /* Only node revision ID's may appear as keys in the `nodes' table.  */
-    if (last_branch_len & 1)
-      return svn_fs__err_corrupt_nodes_key (fs);
-
-    /* If the last key before NEW_ID is just another revision of node
-       N (specifically, the last revision), then there are no branches
-       yet.  */
-    if (last_branch_len == id_len)
-      {
-        /* The first branch from N.V is N.V.1.1.  */
-        memcpy (new_id->digits, id->digits, id_len * sizeof (id->digits[0]));
-        new_id->digits[id_len + 0] = 1;
-        new_id->digits[id_len + 1] = 1;
-        new_id->digits[id_len + 2] = -1;
-
-        *successor_p = new_id;
-        return SVN_NO_ERROR;
-      }
-
-    /* If the last key before NEW_ID is a branch off of ID, then
-       choose the next branch number.  */
-    else if (last_branch_len > id_len)
-      {
-        /* The last key has the form N.V.B... so the first revision
-           on our new branch is N.V.(B+1).1.  */
-        memcpy (new_id->digits, last_branch_id->digits, 
-                (id_len + 1) * sizeof (id->digits[0]));
-        new_id->digits[id_len + 0]++;
-        new_id->digits[id_len + 1] = 1;
-        new_id->digits[id_len + 2] = -1;
-
-        *successor_p = new_id;
-        return SVN_NO_ERROR;
-      }
-
-    /* Otherwise, something strange is going on.  */
-    else
-      return svn_fs__err_corrupt_nodes_key (fs);
-  }
+  /* Return the new node revision ID. */
+  *successor_p = new_id;
+  return SVN_NO_ERROR;
 }
 
 
@@ -445,6 +310,11 @@ svn_fs__get_node_revision (svn_fs__node_revision_t **noderev_p,
 
   /* Handle any other error conditions.  */
   SVN_ERR (DB_WRAP (fs, "reading node revision", db_err));
+
+  /* If our caller doesn't really care about the return value here,
+     just return successfully. */
+  if (! noderev_p)
+    return SVN_NO_ERROR;
 
   /* Parse and the NODE-REVISION skel.  */
   skel = svn_fs__parse_skel (value.data, value.size, trail->pool);

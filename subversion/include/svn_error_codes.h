@@ -280,7 +280,7 @@ SVN_ERROR_START
               "Attempt to change immutable filesystem node")
 
   SVN_ERRDEF (SVN_ERR_FS_ALREADY_EXISTS,
-              "File already exists in revision")
+              "Item already exists in filesystem")
 
   SVN_ERRDEF (SVN_ERR_FS_DIR_NOT_EMPTY,
               "Attempt to remove non-empty filesystem directory")

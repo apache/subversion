@@ -112,6 +112,7 @@ deltify_by_id (svn_fs_t *fs,
                int is_dir,
                trail_t *trail)
 {
+#if 0 /* ### Oh, come back to this later. */
   svn_fs_id_t *source_id = NULL, *tmp_id;
   apr_size_t len = svn_fs__id_length (target_id);
   dag_node_t *node;
@@ -155,6 +156,7 @@ deltify_by_id (svn_fs_t *fs,
   /* If we found a valid source ID, perform the deltification step. */
   if (source_id)
     SVN_ERR (deltify (target_id, source_id, fs, is_dir, trail));
+#endif /* 0 */
 
   return SVN_NO_ERROR;
 }

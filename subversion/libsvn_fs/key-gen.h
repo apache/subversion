@@ -71,6 +71,13 @@ extern const char svn_fs__next_key_key[];
 void svn_fs__next_key (const char *this, apr_size_t *len, char *next);
 
 
+/* Compare two strings A and B as base-36 alphanumeric keys.
+ *
+ * Return -1, 0, or 1 if A is less than, equal to, or greater than B,
+ * respectively.
+ */
+int svn_fs__key_compare (const char *a, const char *b);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
