@@ -339,7 +339,7 @@ def commit_inclusive_dir(sbox):
                   [pi_path, None, {}, {'verb' : 'Sending'}],
                   [rho_path, None, {}, {'verb' : 'Deleting'}],
                   [gloo_path, None, {}, {'verb' : 'Adding'}],
-                  [chi_path, None, {}, {'verb' : 'Replacing'}], # stacked!
+                  [chi_path, None, {}, {'verb' : 'Replacing'}],
                   [omega_path, None, {}, {'verb' : 'Sending'}],
                   [gamma_path, None, {}, {'verb' : 'Deleting'}] ]
                   
@@ -409,7 +409,7 @@ def commit_top_dir(sbox):
                   [pi_path, None, {}, {'verb' : 'Sending'}],
                   [rho_path, None, {}, {'verb' : 'Deleting'}],
                   [gloo_path, None, {}, {'verb' : 'Adding'}],
-                  [chi_path, None, {}, {'verb' : 'Replacing'}], # stacked!
+                  [chi_path, None, {}, {'verb' : 'Replacing'}],
                   [omega_path, None, {}, {'verb' : 'Sending'}],
                   [gamma_path, None, {}, {'verb' : 'Deleting'}] ]
                   
@@ -542,7 +542,7 @@ def nested_dir_replacements(sbox):
 
   # Create expected output tree.
   output_list = [ [os.path.join(wc_dir, 'A', 'D'),
-                   None, {}, {'verb' : 'Replacing' }], # STACKED value!
+                   None, {}, {'verb' : 'Replacing' }],
                   [os.path.join(wc_dir, 'A', 'D', 'H'),
                    None, {}, {'verb' : 'Adding' }],
                   [os.path.join(wc_dir, 'A', 'D', 'bloo'),
@@ -765,8 +765,6 @@ def hudson_part_1_variation_2(sbox):
     return 1
 
   # Create expected commit output.
-  #   We should see messages that gamma is Deleting and then Adding,
-  #   which results in our "stacked" value of `Replacing'.
   output_list = [ [gamma_path, None, {}, {'verb' : 'Adding' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
   
