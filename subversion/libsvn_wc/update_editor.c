@@ -2690,6 +2690,12 @@ check_wc_root (svn_boolean_t *wc_root,
                   entry->url) != 0))
     return SVN_NO_ERROR;
 
+  /* If PATH's parent in the repository is not its parent in the WC,
+     PATH is a WC root. */
+  SVN_ERR (svn_wc_entry (&p_entry, path, adm_access, FALSE, pool));
+  if (! p_entry)
+      return SVN_NO_ERROR;
+
   /* If we have not determined that PATH is a WC root by now, it must
      not be! */
   *wc_root = FALSE;
