@@ -55,9 +55,15 @@ const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 
 
 static svn_error_t *
-test1 (const char **msg, apr_pool_t *pool)
+test1 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
 {
   *msg = "make svn_stringbuf_t from cstring";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
   a = svn_stringbuf_create (phrase_1, pool);
   
   /* Test that length, data, and null-termination are correct. */
@@ -69,9 +75,15 @@ test1 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test2 (const char **msg, apr_pool_t *pool)
+test2 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
 {
   *msg = "make svn_stringbuf_t from substring of cstring";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
   b = svn_stringbuf_ncreate (phrase_2, 16, pool);
   
   /* Test that length, data, and null-termination are correct. */
@@ -83,12 +95,17 @@ test2 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test3 (const char **msg, apr_pool_t *pool)
+test3 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
 {
   char *tmp;
   size_t old_len;
   
   *msg = "append svn_stringbuf_t to svn_stringbuf_t";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   a = svn_stringbuf_create (phrase_1, pool);
   b = svn_stringbuf_ncreate (phrase_2, 16, pool);
@@ -108,13 +125,18 @@ test3 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test4 (const char **msg, apr_pool_t *pool)
+test4 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
 {
+  *msg = "append C string to svn_stringbuf_t";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
   a = svn_stringbuf_create (phrase_1, pool);
   svn_stringbuf_appendcstr (a, "new bytes to append");
   
-  *msg = "append C string to svn_stringbuf_t";
-
   /* Test that length, data, and null-termination are correct. */
   if (svn_stringbuf_compare 
       (a, svn_stringbuf_create ("hello, new bytes to append", pool)))
@@ -125,12 +147,17 @@ test4 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test5 (const char **msg, apr_pool_t *pool)
+test5 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
 {
+  *msg = "append bytes, then compare two strings";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
   a = svn_stringbuf_create (phrase_1, pool);
   svn_stringbuf_appendbytes (a, "new bytes to append", 9);
-  
-  *msg = "append bytes, then compare two strings";
 
   /* Test that length, data, and null-termination are correct. */
   if (svn_stringbuf_compare 
@@ -142,13 +169,18 @@ test5 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test6 (const char **msg, apr_pool_t *pool)
+test6 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
 {
+  *msg = "dup two strings, then compare";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
   a = svn_stringbuf_create (phrase_1, pool);
   b = svn_stringbuf_create (phrase_2, pool);
   c = svn_stringbuf_dup (a, pool);
-
-  *msg = "dup two strings, then compare";
 
   /* Test that length, data, and null-termination are correct. */
   if ((svn_stringbuf_compare (a, c)) && (! svn_stringbuf_compare (b, c)))
@@ -159,12 +191,17 @@ test6 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test7 (const char **msg, apr_pool_t *pool)
+test7 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
 {
   char *tmp;
   size_t tmp_len;
 
   *msg = "chopping a string";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   c = svn_stringbuf_create (phrase_2, pool);
 
@@ -184,11 +221,16 @@ test7 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test8 (const char **msg, apr_pool_t *pool)
+test8 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
 {
-  c = svn_stringbuf_create (phrase_2, pool);  
-  
   *msg = "emptying a string";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  c = svn_stringbuf_create (phrase_2, pool);  
 
   svn_stringbuf_setempty (c);
   
@@ -200,11 +242,16 @@ test8 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test9 (const char **msg, apr_pool_t *pool)
+test9 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
 {
-  a = svn_stringbuf_create (phrase_1, pool);
-
   *msg = "fill string with hashmarks";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  a = svn_stringbuf_create (phrase_1, pool);
 
   svn_stringbuf_fillchar (a, '#');
 
@@ -219,7 +266,9 @@ test9 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test10 (const char **msg, apr_pool_t *pool)
+test10 (const char **msg, 
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
 {
   svn_stringbuf_t *s;
   
@@ -232,6 +281,9 @@ test10 (const char **msg, apr_pool_t *pool)
   int chopped_okay_3 = 0;
   
   *msg = "chop_back_to_char";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   s = svn_stringbuf_create ("chop from slash/you'll never see this", pool);
 
@@ -257,7 +309,9 @@ test10 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test11 (const char **msg, apr_pool_t *pool)
+test11 (const char **msg, 
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
 {
   svn_stringbuf_t *s, *t;
   size_t len_1 = 0;
@@ -266,6 +320,9 @@ test11 (const char **msg, apr_pool_t *pool)
   size_t block_len_2 = 0;
   
   *msg = "block initialization and growth";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   s = svn_stringbuf_create ("a small string", pool);
   len_1       = (s->len);
@@ -291,11 +348,16 @@ test11 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test12 (const char **msg, apr_pool_t *pool)
+test12 (const char **msg, 
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
 {
   svn_stringbuf_t *s;
   
   *msg = "formatting strings from varargs";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   s = svn_stringbuf_createf (pool, 
                           "This %s is used in test %d.",
@@ -317,7 +379,9 @@ test12 (const char **msg, apr_pool_t *pool)
 */
 
 /* An array of all test functions */
-svn_error_t *(*test_funcs[])(const char **msg, apr_pool_t *pool) =
+svn_error_t *(*test_funcs[])(const char **msg, 
+                             svn_boolean_t msg_only,
+                             apr_pool_t *pool) =
 {
   NULL,
   test1,

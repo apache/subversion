@@ -25,6 +25,7 @@
 
 static svn_error_t *
 test_path_is_child (const char **msg,
+                    svn_boolean_t msg_only,
                     apr_pool_t *pool)
 {
   int i, j;
@@ -46,6 +47,9 @@ test_path_is_child (const char **msg,
   };
   
   *msg = "test svn_path_is_child";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   for (i = 0; i < 5; i++)
     {
@@ -77,6 +81,7 @@ test_path_is_child (const char **msg,
 
 static svn_error_t *
 test_path_split (const char **msg,
+                 svn_boolean_t msg_only,
                  apr_pool_t *pool)
 {
   int i;
@@ -90,6 +95,9 @@ test_path_split (const char **msg,
   };
   
   *msg = "test svn_path_split";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   for (i = 0; i < 5; i++)
     {
@@ -121,6 +129,7 @@ test_path_split (const char **msg,
 /* The test table.  */
 
 svn_error_t * (*test_funcs[]) (const char **msg,
+                               svn_boolean_t msg_only,
                                apr_pool_t *pool) = {
   0,
   test_path_is_child,

@@ -250,12 +250,17 @@ check_implicit_length_all_chars (skel_t *skel)
 /* Test parsing of implicit-length atoms.  */
 
 static svn_error_t *
-parse_implicit_length (const char **msg, apr_pool_t *pool)
+parse_implicit_length (const char **msg, 
+                       svn_boolean_t msg_only,
+                       apr_pool_t *pool)
 {
   svn_stringbuf_t *str = get_empty_string (pool);
   skel_t *skel;
 
   *msg = "parse implicit-length atoms";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Try all valid single-byte atoms.  */
   {
@@ -349,9 +354,14 @@ try_explicit_length (const char *data, int len, int check_len,
 
 
 static svn_error_t *
-parse_explicit_length (const char **msg, apr_pool_t *pool)
+parse_explicit_length (const char **msg, 
+                       svn_boolean_t msg_only,
+                       apr_pool_t *pool)
 {
   *msg = "parse explicit-length atoms";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Try to parse the empty atom.  */
   SVN_ERR (try_explicit_length ("", 0, 0, pool));
@@ -406,11 +416,16 @@ static struct invalid_atoms
                       { 7,  0, NULL } };
 
 static svn_error_t *
-parse_invalid_atoms (const char **msg, apr_pool_t *pool)
+parse_invalid_atoms (const char **msg, 
+                     svn_boolean_t msg_only,
+                     apr_pool_t *pool)
 {
   struct invalid_atoms *ia = invalid_atoms;
 
   *msg = "parse invalid atoms";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   while (ia->type != 7)
     {
@@ -418,7 +433,8 @@ parse_invalid_atoms (const char **msg, apr_pool_t *pool)
         {
           skel_t *skel = parse_cstr ((char *) ia->data, pool);
           if (check_atom (skel, ia->data, ia->len))
-            return fail (pool, "failed to detect parsing error in `%s'", ia->data);
+            return fail (pool, 
+                         "failed to detect parsing error in `%s'", ia->data);
         }
       else
 	if (try_explicit_length (ia->data, ia->len, strlen (ia->data), pool)
@@ -490,9 +506,14 @@ check_list (skel_t *skel, int desired_len)
 /* Parse lists.  */
 
 static svn_error_t *
-parse_list (const char **msg, apr_pool_t *pool)
+parse_list (const char **msg, 
+            svn_boolean_t msg_only,
+            apr_pool_t *pool)
 {
   *msg = "parse lists";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   {
     /* Try lists of varying length.  */
@@ -740,9 +761,14 @@ skel_equal (skel_t *a, skel_t *b)
 /* Unparsing implicit-length atoms.  */
 
 static svn_error_t *
-unparse_implicit_length (const char **msg, apr_pool_t *pool)
+unparse_implicit_length (const char **msg, 
+                         svn_boolean_t msg_only,
+                         apr_pool_t *pool)
 {
   *msg = "unparse implicit-length atoms";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Unparse and check every single-byte implicit-length atom.  */
   {
@@ -773,9 +799,14 @@ unparse_implicit_length (const char **msg, apr_pool_t *pool)
 /* Unparse some lists.  */
 
 static svn_error_t *
-unparse_list (const char **msg, apr_pool_t *pool)
+unparse_list (const char **msg, 
+              svn_boolean_t msg_only,
+              apr_pool_t *pool)
 {
   *msg = "unparse lists";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Make a list of all the single-byte implicit-length atoms.  */
   {
@@ -870,7 +901,10 @@ unparse_list (const char **msg, apr_pool_t *pool)
 
 /* The test table.  */
 
-svn_error_t *(*test_funcs[]) (const char **msg, apr_pool_t *pool) = {
+svn_error_t *(*test_funcs[]) (const char **msg, 
+                              svn_boolean_t msg_only,
+                              apr_pool_t *pool) = 
+{
   0,
   parse_implicit_length,
   parse_explicit_length,

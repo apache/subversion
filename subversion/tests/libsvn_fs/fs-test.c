@@ -48,11 +48,15 @@
 /* Create a filesystem.  */
 static svn_error_t *
 create_berkeley_filesystem (const char **msg,
+                            svn_boolean_t msg_only,
                             apr_pool_t *pool)
 {
   svn_fs_t *fs;
 
   *msg = "svn_fs_create_berkeley";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create and close a repository. */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -148,11 +152,15 @@ test_commit_txn (svn_revnum_t *new_rev,
 /* Open an existing filesystem.  */
 static svn_error_t *
 open_berkeley_filesystem (const char **msg,
+                          svn_boolean_t msg_only,
                           apr_pool_t *pool)
 {
   svn_fs_t *fs, *fs2;
 
   *msg = "open an existing Berkeley DB filesystem";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create and close a repository (using fs). */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -176,6 +184,7 @@ open_berkeley_filesystem (const char **msg,
 /* Begin a txn, check its name, then close it */
 static svn_error_t *
 trivial_transaction (const char **msg,
+                     svn_boolean_t msg_only,
                      apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -183,6 +192,9 @@ trivial_transaction (const char **msg,
   const char *txn_name;
 
   *msg = "begin a txn, check its name, then close it";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs_and_repos 
            (&fs, "test-repo-trivial-txn", pool));
@@ -209,6 +221,7 @@ trivial_transaction (const char **msg,
 /* Open an existing transaction by name. */
 static svn_error_t *
 reopen_trivial_transaction (const char **msg,
+                            svn_boolean_t msg_only,
                             apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -216,6 +229,9 @@ reopen_trivial_transaction (const char **msg,
   const char *txn_name;
 
   *msg = "open an existing transaction by name";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs_and_repos 
            (&fs, "test-repo-reopen-trivial-txn", pool));
@@ -242,6 +258,7 @@ reopen_trivial_transaction (const char **msg,
 /* Create a file! */
 static svn_error_t *
 create_file_transaction (const char **msg,
+                         svn_boolean_t msg_only,
                          apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -249,6 +266,9 @@ create_file_transaction (const char **msg,
   svn_fs_root_t *txn_root;
 
   *msg = "begin a txn, get the txn root, and add a file";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs_and_repos 
            (&fs, "test-repo-create-file-txn", pool));
@@ -290,12 +310,16 @@ check_no_fs_error (svn_error_t *err, apr_pool_t *pool)
    correct error.  */
 static svn_error_t *
 call_functions_with_unopened_fs (const char **msg,
+                                 svn_boolean_t msg_only,
                                  apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_fs_t *fs = svn_fs_new (pool);
 
   *msg = "Call functions with unopened filesystem and check errors";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* This is the exception --- it is perfectly okay to call
      svn_fs_close_fs on an unopened filesystem.  */
@@ -357,6 +381,7 @@ call_functions_with_unopened_fs (const char **msg,
 /* Make sure we get txn lists correctly. */
 static svn_error_t *
 verify_txn_list (const char **msg,
+                 svn_boolean_t msg_only,
                  apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -365,6 +390,9 @@ verify_txn_list (const char **msg,
   char **txn_list;
 
   *msg = "create 2 txns, list them, and verify the list.";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs_and_repos 
            (&fs, "test-repo-verify-txn-list", pool));
@@ -415,6 +443,7 @@ verify_txn_list (const char **msg,
 /* Test writing & reading a file's contents. */
 static svn_error_t *
 write_and_read_file (const char **msg,
+                     svn_boolean_t msg_only,
                      apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -426,6 +455,9 @@ write_and_read_file (const char **msg,
                                              pool);
 
   *msg = "write and read a file's contents";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs_and_repos 
            (&fs, "test-repo-read-and-write-file", pool));
@@ -460,6 +492,7 @@ write_and_read_file (const char **msg,
 /* Create a file, a directory, and a file in that directory! */
 static svn_error_t *
 create_mini_tree_transaction (const char **msg,
+                              svn_boolean_t msg_only,
                               apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -467,6 +500,9 @@ create_mini_tree_transaction (const char **msg,
   svn_fs_root_t *txn_root;
 
   *msg = "make a file, a subdir, and another file in that subdir";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs_and_repos 
            (&fs, "test-repo-create-mini-tree-txn", pool));
@@ -497,6 +533,7 @@ create_mini_tree_transaction (const char **msg,
 /* Create a file, a directory, and a file in that directory! */
 static svn_error_t *
 create_greek_tree_transaction (const char **msg,
+                               svn_boolean_t msg_only,
                                apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -504,6 +541,9 @@ create_greek_tree_transaction (const char **msg,
   svn_fs_root_t *txn_root;
 
   *msg = "make The Official Subversion Test Tree";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Prepare a txn to receive the greek tree. */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -561,6 +601,7 @@ verify_entry (apr_hash_t *entries, const char *key, apr_pool_t *pool)
 
 static svn_error_t *
 list_directory (const char **msg,
+                svn_boolean_t msg_only,
                 apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -569,6 +610,9 @@ list_directory (const char **msg,
   apr_hash_t *entries;
 
   *msg = "fill a directory, then list it";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs_and_repos 
            (&fs, "test-repo-list-dir", pool));
@@ -626,6 +670,7 @@ list_directory (const char **msg,
 
 static svn_error_t *
 revision_props (const char **msg,
+                svn_boolean_t msg_only,
                 apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -650,6 +695,9 @@ revision_props (const char **msg,
     };
 
   *msg = "set and get some revision properties";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Open the fs */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -731,6 +779,7 @@ revision_props (const char **msg,
 
 static svn_error_t *
 transaction_props (const char **msg,
+                   svn_boolean_t msg_only,
                    apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -758,6 +807,9 @@ transaction_props (const char **msg,
     };
 
   *msg = "set/get txn props, commit, validate new rev props";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Open the fs */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -891,6 +943,7 @@ transaction_props (const char **msg,
 
 static svn_error_t *
 node_props (const char **msg,
+            svn_boolean_t msg_only,
             apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -917,6 +970,9 @@ node_props (const char **msg,
     };
 
   *msg = "set and get some node properties";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Open the fs and transaction */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -1162,6 +1218,7 @@ check_id_absent (svn_fs_t *fs, svn_fs_id_t *id, apr_pool_t *pool)
    the public filesystem interface.  */
 static svn_error_t *
 abort_txn (const char **msg,
+           svn_boolean_t msg_only,
            apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1170,6 +1227,9 @@ abort_txn (const char **msg,
   const char *txn1_name, *txn2_name;
 
   *msg = "abort a transaction";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Prepare two txns to receive the Greek tree. */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -1371,6 +1431,7 @@ abort_txn (const char **msg,
 /* Fetch the youngest revision from a repos. */
 static svn_error_t *
 fetch_youngest_rev (const char **msg,
+                    svn_boolean_t msg_only,
                     apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1380,6 +1441,9 @@ fetch_youngest_rev (const char **msg,
   svn_revnum_t youngest_rev, new_youngest_rev;
 
   *msg = "fetch the youngest revision from a filesystem";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs_and_repos 
            (&fs, "test-repo-youngest-rev", pool));
@@ -1422,6 +1486,7 @@ fetch_youngest_rev (const char **msg,
    todo: also test committing against youngest? */
 static svn_error_t *
 basic_commit (const char **msg,
+              svn_boolean_t msg_only,
               apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1431,6 +1496,9 @@ basic_commit (const char **msg,
   const char *conflict;
 
   *msg = "basic commit";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -1481,6 +1549,7 @@ basic_commit (const char **msg,
 
 static svn_error_t *
 test_tree_node_validation (const char **msg,
+                           svn_boolean_t msg_only,
                            apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1490,6 +1559,9 @@ test_tree_node_validation (const char **msg,
   const char *conflict;
 
   *msg = "testing tree validation helper";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -1602,6 +1674,7 @@ test_tree_node_validation (const char **msg,
 
 static svn_error_t *
 fetch_by_id (const char **msg,
+             svn_boolean_t msg_only,
              apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1611,6 +1684,9 @@ fetch_by_id (const char **msg,
   svn_error_t *err;
 
   *msg = "fetch by id";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Commit a Greek Tree as the first revision. */
   SVN_ERR (svn_test__create_fs_and_repos (&fs, "test-repo-fetch-by-id", pool));
@@ -1784,6 +1860,7 @@ unexpected_node_id (svn_fs_root_t *root,
 
 static svn_error_t *
 merge_re_id (const char **msg,
+             svn_boolean_t msg_only,
              apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1796,6 +1873,9 @@ merge_re_id (const char **msg,
   svn_fs_id_t *root_4_id, *A_4_id, *D_4_id;
 
   *msg = "re-id nodes after merging";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs_and_repos 
            (&fs, "test-repo-merge-re-id", pool));
@@ -1968,6 +2048,7 @@ merge_re_id (const char **msg,
 /* Commit with merging (committing against non-youngest). */ 
 static svn_error_t *
 merging_commit (const char **msg,
+                svn_boolean_t msg_only,
                 apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1979,6 +2060,9 @@ merging_commit (const char **msg,
   int revision_count;
 
   *msg = "merging commit";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Initialize our revision number stuffs. */
   for (i = 0;
@@ -2746,6 +2830,7 @@ merging_commit (const char **msg,
 
 static svn_error_t *
 copy_test (const char **msg,
+           svn_boolean_t msg_only,
            apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -2754,6 +2839,9 @@ copy_test (const char **msg,
   svn_revnum_t after_rev;
 
   *msg = "copying and tracking copy history";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
   SVN_ERR (svn_test__create_fs_and_repos (&fs, "test-repo-copy-test", pool));
@@ -3041,6 +3129,7 @@ copy_test (const char **msg,
 
 static svn_error_t *
 link_test (const char **msg,
+           svn_boolean_t msg_only,
            apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -3049,6 +3138,9 @@ link_test (const char **msg,
   svn_revnum_t after_rev;
 
   *msg = "linking, so no copy history";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
   SVN_ERR (svn_test__create_fs_and_repos (&fs, "test-repo-link-test", pool));
@@ -3200,6 +3292,7 @@ link_test (const char **msg,
  */
 static svn_error_t *
 delete_mutables (const char **msg,
+                 svn_boolean_t msg_only,
                  apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -3208,6 +3301,9 @@ delete_mutables (const char **msg,
   svn_error_t *err;
 
   *msg = "delete mutable nodes from directories";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Prepare a txn to receive the greek tree. */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -3438,6 +3534,7 @@ delete_mutables (const char **msg,
  */
 static svn_error_t *
 delete (const char **msg,
+        svn_boolean_t msg_only,
         apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -3447,6 +3544,9 @@ delete (const char **msg,
   svn_error_t *err;
 
   *msg = "delete nodes tree";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* This function tests 5 cases:
    *
@@ -3922,6 +4022,7 @@ delete (const char **msg,
 /* Test the datestamps on commits. */
 static svn_error_t *
 commit_date (const char **msg,
+             svn_boolean_t msg_only,
               apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -3933,6 +4034,9 @@ commit_date (const char **msg,
   apr_time_t before_commit, at_commit, after_commit;
 
   *msg = "commit datestamps";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -3977,6 +4081,7 @@ commit_date (const char **msg,
 
 static svn_error_t *
 check_old_revisions (const char **msg,
+                     svn_boolean_t msg_only,
                      apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -3985,6 +4090,9 @@ check_old_revisions (const char **msg,
   svn_revnum_t rev;
 
   *msg = "check old revisions";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
   SVN_ERR (svn_test__create_fs_and_repos
@@ -4342,6 +4450,7 @@ validate_revisions (svn_fs_t *fs,
 
 static svn_error_t *
 check_all_revisions (const char **msg,
+                     svn_boolean_t msg_only,
                      apr_pool_t *pool)
 { 
   svn_fs_t *fs;
@@ -4352,6 +4461,9 @@ check_all_revisions (const char **msg,
   int revision_count = 0;
 
   *msg = "after each commit, check all revisions";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -4645,6 +4757,7 @@ random_data_to_buffer (char *buf,
 
 static svn_error_t *
 large_file_integrity (const char **msg,
+                      svn_boolean_t msg_only,
                       apr_pool_t *pool)
 { 
   svn_fs_t *fs;
@@ -4665,6 +4778,9 @@ large_file_integrity (const char **msg,
   apr_size_t filesize = svn_txdelta__window_size + 1;
 
   *msg = "create and modify a large file, verifying its integrity";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -4804,6 +4920,7 @@ txn_body_get_node_revision (void *baton, trail_t *trail)
 
 static svn_error_t *
 check_root_revision (const char **msg,
+                     svn_boolean_t msg_only,
                      apr_pool_t *pool)
 { 
   svn_fs_t *fs;
@@ -4814,6 +4931,9 @@ check_root_revision (const char **msg,
   int i;
 
   *msg = "make sure the root node's stored revision is accurate";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -4873,6 +4993,7 @@ check_root_revision (const char **msg,
 /* The test table.  */
 
 svn_error_t * (*test_funcs[]) (const char **msg,
+                               svn_boolean_t msg_only,
                                apr_pool_t *pool) = {
   0,
   create_berkeley_filesystem,
