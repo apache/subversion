@@ -81,6 +81,9 @@ struct target_baton
 {
   svn_wc_entry_t *entry;
   void *editor_baton;
+
+  svn_boolean_t text_modified_p;
+  svn_boolean_t prop_modified_p;
 };
 
 
@@ -422,7 +425,7 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
 {
   svn_error_t *err;
   apr_hash_index_t *hi;
-  svn_string_t *filepath;
+  svn_string_t *entrypath;
   struct target_baton *tb;
   const void *key;
   void *val;
@@ -433,21 +436,13 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
       apr_hash_this (hi, &key, &keylen, &val);
       tb = val;
 
-      if (tb->entry->kind != svn_node_file)
-        continue;
-
-      filepath = svn_string_create ((char *) key, pool);
-
-      /* If this file is not simply being deleted, i.e., if it does
-         not have both a delete flag set and no add flag, then we want
-         to send the txdelta. */
-      if (! ((tb->entry->flags & SVN_WC_ENTRY_DELETE)
-             && (! (tb->entry->flags & SVN_WC_ENTRY_ADD))))
+      if (tb->text_modified_p)
         {
-          err = do_apply_textdelta (filepath, editor, tb, pool);
-          if (err)
-            return err;
-
+          entrypath = svn_string_create ((char *) key, pool);
+          
+          err = do_apply_textdelta (entrypath, editor, tb, pool);
+          if (err) return err;
+          
           err = editor->close_file (tb->editor_baton);
           if (err) return err;
         }
@@ -455,6 +450,71 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
 
   return SVN_NO_ERROR;
 }
+
+
+
+/* Given a full PATH to a particular ENTRY, apply all local property
+   changes via EDITOR callbacks with the appropriate file or directory
+   BATON. */
+static svn_error_t *
+do_prop_deltas (svn_string_t *path,
+                svn_wc_entry_t *entry,
+                const svn_delta_edit_fns_t *editor,
+                void *baton,
+                apr_pool_t *pool)
+{
+  svn_error_t *err;
+  int i;
+  svn_string_t *prop_path, *prop_base_path;
+  apr_array_header_t *local_propchanges;
+  apr_hash_t *localprops = apr_make_hash (pool);
+  apr_hash_t *baseprops = apr_make_hash (pool);
+  
+  /* First, get the prop_path from the original path */
+  err = svn_wc__prop_path (&prop_path, path, 0, pool);
+  if (err) return err;
+  
+  /* Get the full path of the prop-base `pristine' file */
+  err = svn_wc__prop_base_path (&prop_base_path, path, 0, pool);
+  if (err) return err;
+
+  /* Load all properties into hashes */
+  err = svn_wc__load_prop_file (prop_path,
+                                localprops, pool);
+  if (err) return err;
+  
+  err = svn_wc__load_prop_file (prop_base_path,
+                                baseprops, pool);
+  if (err) return err;
+  
+  /* Get an array of local changes by comparing the hashes. */
+  err = svn_wc__get_local_propchanges (&local_propchanges,
+                                       localprops,
+                                       baseprops,
+                                       pool);
+  if (err) return err;
+  
+  /* Apply each local change to the baton */
+  for (i = 0; i < local_propchanges->nelts; i++)
+    {
+      svn_prop_t *change;
+
+      change = (((svn_prop_t **)(local_propchanges)->elts)[i]);
+      
+      if (entry->kind == svn_node_file)
+        err = editor->change_file_prop (baton,
+                                        change->name,
+                                        change->value);
+      else
+        err = editor->change_dir_prop (baton,
+                                       change->name,
+                                       change->value);
+      if (err) return err;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 
 
@@ -550,7 +610,9 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
   apr_hash_t *entries;            /* _all_ of the entries in in
                                      current directory */
   apr_hash_index_t *entry_index;  /* holds loop-state */
-  svn_wc_entry_t *this_dir;      /* represents current working dir */
+  svn_wc_entry_t *this_dir;       /* represents current working dir */
+
+  void *new_dir_baton = NULL;     /* potential child dir baton */
 
   /**                                                   **/
   /** Setup -- arrival in a new subdir of working copy. **/
@@ -620,79 +682,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
                                          locks, subpool);
       if (err) return err;
 
-      /* Is the entry marked for both deletion AND addition? */
-      if ((current_entry->flags & SVN_WC_ENTRY_DELETE)
-          && (current_entry->flags & SVN_WC_ENTRY_ADD))
-        {
-          /* Do what's necesary to get a baton for current directory */
-          if (! dir_baton)
-            {
-              err = do_dir_replaces (&dir_baton,
-                                     *stack, editor, edit_baton,
-                                     locks, top_pool, subpool);
-              if (err) return err;
-            }
-          
-          /* Delete the old entry FIRST.  This is IMPORTANT.  :) */
-          err = editor->delete (current_entry_name, dir_baton);
-          if (err) return err;
-          
-          /* Now replace the entry, either by calling replace_file()
-             or replace_dir(). */
-          if (current_entry->kind == svn_node_file)
-            {
-              struct target_baton *tb = apr_pcalloc (top_pool, sizeof (*tb));
-              svn_string_t *longpath;
-
-              tb->entry = svn_wc__entry_dup (current_entry, top_pool);
-
-              /* Replace the file, getting a file baton */
-              err = editor->replace_file (current_entry_name,
-                                          dir_baton,          /* parent */
-                                          current_entry->ancestor,
-                                          current_entry->revision,
-                                          &(tb->editor_baton)); /* child */
-              if (err) return err;
-              
-              /* Store the file's full pathname and baton for safe keeping (to
-                 be used later for postfix text-deltas) */
-              longpath = svn_string_dup (path, top_pool);
-              if (current_entry_name != NULL)
-                svn_path_add_component (longpath, current_entry_name,
-                                        svn_path_local_style);
-              apr_hash_set (affected_targets,
-                            longpath->data, longpath->len, tb);              
-            }
-
-          else if (current_entry->kind == svn_node_dir)
-            {
-              void *new_dir_baton;
-              svn_string_t *new_path = svn_string_dup (path, subpool);
-              
-              err = 
-                editor->replace_directory (current_entry_name, 
-                                           dir_baton,        /* parent */
-                                           current_entry->ancestor,
-                                           current_entry->revision,
-                                           &new_dir_baton);
-              if (err) return err;
-              
-              /* Recurse, using the new, extended path and new dir_baton. */
-              if (current_entry_name != NULL)
-                svn_path_add_component (new_path,
-                                        current_entry_name,
-                                        svn_path_local_style);
-              
-              err = process_subdirectory (new_path, new_dir_baton,
-                                          editor, edit_baton,
-                                          stack, affected_targets, locks,
-                                          top_pool);
-              if (err) return err;              
-            }
-        }
-
-      /* Is the entry marked for deletion only? */
-      else if ((current_entry->flags) & SVN_WC_ENTRY_DELETE)
+      /* Is the entry marked for deletion? */
+      if ((current_entry->flags) & SVN_WC_ENTRY_DELETE)
         {
           /* Do what's necesary to get a baton for current directory */
           if (! dir_baton)
@@ -725,21 +716,23 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
       /* Is this entry marked for addition only? */
       else if ((current_entry->flags) & SVN_WC_ENTRY_ADD)
         {
+          /* Create an affected-target object */
+          svn_string_t *longpath;
+          struct target_baton *tb = apr_pcalloc (top_pool, sizeof (*tb));
+          tb->entry = svn_wc__entry_dup (current_entry, top_pool);          
+
+          /* Do what's necesary to get a baton for current directory */
+          if (! dir_baton)
+            {
+              err = do_dir_replaces (&dir_baton,
+                                     *stack, editor, edit_baton,
+                                     locks, top_pool, subpool);
+              if (err) return err;
+            }
+
           /* Adding a new directory: */
           if (current_entry->kind == svn_node_dir)
             {
-              void *new_dir_baton;
-              svn_string_t *new_path = svn_string_dup (path, subpool);
-              
-              /* Do what's necesary to get a baton for current directory */
-              if (! dir_baton)
-                {
-                  err = do_dir_replaces (&dir_baton,
-                                         *stack, editor, edit_baton,
-                                         locks, top_pool, subpool);
-                  if (err) return err;
-                }
-              
               /* Add the new directory, getting a new dir baton.  */
               err = editor->add_directory (current_entry_name,
                                            dir_baton, /* current dir
@@ -748,37 +741,11 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
                                            current_entry->revision,
                                            &new_dir_baton); /* get child */
               if (err) return err;
-          
-              /* Recurse, using the new, extended path and new dir_baton. */
-              if (current_entry_name != NULL)
-                svn_path_add_component (new_path,
-                                        current_entry_name,
-                                        svn_path_local_style);
-              
-              err = process_subdirectory (new_path, new_dir_baton,
-                                          editor, edit_baton,
-                                          stack, affected_targets, locks,
-                                          top_pool);
-              if (err) return err;
             }
       
           /* Adding a new file: */
           else if (current_entry->kind == svn_node_file)
             {
-              struct target_baton *tb = apr_pcalloc (top_pool, sizeof (*tb));
-              svn_string_t *longpath;
-
-              tb->entry = svn_wc__entry_dup (current_entry, top_pool);
-
-              /* Do what's necesary to get a baton for current directory */
-              if (! dir_baton)
-                {
-                  err = do_dir_replaces (&dir_baton,
-                                         *stack, editor, edit_baton,
-                                         locks, top_pool, subpool);
-                  if (err) return err;
-                }
-              
               /* Add a new file, getting a file baton */
               err = editor->add_file (current_entry_name,
                                       dir_baton,             /* parent */
@@ -786,37 +753,85 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
                                       current_entry->revision,
                                       &(tb->editor_baton));  /* child */
               if (err) return err;
-              
-              /* Store the file's full pathname and baton for safe keeping
-                 (to be used later for postfix text-deltas) */
+
+              /* Of course, this is a new file, so we would should
+                 definitely mark the target as having new text! */
+              tb->text_modified_p = TRUE;
+            }
+
+          /* Check for local property changes to send, whether we're
+             looking a file or a dir.  */
+          {
+            svn_boolean_t prop_modified_p;
+
+            err = svn_wc_props_modified_p (&prop_modified_p,
+                                           full_path_to_entry,
+                                           subpool);
+            if (err) return err;
+
+            if (prop_modified_p)
+              {
+                void *baton = 
+                  (current_entry->kind == svn_node_file) ?
+                  tb->editor_baton : new_dir_baton;
+
+                err = do_prop_deltas (full_path_to_entry,
+                                      current_entry,
+                                      editor,
+                                      baton,
+                                      subpool);
+                if (err) return err;
+
+                tb->prop_modified_p = TRUE;
+              }            
+          }          
+
+          /* Store the affected-target for safe keeping (possibly to
+             be used later for postfix text-deltas) */
+          longpath = svn_string_dup (path, top_pool);
+          if (current_entry_name != NULL)
+            svn_path_add_component (longpath, current_entry_name,
+                                    svn_path_local_style);
+          apr_hash_set (affected_targets,
+                        longpath->data, longpath->len, tb);
+        }
+
+      /* We're done looking for ADD and DELETE flags.  If we're not
+         adding or deleting the entry, look for LOCAL MODS of any
+         sort. */
+      else
+        {
+          svn_boolean_t text_modified_p, prop_modified_p;
+          
+          err = svn_wc_text_modified_p (&text_modified_p,
+                                        full_path_to_entry,
+                                        subpool);
+          if (err) return err;
+          
+          err = svn_wc_props_modified_p (&prop_modified_p,
+                                         full_path_to_entry,
+                                         subpool);
+          if (err) return err;
+          
+          if (text_modified_p || prop_modified_p)
+            {
+              svn_string_t *longpath;
+              struct target_baton *tb;
+
+              /* There was a local change.  Build an affected-target
+                 object in the top-most pool. */
+              tb = apr_pcalloc (top_pool, sizeof (*tb));
+              tb->entry = svn_wc__entry_dup (current_entry, top_pool);
+              tb->text_modified_p = text_modified_p;
+              tb->prop_modified_p = prop_modified_p;
+
+              /* Build the full path to this entry, also from the
+                 top-pool. */
               longpath = svn_string_dup (path, top_pool);
               if (current_entry_name != NULL)
                 svn_path_add_component (longpath, current_entry_name,
                                         svn_path_local_style);
-              apr_hash_set (affected_targets,
-                            longpath->data, longpath->len, tb);
-
-              /* Don't close the file yet!  That comes much later,
-                 after we send text-deltas. */
-            }
-        }
-
-      /* Is this entry a modified file? */      
-      else if (current_entry->kind == svn_node_file)      
-        {
-          struct target_baton *tb = apr_pcalloc (top_pool, sizeof (*tb));
-          svn_string_t *longpath;
-          svn_boolean_t modified_p;
-
-          tb->entry = svn_wc__entry_dup (current_entry, top_pool);
-
-          err = svn_wc_text_modified_p (&modified_p,
-                                        full_path_to_entry,
-                                        subpool);
-          if (err) return err;
-
-          if (modified_p)
-            {
+              
               /* Do what's necesary to get a baton for current directory */
               if (! dir_baton)
                 {
@@ -825,36 +840,57 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
                                          locks, top_pool, subpool);
                   if (err) return err;
                 }
-          
-              /* Replace the file, getting a file baton */
-              err = editor->replace_file (current_entry_name,
-                                          dir_baton,          /* parent */
-                                          current_entry->ancestor,
-                                          current_entry->revision,
-                                          &(tb->editor_baton)); /* child */
-              if (err) return err;
+
+              if (current_entry->kind == svn_node_file)
+                {
+                  /* Replace the file's text, getting a file baton */
+                  err = editor->replace_file (current_entry_name,
+                                              dir_baton,          /* parent */
+                                              current_entry->ancestor,
+                                              current_entry->revision,
+                                              &(tb->editor_baton)); /* child */
+                  if (err) return err;
+                }
               
-              /* Store the file's full pathname and baton for safe keeping (to
-                 be used later for postfix text-deltas) */
-              longpath = svn_string_dup (path, top_pool);
-              if (current_entry_name != NULL)
-                svn_path_add_component (longpath, current_entry_name,
-                                        svn_path_local_style);
+              if (prop_modified_p)
+                {
+                  void *baton = 
+                    (current_entry->kind == svn_node_file) ?
+                    tb->editor_baton : dir_baton;
+                  
+                  err = do_prop_deltas (longpath,
+                                        current_entry,
+                                        editor,
+                                        baton,
+                                        subpool);
+                  if (err) return err;
+
+                  /* Very important logic!! */
+                  if ((current_entry->kind == svn_node_file )
+                      && (! text_modified_p))
+                    {
+                      err = editor->close_file (tb->editor_baton); 
+                    }
+                }
+              
+              /* Store the affected-target for safe keeping (possibly
+                 to be used later for postfix text-deltas) */
               apr_hash_set (affected_targets,
                             longpath->data, longpath->len, tb);
             }
         }
       
-      /* Okay, we're not adding or deleting anything, nor is this a
-         modified file.  However, if the this entry is a directory, we
-         must recurse! */
-      else if ((current_entry->kind == svn_node_dir) 
-               && (current_entry_name != NULL))
+      /* Finally: if the current entry is a directory (and not `.'),
+         we must recurse! */
+      if ((current_entry->kind == svn_node_dir) 
+          && (current_entry_name != NULL))
         {
-          /* Recurse, using a NULL dir_baton.  Why NULL?  Because that
-             will later force a call to do_dir_replaces() and get the
-             _correct_ dir baton for the child directory. */
-          err = process_subdirectory (full_path_to_entry, NULL,
+          /* Recurse, using new_dir_baton, which will most often be
+             NULL (unless the entry is a newly added directory.)  Why
+             NULL?  Because that will later force a call to
+             do_dir_replaces() and get the _correct_ dir baton for the
+             child directory. */
+          err = process_subdirectory (full_path_to_entry, new_dir_baton,
                                       editor, edit_baton,
                                       stack, affected_targets, locks,
                                       top_pool);
