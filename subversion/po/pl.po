@@ -34,8 +34,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-26 22:38+0200\n"
-"PO-Revision-Date: 2004-09-30 00:12+0200\n"
+"POT-Creation-Date: 2004-10-03 23:03+0200\n"
+"PO-Revision-Date: 2004-10-04 23:38+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -83,7 +83,7 @@ msgstr ""
 #: clients/cmdline/help-cmd.c:35
 msgid ""
 "usage: svn <subcommand> [options] [args]\n"
-"Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svn help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Most subcommands take file and/or directory arguments, recursing\n"
 "on the directories.  If no arguments are supplied to such a\n"
@@ -98,8 +98,8 @@ msgstr ""
 "\n"
 "Większość poleceń wymaga podania jako argumentów plików i/lub\n"
 "katalogów. Katalogi są zwykle przetwarzane rekurencyjnie (wraz z\n"
-"podkatalogami). W razie braku argumentów większość poleceń działa\n"
-"na bieżącym katalogu.\n"
+"podkatalogami). W razie braku argumentów domyślnie większość poleceń\n"
+"działa rekurencyjnie na bieżącym katalogu.\n"
 "\n"
 "Dostępne są następujące polecenia:\n"
 
@@ -139,7 +139,7 @@ msgstr "Niewłaściwy URL '%s'"
 msgid "Path: %s\n"
 msgstr "Ścieżka: %s\n"
 
-#: clients/cmdline/info-cmd.c:67 svnlook/main.c:743
+#: clients/cmdline/info-cmd.c:67 svnlook/main.c:742
 #, c-format
 msgid "Name: %s\n"
 msgstr "Nazwa: %s\n"
@@ -269,23 +269,28 @@ msgstr ""
 "%s:  (nie podlega zarządzaniu wersjami)\n"
 "\n"
 
-#: clients/cmdline/log-cmd.c:192
+#: clients/cmdline/log-cmd.c:95 include/svn_error_codes.h:220
+#: libsvn_subr/cmdline.c:316 libsvn_subr/cmdline.c:333
+msgid "Write error"
+msgstr "Błąd zapisu"
+
+#: clients/cmdline/log-cmd.c:215
 msgid "No commit for revision 0.\n"
 msgstr "Brak zatwierdzeń dla wersji 0.\n"
 
-#: clients/cmdline/log-cmd.c:198
+#: clients/cmdline/log-cmd.c:221
 msgid "(no author)"
 msgstr "(brak autora)"
 
-#: clients/cmdline/log-cmd.c:209
+#: clients/cmdline/log-cmd.c:232
 msgid "(no date)"
 msgstr "(brak daty)"
 
-#: clients/cmdline/log-cmd.c:239
+#: clients/cmdline/log-cmd.c:262
 msgid "Changed paths:\n"
 msgstr "Zmodyfikowane ścieżki:\n"
 
-#: clients/cmdline/log-cmd.c:254
+#: clients/cmdline/log-cmd.c:277
 #, c-format
 msgid " (from %s:%ld)"
 msgstr " (z %s:%ld)"
@@ -484,7 +489,11 @@ msgstr ""
 "                                atrybutem. ARG może być jednym z 'LF', 'CR', "
 "'CRLF'"
 
-#: clients/cmdline/main.c:171
+#: clients/cmdline/main.c:148
+msgid "maximum number of log entries"
+msgstr "maksymalna liczba wspisów log"
+
+#: clients/cmdline/main.c:173
 msgid ""
 "Put files and directories under version control, scheduling\n"
 "them for addition to repository.  They will be added in next commit.\n"
@@ -495,7 +504,7 @@ msgstr ""
 "następnym zatwierdzaniu.\n"
 "Wykorzystanie: add ŚCIEŻKA...\n"
 
-#: clients/cmdline/main.c:178
+#: clients/cmdline/main.c:180
 msgid ""
 "Output the content of specified files or\n"
 "URLs with revision and author information in-line.\n"
@@ -506,7 +515,7 @@ msgstr ""
 "każdy wiersz i o autorze tej zmiany.\n"
 "Wykorzystanie: blame OBIEKT...\n"
 
-#: clients/cmdline/main.c:184
+#: clients/cmdline/main.c:186
 msgid ""
 "Output the content of specified files or URLs.\n"
 "usage: cat TARGET...\n"
@@ -514,7 +523,7 @@ msgstr ""
 "Wypisz treść podanych plików (wskazanych przez ścieżki lub URLe).\n"
 "Wykorzystanie: cat OBIEKT...\n"
 
-#: clients/cmdline/main.c:189
+#: clients/cmdline/main.c:191
 msgid ""
 "Check out a working copy from a repository.\n"
 "usage: checkout URL... [PATH]\n"
@@ -533,7 +542,7 @@ msgstr ""
 "  parametrem ŚCIEŻKA, przy czym nazwy podkatalogów zostaną ustalone na\n"
 "  podstawie URLa.\n"
 
-#: clients/cmdline/main.c:199
+#: clients/cmdline/main.c:201
 msgid ""
 "Recursively clean up the working copy, removing locks, resuming\n"
 "unfinished operations, etc.\n"
@@ -543,7 +552,7 @@ msgstr ""
 "przerwane operacje itp.\n"
 "Wykorzystanie: cleanup [ŚCIEŻKA...]\n"
 
-#: clients/cmdline/main.c:205
+#: clients/cmdline/main.c:207
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -559,7 +568,7 @@ msgstr ""
 "   nie podano go za pośrednictwem opcji --message lub --file, zostanie\n"
 "   uruchomiony edytor tekstu.\n"
 
-#: clients/cmdline/main.c:215
+#: clients/cmdline/main.c:217
 msgid ""
 "Duplicate something in working copy or repository, remembering history.\n"
 "usage: copy SRC DST\n"
@@ -588,7 +597,7 @@ msgstr ""
 "                kopii roboczej; zapis często używany do tworzenia \n"
 "                odgałęzień i tagów.\n"
 
-#: clients/cmdline/main.c:228
+#: clients/cmdline/main.c:230
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -618,7 +627,7 @@ msgstr ""
 "      repozytorium, przy czym operacja ta jest natychmiastowo\n"
 "      zatwierdzana.\n"
 
-#: clients/cmdline/main.c:245
+#: clients/cmdline/main.c:247
 msgid ""
 "Display the differences between two paths.\n"
 "usage: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
@@ -679,7 +688,7 @@ msgstr ""
 "  wprowadzone w kopii roboczej w stosunku do wersji pobranej z\n"
 "  repozytorium (zmiany do zatwierdzenia).\n"
 
-#: clients/cmdline/main.c:285
+#: clients/cmdline/main.c:287
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL [PATH]\n"
@@ -715,7 +724,7 @@ msgstr ""
 "     zostaną zachowane (skopiowane), nie zostaną jednak skopiowane\n"
 "     pliki nie podlegające zarządzaniu wersjami.\n"
 
-#: clients/cmdline/main.c:309
+#: clients/cmdline/main.c:311
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: help [SUBCOMMAND...]\n"
@@ -723,7 +732,7 @@ msgstr ""
 "Opisz sposób używania tego programu lub jednego z jego poleceń.\n"
 "Wykorzystanie: help [POLECENIE...]\n"
 
-#: clients/cmdline/main.c:318
+#: clients/cmdline/main.c:320
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
 "usage: import [PATH] URL\n"
@@ -740,7 +749,7 @@ msgstr ""
 "  jest podana, domyślną wartością jest '.'. W repozytorium są w razie\n"
 "  potrzeby tworzone brakujące katalogi nadrzędne.\n"
 
-#: clients/cmdline/main.c:329
+#: clients/cmdline/main.c:331
 msgid ""
 "Display information about a file or directory.\n"
 "usage: info [PATH...]\n"
@@ -753,7 +762,7 @@ msgstr ""
 "  Wypisuje informacje o każdym z podanych parametrów (domyślnie o\n"
 "  '.' czyli katalogu bieżącym).\n"
 
-#: clients/cmdline/main.c:336
+#: clients/cmdline/main.c:338
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET...]\n"
@@ -787,7 +796,7 @@ msgstr ""
 "  informacji o ostatniej zmianie (numer wersji, autor, data i czas)\n"
 "  oraz o rozmiarze pliku (w bajtach).\n"
 
-#: clients/cmdline/main.c:357
+#: clients/cmdline/main.c:359
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -845,7 +854,7 @@ msgstr ""
 "    svn log http://www.example.com/repo/project/foo.c\n"
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
-#: clients/cmdline/main.c:389
+#: clients/cmdline/main.c:391
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -895,7 +904,7 @@ msgstr ""
 "  który zgadza się też z nazwą pliku w katalogu '.' - w tym wypadku\n"
 "  zmiany zostaną naniesione w tym pliku.\n"
 
-#: clients/cmdline/main.c:419
+#: clients/cmdline/main.c:421
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -926,7 +935,7 @@ msgstr ""
 "\n"
 "  W obydwu wypadkach wszelkie nadrzędne katalogi muszą już istnieć.\n"
 
-#: clients/cmdline/main.c:439
+#: clients/cmdline/main.c:441
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -954,7 +963,7 @@ msgstr ""
 "\n"
 "\n"
 
-#: clients/cmdline/main.c:452
+#: clients/cmdline/main.c:454
 msgid ""
 "Remove PROPNAME from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -972,7 +981,7 @@ msgstr ""
 "     kopii roboczej.\n"
 "  2. Usuwany jest - z repozytorium -  atrybut wersji.\n"
 
-#: clients/cmdline/main.c:462
+#: clients/cmdline/main.c:464
 msgid ""
 "Edit property PROPNAME with an external editor on targets.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -991,7 +1000,7 @@ msgstr ""
 "\n"
 "  2. Modyfikacji - w repozytorium - podlega atrybut wersji.\n"
 
-#: clients/cmdline/main.c:473
+#: clients/cmdline/main.c:475
 msgid ""
 "Print value of PROPNAME on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [PATH...]\n"
@@ -1024,7 +1033,7 @@ msgstr ""
 "  (jest użyteczna np. gdy kopiujemy wartość binarnego atrybutu do\n"
 "  pliku).\n"
 
-#: clients/cmdline/main.c:490
+#: clients/cmdline/main.c:492
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [PATH...]\n"
@@ -1045,7 +1054,7 @@ msgstr ""
 "  2. Wypisywane są atrybuty wersji.\n"
 "\n"
 
-#: clients/cmdline/main.c:500
+#: clients/cmdline/main.c:502
 msgid ""
 "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
@@ -1101,13 +1110,18 @@ msgstr ""
 "      URL, HeadURL             - URL dla najnowszej wersji pliku.\n"
 "      Author, LastChangedBy    - Autor ostatniej zmiany.\n"
 "      Date, LastChangedDate    - Data i czas ostatniej zmiany.\n"
-"      Rev, Revision,           - Wersja, w której nastąpiła ostatnia zmiana.\n"
+"      Rev, Revision,           - Wersja, w której nastąpiła ostatnia "
+"zmiana.\n"
 "      LastChangedRevision\n"
-"      Id                       - Zwarty zapis łączący powyższe 4 informacje.\n"
+"      Id                       - Zwarty zapis łączący powyższe 4 "
+"informacje.\n"
 "    svn:executable - Obecność atrybutu sygnalizuje, że plik powinien być\n"
-"      wykonywalny. Atrybutu tego nie można ustawić dla katalogu, gdy parametrem\n"
-"      jest katalog uruchomienie z opcją --non-recursive spowoduje zgłoszenie\n"
-"      błędu a uruchomienie z opcją --recursive spowoduje ustawienie atrybutu\n"
+"      wykonywalny. Atrybutu tego nie można ustawić dla katalogu, gdy "
+"parametrem\n"
+"      jest katalog uruchomienie z opcją --non-recursive spowoduje "
+"zgłoszenie\n"
+"      błędu a uruchomienie z opcją --recursive spowoduje ustawienie "
+"atrybutu\n"
 "      dla wszystkich plików w tym katalogu.\n"
 "    svn:eol-style - Sposób zapisywania końca wierszy, jedno z 'native'\n"
 "      (odpowiedni dla platformy), 'LF', 'CR', 'CRLF'.\n"
@@ -1118,12 +1132,13 @@ msgstr ""
 "      zdefiniowany są traktowane jako tekstowe. Wszystkie inne pliki\n"
 "      są traktowane jako binarne.\n"
 "    svn:externals  - Lista (oddzielanych znakiem nowego wiersza) odsyłaczy\n"
-"      do modułów, z których każdy składa się z ścieżki w ramach repozytorium,\n"
+"      do modułów, z których każdy składa się z ścieżki w ramach "
+"repozytorium,\n"
 "      opcjonalnie wersji oraz URL. Przykład:\n"
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
 
-#: clients/cmdline/main.c:544
+#: clients/cmdline/main.c:546
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -1141,7 +1156,7 @@ msgstr ""
 "  możliwość zatwierdzenia zmian. Powinno być używane po ręcznym\n"
 "  rozwikłaniu konfliktu.\n"
 
-#: clients/cmdline/main.c:553
+#: clients/cmdline/main.c:555
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -1157,7 +1172,7 @@ msgstr ""
 "  Do działania nie wymaga dostępu do sieci, automatycznie rozwiązuje\n"
 "  wszelkie konflikty.\n"
 
-#: clients/cmdline/main.c:563
+#: clients/cmdline/main.c:565
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1294,7 +1309,7 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    Head revision:   981\n"
 
-#: clients/cmdline/main.c:630
+#: clients/cmdline/main.c:632
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -1324,7 +1339,7 @@ msgstr ""
 "     (np. zmienia się sposób dostępu albo nazwa maszyny) ale kopia\n"
 "     robocza nadal odpowiada temu samemu katalogowi w repozytorium.\n"
 
-#: clients/cmdline/main.c:651
+#: clients/cmdline/main.c:653
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1365,44 +1380,44 @@ msgstr ""
 "  ten sposób informacja o zmianach w samym pliku a w drugiej o\n"
 "  zmianach w jego atrybutach.\n"
 
-#: clients/cmdline/main.c:675
+#: clients/cmdline/main.c:677
 msgid "Print client version info\n"
 msgstr "Podaj wersję klienta\n"
 
-#: clients/cmdline/main.c:729 svnadmin/main.c:75
+#: clients/cmdline/main.c:731 svnadmin/main.c:75
 msgid "Caught signal"
 msgstr "Złapano sygnał"
 
-#: clients/cmdline/main.c:826 svnadmin/main.c:1006
+#: clients/cmdline/main.c:831 svnadmin/main.c:1006
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
 "Wielokrotnie podano opcję numeru wersji; spróbuj '-r M:N' zamiast '-r M -r N'"
 
-#: clients/cmdline/main.c:838 svnadmin/main.c:1023
+#: clients/cmdline/main.c:843 svnadmin/main.c:1023
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Błąd składniowy w numerze wersji '%s'"
 
-#: clients/cmdline/main.c:983 clients/cmdline/main.c:993
+#: clients/cmdline/main.c:988 clients/cmdline/main.c:998
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "Opcje --auto-props i --no-auto-props nie mogą występować równocześnie"
 
-#: clients/cmdline/main.c:1009
+#: clients/cmdline/main.c:1014
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Błąd składniowy w nazwie native-eol '%s'"
 
-#: clients/cmdline/main.c:1052
+#: clients/cmdline/main.c:1057
 msgid "Subcommand argument required\n"
 msgstr "Polecenie wymaga podania parametru\n"
 
-#: clients/cmdline/main.c:1070 svnadmin/main.c:1143 svnlook/main.c:1962
+#: clients/cmdline/main.c:1075 svnadmin/main.c:1143 svnlook/main.c:1968
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Nieznane polecenie: '%s'\n"
 
-#: clients/cmdline/main.c:1103
+#: clients/cmdline/main.c:1108
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1411,13 +1426,13 @@ msgstr ""
 "Polecenie '%s' nie obsługuje opcji '%s'.\n"
 "Użyj 'svn help %s' by otrzymać informacje o sposobie jego używania.\n"
 
-#: clients/cmdline/main.c:1137
+#: clients/cmdline/main.c:1142
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Plik z opisem zmian jest plikiem podlegającym zarządzaniu wersjami;\n"
 "użyj '--force-log' by wymusić jego użycie."
 
-#: clients/cmdline/main.c:1155
+#: clients/cmdline/main.c:1160
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -1425,7 +1440,7 @@ msgstr ""
 "Opis zmian jest ścieżką (chciano użyć -F?); użyj --force-log by\n"
 "wymusić użycie takiego opisu "
 
-#: clients/cmdline/main.c:1358
+#: clients/cmdline/main.c:1363
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -1932,11 +1947,6 @@ msgstr "Błąd ramki w komunikacji IPC"
 msgid "Read error in pipe"
 msgstr "Błąd odczytu IPC"
 
-#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:316
-#: libsvn_subr/cmdline.c:333
-msgid "Write error"
-msgstr "Błąd zapisu"
-
 #: include/svn_error_codes.h:226
 msgid "Unexpected EOF on stream"
 msgstr "Nieoczekiwany koniec strumienia"
@@ -2329,7 +2339,7 @@ msgid "Network read/write error"
 msgstr "Błąd odczytu/zapisu sieciowego"
 
 #: include/svn_error_codes.h:635 libsvn_ra_svn/marshal.c:592
-#: libsvn_ra_svn/marshal.c:697 libsvn_ra_svn/marshal.c:724
+#: libsvn_ra_svn/marshal.c:700 libsvn_ra_svn/marshal.c:727
 msgid "Malformed network data"
 msgstr "Błędne dane z sieci"
 
@@ -2643,7 +2653,7 @@ msgstr "Wymagane podanie nazwy obiektu podczas importowania pliku"
 msgid "'%s' does not exist"
 msgstr "'%s' nie istnieje"
 
-#: libsvn_client/commit.c:548 libsvn_client/copy.c:83 svnlook/main.c:1188
+#: libsvn_client/commit.c:548 libsvn_client/copy.c:83 svnlook/main.c:1194
 #, c-format
 msgid "Path '%s' does not exist"
 msgstr "Ścieżka '%s' nie istnieje"
@@ -3005,17 +3015,17 @@ msgstr "'%s' już istnieje"
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "Błąd sumy kontrolnej dla '%s'; oczekiwana: '%s', faktyczna: '%s'"
 
-#: libsvn_client/log.c:74
+#: libsvn_client/log.c:75
 msgid "Missing required revision specification"
 msgstr "Nie podano wymaganej specyfikacji wersji"
 
-#: libsvn_client/log.c:144 libsvn_client/status.c:173
+#: libsvn_client/log.c:145 libsvn_client/status.c:173
 #: libsvn_client/update.c:88
 #, c-format
 msgid "Entry '%s' has no URL"
 msgstr "Element '%s' nie ma URL"
 
-#: libsvn_client/log.c:305
+#: libsvn_client/log.c:308
 msgid "No commits in repository."
 msgstr "Brak zapisów w repozytorium"
 
@@ -3304,7 +3314,7 @@ msgstr "Ostatnia linia w pliku wersji dłuższa niż 64 znaki"
 msgid "Final line in revision file missing space"
 msgstr "Brak spacji w ostatniej linii pliku wersji"
 
-#: libsvn_fs_fs/fs_fs.c:990 libsvn_repos/log.c:237 libsvn_repos/log.c:241
+#: libsvn_fs_fs/fs_fs.c:990 libsvn_repos/log.c:239 libsvn_repos/log.c:243
 #, c-format
 msgid "No such revision %ld"
 msgstr "Nie ma takiej wersji %ld"
@@ -3664,7 +3674,7 @@ msgstr ""
 "Moduł umożliwiający dostęp do repozytorium przy pomocy protokołu\n"
 "WebDAV (DeltaV)."
 
-#: libsvn_ra_dav/session.c:874
+#: libsvn_ra_dav/session.c:875
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
 msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_dav."
@@ -3722,11 +3732,11 @@ msgstr ""
 msgid "Unable to open an ra_local session to URL"
 msgstr "Nie można utworzyć połączenia w sesji ra_local do URL"
 
-#: libsvn_ra_local/ra_plugin.c:930
+#: libsvn_ra_local/ra_plugin.c:957
 msgid "Module for accessing a repository on local disk."
 msgstr "Moduł umożliwiający dostęp do repozytorium na lokalnym dysku."
 
-#: libsvn_ra_local/ra_plugin.c:975
+#: libsvn_ra_local/ra_plugin.c:1003
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_local"
 msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_local"
@@ -3842,43 +3852,43 @@ msgstr "Plik zawiera dane, nie będące tekstem"
 msgid "Dirlist element not a list"
 msgstr "Element dirlist nie jest listą"
 
-#: libsvn_ra_svn/client.c:1046
+#: libsvn_ra_svn/client.c:1050
 msgid "Log entry not a list"
 msgstr "Element log nie jest listą"
 
-#: libsvn_ra_svn/client.c:1059
+#: libsvn_ra_svn/client.c:1063
 msgid "Changed-path entry not a list"
 msgstr "Wpis w liście zmienionych ścieżek nie jest listą"
 
-#: libsvn_ra_svn/client.c:1131
+#: libsvn_ra_svn/client.c:1156
 msgid "get-locations not implemented"
 msgstr "Nie zaimplementowane polecenie get-locations"
 
-#: libsvn_ra_svn/client.c:1144
+#: libsvn_ra_svn/client.c:1169
 msgid "Location entry not a list"
 msgstr "Wpis w lokalizacjach nie jest listą"
 
-#: libsvn_ra_svn/client.c:1196
+#: libsvn_ra_svn/client.c:1221
 msgid "get-file-revs not implemented"
 msgstr "Nie zaimplementowane polecenie get-file-revs"
 
-#: libsvn_ra_svn/client.c:1210
+#: libsvn_ra_svn/client.c:1235
 msgid "Revision entry not a list"
 msgstr "Wpis w Revision nie jest listą"
 
-#: libsvn_ra_svn/client.c:1222 libsvn_ra_svn/client.c:1247
+#: libsvn_ra_svn/client.c:1247 libsvn_ra_svn/client.c:1272
 msgid "Text delta chunk not a string"
 msgstr "Fragment różnic w tekście nie jest listą"
 
-#: libsvn_ra_svn/client.c:1259
+#: libsvn_ra_svn/client.c:1284
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "polecenie get-file-revs nie zwróciło żadnych wersji"
 
-#: libsvn_ra_svn/client.c:1271
+#: libsvn_ra_svn/client.c:1296
 msgid "Module for accessing a repository using the svn network protocol."
 msgstr "Moduł umożliwiający dostęp do repozytorium przy pomocy protokołu svn."
 
-#: libsvn_ra_svn/client.c:1307
+#: libsvn_ra_svn/client.c:1333
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
 msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_svn."
@@ -3903,7 +3913,7 @@ msgstr "Operacja apply-textdelta już aktywna"
 msgid "Apply-textdelta not active"
 msgstr "Operacja apply-textdelta nieaktywna"
 
-#: libsvn_ra_svn/editorp.c:789 libsvn_ra_svn/marshal.c:809
+#: libsvn_ra_svn/editorp.c:789 libsvn_ra_svn/marshal.c:812
 #, c-format
 msgid "Unknown command '%s'"
 msgstr "Nieznane polecenie: '%s'"
@@ -3932,15 +3942,15 @@ msgstr "Długość tekstu przekracza dopuszczalne maksimum"
 msgid "Number is larger than maximum"
 msgstr "Wartość liczby przekracza dopuszczalne maksimum"
 
-#: libsvn_ra_svn/marshal.c:758
+#: libsvn_ra_svn/marshal.c:761
 msgid "Empty error list"
 msgstr "Pusta lista błędów"
 
-#: libsvn_ra_svn/marshal.c:765
+#: libsvn_ra_svn/marshal.c:768
 msgid "Malformed error list"
 msgstr "Zły format listy błędów"
 
-#: libsvn_ra_svn/marshal.c:780
+#: libsvn_ra_svn/marshal.c:783
 #, c-format
 msgid "Unknown status '%s' in command response"
 msgstr "Komenda zwróciła nieznany status '%s'"
@@ -4021,21 +4031,21 @@ msgstr "Nieprawidłowa końcowa wersja %ld"
 
 #: libsvn_repos/rev_hunt.c:315
 msgid "Unreadable path encountered; access denied."
-msgstr ""
+msgstr "Nie można odczytać ścieżki; dostęp zabroniony"
 
 #: libsvn_subr/error.c:294
 msgid "Can't recode error string from APR"
 msgstr "Nie umiem zdekodować komunikatu błędu z APR"
 
 #: libsvn_subr/io.c:127
-#, fuzzy, c-format
+#, c-format
 msgid "Can't check path '%s'"
-msgstr "Nieudane połączenie z komputerem '%s'"
+msgstr "Nie można sprawdzić ścieżki '%s'"
 
 #: libsvn_subr/io.c:245 libsvn_subr/io.c:330
-#, fuzzy, c-format
+#, c-format
 msgid "Can't open '%s'"
-msgstr "Nie można sparsować '%s'"
+msgstr "Nie mozna otworzyć '%s'"
 
 #: libsvn_subr/io.c:259 libsvn_subr/io.c:343
 #, fuzzy, c-format
@@ -4044,50 +4054,50 @@ msgstr "Nie zdołano otworzyć repozytorium '%s'"
 
 #: libsvn_subr/io.c:346 libsvn_subr/io.c:373 libsvn_subr/io.c:401
 msgid "Symbolic links are not supported on this platform"
-msgstr ""
+msgstr "Na tej platformie nie są wspierane dowiązania symboliczne"
 
 #: libsvn_subr/io.c:366
-#, fuzzy
 msgid "Can't read contents of link"
-msgstr "Nie można czytać z połączenia"
+msgstr "Nie można przeczytać zawartości wskazywanej przez odniesienie"
 
 #: libsvn_subr/io.c:1204
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get shared lock on file '%s'"
-msgstr "Nie można ustawić '%s' dla pliku (%s)"
+msgstr "Nie można założyć dzielonej blokady dla pliku '%s'"
 
 #: libsvn_subr/io.c:1207
 #, c-format
 msgid "Can't get exclusive lock on file '%s'"
-msgstr ""
+msgstr "Nie można założyć blokady na pliku '%s'"
 
 #: libsvn_subr/io.c:1237
-#, fuzzy, c-format
+#, c-format
 msgid "Can't flush file '%s'"
-msgstr "Nie można sparsować '%s'"
+msgstr "Nie można opróżnić pliku '%s'"
 
 #: libsvn_subr/io.c:1238
 msgid "Can't flush stream"
-msgstr ""
+msgstr "Nie można opróżnić strumienia"
 
 #: libsvn_subr/io.c:1250 libsvn_subr/io.c:1267
 #, fuzzy
 msgid "Can't flush file to disk"
-msgstr "Nie można pisać do '%s'"
+msgstr "Nie można opróżnić pliku na dysk"
 
 #: libsvn_subr/io.c:1288
 msgid "Reading from stdin is currently broken, so disabled"
 msgstr ""
+"Czytanie z standardowego wejścia jest aktualnie uszkodzone,\n"
+"tak więc zostanie wyłączone"
 
 #: libsvn_subr/io.c:1309
-#, fuzzy
 msgid "Can't get file name"
-msgstr "Błąd otwierania pliku"
+msgstr "Nie można dostać nazwy pliku"
 
 #: libsvn_subr/io.c:1377
-#, fuzzy, c-format
+#, c-format
 msgid "Can't remove file '%s'"
-msgstr "Nie można sparsować '%s'"
+msgstr "Nie można usunąć pliku '%s'"
 
 #: libsvn_subr/io.c:1405
 #, fuzzy, c-format
@@ -4095,29 +4105,29 @@ msgid "Can't rewind directory '%s'"
 msgstr "Nie można zamknąć katalogu '%s'"
 
 #: libsvn_subr/io.c:1440 libsvn_subr/io.c:2277 libsvn_subr/io.c:2364
-#, fuzzy, c-format
+#, c-format
 msgid "Can't open directory '%s'"
-msgstr "Nie można zamknąć katalogu '%s'"
+msgstr "Nie można otworzyć katalogu '%s'"
 
 #: libsvn_subr/io.c:1476 libsvn_subr/io.c:1493
-#, fuzzy, c-format
+#, c-format
 msgid "Can't remove '%s'"
-msgstr "Nie można sparsować '%s'"
+msgstr "Nie można usunąć '%s'"
 
 #: libsvn_subr/io.c:1484 libsvn_subr/io.c:1552
-#, fuzzy, c-format
+#, c-format
 msgid "Can't read directory '%s'"
-msgstr "Nie można zamknąć katalogu '%s'"
+msgstr "Nie można odczytać katalogu '%s'"
 
 #: libsvn_subr/io.c:1488 libsvn_subr/io.c:1556 libsvn_subr/io.c:2424
-#, fuzzy, c-format
+#, c-format
 msgid "Error closing directory '%s'"
-msgstr "Nie można zamknąć katalogu '%s'"
+msgstr "Błąd zamykania katalogu '%s'"
 
 #: libsvn_subr/io.c:1586
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create process '%s' attributes"
-msgstr "Nie udało się utworzyć gniazdka"
+msgstr "Nie można utworzyć atrybutów procesu '%s'"
 
 #: libsvn_subr/io.c:1592
 #, fuzzy, c-format
@@ -4125,49 +4135,49 @@ msgid "Can't set process '%s' cmdtype"
 msgstr "Nie można sparsować '%s'"
 
 #: libsvn_subr/io.c:1604
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set process '%s' directory"
-msgstr "Nie można ustawić '%s' dla katalogu (%s)"
+msgstr "Nie można ustawić katalogu dla procesu '%s'"
 
 #: libsvn_subr/io.c:1617
 #, c-format
 msgid "Can't set process '%s' child input"
-msgstr ""
+msgstr "Nie można przydzielić procesowi '%s' strumienia wejściowego"
 
 #: libsvn_subr/io.c:1624
 #, c-format
 msgid "Can't set process '%s' child outfile"
-msgstr ""
+msgstr "Nie można przydzielić procesowi '%s' strumienia wyjściowego"
 
 #: libsvn_subr/io.c:1631
 #, c-format
 msgid "Can't set process '%s' child errfile"
-msgstr ""
+msgstr "Nie można przydzielić procesowi '%s' strumienia błędów"
 
 #: libsvn_subr/io.c:1655
-#, fuzzy, c-format
+#, c-format
 msgid "Can't start process '%s'"
-msgstr "Nie można pobrać informacji o '%s'"
+msgstr "Nie można uruchomić procesu '%s'"
 
 #: libsvn_subr/io.c:1663
-#, fuzzy, c-format
+#, c-format
 msgid "Error waiting for process '%s'"
-msgstr "Nie udany zapis logu dla '%s'"
+msgstr "Błąd podczas czekania na proces '%s'"
 
 #: libsvn_subr/io.c:1671
 #, c-format
 msgid "Process '%s' failed (exitwhy %d)"
-msgstr ""
+msgstr "Proces '%s' zakończył się niepowodzeniem ( kod błędu: %d )"
 
 #: libsvn_subr/io.c:1678
 #, c-format
 msgid "Process '%s' returned error exitcode %d"
-msgstr ""
+msgstr "Proces '%s' zwrócił kod błędu %d"
 
 #: libsvn_subr/io.c:1766
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' returned %d"
-msgstr "Polecenie system('%s') zwróciło %d"
+msgstr "'%s' zwrócił kod błędu %d"
 
 #: libsvn_subr/io.c:1867
 #, c-format
@@ -4178,80 +4188,81 @@ msgid ""
 "%s\n"
 "%s"
 msgstr ""
+"Błąd uruchamiania '%s': kod wyjścia %d, argumenty:\n"
+"w katalogu '%s', składniki:\n"
+"%s\n"
+"%s\n"
+"%s"
 
 #: libsvn_subr/io.c:1897
 #, c-format
 msgid "Can't detect MIME type of non-file '%s'"
-msgstr ""
+msgstr "Nie można określić typu MIME dla obiektu '%s'"
 
 #: libsvn_subr/io.c:1964
-#, fuzzy, c-format
+#, c-format
 msgid "Can't open file '%s'"
-msgstr "Nie można sparsować '%s'"
+msgstr "Nie można otworzyć pliku '%s'"
 
 #: libsvn_subr/io.c:1998
-#, fuzzy, c-format
+#, c-format
 msgid "Can't close file '%s'"
 msgstr "Nie można zamknąć katalogu '%s'"
 
 #: libsvn_subr/io.c:1999
-#, fuzzy
 msgid "Can't close stream"
-msgstr "Błąd otwarcia wyjścia błędu"
+msgstr "Nie można zamknąć strumienia"
 
 #: libsvn_subr/io.c:2009 libsvn_subr/io.c:2033 libsvn_subr/io.c:2046
-#, fuzzy, c-format
+#, c-format
 msgid "Can't read file '%s'"
-msgstr "Nie można sparsować '%s'"
+msgstr "Nie można czytać z pliku '%s'"
 
 #: libsvn_subr/io.c:2010 libsvn_subr/io.c:2034 libsvn_subr/io.c:2047
-#, fuzzy
 msgid "Can't read stream"
-msgstr "Błąd odczytu standardowego wejścia"
+msgstr "Nie można czytać z strumienia"
 
 #: libsvn_subr/io.c:2021
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get attribute information from file '%s'"
-msgstr "Nie można okreslić odpowiedzialności za plik binarny '%s'"
+msgstr "Nie można uzyskać z pliku '%s' informacji o atrybutach"
 
 #: libsvn_subr/io.c:2022
 msgid "Can't get attribute information from stream"
-msgstr ""
+msgstr "Nie mogę uzyskać ze strumienia informacji o atrybutach"
 
 #: libsvn_subr/io.c:2058
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set position pointer in file '%s'"
-msgstr "Nie można ustawić '%s' dla pliku (%s)"
+msgstr "Nie można ustawić wskaźnika pozycji w pliku '%s'"
 
 #: libsvn_subr/io.c:2059
-#, fuzzy
 msgid "Can't set position pointer in stream"
-msgstr "Żądana pozycja svndiff jest poza końcem strumienia"
+msgstr "Nie można ustawić wskaźnika pozycji strumienia"
 
 #: libsvn_subr/io.c:2070 libsvn_subr/io.c:2083
-#, fuzzy, c-format
+#, c-format
 msgid "Can't write to file '%s'"
-msgstr "Nie można pisać do '%s'"
+msgstr "Nie można pisać do pliku '%s'"
 
 #: libsvn_subr/io.c:2071 libsvn_subr/io.c:2084
-#, fuzzy
 msgid "Can't write to stream"
-msgstr "Nie można pisać do '%s'"
+msgstr "Nie można pisać do strumienia '%s'"
 
 #: libsvn_subr/io.c:2156
-#, fuzzy, c-format
+#, c-format
 msgid "Can't move '%s' to '%s'"
-msgstr "Nie można pisać do '%s'"
+msgstr "Nie można przenieść '%s' do '%s'"
 
 #: libsvn_subr/io.c:2195
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create directory '%s'"
-msgstr "Nie można zamknąć katalogu '%s'"
+msgstr "Nie można utworzyć katalogu '%s'"
 
 #: libsvn_subr/io.c:2205
-#, fuzzy, c-format
+#, c-format
 msgid "Can't hide directory '%s'"
-msgstr "Nie można zamknąć katalogu '%s'"
+msgstr "Nie można ukryć katalogu '%s'"
 
 #: libsvn_subr/io.c:2218
 #, fuzzy, c-format
@@ -4264,14 +4275,13 @@ msgid "Can't stat new directory '%s'"
 msgstr "Nie można zamknąć katalogu '%s'"
 
 #: libsvn_subr/io.c:2294
-#, fuzzy, c-format
+#, c-format
 msgid "Can't remove directory '%s'"
-msgstr "Nie można zamknąć katalogu '%s'"
+msgstr "Nie można usunąć katalogu '%s'"
 
 #: libsvn_subr/io.c:2312
-#, fuzzy
 msgid "Can't read directory"
-msgstr "Nie można zamknąć katalogu '%s'"
+msgstr "Nie można czytać z katalogu '%s'"
 
 #: libsvn_subr/io.c:2381
 #, fuzzy, c-format
@@ -4279,24 +4289,24 @@ msgid "Can't read directory entry in '%s'"
 msgstr "Nie można zamknąć katalogu '%s'"
 
 #: libsvn_subr/io.c:2505
-#, fuzzy, c-format
+#, c-format
 msgid "Can't check directory '%s'"
-msgstr "Nie można zamknąć katalogu '%s'"
+msgstr "Nie można sprawdzić katalogu '%s'"
 
 #: libsvn_subr/io.c:2526
 #, c-format
 msgid "Version %d is not non-negative"
-msgstr ""
+msgstr "Numer wersji %d nie jest nieujemny"
 
 #: libsvn_subr/io.c:2573
-#, fuzzy, c-format
+#, c-format
 msgid "Reading '%s'"
-msgstr "Odtworzono '%s'\n"
+msgstr "Czytanie '%s'"
 
 #: libsvn_subr/io.c:2588
 #, c-format
 msgid "First line of '%s' contains non-digit"
-msgstr ""
+msgstr "Pierwsza linia '%s' nie jest cyfrą"
 
 #: libsvn_subr/opt.c:148
 msgid ""
@@ -5185,7 +5195,6 @@ msgid "remove redundant log files from source repository"
 msgstr "usuń zbędne logi z repozytorium"
 
 #: svnadmin/main.c:269
-#, fuzzy
 msgid ""
 "wait instead of exit if the repository is in\n"
 "                             use by another process"
@@ -5320,7 +5329,6 @@ msgstr ""
 "Wypisuje nazwy wszystkich nie zatwierdzonych transakcji.\n"
 
 #: svnadmin/main.c:345
-#, fuzzy
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
 "\n"
@@ -5461,7 +5469,7 @@ msgstr "Tylko jedna wersja jest dozwolona"
 msgid "Exactly one file argument required"
 msgstr "Wymagany dokładnie jeden parametr - plik"
 
-#: svnadmin/main.c:1121 svndumpfilter/main.c:1103 svnlook/main.c:1939
+#: svnadmin/main.c:1121 svndumpfilter/main.c:1103 svnlook/main.c:1945
 msgid "subcommand argument required\n"
 msgstr "polecenie wymaga parametrów\n"
 
@@ -5800,55 +5808,55 @@ msgstr ""
 "\n"
 "Wypisuje numer najnowszej wersji obecnej w repozytorium.\n"
 
-#: svnlook/main.c:822
+#: svnlook/main.c:821
 #, c-format
 msgid "Copied: %s (from rev %ld, %s)\n"
 msgstr "Skopiowane: %s (z wersji %ld, %s)\n"
 
-#: svnlook/main.c:886
+#: svnlook/main.c:885
 msgid "Added"
 msgstr "Dodano"
 
-#: svnlook/main.c:887
+#: svnlook/main.c:886
 msgid "Deleted"
 msgstr "Usunięto"
 
-#: svnlook/main.c:888
+#: svnlook/main.c:887
 msgid "Modified"
 msgstr "Zmieniono"
 
-#: svnlook/main.c:889
+#: svnlook/main.c:888
 msgid "Index"
 msgstr "Indeks"
 
-#: svnlook/main.c:902
+#: svnlook/main.c:901
 msgid "(Binary files differ)\n"
 msgstr "(Binarne pliki różnią się)\n"
 
-#: svnlook/main.c:1038
+#: svnlook/main.c:1037
 msgid "unknown"
 msgstr "nieznany"
 
-#: svnlook/main.c:1155 svnlook/main.c:1248 svnlook/main.c:1312
+#: svnlook/main.c:1161 svnlook/main.c:1254 svnlook/main.c:1318
 #, c-format
 msgid "Transaction '%s' is not based on a revision; how odd"
 msgstr "Transakcja '%s' nie jest oparta na wersji; dziwne"
 
-#: svnlook/main.c:1185
+#: svnlook/main.c:1191
 #, c-format
 msgid "'%s' is a URL, probably should be a path"
 msgstr "'%s' jest URLem a prawdopodobnie powinien być ścieżką"
 
-#: svnlook/main.c:1212
+#: svnlook/main.c:1218
 #, c-format
 msgid "Path '%s' is not a file"
 msgstr "Ścieżka '%s' nie jest plikiem"
 
-#: svnlook/main.c:1292
+#: svnlook/main.c:1298
 msgid "Can't create temporary directory"
 msgstr "Nie można stworzyć katalogu tymczasowego"
 
-#: svnlook/main.c:1392
+#: svnlook/main.c:1398
 msgid ""
 "REVISION   PATH <ID>\n"
 "--------   ---------\n"
@@ -5856,7 +5864,7 @@ msgstr ""
 "  WERSJA   ŚCIEŻKA<ID>\n"
 "--------   -----------\n"
 
-#: svnlook/main.c:1397
+#: svnlook/main.c:1403
 msgid ""
 "REVISION   PATH\n"
 "--------   ----\n"
@@ -5864,16 +5872,16 @@ msgstr ""
 "  WERSJA   ŚCIEŻKA\n"
 "--------   -------\n"
 
-#: svnlook/main.c:1434
+#: svnlook/main.c:1440
 #, c-format
 msgid "Property '%s' not found on path '%s'"
 msgstr "Atrybutu '%s' nie znaleziono w ścieżce '%s'"
 
-#: svnlook/main.c:1590 svnlook/main.c:1745
+#: svnlook/main.c:1596 svnlook/main.c:1751
 msgid "Missing repository path argument"
 msgstr "Brak parametru podającego ścieżkę w repozytorium"
 
-#: svnlook/main.c:1651
+#: svnlook/main.c:1657
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -5892,35 +5900,35 @@ msgstr ""
 "\n"
 "Dostępne polecenia:\n"
 
-#: svnlook/main.c:1721
+#: svnlook/main.c:1727
 msgid "Missing propname and repository path arguments"
 msgstr "Brak nazwy atrybutu i ścieżki obiektu w repozytorium."
 
-#: svnlook/main.c:1727
+#: svnlook/main.c:1733
 msgid "Missing propname or repository path argument"
 msgstr "Brak nazwy atrybutu lub ścieżki obiektu w repozytorium."
 
-#: svnlook/main.c:1879
+#: svnlook/main.c:1885
 msgid "Invalid revision number supplied"
 msgstr "Podano błędny numer wersji"
 
-#: svnlook/main.c:1921
+#: svnlook/main.c:1927
 msgid ""
 "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr ""
 "Opcje '--transaction' (-t) i '--revision' (-r) nie mogą występować "
 "równocześnie"
 
-#: svnlook/main.c:1995
+#: svnlook/main.c:2001
 msgid "repository argument required\n"
 msgstr "wymagane jest podanie repozytorium\n"
 
-#: svnlook/main.c:2004
+#: svnlook/main.c:2010
 #, c-format
 msgid "'%s' is a URL when it should be a path\n"
 msgstr "'%s' jest URLem a powinien być ścieżką\n"
 
-#: svnlook/main.c:2052
+#: svnlook/main.c:2058
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -5994,9 +6002,9 @@ msgid "last changed rather than current revisions"
 msgstr "ostatnia zmieniona a nie aktualna wersja"
 
 #: svnversion/main.c:287
-#, fuzzy, c-format
+#, c-format
 msgid "exported%s"
-msgstr "wyeksportowano\n"
+msgstr "wyeksportowano%s"
 
 #: svnversion/main.c:296
 #, c-format
