@@ -386,31 +386,31 @@ class RepositoryMirror:
       revision = self.youngest
     print "PROBING path: '%s' in %d" % (path, revision)
 
-    parent_dir_key = self.revs_db[str(revision)]
-    parent_dir = marshal.loads(self.nodes_db[parent_dir_key])
+    parent_key = self.revs_db[str(revision)]
+    parent = marshal.loads(self.nodes_db[parent_key])
     last_component = "/"
 
     i = 1
     for component in components:
       for n in range(i):
         print "  ",
-      print "'%s' key: %s, val:" % (last_component, parent_dir_key), parent_dir
+      print "'%s' key: %s, val:" % (last_component, parent_key), parent
 
-      if not parent_dir.has_key(component):
+      if not parent.has_key(component):
         print "  PROBE ABANDONED: '%s' does not contain '%s'" \
               % (last_component, component)
         return
 
-      this_entry_key = parent_dir[component]
+      this_entry_key = parent[component]
       this_entry_val = marshal.loads(self.nodes_db[this_entry_key])
-      parent_dir_key = this_entry_key
-      parent_dir = this_entry_val
+      parent_key = this_entry_key
+      parent = this_entry_val
       last_component = component
       i = i + 1
   
     for n in range(i):
       print "  ",
-    print "parent_dir_key: %s, val:" % parent_dir_key, parent_dir
+    print "parent_key: %s, val:" % parent_key, parent
 
 
   def change_path(self, path, tags, branches, intermediate_dir_func=None):
@@ -437,16 +437,16 @@ class RepositoryMirror:
     # print "    tags:      ", tags
     # print "    branches:  ", branches
 
-    parent_dir_key = self.revs_db[str(self.youngest)]
-    parent_dir = marshal.loads(self.nodes_db[parent_dir_key])
-    if not parent_dir.has_key(self.mutable_flag):
-      parent_dir_key = gen_key()
-      parent_dir[self.mutable_flag] = 1
-      self.nodes_db[parent_dir_key] = marshal.dumps(parent_dir)
-      self.revs_db[str(self.youngest)] = parent_dir_key
+    parent_key = self.revs_db[str(self.youngest)]
+    parent = marshal.loads(self.nodes_db[parent_key])
+    if not parent.has_key(self.mutable_flag):
+      parent_key = gen_key()
+      parent[self.mutable_flag] = 1
+      self.nodes_db[parent_key] = marshal.dumps(parent)
+      self.revs_db[str(self.youngest)] = parent_key
 
     for component in components[:-1]:
-      # parent_dir is always mutable at the top of the loop
+      # parent is always mutable at the top of the loop
 
       if path_so_far:
         path_so_far = path_so_far + '/' + component
@@ -454,11 +454,11 @@ class RepositoryMirror:
         path_so_far = component
 
       # Ensure that the parent has an entry for this component.
-      if not parent_dir.has_key(component):
+      if not parent.has_key(component):
         new_child_key = gen_key()
-        parent_dir[component] = new_child_key
+        parent[component] = new_child_key
         self.nodes_db[new_child_key] = marshal.dumps(self.empty_mutable_thang)
-        self.nodes_db[parent_dir_key] = marshal.dumps(parent_dir)
+        self.nodes_db[parent_key] = marshal.dumps(parent)
         if intermediate_dir_func:
           intermediate_dir_func(path_so_far)
 
@@ -468,25 +468,25 @@ class RepositoryMirror:
       # though we might have just written it -- if we tweak existing
       # data structures, we could modify self.empty_mutable_thang,
       # which must not happen.)
-      this_entry_key = parent_dir[component]
+      this_entry_key = parent[component]
       this_entry_val = marshal.loads(self.nodes_db[this_entry_key])
       if not this_entry_val.has_key(self.mutable_flag):
         this_entry_val[self.mutable_flag] = 1
         this_entry_key = gen_key()
-        parent_dir[component] = this_entry_key
+        parent[component] = this_entry_key
         self.nodes_db[this_entry_key] = marshal.dumps(this_entry_val)
-        self.nodes_db[parent_dir_key] = marshal.dumps(parent_dir)
+        self.nodes_db[parent_key] = marshal.dumps(parent)
 
-      parent_dir_key = this_entry_key
-      parent_dir = this_entry_val
+      parent_key = this_entry_key
+      parent = this_entry_val
 
     # Now change the last node, the versioned file.  Just like at the
-    # top of the above loop, parent_dir is already mutable.
+    # top of the above loop, parent is already mutable.
     op = OP_ADD
     last_component = components[-1]
-    if parent_dir.has_key(last_component):
+    if parent.has_key(last_component):
       # Sanity check
-      child = marshal.loads(self.nodes_db[parent_dir[last_component]])
+      child = marshal.loads(self.nodes_db[parent[last_component]])
       if child.has_key(self.mutable_flag):
         sys.stderr.write("'%s' has already been changed in revision %d;\n" \
                          "can't change it again in the same revision."     \
@@ -496,8 +496,8 @@ class RepositoryMirror:
       op = OP_CHANGE
 
     leaf_key = gen_key()
-    parent_dir[last_component] = leaf_key
-    self.nodes_db[parent_dir_key] = marshal.dumps(parent_dir)
+    parent[last_component] = leaf_key
+    self.nodes_db[parent_key] = marshal.dumps(parent)
     self.nodes_db[leaf_key] = marshal.dumps(self.empty_mutable_thang)
 
     return (op, ()) # kff todo: empty tuple should be closed_names
@@ -540,8 +540,8 @@ class RepositoryMirror:
     # path (i.e., it is already deleted).
     retval = path
 
-    parent_dir_key = self.revs_db[str(self.youngest)]
-    parent_dir = marshal.loads(self.nodes_db[parent_dir_key])
+    parent_key = self.revs_db[str(self.youngest)]
+    parent = marshal.loads(self.nodes_db[parent_key])
 
     # As we walk down to find the dest, we remember each parent
     # directory's name and db key, in reverse order: push each new key
@@ -554,7 +554,7 @@ class RepositoryMirror:
     #
     # The root directory has name None.
     parent_chain = [ ]
-    parent_chain.insert(0, (None, parent_dir_key))
+    parent_chain.insert(0, (None, parent_key))
 
     def is_prunable(dir, mutable_flag):
       """Return true if DIR, a dictionary representing a directory,
@@ -572,7 +572,7 @@ class RepositoryMirror:
         return 1
 
     for component in components[:-1]:
-      # parent_dir is always mutable at the top of the loop
+      # parent is always mutable at the top of the loop
 
       if path_so_far:
         path_so_far = path_so_far + '/' + component
@@ -580,19 +580,19 @@ class RepositoryMirror:
         path_so_far = component
 
       # If we can't reach the dest, then we don't need to do anything.
-      if not parent_dir.has_key(component):
+      if not parent.has_key(component):
         return (None, ())
 
       # Otherwise continue downward, dropping breadcrumbs.
-      this_entry_key = parent_dir[component]
+      this_entry_key = parent[component]
       this_entry_val = marshal.loads(self.nodes_db[this_entry_key])
-      parent_dir_key = this_entry_key
-      parent_dir = this_entry_val
-      parent_chain.insert(0, (component, parent_dir_key))
+      parent_key = this_entry_key
+      parent = this_entry_val
+      parent_chain.insert(0, (component, parent_key))
 
     # If the target is not present in its parent, then we're done.
     last_component = components[-1]
-    if not parent_dir.has_key(last_component):
+    if not parent.has_key(last_component):
       return (None, ())
 
     # The target is present, so remove it and bubble up, making a new
@@ -601,33 +601,33 @@ class RepositoryMirror:
     prev_entry_name = last_component
     new_key = None
     for parent_item in parent_chain:
-      parent_key = parent_item[1]
-      parent_val = marshal.loads(self.nodes_db[parent_key])
+      pkey = parent_item[1]
+      pval = marshal.loads(self.nodes_db[pkey])
       if prune:
-        if (new_key == None) and is_prunable(parent_val, self.mutable_flag):
+        if (new_key == None) and is_prunable(pval, self.mutable_flag):
           pruned_count = pruned_count + 1
           pass
           # Do nothing more.  All the action takes place when we hit a
           # non-prunable parent.
         else:
           # We hit a non-prunable, so bubble up the new gospel.
-          parent_val[self.mutable_flag] = 1
+          pval[self.mutable_flag] = 1
           if new_key == None:
-            del parent_val[prev_entry_name]
+            del pval[prev_entry_name]
           else:
-            parent_val[prev_entry_name] = new_key
+            pval[prev_entry_name] = new_key
           new_key = gen_key()
       else:
-        parent_val[self.mutable_flag] = 1
+        pval[self.mutable_flag] = 1
         if new_key:
-          parent_val[prev_entry_name] = new_key
+          pval[prev_entry_name] = new_key
         else:
-          del parent_val[prev_entry_name]
+          del pval[prev_entry_name]
         new_key = gen_key()
 
       prev_entry_name = parent_item[0]
       if new_key:
-        self.nodes_db[new_key] = marshal.dumps(parent_val)
+        self.nodes_db[new_key] = marshal.dumps(pval)
 
     if new_key == None:
       new_key = gen_key()
@@ -957,30 +957,30 @@ class SymbolicNameTracker:
     # Print information about a path in the sym name tree (for debugging).
     print "PROBING SYMBOLIC NAME:\n", components
 
-    parent_dir_key = self.root_key
-    parent_dir = marshal.loads(self.db[parent_dir_key])
+    parent_key = self.root_key
+    parent = marshal.loads(self.db[parent_key])
     last_component = "/"
     i = 1
     for component in components:
       for n in range(i):
         print "  ",
-      print "'%s' key: %s, val:" % (last_component, parent_dir_key), parent_dir
+      print "'%s' key: %s, val:" % (last_component, parent_key), parent
 
-      if not parent_dir.has_key(component):
+      if not parent.has_key(component):
         sys.stderr.write("SYM PROBE FAILED: '%s' does not contain '%s'\n" \
                          % (last_component, component))
         sys.exit(1)
 
-      this_entry_key = parent_dir[component]
+      this_entry_key = parent[component]
       this_entry_val = marshal.loads(self.db[this_entry_key])
-      parent_dir_key = this_entry_key
-      parent_dir = this_entry_val
+      parent_key = this_entry_key
+      parent = this_entry_val
       last_component = component
       i = i + 1
   
     for n in range(i):
       print "  ",
-    print "parent_dir_key: %s, val:" % parent_dir_key, parent_dir
+    print "parent_key: %s, val:" % parent_key, parent
 
   def bump_rev_count(self, item_key, rev, revlist_key):
     """Increment REV's count in opening or closing list under KEY.
@@ -1041,23 +1041,23 @@ class SymbolicNameTracker:
     for name in tags + branches:
       components = [name] + string.split(svn_path, '/')
 
-      parent_dir_key = self.root_key
+      parent_key = self.root_key
       for component in components:
-        self.bump_rev_count(parent_dir_key, svn_rev, self.opening_revs_key)
-        parent_dir = marshal.loads(self.db[parent_dir_key])
-        if not parent_dir.has_key(component):
+        self.bump_rev_count(parent_key, svn_rev, self.opening_revs_key)
+        parent = marshal.loads(self.db[parent_key])
+        if not parent.has_key(component):
           new_child_key = gen_key()
-          parent_dir[component] = new_child_key
+          parent[component] = new_child_key
           self.db[new_child_key] = marshal.dumps({})
-          self.db[parent_dir_key] = marshal.dumps(parent_dir)
-        # One way or another, parent_dir now has an entry for component.
-        this_entry_key = parent_dir[component]
+          self.db[parent_key] = marshal.dumps(parent)
+        # One way or another, parent now has an entry for component.
+        this_entry_key = parent[component]
         this_entry_val = marshal.loads(self.db[this_entry_key])
         # Swaparoo.
-        parent_dir_key = this_entry_key
-        parent_dir = this_entry_val
+        parent_key = this_entry_key
+        parent = this_entry_val
 
-      self.bump_rev_count(parent_dir_key, svn_rev, self.opening_revs_key)
+      self.bump_rev_count(parent_key, svn_rev, self.opening_revs_key)
 
 
 class Commit:
