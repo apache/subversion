@@ -287,19 +287,22 @@ svn_client_log2 (const apr_array_header_t *targets,
         && ((end->kind == svn_opt_revision_number)
             && (end->value.number == 1)))
       {
-        svn_revnum_t youngest_rev;
-        
-        SVN_ERR (ra_lib->get_latest_revnum (session, &youngest_rev, pool));
-        if (youngest_rev == 0)
-          {
-            err = SVN_NO_ERROR;
+
+        /* We don't need to check if HEAD is 0, because that must be the case,
+         * by logical deduction: The revision range specified is HEAD:1.
+         * HEAD cannot not exist, so the revision to which "no such revision"
+         * applies is 1. If revision 1 does not exist, then HEAD is 0.
+         * Hence, we deduce the repository is empty without needing access
+         * to further information. */
+
+        svn_error_clear (err);
+        err = SVN_NO_ERROR;
             
-            /* Log receivers are free to handle revision 0 specially... But
-               just in case some don't, we make up a message here. */
-            SVN_ERR (receiver (receiver_baton,
-                               NULL, 0, "", "", _("No commits in repository."),
-                               pool));
-          }
+        /* Log receivers are free to handle revision 0 specially... But
+           just in case some don't, we make up a message here. */
+        SVN_ERR (receiver (receiver_baton,
+                           NULL, 0, "", "", _("No commits in repository."),
+                           pool));
       }
   }
   
