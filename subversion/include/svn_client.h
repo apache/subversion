@@ -113,17 +113,18 @@ typedef struct svn_client_auth_baton_t
 } svn_client_auth_baton_t;
 
 
-/* Set *PROVIDER and *PROVIDER_BATON to an authentication provider of
- * type svn_auth_cred_simple_t that gets information by prompting the
- * user with PROMPT_FUNC and PROMPT_BATON.  If either
- * SVN_AUTH_PARAM_DEFAULT_USERNAME or SVN_AUTH_PARAME_DEFAULT_PASSWORD
- * is defined as a runtime parameter in the auth_baton, then return
- * the default argument(s) when svn_auth_first_credentials is called.
- * If first_credentials() fails, then re-prompt RETRY_LIMIT number of
- * times (via next_credentials()).  BASE_DIR is the top-most working
- * copy directory into which successfully authenticated credentials
- * will be cached.  It may be NULL where no working copy is available.
- * BASE_ACCESS is the access baton associated with BASE_DIR. */
+/** Fetch an authentication provider which prompts the user for name
+ * and password.
+ *
+ * Set @a *provider and @a *provider_baton to an authentication
+ * provider of type @c svn_auth_cred_simple_t that gets information by
+ * prompting the user with @a prompt_func and @a prompt_baton.  If
+ * either @c SVN_AUTH_PARAM_DEFAULT_USERNAME or @c
+ * SVN_AUTH_PARAME_DEFAULT_PASSWORD is defined as a runtime parameter
+ * in the @c auth_baton, then return the default argument(s) when @c
+ * svn_auth_first_credentials is called.  If @c
+ * svn_auth_first_credentials fails, then re-prompt @a retry_limit
+ * number of times (via @c svn_auth_next_credentials). */
 void 
 svn_client_get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                        void **provider_baton,
