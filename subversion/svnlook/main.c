@@ -1260,7 +1260,6 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
 static svn_error_t *
 create_unique_tmpdir (const char **name, apr_pool_t *pool)
 {
-  const char *unique_name_apr;
   const char *unique_name;
   const char *sys_tmp_dir;
   const char *base_apr;
@@ -1273,27 +1272,21 @@ create_unique_tmpdir (const char **name, apr_pool_t *pool)
 
   for (i = 1; i <= 99999; i++)
     {
-      apr_status_t apr_err;
+      svn_error_t *err;
 
-      unique_name_apr = apr_psprintf (pool, "%s.%u", base_apr, i);
-      apr_err = apr_dir_make (unique_name_apr, APR_OS_DEFAULT, pool);
+      unique_name = apr_psprintf (pool, "%s.%u", base_apr, i);
+      err = svn_io_dir_make (unique_name, APR_OS_DEFAULT, pool);
 
-      if (APR_STATUS_IS_EEXIST (apr_err))
-        continue;
-
-      SVN_ERR (svn_path_cstring_to_utf8 (&unique_name, unique_name_apr, pool));
-
-      if (apr_err)
-        {
-          *name = NULL;
-          return svn_error_wrap_apr (apr_err, _("Can't create directory '%s'"),
-                                     unique_name);
-        }
-      else
+      if (!err)
         {
           *name = unique_name;
           return SVN_NO_ERROR;
         }
+
+      if (! APR_STATUS_IS_EEXIST (err->apr_err))
+        return err;
+
+      svn_error_clear (err);
     }
 
   *name = NULL;
