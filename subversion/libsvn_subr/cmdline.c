@@ -93,10 +93,6 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
         }
       return EXIT_FAILURE;
     }
-#ifdef ENABLE_NLS
-  bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
-  textdomain(PACKAGE_NAME);
-#endif
 
   /* Initialize the APR subsystem, and register an atexit() function
      to Uninitialize that subsystem at program exit. */
@@ -122,6 +118,31 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
                 progname);
       return EXIT_FAILURE;
     }
+
+#ifdef ENABLE_NLS
+#ifdef WIN32
+  {
+    char native_file_name[_MAX_PATH];
+    const char* internal_path;
+    apr_pool_t* pool;
+    
+    apr_pool_create (&pool, 0);
+    /* get exe name - our locale info will be in '../share/locale' */
+    GetModuleFileName (0, native_file_name, sizeof(native_file_name));
+    internal_path = svn_path_internal_style (native_file_name, pool);
+    /* get base path name */
+    internal_path = svn_path_dirname (internal_path, pool);
+    /* back up one dir and append 'share/locale' */
+    internal_path = svn_path_dirname (internal_path, pool);
+    internal_path = svn_path_join (internal_path, "share/locale", pool);
+    bindtextdomain (PACKAGE_NAME, internal_path);    
+    apr_pool_destroy (pool);
+  }
+#else
+  bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
+#endif
+  textdomain(PACKAGE_NAME);
+#endif
 
   return EXIT_SUCCESS;
 }

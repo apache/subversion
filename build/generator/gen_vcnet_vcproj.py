@@ -38,6 +38,9 @@ class Generator(gen_win.WinGeneratorBase):
     elif isinstance(target, gen_base.TargetProject):
       config_type=1
       target.output_name = target.name + '.exe'
+    elif isinstance(target, gen_base.TargetI18N):
+      config_type=4
+      target.output_name = target.name
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
 
@@ -60,7 +63,8 @@ class Generator(gen_win.WinGeneratorBase):
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,
       'is_exe' : ezt.boolean(isinstance(target, gen_base.TargetExe)),
-      'is_external' : ezt.boolean(isinstance(target, gen_base.TargetProject)
+      'is_external' : ezt.boolean((isinstance(target, gen_base.TargetProject)
+                                   or isinstance(target, gen_base.TargetI18N))
                                   and target.cmd),
       'is_utility' : ezt.boolean(isinstance(target,
                                             gen_base.TargetProject)),
@@ -124,8 +128,6 @@ class Generator(gen_win.WinGeneratorBase):
       # These aren't working yet
       if isinstance(target, gen_base.TargetProject) and target.cmd:
         continue
-      if isinstance(target, gen_base.TargetI18N):
-        continue
       guids[target.name] = self.makeguid(target.name)
 
     self.gen_proj_names(install_targets)
@@ -136,10 +138,10 @@ class Generator(gen_win.WinGeneratorBase):
       # These aren't working yet
       if isinstance(target, gen_base.TargetProject) and target.cmd:
         continue
-      if isinstance(target, gen_base.TargetI18N):
-        continue
 
-      if isinstance(target, gen_base.TargetLinked) and target.external_project:
+      if ((isinstance(target, gen_base.TargetLinked)
+         or isinstance(target, gen_base.TargetI18N))
+         and target.external_project):
         # Figure out where the external .vcproj is located.
         fname = target.external_project + '.vcproj'
       else:
@@ -151,7 +153,9 @@ class Generator(gen_win.WinGeneratorBase):
       if '-' in fname:
         fname = '"%s"' % fname
 
-      depends = self.adjust_win_depends(target, name)
+      depends = [ ]
+      if not isinstance(target, gen_base.TargetI18N):
+        depends = self.adjust_win_depends(target, name)
 
       deplist = [ ]
       for i in range(len(depends)):

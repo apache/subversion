@@ -5,6 +5,7 @@
 import os
 import sys
 import string
+import fnmatch
 
 try:
   from cStringIO import StringIO
@@ -53,6 +54,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     # Instrumentation options
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
+    
+    # NLS options
+    self.enable_nls = None
 
     for opt, val in options:
       if opt == '--with-berkeley-db':
@@ -78,6 +82,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         self.instrument_purify_quantify = 1
       elif opt == '--enable-pool-debug':
         self.instrument_apr_pools = 1
+      elif opt == '--enable-nls':
+        self.enable_nls = 1
 
   def __init__(self, fname, verfname, options, subdir):
     """
@@ -166,6 +172,17 @@ class WinGeneratorBase(gen_base.GeneratorBase):
             'openssl_path': self.openssl_path}
     self.write_with_template(os.path.join('build', 'win32', 'build_neon.bat'),
                              'build_neon.ezt', data)
+    
+    # Generate the build_locale.bat file
+    pofiles = []
+    if self.enable_nls:
+      for po in os.listdir(os.path.join('subversion', 'po')):
+        if fnmatch.fnmatch(po, '*.po'):
+          pofiles.append(POFile(po, po[:-2] + 'mo'))
+    
+    data = {'pofiles': pofiles}
+    self.write_with_template(os.path.join('build', 'win32', 'build_locale.bat'),
+                             'build_locale.ezt', data)
 
     #Initialize parent
     gen_base.GeneratorBase.__init__(self, fname, verfname)
@@ -453,6 +470,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if self.dblibname:
       fakedefines.append("APU_HAVE_DB=1")
 
+    # check if they wanted nls
+    if self.enable_nls:
+      fakedefines.append("ENABLE_NLS")
+
     return fakedefines
 
   def get_win_includes(self, target, rootpath):
@@ -519,6 +540,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       return []
 
     nondeplibs = target.msvc_libs[:]
+    if self.enable_nls:
+      nondeplibs.extend(['intl.lib'])
 
     if isinstance(target, gen_base.TargetExe):
       nondeplibs.append('setargv.obj')
@@ -603,3 +626,8 @@ else:
 FILTER_LIBS = 1
 FILTER_PROJECTS = 2
 
+class POFile:
+  "Item class for holding po file info"
+  def __init__(self, po, mo):
+    self.po = po
+    self.mo = mo
