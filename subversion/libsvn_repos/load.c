@@ -372,6 +372,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
   apr_pool_t *linepool = svn_pool_create (pool);
   apr_pool_t *revpool = svn_pool_create (pool);
   apr_pool_t *nodepool = svn_pool_create (pool);
+  const char *uuid;
 
   SVN_ERR (svn_stream_readline (stream, &linebuf, linepool));
   if (linebuf == NULL)
@@ -449,6 +450,14 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                                rev_baton,
                                                nodepool));
           found_node = TRUE;
+        }
+
+      /* Or is this the repos UUID? */
+      else if (NULL != (uuid = apr_hash_get (headers, SVN_REPOS_DUMPFILE_UUID,
+                                             APR_HASH_KEY_STRING)))
+        {
+          if (parse_fns->uuid_record)
+            SVN_ERR (parse_fns->uuid_record (uuid, parse_baton, pool));
         }
 
       /* Or is this bogosity?! */
@@ -682,6 +691,14 @@ maybe_add_with_history (struct node_baton *nb,
 }
 
 
+static svn_error_t *
+uuid_record (const char *uuid,
+             void *parse_baton,
+             apr_pool_t *pool)
+{
+  struct parse_baton *pb = parse_baton;
+  return svn_fs_set_uuid (pb->fs, uuid, pool);
+}
 
 static svn_error_t *
 new_node_record (void **node_baton,
@@ -870,6 +887,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_boolean_t use_history,
+                               svn_boolean_t ignore_uuid,
                                svn_stream_t *outstream,
                                apr_pool_t *pool)
 {
@@ -878,6 +896,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
 
   parser->new_revision_record = new_revision_record;
   parser->new_node_record = new_node_record;
+  parser->uuid_record = ignore_uuid? NULL : uuid_record;
   parser->set_revision_property = set_revision_property;
   parser->set_node_property = set_node_property;
   parser->set_fulltext = set_fulltext;
@@ -900,6 +919,7 @@ svn_error_t *
 svn_repos_load_fs (svn_repos_t *repos,
                    svn_stream_t *dumpstream,
                    svn_stream_t *feedback_stream,
+                   svn_boolean_t ignore_uuid,
                    apr_pool_t *pool)
 {
   const svn_repos_parser_fns_t *parser;
@@ -910,6 +930,7 @@ svn_repos_load_fs (svn_repos_t *repos,
   SVN_ERR (svn_repos_get_fs_build_parser (&parser, &parse_baton,
                                           repos,
                                           TRUE, /* look for copyfrom revs */
+                                          ignore_uuid,
                                           feedback_stream,
                                           pool));
 

@@ -734,6 +734,7 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 /* The RFC822-style headers in our dumpfile format. */
 #define SVN_REPOS_DUMPFILE_MAGIC_HEADER            "SVN-fs-dump-format-version"
 #define SVN_REPOS_DUMPFILE_FORMAT_VERSION           1
+#define SVN_REPOS_DUMPFILE_UUID                      "UUID"
 #define SVN_REPOS_DUMPFILE_CONTENT_LENGTH            "Content-length"
 
 #define SVN_REPOS_DUMPFILE_REVISION_NUMBER           "Revision-number"
@@ -785,7 +786,7 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
 
 
 /* Read and parse dumpfile-formatted @a dumpstream, reconstructing
- * filesystem revisions in already-open @a repos.
+ * filesystem revisions in already-open @a repos, 
  *
  * Read and parse dumpfile-formatted @a dumpstream, reconstructing
  * filesystem revisions in already-open @a repos.  Use @a pool for all
@@ -793,10 +794,15 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
  *
  * If the dumpstream contains copy history that is unavailable in the
  * repository, an error will be thrown.
+ *
+ * If @a ignore_uuid is @c TRUE, the repository's UUID will not be
+ * updated.
  */
+
 svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
                                 svn_stream_t *feedback_stream,
+                                svn_boolean_t ignore_uuid,
                                 apr_pool_t *pool);
 
 
@@ -817,6 +823,17 @@ typedef struct svn_repos_parse_fns_t
                                        apr_hash_t *headers,
                                        void *parse_baton,
                                        apr_pool_t *pool);
+
+  /** The parser has discovered a new uuid record within the parsing
+   * session represented by @a parse_baton.
+   *
+   * The parser has discovered a new uuid record within the parsing
+   * session represented by @a parse_baton.  The uuid's value is
+   * @a uuid, and it is allocated in @a pool.
+   */
+  svn_error_t *(*uuid_record) (const char *uuid,
+                               void *parse_baton,
+                               apr_pool_t *pool);
 
   /** The parser has discovered a new node record within the current
    * revision represented by @a revision_baton.
@@ -913,12 +930,16 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
  * nodes that are added-with-history.
  *
  * Print all parsing feedback to @a outstream (if non-@c NULL).
+ *
+ * If @a ignore_uuid is @c TRUE, the repository's UUID will not be
+ * updated.
  */
 svn_error_t *
 svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_boolean_t use_history,
+                               svn_boolean_t ignore_uuid,
                                svn_stream_t *outstream,
                                apr_pool_t *pool);
 /** @} */

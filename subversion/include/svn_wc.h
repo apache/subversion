@@ -540,6 +540,9 @@ typedef struct svn_wc_entry_t
   /** canonical repository url */
   const char *repos;
 
+  /** repository uuid */
+  const char *uuid;
+
   /** node kind (file, dir, ...) */
   svn_node_kind_t kind;
 

@@ -82,7 +82,8 @@ enum
     svnadmin__incremental = SVN_OPT_FIRST_LONGOPT_ID,
     svnadmin__follow_copies,
     svnadmin__on_disk_template,
-    svnadmin__in_repos_template
+    svnadmin__in_repos_template,
+    svnadmin__ignore_uuid
   };
 
 /* Option codes and descriptions.
@@ -114,6 +115,9 @@ static const apr_getopt_option_t options_table[] =
 
     {"in-repos-template", svnadmin__in_repos_template, 1,
      "specify template for the repository structure"},
+
+    {"ignore-uuid", svnadmin__ignore_uuid, 0,
+     "ignore the UUID specified in the file"},
 
     {NULL}
   };
@@ -154,7 +158,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "Read a 'dumpfile'-formatted stream from stdin, committing\n"
      "new revisions into the repository's filesystem.\n"
      "Send progress feedback to stdout.\n",
-     {0} },
+     {svnadmin__ignore_uuid} },
 
     {"lscr", subcommand_lscr, {0},
      "usage: svnadmin lscr REPOS_PATH PATH [--copies]\n\n"
@@ -204,6 +208,7 @@ struct svnadmin_opt_state
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t follow_copies;                      /* --copies */
+  svn_boolean_t ignore_uuid;                        /* --ignore-uuid */
   const char *on_disk;
   const char *in_repos;
 };
@@ -338,7 +343,8 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (create_stdio_stream (&stdout_stream,
                                 apr_file_open_stdout, pool));
   
-  SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream, pool));
+  SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream,
+                              opt_state->ignore_uuid, pool));
 
   return SVN_NO_ERROR;
 }
@@ -647,6 +653,9 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        break;
+      case svnadmin__ignore_uuid:
+        opt_state.ignore_uuid = TRUE;
         break;
       default:
         {

@@ -373,6 +373,14 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       *modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
   }
 
+  /* UUID. */
+  {
+    entry->uuid = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_UUID,
+                                APR_HASH_KEY_STRING);
+    if (entry->uuid)
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_UUID;
+  }
+
   /* Setup last-committed values. */
   {
     const char *cmt_datestr, *cmt_revstr;
@@ -914,6 +922,10 @@ write_entry (svn_stringbuf_t **output,
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_AUTHOR, APR_HASH_KEY_STRING,
                   entry->cmt_author);
 
+  if (entry->uuid)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_UUID, APR_HASH_KEY_STRING,
+                  entry->uuid);
+
   if (entry->cmt_date)
     {
       apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_DATE, APR_HASH_KEY_STRING,
@@ -945,11 +957,13 @@ write_entry (svn_stringbuf_t **output,
 
       if (entry->kind == svn_node_dir)
         {
-          /* We don't write url or revision for subdir
+          /* We don't write url, revision, or uuid for subdir
              entries. */
           apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
                         NULL);
           apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING,
+                        NULL);
+          apr_hash_set (atts, SVN_WC__ENTRY_ATTR_UUID, APR_HASH_KEY_STRING,
                         NULL);
         }
       else
@@ -960,7 +974,17 @@ write_entry (svn_stringbuf_t **output,
           if (entry->revision == this_dir->revision)
             apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REVISION, 
                           APR_HASH_KEY_STRING, NULL);
-          
+
+          /* If this is not the "this dir" entry, and the uuid is
+             the same as that of the "this dir" entry, don't write out
+             the uuid. */
+          if (entry->uuid)
+            {
+              if (!strcmp(entry->uuid, this_dir->uuid))
+                apr_hash_set (atts, SVN_WC__ENTRY_ATTR_UUID, 
+                              APR_HASH_KEY_STRING, NULL);
+            }
+
           /* If this is not the "this dir" entry, and the url is
              trivially calculable from that of the "this dir" entry,
              don't write out the url */
@@ -1174,6 +1198,11 @@ fold_entry (apr_hash_t *entries,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CMT_AUTHOR)
     cur_entry->cmt_author = entry->cmt_author
                             ? apr_pstrdup (pool, entry->cmt_author) 
+                            : NULL;
+
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_UUID)
+    cur_entry->uuid = entry->uuid
+                            ? apr_pstrdup (pool, entry->uuid) 
                             : NULL;
 
   /* Absorb defaults from the parent dir, if any, unless this is a
