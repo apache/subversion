@@ -122,6 +122,7 @@ struct edit_baton
   svn_fs_root_t *root;
   svn_fs_root_t *base_root;
   apr_pool_t *pool;
+  apr_pool_t *node_pool;
   svn_repos_node_t *node;
 };
 
@@ -168,7 +169,7 @@ delete_entry (svn_stringbuf_t *name,
   /* Get (or create) the change node and update it. */
   node = find_child_by_name (d->node, name->data);
   if (! node)
-    node = create_child_node (d->node, name->data, eb->pool);
+    node = create_child_node (d->node, name->data, eb->node_pool);
 
   if (is_dir)
     node->kind = svn_node_dir;
@@ -176,9 +177,6 @@ delete_entry (svn_stringbuf_t *name,
     node->kind = svn_node_file;
 
   node->action = 'D';
-  SVN_ERR (svn_fs_node_id (&(node->id), eb->base_root, 
-                           full_path->data, eb->pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -193,10 +191,9 @@ replace_root (void *edit_baton,
 
   d->path = (svn_stringbuf_t *) svn_stringbuf_create ("", eb->pool);
   d->edit_baton = eb;
-  d->node = (eb->node = create_node ("", eb->pool));
+  d->node = (eb->node = create_node ("", eb->node_pool));
   d->node->kind = svn_node_dir;
   d->node->action = 'R';
-  SVN_ERR (svn_fs_node_id (&(d->node->id), eb->root, "", eb->pool));
   *root_baton = d;
   
   return SVN_NO_ERROR;
@@ -219,10 +216,9 @@ replace_directory (svn_stringbuf_t *name,
 
   /* Fill in other baton members */
   d->edit_baton = eb;
-  d->node = create_child_node (pd->node, name->data, eb->pool);
+  d->node = create_child_node (pd->node, name->data, eb->node_pool);
   d->node->kind = svn_node_dir;
   d->node->action = 'R';
-  SVN_ERR (svn_fs_node_id (&(d->node->id), eb->root, d->path->data, eb->pool));
   *child_baton = d;
 
   return SVN_NO_ERROR;
@@ -246,10 +242,9 @@ add_directory (svn_stringbuf_t *name,
 
   /* Fill in other baton members */
   d->edit_baton = eb;
-  d->node = create_child_node (pd->node, name->data, eb->pool);
+  d->node = create_child_node (pd->node, name->data, eb->node_pool);
   d->node->kind = svn_node_dir;
   d->node->action = 'A';
-  SVN_ERR (svn_fs_node_id (&(d->node->id), eb->root, d->path->data, eb->pool));
   *child_baton = d;
 
   return SVN_NO_ERROR;
@@ -272,11 +267,9 @@ replace_file (svn_stringbuf_t *name,
 
   /* Fill in other baton members */
   fb->dir_baton = pd;
-  fb->node = create_child_node (pd->node, name->data, eb->pool);
+  fb->node = create_child_node (pd->node, name->data, eb->node_pool);
   fb->node->kind = svn_node_file;
   fb->node->action = 'R';
-  SVN_ERR (svn_fs_node_id (&(fb->node->id), eb->root, 
-                           fb->path->data, eb->pool));
   *file_baton = fb;
 
   return SVN_NO_ERROR;
@@ -300,11 +293,9 @@ add_file (svn_stringbuf_t *name,
 
   /* Fill in other baton members */
   fb->dir_baton = pd;
-  fb->node = create_child_node (pd->node, name->data, eb->pool);
+  fb->node = create_child_node (pd->node, name->data, eb->node_pool);
   fb->node->kind = svn_node_file;
   fb->node->action = 'A';
-  SVN_ERR (svn_fs_node_id (&(fb->node->id), eb->root, 
-                           fb->path->data, eb->pool));
   *file_baton = fb;
 
   return SVN_NO_ERROR;
@@ -371,6 +362,7 @@ svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
                        svn_fs_t *fs,
                        svn_fs_root_t *root,
                        svn_fs_root_t *base_root,
+                       apr_pool_t *node_pool,
                        apr_pool_t *pool)
 {
   svn_delta_edit_fns_t *my_editor;
@@ -390,6 +382,7 @@ svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
 
   /* Set up the edit baton. */
   my_edit_baton = apr_pcalloc (pool, sizeof (*my_edit_baton));
+  my_edit_baton->node_pool = node_pool;
   my_edit_baton->pool = pool;
   my_edit_baton->fs = fs;
   my_edit_baton->root = root;

@@ -507,6 +507,11 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
 
   /* Get the entry for the path we are deleting. */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
+  if (! entry)
+    return svn_error_createf
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "'%s' does not appear to be under revision control", path->data);
+    
   if (entry->existence == svn_wc_existence_deleted)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
@@ -709,6 +714,11 @@ svn_wc_unadd (svn_stringbuf_t *path,
 
   /* Get the entry for PATH */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
+  if (! entry)
+    return svn_error_createf
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "'%s' does not appear to be under revision control", path->data);
+
   if (entry->kind == svn_node_dir)
     {
       /* Recursively un-mark a whole tree for addition. */
@@ -762,6 +772,11 @@ svn_wc_undelete (svn_stringbuf_t *path,
 
   /* Get the entry for PATH */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
+  if (! entry)
+    return svn_error_createf
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "'%s' does not appear to be under revision control", path->data);
+
   if (entry->kind == svn_node_dir)
     {
       if (recursive)
