@@ -628,6 +628,40 @@
       <a href="http://www.ietf.org/internet-drafts/draft-mogul-http-delta-05.txt">Delta Encoding in HTTP</a>.
     </p>
 
+    <h3>Entity Tags (etags)</h3>
+    <p>
+      Etags are required to be unique across all versions of a
+      resource and across all resources on the server. Luckily, this
+      is very easy for a version control system. Each etag will be
+      constructed as a tuple pair of (<code>projectId</code>,
+      <code>nodeId</code>).
+    </p>
+    <p>
+      Etags are used to generate diffs, following the guidelines in
+      the aforementioned draft:
+      <a href="http://www.ietf.org/internet-drafts/draft-mogul-http-delta-05.txt">Delta Encoding in HTTP</a>.
+      The problem then becomes how to get the etag for each file and
+      directory revision stored on the client. During a
+      <em>checkout</em> or <em>update</em> process, this is easy: the
+      etag is provided in the HTTP response headers for each
+      file retrieved. If etags are needed for directories, then they
+      can be retrieved via <code>PROPFIND</code> (or possibly through
+      a <code>REPORT</code> or during a sequence of
+      <code>PROPFIND</code>s to traverse the server).
+    </p>
+    <p>
+      The harder part is getting the etag after a <em>commit</em> has
+      occurred. The <code>MERGE</code> response does not provide an
+      obvious way to return the updated etag for each merged file. The
+      <code>MERGE</code> method could be updated, or possibly the
+      client will issue a <code>REPORT</code> after the merge is
+      complete.
+      <br>
+      <i>This issue is still open and pending research. Until then,
+	etags will not (always) be available to the client for
+	fetching a diff from the server during an update.</i>
+    </p>
+
     <hr width="80&#37;">
     <h2>Tags and Branches</h2>
     <p>
@@ -819,7 +853,7 @@
     <address><a href="mailto:gstein@lyra.org">Greg Stein</a></address>
 <!-- Created: Thu Aug 10 19:14:20 PDT 2000 -->
 <!-- hhmts start -->
-Last modified: Tue Aug 15 19:28:00 PDT 2000
+Last modified: Sat Aug 26 02:05:09 PDT 2000
 <!-- hhmts end -->
   </body>
 </html>
