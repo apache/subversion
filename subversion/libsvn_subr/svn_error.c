@@ -75,11 +75,13 @@ svn_create_error (apr_status_t apr_err,
 {
   /* Create the new error structure */
   svn_error_t *new_error = (svn_error_t *) apr_palloc (pool,
-                                                      sizeof(svn_error_t));
+                                                       sizeof(svn_error_t));
+
+  char *msg_storage = apr_palloc (pool, (strlen (message) + 1));
 
   new_error->apr_err = apr_err;
   new_error->src_err = src_err;
-  new_error->message = message;
+  new_error->message = strcpy (msg_storage, message);
   new_error->child = child;
   new_error->pool = pool;  
 
