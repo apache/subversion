@@ -21,6 +21,7 @@ import shutil, string, sys, re, os
 
 # Our testing module
 import svntest
+from svntest import wc, SVNAnyOutput
 
 
 # (abbreviation)
@@ -679,20 +680,17 @@ def update_delete_modified_files(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Update that 'deletes' modified files
-  svntest.actions.run_and_verify_svn("Updating failed", None, [],
-                                     'up', wc_dir)
+  # Update that 'deletes' modified files.  We should get an
+  # 'obstructed update' error (see issue #1196).
+  output, errput = svntest.actions.run_and_verify_svn(
+    "Updating failed", None, SVNAnyOutput, 'up', wc_dir)
 
-  # Modified files should still exist but are now unversioned
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  extra_files = [ 'alpha', 'G' ]
-  svntest.actions.run_and_verify_status (wc_dir, expected_status,
-                                         None, None,
-                                         expect_extra_files, extra_files)
+  for line in errput:
+    if re.match(".*Obstructed update.*", line):
+      return
 
-  if len(extra_files) != 0 or not os.path.exists(pi_path):
-    print "modified files not present"
-    raise svntest.Failure
+  # Else never matched the expected error output, so the test failed.
+  raise svntest.main.SVNUnmatchedError
 
 #----------------------------------------------------------------------
 
