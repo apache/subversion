@@ -230,6 +230,20 @@ static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *readbuf_skip_leading_garbage(svn_ra_svn_conn_t *conn)
+{
+  while (1)
+    {
+      if (conn->read_ptr == conn->read_end)
+        SVN_ERR(readbuf_fill(conn));
+      while (conn->read_ptr < conn->read_end && *conn->read_ptr != '(')
+        conn->read_ptr++;
+      if (conn->read_ptr < conn->read_end)
+        break;
+    }
+  return SVN_NO_ERROR;
+}
+
 /* --- WRITING DATA ITEMS --- */
  
 svn_error_t *svn_ra_svn_write_number(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -442,6 +456,12 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   *item = apr_palloc(pool, sizeof(**item));
   SVN_ERR(readbuf_getchar_skip_whitespace(conn, &c));
   return read_item(conn, pool, *item, c);
+}
+
+svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
+                                             apr_pool_t *pool)
+{
+  return readbuf_skip_leading_garbage(conn);
 }
 
 /* --- READING AND PARSING TUPLES --- */
