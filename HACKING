@@ -22,10 +22,36 @@ make sure you have those tools installed).  Afterwards, do
 
 to build Subversion.
 
+
+Building on Win32
+=================
+
+There is some support for building Subversion on Win32 platforms. The
+project files included in the source tree are from Microsoft Visual
+C++ 6.x; earlier versions of the compiler are not supported at this
+time.
+
+If you want to build the server components, you'll also need a copy of
+Berkeley DB, version 3.1.14 or newer. The sources are available at
+http://www.sleepycat.com, but you can download a binary distribution of
+version 3.1.17 libraries and tools from
+
+    http://www.xbc.nu/svn/db3-win32.zip
+
+Unpack the distribution, then set the environment variable
+SVN_DB3_WIN32 to the full path of the db-win32 directory (use the
+System control panel on WinNT/Win2k). MSVC will look for the include
+files in $(SVN_DB3_WIN32)\include, and the libraries in
+$(SVN_DB3_WIN32)\lib.
+
+The workspace `subversion.dsw' at the top of the source tree includes
+all the necessary projects. Right now, only static libraries are
+built. The `subversion_client' project builds the command-line client
+(svn.exe) and all libraries except `libsvn_fs'.
 
 
 Coding Style
-================================
+============
 
 To understand how things work, read doc/svn-design.{texi,info,ps,pdf},
 and read the header files, which tend to have thoroughly-commented
