@@ -420,10 +420,13 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
 
   if (rv == APR_EOF)
     {
+      /* Special case if we reach the end of file AND the last line is in the
+         changed range AND the file doesn't end with a newline */
       if (bytes_processed && (type == svn_diff__file_output_unified_delete
                               || type == svn_diff__file_output_unified_insert))
         {
-          svn_stringbuf_appendcstr(baton->hunk, "\n\\ No newline at end of file\n");
+          svn_stringbuf_appendcstr(baton->hunk,
+                                   "\n\\ No newline at end of file\n");
         }
 
       baton->length[idx] = 0;
@@ -437,6 +440,8 @@ svn_error_t *
 svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
 {
   apr_off_t target_line;
+  apr_size_t hunk_len;
+  apr_status_t rv;
   int i;
   
   if (svn_stringbuf_isempty(baton->hunk))
@@ -446,29 +451,53 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
 
   target_line = baton->hunk_start[0] + baton->hunk_length[0]
                 + SVN_DIFF__UNIFIED_CONTEXT_SIZE;
-  
+
+  /* Add trailing context to the hunk */  
   while (baton->current_line[0] < target_line)
     {
       SVN_ERR(svn_diff__file_output_unified_line(baton, 
                 svn_diff__file_output_unified_context, 0));
     }
 
+  /* If the file is non-empty, convert the line indexes from
+     zero based to one based */
   for (i = 0; i < 2; i++)
     {
       if (baton->hunk_length[i] > 0)
         baton->hunk_start[i]++;
     }
 
-  apr_file_printf(baton->output_file, "@@ -%" APR_OFF_T_FMT, baton->hunk_start[0]);
+  /* Output the hunk header.  If the hunk length is 1, the file is a one line
+     file.  In this case, surpress the number of lines in the hunk (it is
+     1 implicitly) */
+  apr_file_printf(baton->output_file, "@@ -%" APR_OFF_T_FMT,
+                  baton->hunk_start[0]);
   if (baton->hunk_length[0] != 1)
-    apr_file_printf(baton->output_file, ",%" APR_OFF_T_FMT, baton->hunk_length[0]);
+    {
+      apr_file_printf(baton->output_file, ",%" APR_OFF_T_FMT,
+                      baton->hunk_length[0]);
+    }
 
-  apr_file_printf(baton->output_file, " +%" APR_OFF_T_FMT, baton->hunk_start[1]);
+  apr_file_printf(baton->output_file, " +%" APR_OFF_T_FMT,
+                  baton->hunk_start[1]);
   if (baton->hunk_length[1] != 1)
-    apr_file_printf(baton->output_file, ",%" APR_OFF_T_FMT, baton->hunk_length[1]);
+    {
+      apr_file_printf(baton->output_file, ",%" APR_OFF_T_FMT,
+                      baton->hunk_length[1]);
+    }
 
-  apr_file_printf(baton->output_file, " @@\n%s", baton->hunk->data);
+  apr_file_printf(baton->output_file, " @@\n");
+  
+  /* Output the hunk content */
+  hunk_len = baton->hunk->len;
+  rv = apr_file_write(baton->output_file, baton->hunk->data, &hunk_len);
+  if (rv != APR_SUCCESS)
+    {
+      return svn_error_create(rv, 0, NULL, baton->pool,
+               "svn_diff_file_output_unified: error writing hunk.");
+    }
 
+  /* Prepare for the next hunk */
   baton->hunk_length[0] = 0;
   baton->hunk_length[1] = 0;
   svn_stringbuf_setempty(baton->hunk);
@@ -491,15 +520,19 @@ svn_diff__file_output_unified_diff_modified(void *baton,
                    ? original_start - SVN_DIFF__UNIFIED_CONTEXT_SIZE : 0;
   target_line[1] = modified_start;
 
+  /* If the changed ranges are far enough apart (no overlapping context),
+     flush the current hunk. */
   if (output_baton->hunk_start[0] + output_baton->hunk_length[0] 
       + SVN_DIFF__UNIFIED_CONTEXT_SIZE < target_line[0])
     {
       SVN_ERR(svn_diff__file_output_unified_flush_hunk(output_baton));
 
       output_baton->hunk_start[0] = target_line[0];
-      output_baton->hunk_start[1] = target_line[1] + target_line[0] - original_start;
+      output_baton->hunk_start[1] = target_line[1] + target_line[0] 
+                                    - original_start;
       
-      /* skip lines until we are at start_line */
+      /* Skip lines until we are at the beginning of the context we want to
+         display */
       while (output_baton->current_line[0] < target_line[0])
         {
           SVN_ERR(svn_diff__file_output_unified_line(output_baton,
@@ -507,13 +540,14 @@ svn_diff__file_output_unified_diff_modified(void *baton,
         }
     }
 
-  /* skip lines until we are at start_line */
+  /* Skip lines until we are at the start of the changed range */
   while (output_baton->current_line[1] < target_line[1])
     {
       SVN_ERR(svn_diff__file_output_unified_line(output_baton,
                 svn_diff__file_output_unified_skip, 1));
     }
 
+  /* Output the context preceding the changed range */
   while (output_baton->current_line[0] < original_start)
     {
       SVN_ERR(svn_diff__file_output_unified_line(output_baton, 
@@ -523,6 +557,7 @@ svn_diff__file_output_unified_diff_modified(void *baton,
   target_line[0] = original_start + original_length;
   target_line[1] = modified_start + modified_length;
 
+  /* Output the changed range */
   for (i = 0; i < 2; i++)
     {
       while (output_baton->current_line[i] < target_line[i])
@@ -552,7 +587,7 @@ svn_diff__file_output_unified_default_hdr(apr_pool_t *pool,
   apr_strftime(time_buffer, &time_len, sizeof(time_buffer) - 1,
                "%a %b %e %H:%M:%S %Y", &exploded_time);
 
-  return apr_psprintf(pool, "%s   %s", path, time_buffer);
+  return apr_psprintf(pool, "%s\t%s", path, time_buffer);
 }
 
 static const svn_diff_output_fns_t svn_diff__file_output_unified_vtable =
