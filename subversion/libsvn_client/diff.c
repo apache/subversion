@@ -1721,7 +1721,7 @@ diff_repos_wc (const apr_array_header_t *options,
   /* Use path2 to get the diff's anchor and target. */
   SVN_ERR (svn_wc_get_actual_target (path2, &anchor, &target, pool));
 
-  /* Get a write-lock on the anchor and target.  ### There should
+  /* Get a read-lock on the anchor and target.  ### There should
      really be a helper function for this. */
   SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, anchor, FALSE,
                              (recurse && (! *target)) ? -1 : 0, pool));
