@@ -796,7 +796,7 @@ svn_fs__rep_contents_size (apr_size_t *size_p,
 
       /* Get the skel for the window sublist. */
       window_skel = pkg_skel->children->next;
-      assert (pkg_skel != NULL);
+      assert (window_skel != NULL);
 
       /* The window's reconstructed size is the second element. */
       size_str = apr_pstrndup (trail->pool,
@@ -1144,7 +1144,7 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
 /* Change this to 1 to test deltification/undeltification.  When we're
    ready for it to be permanently on, we should just remove the
    #define altogther of course. */
-#define DELTIFYING 0
+#define DELTIFYING 1
 
 #if DELTIFYING
 /* Baton for svn_write_fn_t write_string(). */
