@@ -464,8 +464,11 @@ do_directory_callback (svn_xml__digger_t *digger,
     err = digger->editor->add_directory
       (dir_name,
        youngest_frame->baton,
-       youngest_frame->ancestor_path,
-       youngest_frame->ancestor_revision,
+       NULL, SVN_INVALID_REVNUM,
+       /* We no longer use these args:      
+             youngest_frame->ancestor_path,
+             youngest_frame->ancestor_revision,
+          ...unless we're doing some *crazy* optimizations! */
        &(youngest_frame->baton));
 
   if (err) 

@@ -475,13 +475,74 @@ add_directory (svn_string_t *name,
                void **child_baton)
 {
   svn_error_t *err;
+  enum svn_node_kind kind;
   struct dir_baton *parent_dir_baton = parent_baton;
 
+  /* Make a new dir baton for the new directory. */
   struct dir_baton *this_dir_baton
     = make_dir_baton (name,
                       parent_dir_baton->edit_baton,
                       parent_dir_baton,
                       parent_dir_baton->pool);
+
+  /* Semantic check.  Either both "copyfrom" args are valid, or they're
+     NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
+  if ((copyfrom_path && (! SVN_IS_VALID_REVNUM(copyfrom_revision)))
+      || ((! copyfrom_path) && (SVN_IS_VALID_REVNUM(copyfrom_revision))))
+    abort();
+      
+  /* Check that an object by this name doesn't already exist. */
+  SVN_ERR (svn_io_check_path (this_dir_baton->path, &kind,
+                              this_dir_baton->pool));
+  if (kind != svn_node_none)
+    return 
+      svn_error_createf 
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, this_dir_baton->pool,
+       "wc editor: add_dir `%s': object already exists and is in the way.",
+       this_dir_baton->path->data);
+
+  /* Either we got real copyfrom args... */
+  if (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_revision))
+    {
+      /* ### todo: for now, this editor doesn't know how to deal with
+         copyfrom args.  Someday it will interpet them as an update
+         optimization, and actually copy one part of the wc to another.
+         Then it will recursively "normalize" all the ancestry in the
+         copied tree.  Someday! */      
+      return 
+        svn_error_createf 
+        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+         parent_dir_baton->edit_baton->pool,
+         "wc editor: add_dir `%s': sorry, I don't support copyfrom args yet.",
+         name->data);
+    }
+  /* ...or we got invalid copyfrom args. */
+  else
+    {
+      /* If the copyfrom args are both invalid, inherit the URL from the
+         parent, and make the revision equal to the global target
+         revision. */
+      svn_string_t *new_URL;
+      svn_wc_entry_t *parent_entry;
+      SVN_ERR (svn_wc_entry (&parent_entry,
+                             parent_dir_baton->path,
+                             parent_dir_baton->pool));
+      new_URL = svn_string_dup (parent_entry->ancestor, this_dir_baton->pool);
+      svn_path_add_component (new_URL, name, svn_path_local_style);
+
+      copyfrom_path = new_URL;
+      copyfrom_revision = parent_dir_baton->edit_baton->target_revision;      
+    }
+
+  /* Create dir (if it doesn't yet exist), make sure it's formatted
+     with an administrative subdir.   */
+  err = prep_directory (this_dir_baton->path,
+                        copyfrom_path,
+                        copyfrom_revision,
+                        1, /* force */
+                        this_dir_baton->pool);
+  if (err)
+    return (err);
 
   /* Notify the parent that this child dir exists.  This can happen
      right away, there is no need to wait until the child is done. */
@@ -498,14 +559,6 @@ add_directory (svn_string_t *name,
   if (err)
     return err;
 
-
-  err = prep_directory (this_dir_baton->path,
-                        copyfrom_path,
-                        copyfrom_revision,
-                        1, /* force */
-                        this_dir_baton->pool);
-  if (err)
-    return (err);
 
   *child_baton = this_dir_baton;
 
@@ -764,6 +817,13 @@ add_or_replace_file (svn_string_t *name,
   /* Set up the file's baton. */
   fb = make_file_baton (parent_dir_baton, name);
   *file_baton = fb;
+
+
+  /* ### todo:  right now the incoming copyfrom* args are being
+     completely ignored!  Someday the editor-driver may expect us to
+     support this optimization;  when that happens, this func needs to
+     -copy- the specified existing wc file to this location.  From
+     there, the driver can apply_textdelta on it, etc. */
 
   return SVN_NO_ERROR;
 }

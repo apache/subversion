@@ -55,6 +55,9 @@ typedef enum svn_errno_t {
   /* A bogus filename was passed to a routine */
   SVN_ERR_BAD_FILENAME,
 
+  /* Trying to use an as-yet unsupported feature. */
+  SVN_ERR_UNSUPPORTED_FEATURE,
+
   /* There's no such xml tag attribute */
   SVN_ERR_XML_ATTRIB_NOT_FOUND,
 
