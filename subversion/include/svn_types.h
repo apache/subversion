@@ -235,11 +235,11 @@ typedef unsigned long svn_token_t;
  * Proposal:
  * 
  * A caller (say, the working copy library) is given the tree delta as
- * soon as there is at least one svn_change_t in its list ready to
- * use.  The callee may continue to append svn_change_t objects to the
+ * soon as there is at least one svn_edit_t in its list ready to
+ * use.  The callee may continue to append svn_edit_t objects to the
  * list even while the caller is using the ones already there.  The
  * callee signals that it is done by adding a change of the special
- * type `done' (see the enumeration `svn_delta_action_t' below).
+ * type `end'.
  *
  * Since the caller can tell by inspection whether or not it's done
  * yet, the callee could tack on new change objects in an unscheduled
@@ -295,14 +295,24 @@ typedef struct svn_edit_content_t
 
 
 /* A tree delta is a list of edits.  This is an edit. */
+/* 
+ * kff todo: you might be asking yourself, why do we need a `done'
+ * flag when there's a next pointer?  Couldn't we just check if the
+ * next pointer is NULL?  Well, not necessarily; the callee still has
+ * the address of that pointer, and, if something new comes down the
+ * pipe, will make it point to the next change.  So NULL doesn't mean
+ * "the end", it just means "nothing more to do right now, check back
+ * later".  The caller can't know it's done until it actually sees an
+ * `end' marker.  (This is a tentative plan.)
+ */
 typedef struct svn_edit_t
 {
   enum { 
-    action_delete = 1,            /* Delete a file or directory. */
+    action_end = 0,               /* Special flag: no more changes. */
+    action_delete,                /* Delete a file or directory. */
     action_new,                   /* Create a new file or directory. */
     action_replace,               /* Replace an existing file or dir */
   } kind;
-  svn_delta_action_t action;      /* One of the enumerated values. */
   svn_string_t *name;             /* name to add/del/replace */
   svn_edit_content_t *content;    /* the object we're adding/replacing */
   struct svn_edit_t *next;        /* Next one in the list, or NULL. */
