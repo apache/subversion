@@ -35,7 +35,6 @@ svn_cl__print_file_diff (svn_stringbuf_t *path,
                          apr_pool_t *pool)
 {
   apr_status_t status;
-  svn_error_t *err;
   svn_stringbuf_t *pristine_copy_path;
   svn_boolean_t text_is_modified = FALSE;
   const char *args[5];
@@ -49,14 +48,12 @@ svn_cl__print_file_diff (svn_stringbuf_t *path,
      intelligently determine this will be worth our effort.  In other
      words, if we *know* that the text hasn't been modified, the
      external display of those (non-existant) changes is a NOOP. */
-  err = svn_wc_text_modified_p (&text_is_modified,
-                                path, pool);
-  if (err) return err;
-  if (!text_is_modified) return SVN_NO_ERROR;
+  SVN_ERR (svn_wc_text_modified_p (&text_is_modified, path, pool));
+  if (!text_is_modified) 
+    return SVN_NO_ERROR;
 
   /* Get a PRISTINE_COPY_PATH to compare against.  */
-  err = svn_client_file_diff (path, &pristine_copy_path, pool);
-  if (err) return err;
+  SVN_ERR (svn_client_file_diff (path, &pristine_copy_path, pool));
 
   /* Get an apr_file_t representing stdout, which is where we'll have
      the diff program print to. */
@@ -78,11 +75,8 @@ svn_cl__print_file_diff (svn_stringbuf_t *path,
   printf( "Index: %s\n", path->data );
   printf( "===================================================================\n" );
 
-  err = svn_wc_run_cmd_in_directory (svn_stringbuf_create (".", pool), 
-                                     SVN_CLIENT_DIFF,
-                                     args,
-                                     NULL, outhandle, NULL, pool);
-  if (err) return err;
+  SVN_ERR (svn_io_run_cmd (".", SVN_CLIENT_DIFF, args, 
+                           NULL, outhandle, NULL, pool));
   
   /* TODO:  someday we'll need to worry about two things here:
 

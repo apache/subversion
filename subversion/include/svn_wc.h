@@ -615,24 +615,6 @@ svn_error_t *svn_wc_get_pristine_copy_path (svn_stringbuf_t *path,
                                             apr_pool_t *pool);
 
 
-/* Invoke PROGRAM with ARGS, using PATH as working directory.
- * Connect PROGRAM's stdin, stdout, and stderr to INFILE, OUTFILE, and
- * ERRFILE, except where they are null.
- *
- * ARGS is a list of (const char *)'s, terminated by NULL.
- * ARGS[0] is the name of the program, though it need not be the same
- * as CMD.
- */
-svn_error_t *
-svn_wc_run_cmd_in_directory (svn_stringbuf_t *path,
-                             const char *cmd,
-                             const char *const *args,
-                             apr_file_t *infile,
-                             apr_file_t *outfile,
-                             apr_file_t *errfile,
-                             apr_pool_t *pool);
-
-
 /* Recurse from PATH, cleaning up unfinished log business.  Perform
    necessary allocations in POOL.  */
 svn_error_t *

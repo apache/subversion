@@ -546,25 +546,25 @@ const char *svn_fs_repository (svn_fs_t *fs);
 /* Return the path to FS's configuration directory. */
 const char *svn_fs_conf_dir (svn_fs_t *fs);
 
-/* Return the path to FS's start-commit hook configuration file,
-   allocated in POOL. */
-const char *svn_fs_start_commit_conf (svn_fs_t *fs, apr_pool_t *pool);
+/* Return the path to FS's start-commit hook program, allocated in
+   POOL. */
+const char *svn_fs_start_commit_hook (svn_fs_t *fs, apr_pool_t *pool);
 
-/* Return the path to FS's pre-commit hook configuration file,
-   allocated in POOL. */
-const char *svn_fs_pre_commit_conf (svn_fs_t *fs, apr_pool_t *pool);
+/* Return the path to FS's pre-commit hook program, allocated in
+   POOL. */
+const char *svn_fs_pre_commit_hook (svn_fs_t *fs, apr_pool_t *pool);
 
-/* Return the path to FS's post-commit hook configuration file,
-   allocated in POOL. */
-const char *svn_fs_post_commit_conf (svn_fs_t *fs, apr_pool_t *pool);
+/* Return the path to FS's post-commit hook program, allocated in
+   POOL. */
+const char *svn_fs_post_commit_hook (svn_fs_t *fs, apr_pool_t *pool);
 
-/* Return the path to FS's read sentinel configuration file, allocated
-   in POOL. */
-const char *svn_fs_read_sentinel_conf (svn_fs_t *fs, apr_pool_t *pool);
+/* Return the path to FS's read sentinel program, allocated in
+   POOL. */
+const char *svn_fs_read_sentinel_hook (svn_fs_t *fs, apr_pool_t *pool);
 
-/* Return the path to FS's write sentinel configuration file,
-   allocated in POOL. */
-const char *svn_fs_write_sentinel_conf (svn_fs_t *fs, apr_pool_t *pool);
+/* Return the path to FS's write sentinel program, allocated in
+   POOL. */
+const char *svn_fs_write_sentinel_hook (svn_fs_t *fs, apr_pool_t *pool);
 
 
 

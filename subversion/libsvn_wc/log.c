@@ -47,111 +47,6 @@ enum svn_wc__xfer_action {
   svn_wc__xfer_mv,
 };
 
-/* Invoke PROGRAM with ARGS, using PATH as working directory.
- * Connect PROGRAM's stdin, stdout, and stderr to INFILE, OUTFILE, and
- * ERRFILE, except where they are null.
- *
- * ARGS is a list of (const char *)'s, terminated by NULL.
- * ARGS[0] is the name of the program, though it need not be the same
- * as CMD.
- */
-svn_error_t *
-svn_wc_run_cmd_in_directory (svn_stringbuf_t *path,
-                             const char *cmd,
-                             const char *const *args,
-                             apr_file_t *infile,
-                             apr_file_t *outfile,
-                             apr_file_t *errfile,
-                             apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  apr_proc_t cmd_proc;
-  apr_procattr_t *cmdproc_attr;
-
-  /* Create the process attributes. */
-  apr_err = apr_procattr_create (&cmdproc_attr, pool); 
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return svn_error_createf
-      (apr_err, 0, NULL, pool,
-       "run_cmd_in_directory: error creating %s process attributes",
-       cmd);
-
-  /* Make sure we invoke cmd directly, not through a shell. */
-  apr_err = apr_procattr_cmdtype_set (cmdproc_attr, APR_PROGRAM);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return svn_error_createf 
-      (apr_err, 0, NULL, pool,
-       "run_cmd_in_directory: error setting %s process cmdtype",
-       cmd);
-
-  /* Set the process's working directory. */
-  if (path)
-    {
-      apr_err = apr_procattr_dir_set (cmdproc_attr, path->data);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
-        return svn_error_createf 
-          (apr_err, 0, NULL, pool,
-           "run_cmd_in_directory: error setting %s process directory",
-           cmd);
-    }
-
-  /* Set io style. */
-  apr_err = apr_procattr_io_set (cmdproc_attr, APR_FULL_BLOCK, 
-                                APR_CHILD_BLOCK, APR_CHILD_BLOCK);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return svn_error_createf
-      (apr_err, 0, NULL, pool,
-       "run_cmd_in_directory: error setting %s process io attributes",
-       cmd);
-
-  /* Use requested inputs and outputs. */
-  if (infile)
-    {
-      apr_err = apr_procattr_child_in_set (cmdproc_attr, infile, NULL);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
-        return svn_error_createf 
-          (apr_err, 0, NULL, pool,
-           "run_cmd_in_directory: error setting %s process child input",
-           cmd);
-    }
-  if (outfile)
-    {
-      apr_err = apr_procattr_child_out_set (cmdproc_attr, outfile, NULL);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
-        return svn_error_createf 
-          (apr_err, 0, NULL, pool,
-           "run_cmd_in_directory: error setting %s process child outfile",
-           cmd);
-    }
-  if (errfile)
-    {
-      apr_err = apr_procattr_child_err_set (cmdproc_attr, errfile, NULL);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
-        return svn_error_createf 
-          (apr_err, 0, NULL, pool,
-           "run_cmd_in_directory: error setting %s process child errfile",
-           cmd);
-    }
-
-  /* Start the cmd command. */ 
-  apr_err = apr_proc_create (&cmd_proc, cmd, args, NULL,
-                                cmdproc_attr, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return svn_error_createf 
-      (apr_err, 0, NULL, pool,
-       "run_cmd_in_directory: error starting %s process",
-       cmd);
-
-  /* Wait for the cmd command to finish. */
-  apr_err = apr_proc_wait (&cmd_proc, APR_WAIT);
-  if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
-    return svn_error_createf
-      (apr_err, 0, NULL, pool,
-       "run_cmd_in_directory: error waiting for %s process",
-       cmd);
-
-  return SVN_NO_ERROR;
-}
 
 
 /* Copy (or rename, if RENAME is non-zero) NAME to DEST, assuming that
@@ -319,13 +214,8 @@ log_do_run_cmd (struct log_runner *loggy,
                                   "error opening %s", errfile_path->data);
     }
   
-  err = svn_wc_run_cmd_in_directory (loggy->path,
-                                     name,
-                                     args,
-                                     infile,
-                                     outfile,
-                                     errfile,
-                                     loggy->pool);
+  err = svn_io_run_cmd (loggy->path->data, name, args,
+                        infile, outfile, errfile, loggy->pool);
   if (err)
      return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
                                "error running %s in %s",
