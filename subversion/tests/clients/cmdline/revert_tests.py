@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, string, sys, re, os
+import shutil, string, sys, stat, re, os
 
 # Our testing module
 import svntest
@@ -96,6 +96,57 @@ def revert_reexpand_keyword(sbox):
   check_expanded(newfile_path)
   
 
+def revert_corrupted_text_base(sbox):
+  "reverting to corrupt text base should fail"
+
+  # This is for issue #1774, whose entire recipe is:
+  #
+  #   put a file named "important.txt" in your repository
+  #   check it out to your local working dir.
+  #   modify the "important.txt" locally.
+  #   ==
+  #   be a "bad thing" and modifty something in
+  #     ".svn/text-base/important.txt.svn-base"
+  #   ==
+  #   use svn revert.
+  #   you get the corrupted content from the text-base  
+  #
+  # Any questions?
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, "iota")
+
+  # Modify iota, so we have something to revert.
+  svntest.main.file_append (iota_path, 'appended text')
+
+  # Corrupt its text base.  For kicks, corrupt the text base with the
+  # exact same modification.
+  tb_dir_path = os.path.join(wc_dir, ".svn", "text-base")
+  iota_tb_path = os.path.join(tb_dir_path, "iota.svn-base")
+  tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
+  iota_tb_saved_mode = os.stat(iota_tb_path)[stat.ST_MODE]
+  os.chmod (tb_dir_path, 0777)   ### What's a more portable way to do this?
+  os.chmod (iota_tb_path, 0666)  ### Would rather not use hardcoded numbers.
+  svntest.main.file_append (iota_tb_path, 'appended text')
+  os.chmod (tb_dir_path, tb_dir_saved_mode)
+  os.chmod (iota_tb_path, iota_tb_saved_mode)
+  
+  # Revert the file.  The keyword should reexpand.
+  out, err = svntest.actions.run_and_verify_svn("expected an error, got none",
+                                                None,
+                                                svntest.actions.SVNAnyOutput,
+                                                'revert',
+                                                iota_path)
+  # Make sure we got the error.
+  found_it = 0
+  for line in err:
+    if re.match(".*Checksum mismatch indicates corrupt text base.*", line):
+      found_it = 1
+  if not found_it:
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -103,6 +154,7 @@ def revert_reexpand_keyword(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               XFail(revert_reexpand_keyword),
+              revert_corrupted_text_base,
              ]
 
 if __name__ == '__main__':
