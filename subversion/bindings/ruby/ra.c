@@ -539,6 +539,8 @@ ra_get_commit_editor (int argc, VALUE *argv, VALUE self)
 {
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
+  svn_revnum_t new_rev;
+  const char *committed_date, *committed_author;
   svn_stringbuf_t *log_msg = NULL;
   apr_pool_t *pool;
 
@@ -574,9 +576,11 @@ ra_get_commit_editor (int argc, VALUE *argv, VALUE self)
       cb->proc = closeFunc;
       cb->pool = pool;
     }
-  /* #### NULLs below are hack. */
+  /* #### NULLs below are hack.
+     new_rev, committed_date, committed_author is tossed right now. */
   err = ra->plugin->get_commit_editor (ra->session_baton,
-                                       &editor, &edit_baton,
+                                       &editor, &edit_baton, &new_rev,
+                                       &committed_date, &committed_author,
                                        log_msg, NULL, NULL,
                                        close_func, (void *)cb);
   return svn_ruby_commit_editor_new (editor, edit_baton, pool);
