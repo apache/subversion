@@ -80,11 +80,25 @@ int svn_sort_compare_items_lexically (const svn_sort__item_t *a,
  * than @a a. Note that this sorts newest revision to oldest (IOW, descending
  * order).
  *
+ * This function is compatible for use with @c qsort().
+ *
  * This is useful for converting an array of revisions into a sorted
  * @c apr_array_header_t. You are responsible for detecting, preventing or
  * removing duplicates.
  */
 int svn_sort_compare_revisions (const void *a, const void *b);
+
+
+/**
+ * @since New in 1.1.
+ *
+ * Compare two @c const char * paths, returning an integer greater
+ * than, equal to, or less than 0, using the same comparison rules as
+ * are used by @c svn_path_compare_paths.
+ *
+ * This function is compatible for use with @c qsort().
+ */
+int svn_sort_compare_paths (const void *a, const void *b);
 
 
 /** Sort @a ht according to its keys, return an @c apr_array_header_t
