@@ -261,7 +261,7 @@ static dav_error *dav_svn_db_output_value(dav_db *db,
     return NULL;
 
   /* XML-escape our properties before sending them across the wire. */
-  svn_xml_escape_string(&xmlsafe, propval, db->resource->pool);
+  svn_xml_escape_cdata_string(&xmlsafe, propval, db->resource->pool);
 
 #ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
   if (strcmp(name->ns, SVN_PROP_CUSTOM_PREFIX) == 0)
