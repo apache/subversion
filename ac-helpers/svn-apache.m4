@@ -19,7 +19,7 @@ AC_ARG_WITH(apache,
 		AC_MSG_ERROR(You need to specify a directory with --with-apache)
 	fi
 	if test -r $withval/src/modules/dav/main/mod_dav.h; then
-		APACHE_INCLUDES="$APACHE_INCLUDES -I$withval/src/include -I$withval/src/os/unix -I$withval/src/modules/dav/main -I$withval/src/lib/apr/include"
+		APACHE_INCLUDES="$APACHE_INCLUDES -I$withval/src/include -I$withval/src/os/unix -I$withval/src/modules/dav/main -I$withval/src/lib/apr/include -I$withval/src/lib/aputil"
 		APACHE_TARGET=$withval/src/modules/dav/svn
 		BINNAME=mod_dav_svn.a
 
