@@ -7,4 +7,4 @@ like src/ (of course, silly file removal issues are one of the things
 we hope to fix with with Inversion).
 
 Outline mode is used for `inversion.txt' because we'll be editing it a
-lot.  Run htmlize.pl with no arguments to produce `inversion.html'.
+lot.  Type "make html" to produce `inversion.html'.
