@@ -52,12 +52,22 @@ def load_expected_output(basename):
   return exp_stdout, exp_stderr
 
 # This is a list of lines to delete.
-del_lines_res = [ re.compile(r'\s+compiled\s+'),
-                  re.compile(r"- handles '(https|file)' schema"),
+del_lines_res = [
+                 # In 'svn --version', the date line is variable, for example:
+                 # "compiled Apr  5 2002, 10:08:45"
+                 re.compile(r'\s+compiled\s+'),
+
+                 # Also for 'svn --version':
+                 re.compile(r"- handles '(https|file)' schema"),
                 ]
 
 # This is a list of lines to search and replace text on.
-rep_lines_res = [ (re.compile(r'version \d+\.\d+\.\d+ '), 'version X.Y.Z '),
+rep_lines_res = [
+                 # In 'svn --version', this line varies, for example:
+                 # "Subversion Client, version 0.10.2 (dev build)"
+                 # "Subversion Client, version 0.10.2 (r1729)"
+                 (re.compile(r'version \d+\.\d+\.\d+ \(.*\)'),
+                  'version X.Y.Z '),
                 ]
 
 def process_lines(lines):
