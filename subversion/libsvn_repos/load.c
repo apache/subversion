@@ -65,9 +65,6 @@ struct node_baton
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
 
-  svn_boolean_t notice_text;
-  svn_boolean_t notice_props;
-  
   struct revision_baton *rb;
   apr_pool_t *pool;
 };
@@ -254,13 +251,9 @@ parse_property_block (svn_stream_t *stream,
 
               /* Now, send the property pair to the vtable! */
               if (is_node)
-                {
-                  struct node_baton *nb = record_baton;
-                  if (nb->notice_props)
-                    SVN_ERR (parse_fns->set_node_property (record_baton,
-                                                           keybuf,
-                                                           &propstring));
-                }
+                SVN_ERR (parse_fns->set_node_property (record_baton,
+                                                       keybuf,
+                                                       &propstring));
               else
                 SVN_ERR (parse_fns->set_revision_property (record_baton,
                                                            keybuf,
