@@ -98,7 +98,6 @@ svn_client_status (svn_revnum_t *youngest,
 
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
-  sb.hash = apr_hash_make (pool);
   sb.deleted_in_repos = FALSE;
 
   /* Need to lock the tree as even a non-recursive status requires the
