@@ -220,9 +220,9 @@ void svn_txdelta_free (svn_txdelta_stream_t *stream);
 
 /* Prepare to apply a text delta.  SOURCE_FN and SOURCE_BATON specify
    how to read source data, TARGET_FN and TARGET_BATON specify how to
-   write target data, and allocation takes place in POOL.  On return,
-   *HANDLER is set to a window handler function and *HANDLER_BATON is
-   set to the baton argument to pass as the BATON argument to
+   write target data, and allocation takes place in a sub-pool of
+   POOL.  On return, *HANDLER is set to a window handler function and
+   *HANDLER_BATON is set to the value to pass as the BATON argument to
    *HANDLER.  */
 svn_error_t *svn_txdelta_apply (svn_read_fn_t *source_fn,
                                 void *source_baton,
@@ -236,17 +236,17 @@ svn_error_t *svn_txdelta_apply (svn_read_fn_t *source_fn,
 
 /*** Producing and consuming VCDIFF-format text deltas.  ***/
 
-/* Given text delta windows, produce a VCDIFF-format diff.
+/* Prepare to produce VCDIFF-format diff from text delta windows.
+   WRITE_FN and WRITE_BATON specify how the VCDIFF output should be
+   written.  Allocation takes place in a sub-pool of POOL.  On return,
+   *HANDLER is set to a window handler function and *HANDLER_BATON is
+   set to the value to pass as the BATON argument to *HANDLER.  */
+svn_error_t *svn_txdelta_to_vcdiff (svn_write_fn_t *write_fn
+                                    void *write_baton,
+                                    apr_pool_t *pool,
+                                    svn_txdelta_window_handler_t **handler,
+                                    void **handler_baton);
 
-   Set *READ_FN and *READ_BATON to a `read'-like function that will
-   return a text delta in VCDIFF format.  READ_FN will draw windows as
-   needed from the text delta window stream STREAM, and convert them
-   to VCDIFF format.  Do all allocation for the conversion in POOL.  */
-svn_error_t *svn_txdelta_to_vcdiff (svn_read_fn_t **read_fn,
-                                    void **read_baton,
-                                    svn_txdelta_stream_t *stream,
-                                    apr_pool_t *pool);
-     
 
 /* Definitions for converting VCDIFF -> text delta window streams.  */
 
