@@ -335,10 +335,10 @@ change_file_prop (void *file_baton,
 {
   struct file_baton *fb = file_baton;
   if (svn_wc_is_normal_prop (name))
-    fb->prop_changed = TRUE;
-
-  if (svn_wc_is_normal_prop (name))
-    fb->edit_baton->received_some_change = TRUE;
+    {
+      fb->prop_changed = TRUE;
+      fb->edit_baton->received_some_change = TRUE;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -352,10 +352,10 @@ change_dir_prop (void *parent_baton,
 {
   struct dir_baton *db = parent_baton;
   if (svn_wc_is_normal_prop (name))
-    db->prop_changed = TRUE;
-
-  if (svn_wc_is_normal_prop (name))
-    db->edit_baton->received_some_change = TRUE;
+    {
+      db->prop_changed = TRUE;
+      db->edit_baton->received_some_change = TRUE;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -409,7 +409,6 @@ svn_cl__get_trace_update_editor (const svn_delta_editor_t **editor,
   eb->target_revision = SVN_INVALID_REVNUM;
   eb->is_checkout = is_checkout;
   eb->suppress_final_line = suppress_final_line;
-  eb->received_some_change = FALSE;
 
   /* Set up the editor. */
   trace_editor->open_root = open_root;
