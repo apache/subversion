@@ -1101,9 +1101,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   fs_parent_path = dav_svn_get_fs_parent_path(r);
   if (fs_parent_path != NULL)
     {      
-      /* ...then the path to the repository is actually one implicit
+      /* ...then the URL to the repository is actually one implicit
          component longer... */
-      root_path = svn_path_join (root_path, repos_name, r->pool);
+      root_path = svn_path_url_add_component (root_path, repos_name, r->pool);
       /* ...and we need to specify exactly what repository to open. */
       fs_path = svn_path_join (fs_parent_path, repos_name, r->pool);
     }
