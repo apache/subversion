@@ -52,7 +52,7 @@
 #include "fs.h"
 #include "node.h"
 #include "dir.h"
-#include "version.h"
+#include "revision.h"
 #include "err.h"
 #include "id.h"
 #include "skel.h"
@@ -84,7 +84,7 @@ path_not_found (svn_fs_t *fs, svn_string_t *path)
 
 
 static svn_error_t *
-corrupt_node_version (svn_fs_node_t *node)
+corrupt_node_revision (svn_fs_node_t *node)
 {
   svn_fs_t *fs = svn_fs__node_fs (node);
   svn_fs_id_t *id = svn_fs__node_id (node);
@@ -93,7 +93,7 @@ corrupt_node_version (svn_fs_node_t *node)
   return
     svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-     "corrupt node version for node `%s' in filesystem `%s'",
+     "corrupt node revision for node `%s' in filesystem `%s'",
      unparsed_id->data, fs->env_path);
 }
 
@@ -129,18 +129,18 @@ not_a_directory (svn_fs_t *fs, char *path, int len)
 }
 
 
-/* Finding a version's root directory.  */
+/* Finding a revision's root directory.  */
 
 svn_error_t *
 svn_fs_open_root (svn_fs_dir_t **dir_p,
 		  svn_fs_t *fs,
-		  svn_vernum_t v)
+		  svn_revnum_t v)
 {
   svn_fs_id_t *root_id;
   svn_fs_node_t *root_node;
 
   SVN_ERR (svn_fs__check_fs (fs));
-  SVN_ERR (svn_fs__version_root (&root_id, fs, v, fs->pool));
+  SVN_ERR (svn_fs__revision_root (&root_id, fs, v, fs->pool));
   SVN_ERR (svn_fs__open_node_by_id (&root_node, fs, root_id, 0));
   if (! svn_fs_node_is_dir (root_node))
     {
@@ -148,7 +148,7 @@ svn_fs_open_root (svn_fs_dir_t **dir_p,
       return
 	svn_error_createf
 	(SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-	 "the root of version %ld in filesystem `%s' is not a directory",
+	 "the root of revision %ld in filesystem `%s' is not a directory",
 	 v, fs->env_path);
     }
 
@@ -234,11 +234,11 @@ search (svn_fs_id_t **id_p,
   skel_t *dir_skel, *entry_list, *entry;
 
   /* Read the contents of DIR.  */
-  SVN_ERR (svn_fs__get_node_version (&dir_skel, dir_node, db_txn, pool));
+  SVN_ERR (svn_fs__get_node_revision (&dir_skel, dir_node, db_txn, pool));
 
   entry_list = dir_skel->children->next;
   if (! entry_list || entry_list->is_atom)
-    return corrupt_node_version (dir_node);
+    return corrupt_node_revision (dir_node);
 
   for (entry = entry_list->children; entry; entry = entry->next)
     {
@@ -246,7 +246,7 @@ search (svn_fs_id_t **id_p,
       if (svn_fs__list_length (entry) != 2
 	  || ! entry->children->is_atom
 	  || ! entry->children->next->is_atom)
-	return corrupt_node_version (dir_node);
+	return corrupt_node_revision (dir_node);
 
       entry_name = entry->children;
       entry_id = entry->children->next;
@@ -258,7 +258,7 @@ search (svn_fs_id_t **id_p,
 					      entry_id->len,
 					      pool);
 	  if (! id) 
-	    return corrupt_node_version (dir_node);
+	    return corrupt_node_revision (dir_node);
 
 	  *id_p = id;
 	  return 0;
@@ -376,13 +376,13 @@ svn_fs_dir_entries (apr_hash_t **table_p,
   skel_t *dir_skel, *entry;
   apr_hash_t *table;
 
-  SVN_ERR (svn_fs__get_node_version (&dir_skel, dir_node, 0, pool));
+  SVN_ERR (svn_fs__get_node_revision (&dir_skel, dir_node, 0, pool));
   table = apr_make_hash (pool);
   
   /* Walk DIR's list of entries, adding an entry to TABLE for each one.  */
   if (svn_fs__list_length (dir_skel) != 2
       || dir_skel->children->next->is_atom)
-    return corrupt_node_version (dir_node);
+    return corrupt_node_revision (dir_node);
 
   for (entry = dir_skel->children->next->children; entry; entry = entry->next)
     {
@@ -392,7 +392,7 @@ svn_fs_dir_entries (apr_hash_t **table_p,
       if (svn_fs__list_length (entry) != 2
 	  || ! entry->children->is_atom
 	  || ! entry->children->next->is_atom)
-	return corrupt_node_version (dir_node);
+	return corrupt_node_revision (dir_node);
 
       name_skel = entry->children;
       id_skel = entry->children->next;
@@ -415,7 +415,7 @@ svn_fs_dir_entries (apr_hash_t **table_p,
       dirent->id = svn_fs__parse_id (id_skel->data, id_skel->len, pool);
 
       if (! dirent->id)
-	return corrupt_node_version (dir_node);
+	return corrupt_node_revision (dir_node);
 
       apr_hash_set (table, dirent->name->data, dirent->name->len, dirent);
     }
@@ -458,12 +458,12 @@ delete_body (void *baton,
     return node_not_mutable (dir_node);
   
   /* Read the node's contents.  */
-  SVN_ERR (svn_fs__get_node_version (&skel, dir_node, db_txn, pool));
+  SVN_ERR (svn_fs__get_node_revision (&skel, dir_node, db_txn, pool));
 
   /* Find an entry whose name is NAME, and delete it.  */
   entry_list = skel->children->next;
   if (entry_list->is_atom)
-    return corrupt_node_version (dir_node);
+    return corrupt_node_revision (dir_node);
 
   for (entry = &entry_list->children; *entry; entry = &(*entry)->next)
     {
@@ -471,7 +471,7 @@ delete_body (void *baton,
       if (svn_fs__list_length (*entry) != 2
 	  || ! (*entry)->children->is_atom
 	  || ! (*entry)->children->next->is_atom)
-	return corrupt_node_version (dir_node);
+	return corrupt_node_revision (dir_node);
 
       entry_name = (*entry)->children;
       entry_id = (*entry)->children->next;
@@ -494,7 +494,7 @@ delete_body (void *baton,
      works.  */
   *entry = (*entry)->next;
 
-  SVN_ERR (svn_fs__put_node_version (dir_node, skel, db_txn));
+  SVN_ERR (svn_fs__put_node_revision (dir_node, skel, db_txn));
 
   return 0;
 }

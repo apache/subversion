@@ -90,7 +90,7 @@ extern apr_size_t svn_txdelta__window_size;
  * 
  * The XML representation has certain space optimizations.  For
  * example, if an ancestor is omitted, it means the same path at the
- * same version (taken from the surrounding delta context).  We may
+ * same revision (taken from the surrounding delta context).  We may
  * well decide to use corresponding optimizations here -- an absent
  * svn_ancestor_t object means use the path and ancestor from the
  * delta, etc -- or we may not.  In any case it doesn't affect the
@@ -137,7 +137,7 @@ typedef struct svn_xml__stackframe_t
 
   svn_string_t *name;    /* if the tag had a "name" attribute attached */
   svn_string_t *ancestor_path;     /* Explicit, else inherited from parent */ 
-  svn_vernum_t ancestor_version;   /* Explicit, else inherited from parent */ 
+  svn_revnum_t ancestor_revision;   /* Explicit, else inherited from parent */ 
 
   void *baton;           /* holds caller data for the _current_ subdirectory */
   void *file_baton;      /* holds caller data for the _current_ file */
@@ -189,7 +189,7 @@ typedef struct svn_xml__digger_t
 
   /* General "context variables" used when evaluating a tree-delta */
   svn_string_t *base_path;
-  svn_vernum_t base_version;
+  svn_revnum_t base_revision;
 
   /* Userdata structures that we need to keep track of while we parse,
      given to us by either the SVN filesystem or the SVN client */

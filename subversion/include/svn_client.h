@@ -83,7 +83,7 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      svn_string_t *path,
                      svn_string_t *xml_src,
                      svn_string_t *ancestor_path,
-                     svn_vernum_t ancestor_version,
+                     svn_revnum_t ancestor_revision,
                      apr_pool_t *pool);
 
 
@@ -94,7 +94,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    void *after_edit_baton,
                    svn_string_t *path,
                    svn_string_t *xml_src,
-                   svn_vernum_t ancestor_version,
+                   svn_revnum_t ancestor_revision,
                    apr_pool_t *pool);
 
 
@@ -112,7 +112,7 @@ svn_client_delete (svn_string_t *file,
 svn_error_t *
 svn_client_commit (svn_string_t *path,
                    svn_string_t *xml_dst,
-                   svn_vernum_t version,  /* this param is temporary */
+                   svn_revnum_t revision,  /* this param is temporary */
                    apr_pool_t *pool);
 
 

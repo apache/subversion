@@ -84,8 +84,8 @@
 */
 typedef struct svn_wc_status_t 
 {
-  svn_vernum_t local_ver;        /* working copy version number */
-  svn_vernum_t repos_ver;        /* repository version number */
+  svn_revnum_t local_ver;        /* working copy revision number */
+  svn_revnum_t repos_ver;        /* repository revision number */
   
   /* MUTUALLY EXCLUSIVE states. One of
      these will always be set. */
@@ -108,7 +108,7 @@ typedef struct svn_wc_status_t
 
 /* Given a PATH to a working copy file or dir, return a STATUS
    structure describing it.  All fields will be filled in _except_ for
-   the field containing the current repository version; this will be
+   the field containing the current repository revision; this will be
    filled in by svn_client_status(), the primary caller of this
    routine. */
 svn_error_t *svn_wc_get_status (apr_hash_t *statushash,
@@ -146,16 +146,16 @@ svn_error_t *svn_wc_add_file (svn_string_t *file,
 
 /*** Commits. ***/
 
-/* Update working copy PATH with NEW_VERSION after a commit has succeeded.
+/* Update working copy PATH with NEW_REVISION after a commit has succeeded.
  * TARGETS is a hash of files/dirs that actually got committed --
  * these are the only ones who we can write log items for, and whose
- * version numbers will get set.  todo: eventually this hash will be
+ * revision numbers will get set.  todo: eventually this hash will be
  * of the sort used by svn_wc__compose_paths(), as with all entries
  * recursers.
  */
 svn_error_t *
 svn_wc_close_commit (svn_string_t *path,
-                     svn_vernum_t new_version,
+                     svn_revnum_t new_revision,
                      apr_hash_t *targets,
                      apr_pool_t *pool);
 
@@ -197,7 +197,7 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
  * 
  * DEST is the local path to the working copy.
  *
- * TARGET_VERSION is the repository version that results from this set
+ * TARGET_REVISION is the repository revision that results from this set
  * of changes.
  *
  * EDITOR, EDIT_BATON, and DIR_BATON are all returned by reference,
@@ -205,7 +205,7 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
  * functions.
  */
 svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
-                                       svn_vernum_t target_version,
+                                       svn_revnum_t target_revision,
                                        const svn_delta_edit_fns_t **editor,
                                        void **edit_baton,
                                        apr_pool_t *pool);
@@ -235,7 +235,7 @@ svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
 svn_error_t *svn_wc_get_checkout_editor (svn_string_t *dest,
                                          svn_string_t *repos,
                                          svn_string_t *ancestor_path,
-                                         svn_vernum_t target_version,
+                                         svn_revnum_t target_revision,
                                          const svn_delta_edit_fns_t **editor,
                                          void **edit_baton,
                                          apr_pool_t *pool);

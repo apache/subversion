@@ -260,7 +260,7 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
 static svn_error_t *
 output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
                    enum elemtype dirfile, svn_string_t *name,
-                   svn_string_t *ancestor_path, svn_vernum_t ancestor_version)
+                   svn_string_t *ancestor_path, svn_revnum_t ancestor_revision)
 {
   svn_string_t *str;
   apr_pool_t *pool = svn_pool_create (eb->pool);
@@ -279,7 +279,7 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
     {
       char buf[128];
       apr_hash_set (att, "ancestor", strlen("ancestor"), ancestor_path);
-      sprintf (buf, "%lu", (unsigned long) ancestor_version);
+      sprintf (buf, "%lu", (unsigned long) ancestor_revision);
       apr_hash_set (att, "ver", strlen("ver"), svn_string_create (buf, pool));
     }
   svn_xml_make_open_tag_hash (&str, pool, svn_xml_normal, innertag, att);
@@ -372,7 +372,7 @@ static svn_error_t *
 add_directory (svn_string_t *name,
                void *parent_baton,
                svn_string_t *ancestor_path,
-               svn_vernum_t ancestor_version,
+               svn_revnum_t ancestor_revision,
                void **child_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
@@ -380,7 +380,7 @@ add_directory (svn_string_t *name,
 
   *child_baton = make_dir_baton (eb, elem_add);
   return output_addreplace (eb, elem_add, elem_dir, name,
-                            ancestor_path, ancestor_version);
+                            ancestor_path, ancestor_revision);
 }
 
 
@@ -388,7 +388,7 @@ static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
                    svn_string_t *ancestor_path,
-                   svn_vernum_t ancestor_version,
+                   svn_revnum_t ancestor_revision,
                    void **child_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
@@ -396,7 +396,7 @@ replace_directory (svn_string_t *name,
 
   *child_baton = make_dir_baton (eb, elem_replace);
   return output_addreplace (eb, elem_replace, elem_dir, name,
-                            ancestor_path, ancestor_version);
+                            ancestor_path, ancestor_revision);
 }
 
 
@@ -444,7 +444,7 @@ static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
           svn_string_t *ancestor_path,
-          svn_vernum_t ancestor_version,
+          svn_revnum_t ancestor_revision,
           void **file_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
@@ -453,7 +453,7 @@ add_file (svn_string_t *name,
   *file_baton = make_file_baton (eb, elem_add);
   eb->curfile = *file_baton;
   return output_addreplace (eb, elem_add, elem_file, name,
-                            ancestor_path, ancestor_version);
+                            ancestor_path, ancestor_revision);
 }
 
 
@@ -461,7 +461,7 @@ static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
               svn_string_t *ancestor_path,
-              svn_vernum_t ancestor_version,
+              svn_revnum_t ancestor_revision,
               void **file_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
@@ -470,7 +470,7 @@ replace_file (svn_string_t *name,
   *file_baton = make_file_baton (eb, elem_replace);
   eb->curfile = *file_baton;
   return output_addreplace (eb, elem_replace, elem_file, name,
-                            ancestor_path, ancestor_version);
+                            ancestor_path, ancestor_revision);
 }
 
 

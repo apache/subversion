@@ -57,7 +57,7 @@ main (int argc, char *argv[])
   apr_status_t status;
   void *edit_baton;
 
-  svn_vernum_t base_version;
+  svn_revnum_t base_revision;
   svn_string_t *base_path;
 
 
@@ -86,19 +86,19 @@ main (int argc, char *argv[])
     
 
   /* Set context variables for evaluating a tree-delta */
-  base_version = 37;
+  base_revision = 37;
   base_path = svn_string_create ("/root", globalpool);
   
   /* Grab the "test" editor and baton */
   err = svn_test_get_editor (&editor, &edit_baton,
-                             base_path, base_version, globalpool);
+                             base_path, base_revision, globalpool);
   
   /* Fire up the XML parser */
   err = svn_delta_xml_auto_parse (my_read_func, source_baton, 
                                   editor,
                                   edit_baton,
                                   base_path,
-                                  base_version,
+                                  base_revision,
                                   globalpool);
 
   apr_close (source_baton);

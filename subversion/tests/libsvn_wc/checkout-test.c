@@ -86,7 +86,7 @@ apply_delta (void *delta_src,
              svn_read_fn_t *read_fn,
              svn_string_t *dest,
              svn_string_t *repos,
-             svn_vernum_t version,
+             svn_revnum_t revision,
              apr_pool_t *pool)
 {
   const svn_delta_edit_fns_t *editor;
@@ -98,7 +98,7 @@ apply_delta (void *delta_src,
                                     repos,
                                     /* Assume we're checking out root. */
                                     svn_string_create ("", pool),
-                                    version,
+                                    revision,
                                     &editor,
                                     &edit_baton,
                                     pool);
@@ -111,7 +111,7 @@ apply_delta (void *delta_src,
                                    editor,
                                    edit_baton,
                                    svn_string_create ("", pool),
-                                   version,
+                                   revision,
                                    pool);
 }
 
@@ -158,7 +158,7 @@ main (int argc, char **argv)
      test_read_fn,
      target,
      svn_string_create (":ssh:jrandom@svn.tigris.org/repos", pool),
-     1,  /* kff todo: version must be passed in, right? */
+     1,  /* kff todo: revision must be passed in, right? */
      pool);
   
   if (err)

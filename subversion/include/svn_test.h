@@ -66,7 +66,7 @@
 svn_error_t *svn_test_get_editor (const svn_delta_edit_fns_t **editor,
                                   void **edit_baton,
                                   svn_string_t *path,
-                                  svn_vernum_t version,
+                                  svn_revnum_t revision,
                                   apr_pool_t *pool);
      
 #endif /* SVN_TEST_H */

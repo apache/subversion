@@ -59,7 +59,7 @@
 
 
 /* Set *NODE to a new a svn_fs_file_t for node ID in filesystem FS,
-   whose NODE-VERSION skel is NV.  NV is allocated in SKEL_POOL, as is
+   whose NODE-REVISION skel is NV.  NV is allocated in SKEL_POOL, as is
    the data it points to.  NV must be a list skel of at least two
    elements, whose first element is the atom "file".
 

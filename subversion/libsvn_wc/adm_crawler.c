@@ -287,7 +287,7 @@ do_dir_replaces (void **newest_baton,
             editor->replace_directory (dirname, /* current dir */
                                        stackptr->previous->baton, /* parent */
                                        stackptr->this_dir->ancestor,
-                                       stackptr->this_dir->version,
+                                       stackptr->this_dir->revision,
                                        &dir_baton);
           if (err) return err;
 
@@ -635,7 +635,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               err = editor->replace_file (current_entry_name,
                                           dir_baton,          /* parent */
                                           current_entry->ancestor,
-                                          current_entry->version,
+                                          current_entry->revision,
                                           &(tb->editor_baton)); /* child */
               if (err) return err;
               
@@ -658,7 +658,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
                 editor->replace_directory (current_entry_name, 
                                            dir_baton,        /* parent */
                                            current_entry->ancestor,
-                                           current_entry->version,
+                                           current_entry->revision,
                                            &new_dir_baton);
               if (err) return err;
               
@@ -730,7 +730,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
                                            dir_baton, /* current dir
                                                          is parent */
                                            current_entry->ancestor,
-                                           current_entry->version,
+                                           current_entry->revision,
                                            &new_dir_baton); /* get child */
               if (err) return err;
           
@@ -768,7 +768,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               err = editor->add_file (current_entry_name,
                                       dir_baton,             /* parent */
                                       current_entry->ancestor,
-                                      current_entry->version,
+                                      current_entry->revision,
                                       &(tb->editor_baton));  /* child */
               if (err) return err;
               
@@ -815,7 +815,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               err = editor->replace_file (current_entry_name,
                                           dir_baton,          /* parent */
                                           current_entry->ancestor,
-                                          current_entry->version,
+                                          current_entry->revision,
                                           &(tb->editor_baton)); /* child */
               if (err) return err;
               

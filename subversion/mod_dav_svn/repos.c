@@ -420,7 +420,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
 {
   dav_resource_private *info = resource->info;
   svn_error_t *err;
-  svn_vernum_t v;
+  svn_revnum_t v;
   svn_fs_dir_t *fsdir;
   svn_fs_node_t *node;
   svn_string_t relpath;

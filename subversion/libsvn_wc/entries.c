@@ -82,7 +82,7 @@ svn_wc__entries_init (svn_string_t *path,
   apr_status_t apr_err;
   apr_file_t *f = NULL;
   svn_string_t *accum = NULL;
-  char *initial_verstr = apr_psprintf (pool, "%ld", 0);
+  char *initial_revstr = apr_psprintf (pool, "%ld", 0);
 
   /* Create the entries file, which must not exist prior to this. */
   err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_ENTRIES,
@@ -103,13 +103,13 @@ svn_wc__entries_init (svn_string_t *path,
                          NULL);
 
   /* Add an entry for the dir itself -- name is absent, only the
-     version and default ancestry are present as xml attributes. */
+     revision and default ancestry are present as xml attributes. */
   svn_xml_make_open_tag (&accum,
                          pool,
                          svn_xml_self_closing,
                          SVN_WC__ENTRIES_ENTRY,
-                         SVN_WC__ENTRIES_ATTR_VERSION,
-                         svn_string_create (initial_verstr, pool),
+                         SVN_WC__ENTRIES_ATTR_REVISION,
+                         svn_string_create (initial_revstr, pool),
                          SVN_WC__ENTRIES_ATTR_ANCESTOR,
                          ancestor_path,
                          NULL);
@@ -163,7 +163,7 @@ static svn_wc__entry_t *
 alloc_entry (apr_pool_t *pool)
 {
   svn_wc__entry_t *entry = apr_pcalloc (pool, sizeof (*entry));
-  entry->version    = SVN_INVALID_VERNUM;
+  entry->revision   = SVN_INVALID_REVNUM;
   entry->kind       = svn_node_none;
   entry->attributes = apr_make_hash (pool);
   return entry;
@@ -194,16 +194,16 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
         apr_hash_set (accum->entries, nstr, len, entry);
       }
 
-      /* Attempt to set version (resolve_to_defaults may do it later, too) */
+      /* Attempt to set revision (resolve_to_defaults may do it later, too) */
       {
-        svn_string_t *version_str
+        svn_string_t *revision_str
           = apr_hash_get (entry->attributes,
-                          SVN_WC__ENTRIES_ATTR_VERSION, APR_HASH_KEY_STRING);
+                          SVN_WC__ENTRIES_ATTR_REVISION, APR_HASH_KEY_STRING);
 
-        if (version_str)
-          entry->version = (svn_vernum_t) atoi (version_str->data);
+        if (revision_str)
+          entry->revision = (svn_revnum_t) atoi (revision_str->data);
         else
-          entry->version = SVN_INVALID_VERNUM;
+          entry->revision = SVN_INVALID_REVNUM;
       }
 
       /* Attempt to set up ancestor path (again, see resolve_to_defaults). */
@@ -282,10 +282,10 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
 static void
 take_from_entry (svn_wc__entry_t *src, svn_wc__entry_t *dst, apr_pool_t *pool)
 {
-  /* Inherits parent's version if don't have a version of one's own,
+  /* Inherits parent's revision if don't have a revision of one's own,
      unless this is a subdirectory. */
-  if ((dst->version == SVN_INVALID_VERNUM) && (dst->kind != svn_node_dir))
-    dst->version = src->version;
+  if ((dst->revision == SVN_INVALID_REVNUM) && (dst->kind != svn_node_dir))
+    dst->revision = src->revision;
   
   if (! dst->ancestor)
     {
@@ -316,12 +316,12 @@ resolve_to_defaults (apr_hash_t *entries, apr_pool_t *pool)
                              pool,
                              "missing default entry");
 
-  if (default_entry->version == SVN_INVALID_VERNUM)
-    return svn_error_create (SVN_ERR_WC_ENTRY_MISSING_VERSION,
+  if (default_entry->revision == SVN_INVALID_REVNUM)
+    return svn_error_create (SVN_ERR_WC_ENTRY_MISSING_REVISION,
                              0,
                              NULL,
                              pool,
-                             "default entry has no version number");
+                             "default entry has no revision number");
 
   if (! default_entry->ancestor)
     return svn_error_create (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY,
@@ -357,11 +357,11 @@ resolve_to_defaults (apr_hash_t *entries, apr_pool_t *pool)
 static void
 sync_entry (svn_wc__entry_t *entry, apr_pool_t *pool)
 {
-  /* Version. */
-  if (entry->version != SVN_INVALID_VERNUM)
+  /* Revision. */
+  if (entry->revision != SVN_INVALID_REVNUM)
     apr_hash_set (entry->attributes,
-                  SVN_WC__ENTRIES_ATTR_VERSION, APR_HASH_KEY_STRING,
-                  svn_string_createf (pool, "%ld", entry->version));
+                  SVN_WC__ENTRIES_ATTR_REVISION, APR_HASH_KEY_STRING,
+                  svn_string_createf (pool, "%ld", entry->revision));
   
   /* Ancestor. */
   apr_hash_set (entry->attributes,
@@ -561,7 +561,7 @@ svn_wc__entries_write (apr_hash_t *entries,
 static void
 stuff_entry_v (apr_hash_t *entries,
                svn_string_t *name,
-               svn_vernum_t version,
+               svn_revnum_t revision,
                enum svn_node_kind kind,
                int flags,
                apr_time_t timestamp,
@@ -578,8 +578,8 @@ stuff_entry_v (apr_hash_t *entries,
     entry = alloc_entry (pool);
 
   /* Set up the explicit attributes. */
-  if (version != SVN_INVALID_VERNUM)
-    entry->version = version;
+  if (revision != SVN_INVALID_REVNUM)
+    entry->revision = revision;
   if (kind != svn_node_none)
     entry->kind = kind;
   if (timestamp)
@@ -621,7 +621,7 @@ stuff_entry_v (apr_hash_t *entries,
 svn_error_t *
 svn_wc__entry_add (apr_hash_t *entries,
                    svn_string_t *name,
-                   svn_vernum_t version,
+                   svn_revnum_t revision,
                    enum svn_node_kind kind,
                    int flags,
                    apr_time_t timestamp,
@@ -644,7 +644,8 @@ svn_wc__entry_add (apr_hash_t *entries,
     {
       va_list ap;
       va_start (ap, pool);
-      stuff_entry_v (entries, name, version, kind, flags, timestamp, pool, ap);
+      stuff_entry_v (entries, name, revision, kind,
+                     flags, timestamp, pool, ap);
       va_end (ap);
       return SVN_NO_ERROR;
     }
@@ -663,7 +664,7 @@ svn_wc__entry_remove (apr_hash_t *entries,
 svn_error_t *
 svn_wc__entry_merge_sync (svn_string_t *path,
                           svn_string_t *name,
-                          svn_vernum_t version,
+                          svn_revnum_t revision,
                           enum svn_node_kind kind,
                           int flags,
                           apr_time_t timestamp,
@@ -682,7 +683,7 @@ svn_wc__entry_merge_sync (svn_string_t *path,
     name = svn_string_create (SVN_WC__ENTRIES_THIS_DIR, pool);
 
   va_start (ap, pool);
-  stuff_entry_v (entries, name, version, kind, flags, timestamp, pool, ap);
+  stuff_entry_v (entries, name, revision, kind, flags, timestamp, pool, ap);
   va_end (ap);
   
   err = svn_wc__entries_write (entries, path, pool);
@@ -701,7 +702,7 @@ svn_wc__entry_dup (svn_wc__entry_t *entry, apr_pool_t *pool)
   apr_hash_index_t *hi;
   svn_wc__entry_t *dupentry = apr_pcalloc (pool, sizeof(*dupentry));
 
-  dupentry->version    = entry->version;
+  dupentry->revision   = entry->revision;
   dupentry->ancestor   = svn_string_dup (entry->ancestor, pool);
   dupentry->kind       = entry->kind;
   dupentry->flags      = entry->flags;
@@ -767,7 +768,7 @@ svn_wc__entry_dup (svn_wc__entry_t *entry, apr_pool_t *pool)
  * Fairly easy to turn the below into that, luckily.
  *
  * -------------------------------------------------------------------
- * Recurse on the versioned parts of a working copy tree, starting at
+ * Recurse on the revisioned parts of a working copy tree, starting at
  * PATH.
  *
  * Each time a directory is entered, ENTER_DIR is called with the

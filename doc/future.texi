@@ -30,7 +30,7 @@ The lists below are a bit dated;  a more recent wishlist can be found in
 @subsection Annotation
 
 We need to provide annotation of individual files (i.e. who wrote which
-line in which version), because CVS does this reasonably well.
+line in which revision), because CVS does this reasonably well.
 
 The information needed to annotate files should be stored by the
 filesystem as properties.  

@@ -69,8 +69,8 @@ typedef struct
   const char *activity_url;
   apr_hash_t *workrsrc;         /* PATH -> WORKING RESOURCE */
 
-  /* This is how we pass back the new version number to our callers. */
-  svn_vernum_t *new_version;
+  /* This is how we pass back the new revision number to our callers. */
+  svn_revnum_t *new_revision;
 
 } commit_ctx_t;
 
@@ -113,7 +113,7 @@ static svn_error_t *
 commit_add_dir (svn_string_t *name,
                 void *parent_baton,
                 svn_string_t *ancestor_path,
-                svn_vernum_t ancestor_version,
+                svn_revnum_t ancestor_revision,
                 void **child_baton)
 {
   /* ### CHECKOUT parent, then MKCOL */
@@ -124,7 +124,7 @@ static svn_error_t *
 commit_rep_dir (svn_string_t *name,
                 void *parent_baton,
                 svn_string_t *ancestor_path,
-                svn_vernum_t ancestor_version,
+                svn_revnum_t ancestor_revision,
                 void **child_baton)
 {
   /* ### if replacing with ancestor of something else, then CHECKOUT target
@@ -159,7 +159,7 @@ static svn_error_t *
 commit_add_file (svn_string_t *name,
                  void *parent_baton,
                  svn_string_t *ancestor_path,
-                 svn_vernum_t ancestor_version,
+                 svn_revnum_t ancestor_revision,
                  void **file_baton)
 {
   /* ### CHECKOUT parent (then PUT in apply_txdelta) */
@@ -170,7 +170,7 @@ static svn_error_t *
 commit_rep_file (svn_string_t *name,
                  void *parent_baton,
                  svn_string_t *ancestor_path,
-                 svn_vernum_t ancestor_version,
+                 svn_revnum_t ancestor_revision,
                  void **file_baton)
 {
   /* ### CHECKOUT (then PUT in apply_txdelta) */
@@ -207,13 +207,13 @@ static svn_error_t *
 commit_close_edit (void *edit_baton)
 {
   commit_ctx_t *cc = (commit_ctx_t *) edit_baton;
-  svn_vernum_t new_version = SVN_INVALID_VERNUM;
+  svn_revnum_t new_revision = SVN_INVALID_REVNUM;
 
-  /* todo: set new_version according to response from server. */
+  /* todo: set new_revision according to response from server. */
 
   /* Make sure the caller (most likely the working copy library, or
-     maybe its caller) knows the new version. */
-  *(cc->new_version) = new_version;
+     maybe its caller) knows the new revision. */
+  *(cc->new_revision) = new_revision;
 
   /* ### nothing? */
   return NULL;
@@ -243,7 +243,7 @@ svn_error_t *
 svn_ra_get_commit_editor(svn_ra_session_t *ras,
                          const svn_delta_edit_fns_t **editor,
                          void **edit_baton,
-                         svn_vernum_t *new_version)
+                         svn_revnum_t *new_revision)
 {
   commit_ctx_t *cc = apr_pcalloc(ras->pool, sizeof(*cc));
   svn_error_t *err;
@@ -253,8 +253,8 @@ svn_ra_get_commit_editor(svn_ra_session_t *ras,
   if (err)
     return err;
 
-  /* Record where the caller wants the new version number stored. */
-  cc->new_version = new_version;
+  /* Record where the caller wants the new revision number stored. */
+  cc->new_revision = new_revision;
 
   *edit_baton = cc;
 

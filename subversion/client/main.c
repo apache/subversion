@@ -86,7 +86,7 @@ parse_command_options (int argc,
                        char *progname,
                        svn_string_t **xml_file,
                        svn_string_t **target,
-                       svn_vernum_t *version,
+                       svn_revnum_t *revision,
                        svn_string_t **ancestor_path,
                        svn_boolean_t *force,
                        apr_pool_t *pool)
@@ -126,16 +126,16 @@ parse_command_options (int argc,
           else
             *ancestor_path = svn_string_create (argv[i], pool);
         }
-      else if (strcmp (argv[i], "--version") == 0)
+      else if (strcmp (argv[i], "--revision") == 0)
         {
           if (++i >= argc)
             {
-              fprintf (stderr, "%s: \"--version\" needs an argument\n",
+              fprintf (stderr, "%s: \"--revision\" needs an argument\n",
                        progname);
               exit (1);
             }
           else
-            *version = (svn_vernum_t) atoi (argv[i]);
+            *revision = (svn_revnum_t) atoi (argv[i]);
         }
       else if (strcmp (argv[i], "--force") == 0)
         *force = 1;
@@ -154,7 +154,7 @@ parse_options (int argc,
                enum command *command,
                svn_string_t **xml_file,
                svn_string_t **target,  /* dest_dir or file to add */
-               svn_vernum_t *version,  /* ancestral or new */
+               svn_revnum_t *revision,  /* ancestral or new */
                svn_string_t **ancestor_path,
                svn_boolean_t *force,
                apr_pool_t *pool)
@@ -205,7 +205,7 @@ parse_options (int argc,
 
  do_command_opts:
   parse_command_options (argc, argv, ++i, s,
-                         xml_file, target, version, ancestor_path, force,
+                         xml_file, target, revision, ancestor_path, force,
                          pool);
 
   /* Sanity checks: make sure we got what we needed. */
@@ -226,11 +226,11 @@ parse_options (int argc,
       fprintf (stderr, "%s: \"--force\" meaningless except for delete\n", s);
       exit (1);
     }
-  if (((*command == commit_command) && (*version == SVN_INVALID_VERNUM))
-      || ((*command == update_command) && (*version == SVN_INVALID_VERNUM)))
+  if (((*command == commit_command) && (*revision == SVN_INVALID_REVNUM))
+      || ((*command == update_command) && (*revision == SVN_INVALID_REVNUM)))
     {
-      fprintf (stderr, "%s: please use \"--version VER\" "
-               "to specify target version\n", s);
+      fprintf (stderr, "%s: please use \"--revision VER\" "
+               "to specify target revision\n", s);
       exit (1);
     }
   if (((*command == checkout_command) 
@@ -247,7 +247,7 @@ main (int argc, char **argv)
 {
   svn_error_t *err;
   apr_pool_t *pool;
-  svn_vernum_t version = SVN_INVALID_VERNUM;
+  svn_revnum_t revision = SVN_INVALID_REVNUM;
   svn_string_t *xml_file = NULL;
   svn_string_t *target = NULL;
   svn_string_t *ancestor_path = NULL;
@@ -260,7 +260,7 @@ main (int argc, char **argv)
   pool = svn_pool_create (NULL);
 
   parse_options (argc, argv, &command,
-                 &xml_file, &target, &version, &ancestor_path, &force,
+                 &xml_file, &target, &revision, &ancestor_path, &force,
                  pool);
   
   switch (command)
@@ -279,7 +279,7 @@ main (int argc, char **argv)
                                  trace_editor,
                                  trace_edit_baton,
                                  target, xml_file,
-                                 ancestor_path, version, pool);
+                                 ancestor_path, revision, pool);
       break;
     case update_command:
       {
@@ -292,7 +292,7 @@ main (int argc, char **argv)
       }
       err = svn_client_update (NULL, NULL,
                                trace_editor, trace_edit_baton,
-                               target, xml_file, version, pool);
+                               target, xml_file, revision, pool);
       break;
     case add_command:
       err = svn_client_add (target, pool);
@@ -301,7 +301,7 @@ main (int argc, char **argv)
       err = svn_client_delete (target, force, pool);
       break;
     case commit_command:
-      err = svn_client_commit (target, xml_file, version, pool);
+      err = svn_client_commit (target, xml_file, revision, pool);
       break;
     case status_command:
       {

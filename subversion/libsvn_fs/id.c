@@ -1,4 +1,4 @@
-/* id.c : operations on node and node version ID's
+/* id.c : operations on node and node revision ID's
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -94,7 +94,7 @@ svn_fs_id_is_ancestor (svn_fs_id_t *a, svn_fs_id_t *b)
     {
       /* Invariant: i is even, and for all j < i, a[j] == b[j].
          Keep in mind: every even-numbered entry in A or B is a
-         node/branch number; every odd-numbered entry is a version
+         node/branch number; every odd-numbered entry is a revision
          number.  So i is pointing at a node/branch number.  */
 
       /* If we've reached the end of A, then either A and B are equal,
@@ -112,28 +112,28 @@ svn_fs_id_is_ancestor (svn_fs_id_t *a, svn_fs_id_t *b)
       if (a[i] != b[i])
 	return 0;
 
-      /* If A's version number is greater than B's, then A is not B's
+      /* If A's revision number is greater than B's, then A is not B's
          ancestor.  Examples: 100.30 vs 100.20; 2.3.4.5 vs 2.3.4.4.  */
       if (a[i+1] > b[i+1])
 	return 0;
 
-      /* If A's version number is less than B's, then A is an ancestor
+      /* If A's revision number is less than B's, then A is an ancestor
 	 iff its ID ends now.  Examples: 100.30 vs 100.31; 100.30 vs
 	 100.32.2.4.  */
       if (a[i+1] < b[i+1])
 	return (a[i+2] == -1);
 
       /* Otherwise, we've established that the node/branch numbers and
-         version numbers are equal, so go around again.  */
+         revision numbers are equal, so go around again.  */
       i += 2;
     }
 }
 
 
-/* Compute the distance from the node version A to the node version
+/* Compute the distance from the node revision A to the node revision
    identified by the first PREFIX elements of A.  In other words, this
-   is the distance from a node version to some branch of the node
-   version.  */
+   is the distance from a node revision to some branch of the node
+   revision.  */
 static int
 distance_from_prefix (svn_fs_id_t *a, int prefix)
 {
@@ -169,14 +169,14 @@ svn_fs_id_distance (svn_fs_id_t *a, svn_fs_id_t *b)
     if (a[i] == -1)
       return 0;
 
-  /* Are they (branches off) different versions of the same node?
-     Account for the distance between the two versions.  */
+  /* Are they (branches off) different revisions of the same node?
+     Account for the distance between the two revisions.  */
   if (a[i] == b[i])
     return (distance_from_prefix (a, i+2)
 	    + distance_from_prefix (b, i+2)
 	    + abs (a[i+1] - b[i+1]));
   else
-    /* Or two branches off the same node version?  */
+    /* Or two branches off the same node revision?  */
     return (distance_from_prefix (a, i)
 	    + distance_from_prefix (b, i));
 }
@@ -196,14 +196,14 @@ svn_fs__is_parent (svn_fs_id_t *parent,
 	return 0;
     }
 
-  /* Is CHILD the next version of PARENT?  */
+  /* Is CHILD the next revision of PARENT?  */
   if ((i & 1) == 1
       && child[i] == parent[i] + 1
       && child[i + 1] == -1
       && parent[i + 1] == -1)
     return 1;
 
-  /* Is CHILD the first version of any branch from PARENT?  */
+  /* Is CHILD the first revision of any branch from PARENT?  */
   if ((i & 1) == 0
       && parent[i] == -1
       && child[i + 1] != -1

@@ -72,8 +72,8 @@ maintaining administrative files in the @file{SVN/} directory.
 
 The second library provides an API for exchanging information with a
 Subversion repository.  This includes the ability to read files, write
-new versions of files, and ask the repository to compare a working copy
-against its latest version.  Note that there are two implementations of
+new revisions of files, and ask the repository to compare a working copy
+against its latest revision.  Note that there are two implementations of
 this interface:  one designed to talk to a repository over a network,
 and one designed to work with a repository on local disk.  
 
@@ -126,7 +126,7 @@ For details, @xref{Protocol}.
 
 When the requests reach a particular repository, they are interpreted by
 the @dfn{Subversion Filesystem library}.  The Subversion Filesystem is a
-custom Unix-like filesystem, with a twist: writes are versioned and
+custom Unix-like filesystem, with a twist: writes are revisioned and
 atomic, and no data is ever deleted!  This filesystem is currently
 implemented on top of a normal filesystem, using Berkeley DBM files.
 

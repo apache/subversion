@@ -375,7 +375,7 @@ NOTE: For now, the option descriptions are mostly not included in the
   log
   ===
  
-  Usage: svn log [-D DATESPEC] [-v VERSPEC] [[FILE|DIR] ...]
+  Usage: svn log [-D DATESPEC] [-r REVSPEC] [[FILE|DIR] ...]
 
   Show log messages (and affected entities) for commits in which any
   of the entities in question changed.  If none were specified, then
@@ -412,7 +412,7 @@ NOTE: For now, the option descriptions are mostly not included in the
   commit.
 
     /* Taken from update */
-    -v ver    Merge in changes made between current revision and ver. 
+    -r REV    Merge in changes made between current revision and REV. 
 
   Note: Merges cannot happen in the repository. The repository has no
   way to resolve conflicts, so all merges have to be done in a working

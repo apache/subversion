@@ -71,12 +71,12 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    void *after_edit_baton,
                    svn_string_t *path,
                    svn_string_t *xml_src,
-                   svn_vernum_t version,
+                   svn_revnum_t revision,
                    apr_pool_t *pool)
 {
   return svn_client__update_internal (before_editor, before_edit_baton,
                                       after_editor, after_edit_baton,
-                                      path, xml_src, version, pool);
+                                      path, xml_src, revision, pool);
 }
 
 

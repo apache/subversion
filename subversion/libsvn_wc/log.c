@@ -91,7 +91,7 @@ merge_text (svn_string_t *path,
   if (err)
     return err;
 
-  /* Merge local edits into the updated version. */
+  /* Merge local edits into the updated revision. */
   err = svn_wc__merge_local_changes (svn_wc__gnudiff_patcher,
                                      diff,
                                      filepath,
@@ -171,7 +171,7 @@ signal_error (struct log_runner *loggy, svn_error_t *err)
 
 
 static svn_error_t *
-remove_from_version_control (struct log_runner *loggy, svn_string_t *name)
+remove_from_revision_control (struct log_runner *loggy, svn_string_t *name)
 {
   svn_error_t *err;
   apr_hash_t *entries = NULL;
@@ -314,7 +314,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
 
       sname = svn_string_create (name, loggy->pool);
 
-      err = remove_from_version_control (loggy, sname);
+      err = remove_from_revision_control (loggy, sname);
       if (err)
         return signal_error (loggy, err);
     }
@@ -333,11 +333,11 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
       else
         {
           svn_string_t *sname = svn_string_create (name, loggy->pool);
-          svn_string_t *verstr = apr_hash_get (ah,
-                                               SVN_WC__ENTRIES_ATTR_VERSION,
+          svn_string_t *revstr = apr_hash_get (ah,
+                                               SVN_WC__ENTRIES_ATTR_REVISION,
                                                APR_HASH_KEY_STRING);
-          svn_vernum_t new_version = (verstr ? atoi (verstr->data)
-                                      : SVN_INVALID_VERNUM);
+          svn_revnum_t new_revision = (revstr ? atoi (revstr->data)
+                                      : SVN_INVALID_REVNUM);
           apr_time_t timestamp = 0;
           int flags = 0;
           
@@ -408,7 +408,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           
           err = svn_wc__entry_merge_sync (loggy->path,
                                           sname,
-                                          new_version,
+                                          new_revision,
                                           kind,
                                           flags,
                                           timestamp,
@@ -426,8 +426,8 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
     }
   else if (strcmp (eltname, SVN_WC__LOG_COMMITTED) == 0)
     {
-      const char *verstr
-        = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_VERSION, atts);
+      const char *revstr
+        = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REVISION, atts);
 
       if (! name)
         return signal_error
@@ -437,13 +437,13 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                      loggy->pool,
                                      "missing name attr in %s",
                                      loggy->path->data));
-      else if (! verstr)
+      else if (! revstr)
         return signal_error
           (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
                                      0,
                                      NULL,
                                      loggy->pool,
-                                     "missing version attr for %s",
+                                     "missing revision attr for %s",
                                      name));
       else
         {
@@ -462,7 +462,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           entry = apr_hash_get (entries, sname->data, sname->len);
           if (entry && (entry->flags & SVN_WC__ENTRY_DELETE))
             {
-              err = remove_from_version_control (loggy, sname);
+              err = remove_from_revision_control (loggy, sname);
               if (err)
                 return signal_error (loggy, err);
             }
@@ -528,7 +528,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                  can ignore and move on. */
               err = svn_wc__entry_merge_sync (loggy->path,
                                               sname,
-                                              atoi (verstr),
+                                              atoi (revstr),
                                               svn_node_file,
                                               SVN_WC__ENTRY_CLEAR,
                                               timestamp,
@@ -745,7 +745,7 @@ svn_wc__cleanup (svn_string_t *path,
 svn_error_t *
 svn_wc__log_commit (svn_string_t *path,
                     apr_hash_t *targets,
-                    svn_vernum_t version,
+                    svn_revnum_t revision,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -778,14 +778,14 @@ svn_wc__log_commit (svn_string_t *path,
                                   svn_string_create ((char *) key, pool),
                                   svn_path_local_style);
 
-          err = svn_wc__log_commit (subdir, targets, version, pool);
+          err = svn_wc__log_commit (subdir, targets, revision, pool);
           if (err)
             return err;
         }
       else
         {
           svn_string_t *logtag = svn_string_create ("", pool);
-          char *verstr = apr_psprintf (pool, "%ld", version);
+          char *revstr = apr_psprintf (pool, "%ld", revision);
           apr_file_t *log_fp = NULL;
           
           /* entry->kind == svn_node_file, but was the file actually
@@ -817,8 +817,8 @@ svn_wc__log_commit (svn_string_t *path,
                                  SVN_WC__LOG_COMMITTED,
                                  SVN_WC__LOG_ATTR_NAME,
                                  svn_string_create ((char *) key, pool),
-                                 SVN_WC__LOG_ATTR_VERSION,
-                                 svn_string_create (verstr, pool),
+                                 SVN_WC__LOG_ATTR_REVISION,
+                                 svn_string_create (revstr, pool),
                                  NULL);
           
           apr_err = apr_full_write (log_fp, logtag->data, logtag->len, NULL);

@@ -119,7 +119,7 @@ static svn_error_t *
 add_directory (svn_string_t *name,
                void *parent_baton,
                svn_string_t *ancestor_path,
-               long int ancestor_version,
+               long int ancestor_revision,
                void **child_baton)
 {
   struct dir_baton *parent_d = parent_baton;
@@ -143,7 +143,7 @@ static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
                    svn_string_t *ancestor_path,
-                   long int ancestor_version,
+                   long int ancestor_revision,
                    void **child_baton)
 {
   struct dir_baton *parent_d = parent_baton;
@@ -225,7 +225,7 @@ static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
           svn_string_t *ancestor_path,
-          long int ancestor_version,
+          long int ancestor_revision,
           void **file_baton)
 {
   struct dir_baton *parent_d = parent_baton;
@@ -248,7 +248,7 @@ static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
               svn_string_t *ancestor_path,
-              long int ancestor_version,
+              long int ancestor_revision,
               void **file_baton)
 {
   struct dir_baton *parent_d = parent_baton;

@@ -386,19 +386,19 @@ fetch_file (svn_ra_session_t *ras,
   svn_error_t *err;
   svn_string_t *name;
   svn_string_t *ancestor_path;
-  svn_vernum_t ancestor_version;
+  svn_revnum_t ancestor_revision;
   void *file_baton;
   int rv;
 
   /* ### */
   ancestor_path = svn_string_create("### ancestor_path ###", fc->pool);
-  ancestor_version = 1;
+  ancestor_revision = 1;
 
   printf("fetching and saving %s\n", url);
 
   name = my_basename(url, fc->pool);
   err = (*fc->editor->add_file) (name, fc->cur_baton,
-                                 ancestor_path, ancestor_version,
+                                 ancestor_path, ancestor_revision,
                                  &file_baton);
   if (err)
     return svn_error_quick_wrap(err, "could not add a file");
@@ -435,7 +435,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
   fetch_ctx_t fc = { 0 };
   dir_rec_t *dr;
   svn_string_t *ancestor_path;
-  svn_vernum_t ancestor_version;
+  svn_revnum_t ancestor_revision;
   void *dir_baton;
 
   fc.editor = editor;
@@ -455,7 +455,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
 
   /* ### */
   ancestor_path = svn_string_create("### ancestor_path ###", ras->pool);
-  ancestor_version = 1;
+  ancestor_revision = 1;
 
   do
     {
@@ -502,7 +502,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
           name = my_basename(url, ras->pool);
           
           err = (*editor->add_directory) (name, parent_baton,
-                                          ancestor_path, ancestor_version,
+                                          ancestor_path, ancestor_revision,
                                           &this_baton);
           if (err)
             return svn_error_quick_wrap(err, "could not add directory");
@@ -558,7 +558,7 @@ static svn_error_t *
 update_add_dir (svn_string_t *name,
                 void *parent_baton,
                 svn_string_t *ancestor_path,
-                svn_vernum_t ancestor_version,
+                svn_revnum_t ancestor_revision,
                 void **child_baton)
 {
   return SVN_NO_ERROR;
@@ -568,7 +568,7 @@ static svn_error_t *
 update_rep_dir (svn_string_t *name,
                 void *parent_baton,
                 svn_string_t *ancestor_path,
-                svn_vernum_t ancestor_version,
+                svn_revnum_t ancestor_revision,
                 void **child_baton)
 {
   return SVN_NO_ERROR;
@@ -592,7 +592,7 @@ static svn_error_t *
 update_add_file (svn_string_t *name,
                  void *parent_baton,
                  svn_string_t *ancestor_path,
-                 svn_vernum_t ancestor_version,
+                 svn_revnum_t ancestor_revision,
                  void **file_baton)
 {
   return SVN_NO_ERROR;
@@ -602,7 +602,7 @@ static svn_error_t *
 update_rep_file (svn_string_t *name,
                  void *parent_baton,
                  svn_string_t *ancestor_path,
-                 svn_vernum_t ancestor_version,
+                 svn_revnum_t ancestor_revision,
                  void **file_baton)
 {
   return SVN_NO_ERROR;

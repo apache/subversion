@@ -11,7 +11,7 @@ libsvn_fs_la_SOURCES = convert-size.c		\
 		       node.c			\
 		       skel.c			\
 		       txn.c			\
-		       version.c
+		       revision.c
 # Set aside for the moment:
 # 		       file.c			\
 #		       delta.c			\

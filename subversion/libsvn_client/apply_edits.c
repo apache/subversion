@@ -94,7 +94,7 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
              svn_string_t *dest,
              svn_string_t *repos,            /* ignored if update */
              svn_string_t *ancestor_path,    /* ignored if update */
-             svn_vernum_t ancestor_version,  /* ignored if update */
+             svn_revnum_t ancestor_revision,  /* ignored if update */
              apr_pool_t *pool,
              svn_boolean_t is_update)
 {
@@ -104,13 +104,13 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
 
   if (! ancestor_path)
     ancestor_path = svn_string_create ("", pool);
-  if (ancestor_version == SVN_INVALID_VERNUM)
-    ancestor_version = 1;
+  if (ancestor_revision == SVN_INVALID_REVNUM)
+    ancestor_revision = 1;
       
   if (is_update)
     {
       err = svn_wc_get_update_editor (dest,
-                                      ancestor_version,
+                                      ancestor_revision,
                                       &editor,
                                       &edit_baton,
                                       pool);
@@ -120,7 +120,7 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
       err = svn_wc_get_checkout_editor (dest,
                                         repos,
                                         ancestor_path,
-                                        ancestor_version,
+                                        ancestor_revision,
                                         &editor,
                                         &edit_baton,
                                         pool);
@@ -143,7 +143,7 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
                                    editor,
                                    edit_baton,
                                    ancestor_path,
-                                   ancestor_version,
+                                   ancestor_revision,
                                    pool);
 }
 
@@ -157,7 +157,7 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
           svn_string_t *path,
           svn_string_t *xml_src,
           svn_string_t *ancestor_path,    /* ignored if update */
-          svn_vernum_t ancestor_version,  /* ignored if update */
+          svn_revnum_t ancestor_revision,  /* ignored if update */
           apr_pool_t *pool,
           svn_boolean_t is_update)
 {
@@ -190,7 +190,7 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
                      path,
                      svn_string_create (repos, pool),
                      ancestor_path,
-                     ancestor_version,
+                     ancestor_revision,
                      pool,
                      is_update);
   if (err)
@@ -216,12 +216,12 @@ svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
                                svn_string_t *path,
                                svn_string_t *xml_src,
                                svn_string_t *ancestor_path,
-                               svn_vernum_t ancestor_version,
+                               svn_revnum_t ancestor_revision,
                                apr_pool_t *pool)
 {
   return do_edits (before_editor, before_edit_baton,
                    after_editor, after_edit_baton,
-                   path, xml_src, ancestor_path, ancestor_version, pool, 0);
+                   path, xml_src, ancestor_path, ancestor_revision, pool, 0);
 }
 
 
@@ -232,12 +232,12 @@ svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
                              void *after_edit_baton,
                              svn_string_t *path,
                              svn_string_t *xml_src,
-                             svn_vernum_t ancestor_version,
+                             svn_revnum_t ancestor_revision,
                              apr_pool_t *pool)
 {
   return do_edits (before_editor, before_edit_baton,
                    after_editor, after_edit_baton,
-                   path, xml_src, NULL, ancestor_version, pool, 1);
+                   path, xml_src, NULL, ancestor_revision, pool, 1);
 }
 
 

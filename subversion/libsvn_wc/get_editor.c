@@ -76,7 +76,7 @@
 struct edit_baton
 {
   svn_string_t *dest_dir;
-  svn_vernum_t target_version;
+  svn_revnum_t target_revision;
 
   /* These used only in checkouts. */
   svn_boolean_t is_checkout;
@@ -100,7 +100,7 @@ struct dir_baton
      this dir itself).  BATON->ref_count starts at 1, is incremented
      for each entity being changed, and decremented for each
      completion of one entity's changes.  When the ref_count is 0, the
-     directory may be safely set to the target version, and this baton
+     directory may be safely set to the target revision, and this baton
      freed. */
   int ref_count;
 
@@ -178,10 +178,10 @@ free_dir_baton (struct dir_baton *dir_baton)
   svn_error_t *err;
   struct dir_baton *parent = dir_baton->parent_baton;
 
-  /* Bump this dir to the new version. */
+  /* Bump this dir to the new revision. */
   err = svn_wc__entry_merge_sync (dir_baton->path,
                                   NULL,
-                                  dir_baton->edit_baton->target_version,
+                                  dir_baton->edit_baton->target_revision,
                                   svn_node_dir,
                                   0,
                                   0,
@@ -396,7 +396,7 @@ static svn_error_t *
 prep_directory (svn_string_t *path,
                 svn_string_t *repository,
                 svn_string_t *ancestor_path,
-                svn_vernum_t ancestor_version,
+                svn_revnum_t ancestor_revision,
                 svn_boolean_t force,
                 apr_pool_t *pool)
 {
@@ -418,7 +418,7 @@ prep_directory (svn_string_t *path,
   err = svn_wc__ensure_wc (path,
                            repository,
                            ancestor_path,
-                           ancestor_version,
+                           ancestor_revision,
                            pool);
   if (err)
     return err;
@@ -438,19 +438,19 @@ replace_root (void *edit_baton,
   struct dir_baton *d;
   svn_error_t *err;
   svn_string_t *ancestor_path;
-  svn_vernum_t ancestor_version;
+  svn_revnum_t ancestor_revision;
 
   *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->pool);
 
   if (eb->is_checkout)
     {
       ancestor_path = eb->ancestor_path;
-      ancestor_version = eb->target_version;
+      ancestor_revision = eb->target_revision;
       
       err = prep_directory (d->path,
                             eb->repository,
                             ancestor_path,
-                            ancestor_version,
+                            ancestor_revision,
                             1, /* force */
                             d->pool);
       if (err)
@@ -523,7 +523,7 @@ static svn_error_t *
 add_directory (svn_string_t *name,
                void *parent_baton,
                svn_string_t *ancestor_path,
-               svn_vernum_t ancestor_version,
+               svn_revnum_t ancestor_revision,
                void **child_baton)
 {
   svn_error_t *err;
@@ -539,7 +539,7 @@ add_directory (svn_string_t *name,
      right away, there is no need to wait until the child is done. */
   err = svn_wc__entry_merge_sync (parent_dir_baton->path,
                                   this_dir_baton->name,
-                                  SVN_INVALID_VERNUM,
+                                  SVN_INVALID_REVNUM,
                                   svn_node_dir,
                                   0,
                                   0,
@@ -552,7 +552,7 @@ add_directory (svn_string_t *name,
   err = prep_directory (this_dir_baton->path,
                         this_dir_baton->edit_baton->repository,
                         ancestor_path,
-                        ancestor_version,
+                        ancestor_revision,
                         1, /* force */
                         this_dir_baton->pool);
   if (err)
@@ -568,14 +568,14 @@ static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
                    svn_string_t *ancestor_path,
-                   svn_vernum_t ancestor_version,
+                   svn_revnum_t ancestor_revision,
                    void **child_baton)
 {
   struct dir_baton *parent_dir_baton = parent_baton;
 
   /* kff todo: check that the dir exists locally, find it somewhere if
      its not there?  Yes, all this and more...  And ancestor_path and
-     ancestor_version need to get used. */
+     ancestor_revision need to get used. */
 
   struct dir_baton *this_dir_baton
     = make_dir_baton (name,
@@ -629,7 +629,7 @@ static svn_error_t *
 add_or_replace_file (svn_string_t *name,
                      void *parent_baton,
                      svn_string_t *ancestor_path,
-                     svn_vernum_t ancestor_version,
+                     svn_revnum_t ancestor_revision,
                      void **file_baton,
                      svn_boolean_t adding)  /* 0 if replacing */
 {
@@ -680,11 +680,11 @@ static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
           svn_string_t *ancestor_path,
-          svn_vernum_t ancestor_version,
+          svn_revnum_t ancestor_revision,
           void **file_baton)
 {
   return add_or_replace_file
-    (name, parent_baton, ancestor_path, ancestor_version, file_baton, 1);
+    (name, parent_baton, ancestor_path, ancestor_revision, file_baton, 1);
 }
 
 
@@ -692,11 +692,11 @@ static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
               svn_string_t *ancestor_path,
-              svn_vernum_t ancestor_version,
+              svn_revnum_t ancestor_revision,
               void **file_baton)
 {
   return add_or_replace_file
-    (name, parent_baton, ancestor_path, ancestor_version, file_baton, 0);
+    (name, parent_baton, ancestor_path, ancestor_revision, file_baton, 0);
 }
 
 
@@ -718,7 +718,7 @@ apply_textdelta (void *file_baton,
          kff todo: what we really need to do here is:
          
          1. See if there's a file or dir by this name already here.
-         2. See if it's under version control.
+         2. See if it's under revision control.
          3. If both are true, open text-base.
          4. If only 1 is true, bail, because we can't go destroying
             user's files (or as an alternative to bailing, move it to
@@ -934,7 +934,7 @@ close_file (void *file_baton)
   svn_error_t *err;
   apr_status_t apr_err;
   void *local_changes;
-  char *version_str = NULL;
+  char *revision_str = NULL;
   svn_string_t *entry_accum;
 
   err = svn_wc__lock (fb->dir_baton->path, 0, fb->pool);
@@ -1015,9 +1015,9 @@ close_file (void *file_baton)
                        really applicable here. -->
               <replace-prop-base name="F"/>
                   <!-- You know what to do. -->
-              <set-entry name="F" version="N"/>
+              <set-entry name="F" revision="N"/>
                   <!-- Once everything else is done, we can set F's
-                       entry to version N, changing the ./SVN/entries
+                       entry to revision N, changing the ./SVN/entries
                        file. -->
          
          3. Now run over the log file, doing each operation.  Note
@@ -1142,10 +1142,10 @@ close_file (void *file_baton)
                              NULL);
     }
 
-  /* Set version. */
-  version_str = apr_psprintf (fb->pool,
+  /* Set revision. */
+  revision_str = apr_psprintf (fb->pool,
                               "%d",
-                              fb->dir_baton->edit_baton->target_version);
+                              fb->dir_baton->edit_baton->target_revision);
 
   svn_xml_make_open_tag (&entry_accum,
                          fb->pool,
@@ -1153,8 +1153,8 @@ close_file (void *file_baton)
                          SVN_WC__LOG_MODIFY_ENTRY,
                          SVN_WC__LOG_ATTR_NAME,
                          fb->name,
-                         SVN_WC__ENTRIES_ATTR_VERSION,
-                         svn_string_create (version_str, fb->pool),
+                         SVN_WC__ENTRIES_ATTR_REVISION,
+                         svn_string_create (revision_str, fb->pool),
                          NULL);
 
   apr_err = apr_full_write (log_fp, entry_accum->data, entry_accum->len, NULL);
@@ -1231,7 +1231,7 @@ static const svn_delta_edit_fns_t tree_editor =
 /* Helper for the two public editor-supplying functions. */
 static svn_error_t *
 make_editor (svn_string_t *dest,
-             svn_vernum_t target_version,
+             svn_revnum_t target_revision,
              svn_boolean_t is_checkout,
              svn_string_t *repos,
              svn_string_t *ancestor_path,
@@ -1258,7 +1258,7 @@ make_editor (svn_string_t *dest,
   eb->is_checkout    = is_checkout;
   eb->ancestor_path  = ancestor_path;
   eb->repository     = repos;
-  eb->target_version = target_version;
+  eb->target_revision = target_revision;
 
   *edit_baton = eb;
 
@@ -1268,13 +1268,13 @@ make_editor (svn_string_t *dest,
 
 svn_error_t *
 svn_wc_get_update_editor (svn_string_t *dest,
-                          svn_vernum_t target_version,
+                          svn_revnum_t target_revision,
                           const svn_delta_edit_fns_t **editor,
                           void **edit_baton,
                           apr_pool_t *pool)
 {
   return
-    make_editor (dest, target_version,
+    make_editor (dest, target_revision,
                  0, NULL, NULL,
                  editor, edit_baton, pool);
 }
@@ -1284,12 +1284,12 @@ svn_error_t *
 svn_wc_get_checkout_editor (svn_string_t *dest,
                             svn_string_t *repos,
                             svn_string_t *ancestor_path,
-                            svn_vernum_t target_version,
+                            svn_revnum_t target_revision,
                             const svn_delta_edit_fns_t **editor,
                             void **edit_baton,
                             apr_pool_t *pool)
 {
-  return make_editor (dest, target_version,
+  return make_editor (dest, target_revision,
                       1, repos, ancestor_path,
                       editor, edit_baton, pool);
 }

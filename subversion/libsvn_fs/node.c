@@ -101,13 +101,13 @@ struct svn_fs_node_t {
      belongs.  Otherwise, this is zero.  */
   char *txn_id;
 
-  /* If this is an immutable node, this is its NODE-VERSION skel.  The
+  /* If this is an immutable node, this is its NODE-REVISION skel.  The
      skel, and the data it points into, are allocated from POOL.
 
      On mutable nodes, this should be zero.  We don't cache the
-     NODE-VERSION skel of mutable nodes, since it could change while
+     NODE-REVISION skel of mutable nodes, since it could change while
      we have the node open.  */
-  skel_t *node_version;
+  skel_t *node_revision;
 
 };
 
@@ -135,10 +135,10 @@ corrupt_representation (svn_fs_t *fs, svn_fs_id_t *id)
 
 
 static svn_error_t *
-corrupt_node_version (svn_fs_t *fs, svn_fs_id_t *id)
+corrupt_node_revision (svn_fs_t *fs, svn_fs_id_t *id)
 {
   return
-    corrupt_id ("corrupt node version for node `%s' in filesystem `%s'",
+    corrupt_id ("corrupt node revision for node `%s' in filesystem `%s'",
 		id, fs);
 }
 
@@ -153,10 +153,10 @@ corrupt_dangling_id (svn_fs_t *fs, svn_fs_id_t *id)
 
 
 static svn_error_t *
-not_a_node_version_id (svn_fs_t *fs, svn_fs_id_t *id)
+not_a_node_revision_id (svn_fs_t *fs, svn_fs_id_t *id)
 {
   return
-    corrupt_id ("Bogus node version id `%s' appears in filesystem `%s'",
+    corrupt_id ("Bogus node revision id `%s' appears in filesystem `%s'",
 		id, fs);
 }
 
@@ -172,7 +172,7 @@ corrupt_nodes_key (svn_fs_t *fs)
 
 
 
-/* Storing and retrieving node version REPRESENTATION skels.  */
+/* Storing and retrieving node revision REPRESENTATION skels.  */
 
 
 /* Set *SKEL_P to point to the REPRESENTATION skel for the node ID in
@@ -192,7 +192,7 @@ get_representation_skel (skel_t **skel_p,
   DBT key, value;
   skel_t *skel;
 
-  /* Generate the ASCII form of the node version ID.  */
+  /* Generate the ASCII form of the node revision ID.  */
   db_err = fs->nodes->get (fs->nodes, db_txn,
 			   svn_fs__id_to_dbt (&key, id, pool),
 			   svn_fs__result_dbt (&value),
@@ -235,18 +235,18 @@ put_representation_skel (svn_fs_t *fs,
 			 
 
 
-/* Storing and retrieving NODE-VERSION skels.  */
+/* Storing and retrieving NODE-REVISION skels.  */
 
 
-/* Set *SKEL_P to point to the NODE-VERSION skel for the node ID in FS,
+/* Set *SKEL_P to point to the NODE-REVISION skel for the node ID in FS,
    as part of the Berkeley DB transaction DB_TXN.  Allocate the skel
    and the data it points into in POOL.
 
    This takes care of applying any necessary deltas to reconstruct the
-   node version.  */
+   node revision.  */
 
 static svn_error_t *
-get_node_version_skel (skel_t **skel_p,
+get_node_revision_skel (skel_t **skel_p,
 		       svn_fs_t *fs,
 		       svn_fs_id_t *id,
 		       DB_TXN *db_txn,
@@ -255,7 +255,7 @@ get_node_version_skel (skel_t **skel_p,
   skel_t *skel;
 
   /* This is where we would handle diffy representations, to construct
-     a NODE-VERSION given its REPRESENTATION.  But I want to get the
+     a NODE-REVISION given its REPRESENTATION.  But I want to get the
      essentials working before I add that to the mix.  */
   SVN_ERR (get_representation_skel (&skel, fs, id, db_txn, pool));
   if (svn_fs__list_length (skel) != 2
@@ -267,11 +267,11 @@ get_node_version_skel (skel_t **skel_p,
 }
 
 
-/* Store SKEL as the NODE-VERSION skel for the node ID in FS, as part
+/* Store SKEL as the NODE-REVISION skel for the node ID in FS, as part
    of the Berkeley DB transaction DB_TXN.  Use POOL for any necessary
    temporary allocation.  */
 static svn_error_t *
-put_node_version_skel (svn_fs_t *fs,
+put_node_revision_skel (svn_fs_t *fs,
 		       svn_fs_id_t *id,
 		       skel_t *skel,
 		       DB_TXN *db_txn,
@@ -282,7 +282,7 @@ put_node_version_skel (svn_fs_t *fs,
      svn_fs__stable_node.  */
 
   /* Start with a dummy "fulltext" skel, and just drop in the
-     NODE-VERSION skel for this node.  */
+     NODE-REVISION skel for this node.  */
   static skel_t rep[] = {
     { 0, 0, 0, &rep[1], 0 },
     { 1, "fulltext", 8, 0, 0 }
@@ -317,7 +317,7 @@ typedef struct header_values_t {
 } header_values_t;
 
 
-/* Parse the HEADER in the NODE-VERSION skel SKEL, and fill in VALUES
+/* Parse the HEADER in the NODE-REVISION skel SKEL, and fill in VALUES
    with pointers to the appropriate sub-skels.  Return non-zero if
    HEADER is well-formed, zero otherwise.  */
 
@@ -328,7 +328,7 @@ parse_header (skel_t *skel, header_values_t *values)
 
   memset (values, 0, sizeof (*values));
 
-  /* The NODE-VERSION skel must be a list of at least one element.  */
+  /* The NODE-REVISION skel must be a list of at least one element.  */
   if (skel->is_atom
       || ! skel->children)
     return 0;
@@ -386,37 +386,37 @@ compare_ids (svn_fs_id_t *a, svn_fs_id_t *b)
   if ((i & 1) == 0)
     return a[i] - b[i];
 
-  /* This function is only prepared to handle node version ID's.  */
+  /* This function is only prepared to handle node revision ID's.  */
   if (a[i] == -1 || b[i] == -1)
     abort ();
 
-  /* Different versions of the same node are ordered by version number.  */
+  /* Different revisions of the same node are ordered by revision number.  */
   if (a[i + 1] == -1 && b[i + 1] == -1)
     return a[i] - b[i];
 
-  /* A branch off of any version of a node comes after all versions
+  /* A branch off of any revision of a node comes after all revisions
      of that node.  */
   if (a[i + 1] == -1)
     return -1;
   if (b[i + 1] == -1)
     return 1;
 
-  /* Branches are ordered by increasing version number.  */
+  /* Branches are ordered by increasing revision number.  */
   return a[i] - b[i];
 }
 
 
-/* Parse a node version ID from D.
-   Return zero if D does not contain a well-formed node version ID.  */
+/* Parse a node revision ID from D.
+   Return zero if D does not contain a well-formed node revision ID.  */
 static svn_fs_id_t *
-parse_node_version_dbt (const DBT *d)
+parse_node_revision_dbt (const DBT *d)
 {
   svn_fs_id_t *id = svn_fs__parse_id (d->data, d->size, 0);
 
   if (! id)
     return 0;
 
-  /* It must be a node version ID, not a node ID.  */
+  /* It must be a node revision ID, not a node ID.  */
   if (svn_fs_id_length (id) & 1)
     {
       free (id);
@@ -437,15 +437,15 @@ parse_node_version_dbt (const DBT *d)
    seems unfriendly.
 
    So this function tries to act as a proper comparison for any two
-   arbitrary byte strings.  Two well-formed node versions ID's compare
+   arbitrary byte strings.  Two well-formed node revisions ID's compare
    according to the rules described in the `structure' file; any
    malformed key comes before any well-formed key; and two malformed
    keys come in byte-by-byte order.  */
 static int
 compare_nodes_keys (const DBT *ak, const DBT *bk)
 {
-  svn_fs_id_t *a = parse_node_version_dbt (ak);
-  svn_fs_id_t *b = parse_node_version_dbt (bk);
+  svn_fs_id_t *a = parse_node_revision_dbt (ak);
+  svn_fs_id_t *b = parse_node_revision_dbt (bk);
   int result;
 
   /* Two well-formed keys are compared by the rules in `structure'.  */
@@ -647,9 +647,9 @@ svn_fs__open_node_by_id (svn_fs_node_t **node_p,
       skel_t *nv;
       header_values_t values;
 
-      SVN_ERR (get_node_version_skel (&nv, fs, id, db_txn, skel_pool));
+      SVN_ERR (get_node_revision_skel (&nv, fs, id, db_txn, skel_pool));
       if (! parse_header (nv, &values))
-	return corrupt_node_version (fs, id);
+	return corrupt_node_revision (fs, id);
 
       /* If the node is immutable, use SKEL_POOL as the node's pool.
 	 We're going to keep the skel around, so this puts the node
@@ -674,7 +674,7 @@ svn_fs__open_node_by_id (svn_fs_node_t **node_p,
       else if (svn_fs__is_atom (values.kind, "dir"))
 	node->kind = kind_directory;
       else
-	return corrupt_node_version (fs, id);
+	return corrupt_node_revision (fs, id);
 
       if (values.mutable)
 	/* For mutable nodes, we record the transaction ID.  */
@@ -682,8 +682,8 @@ svn_fs__open_node_by_id (svn_fs_node_t **node_p,
 				     values.mutable->data,
 				     values.mutable->len);
       else
-	/* For immutable nodes, we save the node version skel.  */
-	node->node_version = nv;
+	/* For immutable nodes, we save the node revision skel.  */
+	node->node_revision = nv;
 
       /* Add NODE to the filesystem's cache.  */
       cache_node (node);
@@ -703,7 +703,7 @@ svn_fs__open_node_by_id (svn_fs_node_t **node_p,
 
 
 /* Check FS's `nodes' table to find an unused node number, and set *ID_P
-   to the ID of the first version of an entirely new node in FS, as
+   to the ID of the first revision of an entirely new node in FS, as
    part of DB_TXN.  Allocate the new ID in POOL.  */
 static svn_error_t *
 new_node_id (svn_fs_id_t **id_p,
@@ -804,7 +804,7 @@ svn_fs__create_node (svn_fs_node_t **node_p,
 
 
 
-/* Creating successor node versions.  */
+/* Creating successor node revisions.  */
 
 
 /* Find the last entry before KEY in the btree table DB.
@@ -862,11 +862,11 @@ last_key_before (DB *db,
 
 
 /* Set *SUCCESSOR_P to the ID of an immediate successor to node
-   version ID in FS that does not exist yet, as part of the Berkeley
+   revision ID in FS that does not exist yet, as part of the Berkeley
    DB transaction DB_TXN.  Do any needed temporary allocation in POOL.
 
-   If ID is the youngest version of its node, then the successor is
-   simply ID with its rightmost version number increased; otherwise,
+   If ID is the youngest revision of its node, then the successor is
+   simply ID with its rightmost revision number increased; otherwise,
    the successor is a new branch from ID.  */
 static svn_error_t *
 new_successor_id (svn_fs_id_t **successor_p,
@@ -880,15 +880,15 @@ new_successor_id (svn_fs_id_t **successor_p,
   DBT key, value;
   int db_err;
 
-  /* Make sure ID is really a node version ID.  */
+  /* Make sure ID is really a node revision ID.  */
   if (id_len & 1)
-    return not_a_node_version_id (fs, id);
+    return not_a_node_revision_id (fs, id);
 
-  /* Set NEW_ID to the next node version after ID.  Allocate some
+  /* Set NEW_ID to the next node revision after ID.  Allocate some
      extra room, in case we need to construct a branch ID below.  */
   new_id = NEWARRAY (pool, svn_fs_id_t, (id_len + 3) * sizeof (*id));
   memcpy (new_id, id, (id_len + 1) * sizeof (*id)); /* copy the -1 */
-  new_id[id_len - 1]++;		/* increment the version number */
+  new_id[id_len - 1]++;		/* increment the revision number */
 
   /* Check to see if there already exists a node whose ID is NEW_ID.  */
   db_err = fs->nodes->get (fs->nodes, db_txn,
@@ -902,17 +902,17 @@ new_successor_id (svn_fs_id_t **successor_p,
       return 0;
     }
   else
-    SVN_ERR (DB_WRAP (fs, "checking for next node version", db_err));
+    SVN_ERR (DB_WRAP (fs, "checking for next node revision", db_err));
 
-  /* Okay, the next version of ID already exists, so we'll need to make
+  /* Okay, the next revision of ID already exists, so we'll need to make
      a new branch.  What's the next available branch number?
 
-     The sort order for the nodes table says that all versions of a
-     node come together, followed by all branches from any version of
-     that node; the branches are sorted by the version they branch
+     The sort order for the nodes table says that all revisions of a
+     node come together, followed by all branches from any revision of
+     that node; the branches are sorted by the revision they branch
      from, and then by branch number.
 
-     So, if our node version ID is N.V, then all its branches will
+     So, if our node revision ID is N.V, then all its branches will
      come immediately before the first branch from N.(V+1).  So we
      find the last node in the table before node ID N.(V+1).1.1; that
      node is (perhaps a branch from) the last branch from N.V.
@@ -932,11 +932,11 @@ new_successor_id (svn_fs_id_t **successor_p,
       return corrupt_nodes_key (fs);
     last_branch_len = svn_fs_id_length (last_branch_id);
 
-    /* Only node version ID's may appear as keys in the `nodes' table.  */
+    /* Only node revision ID's may appear as keys in the `nodes' table.  */
     if (last_branch_len & 1)
       return corrupt_nodes_key (fs);
 
-    /* If the last key before NEW_ID is just another version of node N,
+    /* If the last key before NEW_ID is just another revision of node N,
        then there are no branches.  */
     if (last_branch_len == id_len)
       {
@@ -997,7 +997,7 @@ svn_fs__create_successor (svn_fs_node_t **new_p,
   SVN_ERR (new_successor_id (&new->id, new->fs, old->id, db_txn, new->pool));
 
   /* Get a copy of the old node's contents.  */
-  SVN_ERR (svn_fs__get_node_version (&old_skel, old, db_txn, new->pool));
+  SVN_ERR (svn_fs__get_node_revision (&old_skel, old, db_txn, new->pool));
   new_skel = svn_fs__copy_skel (old_skel, new->pool);
 
   /* Add a "mutable" flag to the HEADER skel for SVN_TXN.  */
@@ -1019,7 +1019,7 @@ svn_fs__create_successor (svn_fs_node_t **new_p,
   }
 
   /* Write this out as the new node's contents.  */
-  SVN_ERR (put_node_version_skel (new->fs, new->id, new_skel, db_txn,
+  SVN_ERR (put_node_revision_skel (new->fs, new->id, new_skel, db_txn,
 				  new->pool));
 
   /* Add it to the cache.  */
@@ -1034,18 +1034,18 @@ svn_fs__create_successor (svn_fs_node_t **new_p,
 /* Public functions for reading and writing node contents.  */
 
 svn_error_t *
-svn_fs__get_node_version (skel_t **skel_p,
-			  svn_fs_node_t *node,
-			  DB_TXN *db_txn,
-			  apr_pool_t *pool)
+svn_fs__get_node_revision (skel_t **skel_p,
+                           svn_fs_node_t *node,
+                           DB_TXN *db_txn,
+                           apr_pool_t *pool)
 {
   skel_t *skel;
   header_values_t values;
 
-  SVN_ERR (get_node_version_skel (&skel, node->fs, node->id, db_txn, pool));
+  SVN_ERR (get_node_revision_skel (&skel, node->fs, node->id, db_txn, pool));
 
   if (! parse_header (skel, &values))
-    return corrupt_node_version (node->fs, node->id);
+    return corrupt_node_revision (node->fs, node->id);
 
   *skel_p = skel;
   return 0;
@@ -1053,9 +1053,9 @@ svn_fs__get_node_version (skel_t **skel_p,
 
 
 svn_error_t *
-svn_fs__put_node_version (svn_fs_node_t *node,
-			  skel_t *skel,
-			  DB_TXN *db_txn)
+svn_fs__put_node_revision (svn_fs_node_t *node,
+                           skel_t *skel,
+                           DB_TXN *db_txn)
 {
   header_values_t values;
 
@@ -1064,8 +1064,8 @@ svn_fs__put_node_version (svn_fs_node_t *node,
       || ! values.mutable)
     abort ();
 
-  SVN_ERR (put_node_version_skel (node->fs, node->id, skel, db_txn,
-				  node->pool));
+  SVN_ERR (put_node_revision_skel (node->fs, node->id, skel, db_txn,
+                                   node->pool));
 
   return 0;
 }
@@ -1093,7 +1093,7 @@ svn_fs_get_node_prop (svn_string_t **value_p,
 		      apr_pool_t *pool)
 {
   apr_pool_t *skel_pool;
-  skel_t *node_version;
+  skel_t *node_revision;
   header_values_t values;
 
   /* If the node is mutable, we'll get our own copy of the entire
@@ -1103,10 +1103,10 @@ svn_fs_get_node_prop (svn_string_t **value_p,
   else
     skel_pool = pool;
 
-  SVN_ERR (svn_fs__get_node_version (&node_version, node, 0, skel_pool));
+  SVN_ERR (svn_fs__get_node_revision (&node_revision, node, 0, skel_pool));
 
-  if (! parse_header (node_version, &values))
-    return corrupt_node_version (node->fs, node->id);
+  if (! parse_header (node_revision, &values))
+    return corrupt_node_revision (node->fs, node->id);
 
   /* Scan the property list for a property with the right name.  */
   {
@@ -1119,7 +1119,7 @@ svn_fs_get_node_prop (svn_string_t **value_p,
 	if (! prop->is_atom
 	    || ! prop->next
 	    || ! prop->next->is_atom)
-	  return corrupt_node_version (node->fs, node->id);
+	  return corrupt_node_revision (node->fs, node->id);
 
 	if (prop->len == propname->len
 	    && ! memcmp (prop->data, propname->data, prop->len))
@@ -1149,7 +1149,7 @@ svn_fs_get_node_proplist (apr_hash_t **table_p,
 			  apr_pool_t *pool)
 {
   apr_pool_t *skel_pool;
-  skel_t *node_version;
+  skel_t *node_revision;
   header_values_t values;
   apr_hash_t *table;
 
@@ -1160,10 +1160,10 @@ svn_fs_get_node_proplist (apr_hash_t **table_p,
   else
     skel_pool = pool;
 
-  SVN_ERR (svn_fs__get_node_version (&node_version, node, 0, skel_pool));
+  SVN_ERR (svn_fs__get_node_revision (&node_revision, node, 0, skel_pool));
 
-  if (! parse_header (node_version, &values))
-    return corrupt_node_version (node->fs, node->id);
+  if (! parse_header (node_revision, &values))
+    return corrupt_node_revision (node->fs, node->id);
 
   table = apr_make_hash (pool);
 
@@ -1178,7 +1178,7 @@ svn_fs_get_node_proplist (apr_hash_t **table_p,
 	if (! prop->is_atom
 	    || ! prop->next
 	    || ! prop->next->is_atom)
-	  return corrupt_node_version (node->fs, node->id);
+	  return corrupt_node_revision (node->fs, node->id);
 
 	/* Copy the name and value.  If NODE is mutable, the originals
            are allocated in skel_pool, which will go away soon.  If
