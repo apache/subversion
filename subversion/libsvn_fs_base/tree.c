@@ -709,7 +709,8 @@ open_path (parent_path_t **parent_path_p,
   dag_node_t *here; /* The directory we're currently looking at.  */
   parent_path_t *parent_path; /* The path from HERE up to the root.  */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
-  const char *canon_path = svn_fs__canonicalize_abspath (path, trail->pool);
+  const char *canon_path = svn_fs_base__canonicalize_abspath (path,
+                                                              trail->pool);
   const char *path_so_far = "/";
 
   /* Make a parent_path item for the root node, using its own current
@@ -926,7 +927,7 @@ get_dag (dag_node_t **dag_node_p,
   dag_node_t *node = NULL;
 
   /* Canonicalize the input PATH. */
-  path = svn_fs__canonicalize_abspath (path, trail->pool);
+  path = svn_fs_base__canonicalize_abspath (path, trail->pool);
 
   /* If ROOT is a revision root, we'll look for the DAG in our cache. */
   node = dag_node_cache_get (root, path, trail->pool);
@@ -964,7 +965,7 @@ add_change (svn_fs_t *fs,
             trail_t *trail)
 {
   change_t change;
-  change.path = svn_fs__canonicalize_abspath (path, trail->pool);
+  change.path = svn_fs_base__canonicalize_abspath (path, trail->pool);
   change.noderev_id = noderev_id;
   change.kind = change_kind;
   change.text_mod = text_mod;
@@ -1776,7 +1777,7 @@ undelete_change (svn_fs_t *fs,
   svn_fs_path_change_t *this_change;
 
   /* Canonicalize PATH. */
-  path = svn_fs__canonicalize_abspath (path, trail->pool);
+  path = svn_fs_base__canonicalize_abspath (path, trail->pool);
 
   /* First, get the changes associated with TXN_ID. */
   SVN_ERR (svn_fs_bdb__changes_fetch (&changes, fs, txn_id, trail));
@@ -3851,7 +3852,8 @@ base_node_history (svn_fs_history_t **history_p,
 
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history (root->fs,
-                                 svn_fs__canonicalize_abspath (path, pool),
+                                 svn_fs_base__canonicalize_abspath (path,
+                                                                    pool),
                                  root->rev, FALSE, NULL,
                                  SVN_INVALID_REVNUM, pool);
   return SVN_NO_ERROR;
