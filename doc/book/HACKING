@@ -26,8 +26,6 @@ Tone: somewhere between formal and informal.
 
 - Always use long Subversion commands (e.g. checkout, not co, etc)
 
-- Always "Apache HTTP Server" not httpd.
-
 ===========================================================================
 
 ================
