@@ -946,11 +946,22 @@ rep_write_contents (void *baton,
   if (wb->trail)
     SVN_ERR (txn_body_write_rep (&args, wb->trail));
   else
-    SVN_ERR (svn_fs__retry_txn (wb->fs,
-                                txn_body_write_rep,
-                                &args,
-                                wb->pool));
-  
+    {
+      /* Hey, guess what?  trails don't clear their own subpools.  In
+         the case of simply writing the rep to the db, we're *certain*
+         that there's no data coming back to us that needs to be
+         preserved... so the whole operation can happen within a
+         single malloc/free cycle.  This prevents us from creating
+         millions of unnecessary trail subpools when writing a big
+         file. */
+      apr_pool_t *subpool = svn_pool_create (wb->pool);
+      SVN_ERR (svn_fs__retry_txn (wb->fs,
+                                  txn_body_write_rep,
+                                  &args,
+                                  subpool));
+      svn_pool_destroy (subpool);
+    }
+
   return SVN_NO_ERROR;
 }
 
