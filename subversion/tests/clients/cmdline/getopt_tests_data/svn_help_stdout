@@ -29,8 +29,8 @@ Available subcommands:
    propget (pget, pg)
    proplist (plist, pl)
    propset (pset, ps)
-   revert
    resolve
+   revert
    status (stat, st)
    switch (sw)
    update (up)
