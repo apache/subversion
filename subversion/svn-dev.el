@@ -12,7 +12,8 @@
 
 
 
-(c-set-style "gnu")
+(c-add-style "svn" '("gnu" (c-offsets-alist . ((inextern-lang . 0)))))
+(c-set-style "svn")
 (setq indent-tabs-mode nil)
 (setq angry-mob-with-torches-and-pitchforks t)
 
