@@ -34,11 +34,11 @@ MDOCS_XML_SOURCE = $(MDOCS_DIR)/misc-docs.xml
 MDOCS_ALL_SOURCE = $(MDOCS_DIR)/*.xml
 MDOCS_INSTALL_DIR = $(INSTALL_DIR)/misc-docs
 
-XSL_FO = ${BOOK_TOP}/tools/fo-stylesheet.xsl
-XSL_HTML = $(BOOK_TOP)/tools/html-stylesheet.xsl
-XSL_HTML_CHUNK = $(BOOK_TOP)/tools/chunk-stylesheet.xsl
+XSL_FO = ${BOOK_TOP}/../../book/tools/fo-stylesheet.xsl
+XSL_HTML = $(BOOK_TOP)/../../book/tools/html-stylesheet.xsl
+XSL_HTML_CHUNK = $(BOOK_TOP)/../../book/tools/chunk-stylesheet.xsl
 
-RUN_FOP = ${BOOK_TOP}/tools/bin/run-fop.sh
+RUN_FOP = ${BOOK_TOP}/../../book/tools/bin/run-fop.sh
 
 # Book xsltproc options for HTML output
 # Note: --stringparam arguments no longer go here; 

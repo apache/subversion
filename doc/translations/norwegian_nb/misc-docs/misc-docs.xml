@@ -1,5 +1,14 @@
 <?xml version="1.0"?>
+<!-- @ENGLISH {{{
 <!DOCTYPE book SYSTEM "../tools/dtd/dblite.dtd"
+[
+
+<!ENTITY best_practices           SYSTEM "best_practices.xml">
+<!ENTITY directory_versioning     SYSTEM "directory_versioning.xml">
+<!ENTITY quick_walkthrough        SYSTEM "quick_walkthrough.xml">
+]>
+@ENGLISH }}} -->
+<!DOCTYPE book SYSTEM "../../../book/tools/dtd/dblite.dtd"
 [
 
 <!ENTITY best_practices           SYSTEM "best_practices.xml">
