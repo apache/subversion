@@ -6,29 +6,19 @@
    improvements himself, but that's okay -- I'm still finding it
    helpful to consider the problem from scratch.  -kff]
 
-Last updated: $Date: 2001-04-16 22:58:17 $
+Last updated: $Date: 2001-04-16 23:00:19 $
 
 Three related things that need to happen in the filesystem before we
 get to alpha:
 
-   a) file contents need to be moved into a separate table
+   a) File contents need to be moved into a separate table.
 
-   b) we need to operate on file contents without holding the entire
+   b) We need to operate on file contents without holding the entire
       contents in RAM.  Berkeley DB gives us tools to operate on
       regions within a value, we just need to use them.
 
-   c) we need to do reverse-delta storage in the filesystem (with
-      checksums)
-
-This is a rough guide to how we'll do these three things.  I'm writing
-it up here mainly so JimB can tear it down and replace it with
-something better.
-
-I'm going to describe the changes as though they are being done
-independently, in the order given above.  Probably they will in fact
-be implemented independently, as our brains aren't big enough to do
-otherwise.  But if it turns to be easy to condense some of them into a
-single pass, then we may try it.
+   c) We need to do reverse-delta storage in the filesystem (with
+      checksums).
 
 
 a) File contents need to be moved into a separate table.
