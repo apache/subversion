@@ -1293,9 +1293,10 @@ svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict.
         </itemizedlist>
 
       <para>Once you've resolved the conflict, you need to let
-        Subversion know by removing the three temporary files.  When
-        those files are gone, Subversion no longer considers the file
-        to be in a state of conflict anymore.</para>
+        Subversion know by running <command>svn resolve</command>.
+        This removes the three temporary files
+        and Subversion no longer considers the file
+        to be in a state of conflict.</para>
 
       <screen>
 $ svn resolve sandwich.txt
@@ -1446,8 +1447,8 @@ sandwich.txt
         argument.  In any case, you want to be careful and only run
         <command>svn resolve</command> when you're certain that you've
         fixed the conflict in your file&mdash;once the temporary files
-        are removed, Subversion will let you commit a file with
-        conflict markers.</para>
+        are removed, Subversion will let you commit the file even if
+        it still contains conflict markers.</para>
       
     </sect2>
     
@@ -1465,7 +1466,7 @@ sandwich.txt
            to the new revision you create.  If your log message is
            brief, you may wish to supply it on the command line using
            the <option>--message</option> (or
-           <option>-m</option>):</para>
+           <option>-m</option>) option:</para>
            
       <screen>
 $ svn commit --message "Corrected number of cheese slices."
