@@ -403,7 +403,9 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   /* ### grumble */
   rootpath = svn_stringbuf_create("/", pool);
 
-  serr = svn_repos_dir_delta(previous_root, rootpath, revs,
+  serr = svn_repos_dir_delta(previous_root, rootpath,
+                             NULL,      /* ### should fix */
+                             revs,
                              committed_root, rootpath,
                              editor, &mrc, pool);
   if (serr != NULL)
