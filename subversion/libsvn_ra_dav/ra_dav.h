@@ -286,6 +286,7 @@ enum {
   ELEM_fetch_props,
   ELEM_remove_prop,
   ELEM_ignored_set,
+  ELEM_log_report,
   ELEM_log_item,
   ELEM_log_date,
   ELEM_merge_response,
