@@ -843,6 +843,12 @@ svn_fs__dag_get_proplist (skel_t **proplist_p,
 
   /* Get the string associated with the property rep, parsing it as a
      skel. */
+  if (rep->len == 0)
+    {
+      *proplist_p = svn_fs__make_empty_list (trail->pool);
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR (svn_fs__string_from_rep (&propstr, node->fs, rep, trail));
   *proplist_p = svn_fs__parse_skel ((char *) propstr.data,
                                     propstr.len,
@@ -858,14 +864,15 @@ svn_fs__dag_set_proplist (dag_node_t *node,
                           trail_t *trail)
 {
   skel_t *node_rev;
-  skel_t *header;
+  skel_t *rep;
+  const char *rep_key, *mutable_rep_key, *str_key;
+  svn_stringbuf_t *unparsed_props;
   
   /* Sanity check: this node better be mutable! */
   {
     svn_boolean_t is_mutable;
-    
-    SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
 
+    SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
     if (! is_mutable)
       {
         svn_stringbuf_t *idstr = svn_fs_unparse_id (node->id, node->pool);
@@ -878,7 +885,7 @@ svn_fs__dag_set_proplist (dag_node_t *node,
   }
 
   /* Well-formed tests:  make sure the incoming proplist is of the
-     form 
+     form:
                PROPLIST ::= (PROP ...) ;
                    PROP ::= atom atom ;                     */
   {
@@ -901,30 +908,26 @@ svn_fs__dag_set_proplist (dag_node_t *node,
   
   /* Go get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, node, trail));
+  rep_key = apr_pstrndup (trail->pool,
+                          node_rev->children->next->data,
+                          node_rev->children->next->len);
 
-  {
-    skel_t *node_rev_copy;
+  /* Get a mutable version of this rep. */
+  SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, rep_key,
+                                    node->fs, trail));
 
-    /* Copy this NODE-REVISION skel so we can work on it without fear
-       of tampering with the cache. */
-    node_rev_copy = svn_fs__copy_skel (node_rev, trail->pool);
+  /* Now, get the key to the string our mutable rep points to. */
+  SVN_ERR (svn_fs__read_rep (&rep, node->fs, mutable_rep_key, trail));
+  str_key = svn_fs__string_key_from_rep (rep, trail->pool);
 
-    /* ### tweakit: Everything up to here is golden.  Below, push
-       through and get a mutable rep, store the proplist in a new
-       string, reference the string in the new mutable rep, reference
-       the rep from this node revision, et voila. */
+  /* Clear the old string, write the new one. */
+  unparsed_props = svn_fs__unparse_skel (proplist, trail->pool);
+  SVN_ERR (svn_fs__string_clear (node->fs, str_key, trail));
+  SVN_ERR (svn_fs__string_append (node->fs, &str_key, 
+                                  unparsed_props->len, 
+                                  unparsed_props->data, 
+                                  trail));
 
-    /* The node "header" is the first element of a node-revision skel,
-       itself a list. */
-    header = node_rev_copy->children;
-
-    /* Insert the new proplist into the content_skel.  */
-    proplist->next = header->children->next->next;
-    header->children->next = proplist;
-  
-    /* Commit the new content_skel, within the given trail. */
-    SVN_ERR (set_node_revision (node, node_rev_copy, trail));
-  }
   return SVN_NO_ERROR;
 }
 
