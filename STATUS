@@ -34,25 +34,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r12637, r12640
-    Very bad memory handling in svndumpfilter - caches an entire revision
-    of data in memory.
-    Justification:
-      Makes the use of svndumpfilter on dumpstreams containing files
-      larger than available RAM, or revisions in which the total size of
-      changed files is larger than available RAM, totally impossible.
-      This is a showstopper bug, since we do not have obliterate.
-    Notes:
-      r12637 is purely re-ordering of entire functions with no effective
-      code changes whatsoever, in order to make the diff of r12640 more
-      easily reviewable.
-    Branch:
-      1.1.x-svndumpfilter r12657:12659
-      (Each merged revision committed to branch seperately)
-      NEEDS AS YET UNAPPROVED r12636 TO APPLY CLEANLY
-    Votes:
-      +1: maxb, sussman, dionisos
-
   * r12499, r12542, plus branch-only modification in r12670
     Make mailer.py work on Windows.
     Justification:
