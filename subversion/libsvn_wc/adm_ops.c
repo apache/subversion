@@ -1319,7 +1319,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       base_thing = svn_wc__text_base_path (fullpath, 0, pool);
 
       if (! magic_props_changed)
-        SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, TRUE,
+        SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, FALSE,
                                          adm_access, pool));
       if ((modified_p) || (kind == svn_node_none) || (magic_props_changed))
         {
