@@ -49,7 +49,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "POT-Creation-Date: 2004-08-17 09:36+0200\n"
-"PO-Revision-Date: 2004-08-27 10:00+0100\n"
+"PO-Revision-Date: 2004-09-06 12:33+0100\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -259,7 +259,11 @@ msgstr "Konflikt aktuelle Ausgangsdatei: %s\n"
 msgid "Conflict Properties File: %s\n"
 msgstr "Konflikt Eigenschaftsdatei: %s\n"
 
-#: clients/cmdline/info-cmd.c:257
+#: clients/cmdline/info-cmd.c:252
+msgid "'svn info' only works on working copy paths, not URLs"
+msgstr "'svn info' geht nur für Pfade von Abeitskopien, keine URLs"
+
+#: clients/cmdline/info-cmd.c:264
 #, c-format
 msgid ""
 "%s:  (Not a versioned resource)\n"
@@ -299,8 +303,8 @@ msgstr "Gültigkeit der Log-Meldung erzwingen"
 
 #: clients/cmdline/main.c:67
 #: clients/cmdline/main.c:68
-#: svnadmin/main.c:199
-#: svnadmin/main.c:202
+#: svnadmin/main.c:221
+#: svnadmin/main.c:224
 #: svnlook/main.c:89
 #: svnlook/main.c:92
 msgid "show help on a subcommand"
@@ -453,7 +457,7 @@ msgid "relocate via URL-rewriting"
 msgstr "durch Umschreiben der URL umplazieren"
 
 #: clients/cmdline/main.c:136
-#: svnadmin/main.c:241
+#: svnadmin/main.c:263
 msgid "read user configuration files from directory ARG"
 msgstr "Benutzerkonfigurationsdateien aus dem Verzeichnis PAR lesen"
 
@@ -998,7 +1002,8 @@ msgid ""
 "      URL, HeadURL             - The URL for the head version of the object.\n"
 "      Author, LastChangedBy    - The last person to modify the file.\n"
 "      Date, LastChangedDate    - The date/time the object was last modified.\n"
-"      Rev, LastChangedRevision - The last revision the object changed.\n"
+"      Rev, Revision,           - The last revision the object changed.\n"
+"      LastChangedRevision\n"
 "      Id                       - A compressed summary of the previous\n"
 "                                   4 keywords.\n"
 "    svn:executable - If present, make the file executable. This\n"
@@ -1020,38 +1025,44 @@ msgstr ""
 "Aufruf: 1. propset EIGNAME [EIGWERT | -F WERTDATEI] PFAD\n"
 "        2. propset EIGNAME --revprop -r REV [EIGWERT | -F WERTDATEI] [URL]\n"
 "\n"
-"  1. Erstellt eine versionierte, lokale Eigenschaftsänderung in Arbeitskopie\n"
-"  2. Erstellt eine unversionierte, Eigenschaftsänderung auf der Revision des\n"
+"  1. Erstellt eine versionierte, lokale Eigenschaftsänderung in der Arbeitskopie\n"
+"  2. Erstellt eine unversionierte, Eigenschaftsänderung in der Revision des\n"
 "     Projektarchivs. \n"
 "\n"
 "  Notiz: svn erkennt die folgenden speziellen, versionierten Eigenschaften,\n"
 "  wird aber jede gewünschte Eigenschaft speichern:\n"
 "    svn:ignore    - Eine durch Zeilenumbruch getrennte Liste von zu\n"
 "      ignorierenden Dateimustern.\n"
-"    svn:keywords  - Schlüsselworte, die expandiert werden sollen. Gültige       Schlüsselworte sind:       URL, HeadURL             - Die URL für die Head-Version des Objektes.\n"
-"      Author, LastChangedBy    - Die letzte Person, die die Datei geändert hat.\n"
-"      Date, LastChangedDate    - Das Datum / die Zeit zu der das Objekt zuletzt\n"
-"                                   geändert wurde.\n"
-"      Rev, LastChangedRevision - Die letzte Revision, in der das Objekt\n"
-"                                   geändert wurde.\n"
-"      Id                       - Eine komprimierte Zusammenfassung der vier\n"
-"                                   genannten Schlüsselworte.\n"
+"\n"
+"    svn:keywords  - Schlüsselworte, die expandiert werden sollen. Gültige                 Schlüsselworte sind:\n"
+"      URL, HeadURL          - Die URL für die Head-Version des Objektes.\n"
+"      Author, LastChangedBy - Die letzte Person, die die Datei geändert hat.\n"
+"      Date, LastChangedDate - Das Datum / die Zeit zu der das Objekt zuletzt\n"
+"                              geändert wurde.\n"
+"      Rev, Revision,      LastChangedRevision   - Die letzte Revision, in der das Objekt\n"
+"                              geändert wurde.\n"
+"      Id                    - Eine komprimierte Zusammenfassung der vier\n"
+"                              genannten Schlüsselworte.\n"
+"\n"
 "    svn:executable - Falls vorhanden, mache die Datei ausführbar.  Diese\n"
 "      Eigenschaft kann nicht für ein Verzeichnis gesetzt werden.  Ein nicht-\n"
 "      rekursiver Versuch wird scheitern und ein rekursiver Versuch wird nur die\n"
 "      Eigenschaften der Dateikinder des Verzeichnisses setzen.\n"
+"\n"
 "    svn:eol-style  - Einer von 'native', 'LF', 'CR', 'CRLF'.\n"
+"\n"
 "    svn:mime-type  - Der MIME-Typ der Datei. Verwendet, um festzustellen, ob\n"
 "      die Datei zusammengeführt werden soll und wie sie von Apache übertragen\n"
 "      werden soll. Ein MIME-Typ, der mit 'text/' beginnt (oder kein MIME-Typ)\n"
 "      werden als Text behandelt.  Alles andere wird als ausführbar behandelt.\n"
+"\n"
 "    svn:externals  - Eine durch Zeilenumbruch getrennte Liste von\n"
 "      Modulnamen, die jeder aus einem relativen Verzeichnispfad, optionalen\n"
 "      Revisionsmarkern und einer URL bestehen.  Zum Beispiel:\n"
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
 
-#: clients/cmdline/main.c:543
+#: clients/cmdline/main.c:544
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -1068,7 +1079,7 @@ msgstr ""
 "  Dateien und ermöglicht es somit, daß das Verzeichnis wieder übertragen \n"
 "  werden kann.\n"
 
-#: clients/cmdline/main.c:552
+#: clients/cmdline/main.c:553
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -1083,7 +1094,7 @@ msgstr ""
 "  Konfliktzustände auf. Er kann jedoch keine gelöschten Verzeichnisse wieder\n"
 "  herstellen.\n"
 
-#: clients/cmdline/main.c:562
+#: clients/cmdline/main.c:563
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1216,7 +1227,7 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    Head revision:   981\n"
 
-#: clients/cmdline/main.c:629
+#: clients/cmdline/main.c:630
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -1245,7 +1256,7 @@ msgstr ""
 "     Projektarchivs ändert (z.B. durch eine Schema- oder Hostnamenänderung),\n"
 "     während Ihre Arbeitskopie immer noch das selbe Verzeichnis im selben      Projektarchiv spiegelt.\n"
 
-#: clients/cmdline/main.c:650
+#: clients/cmdline/main.c:651
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1284,44 +1295,44 @@ msgstr ""
 "  Datei, während Aktualisierungen der Dateieigenschaften in der zweiten Spalte\n"
 "  angezeigt werden.\n"
 
-#: clients/cmdline/main.c:724
-#: svnadmin/main.c:56
+#: clients/cmdline/main.c:725
+#: svnadmin/main.c:75
 msgid "Caught signal"
 msgstr "Signal empfangen"
 
-#: clients/cmdline/main.c:821
-#: svnadmin/main.c:941
+#: clients/cmdline/main.c:822
+#: svnadmin/main.c:1006
 msgid "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr "Mehrere Revisionsparameter gefunden; bitte '-r M:N' anstelle '-r M -r N' verwenden"
 
-#: clients/cmdline/main.c:833
-#: svnadmin/main.c:958
+#: clients/cmdline/main.c:834
+#: svnadmin/main.c:1023
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaxfehler in Revisionsparameter '%s'"
 
-#: clients/cmdline/main.c:978
-#: clients/cmdline/main.c:988
+#: clients/cmdline/main.c:979
+#: clients/cmdline/main.c:989
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props und --no-auto-props schließen sich gegenseitig aus"
 
-#: clients/cmdline/main.c:1004
+#: clients/cmdline/main.c:1005
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Syntaxfehler im 'native-eol' Parameter '%s'"
 
-#: clients/cmdline/main.c:1047
+#: clients/cmdline/main.c:1048
 msgid "Subcommand argument required\n"
 msgstr "Unterbefehl benötigt einen Parameter\n"
 
-#: clients/cmdline/main.c:1065
-#: svnadmin/main.c:1075
+#: clients/cmdline/main.c:1066
+#: svnadmin/main.c:1143
 #: svnlook/main.c:1962
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Unbekannter Befehl: '%s'\n"
 
-#: clients/cmdline/main.c:1098
+#: clients/cmdline/main.c:1099
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1330,15 +1341,15 @@ msgstr ""
 "Unterbefehl '%s' akzeptiert die Option '%s' nicht\n"
 "Geben Sie 'svn help %s' für Hilfe ein.\n"
 
-#: clients/cmdline/main.c:1132
+#: clients/cmdline/main.c:1133
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "Die Datei für die Log-Meldung ist versioniert; verwenden Sie '--force-log', um sie zu verwenden"
 
-#: clients/cmdline/main.c:1150
+#: clients/cmdline/main.c:1151
 msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Die Log-Meldung ist ein Pfad (war -F gemeint?); verwenden Sie '--force-log', um sie zu verwenden"
 
-#: clients/cmdline/main.c:1345
+#: clients/cmdline/main.c:1346
 msgid "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
 msgstr "svn: Starten Sie 'svn cleanup', um die Sperren zu entfernen (Aufruf: 'svn help cleanup' für Details)\n"
 
@@ -3828,7 +3839,7 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "Geben Sie '%s help' für weitere Hilfe ein.\n"
 
-#: libsvn_subr/subst.c:939
+#: libsvn_subr/subst.c:946
 #: libsvn_wc/props.c:986
 #, c-format
 msgid "File '%s' has inconsistent newlines"
@@ -4560,74 +4571,82 @@ msgstr "'%s' hat keine Informationen über seine Vorgänger"
 msgid "Unable to make any directories"
 msgstr "Kann keine Verzeichnisse erzeugen"
 
-#: svnadmin/main.c:72
+#: svnadmin/main.c:92
 msgid "Can't open stdio file"
 msgstr "Kann Standardeingabe nicht öffnen"
 
-#: svnadmin/main.c:100
+#: svnadmin/main.c:121
 msgid "Repository argument required"
 msgstr "Projektarchiv Parameter erforderlich"
 
-#: svnadmin/main.c:105
+#: svnadmin/main.c:126
 #, c-format
 msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' ist eine URL, obwohl es ein Pfad sein sollte"
 
-#: svnadmin/main.c:205
+#: svnadmin/main.c:227
 #: svnlook/main.c:95
 #: svnversion/main.c:201
 msgid "show version information"
 msgstr "zeige Versionsinformation"
 
-#: svnadmin/main.c:208
+#: svnadmin/main.c:230
 msgid "specify revision number ARG (or X:Y range)"
 msgstr "spezifizieren Sie PAR für Revisionsnummer (oder X:Y Bereich)"
 
-#: svnadmin/main.c:211
+#: svnadmin/main.c:233
 msgid "dump incrementally"
 msgstr "Inkrementellen ausgeben"
 
-#: svnadmin/main.c:214
+#: svnadmin/main.c:236
 msgid "use deltas in dump output"
 msgstr "Nutze Deltas bei der Ausgabe"
 
-#: svnadmin/main.c:217
+#: svnadmin/main.c:239
 msgid "bypass the repository hook system"
 msgstr "Umgehe das Hakensystem des Projektarchivs"
 
-#: svnadmin/main.c:220
+#: svnadmin/main.c:242
 msgid "no progress (only errors) to stderr"
 msgstr "keine Fortschrittsanzeige (nur Fehler) auf die Standardausgabe"
 
-#: svnadmin/main.c:223
+#: svnadmin/main.c:245
 msgid "ignore any repos UUID found in the stream"
 msgstr "ignoriere jede Projektarchiv-UUID, die im Datenstrom gefunden wird"
 
-#: svnadmin/main.c:226
+#: svnadmin/main.c:248
 msgid "set repos UUID to that found in stream, if any"
 msgstr "setze die UUID des Projektarchiv auf die im Datenstrom gefundene"
 
-#: svnadmin/main.c:229
+#: svnadmin/main.c:251
 msgid "type of repository: 'bdb' or 'fsfs'"
 msgstr "Art des Projektarchivs: 'bdb' oder 'fsfs'"
 
-#: svnadmin/main.c:232
+#: svnadmin/main.c:254
 msgid "load at specified directory in repository"
 msgstr "in das spezifizierte Verzeichnis im Projektarchiv laden"
 
-#: svnadmin/main.c:235
+#: svnadmin/main.c:257
 msgid "disable fsync at transaction commit [Berkeley DB]"
 msgstr "deaktiviere fsync für jede Übertragungstransaktion [Berkeley DB]"
 
-#: svnadmin/main.c:238
+#: svnadmin/main.c:260
 msgid "disable automatic log file removal [Berkeley DB]"
 msgstr "deaktiviere das automatische Entfernen von Log-Dateien [Berkeley DB]"
 
-#: svnadmin/main.c:244
+#: svnadmin/main.c:266
 msgid "remove redundant log files from source repository"
 msgstr "entferne redundante Log-Dateien aus den Quellen des Projektarchivs"
 
-#: svnadmin/main.c:256
+#: svnadmin/main.c:269
+msgid ""
+"wait instead of exit if the the repository is in\n"
+"                             use by another process"
+msgstr ""
+"warte anstatt abzubrechen, wenn das Projektarchiv\n"
+"durch einen anderen Prozess belegt ist"
+
+#: svnadmin/main.c:282
 msgid ""
 "usage: svnadmin create REPOS_PATH\n"
 "\n"
@@ -4637,7 +4656,7 @@ msgstr ""
 "\n"
 "Erstelle ein neues, leeres Projektarchiv im ARCHIV_PFAD.\n"
 
-#: svnadmin/main.c:262
+#: svnadmin/main.c:288
 msgid ""
 "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
 "\n"
@@ -4655,7 +4674,7 @@ msgstr ""
 "Revision gespeichert werden.  Falls keine Revisionen angegeben wurden, wird\n"
 "nur die HEAD-Revision deltifiziert.\n"
 
-#: svnadmin/main.c:271
+#: svnadmin/main.c:297
 msgid ""
 "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
 "\n"
@@ -4676,7 +4695,7 @@ msgstr ""
 "ausgegebene Revision ein diff gegen die vorhergehende Version,\n"
 "anstelle des üblichen vollständigen Inhaltes.\n"
 
-#: svnadmin/main.c:282
+#: svnadmin/main.c:308
 msgid ""
 "usage: svnadmin help [SUBCOMMAND...]\n"
 "\n"
@@ -4686,7 +4705,7 @@ msgstr ""
 "\n"
 "Beschreibt die Anwendung dieses Programms und seiner Unterbefehle.\n"
 
-#: svnadmin/main.c:287
+#: svnadmin/main.c:313
 msgid ""
 "usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n"
 "\n"
@@ -4696,7 +4715,7 @@ msgstr ""
 "\n"
 "Erstellt eine Kopie des Projektarchivs im laufenden Betrieb.\n"
 
-#: svnadmin/main.c:292
+#: svnadmin/main.c:318
 msgid ""
 "usage: svnadmin list-dblogs REPOS_PATH\n"
 "\n"
@@ -4712,7 +4731,7 @@ msgstr ""
 "WARNUNG: Ändern oder Löschen von Log-Dateien, die noch\n"
 "benutzt werden, wird ihr Projektarchiv beschädigen.\n"
 
-#: svnadmin/main.c:299
+#: svnadmin/main.c:325
 msgid ""
 "usage: svnadmin list-unused-dblogs REPOS_PATH\n"
 "\n"
@@ -4724,7 +4743,7 @@ msgstr ""
 "Listet ungenutzte Log-Dateien der Berkeley Datenbank auf.\n"
 "\n"
 
-#: svnadmin/main.c:304
+#: svnadmin/main.c:330
 msgid ""
 "usage: svnadmin load REPOS_PATH\n"
 "\n"
@@ -4741,7 +4760,7 @@ msgstr ""
 "strom spezifiziert ist. Eine Fortschrittsanzeige wird an die Standard-\n"
 "ausgabe gesendet.\n"
 
-#: svnadmin/main.c:314
+#: svnadmin/main.c:340
 msgid ""
 "usage: svnadmin lstxns REPOS_PATH\n"
 "\n"
@@ -4751,30 +4770,26 @@ msgstr ""
 "\n"
 "Gib die Namen aller nicht übertragenen Transaktionen aus.\n"
 
-#: svnadmin/main.c:319
+#: svnadmin/main.c:345
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
 "\n"
 "Run the Berkeley DB recovery procedure on a repository.  Do\n"
 "this if you've been getting errors indicating that recovery\n"
-"ought to be run.\n"
-"\n"
-"WARNING: only run this when you are SURE you're the only process\n"
-"accessing the repository.  Requires exclusive access.\n"
+"ought to be run.  Recovery requires exclusive access and will\n"
+"exit if the repository is in use by another process.\n"
 "\n"
 msgstr ""
 "Aufruf: svnadmin recover ARCHIV_PFAD\n"
 "\n"
 "Lasse die Berkeley DB Rettungsprozedur auf einem Projektarchiv laufen.\n"
 "Veranlassen Sie das, falls sie Fehlermeldungen erhalten haben, die Sie dazu\n"
-"auffordern.\n"
-"\n"
-"WARNUNG: Führen Sie den Befehl nur aus, wenn Sie SICHER sind, das Sie der\n"
-"einzige Prozeß sind, der auf das Projektarchiv zugreift. Benötigt alleinigen\n"
-"Zugriff.\n"
+"auffordern. Die Wiederherstellung erfordert exklusiven Zugriff auf das Projekt-\n"
+"archiv. Der Vorgang wird nicht gestartet, falls das Projektarchiv von einem\n"
+"anderen Prozess benutzt wird.\n"
 "\n"
 
-#: svnadmin/main.c:328
+#: svnadmin/main.c:353
 msgid ""
 "usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n"
 "\n"
@@ -4784,7 +4799,7 @@ msgstr ""
 "\n"
 "Lösche die benannte(n) Transaktion(en).\n"
 
-#: svnadmin/main.c:333
+#: svnadmin/main.c:358
 msgid ""
 "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
 "\n"
@@ -4809,7 +4824,7 @@ msgstr ""
 "Hinweis: Revisionseigenschaften werden nicht versioniert. Dieser Befehl\n"
 "überschreibt also die vorherige Log-Meldung endgültig.\n"
 
-#: svnadmin/main.c:347
+#: svnadmin/main.c:372
 msgid ""
 "usage: svnadmin verify REPOS_PATH\n"
 "\n"
@@ -4819,21 +4834,21 @@ msgstr ""
 "\n"
 "Überprüft die im Projektarchiv gespeicherten Daten.\n"
 
-#: svnadmin/main.c:470
-#: svnadmin/main.c:525
+#: svnadmin/main.c:496
+#: svnadmin/main.c:551
 msgid "First revision cannot be higher than second"
 msgstr "Erste Revision darf kann nicht größer als zweite sein"
 
-#: svnadmin/main.c:479
+#: svnadmin/main.c:505
 #, c-format
 msgid "Deltifying revision %ld..."
 msgstr "Bilde Deltas für Revision %ld..."
 
-#: svnadmin/main.c:483
+#: svnadmin/main.c:509
 msgid "done.\n"
 msgstr "erledigt.\n"
 
-#: svnadmin/main.c:552
+#: svnadmin/main.c:578
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type \"svnadmin help <subcommand>\" for help on a specific subcommand.\n"
@@ -4846,11 +4861,28 @@ msgstr ""
 "\n"
 "Verfügbare Unterbefehle:\n"
 
-#: svnadmin/main.c:629
-msgid "Please wait; recovering the repository may take some time...\n"
-msgstr "Bitte warten, die Rettung des Projektarchivs kann einige Zeit dauern...\n"
+#: svnadmin/main.c:653
+msgid ""
+"Repository lock acquired.\n"
+"Please wait; recovering the repository may take some time...\n"
+msgstr ""
+"Projektarchiv für Rettung gesperrt\n"
+"Bitte warten, die Rettung des Projektarchivs kann einige Zeit dauern...\n"
 
-#: svnadmin/main.c:635
+#: svnadmin/main.c:688
+msgid ""
+"Failed to get exclusive repository access; perhaps another process\n"
+"such as httpd, svnserve or svn has it open?"
+msgstr ""
+"Konnte keinen exklusiven Zugriff auf das Projektarchiv erlangen\n"
+"Vielleicht hat noch ein anderer Prozess (httpd, svnserve, svn)\n"
+"das Projektarchiv geöffnet?"
+
+#: svnadmin/main.c:693
+msgid "Waiting on repository lock; perhaps another process has it open?\n"
+msgstr "Warte auf Freigabe des Projektarchivs; Vielleicht ist es durch einen anderen Prozess geöffnet?\n"
+
+#: svnadmin/main.c:700
 msgid ""
 "\n"
 "Recovery completed.\n"
@@ -4858,34 +4890,34 @@ msgstr ""
 "\n"
 "Wiederherstellung vollständig abgeschlossen.\n"
 
-#: svnadmin/main.c:642
+#: svnadmin/main.c:707
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "Die neueste Revision des Projektarchivs ist %ld.\n"
 
-#: svnadmin/main.c:750
+#: svnadmin/main.c:815
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "Transaktion '%s' entfernt.\n"
 
-#: svnadmin/main.c:774
+#: svnadmin/main.c:839
 msgid "Missing revision"
 msgstr "Fehlende Revision"
 
-#: svnadmin/main.c:777
+#: svnadmin/main.c:842
 msgid "Only one revision allowed"
 msgstr "Nur eine Revision zulässig"
 
-#: svnadmin/main.c:783
+#: svnadmin/main.c:848
 msgid "Exactly one file argument required"
 msgstr "Genau ein Dateiparameter benötigt"
 
-#: svnadmin/main.c:1053
+#: svnadmin/main.c:1121
 #: svnlook/main.c:1939
 msgid "subcommand argument required\n"
 msgstr "Unterbefehl benötigt einen Parameter\n"
 
-#: svnadmin/main.c:1143
+#: svnadmin/main.c:1211
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
