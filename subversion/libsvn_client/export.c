@@ -119,6 +119,8 @@ copy_versioned_files (const char *from,
       const void *key;
       void *val;
       
+      svn_pool_clear (iterpool);
+
       apr_hash_this (hi, &key, NULL, &val);
       
       item = key;
@@ -247,8 +249,6 @@ copy_versioned_files (const char *from,
                 
           SVN_ERR (svn_io_set_file_affected_time (tm, copy_to, iterpool));
         }
-
-      svn_pool_clear (iterpool);
     }
   svn_pool_destroy (iterpool);
 
