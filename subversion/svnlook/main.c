@@ -38,9 +38,11 @@
 
 /*** Some convenience macros and types. ***/
 
-/* Names used for directories that the `diff' subcommand creates. */
-#define SVNLOOK_DIFF_TMPDIR_BASE  "OLD"
-#define SVNLOOK_DIFF_TMPDIR_NEW   "NEW"
+/* Temporary subdirectory created for use by svnlook.  ### todo: we
+   need to either find a way to query APR for a suitable (that is,
+   writable) temporary directory, or add this #define to the
+   svn_private_config.h stuffs (with a default of perhaps "/tmp/.svnlook" */
+#define SVNLOOK_TMPDIR       ".svnlook"
 
 typedef enum svnlook_cmd_t
 {
@@ -414,49 +416,66 @@ print_diff_tree (svn_fs_root_t *root,
   /* Print the node. */
   tmp_node = node;
 
-  /* ### todo:  Need a plan for printing diffs here.  */
   /* First, we'll just print file content diffs. */
   if (tmp_node->kind == svn_node_file)
     {
+      /* Here's the generalized way we do our diffs:
+
+         - First, dump the contents of the new version of the file
+           into the svnlook temporary directory, building out the
+           actual directories that need to be created in order to
+           fully represent the filesystem path inside the tmp
+           directory.
+
+         - Then, dump the contents of the old version of the file into
+           the top level of the svnlook temporary directory using a
+           unique temporary file name (we do this *after* putting the
+           new version of the file there in case something actually
+           versioned has a name that looks like one of our unique
+           identifiers).
+           
+         - Next, we run 'diff', passing the repository path as the
+           label.  
+
+         - Finally, we delete the temporary files (but leave the
+           built-out directories in place until after all diff
+           handling has been finished).  */
       if ((tmp_node->action == 'R') && (tmp_node->text_mod))
         {
-          orig_path = svn_stringbuf_create (SVNLOOK_DIFF_TMPDIR_BASE, pool);
-          svn_path_add_component (orig_path, path);
-          SVN_ERR (open_writable_binary_file (&fh2, orig_path, pool));
-          SVN_ERR (dump_contents (fh2, base_root, path, pool));
-          apr_file_close (fh2);
-
-          new_path = svn_stringbuf_create (SVNLOOK_DIFF_TMPDIR_NEW, pool);
+          new_path = svn_stringbuf_create (SVNLOOK_TMPDIR, pool);
           svn_path_add_component (new_path, path);
           SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
           SVN_ERR (dump_contents (fh1, root, path, pool));
           apr_file_close (fh1);
+
+          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path, NULL,
+                                            FALSE, pool));
+          SVN_ERR (dump_contents (fh2, base_root, path, pool));
+          apr_file_close (fh2);
         }
       if (tmp_node->action == 'A')
         {
-          orig_path = svn_stringbuf_create (SVNLOOK_DIFF_TMPDIR_BASE, pool);
-          svn_path_add_component (orig_path, path);
-          SVN_ERR (open_writable_binary_file (&fh2, orig_path, pool));
-          apr_file_close (fh2);
-
-          new_path = svn_stringbuf_create (SVNLOOK_DIFF_TMPDIR_NEW, pool);
+          new_path = svn_stringbuf_create (SVNLOOK_TMPDIR, pool);
           svn_path_add_component (new_path, path);
           SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
           SVN_ERR (dump_contents (fh1, root, path, pool));
           apr_file_close (fh1);
+
+          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path, NULL,
+                                            FALSE, pool));
+          apr_file_close (fh2);
         }
       if (tmp_node->action == 'D')
         {
-          orig_path = svn_stringbuf_create (SVNLOOK_DIFF_TMPDIR_BASE, pool);
-          svn_path_add_component (orig_path, path);
-          SVN_ERR (open_writable_binary_file (&fh2, orig_path, pool));
-          SVN_ERR (dump_contents (fh2, base_root, path, pool));
-          apr_file_close (fh2);
-
-          new_path = svn_stringbuf_create (SVNLOOK_DIFF_TMPDIR_NEW, pool);
+          new_path = svn_stringbuf_create (SVNLOOK_TMPDIR, pool);
           svn_path_add_component (new_path, path);
           SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
           apr_file_close (fh1);
+
+          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path, NULL,
+                                            FALSE, pool));
+          SVN_ERR (dump_contents (fh2, base_root, path, pool));
+          apr_file_close (fh2);
         }
     }
 
@@ -464,6 +483,8 @@ print_diff_tree (svn_fs_root_t *root,
     {
       apr_file_t *outhandle;
       apr_status_t apr_err;
+      const char *label;
+      svn_stringbuf_t *abs_path;
       int exitcode;
 
       printf ("%s: %s\n", 
@@ -483,9 +504,11 @@ print_diff_tree (svn_fs_root_t *root,
           (apr_err, 0, NULL, pool,
            "print_diff_tree: can't open handle to stdout");
 
-      SVN_ERR(svn_io_run_diff 
-        (".", NULL, 0, NULL, orig_path->data, new_path->data, &exitcode, 
-         outhandle, NULL, pool));
+      label = apr_psprintf (pool, "%s\t(original)", path->data);
+      SVN_ERR (svn_path_get_absolute (&abs_path, orig_path, pool));
+      SVN_ERR (svn_io_run_diff (SVNLOOK_TMPDIR, NULL, 0, label,
+                                abs_path->data, path->data, 
+                                &exitcode, outhandle, NULL, pool));
 
       /* TODO: Handle exit code == 2 (i.e. diff error) here. */
 
@@ -801,8 +824,7 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
       SVN_ERR (print_diff_tree 
                (root, base_root, tree, svn_stringbuf_create ("", pool), pool));
-      apr_dir_remove_recursively (SVNLOOK_DIFF_TMPDIR_BASE, pool);
-      apr_dir_remove_recursively (SVNLOOK_DIFF_TMPDIR_NEW, pool);
+      apr_dir_remove_recursively (SVNLOOK_TMPDIR, pool);
     }
   return SVN_NO_ERROR;
 }
