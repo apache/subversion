@@ -1,3 +1,7 @@
+<!-- This appendix is slated for mass rewriting.  If you're adding
+     content or fixing things, please understand that your changes,
+     while certainly influencing the resultant chapter, might
+     themselves get lost in the mix. -->
 <appendix id="svn-ap-a">
 <title>Subversion for CVS Users</title>
 
