@@ -325,9 +325,8 @@ svn_error_t *svn_stream_printf (svn_stream_t *stream,
    The '\n' is read from the stream, but is not added to the end of
    the stringbuf.  Instead, the stringbuf ends with a usual \0.
 
-   If STREAM runs out of bytes before encountering a '\n', then return
-   whatever error comes from stream's read-function (after a failed
-   read-attempt). 
+   If STREAM runs out of bytes before encountering a '\n', then set
+   *STRINGBUF to NULL and return no error.
 */
 svn_error_t *
 svn_stream_readline (svn_stream_t *stream,

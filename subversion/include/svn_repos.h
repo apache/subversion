@@ -514,7 +514,7 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 
 #define SVN_REPOS_DUMPFILE_REVISION_NUMBER           "Revision-number"
 #define SVN_REPOS_DUMPFILE_REVISION_CONTENT_CHECKSUM "Revision-content-md5"
-#define SVN_REPOS_DUMPFILE_REVISION_CONTENT_LENGTH   "Content-length"
+#define SVN_REPOS_DUMPFILE_CONTENT_LENGTH            "Content-length"
 
 #define SVN_REPOS_DUMPFILE_NODE_PATH                 "Node-path"
 #define SVN_REPOS_DUMPFILE_NODE_KIND                 "Node-kind"
@@ -522,7 +522,6 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 #define SVN_REPOS_DUMPFILE_NODE_COPIED_FROM          "Node-copied-from"
 #define SVN_REPOS_DUMPFILE_NODE_COPY_SOURCE_CHECKSUM "Node-copy-source-md5"
 #define SVN_REPOS_DUMPFILE_NODE_CONTENT_CHECKSUM     "Node-content-md5"
-#define SVN_REPOS_DUMPFILE_NODE_CONTENT_LENGTH       "Content-length"
 
 
 /* The different "actions" attached to nodes in the dumpfile. */

@@ -24,6 +24,7 @@
 #include "svn_hash.h"
 #include "svn_path.h"
 
+#include "apr_lib.h"
 
 /*----------------------------------------------------------------------*/
 
@@ -34,10 +35,15 @@
    RFC822-style headers from STREAM.  Duplicate each header's name and
    value into POOL and store in hash as a const char * ==> const char *.
 
-   The headers are assumed to be terminated by a blank line ("\n\n").
+   The headers are assumed to be terminated by a single blank line,
+   which will be permanently sucked from the stream and tossed.
+
+   If the caller has already read in the first header line, it should
+   be passed in as FIRST_HEADER.  If not, pass NULL instead.
  */
 static svn_error_t *
 read_header_block (svn_stream_t *stream,
+                   svn_stringbuf_t *first_header,
                    apr_hash_t **headers,
                    apr_pool_t *pool)
 {
@@ -50,8 +56,15 @@ read_header_block (svn_stream_t *stream,
       const char *name, *value; 
       apr_size_t old_i = 0, i = 0;
 
-      /* Read the next line into a stringbuf in subpool. */
-      SVN_ERR (svn_stream_readline (stream, &header_str, subpool));
+      if (first_header != NULL)
+        {
+          header_str = first_header;
+          first_header = NULL;  /* so we never visit this block again. */
+        }
+
+      else
+        /* Read the next line into a stringbuf in subpool. */
+        SVN_ERR (svn_stream_readline (stream, &header_str, subpool));
       
       if (svn_stringbuf_isempty (header_str))
         break;    /* end of header block */
@@ -293,6 +306,17 @@ parse_content_block (svn_stream_t *stream,
 
 
 
+static svn_error_t *
+validate_format_version (const char *versionstring)
+{
+  /* ### parse string and verify that we support the dumpfile format
+         version number. */
+  
+  return SVN_NO_ERROR;
+}
+
+
+
 /* The Main Parser Logic */
 svn_error_t *
 svn_repos_parse_dumpstream (svn_stream_t *stream,
@@ -300,48 +324,131 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                             void *parse_baton,
                             apr_pool_t *pool)
 {
-  apr_hash_t *headers;
+  svn_stringbuf_t *linebuf;
+  void *current_rev_baton = NULL;
+  apr_pool_t *linepool = svn_pool_create (pool);
+  apr_pool_t *revpool = svn_pool_create (pool);
+  apr_pool_t *nodepool = svn_pool_create (pool);
 
-  /* ### verify that we support the dumpfile format version number. */
+  /* The first two lines of the stream are the dumpfile-format version
+     number, and a blank line. */
+  SVN_ERR (svn_stream_readline (stream, &linebuf, pool));
+  SVN_ERR (validate_format_version (linebuf->data));
 
-  /* ### outline:
+  /* A dumpfile "record" is defined to be a header-block of
+     rfc822-style headers, possibly followed by a content-block.
 
-  while (stream):
-  {
-    read group of headers into a hash
+       - A header-block is always terminated by a single blank line (\n\n)
 
-    if hash contains revision-number,
-       possibly close_revision() on the old revision baton
-       new_revision_record()
-    else if hash contains node-path,
-       new_node_record()
-     
-    if hash contains content-length,
-       read & parse a content block.
+       - We know whether the record has a content-block by looking for
+         a 'Content-length:' header.  The content-block will always be
+         of a specific length, plus an extra newline.
 
-    if in a node,
-        close_node()
-   }
-   if in a revision,
-     close_revision()
- */
+     Once a record is fully sucked from the stream, an indeterminate
+     number of blank lines (or lines that begin with whitespace) may
+     follow before the next record (or the end of the stream.)
+  */
+  
+  while (1)
+    {
+      /* Keep reading blank lines until we discover a new record, or until
+         the stream runs out. */
+      SVN_ERR (svn_stream_readline (stream, &linebuf, pool));
+      
+      if (linebuf == NULL)
+        break;   /* end of stream, go home. */
 
-  /* shut up compiler warnings about unused functions. */
-  SVN_ERR (read_header_block (stream, &headers, pool));
-  SVN_ERR (parse_content_block (stream, 42,
-                                parse_fns, NULL,
-                                svn_pack_bytestring, 
-                                TRUE, pool));
+      if (! apr_isspace (linebuf->data[0]))
+        {
+          /* Found the beginning of a new record. */ 
+          apr_hash_t *headers;
+          void *node_baton;
+          const char *valstr;
+          svn_boolean_t found_node = FALSE;
 
+          /* The last line we read better be a header of some sort.
+             Read the whole header-block into a hash. */
+          SVN_ERR (read_header_block (stream, linebuf, &headers, linepool));
+
+          /* Create some kind of new record object. */
+          if (apr_hash_get (headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
+                            APR_HASH_KEY_STRING))
+            {
+              /* Found a new revision record. */
+              if (current_rev_baton != NULL)
+                {
+                  SVN_ERR (parse_fns->close_revision (current_rev_baton));
+                  svn_pool_clear (revpool);
+                }
+
+              SVN_ERR (parse_fns->new_revision_record (&current_rev_baton,
+                                                       headers, parse_baton,
+                                                       revpool));
+            }
+          else if (apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
+                                 APR_HASH_KEY_STRING))
+            {
+              /* Found a new node record. */
+              SVN_ERR (parse_fns->new_node_record (&node_baton,
+                                                   headers,
+                                                   current_rev_baton,
+                                                   nodepool));
+              found_node = TRUE;
+            }
+          else            
+            /* What the heck is this record?!? */
+            return svn_error_create (SVN_ERR_MALFORMED_STREAM_DATA,
+                                     0, NULL, pool,
+                                     "Unrecognized record type in stream.");
+
+
+          /* Is there a content-block to parse? */
+          if ((valstr = apr_hash_get (headers,
+                                      SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
+                                      APR_HASH_KEY_STRING)))
+            {
+              apr_size_t content_length = (apr_size_t) atoi (valstr);
+
+              SVN_ERR (parse_content_block (stream, content_length,
+                                            parse_fns,
+                                            found_node ? 
+                                              node_baton : current_rev_baton,
+                                            svn_pack_bytestring,
+                                            found_node, 
+                                            found_node ?
+                                              nodepool : revpool));
+            }
+          
+          /* Done processing this node-record. */
+          if (found_node)
+            {
+              SVN_ERR (parse_fns->close_node (node_baton));
+              svn_pool_clear (nodepool);
+            }
+
+        } /* end of processing for one record. */
+      
+      svn_pool_clear (linepool);
+
+    } /* end of stream */
+
+  /* Close out whatever revision we're in. */
+  if (current_rev_baton != NULL)
+    SVN_ERR (parse_fns->close_revision (current_rev_baton));
+
+  svn_pool_destroy (linepool);
+  svn_pool_destroy (revpool);
+  svn_pool_destroy (nodepool);
   return SVN_NO_ERROR;
 }
+
 
 
 /*----------------------------------------------------------------------*/
 
 /** vtable for doing commits to a fs **/
 
-/* ### right now, this vtable will do nothing but stupid printf's */
+/* ### right now, this vtable does nothing but stupid printf's. */
 
 struct parse_baton
 {
