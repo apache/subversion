@@ -9,13 +9,11 @@ import sys
 import os
 import getopt
 
-from svn import fs, _util
+from svn import fs, util
 
 CHUNK_SIZE = 16384
 
-def getfile(path, rev=None, home='.'):
-  _util.apr_initialize()
-  pool = _util.svn_pool_create(None)
+def getfile(pool, path, rev=None, home='.'):
 
   db_path = os.path.join(home, 'db')
   if not os.path.exists(db_path):
@@ -30,13 +28,10 @@ def getfile(path, rev=None, home='.'):
   root = fs.revision_root(fsob, rev, pool)
   file = fs.file_contents(root, path, pool)
   while 1:
-    data = _util.svn_stream_read(file, CHUNK_SIZE)
+    data = util.svn_stream_read(file, CHUNK_SIZE)
     if not data:
       break
     sys.stdout.write(data)
-
-  _util.svn_pool_destroy(pool)
-  _util.apr_terminate()
 
 def usage():
   print "USAGE: getfile.py [-r REV] [-h DBHOME] repos-path"
@@ -53,7 +48,7 @@ def main():
       rev = int(value)
     elif name == '-h':
       home = value
-  getfile(args[0], rev, home)
+  util.run_app(getfile, args[0], rev, home)
 
 if __name__ == '__main__':
   main()
