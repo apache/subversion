@@ -961,16 +961,17 @@ report_local_mods (svn_string_t *path,
 /* The recursive crawler that describes a mixed-revision working
    copy.  Used for updates.
 
-   This is a depth-first recursive walk of DIR_PATH.  Look at each
-   entry and check if its revision is different than DIR_REV.  If so,
-   report this fact to REPORTER.
+   This is a depth-first recursive walk of DIR_PATH under WC_PATH.
+   Look at each entry and check if its revision is different than
+   DIR_REV.  If so, report this fact to REPORTER.
 
    Note: we're conspicuously creating a subpool in POOL and freeing it
    at each level of subdir recursion; this is a safety measure that
    protects us when reporting info on outrageously large or deep
    trees. */
 static svn_error_t *
-report_revisions (svn_string_t *dir_path,
+report_revisions (svn_string_t *wc_path,
+                  svn_string_t *dir_path,
                   svn_revnum_t dir_rev,
                   const svn_ra_reporter_t *reporter,
                   void *report_baton,
@@ -980,7 +981,10 @@ report_revisions (svn_string_t *dir_path,
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  SVN_ERR (svn_wc_entries_read (&entries, dir_path, subpool));
+  svn_string_t *full_path = svn_string_dup (wc_path, subpool);
+  svn_path_add_component (full_path, dir_path, svn_path_local_style);
+  
+  SVN_ERR (svn_wc_entries_read (&entries, full_path, subpool));
 
   /* Loop over this directory's entries: */
   for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
@@ -1004,16 +1008,16 @@ report_revisions (svn_string_t *dir_path,
       else
         current_entry_name = svn_string_create (keystring, subpool);
 
-      /* Compute the complete path of the entry */
+      /* Compute the complete path of the entry, relative to dir_path. */
       full_entry_path = svn_string_dup (dir_path, subpool);
       if (current_entry_name)
         svn_path_add_component (full_entry_path, current_entry_name,
-                                svn_path_url_style);
+                                svn_path_local_style);
 
       /* The Big Tests: */
       
       /* If it's a file with a different rev than its parent, report. */
-      if ((current_entry->kind == svn_node_file)
+      if ((current_entry->kind == svn_node_file) 
           && (current_entry->revision != dir_rev))
         SVN_ERR (reporter->set_path (report_baton,
                                      full_entry_path,
@@ -1025,14 +1029,18 @@ report_revisions (svn_string_t *dir_path,
           /* First check to see if it has a different rev than its
              parent.  It might need to be reported. */
           svn_wc_entry_t *subdir_entry;
-          SVN_ERR (svn_wc_entry (&subdir_entry, full_entry_path, subpool));
+          svn_string_t *megalong_path = svn_string_dup (wc_path, subpool);
+          svn_path_add_component (megalong_path, full_entry_path,
+                                  svn_path_local_style);
+          SVN_ERR (svn_wc_entry (&subdir_entry, megalong_path, subpool));
 
           if (subdir_entry->revision != dir_rev)
             SVN_ERR (reporter->set_path (report_baton,
                                          full_entry_path,
                                          subdir_entry->revision));          
           /* Recurse. */
-          SVN_ERR (report_revisions (full_entry_path,
+          SVN_ERR (report_revisions (wc_path,
+                                     full_entry_path,
                                      subdir_entry->revision,
                                      reporter, report_baton,
                                      subpool));
@@ -1119,7 +1127,9 @@ svn_wc_crawl_revisions (svn_string_t *root_directory,
   base_rev = root_entry->revision;
 
   /* Recursively crawl ROOT_DIRECTORY and report revisions. */
-  SVN_ERR (report_revisions (root_directory, base_rev,
+  SVN_ERR (report_revisions (root_directory,
+                             svn_string_create ("", pool),
+                             base_rev,
                              reporter, report_baton, pool));
 
   /* Finish the report, which causes the update editor to be driven. */
