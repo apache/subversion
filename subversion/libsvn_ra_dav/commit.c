@@ -624,7 +624,7 @@ static svn_error_t * commit_stream_close(void *baton)
 
   /* we're done with the file */
   (void) fclose(fp);
-  (void) apr_file_remove(pb->fname->data, pb->subpool);
+  (void) apr_file_remove(pb->fname->data, pb->pool);
 
   /* fetch the status, then clean up the request */
   code = http_get_status(req)->code;
