@@ -887,6 +887,8 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
    conflicts are resolved.  If RECURSIVE is true, then search
    recursively for conflicts to resolve.
 
+   ADM_ACCESS is an access baton, with a write lock, for PATH.
+
    Needless to say, this function doesn't touch conflict markers or
    anything of that sort -- only a human can semantically resolve a
    conflict.  Instead, this function simply marks a file as "having
@@ -894,7 +896,8 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
 
    The implementation details are opaque, as our "conflicted" criteria
    might change over time.  (At the moment, this routine removes the
-   three fulltext 'backup' files and any .prej file created in a conflict.)
+   three fulltext 'backup' files and any .prej file created in a conflict,
+   and modifies PATH's entry.)
 
    If PATH is not under version control, return SVN_ERR_ENTRY_NOT_FOUND.  
    If PATH isn't in a state of conflict to begin with, do nothing, and
@@ -906,6 +909,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
    gets reported.
  */
 svn_error_t *svn_wc_resolve_conflict (const char *path,
+                                      svn_wc_adm_access_t *adm_access,
                                       svn_boolean_t resolve_text,
                                       svn_boolean_t resolve_props,
                                       svn_boolean_t recursive,
