@@ -30,7 +30,7 @@ extern "C" {
 
 
 /* Retrieve a dummy editor that simply prints info to stdout.   This
-   is implemented in tests-common/libsvn_test_editor.la */
+   is implemented in tests/libsvn_test_editor.la */
 
 svn_error_t *svn_test_get_editor (const svn_delta_edit_fns_t **editor,
                                   void **edit_baton,

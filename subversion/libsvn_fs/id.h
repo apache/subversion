@@ -17,7 +17,7 @@
 #include "svn_fs.h"
 
 
-/* Return true iff PARENT is a direct ancestor of CHILD.  */
+/* Return true iff PARENT is a direct parent of CHILD.  */
 int svn_fs__is_parent (const svn_fs_id_t *parent,
                        const svn_fs_id_t *child);
 
