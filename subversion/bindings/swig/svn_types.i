@@ -83,6 +83,9 @@
     $1 = PyString_AS_STRING($input);
     $2 = PyString_GET_SIZE($input);
 }
+%typemap(java, in) (const char *PTR, apr_size_t LEN) {
+    /* FIXME: This is just a stub -- implement JNI code! */
+}
 
 /* -----------------------------------------------------------------------
    Define a generic arginit mapping for pools.

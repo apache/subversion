@@ -85,6 +85,12 @@
     }
     $result = t_output_helper($result, list);
 }
+%typemap(java,argout) apr_hash_t **statushash {
+    /* FIXME: Use JNI equiv of Java type SWIGTYPE_p_svn_wc_status_t */
+    $result = t_output_helper(
+        $result,
+        svn_swig_java_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
+}
 
 /* -----------------------------------------------------------------------
    handle svn_wc_notify_func_t/baton pairs
@@ -150,6 +156,10 @@
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
+#endif
+
+#ifdef SWIGJAVA
+#include "swigutil_java.h"
 #endif
 %}
 

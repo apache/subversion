@@ -42,6 +42,10 @@ typedef struct svn_string_t svn_string_t;
     }
     $result = t_output_helper($result, s);
 }
+%typemap(java,argout,fragment="t_output_helper") RET_STRING {
+    /* FIXME: This is just a stub -- implement JNI code! */
+    return NULL;
+}
 
 /* -----------------------------------------------------------------------
    TYPE: svn_stringbuf_t
@@ -137,6 +141,9 @@ typedef struct svn_string_t svn_string_t;
                                                              _global_pool);
     if ($1 == NULL)
         return NULL;
+}
+%typemap(java,in) const apr_array_header_t *STRINGLIST {
+    /* FIXME: This is just a stub -- implement JNI code! */
 }
 
 /* ----------------------------------------------------------------------- */

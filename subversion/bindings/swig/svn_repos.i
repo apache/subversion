@@ -62,4 +62,8 @@
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
+
+#ifdef SWIGJAVA
+#include "swigutil_java.h"
+#endif
 %}

@@ -199,4 +199,8 @@ void apr_pool_destroy(apr_pool_t *p);
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
+
+#ifdef SWIGJAVA
+#include "swigutil_java.h"
+#endif
 %}
