@@ -48,6 +48,7 @@ typedef struct {
   const char *repo_name;        /* repository name */
   const char *xslt_uri;         /* XSL transform URI */
   const char *fs_parent_path;   /* path to parent of of SVN FS'es  */
+  svn_boolean_t autoversioning; /* whether autoversioning is active */
 } dav_svn_dir_conf;
 
 #define INHERIT_VALUE(parent, child, field) \
@@ -103,6 +104,7 @@ static void *dav_svn_merge_dir_config(apr_pool_t *p,
     newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
     newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
     newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
+    newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
 
     return newconf;
 }
@@ -123,6 +125,15 @@ static const char *dav_svn_xslt_uri(cmd_parms *cmd, void *config,
   dav_svn_dir_conf *conf = config;
 
   conf->xslt_uri = apr_pstrdup(cmd->pool, arg1);
+
+  return NULL;
+}
+
+static const char *dav_svn_autoversioning_cmd(cmd_parms *cmd, void *config)
+{
+  dav_svn_dir_conf *conf = config;
+
+  conf->autoversioning = TRUE;
 
   return NULL;
 }
@@ -232,6 +243,14 @@ const char *dav_svn_get_special_uri(request_rec *r)
     return conf->special_uri ? conf->special_uri : SVN_DEFAULT_SPECIAL_URI;
 }
 
+svn_boolean_t dav_svn_get_autoversioning_flag(request_rec *r)
+{
+    dav_svn_dir_conf *conf;
+
+    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+    return conf->autoversioning;
+}
+
 
 /** Module framework stuff **/
 
@@ -261,6 +280,9 @@ static const command_rec dav_svn_cmds[] =
                 "specifies the location in the filesystem whose "
                 "subdirectories are assumed to be Subversion repositories."),
 
+  /* per directory/location */
+  AP_INIT_NO_ARGS("SVNAutoversioning", dav_svn_autoversioning_cmd,
+                  NULL, ACCESS_CONF, "turns on deltaV autoversioning."),
 
   { NULL }
 };

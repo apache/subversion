@@ -21,6 +21,7 @@
 #include <httpd.h>
 #include <mod_dav.h>
 #include <apr_tables.h>
+#include <apr_uuid.h>
 
 #include "svn_fs.h"
 #include "svn_xml.h"
@@ -38,6 +39,39 @@ static const dav_report_elem avail_reports[] = {
   { SVN_XML_NAMESPACE, "log-report" },
   { NULL },
 };
+
+/* declare these static functions early, so we can use them anywhere. */
+static dav_error *dav_svn_make_activity(dav_resource *resource);
+
+
+/* Helper: attach an auto-generated svn:log property to a txn within
+   an auto-checked-out working resource. */
+static dav_error *set_auto_log_message(dav_resource *resource)
+{
+  const char *logmsg;
+  svn_string_t *logval;
+  svn_error_t *serr;
+
+  if (! (resource->type == DAV_RESOURCE_TYPE_WORKING
+         && resource->info->auto_checked_out))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         "set_auto_log_message called on invalid resource.");
+  
+  logmsg = apr_psprintf(resource->pool, 
+                        "Autoversioning commit:  a non-deltaV client made "
+                        "a change to\n%s", resource->info->repos_path);
+
+  logval = svn_string_create(logmsg, resource->pool);
+
+  serr = svn_repos_fs_change_txn_prop(resource->info->root.txn,
+                                      SVN_PROP_REVISION_LOG, logval,
+                                      resource->pool);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "Error setting auto-log-message on "
+                               "auto-checked-out resource's txn.");
+  return NULL;
+}
 
 static dav_error *open_txn(svn_fs_txn_t **ptxn, svn_fs_t *fs,
                            const char *txn_name, apr_pool_t *pool)
@@ -113,14 +147,28 @@ static dav_auto_version dav_svn_auto_versionable(const dav_resource *resource)
   /* The svn client attempts to proppatch a baseline when changing
      unversioned revision props.  Thus we allow baselines to be
      "auto-checked-out" by mod_dav.  See issue #916. */
-  if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
+  if (resource->type == DAV_RESOURCE_TYPE_VERSION
+      && resource->baselined)
     return DAV_AUTO_VERSION_ALWAYS;
 
-  /* ### We also want to allow TYPE_REGULAR VCR's to be
-     auto-versionable.  But we can't start returning ALWAYS here until
-     we implement new routines below.  In particular, mod_dav starts
-     trying to call our version_control() routine, which doesn't yet
-     exist, and then the whole request throws an error.  */
+  /* No other autoversioning is allowed unless the SVNAutoversioning
+     directive is used. */
+  if (resource->info->repos->autoversioning)
+    {
+      /* This allows a straight-out PUT on a public file or collection
+         VCR.  mod_dav's auto-versioning subsystem will check to see if
+         it's possible to auto-checkout a regular resource. */
+      if (resource->type == DAV_RESOURCE_TYPE_REGULAR)
+        return DAV_AUTO_VERSION_ALWAYS;
+
+      /* mod_dav's auto-versioning subsystem will also check to see if
+         it's possible to auto-checkin a working resource that was
+         auto-checked-out.  We *only* allow auto-versioning on a working
+         resource if it was auto-checked-out. */
+      if (resource->type == DAV_RESOURCE_TYPE_WORKING
+          && resource->info->auto_checked_out)
+        return DAV_AUTO_VERSION_ALWAYS;
+    }
 
   /* Default:  whatever it is, assume it's not auto-versionable */
   return DAV_AUTO_VERSION_NEVER;
@@ -129,63 +177,115 @@ static dav_auto_version dav_svn_auto_versionable(const dav_resource *resource)
 static dav_error *dav_svn_vsn_control(dav_resource *resource,
                                       const char *target)
 {
-  /*
-    ### We need to implement this from scratch.  For now, we only
-    allow a NULL target, which means, 'create an empty file'.  The
-    resource itself, however, must be tweaked in-place into a true VCR.
-  */
+  /* All mod_dav_svn resources are versioned objects;  so it doesn't
+     make sense to call vsn_control on a resource that exists . */
+  if (resource->exists)
+    return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                         "vsn_control called on already-versioned resource.");
 
-  return dav_new_error_tag(resource->pool, HTTP_NOT_IMPLEMENTED,
-                           SVN_ERR_UNSUPPORTED_FEATURE,
-                           "VERSION-CONTROL is not yet implemented.",
-                           SVN_DAV_ERROR_NAMESPACE,
-                           SVN_DAV_ERROR_TAG);
+  /* Only allow a NULL target, which means an create an 'empty' VCR. */
+  if (target != NULL)
+    return dav_new_error_tag(resource->pool, HTTP_NOT_IMPLEMENTED,
+                             SVN_ERR_UNSUPPORTED_FEATURE,
+                             "vsn_control called with non-null target.",
+                             SVN_DAV_ERROR_NAMESPACE,
+                             SVN_DAV_ERROR_TAG);
+
+  /* This is kind of silly.  The docstring for this callback says it's
+     supposed to "put a resource under version control".  But in
+     Subversion, all REGULAR resources (bc's or public URIs) are
+     already under version control. So we don't need to do a thing to
+     the resource, just return. */
+  return NULL;
 }
 
-static dav_error *dav_svn_checkout(dav_resource *resource,
-                                   int auto_checkout,
-                                   int is_unreserved, int is_fork_ok,
-                                   int create_activity,
-                                   apr_array_header_t *activities,
-                                   dav_resource **working_resource)
+dav_error *dav_svn_checkout(dav_resource *resource,
+                            int auto_checkout,
+                            int is_unreserved, int is_fork_ok,
+                            int create_activity,
+                            apr_array_header_t *activities,
+                            dav_resource **working_resource)
 {
   const char *txn_name;
   svn_error_t *serr;
+  dav_error *derr;
   dav_svn_uri_info parse;
 
   /* Auto-Versioning Stuff */
   if (auto_checkout)
     {
-      /* ### autoversioning todo:
-      
-            - verify we have a VCR, and get the VCR's VR.
-            - create a new activity (txn)
-            - checkout the VR into the activity, creating a WR.
-            - don't return the WR via pointer at the bottom of this
-              routine, but instead tweak the VCR to look like the WR.
-              This might be tricky.
-      */
+      dav_resource *res; /* ignored */
+      apr_uuid_t uuid;
+      char uuid_buf[APR_UUID_FORMATTED_LENGTH + 1];
 
-      /* ### Only baselines can be auto-checked-out -- grudgingly --
-         so we can allow clients to proppatch unversioned rev props.
-         See issue #916. */
-      if (! (resource->baselined
-             && resource->type == DAV_RESOURCE_TYPE_VERSION))
+      /* Baselines can be auto-checked-out -- grudgingly -- so we can
+         allow clients to proppatch unversioned rev props.  See issue
+         #916. */
+      if ((resource->type == DAV_RESOURCE_TYPE_VERSION)
+          && resource->baselined)
+        /* ### We're violating deltaV big time here, by allowing a
+           dav_auto_checkout() on something that mod_dav assumes is a
+           VCR, not a VR.  Anyway, mod_dav thinks we're checking out the
+           resource 'in place', so that no working resource is returned.
+           (It passes NULL as **working_resource.)  */
+        return NULL;
+
+      if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
         return dav_new_error_tag(resource->pool, HTTP_METHOD_NOT_ALLOWED,
                                  SVN_ERR_UNSUPPORTED_FEATURE,
-                                 "auto-checkout only allowed on baselines "
-                                 "[at this time].",
+                                 "auto-checkout attempted on non-regular "
+                                 "version-controlled resource.",
                                  SVN_DAV_ERROR_NAMESPACE,
                                  SVN_DAV_ERROR_TAG);
 
-      /* ### We're violating deltaV big time here, by allowing a
-         dav_auto_checkout() on something that mod_dav assumes is a
-         VCR, not a VR.  Anyway, mod_dav thinks we're checking out the
-         resource 'in place', so that no working resource is returned.
-         (It passes NULL as **working_resource.)  */
+      if (resource->baselined)
+        return dav_new_error_tag(resource->pool, HTTP_METHOD_NOT_ALLOWED,
+                                 SVN_ERR_UNSUPPORTED_FEATURE,
+                                 "auto-checkout attempted on baseline "
+                                 "collection, which is not supported.",
+                                 SVN_DAV_ERROR_NAMESPACE,
+                                 SVN_DAV_ERROR_TAG);
+
+      /* Come up with a unique activity name, put it in the resource. */
+      apr_uuid_get(&uuid);
+      apr_uuid_format(uuid_buf, &uuid);
+      resource->info->root.activity_id = uuid_buf;
+
+      /* Create a txn based on youngest rev, and create an associated
+         activity id in the activity database. */
+      derr = dav_svn_make_activity(resource);
+      if (derr)
+        return derr;
       
+      /* Tweak the VCR in-place, making it into a WR.  (Ignore the
+         NULL return value.) */
+      res = dav_svn_create_working_resource(resource, uuid_buf, 
+                                            resource->info->root.txn_name,
+                                            TRUE /* tweak in place */);
+
+      /* Remember that this resource was auto-checked-out, so that
+         dav_svn_auto_versionable allows us to do an auto-checkin. */
+      resource->info->auto_checked_out = TRUE;
+
+      /* Finally, be sure to open the txn and txn_root in the
+         resource.  Normally we only get a PUT on a WR uri, and
+         prep_working() opens the txn automatically.  We need to make
+         sure this WR is in the exact same state, ready for a PUT. */
+      derr = open_txn(&resource->info->root.txn, resource->info->repos->fs,
+                      resource->info->root.txn_name, resource->pool);
+      if (derr)
+        return derr;
+
+      serr = svn_fs_txn_root(&resource->info->root.root,
+                             resource->info->root.txn, resource->pool);
+      if (serr != NULL)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Could not open the (txn) root of the "
+                                   "repository");
+        
       return NULL;
     }
+  /* end of Auto-Versioning Stuff */
 
   if (resource->type != DAV_RESOURCE_TYPE_VERSION)
     {
@@ -455,45 +555,131 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
     }
   *working_resource = dav_svn_create_working_resource(resource,
                                                       parse.activity_id,
-                                                      txn_name);
+                                                      txn_name,
+                                                      FALSE);
   return NULL;
 }
 
 static dav_error *dav_svn_uncheckout(dav_resource *resource)
 {
-  /* ### abort the resource's svn txn, and magically change the
-     resource in-place from a WR back into a VCR */
+  if (resource->type != DAV_RESOURCE_TYPE_WORKING)
+    return dav_new_error_tag(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
+                             SVN_ERR_UNSUPPORTED_FEATURE,
+                             "UNCHECKOUT called on non-working resource.",
+                             SVN_DAV_ERROR_NAMESPACE,
+                             SVN_DAV_ERROR_TAG);
 
-  return dav_new_error_tag(resource->pool, HTTP_NOT_IMPLEMENTED,
-                           SVN_ERR_UNSUPPORTED_FEATURE,
-                           "UNCHECKOUT is not yet implemented.",
-                           SVN_DAV_ERROR_NAMESPACE,
-                           SVN_DAV_ERROR_TAG);
+  /* Try to abort the txn if it exists;  but don't try too hard.  :-)  */
+  if (resource->info->root.txn)
+    svn_fs_abort_txn(resource->info->root.txn);
+
+  resource->info->root.txn_name = NULL;
+  resource->info->root.txn = NULL;
+
+  /* We're no longer checked out. */
+  resource->info->auto_checked_out = FALSE;
+
+  /* Convert the working resource back into a regular one, in-place. */
+  return dav_svn_working_to_regular_resource(resource);
 }
 
-static dav_error *dav_svn_checkin(dav_resource *resource,
-                                  int keep_checked_out,
-                                  dav_resource **version_resource)
+dav_error *dav_svn_checkin(dav_resource *resource,
+                           int keep_checked_out,
+                           dav_resource **version_resource)
 {
-  /* ### need to write this routine.
+  svn_error_t *serr;
+  dav_error *err;
+  const char *uri;
 
-     commit the txn hidden within the WR, using an auto-generated log
-     message.  Return the new VR that was created in
-     **version_resource, and convert the WR resource back into a VCR.
+  /* ### mod_dav has a flawed architecture, in the sense that it first
+     tries to auto-checkin the modified resource, then attempts to
+     auto-checkin the parent resource (if the parent resource was
+     auto-checked-out).  Instead, the provider should be in charge:
+     mod_dav should provide a *set* of resources that need
+     auto-checkin, and the provider can decide how to do it.  (One
+     txn?  Many txns?  Etc.) */
 
-     Note that mod_dav may often call this routine first on a child
-     resource, then immediately on its parent, especially if both were
-     auto-checked-out.  Thus it's very likely that we just committed
-     the txn in the previous call to checkin().  The best strategy
-     here, I suppose, is to not throw an error... i.e. if the txn no
-     longer exists, just do nothing.
- */
+  if (resource->type != DAV_RESOURCE_TYPE_WORKING)
+    return dav_new_error_tag(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
+                             SVN_ERR_UNSUPPORTED_FEATURE,
+                             "CHECKIN called on non-working resource.",
+                             SVN_DAV_ERROR_NAMESPACE,
+                             SVN_DAV_ERROR_TAG);
 
-  return dav_new_error_tag(resource->pool, HTTP_NOT_IMPLEMENTED,
-                           SVN_ERR_UNSUPPORTED_FEATURE,
-                           "CHECKIN is not yet implemented.",
-                           SVN_DAV_ERROR_NAMESPACE,
-                           SVN_DAV_ERROR_TAG);
+  /* Try to commit the txn if it exists. */
+  if (resource->info->root.txn_name)
+    {
+      svn_fs_txn_t *txn;
+      const char *conflict_msg;
+      svn_revnum_t new_rev;
+
+      err = open_txn(&txn, resource->info->repos->fs,
+                     resource->info->root.txn_name, resource->pool);
+      
+      /* If we failed to open the txn, don't worry about it.  It may
+         have already been committed when a child resource was
+         checked in.  */
+      if (! err)
+        {
+          err = set_auto_log_message(resource);
+          if (err)
+            return err;
+
+          serr = svn_repos_fs_commit_txn(&conflict_msg,
+                                         resource->info->repos->repos,
+                                         &new_rev, resource->info->root.txn);
+          if (serr != NULL)
+            {
+              const char *msg;
+              svn_fs_abort_txn(resource->info->root.txn);
+              
+              if (serr->apr_err == SVN_ERR_FS_CONFLICT)
+                {
+                  msg = apr_psprintf(resource->pool,
+                                     "A conflict occurred during the CHECKIN "
+                                     "processing. The problem occurred with  "
+                                     "the \"%s\" resource.",
+                                     conflict_msg);
+                }
+              else
+                msg = "An error occurred while committing the transaction.";
+              
+              return dav_svn_convert_err(serr, HTTP_CONFLICT, msg);
+            }
+
+          /* Commit was successful. */
+
+          /* If caller wants it, return the new VR that was created by
+             the checkin. */
+          if (version_resource)
+            {
+              uri = dav_svn_build_uri(resource->info->repos,
+                                      DAV_SVN_BUILD_URI_VERSION,
+                                      new_rev, resource->info->repos_path,
+                                      0, resource->pool);
+
+              err = dav_svn_create_version_resource(version_resource, uri,
+                                                    resource->pool);
+              if (err)
+                return err;
+            }
+        }
+
+      /* whether the txn was committed, aborted, or inaccessible,
+         it's gone now.  the resource needs to lose all knowledge
+         of it. */
+      resource->info->root.txn_name = NULL;
+      resource->info->root.txn = NULL;
+    }
+
+  /* Convert the working resource back into an regular one. */
+  if (! keep_checked_out)
+    {
+      resource->info->auto_checked_out = FALSE;
+      return dav_svn_working_to_regular_resource(resource);
+    } 
+
+  return NULL;
 }
 
 static dav_error *dav_svn_avail_reports(const dav_resource *resource,
