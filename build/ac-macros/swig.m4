@@ -107,15 +107,27 @@ AC_DEFUN(SVN_FIND_SWIG,
                         ac_cv_swig_swiglib_dir="`$SWIG -swiglib`"
                        ])
         SWIG_LIBSWIG_DIR="$ac_cv_swig_swiglib_dir"
+
+      dnl Newer versions of SWIG have deprecated the -c "do not
+      dnl include SWIG runtime functions (used for creating multi-module
+      dnl packages)" in favor of the -noruntime flag.
+      dnl ### I'm not positive when -noruntime became available.  A
+      dnl ### Google search indicates that 1.3.20 had it, but I don't
+      dnl ### have that installed to test with. (-dlr)
+      if test "$SWIG_VERSION" -ge "103020"; then
+          SWIG_NORUNTIME_FLAG='-noruntime'
+      else
+          SWIG_NORUNTIME_FLAG='-c'
+      fi
     else
         SWIG_SUITABLE=no
         AC_MSG_WARN([swig bindings version 1.3.19 or newer needed for swig support.])
     fi
+
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_python" = "yes"; then
       AC_MSG_NOTICE("Configuring python swig binding")
       SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-py-lib"
       SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-py-lib"
-
 
       AC_CACHE_CHECK([if swig needs -L for its libraries],
         [ac_cv_swig_ldflags],[
@@ -170,6 +182,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   fi
   AC_SUBST(SWIG_BUILD_RULES)
   AC_SUBST(SWIG_INSTALL_RULES)
+  AC_SUBST(SWIG_NORUNTIME_FLAG)
   AC_SUBST(SWIG_PY_INCLUDES)
   AC_SUBST(SWIG_PY_COMPILE)
   AC_SUBST(SWIG_PY_LINK)
