@@ -48,12 +48,7 @@
 
 
 
-#include <svn_types.h>
-#include <svn_error.h>
-#include <apr_pools.h>
-#include <apr_hash.h>
-#include <apr_file_io.h>
-#include <ctype.h>           /* isspace() */
+#include <svn_parse.h>
 
 
 /* 
@@ -208,7 +203,7 @@ slurp__to (const svn_string_t *searchstr,
       if (searchstr->data[i] == sc)
         {
           svn_string_appendbytes (substr,                 /* new substring */
-                                  searchstr->data[start], /* start copy here */
+                                  searchstr->data + start,/* start copy here */
                                   (i - start - 1),        /* number to copy */
                                   pool);
           
@@ -258,7 +253,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
 
   ap_file_t *FILE;
   ap_pool_t *scratchpool;
-  ap_string_t *currentline;
+  svn_string_t *currentline;
   ap_status_t result;     
 
   
@@ -269,7 +264,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
   result = ap_open (&FILE,
                     svn_string_2cstring (filename, pool),
                     APR_READ,
-                    perms,/*TODO: WHAT IS THIS? */
+                    APR_OS_DEFAULT, /*TODO: WHAT IS THIS? */
                     pool);
   
   if (result != APR_SUCCESS)
@@ -323,7 +318,12 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
 
         case '[':
           {
-            /* It's a new section!  Slurp up the section name */
+            /* It's a new section! */  
+
+            /* Create new hash to hold this section's keys/vals  */
+            ap_hash_t *new_section_hash = ap_make_hash (pool);  
+
+            /* Slurp up the section name */
             svn_string_t *new_section;
 
             slurp__to (currentline,  /* search current line */
@@ -340,12 +340,10 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                 svn_string_appendstr (msg, currentline, pool);
                 
                 svn_handle_error (svn_create_error 
-                                  (result, FALSE, msg, pool), pool);
+                                  (result, FALSE, msg, pool));
                 break;
               }
                                         
-            /* create new hash to hold this section's keys/vals  */
-            ap_hash_t new_section_hash = ap_make_hash (pool);  
 
             /* make this the "active" hash */
             current_hash = new_section_hash;  
@@ -382,7 +380,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                 svn_string_appendstr (msg, currentline, pool);
                 
                 svn_handle_error (svn_create_error 
-                                  (result, FALSE, msg, pool), pool);
+                                  (result, FALSE, msg, pool));
                 break;
               }
 

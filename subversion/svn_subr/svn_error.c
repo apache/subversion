@@ -49,12 +49,10 @@
 
 
 #include <svn_error.h>
-#include <stdio.h>
-
 
 
 svn_error_t *
-svn_create_error (ap_status_t errno, 
+svn_create_error (ap_status_t err,
                   svn_boolean_t fatal, 
                   svn_string_t *message,
                   ap_pool_t *pool)
@@ -62,11 +60,22 @@ svn_create_error (ap_status_t errno,
   svn_error_t *new_error = (svn_error_t *) ap_palloc (pool,
                                                       sizeof(svn_error_t));
 
-  new_error->errno = errno;
+  svn_string_t *desc = 
+    svn_string_create ("Really really long string because I'm too lazy to implement this routine now", pool);
+
+  char *strerror_msg;
+
+
+  new_error->err = err;
   new_error->fatal = fatal;
   new_error->message = message;
-  new_error->description = svn_string_create (ap_strerror (errno), pool);
   new_error->canonical_errno = ap_canonical_error (errno);
+
+  *strerror_msg = 
+    ap_strerror (err, (char *) desc->data, (ap_size_t) desc->len);
+
+  new_error->description = svn_string_create (strerror_msg, pool);
+
 
   return new_error;
 }
@@ -74,11 +83,11 @@ svn_create_error (ap_status_t errno,
 
 
 void
-svn_handle_error (svn_error_t err)
+svn_handle_error (svn_error_t *err)
 {
-  printf ("svn_error: errno %d\n");
-  svn_string_print (err->message);
-  svn_string_print (err->description);
+  printf ("svn_error: errno %d\n", err->err);
+  svn_string_print (err->message, stderr);
+  svn_string_print (err->description, stderr);
 
   /* We can examine the APR canonicalized error here, make general
      logical desciions if we wish.*/
@@ -88,7 +97,7 @@ svn_handle_error (svn_error_t err)
   if (err->fatal)
     {
       printf ("Fatal error, exiting.\n");
-      exit (err->errno);
+      exit (err->err);
     }
 }
 
