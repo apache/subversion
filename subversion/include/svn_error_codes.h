@@ -518,13 +518,13 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 36,
               "Path is not locked")
 
-  SVN_ERRDEF (SVN_ERR_FS_BAD_LOCK_TOKEN
+  SVN_ERRDEF (SVN_ERR_FS_BAD_LOCK_TOKEN,
               SVN_ERR_FS_CATEGORY_START + 37,
               "Lock token is incorrect")
 
-  SVN_ERRDEF (SVN_ERR_FS_LOCK_OWNER_MISMATCH
-             SVN_ERR_FS_CATEGORY_START + 38,
-             "Username does not match lock owner")
+  SVN_ERRDEF (SVN_ERR_FS_LOCK_OWNER_MISMATCH,
+              SVN_ERR_FS_CATEGORY_START + 38,
+              "Username does not match lock owner")
 
 
   /* repos errors */
@@ -562,11 +562,11 @@ SVN_ERROR_START
               "Error running post-commit hook")
 
   /* @since New in 1.2 */
-  SVN_ERRDEF (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED
+  SVN_ERRDEF (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED,
               SVN_ERR_REPOS_CATEGORY_START + 8,
               "Error running post-lock hook")
 
-  SVN_ERRDEF (SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED
+  SVN_ERRDEF (SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED,
               SVN_ERR_REPOS_CATEGORY_START + 9,
               "Error running post-unlock hook")
 

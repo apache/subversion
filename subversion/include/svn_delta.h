@@ -597,10 +597,10 @@ typedef struct svn_delta_editor_t
 
 
   /** Give lock-token @a token to the editor.  It is assumed that the
-   *  editor will store the token and pass it to the repository
-   *  filesystem when appropriate.  It is the editor-driver's
-   *  responsibility to make sure that a lock token has been pushed
-   *  before the editor needs to use it.
+   * editor will store the token and pass it to the repository
+   * filesystem when appropriate.  It is the editor-driver's
+   * responsibility to make sure that a lock token has been pushed
+   * before the editor needs to use it.
    */
   svn_error_t *(*push_lock_token) (void *edit_baton,
                                    const svn_lock_token_t *token,

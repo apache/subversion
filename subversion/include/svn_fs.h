@@ -276,57 +276,58 @@ svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path,
  */
 
 /** At certain times, filesystem functions need access to temporary
-    user data.  For example, which user is changing a file?  If the
-    file is locked, has an appropriate lock-token been supplied?
-
-    This temporary user data is stored in an "access context" object,
-    and the access context is then connected to the filesystem object.
-    Whenever a filesystem function requires information, it can pull
-    things out of the context as needed.
+ * user data.  For example, which user is changing a file?  If the
+ * file is locked, has an appropriate lock-token been supplied?
+ *
+ * This temporary user data is stored in an "access context" object,
+ * and the access context is then connected to the filesystem object.
+ * Whenever a filesystem function requires information, it can pull
+ * things out of the context as needed.
 */
 
 /** An opaque object representing temporary user data. */
 typedef struct svn_fs_access_t svn_fs_access_t;
 
 
-/** Set @a *access to a new @c svn_fs_access_t object representing @a
- *  username, allocated in @a pool.  Presumably @a username has
- *  already been authenticated by the caller.
+/** Set @a *access_ctx to a new @c svn_fs_access_t object
+ *  representing @a username, allocated in @a pool.  Presumably @a
+ *  username has already been authenticated by the caller.
  */
-svn_error_t *svn_fs_create_access (svn_fs_access_t **access,
+svn_error_t *svn_fs_create_access (svn_fs_access_t **access_ctx,
                                    const char *username,
                                    apr_pool_t *pool);
 
 
-/** Associate @a access with an open @a fs.
+/** Associate @a access_ctx with an open @a fs.
  *
  * This function can be run multiple times on the same open
  * filesystem, in order to change the filesystem access context for
- * different filesystem operations.  Pass a NULL value for @a access
- * to disassociate the current access context from the filesystem.
+ * different filesystem operations.  Pass a NULL value for @a
+ * access_ctx to disassociate the current access context from the
+ * filesystem.
  */
 svn_error_t *svn_fs_set_access (svn_fs_t *fs,
-                                svn_fs_access_t *access);
+                                svn_fs_access_t *access_ctx);
 
 
-/** Set @a *context to the current @a fs access context, or NULL if
+/** Set @a *access_ctx to the current @a fs access context, or NULL if
  * there is no current fs access context.
  */
-svn_error_t *svn_fs_get_access (svn_fs_access_t **access,
+svn_error_t *svn_fs_get_access (svn_fs_access_t **access_ctx,
                                 svn_fs_t *fs);
 
 
 /** Accessors for the access context: */
 
-/** Set @a *username to the name represented by @a access. */
+/** Set @a *username to the name represented by @a access_ctx. */
 svn_error_t *svn_fs_access_get_username (const char **username,
-                                         svn_fs_access_t *access);
+                                         svn_fs_access_t *access_ctx);
 
 
-/** Push a lock-token @a token into the context @a access.  The
-    context remembers all tokens it receives, and makes them available
-    to fs functions. */
-svn_error_t *svn_fs_access_set_lock_token (svn_fs_access_t *access,
+/** Push a lock-token @a token into the context @a access_ctx.  The
+ * context remembers all tokens it receives, and makes them available
+ * to fs functions. */
+svn_error_t *svn_fs_access_add_lock_token (svn_fs_access_t *access_ctx,
                                            const svn_lock_token_t *token);
 
 
@@ -1449,12 +1450,12 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  *
  * ### Note:  at this time, only files can be locked.
  */
-svn_error_t *svn_fs_lock (svn_fs_lock_token_t **token,
+svn_error_t *svn_fs_lock (svn_lock_token_t **token,
                           svn_fs_t *fs,
                           const char *path,
                           svn_boolean_t force,
                           long int timeout,
-                          svn_fs_lock_token_t *current_token,
+                          svn_lock_token_t *current_token,
                           apr_pool_t *pool);
 
 
@@ -1473,7 +1474,7 @@ svn_error_t *svn_fs_lock (svn_fs_lock_token_t **token,
  * Use @a pool for temporary allocations.
  */
 svn_error_t *svn_fs_unlock (svn_fs_t *fs,
-                            svn_fs_lock_token_t *token,
+                            svn_lock_token_t *token,
                             svn_boolean_t force,
                             apr_pool_t *pool);
 
@@ -1483,7 +1484,7 @@ svn_error_t *svn_fs_unlock (svn_fs_t *fs,
  *  
  * If @a path is not locked, set @a *token to NULL.
  */
-svn_error_t *svn_fs_get_lock (svn_fs_lock_token_t **token,
+svn_error_t *svn_fs_get_lock (svn_lock_token_t **token,
                               svn_fs_t *fs,
                               const char *path,
                               apr_pool_t *pool);
