@@ -198,6 +198,7 @@ struct parse_baton_t {
   svn_boolean_t       do_exclude;
   svn_boolean_t       drop_empty_revs;
   svn_boolean_t       do_renumber_revs;
+  svn_boolean_t       preserve_revprops;
   svn_stream_t       *in_stream;
   svn_stream_t       *out_stream;
   apr_int32_t         rev_drop_count;
@@ -216,7 +217,7 @@ struct revision_baton_t {
   svn_revnum_t     rev_orig;
   svn_revnum_t     rev_actual;
   svn_stringbuf_t *header;
-  svn_stringbuf_t *props;
+  apr_hash_t      *props;
   svn_stringbuf_t *body;
   svn_stream_t    *body_stream;
 };
@@ -263,8 +264,8 @@ new_revision_record (void **revision_baton,
   rb->had_dropped_nodes = FALSE;
   rb->pb     = parse_baton;
   rb->header = svn_stringbuf_create ("", pool);
-  rb->props  = svn_stringbuf_create ("", pool);
   rb->body   = svn_stringbuf_create ("", pool);
+  rb->props  = apr_hash_make (pool);
   rb->body_stream = svn_stream_from_stringbuf (rb->body, pool);
 
   header_stream = svn_stream_from_stringbuf (rb->header, pool);
@@ -443,10 +444,11 @@ set_revision_property (void *revision_baton,
                        const svn_string_t *value)
 {
   struct revision_baton_t *rb = revision_baton;
+  apr_pool_t *hash_pool = apr_hash_pool_get (rb->props);
 
-  write_prop_to_stringbuf (&(rb->props), name, value);
   rb->has_props = TRUE;
-
+  apr_hash_set (rb->props, apr_pstrdup (hash_pool, name),
+                APR_HASH_KEY_STRING, svn_string_dup (value, hash_pool));
   return SVN_NO_ERROR;
 }
 
@@ -560,21 +562,55 @@ close_revision (void *revision_baton)
   struct revision_baton_t *rb = revision_baton;
   int bytes_used;
   char buf[SVN_KEYLINE_MAXLEN];
+  apr_hash_index_t *hi;
+  apr_pool_t *hash_pool = apr_hash_pool_get (rb->props);
+  svn_stringbuf_t *props = svn_stringbuf_create ("", hash_pool);
 
-  if (rb->has_props)
-    svn_stringbuf_appendcstr (rb->props, "PROPS-END\n");
+  /* If this revision has no nodes left because the ones it had were
+     dropped, and we are not dropping empty revisions, and we were not
+     told to preserve revision props, then we want to fixup the
+     revision props to only contain:
+       - the date
+       - a log message that reports that this revision is just stuffing. */
+  if ((! rb->pb->preserve_revprops)
+      && (! rb->has_nodes) 
+      && rb->had_dropped_nodes 
+      && (! rb->pb->drop_empty_revs))
+    {
+      apr_hash_t *old_props = rb->props;
+      rb->has_props = TRUE;
+      rb->props = apr_hash_make (hash_pool);
+      apr_hash_set (rb->props, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING,
+                    apr_hash_get (old_props, SVN_PROP_REVISION_DATE, 
+                                  APR_HASH_KEY_STRING));
+      apr_hash_set (rb->props, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                    svn_string_create ("This is an empty revision for "
+                                       "padding.", hash_pool));
+    }
 
+  /* Now, "rasterize" the props to a string, and append the property
+     information to the header string.  */
   if (rb->has_props)
     {
+      for (hi = apr_hash_first (hash_pool, rb->props); 
+           hi; 
+           hi = apr_hash_next (hi))
+        {
+          const void *key;
+          void *val;
+          apr_hash_this (hi, &key, NULL, &val);
+          write_prop_to_stringbuf (&props, key, val);
+        }
+      svn_stringbuf_appendcstr (props, "PROPS-END\n");
       svn_stringbuf_appendcstr (rb->header,
                                 SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
-      sprintf (buf, ": %" APR_SIZE_T_FMT "%n", rb->props->len, &bytes_used);
+      sprintf (buf, ": %" APR_SIZE_T_FMT "%n", props->len, &bytes_used);
       svn_stringbuf_appendbytes (rb->header, buf, bytes_used);
       svn_stringbuf_appendbytes (rb->header, "\n", 1);
     }
 
   svn_stringbuf_appendcstr (rb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
-  sprintf (buf, ": %" APR_SIZE_T_FMT "%n", rb->props->len, &bytes_used);
+  sprintf (buf, ": %" APR_SIZE_T_FMT "%n", props->len, &bytes_used);
   svn_stringbuf_appendbytes (rb->header, buf, bytes_used);
   svn_stringbuf_appendbytes (rb->header, "\n", 1);
 
@@ -582,7 +618,7 @@ close_revision (void *revision_baton)
   svn_stringbuf_appendbytes (rb->header, "\n", 1);
 
   /* put an end to revision */
-  svn_stringbuf_appendbytes (rb->props,  "\n", 1);
+  svn_stringbuf_appendbytes (props,  "\n", 1);
 
   /* write out the revision */
   /* Revision is written out in the following cases:
@@ -598,7 +634,7 @@ close_revision (void *revision_baton)
       SVN_ERR (svn_stream_write (rb->pb->out_stream,
                                  rb->header->data , &(rb->header->len)));
       SVN_ERR (svn_stream_write (rb->pb->out_stream,
-                                 rb->props->data  , &(rb->props->len)));
+                                 props->data      , &(props->len)));
       SVN_ERR (svn_stream_write (rb->pb->out_stream,
                                  rb->body->data   , &(rb->body->len)));
       fprintf (stderr, "Revision %" SVN_REVNUM_T_FMT " committed as %"
@@ -642,7 +678,8 @@ subcommand_help,
 enum
   {
     svndumpfilter__drop_empty_revs = SVN_OPT_FIRST_LONGOPT_ID,
-    svndumpfilter__renumber_revs
+    svndumpfilter__renumber_revs,
+    svndumpfilter__preserve_revprops
   };
 
 /* Option codes and descriptions.
@@ -664,7 +701,8 @@ static const apr_getopt_option_t options_table[] =
      "Remove revisions emptied by filtering."},
     {"renumber-revs",     svndumpfilter__renumber_revs, 0,
      "Renumber revisions left after filtering." },
-
+    {"preserve-revprops",  svndumpfilter__preserve_revprops, 0,
+     "Don't filter revision properties." },
     {NULL}
   };
 
@@ -677,12 +715,14 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"exclude", subcommand_exclude, {0},
      "usage: svndumpfilter exclude PATH_PREFIX...\n\n"
      "Filter out nodes with given prefixes from dumpstream.\n",
-     {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs} },
+     {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs,
+      svndumpfilter__preserve_revprops} },
 
     {"include", subcommand_include, {0},
      "usage: svndumpfilter include PATH_PREFIX...\n\n"
      "Filter out nodes without given prefixes from dumpstream.\n",
-     {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs} },
+     {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs,
+      svndumpfilter__preserve_revprops} },
 
     {"help", subcommand_help, {"?", "h"},
      "usage: svndumpfilter help [SUBCOMMAND...]\n\n"
@@ -696,12 +736,13 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 /* Baton for passing option/argument state to a subcommand function. */
 struct svndumpfilter_opt_state
 {
-  svn_opt_revision_t start_revision;     /* -r X[:Y] is       */
-  svn_opt_revision_t end_revision;       /* not implemented.  */
-  svn_boolean_t drop_empty_revs;         /* --drop-empty-revs */
-  svn_boolean_t help;                    /* --help or -?      */
-  svn_boolean_t renumber_revs;           /* --renumber_revs   */
-  apr_array_header_t *prefixes;          /* mainargs.         */
+  svn_opt_revision_t start_revision;     /* -r X[:Y] is         */
+  svn_opt_revision_t end_revision;       /* not implemented.    */
+  svn_boolean_t drop_empty_revs;         /* --drop-empty-revs   */
+  svn_boolean_t help;                    /* --help or -?        */
+  svn_boolean_t renumber_revs;           /* --renumber-revs     */
+  svn_boolean_t preserve_revprops;       /* --preserve-revprops */
+  apr_array_header_t *prefixes;          /* mainargs.           */
 };
 
 
@@ -743,6 +784,7 @@ parse_baton_initialize (struct parse_baton_t **pb,
   (*pb)->do_exclude = do_exclude;
   (*pb)->do_renumber_revs = opt_state->renumber_revs;
   (*pb)->drop_empty_revs = opt_state->drop_empty_revs;
+  (*pb)->preserve_revprops = opt_state->preserve_revprops;
   (*pb)->prefixes = opt_state->prefixes;
   /* this may be used to shift revision numbers while filtering */
   (*pb)->rev_drop_count = 0;
@@ -923,6 +965,9 @@ main (int argc, const char * const *argv)
           break;
         case svndumpfilter__renumber_revs:
           opt_state.renumber_revs = TRUE;
+          break;
+        case svndumpfilter__preserve_revprops:
+          opt_state.preserve_revprops = TRUE;
           break;
         default:
           {
