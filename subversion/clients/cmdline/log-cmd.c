@@ -251,9 +251,7 @@ log_message_receiver (void *baton,
                                 log_item->copyfrom_rev);
             }
           SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-          printf ("   %c %s%s\n", 
-                  (log_item->action == 'M') ? 'U' : log_item->action, 
-                  path_native, copy_data);
+          printf ("   %c %s%s\n", log_item->action, path_native, copy_data);
         }
     }
   printf ("\n");  /* A blank line always precedes the log message. */
@@ -347,16 +345,33 @@ log_message_receiver_xml (void *baton,
            hi = apr_hash_next (hi))
         {
           void *val;
-          char action;
           char *actionstr;
-
+          svn_log_changed_path_t *log_item;
+          
           apr_hash_this(hi, (void *) &path, NULL, &val);
-          action = (char) ((int) val);
+          log_item = val;
 
-          actionstr = apr_psprintf (pool, "%c", action);
-          /* <path action="X">xxx</path> */
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
-                                 "action", actionstr, NULL);
+          actionstr = apr_psprintf (pool, "%c", log_item->action);
+          if (log_item->copyfrom_path
+              && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
+            {
+              /* <path action="X" copyfrom-path="aaa" copyfrom-rev="> */
+              svn_stringbuf_t *escpath = svn_stringbuf_create ("", pool);
+              svn_xml_escape_nts (&escpath, log_item->copyfrom_path, pool);
+              revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, 
+                                     log_item->copyfrom_rev);
+              svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
+                                     "action", actionstr, 
+                                     "copyfrom-path", escpath->data,
+                                     "copyfrom-rev", revstr, NULL);
+            }
+          else
+            {
+              /* <path action="X"> */
+              svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
+                                     "action", actionstr, NULL);
+            }
+          /* xxx</path> */
           svn_xml_escape_nts (&sb, path, pool);
           svn_xml_make_close_tag (&sb, pool, "path");
         }
