@@ -173,12 +173,8 @@ static const struct ne_xml_elm report_elements[] =
 
 static svn_stringbuf_t *my_basename(const char *url, apr_pool_t *pool)
 {
-  svn_stringbuf_t *s = svn_stringbuf_create(url, pool);
-
-  svn_path_canonicalize(s);
-
-  /* ### creates yet another string. let's optimize this stuff... */
-  return svn_path_last_component(s, pool);
+  /* ### be nice to lose the stringbuf portion */
+  return svn_stringbuf_create(svn_path_basename(url, pool), pool);
 }
 
 /* ### fold this function into store_vsn_url; not really needed */

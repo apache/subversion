@@ -162,9 +162,13 @@ make_dir_baton (const char *path,
 
   /* Construct the PATH and baseNAME of this directory. */
   d->path = svn_stringbuf_dup (eb->anchor, pool);
-  if (pb)
-    svn_path_add_component_nts (d->path, path);
-  d->name = pb ? svn_path_last_component (d->path, pool) : NULL;
+  if (path)
+    {
+      svn_path_add_component_nts (d->path, path);
+      d->name = svn_stringbuf_create (svn_path_basename (path, pool), pool);
+    }
+  else
+    d->name = NULL;
 
   /* Figure out the URL for this directory. */
   if (edit_baton->is_checkout)
@@ -361,7 +365,7 @@ make_file_baton (struct dir_baton *parent_dir_baton,
   /* Make the file's on-disk name. */
   f->path = svn_stringbuf_dup (pb->edit_baton->anchor, pool);
   svn_path_add_component_nts (f->path, path);
-  f->name = svn_path_last_component (f->path, pool);
+  f->name = svn_stringbuf_create (svn_path_basename (path, pool), pool);
 
   /* Figure out the URL for this file. */
   if (pb->edit_baton->is_checkout)
@@ -1956,8 +1960,10 @@ svn_wc_install_file (const char *file_path,
                                           "close_file: error closing %s",
                                           renamed_path->data);
               
-              renamed_basename
-                = svn_path_last_component (renamed_path, pool);
+              renamed_basename =
+                svn_stringbuf_create (svn_path_basename (renamed_path->data,
+                                                         pool),
+                                      pool);
 
               svn_xml_make_open_tag (&entry_accum,
                                      pool,

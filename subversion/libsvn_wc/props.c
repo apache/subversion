@@ -518,7 +518,7 @@ svn_wc__merge_prop_diffs (const char *path,
                 /* This is the very first prop conflict found on this
                    node. */
                 svn_stringbuf_t *tmppath;
-                svn_stringbuf_t *tmpname;
+                const char *tmpname;
 
                 /* Get path to /temporary/ local prop file */
                 SVN_ERR (svn_wc__prop_path (&tmppath, full_path, 1, pool));
@@ -534,7 +534,7 @@ svn_wc__merge_prop_diffs (const char *path,
                 /* reject_tmp_path is an absolute path at this point,
                    but that's no good for us.  We need to convert this
                    path to a *relative* path to use in the logfile. */
-                tmpname = svn_path_last_component (reject_tmp_path, pool);
+                tmpname = svn_path_basename (reject_tmp_path->data, pool);
 
                 if (is_dir)
                   {
@@ -543,7 +543,7 @@ svn_wc__merge_prop_diffs (const char *path,
                       svn_wc__adm_path (svn_stringbuf_create ("", pool),
                                         TRUE, /* use tmp */
                                         pool,
-                                        tmpname->data,
+                                        tmpname,
                                         NULL);
                   }
                 else
@@ -554,7 +554,7 @@ svn_wc__merge_prop_diffs (const char *path,
                                         TRUE, 
                                         pool,
                                         SVN_WC__ADM_PROPS,
-                                        tmpname->data,
+                                        tmpname,
                                         NULL);
                   }               
               }
@@ -683,20 +683,18 @@ svn_wc__merge_prop_diffs (const char *path,
           /* Reserve a new .prej file *above* the .svn/ directory by
              opening and closing it. */
           svn_stringbuf_t *reserved_path;
-          svn_stringbuf_t *full_reject_path =
-            svn_stringbuf_create (path, pool);
+          const char *full_reject_path;
 
           if (is_dir)
-            svn_path_add_component (full_reject_path,
-                                    svn_stringbuf_create
-                                    (SVN_WC__THIS_DIR_PREJ,
-                                     pool));
+            full_reject_path = svn_path_join (path,
+                                              SVN_WC__THIS_DIR_PREJ,
+                                              pool);
           else
-            svn_path_add_component_nts (full_reject_path, name);
+            full_reject_path = svn_path_join (path, name, pool);
 
           SVN_ERR (svn_io_open_unique_file (&reject_fp,
                                             &reserved_path,
-                                            full_reject_path->data,
+                                            full_reject_path,
                                             SVN_WC__PROP_REJ_EXT,
                                             FALSE,
                                             pool));
@@ -705,7 +703,7 @@ svn_wc__merge_prop_diffs (const char *path,
           if (status)
             return svn_error_createf (status, 0, NULL, pool,
                                       "do_property_merge: can't close '%s'",
-                                      full_reject_path->data);
+                                      full_reject_path);
           
           /* This file will be overwritten when the log is run; that's
              ok, because at least now we have a reservation on
@@ -713,7 +711,10 @@ svn_wc__merge_prop_diffs (const char *path,
 
           /* Now just get the name of the reserved file.  This is the
              "relative" path we will use in the log entry. */
-          reject_pathbuf = svn_path_last_component (reserved_path, pool);
+          reject_pathbuf =
+            svn_stringbuf_create (svn_path_basename (reserved_path->data,
+                                                     pool),
+                                  pool);
         }
 
       /* We've now guaranteed that some kind of .prej file exists

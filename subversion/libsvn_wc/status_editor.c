@@ -195,7 +195,9 @@ make_dir_baton (const char *path,
 
   /* Finish populating the baton members. */
   d->path         = full_path;
-  d->name         = pb ? svn_path_last_component (full_path, pool) : NULL;
+  d->name         = path ? svn_stringbuf_create (svn_path_basename (path,
+                                                                    pool),
+                                                 pool) : NULL;
   d->edit_baton   = edit_baton;
   d->parent_baton = parent_baton;
   d->pool         = pool;
@@ -256,7 +258,8 @@ make_file_baton (struct dir_baton *parent_dir_baton,
 
   /* Finish populating the baton members. */
   f->path       = full_path;
-  f->name       = svn_path_last_component (full_path, pool);
+  f->name       = svn_stringbuf_create (svn_path_basename (path, pool),
+                                        pool);
   f->pool       = pool;
   f->dir_baton  = pb;
   f->edit_baton = eb;
@@ -301,10 +304,9 @@ delete_entry (const char *path,
   struct edit_baton *eb = db->edit_baton;
   apr_hash_t *entries;
   svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pool);
-  svn_stringbuf_t *name;
+  const char *name = svn_path_basename (path, pool);
 
   svn_path_add_component_nts (full_path, path);
-  name = svn_path_last_component (full_path, pool);
 
   /* Note:  when something is deleted, it's okay to tweak the
      statushash immediately.  No need to wait until close_file or
@@ -314,8 +316,9 @@ delete_entry (const char *path,
   /* Read the parent's entries file.  If the deleted thing is not
      versioned in this working copy, it was probably deleted via this
      working copy.  No need to report such a thing. */
+  /* ### use svn_wc_entry() instead? */
   SVN_ERR (svn_wc_entries_read (&entries, db->path, pool));
-  if (apr_hash_get (entries, name->data, name->len))
+  if (apr_hash_get (entries, name, APR_HASH_KEY_STRING))
     SVN_ERR (tweak_statushash (db->edit_baton,
                                full_path->data,
                                svn_wc_status_deleted, 0));

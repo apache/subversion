@@ -118,15 +118,6 @@ void svn_path_add_component_nts (svn_stringbuf_t *path,
 void svn_path_remove_component (svn_stringbuf_t *path);
 
 
-/* Duplicate and return PATH's last component, w/o separator. 
- *
- * If PATH is the root directory, then its last component is still the
- * root directory.  Else if PATH ends with a separator, then PATH's
- * last component is the empty string.
- */
-svn_stringbuf_t *svn_path_last_component (const svn_stringbuf_t *path,
-                                          apr_pool_t *pool);
-
 
 /* Return TRUE iff PATH is a single component. */
 svn_boolean_t

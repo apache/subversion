@@ -359,22 +359,6 @@ svn_path_basename (const char *path, apr_pool_t *pool)
 }
 
 
-svn_stringbuf_t *
-svn_path_last_component (const svn_stringbuf_t *path,
-                         apr_pool_t *pool)
-{
-  apr_size_t i = svn_stringbuf_find_char_backward (path, SVN_PATH_SEPARATOR);
-
-  if (i < path->len)
-    {
-      i += 1;  /* Get past the separator char. */
-      return svn_stringbuf_ncreate (path->data + i, (path->len - i), pool);
-    }
-  else
-    return svn_stringbuf_dup (path, pool);
-}
-
-
 
 void
 svn_path_split (const svn_stringbuf_t *path, 
@@ -382,24 +366,24 @@ svn_path_split (const svn_stringbuf_t *path,
                 svn_stringbuf_t **basename,
                 apr_pool_t *pool)
 {
-  svn_stringbuf_t *n_dirpath, *n_basename = NULL;
-
   assert (dirpath != basename);
 
-  n_dirpath = svn_stringbuf_dup (path, pool);
-  svn_path_canonicalize (n_dirpath);
+  if (dirpath)
+    {
+      svn_stringbuf_t *n_dirpath;
+
+      n_dirpath = svn_stringbuf_dup (path, pool);
+      svn_path_canonicalize (n_dirpath);
+      svn_path_remove_component (n_dirpath);
+
+      *dirpath = n_dirpath;
+    }
 
   if (basename)
-    n_basename = svn_path_last_component (n_dirpath, pool);
-
-  if (dirpath)
-    svn_path_remove_component (n_dirpath);
-
-  if (dirpath)
-    *dirpath = n_dirpath;
-
-  if (basename)
-    *basename = n_basename;
+    {
+      *basename =
+        svn_stringbuf_create (svn_path_basename (path->data, pool), pool);
+    }
 }
 
 
