@@ -15,4 +15,8 @@ if sys.hexversion < 0x2000000:
 # don't export this name
 del sys
 
+class Failure(Exception):
+  'Base class for exceptions that indicate test failure'
+  pass
+
 import main, tree, actions, wc
