@@ -174,7 +174,6 @@ Summary:
    rename   | mv
    repo
    status   | st | stat
-   sync     | sy
    tag     /* implemented via copy, though may want to be its own command */
    update   | up
 
@@ -320,15 +319,6 @@ svn convert local-dir remote-dir
   repo
   ====
 
-
-
-  sync
-  ====
-
-This is going to take a bit of explaining. Imagine an intelligent
-update that knows to add new files and remove files that you've
-removed, and all recursively (without having to svn add, svn rm, ad
-nauseam). More to come!
 
 
 Miscellaneous Notes and addenda
