@@ -48,11 +48,14 @@ switch (sw): Update the working copy to a different URL.
 usage: 1. switch URL [PATH]
        2. switch --relocate FROM TO [PATH...]
 
-  1. Update the working copy to mirror a new URL.  This behaviour is a
-     superset of 'svn update'.
-     Note:  this is the way to move a working copy to a new branch.
+  1. Update the working copy to mirror a new URL within the repository.
+     This behaviour is similar to 'svn update', and is the way to
+     move a working copy to a branch or tag within the same repository.
 
-  2. Reconnect the working copy when the repository URL has changed.
+  2. Rewrite working copy URL metadata to reflect a syntactic change only.
+     This is used when repository's root URL changes (such as a schema
+     or hostname change) but your working copy still reflects the same
+     directory within the same repository.
 
 Valid options:
   -r [--revision] arg      : ARG (some commands also take ARG1:ARG2 range)
