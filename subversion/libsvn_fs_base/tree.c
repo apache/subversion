@@ -2564,8 +2564,6 @@ verify_locks (const char *txn_name,
       svn_pool_clear (subpool);
       path = APR_ARRAY_IDX (changed_paths, i, const char *);
 
-      fprintf (stderr, "Path: %s\n", path);
-
       /* If this path has already been verified as part of a recursive
          check of one of its parents, no need to do it again.  */
       if (last_recursed 
@@ -2586,7 +2584,6 @@ verify_locks (const char *txn_name,
          recursive check on deleted paths regardless of their kind.  */
       if (change->change_kind == svn_fs_path_change_modify)
         recurse = FALSE;
-      fprintf (stderr, "   ... checking %s\n", recurse ? "recursively" : "non-recursively");
       SVN_ERR (svn_fs_base__allow_locked_operation (path, recurse,
                                                     trail, subpool));
 

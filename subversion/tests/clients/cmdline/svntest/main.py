@@ -352,8 +352,9 @@ def create_repos(path):
 
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
   file_append(os.path.join(path, "conf", "svnserve.conf"),
-              "[general]\nanon-access = write\n");
-
+              "[general]\nauth-access = write\npassword-db = passwd\n");
+  file_append(os.path.join(path, "conf", "passwd"),
+               "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
 
