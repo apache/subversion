@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-05-05 22:19+0200\n"
-"PO-Revision-Date: 2004-05-07 15:22+0200\n"
+"PO-Revision-Date: 2004-06-23 23:04+0200\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -3202,7 +3202,7 @@ msgstr "Brak parametru 'cel' w '%s'"
 #: libsvn_wc/log.c:422
 #, c-format
 msgid "Missing 'timestamp' attribute in '%s'"
-msgstr "Brak parametru 'timestamp' w 's'"
+msgstr "Brak parametru 'timestamp' w '%s'"
 
 #: libsvn_wc/log.c:487 libsvn_wc/log.c:518
 #, c-format
