@@ -52,7 +52,7 @@
 	</Configurations>
 	<Files>
 		<File
-			RelativePath="..\..\svn_private_config.h">
+			RelativePath="..\..\subversion\svn_private_config.h">
 			<FileConfiguration
 				Name="Debug|Win32"
 				ExcludedFromBuild="TRUE">
@@ -67,24 +67,24 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\..\svn_private_config.hw">
+			RelativePath="..\..\subversion\svn_private_config.hw">
 			<FileConfiguration
 				Name="Debug|Win32">
 				<Tool
 					Name="VCCustomBuildTool"
 					Description="Creating svn_private_config.h from svn_private_config.hw."
-					CommandLine="copy ..\..\svn_private_config.hw ..\..\svn_private_config.h &gt; nul
+					CommandLine="copy ..\..\subversion\svn_private_config.hw ..\..\subversion\svn_private_config.h &gt; nul
 "
-					Outputs="..\..\svn_private_config.h"/>
+					Outputs="..\..\subversion\svn_private_config.h"/>
 			</FileConfiguration>
 			<FileConfiguration
 				Name="Release|Win32">
 				<Tool
 					Name="VCCustomBuildTool"
 					Description="Creating svn_private_config.h from svn_private_config.hw."
-					CommandLine="copy ..\..\svn_private_config.hw ..\..\svn_private_config.h &gt; nul
+					CommandLine="copy ..\..\subversion\svn_private_config.hw ..\..\subversion\svn_private_config.h &gt; nul
 "
-					Outputs="..\..\svn_private_config.h"/>
+					Outputs="..\..\subversion\svn_private_config.h"/>
 			</FileConfiguration>
 		</File>
 	</Files>

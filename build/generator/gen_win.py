@@ -555,7 +555,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if isinstance(target, gen_base.TargetApacheMod):
       fakeincludes = self.map_rootpath(["subversion/include",
                                         self.dbincpath,
-                                        ""],
+                                        "subversion"],
                                        rootpath)
       fakeincludes.extend([
         self.apr_path + "/include",
@@ -580,7 +580,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                         self.apr_util_path + "/xml/expat/lib",
                                         "neon/src",
                                         self.dbincpath,
-                                        ""],
+                                        "subversion"],
                                        rootpath)
 
     if self.swig_libdir \
