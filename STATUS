@@ -81,6 +81,7 @@ section for approved changes.)
    * Issue #1681
      Make svnserve require --inetd to use stdin/stdout.
      Justification: Make svnserve more user friendly, low risk.
+     Notes: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=53957
      Votes:
       +1: bliss, ghudson
       +0: cmpilato
