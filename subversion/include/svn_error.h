@@ -278,7 +278,11 @@ svn_error_t *svn_error_createf (apr_status_t apr_err,
                                 svn_error_t *child,
                                 apr_pool_t *pool,
                                 const char *fmt, 
-                                ...);
+                                ...)
+#ifdef __GNUC__
+    __attribute__ ((format (printf, 5, 6)))
+#endif /* __GNUC__ */
+;
 
 
 /* A quick n' easy way to create a wrappered exception with your own

@@ -83,13 +83,21 @@ svn_string_t * svn_string_ncreate (const char *bytes, const apr_size_t size,
    from varargs, which are as appropriate for apr_psprintf. */
 svn_string_t *svn_string_createf (apr_pool_t *pool,
                                   const char *fmt,
-                                  ...);
+                                  ...)
+#ifdef __GNUC__
+    __attribute__ ((format (printf, 2, 3)))
+#endif /* __GNUC__ */
+;
 
 /* Create a new bytestring by formatting CSTRING (null-terminated)
    from a va_list (see svn_string_createf). */
 svn_string_t *svn_string_createv (apr_pool_t *pool,
                                   const char *fmt,
-                                  va_list ap);
+                                  va_list ap)
+#ifdef __GNUC__
+    __attribute__ ((format (printf, 2, 0)))
+#endif /* __GNUC__ */
+;
 
 /* Make sure that the string STR has at least MINIMUM_SIZE bytes of
    space available in the memory block.  (MINIMUM_SIZE should include
