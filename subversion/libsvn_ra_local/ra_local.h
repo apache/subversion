@@ -121,7 +121,7 @@ svn_ra_local__checkout (svn_fs_t *fs,
                         svn_boolean_t recurse,
                         svn_stringbuf_t *URL,
                         const svn_string_t *fs_path,
-                        const svn_delta_edit_fns_t *editor, 
+                        const svn_delta_editor_t *editor, 
                         void *edit_baton,
                         apr_pool_t *pool);
 

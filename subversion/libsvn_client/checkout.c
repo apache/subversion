@@ -52,10 +52,6 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
 {
   const svn_delta_editor_t *checkout_editor;
   void *checkout_edit_baton;
-  const svn_delta_editor_t *wrap_editor;
-  void *wrap_edit_baton;
-  const svn_delta_edit_fns_t *wrapped_old_editor;
-  void *wrapped_old_edit_baton;
   svn_error_t *err;
   svn_revnum_t revnum;
 
@@ -85,15 +81,10 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
                                        pool));
 
   /* Wrap it up with outside editors. */
-  svn_delta_wrap_editor (&wrap_editor, &wrap_edit_baton,
+  svn_delta_wrap_editor (&checkout_editor, &checkout_edit_baton,
                          before_editor, before_edit_baton,
                          checkout_editor, checkout_edit_baton,
                          after_editor, after_edit_baton, pool);
-
-  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
-     can use it with an old driver. */
-  svn_delta_compat_wrap (&wrapped_old_editor, &wrapped_old_edit_baton, 
-                         wrap_editor, wrap_edit_baton, pool);
 
   /* if using an RA layer */
   if (! xml_src)
@@ -120,8 +111,8 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
       err = ra_lib->do_checkout (session,
                                  revnum,
                                  recurse,
-                                 wrapped_old_editor,
-                                 wrapped_old_edit_baton);
+                                 checkout_editor,
+                                 checkout_edit_baton);
       /* Sleep for one second to ensure timestamp integrity. */
       apr_sleep (APR_USEC_PER_SEC * 1);
       
@@ -137,6 +128,8 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
     {
       apr_status_t apr_err;
       apr_file_t *in = NULL;
+      void *wrap_edit_baton;
+      const svn_delta_edit_fns_t *wrap_editor;
 
       /* Open xml file. */
       apr_err = apr_file_open (&in, xml_src->data, (APR_READ | APR_CREATE),
@@ -145,13 +138,18 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
         return svn_error_createf (apr_err, 0, NULL, pool,
                                   "unable to open %s", xml_src->data);
 
+      /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+         can use it with an old driver. */
+      svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton,
+                             checkout_editor, checkout_edit_baton, pool);
+
       /* Do a checkout by xml-parsing the stream.  An invalid revnum
          means that there will be a revision number in the <delta-pkg>
          tag.  Otherwise, a valid revnum will be stored in the wc,
          assuming there's no <delta-pkg> tag to override it. */
       err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
-                                      wrapped_old_editor,
-                                      wrapped_old_edit_baton,
+                                      wrap_editor,
+                                      wrap_edit_baton,
                                       URL->data,
                                       revnum,
                                       pool);

@@ -357,7 +357,7 @@ typedef struct svn_ra_plugin_t
   svn_error_t *(*do_checkout) (void *session_baton,
                                svn_revnum_t revision,
                                svn_boolean_t recurse,
-                               const svn_delta_edit_fns_t *editor,
+                               const svn_delta_editor_t *editor,
                                void *edit_baton);
 
 
