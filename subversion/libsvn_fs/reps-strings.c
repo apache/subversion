@@ -15,18 +15,18 @@
  * ====================================================================
  */
 
-#include <string.h>
 #include <assert.h>
 #include <apr_md5.h>
+#include <db.h>
 
-#include "db.h"
 #include "svn_fs.h"
 #include "svn_pools.h"
+
 #include "fs.h"
 #include "err.h"
 #include "trail.h"
 #include "reps-strings.h"
-#include "bdb/dbt.h"
+
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 
