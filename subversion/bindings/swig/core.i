@@ -292,7 +292,7 @@ apr_pool_t *current_pool;
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **cfg_hash {
     $result = t_output_helper(
         $result,
-        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_config_t));
+        SWIG_NewPointerObj(*$1, SWIGTYPE_p_apr_hash_t, 0));
 }
 
 /* Allow None to be passed as config_dir argument */
