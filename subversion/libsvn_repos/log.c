@@ -197,8 +197,10 @@ svn_repos_get_logs (svn_repos_t *repos,
                                                  pool));
               for (j = 0; j < changed_revs->nelts; j++)
                 {
-                  svn_revnum_t chrev = 
-                    APR_ARRAY_IDX (changed_revs, j, svn_revnum_t);
+                  /* We're re-using the memory allocated for the array
+                     here in order to avoid more allocations.  */
+                  svn_revnum_t *chrev = 
+                    (((svn_revnum_t *)(changed_revs)->elts) + j);
                   apr_hash_set (all_revs, (void *)chrev, sizeof (chrev), 
                                 (void *)1);
                 }
