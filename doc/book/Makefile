@@ -1,5 +1,5 @@
 XSLTPROC = xsltproc
-INSTALL_DIR = /usr/share/doc/subversion
+INSTALL_DIR = $(DESTDIR)/usr/share/doc/subversion
 INSTALL = install
 
 ## You shouldn't normally need to edit anything below here.
