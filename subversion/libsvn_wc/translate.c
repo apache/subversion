@@ -791,6 +791,18 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
 
 
 
+svn_string_t *svn_wc__friendly_date (const char *date, apr_pool_t *pool)
+{
+  char *dot_spot = strchr (date, '.');
+
+  if (dot_spot)
+    return svn_string_ncreate (date, dot_spot - date, pool);
+  else
+    return svn_string_create (date, pool);
+}
+
+
+
 /*
  * local variables:
  * eval: (load-file "../svn-dev.el")
