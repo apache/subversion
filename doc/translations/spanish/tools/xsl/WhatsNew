@@ -1,0 +1,60 @@
+Changes since version 1.65.0 (2004-02-27)
+
+Changes to xsl/*
+
+  | 2004-03-09  Norman Walsh <nwalsh@users.sourceforge.net>
+  | 
+  | 	* VERSION: Version 1.65.1 released
+  | 
+
+Changes to xsl/fo/*
+
+  | 2004-03-04  Norman Walsh <nwalsh@users.sourceforge.net>
+  | 
+  | 	* formal.xsl, table.xsl: Use table.table.properties on tables
+  | 
+  | 	* inline.xsl: Make linked first glossterms italic like all the
+  | 	  glossterms
+  | 
+  | 	* param.ent, param.xweb: Added table.table.properties
+  | 
+  | 2004-03-02  Jirka Kosek <kosek@users.sourceforge.net>
+  | 
+  | 	* xep.xsl: Seems that XEP now supports Unicode characters in
+  | 	  bookmarks. There is no further need to strip accents from
+  | 	  characters.
+  | 
+  | 2004-02-29  Jirka Kosek <kosek@users.sourceforge.net>
+  | 
+  | 	* graphics.xsl: Improved mapping of scalefit attribute to
+  | 	  content-width FO property
+  | 
+
+Changes to xsl/params/*
+
+  | 2004-03-04  Norman Walsh <nwalsh@users.sourceforge.net>
+  | 
+  | 	* root.properties.xml: Added
+  | 	  line-height-shift-adjustment=disregard-shifts to the root
+  | 	  properties
+  | 
+  | 	* table.properties.xml: Clarified description pointing to the
+  | 	  distinction between table.properties and
+  | 	  table.table.properties
+  | 
+  | 	* table.table.properties.xml: New file.
+  | 
+
+Changes to xsl/extensions/saxon643/com/nwalsh/saxon/*
+
+  | 2004-03-04  Norman Walsh <nwalsh@users.sourceforge.net>
+  | 
+  | 	* ImageIntrinsics.java: Added warning messages when images
+  | 	  can't be loaded
+  | 
+  | 2004-03-01  Jirka Kosek <kosek@users.sourceforge.net>
+  | 
+  | 	* Text.java: Normalize DOS and Mac line breaks to LF in
+  | 	  included files.
+  | 
+
