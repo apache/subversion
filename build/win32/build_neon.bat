@@ -5,8 +5,8 @@
 @rem * Edit and uncomment the following lines to add zlib and OpenSSL
 @rem * support to the Neon libraries:
 @rem *
-set OPENSSL_SRC=..\..\common\openssl
-set ZLIB_SRC=..\..\common\zlib114
+@rem set OPENSSL_SRC=..\..\common\openssl
+@rem set ZLIB_SRC=..\..\common\zlib114-win32
 @rem *
 @rem * NOTE: The paths should be relative to the Neon directory, ..\..\neon
 @rem **************************************************************************
