@@ -702,7 +702,7 @@ to the server, and the @emph{server} is the editor-driver.
 
 Here are the main advantages of this interface:
 
-@itemize
+@itemize @bullet
 
 @item
 @emph{Consistency}.  Tree-deltas move across the network, in both
