@@ -236,19 +236,19 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
       print lastline
       return 1
     
-    # Convert the output into a tree.
-    expected_tree = tree.build_tree_from_commit (output)
+  # Convert the output into a tree.
+  expected_tree = tree.build_tree_from_commit (output)
     
-    # Verify actual output against expected output.
-    if tree.compare_trees (expected_tree, output_tree):
+  # Verify actual output against expected output.
+  if tree.compare_trees (expected_tree, output_tree):
+    return 1
+    
+  # Verify via 'status' command too, if possible.
+  if status_output_tree:
+    if run_and_verify_status(wc_dir_name, status_output_tree):
       return 1
-    
-    # Verify via 'status' command too, if possible.
-    if status_output_tree:
-      if run_and_verify_status(wc_dir_name, status_output_tree):
-        return 1
       
-      return 0
+  return 0
 
 
 def run_and_verify_status(wc_dir_name, output_tree,

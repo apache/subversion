@@ -204,22 +204,143 @@ def commit_one_file():
 def commit_inclusive_dir():
   "Commit wc_dir/A/D -- includes D. (anchor=A, tgt=D)"
 
-  pass
+  # Bootstrap:  make independent repo and working copy.
+  sbox = sandbox(commit_inclusive_dir)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
 
-#----------------------------------------------------------------------
+  if svntest.actions.make_repo_and_wc(sbox): return 1
 
-def commit_noninclusive_dir():
-  "Commit repos/wc_dir -- does NOT include wc_dir. (anchor=wc_dir, tgt={})"
+  # Make standard slew of changes to working copy.
+  if make_standard_slew_of_changes(wc_dir): return 1
 
-  pass
-
-#----------------------------------------------------------------------
-
-def commit_multi_targets():
-  "Commit multiple targets. (anchor=common parent, target={tgts})"
-
-  pass
+  # Create expected output tree.
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
+  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   
+  output_list = [ [D_path, None, {}, {'verb' : 'Changing' }],
+                  [pi_path, None, {}, {'verb' : 'Changing'}],
+                  [rho_path, None, {}, {'verb' : 'Deleting'}],
+                  [gloo_path, None, {}, {'verb' : 'Adding'}],
+                  [chi_path, None, {}, {'verb' : 'Replacing'}], # stacked!
+                  [omega_path, None, {}, {'verb' : 'Changing'}],
+                  [gamma_path, None, {}, {'verb' : 'Deleting'}] ]
+                  
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Created expected status tree.
+  status_list = get_standard_status_list(wc_dir) # pre-commit status
+  status_list.pop(path_index(status_list, rho_path))
+  status_list.pop(path_index(status_list, gamma_path))
+  for item in status_list:
+    item[3]['repos_rev'] = '2'     # post-commit status
+    if (item[0] == D_path) or (item[0] == pi_path) or (item[0] == omega_path):
+      item[3]['wc_rev'] = '2'
+      item[3]['status'] = '__'
+    if (item[0] == chi_path) or (item[0] == gloo_path):
+      item[3]['wc_rev'] = '2'
+      item[3]['status'] = '_ '
+      
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit the one file.
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                expected_output_tree,
+                                                expected_status_tree,
+                                                None,
+                                                None, None,
+                                                None, None,
+                                                D_path)
+
+#----------------------------------------------------------------------
+
+def commit_top_dir():
+  "Commit wc_dir -- (anchor=wc_dir, tgt={})"
+
+  # Bootstrap:  make independent repo and working copy.
+  sbox = sandbox(commit_top_dir)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  # Make standard slew of changes to working copy.
+  if make_standard_slew_of_changes(wc_dir): return 1
+
+  # Create expected output tree.
+  top_path = wc_dir
+  Q_path = os.path.join(wc_dir, 'Q')
+  floo_path = os.path.join(wc_dir, 'Q', 'floo')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  bloo_path = os.path.join(wc_dir, 'A', 'B', 'E', 'bloo')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
+  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  
+  output_list = [ [top_path, None, {}, {'verb' : 'Changing'}],
+                  [Q_path, None, {}, {'verb' : 'Adding'}],
+                  [floo_path, None, {}, {'verb' : 'Adding'}],
+                  [E_path, None, {}, {'verb' : 'Replacing'}],
+                  [bloo_path, None, {}, {'verb' : 'Adding'}],
+                  [lambda_path, None, {}, {'verb' : 'Changing'}],
+                  [C_path, None, {}, {'verb' : 'Deleting'}],                  
+                  [D_path, None, {}, {'verb' : 'Changing' }],
+                  [pi_path, None, {}, {'verb' : 'Changing'}],
+                  [rho_path, None, {}, {'verb' : 'Deleting'}],
+                  [gloo_path, None, {}, {'verb' : 'Adding'}],
+                  [chi_path, None, {}, {'verb' : 'Replacing'}], # stacked!
+                  [omega_path, None, {}, {'verb' : 'Changing'}],
+                  [gamma_path, None, {}, {'verb' : 'Deleting'}] ]
+                  
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Created expected status tree.
+  status_list = get_standard_status_list(wc_dir) # pre-commit status
+  status_list.pop(path_index(status_list, rho_path))
+  status_list.pop(path_index(status_list, gamma_path))
+  status_list.pop(path_index(status_list, C_path))
+  status_list.pop(path_index(status_list,
+                             os.path.join(wc_dir,'A','B','E','alpha')))
+  status_list.pop(path_index(status_list,
+                             os.path.join(wc_dir,'A','B','E','beta')))
+  for item in status_list:    
+    item[3]['repos_rev'] = '2'     # post-commit status
+    if ((item[0] == D_path)
+        or (item[0] == pi_path)
+        or (item[0] == omega_path)
+        or (item[0] == floo_path)
+        or (item[0] == top_path)):
+      item[3]['wc_rev'] = '2'
+      item[3]['status'] = '__'
+    if ((item[0] == chi_path)
+        or (item[0] == Q_path)
+        or (item[0] == E_path)
+        or (item[0] == bloo_path)
+        or (item[0] == lambda_path)
+        or (item[0] == gloo_path)):
+      item[3]['wc_rev'] = '2'
+      item[3]['status'] = '_ '
+      
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit the one file.
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                expected_output_tree,
+                                                expected_status_tree,
+                                                None,
+                                                None, None,
+                                                None, None,
+                                                wc_dir)
+
 #----------------------------------------------------------------------
 
 # Regression test for bug reported by Jon Trowbridge:
@@ -660,6 +781,8 @@ def hook_test():
 # list all tests here, starting with None:
 test_list = [ None,
               commit_one_file,
+              commit_inclusive_dir,
+              commit_top_dir,
               commit_unversioned_thing,
               nested_dir_replacements,
               hudson_part_1,
