@@ -134,7 +134,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   const char *exceptions;
   const char *port_str, *timeout_str, *server_group, *debug_str;
   svn_boolean_t is_exception = FALSE;
-  svn_config_t *cfg = apr_hash_get (config, "servers", APR_HASH_KEY_STRING);
+  svn_config_t *cfg = apr_hash_get (config, SVN_CONFIG_CATEGORY_SERVERS,
+                                    APR_HASH_KEY_STRING);
 
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;

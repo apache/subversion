@@ -47,6 +47,11 @@ extern "C" {
 /** Opaque structure describing a set of configuration options. */
 typedef struct svn_config_t svn_config_t;
 
+/** Config category corresponding to the ~/.subversion/config file. */
+#define SVN_CONFIG_CATEGORY_CONFIG "config"
+
+/** Config category corresponding to the ~/.subversion/servers file. */
+#define SVN_CONFIG_CATEGORY_SERVERS "servers"
 
 /** Read configuration information from all available sources and merge it 
  * into one @c svn_config_t object.

@@ -246,7 +246,8 @@ static void ra_svn_get_reporter(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 static svn_error_t *find_tunnel_agent(const char *hostname, const char **agent,
                                       apr_hash_t *config, apr_pool_t *pool)
 {
-  svn_config_t *cfg = apr_hash_get (config, "servers", APR_HASH_KEY_STRING);
+  svn_config_t *cfg = apr_hash_get (config, SVN_CONFIG_CATEGORY_SERVERS,
+                                    APR_HASH_KEY_STRING);
   const char *server_group;
 
   server_group = svn_config_find_group(cfg, hostname, "groups", pool);

@@ -35,7 +35,6 @@
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
-#include "svn_config.h"
 
 #ifdef __cplusplus
 extern "C" {
