@@ -44,7 +44,7 @@ Blanket commit access:
 
 Commit access for specific areas:
 
-          xela   Alexander Mueller <alex@littleblue.de>      (Java bindings)
+          xela   Alexander Müller <alex@littleblue.de>       (Java bindings)
        yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Ruby bindings)
          david   David Summers <david@summersoft.fay.ar.us>  (RPMs)
       rassilon   Bill Tutt <rassilon@lyra.org>               (Win32 / COM)
@@ -58,7 +58,7 @@ Commit access for specific areas:
       niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
         morten   Morten Ludvigsen <morten@2ps.dk>            (bindings)
         zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
-        mmacek   Marko Macek <Marko.Macek@gmx.net>           (cvs2svn branch)
+        mmacek   Marko Maček <Marko.Macek@gmx.net>           (cvs2svn branch)
           mass   David Waite <mass@akuma.org>                (certs branch)
       jespersm   Jesper Steen Møller <jesper@selskabet.org>  (bindings)
         knacke   Kai Nacke <kai.nacke@redstar.de>            (bindings)
@@ -71,7 +71,7 @@ Commit access for specific areas:
          clkao   Chia-liang Kao <clkao@clkao.org>            (perl bindings)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
-      lonestar   Martin MAURER <martin.maurer@email.de>      (svnshow)
+      lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
        niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (.po files)
       lundblad   Peter N. Lundblad <lundblad@softhome.net>   (.po files)
