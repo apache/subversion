@@ -72,7 +72,7 @@ do
   else
 
     case $ARG in
-      -v|-r|-rs|-pr|-beta|-apr|-apu|-neon)
+      -v|-r|-rs|-pr|-beta|-rc|-apr|-apu|-neon)
         ARG_PREV=$ARG
         ;;
       -alpha)
