@@ -43,8 +43,8 @@ extern "C" {
    their parameter to indicate they are expecting a constant, counted
    string.
 
-   svn_string_t uses a plain "char *" for its data, so it is most appropriate
-   for modifiable data.
+   svn_stringbuf_t uses a plain "char *" for its data, so it is most
+   appropriate for modifiable data.
 
 
    INVARIANT
