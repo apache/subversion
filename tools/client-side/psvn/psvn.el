@@ -1,9 +1,7 @@
 ;;; psvn.el --- Subversion interface for emacs
-;; Copyright (C) 2002 by Stefan Reichoer
+;; Copyright (C) 2002-2003 by Stefan Reichoer
 
 ;; Author: Stefan Reichoer, <reichoer@web.de>
-;; Version: 0.2b
-
 ;; $Id$
 
 ;; psvn.el is free software; you can redistribute it and/or modify
@@ -23,8 +21,8 @@
 
 ;;; Commentary
 
-;; psvn.el is tested with GNU Emacs 21.1.1 on windows, debian linux
-;; with svn 0.14.3
+;; psvn.el is tested with GNU Emacs 21.3 on windows, debian linux
+;; with svn 0.23
 
 ;; psvn.el is an interface for the revision control tool subversion
 ;; (see http://subversion.tigris.org)
@@ -81,11 +79,7 @@
 ;; * when editing the command line - offer help from the svn client
 ;; * finish svn-status-property-set
 ;; * eventually use the customize interface
-;; * make it xemacs compatible:
-;;   - make the menu entry working
 ;; * add support for svn rename, svn delete
-;; * Parse the following line correct:
-;;  A  +            -       ?          ?    ./psvn.el -- show the + also
 ;; * interactive svn-status should complete existing directories only;
 ;;   unfortunately `read-directory-name' doesn't exist in Emacs 21.3
 
@@ -128,6 +122,10 @@
 (defvar svn-status-hide-unknown nil "Hide unknown files in *cvs-status* buffer.")
 (defvar svn-status-hide-unmodified nil "Hide unmodified files in *cvs-status* buffer.")
 (defvar svn-status-directory-history nil "List of visited svn working directories.")
+
+(defvar svn-status-wash-control-M-in-process-buffers
+  (eq system-type 'windows-nt)
+  "Remove any trailing ^M in the svn process buffers")
 
 (eval-and-compile
   (defconst svn-xemacsp (featurep 'xemacs))
@@ -271,6 +269,12 @@
         (progn
           (cond ((eq svn-process-cmd 'status)
                  ;;(message "svn status finished")
+                 (if (eq system-type 'windows-nt)
+                     ;; convert path separator as UNIX style
+                     (save-excursion
+                       (goto-char (point-min))
+                       (while (search-forward "\\" nil t)
+                         (replace-match "/"))))
                  (svn-parse-status-result)
                  (set-buffer act-buf)
                  (svn-status-update-buffer))
@@ -324,70 +328,113 @@
       ;;(message (format "SVN Error: :%s:" event))
       (svn-status-show-process-buffer-internal t))))
 
+(defun svn-parse-rev-num (str)
+  (if (and str (stringp str)
+           (save-match-data (string-match "^[0-9]+" str)))
+      (string-to-number str)
+    -1))
+
+
 (defun svn-parse-status-result ()
   (setq svn-status-head-revision nil)
   (save-excursion
     (let ((old-marked-files (svn-status-marked-file-names))
           (line-string)
           (user-mark)
-          (file-svn-info)
+          ;;(file-svn-info)
+          (svn-marks)
           (svn-file-mark)
           (svn-property-mark)
+          (svn-update-mark)
           (local-rev)
           (last-change-rev)
-          (modified-external)
+          ;;(modified-external)
           (author)
           (path))
       (set-buffer "*svn-process*")
       (setq svn-status-info nil)
       (goto-char (point-min))
       (while (> (- (point-at-eol) (point-at-bol)) 0)
-        (setq modified-external nil)
-        (setq line-string (buffer-substring-no-properties
-                           (point-at-bol)
-                           (point-at-eol)))
-        (if (string-match "Head revision:[ ]+\\([0-9]+\\)" line-string)
-            (setq svn-status-head-revision (match-string 1 line-string))
-          (setq file-svn-info (append (list (substring line-string 0 4))
-                                      (if svn-xemacsp
-                                          (cdr (split-string (substring line-string 5)))
-                                        (split-string (substring line-string 5)))))
-          (when (string= (nth 1 file-svn-info) "*")
-            (setq modified-external t)
-            ; remove the (nth 1) entry
-            (setq file-svn-info (append
-                                 (list (car file-svn-info))
-                                 ; nth 1 removed
-                                 (cddr file-svn-info))))
-          (setq svn-file-mark (string-to-char (car file-svn-info)))
-          (setq svn-property-mark (string-to-char (substring (car file-svn-info) 1)))
-          (when (eq svn-property-mark 0) (setq svn-property-mark nil))
-          ;is this necessary?
+        ;;(setq modified-external nil)
+        ;;(setq line-string (buffer-substring-no-properties
+        ;;                   (point-at-bol)
+        ;;                   (point-at-eol)))
+        ;;(if (string-match "Head revision:[ ]+\\([0-9]+\\)" line-string)
+        ;;    (setq svn-status-head-revision (match-string 1 line-string))
+        ;;  (setq file-svn-info (append (list (substring line-string 0 4))
+        ;;                              (if svn-xemacsp
+        ;;                                  (cdr (split-string (substring line-string 5)))
+        ;;                                (split-string (substring line-string 5)))))
+        ;;  (when (string= (nth 1 file-svn-info) "*")
+        ;;    (setq modified-external t)
+        ;;    ; remove the (nth 1) entry
+        ;;    (setq file-svn-info (append
+        ;;                         (list (car file-svn-info))
+        ;;                         ; nth 1 removed
+        ;;                         (cddr file-svn-info))))
+        ;;  (setq svn-file-mark (string-to-char (car file-svn-info)))
+        ;;  (setq svn-property-mark (string-to-char (substring (car file-svn-info) 1)))
+        ;;  (when (eq svn-property-mark 0) (setq svn-property-mark nil))
+        ;;  ;is this necessary?
+        (if (looking-at "Head revision:[ ]+\\([0-9]+\\)")
+            (setq svn-status-head-revision (match-string 1))
+          (setq svn-marks (buffer-substring (point) (+ (point) 8))
+                svn-file-mark (elt svn-marks 0) ; 1st column
+                svn-property-mark (elt svn-marks 1)) ; 2nd column
+
           (when (eq svn-property-mark ?\ ) (setq svn-property-mark nil))
-          (cond ((eq svn-file-mark ??)
-                 (setq path (nth 1 file-svn-info)
-                       local-rev -1
-                       last-change-rev -1
-                       author "?"))
-                (t
-                 (setq path (nth 4 file-svn-info)
-                       local-rev (string-to-number (nth 1 file-svn-info))
-                       last-change-rev (string-to-number (nth 2 file-svn-info))
-                       author (nth 3 file-svn-info))))
+          ;;(cond ((eq svn-file-mark ??)
+          ;;       (setq path (nth 1 file-svn-info)
+          ;;             local-rev -1
+          ;;             last-change-rev -1
+          ;;             author "?"))
+          ;;      (t
+          ;;       (setq path (nth 4 file-svn-info)
+          ;;             local-rev (string-to-number (nth 1 file-svn-info))
+          ;;             last-change-rev (string-to-number (nth 2 file-svn-info))
+          ;;             author (nth 3 file-svn-info))))
+          (when (eq svn-update-mark ?\ ) (setq svn-update-mark nil))
+          (forward-char 8)
+          (skip-chars-forward " ")
+          (cond
+           ((looking-at "\\([-?]\\|[0-9]+\\) +\\([-?]\\|[0-9]+\\) +\\([^ ]+\\) *\\(.+\\)")
+            (setq local-rev (svn-parse-rev-num (match-string 1))
+                  last-change-rev (svn-parse-rev-num (match-string 2))
+                  author (match-string 3)
+                  path (match-string 4)))
+           ((looking-at "\\(.*\\)")
+            (setq path (match-string 1)
+                  local-rev -1
+                  last-change-rev -1
+                  author "?"))
+           (t
+            (error "Unknown status line format."))))
           (unless path (setq path "."))
           (setq user-mark (not (not (member path old-marked-files))))
-          (setq svn-status-info (append svn-status-info
-                                        (list
-                                         (list user-mark
-                                               svn-file-mark
-                                               svn-property-mark
-                                               path
-                                               local-rev
-                                               last-change-rev
-                                               author
-                                               modified-external)))))
+          ;;(setq svn-status-info (append svn-status-info
+          ;;                              (list
+          ;;                               (list user-mark
+          ;;                                     svn-file-mark
+          ;;                                     svn-property-mark
+          ;;                                     path
+          ;;                                     local-rev
+          ;;                                     last-change-rev
+          ;;                                     author
+          ;;                                     modified-external)))))
                                                ;;file-svn-info
-          (next-line 1)))))
+          (setq svn-status-info (cons (list user-mark
+                                            svn-file-mark
+                                            svn-property-mark
+                                            path
+                                            local-rev
+                                            last-change-rev
+                                            author
+                                            svn-update-mark)
+                                      svn-status-info))
+
+          ;;(next-line 1)))))
+          (forward-line 1))
+      (setq svn-status-info (nreverse svn-status-info)))))
 
 (defun svn-status-remove-control-M ()
   "Remove ^M at end of line in the whole buffer."
@@ -531,6 +578,8 @@
   (kill-all-local-variables)
 
   (use-local-map svn-status-mode-map)
+  (easy-menu-add svn-status-mode-menu)
+
   (setq major-mode 'svn-status-mode)
   (setq mode-name "svn-status")
   (setq mode-line-process 'svn-status-mode-line-process)
@@ -857,6 +906,8 @@ Then move to that line."
   (when (eq (current-buffer) "*svn-status*")
     (delete-other-windows))
   (pop-to-buffer "*svn-process*")
+  (when svn-status-wash-control-M-in-process-buffers
+    (svn-status-remove-control-M))
   (when scroll-to-top
     (goto-char (point-min)))
   (other-window 1))
@@ -948,6 +999,7 @@ Then move to that line."
           ;(message "svn-status-cleanup %S" file-names))
           (svn-run-svn t t 'cleanup (append (list "cleanup") file-names)))
       (message "No valid file selected - No status cleanup possible"))))
+
 ;; --------------------------------------------------------------------------------
 ;; Property List stuff
 ;; --------------------------------------------------------------------------------
@@ -1186,6 +1238,7 @@ Then move to that line."
   (interactive)
   (kill-all-local-variables)
   (use-local-map svn-prop-edit-mode-map)
+  (easy-menu-add svn-prop-edit-mode-menu)
   (setq major-mode 'svn-prop-edit-mode)
   (setq mode-name "svn-prop-edit"))
 
@@ -1248,6 +1301,7 @@ Then move to that line."
   (interactive)
   (kill-all-local-variables)
   (use-local-map svn-log-edit-mode-map)
+  (easy-menu-add svn-log-edit-mode-menu)
   (setq major-mode 'svn-log-edit-mode)
   (setq mode-name "svn-log-edit"))
 
