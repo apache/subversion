@@ -222,6 +222,7 @@ Possible values are: commit, revert.")
 (defvar svn-status-options nil)
 (defvar svn-status-commit-rev-number nil)
 (defvar svn-status-operated-on-dot nil)
+(defvar svn-status-elided-list nil)
 
 ;;; faces
 (defface svn-status-marked-face
@@ -1006,6 +1007,9 @@ EVENT could be \"mouse clicked\" or similar."
         (len-fname)
         (new-elide-mark t)
         (elide-mark))
+    (if (member test svn-status-elided-list)
+        (setq svn-status-elided-list (delete test svn-status-elided-list))
+      (add-to-list 'svn-status-elided-list test))
     (when (string= test ".")
       (setq test ""))
     (setq len-test (length test))
@@ -1021,7 +1025,42 @@ EVENT could be \"mouse clicked\" or similar."
           (message "Elide directory %s and all its files." fname)
           (setq new-elide-mark (not (svn-status-line-info->user-elide (car st-info))))
           (setq elide-mark (if new-elide-mark 'directory nil)))
+        ;;(message "elide-mark: %S member: %S" elide-mark (member fname svn-status-elided-list))
+        (when (and (member fname svn-status-elided-list) (not elide-mark))
+          (setq svn-status-elided-list (delete fname svn-status-elided-list)))
         (setcar (nthcdr 1 (svn-status-line-info->ui-status (car st-info))) elide-mark))
+      (setq st-info (cdr st-info))))
+  ;;(message "svn-status-elided-list: %S" svn-status-elided-list)
+  (svn-status-update-buffer))
+
+(defun svn-status-apply-elide-list ()
+  "Elide files/directories according to `svn-status-elided-list'."
+  (interactive)
+  (let ((st-info svn-status-info)
+        (fname)
+        (len-fname)
+        (test)
+        (len-test)
+        (elide-mark))
+    (while st-info
+      (setq fname (svn-status-line-info->filename (car st-info)))
+      (setq len-fname (length fname))
+      (setq elided-list svn-status-elided-list)
+      (setq elide-mark nil)
+      (while elided-list
+        (setq test (car elided-list))
+        (when (string= test ".")
+          (setq test ""))
+        (setq len-test (length test))
+        (when (and (>= len-fname len-test)
+                   (string= (substring fname 0 len-test) test))
+          (setq elide-mark t)
+          (when (or (string= fname ".")
+                    (and (= len-fname len-test) (svn-status-line-info->directory-p (car st-info))))
+            (setq elide-mark 'directory)))
+        (setq elided-list (cdr elided-list)))
+      ;;(message "fname: %s elide-mark: %S" fname elide-mark)
+      (setcar (nthcdr 1 (svn-status-line-info->ui-status (car st-info))) elide-mark)
       (setq st-info (cdr st-info))))
   (svn-status-update-buffer))
 
@@ -2591,7 +2630,8 @@ When called with a prefix argument, ask the user for the revision."
     (delete-region (point-min) (point-max))
     (setq svn-status-options
           (list
-           (list "sort-status-buffer" svn-status-sort-status-buffer)))
+           (list "sort-status-buffer" svn-status-sort-status-buffer)
+           (list "elide-list" svn-status-elided-list)))
     (insert (pp-to-string svn-status-options))
     (save-buffer)
     (kill-buffer buf)))
@@ -2604,7 +2644,10 @@ When called with a prefix argument, ask the user for the revision."
           (insert-file-contents file)
           (setq svn-status-options (read (current-buffer)))
           (setq svn-status-sort-status-buffer
-                (nth 1 (assoc "sort-status-buffer" svn-status-options))))
+                (nth 1 (assoc "sort-status-buffer" svn-status-options)))
+          (setq svn-status-elided-list
+                (nth 1 (assoc "elide-list" svn-status-options)))
+          (when svn-status-elided-list (svn-status-apply-elide-list)))
       (error "%s is not readable." file))
     (message "Loaded %s" file)))
 
