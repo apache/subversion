@@ -265,6 +265,32 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
 
 
 
+apr_size_t
+svn_path_component_count (const char *path)
+{
+  apr_size_t count = 0;
+
+  assert (is_canonical (path, strlen (path)));
+
+  while (*path)
+    {
+      const char *start;
+
+      while (*path == '/')
+        ++path;
+
+      start = path;
+      
+      while (*path && *path != '/')
+        ++path;
+
+      if (path != start)
+        ++count;
+    }
+
+  return count;
+}
+
 /* Return the length of substring necessary to encompass the entire
  * previous path segment in PATH, which should be a LEN byte string.
  *
@@ -317,6 +343,16 @@ svn_path_remove_component (svn_stringbuf_t *path)
 
   path->len = previous_segment(path->data, path->len);
   path->data[path->len] = '\0';
+}
+
+void
+svn_path_remove_components (svn_stringbuf_t *path, apr_size_t n)
+{
+  while (n > 0)
+    {
+      svn_path_remove_component (path);
+      n--;
+    }
 }
 
 
