@@ -563,6 +563,14 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
   comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
   comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
 
+  /* HACK:  dav_get_resource_state() is making shortcut assumptions
+     about how to distinguish a null resource from a lock-null
+     resource.  This is the only way to get around that problem.
+     Without it, it won't ever detect lock-nulls, and thus 'svn unlock
+     nonexistentURL' will always return 404's. */
+  if (! comb->res.exists)
+    comb->priv.r->path_info = (char *) "";
+
   return NULL;
 }
 
