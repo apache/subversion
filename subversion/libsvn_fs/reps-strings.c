@@ -34,7 +34,6 @@
 
 
 /*** Local prototypes. ***/
-#define APR_ARRAY_IDX(ary,i,type) (((type *)(ary)->elts)[i])
 
 static svn_error_t *rep_read_range (svn_fs_t *fs,
                                     const char *rep_key,

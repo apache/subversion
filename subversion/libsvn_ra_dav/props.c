@@ -675,7 +675,8 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
   if (is_dir != NULL)
     {
       /* query the DAV:resourcetype of the full, assembled URL. */
-      const char *full_bc_url = svn_path_join(my_bc_url, my_bc_relative, pool);
+      const char *full_bc_url 
+        = svn_path_url_add_component(my_bc_url, my_bc_relative, pool);
       SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, full_bc_url,
                                               NULL, starting_props, pool) );
       *is_dir = rsrc->is_collection;

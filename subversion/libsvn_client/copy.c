@@ -164,6 +164,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   src_rel = svn_path_is_child (top_url, src_url, pool);
   if (src_rel)
     {
+      src_rel = svn_path_uri_decode (src_rel, pool);
       src_pieces = svn_path_decompose (src_rel, pool);
       if ((! src_pieces) || (! src_pieces->nelts))
         return svn_error_createf 
@@ -174,6 +175,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   dst_rel = svn_path_is_child (top_url, dst_url, pool);
   if (dst_rel)
     {
+      dst_rel = svn_path_uri_decode (dst_rel, pool);
       dst_pieces = svn_path_decompose (dst_rel, pool);
       if ((! dst_pieces) || (! dst_pieces->nelts))
         return svn_error_createf 
@@ -236,18 +238,17 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
          pre-existing directory.  So we temporarily append src_url's
          basename to dst_rel, and see if that already exists.  */
       svn_node_kind_t some_kind;
-      const char *hypothetical_repos_path =
-        svn_path_join (dst_rel, svn_path_basename (src_url, pool), pool);
-
+      const char *hypothetical_repos_path;
+      
+      base_name = svn_path_basename (src_url, pool);
+      hypothetical_repos_path 
+        = svn_path_join (dst_rel, svn_path_uri_decode (base_name, pool), pool);
       SVN_ERR (ra_lib->check_path (&some_kind, sess,
                                    hypothetical_repos_path, youngest));
       if (some_kind != svn_node_none)
         return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
                                   "fs path `%s' already exists.",
                                   hypothetical_repos_path);
-
-      /* Normal case:  we'll put the src basename into the dst directory. */
-      svn_path_split_nts (src_url, &unused, &base_name, pool);
     }
   else
     {
@@ -281,9 +282,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       while (i < dst_pieces->nelts)
         {
           piece = (((const char **)(dst_pieces)->elts)[i]);
-          telepath = svn_path_join (telepath, 
-                                    svn_path_uri_decode (piece, pool),
-                                    pool);
+          telepath = svn_path_join (telepath, piece, pool);
           SVN_ERR (editor->open_directory (telepath, batons[i], 
                                            youngest, pool, &(batons[i + 1])));
           i++;
@@ -327,9 +326,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       while (i < (src_pieces->nelts - 1))
         {
           piece = (((const char **)(src_pieces)->elts)[i]);
-          telepath = svn_path_join (telepath, 
-                                    svn_path_uri_decode (piece, pool),
-                                    pool);
+          telepath = svn_path_join (telepath, piece, pool);
           SVN_ERR (editor->open_directory (telepath, batons[i], 
                                            youngest, pool, &(batons[i + 1])));
           i++;
@@ -337,9 +334,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
           
       /* Delete SRC. */
       piece = (((const char **)(src_pieces)->elts)[i]);
-      telepath = svn_path_join (telepath, 
-                                svn_path_uri_decode (piece, pool),
-                                pool);
+      telepath = svn_path_join (telepath, piece, pool);
       SVN_ERR (editor->delete_entry (telepath, SVN_INVALID_REVNUM, 
                                      batons[i], pool));
 
@@ -521,7 +516,8 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                                         auth_baton, pool));
 
   /* Figure out the basename that will result from this operation. */
-  SVN_ERR (ra_lib->check_path (&dst_kind, session, target,
+  SVN_ERR (ra_lib->check_path (&dst_kind, session, 
+                               svn_path_uri_decode (target, pool),
                                SVN_INVALID_REVNUM));
   
   /* Close the RA session.  We'll re-open it after we've figured out
@@ -540,9 +536,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     {
       /* DST_URL is an existing directory URL.  The URL we will be
          creating, then, is DST_URL+BASENAME. */
-      base_url = svn_path_join (base_url, 
-                                svn_path_uri_encode (base_name, pool),
-                                pool);
+      base_url = svn_path_url_add_component (base_url, base_name, pool);
     }
   else
     {
