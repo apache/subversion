@@ -281,12 +281,12 @@ representation.  Here are the two forms currently recognized:
        DIFF   ::= ("svndiff" STRING-KEY)
 
        Notice that a WINDOW holds only metadata.  REP-KEY says what
-       the window should be applied against (it's absent if this is a
-       self-compressed delta); SIZE says how much this window
+       the window should be applied against, or none if this is a
+       self-compressed delta; SIZE says how much data this window
        reconstructs; CHECKSUM is a checksum on just the portion of
        fulltext reconstructed by this window; and STRING-KEY says
-       which string contains the actual svndiff data.  Thus, there is
-       no diff data held directly in the representations table.
+       which string contains the actual svndiff data (there is no diff
+       data held directly in the representations table, of course).
 
        Note also that REP-KEY might refer to a representation that
        itself requires undeltification.  For now, we just reconstruct
@@ -294,6 +294,16 @@ representation.  Here are the two forms currently recognized:
        an efficient delta-combiner is planned that will retrieve the
        required data directly without expanding anything; that's where
        REP-OFFSET may prove useful.  We think. :-)
+
+       Branko says this is what REP-OFFSET is for:
+       > The offsets embedded in the svndiff are stored in a string;
+       > these offsets would be in the representation. The point is that
+       > you get all the information you need to select the appropriate
+       > windows from the rep skel -- without touching a single
+       > string. This means a bit more space used in the repository, but
+       > lots less memory used on the server.
+
+       We'll see if it turns out to be necessary.
 
 In the future, there may be other representations, for example
 indicating that the text is stored elsewhere in the database, or
