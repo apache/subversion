@@ -316,43 +316,34 @@ void
 svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 {
   char buf[200], buf2[2000];
+  const char *err_string;
 
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
 
 #ifdef SVN_DEBUG
   if (err->file)
-    fprintf (stream, "\n%s:%ld\n",
+    fprintf (stream, "%s:%ld: (apr %d, src %d)\n",
              svn_utf_utf8_to_native (err->file, buf2, sizeof (buf2)),
-             err->line);
+             err->line, err->apr_err, err->src_err);
   else
-    fprintf (stream, "\n%s\n", SVN_FILE_LINE_UNDEFINED);
-#else
-  fputc ('\n', stream);
+    fprintf (stream, "%s: (apr %d, src %d)\n",
+             SVN_FILE_LINE_UNDEFINED, err->apr_err, err->src_err);
 #endif /* SVN_DEBUG */
 
   /* Is this a Subversion-specific error code? */
   if ((err->apr_err > APR_OS_START_USEERR) 
       && (err->apr_err <= APR_OS_START_CANONERR))
-    fprintf (stream, "svn_error: #%d : <%s>\n", err->apr_err,
-             svn_utf_utf8_to_native
-             (svn_strerror (err->apr_err, buf, sizeof (buf)),
-              buf2, sizeof(buf2)));
-
-
+    err_string = svn_utf_utf8_to_native
+      (svn_strerror (err->apr_err, buf, sizeof (buf)), buf2, sizeof (buf2));
   /* Otherwise, this must be an APR error code. */
   else
-    fprintf (stream, "apr_error: #%d, src_err %d : <%s>\n",
-             err->apr_err,
-             err->src_err,
-             apr_strerror (err->apr_err, buf, sizeof(buf)));
+    err_string = apr_strerror (err->apr_err, buf, sizeof (buf));
 
+  fprintf (stream, "svn: %s\n", err_string);
   if (err->message)
-    fprintf (stream, "  %s",
+    fprintf (stream, "svn: %s\n",
              svn_utf_utf8_to_native (err->message, buf2, sizeof(buf2)));
-
-
-  fputc ('\n', stream);
   fflush (stream);
 
   if (err->child)
@@ -381,9 +372,10 @@ svn_handle_warning (void *data, const char *fmt, ...)
   if (err)
     svn_handle_error (err, stderr, FALSE);
   else
-    fprintf (stderr, "%s\n", msg->data);
-
-  fflush (stderr);
+    {
+      fprintf (stderr, "%s\n", msg->data);
+      fflush (stderr);
+    }
 
   svn_pool_destroy (pool);
 }
