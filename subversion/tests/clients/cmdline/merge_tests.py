@@ -789,52 +789,24 @@ def simple_property_merges(sbox):
 def merge_one_file(sbox):
   "merge one file, receive a specific error"
 
-  # When subversion.tigris.org comes back up, we can file an issue for
-  # this.  In the meantime, here's Sander's original report:
-  #
-  # -----------------------------------------------------------------
-  # From: "Sander Striker" <striker@apache.org>
-  # Subject: Buglet in svn merge?
-  # To: <dev@subversion.tigris.org>
-  # Date: Mon, 27 Jan 2003 12:00:57 +0100
-  # 
-  # Hi,
-  # 
-  # To do what I did in rev 4605 I first tried (from the top
-  # of my working copy):
-  # 
-  # $ svn merge -r 4603:4602 subversion/libsvn_delta/diff_file.c
-  # subversion/libsvn_ra_dav/util.c:350: (apr_err=175002)
-  # svn: RA layer request failed
-  # svn: REPORT request failed on \
-  #      /repos/svn/trunk/subversion/libsvn_delta/diff_file.c
-  # subversion/libsvn_ra_dav/util.c:335: (apr_err=175002)
-  # svn: The REPORT request returned invalid XML in the response: \
-  #      XML parse error at line 1: xmlParseStartTag: invalid element name
-  # .. (/repos/svn/trunk/subversion/libsvn_delta/diff_file.c)
-  # 
-  # That clearly didn't work...
-  # 
-  # $ svn diff -r 4603:4602 subversion/libsvn_delta/diff_file.c | patch -p0
-  # 
-  # did the trick however.
-  # -----------------------------------------------------------------
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=1150. ##
 
   if sbox.build():
     return 1
 
   wc_dir = sbox.wc_dir
-  rho_relative_path = os.path.join('A', 'D', 'G', 'rho')
+  rho_rel_path = os.path.join('A', 'D', 'G', 'rho')
+  rho_path = os.path.join(wc_dir, rho_rel_path)
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  rho_url = os.path.join(svntest.main.current_repo_url, rho_rel_path)
   
   # Change rho for revision 2
-  rho_path = os.path.join(wc_dir, rho_relative_path)
-  rho_url = os.path.join(svntest.main.current_repo_url, rho_relative_path)
   svntest.main.file_append(rho_path, '\nA new line in rho.\n')
 
-  expected_output = wc.State(wc_dir, { 'A/D/G/rho' : Item(verb='Sending'), })
+  expected_output = wc.State(wc_dir, { rho_rel_path : Item(verb='Sending'), })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak('A/D/G/rho', wc_rev=2)
+  expected_status.tweak(rho_rel_path, wc_rev=2)
   if svntest.actions.run_and_verify_commit (wc_dir,
                                             expected_output,
                                             expected_status,
@@ -843,23 +815,63 @@ def merge_one_file(sbox):
                                             wc_dir):
     return 1
   
-  # Run merge directly, as it's expected to fail right now anyway --
-  # this test is just to make sure that it fails for the right
-  # reasons.
-  out, err = svntest.main.run_svn(1, 'merge', '-r', '1:2', rho_url)
-
+  # Backdate rho to revision 1, so we can merge in the rev 2 changes.
+  out, err = svntest.main.run_svn(0, 'up', '-r', '1', rho_path)
   if err:
-    for line in err:
-      if re.match(".*invalid XML", line):
-        ### print "Unexpected XML error:\n   " + line
-        return 1
-      
-  # Note that fixing the invalid XML error reported by Sander revealed
-  # a *new* invalid XML error, one which is much harder to debug.  So
-  # this test will have to be XFail for now.
-  #
-  # Since subversion.tigris.org is down right now, I'll describe it
-  # here:
+    print err
+    return 1
+
+  # Try one merge with an explicit target; it should succeed.
+  # ### Yes, it would be nice to use run_and_verify_merge(), but it
+  # appears to be impossible to get the expected_foo trees working
+  # right.  I think something is still assuming a directory target.
+  out, err = svntest.main.run_svn(0, 'merge', '-r', '1:2',
+                                  rho_url, rho_path)
+  if err:
+    print err
+    return 1
+
+  # Inspect rho, make sure it's right.
+  rho_text = svntest.tree.get_text(rho_path)
+  if rho_text != "This is the file 'rho'.\nA new line in rho.\n":
+    print "Unexpected text in merged '" + rho_path + "'"
+    return 1
+
+  # Restore rho to pristine revision 1, for another merge.
+  out, err = svntest.main.run_svn(0, 'revert', rho_path)
+  if err:
+    print err
+    return 1
+
+  ### Okay, this is the part that issue #1150 is about.  This fails on
+  ### all RA layers right now, though I think for different reasons in
+  ### each one.  In ra_local it seems to have something to do with
+  ### delta_dirs; in ra_dav and ra_svn, something different may be
+  ### going on.
+
+  # Cd into the directory and run merge with no targets.
+  # Ideally, it would still merge into rho, since the diff applies
+  # only to rho... ### But it's broken right now :-).
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(G_path)
+    out, err = svntest.main.run_svn(0, 'merge', '-r', '1:2', rho_url)
+    if err:
+      print err
+      return 1
+
+    # Inspect rho, make sure it's right.
+    rho_text = svntest.tree.get_text('rho')
+    if rho_text != "This is the file 'rho'.\nA new line in rho.\n":
+      print "Unexpected text merging to 'rho' in '" + G_path + "'"
+      return 1
+  finally:
+    os.chdir(saved_cwd)
+
+  return 0
+
+  # At one time (see revision 4622), the error over ra_dav looked like
+  # this:
   #
   #    $ cd subversion/tests/clients/cmdline/working_copies/merge_tests-5
   #    $ svn merge -r1:2 http://localhost/repositories/merge_tests-5/A/D/G/rho
@@ -923,15 +935,6 @@ def merge_one_file(sbox):
   # that, and that's why we see that "Unknown XML element" error from
   # the client.
 
-  # ### When we're no longer getting invalid XML errors, this will no
-  # longer be an XFail test.  Even though the merge command should
-  # still return an error, it will be a specific error that we can
-  # test for.
-  if not err:
-    return 1
-  else:
-    return 0
-
 
 #----------------------------------------------------------------------
 
@@ -945,7 +948,7 @@ test_list = [ None,
               add_with_history,
               delete_file_and_dir,
               simple_property_merges,
-              Skip(merge_one_file, 'Suspended while Karl thinks'),
+              # merge_one_file,          # See issue #1150.
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.
