@@ -47,6 +47,11 @@ struct svn_fs_txn_t
   /* The filesystem to which this transaction belongs.  */
   svn_fs_t *fs;
 
+  /* The revision on which this transaction is based, or
+     SVN_INVALID_REVISION if the transaction is not based on a
+     revision at all. */
+  svn_revnum_t base_rev;
+
   /* The ID of this transaction --- a null-terminated string.
      This is the key into the `transactions' table.  */
   const char *id;
@@ -62,6 +67,7 @@ struct svn_fs_txn_t
 static svn_fs_txn_t *
 make_txn (svn_fs_t *fs,
           const char *id,
+          svn_revnum_t base_rev,
           apr_pool_t *pool)
 {
   apr_pool_t *new_pool = svn_pool_create (pool);
@@ -70,6 +76,7 @@ make_txn (svn_fs_t *fs,
   txn->pool = new_pool;
   txn->fs = fs;
   txn->id = id;
+  txn->base_rev = base_rev;
 
   return txn;
 }
@@ -94,7 +101,7 @@ txn_body_begin_txn (void *baton,
   SVN_ERR (svn_fs__rev_get_root (&root_id, args->fs, args->rev, trail));
   SVN_ERR (svn_fs__create_txn (&svn_txn_id, args->fs, root_id, trail));
 
-  *args->txn_p = make_txn (args->fs, svn_txn_id, trail->pool);
+  *args->txn_p = make_txn (args->fs, svn_txn_id, args->rev, trail->pool);
   return SVN_NO_ERROR;
 }
 
@@ -171,6 +178,13 @@ svn_fs_txn_pool (svn_fs_txn_t *txn)
 }
 
 
+svn_revnum_t
+svn_fs_txn_base_revision (svn_fs_txn_t *txn)
+{
+  return txn->base_rev;
+}
+
+
 
 /* Closing transactions. */
 
@@ -242,11 +256,15 @@ txn_body_open_txn (void *baton,
   struct open_txn_args *args = baton;
   svn_fs_id_t *root_id;
   svn_fs_id_t *base_root_id;
+  dag_node_t *base_root_node;
+  svn_revnum_t base_rev;
 
   SVN_ERR (svn_fs__get_txn_ids (&root_id, &base_root_id,
                                 args->fs, args->name, trail));
-
-  *args->txn_p = make_txn (args->fs, args->name, trail->pool); 
+  SVN_ERR (svn_fs__dag_get_node (&base_root_node, args->fs, 
+                                 base_root_id, trail));
+  SVN_ERR (svn_fs__dag_get_revision (&base_rev, base_root_node, trail));
+  *args->txn_p = make_txn (args->fs, args->name, base_rev, trail->pool); 
   return SVN_NO_ERROR;
 }
 
