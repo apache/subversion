@@ -48,9 +48,6 @@ Commit access for specific areas:
 
   Bindings:
 
-        morten   Morten Ludvigsen <morten@2ps.dk>            (Swig-Java b.)
-      jespersm   Jesper Steen Møller <jesper@selskabet.org>  (Swig-Java b.)
-        knacke   Kai Nacke <kai.nacke@redstar.de>            (Swig-Java b.)
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
@@ -83,6 +80,8 @@ Commit access for specific areas:
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         offby1   Eric Hanchrow <offby1@blarg.net>            (doc)
        nomis80   Simon Perreault <nomis80@nomis80.org>       (svn-clean)
+        imajes   James Cox <?@?.?>                           (?)
+      jgoerzen   John Goerzen <?@?.?>                        (?)
 
   Translation:
 
@@ -124,6 +123,9 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (doc: it)
           mass   David Waite <mass@akuma.org>                (certs branch)
       sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
       ballbach   Michael Ballbach <ballbach@rten.net>        (Old Mandrake RPM)
+        morten   Morten Ludvigsen <morten@2ps.dk>            (Swig-Java b.)
+      jespersm   Jesper Steen Møller <jesper@selskabet.org>  (Swig-Java b.)
+        knacke   Kai Nacke <kai.nacke@redstar.de>            (Swig-Java b.)
 
 Committers who have asked to be listed as dormant:
 
