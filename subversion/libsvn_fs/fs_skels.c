@@ -208,7 +208,10 @@ svn_fs__parse_proplist_skel (apr_hash_t **proplist_p,
     {
       svn_string_t *value = svn_string_ncreate (elt->next->data, 
                                                 elt->next->len, pool);
-      apr_hash_set (proplist, elt->data, elt->len, (void *)value);
+      apr_hash_set (proplist, 
+                    apr_pstrndup (pool, elt->data, elt->len), 
+                    elt->len,
+                    (void *)value);
     }
 
   /* Return the structure. */
@@ -410,7 +413,8 @@ svn_fs__parse_node_revision_skel (svn_fs__node_revision_t **noderev_p,
                               copy_skel->children->next->data,
                               copy_skel->children->next->len));
       noderev->ancestor_path
-        = apr_pstrdup (pool, copy_skel->children->next->next->data);
+        = apr_pstrndup (pool, copy_skel->children->next->next->data,
+                        copy_skel->children->next->next->len);
     }
       
   /* PROP-KEY */

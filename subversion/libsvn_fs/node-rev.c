@@ -34,7 +34,7 @@
 svn_error_t *
 svn_fs__create_node (svn_fs_id_t **id_p,
                      svn_fs_t *fs,
-                     skel_t *skel,
+                     svn_fs__node_revision_t *noderev,
                      trail_t *trail)
 {
   svn_fs_id_t *id;
@@ -43,7 +43,7 @@ svn_fs__create_node (svn_fs_id_t **id_p,
   SVN_ERR (svn_fs__new_node_id (&id, fs, trail));
 
   /* Store its NODE-REVISION skel.  */
-  SVN_ERR (svn_fs__put_node_revision (fs, id, skel, trail));
+  SVN_ERR (svn_fs__put_node_revision (fs, id, noderev, trail));
 
   *id_p = id;
   return SVN_NO_ERROR;
@@ -57,7 +57,7 @@ svn_error_t *
 svn_fs__create_successor (svn_fs_id_t **new_id_p,
                           svn_fs_t *fs,
                           svn_fs_id_t *old_id,
-                          skel_t *new_skel,
+                          svn_fs__node_revision_t *new_noderev,
                           trail_t *trail)
 {
   svn_fs_id_t *new_id;
@@ -66,7 +66,7 @@ svn_fs__create_successor (svn_fs_id_t **new_id_p,
   SVN_ERR (svn_fs__new_successor_id (&new_id, fs, old_id, trail));
 
   /* Store the new skel under that ID.  */
-  SVN_ERR (svn_fs__put_node_revision (fs, new_id, new_skel, trail));
+  SVN_ERR (svn_fs__put_node_revision (fs, new_id, new_noderev, trail));
 
   *new_id_p = new_id;
   return SVN_NO_ERROR;

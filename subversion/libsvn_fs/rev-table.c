@@ -22,7 +22,6 @@
 #include "dbt.h"
 #include "skel.h"
 #include "fs_skels.h"
-#include "proplist.h"
 #include "validate.h"
 #include "rev-table.h"
 
@@ -280,18 +279,13 @@ txn_body_revision_prop (void *baton,
 {
   struct revision_prop_args *args = baton;
   svn_fs__revision_t *revision;
-  skel_t *proplist;
 
   SVN_ERR (svn_fs__get_rev (&revision, args->fs, args->rev, trail));
-  SVN_ERR (svn_fs__unparse_proplist_skel (&proplist,
-                                          revision->proplist,
-                                          trail->pool));
-
-  /* Return the results of the generic property getting function. */
-  return svn_fs__get_prop (args->value_p,
-                           proplist,
-                           args->propname,
-                           trail->pool);
+  *(args->value_p) = NULL;
+  if (revision->proplist)
+    *(args->value_p) = apr_hash_get (revision->proplist, args->propname,
+                                     APR_HASH_KEY_STRING);
+  return SVN_NO_ERROR;
 }
 
 
@@ -332,7 +326,8 @@ txn_body_revision_proplist (void *baton, trail_t *trail)
   svn_fs__revision_t *revision;
 
   SVN_ERR (svn_fs__get_rev (&revision, args->fs, args->rev, trail));
-  *(args->table_p) = revision->proplist;
+  *(args->table_p) = revision->proplist 
+                     ? revision->proplist : apr_hash_make (trail->pool);
   return SVN_NO_ERROR;
 }
 
@@ -370,8 +365,7 @@ svn_fs__set_rev_prop (svn_fs_t *fs,
 
   SVN_ERR (svn_fs__get_rev (&revision, fs, rev, trail));
 
-  /* If there's no proplist, but we're just deleting a property, exit
-     now. */
+  /* If there's no proplist, but we're just deleting a property, exit now. */
   if ((! revision->proplist) && (! value))
     return SVN_NO_ERROR;
 

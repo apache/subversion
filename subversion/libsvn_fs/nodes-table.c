@@ -24,6 +24,7 @@
 #include "err.h"
 #include "dbt.h"
 #include "skel.h"
+#include "fs_skels.h"
 #include "trail.h"
 #include "validate.h"
 #include "nodes-table.h"
@@ -169,101 +170,7 @@ svn_fs__open_nodes_table (DB **nodes_p,
 
 
 
-/* Validating NODE-REVISION skels.  */
-
-
-static int
-is_valid_option (skel_t *skel)
-{
-  int len = svn_fs__list_length (skel);
-
-  if (len == 3
-      && svn_fs__matches_atom (skel->children, "copy")
-      && skel->children->next->is_atom
-      && skel->children->next->next->is_atom)
-    {      
-      return 1;      
-    }
-
-  return 0;
-}
-
-
-static int
-is_valid_header (skel_t *skel, skel_t **kind_p)
-{
-  int len = svn_fs__list_length (skel);
-
-  if (len >= 2)
-    {
-      if (skel->children->is_atom && skel->children->next->is_atom)
-        {
-          skel_t *option;
-
-          for (option = skel->children->next->next;
-               option;
-               option = option->next)
-            if (! is_valid_option (option))
-              return 0;
-
-          *kind_p = skel->children;
-          return 1;
-        }
-    }
-
-  return 0;
-}
-
-
-static int
-is_mutable_header (skel_t *skel)
-{
-  return ((skel->children->next->len == 0) ? 1 : 0);
-}
-
-
-static int
-is_valid_node_revision (skel_t *skel)
-{
-  int len = svn_fs__list_length (skel);
-
-  if (len >= 1)
-    {
-      skel_t *header = skel->children;
-      skel_t *kind;
-
-      if (is_valid_header (header, &kind))
-        {
-          if (svn_fs__matches_atom (kind, "dir")
-              && len == 3
-              && header->next->is_atom
-              && header->next->next->is_atom)
-            return 1;
-          
-          if (svn_fs__matches_atom (kind, "file")
-              && len >= 3
-              && header->next->is_atom
-              && header->next->next->is_atom)
-            {
-              if ((len == 3) && (! header->next->next->next))
-                return 1;
-
-              /* edit-data-key can only exist on mutable file nodes. */
-              if ((len == 4) 
-                  && is_mutable_header (header)
-                  && header->next->next->next->is_atom)
-                return 1;
-            }
-        }
-    }
-
-  return 0;
-}
-
-
-
 /* Choosing node revision ID's.  */
-
 
 svn_error_t *
 svn_fs__new_node_id (svn_fs_id_t **id_p,
@@ -512,15 +419,16 @@ svn_fs__delete_nodes_entry (svn_fs_t *fs,
 
 
 
-/* Storing and retrieving NODE-REVISION skels.  */
+/* Storing and retrieving NODE-REVISIONs.  */
 
 
 svn_error_t *
-svn_fs__get_node_revision (skel_t **skel_p,
+svn_fs__get_node_revision (svn_fs__node_revision_t **noderev_p,
                            svn_fs_t *fs,
                            const svn_fs_id_t *id,
                            trail_t *trail)
 {
+  svn_fs__node_revision_t *noderev;
   skel_t *skel;
   int db_err;
   DBT key, value;
@@ -538,13 +446,12 @@ svn_fs__get_node_revision (skel_t **skel_p,
   /* Handle any other error conditions.  */
   SVN_ERR (DB_WRAP (fs, "reading node revision", db_err));
 
-  /* Parse and check the NODE-REVISION skel.  */
+  /* Parse and the NODE-REVISION skel.  */
   skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
-  if (! skel
-      || ! is_valid_node_revision (skel))
-    return svn_fs__err_corrupt_node_revision (fs, id);
 
-  *skel_p = skel;
+  /* Convert to a native FS type. */
+  SVN_ERR (svn_fs__parse_node_revision_skel (&noderev, skel, trail->pool));
+  *noderev_p = noderev;
   return SVN_NO_ERROR;
 }
 
@@ -552,23 +459,21 @@ svn_fs__get_node_revision (skel_t **skel_p,
 svn_error_t *
 svn_fs__put_node_revision (svn_fs_t *fs,
                            const svn_fs_id_t *id,
-                           skel_t *skel,
+                           svn_fs__node_revision_t *noderev,
                            trail_t *trail)
 {
   DB_TXN *db_txn = trail->db_txn;
   apr_pool_t *pool = trail->pool;
   DBT key, value;
+  skel_t *skel;
 
-  if (! is_valid_node_revision (skel))
-    return svn_fs__err_corrupt_node_revision (fs, id);
-
-  SVN_ERR (DB_WRAP (fs, "storing node revision",
-                    fs->nodes->put (fs->nodes, db_txn,
-                                    svn_fs__id_to_dbt (&key, id, pool),
-                                    svn_fs__skel_to_dbt (&value, skel, pool),
-                                    0)));
-
-  return 0;
+  /* Convert from native type into skel */
+  SVN_ERR (svn_fs__unparse_node_revision_skel (&skel, noderev, pool));
+  return DB_WRAP (fs, "storing node revision",
+                  fs->nodes->put (fs->nodes, db_txn,
+                                  svn_fs__id_to_dbt (&key, id, pool),
+                                  svn_fs__skel_to_dbt (&value, skel, pool),
+                                  0));
 }
 
 

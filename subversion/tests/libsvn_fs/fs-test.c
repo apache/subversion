@@ -1103,7 +1103,7 @@ static svn_error_t *
 txn_body_check_id (void *baton, trail_t *trail)
 {
   struct check_id_args *args = baton;
-  skel_t *noderev;
+  svn_fs__node_revision_t *noderev;
   svn_error_t *err;
 
   err = svn_fs__get_node_revision (&noderev, args->fs, args->id, trail);
@@ -4896,7 +4896,7 @@ struct get_node_revision_args
 {
   svn_fs_t *fs;
   svn_fs_id_t *id;
-  skel_t *node_rev;
+  svn_fs__node_revision_t *noderev;
 };
 
 
@@ -4904,8 +4904,7 @@ static svn_error_t *
 txn_body_get_node_revision (void *baton, trail_t *trail)
 {
   struct get_node_revision_args *args = baton;
-
-  return svn_fs__get_node_revision (&(args->node_rev), args->fs, 
+  return svn_fs__get_node_revision (&(args->noderev), args->fs, 
                                     args->id, trail);
 }
 
@@ -4944,8 +4943,7 @@ check_root_revision (const char **msg,
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool)); 
   SVN_ERR (svn_fs_node_id (&args.id, rev_root, "", pool));
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_node_revision, &args, pool));
-  test_rev = SVN_STR_TO_REV ((SVN_FS__NR_HDR_REV
-                              (SVN_FS__NR_HEADER (args.node_rev)))->data);
+  test_rev = args.noderev->revision;
   if (test_rev != youngest_rev)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -4970,8 +4968,7 @@ check_root_revision (const char **msg,
       SVN_ERR (svn_fs_node_id (&args.id, rev_root, "", pool));
       SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_node_revision, 
                                   &args, pool));
-      test_rev = SVN_STR_TO_REV ((SVN_FS__NR_HDR_REV
-                                  (SVN_FS__NR_HEADER (args.node_rev)))->data);
+      test_rev = args.noderev->revision;
       if (test_rev != youngest_rev)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -5485,12 +5482,12 @@ check_related (const char **msg,
   SVN_ERR (svn_test__set_file_contents (txn_root, "F", "10", subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
-
+  
   /*** Step II: Exhausively verify relationship between all nodes in
        existence. */
   {
     int i, j;
-
+    
     struct path_rev_t
     {
       const char *path;

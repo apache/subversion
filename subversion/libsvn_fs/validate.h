@@ -33,12 +33,6 @@ int svn_fs__count_id_components (const char *data, apr_size_t data_len);
 
 
 
-/* Validating skels. */
-
-/* Validate the structure of a PROPLIST. */
-int svn_fs__is_valid_proplist (skel_t *skel);
-
-
 /* Validating paths. */
 
 /* Validate that name NAME is a single path component, not a

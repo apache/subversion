@@ -22,7 +22,6 @@
 #include "err.h"
 #include "key-gen.h"
 #include "dbt.h"
-#include "proplist.h"
 #include "skel.h"
 #include "fs_skels.h"
 #include "txn-table.h"
@@ -354,9 +353,11 @@ txn_body_txn_prop (void *baton,
   struct txn_prop_args *args = baton;
   svn_fs__transaction_t *txn;
   
-  SVN_ERR (svn_fs__get_txn (&txn, args->fs, args->id, trail));
-  *(args->value_p) = apr_hash_get (txn->proplist, 
-                                   args->propname, APR_HASH_KEY_STRING);
+  SVN_ERR (svn_fs__get_txn (&txn, args->fs, args->id, trail)); 
+  *(args->value_p) = NULL;
+  if (txn->proplist)
+    *(args->value_p) = apr_hash_get (txn->proplist, 
+                                     args->propname, APR_HASH_KEY_STRING);
   return SVN_NO_ERROR;
 }
 
@@ -399,7 +400,8 @@ txn_body_txn_proplist (void *baton, trail_t *trail)
   struct txn_proplist_args *args = baton;
 
   SVN_ERR (svn_fs__get_txn (&txn, args->fs, args->id, trail));
-  *(args->table_p) = txn->proplist;
+  *(args->table_p) = txn->proplist 
+                     ? txn->proplist : apr_hash_make (trail->pool);
   return SVN_NO_ERROR;
 }
 
@@ -444,8 +446,7 @@ svn_fs__set_txn_prop (svn_fs_t *fs,
 
   SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
 
-  /* If there's no proplist, but we're just deleting a property, exit
-     now. */
+  /* If there's no proplist, but we're just deleting a property, exit now. */
   if ((! txn->proplist) && (! value))
     return SVN_NO_ERROR;
 
