@@ -88,8 +88,12 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
                         APR_OS_DEFAULT, repos->pool);
   if (status != APR_SUCCESS)
     {
-      /* ### return an error */
-      return NULL;
+      svn_error_t *serr = 
+        svn_error_create(status, 0, NULL, repos->pool,
+                         "failed to open activity db;  check repos perms.");
+
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not open dbm files.");
     }
 
   key.dptr = (char *)activity_id;
@@ -100,8 +104,12 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
   apr_dbm_close(dbm);
   if (status != APR_SUCCESS)
     {
-      /* ### return an error */
-      return NULL;
+      svn_error_t *serr = 
+        svn_error_create(status, 0, NULL, repos->pool,
+                         "failed to close activity db; check repos perms.");
+
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not close dbm files.");
     }
 
   return NULL;
