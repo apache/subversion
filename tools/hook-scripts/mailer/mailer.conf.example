@@ -192,10 +192,10 @@ suppress_deletes = yes
 # A revision will be reported on if any changed-path matches the for_paths
 # option. If only some of the changed-paths of a revision match, this
 # controls the behaviour for the non-matching paths. Possible values are:
-#   show-all: (Default) Show in both summary and diffs.
-#   show-summary: Show the changed paths in the summary, but omit the diffs.
-#   hide: Show nothing more than a note saying "and changes in other areas"
-excluded_paths = show-all
+#   yes: (Default) Show in both summary and diffs.
+#   summary: Show the changed paths in the summary, but omit the diffs.
+#   no: Show nothing more than a note saying "and changes in other areas"
+show_nonmatching_paths = yes
 
 # Subject line length limit.  The generated subject line will be truncated
 # and terminated with "...", to remain within the specified maximum length.
