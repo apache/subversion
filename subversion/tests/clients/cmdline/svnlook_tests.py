@@ -90,6 +90,51 @@ def test_youngest(sbox):
   return 0  # success
 
 
+#----------------------------------------------------------------------
+# Issue 1089
+def delete_file_in_moved_dir(sbox):
+  "delete file in moved dir"
+
+  if sbox.build(): return 1
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  # move E to E2 and delete E2/alpha
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  E2_path = os.path.join(wc_dir, 'A', 'B', 'E2')
+  output, errput = svntest.main.run_svn(None, 'mv', E_path, E2_path)
+  if errput: return 1
+  alpha_path = os.path.join(E2_path, 'alpha')
+  output, errput = svntest.main.run_svn(None, 'rm', alpha_path)
+  if errput: return 1
+
+  # commit
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E' : Item(verb='Deleting'),
+    'A/B/E2' : Item(verb='Adding'),
+    'A/B/E2/alpha' : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_status.add({
+    'A/B/E2'      : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/E2/beta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output,
+                                            expected_status,
+                                            None,
+                                            None, None,
+                                            None, None,
+                                            wc_dir):
+    return 1
+
+  output, errput = svntest.main.run_svnlook("dirs-changed", repo_dir)
+  if errput:
+    return 1
+  ### FIXME: Once 1089 is fixed need to verify the output is correct
+
 ########################################################################
 # Run the tests
 
@@ -97,6 +142,7 @@ def test_youngest(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               test_youngest,
+              XFail(delete_file_in_moved_dir),
              ]
 
 if __name__ == '__main__':
