@@ -52,12 +52,12 @@ def basic_utf8_conversion(sbox):
 
   wc_dir = sbox.wc_dir
 
+  # Set our environment's locale to ISO-8859-1
+  os.putenv('LC_ALL', 'ISO-8859-1')
+
   # Create the new i18n file and schedule it for addition
   svntest.main.file_append(os.path.join(wc_dir, i18n_filename), "hi")
   svntest.main.run_svn(None, 'add', os.path.join(wc_dir, i18n_filename))
-
-  # Set our environment's locale to ISO-8859-1
-  os.putenv('LC_ALL', 'ISO-8859-1')
 
   outlines, inlines = svntest.main.run_svn(None, # no error expected
                                            'commit', '-m', i18n_logmsg)
