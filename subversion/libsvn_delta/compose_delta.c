@@ -644,17 +644,61 @@ copy_source_ops (apr_off_t offset, apr_off_t limit,
              offset in the (virtual) target stream. */
           assert(op->offset < off[0]);
 
-          if (op->offset + op->length - fix_limit > off[0])
-            {
-              assert(!"Overlapping target copies are a pain in the ass.");
-            }
-          else
+          if (op->offset + op->length - fix_limit <= off[0])
             {
               /* The recursion _must_ end, otherwise the delta has
                  circular references, and that is not possible. */
               copy_source_ops(op->offset + fix_offset,
                               op->offset + op->length - fix_limit,
                               build_baton, window, ndx, pool);
+            }
+          else
+            {
+              /* This is an overlapping target copy.
+                 The idea here is to transpose the pattern, then generate
+                 another overlapping copy. */
+              const apr_off_t ptn_length = off[0] - op->offset;
+              const apr_off_t ptn_overlap = fix_offset % ptn_length;
+              apr_off_t fix_off = fix_offset;
+              assert(ptn_length > ptn_overlap);
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+              if (ptn_overlap > 0)
+                {
+                  /* Issue second subrange in the pattern. */
+                  const apr_size_t length =
+                    MIN(op->length - fix_off - fix_limit,
+                        ptn_length - ptn_overlap);
+                  copy_source_ops(op->offset + ptn_overlap,
+                                  op->offset + ptn_overlap + length,
+                                  build_baton, window, ndx, pool);
+                  fix_off += length;
+                }
+
+              assert(fix_off + fix_limit <= op->length);
+              if (fix_off + fix_limit < op->length)
+                {
+                  /* Issue the first subrange in the pattern. */
+                  const apr_size_t length =
+                    MIN(op->length - fix_off - fix_limit,
+                        ptn_length - ptn_overlap);
+                  copy_source_ops(op->offset, op->offset + length,
+                                  build_baton, window, ndx, pool);
+                  fix_off += length;
+                }
+#undef MIN
+
+              assert(fix_off + fix_limit <= op->length);
+              if (fix_off + fix_limit < op->length)
+                {
+                  /* Now multiply the pattern */
+                  svn_txdelta__insert_op(build_baton, svn_txdelta_target,
+                                         offset + fix_off - ptn_length,
+                                         op->length - fix_off - fix_limit,
+                                         NULL, pool);
+                }
+
+              assert("Overlapping target copies are a pain in the ass.");
             }
         }
     }

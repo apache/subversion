@@ -424,8 +424,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
                                apr_pool_t *pool) = {
   0,
   random_test,
-  /*random_combine_test, FIXME: Disabled, because it sometimes fails.
-    Hey, but the failures are predictable and understood now! :-) */
+  random_combine_test,
 #ifdef SVN_RANGE_INDEX_TEST_H
   random_range_index_test,
 #endif
