@@ -360,6 +360,7 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_stringbuf_t *fullpath = svn_stringbuf_dup (dir, pool);
+  svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
 
   /* Read the entries file for this directory. */
   SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
@@ -393,16 +394,15 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
         continue;
           
       basename = svn_stringbuf_create ((const char *) key, subpool);
+      svn_path_add_component (fullpath, basename, svn_path_local_style);
 
       /* If the entry's existence is `deleted', skip it. */
       if (entry->existence == svn_wc_existence_deleted)
         continue;
 
+      /* If this is a directory, recurse. */
       if (entry->kind == svn_node_dir)
-        {
-          svn_path_add_component (fullpath, basename, svn_path_local_style);
-          SVN_ERR (mark_tree (fullpath, state, subpool));
-        }
+        SVN_ERR (mark_tree (fullpath, state, subpool));
 
       /* Mark this entry. */
       switch (state)
@@ -415,6 +415,16 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
                     svn_wc_schedule_delete,
                     svn_wc_existence_normal,
                     FALSE, 0, 0, NULL, subpool, NULL));
+          if (fbtable)
+            {
+              apr_status_t apr_err;
+
+              apr_err = fbtable->report_deleted_item (fullpath->data, pool);
+              if (apr_err)
+                return svn_error_createf 
+                  (apr_err, 0, NULL, pool,
+                   "Error reporting deleted item `%s'", fullpath->data);
+            }
           break;
 
         case mark_tree_state_unadd:
@@ -425,6 +435,16 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
                     svn_wc_schedule_unadd,
                     svn_wc_existence_normal,
                     FALSE, 0, 0, NULL, subpool, NULL));
+          if (fbtable)
+            {
+              apr_status_t apr_err;
+
+              apr_err = fbtable->report_unadded_item (fullpath->data, pool);
+              if (apr_err)
+                return svn_error_createf 
+                  (apr_err, 0, NULL, pool,
+                   "Error reporting unadded item `%s'", fullpath->data);
+            }
           break;
 
         case mark_tree_state_undelete: 
@@ -435,6 +455,16 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
                     svn_wc_schedule_undelete,
                     svn_wc_existence_normal,
                     FALSE, 0, 0, NULL, subpool, NULL));
+          if (fbtable)
+            {
+              apr_status_t apr_err;
+
+              apr_err = fbtable->report_undeleted_item (fullpath->data, pool);
+              if (apr_err)
+                return svn_error_createf 
+                  (apr_err, 0, NULL, pool,
+                   "Error reporting undeleted item `%s'", fullpath->data);
+            }
           break;
         }
 
@@ -502,6 +532,21 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
             svn_wc_schedule_delete,
             svn_wc_existence_normal,
             FALSE, 0, 0, NULL, pool, NULL));
+
+  /* Now, call our client feedback function. */
+  {
+    svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
+    if (fbtable)
+      {
+        apr_status_t apr_err;
+
+        apr_err = fbtable->report_deleted_item (path->data, pool);
+        if (apr_err)
+          return svn_error_createf 
+            (apr_err, 0, NULL, pool,
+             "Error reporting deleted item `%s'", path->data);
+      }
+  }
 
   return SVN_NO_ERROR;
 }
@@ -571,6 +616,21 @@ svn_wc_add_directory (svn_stringbuf_t *dir, apr_pool_t *pool)
             svn_wc_existence_normal,
             FALSE, 0, 0, NULL, pool, NULL));
 
+  /* Now, call our client feedback function. */
+  {
+    svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
+    if (fbtable)
+      {
+        apr_status_t apr_err;
+
+        apr_err = fbtable->report_added_item (dir->data, pool);
+        if (apr_err)
+          return svn_error_createf 
+            (apr_err, 0, NULL, pool,
+             "Error reporting added item `%s'", dir->data);
+      }
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -608,6 +668,34 @@ svn_wc_add_file (svn_stringbuf_t *file, apr_pool_t *pool)
             svn_wc_existence_normal,
             FALSE, 0, 0, NULL, pool, NULL));
 
+  /* Try to detect the mime-type of this new addition. */
+  {
+    const char *mimetype;
+
+    SVN_ERR (svn_io_detect_mimetype (&mimetype, file->data, pool));
+    if (mimetype)
+      SVN_ERR (svn_wc_prop_set 
+               (svn_stringbuf_create (SVN_PROP_MIME_TYPE, pool),
+                svn_stringbuf_create (mimetype, pool),
+                file,
+                pool));
+  }
+
+  /* Now, call our client feedback function. */
+  {
+    svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
+    if (fbtable)
+      {
+        apr_status_t apr_err;
+
+        apr_err = fbtable->report_added_item (file->data, pool);
+        if (apr_err)
+          return svn_error_createf 
+            (apr_err, 0, NULL, pool,
+             "Error reporting added item `%s'", file->data);
+      }
+  }
+  
   return SVN_NO_ERROR;
 }
 
@@ -641,6 +729,21 @@ svn_wc_unadd (svn_stringbuf_t *path,
             svn_wc_schedule_unadd,
             svn_wc_existence_normal,
             FALSE, 0, 0, NULL, pool, NULL));
+
+  /* Now, call our client feedback function. */
+  {
+    svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
+    if (fbtable)
+      {
+        apr_status_t apr_err;
+
+        apr_err = fbtable->report_unadded_item (path->data, pool);
+        if (apr_err)
+          return svn_error_createf 
+            (apr_err, 0, NULL, pool,
+             "Error reporting un-added item `%s'", path->data);
+      }
+  }
 
   return SVN_NO_ERROR;
 }
@@ -693,6 +796,21 @@ svn_wc_undelete (svn_stringbuf_t *path,
             svn_wc_schedule_undelete,
             svn_wc_existence_normal,
             FALSE, 0, 0, NULL, pool, NULL));
+
+  /* Now, call our client feedback function. */
+  {
+    svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
+    if (fbtable)
+      {
+        apr_status_t apr_err;
+
+        apr_err = fbtable->report_undeleted_item (path->data, pool);
+        if (apr_err)
+          return svn_error_createf 
+            (apr_err, 0, NULL, pool,
+             "Error reporting un-deleted item `%s'", path->data);
+      }
+  }
 
   return SVN_NO_ERROR;
 }
