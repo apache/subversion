@@ -75,6 +75,9 @@ class GeneratorBase:
       if parser.get(target, 'debug'):
         target_ob.debug = parser.get(target, 'debug')
 
+      if parser.get(target, 'project_name'):
+        target_ob.project_name = parser.get(target, 'project_name')
+
       self.targets[target] = target_ob
 
       ### I don't feel like passing these to the constructor right now,
@@ -562,6 +565,7 @@ _cfg_defaults = {
   'cmd' : '',
   'release' : '',
   'debug' : '',
+  'project_name' : '',
   }
 
 _predef_sections = [

@@ -61,25 +61,26 @@ MTL=midl.exe
 # Name "__config__ - Win32 Debug"
 # Begin Source File
 
-SOURCE=.\subversion\libsvn_subr\getdate.cw
+SOURCE=..\..\subversion\libsvn_subr\getdate.cw
 
 !IF  "$(CFG)" == "__config__ - Win32 Release"
 
-# Begin Custom Build - Creating getdate.c from getdate.cw.
-InputPath=.\subversion\libsvn_subr\getdate.cw
+# PROP Ignore_Default_Tool 1
+# Begin Custom Build - Creating subversion\libsvn_subr\getdate.c from subversion\libsvn_subr\getdate.cw.
+InputPath=..\..\subversion\libsvn_subr\getdate.cw
 
-".\subversion\libsvn_subr\getdate.c" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy .\subversion\libsvn_subr\getdate.cw .\subversion\libsvn_subr\getdate.c > nul
+"..\..\subversion\libsvn_subr\getdate.c" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy ..\..\subversion\libsvn_subr\getdate.cw ..\..\subversion\libsvn_subr\getdate.c > nul
 
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "__config__ - Win32 Debug"
 
 # Begin Custom Build - Creating getdate.c from getdate.cw.
-InputPath=.\subversion\libsvn_subr\getdate.cw
+InputPath=..\..\subversion\libsvn_subr\getdate.cw
 
-".\subversion\libsvn_subr\getdate.c" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy .\subversion\libsvn_subr\getdate.cw .\subversion\libsvn_subr\getdate.c > nul
+"..\..\subversion\libsvn_subr\getdate.c" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy ..\..\subversion\libsvn_subr\getdate.cw ..\..\subversion\libsvn_subr\getdate.c > nul
 
 # End Custom Build
 
@@ -88,21 +89,21 @@ InputPath=.\subversion\libsvn_subr\getdate.cw
 # End Source File
 # Begin Source File
 
-SOURCE=.\svn_private_config.h
+SOURCE=..\..\svn_private_config.h
 # PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
-SOURCE=.\svn_private_config.hw
+SOURCE=..\..\svn_private_config.hw
 
 !IF  "$(CFG)" == "__config__ - Win32 Release"
 
 # PROP Ignore_Default_Tool 1
 # Begin Custom Build - Creating svn_private_config.h from svn_private_config.hw.
-InputPath=.\svn_private_config.hw
+InputPath=..\..\svn_private_config.hw
 
-".\svn_private_config.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy .\svn_private_config.hw .\svn_private_config.h > nul
+"..\..\svn_private_config.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy ..\..\svn_private_config.hw ..\..\svn_private_config.h > nul
 
 # End Custom Build
 
@@ -110,10 +111,10 @@ InputPath=.\svn_private_config.hw
 
 # PROP Ignore_Default_Tool 1
 # Begin Custom Build - Creating svn_private_config.h from svn_private_config.hw.
-InputPath=.\svn_private_config.hw
+InputPath=..\..\svn_private_config.hw
 
-".\svn_private_config.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy .\svn_private_config.hw .\svn_private_config.h > nul
+"..\..\svn_private_config.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy ..\..\svn_private_config.hw ..\..\svn_private_config.h > nul
 
 # End Custom Build
 
