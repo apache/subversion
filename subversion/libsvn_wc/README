@@ -74,7 +74,7 @@ exactly how to massage a working copy from one state to another.
 Structure of the Working Copy
 =============================
 
-Working copy meta-information is stored in SVN/ subdirectories,
+Working copy meta-information is stored in .svn/ subdirectories,
 analogous to CVS/ subdirs:
 
   .svn/format                   /* Contains wc adm format version. */
@@ -86,21 +86,21 @@ analogous to CVS/ subdirs:
        lock                     /* Optional, tells others this dir is busy */
        log                      /* Ops log (for rollback/crash-recovery) */
        text-base/               /* Pristine repos revisions of the files... */
-            foo.c
-            bar.c
-            baz.c
+            foo.c.svn-base
+            bar.c.svn-base
+            baz.c.svn-base
        props/                   /* Working properties for files in this dir */
-            foo.c                  /* Stores foo.c's working properties
-            bar.c
-            baz.c
+            foo.c.svn-work         /* Stores foo.c's working properties
+            bar.c.svn-work
+            baz.c.svn-work
        prop-base/               /* Pristine properties for files in this dir */
-            foo.c                  /* Stores foo.c's pristine properties */
-            bar.c
-            baz.c
+            foo.c.svn-base         /* Stores foo.c's pristine properties */
+            bar.c.svn-base
+            baz.c.svn-base
        wcprops/                 /* special 'wc' props for files in this dir*/
-            foo.c
-            bar.c
-            baz.c
+            foo.c.svn-work
+            bar.c.svn-work
+            baz.c.svn-work
        dir-wcprops              /* 'wc' props for this directory. */
        auth/                    /* Area to store authentication info */
        tmp/                     /* Local tmp area */
