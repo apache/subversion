@@ -130,6 +130,7 @@ svn_fs_bdb__lock_tokens_get (apr_hash_t **lock_tokens_p,
   DBC *cursor;
   DBT key, value;
   int db_err;
+  apr_pool_t *subpool = svn_pool_create (trail->pool);
 
   apr_hash_t *lock_tokens = apr_hash_make(trail->pool);
 
@@ -155,24 +156,28 @@ svn_fs_bdb__lock_tokens_get (apr_hash_t **lock_tokens_p,
    */
   while (! db_err && strncmp(path, key.data, key.size) != 0)
     {
-      svn_fs_base__track_dbt (&key, trail->pool);      
-      svn_fs_base__track_dbt (&value, trail->pool);
+      svn_pool_clear (subpool);
+
+      svn_fs_base__track_dbt (&key, subpool);      
+      svn_fs_base__track_dbt (&value, subpool);
 
       apr_hash_set (lock_tokens,
                     apr_pstrmemdup(trail->pool, key.data, key.size), key.size,
                     apr_pstrmemdup(trail->pool, value.data, value.size));
 
+      svn_fs_base__result_dbt (&key);
       svn_fs_base__result_dbt (&value);
       db_err = cursor->c_get(cursor, &key, &value, DB_NEXT);
     }
 
+  svn_pool_destroy (subpool);
   cursor->c_close(cursor);
 
   if (db_err && (db_err != DB_NOTFOUND)) 
     SVN_ERR (BDB_WRAP (fs, "fetching lock tokens", db_err));
 
   *lock_tokens_p = lock_tokens;
-  return SVN_NO_ERROR;  
+  return SVN_NO_ERROR;
 }
 
 
