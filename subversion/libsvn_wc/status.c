@@ -402,7 +402,7 @@ assemble_status (svn_wc_status_t **status,
          || (final_text_status == svn_wc_status_normal))
         && ((final_prop_status == svn_wc_status_none)
             || (final_prop_status == svn_wc_status_normal))
-        && (! locked_p) && (! switched_p))
+        && (! locked_p) && (! switched_p) && (! entry->lock_token))
       {
         *status = NULL;
         return SVN_NO_ERROR;
@@ -1065,6 +1065,10 @@ is_sendable_status (svn_wc_status_t *status,
   if (status->locked)
     return TRUE;
   if (status->switched)
+    return TRUE;
+
+  /* If there is a lock token, send it. */
+  if (status->entry && status->entry->lock_token)
     return TRUE;
 
   /* Otherwise, don't send it. */

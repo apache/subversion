@@ -61,6 +61,13 @@ print_status (const char *path,
               svn_wc_status_t *status,
               apr_pool_t *pool)
 {
+  char lock_status;
+
+  if (status->entry && status->entry->lock_token)
+    lock_status = 'K';
+  else
+    lock_status = ' ';
+
   if (detailed)
     {
       char ood_status;
@@ -102,12 +109,13 @@ print_status (const char *path,
 
           SVN_ERR
             (svn_cmdline_printf (pool,
-                                 "%c%c%c%c%c  %c   %6s   %6s %-12s %s\n",
+                                 "%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n",
                                  generate_status_code(status->text_status),
                                  generate_status_code (status->prop_status),
                                  status->locked ? 'L' : ' ',
                                  status->copied ? '+' : ' ',
                                  status->switched ? 'S' : ' ',
+                                 lock_status,
                                  ood_status,
                                  working_rev,
                                  commit_rev,
@@ -116,24 +124,26 @@ print_status (const char *path,
         }
       else
         SVN_ERR
-          (svn_cmdline_printf (pool, "%c%c%c%c%c  %c   %6s   %s\n",
+          (svn_cmdline_printf (pool, "%c%c%c%c%c%c %c   %6s   %s\n",
                                generate_status_code (status->text_status),
                                generate_status_code (status->prop_status),
                                status->locked ? 'L' : ' ',
                                status->copied ? '+' : ' ',
                                status->switched ? 'S' : ' ',
+                               lock_status,
                                ood_status,
                                working_rev,
                                path));
     }
   else
     SVN_ERR
-      (svn_cmdline_printf (pool, "%c%c%c%c%c  %s\n",
+      (svn_cmdline_printf (pool, "%c%c%c%c%c%c %s\n",
                            generate_status_code (status->text_status),
                            generate_status_code (status->prop_status),
                            status->locked ? 'L' : ' ',
                            status->copied ? '+' : ' ',
                            status->switched ? 'S' : ' ',
+                           lock_status,
                            path));
 
   return SVN_NO_ERROR;
