@@ -2,7 +2,7 @@
 
      Subversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.49 $ of this document.)
+              ($Revision: 1.50 $ of this document.)
 
 * Introduction
 
@@ -376,9 +376,12 @@ In the diagrams that follow, straight horizontal lines with arrowheads
 represent backwards time-flow (the regression of versions), and any
 other kind of path represents a parent-to-child connection in a
 directory hierarchy.  Boxes are "nodes".  A node is either a file or a
-directory -- a letter in the upper left indicates which kind.  A
-node's name is stored only in its parent, for reasons that will become
-obvious.
+directory -- a letter in the upper left indicates which kind.
+
+Parent-child links go both ways (i.e., a child knows who all its
+parents are), but a node's name is stored *only* in its parent,
+because a node with multiple parents may have different names in
+different parents.
 
 A file node has a byte-string for its content, whereas directory nodes
 have a list of dir_entries, eaching pointing to another node.
@@ -519,7 +522,7 @@ number tells you the version of the destination node, *not* the node
 holding the back-link.  So if you're looking for FILE:N, and when you
 get a node for that file you find a back-link pointing to a version N
 or higher, then you know you must follow that link farther back to get
-to version N.
+to a node in version N.
 
 But I digress.  Right now, we're learning how to commit tuna:2, and
 there's one more step needed to complete that commit -- register the
@@ -592,6 +595,9 @@ So, the general recipe for retrieving `foo:N' is:
 
    3. When you have nowhere else to go, this is the droid you're
       looking for.                                   
+
+   (Note: this recipe will be slightly modified later to work
+   with locking, but the general idea here is accurate.)
 
 Now watch what happens when we add a new file `cod into `fish' (i.e.,
 cod will be a sibling of `tuna').  Here's the new tree, the
@@ -788,8 +794,9 @@ version of tuna:
   Both nodes have the full contents of their respective versions; no
   diffs have been made yet.
 
-  *** Step 3: Change the link in the parent node to point to the new
-  tuna:2 node (which in turn points to tuna:1).
+  *** Step 3: In each of tuna's parent nodes (which are listed in
+  tuna, remember), change the entry for tuna to point to point to the
+  new tuna:2 node: 
 
               \
             ___\____                    
@@ -815,9 +822,10 @@ version of tuna:
 
   However, if you follow the three-step algorithm for retrieving
   FILE:N, you'll see that you still reach tuna:1 just fine -- it's as
-  though tuna:2 isn't there.  Another way to look at it is that
-  version 2 of the project does not exist yet, therefore you can't ask
-  for it; if you ask for the head version, you'll get version 1.
+  though tuna:2 isn't there, because N can't be higher than 1 yet
+  anyway.  In other words, version 2 of the project does not exist
+  yet, therefore you can't ask for it; if you ask for the head
+  version, you'll get version 1. 
 
   *** Step 3: Hook up version 2 to the root node.
 
@@ -844,24 +852,43 @@ course, there's a "diff-bit" on each node, saying whether its contents
 are stored full-text or as a diff against the node that back-links to
 this one.)
 
-Now let's generalize that procedure, and add locking...
+TODO: jimb points out that the diffs have to be made at a rate at
+least as fast as changes come in.  The implication of diffs *not*
+keeping up is that there are many thousands of active committers, in
+which case doing diffs at commit-time would increase lock contentions
+(because the amount of wait-time involved in a commit would go up),
+whereas if you don't try to guarantee that they keep up, your
+repository just gets bigger faster.  So it's a time/space tradeoff.  I
+do think it's important to keep commit wait-time to a minimum... A
+good solution might be for us to initially just trust that people
+aren't going to commit that fast (I mean, really), and then add some
+rapid-growth autodetection heuristics later on, that would flip the
+repository into diff-on-commit mode when things start coming in too
+fast.  But it's kind of a funny situation: if your repository is too
+large because it hasn't had a chance to diffify storage, then you
+basically have to do *something* to slow up the commit rate.  You can
+do this by increasing the amount of time each commit takes, or you can
+do it by unplugging the server's network cable until the repository is
+small enough. :-)
 
-The important thing to realize is that someone else may initiate a
+Anyway, let's now generalize the above procedure, and add locking.
+
+When locking, we have to keep in mind that someone else may initiate a
 commit before or during our commit, and their commit might finish
 before or after ours.  We don't want their commit to wait
 unnecessarily, so our commit does not try to reserve any particular
 version number -- it just grabs the next available number at the time
 it finishes.
 
-Below, a lock is a single object, and a node gets locked by making
-reference to that object.  A lock's fields are `User:Num:Pending',
-where Num serves both as an identifier and a priority number, and
-Pending is a boolean that starts out true, and turns false once all
-the nodes involved in this commit have gotten locked.  Note that Num
-is different from any other lock's Num, even a lock for a different
-commit by the same user.  Locks persist through server crashes.
+Below, a lock is a single project-wide object, and we lock a node by
+adding a reference to that object to the node.  A lock's fields are
+`User:Num:Pending', where Num serves both as an identifier and a
+priority number, and Pending is a boolean that starts out true, and
+turns false once all the nodes involved in this commit have gotten
+locked.  Note that Num is different from any other lock's Num, even a
+lock for a different commit by the same user.
 
-todo: I think this could all be said better:
+Locks persist through server crashes.
 
   1. Lock the nodes you're committing new versions for (though if
      you're adding a new file, there's no node to lock).  These
@@ -877,17 +904,21 @@ todo: I think this could all be said better:
   2. Create the new, unattached nodes that will hold the new versions.
      Fill them up with the new contents.  Create the back-links.
 
-  3. Lock the parents of the nodes you're committing (call these
+  3. Lock all the parents of the nodes you're committing (call these
      "secondary locks").  Use the same blocking scheme as in step 1.
 
   4. Set dir_entries in the locked parents to point at the newly
-     created child nodes.  Although this cannot be atomic if there are
-     multiple parents, it is safe because the server knows that a node
-     might not really exist yet if its parent is locked and the child
-     doesn't share the lock.  (Amend the node-finding algorithm given
-     earlier to always first follow back-links from a node whose
-     parent is locked, trying to find a node with the same lock Num as
-     that parent).
+     created child nodes.  Although this cannot be atomic if there is
+     more than one parent node involved, it can be made effectively
+     atomic by amending the basic node-finding recipe to be
+     lock-aware, thusly:
+
+     If you arrive at a child via a locked parent, then check the
+     child for the same lock.  If present, then this child existed
+     before the commit currently taking place, so this child is safe
+     to use; but if that lock isn't here, then this child must be a
+     newly created node in a commit-in-progress, so follow the
+     backlink to a previous version of the child.
 
   5. Now create the new version number; just take the next available
      number and hook it up to the root node, but put a special
@@ -1257,10 +1288,7 @@ end up looking like this at all:
       plist *svn_props;              /* Properties managed by Subversion. */
       plist *usr_props;              /* Properties ignored by Subversion. */
 
-      /* I think we might need parent pointers to do multiple hard
-         links correctly; but there might be another way... */
-      /* todo: jimb was worried about some problem involving multiple
-         parents, remember to ask him about this. */
+      /* Need parent pointers to do multiple hard links correctly. */
       struct node **parents;
 
       /* See notes about locking above.  This may be stored as
