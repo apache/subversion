@@ -879,8 +879,8 @@ init_adm (svn_string_t *path,
     return err;
 
 
-  /* SVN_WC__ADM_DPROP_BASE */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DPROP_BASE,
+  /* SVN_WC__ADM_PROPS */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
                                 svn_dir_kind, 0, pool);
   if (err)
     return err;
@@ -902,8 +902,8 @@ init_adm (svn_string_t *path,
     return err;
 
 
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_DPROP_BASE */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DPROP_BASE,
+  /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
                                 svn_dir_kind, 1, pool);
   if (err)
     return err;
@@ -935,6 +935,14 @@ init_adm (svn_string_t *path,
                                 svn_file_kind, 0, pool);
   if (err)
     return err;
+
+
+  /* SVN_WC__ADM_DIR_PROP_BASE */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_PROP_BASE,
+                                svn_file_kind, 0, pool);
+  if (err)
+    return err;
+
 
 
   /* THIS FILE MUST BE CREATED LAST: 
