@@ -191,7 +191,7 @@ close_file (void *file_baton)
       if (fb->text_changed)
         {
           svn_boolean_t modified;
-          if (svn_wc_file_modified_p 
+          if (svn_wc_text_modified_p 
               (&modified, fb->path, fb->parent_dir_baton->edit_baton->pool))
             statchar_buf[0] = 'G';
           else
