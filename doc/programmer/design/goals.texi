@@ -232,6 +232,6 @@ When the conflict has been resolved and the working copy is committed,
 Subversion automatically removes the temporary pristine files.
 
 A more general solution would allow plug-in merge resolution tools on
-the client side; but this is not scheduled for the first release
-(@pxref{Future}).  Note that users can use their own merge tools anyway,
-since all the original files are available.
+the client side; but this is not scheduled for the first release).
+Note that users can use their own merge tools anyway, since all the
+original files are available.

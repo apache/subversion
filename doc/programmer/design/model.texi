@@ -611,5 +611,4 @@ the other two changes, resulting in a final ancestry set of:
 
 This description of merging and ancestry applies to both intra- and
 inter-repository merges.  However, inter-repository merging will
-probably not be implemented until a future release of Subversion
-(@pxref{Future}).
+probably not be implemented until a future release of Subversion.
