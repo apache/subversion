@@ -37,6 +37,64 @@
 #include "ra_dav.h"
 
 
+
+/* Retrieve a named configuration value, specifying a default.
+   The configuration will first be checked for a configured default
+   (in the "default" group), then will check the specified server
+   group for an override. If nothing is found in either the default
+   section or the server section, the default value will be returned
+*/
+static const char*
+get_server_setting(svn_config_t *cfg,
+                   const char* server_group,
+                   const char* option_name,
+                   const char* default_value)
+{
+  const char* retval;
+  svn_config_get(cfg, &retval, "default", option_name, default_value);
+  if (server_group)
+    {
+      svn_config_get(cfg, &retval, server_group, option_name, retval);
+    }
+  return retval;
+}
+
+
+/*  Retrieve a named configuration value, specifying a default.
+   The configuration will first be checked for a configured default
+   (in the "default" group), then will check the specified server
+   group for an override. If nothing is found in either the default
+   section or the server section, the default value will be
+   returned. an error will be returned if the value is not a valid
+   number. */
+static svn_error_t*
+get_server_setting_int(svn_config_t *cfg,
+                       const char *server_group,
+                       const char *option_name,
+                       apr_int64_t default_value,
+                       apr_int64_t *result_value,
+                       apr_pool_t *pool)
+{
+  const char* tmp_value;
+  char* end_pos;
+  char *default_value_str = apr_psprintf(pool,
+                                         "%" APR_INT64_T_FMT,
+                                         default_value); 
+  tmp_value = get_server_setting(cfg, server_group,
+                                 option_name, default_value_str);
+
+  /* read tmp_value as an int now */
+  *result_value = apr_strtoi64(tmp_value, &end_pos, 0);
+  
+  if (*end_pos != 0) 
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                              "non-integer in integer option");
+    }
+  return NULL;
+}
+
+
 /* a cleanup routine attached to the pool that contains the RA session
    baton. */
 static apr_status_t cleanup_session(void *sess)
@@ -125,126 +183,7 @@ static int ssl_set_verify_callback(void *userdata, int failures,
 }
 
 
-/* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, *PROXY_PASSWORD,
- * *TIMEOUT_SECONDS and *NEON_DEBUG to the information for REQUESTED_HOST,
- * allocated in POOL, if there is any applicable information.  If there is
- * no applicable information or if there is an error, then set *PROXY_PORT
- * to (unsigned int) -1, *TIMEOUT_SECONDS and *NEON_DEBUG to zero, and the
- * rest to NULL.  This function can return an error, so before checking any
- * values, check the error return value.
- */
-static svn_error_t *get_server_settings(const char **proxy_host,
-                                        unsigned int *proxy_port,
-                                        const char **proxy_username,
-                                        const char **proxy_password,
-                                        int *timeout_seconds,
-                                        int *neon_debug,
-                                        const char *requested_host,
-                                        apr_pool_t *pool)
-{
-  svn_config_t *cfg;
-  const char *exceptions;
-  const char *port_str, *timeout_str, *server_group, *debug_str;
-
-  /* If we find nothing, default to nulls. */
-  *proxy_host     = NULL;
-  *proxy_port     = (unsigned int) -1;
-  *proxy_username = NULL;
-  *proxy_password = NULL;
-  port_str        = NULL;
-  timeout_str     = NULL;
-  debug_str       = NULL;
-
-  SVN_ERR( svn_config_read_servers(&cfg, pool) );
-
-  /* If there are defaults, use them, but only if the requested host
-     is not one of the exceptions to the defaults. */
-  svn_config_get(cfg, &exceptions, "default", "http-proxy-exceptions", NULL);
-  if ((! exceptions) || (! svn_cstring_match_glob_list(requested_host,
-                                                       exceptions, pool)))
-    {
-      svn_config_get(cfg, proxy_host, "default", "http-proxy-host", NULL);
-      svn_config_get(cfg, &port_str, "default", "http-proxy-port", NULL);
-      svn_config_get(cfg, proxy_username, "default", "http-proxy-username",
-                     NULL);
-      svn_config_get(cfg, proxy_password, "default", "http-proxy-password",
-                     NULL);
-      svn_config_get(cfg, &timeout_str, "default", "http-timeout", NULL);
-      svn_config_get(cfg, &debug_str, "default", "neon-debug-mask", NULL);
-    }
-
-  server_group = svn_config_find_group(cfg, requested_host, "groups", pool);
-  if (server_group)
-    {
-      svn_config_get(cfg, proxy_host, server_group, "http-proxy-host",
-                     *proxy_host);
-      svn_config_get(cfg, &port_str, server_group, "http-proxy-port",
-                     port_str);
-      svn_config_get(cfg, proxy_username, server_group, "http-proxy-username",
-                     *proxy_username);
-      svn_config_get(cfg, proxy_password, server_group, "http-proxy-password",
-                     *proxy_password);
-      svn_config_get(cfg, &timeout_str, server_group, "http-timeout",
-                     timeout_str);
-      svn_config_get(cfg, &debug_str, server_group, "neon-debug-mask",
-                     debug_str);
-    }
-
-  /* Special case: convert the port value, if any. */
-  if (port_str)
-    {
-      char *endstr;
-      const long int port = strtol(port_str, &endstr, 10);
-
-      if (*endstr)
-        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                "illegal character in proxy port number");
-      if (port < 0)
-        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                "negative proxy port number");
-      if (port > 65535)
-        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                "proxy port number greater than maximum TCP "
-                                "port number 65535");
-      *proxy_port = port;
-    }
-  else
-    *proxy_port = 80;
-
-  if (timeout_str)
-    {
-      char *endstr;
-      const long int timeout = strtol(timeout_str, &endstr, 10);
-
-      if (*endstr)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                "illegal character in timeout value");
-      if (timeout < 0)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                "negative timeout value");
-      *timeout_seconds = timeout;
-    }
-  else
-    *timeout_seconds = 0;
-
-  if (debug_str)
-    {
-      char *endstr;
-      const long int debug = strtol(debug_str, &endstr, 10);
-
-      if (*endstr)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                "illegal character in debug mask value");
-
-      *neon_debug = debug;
-    }
-  else
-    *neon_debug = 0;
-
-  return SVN_NO_ERROR;
-}
-
-
+
 /* Userdata for the `proxy_auth' function. */
 struct proxy_auth_baton
 {
@@ -300,6 +239,7 @@ static int proxy_auth(void *userdata,
  * call and make this halfway sane. */
 
 
+
 static svn_error_t *
 svn_ra_dav__open (void **session_baton,
                   const char *repos_URL,
@@ -364,27 +304,57 @@ svn_ra_dav__open (void **session_baton,
   /* If there's a timeout or proxy for this URL, use it. */
   {
     const char *proxy_host;
-    unsigned int proxy_port;
+    apr_int64_t proxy_port;
     const char *proxy_username;
     const char *proxy_password;
-    int timeout;
-    int debug;
-    svn_error_t *err;
-    
-    err = get_server_settings(&proxy_host,
-                              &proxy_port,
-                              &proxy_username,
-                              &proxy_password,
-                              &timeout,
-                              &debug,
-                              uri.host,
-                              pool);
+    apr_int64_t timeout;
+    apr_int64_t debug;
+    svn_error_t *err;    
+    svn_config_t *cfg;
+    const char *server_group;
+    SVN_ERR( svn_config_read_servers(&cfg, pool) );
+    server_group = svn_config_find_group(cfg, uri.host, "groups", pool);
+
+    proxy_host = get_server_setting(cfg, server_group,
+                                    "http-proxy-host", NULL);
+    proxy_username = get_server_setting(cfg, server_group,
+                                        "http-proxy-username", NULL);
+    proxy_password = get_server_setting(cfg, server_group,
+                                        "http-proxy-password", NULL);
+    err = get_server_setting_int(cfg, server_group,
+                                 "http-proxy-port", 80, &proxy_port, pool);
     if (err)
       {
         ne_uri_free(&uri);
-        return err;
+        return svn_error_quick_wrap(err, "http-proxy-port not set");
       }
-
+    if ((proxy_port < 0) || (proxy_port > 65535))
+      {
+        ne_uri_free(&uri);
+        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                "negative proxy port number");
+      }
+    err = get_server_setting_int(cfg, server_group,
+                                 "http-timeout", 0, &timeout, pool);
+    if (err)
+      {
+        ne_uri_free(&uri);
+        return svn_error_quick_wrap(err, "http-timeout not set");
+      }
+    if (timeout < 0)
+      {
+        ne_uri_free(&uri);
+        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                                "negative timeout value");
+      }
+    err = get_server_setting_int(cfg, server_group,
+                                 "neon-debug-mask", 0, &debug, pool);    
+    if (err)
+      {
+        ne_uri_free(&uri);
+        return svn_error_quick_wrap(err, "neon-debug-mask not set");
+      }
+    
     if (debug)
       ne_debug_init(stderr, debug);
 
