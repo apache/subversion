@@ -83,6 +83,37 @@ static int request_auth(void *userdata, const char *realm, int attempt,
 }
 
 
+/* A neon-session callback to validate the SSL certificate when the CA
+   is unknown or there are other SSL certificate problems. */
+static int ssl_set_verify_callback(void *userdata, int failures,
+                                   const ne_ssl_certificate *cert)
+{
+  /* XXX Right now this accepts any SSL server certificates.
+     Subversion should perform checks of the SSL certificates and keep
+     any information related to the certificates in $HOME/.subversion
+     and not in the .svn directories so that the same information can
+     be used for multiple working copies.
+
+     Upon connecting to an SSL svn server, this is was subversion
+     should do:
+
+     1) Check if a copy of the SSL certificate exists for the given
+     svn server hostname in $HOME/.subversion.  If it is there, then
+     just continue processing the svn request.  Otherwise, print all
+     the information about the svn server's SSL certificate and ask if
+     the user wants to:
+     a) Cancel the request.
+     b) Continue this request but do the store the SSL certificate so
+        that the next request will require the same revalidation.
+     c) Accept the SSL certificate forever.  Store a copy of the
+        certificate in $HOME/.subversion.
+
+     Also, when checking the certificate, warn if the certificate is
+     not properly signed by a CA.
+   */
+  return 0;
+}
+
 /* ### need an ne_session_dup to avoid the second gethostbyname
  * call and make this halfway sane. */
 
@@ -99,6 +130,7 @@ svn_ra_dav__open (void **session_baton,
   ne_session *sess, *sess2;
   struct uri uri = { 0 };
   svn_ra_session_t *ras;
+  int is_ssl_session;
 
   /* Sanity check the URI */
   if (uri_parse(repository, &uri, NULL) 
@@ -116,45 +148,27 @@ svn_ra_dav__open (void **session_baton,
                             "network socket initialization failed");
   }
 
-  /* Create two neon session objects, and set their properties... */
-  sess = ne_session_create();
-  sess2 = ne_session_create();
-
 #if 0
   /* #### enable this block for debugging output on stderr. */
   ne_debug_init(stderr, NE_DBG_HTTP|NE_DBG_HTTPBODY);
 #endif
 
-#if 0
-  /* Turn off persistent connections. */
-  ne_set_persist(sess, 0);
-  ne_set_persist(sess2, 0);
-#endif
-
-  /* make sure we will eventually destroy the session */
-  apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
-  apr_pool_cleanup_register(pool, sess2, cleanup_session, apr_pool_cleanup_null);
-
-  ne_set_useragent(sess, "SVN/" SVN_VERSION);
-  ne_set_useragent(sess2, "SVN/" SVN_VERSION);
-
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
 
-  if (strcasecmp(uri.scheme, "https") == 0)
+  is_ssl_session = (strcasecmp(uri.scheme, "https") == 0);
+  if (is_ssl_session)
     {
       if (uri.port == -1)
         {
           uri.port = 443;
         }
-      if (ne_set_secure(sess, 1))
+      if (ne_supports_ssl() == 0)
         {
           uri_free(&uri);
           return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
                                   "SSL is not supported");
         }
-
-      ne_set_secure(sess2, 1);
     }
 #if 0
   else
@@ -170,16 +184,32 @@ svn_ra_dav__open (void **session_baton,
       uri.port = 80;
     }
 
-  if (ne_session_server(sess, uri.host, uri.port))
+  /* Create two neon session objects, and set their properties... */
+  sess = ne_session_create(uri.scheme, uri.host, uri.port);
+  sess2 = ne_session_create(uri.scheme, uri.host, uri.port);
+
+  /* For SSL connections, when the CA certificate is not known for the
+     server certificate or the server cert has other verification
+     problems, neon will fail the connection unless we add a callback
+     to tell it to ignore the problem.  */
+  if (is_ssl_session)
     {
-      svn_error_t *err =
-        svn_error_createf(SVN_ERR_RA_HOSTNAME_LOOKUP, 0, NULL, pool,
-                          "Hostname not found: %s", uri.host);
-      uri_free(&uri);
-      return err;
+      ne_ssl_set_verify(sess, ssl_set_verify_callback, NULL);
+      ne_ssl_set_verify(sess2, ssl_set_verify_callback, NULL);
     }
 
-  ne_session_server(sess2, uri.host, uri.port);
+#if 0
+  /* Turn off persistent connections. */
+  ne_set_persist(sess, 0);
+  ne_set_persist(sess2, 0);
+#endif
+
+  /* make sure we will eventually destroy the session */
+  apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
+  apr_pool_cleanup_register(pool, sess2, cleanup_session, apr_pool_cleanup_null);
+
+  ne_set_useragent(sess, "SVN/" SVN_VERSION);
+  ne_set_useragent(sess2, "SVN/" SVN_VERSION);
 
   /* clean up trailing slashes from the URL */
   len = strlen(uri.path);
