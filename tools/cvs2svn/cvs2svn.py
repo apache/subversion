@@ -2185,10 +2185,17 @@ def main():
                                [ "create", "trunk=",
                                  "username=",
                                  "branches=", "tags=", "encoding=",
-                                 "trunk-only", "no-prune", "dump-only"])
-  except getopt.GetoptError:
+                                 "trunk-only", "no-prune",
+                                 "dump-only", "dumpfile="])
+  except getopt.GetoptError, e:
+    sys.stderr.write('Error: ' + str(e) + '\n\n')
     usage(ctx)
-  if len(args) != 1:
+
+  if len(args) == 0:
+    usage(ctx)
+
+  if len(args) > 1:
+    sys.stderr.write("Error: must pass only one CVS repository.\n")
     usage(ctx)
 
   ctx.cvsroot = args[0]
