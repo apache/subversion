@@ -69,7 +69,7 @@ svn_cl__propedit (apr_getopt_t *os,
                                    FALSE, pool));
 
       /* Get the property value. */
-      propval = apr_hash_get (props, propname->data, propname->len);
+      propval = apr_hash_get (props, target->data, target->len);
       if (! propval)
         propval = svn_string_create ("", pool);
 
