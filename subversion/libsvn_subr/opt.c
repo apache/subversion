@@ -655,7 +655,7 @@ print_version_info (const char *pgm_name,
                     apr_pool_t *pool)
 {
   static const char info[] =
-    "Copyright (C) 2000-2003 CollabNet.\n"
+    "Copyright (C) 2000-2004 CollabNet.\n"
     "Subversion is open source software, see http://subversion.tigris.org/\n";
 
   if (quiet)
