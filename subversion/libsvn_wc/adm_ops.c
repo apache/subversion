@@ -1312,6 +1312,7 @@ svn_wc_revert (const char *path,
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
+      apr_pool_t *subpool = svn_pool_create (pool);
 
       SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -1329,12 +1330,16 @@ svn_wc_revert (const char *path,
             continue;
 
           /* Add the entry name to FULL_ENTRY_PATH. */
-          full_entry_path = svn_path_join (path, keystring, pool);
+          full_entry_path = svn_path_join (path, keystring, subpool);
 
           /* Revert the entry. */
           SVN_ERR (svn_wc_revert (full_entry_path, TRUE,
-                                  notify_func, notify_baton, pool));
+                                  notify_func, notify_baton, subpool));
+
+          svn_pool_clear (subpool);
         }
+
+        svn_pool_destroy (subpool);
     }
   
   return SVN_NO_ERROR;
