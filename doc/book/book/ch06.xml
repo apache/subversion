@@ -1218,7 +1218,7 @@ $ svn status
             <listitem>
               <para>This keyword describes the last known user to
                 change this file in the repository, and looks
-                something like <literal>$LastChangedBy: joe
+                something like <literal>$LastChangedBy: harry
                 $</literal>.  It may be abbreviated as
                 <literal>Author</literal></para>
             </listitem>
