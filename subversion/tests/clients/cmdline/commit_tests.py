@@ -24,61 +24,36 @@ import svntest
 
 # (abbreviation)
 path_index = svntest.actions.path_index
-  
+Item = svntest.wc.StateItem
+
 
 ######################################################################
 # Utilities
 #
 
-def get_standard_status_list(wc_dir):
+def get_standard_state(wc_dir):
   """Return a status list reflecting the local mods made by
   make_standard_slew_of_changes()."""
 
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  state = svntest.actions.get_virginal_state(wc_dir, 1)
 
-  ### todo:  use status-hash below instead.
-
-  # `.'
-  status_list[0][3]['status'] = '_M'
-
-  # A/B/lambda, A/D
-  status_list[5][3]['status'] = 'M '
-  status_list[11][3]['status'] = 'M '
-
-  # A/B/E, A/D/H/chi
-  status_list[6][3]['status'] = 'R '
-  status_list[18][3]['status'] = 'R '
-
-  # A/B/E/alpha, A/B/E/beta, A/C, A/D/gamma
-  status_list[7][3]['status'] = 'D '
-  status_list[8][3]['status'] = 'D '
-  status_list[10][3]['status'] = 'D '
-  status_list[12][3]['status'] = 'D '
-  status_list[15][3]['status'] = 'D '
-  
-  # A/D/G/pi, A/D/H/omega
-  status_list[14][3]['status'] = '_M'
-  status_list[20][3]['status'] = 'MM'
+  state.tweak('', status='_M')
+  state.tweak('A/B/lambda', 'A/D', status='M ')
+  state.tweak('A/B/E', 'A/D/H/chi', status='R ')
+  state.tweak('A/B/E/alpha', 'A/B/E/beta', 'A/C', 'A/D/gamma',
+              'A/D/G/rho', status='D ')
+  state.tweak('A/D/G/pi', status='_M')
+  state.tweak('A/D/H/omega', status='MM')
 
   # New things
-  status_list.append([os.path.join(wc_dir, 'Q'), None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([os.path.join(wc_dir, 'Q', 'floo'), None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([os.path.join(wc_dir, 'A', 'D', 'H', 'gloo'), None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([os.path.join(wc_dir, 'A', 'B', 'E', 'bloo'), None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
+  state.add({
+    'Q' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'Q/floo' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/H/gloo' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/B/E/bloo' : Item(status='A ', wc_rev=0, repos_rev=1),
+    })
 
-  return status_list
+  return state
   
 
 def make_standard_slew_of_changes(wc_dir):
@@ -138,11 +113,10 @@ def make_standard_slew_of_changes(wc_dir):
   os.chdir(was_cwd)
   
   # Build an expected status tree.
-  status_list = get_standard_status_list(wc_dir)
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = get_standard_state(wc_dir)
 
   # Verify status -- all local mods should be present.
-  if svntest.actions.run_and_verify_status(wc_dir, expected_status_tree):
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
   return 0
@@ -166,24 +140,22 @@ def commit_one_file(sbox):
   # Make standard slew of changes to working copy.
   if make_standard_slew_of_changes(wc_dir): return 1
 
-  # Create expected output tree.
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega') 
-  output_list = [ [omega_path, None, {}, {'verb' : 'Sending' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/omega' : Item(verb='Sending'),
+    })
 
   # Created expected status tree.
-  status_list = get_standard_status_list(wc_dir) # pre-commit status
-  for item in status_list:
-    item[3]['repos_rev'] = '2'     # post-commit status
-    if (item[0] == omega_path):
-      item[3]['wc_rev'] = '2'
-      item[3]['status'] = '__'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = get_standard_state(wc_dir) # pre-commit status
+  expected_status.tweak(repos_rev=2) # post-commit status
+  expected_status.tweak('A/D/H/omega', wc_rev=2, status='__')
 
   # Commit the one file.
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None,
                                                 None, None,
                                                 None, None,
@@ -203,24 +175,22 @@ def commit_one_new_file(sbox):
   # Make standard slew of changes to working copy.
   if make_standard_slew_of_changes(wc_dir): return 1
 
-  # Create expected output tree.
   gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo') 
-  output_list = [ [gloo_path, None, {}, {'verb' : 'Adding' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/gloo' : Item(verb='Adding'),
+    })
 
   # Created expected status tree.
-  status_list = get_standard_status_list(wc_dir) # pre-commit status
-  for item in status_list:
-    item[3]['repos_rev'] = '2'     # post-commit status
-    if (item[0] == gloo_path):
-      item[3]['wc_rev'] = '2'
-      item[3]['status'] = '_ '
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = get_standard_state(wc_dir) # pre-commit status
+  expected_status.tweak(repos_rev=2) # post-commit status
+  expected_status.tweak('A/D/H/gloo', wc_rev=2, status='_ ')
 
   # Commit the one file.
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None,
                                                 None, None,
                                                 None, None,
@@ -259,29 +229,27 @@ def commit_multiple_targets(sbox):
 
   # Created expected output tree for 'svn ci'.  We should see changes
   # only on these three targets, no others.  
-  output_list = [ [psi_path, None, {}, {'verb' : 'Sending' }],
-                  [lambda_path, None, {}, {'verb' : 'Sending' }],
-                  [pi_path, None, {}, {'verb' : 'Sending' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/psi' : Item(verb='Sending'),
+    'A/B/lambda' : Item(verb='Sending'),
+    'A/D/G/pi' : Item(verb='Sending'),
+    })
 
   # Create expected status tree; all local revisions should be at 1,
   # but our three targets should be at 2.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    if ((item[0] != psi_path) and (item[0] != lambda_path)
-        and (item[0] != pi_path)):
-      item[3]['wc_rev'] = '1'
-    # rho and omega should still display as locally modified:
-    if ((item[0] == rho_path) or (item[0] == omega_path)):
-      item[3]['status'] = 'M '
-    # A/D/G should still have a local property set, too.
-    if (item[0] == ADG_path):
-      item[3]['status'] = '_M'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D/H/psi', 'A/B/lambda', 'A/D/G/pi', wc_rev=2)
+
+  # rho and omega should still display as locally modified:
+  expected_status.tweak('A/D/G/rho', 'A/D/H/omega', status='M ')
+
+  # A/D/G should still have a local property set, too.
+  expected_status.tweak('A/D/G', status='_M')
 
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None,
                                                 None, None,
                                                 None, None,
@@ -320,30 +288,29 @@ def commit_multiple_targets_2(sbox):
 
   # Created expected output tree for 'svn ci'.  We should see changes
   # only on these three targets, no others.  
-  output_list = [ [psi_path, None, {}, {'verb' : 'Sending' }],
-                  [lambda_path, None, {}, {'verb' : 'Sending' }],
-                  [omega_path, None, {}, {'verb' : 'Sending' }],
-                  [pi_path, None, {}, {'verb' : 'Sending' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/psi' : Item(verb='Sending'),
+    'A/B/lambda' : Item(verb='Sending'),
+    'A/D/H/omega' : Item(verb='Sending'),
+    'A/D/G/pi' : Item(verb='Sending'),
+    })
 
   # Create expected status tree; all local revisions should be at 1,
   # but our four targets should be at 2.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    if ((item[0] != psi_path) and (item[0] != lambda_path)
-        and (item[0] != pi_path) and (item[0] != omega_path)):
-      item[3]['wc_rev'] = '1'
-    # rho should still display as locally modified:
-    if (item[0] == rho_path):
-      item[3]['status'] = 'M '
-    # A/D/G should still have a local property set, too.
-    if (item[0] == ADG_path):
-      item[3]['status'] = '_M'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D/H/psi', 'A/B/lambda', 'A/D/G/pi', 'A/D/H/omega',
+                        wc_rev=2)
+
+  # rho should still display as locally modified:
+  expected_status.tweak('A/D/G/rho', status='M ')
+
+  # A/D/G should still have a local property set, too.
+  expected_status.tweak('A/D/G', status='_M')
 
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None,
                                                 None, None,
                                                 None, None,
@@ -372,35 +339,29 @@ def commit_inclusive_dir(sbox):
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   
-  output_list = [ [D_path, None, {}, {'verb' : 'Sending' }],
-                  [pi_path, None, {}, {'verb' : 'Sending'}],
-                  [rho_path, None, {}, {'verb' : 'Deleting'}],
-                  [gloo_path, None, {}, {'verb' : 'Adding'}],
-                  [chi_path, None, {}, {'verb' : 'Replacing'}],
-                  [omega_path, None, {}, {'verb' : 'Sending'}],
-                  [gamma_path, None, {}, {'verb' : 'Deleting'}] ]
-                  
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D' : Item(verb='Sending'),
+    'A/D/G/pi' : Item(verb='Sending'),
+    'A/D/G/rho' : Item(verb='Deleting'),
+    'A/D/H/gloo' : Item(verb='Adding'),
+    'A/D/H/chi' : Item(verb='Replacing'),
+    'A/D/H/omega' : Item(verb='Sending'),
+    'A/D/gamma' : Item(verb='Deleting'),
+    })
 
   # Created expected status tree.
-  status_list = get_standard_status_list(wc_dir) # pre-commit status
-  status_list.pop(path_index(status_list, rho_path))
-  status_list.pop(path_index(status_list, gamma_path))
-  for item in status_list:
-    item[3]['repos_rev'] = '2'     # post-commit status
-    if (item[0] == D_path) or (item[0] == pi_path) or (item[0] == omega_path):
-      item[3]['wc_rev'] = '2'
-      item[3]['status'] = '__'
-    if (item[0] == chi_path) or (item[0] == gloo_path):
-      item[3]['wc_rev'] = '2'
-      item[3]['status'] = '_ '
-      
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = get_standard_state(wc_dir) # pre-commit status
+  expected_status.tweak(repos_rev=2) # post-commit status
+
+  expected_status.remove('A/D/G/rho', 'A/D/gamma')
+  expected_status.tweak('A/D', 'A/D/G/pi', 'A/D/H/omega',
+                        wc_rev=2, status='__')
+  expected_status.tweak('A/D/H/chi', 'A/D/H/gloo', wc_rev=2, status='_ ')
 
   # Commit the one file.
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None,
                                                 None, None,
                                                 None, None,
@@ -435,56 +396,37 @@ def commit_top_dir(sbox):
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   
-  output_list = [ [top_path, None, {}, {'verb' : 'Sending'}],
-                  [Q_path, None, {}, {'verb' : 'Adding'}],
-                  [floo_path, None, {}, {'verb' : 'Adding'}],
-                  [E_path, None, {}, {'verb' : 'Replacing'}],
-                  [bloo_path, None, {}, {'verb' : 'Adding'}],
-                  [lambda_path, None, {}, {'verb' : 'Sending'}],
-                  [C_path, None, {}, {'verb' : 'Deleting'}],                  
-                  [D_path, None, {}, {'verb' : 'Sending' }],
-                  [pi_path, None, {}, {'verb' : 'Sending'}],
-                  [rho_path, None, {}, {'verb' : 'Deleting'}],
-                  [gloo_path, None, {}, {'verb' : 'Adding'}],
-                  [chi_path, None, {}, {'verb' : 'Replacing'}],
-                  [omega_path, None, {}, {'verb' : 'Sending'}],
-                  [gamma_path, None, {}, {'verb' : 'Deleting'}] ]
-                  
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    '' : Item(verb='Sending'),
+    'Q' : Item(verb='Adding'),
+    'Q/floo' : Item(verb='Adding'),
+    'A/B/E' : Item(verb='Replacing'),
+    'A/B/E/bloo' : Item(verb='Adding'),
+    'A/B/lambda' : Item(verb='Sending'),
+    'A/C' : Item(verb='Deleting'),
+    'A/D' : Item(verb='Sending'),
+    'A/D/G/pi' : Item(verb='Sending'),
+    'A/D/G/rho' : Item(verb='Deleting'),
+    'A/D/H/gloo' : Item(verb='Adding'),
+    'A/D/H/chi' : Item(verb='Replacing'),
+    'A/D/H/omega' : Item(verb='Sending'),
+    'A/D/gamma' : Item(verb='Deleting'),
+    })
 
   # Created expected status tree.
-  status_list = get_standard_status_list(wc_dir) # pre-commit status
-  status_list.pop(path_index(status_list, rho_path))
-  status_list.pop(path_index(status_list, gamma_path))
-  status_list.pop(path_index(status_list, C_path))
-  status_list.pop(path_index(status_list,
-                             os.path.join(wc_dir,'A','B','E','alpha')))
-  status_list.pop(path_index(status_list,
-                             os.path.join(wc_dir,'A','B','E','beta')))
-  for item in status_list:    
-    item[3]['repos_rev'] = '2'     # post-commit status
-    if ((item[0] == D_path)
-        or (item[0] == pi_path)
-        or (item[0] == omega_path)
-        or (item[0] == floo_path)
-        or (item[0] == top_path)):
-      item[3]['wc_rev'] = '2'
-      item[3]['status'] = '__'
-    if ((item[0] == chi_path)
-        or (item[0] == Q_path)
-        or (item[0] == E_path)
-        or (item[0] == bloo_path)
-        or (item[0] == lambda_path)
-        or (item[0] == gloo_path)):
-      item[3]['wc_rev'] = '2'
-      item[3]['status'] = '_ '
-      
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = get_standard_state(wc_dir) # pre-commit status
+  expected_status.remove('A/D/G/rho', 'A/D/gamma', 'A/C',
+                         'A/B/E/alpha', 'A/B/E/beta')
+  expected_status.tweak(repos_rev=2) # post-commit status
+  expected_status.tweak('A/D', 'A/D/G/pi', 'A/D/H/omega', 'Q/floo', '',
+                        wc_rev=2, status='__')
+  expected_status.tweak('A/D/H/chi', 'Q', 'A/B/E', 'A/B/E/bloo', 'A/B/lambda',
+                        'A/D/H/gloo', wc_rev=2, status='_ ')
 
   # Commit the one file.
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None,
                                                 None, None,
                                                 None, None,
@@ -552,67 +494,41 @@ def nested_dir_replacements(sbox):
   #    - A/D/bloo scheduled as "A" at rev 0
   #    - ALL other children of A/D scheduled as "D" at rev 1
 
-  sl = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D', 'A/D/H', status='R ', wc_rev=0)
+  expected_status.add({
+    'A/D/bloo' : Item(status='A ', wc_rev=0, repos_rev=1),
+    })
+  expected_status.tweak('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                        'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi', 'A/D/gamma',
+                        status='D ')
 
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D'))][3]['status'] = "R "
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D'))][3]['wc_rev'] = "0"  
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H'))][3]['status'] = "R "
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H'))][3]['wc_rev'] = "0"  
-  sl.append([os.path.join(wc_dir, 'A', 'D', 'bloo'), None, {},
-             {'status' : 'A ',
-              'wc_rev' : '0',
-              'repos_rev' : '1'}])
-
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G'))][3]['status'] = "D "
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'pi'))][3]['status'] = "D "
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'rho'))][3]['status'] = "D "
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'tau'))][3]['status'] = "D "
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H', 'chi'))][3]['status'] = "D "
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H', 'omega'))][3]['status'] = "D "
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H', 'psi'))][3]['status'] = "D "
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'gamma'))][3]['status'] = "D "
-  expected_status_tree = svntest.tree.build_generic_tree(sl)
-  if svntest.actions.run_and_verify_status(wc_dir, expected_status_tree):
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
   # Build expected post-commit trees:
 
   # Create expected output tree.
-  output_list = [ [os.path.join(wc_dir, 'A', 'D'),
-                   None, {}, {'verb' : 'Replacing' }],
-                  [os.path.join(wc_dir, 'A', 'D', 'H'),
-                   None, {}, {'verb' : 'Adding' }],
-                  [os.path.join(wc_dir, 'A', 'D', 'bloo'),
-                   None, {}, {'verb' : 'Adding' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D' : Item(verb='Replacing'),
+    'A/D/H' : Item(verb='Adding'),
+    'A/D/bloo' : Item(verb='Adding'),
+    })
 
   # Created expected status tree.
-  sl = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in sl:
-    item[3]['wc_rev'] = '1'
-  
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D'))][3]['wc_rev'] = "2"  
-  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H'))][3]['wc_rev'] = "2"  
-  sl.append([os.path.join(wc_dir, 'A', 'D', 'bloo'), None, {},
-             {'status' : '_ ',
-              'wc_rev' : '2',
-              'repos_rev' : '2'}])
-
-  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G')))
-  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'pi')))
-  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'rho')))
-  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'tau')))
-  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H', 'chi')))
-  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H', 'omega')))
-  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H', 'psi')))
-  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'gamma')))
-    
-  expected_status_tree = svntest.tree.build_generic_tree(sl)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D', 'A/D/H', wc_rev=2)
+  expected_status.add({
+    'A/D/bloo' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    })
+  expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                        'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi', 'A/D/gamma')
 
   # Commit from the top of the working copy and verify output & status.
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None,
                                                 None, None,
                                                 None, None,
@@ -638,20 +554,19 @@ def hudson_part_1(sbox):
   svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Create expected commit output.
-  output_list = [ [gamma_path, None, {}, {'verb' : 'Deleting' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Deleting'),
+    })
   
   # After committing, status should show no sign of gamma.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  status_list.pop(path_index(status_list, gamma_path))
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/D/gamma')
   
   # Commit the deletion of gamma and verify.
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
@@ -661,22 +576,20 @@ def hudson_part_1(sbox):
   # at revision 2.  (The `deleted' entry should be removed.)
   
   # Expected output of update:  nothing.
-  expected_output_tree = svntest.tree.build_generic_tree([])
+  expected_output = svntest.wc.State(wc_dir, {})
 
   # Expected disk tree:  everything but gamma
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree.pop(path_index(my_greek_tree, os.path.join('A','D','gamma')))
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/gamma')
   
   # Expected status after update:  totally clean revision 2, minus gamma.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  status_list.pop(path_index(status_list, gamma_path))  
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/D/gamma')
 
   return svntest.actions.run_and_verify_update(wc_dir,
-                                               expected_output_tree,
-                                               expected_disk_tree,
-                                               expected_status_tree)
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status)
 
 
 #----------------------------------------------------------------------
@@ -697,23 +610,19 @@ def hudson_part_1_variation_1(sbox):
   svntest.main.run_svn(None, 'rm', H_path)
 
   # Create expected commit output.
-  output_list = [ [H_path, None, {}, {'verb' : 'Deleting' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H' : Item(verb='Deleting'),
+    })
   
   # After committing, status should show no sign of H or its contents
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  status_list.pop(path_index(status_list, H_path))
-  status_list.pop(path_index(status_list, os.path.join(H_path, 'chi')))
-  status_list.pop(path_index(status_list, os.path.join(H_path, 'omega')))
-  status_list.pop(path_index(status_list, os.path.join(H_path, 'psi')))
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
   
   # Commit the deletion of H and verify.
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
@@ -723,27 +632,20 @@ def hudson_part_1_variation_1(sbox):
   # list at revision 2.  (The `deleted' entry should be removed.)
   
   # Expected output of update:  H gets a no-op deletion.
-  expected_output_tree = svntest.tree.build_generic_tree([])
+  expected_output = svntest.wc.State(wc_dir, {})
 
   # Expected disk tree:  everything except files in H
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree.pop(path_index(my_greek_tree,os.path.join('A','D','H','chi')))
-  my_greek_tree.pop(path_index(my_greek_tree,os.path.join('A','D','H','omega')))
-  my_greek_tree.pop(path_index(my_greek_tree,os.path.join('A','D','H','psi')))
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
 
   # Expected status after update:  totally clean revision 2, minus H.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  status_list.pop(path_index(status_list, H_path))
-  status_list.pop(path_index(status_list, os.path.join(H_path, 'chi')))
-  status_list.pop(path_index(status_list, os.path.join(H_path, 'omega')))
-  status_list.pop(path_index(status_list, os.path.join(H_path, 'psi')))
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
 
   return svntest.actions.run_and_verify_update(wc_dir,
-                                               expected_output_tree,
-                                               expected_disk_tree,
-                                               expected_status_tree)
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status)
 
 #----------------------------------------------------------------------
 
@@ -764,20 +666,19 @@ def hudson_part_1_variation_2(sbox):
   svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Create expected commit output.
-  output_list = [ [gamma_path, None, {}, {'verb' : 'Deleting' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Deleting'),
+    })
   
   # After committing, status should show no sign of gamma.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  status_list.pop(path_index(status_list, gamma_path))
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/D/gamma')
   
   # Commit the deletion of gamma and verify.
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
@@ -789,31 +690,26 @@ def hudson_part_1_variation_2(sbox):
 
   # For sanity, examine status: it should show a revision 2 tree with
   # gamma scheduled for addition.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-    if item[0] == gamma_path:
-      item[3]['wc_rev'] = '0'
-      item[3]['status'] = 'A '
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D/gamma', wc_rev=0, status='A ')
 
-  if svntest.actions.run_and_verify_status (wc_dir, expected_status_tree):
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
   # Create expected commit output.
-  output_list = [ [gamma_path, None, {}, {'verb' : 'Adding' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Adding'),
+    })
   
-  # After committing, status should show only gamma at revision 2.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
-  for item in status_list:
-    if item[0] != gamma_path:
-      item[3]['wc_rev'] = '1'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  # After committing, status should show only gamma at revision 3.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D/gamma', wc_rev=3)
 
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None, None, None, None, None,
                                                 wc_dir)
 
@@ -839,20 +735,19 @@ def hudson_part_2(sbox):
   svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Create expected commit output.
-  output_list = [ [gamma_path, None, {}, {'verb' : 'Deleting' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Deleting'),
+    })
   
   # After committing, status should show no sign of gamma.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  status_list.pop(path_index(status_list, gamma_path))
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/D/gamma')
   
   # Commit the deletion of gamma and verify.
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
@@ -918,9 +813,8 @@ def hook_test(sbox):
   output, errput = svntest.main.run_svn (None, 'ci', '--quiet', wc_dir)
 
   # Make sure we got the right output.
-  if len (expected_output) != len (output): return 1
-  for index in range (len (output)):
-    if output[index] != expected_output[index]: return 1
+  if output != expected_output:
+    return 1
     
   return 0
 
@@ -952,64 +846,58 @@ def merge_mixed_revisions(sbox):
   # 1. echo "moo" >> iota; echo "moo" >> A/D/H/chi; svn ci
   svntest.main.file_append(iota_path, "moo")
   svntest.main.file_append(chi_path, "moo")
-  output_list = [ [iota_path, None, {}, {'verb' : 'Sending' }],
-                  [chi_path, None, {}, {'verb' : 'Sending' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    if not ((item[0] == iota_path) or (item[0] == chi_path)):
-      item[3]['wc_rev'] = '1'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    'A/D/H/chi' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('iota', 'A/D/H/chi', wc_rev=2)
+
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
 
 
   # 2. svn up A/D/H
-  status_list = []
-  status_list.append([H_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2', 'repos_rev' : '2'}])
-  status_list.append([chi_path, None, {},
-                      {'status' : '_ ', 
-                       'wc_rev' : '2', 'repos_rev' : '2'}])
-  status_list.append([omega_path, None, {},
-                      {'status' : '_ ', 
-                       'wc_rev' : '2', 'repos_rev' : '2'}])
-  status_list.append([psi_path, None, {},
-                      {'status' : '_ ', 
-                       'wc_rev' : '2', 'repos_rev' : '2'}])
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
-  my_greek_tree = [['omega', "This is the file 'omega'.", {}, {}],
-                   ['chi', "This is the file 'chi'.moo", {}, {}],
-                   ['psi', "This is the file 'psi'.", {}, {}]]
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
-  expected_output_tree = svntest.tree.build_generic_tree([])
+  expected_status = svntest.wc.State(wc_dir, {
+    'A/D/H' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/D/H/chi' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/D/H/omega' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/D/H/psi' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    })
+  expected_disk = svntest.wc.State('', {
+    'omega' : Item("This is the file 'omega'."),
+    'chi' : Item("This is the file 'chi'.moo"),
+    'psi' : Item("This is the file 'psi'."),
+    })
+  expected_output = svntest.wc.State(wc_dir, { })
   if svntest.actions.run_and_verify_update (H_path,
-                                            expected_output_tree,
-                                            expected_disk_tree,
-                                            expected_status_tree):
+                                            expected_output,
+                                            expected_disk,
+                                            expected_status):
     return 1
 
 
   # 3. echo "moo" >> iota; svn ci iota
   svntest.main.file_append(iota_path, "moo2")
-  output_list = [[iota_path, None, {}, {'verb' : 'Sending' }]]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
-  for item in status_list:
-    if not (item[0] == iota_path):
-      item[3]['wc_rev'] = '1'
-    if ((item[0] == H_path) or (item[0] == omega_path)
-        or (item[0] == chi_path) or (item[0] == psi_path)):
-      item[3]['wc_rev'] = '2'    
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D/H', 'A/D/H/omega', 'A/D/H/chi', 'A/D/H/psi',
+                        wc_rev=2)
+  expected_status.tweak('iota', wc_rev=3)
+
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
@@ -1017,42 +905,34 @@ def merge_mixed_revisions(sbox):
 
   # 4. echo "moo" >> A/D/H/chi; svn ci A/D/H/chi
   svntest.main.file_append(chi_path, "moo3")
-  output_list = [[chi_path, None, {}, {'verb' : 'Sending' }]]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '4')
-  for item in status_list:
-    if not (item[0] == chi_path):
-      item[3]['wc_rev'] = '1'
-    if ((item[0] == H_path) or (item[0] == omega_path)
-        or (item[0] == psi_path)):
-      item[3]['wc_rev'] = '2'
-    if item[0] == iota_path:
-      item[3]['wc_rev'] = '3'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/chi' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D/H/chi', wc_rev=4)
+  expected_status.tweak('A/D/H', 'A/D/H/omega', 'A/D/H/psi', wc_rev=2)
+  expected_status.tweak('iota', wc_rev=3)
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
 
   # 5. echo "moo" >> iota; svn ci iota
   svntest.main.file_append(iota_path, "moomoo")
-  output_list = [[iota_path, None, {}, {'verb' : 'Sending' }]]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '5')
-  for item in status_list:
-    if not (item[0] == iota_path):
-      item[3]['wc_rev'] = '1'
-    if ((item[0] == H_path) or (item[0] == omega_path)
-        or (item[0] == psi_path)):
-      item[3]['wc_rev'] = '2'
-    if item[0] == chi_path:
-      item[3]['wc_rev'] = '4'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 5)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D/H', 'A/D/H/omega', 'A/D/H/psi', wc_rev=2)
+  expected_status.tweak('A/D/H/chi', wc_rev=4)
+  expected_status.tweak('iota', wc_rev=5)
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
@@ -1085,21 +965,19 @@ def merge_mixed_revisions(sbox):
 
   svntest.main.file_append(iota_path, "finalmoo")
   svntest.main.file_append(omega_path, "finalmoo")
-  output_list = [ [iota_path, None, {}, {'verb' : 'Sending' }],
-                  [omega_path, None, {}, {'verb' : 'Sending' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '6')
-  for item in status_list:
-    if not ((item[0] == iota_path) or (item[0] == omega_path)):
-      item[3]['wc_rev'] = '1'
-    if ((item[0] == H_path) or (item[0] == psi_path)):
-      item[3]['wc_rev'] = '2'
-    if item[0] == chi_path:
-      item[3]['wc_rev'] = '4'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    'A/D/H/omega' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 6)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('iota', 'A/D/H/omega', wc_rev=6)
+  expected_status.tweak('A/D/H', 'A/D/H/psi', wc_rev=2)
+  expected_status.tweak('A/D/H/chi', wc_rev=4)
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None, None, None, None, None,
                                                 wc_dir)
 
@@ -1136,7 +1014,6 @@ def commit_uri_unsafe(sbox):
   svntest.main.file_append(percent_path, "This path has a percent in it.")
   svntest.main.file_append(nasty_path, "This path has all sorts of ick in it.")
 
-  output_list = []
   add_list = [hash_dir,
               nasty_dir, # not xml-safe
               space_path,
@@ -1150,26 +1027,32 @@ def commit_uri_unsafe(sbox):
               ]
   for item in add_list:
     svntest.main.run_svn(None, 'add', item)
-    item_list = [item, None, {}, {'verb' : 'Adding'}]
-    output_list.append(item_list)
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  expected_output = svntest.wc.State(wc_dir, {
+    '#hash#' : Item(verb='Adding'),
+    '#![]{}()<>%' : Item(verb='Adding'),
+    'A/D/space path' : Item(verb='Adding'),
+    'A/D/H/bang!' : Item(verb='Adding'),
+    'A/D/H/bra[ket' : Item(verb='Adding'),
+    'A/D/H/bra{e' : Item(verb='Adding'),
+    'A/D/H/<angle>' : Item(verb='Adding'),
+    'A/D/pare)(theses' : Item(verb='Adding'),
+    '#hash#/percen%' : Item(verb='Adding'),
+    'A/#![]{}()<>%' : Item(verb='Adding'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   
   # Items in the status list are all at rev 1
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
+  expected_status.tweak(wc_rev=1)
 
   # Items in our add list will be at rev 2
-  for item in add_list:
-    item_list = [item, None, {}, {'wc_rev': '2', 'repos_rev': '2',
-                                  'status': '_ '}]
-    status_list.append(item_list)
+  for item in expected_output.desc.keys():
+    expected_status.add({ item : Item(wc_rev=2, repos_rev=2, status='_ ') })
 
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None, None, None, None, None,
                                                 wc_dir)
 
@@ -1197,21 +1080,20 @@ def commit_deleted_edited(sbox):
   svntest.main.run_svn(None, 'remove', '--force', mu_path)
 
   # Make our output list
-  output_list = [(iota_path, None, {}, {'verb' : 'Deleting'}),
-                 (mu_path, None, {}, {'verb' : 'Deleting'})]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Deleting'),
+    'A/mu' : Item(verb='Deleting'),
+    })
 
   # Items in the status list are all at rev 1, except the two things
   # we changed...but then, they don't exist at all.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  status_list.pop(path_index(status_list, iota_path))
-  status_list.pop(path_index(status_list, mu_path))
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('iota', 'A/mu')
+  expected_status.tweak(wc_rev=1)
+
   return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output_tree,
-                                                expected_status_tree,
+                                                expected_output,
+                                                expected_status,
                                                 None, None, None, None, None,
                                                 wc_dir)
   
@@ -1298,26 +1180,22 @@ def commit_add_file_twice(sbox):
   svntest.main.run_svn(None, 'add', gloo_path)
 
   # Create expected output tree.
-  output_list = [ [gloo_path, None, {}, {'verb' : 'Adding' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/gloo' : Item(verb='Adding'),
+    })
 
   # Created expected status tree.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  status_list.append([gloo_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}]) # pre-commit status
-  for item in status_list:
-    item[3]['repos_rev'] = '2'     # post-commit status
-    if (item[0] == gloo_path):
-      item[3]['wc_rev'] = '2'
-      item[3]['status'] = '_ '
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/H/gloo' : Item(status='A ', wc_rev=0),
+    })
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('A/D/H/gloo', wc_rev=2, status='_ ')
 
   # Commit should succeed
   if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
+                                            expected_output,
+                                            expected_status,
                                             None,
                                             None, None,
                                             None, None,
@@ -1361,8 +1239,9 @@ def commit_from_long_dir(sbox):
   svntest.main.file_append(os.path.join(wc_dir, 'iota'), "modified iota")
 
   # Create expected output tree.
-  output_list = [ ['iota', None, {}, {'verb' : 'Sending' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  expected_output = svntest.wc.State('', {
+    'iota' : Item(verb='Sending'),
+    })
 
   # Any length name was enough to provoke the original bug, but
   # keeping it's length less than that of the filename 'iota' avoided
@@ -1374,7 +1253,7 @@ def commit_from_long_dir(sbox):
   os.chdir(extra_name)
 
   if svntest.actions.run_and_verify_commit (abs_wc_dir,
-                                            expected_output_tree,
+                                            expected_output,
                                             None,
                                             None,
                                             None, None,
