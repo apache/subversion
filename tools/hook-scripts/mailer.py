@@ -10,6 +10,7 @@
 
 import os
 import sys
+import string
 import ConfigParser
 
 from svn import fs, util, delta, _repos
@@ -62,16 +63,16 @@ def generate_content(output, repos, editor, pool):
     if editor.adds.has_key(path):
       src = None
       dst = path
-      info = editor.adds[path]
+      change = editor.adds[path]
     elif editor.deletes.has_key(path):
       src = path
       dst = None
-      info = editor.deletes[path]
+      change = editor.deletes[path]
     else:
       src = dst = path
-      info = editor.changes[path]
+      change = editor.changes[path]
 
-    generate_diff(output, repos, src, dst, info, pool)
+    generate_diff(output, repos, src, dst, change, pool)
 
   ### print diffs. watch for binary files.
 
@@ -81,18 +82,17 @@ def generate_list(output, header, fnames):
     output.write('%s:\n' % header)
     items = fnames.items()
     items.sort()
-    for fname, (item_type, prop_changes, copy_info) in items:
+    for fname, change in items:
       ### should print prop_changes?, copy_info, and binary? here
       ### hmm. don't have binary right now.
-      if item_type == ChangeCollector.DIR:
+      if change.item_type == ChangeCollector.DIR:
         output.write('   %s/\n' % fname)
       else:
         output.write('   %s\n' % fname)
 
 
-def generate_diff(output, repos, src, dst,
-                  (item_type, prop_changes, copy_info), pool):
-  if copy_info and copy_info[0]:
+def generate_diff(output, repos, src, dst, change, pool):
+  if 0 and copy_info and copy_info[0]:
     assert (not src) and dst  # it was ADDED
 
     copyfrom_path = copy_info[0]
@@ -103,7 +103,7 @@ def generate_diff(output, repos, src, dst,
     output.write('Copied: %s (from rev %d, %s)\n'
                  % (dst, copy_info[1], copy_info[0]))
 
-  print src, dst, item_type, prop_changes, copy_info
+  print src, dst, change.item_type, change.prop_changes #, copy_info
 
 
 class Repository:
@@ -124,6 +124,11 @@ class Repository:
     self.root_prev = fs.revision_root(self.fs_ptr, rev-1, pool)
     self.root_this = fs.revision_root(self.fs_ptr, rev, pool)
 
+    self.roots = {
+      rev-1 : self.root_prev,
+      rev : self.root_this,
+      }
+
   def get_rev_prop(self, propname):
     return fs.revision_prop(self.fs_ptr, self.rev, propname, self.pool)
 
@@ -141,74 +146,100 @@ class ChangeCollector(delta.Editor):
     self.deletes = { }
 
   def open_root(self, base_revision, dir_pool):
-    return ''  # dir_baton
+    return ('', '', base_revision)  # dir_baton
 
   def delete_entry(self, path, revision, parent_baton, pool):
     if fs.is_dir(self.root_prev, '/' + path, pool):
       item_type = ChangeCollector.DIR
     else:
       item_type = ChangeCollector.FILE
-    self.deletes[path] = [ item_type, 0, None ]
+    ### compute base path/rev
+    self.deletes[path] = _change(item_type, False, None, None)
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool):
-    self.adds[path] = [ ChangeCollector.DIR,
-                        0,
-                        (copyfrom_path, copyfrom_revision),
-                        ]
+    self.adds[path] = _change(ChangeCollector.DIR,
+                              False,
+                              copyfrom_path,
+                              copyfrom_revision,
+                              )
 
-    return path  # dir_baton
+    return (path, copyfrom_path, copyfrom_revision)  # dir_baton
 
   def open_directory(self, path, parent_baton, base_revision, dir_pool):
-    return path  # dir_baton
+    assert parent_baton[2] == base_revision
+
+    base_path = parent_baton[1] + '/' + _svn_basename(path)
+    return (path, base_path, base_revision)  # dir_baton
 
   def change_dir_prop(self, dir_baton, name, value, pool):
-    if self.changes.has_key(dir_baton):
-      self.changes[dir_baton][2] = 1
-    elif self.adds.has_key(dir_baton):
-      self.adds[dir_baton][2] = 1
+    dir_path = dir_baton[0]
+    if self.changes.has_key(dir_path):
+      self.changes[dir_path].prop_changes = True
+    elif self.adds.has_key(dir_path):
+      self.adds[dir_path].prop_changes = True
     else:
       # can't be added or deleted, so this must be CHANGED
-      self.changes[dir_baton] = [ ChangeCollector.DIR,
-                                  1,
-                                  None
-                                  ]
+      self.changes[dir_baton] = _change(ChangeCollector.DIR,
+                                        True,
+                                        dir_baton[1], # base_path
+                                        dir_baton[2], # base_rev
+                                        )
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
-    self.adds[path] = [ ChangeCollector.FILE,
-                        0,
-                        (copyfrom_path, copyfrom_revision),
-                        ]
+    self.adds[path] = _change(ChangeCollector.FILE,
+                              False,
+                              copyfrom_path,
+                              copyfrom_revision,
+                              )
 
-    return path  # file_baton
+    return (path, copyfrom_path, copyfrom_revision)  # file_baton
 
   def open_file(self, path, parent_baton, base_revision, file_pool):
-    return path  # file_baton
+    assert parent_baton[2] == base_revision
+
+    base_path = parent_baton[1] + '/' + _svn_basename(path)
+    return (path, base_path, base_revision)  # file_baton
 
   def apply_textdelta(self, file_baton):
-    if not self.changes.has_key(file_baton) \
-       and not self.adds.has_key(file_baton):
+    file_path = file_baton[0]
+    if not self.changes.has_key(file_path) \
+       and not self.adds.has_key(file_path):
       # can't be added or deleted, so this must be CHANGED
-      self.changes[file_baton] = [ ChangeCollector.FILE,
-                                   0,
-                                   None
-                                   ]
+      self.changes[file_path] = _change(ChangeCollector.FILE,
+                                        False,
+                                        file_baton[1], # base_path
+                                        file_baton[2], # base_rev
+                                        )
 
     # no handler
     return None
 
   def change_file_prop(self, file_baton, name, value, pool):
-    if self.changes.has_key(file_baton):
-      self.changes[file_baton][2] = 1
-    elif self.adds.has_key(file_baton):
-      self.adds[file_baton][2] = 1
+    file_path = file_baton[0]
+    if self.changes.has_key(file_path):
+      self.changes[file_path].prop_changes = True
+    elif self.adds.has_key(file_path):
+      self.adds[file_path].prop_changes = True
     else:
       # can't be added or deleted, so this must be CHANGED
-      self.changes[file_baton] = [ ChangeCollector.FILE,
-                                   1,
-                                   None
-                                   ]
+      self.changes[file_path] = _change(ChangeCollector.FILE,
+                                        True,
+                                        file_baton[1], # base_path
+                                        file_baton[2], # base_rev
+                                        )
+
+
+class _change:
+  __slots__ = [ 'item_type', 'prop_changes',
+                'base_path', 'base_rev',
+                ]
+  def __init__(self, item_type, prop_changes, base_path, base_rev):
+    self.item_type = item_type
+    self.prop_changes = prop_changes
+    self.base_path = base_path
+    self.base_rev = base_rev
 
 
 class Config:
@@ -232,6 +263,22 @@ class _sub_section:
 
 class MissingConfig(Exception):
   pass
+
+
+def _svn_basename(path):
+  "Compute the basename of an SVN path ('/' separators)."
+  idx = string.rfind(path, '/')
+  if idx == -1:
+    return path
+  return path[idx+1:]
+
+
+# enable True/False in older vsns of Python
+try:
+  _unused = True
+except NameError:
+  True = 1
+  False = 0
 
 
 if __name__ == '__main__':
