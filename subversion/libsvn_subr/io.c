@@ -1018,15 +1018,7 @@ static svn_error_t *
 read_handler_string (void *baton, char *buffer, apr_size_t *len)
 {
   struct string_stream_baton *btn = baton;
-  apr_size_t left_to_read;
-  
-  if (! btn->str)
-    {
-      *len = 0;
-      return SVN_NO_ERROR;
-    }
-     
-  left_to_read = btn->str->len - btn->amt_read;
+  apr_size_t left_to_read = btn->str->len - btn->amt_read;
   *len = (*len > left_to_read) ? left_to_read : *len;
   memcpy (buffer, btn->str->data + btn->amt_read, *len);
   btn->amt_read += *len;
@@ -1037,12 +1029,6 @@ static svn_error_t *
 write_handler_string (void *baton, const char *data, apr_size_t *len)
 {
   struct string_stream_baton *btn = baton;
-  if (! btn->str)
-    {
-      *len = 0;
-      return svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL,
-                               "No receiving string available");
-    }
   svn_stringbuf_appendbytes (btn->str, data, *len);
   return SVN_NO_ERROR;
 }
