@@ -393,6 +393,21 @@ def versioned_log_message(sbox):
   return 0
 
 
+def log_with_empty_repos(sbox):
+  "Test 'svn log' on an empty repository"
+
+  # Create virgin repos
+  svntest.main.create_repos(sbox.repo_dir)
+
+  stdout_lines, stderr_lines = svntest.main.run_svn\
+                               (None, "log", svntest.main.current_repo_url)
+
+  if (len(stderr_lines) != 0):
+    return 1
+
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -401,6 +416,7 @@ def versioned_log_message(sbox):
 test_list = [ None,
               plain_log,
               versioned_log_message,
+              log_with_empty_repos,
              ]
 
 if __name__ == '__main__':
