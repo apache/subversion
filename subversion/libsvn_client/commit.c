@@ -144,9 +144,9 @@ send_file_contents (const char *path,
     {
       /* If we used a tempfile, we need to close and remove it, too. */
       svn_error_t *err2 = svn_io_remove_file (tmpfile_path, pool);
-      if (err)
+      if (err && err2)
         svn_error_compose (err, err2);
-      else
+      else if (err2)
         err = err2;
     }
 
