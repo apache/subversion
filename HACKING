@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-05-08 13:42:11 $
+              Last updated:  $Date: 2001-05-08 19:05:12 $
 
 
 TABLE OF CONTENTS
@@ -111,6 +111,13 @@ make sure you have those tools installed).  Afterwards, do
    make
 
 to build Subversion.
+
+You may wish to run "./configure" with some options; see the end of
+autogen.sh's output for some hints about this.  
+
+BSD systems should use GNU make (`gmake') instead of the standard
+system `make'.
+
 
 
 Building on Win32
