@@ -112,3 +112,63 @@ svn_fs__retry_txn (svn_fs_t *fs,
 			txn_abort (db_txn)));
     }
 }
+
+
+
+/* Building common error objects.  */
+
+
+static svn_error_t *
+corrupt_id (const char *fmt, svn_fs_id_t *id, svn_fs_t *fs)
+{
+  svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
+
+  return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+			    fmt, unparsed_id->data, fs->env_path);
+}
+
+
+svn_error_t *
+svn_fs__err_corrupt_representation (svn_fs_t *fs, svn_fs_id_t *id)
+{
+  return
+    corrupt_id ("corrupt representation for node `%s' in filesystem `%s'",
+		id, fs);
+}
+
+
+svn_error_t *
+svn_fs__err_corrupt_node_revision (svn_fs_t *fs, svn_fs_id_t *id)
+{
+  return
+    corrupt_id ("corrupt node revision for node `%s' in filesystem `%s'",
+		id, fs);
+}
+
+
+svn_error_t *
+svn_fs__err_corrupt_id (svn_fs_t *fs, svn_fs_id_t *id)
+{
+  return
+    corrupt_id ("Corrupt node revision id `%s' appears in filesystem `%s'",
+		id, fs);
+}
+
+
+svn_error_t *
+svn_fs__err_dangling_id (svn_fs_t *fs, svn_fs_id_t *id)
+{
+  return
+    corrupt_id ("reference to non-existent node `%s' in filesystem `%s'",
+		id, fs);
+}
+
+
+svn_error_t *
+svn_fs__err_corrupt_nodes_key (svn_fs_t *fs)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+     "malformed ID as key in `nodes' table of filesystem `%s'", fs->env_path);
+}

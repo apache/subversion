@@ -161,6 +161,8 @@ make_transactions (svn_fs_t *fs, int create)
   SVN_ERR (DB_WRAP (fs, "setting `transactions' comparison function",
 		    transactions->set_bt_compare (transactions,
 						  compare_transactions_keys)));
+  SVN_ERR (DB_WRAP (fs, "enabling duplicates in `transactions'",
+		    transactions->set_flags (transactions, DB_DUP)));
   SVN_ERR (DB_WRAP (fs, 
 		    (create
 		     ? "creating `transactions' table"
@@ -464,9 +466,15 @@ replace_root_body (void *baton,
       SVN_ERR (svn_fs__open_node_by_id (&revision_root,
 					svn_txn->fs, revision_root_id,
 					db_txn));
+<<<<<<< txn.c
+      svn_err = svn_fs__create_successor (&txn_root, version_root,
+					  svn_txn->id, db_txn);
+      svn_fs_close_node (version_root);
+=======
       svn_err = svn_fs__create_successor (&txn_root, revision_root,
 					  svn_txn, db_txn);
       svn_fs_close_node (revision_root);
+>>>>>>> 1.8
       if (svn_err)
 	return svn_err;
 
@@ -520,6 +528,114 @@ svn_fs_replace_root (svn_fs_dir_t **root_p,
   args.revision = revision;
 
   return svn_fs__retry_txn (txn->fs, replace_root_body, &args);
+}
+
+
+
+/* Committing a transaction.  */
+
+
+/* Data that are constant across the merge, passed along as we recurse.  */
+struct merge_context {
+
+  /* The entire merge is part of this Berkeley DB transaction.  */
+  DB_TXN *db_txn;
+
+  /* A pool global to the entire merge, in which we allocate
+     structures that need to persist even when we're finished with the
+     subdirectory.  */
+  apr_pool_t *pool;
+
+  /* A hash recording all the nodes that are part of the merged
+     version.  If a node in the transaction doesn't appear in this
+     table when the merge is complete, we delete it.  The keys are
+     node version ID's; the values are dummy pointers.  All that
+     matters is whether the ID appears in the table.  */
+  apr_hash_t *nodes_used;
+
+};
+
+
+/* If the merge fails, the traversal return a pointer to one of these
+   structures, indicating the reason.  */
+struct merge_result {
+
+  /* If the merge failed for some reason other than a conflict, 
+     this is the error object describing the problem.  */
+  svn_error_t *error;
+
+  /* If we did find a conflict, this is the name of the file that
+     couldn't be merged, relative to the source, target, and ancestor
+     directories.  If the conflict is in those nodes themselves, the
+     name will be the empty string.
+
+     These names are constructed as we back out of the recursion: each
+     directory we leave prepends one more component to the names, so
+     that when we reach the root, we have the complete names.  */
+  svn_string_t *conflict_name;
+};
+
+
+/* Build a merge_result structure carrying ERROR, in POOL.  */
+static struct merge_result *
+error_result (svn_error_t *error,
+	      apr_pool_t *pool)
+{
+  struct merge_result *mr = NEW (pool, struct merge_result);
+
+  memset (mr, 0, sizeof (*mr));
+  mr->error = error;
+  return mr;
+}
+
+
+/* Build a merge_result structure reporting a conflict.  The conflict
+   filename is set to the empty string.  */
+static struct merge_result *
+conflict_result (apr_pool_t *pool)
+{
+  struct merge_result *mr = NEW (pool, struct merge_result);
+
+  memset (mr, 0, sizeof (*mr));
+  mr->conflict_name = svn_string_ncreate (0, 0, pool);
+  return mr;
+}
+
+
+/* The recursive heart of the merge process.
+
+   Given two nodes SOURCE and TARGET, and a common ancestor ANCESTOR,
+   modify TARGET to contain all the changes made between ANCESTOR and
+   SOURCE, as well as all the changes made between ANCESTOR and
+   TARGET.  Do all this as part of the Berkeley DB transaction DB_TXN.
+
+   If the merge succeeds, return zero.  If we encounter a conflict or
+   an error, return an appropriate `struct merge_result' object.  */
+static struct merge_result *
+merge (svn_fs_node_t *ancestor,
+       svn_fs_node_t *source,
+       svn_fs_node_t *target,
+       struct merge_context *context,
+       apr_pool_t *pool)
+{
+  /* Nodes of different types can't be merged.  */
+  if (svn_fs_node_is_dir (source)
+      && svn_fs_node_is_dir (target)
+      && svn_fs_node_is_dir (ancestor))
+    return merge_dirs (ancestor, source, target, context, pool);
+  else if (svn_fs_node_is_file (source)
+	   && svn_fs_node_is_file (target)
+	   && svn_fs_node_is_file (ancestor))
+    return merge_files (ancestor, source, target, context, pool);
+  else
+    return conflict_result (pool);
+}
+
+
+svn_error_t *
+svn_fs_commit_txn (svn_fs_txn_t *txn)
+{
+  
 }
 
 
