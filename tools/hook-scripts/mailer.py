@@ -103,7 +103,22 @@ def generate_diff(output, repos, src, dst, change, pool):
     output.write('Copied: %s (from rev %d, %s)\n'
                  % (dst, copy_info[1], copy_info[0]))
 
-  print src, dst, change.item_type, change.prop_changes #, copy_info
+  if not dst:
+    output.write('deleted: %s\n' % src)
+    return
+  if not src:
+    if change.base_path:
+      # this was copied. note that we strip the leading slash from the
+      # base (copyfrom) path.
+      output.write('Copied: %s (from rev %d, %s)\n'
+                   % (dst, change.base_rev, change.base_path[1:]))
+    else:
+      output.write('Added: %s\n' % dst)
+    return
+
+  output.write('diff: %s@%d <- %s@%d  (%s; propmod=%d)\n'
+               % (src, repos.rev, change.base_path[1:], change.base_rev,
+                  change.item_type, change.prop_changes))
 
 
 class Repository:
@@ -121,16 +136,21 @@ class Repository:
     self.fs_ptr = fs.new(pool)
     fs.open_berkeley(self.fs_ptr, db_path)
 
-    self.root_prev = fs.revision_root(self.fs_ptr, rev-1, pool)
-    self.root_this = fs.revision_root(self.fs_ptr, rev, pool)
+    self.roots = { }
 
-    self.roots = {
-      rev-1 : self.root_prev,
-      rev : self.root_this,
-      }
+    self.root_prev = self.get_root(rev-1)
+    self.root_this = self.get_root(rev)
 
   def get_rev_prop(self, propname):
     return fs.revision_prop(self.fs_ptr, self.rev, propname, self.pool)
+
+  def get_root(self, rev):
+    try:
+      return self.roots[rev]
+    except KeyError:
+      pass
+    root = self.roots[rev] = fs.revision_root(self.fs_ptr, rev, self.pool)
+    return root
 
 
 class ChangeCollector(delta.Editor):
@@ -153,8 +173,8 @@ class ChangeCollector(delta.Editor):
       item_type = ChangeCollector.DIR
     else:
       item_type = ChangeCollector.FILE
-    ### compute base path/rev
-    self.deletes[path] = _change(item_type, False, None, None)
+    # base_path is the specified path. revision is the parent's.
+    self.deletes[path] = _change(item_type, False, path, parent_baton[2])
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool):
@@ -169,7 +189,7 @@ class ChangeCollector(delta.Editor):
   def open_directory(self, path, parent_baton, base_revision, dir_pool):
     assert parent_baton[2] == base_revision
 
-    base_path = parent_baton[1] + '/' + _svn_basename(path)
+    base_path = _svn_join(parent_baton[1], _svn_basename(path))
     return (path, base_path, base_revision)  # dir_baton
 
   def change_dir_prop(self, dir_baton, name, value, pool):
@@ -199,14 +219,14 @@ class ChangeCollector(delta.Editor):
   def open_file(self, path, parent_baton, base_revision, file_pool):
     assert parent_baton[2] == base_revision
 
-    base_path = parent_baton[1] + '/' + _svn_basename(path)
+    base_path = _svn_join(parent_baton[1], _svn_basename(path))
     return (path, base_path, base_revision)  # file_baton
 
   def apply_textdelta(self, file_baton):
     file_path = file_baton[0]
     if not self.changes.has_key(file_path) \
        and not self.adds.has_key(file_path):
-      # can't be added or deleted, so this must be CHANGED
+      # it wasn't added, and it can't be deleted, so this must be CHANGED
       self.changes[file_path] = _change(ChangeCollector.FILE,
                                         False,
                                         file_baton[1], # base_path
@@ -223,7 +243,7 @@ class ChangeCollector(delta.Editor):
     elif self.adds.has_key(file_path):
       self.adds[file_path].prop_changes = True
     else:
-      # can't be added or deleted, so this must be CHANGED
+      # it wasn't added, and it can't be deleted, so this must be CHANGED
       self.changes[file_path] = _change(ChangeCollector.FILE,
                                         True,
                                         file_baton[1], # base_path
@@ -272,6 +292,14 @@ def _svn_basename(path):
     return path
   return path[idx+1:]
 
+def _svn_join(base, relative):
+  "Join a relative path onto a base path using the SVN separator ('/')."
+  if relative[:1] == '/':
+    return relative
+  if base[-1:] == '/':
+    return base + relative
+  return base + '/' + relative
+
 
 # enable True/False in older vsns of Python
 try:
@@ -283,7 +311,8 @@ except NameError:
 
 if __name__ == '__main__':
   if len(sys.argv) < 3 or len(sys.argv) > 4:
-    sys.stderr.write('USAGE: %s REPOS-DIR REVISION [CONFIG-FILE]\n')
+    sys.stderr.write('USAGE: %s REPOS-DIR REVISION [CONFIG-FILE]\n'
+                     % sys.argv[0])
     sys.exit(1)
 
   repos_dir = sys.argv[1]
