@@ -1,24 +1,122 @@
+<!-- This is currently being roughed out.  Suggestions and comments
+are more than welcome, but patches are probably a bit premature at
+this point. -->
 <chapter id="svn-ch-8">
-<title>Complete Reference</title>
-
-<sect1 id="svn-ch-8-sect-1">
-<title></title>
-
-<para>
-###TODO Write this
-</para>
+  <title>Subversion Complete Reference</title>
+  
+  <simplesect>
+    <para>This chapter is intended to be a complete reference to
+      using Subversion. This includes the command line client
+      (<command>svn</command>) and all its commands, repository
+      administration programs (<command>svnadmin</command> and
+      <command>svnlook</command> and their respective commands,
+      repository configuration files, commit hooks, client
+      configuration files, and working copy administrative areas.
+    </para>
+  </simplesect>
+  
+  
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-8-sect-1">
+    <title>The Subversion Command Line Client:
+      <command>svn</command></title>
     
-    <!-- Put here for storage -->
-    <sect2 id="svn-ch-8-todo1">
+    <para>###TODO Talk about the client, how commands are laid out,
+      cover global switches, long form vs. short form, plus xrefs to
+      the rest of the book for more info.</para>
+    
+    <sect2 id="svn-ch-8-sect-1.1">
+      <title></title>
+      <para>###TODO Write this</para>
+    </sect2>
+    
+    <sect2 id="svn-ch-8-sect-1.2">
+      <title><command>svn add</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.3">
+      <title><command>svn cat</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.4">
+      <title><command>svn checkout</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.5">
+      <title><command>svn cleanup</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.6">
+      <title><command>svn commit</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.7">
+      <title><command>svn copy</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.8">
+      <title><command>svn delete</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.9">
+      <title><command>svn diff</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.10">
+      <title><command>svn export</command></title>
+
+      <para>The export command is a quick way to create an unversioned
+        tree of files from a repository directory&mdash;a tree that
+        looks like a typical working copy, but doesn't contain the
+        <filename>.svn</filename> directories:</para>
+      
+      <screen>
+$ svn export file:///usr/local/svn/newrepos/fooproject
+A  fooproject/foo.c
+A  fooproject/bar.c
+A  fooproject/subdir
+A  fooproject/subdir/quux.h
+Checked out revision 3.
+      </screen>
+      
+      <para>The resulting directory will not contain any
+        <filename>.svn</filename> administrative areas, and all
+        property metadata will be lost.  (Hint: don't use this
+        technique for backing up; it's probably better for rolling
+        source distributions.)</para>
+
+    </sect2>
+    
+    <sect2 id="svn-ch-8-sect-1.11">
+      <title><command>svn help</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.12">
+      <title><command>svn import</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.13">
       <title><command>svn info</command></title>
-
-      <para>In general, we try to discourage you from directly reading
-        the <filename>.svn/entries</filename> file used to track items
-        in a Subversion working copy.  Instead, you can get tons of
-        information about an item in your working copy by using the
-        <command>svn info</command> command to display most of the
-        tracked information:</para>
-
+      
+      <para>In general, we try to discourage you from directly
+        reading the <filename>.svn/entries</filename> file used to
+        track items in a Subversion working copy.  Instead, you can
+        get tons of information about an item in your working copy
+        by using the <command>svn info</command> command to display
+        most of the tracked information:</para>
+      
       <screen>
 $ svn info rules.txt
 Path: rules.txt
@@ -34,45 +132,33 @@ Text Last Updated: 2002-11-16 08:48:04 -0500 (Sat, 16 Nov 2002)
 Properties Last Updated: 2002-11-16 08:48:03 -0500 (Sat, 16 Nov 2002)
 Checksum: 8sfaU+5dqyOgkhuSdyxGrQ==
       </screen>
-
+      
+    </sect2>
+    
+    <sect2 id="svn-ch-8-sect-1.14">
+      <title><command>svn list</command></title>
+      <para>###TODO Write this</para>
     </sect2>
 
-    <!-- Put here for storage -->
-    <sect2 id="svn-ch-8-todo2">
-      <title><command>svn export</command></title>
-
-      <para>The export command is a quick way to create an unversioned
-        tree of files from a repository directory&mdash;a tree that
-        looks like a typical working copy, but doesn't contain the
-        <filename>.svn</filename> directories:</para>
-
-      <screen>
-$ svn export file:///usr/local/svn/newrepos/fooproject
-A  fooproject/foo.c
-A  fooproject/bar.c
-A  fooproject/subdir
-A  fooproject/subdir/quux.h
-Checked out revision 3.
-      </screen>
-
-      <para>The resulting directory will not contain any
-        <filename>.svn</filename> administrative areas, and all
-        property metadata will be lost.  (Hint: don't use this
-        technique for backing up; it's probably better for rolling
-        source distributions.)</para>
-
+    <sect2 id="svn-ch-8-sect-1.15">
+      <title><command>svn log</command></title>
+      <para>###TODO Write this</para>
     </sect2>
 
-    <!-- Put here for storage -->
-    <sect2 id="svn-ch-8-todo3">
+    <sect2 id="svn-ch-8-sect-1.16">
+      <title><command>svn merge</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.17">
       <title><command>svn mkdir</command></title>
-
+      
       <para>This is another convenience command, and it has two
         uses.</para>
-
-      <para>First, it can be used to simultaneously create a new working copy
-        directory and schedule it for addition:</para>
       
+      <para>First, it can be used to simultaneously create a new
+        working copy directory and schedule it for addition:</para>
+    
       <screen>
 $ svn mkdir new-dir
 A     new-dir
@@ -86,13 +172,248 @@ $ svn mkdir file:///usr/local/svn/newrepos/branches --message "made new dir"
 Committed revision 1123.
       </screen>
 
-      <para>Again, this is a form of immediate commit, so some sort of
-        log message is required.</para>
-
+      <para>Again, this is a form of immediate commit, so some sort
+        of log message is required.</para>
+      
     </sect2>
 
-</sect1>
+    <sect2 id="svn-ch-8-sect-1.18">
+      <title><command>svn move</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
 
+    <sect2 id="svn-ch-8-sect-1.19">
+      <title><command>svn propdel</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.20">
+      <title><command>svn propedit</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.21">
+      <title><command>svn propget</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.22">
+      <title><command>svn proplist</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.23">
+      <title><command>svn propset</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.24">
+      <title><command>svn revert</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.25">
+      <title><command>svn resolve</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.26">
+      <title><command>svn status</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.27">
+      <title><command>svn switch</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-1.28">
+      <title><command>svn update</command></title>
+      <para>###TODO Write this</para>
+    </sect2>
+    
+  </sect1>
+  
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-8-sect-2">
+    <title><command>svnadmin</command></title>
+    
+    <para>
+      ###TODO Write this
+    </para>
+
+    <sect2 id="svn-ch-8-sect-2.1">
+      <title>svn create</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-2.2">
+      <title>svn createtxn</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-2.3">
+      <title>svn dump</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-2.4">
+      <title>svn help</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-2.5">
+      <title>svn load</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-2.6">
+      <title>svn lscr</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-2.7">
+      <title>svn lstxns</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-2.8">
+      <title>svn recover</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-2.9">
+      <title>svn rmtxns</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-2.10">
+      <title>svn setlog</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-2.11">
+      <title></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+  </sect1>
+  
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 3 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-8-sect-3">
+    <title><command>svnlook</command></title>
+    
+    <para>### TODO Talk about how svnlook works in general:
+      std. command structure, revnums vs. tranny names, what the
+      default action is, etc.</para>
+    
+    <sect2 id="svn-ch-8-sect-3.1">
+      <title>svn author</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-3.2">
+      <title>svn changed</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-3.3">
+      <title>svn date</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-3.4">
+      <title>svn diff</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-3.5">
+      <title>svn dirs-changed</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-3.6">
+      <title>svn ids</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-3.7">
+      <title>svn info</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-3.8">
+      <title>svn log</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-3.9">
+      <title>svn tree</title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+    <sect2 id="svn-ch-8-sect-3.10">
+      <title></title>
+      <para>###TODO Write this</para>
+    </sect2>
+
+  </sect1>
+  
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-8-sect-4">
+    <title>Repository Configuration Files</title>
+    
+    <para>###TODO We should probably break out Apache stuff into its
+      own section and talk about ra_local on its own. For ra_dav, go
+      through all the relevant directives and what they do.  Once
+      ra_svn matures a bit, we can add that.</para>
+
+  </sect1>
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-8-sect-5">
+    <title>Repository commit hooks</title>
+    
+    <para>
+      ###TODO pre-commit, post-commit, start-co
+    </para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 6 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-8-sect-6">
+    <title>Client configuration (Inside the
+      <filename>.subversion</filename> directory)</title>
+    
+    <para>###TODO Write this</para>
+    
+  </sect1>
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 7 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-8-sect-7">
+    <title>The Working Copy Administrative Area (Inside the
+      <filename>.svn</filename> directories)</title>
+
+    <!-- ###TODO: Do we want to include this? -Fitz -->
+    <para>
+      ###TODO If we decide to go with this, add a short summary, a
+      big warning to not touch anything, and then a quick blurb for
+      each of the following: README, auth/, dir-prop-base,
+      dir-props, dir-wcprops, empty-file, entries, format,
+      prop-base/, props/, text-base/, tmp/, and wcprops/</para>
+
+  </sect1>
+  
 </chapter>
 
 
