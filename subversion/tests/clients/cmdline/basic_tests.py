@@ -24,6 +24,8 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
+Skip = svntest.testcase.Skip
+XFail = svntest.testcase.XFail
 Item = wc.StateItem
 
 #----------------------------------------------------------------------

@@ -22,7 +22,9 @@ import string, sys, os.path, re
 # Our testing module
 import svntest
 
-
+# (abbreviation)
+Skip = svntest.testcase.Skip
+XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 ######################################################################
@@ -401,9 +403,9 @@ This is the file 'rho'.>>>>>>> .r1
 # list all tests here, starting with None:
 test_list = [ None,
               keywords_from_birth,
-              svntest.main.XFAIL(enable_translation),
-              svntest.main.XFAIL(checkout_translated),
-              svntest.main.XFAIL(disable_translation),
+              XFail(enable_translation),
+              XFail(checkout_translated),
+              XFail(disable_translation),
               update_modified_with_translation,
              ]
 

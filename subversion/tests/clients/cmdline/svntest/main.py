@@ -23,8 +23,8 @@ import re      # to parse version string
 import stat    # for ST_MODE
 import string  # for atof()
 import copy    # for deepcopy()
-import traceback # for print_exc()
 
+from svntest import testcase
 from svntest import wc
 
 ######################################################################
@@ -62,7 +62,6 @@ class SVNTypeMismatch(Exception): pass
 
 # Exception raised if get_child is passed a file.
 class SVNTreeIsNotDirectory(Exception): pass
-
 
 # Windows specifics
 if sys.platform == 'win32':
@@ -303,23 +302,6 @@ class Sandbox:
 # Ideally, each test should also have a short, one-line docstring (so
 # it can be displayed by the 'list' command.)
 
-# Use this function in the test list to mark XFAIL tests
-def XFAIL(fn):
-  return fn, 1
-
-# Interpret an entry in TEST_LIST
-def _func_and_fail_mode(elem):
-  "Return a tuple (func, xfail) based on the Nth element of TEST_LIST."
-  # If it's a tuple, the second element is the expected failure mode.
-  if type(elem) is type(()):
-    func = elem[0]
-    xfail = (elem[1] != 0)
-  else:
-    func = elem
-    xfail = 0
-  assert type(func) is type(lambda x: 0)
-  return func, xfail
-
 # Func to run one test in the list.
 def run_one_test(n, test_list):
   "Run the Nth client test in TEST_LIST, return the result."
@@ -332,36 +314,19 @@ def run_one_test(n, test_list):
   current_repo_dir = None
   current_repo_url = None
 
-  func, xfail = _func_and_fail_mode(test_list[n])
-  if func.func_code.co_argcount:
+  tc = testcase.TestCase(test_list[n], n)
+  func_code = tc.func_code()
+  if func_code.co_argcount:
     # ooh! this function takes a sandbox argument
     module, unused = \
-      os.path.splitext(os.path.basename(func.func_code.co_filename))
+      os.path.splitext(os.path.basename(func_code.co_filename))
     sandbox = Sandbox(module, n)
     args = (sandbox,)
   else:
     args = ()
 
   # Run the test.
-  error = 1
-  try:
-    error = apply(func, args)
-  except SVNTreeUnequal:
-    print "caught an SVNTreeUnequal exception, returning error instead"
-  except KeyboardInterrupt:
-    print "Interrupted"
-    sys.exit(0)
-  except:
-    print "caught unexpected exception"
-    traceback.print_exc(file=sys.stdout)
-  if error:
-    print ('FAIL: ', 'XFAIL:')[xfail != 0],
-    if xfail: error = 0                 # Expected failures are not errors.
-  else:
-    print ('PASS: ', 'XPASS:')[xfail != 0],
-    if xfail: error = 1                 # Unexpected passes are errors.
-  print os.path.basename(sys.argv[0]), str(n) + ":", func.__doc__
-  return error
+  return tc.run(args)
 
 def _internal_run_tests(test_list, testnum=None):
   exit_code = 0
@@ -402,8 +367,7 @@ def run_tests(test_list):
       print "------  -----  ----------------"
       n = 1
       for x in test_list[1:]:
-        f, m = _func_and_fail_mode(x)
-        print " %2d     %5s  %s" % (n, ('', 'XFAIL')[m != 0], f.__doc__)
+        testcase.TestCase(x, n).list()
         n = n+1
 
       # done. just exit with success.

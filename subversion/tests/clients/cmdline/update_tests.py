@@ -23,6 +23,9 @@ import shutil, string, sys, re, os
 import svntest
 
 
+# (abbreviation)
+Skip = svntest.testcase.Skip
+XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
  
