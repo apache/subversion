@@ -102,7 +102,20 @@ apr_array_header_t **revs {
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t));
 }
 
+/* -----------------------------------------------------------------------
+   and except for svn_fs_paths_changed, which returns svn_fs_path_change_t
+   structures
+*/
+
+%typemap(in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
+%typemap(python, argout, fragment="t_output_helper") apr_hash_t **changed_paths_p {
+    $result = t_output_helper(
+        $result,
+        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_path_change_t));
+}
+
 /* ----------------------------------------------------------------------- */
+
 
 
 %include svn_fs.h
