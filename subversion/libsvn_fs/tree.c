@@ -606,11 +606,11 @@ txn_body_node_prop (void *baton,
                     trail_t *trail)
 {
   struct node_prop_args *args = baton;
-  parent_path_t *parent_path;
+  dag_node_t *node;
   skel_t *proplist, *prop;
 
-  SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
-  SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
+  SVN_ERR (get_dag (&node, args->root, args->path, trail));
+  SVN_ERR (svn_fs__dag_get_proplist (&proplist, node, trail));
   
   /* Search the proplist for a property with the right name.  */
   for (prop = proplist->children; prop; prop = prop->next->next)
@@ -653,13 +653,59 @@ svn_fs_node_prop (svn_string_t **value_p,
 }
 
 
+struct node_proplist_args {
+  apr_hash_t **table_p;
+  svn_fs_root_t *root;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_node_proplist (void *baton, trail_t *trail)
+{
+  struct node_proplist_args *args = baton;
+
+  parent_path_t *parent_path;
+  apr_hash_t *table;
+  skel_t *proplist, *prop;
+
+  SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
+  SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
+
+  /* Build a hash table from the property list.  */
+  table = apr_hash_make (trail->pool);
+  for (prop = proplist->children; prop; prop = prop->next->next)
+    {
+      skel_t *name = prop;
+      skel_t *value = prop->next;
+
+      apr_hash_set (table, name->data, name->len,
+                    svn_string_ncreate (value->data, value->len,
+                                        trail->pool));
+    }
+
+  *args->table_p = table;
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_fs_node_proplist (apr_hash_t **table_p,
                       svn_fs_root_t *root,
                       const char *path,
                       apr_pool_t *pool)
 {
-  abort ();
+  apr_hash_t *table;
+  struct node_proplist_args args;
+
+  args.table_p = &table;
+  args.root = root;
+  args.path = path;
+
+  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_proplist, &args, pool));
+
+  *table_p = table;
+  return SVN_NO_ERROR;
 }
 
 
@@ -678,6 +724,7 @@ txn_body_change_node_prop (void *baton,
   struct change_node_prop_args *args = baton;
   parent_path_t *parent_path;
   skel_t *proplist, *prop;
+  skel_t *prev = NULL;
 
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
   SVN_ERR (make_path_mutable (args->root, parent_path, args->path, trail));
@@ -689,16 +736,54 @@ txn_body_change_node_prop (void *baton,
       skel_t *name = prop;
       skel_t *value = prop->next;
 
-      /* We've found an existing entry for this property. 
-         Replace the value.  */
-      if (name->len == args->name->len
-          && ! memcmp (name->data, args->name->data, name->len))
+      if (svn_fs__atom_matches_string (name, args->name))
         {
-          value->data = args->value->data;
-          value->len = args->value->len;
+          /* We've found an existing entry for this property.  */
+          if (! args->value)
+            {
+              /* If our new value for this is NULL, we'll remove the
+                 property altogether by effectively routing our linked
+                 list of properties around the current property
+                 name/value pair. */
+              if (prev)
+                {
+                  /* If this isn't the first pair in the list, this
+                     can be done by setting the previous value's next
+                     pointer to the name of the following property
+                     pair, if one exists, or zero if we are removing
+                     the last name/value pair currently in the
+                     list. */
+                  if (prop->next)
+                    prev->next->next = prop->next->next;
+                  else
+                    prev->next->next = 0;
+                }
+              else
+                {
+                  /* If, however, this is the first item in the list,
+                     we'll set the children pointer of the PROPLIST
+                     skel to the following name/value pair, if one
+                     exists, or zero if we're removing the only
+                     property pair in the list. */
+                  if (prop->next)
+                    proplist->children = prop->next->next;
+                  else
+                    proplist->children = 0;
+                }
+            }
+          else
+            {
+              value->data = args->value->data;
+              value->len = args->value->len;
+            }
 
+          /* Regardless of what we changed, we're done editing the
+             list now that we've acted on the property we found. */
           break;
         }
+      /* Squirrel away a pointer to this property name/value pair, as
+         we may need this in the next iteration of this loop. */
+      prev = prop;
     }
 
   /* This property doesn't appear in the property list; add it to the
