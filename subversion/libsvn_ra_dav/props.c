@@ -458,6 +458,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
   svn_ra_dav_resource_t *rsrc;
   const char *vcc;
   struct uri parsed_url;
+  svn_string_t *my_bc_url, *my_bc_relative;
   const char *lopped_path = "";
 
   /* ### we may be able to replace some/all of this code with an
@@ -466,16 +467,21 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
   /* -------------------------------------------------------------------
      STEP 1
 
-     Fetch the following properties from the given URL:
+     Fetch the following properties from the given URL (or, if URL no
+     longer exists in HEAD, get the properties from the nearest
+     still-existing parent resource):
 
      *) DAV:version-controlled-configuration so that we can reach the
         baseline information.
 
      *) svn:baseline-relative-path so that we can find this resource
-        within a Baseline Collection.
+        within a Baseline Collection.  If we need to search up parent
+        directories, then the relative path is this property value
+        *plus* any trailing components we had to chop off.
 
      *) DAV:resourcetype so that we can identify whether this resource
-        is a collection or not.
+        is a collection or not -- assuming we never had to search up
+        parent directories.
   */
 
   /* Split the url into it's component pieces (schema, host, path,
@@ -522,9 +528,6 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
 
   uri_free(&parsed_url);
 
-  if (is_dir != NULL)
-    *is_dir = rsrc->is_collection;
-
   vcc = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
   if (vcc == NULL)
     {
@@ -536,33 +539,39 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
                               "resource.");
     }
 
+  /* Allocate our own bc_relative path. */
+  my_bc_relative = svn_string_create ("", pool);
+  {
+    const char *relative_path;
+    
+    relative_path = apr_hash_get(rsrc->propset,
+                                 SVN_RA_DAV__PROP_BASELINE_RELPATH,
+                                 APR_HASH_KEY_STRING);
+    if (relative_path == NULL)
+      {
+        /* ### better error reporting... */        
+        /* ### need an SVN_ERR here */
+        return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                                "The relative-path property was not "
+                                "found on the resource.");
+      }
+    
+    /* don't forget to tack on the parts we lopped off in order
+       to find the VCC... */
+    my_bc_relative->data = svn_path_join (relative_path, lopped_path, pool);
+    my_bc_relative->len = strlen(my_bc_relative->data);
+  }
+ 
   /* if they want the relative path (could be, they're just trying to find
      the baseline collection), then return it */
   if (bc_relative != NULL)
     {
-      const char *relative_path;
-
-      relative_path = apr_hash_get(rsrc->propset,
-                                   SVN_RA_DAV__PROP_BASELINE_RELPATH,
-                                   APR_HASH_KEY_STRING);
-      if (relative_path == NULL)
-        {
-          /* ### better error reporting... */
-
-          /* ### need an SVN_ERR here */
-          return svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                                  "The relative-path property was not "
-                                  "found on the resource.");
-        }
-
-      /* don't forget to tack on the parts we lopped off in order
-         to find the VCC... */
-      bc_relative->data = svn_path_join (relative_path, lopped_path, pool);
-      bc_relative->len = strlen(bc_relative->data);
+      bc_relative->data = my_bc_relative->data;
+      bc_relative->len = my_bc_relative->len;     
     }
 
   /* shortcut: no need to do more work if the data isn't needed. */
-  if (bc_url == NULL && latest_rev == NULL)
+  if (bc_url == NULL && latest_rev == NULL && is_dir == NULL)
     return SVN_NO_ERROR;
 
   /* -------------------------------------------------------------------
@@ -626,23 +635,28 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
   /* rsrc now points at the Baseline. We will checkout from the
      DAV:baseline-collection.  The revision we are checking out is in
      DAV:version-name */
+  
+  /* Allocate our own copy of bc_url regardless. */
+  my_bc_url = svn_string_create ("", pool);
+  my_bc_url->data = apr_hash_get(rsrc->propset,
+                                 SVN_RA_DAV__PROP_BASELINE_COLLECTION,
+                                 APR_HASH_KEY_STRING);
+  if (my_bc_url->data == NULL)
+    {
+      /* ### better error reporting... */
+      /* ### need an SVN_ERR here */
+      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                              "DAV:baseline-collection was not present "
+                              "on the baseline resource.");
+    }
+  my_bc_url->len = strlen(my_bc_url->data);
 
+  /* maybe return bc_url to the caller */
   if (bc_url != NULL)
     {
-      bc_url->data = apr_hash_get(rsrc->propset,
-                                  SVN_RA_DAV__PROP_BASELINE_COLLECTION,
-                                  APR_HASH_KEY_STRING);
-      if (bc_url->data == NULL)
-        {
-          /* ### better error reporting... */
-
-          /* ### need an SVN_ERR here */
-          return svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                                  "DAV:baseline-collection was not present "
-                                  "on the baseline resource.");
-        }
-      bc_url->len = strlen(bc_url->data);
-    }
+      bc_url->data = my_bc_url->data;
+      bc_url->len = my_bc_url->len;     
+    }  
 
   if (latest_rev != NULL)
     {
@@ -661,6 +675,18 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
                                   "baseline resource.");
         }
       *latest_rev = SVN_STR_TO_REV(vsn_name);
+    }
+
+  if (is_dir != NULL)
+    {
+      /* query the DAV:resourcetype of the full, assembled URL. */
+      char *full_bc_url = svn_path_join(my_bc_url->data,
+                                        my_bc_relative->data,
+                                        pool);
+      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, full_bc_url,
+                                              NULL, starting_props, pool));
+      
+      *is_dir = rsrc->is_collection;
     }
 
   return SVN_NO_ERROR;
