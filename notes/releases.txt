@@ -1,38 +1,59 @@
                 Subversion Tarball Release Procedure
                 ====================================
 
-1. Tweak trunk/CHANGES to contain all the latest changes.  Commit.
+1. Create a release branch from the "golden" revision number:
 
-   Begin a new section at the top of the file with:
-
-   Version X.YY.Z (released XX Month 200X, revision XXXX)
-   http://svn.collab.net/repos/svn/tags/X.YY.Z
-
-2. Bump the version numbers in svn_version.h and CHANGES.  Commit.
-
-3. Create the release branch for building the release:
-
-   a. Create the branch
-
-      svn cp -rHEAD -m"Create release X.YY.Z branch" \
-          http://svn.collab.net/repos/svn/trunk \
-          http://svn.collab.net/repos/svn/branches/X.YY.Z
+   svn cp -rHEAD -m"Create release X.YY.Z branch" \
+      http://svn.collab.net/repos/svn/trunk \
+      http://svn.collab.net/repos/svn/branches/X.YY.Z
 
    (Note that only the release manager commits to the branch;
     everyone else continues working on trunk, and the release
     manager ports changes across only if absolutely necessary.)
 
-   b. Check out a working copy of the branch
+2. Tweak trunk/CHANGES to contain all the latest changes.
 
-      svn co http://svn.collab.net/repos/svn/branches/X.YY.Z
+   a) Begin a new section at the top of the file with:
 
-    or
+      Version X.YY.Z (released XX Month 200X, from revision XXXX)
+      http://svn.collab.net/repos/svn/tags/X.YY.Z
 
-      svn switch http://svn.collab.net/repos/svn/branches/X.YY.Z
+   b) Bump the version numbers in svn_version.h and CHANGES.
+   
+   c) Commit.
 
-    if you have an existing working copy
+3. Create a working copy (wc) from the release branch:
 
-   c. Make sure your release branch wc has the following packages
+   $ svn co http://svn.collab.net/repos/svn/branches/X.YY.Z
+
+4. The branch stabilizing week
+
+   Only very important bugfixes are allowed to merge from the trunk to
+   the release branch. A decision of a merge happends in the Dev
+   mailing list.
+
+   In the following example, we pretends to merge revision 7868 into
+   the release branch:
+
+   a) cd to your branch release working copy and run:
+
+     $ svn merge -r7867:7868 http://svn.collab.net/repos/svn/trunk
+
+   b) Commit the changes:
+
+      $ svn ci -m "Merge r7868 into the 0.34.0 branch"
+
+   c) cd to your wc for http://svn.collab.net/repos/svn/trunk and add
+      a note under the merge section like this in the CHANGES file:
+
+         Merged revisions after release branching:
+         * r7868 - Java bindings
+
+   d) Commit
+
+5. It's release time, so cd to the release branch's working copy.
+
+   a) Make sure your release branch wc has the following packages
       extracted into the root of the wc tree:
 
       apr           (see INSTALL, section I)
@@ -57,11 +78,11 @@
       'BUILDING A SUBVERSION SERVER' in the INSTALL file. for more
       detailed build information.
 
-   d. Run './autogen.sh && ./configure' so the design docs can get
+   b) Run './autogen.sh && ./configure' so the design docs can get
       built in the branch tree (in step 4, dist.sh will move the built
       design docs into the release sandbox).
 
-   e. Grab the latest prebuilt book from http://svnbook.red-bean.com/
+   c) Grab the latest prebuilt book from http://svnbook.red-bean.com/
 
       cd doc/book/book
       wget http://svnbook.red-bean.com/book.pdf
@@ -71,11 +92,15 @@
       (The book maintainers keep those files up to date, so the
       release manager doesn't have to rebuild the book.)
 
-4. Run './dist.sh [ARGS ...]'    (see dist.sh for details about ARGS)
+6. Merge CHANGES and svn_version.h into the release branch. Do it the
+   the same way as described in section 4 in this document when
+   merging fixes to the release branch.
+
+7. Run './dist.sh [ARGS ...]'    (see dist.sh for details about ARGS)
    Watch dist.sh's output to make sure everything goes smoothly; when
    it's done, you'll have 'subversion-X.YY.Z.tar.gz' in the cwd.
 
-5. Test the tarball:
+8. Test the tarball:
      a) tar zxvf subversion-X.YY.Z.tar.gz;  cd subversion-X.YY.Z
      b) ./configure
 
@@ -101,9 +126,10 @@
         Make sure, that if you maintain a development installation of
         apache, that you check the config file and update it for the
         new release area where you're testing the tar-ball.
-	(Unless you rename the tree which gets extracted from the
-	tarball to match what's in httpd.conf, you will need to edit
-	httpd.conf)
+
+        (Unless you rename the tree which gets extracted from the
+        tarball to match what's in httpd.conf, you will need to edit
+        httpd.conf)
 
      g) make svncheck
 
@@ -124,7 +150,7 @@
          subversion/clients/cmdline/svn co \
                         http://svn.collab.net/repos/svn/trunk
 
-7. Upload the tarball to /usr/www/docroot/tarballs/ on svn.collab.net,
+9. Upload the tarball to /usr/www/docroot/tarballs/ on svn.collab.net,
    then link to it from subversion.tigris.org.  
 
    The ability to upload a public, automatically approved tarball
@@ -149,20 +175,20 @@
 
     f. Click Submit
 
-8. Move branch into the tags directory in the repository.
+10. Move branch into the tags directory in the repository.
 
-     svn mv http://svn.collab.net/repos/svn/branches/X.YY.Z \
-          http://svn.collab.net/repos/svn/tags/X.YY.Z \
-          -m"Moved Release X.YY.Z branch to tags/."
+      svn mv http://svn.collab.net/repos/svn/branches/X.YY.Z \
+           http://svn.collab.net/repos/svn/tags/X.YY.Z \
+           -m"Moved Release X.YY.Z branch to tags/."
 
-   Now that the release is public, no more changes can happen on that
-   branch.  If we discover problems with the release, then we make a
-   new branch (with the minor version number incremented), apply
-   fixes, and go through the release process again.
+    Now that the release is public, no more changes can happen on that
+    branch.  If we discover problems with the release, then we make a
+    new branch (with the minor version number incremented), apply
+    fixes, and go through the release process again.
 
-9. Update the website.
+11. Update the website.
 
-   a. Edit the www/project_status.html file appropriately in /trunk *NOT*
+   a) Edit the www/project_status.html file appropriately in /trunk *NOT*
       in the release branch and commit. Remember edit a search term at the
       end of release's issue link. 
 
@@ -173,15 +199,16 @@
 
       then edit the www/project_status.html file appropriately.
 
-   b. Commit the modifications of www/project_status.html 
+   b) Commit the modifications of www/project_status.html
 
-   c. Remind someone with an @collab.net address to update the live
+   c) Remind someone with an @collab.net address to update the live
       web site (we used to have a servlet for this, but at the moment
       we don't).
 
-10. Post news item <http://subversion.tigris.org/servlets/ProjectNewsAdd>,
+12. Post news item <http://subversion.tigris.org/servlets/ProjectNewsAdd>,
     and send an announcement to dev@, users@, and announce@ lists.
     Remember to include the URL and MD5 checksum in the announcement.
 
-11. Someone with administrative access upgrade svn.collab.net to head,
-    then repeat step 5e.  (This is not usually the release manager.)
+13. Someone with administrative access upgrade svn.collab.net to head.
+    (This is not usually the release manager.)
+
