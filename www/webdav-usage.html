@@ -8,19 +8,93 @@
     <h1>Use of WebDAV in Subversion</h1>
 
     <p>
-      This document details how WebDAV is used within the Subversion
-      product. Specifically, how the client side interfaces with Neon
-      to generate WebDAV requests over the wire, and what the server
-      must do to map incoming WebDAV requests into operations against
-      the Subversion repository.
+      This document details how WebDAV is used within the
+      <a href="http://subversion.tigris.org/">Subversion
+      product</a>. Specifically, how the client side interfaces with
+      <a href="http://www.webdav.org/neon/">Neon</a> to generate
+      WebDAV requests over the wire, and what the
+      server must do to map incoming WebDAV requests into operations
+      against the Subversion repository. Note that the server side is
+      implemented as an
+      <a href="http://www.apache.org/httpd">Apache 2.0</a> module,
+      operating as a back-end for its mod_dav functionality.
     </p>
 
+    <h2>Basic Concepts</h2>
+    <p>
+      Subversion uses a tree-based format to describe a change set
+      against the repository. This tree is constructed on the client
+      side to describe the change. It is then marshalled to the
+      server, reconstructed, and applied against the
+      repository. However, WebDAV uses a sequence of changes. As a
+      result, we must map from the tree form to a sequence of WebDAV
+      requests, send them over the wire, then reconstruct the tree
+      form on the server for application to the repository.
+    </p>
+    <p>
+      In addition, Subversion applies a change set in two steps. It
+      sends a "skeleton delta", or "skelta", to the server as a
+      preflight test to check whether the change set can be
+      applied. The server then returns a token to be passed back along
+      with the final delta. The combination of a token and the
+      complete delta completes the process, and the change set is
+      applied to the repository.
+    </p>
+    <p>
+      Subversion also provides properties on files, directories, and
+      even the abstract concept of a version. Each of the operations
+      involving properties will be mapped directly to WebDAV
+      properties, which are manipulated with the <code>PROPFIND</code>
+      and <code>PROPPATCH</code> HTTP methods. To enable properties on
+      abstract versions, the Subversion Apache module will publish a
+      URL namespace containing resources for each version. The
+      per-version properties will be maintained on these resources.
+    </p>
+    <p>
+      Subversion specifies that the server will compute deltas between
+      two versions. Presumably, the server can create the delta much
+      more efficiently than a client performing a sequence of
+      <code>PROPFIND</code> requests. This feature will be implemented
+      using the <code>DAV:compare-report</code> report option. If the
+      client is performing an actual update, then a series of GET
+      operations will be performed to fetch the files which have
+      changed.
+    </p>
+    <p>
+      Tags and branches are handled through the WebDAV
+      <code>LABEL</code> and <code>COPY</code> methods as appropriate.
+    </p>
+
+    <h2>Committing a Change Set</h2>
+    <p>
+      Change sets are modelled using the "activity" concept from
+      WebDAV. An activity can be viewed as a transaction for a set of
+      resources.
+    </p>
+    <p>
+      ...
+    </p>
+
+    <h2>URL Layout</h2>
+    <p>
+      ...
+      /$svn/act/  hold activity info
+      /$svn/wr/   hold working resources
+      /$svn/ver/  hold version resources
+      /$svn/his/  hold history resources
+    </p>
+
+    <h2>Property Management (and History/Log Reporting)</h2>
+
+    <h2>Fetching Status and Updates</h2>
+
+    <h2>Tags and Branches</h2>
 
     <hr>
     <address><a href="mailto:gstein@lyra.org">Greg Stein</a></address>
 <!-- Created: Thu Aug 10 19:14:20 PDT 2000 -->
 <!-- hhmts start -->
-Last modified: Thu Aug 10 19:15:44 PDT 2000
+Last modified: Fri Aug 11 04:22:24 PDT 2000
 <!-- hhmts end -->
   </body>
 </html>
