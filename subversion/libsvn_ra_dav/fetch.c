@@ -2170,7 +2170,8 @@ make_reporter (void *session_baton,
   */
 
   /* Use the client callback to create a tmpfile. */
-  SVN_ERR(ras->callbacks->open_tmp_file (&rb->tmpfile, ras->callback_baton));
+  SVN_ERR(ras->callbacks->open_tmp_file (&rb->tmpfile, ras->callback_baton,
+                                         pool));
 
   /* ### register a cleanup on our (sub)pool which removes the file. this
      ### will ensure that the file always gets tossed, even if we exit
