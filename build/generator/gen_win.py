@@ -451,7 +451,24 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       else:
         proj_name = string.replace(name, '-', '_')
       target.proj_name = proj_name
-  
+
+  def get_external_project(self, target, proj_ext):
+    if not ((isinstance(target, gen_base.TargetLinked)
+             or isinstance(target, gen_base.TargetI18N))
+            and target.external_project):
+      return None
+
+    if target.external_project[:10] == 'apr-iconv/':
+      path = self.apr_iconv_path + target.external_project[9:]
+    elif target.external_project[:9] == 'apr-util/':
+      path = self.apr_util_path + target.external_project[8:]
+    elif target.external_project[:4] == 'apr/':
+      path = self.apr_path + target.external_project[3:]
+    else:
+      path = target.external_project
+
+    return "%s.%s" % (path, proj_ext)
+
   def adjust_win_depends(self, target, name):
     "Handle special dependencies if needed"
 
