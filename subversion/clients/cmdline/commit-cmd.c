@@ -238,8 +238,6 @@ svn_cl__commit (apr_getopt_t *os,
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
   svn_stringbuf_t *base_dir;
-  const svn_delta_editor_t *trace_editor;
-  void *trace_edit_baton;
   svn_client_auth_baton_t *auth_baton;
   svn_client_commit_info_t *commit_info = NULL;
   svn_revnum_t revnum;
@@ -269,12 +267,6 @@ svn_cl__commit (apr_getopt_t *os,
         svn_stringbuf_set (base_dir, parent_dir->data);
     }
 
-  /* Get a trace commit editor. */
-  SVN_ERR (svn_cl__get_trace_commit_editor (&trace_editor,
-                                            &trace_edit_baton,
-                                            NULL,
-                                            pool));
-
   /* Get revnum set to something meaningful, to cover the xml case. */
   if (opt_state->start_revision.kind == svn_client_revision_number)
     revnum = opt_state->start_revision.value.number;
@@ -291,8 +283,9 @@ svn_cl__commit (apr_getopt_t *os,
   /* Commit. */
   SVN_ERR (svn_client_commit (&commit_info,
                               NULL, NULL,
-                              opt_state->quiet ? NULL : trace_editor, 
-                              opt_state->quiet ? NULL : trace_edit_baton,
+                              NULL, NULL,
+                              SVN_CL_NOTIFY(opt_state), 
+                              svn_cl__make_notify_baton (pool),
                               auth_baton,
                               targets,
                               &get_log_msg,

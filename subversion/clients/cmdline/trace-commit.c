@@ -452,7 +452,7 @@ svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
   if (initial_path && (! svn_path_is_empty (initial_path)))
     eb->path = svn_stringbuf_dup (initial_path, subpool);
   else
-    eb->path = svn_stringbuf_create ("", subpool);
+    eb->path = svn_stringbuf_create (".", subpool);
 
   /* Set up the editor. */
   trace_editor->open_root = open_root;

@@ -32,11 +32,19 @@
 #include "cl.h"
 
 
+struct notify_baton
+{
+  apr_pool_t *pool;
+  svn_boolean_t sent_first_txdelta;
+};
+
+
 static void 
 notify_added (void *baton, const char *path)
 {
   /* the pool (BATON) is typically the global pool; don't keep filling it */
-  apr_pool_t *subpool = svn_pool_create (baton);
+  struct notify_baton *nb = (struct notify_baton *) baton;
+  apr_pool_t *subpool = svn_pool_create (nb->pool);
 
   svn_stringbuf_t *spath = svn_stringbuf_create (path, subpool);
   svn_wc_entry_t *entry;
@@ -83,6 +91,23 @@ notify_added (void *baton, const char *path)
 }
 
 
+static void
+notify_commit_postfix_txdelta (void *baton,
+                               const char *path)
+{
+  struct notify_baton *nb = (struct notify_baton *) baton;
+  
+  if (nb->sent_first_txdelta == FALSE)
+    {
+      printf ("Transmitting file data ");
+      nb->sent_first_txdelta = TRUE;
+    }
+  
+  printf (".");
+  fflush (stdout);
+}
+
+
 void svn_cl__notify_func (void *baton, 
                           svn_wc_notify_action_t action, 
                           const char *path)
@@ -113,6 +138,26 @@ void svn_cl__notify_func (void *baton,
       printf ("U   %s\n", path);
       return;
 
+    case svn_wc_notify_commit_modified:
+      printf ("Sending   %s\n", path);
+      return;
+
+    case svn_wc_notify_commit_added:
+      printf ("Adding    %s\n", path);
+      return;
+
+    case svn_wc_notify_commit_deleted:
+      printf ("Deleting  %s\n", path);
+      return;
+
+    case svn_wc_notify_commit_replaced:
+      printf ("Replacing %s\n", path);
+      return;
+
+    case svn_wc_notify_commit_postfix_txdelta:
+      notify_commit_postfix_txdelta (baton, path);
+      return;
+
     default:
       break;
     }
@@ -121,7 +166,12 @@ void svn_cl__notify_func (void *baton,
 
 void *svn_cl__make_notify_baton (apr_pool_t *pool)
 {
-  return (void *)pool;
+  struct notify_baton *nb = apr_pcalloc (pool, sizeof(*nb));
+
+  nb->pool = pool;
+  nb->sent_first_txdelta = 0;
+
+  return (void *)nb;
 }
 
 

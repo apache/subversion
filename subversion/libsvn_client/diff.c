@@ -338,9 +338,6 @@ merge_dir_added (const char *path,
       break;
     }
 
-  SVN_ERR (svn_client_mkdir (NULL, path_s, NULL, NULL, NULL, NULL, subpool));
-  SVN_ERR (svn_client_add (path_s, FALSE, NULL, NULL, subpool));
-  
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }

@@ -463,6 +463,10 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
    AFTER_EDIT_BATON are pre- and post-commit hook editors.  They are
    optional; pass four NULLs here if you don't need them.
 
+   Additionally, NOTIFY_FUNC/BATON will be called as the commit
+   progresses, as a way of describing actions to the application
+   layer.
+
    LOG_MSG_FUNC/LOG_MSG_BATON are a callback/baton combo that this
    function can use to query for a commit log message when one is
    needed.
@@ -491,6 +495,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    void *before_edit_baton,
                    const svn_delta_editor_t *after_editor,
                    void *after_edit_baton,
+                   svn_wc_notify_func_t notify_func,
+                   void *notify_baton,
                    svn_client_auth_baton_t *auth_baton,
                    const apr_array_header_t *targets,
                    svn_client_get_commit_log_t log_msg_func,

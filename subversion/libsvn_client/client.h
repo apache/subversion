@@ -335,12 +335,21 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
    REVNUM_FN/REV_BATON allows this routine to query the repository for
    the latest revision.  It is used (temporarily) for checking that
    directories are "up-to-date" when a dir-propchange is discovered.
-   We don't expect it to be here forever.  :-)  */
+   We don't expect it to be here forever.  :-) 
+
+   NOTIFY_FUNC/BATON will be called as the commit progresses, as a way
+   of describing actions to the application layer (if non NULL).
+   DISPLAY_DIR is used to send shorter, relative paths to the
+   notify_func (it's subtracted from the front of absolute paths.)
+ */
 svn_error_t *
 svn_client__do_commit (svn_stringbuf_t *base_url,
                        apr_array_header_t *commit_items,
                        const svn_delta_editor_t *editor,
                        void *edit_baton,
+                       svn_wc_notify_func_t notify_func,
+                       void *notify_baton,
+                       svn_stringbuf_t *display_dir,
                        const svn_ra_get_latest_revnum_func_t *revnum_fn,
                        void *rev_baton,
                        apr_pool_t *pool);

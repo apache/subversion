@@ -580,6 +580,9 @@ do_item_commit (const char *url,
                 apr_array_header_t *db_stack,
                 int *stack_ptr,
                 apr_array_header_t *file_mods,
+                svn_wc_notify_func_t notify_func,
+                void *notify_baton,
+                svn_stringbuf_t *display_dir,
                 apr_pool_t *pool)
 {
   svn_wc_entry_t *entry = item->entry;
@@ -594,6 +597,28 @@ do_item_commit (const char *url,
 
   /* Get the parent dir_baton. */
   parent_baton = ((void **) db_stack->elts)[*stack_ptr - 1];
+
+  /* If a feedback table was supplied by the application layer,
+     describe what we're about to do to this item.  */
+  if (notify_func)
+    {
+      /* Convert an absolute path into a relative one (for feedback.) */
+      const char *path = item->path->data + (display_dir->len + 1);
+
+      if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+          && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
+        (*notify_func) (notify_baton, svn_wc_notify_commit_replaced, path);
+
+      else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+        (*notify_func) (notify_baton, svn_wc_notify_commit_deleted, path);
+
+      else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+        (*notify_func) (notify_baton, svn_wc_notify_commit_added, path);
+
+      else if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
+               || (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS))
+        (*notify_func) (notify_baton, svn_wc_notify_commit_modified, path);
+    }
 
   /* If this item is supposed to be deleted, do so. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
@@ -663,12 +688,11 @@ do_item_commit (const char *url,
       mod.item = item;
       mod.file_baton = file_baton;
       (*((struct file_mod_t *) apr_array_push (file_mods))) = mod;
-      return SVN_NO_ERROR;
     }
 
   /* Close any outstanding file batons that didn't get caught by the
      "has local mods" conditional above. */
-  if (file_baton)
+  else if (file_baton)
     SVN_ERR (editor->close_file (file_baton));
   
   return SVN_NO_ERROR;
@@ -688,6 +712,9 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
                        apr_array_header_t *commit_items,
                        const svn_delta_editor_t *editor,
                        void *edit_baton,
+                       svn_wc_notify_func_t notify_func,
+                       void *notify_baton,
+                       svn_stringbuf_t *display_dir,
                        const svn_ra_get_latest_revnum_func_t *revnum_fn,
                        void *rev_baton,
                        apr_pool_t *pool)
@@ -785,7 +812,8 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
 
       /*** Step D - Commit the item.  ***/
       SVN_ERR (do_item_commit (item_url->data, item, editor,
-                               db_stack, &stack_ptr, file_mods, pool));
+                               db_stack, &stack_ptr, file_mods, 
+                               notify_func, notify_baton, display_dir, pool));
 
       /* Save our state for the next iteration. */
       last_url = (item->entry->kind == svn_node_dir) ? item_url : item_dir;
@@ -804,7 +832,10 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
         = ((struct file_mod_t *) file_mods->elts) + i;
       svn_client_commit_item_t *item = mod->item;
       void *file_baton = mod->file_baton;
-
+      
+      if (notify_func)
+        (*notify_func) (notify_baton, svn_wc_notify_commit_postfix_txdelta, 
+                        item->path->data);
       SVN_ERR (svn_wc_transmit_text_deltas 
                (item->path, item->entry, editor, file_baton, pool));
     }
