@@ -1040,7 +1040,7 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
 {
   PyObject *receiver = baton;
   PyObject *result;
-  swig_type_info *tinfo = SWIG_TypeQuery("SWIGTYPE_p_svn_log_changed_path_t");
+  swig_type_info *tinfo = SWIG_TypeQuery("svn_log_changed_path_t *");
   PyObject *chpaths;
   svn_error_t *err;
  
