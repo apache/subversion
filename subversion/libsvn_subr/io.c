@@ -299,6 +299,8 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                                           const char *dst_parent,
                                           const char *dst_basename,
                                           svn_boolean_t copy_perms,
+                                          svn_cancel_func_t cancel_func,
+                                          void *cancel_baton,
                                           apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -361,6 +363,9 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
       entryname = key;
       entrykind = val;
 
+      if (cancel_func)
+        SVN_ERR (cancel_func (cancel_baton));
+
       /* Telescope the entryname onto the source dir. */
       src_target = svn_path_join (src, entryname, subpool);
 
@@ -374,11 +379,15 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                                      copy_perms, subpool));
         }
       else if (*entrykind == svn_node_dir)  /* recurse */
-        SVN_ERR (svn_io_copy_dir_recursively (src_target,
-                                              dst_path,
-                                              entryname,
-                                              copy_perms,
-                                              subpool));
+        {
+          SVN_ERR (svn_io_copy_dir_recursively (src_target,
+                                                dst_path,
+                                                entryname,
+                                                copy_perms,
+                                                cancel_func,
+                                                cancel_baton,
+                                                subpool));
+        }
 
       /* ### someday deal with other node kinds? */
     }

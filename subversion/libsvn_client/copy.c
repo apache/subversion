@@ -160,6 +160,7 @@ wc_to_wc_copy (const char *src_path,
      ### requires cleanup should we abort the copy? */
 
   SVN_ERR (svn_wc_copy (src_path, adm_access, base_name,
+                        ctx->cancel_func, ctx->cancel_baton,
                         ctx->notify_func, ctx->notify_baton, pool));
 
 
@@ -443,6 +444,8 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
 static svn_error_t *
 remove_tmpfiles (apr_hash_t *tempfiles,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
                  apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -458,6 +461,9 @@ remove_tmpfiles (apr_hash_t *tempfiles,
       apr_ssize_t keylen;
       void *val;
       svn_node_kind_t kind;
+
+      if (cancel_func)
+        SVN_ERR (cancel_func (cancel_baton));
 
       apr_hash_this (hi, &key, &keylen, &val);
       SVN_ERR (svn_io_check_path ((const char *)key, &kind, pool));
@@ -666,7 +672,9 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Remove any outstanding temporary text-base files. */
   if (tempfiles)
-    cleanup_err = remove_tmpfiles (tempfiles, pool);
+    cleanup_err = remove_tmpfiles (tempfiles,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool);
 
   /* Fill in the commit_info structure */
   *commit_info = svn_client__make_commit_info (committed_rev, 
@@ -872,6 +880,7 @@ repos_to_wc_copy (const char *src_url,
      See comment in svn_wc_add()'s doc about whether svn_wc_add is the
      appropriate place for this. */
   SVN_ERR (svn_wc_add (dst_path, adm_access, src_url, src_revnum,
+                       ctx->cancel_func, ctx->cancel_baton, 
                        ctx->notify_func, ctx->notify_baton, pool));
 
   /* If any properties were fetched (in the file case), apply those

@@ -36,6 +36,7 @@
 
 svn_error_t *
 svn_client_cleanup (const char *dir,
+                    svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -46,5 +47,5 @@ svn_client_cleanup (const char *dir,
                               "Cannot cleanup '%s' -- not a directory", 
                               dir);
 
-  return svn_wc_cleanup (dir, NULL, pool);
+  return svn_wc_cleanup (dir, NULL, ctx->cancel_func, ctx->cancel_baton, pool);
 }

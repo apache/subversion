@@ -713,9 +713,15 @@ svn_client_merge (const char *URL1,
 
 /** Recursively cleanup a working copy directory @a dir, finishing any
  * incomplete operations, removing lockfiles, etc.
+ *
+ * If @a ctx->cancel_func is non-null, invoke it with @a
+ * ctx->cancel_baton at various points during the operation.  If it
+ * returns an error (typically SVN_ERR_CANCELLED), return that error
+ * immediately.
  */
 svn_error_t *
 svn_client_cleanup (const char *dir,
+                    svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
 

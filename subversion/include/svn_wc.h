@@ -1008,6 +1008,10 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
  * @a dst_basename will be the name of the copied item, and it must not
  * exist already.
  *
+ * If @a cancel_func is non-null, call it with @a cancel_baton at
+ * various points during the deletion.  If it returns an error
+ * (typically SVN_ERR_CANCELLED), return that error immediately.
+ *
  * For each file or directory copied, @a notify_func will be called
  * with its path and the @a notify_baton.  @a notify_func may be @c NULL 
  * if you are not interested in this information.
@@ -1019,6 +1023,8 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
 svn_error_t *svn_wc_copy (const char *src,
                           svn_wc_adm_access_t *dst_parent,
                           const char *dst_basename,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           svn_wc_notify_func_t notify_func,
                           void *notify_baton,
                           apr_pool_t *pool);
@@ -1071,6 +1077,10 @@ svn_error_t *svn_wc_delete (const char *path,
  * `copyfrom' args.  This is for copy operations, where one wants
  * to schedule @a path for addition with a particular history.
  *
+ * If @a cancel_func is non-null, call it with @a cancel_baton at
+ * various points during the deletion.  If it returns an error
+ * (typically SVN_ERR_CANCELLED), return that error immediately.
+ *
  * When the @a path has been added, then @a notify_func will be called
  * (if it is not @c NULL) with the @a notify_baton and the path.
  *
@@ -1107,6 +1117,8 @@ svn_error_t *svn_wc_add (const char *path,
                          svn_wc_adm_access_t *parent_access,
                          const char *copyfrom_url,
                          svn_revnum_t copyfrom_rev,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
                          svn_wc_notify_func_t notify_func,
                          void *notify_baton,
                          apr_pool_t *pool);
@@ -1883,10 +1895,16 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
  *
  * WARNING: there is no mechanism that will protect locks that are still 
  * being used.
+ *
+ * If @a cancel_func is non-null, invoke it with @a cancel_baton at
+ * various points during the operation.  If it returns an error
+ * (typically SVN_ERR_CANCELLED), return that error immediately.
  */
 svn_error_t *
 svn_wc_cleanup (const char *path,
                 svn_wc_adm_access_t *optional_adm_access,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
                 apr_pool_t *pool);
 
 

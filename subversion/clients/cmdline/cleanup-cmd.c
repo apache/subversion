@@ -40,6 +40,7 @@ svn_cl__cleanup (apr_getopt_t *os,
                  apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   apr_pool_t *subpool;
   int i;
@@ -63,7 +64,7 @@ svn_cl__cleanup (apr_getopt_t *os,
     {
       const char *target = ((const char **) (targets->elts))[i];
 
-      SVN_ERR (svn_client_cleanup (target, subpool));
+      SVN_ERR (svn_client_cleanup (target, ctx, subpool));
       svn_pool_clear (subpool);
     }
 

@@ -57,6 +57,7 @@ add_dir_recursive (const char *dirname,
   /* Add this directory to revision control. */
   SVN_ERR (svn_wc_add (dirname, adm_access,
                        NULL, SVN_INVALID_REVNUM,
+                       ctx->cancel_func, ctx->cancel_baton,
                        ctx->notify_func, ctx->notify_baton, pool));
 
   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, dirname, pool));
@@ -97,6 +98,7 @@ add_dir_recursive (const char *dirname,
 
       else if (this_entry.filetype == APR_REG)
         SVN_ERR (svn_wc_add (fullpath, dir_access, NULL, SVN_INVALID_REVNUM,
+                             ctx->cancel_func, ctx->cancel_baton,
                              ctx->notify_func, ctx->notify_baton, subpool));
 
       /* Clean out the per-iteration pool. */
@@ -146,6 +148,7 @@ svn_client_add (const char *path,
     err = add_dir_recursive (path, adm_access, ctx, pool);
   else
     err = svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
+                      ctx->cancel_func, ctx->cancel_baton,
                       ctx->notify_func, ctx->notify_baton, pool);
 
   err2 = svn_wc_adm_close (adm_access);
