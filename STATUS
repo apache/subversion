@@ -116,3 +116,13 @@ Candidate changes:
     Votes:
       +1: philip
       Nominated by: Chris AtLee <catlee@sidefx.com>
+
+  * r12046
+    Fix issue 2142 - svndumpfilter mislabels output as version 3.
+    Justification:
+      Prevents chaining of multiple svndumpfilter runs.
+      (This is a regression from 1.0.x)
+      Trivial change.
+    Votes:
+      +1: maxb
+
