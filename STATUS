@@ -28,3 +28,12 @@ Candidate changes:
       r10487 really doesn't need a vote, but I included it for completness.
     Votes:
       +1: breser, kfogel
+
+  * r10573
+    Update documentation and batch file slightly for zip files.
+    Justification:
+      Nice to have our documentation up to date.
+    Notes:
+      The change to the batch file only update it to reference Aache 2.0.50.
+    Votes:
+      +1: breser, cmpilato
