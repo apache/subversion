@@ -92,7 +92,7 @@ section for approved changes.)
            Message-Id:  <200401082033.i08KXMv45357@newton.ch.collab.net>
 
 
-    * r8292 (Fix for Issue #1695)
+    * r8292 (fix for Issue #1695)
       Fix a nasty bug in the 'changes' table reading code that caused
       in invalid set of changes to be returned.  This bug *probably*
       only gets triggered by cvs2svn during directory pruning, but
@@ -104,9 +104,11 @@ section for approved changes.)
     * r8301 (issue 1701)
       Fix a buffer overflow in svn_subst_translate_stream
       Justification: obvious bug, breaks AIX client
-      +1: philip
+      Votes:
+       +1: philip, cmpilato
 
 
+>>>>>>> .r8304
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
