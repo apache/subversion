@@ -97,7 +97,7 @@ def guarantee_greek_repository(path):
     output_list = []
     path_list = [x[0] for x in svntest.main.greek_tree]
     for apath in path_list:
-      item = [ os.path.join(".", apath), None, {'verb' : 'Adding'}]
+      item = [ os.path.join(".", apath), None, {}, {'verb' : 'Adding'}]
       output_list.append(item)
     expected_output_tree = svntest.tree.build_generic_tree(output_list)
       
@@ -290,7 +290,7 @@ def make_repo_and_wc(test_name):
   output_list = []
   path_list = [x[0] for x in svntest.main.greek_tree]
   for path in path_list:
-    item = [ os.path.join(wc_dir, path), None, {'status' : 'A '} ]
+    item = [ os.path.join(wc_dir, path), None, {}, {'status' : 'A '} ]
     output_list.append(item)
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
@@ -318,9 +318,9 @@ def duplicate_dir(wc_name, wc_copy_name):
 # A generic starting state for the output of 'svn status'.
 # Returns a list of the form:
 #
-#   [ ['repo', None, {'status':'_ ', 'wc_rev':'1', 'repos_rev':'1'}],
-#     ['repo/A', None, {'status':'_ ', 'wc_rev':'1', 'repos_rev':'1'}],
-#     ['repo/A/mu', None, {'status':'_ ', 'wc_rev':'1', 'repos_rev':'1'}],
+#   [ ['repo', None, {}, {'status':'_ ', 'wc_rev':'1', 'repos_rev':'1'}],
+#     ['repo/A', None, {}, {'status':'_ ', 'wc_rev':'1', 'repos_rev':'1'}],
+#     ['repo/A/mu', None, {}, {'status':'_ ', 'wc_rev':'1', 'repos_rev':'1'}],
 #     ... ]
 #
 def get_virginal_status_list(wc_dir, rev):
@@ -333,13 +333,13 @@ def get_virginal_status_list(wc_dir, rev):
   The list returned is suitable for passing to
   svntest.tree.build_generic_tree()."""
 
-  output_list = [[wc_dir, None,
+  output_list = [[wc_dir, None, {},
                   {'status' : '_ ',
                    'wc_rev' : rev,
                    'repos_rev' : rev}]]
   path_list = [x[0] for x in svntest.main.greek_tree]
   for path in path_list:
-    item = [os.path.join(wc_dir, path), None,
+    item = [os.path.join(wc_dir, path), None, {},
             {'status' : '_ ',
              'wc_rev' : rev,
              'repos_rev' : rev}]
@@ -392,8 +392,8 @@ def basic_commit():
   svntest.main.file_append (rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {'verb' : 'Changing' }],
-                  [rho_path, None, {'verb' : 'Changing' }] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Changing' }],
+                  [rho_path, None, {}, {'verb' : 'Changing' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -401,7 +401,7 @@ def basic_commit():
   status_list = get_virginal_status_list(wc_dir, '2')
   for item in status_list:
     if (item[0] != mu_path) and (item[0] != rho_path):
-      item[2]['wc_rev'] = '1'
+      item[3]['wc_rev'] = '1'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   return run_and_verify_commit (wc_dir,
@@ -428,7 +428,7 @@ def commit_one_file():
   svntest.main.file_append (rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci';  we're only committing rho.
-  output_list = [ [rho_path, None, {'verb' : 'Changing' }] ]
+  output_list = [ [rho_path, None, {}, {'verb' : 'Changing' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -436,10 +436,10 @@ def commit_one_file():
   status_list = get_virginal_status_list(wc_dir, '2')
   for item in status_list:
     if (item[0] != rho_path):
-      item[2]['wc_rev'] = '1'
+      item[3]['wc_rev'] = '1'
     # And mu should still be locally modified
     if (item[0] == mu_path):
-      item[2]['status'] = 'M '
+      item[3]['status'] = 'M '
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   return run_and_verify_commit (wc_dir,
@@ -481,9 +481,9 @@ def commit_multiple_targets():
 
   # Created expected output tree for 'svn ci'.  We should see changes
   # only on these three targets, no others.  
-  output_list = [ [psi_path, None, {'verb' : 'Changing' }],
-                  [lambda_path, None, {'verb' : 'Changing' }],
-                  [pi_path, None, {'verb' : 'Changing' }] ]
+  output_list = [ [psi_path, None, {}, {'verb' : 'Changing' }],
+                  [lambda_path, None, {}, {'verb' : 'Changing' }],
+                  [pi_path, None, {}, {'verb' : 'Changing' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -492,13 +492,13 @@ def commit_multiple_targets():
   for item in status_list:
     if ((item[0] != psi_path) and (item[0] != lambda_path)
         and (item[0] != pi_path)):
-      item[2]['wc_rev'] = '1'
+      item[3]['wc_rev'] = '1'
     # rho and omega should still display as locally modified:
     if ((item[0] == rho_path) or (item[0] == omega_path)):
-      item[2]['status'] = 'M '
+      item[3]['status'] = 'M '
     # A/D/G should still have a local property set, too.
     if (item[0] == ADG_path):
-      item[2]['status'] = '_M'
+      item[3]['status'] = '_M'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   return run_and_verify_commit (wc_dir,
@@ -541,10 +541,10 @@ def commit_multiple_targets_2():
 
   # Created expected output tree for 'svn ci'.  We should see changes
   # only on these three targets, no others.  
-  output_list = [ [psi_path, None, {'verb' : 'Changing' }],
-                  [lambda_path, None, {'verb' : 'Changing' }],
-                  [omega_path, None, {'verb' : 'Changing' }],
-                  [pi_path, None, {'verb' : 'Changing' }] ]
+  output_list = [ [psi_path, None, {}, {'verb' : 'Changing' }],
+                  [lambda_path, None, {}, {'verb' : 'Changing' }],
+                  [omega_path, None, {}, {'verb' : 'Changing' }],
+                  [pi_path, None, {}, {'verb' : 'Changing' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -553,13 +553,13 @@ def commit_multiple_targets_2():
   for item in status_list:
     if ((item[0] != psi_path) and (item[0] != lambda_path)
         and (item[0] != pi_path) and (item[0] != omega_path)):
-      item[2]['wc_rev'] = '1'
+      item[3]['wc_rev'] = '1'
     # rho should still display as locally modified:
     if (item[0] == rho_path):
-      item[2]['status'] = 'M '
+      item[3]['status'] = 'M '
     # A/D/G should still have a local property set, too.
     if (item[0] == ADG_path):
-      item[2]['status'] = '_M'
+      item[3]['status'] = '_M'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   return run_and_verify_commit (wc_dir,
@@ -590,8 +590,8 @@ def basic_update():
   svntest.main.file_append (rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {'verb' : 'Changing' }],
-                  [rho_path, None, {'verb' : 'Changing' }] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Changing' }],
+                  [rho_path, None, {}, {'verb' : 'Changing' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -599,7 +599,7 @@ def basic_update():
   status_list = get_virginal_status_list(wc_dir, '2')
   for item in status_list:
     if (item[0] != mu_path) and (item[0] != rho_path):
-      item[2]['wc_rev'] = '1'
+      item[3]['wc_rev'] = '1'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   # Commit.
@@ -610,9 +610,9 @@ def basic_update():
 
   # Create expected output tree for an update of the wc_backup.
   output_list = [[os.path.join(wc_backup, 'A', 'mu'),
-                  None, {'status' : 'U '}],
+                  None, {}, {'status' : 'U '}],
                  [os.path.join(wc_backup, 'A', 'D', 'G', 'rho'),
-                   None, {'status' : 'U '}]]
+                   None, {}, {'status' : 'U '}]]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected disk tree for the update.
@@ -652,17 +652,17 @@ def basic_merge():
   svntest.main.file_append (rho_path, rho_text)  
 
   # Create expected output tree for initial commit
-  output_list = [ [mu_path, None, {'verb' : 'Changing' }],
-                  [rho_path, None, {'verb' : 'Changing' }] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Changing' }],
+                  [rho_path, None, {}, {'verb' : 'Changing' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree : rev 2 for rho and mu.
   status_list = get_virginal_status_list(wc_dir, '1')
   for item in status_list:
-    item[2]['repos_rev'] = '2'
+    item[3]['repos_rev'] = '2'
     if (item[0] == mu_path) or (item[0] == rho_path):
-      item[2]['wc_rev'] = '2'
-      item[2]['status'] = '_ '
+      item[3]['wc_rev'] = '2'
+      item[3]['status'] = '_ '
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
   
   # Initial commit.
@@ -680,18 +680,18 @@ def basic_merge():
   svntest.main.file_append (rho_path, ' Appended to line 10 of rho')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {'verb' : 'Changing' }],
-                  [rho_path, None, {'verb' : 'Changing' }] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Changing' }],
+                  [rho_path, None, {}, {'verb' : 'Changing' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 3.
   status_list = get_virginal_status_list(wc_dir, '1')
   for item in status_list:
-    item[2]['repos_rev'] = '3'
+    item[3]['repos_rev'] = '3'
     if (item[0] == mu_path) or (item[0] == rho_path):
-      item[2]['wc_rev'] = '3'
-      item[2]['status'] = '_ '
+      item[3]['wc_rev'] = '3'
+      item[3]['status'] = '_ '
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   # Commit.
@@ -722,9 +722,9 @@ def basic_merge():
   
   # Create expected output tree for an update of the wc_backup.
   output_list = [[os.path.join(wc_backup, 'A', 'mu'),
-                  None, {'status' : 'G '}],
+                  None, {}, {'status' : 'G '}],
                  [os.path.join(wc_backup, 'A', 'D', 'G', 'rho'),
-                  None, {'status' : 'G '}]]
+                  None, {}, {'status' : 'G '}]]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
   
   # Create expected disk tree for the update.
@@ -743,8 +743,7 @@ def basic_merge():
   status_list = get_virginal_status_list(wc_backup, '3')
   for item in status_list:
     if (item[0] == mu_path_backup) or (item[0] == rho_path_backup):
-      item[2]['status'] = 'M '
-  # Some discrepancy here about whether this should be M or G...M for now.    
+      item[3]['status'] = 'M '
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
   
   # Do the update and check the results in three ways.
@@ -801,8 +800,8 @@ def basic_conflict():
                              '\nConflicting appended text for rho')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {'verb' : 'Changing' }],
-                  [rho_path, None, {'verb' : 'Changing' }] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Changing' }],
+                  [rho_path, None, {}, {'verb' : 'Changing' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -810,7 +809,7 @@ def basic_conflict():
   status_list = get_virginal_status_list(wc_dir, '2')
   for item in status_list:
     if (item[0] != mu_path) and (item[0] != rho_path):
-      item[2]['wc_rev'] = '1'
+      item[3]['wc_rev'] = '1'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   # Commit.
@@ -820,8 +819,8 @@ def basic_conflict():
     return 1
 
   # Create expected output tree for an update of the wc_backup.
-  output_list = [ [mu_path_backup, None, {'status' : 'C '}],
-                  [rho_path_backup, None, {'status' : 'C '}]]
+  output_list = [ [mu_path_backup, None, {}, {'status' : 'C '}],
+                  [rho_path_backup, None, {}, {'status' : 'C '}]]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
   
   # Create expected disk tree for the update.
@@ -834,7 +833,7 @@ def basic_conflict():
   status_list = get_virginal_status_list(wc_backup, '2')
   for item in status_list:
     if (item[0] == mu_path_backup) or (item[0] == rho_path_backup):
-      item[2]['status'] = 'C '
+      item[3]['status'] = 'C '
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   # "Extra" files that we expect to result from the conflicts.
