@@ -169,6 +169,25 @@ Filesystem:
 
   -Karl
 
+
+Anyone, WRT filesystem:
+
+  We need a function that will remove the *first*, not the last,
+  component from a path. We need this to support full-path lookups in
+  the new FS interface, specifically, for open_path.
+
+  Suggest something like this:
+
+    int svn_path_first_component (const char **name,
+                                  char **path,
+                                  enum svn_path_style style);
+
+  This would point *NAME to the first component in *PATH, and modify
+  *PATH to split the first component off. Return 0 if *NAME is empty,
+  otherwise 1. See the pseudocode in open_path in tree.c to see how
+  this would be used.
+  
+
 Changes to svn_delta_edit_fns_t:
 
    These are the summary emails Ben sent to the dev list (lightly
