@@ -47,10 +47,11 @@ import copy    # for deepcopy()
 # Global stuff
 
 
-# The locations of the svn and svnadmin binaries, relative to the only
-# scripts that import this file right now (they live in ../ ).
+# The locations of the svn, svnadmin and svnlook binaries, relative to
+# the only scripts that import this file right now (they live in ../).
 svn_binary = os.path.abspath('../../../clients/cmdline/svn')
 svnadmin_binary = os.path.abspath('../../../svnadmin/svnadmin')
+svnlook_binary = os.path.abspath('../../../svnlook/svnlook')
 
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
@@ -108,6 +109,26 @@ def get_admin_name():
   # todo: One day this sucker will try to intelligently discern what
   # the admin dir is.  For now, 'SVN' will suffice.
   return 'SVN'
+
+
+
+def get_start_commit_hook_path(repo_dir):
+  "Return the path of the start-commit-hook conf file in REPO_DIR."
+
+  return os.path.join(repo_dir, "conf", "start-commit-hooks.txt")
+
+
+def get_pre_commit_hook_path(repo_dir):
+  "Return the path of the pre-commit-hook conf file in REPO_DIR."
+
+  return os.path.join(repo_dir, "conf", "pre-commit-hooks.txt")
+
+
+def get_post_commit_hook_path(repo_dir):
+  "Return the path of the post-commit-hook conf file in REPO_DIR."
+
+  return os.path.join(repo_dir, "conf", "post-commit-hooks.txt")
+
 
 
 # For running subversion and returning the output

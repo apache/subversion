@@ -611,6 +611,48 @@ def hudson_part_2():
                                                 wc_dir)
 
 
+#----------------------------------------------------------------------
+
+def hook_test():
+  "hook testing."
+
+  # Bootstrap:  make independent repo and working copy.
+  sbox = sandbox(hook_test)
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  # Get paths to the working copy and repository
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  repo_dir = os.path.join (svntest.main.general_repo_dir, sbox)
+
+  # Setup the hook configs to echo data back
+  start_commit_hook = svntest.main.get_start_commit_hook_path (repo_dir)
+  svntest.main.file_append (start_commit_hook, "echo $repos\n")
+  pre_commit_hook = svntest.main.get_pre_commit_hook_path (repo_dir)
+  svntest.main.file_append (pre_commit_hook, "echo $repos $txn\n")
+  post_commit_hook = svntest.main.get_post_commit_hook_path (repo_dir)
+  svntest.main.file_append (post_commit_hook, "echo $repos $rev\n")
+
+  # Modify iota just so there is something to commit.
+  iota_path = os.path.join (wc_dir, "iota")
+  svntest.main.file_append (iota_path, "More stuff in iota")
+
+  # Now, commit and examine the output (we happen to know that the
+  # filesystem will report an absolute path because that's the way the
+  # filesystem is created by this test suite.
+  abs_repo_dir = os.path.abspath (repo_dir)
+  expected_output = (abs_repo_dir + "\n",
+                     abs_repo_dir + " 1\n",
+                     abs_repo_dir + " 2\n")
+  output, errput = svntest.main.run_svn ('ci', '--quiet', wc_dir)
+
+  # Make sure we got the right output.
+  if len (expected_output) != len (output): return 1
+  for index in range (len (output)):
+    if output[index] != expected_output[index]: return 1
+    
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -623,7 +665,8 @@ test_list = [ None,
               hudson_part_1,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
-              hudson_part_2
+              hudson_part_2,
+              hook_test
              ]
 
 if __name__ == '__main__':
