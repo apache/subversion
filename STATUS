@@ -43,7 +43,7 @@ Candidate changes:
     Justification: The paths are for URLS they should be copyable for use on
     repo URLS.
     Votes (on both):
-      +1: breser
+      +1: breser, sussman
     Votes (on just 9104):
       +1: breser, sussman, kfogel
 
@@ -77,10 +77,6 @@ Candidate changes:
     Votes:
       +1: breser
 
-  * r9358
-    Make mod_authz_svn less restrictive per issue #1821.
-    Votes:
-      +1: striker, dlr, sussman
 
 
 Status of 1.0.3:
