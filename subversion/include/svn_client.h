@@ -65,6 +65,21 @@ extern "C" {
 /*  The new authentication system allows the RA layer to "pull"
     information as needed from libsvn_client.  See svn_ra.h */
 
+/** A callback function type defined by a top-level svn application.
+ *
+ * If libsvn_client is unable to retrieve certain authorization
+ * information, it can use this callback; the application will then
+ * directly query the user with @a prompt and return the answer in 
+ * @c info, allocated in @a pool.  @a baton is provided at the same 
+ * time as the callback, and @a hide indicates that the user's answer 
+ * should not be displayed on the screen.
+ */
+typedef svn_error_t *
+(*svn_client_prompt_t) (const char **info,
+                        const char *prompt,
+                        svn_boolean_t hide,
+                        void *baton,
+                        apr_pool_t *pool);
 
 /** This is a baton that contains information from the calling
  * application, passed to libsvn_client to aid in authentication. 
@@ -79,7 +94,7 @@ typedef struct svn_client_auth_baton_t
   const char *password; 
   
   /** a callback provided by the app layer, for prompting the user */
-  svn_auth_prompt_t prompt_callback;
+  svn_client_prompt_t prompt_callback;
   void *prompt_baton;
 
   /* ### Right now, we only cache username and password.  Since
@@ -132,6 +147,20 @@ svn_client_ctx_set_default_simple_creds (svn_client_ctx_t *ctx,
     there is none. */
 svn_auth_cred_simple_t *
 svn_client_ctx_get_default_simple_creds (svn_client_ctx_t *ctx);
+
+/** Set the prompt callback function and baton in @a ctx to @a
+    prompt_func and @a prompt_baton, respectively. */
+void
+svn_client_ctx_set_prompt_func (svn_client_ctx_t *ctx,
+                                svn_client_prompt_t prompt_func,
+                                void *prompt_baton);
+
+/* Return the prompt callback function and baton from @a ctx in @a
+   *prompt_func and @a *prompt_baton, respectively. */
+void
+svn_client_ctx_get_prompt_func (svn_client_prompt_t *prompt_func,
+                                void **prompt_baton,
+                                svn_client_ctx_t *ctx);
 
 
 /** This is a structure which stores a filename and a hash of property
@@ -253,10 +282,7 @@ typedef svn_error_t *
 #define SVN_CLIENT_AUTH_PASSWORD            "password"
 /** @} */
 
-
 
-/*** Milestone 4 Interfaces ***/
-
 /** Check out a working copy from the repository.
  *
  * Checkout a working copy of @a url at @a revision, using @a path as 

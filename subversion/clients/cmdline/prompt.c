@@ -68,37 +68,9 @@ svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
 }
 
 
-/* Build a new-style auth baton from commandline args. */
-svn_auth_baton_t *
-svn_cl__create_auth_baton (svn_cl__opt_state_t *opt_state,
-                           apr_pool_t *pool)
-{
-  svn_auth_baton_t *ab;
-  const svn_auth_provider_t *prompt_provider;
-  void *prompt_prov_baton;
-
-  svn_auth_open (&ab, pool);
-
-  /* A cmdline-app provider which prompts the user. */
-  svn_auth_get_simple_prompt_provider (&prompt_provider, &prompt_prov_baton,
-                                       &svn_cl__prompt_user, NULL, 
-                                       2 , /* number of retries */
-                                       /* default --username or --password */
-                                       opt_state->auth_username,
-                                       opt_state->auth_password,
-                                       pool);
-  
-  svn_auth_register_provider (ab, FALSE /* append */,
-                              prompt_provider, prompt_prov_baton, pool);
-
-  return ab;
-}
-
-
-
 
 /*** Our implementation of the 'prompt callback' routine, as defined
-     in svn_auth.h.  (See svn_auth_prompt_t.)  */
+     in svn_auth.h.  (See svn_client_prompt_t.)  */
 
 svn_error_t *
 svn_cl__prompt_user (const char **result,

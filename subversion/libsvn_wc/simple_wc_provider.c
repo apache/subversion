@@ -47,8 +47,7 @@ simple_wc_first_creds (void **credentials,
                        void *provider_baton,
                        apr_pool_t *pool)
 {
-  simple_wc_provider_baton_t *pb
-    = (simple_wc_provider_baton_t *) provider_baton;
+  simple_wc_provider_baton_t *pb = provider_baton;
   svn_auth_cred_simple_t *creds = apr_pcalloc (pool, sizeof(*creds));
   svn_error_t *err = NULL;
   svn_stringbuf_t *susername, *spassword;
@@ -80,33 +79,28 @@ simple_wc_first_creds (void **credentials,
 }
 
 
-/* Most of this code was stolen right out of
-   libsvn_client/auth.c:store_auth_info().  */
-static svn_error_t *
-simple_wc_save_creds (svn_boolean_t *saved,
-                      void *credentials,
-                      void *provider_baton,
-                      apr_pool_t *pool)
+svn_error_t *
+svn_wc_save_simple_creds (svn_boolean_t *saved,
+                          const char *base_dir,
+                          svn_wc_adm_access_t *base_access,
+                          svn_auth_cred_simple_t *creds,
+                          apr_pool_t *pool)
 {
-  svn_auth_cred_simple_t *creds 
-    = (svn_auth_cred_simple_t *) credentials;
-  simple_wc_provider_baton_t *pb
-    = (simple_wc_provider_baton_t *) provider_baton;
-
   svn_wc_adm_access_t *adm_access;
   svn_error_t *err;
   int wc_format;
 
+  *saved = FALSE;
+
   /* Repository queries (at the moment HEAD to number, but in future date
      to number and maybe others) prior to a checkout will attempt to store
      auth info before the working copy exists.  */
-  err = svn_wc_check_wc (pb->base_dir, &wc_format, pool);
+  err = svn_wc_check_wc (base_dir, &wc_format, pool);
   if (err || ! wc_format)
     {
       if (err && err->apr_err == APR_ENOENT)
         {
           svn_error_clear (err);
-          *saved = FALSE;
           err = SVN_NO_ERROR;
         }
       return err;
@@ -117,11 +111,10 @@ simple_wc_save_creds (svn_boolean_t *saved,
      before storing auth info so we can open a new baton here.  We don't
      need a write-lock because storing auth data doesn't use log files. */
 
-  if (! pb->base_access)
-    SVN_ERR (svn_wc_adm_open (&adm_access, NULL, pb->base_dir, FALSE, TRUE,
-                              pool));
+  if (! base_access)
+    SVN_ERR (svn_wc_adm_open (&adm_access, NULL, base_dir, FALSE, TRUE, pool));
   else
-    adm_access = pb->base_access;
+    adm_access = base_access;
 
   /* Do a recursive store of username and password. */
   SVN_ERR (svn_wc_set_auth_file (adm_access, TRUE,
@@ -133,11 +126,28 @@ simple_wc_save_creds (svn_boolean_t *saved,
                                  svn_stringbuf_create (creds->password, pool),
                                  pool));
 
-  if (! pb->base_access)
-    SVN_ERR (svn_wc_adm_close (adm_access));
-
   *saved = TRUE;
+
+  if (! base_access)
+    SVN_ERR (svn_wc_adm_close (adm_access));
+  
   return SVN_NO_ERROR;
+}
+
+
+/* Most of this code was stolen right out of
+   libsvn_client/auth.c:store_auth_info().  */
+static svn_error_t *
+simple_wc_save_creds (svn_boolean_t *saved,
+                      void *credentials,
+                      void *provider_baton,
+                      apr_pool_t *pool)
+{
+  svn_auth_cred_simple_t *creds = credentials;
+  simple_wc_provider_baton_t *pb = provider_baton;
+
+  return svn_wc_save_simple_creds (saved, pb->base_dir, pb->base_access, 
+                                   creds, pool);
 }
 
 

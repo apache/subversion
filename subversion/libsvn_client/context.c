@@ -40,6 +40,9 @@ struct svn_client_ctx_t {
      this structure.  if NULL, then no defaults exist.  */
   svn_auth_cred_simple_t *default_simple_creds;
 
+  /* prompt callback function/baton. */
+  svn_client_prompt_t prompt_func;
+  void *prompt_baton;
 };
 
 svn_client_ctx_t *
@@ -83,4 +86,23 @@ svn_auth_cred_simple_t *
 svn_client_ctx_get_default_simple_creds (svn_client_ctx_t *ctx)
 {
   return ctx->default_simple_creds;
+}
+
+/** prompt func/baton accessors  */
+void
+svn_client_ctx_set_prompt_func (svn_client_ctx_t *ctx,
+                                svn_client_prompt_t prompt_func,
+                                void *prompt_baton)
+{
+  ctx->prompt_func = prompt_func;
+  ctx->prompt_baton = prompt_baton;
+}
+
+void
+svn_client_ctx_get_prompt_func (svn_client_prompt_t *prompt_func,
+                                void **prompt_baton,
+                                svn_client_ctx_t *ctx)
+{
+  *prompt_func = ctx->prompt_func;
+  *prompt_baton = ctx->prompt_baton;
 }
