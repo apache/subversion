@@ -132,7 +132,7 @@ fast-clean: doc-clean
 # clean all but bulky test output, returning to before './configure' was run.
 fast-distclean: fast-clean
 	rm -f Makefile config.cache config.log config.status libtool \
-              svn_private_config.h
+              svn_private_config.h svn-config
 
 # clean everything out, returning to before './autogen.sh' was run.
 local-extraclean: local-distclean
