@@ -83,6 +83,8 @@ entries file, instead of just detecting PATH among the entries."
 Inhibit backup files unless `vc-make-backup-files' is non-nil."
   (if (svn-controlled-path-p (buffer-file-name))
       (progn
+        (if (string-match "XEMACS\\|XEmacs\\|xemacs" emacs-version)
+            (vc-load-vc-hooks)) ; for `vc-make-backup-files'
         (unless vc-make-backup-files
           (make-local-variable 'backup-inhibited)
           (setq backup-inhibited t)))))
